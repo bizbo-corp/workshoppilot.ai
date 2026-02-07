@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** MVP 0.5 — Application Shell (Phase 2: Authentication & Roles)
+**Current focus:** MVP 0.5 — Application Shell (Phase 3: Application Shell)
 
 ## Current Position
 
-Phase: 2 of 6 (Authentication & Roles)
-Plan: 4 of 4 in current phase
-Status: All plans complete, pending verification
-Last activity: 2026-02-07 — Completed 02-04-PLAN.md (Landing & Dashboard Integration)
+Phase: 3 of 6 (Application Shell)
+Plan: 1 of 5 in current phase
+Status: In progress
+Last activity: 2026-02-07 — Completed 03-01-PLAN.md (Dependencies & Foundation)
 
-Progress: [██████░░░░] 7/27 plans complete (26%)
+Progress: [████████░░] 8/27 plans complete (30%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 3.0 min
-- Total execution time: 0.35 hours
+- Total plans completed: 8
+- Average duration: 3.1 min
+- Total execution time: 0.42 hours
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [██████░░░░] 7/27 plans complete (26%)
 |-------|-------|-------|----------|
 | 01-foundation-database | 3 | 7 min | 2.3 min |
 | 02-authentication-roles | 4 | 14 min | 3.5 min |
+| 03-application-shell | 1 | 4 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (5 min), 02-02 (2 min), 02-03 (2 min), 02-04 (8 min)
-- Trend: Integration plans take longer (expected)
+- Last 5 plans: 02-02 (2 min), 02-03 (2 min), 02-04 (8 min), 03-01 (4 min)
+- Trend: Dependency installation plans are fast (expected)
 
 *Updated after each plan completion*
 
@@ -71,6 +72,10 @@ Recent decisions affecting current work:
 - **02-04:** Dashboard as temporary post-sign-up redirect (Phase 3 updates to step 4)
 - **02-04:** MigrationCheck runs silently on dashboard mount (invisible component)
 - **02-04:** Defense-in-depth: middleware + page-level auth/role checks
+- **03-01:** .npmrc with legacy-peer-deps=true to handle Clerk/React 19.2.0 peer dependency mismatch
+- **03-01:** Header removed from root layout - headers are route-specific (landing vs workshop vs dashboard)
+- **03-01:** ThemeProvider configured with attribute='class', defaultTheme='system', enableSystem=true
+- **03-01:** Root layout structure: html > body > ClerkProvider > ThemeProvider > {children}
 
 ### Pending Todos
 
@@ -84,5 +89,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 02-04-PLAN.md (Landing & Dashboard Integration) — Phase 2 plans complete
-Resume file: .planning/phases/02-authentication-roles/02-04-SUMMARY.md
+Stopped at: Completed 03-01-PLAN.md (Dependencies & Foundation) — Phase 3 plan 1 complete
+Resume file: .planning/phases/03-application-shell/03-01-SUMMARY.md
