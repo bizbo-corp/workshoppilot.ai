@@ -66,6 +66,7 @@ export function SignInModal({
         {/* Clerk SignIn component */}
         <div className="mt-2">
           <SignIn
+            routing="hash"
             appearance={{
               elements: {
                 rootBox: 'w-full',

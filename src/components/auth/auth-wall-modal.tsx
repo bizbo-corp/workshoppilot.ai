@@ -126,6 +126,7 @@ export function AuthWallModal({
           <div className="flex flex-col rounded-r-lg bg-white p-8 md:p-10">
             <div className="flex-1">
               <SignUp
+                routing="hash"
                 appearance={{
                   elements: {
                     rootBox: 'w-full',

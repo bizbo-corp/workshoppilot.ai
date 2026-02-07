@@ -69,6 +69,7 @@ export function SignUpModal({
               Company/org field to be added as custom field in Clerk unsafeMetadata via
               Dashboard configuration or deferred to post-sign-up profile completion. */}
           <SignUp
+            routing="hash"
             appearance={{
               elements: {
                 rootBox: 'w-full',
