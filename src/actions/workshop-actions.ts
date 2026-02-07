@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db/client';
 import { workshops, sessions, workshopSteps } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import { createPrefixedId } from '@/lib/ids';
 import { STEPS } from '@/lib/workshop/step-metadata';
 
@@ -58,5 +59,35 @@ export async function createWorkshopSession() {
   } catch (error) {
     console.error('Failed to create workshop session:', error);
     throw new Error('Failed to create workshop session. Please try again.');
+  }
+}
+
+/**
+ * Renames a workshop
+ * Validates name and updates workshop title in database
+ */
+export async function renameWorkshop(workshopId: string, newName: string): Promise<void> {
+  try {
+    // Validate name
+    const trimmedName = newName.trim();
+    if (trimmedName === '') {
+      throw new Error('Workshop name cannot be empty');
+    }
+    if (trimmedName.length > 100) {
+      throw new Error('Workshop name must be 100 characters or less');
+    }
+
+    // Update workshop title
+    await db
+      .update(workshops)
+      .set({ title: trimmedName })
+      .where(eq(workshops.id, workshopId));
+
+    // Revalidate dashboard to show updated name
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath('/dashboard');
+  } catch (error) {
+    console.error('Failed to rename workshop:', error);
+    throw error;
   }
 }

@@ -1,9 +1,14 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { db } from '@/db/client';
-import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { users, workshops } from '@/db/schema';
+import { eq, desc } from 'drizzle-orm';
 import { MigrationCheck } from '@/components/auth/migration-check';
+import { WorkshopCard } from '@/components/dashboard/workshop-card';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
+import { createWorkshopSession, renameWorkshop } from '@/actions/workshop-actions';
+import { getStepByOrder } from '@/lib/workshop/step-metadata';
 
 export default async function DashboardPage() {
   // Defense in depth: verify auth at page level
@@ -24,31 +29,66 @@ export default async function DashboardPage() {
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-          <p className="text-lg text-gray-600">Setting up your account...</p>
-          <p className="mt-2 text-sm text-gray-400">This will only take a moment.</p>
+          <p className="text-lg text-muted-foreground">Setting up your account...</p>
+          <p className="mt-2 text-sm text-muted-foreground">This will only take a moment.</p>
         </div>
       </div>
     );
   }
 
+  // Query user's workshops with sessions and steps
+  const userWorkshops = await db.query.workshops.findMany({
+    where: eq(workshops.clerkUserId, userId),
+    orderBy: [desc(workshops.updatedAt)],
+    with: {
+      sessions: {
+        orderBy: (sessions, { desc }) => [desc(sessions.startedAt)],
+        limit: 1,
+      },
+      steps: {
+        orderBy: (workshopSteps, { asc }) => [asc(workshopSteps.createdAt)],
+      },
+    },
+  });
+
+  // Find the current step for each workshop (first in_progress or first not_started)
+  const workshopsWithProgress = userWorkshops.map((workshop) => {
+    const currentStepData = workshop.steps.find(
+      (step) => step.status === 'in_progress'
+    ) || workshop.steps[0];
+
+    const stepMetadata = getStepByOrder(
+      workshop.steps.findIndex((s) => s.id === currentStepData?.id) + 1 || 1
+    );
+
+    return {
+      ...workshop,
+      currentStep: stepMetadata?.order || 1,
+      currentStepName: stepMetadata?.name || 'Challenge',
+      sessionId: workshop.sessions[0]?.id || '',
+    };
+  });
+
+  const mostRecentWorkshop = workshopsWithProgress[0];
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       {/* Migration check component - triggers anonymous session migration */}
       <MigrationCheck />
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Page header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Your Workshops</h1>
-          <p className="mt-2 text-gray-600">
-            Welcome back, {user.firstName || 'there'}!
-          </p>
-        </div>
+      {/* Page header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-foreground">Your Workshops</h1>
+        <p className="mt-2 text-muted-foreground">
+          Welcome back, {user.firstName || 'there'}!
+        </p>
+      </div>
 
-        {/* Placeholder workshop list */}
-        <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white p-12 text-center">
+      {workshopsWithProgress.length === 0 ? (
+        /* Empty state */
+        <div className="rounded-lg border-2 border-dashed border-border bg-card p-12 text-center">
           <svg
-            className="mx-auto h-12 w-12 text-gray-400"
+            className="mx-auto h-12 w-12 text-muted-foreground"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -60,31 +100,72 @@ export default async function DashboardPage() {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <h3 className="mt-2 text-sm font-semibold text-gray-900">No workshops yet</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <h3 className="mt-2 text-sm font-semibold text-foreground">No workshops yet</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             Get started by creating your first workshop.
           </p>
           <div className="mt-6">
-            <button
-              type="button"
-              className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
-            >
-              <svg
-                className="-ml-0.5 mr-1.5 h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Start Workshop
-            </button>
+            <form action={createWorkshopSession}>
+              <Button type="submit" size="lg">
+                <PlusCircle className="mr-2 h-5 w-5" />
+                Start Workshop
+              </Button>
+            </form>
           </div>
         </div>
-      </div>
-    </div>
+      ) : (
+        <>
+          {/* Primary CTA section */}
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex-1">
+              {mostRecentWorkshop && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 dark:border-blue-900 dark:bg-blue-950">
+                  <h2 className="mb-2 text-lg font-semibold text-foreground">
+                    Continue where you left off
+                  </h2>
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    {mostRecentWorkshop.title} • Step {mostRecentWorkshop.currentStep}
+                  </p>
+                  <div className="flex gap-3">
+                    <Button asChild size="lg">
+                      <a
+                        href={`/workshop/${mostRecentWorkshop.sessionId}/step/${mostRecentWorkshop.currentStep}`}
+                      >
+                        Continue {mostRecentWorkshop.title}
+                      </a>
+                    </Button>
+                    <form action={createWorkshopSession}>
+                      <Button type="submit" variant="outline" size="lg">
+                        <PlusCircle className="mr-2 h-5 w-5" />
+                        Start New Workshop
+                      </Button>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Workshop grid */}
+          <div className="mb-6">
+            <h2 className="mb-4 text-xl font-semibold text-foreground">All Workshops</h2>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {workshopsWithProgress.map((workshop) => (
+                <WorkshopCard
+                  key={workshop.id}
+                  workshopId={workshop.id}
+                  sessionId={workshop.sessionId}
+                  title={workshop.title}
+                  currentStep={workshop.currentStep}
+                  currentStepName={workshop.currentStepName}
+                  updatedAt={workshop.updatedAt}
+                  onRename={renameWorkshop}
+                />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 }
