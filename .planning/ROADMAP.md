@@ -14,7 +14,7 @@ MVP 0.5 establishes the application shell — a working skeleton of the 10-step 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & Database** - Database schema, Neon connection, Drizzle ORM setup
-- [ ] **Phase 2: Authentication & Roles** - Clerk integration, user flows, role-based access
+- [x] **Phase 2: Authentication & Roles** - Clerk integration, user flows, role-based access
 - [ ] **Phase 3: Application Shell** - App structure, 10 step containers, routing
 - [ ] **Phase 4: Navigation & State** - Stepper UI, progress tracking, sequential flow
 - [ ] **Phase 5: AI Chat Integration** - Gemini API, chat interface, streaming responses
@@ -65,10 +65,10 @@ Plans:
 
 Plans:
 
-- [ ] 02-01-PLAN.md — Install Clerk SDK, create users DB schema, configure ClerkProvider and middleware
-- [ ] 02-02-PLAN.md — Create Clerk webhook endpoint for user sync and role management utilities
-- [ ] 02-03-PLAN.md — Build auth modal components (sign-in, sign-up, auth wall)
-- [ ] 02-04-PLAN.md — Wire route pages, header, anonymous sessions, and verify end-to-end auth flow
+- [x] 02-01-PLAN.md — Install Clerk SDK, create users DB schema, configure ClerkProvider and middleware
+- [x] 02-02-PLAN.md — Create Clerk webhook endpoint for user sync and role management utilities
+- [x] 02-03-PLAN.md — Build auth modal components (sign-in, sign-up, auth wall)
+- [x] 02-04-PLAN.md — Wire route pages, header, anonymous sessions, and verify end-to-end auth flow
 
 ### Phase 3: Application Shell
 
@@ -168,7 +168,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase                     | Plans Complete | Status      | Completed |
 | ------------------------- | -------------- | ----------- | --------- |
 | 1. Foundation & Database  | 3/3            | ✓ Complete  | 2026-02-07 |
-| 2. Authentication & Roles | 0/4            | Not started | -         |
+| 2. Authentication & Roles | 4/4            | ✓ Complete  | 2026-02-07 |
 | 3. Application Shell      | 0/TBD          | Not started | -         |
 | 4. Navigation & State     | 0/TBD          | Not started | -         |
 | 5. AI Chat Integration    | 0/TBD          | Not started | -         |

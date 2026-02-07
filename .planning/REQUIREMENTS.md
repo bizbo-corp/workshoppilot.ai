@@ -9,11 +9,11 @@ Requirements for MVP 0.5 — Application Shell. Each maps to roadmap phases.
 
 ### Authentication
 
-- [ ] **AUTH-01**: User can sign up and sign in via Clerk (email + password)
-- [ ] **AUTH-02**: System supports two roles: facilitator and participant
-- [ ] **AUTH-03**: Facilitator can access admin/dashboard routes; participant cannot
-- [ ] **AUTH-04**: Protected routes redirect unauthenticated users to sign-in
-- [ ] **AUTH-05**: User session persists across browser refresh
+- [x] **AUTH-01**: User can sign up and sign in via Clerk (email + password)
+- [x] **AUTH-02**: System supports two roles: facilitator and participant
+- [x] **AUTH-03**: Facilitator can access admin/dashboard routes; participant cannot
+- [x] **AUTH-04**: Protected routes redirect unauthenticated users to sign-in
+- [x] **AUTH-05**: User session persists across browser refresh
 
 ### Application Scaffolding
 
@@ -38,9 +38,9 @@ Requirements for MVP 0.5 — Application Shell. Each maps to roadmap phases.
 
 ### Database
 
-- [ ] **DATA-01**: Neon Postgres database provisioned and connected
-- [ ] **DATA-02**: Drizzle ORM configured with schema definition and migration workflow
-- [ ] **DATA-03**: Database connection works in Vercel serverless environment (edge-compatible driver)
+- [x] **DATA-01**: Neon Postgres database provisioned and connected
+- [x] **DATA-02**: Drizzle ORM configured with schema definition and migration workflow
+- [x] **DATA-03**: Database connection works in Vercel serverless environment (edge-compatible driver)
 
 ### AI Chat Integration
 
