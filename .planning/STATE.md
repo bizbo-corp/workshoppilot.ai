@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 ## Current Position
 
 Phase: 3 of 6 (Application Shell)
-Plan: 4 of 5 in current phase
-Status: In progress
-Last activity: 2026-02-07 — Completed 03-04-PLAN.md (Workshop Shell Layout)
+Plan: 5 of 5 in current phase
+Status: Phase complete
+Last activity: 2026-02-07 — Completed 03-05-PLAN.md (Step Pages with Chat/Output Panels)
 
-Progress: [████████░░] 11/27 plans complete (41%)
+Progress: [████████░░] 12/27 plans complete (44%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 2.9 min
-- Total execution time: 0.53 hours
+- Total plans completed: 12
+- Average duration: 3.0 min
+- Total execution time: 0.60 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [████████░░] 11/27 plans complete (41%)
 |-------|-------|-------|----------|
 | 01-foundation-database | 3 | 7 min | 2.3 min |
 | 02-authentication-roles | 4 | 14 min | 3.5 min |
-| 03-application-shell | 4 | 14 min | 3.5 min |
+| 03-application-shell | 5 | 18 min | 3.6 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (4 min), 03-02 (3 min), 03-03 (3 min), 03-04 (4 min)
-- Trend: Phase 3 maintaining 3-4 min average (consistent velocity)
+- Last 5 plans: 03-02 (3 min), 03-03 (3 min), 03-04 (4 min), 03-05 (4 min)
+- Trend: Phase 3 complete with consistent 3-4 min average (stable velocity)
 
 *Updated after each plan completion*
 
@@ -86,6 +86,10 @@ Recent decisions affecting current work:
 - **03-04:** Hydration-safe localStorage pattern: useState with default, read localStorage in useEffect
 - **03-04:** Exit dialog emphasizes "progress is saved" with reassuring language (not scary)
 - **03-04:** Mobile stepper uses Sheet from top (better UX than cramming 10 steps horizontally)
+- **03-05:** react-resizable-panels uses Group/Panel/Separator API (not PanelGroup/PanelResizeHandle)
+- **03-05:** Mobile breakpoint detection via useEffect with window resize listener
+- **03-05:** Chat input disabled with 'AI facilitation coming soon...' placeholder
+- **03-05:** Invalid step numbers (< 1 or > 10) redirect to step 1
 
 ### Pending Todos
 
@@ -99,5 +103,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 03-04-PLAN.md (Workshop Shell Layout) — Phase 3 plan 4 complete
-Resume file: .planning/phases/03-application-shell/03-04-SUMMARY.md
+Stopped at: Completed 03-05-PLAN.md (Step Pages with Chat/Output Panels) — Phase 3 complete
+Resume file: .planning/phases/03-application-shell/03-05-SUMMARY.md
