@@ -137,11 +137,12 @@ Plans:
 4. User types message and sees AI response stream in progressively (typing indicator during generation)
 5. Chat history persists within current session when navigating between steps
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 
-- [ ] TBD (to be defined during planning)
+- [ ] 05-01-PLAN.md — Install AI SDK, create chat_messages schema, build streaming /api/chat endpoint
+- [ ] 05-02-PLAN.md — Wire ChatPanel with useChat hook, load persisted messages, verify end-to-end
 
 ### Phase 6: Production Deployment
 
@@ -177,7 +178,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Authentication & Roles | 4/4            | ✓ Complete  | 2026-02-07 |
 | 3. Application Shell      | 6/6            | ✓ Complete  | 2026-02-08 |
 | 4. Navigation & State     | 2/2            | ✓ Complete  | 2026-02-08 |
-| 5. AI Chat Integration    | 0/TBD          | Not started | -         |
+| 5. AI Chat Integration    | 0/2            | Not started | -         |
 | 6. Production Deployment  | 0/TBD          | Not started | -         |
 
 ---
