@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 ## Current Position
 
 Phase: 3 of 6 (Application Shell)
-Plan: 5 of 5 in current phase
+Plan: 6 of 6 in current phase
 Status: Phase complete
-Last activity: 2026-02-07 — Completed 03-05-PLAN.md (Step Pages with Chat/Output Panels)
+Last activity: 2026-02-08 — Completed 03-06-PLAN.md (Dashboard with Workshop Cards)
 
-Progress: [████████░░] 12/27 plans complete (44%)
+Progress: [█████████░] 13/27 plans complete (48%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: 3.0 min
-- Total execution time: 0.60 hours
+- Total plans completed: 13
+- Average duration: 3.2 min
+- Total execution time: 0.73 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [████████░░] 12/27 plans complete (44%)
 |-------|-------|-------|----------|
 | 01-foundation-database | 3 | 7 min | 2.3 min |
 | 02-authentication-roles | 4 | 14 min | 3.5 min |
-| 03-application-shell | 5 | 18 min | 3.6 min |
+| 03-application-shell | 6 | 26 min | 4.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (3 min), 03-03 (3 min), 03-04 (4 min), 03-05 (4 min)
-- Trend: Phase 3 complete with consistent 3-4 min average (stable velocity)
+- Last 5 plans: 03-03 (3 min), 03-04 (4 min), 03-05 (4 min), 03-06 (8 min)
+- Trend: Phase 3 complete with 3-8 min range (4.3 min avg)
 
 *Updated after each plan completion*
 
@@ -90,6 +90,9 @@ Recent decisions affecting current work:
 - **03-05:** Mobile breakpoint detection via useEffect with window resize listener
 - **03-05:** Chat input disabled with 'AI facilitation coming soon...' placeholder
 - **03-05:** Invalid step numbers (< 1 or > 10) redirect to step 1
+- **03-06:** Dashboard cards use relative time formatting for "last active" timestamp
+- **03-06:** Inline rename with Enter to save, Escape to cancel (standard editable field UX)
+- **03-06:** Dashboard header is non-sticky (scrolls with content)
 
 ### Pending Todos
 
@@ -102,6 +105,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-07
-Stopped at: Completed 03-05-PLAN.md (Step Pages with Chat/Output Panels) — Phase 3 complete
-Resume file: .planning/phases/03-application-shell/03-05-SUMMARY.md
+Last session: 2026-02-08
+Stopped at: Completed 03-06-PLAN.md (Dashboard with Workshop Cards) — Phase 3 complete
+Resume file: .planning/phases/03-application-shell/03-06-SUMMARY.md
