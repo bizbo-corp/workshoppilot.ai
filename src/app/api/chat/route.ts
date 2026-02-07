@@ -42,8 +42,11 @@ export async function POST(req: Request) {
     result.consumeStream();
 
     // Return streaming response with persistence on finish
+    // originalMessages enables "persistence mode" — onFinish receives the
+    // full conversation (original + new assistant response), not just the new message
     return result.toUIMessageStreamResponse({
       sendReasoning: false,
+      originalMessages: messages,
       onFinish: async ({ messages: responseMessages }) => {
         await saveMessages(sessionId, stepId, responseMessages);
       },
