@@ -1,6 +1,10 @@
-import { notFound, redirect } from 'next/navigation';
-import { getStepByOrder } from '@/lib/workshop/step-metadata';
+import { redirect } from 'next/navigation';
+import { eq } from 'drizzle-orm';
+import { db } from '@/db/client';
+import { sessions } from '@/db/schema';
+import { getStepByOrder, STEPS } from '@/lib/workshop/step-metadata';
 import { StepContainer } from '@/components/workshop/step-container';
+import { StepNavigation } from '@/components/workshop/step-navigation';
 
 interface StepPageProps {
   params: Promise<{
@@ -27,6 +31,37 @@ export default async function StepPage({ params }: StepPageProps) {
     redirect(`/workshop/${sessionId}/step/1`);
   }
 
+  // Fetch session with workshop and steps for sequential enforcement
+  const session = await db.query.sessions.findFirst({
+    where: eq(sessions.id, sessionId),
+    with: {
+      workshop: {
+        with: {
+          steps: true,
+        },
+      },
+    },
+  });
+
+  if (!session) {
+    redirect('/dashboard');
+  }
+
+  // Sequential enforcement: redirect if trying to access not_started step
+  const stepRecord = session.workshop.steps.find((s) => s.stepId === step.id);
+
+  if (stepRecord?.status === 'not_started') {
+    // Find the current in_progress step (or first not_started if none in_progress)
+    const activeStep = session.workshop.steps.find(
+      (s) => s.status === 'in_progress'
+    );
+    if (activeStep) {
+      const activeStepDef = STEPS.find((s) => s.id === activeStep.stepId);
+      redirect(`/workshop/${sessionId}/step/${activeStepDef?.order || 1}`);
+    }
+    redirect(`/workshop/${sessionId}/step/1`);
+  }
+
   return (
     <div className="flex h-full flex-col">
       {/* Step header */}
@@ -43,6 +78,13 @@ export default async function StepPage({ params }: StepPageProps) {
       <div className="flex-1 overflow-hidden">
         <StepContainer stepOrder={stepNumber} />
       </div>
+
+      {/* Navigation buttons */}
+      <StepNavigation
+        sessionId={sessionId}
+        workshopId={session.workshop.id}
+        currentStepOrder={stepNumber}
+      />
     </div>
   );
 }
