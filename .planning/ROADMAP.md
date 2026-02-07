@@ -86,11 +86,16 @@ Plans:
 4. All 10 design thinking steps exist as separate pages with step number, name, and placeholder content
 5. Step content areas are structured containers ready to receive AI chat and form components
 
-**Plans**: TBD
+**Plans**: 6 plans
 
 Plans:
 
-- [ ] TBD (to be defined during planning)
+- [ ] 03-01-PLAN.md — Install deps, shadcn/ui components, configure ThemeProvider and dark mode
+- [ ] 03-02-PLAN.md — Create step metadata module and update middleware for workshop routes
+- [ ] 03-03-PLAN.md — Workshop session creation server action and landing page with Start Workshop CTA
+- [ ] 03-04-PLAN.md — Workshop layout with collapsible sidebar, header, exit dialog, mobile stepper
+- [ ] 03-05-PLAN.md — Step pages with resizable chat/output split panels and mock content
+- [ ] 03-06-PLAN.md — Dashboard with workshop cards, management CTAs, and end-to-end verification
 
 ### Phase 4: Navigation & State
 
@@ -169,7 +174,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | ------------------------- | -------------- | ----------- | --------- |
 | 1. Foundation & Database  | 3/3            | ✓ Complete  | 2026-02-07 |
 | 2. Authentication & Roles | 4/4            | ✓ Complete  | 2026-02-07 |
-| 3. Application Shell      | 0/TBD          | Not started | -         |
+| 3. Application Shell      | 0/6            | Not started | -         |
 | 4. Navigation & State     | 0/TBD          | Not started | -         |
 | 5. AI Chat Integration    | 0/TBD          | Not started | -         |
 | 6. Production Deployment  | 0/TBD          | Not started | -         |
