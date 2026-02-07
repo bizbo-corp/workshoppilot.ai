@@ -8,6 +8,9 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/api/webhooks(.*)',
   '/api/health',
+  '/workshop/:path*/step/1',
+  '/workshop/:path*/step/2',
+  '/workshop/:path*/step/3',
 ]);
 
 const isAdminRoute = createRouteMatcher(['/admin(.*)']);
@@ -16,22 +19,14 @@ const isProtectedRoute = createRouteMatcher([
   '/dashboard(.*)',
   '/api/workshops(.*)',
   '/api/sessions(.*)',
+  '/workshop/:path*/step/4',
+  '/workshop/:path*/step/5',
+  '/workshop/:path*/step/6',
+  '/workshop/:path*/step/7',
+  '/workshop/:path*/step/8',
+  '/workshop/:path*/step/9',
+  '/workshop/:path*/step/10',
 ]);
-
-// ============================================================
-// PHASE 3 HANDOFF: WORKSHOP STEP ROUTE PROTECTION
-// ============================================================
-// When workshop routes are created in Phase 3, update matchers:
-//   PUBLIC (add to isPublicRoute):
-//     '/workshop/:path*/step/1'
-//     '/workshop/:path*/step/2'
-//     '/workshop/:path*/step/3'
-//   PROTECTED (add to isProtectedRoute):
-//     '/workshop/:path*/step/4' through step/10
-//
-// User decision (LOCKED): steps 1-3 public, steps 4-10 protected
-// Auth wall modal triggers after step 3 on advance to step 4
-// ============================================================
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();
