@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 ## Current Position
 
 Phase: 2 of 6 (Authentication & Roles)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-07 — Completed 02-03-PLAN.md (Auth UI Modals)
+Plan: 4 of 4 in current phase
+Status: All plans complete, pending verification
+Last activity: 2026-02-07 — Completed 02-04-PLAN.md (Landing & Dashboard Integration)
 
-Progress: [█████░░░░░] 6/27 plans complete (22%)
+Progress: [██████░░░░] 7/27 plans complete (26%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 2.7 min
-- Total execution time: 0.27 hours
+- Total plans completed: 7
+- Average duration: 3.0 min
+- Total execution time: 0.35 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation-database | 3 | 7 min | 2.3 min |
-| 02-authentication-roles | 3 | 9 min | 3.0 min |
+| 02-authentication-roles | 4 | 14 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-03 (3 min), 02-01 (5 min), 02-02 (2 min), 02-03 (2 min)
-- Trend: Stable around 2-5 min per plan
+- Last 5 plans: 02-01 (5 min), 02-02 (2 min), 02-03 (2 min), 02-04 (8 min)
+- Trend: Integration plans take longer (expected)
 
 *Updated after each plan completion*
 
@@ -67,22 +67,22 @@ Recent decisions affecting current work:
 - **02-03:** Auth wall modal has explicit dismiss (close button, 'Not now') but no backdrop click close
 - **02-03:** Step 4-10 preview shown in auth wall to motivate sign-up
 - **02-03:** Auth wall redirects to /dashboard (Phase 3 will update to step 4 redirect)
+- **02-04:** Hash-based routing for Clerk modal components (routing="hash")
+- **02-04:** Dashboard as temporary post-sign-up redirect (Phase 3 updates to step 4)
+- **02-04:** MigrationCheck runs silently on dashboard mount (invisible component)
+- **02-04:** Defense-in-depth: middleware + page-level auth/role checks
 
 ### Pending Todos
 
-- User must add real Clerk API keys to .env.local (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY)
-- User must create Clerk application and configure email+password + Google OAuth
-- User must configure Clerk webhook endpoint and add CLERK_WEBHOOK_SECRET to .env.local
-- User should optionally set ADMIN_EMAIL env var to assign admin role to first user
 - Workshops table needs deletedAt column for soft delete on user deletion (future enhancement)
+- User must configure Clerk webhook endpoint and add CLERK_WEBHOOK_SECRET for user sync
 
 ### Blockers/Concerns
 
-- Next.js 16.1.1 shows "middleware" deprecation warning, suggests "proxy" convention (not blocking, but may need future migration)
-- Authentication won't function until user completes Clerk setup (expected, documented in SUMMARY)
+- Next.js 16.1.1 shows "middleware" deprecation warning, suggests "proxy" convention (not blocking)
 
 ## Session Continuity
 
-Last session: 2026-02-07 21:16 UTC
-Stopped at: Completed 02-03-PLAN.md (Auth UI Modals)
-Resume file: .planning/phases/02-authentication-roles/02-03-SUMMARY.md
+Last session: 2026-02-07
+Stopped at: Completed 02-04-PLAN.md (Landing & Dashboard Integration) — Phase 2 plans complete
+Resume file: .planning/phases/02-authentication-roles/02-04-SUMMARY.md
