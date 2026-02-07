@@ -1,5 +1,6 @@
 import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
 import {
+  users,
   workshops,
   workshopMembers,
   stepDefinitions,
@@ -12,6 +13,10 @@ import {
  * Inferred TypeScript types from Drizzle schema
  * Used throughout the app for type-safe database operations
  */
+
+// User types
+export type User = InferSelectModel<typeof users>;
+export type NewUser = InferInsertModel<typeof users>;
 
 // Workshop types
 export type Workshop = InferSelectModel<typeof workshops>;

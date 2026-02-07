@@ -1,8 +1,20 @@
 import { relations } from 'drizzle-orm';
+import { users } from './users';
 import { workshops, workshopMembers } from './workshops';
 import { stepDefinitions, workshopSteps } from './steps';
 import { sessions } from './sessions';
 import { buildPacks } from './build-packs';
+
+/**
+ * Users relations
+ * Note: User has many workshops via logical relationship between users.clerkUserId
+ * and workshops.clerkUserId (text match, not a foreign key). This is intentional
+ * to maintain flexibility with Clerk's user management.
+ */
+export const usersRelations = relations(users, ({ many }) => ({
+  // Logical relation: workshops.clerkUserId matches users.clerkUserId
+  workshops: many(workshops),
+}));
 
 /**
  * Workshops relations
