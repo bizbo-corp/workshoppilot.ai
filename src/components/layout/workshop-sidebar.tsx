@@ -33,9 +33,13 @@ import Logo, { LogoIcon } from '@/components/Logo';
 
 interface WorkshopSidebarProps {
   sessionId: string;
+  workshopSteps: Array<{
+    stepId: string;
+    status: 'not_started' | 'in_progress' | 'complete';
+  }>;
 }
 
-export function WorkshopSidebar({ sessionId }: WorkshopSidebarProps) {
+export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarProps) {
   const pathname = usePathname();
   const { state, toggleSidebar } = useSidebar();
   const [_, __, isLoading] = useLocalStorage(
@@ -53,6 +57,9 @@ export function WorkshopSidebar({ sessionId }: WorkshopSidebarProps) {
   // Pathname format: /workshop/[sessionId]/step/[stepNumber]
   const stepMatch = pathname.match(/\/workshop\/[^/]+\/step\/(\d+)/);
   const currentStepNumber = stepMatch ? parseInt(stepMatch[1], 10) : null;
+
+  // Create status lookup map
+  const statusLookup = new Map(workshopSteps.map(s => [s.stepId, s.status]));
 
   // Show loading skeleton during hydration
   if (isLoading) {
@@ -85,52 +92,65 @@ export function WorkshopSidebar({ sessionId }: WorkshopSidebarProps) {
       <SidebarContent className="p-2">
         <SidebarMenu>
           {STEPS.map((step) => {
-            const isComplete = currentStepNumber
-              ? step.order < currentStepNumber
-              : false;
+            const status = statusLookup.get(step.id) || 'not_started';
+            const isComplete = status === 'complete';
             const isCurrent = step.order === currentStepNumber;
+            const isAccessible = status !== 'not_started';
+
+            const content = (
+              <>
+                {/* Step indicator */}
+                <div
+                  className={cn(
+                    'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-medium',
+                    isComplete &&
+                      'bg-primary text-primary-foreground',
+                    isCurrent &&
+                      'border-2 border-primary bg-background text-primary',
+                    !isComplete &&
+                      !isCurrent &&
+                      'border bg-background text-muted-foreground'
+                  )}
+                >
+                  {isComplete ? (
+                    <Check className="h-3 w-3" />
+                  ) : (
+                    step.order
+                  )}
+                </div>
+
+                {/* Step name (hidden when collapsed) */}
+                {state === 'expanded' && (
+                  <span
+                    className={cn(
+                      'flex-1 truncate text-sm',
+                      isCurrent && 'font-semibold text-primary',
+                      !isCurrent && 'text-foreground'
+                    )}
+                  >
+                    {step.name}
+                  </span>
+                )}
+              </>
+            );
 
             return (
               <SidebarMenuItem key={step.id}>
                 <SidebarMenuButton
-                  asChild
+                  asChild={isAccessible}
                   isActive={isCurrent}
                   tooltip={state === 'collapsed' ? step.name : undefined}
+                  disabled={!isAccessible}
                 >
-                  <Link href={`/workshop/${sessionId}/step/${step.order}`}>
-                    {/* Step indicator */}
-                    <div
-                      className={cn(
-                        'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-medium',
-                        isComplete &&
-                          'bg-primary text-primary-foreground',
-                        isCurrent &&
-                          'border-2 border-primary bg-background text-primary',
-                        !isComplete &&
-                          !isCurrent &&
-                          'border bg-background text-muted-foreground'
-                      )}
-                    >
-                      {isComplete ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        step.order
-                      )}
+                  {isAccessible ? (
+                    <Link href={`/workshop/${sessionId}/step/${step.order}`}>
+                      {content}
+                    </Link>
+                  ) : (
+                    <div className="cursor-not-allowed opacity-50">
+                      {content}
                     </div>
-
-                    {/* Step name (hidden when collapsed) */}
-                    {state === 'expanded' && (
-                      <span
-                        className={cn(
-                          'flex-1 truncate text-sm',
-                          isCurrent && 'font-semibold text-primary',
-                          !isCurrent && 'text-foreground'
-                        )}
-                      >
-                        {step.name}
-                      </span>
-                    )}
-                  </Link>
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );
