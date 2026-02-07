@@ -61,11 +61,14 @@ Plans:
 4. Facilitator can access /admin routes while participant cannot
 5. Unauthenticated users attempting to access /workshop routes are redirected to sign-in
 
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
 
-- [ ] TBD (to be defined during planning)
+- [ ] 02-01-PLAN.md — Install Clerk SDK, create users DB schema, configure ClerkProvider and middleware
+- [ ] 02-02-PLAN.md — Create Clerk webhook endpoint for user sync and role management utilities
+- [ ] 02-03-PLAN.md — Build auth modal components (sign-in, sign-up, auth wall)
+- [ ] 02-04-PLAN.md — Wire route pages, header, anonymous sessions, and verify end-to-end auth flow
 
 ### Phase 3: Application Shell
 
@@ -165,7 +168,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase                     | Plans Complete | Status      | Completed |
 | ------------------------- | -------------- | ----------- | --------- |
 | 1. Foundation & Database  | 3/3            | ✓ Complete  | 2026-02-07 |
-| 2. Authentication & Roles | 0/TBD          | Not started | -         |
+| 2. Authentication & Roles | 0/4            | Not started | -         |
 | 3. Application Shell      | 0/TBD          | Not started | -         |
 | 4. Navigation & State     | 0/TBD          | Not started | -         |
 | 5. AI Chat Integration    | 0/TBD          | Not started | -         |
