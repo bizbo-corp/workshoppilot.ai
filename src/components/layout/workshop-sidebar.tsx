@@ -29,7 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { STEPS } from '@/lib/workshop/step-metadata';
 import { cn } from '@/lib/utils';
-import Logo from '@/components/Logo';
+import Logo, { LogoIcon } from '@/components/Logo';
 
 interface WorkshopSidebarProps {
   sessionId: string;
@@ -74,12 +74,9 @@ export function WorkshopSidebar({ sessionId }: WorkshopSidebarProps) {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b p-4">
-        {state === 'expanded' ? (
-          <div className="flex items-center gap-2">
-            <Logo size="sm" />
-            <span className="text-sm font-medium">WorkshopPilot</span>
-          </div>
+      <SidebarHeader className="flex h-16 items-center justify-center border-b px-4">
+        {state === 'collapsed' ? (
+          <LogoIcon size="md" />
         ) : (
           <Logo size="sm" />
         )}

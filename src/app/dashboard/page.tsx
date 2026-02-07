@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { db } from '@/db/client';
 import { users, workshops } from '@/db/schema';
@@ -24,7 +24,25 @@ export default async function DashboardPage() {
   });
 
   // Handle webhook race condition: user signed up but webhook hasn't created DB record yet
+  // Fallback: create the user record directly from Clerk data (covers local dev without webhooks)
   if (!user) {
+    const clerkUser = await currentUser();
+    if (clerkUser) {
+      const primaryEmail = clerkUser.emailAddresses[0]?.emailAddress;
+      if (primaryEmail) {
+        await db.insert(users).values({
+          clerkUserId: clerkUser.id,
+          email: primaryEmail,
+          firstName: clerkUser.firstName || null,
+          lastName: clerkUser.lastName || null,
+          imageUrl: clerkUser.imageUrl || null,
+          roles: JSON.stringify(['facilitator']),
+        }).onConflictDoNothing();
+        // Redirect to reload with the newly created user
+        redirect('/dashboard');
+      }
+    }
+    // If we still can't create the user, show the loading state
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">

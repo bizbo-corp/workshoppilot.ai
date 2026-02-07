@@ -13,7 +13,6 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { UserButton, SignedIn, SignedOut } from '@clerk/nextjs';
 import { LogOut } from 'lucide-react';
-import Logo from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { ExitWorkshopDialog } from '@/components/dialogs/exit-workshop-dialog';
@@ -46,8 +45,6 @@ export function WorkshopHeader({
       <header className="flex h-16 items-center justify-between border-b bg-background px-6">
         {/* Left section: Logo + workshop name + step indicator */}
         <div className="flex items-center gap-4">
-          <Logo size="sm" />
-
           <div className="hidden md:flex md:items-center md:gap-2">
             <span className="text-sm font-medium text-foreground">
               {workshopName}

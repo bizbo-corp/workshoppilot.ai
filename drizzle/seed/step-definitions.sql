@@ -1,84 +1,85 @@
 -- Seed step definitions for all 10 design thinking steps
+-- IDs MUST match step-metadata.ts STEPS[].id values
 -- Uses ON CONFLICT to make this script idempotent (safe to run multiple times)
 
 INSERT INTO step_definitions (id, name, description, "order", prompt_template, created_at)
 VALUES
   (
-    'empathize',
-    'Empathize',
-    'Understand your users and their needs deeply through research and observation',
+    'challenge',
+    'Challenge',
+    'Extract the core problem and draft a How Might We statement',
     1,
     NULL,
     NOW()
   ),
   (
-    'define',
-    'Define',
-    'Synthesize research into a clear problem statement',
+    'stakeholder-mapping',
+    'Stakeholder Mapping',
+    'Identify and prioritize the people and groups involved',
     2,
     NULL,
     NOW()
   ),
   (
-    'ideate',
-    'Ideate',
-    'Generate a wide range of creative solutions',
+    'user-research',
+    'User Research',
+    'Gather insights through synthetic interviews and research',
     3,
     NULL,
     NOW()
   ),
   (
-    'prototype',
-    'Prototype',
-    'Create low-fidelity representations of your solutions',
+    'sense-making',
+    'Research Sense Making',
+    'Synthesize research into themes, pains, and gains',
     4,
     NULL,
     NOW()
   ),
   (
-    'test',
-    'Test',
-    'Validate prototypes with real users and gather feedback',
+    'persona',
+    'Persona Development',
+    'Create a research-grounded user persona',
     5,
     NULL,
     NOW()
   ),
   (
-    'prioritize',
-    'Prioritize',
-    'Evaluate and rank features for your minimum viable product',
+    'journey-mapping',
+    'Journey Mapping',
+    'Map the current user experience and find the critical dip',
     6,
     NULL,
     NOW()
   ),
   (
-    'architect',
-    'Architect',
-    'Design the technical architecture and system structure',
+    'reframe',
+    'Reframing Challenge',
+    'Craft a focused How Might We statement based on insights',
     7,
     NULL,
     NOW()
   ),
   (
-    'spec',
-    'Spec',
-    'Write detailed product requirements and specifications',
+    'ideation',
+    'Ideation',
+    'Generate ideas using Mind Mapping, Crazy 8s, Brain Writing, and Billboard Hero',
     8,
     NULL,
     NOW()
   ),
   (
-    'story',
-    'Story',
-    'Break specifications into actionable user stories',
+    'concept',
+    'Concept Development',
+    'Develop concept sheets with SWOT analysis, feasibility, and elevator pitch',
     9,
     NULL,
     NOW()
   ),
   (
-    'pack',
-    'Pack',
-    'Assemble the complete Build Pack for development handoff',
+    'validate',
+    'Validate',
+    'Create flow diagrams, prototyping, PRD generation, and Build Pack export',
     10,
     NULL,
     NOW()

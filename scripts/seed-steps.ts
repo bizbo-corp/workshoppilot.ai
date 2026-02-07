@@ -84,10 +84,6 @@ async function seedStepDefinitions() {
   console.log('Seeding step definitions...');
 
   try {
-    // Clean up old step definitions (development only - safe pre-launch)
-    await db.delete(stepDefinitions);
-    console.log('✓ Cleaned up old step definitions\n');
-
     for (const step of STEP_DEFINITIONS) {
       await db
         .insert(stepDefinitions)

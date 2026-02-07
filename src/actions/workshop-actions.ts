@@ -13,6 +13,8 @@ import { STEPS } from '@/lib/workshop/step-metadata';
  * Works for both authenticated and anonymous users
  */
 export async function createWorkshopSession() {
+  let sessionId: string;
+
   try {
     // Get current user (or null for anonymous)
     const { userId } = await auth();
@@ -54,12 +56,15 @@ export async function createWorkshopSession() {
 
     await db.insert(workshopSteps).values(stepRecords);
 
-    // 4. Redirect to step 1
-    redirect(`/workshop/${session.id}/step/1`);
+    sessionId = session.id;
   } catch (error) {
     console.error('Failed to create workshop session:', error);
     throw new Error('Failed to create workshop session. Please try again.');
   }
+
+  // Redirect outside try/catch — redirect() throws a special NEXT_REDIRECT
+  // error internally, which must not be caught
+  redirect(`/workshop/${sessionId}/step/1`);
 }
 
 /**
