@@ -29,11 +29,15 @@ export default async function WorkshopLayout({
   // Next.js 16: params are async
   const { sessionId } = await params;
 
-  // Verify session exists
+  // Verify session exists and fetch workshop with steps
   const session = await db.query.sessions.findFirst({
     where: eq(sessions.id, sessionId),
     with: {
-      workshop: true,
+      workshop: {
+        with: {
+          steps: true,
+        },
+      },
     },
   });
 
@@ -42,22 +46,26 @@ export default async function WorkshopLayout({
     redirect('/dashboard');
   }
 
-  // Extract pathname for mobile stepper current step detection
-  // This will be handled in the client component via usePathname
+  // Serialize step data for client components
+  // Convert to plain serializable array (no Map objects for RSC)
+  const workshopSteps = session.workshop.steps.map((s) => ({
+    stepId: s.stepId,
+    status: s.status as 'not_started' | 'in_progress' | 'complete',
+  }));
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         {/* Desktop: Sidebar */}
         <div className="hidden md:block">
-          <WorkshopSidebar sessionId={sessionId} />
+          <WorkshopSidebar sessionId={sessionId} workshopSteps={workshopSteps} />
         </div>
 
         {/* Main content column */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Mobile: Stepper bar */}
           <div className="block md:hidden">
-            <MobileStepper currentStep={1} sessionId={sessionId} />
+            <MobileStepper sessionId={sessionId} workshopSteps={workshopSteps} />
           </div>
 
           {/* Workshop header (scrolls with content) */}
