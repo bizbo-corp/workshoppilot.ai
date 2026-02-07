@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 ## Current Position
 
 Phase: 3 of 6 (Application Shell)
-Plan: 1 of 5 in current phase
+Plan: 2 of 5 in current phase
 Status: In progress
-Last activity: 2026-02-07 — Completed 03-01-PLAN.md (Dependencies & Foundation)
+Last activity: 2026-02-07 — Completed 03-02-PLAN.md (Step Definitions & Metadata)
 
-Progress: [████████░░] 8/27 plans complete (30%)
+Progress: [████████░░] 9/27 plans complete (33%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 3.1 min
-- Total execution time: 0.42 hours
+- Total plans completed: 9
+- Average duration: 3.0 min
+- Total execution time: 0.45 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [████████░░] 8/27 plans complete (30%)
 |-------|-------|-------|----------|
 | 01-foundation-database | 3 | 7 min | 2.3 min |
 | 02-authentication-roles | 4 | 14 min | 3.5 min |
-| 03-application-shell | 1 | 4 min | 4.0 min |
+| 03-application-shell | 2 | 7 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 (2 min), 02-03 (2 min), 02-04 (8 min), 03-01 (4 min)
-- Trend: Dependency installation plans are fast (expected)
+- Last 5 plans: 02-03 (2 min), 02-04 (8 min), 03-01 (4 min), 03-02 (3 min)
+- Trend: Setup/metadata plans are fast (expected)
 
 *Updated after each plan completion*
 
@@ -76,6 +76,9 @@ Recent decisions affecting current work:
 - **03-01:** Header removed from root layout - headers are route-specific (landing vs workshop vs dashboard)
 - **03-01:** ThemeProvider configured with attribute='class', defaultTheme='system', enableSystem=true
 - **03-01:** Root layout structure: html > body > ClerkProvider > ThemeProvider > {children}
+- **03-02:** Step metadata hardcoded (not DB-fetched) for performance and simplicity
+- **03-02:** Step IDs aligned between seed script, metadata module, and database foreign keys
+- **03-02:** Workshop route protection: steps 1-3 public, 4-10 protected (LOCKED user decision)
 
 ### Pending Todos
 
@@ -89,5 +92,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 03-01-PLAN.md (Dependencies & Foundation) — Phase 3 plan 1 complete
-Resume file: .planning/phases/03-application-shell/03-01-SUMMARY.md
+Stopped at: Completed 03-02-PLAN.md (Step Definitions & Metadata) — Phase 3 plan 2 complete
+Resume file: .planning/phases/03-application-shell/03-02-SUMMARY.md
