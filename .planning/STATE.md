@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 ## Current Position
 
 Phase: 3 of 6 (Application Shell)
-Plan: 3 of 5 in current phase
+Plan: 4 of 5 in current phase
 Status: In progress
-Last activity: 2026-02-07 — Completed 03-03-PLAN.md (Workshop Session Creation)
+Last activity: 2026-02-07 — Completed 03-04-PLAN.md (Workshop Shell Layout)
 
-Progress: [████████░░] 10/27 plans complete (37%)
+Progress: [████████░░] 11/27 plans complete (41%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 3.0 min
-- Total execution time: 0.50 hours
+- Total plans completed: 11
+- Average duration: 2.9 min
+- Total execution time: 0.53 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [████████░░] 10/27 plans complete (37%)
 |-------|-------|-------|----------|
 | 01-foundation-database | 3 | 7 min | 2.3 min |
 | 02-authentication-roles | 4 | 14 min | 3.5 min |
-| 03-application-shell | 3 | 10 min | 3.3 min |
+| 03-application-shell | 4 | 14 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-04 (8 min), 03-01 (4 min), 03-02 (3 min), 03-03 (3 min)
-- Trend: Phase 3 plans averaging 3-4 min (consistent velocity)
+- Last 5 plans: 03-01 (4 min), 03-02 (3 min), 03-03 (3 min), 03-04 (4 min)
+- Trend: Phase 3 maintaining 3-4 min average (consistent velocity)
 
 *Updated after each plan completion*
 
@@ -83,6 +83,9 @@ Recent decisions affecting current work:
 - **03-03:** Anonymous users stored as 'anonymous' clerkUserId (Phase 2 migration updates on signup)
 - **03-03:** Landing header separate from workshop header (different UX requirements)
 - **03-03:** Step initialization uses STEPS array from step-metadata.ts for consistency
+- **03-04:** Hydration-safe localStorage pattern: useState with default, read localStorage in useEffect
+- **03-04:** Exit dialog emphasizes "progress is saved" with reassuring language (not scary)
+- **03-04:** Mobile stepper uses Sheet from top (better UX than cramming 10 steps horizontally)
 
 ### Pending Todos
 
@@ -96,5 +99,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 03-03-PLAN.md (Workshop Session Creation) — Phase 3 plan 3 complete
-Resume file: .planning/phases/03-application-shell/03-03-SUMMARY.md
+Stopped at: Completed 03-04-PLAN.md (Workshop Shell Layout) — Phase 3 plan 4 complete
+Resume file: .planning/phases/03-application-shell/03-04-SUMMARY.md
