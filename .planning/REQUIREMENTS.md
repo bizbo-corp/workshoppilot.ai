@@ -44,10 +44,10 @@ Requirements for MVP 0.5 — Application Shell. Each maps to roadmap phases.
 
 ### AI Chat Integration
 
-- [ ] **CHAT-01**: Gemini API connected via Vercel AI SDK with streaming responses
-- [ ] **CHAT-02**: Basic chat interface component (message input, send button, message history)
-- [ ] **CHAT-03**: Chat UI displays at each step (same generic AI, not yet step-specific)
-- [ ] **CHAT-04**: AI responses stream in real-time (typing indicator, progressive display)
+- [x] **CHAT-01**: Gemini API connected via Vercel AI SDK with streaming responses
+- [x] **CHAT-02**: Basic chat interface component (message input, send button, message history)
+- [x] **CHAT-03**: Chat UI displays at each step (same generic AI, not yet step-specific)
+- [x] **CHAT-04**: AI responses stream in real-time (typing indicator, progressive display)
 
 ### Deployment
 
@@ -132,10 +132,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 1 | Complete |
 | DATA-03 | Phase 1 | Complete |
-| CHAT-01 | Phase 5 | Pending |
-| CHAT-02 | Phase 5 | Pending |
-| CHAT-03 | Phase 5 | Pending |
-| CHAT-04 | Phase 5 | Pending |
+| CHAT-01 | Phase 5 | Complete |
+| CHAT-02 | Phase 5 | Complete |
+| CHAT-03 | Phase 5 | Complete |
+| CHAT-04 | Phase 5 | Complete |
 | DEPLOY-01 | Phase 6 | Pending |
 | DEPLOY-02 | Phase 6 | Pending |
 | DEPLOY-03 | Phase 6 | Pending |

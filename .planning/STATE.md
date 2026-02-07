@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** MVP 0.5 — Phase 4 complete, ready for Phase 5: AI Chat Integration
+**Current focus:** MVP 0.5 — Phase 5 complete, ready for Phase 6: Production Deployment
 
 ## Current Position
 
-Phase: 5 of 6 (AI Chat Integration) — IN PROGRESS
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-08 — Completed 05-01-PLAN.md (AI chat backend infrastructure)
+Phase: 5 of 6 (AI Chat Integration) — COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase complete, verified by human testing
+Last activity: 2026-02-08 — Phase 5 complete (AI Chat Integration)
 
-Progress: [████████░░] 16/27 plans complete (59%)
+Progress: [█████████░] 17/27 plans complete (63%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
-- Average duration: 3.0 min
-- Total execution time: 0.88 hours
+- Total plans completed: 17
+- Average duration: 3.1 min
+- Total execution time: 0.98 hours
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [████████░░] 16/27 plans complete (59%)
 | 02-authentication-roles | 4 | 14 min | 3.5 min |
 | 03-application-shell | 6 | 26 min | 4.3 min |
 | 04-navigation-state | 2 | 4 min | 2.0 min |
-| 05-ai-chat-integration | 1 | 3 min | 3.0 min |
+| 05-ai-chat-integration | 2 | 9 min | 4.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-06 (8 min), 04-01 (2 min), 04-02 (2 min), 05-01 (3 min)
-- Trend: Consistent sub-5-min execution for foundation/backend work
+- Last 5 plans: 04-01 (2 min), 04-02 (2 min), 05-01 (3 min), 05-02 (6 min)
+- Trend: Frontend integration slightly longer due to human verification checkpoint
 
 *Updated after each plan completion*
 
@@ -109,6 +109,10 @@ Recent decisions affecting current work:
 - **05-01:** Message deduplication via messageId comparison before insert
 - **05-01:** convertToModelMessages is async and must be awaited (AI SDK pattern)
 - **05-01:** consumeStream() ensures onFinish fires even if client disconnects
+- **05-02:** DefaultChatTransport with body for sessionId/stepId passing (AI SDK 5 pattern)
+- **05-02:** sendMessage pattern instead of handleSubmit (AI SDK 5 API)
+- **05-02:** originalMessages required in toUIMessageStreamResponse for full conversation persistence
+- **05-02:** Step greeting shown when messages array is empty (welcome state)
 
 ### Pending Todos
 
@@ -123,5 +127,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 05-01-PLAN.md (AI Chat Backend Infrastructure)
-Resume file: None
+Stopped at: Phase 5 complete (AI Chat Integration) — verified by human testing, ROADMAP updated
+Resume file: .planning/phases/05-ai-chat-integration/05-02-SUMMARY.md
