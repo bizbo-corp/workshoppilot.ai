@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 
 ## Current Position
 
-Phase: 5 of 6 (AI Chat Integration) — COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase complete, verified by human testing
-Last activity: 2026-02-08 — Phase 5 complete (AI Chat Integration)
+Phase: 6 of 6 (Production Deployment) — IN PROGRESS
+Plan: 1 of 10 in current phase
+Status: In progress - plan 06-01 complete
+Last activity: 2026-02-08 — Completed 06-01-PLAN.md (Production Hardening)
 
-Progress: [█████████░] 17/27 plans complete (63%)
+Progress: [█████████░] 18/27 plans complete (67%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: 3.1 min
-- Total execution time: 0.98 hours
+- Total plans completed: 18
+- Average duration: 3.0 min
+- Total execution time: 1.0 hours
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: [█████████░] 17/27 plans complete (63%)
 | 03-application-shell | 6 | 26 min | 4.3 min |
 | 04-navigation-state | 2 | 4 min | 2.0 min |
 | 05-ai-chat-integration | 2 | 9 min | 4.5 min |
+| 06-production-deployment | 1 | 2 min | 2.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-01 (2 min), 04-02 (2 min), 05-01 (3 min), 05-02 (6 min)
-- Trend: Frontend integration slightly longer due to human verification checkpoint
+- Last 5 plans: 04-02 (2 min), 05-01 (3 min), 05-02 (6 min), 06-01 (2 min)
+- Trend: Infrastructure plans faster than feature integration
 
 *Updated after each plan completion*
 
@@ -113,6 +114,11 @@ Recent decisions affecting current work:
 - **05-02:** sendMessage pattern instead of handleSubmit (AI SDK 5 API)
 - **05-02:** originalMessages required in toUIMessageStreamResponse for full conversation persistence
 - **05-02:** Step greeting shown when messages array is empty (welcome state)
+- **06-01:** tsx runs verify-env.ts directly (Vercel injects env vars, no dotenv-cli needed in production)
+- **06-01:** Analytics and SpeedInsights placed inside ThemeProvider after children
+- **06-01:** Error boundary logs to console.error for future Sentry integration
+- **06-01:** DATABASE_URL_UNPOOLED falls back to DATABASE_URL for local dev compatibility
+- **06-01:** Build pipeline: verify-env → migrate → build (fail fast on misconfiguration)
 
 ### Pending Todos
 
@@ -127,5 +133,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Phase 5 complete (AI Chat Integration) — verified by human testing, ROADMAP updated
-Resume file: .planning/phases/05-ai-chat-integration/05-02-SUMMARY.md
+Stopped at: Completed 06-01-PLAN.md (Production Hardening)
+Resume file: .planning/phases/06-production-deployment/06-01-SUMMARY.md
