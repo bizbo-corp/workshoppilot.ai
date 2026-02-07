@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 
 ## Current Position
 
-Phase: 4 of 6 (Navigation & State) — COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase complete, verified
-Last activity: 2026-02-08 — Phase 4 complete (Navigation & State)
+Phase: 5 of 6 (AI Chat Integration) — IN PROGRESS
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-08 — Completed 05-01-PLAN.md (AI chat backend infrastructure)
 
-Progress: [████████░░] 15/27 plans complete (56%)
+Progress: [████████░░] 16/27 plans complete (59%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
+- Total plans completed: 16
 - Average duration: 3.0 min
-- Total execution time: 0.83 hours
+- Total execution time: 0.88 hours
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: [████████░░] 15/27 plans complete (56%)
 | 02-authentication-roles | 4 | 14 min | 3.5 min |
 | 03-application-shell | 6 | 26 min | 4.3 min |
 | 04-navigation-state | 2 | 4 min | 2.0 min |
+| 05-ai-chat-integration | 1 | 3 min | 3.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-05 (4 min), 03-06 (8 min), 04-01 (2 min), 04-02 (2 min)
-- Trend: Phase 4 consistently fast (2-min plans for foundation work)
+- Last 5 plans: 03-06 (8 min), 04-01 (2 min), 04-02 (2 min), 05-01 (3 min)
+- Trend: Consistent sub-5-min execution for foundation/backend work
 
 *Updated after each plan completion*
 
@@ -103,11 +104,17 @@ Recent decisions affecting current work:
 - **04-02:** Not_started steps rendered as div with disabled styling, not Link
 - **04-02:** Sequential enforcement at server level (step page) prevents URL manipulation
 - **04-02:** Back navigation does not modify step status (user revisiting completed step)
+- **05-01:** Gemini 2.0 Flash model for fast, cost-effective MVP AI responses
+- **05-01:** stepId stores semantic IDs ('empathize', 'define') not FK to workshop_steps.id
+- **05-01:** Message deduplication via messageId comparison before insert
+- **05-01:** convertToModelMessages is async and must be awaited (AI SDK pattern)
+- **05-01:** consumeStream() ensures onFinish fires even if client disconnects
 
 ### Pending Todos
 
 - Workshops table needs deletedAt column for soft delete on user deletion (future enhancement)
 - User must configure Clerk webhook endpoint and add CLERK_WEBHOOK_SECRET for user sync
+- User must configure Google Gemini API key (GOOGLE_GENERATIVE_AI_API_KEY) from AI Studio
 
 ### Blockers/Concerns
 
@@ -116,5 +123,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Phase 4 complete (Navigation & State) — verified, ROADMAP updated
-Resume file: .planning/phases/04-navigation-state/04-VERIFICATION.md
+Stopped at: Completed 05-01-PLAN.md (AI Chat Backend Infrastructure)
+Resume file: None
