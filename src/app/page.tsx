@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import Link from 'next/link';
 import { SignedIn } from '@clerk/nextjs';
 import Logo from '@/components/Logo';
