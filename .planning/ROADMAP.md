@@ -114,11 +114,12 @@ Plans:
 5. User cannot skip ahead to uncompleted steps (clicking disabled steps does nothing)
 6. Step completion state persists when user navigates away and returns
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 
-- [ ] TBD (to be defined during planning)
+- [ ] 04-01-PLAN.md — Server actions for step state management and layout data fetching
+- [ ] 04-02-PLAN.md — Wire sidebar, mobile stepper, step navigation buttons, and sequential enforcement
 
 ### Phase 5: AI Chat Integration
 
@@ -175,7 +176,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Foundation & Database  | 3/3            | ✓ Complete  | 2026-02-07 |
 | 2. Authentication & Roles | 4/4            | ✓ Complete  | 2026-02-07 |
 | 3. Application Shell      | 6/6            | ✓ Complete  | 2026-02-08 |
-| 4. Navigation & State     | 0/TBD          | Not started | -         |
+| 4. Navigation & State     | 0/2            | Not started | -         |
 | 5. AI Chat Integration    | 0/TBD          | Not started | -         |
 | 6. Production Deployment  | 0/TBD          | Not started | -         |
 
