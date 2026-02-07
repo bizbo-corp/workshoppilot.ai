@@ -4,4 +4,5 @@ export * from './workshops';
 export * from './steps';
 export * from './sessions';
 export * from './build-packs';
+export * from './chat-messages';
 export * from './relations';

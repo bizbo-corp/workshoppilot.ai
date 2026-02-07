@@ -4,6 +4,7 @@ import { workshops, workshopMembers } from './workshops';
 import { stepDefinitions, workshopSteps } from './steps';
 import { sessions } from './sessions';
 import { buildPacks } from './build-packs';
+import { chatMessages } from './chat-messages';
 
 /**
  * Users relations
@@ -61,11 +62,12 @@ export const workshopStepsRelations = relations(workshopSteps, ({ one }) => ({
 /**
  * Sessions relations
  */
-export const sessionsRelations = relations(sessions, ({ one }) => ({
+export const sessionsRelations = relations(sessions, ({ one, many }) => ({
   workshop: one(workshops, {
     fields: [sessions.workshopId],
     references: [workshops.id],
   }),
+  chatMessages: many(chatMessages),
 }));
 
 /**
@@ -75,5 +77,15 @@ export const buildPacksRelations = relations(buildPacks, ({ one }) => ({
   workshop: one(workshops, {
     fields: [buildPacks.workshopId],
     references: [workshops.id],
+  }),
+}));
+
+/**
+ * Chat Messages relations
+ */
+export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
+  session: one(sessions, {
+    fields: [chatMessages.sessionId],
+    references: [sessions.id],
   }),
 }));
