@@ -9,72 +9,72 @@ import { stepDefinitions } from '../src/db/schema';
 
 const STEP_DEFINITIONS = [
   {
-    id: 'empathize' as const,
-    name: 'Empathize',
-    description: 'Understand your users and their needs deeply through research and observation',
+    id: 'challenge' as const,
+    name: 'Challenge',
+    description: 'Extract the core problem and draft a How Might We statement',
     order: 1,
     promptTemplate: null,
   },
   {
-    id: 'define' as const,
-    name: 'Define',
-    description: 'Synthesize research into a clear problem statement',
+    id: 'stakeholder-mapping' as const,
+    name: 'Stakeholder Mapping',
+    description: 'Identify and prioritize the people and groups involved',
     order: 2,
     promptTemplate: null,
   },
   {
-    id: 'ideate' as const,
-    name: 'Ideate',
-    description: 'Generate a wide range of creative solutions',
+    id: 'user-research' as const,
+    name: 'User Research',
+    description: 'Gather insights through synthetic interviews and research',
     order: 3,
     promptTemplate: null,
   },
   {
-    id: 'prototype' as const,
-    name: 'Prototype',
-    description: 'Create low-fidelity representations of your solutions',
+    id: 'sense-making' as const,
+    name: 'Research Sense Making',
+    description: 'Synthesize research into themes, pains (5), and gains (5)',
     order: 4,
     promptTemplate: null,
   },
   {
-    id: 'test' as const,
-    name: 'Test',
-    description: 'Validate prototypes with real users and gather feedback',
+    id: 'persona' as const,
+    name: 'Persona Development',
+    description: 'Create a research-grounded user persona',
     order: 5,
     promptTemplate: null,
   },
   {
-    id: 'prioritize' as const,
-    name: 'Prioritize',
-    description: 'Evaluate and rank features for your minimum viable product',
+    id: 'journey-mapping' as const,
+    name: 'Journey Mapping',
+    description: 'Map the current user experience and find the critical dip',
     order: 6,
     promptTemplate: null,
   },
   {
-    id: 'architect' as const,
-    name: 'Architect',
-    description: 'Design the technical architecture and system structure',
+    id: 'reframe' as const,
+    name: 'Reframing Challenge',
+    description: 'Craft a focused How Might We statement based on insights',
     order: 7,
     promptTemplate: null,
   },
   {
-    id: 'spec' as const,
-    name: 'Spec',
-    description: 'Write detailed product requirements and specifications',
+    id: 'ideation' as const,
+    name: 'Ideation',
+    description: 'Generate ideas using Mind Mapping, Crazy 8s, Brain Writing, and Billboard Hero',
     order: 8,
     promptTemplate: null,
   },
   {
-    id: 'story' as const,
-    name: 'Story',
-    description: 'Break specifications into actionable user stories',
+    id: 'concept' as const,
+    name: 'Concept Development',
+    description: 'Develop concept sheets with SWOT analysis, feasibility, and elevator pitch',
     order: 9,
     promptTemplate: null,
   },
   {
-    id: 'pack' as const,
-    name: 'Pack',
-    description: 'Assemble the complete Build Pack for development handoff',
+    id: 'validate' as const,
+    name: 'Validate',
+    description: 'Create flow diagrams, prototyping, PRD generation, and Build Pack export',
     order: 10,
     promptTemplate: null,
   },
@@ -84,6 +84,10 @@ async function seedStepDefinitions() {
   console.log('Seeding step definitions...');
 
   try {
+    // Clean up old step definitions (development only - safe pre-launch)
+    await db.delete(stepDefinitions);
+    console.log('✓ Cleaned up old step definitions\n');
+
     for (const step of STEP_DEFINITIONS) {
       await db
         .insert(stepDefinitions)
