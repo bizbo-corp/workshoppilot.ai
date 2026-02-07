@@ -13,7 +13,7 @@ MVP 0.5 establishes the application shell — a working skeleton of the 10-step 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Database** - Database schema, Neon connection, Drizzle ORM setup
+- [x] **Phase 1: Foundation & Database** - Database schema, Neon connection, Drizzle ORM setup
 - [ ] **Phase 2: Authentication & Roles** - Clerk integration, user flows, role-based access
 - [ ] **Phase 3: Application Shell** - App structure, 10 step containers, routing
 - [ ] **Phase 4: Navigation & State** - Stepper UI, progress tracking, sequential flow
@@ -41,9 +41,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 
-- [ ] 01-01-PLAN.md — Install deps, configure Drizzle Kit, create db client and ID utility
-- [ ] 01-02-PLAN.md — Define all table schemas, relations, indexes, and TypeScript types
-- [ ] 01-03-PLAN.md — Push schema to Neon, seed step definitions, health check endpoint
+- [x] 01-01-PLAN.md — Install deps, configure Drizzle Kit, create db client and ID utility
+- [x] 01-02-PLAN.md — Define all table schemas, relations, indexes, and TypeScript types
+- [x] 01-03-PLAN.md — Push schema to Neon, seed step definitions, health check endpoint
 
 ### Phase 2: Authentication & Roles
 
@@ -164,7 +164,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase                     | Plans Complete | Status      | Completed |
 | ------------------------- | -------------- | ----------- | --------- |
-| 1. Foundation & Database  | 0/3            | Planned     | -         |
+| 1. Foundation & Database  | 3/3            | ✓ Complete  | 2026-02-07 |
 | 2. Authentication & Roles | 0/TBD          | Not started | -         |
 | 3. Application Shell      | 0/TBD          | Not started | -         |
 | 4. Navigation & State     | 0/TBD          | Not started | -         |

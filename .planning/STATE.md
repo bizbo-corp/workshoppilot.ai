@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** MVP 0.5 — Application Shell (Phase 1: Foundation & Database)
+**Current focus:** MVP 0.5 — Application Shell (Phase 2: Authentication & Roles)
 
 ## Current Position
 
