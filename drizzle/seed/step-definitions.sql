@@ -1,7 +1,7 @@
 -- Seed step definitions for all 10 design thinking steps
 -- Uses ON CONFLICT to make this script idempotent (safe to run multiple times)
 
-INSERT INTO step_definitions (id, name, description, order_number, prompt_template, created_at)
+INSERT INTO step_definitions (id, name, description, "order", prompt_template, created_at)
 VALUES
   (
     'empathize',
@@ -86,5 +86,5 @@ VALUES
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,
-  order_number = EXCLUDED.order_number,
+  "order" = EXCLUDED."order",
   prompt_template = EXCLUDED.prompt_template;
