@@ -51,9 +51,9 @@ Requirements for MVP 0.5 — Application Shell. Each maps to roadmap phases.
 
 ### Deployment
 
-- [ ] **DEPLOY-01**: Application deploys to Vercel from main branch
-- [ ] **DEPLOY-02**: Environment variables configured for Clerk, Neon, and Gemini API keys
-- [ ] **DEPLOY-03**: Application accessible via workshoppilot.ai domain
+- [x] **DEPLOY-01**: Application deploys to Vercel from main branch
+- [x] **DEPLOY-02**: Environment variables configured for Clerk, Neon, and Gemini API keys
+- [x] **DEPLOY-03**: Application accessible via workshoppilot.ai domain
 
 ## v2 Requirements
 
@@ -136,9 +136,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAT-02 | Phase 5 | Complete |
 | CHAT-03 | Phase 5 | Complete |
 | CHAT-04 | Phase 5 | Complete |
-| DEPLOY-01 | Phase 6 | Pending |
-| DEPLOY-02 | Phase 6 | Pending |
-| DEPLOY-03 | Phase 6 | Pending |
+| DEPLOY-01 | Phase 6 | Complete |
+| DEPLOY-02 | Phase 6 | Complete |
+| DEPLOY-03 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: 27 total
@@ -147,4 +147,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-07 after Phase 1 completion*
+*Last updated: 2026-02-08 after Phase 6 completion (MVP 0.5 complete)*

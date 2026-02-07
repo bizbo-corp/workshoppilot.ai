@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** MVP 0.5 — Phase 5 complete, ready for Phase 6: Production Deployment
+**Current focus:** MVP 0.5 — COMPLETE. All 6 phases done. Live at https://workshoppilot.ai
 
 ## Current Position
 
-Phase: 6 of 6 (Production Deployment) — IN PROGRESS
-Plan: 1 of 10 in current phase
-Status: In progress - plan 06-01 complete
-Last activity: 2026-02-08 — Completed 06-01-PLAN.md (Production Hardening)
+Phase: 6 of 6 (Production Deployment) — COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase complete, verified by automated checks
+Last activity: 2026-02-08 — Phase 6 complete (Production Deployment)
 
-Progress: [█████████░] 18/27 plans complete (67%)
+Progress: [██████████] 19/19 plans complete (100%)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: 3.0 min
-- Total execution time: 1.0 hours
+- Total execution time: 1.1 hours
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [█████████░] 18/27 plans complete (67%)
 | 03-application-shell | 6 | 26 min | 4.3 min |
 | 04-navigation-state | 2 | 4 min | 2.0 min |
 | 05-ai-chat-integration | 2 | 9 min | 4.5 min |
-| 06-production-deployment | 1 | 2 min | 2.0 min |
+| 06-production-deployment | 2 | 12 min | 6.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-02 (2 min), 05-01 (3 min), 05-02 (6 min), 06-01 (2 min)
-- Trend: Infrastructure plans faster than feature integration
+- Last 5 plans: 05-01 (3 min), 05-02 (6 min), 06-01 (2 min), 06-02 (10 min)
+- Trend: Deployment plans include human checkpoint wait time
 
 *Updated after each plan completion*
 
@@ -119,6 +119,8 @@ Recent decisions affecting current work:
 - **06-01:** Error boundary logs to console.error for future Sentry integration
 - **06-01:** DATABASE_URL_UNPOOLED falls back to DATABASE_URL for local dev compatibility
 - **06-01:** Build pipeline: verify-env → migrate → build (fail fast on misconfiguration)
+- **06-02:** workshoppilot.ai redirects to www.workshoppilot.ai (Vercel default with apex + www)
+- **06-02:** Production Clerk keys (pk_live_, sk_live_) required — test keys blocked by verify-env.ts
 
 ### Pending Todos
 
@@ -133,5 +135,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 06-01-PLAN.md (Production Hardening)
-Resume file: .planning/phases/06-production-deployment/06-01-SUMMARY.md
+Stopped at: MVP 0.5 COMPLETE — all 6 phases done, live at https://workshoppilot.ai
+Resume file: .planning/phases/06-production-deployment/06-02-SUMMARY.md
