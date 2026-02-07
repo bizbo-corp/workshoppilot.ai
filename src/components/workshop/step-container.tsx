@@ -2,15 +2,18 @@
 
 import * as React from 'react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
+import type { UIMessage } from 'ai';
 import { ChatPanel } from './chat-panel';
 import { OutputPanel } from './output-panel';
 import { cn } from '@/lib/utils';
 
 interface StepContainerProps {
   stepOrder: number;
+  sessionId: string;
+  initialMessages?: UIMessage[];
 }
 
-export function StepContainer({ stepOrder }: StepContainerProps) {
+export function StepContainer({ stepOrder, sessionId, initialMessages }: StepContainerProps) {
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
@@ -28,7 +31,11 @@ export function StepContainer({ stepOrder }: StepContainerProps) {
     return (
       <div className="flex h-full flex-col">
         <div className="flex-1 border-b">
-          <ChatPanel stepOrder={stepOrder} />
+          <ChatPanel
+            stepOrder={stepOrder}
+            sessionId={sessionId}
+            initialMessages={initialMessages}
+          />
         </div>
         <div className="flex-1">
           <OutputPanel stepOrder={stepOrder} />
@@ -41,7 +48,11 @@ export function StepContainer({ stepOrder }: StepContainerProps) {
   return (
     <Group orientation="horizontal" className="h-full">
       <Panel defaultSize={50} minSize={30}>
-        <ChatPanel stepOrder={stepOrder} />
+        <ChatPanel
+          stepOrder={stepOrder}
+          sessionId={sessionId}
+          initialMessages={initialMessages}
+        />
       </Panel>
 
       <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">

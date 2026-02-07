@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { sessions } from '@/db/schema';
 import { getStepByOrder, STEPS } from '@/lib/workshop/step-metadata';
+import { loadMessages } from '@/lib/ai/message-persistence';
 import { StepContainer } from '@/components/workshop/step-container';
 import { StepNavigation } from '@/components/workshop/step-navigation';
 
@@ -62,6 +63,9 @@ export default async function StepPage({ params }: StepPageProps) {
     redirect(`/workshop/${sessionId}/step/1`);
   }
 
+  // Load chat messages for this session and step
+  const initialMessages = await loadMessages(sessionId, step.id);
+
   return (
     <div className="flex h-full flex-col">
       {/* Step header */}
@@ -76,7 +80,11 @@ export default async function StepPage({ params }: StepPageProps) {
 
       {/* Step content area */}
       <div className="flex-1 overflow-hidden">
-        <StepContainer stepOrder={stepNumber} />
+        <StepContainer
+          stepOrder={stepNumber}
+          sessionId={sessionId}
+          initialMessages={initialMessages}
+        />
       </div>
 
       {/* Navigation buttons */}

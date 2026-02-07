@@ -1,6 +1,8 @@
 'use client';
 
 import * as React from 'react';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport, type UIMessage } from 'ai';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Send } from 'lucide-react';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
@@ -9,10 +11,14 @@ import { cn } from '@/lib/utils';
 
 interface ChatPanelProps {
   stepOrder: number;
+  sessionId: string;
+  initialMessages?: UIMessage[];
 }
 
-export function ChatPanel({ stepOrder }: ChatPanelProps) {
+export function ChatPanel({ stepOrder, sessionId, initialMessages }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const [inputValue, setInputValue] = React.useState('');
 
   if (!step) {
     return (
@@ -22,12 +28,45 @@ export function ChatPanel({ stepOrder }: ChatPanelProps) {
     );
   }
 
+  const transport = React.useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: '/api/chat',
+        body: { sessionId, stepId: step.id },
+      }),
+    [sessionId, step.id]
+  );
+
+  const { messages, sendMessage, status } = useChat({
+    transport,
+    messages: initialMessages,
+  });
+
+  const isLoading = status === 'streaming' || status === 'submitted';
+
+  // Auto-scroll to bottom when new messages arrive
+  React.useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Handle message send
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || isLoading) return;
+
+    await sendMessage({
+      role: 'user',
+      parts: [{ type: 'text', text: inputValue }],
+    });
+    setInputValue('');
+  };
+
+  // Handle Enter to send (Shift+Enter for newline)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enter without Shift sends (when enabled)
-    // Shift+Enter adds newline
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      // Would send message here when enabled
+      const form = e.currentTarget.closest('form');
+      if (form) form.requestSubmit();
     }
   };
 
@@ -35,28 +74,82 @@ export function ChatPanel({ stepOrder }: ChatPanelProps) {
     <div className="flex h-full flex-col">
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4">
-        {/* AI greeting message */}
-        <div className="flex items-start gap-3">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            AI
-          </div>
-          <div className="flex-1">
-            <div className="rounded-lg bg-muted p-3 text-sm">
-              {step.greeting}
+        {messages.length === 0 ? (
+          // Welcome message when chat is empty
+          <div className="flex items-start gap-3">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              AI
+            </div>
+            <div className="flex-1">
+              <div className="rounded-lg bg-muted p-3 text-sm">
+                {step.greeting}
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          // Render conversation messages
+          <div className="space-y-4">
+            {messages.map((message) => {
+              const textParts = message.parts?.filter((part) => part.type === 'text') || [];
+              const content = textParts.map((part) => part.text).join('\n');
+
+              if (message.role === 'user') {
+                return (
+                  <div key={message.id} className="flex items-start gap-3 justify-end">
+                    <div className="flex-1 max-w-[80%]">
+                      <div className="rounded-lg bg-primary p-3 text-sm text-primary-foreground">
+                        {content}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Assistant message
+              return (
+                <div key={message.id} className="flex items-start gap-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    AI
+                  </div>
+                  <div className="flex-1">
+                    <div className="rounded-lg bg-muted p-3 text-sm whitespace-pre-wrap">
+                      {content}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Typing indicator */}
+            {isLoading && (
+              <div className="flex items-start gap-3">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  AI
+                </div>
+                <div className="flex-1">
+                  <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+                    AI is thinking...
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Auto-scroll target */}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </div>
 
       {/* Input area */}
       <div className="border-t bg-background p-4">
-        <div className="flex gap-2">
+        <form onSubmit={handleSend} className="flex gap-2">
           <TextareaAutosize
             minRows={1}
             maxRows={6}
-            disabled
-            placeholder="AI facilitation coming soon..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
+            placeholder="Type your message..."
             className={cn(
               'flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow]',
               'placeholder:text-muted-foreground',
@@ -65,14 +158,15 @@ export function ChatPanel({ stepOrder }: ChatPanelProps) {
             )}
           />
           <Button
-            disabled
+            type="submit"
+            disabled={isLoading || !inputValue.trim()}
             size="icon"
             variant="default"
             aria-label="Send message"
           >
             <Send />
           </Button>
-        </div>
+        </form>
       </div>
     </div>
   );
