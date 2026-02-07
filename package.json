@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:push:dev": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "psql $DATABASE_URL -f drizzle/seed/step-definitions.sql",
+    "vercel-build": "npm run db:migrate && npm run build"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
