@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { db } from '@/db/client';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { MigrationCheck } from '@/components/auth/migration-check';
 
 export default async function DashboardPage() {
   // Defense in depth: verify auth at page level
@@ -33,7 +34,7 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Migration check component - triggers anonymous session migration */}
-      {/* MigrationCheck component will be created in Task 2 */}
+      <MigrationCheck />
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Page header */}
