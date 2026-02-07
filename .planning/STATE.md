@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 ## Current Position
 
 Phase: 1 of 6 (Foundation & Database)
-Plan: 1 of TBD in current phase
+Plan: 2 of TBD in current phase
 Status: In progress
-Last activity: 2026-02-07 — Completed 01-01-PLAN.md (Database Foundation)
+Last activity: 2026-02-07 — Completed 01-02-PLAN.md (Database Schema Definition)
 
-Progress: [█░░░░░░░░░] ~10% (estimated based on typical phase size)
+Progress: [██░░░░░░░░] ~20% (estimated based on typical phase size)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
+- Total plans completed: 2
 - Average duration: 2 min
-- Total execution time: 0.03 hours
+- Total execution time: 0.07 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation-database | 1 | 2 min | 2 min |
+| 01-foundation-database | 2 | 4 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2 min)
-- Trend: Just started
+- Last 5 plans: 01-01 (2 min), 01-02 (2 min)
+- Trend: Steady 2 min/plan
 
 *Updated after each plan completion*
 
@@ -46,12 +46,15 @@ Recent decisions affecting current work:
 - Neon Postgres for database (serverless Postgres, pairs well with Vercel)
 - Clerk for authentication (managed auth with role support, fast to integrate)
 - 4-milestone phasing (0.5 → 1.0 → MMP → FFP) - ship scaffold first, validate architecture
-- **NEW (01-01):** neon-http driver over WebSocket (serverless-optimized, no connection pooling)
-- **NEW (01-01):** Prefixed CUID2 IDs (ws_, wm_, wst_, ses_, bp_) for improved debuggability
+- **01-01:** neon-http driver over WebSocket (serverless-optimized, no connection pooling)
+- **01-01:** Prefixed CUID2 IDs (ws_, wm_, wst_, ses_, bp_) for improved debuggability
+- **01-02:** Semantic IDs for step_definitions ('empathize', 'define', etc.) instead of cuid2
+- **01-02:** No updated_at on sessions table (write-once, close-once pattern)
+- **01-02:** Nullable content in build_packs (assembled from current outputs at generation time)
 
 ### Pending Todos
 
-**User Setup Required (before Plan 02):**
+**User Setup Required (before Plan 03):**
 - Create Neon project at console.neon.tech (if not exists)
 - Create dev branch: `dev/michael` (parent: main)
 - Update `.env.local` with actual Neon DATABASE_URL connection string
@@ -63,6 +66,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-07 03:33 UTC
-Stopped at: Completed 01-01-PLAN.md (Database Foundation)
-Resume file: .planning/phases/01-foundation-database/01-01-SUMMARY.md
+Last session: 2026-02-07 03:39 UTC
+Stopped at: Completed 01-02-PLAN.md (Database Schema Definition)
+Resume file: .planning/phases/01-foundation-database/01-02-SUMMARY.md
