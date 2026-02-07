@@ -160,11 +160,12 @@ Plans:
 4. All features work in production: authentication, database queries, AI chat streaming
 5. No console errors or broken functionality visible to end users
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 
-- [ ] TBD (to be defined during planning)
+- [ ] 06-01-PLAN.md — Production hardening: error boundaries, env verification, analytics, migration config
+- [ ] 06-02-PLAN.md — Deploy to Vercel production, configure env vars, custom domain, end-to-end verification
 
 ## Progress
 
@@ -179,7 +180,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Application Shell      | 6/6            | ✓ Complete  | 2026-02-08 |
 | 4. Navigation & State     | 2/2            | ✓ Complete  | 2026-02-08 |
 | 5. AI Chat Integration    | 2/2            | ✓ Complete  | 2026-02-08 |
-| 6. Production Deployment  | 0/TBD          | Not started | -         |
+| 6. Production Deployment  | 0/2            | Not started | -         |
 
 ---
 
