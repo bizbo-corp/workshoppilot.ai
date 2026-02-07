@@ -37,11 +37,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 3. Database queries execute successfully in Vercel serverless environment using edge-compatible driver
 4. Migrations run successfully and schema matches code definitions
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 
-- [ ] TBD (to be defined during planning)
+- [ ] 01-01-PLAN.md — Install deps, configure Drizzle Kit, create db client and ID utility
+- [ ] 01-02-PLAN.md — Define all table schemas, relations, indexes, and TypeScript types
+- [ ] 01-03-PLAN.md — Push schema to Neon, seed step definitions, health check endpoint
 
 ### Phase 2: Authentication & Roles
 
@@ -162,7 +164,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase                     | Plans Complete | Status      | Completed |
 | ------------------------- | -------------- | ----------- | --------- |
-| 1. Foundation & Database  | 0/TBD          | Not started | -         |
+| 1. Foundation & Database  | 0/3            | Planned     | -         |
 | 2. Authentication & Roles | 0/TBD          | Not started | -         |
 | 3. Application Shell      | 0/TBD          | Not started | -         |
 | 4. Navigation & State     | 0/TBD          | Not started | -         |
