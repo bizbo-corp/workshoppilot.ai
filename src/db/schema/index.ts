@@ -1,4 +1,6 @@
-// Schema exports — populated in Plan 02
-
-// Empty export to make this a module
-export {};
+// Schema exports
+export * from './workshops';
+export * from './steps';
+export * from './sessions';
+export * from './build-packs';
+export * from './relations';
