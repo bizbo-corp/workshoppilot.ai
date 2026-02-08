@@ -122,11 +122,12 @@ Plans:
   3. User sees extracted output and confirms before step completion
   4. Structured outputs render as formatted Markdown in the UI
   5. Extraction failures are handled gracefully with fallback to manual edit form
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 09-01: TBD during planning
-- [ ] 09-02: TBD during planning
+- [ ] 09-01-PLAN.md — Zod schemas for all 10 step artifacts and type system updates
+- [ ] 09-02-PLAN.md — Extraction service with retry logic and API endpoint
+- [ ] 09-03-PLAN.md — Output panel Markdown rendering, confirmation UI, and navigation gating
 
 #### Phase 10: Navigation & Persistence
 **Goal**: Back-revise navigation with auto-save and cascade updates
@@ -226,8 +227,8 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 5. Basic AI Integration | v0.5 | 4/4 | Complete | 2026-02-08 |
 | 6. Production Deployment | v0.5 | 3/3 | Complete | 2026-02-08 |
 | 7. Context Architecture | v1.0 | 3/3 | Complete | 2026-02-08 |
-| 8. AI Facilitation Engine | v1.0 | 0/3 | Not started | - |
-| 9. Structured Outputs | v1.0 | 0/TBD | Not started | - |
+| 8. AI Facilitation Engine | v1.0 | 3/3 | Complete | 2026-02-08 |
+| 9. Structured Outputs | v1.0 | 0/3 | Not started | - |
 | 10. Navigation & Persistence | v1.0 | 0/TBD | Not started | - |
 | 11. Discovery Steps (1-4) | v1.0 | 0/TBD | Not started | - |
 | 12. Definition Steps (5-7) | v1.0 | 0/TBD | Not started | - |
@@ -235,4 +236,4 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 14. Production Hardening | v1.0 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-08 after Phase 8 planning*
+*Last updated: 2026-02-08 after Phase 9 planning*
