@@ -1,6 +1,7 @@
 import { db } from '@/db/client';
 import { stepArtifacts } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { getSchemaForStep } from '@/lib/schemas';
 
 /**
  * Custom error for optimistic locking failures
@@ -25,14 +26,26 @@ export class OptimisticLockError extends Error {
  * @param stepId - The semantic step ID ('challenge', 'stakeholder-mapping', etc.)
  * @param artifact - The structured JSON artifact (Record<string, unknown> until Phase 9 adds Zod schemas)
  * @param schemaVersion - Optional schema version string (defaults to '1.0')
+ * @param validate - Optional: validate artifact against Zod schema before saving (defaults to false)
  * @throws OptimisticLockError if another request updated the artifact concurrently
+ * @throws ZodError if validation fails (when validate is true)
  */
 export async function saveStepArtifact(
   workshopStepId: string,
   stepId: string,
   artifact: Record<string, unknown>,
-  schemaVersion: string = '1.0'
+  schemaVersion: string = '1.0',
+  validate: boolean = false
 ): Promise<void> {
+  // Optional: Validate artifact against Zod schema
+  if (validate) {
+    const schema = getSchemaForStep(stepId);
+    if (schema) {
+      // Throws ZodError if validation fails
+      schema.parse(artifact);
+    }
+  }
+
   // Try to find existing artifact
   const existing = await db
     .select({
