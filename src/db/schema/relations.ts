@@ -2,6 +2,8 @@ import { relations } from 'drizzle-orm';
 import { users } from './users';
 import { workshops, workshopMembers } from './workshops';
 import { stepDefinitions, workshopSteps } from './steps';
+import { stepArtifacts } from './step-artifacts';
+import { stepSummaries } from './step-summaries';
 import { sessions } from './sessions';
 import { buildPacks } from './build-packs';
 import { chatMessages } from './chat-messages';
@@ -48,7 +50,7 @@ export const stepDefinitionsRelations = relations(stepDefinitions, ({ many }) =>
 /**
  * Workshop Steps relations
  */
-export const workshopStepsRelations = relations(workshopSteps, ({ one }) => ({
+export const workshopStepsRelations = relations(workshopSteps, ({ one, many }) => ({
   workshop: one(workshops, {
     fields: [workshopSteps.workshopId],
     references: [workshops.id],
@@ -57,6 +59,8 @@ export const workshopStepsRelations = relations(workshopSteps, ({ one }) => ({
     fields: [workshopSteps.stepId],
     references: [stepDefinitions.id],
   }),
+  artifacts: many(stepArtifacts),
+  summaries: many(stepSummaries),
 }));
 
 /**
@@ -87,5 +91,25 @@ export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
   session: one(sessions, {
     fields: [chatMessages.sessionId],
     references: [sessions.id],
+  }),
+}));
+
+/**
+ * Step Artifacts relations
+ */
+export const stepArtifactsRelations = relations(stepArtifacts, ({ one }) => ({
+  workshopStep: one(workshopSteps, {
+    fields: [stepArtifacts.workshopStepId],
+    references: [workshopSteps.id],
+  }),
+}));
+
+/**
+ * Step Summaries relations
+ */
+export const stepSummariesRelations = relations(stepSummaries, ({ one }) => ({
+  workshopStep: one(workshopSteps, {
+    fields: [stepSummaries.workshopStepId],
+    references: [workshopSteps.id],
   }),
 }));
