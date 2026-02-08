@@ -136,6 +136,19 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | AI SDK 5 with DefaultChatTransport | Latest API with streaming and message persistence | ✓ Good — sendMessage pattern cleaner than handleSubmit |
 | Vercel Analytics + Speed Insights | Free performance monitoring from day one | ✓ Good — baseline data before real users |
 
+## Current Milestone: v1.0 Working AI Facilitation
+
+**Goal:** All 10 design thinking steps working end-to-end with intelligent, step-aware AI facilitation. Text-based throughout. The AI remembers everything from previous steps and builds on it — the user walks away feeling the AI understood their problem.
+
+**Target features:**
+- Step-aware AI prompts (each step knows what to produce and references prior outputs)
+- Dual-layer context architecture (structured JSON artifacts + conversation summaries)
+- All 10 steps functional with text-based outputs
+- Ideation/visual steps as text alternatives (text mind maps, idea lists, concept descriptions)
+- Back-and-revise navigation (revisit earlier steps, cascade context updates)
+- Auto-save (periodic within steps + on step completion)
+- Step 10 synthesis summary (full journey recap, no Build Pack export yet)
+
 ## Current State
 
 **Shipped:** v0.5 Application Shell (2026-02-08)
@@ -148,4 +161,4 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Gemini free tier rate limits may be insufficient for multiple concurrent users
 
 ---
-*Last updated: 2026-02-08 after v0.5 milestone*
+*Last updated: 2026-02-08 after v1.0 milestone start*
