@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 9 of 14 (Structured Extraction Engine)
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: In progress
-Last activity: 2026-02-08 — Completed 09-01-PLAN.md (Schema Definition)
+Last activity: 2026-02-08 — Completed 09-02-PLAN.md (Extraction Integration)
 
-Progress: [████████░░░░░░░░░░░░] 59% (8.33 of 14 phases complete)
+Progress: [████████░░░░░░░░░░░░] 60% (8.67 of 14 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27
-- Average duration: 2.6 min
-- Total execution time: 1.7 hours
+- Total plans completed: 28
+- Average duration: 2.7 min
+- Total execution time: 1.8 hours
 
 **By Phase:**
 
@@ -35,16 +35,16 @@ Progress: [████████░░░░░░░░░░░░] 59% (8.
 | 06-production-deployment | 2 | 12 min | 6.0 min |
 | 07-context-architecture | 3 | 6 min | 2.0 min |
 | 08-ai-facilitation-engine | 3 | 10 min | 3.3 min |
-| 09-structured-outputs | 1 | 2.5 min | 2.5 min |
+| 09-structured-outputs | 2 | 5.5 min | 2.8 min |
 
 **Recent Trend:**
 - v0.5 milestone: 6 phases, 19 plans in 2 days
 - Phase 7: Context Architecture completed (3 plans, 6 min)
 - Phase 8: AI Facilitation Engine completed (3 plans, 10 min)
-- Phase 9: Structured Outputs in progress (1 of 3 plans, 2.5 min)
-- Trend: Stable velocity, fast schema definition
+- Phase 9: Structured Outputs in progress (2 of 3 plans, 5.5 min)
+- Trend: Stable velocity, consistent 2-3 min per plan
 
-*Updated after 09-01 completion*
+*Updated after 09-02 completion*
 
 ## Accumulated Context
 
@@ -80,6 +80,11 @@ Recent decisions affecting v1.0 work:
 - **Phase 9 Plan 1**: Secondary fields marked .optional() to prevent extraction failures when LLM can't find optional data
 - **Phase 9 Plan 1**: stepSchemaMap enables dynamic schema lookup without hardcoded conditionals
 - **Phase 9 Plan 1**: StepArtifactMap provides step-specific typing, ArtifactRecord preserved for backward compatibility
+- **Phase 9 Plan 2**: AI SDK 6 streamText + Output.object pattern (not deprecated generateObject), output is PromiseLike
+- **Phase 9 Plan 2**: Extraction retry logic injects previous error message into prompt for schema repair (3 total attempts)
+- **Phase 9 Plan 2**: Temperature 0.1 for extraction increases determinism and reduces hallucination
+- **Phase 9 Plan 2**: saveStepArtifact optional validation parameter (defaults false) maintains backward compatibility
+- **Phase 9 Plan 2**: Extraction endpoint maxDuration 60s (vs 30s chat) for complex extractions with retry
 - **Phase 9+**: Schema-driven extraction using Zod + AI SDK 6's streamText with output property
 - **Phase 10+**: Auto-save with debounce (2s, maxWait 10s) + optimistic locking prevents race conditions
 - **Phase 11-13**: Group steps into natural clusters (Discovery 1-4, Definition 5-7, Ideation/Validation 8-10)
@@ -106,10 +111,10 @@ Recent decisions affecting v1.0 work:
 ## Session Continuity
 
 Last session: 2026-02-08 (Phase 9 in progress)
-Stopped at: Completed 09-01-PLAN.md (Schema Definition)
+Stopped at: Completed 09-02-PLAN.md (Extraction Integration)
 Resume file: None
 
-**Next action:** Execute plan 09-02 (Extraction Integration) and 09-03 (Output Panel Rendering)
+**Next action:** Execute plan 09-03 (Output Panel Rendering)
 
 ---
-*Last updated: 2026-02-08T03:28:00Z after 09-01 completion*
+*Last updated: 2026-02-08T04:05:15Z after 09-02 completion*
