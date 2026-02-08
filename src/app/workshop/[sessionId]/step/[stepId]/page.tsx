@@ -5,7 +5,6 @@ import { sessions } from '@/db/schema';
 import { getStepByOrder, STEPS } from '@/lib/workshop/step-metadata';
 import { loadMessages } from '@/lib/ai/message-persistence';
 import { StepContainer } from '@/components/workshop/step-container';
-import { StepNavigation } from '@/components/workshop/step-navigation';
 
 interface StepPageProps {
   params: Promise<{
@@ -78,7 +77,7 @@ export default async function StepPage({ params }: StepPageProps) {
         </p>
       </div>
 
-      {/* Step content area */}
+      {/* Step content area + navigation */}
       <div className="flex-1 overflow-hidden">
         <StepContainer
           stepOrder={stepNumber}
@@ -87,13 +86,6 @@ export default async function StepPage({ params }: StepPageProps) {
           initialMessages={initialMessages}
         />
       </div>
-
-      {/* Navigation buttons */}
-      <StepNavigation
-        sessionId={sessionId}
-        workshopId={session.workshop.id}
-        currentStepOrder={stepNumber}
-      />
     </div>
   );
 }

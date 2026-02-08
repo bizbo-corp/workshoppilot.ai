@@ -57,10 +57,13 @@ export async function POST(req: Request) {
       return new Response(
         JSON.stringify({
           error: 'Not enough conversation to extract from',
+          message: `Found ${messages?.length ?? 0} messages, need at least 2`,
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`[extract] Step: ${stepId}, Messages: ${messages.length}, First role: ${messages[0]?.role}`);
 
     // Extract artifact using AI
     const result = await extractStepArtifact(stepId, messages);
@@ -112,7 +115,10 @@ export async function POST(req: Request) {
     }
 
     // Handle all other errors
-    console.error('Extract API error:', error);
+    console.error('Extract API error:', error instanceof Error ? error.message : error);
+    if (error instanceof Error && error.cause) {
+      console.error('Extract API error cause:', error.cause);
+    }
     return new Response(
       JSON.stringify({
         error: 'Internal server error',

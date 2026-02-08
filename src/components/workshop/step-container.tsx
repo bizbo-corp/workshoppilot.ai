@@ -6,6 +6,7 @@ import type { UIMessage } from 'ai';
 import { ChatPanel } from './chat-panel';
 import { OutputPanel } from './output-panel';
 import { ArtifactConfirmation } from './artifact-confirmation';
+import { StepNavigation } from './step-navigation';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,9 +32,9 @@ export function StepContainer({
   const [extractionError, setExtractionError] = React.useState<string | null>(null);
   const [artifactConfirmed, setArtifactConfirmed] = React.useState(false);
 
-  // Messages count for "Extract Output" button visibility
-  const messageCount = initialMessages?.length || 0;
-  const hasEnoughMessages = messageCount >= 4; // At least 2 exchanges
+  // Live message count for "Extract Output" button visibility
+  const [liveMessageCount, setLiveMessageCount] = React.useState(initialMessages?.length || 0);
+  const hasEnoughMessages = liveMessageCount >= 4; // At least 2 exchanges
 
   React.useEffect(() => {
     const checkMobile = () => {
@@ -113,7 +114,9 @@ export function StepContainer({
       <ChatPanel
         stepOrder={stepOrder}
         sessionId={sessionId}
+        workshopId={workshopId}
         initialMessages={initialMessages}
+        onMessageCountChange={setLiveMessageCount}
       />
       <div className="flex flex-col gap-4 p-4">
         {/* Extract Output button (shown when enough messages AND no artifact AND not extracting) */}
@@ -163,27 +166,43 @@ export function StepContainer({
       <div className="flex h-full flex-col">
         <div className="flex-1 border-b">{renderContent()}</div>
         <div className="flex-1">{renderOutput()}</div>
+        <StepNavigation
+          sessionId={sessionId}
+          workshopId={workshopId}
+          currentStepOrder={stepOrder}
+          artifactConfirmed={artifactConfirmed}
+        />
       </div>
     );
   }
 
   // Desktop: resizable panels
   return (
-    <Group orientation="horizontal" className="h-full">
-      <Panel defaultSize={50} minSize={30}>
-        {renderContent()}
-      </Panel>
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-hidden">
+        <Group orientation="horizontal" className="h-full">
+          <Panel defaultSize={50} minSize={30}>
+            {renderContent()}
+          </Panel>
 
-      <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
-        {/* Invisible touch-friendly hit area */}
-        <div className="absolute inset-y-0 -left-3 -right-3" />
-        {/* Visual indicator on hover */}
-        <div className="absolute inset-y-0 left-0 w-px bg-ring opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
-      </Separator>
+          <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
+            {/* Invisible touch-friendly hit area */}
+            <div className="absolute inset-y-0 -left-3 -right-3" />
+            {/* Visual indicator on hover */}
+            <div className="absolute inset-y-0 left-0 w-px bg-ring opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
+          </Separator>
 
-      <Panel defaultSize={50} minSize={25}>
-        {renderOutput()}
-      </Panel>
-    </Group>
+          <Panel defaultSize={50} minSize={25}>
+            {renderOutput()}
+          </Panel>
+        </Group>
+      </div>
+      <StepNavigation
+        sessionId={sessionId}
+        workshopId={workshopId}
+        currentStepOrder={stepOrder}
+        artifactConfirmed={artifactConfirmed}
+      />
+    </div>
   );
 }

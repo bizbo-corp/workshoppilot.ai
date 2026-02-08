@@ -102,6 +102,9 @@ export async function extractStepArtifact(
         `Extraction attempt ${attempt + 1}/${maxRetries + 1} failed for step ${stepId}:`,
         errorMessage
       );
+      if (error instanceof Error && error.cause) {
+        console.warn('  Cause:', error.cause instanceof Error ? error.cause.message : error.cause);
+      }
 
       // Continue to next retry attempt (unless this was the last one)
     }

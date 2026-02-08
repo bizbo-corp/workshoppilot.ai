@@ -12,10 +12,12 @@ import { cn } from '@/lib/utils';
 interface ChatPanelProps {
   stepOrder: number;
   sessionId: string;
+  workshopId: string;
   initialMessages?: UIMessage[];
+  onMessageCountChange?: (count: number) => void;
 }
 
-export function ChatPanel({ stepOrder, sessionId, initialMessages }: ChatPanelProps) {
+export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = React.useState('');
@@ -32,9 +34,9 @@ export function ChatPanel({ stepOrder, sessionId, initialMessages }: ChatPanelPr
     () =>
       new DefaultChatTransport({
         api: '/api/chat',
-        body: { sessionId, stepId: step.id },
+        body: { sessionId, stepId: step.id, workshopId },
       }),
-    [sessionId, step.id]
+    [sessionId, step.id, workshopId]
   );
 
   const { messages, sendMessage, status } = useChat({
@@ -43,6 +45,11 @@ export function ChatPanel({ stepOrder, sessionId, initialMessages }: ChatPanelPr
   });
 
   const isLoading = status === 'streaming' || status === 'submitted';
+
+  // Report live message count to parent
+  React.useEffect(() => {
+    onMessageCountChange?.(messages.length);
+  }, [messages.length, onMessageCountChange]);
 
   // Auto-scroll to bottom when new messages arrive
   React.useEffect(() => {

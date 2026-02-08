@@ -79,7 +79,7 @@ export type StakeholderArtifact = z.infer<typeof stakeholderArtifactSchema>;
 export const userResearchArtifactSchema = z.object({
   interviewQuestions: z
     .array(z.string())
-    .min(3)
+    .min(1)
     .max(8)
     .describe('List of interview questions used to gather user insights'),
   insights: z
@@ -98,7 +98,7 @@ export const userResearchArtifactSchema = z.object({
           .describe('Supporting quote or verbatim from user'),
       })
     )
-    .min(2)
+    .min(1)
     .describe('Key insights discovered from user research'),
 });
 
@@ -124,12 +124,12 @@ export const senseMakingArtifactSchema = z.object({
     .describe('Major themes or patterns identified in research'),
   pains: z
     .array(z.string())
-    .min(3)
+    .min(1)
     .max(5)
     .describe('Top pain points or frustrations users experience'),
   gains: z
     .array(z.string())
-    .min(3)
+    .min(1)
     .max(5)
     .describe('Desired gains or outcomes users are seeking'),
 });
@@ -168,12 +168,12 @@ export const personaArtifactSchema = z.object({
     ),
   goals: z
     .array(z.string())
-    .min(2)
+    .min(1)
     .max(5)
     .describe('Primary goals or objectives this persona is trying to achieve'),
   pains: z
     .array(z.string())
-    .min(2)
+    .min(1)
     .max(5)
     .describe('Key pain points, frustrations, or obstacles they face'),
   behaviors: z
@@ -278,7 +278,7 @@ export const ideationArtifactSchema = z.object({
           ),
       })
     )
-    .min(5)
+    .min(1)
     .describe('List of generated ideas from ideation techniques'),
   topIdeas: z
     .array(z.string())
