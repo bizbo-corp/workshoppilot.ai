@@ -7,8 +7,9 @@ import { db } from '@/db/client';
 import { workshops, sessions, workshopSteps } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { createPrefixedId } from '@/lib/ids';
-import { STEPS } from '@/lib/workshop/step-metadata';
+import { STEPS, getStepById } from '@/lib/workshop/step-metadata';
 import { invalidateDownstreamSteps } from '@/lib/navigation/cascade-invalidation';
+import { generateStepSummary } from '@/lib/context/generate-summary';
 
 /**
  * Creates a new workshop session and redirects to step 1
@@ -158,6 +159,38 @@ export async function advanceToNextStep(
   try {
     // Mark current step complete
     await updateStepStatus(workshopId, currentStepId, 'complete', sessionId);
+
+    // Generate conversation summary for the completed step
+    // Summary generation is synchronous but failure must not block step advance
+    try {
+      // Get the workshopStepId from the database
+      const workshopStepResult = await db
+        .select({ id: workshopSteps.id })
+        .from(workshopSteps)
+        .where(
+          and(
+            eq(workshopSteps.workshopId, workshopId),
+            eq(workshopSteps.stepId, currentStepId)
+          )
+        )
+        .limit(1);
+
+      if (workshopStepResult.length > 0) {
+        const workshopStepId = workshopStepResult[0].id;
+
+        // Get step metadata for the step name
+        const stepMetadata = getStepById(currentStepId);
+        const stepName = stepMetadata?.name || currentStepId;
+
+        // Generate summary for the completed step
+        await generateStepSummary(sessionId, workshopStepId, currentStepId, stepName);
+      } else {
+        console.error(`Workshop step not found for workshopId=${workshopId}, stepId=${currentStepId}`);
+      }
+    } catch (summaryError) {
+      // Log error but continue with step advance (per Phase 7 decision)
+      console.error(`Failed to generate summary for step ${currentStepId}:`, summaryError);
+    }
 
     // Mark next step in_progress
     await updateStepStatus(workshopId, nextStepId, 'in_progress', sessionId);
