@@ -83,6 +83,7 @@ export default async function StepPage({ params }: StepPageProps) {
         <StepContainer
           stepOrder={stepNumber}
           sessionId={sessionId}
+          workshopId={session.workshop.id}
           initialMessages={initialMessages}
         />
       </div>

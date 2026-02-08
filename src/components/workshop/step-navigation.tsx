@@ -21,12 +21,14 @@ interface StepNavigationProps {
   sessionId: string;
   workshopId: string;
   currentStepOrder: number;
+  artifactConfirmed?: boolean;
 }
 
 export function StepNavigation({
   sessionId,
   workshopId,
   currentStepOrder,
+  artifactConfirmed = false,
 }: StepNavigationProps) {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
@@ -89,8 +91,12 @@ export function StepNavigation({
 
       {/* Right: Next button (hidden on step 10) */}
       {!isLastStep ? (
-        <Button onClick={handleNext} disabled={isNavigating}>
-          {isNavigating ? 'Advancing...' : 'Next'}
+        <Button
+          onClick={handleNext}
+          disabled={isNavigating}
+          variant={artifactConfirmed ? 'default' : 'outline'}
+        >
+          {isNavigating ? 'Advancing...' : artifactConfirmed ? 'Next' : 'Skip to Next'}
           {!isNavigating && <ChevronRight className="ml-2 h-4 w-4" />}
         </Button>
       ) : (
