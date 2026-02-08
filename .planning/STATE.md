@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 8 of 14 (AI Facilitation Engine)
-Plan: 2 of 3 complete
+Plan: 1 of 3 complete
 Status: In progress
-Last activity: 2026-02-08 — Completed 08-02-PLAN.md (Arc Phase Tracking)
+Last activity: 2026-02-08 — Completed 08-01-PLAN.md (Step-Specific Prompts & Validation Criteria)
 
 Progress: [███████░░░░░░░░░░░░░] 50% (7 of 14 phases complete, Phase 8 in progress)
 
@@ -34,14 +34,14 @@ Progress: [███████░░░░░░░░░░░░░] 50% (7 
 | 05-ai-chat-integration | 2 | 9 min | 4.5 min |
 | 06-production-deployment | 2 | 12 min | 6.0 min |
 | 07-context-architecture | 3 | 6 min | 2.0 min |
-| 08-ai-facilitation-engine | 2 | 4 min | 2.0 min |
+| 08-ai-facilitation-engine | 1 | 4 min | 4.0 min |
 
 **Recent Trend:**
 - v0.5 milestone: 6 phases, 19 plans in 2 days
-- v1.0 in progress: Phase 8 (2 of 3 plans complete)
+- v1.0 in progress: Phase 8 (1 of 3 plans complete)
 - Trend: Stable velocity, predictable execution
 
-*Updated after 08-02 completion*
+*Updated after 08-01 completion*
 
 ## Accumulated Context
 
@@ -63,9 +63,10 @@ Recent decisions affecting v1.0 work:
 - **Phase 7 Plan 3**: Summary generation failure doesn't block step completion (logged error, step still marked complete)
 - **Phase 7 Plan 3**: workshopId required in chat API for context assembly (breaking change for client)
 - **Phase 8+**: Step-aware prompting with 6-phase arc (Orient → Gather → Synthesize → Refine → Validate → Complete)
-- **Phase 8 Plan 2**: Arc phase tracked per workshop step in database (prevents phase whiplash between requests)
-- **Phase 8 Plan 2**: Arc phase column added to workshopSteps with 'orient' default
-- **Phase 8 Plan 2**: ArcPhase type defined locally in conversation-state.ts (reconciled in Plan 08-03)
+- **Phase 8 Plan 1**: Step prompts kept self-contained without importing step-metadata.ts to avoid circular dependencies
+- **Phase 8 Plan 1**: Validation criteria use specific checkPrompt questions instead of generic quality assessments
+- **Phase 8 Plan 1**: Prior context usage documented per step to guide AI on which outputs to reference
+- **Phase 8 Plan 1**: Steps grouped by cluster - Discovery (1-4) exploration, Definition (5-7) synthesis with heavy prior context, Ideation/Validation (8-10) creativity grounded in research
 - **Phase 9+**: Schema-driven extraction using Zod + AI SDK 6's streamText with output property
 - **Phase 10+**: Auto-save with debounce (2s, maxWait 10s) + optimistic locking prevents race conditions
 - **Phase 11-13**: Group steps into natural clusters (Discovery 1-4, Definition 5-7, Ideation/Validation 8-10)
@@ -91,10 +92,10 @@ Recent decisions affecting v1.0 work:
 ## Session Continuity
 
 Last session: 2026-02-08 (Phase 8 in progress)
-Stopped at: Completed 08-02-PLAN.md (Arc Phase Tracking)
+Stopped at: Completed 08-01-PLAN.md (Step-Specific Prompts & Validation Criteria)
 Resume file: None
 
-**Next action:** Execute Plan 08-03 (Prompt Assembly)
+**Next action:** Execute Plan 08-02 (Arc Phase Tracking) or 08-03 (Prompt Assembly)
 
 ---
-*Last updated: 2026-02-08T03:18:40Z after 08-02 completion*
+*Last updated: 2026-02-08T06:52:55Z after 08-01 completion*
