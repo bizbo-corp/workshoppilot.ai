@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import TextareaAutosize from 'react-textarea-autosize';
+import ReactMarkdown from 'react-markdown';
 import { Send } from 'lucide-react';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { Button } from '@/components/ui/button';
@@ -142,8 +143,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                     AI
                   </div>
                   <div className="flex-1">
-                    <div className="rounded-lg bg-muted p-3 text-sm whitespace-pre-wrap">
-                      {content}
+                    <div className="rounded-lg bg-muted p-3 text-sm prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown>{content}</ReactMarkdown>
                     </div>
                   </div>
                 </div>
