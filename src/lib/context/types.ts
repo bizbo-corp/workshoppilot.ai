@@ -5,6 +5,19 @@
  * across the 10-step design thinking workshop flow.
  */
 
+import type {
+  ChallengeArtifact,
+  StakeholderArtifact,
+  UserResearchArtifact,
+  SenseMakingArtifact,
+  PersonaArtifact,
+  JourneyMappingArtifact,
+  ReframeArtifact,
+  IdeationArtifact,
+  ConceptArtifact,
+  ValidateArtifact,
+} from '@/lib/schemas';
+
 /**
  * Context tiers in the hierarchical compression system
  *
@@ -32,9 +45,34 @@ export interface StepContext {
 }
 
 /**
- * Artifact record type (placeholder until Phase 9)
+ * Map of step IDs to their typed artifact structures
  *
- * In Phase 9, this becomes a discriminated union of step-specific Zod schemas.
- * For now, it's a generic Record to allow storage of any JSON structure.
+ * Each step produces a specific artifact type with a defined schema.
+ * Step IDs match those in src/lib/workshop/step-metadata.ts
+ */
+export type StepArtifactMap = {
+  challenge: ChallengeArtifact;
+  'stakeholder-mapping': StakeholderArtifact;
+  'user-research': UserResearchArtifact;
+  'sense-making': SenseMakingArtifact;
+  persona: PersonaArtifact;
+  'journey-mapping': JourneyMappingArtifact;
+  reframe: ReframeArtifact;
+  ideation: IdeationArtifact;
+  concept: ConceptArtifact;
+  validate: ValidateArtifact;
+};
+
+/**
+ * Union of all step artifact types
+ *
+ * Use this when you need to handle any artifact type generically.
+ */
+export type AnyStepArtifact = StepArtifactMap[keyof StepArtifactMap];
+
+/**
+ * Artifact record type (deprecated - use StepArtifactMap types for new code)
+ *
+ * @deprecated Use StepArtifactMap types for new code. This remains for backward compatibility.
  */
 export type ArtifactRecord = Record<string, unknown>;
