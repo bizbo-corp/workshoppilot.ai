@@ -7,17 +7,17 @@
  * - NOT sticky (scrolls with content)
  */
 
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { usePathname } from 'next/navigation';
-import { UserButton, SignedIn, SignedOut } from '@clerk/nextjs';
-import { LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { ExitWorkshopDialog } from '@/components/dialogs/exit-workshop-dialog';
-import { getStepByOrder } from '@/lib/workshop/step-metadata';
-import { SignInModal } from '@/components/auth/sign-in-modal';
+import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ExitWorkshopDialog } from "@/components/dialogs/exit-workshop-dialog";
+import { getStepByOrder } from "@/lib/workshop/step-metadata";
+import { SignInModal } from "@/components/auth/sign-in-modal";
 
 interface WorkshopHeaderProps {
   sessionId: string;
@@ -26,7 +26,7 @@ interface WorkshopHeaderProps {
 
 export function WorkshopHeader({
   sessionId,
-  workshopName = 'New Workshop',
+  workshopName = "New Workshop",
 }: WorkshopHeaderProps) {
   const pathname = usePathname();
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
@@ -42,34 +42,35 @@ export function WorkshopHeader({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b bg-background px-6">
+      <header className="flex min-h-16 items-center justify-between border-b bg-background px-6 py-2">
         {/* Left section: Logo + workshop name + step indicator */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col justify-center">
           <div className="hidden md:flex md:items-center md:gap-2">
-            <span className="text-sm font-medium text-foreground">
+            <span className="text-xs font-medium text-muted-foreground">
               {workshopName}
             </span>
             {currentStep && (
               <>
-                <span className="text-sm text-muted-foreground">/</span>
-                <span className="text-sm text-muted-foreground">
-                  Step {currentStep.order}: {currentStep.name}
+                <span className="text-xs text-muted-foreground">/</span>
+                <span className="text-xs text-muted-foreground">
+                  Step {currentStep.order}
                 </span>
               </>
             )}
           </div>
 
-          {/* Mobile: Show only current step */}
           {currentStep && (
-            <div className="flex items-center gap-2 md:hidden">
-              <span className="text-sm text-muted-foreground">
-                Step {currentStep.order}
+            <div className="flex items-baseline gap-3">
+              <span className="text-sm font-semibold text-foreground">
+                {currentStep.name}
+              </span>
+              <span className="hidden text-sm text-muted-foreground md:inline-block">
+                {currentStep.description}
               </span>
             </div>
           )}
         </div>
 
-        {/* Right section: Theme toggle, Exit button, User menu */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
 

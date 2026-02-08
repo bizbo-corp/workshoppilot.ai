@@ -119,13 +119,13 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         ) : (
           // Render conversation messages
           <div className="space-y-4">
-            {messages.map((message) => {
+            {messages.map((message, index) => {
               const textParts = message.parts?.filter((part) => part.type === 'text') || [];
               const content = textParts.map((part) => part.text).join('\n');
 
               if (message.role === 'user') {
                 return (
-                  <div key={message.id} className="flex items-start gap-3 justify-end">
+                  <div key={`${message.id}-${index}`} className="flex items-start gap-3 justify-end">
                     <div className="flex-1 max-w-[80%]">
                       <div className="rounded-lg bg-primary p-3 text-sm text-primary-foreground">
                         {content}
@@ -137,7 +137,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
               // Assistant message
               return (
-                <div key={message.id} className="flex items-start gap-3">
+                <div key={`${message.id}-${index}`} className="flex items-start gap-3">
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     AI
                   </div>

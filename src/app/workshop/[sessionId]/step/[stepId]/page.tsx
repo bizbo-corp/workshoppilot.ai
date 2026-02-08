@@ -1,10 +1,10 @@
-import { redirect } from 'next/navigation';
-import { eq } from 'drizzle-orm';
-import { db } from '@/db/client';
-import { sessions, stepArtifacts } from '@/db/schema';
-import { getStepByOrder, STEPS } from '@/lib/workshop/step-metadata';
-import { loadMessages } from '@/lib/ai/message-persistence';
-import { StepContainer } from '@/components/workshop/step-container';
+import { redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { sessions, stepArtifacts } from "@/db/schema";
+import { getStepByOrder, STEPS } from "@/lib/workshop/step-metadata";
+import { loadMessages } from "@/lib/ai/message-persistence";
+import { StepContainer } from "@/components/workshop/step-container";
 
 interface StepPageProps {
   params: Promise<{
@@ -44,16 +44,16 @@ export default async function StepPage({ params }: StepPageProps) {
   });
 
   if (!session) {
-    redirect('/dashboard');
+    redirect("/dashboard");
   }
 
   // Sequential enforcement: redirect if trying to access not_started step
   const stepRecord = session.workshop.steps.find((s) => s.stepId === step.id);
 
-  if (stepRecord?.status === 'not_started') {
+  if (stepRecord?.status === "not_started") {
     // Find the current in_progress step (or first not_started if none in_progress)
     const activeStep = session.workshop.steps.find(
-      (s) => s.status === 'in_progress'
+      (s) => s.status === "in_progress",
     );
     if (activeStep) {
       const activeStepDef = STEPS.find((s) => s.id === activeStep.stepId);
@@ -67,7 +67,11 @@ export default async function StepPage({ params }: StepPageProps) {
 
   // Query existing artifact for completed or needs_regeneration steps
   let initialArtifact: Record<string, unknown> | null = null;
-  if (stepRecord && (stepRecord.status === 'complete' || stepRecord.status === 'needs_regeneration')) {
+  if (
+    stepRecord &&
+    (stepRecord.status === "complete" ||
+      stepRecord.status === "needs_regeneration")
+  ) {
     const artifactRecord = await db
       .select()
       .from(stepArtifacts)
@@ -80,28 +84,15 @@ export default async function StepPage({ params }: StepPageProps) {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Step header */}
-      <div className="border-b bg-background px-6 py-4">
-        <h1 className="text-xl font-semibold">
-          Step {step.order}: {step.name}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {step.description}
-        </p>
-      </div>
-
-      {/* Step content area + navigation */}
-      <div className="flex-1 overflow-hidden">
-        <StepContainer
-          stepOrder={stepNumber}
-          sessionId={sessionId}
-          workshopId={session.workshop.id}
-          initialMessages={initialMessages}
-          initialArtifact={initialArtifact}
-          stepStatus={stepRecord?.status}
-        />
-      </div>
+    <div className="h-full">
+      <StepContainer
+        stepOrder={stepNumber}
+        sessionId={sessionId}
+        workshopId={session.workshop.id}
+        initialMessages={initialMessages}
+        initialArtifact={initialArtifact}
+        stepStatus={stepRecord?.status}
+      />
     </div>
   );
 }

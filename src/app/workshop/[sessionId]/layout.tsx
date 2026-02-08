@@ -55,7 +55,7 @@ export default async function WorkshopLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex h-screen w-full">
         {/* Desktop: Sidebar */}
         <div className="hidden md:block">
           <WorkshopSidebar sessionId={sessionId} workshopSteps={workshopSteps} />
@@ -75,7 +75,7 @@ export default async function WorkshopLayout({
           />
 
           {/* Main content area (full width) */}
-          <main className="flex-1 overflow-auto">{children}</main>
+          <main className="flex-1 overflow-hidden">{children}</main>
         </div>
       </div>
     </SidebarProvider>

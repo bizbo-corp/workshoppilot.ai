@@ -32,9 +32,9 @@ export default function RootLayout({
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY !== 'pk_test_...';
 
   const content = (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="h-full">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       >
         <ThemeProvider
           attribute="class"

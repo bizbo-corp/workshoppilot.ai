@@ -148,29 +148,29 @@ export function StepContainer({
 
   // Render content section
   const renderContent = () => (
-    <>
-      <ChatPanel
-        stepOrder={stepOrder}
-        sessionId={sessionId}
-        workshopId={workshopId}
-        initialMessages={initialMessages}
-        onMessageCountChange={setLiveMessageCount}
-      />
-      <div className="flex flex-col gap-4 p-4">
-        {/* Extract Output button (shown when enough messages AND no artifact AND not extracting) */}
-        {hasEnoughMessages && !artifact && !isExtracting && (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="min-h-0 flex-1">
+        <ChatPanel
+          stepOrder={stepOrder}
+          sessionId={sessionId}
+          workshopId={workshopId}
+          initialMessages={initialMessages}
+          onMessageCountChange={setLiveMessageCount}
+        />
+      </div>
+      {hasEnoughMessages && !artifact && !isExtracting && (
+        <div className="flex shrink-0 justify-center border-t bg-background p-4">
           <Button
             onClick={extractArtifact}
             variant="outline"
             size="sm"
-            className="self-center"
           >
             <Sparkles className="mr-2 h-4 w-4" />
             Extract Output
           </Button>
-        )}
-      </div>
-    </>
+        </div>
+      )}
+    </div>
   );
 
   const renderOutput = () => (
@@ -202,8 +202,8 @@ export function StepContainer({
   if (isMobile) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex-1 border-b">{renderContent()}</div>
-        <div className="flex-1">{renderOutput()}</div>
+        <div className="min-h-0 flex-1 border-b">{renderContent()}</div>
+        <div className="min-h-0 flex-1">{renderOutput()}</div>
         <StepNavigation
           sessionId={sessionId}
           workshopId={workshopId}
@@ -219,7 +219,7 @@ export function StepContainer({
   // Desktop: resizable panels
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <Group orientation="horizontal" className="h-full">
           <Panel defaultSize={50} minSize={30}>
             {renderContent()}
