@@ -1,430 +1,450 @@
-# Domain Pitfalls: AI-Powered Workshop Facilitation Platform
+# Pitfalls Research: v1.0 AI Facilitation Features
 
-**Domain:** AI-guided design thinking workshop platform
-**Researched:** 2026-02-07
-**Confidence:** MEDIUM-HIGH (verified with official docs for stack-specific issues, community patterns for domain issues)
+**Domain:** Multi-step AI facilitation with context memory (adding features to existing system)
+**Researched:** 2026-02-08
+**Confidence:** MEDIUM-HIGH
+
+**Context:** This research focuses on common mistakes when ADDING step-aware AI facilitation, dual-layer context architecture, back-and-revise navigation, and auto-save to the EXISTING WorkshopPilot.ai v0.5 system (Next.js 16.1.1 App Router, Neon Postgres, Drizzle ORM, Vercel AI SDK 5, Gemini 2.0 Flash, Clerk auth).
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites or major issues.
+### Pitfall 1: Context Degradation Syndrome in 10-Step Workshops
+
+**What goes wrong:**
+AI quality degrades significantly after step 4-5 as conversation history grows. Users reach step 7-8 and the AI asks questions already answered in step 2, suggests ideas that contradict earlier decisions, or loses track of the project's core problem statement. Attention drops from 100% on early messages to 50% at message 40. The AI becomes progressively less useful as the user progresses through the 10-step workshop, precisely when they need the most contextual support.
+
+**Why it happens:**
+LLMs do not use their context uniformly - performance becomes increasingly unreliable as input length grows, even when well within the model's advertised limits. This phenomenon ("context rot") means effective capacity is usually 60-70% of the advertised maximum. A model claiming 200k tokens typically becomes unreliable around 130k. Models work best when relevant information sits at the very beginning or end of the context window, but struggle when buried in the middle. In a 10-step workshop with 5-7 conversational turns per step, you accumulate 50-70 messages - even with Gemini's 1M token context window, retrieval accuracy degrades 13.9%-85% as context grows. Research shows one token difference in an early turn can lead to cascading deviations, observed as "stagnated unreliability."
+
+**How to avoid:**
+Implement hierarchical context compression with three tiers: (1) short-term memory keeps current step messages verbatim, (2) long-term memory stores previous step summaries + structured JSON outputs, (3) persistent memory maintains all structured outputs in database. Trigger summarization when step completes, not when token limit approaches. Use step-specific prompts that reference structured outputs ("The user's HMW statement from Step 7 is: {hmw_statement}") rather than relying on full conversation history. Add memory refresh checkpoints at steps 4 and 7 where the AI explicitly recaps key decisions before proceeding. Use Gemini context caching for stable system prompts and step definitions (90% cost savings on repeated prompts).
+
+**Warning signs:**
+- AI asks questions already answered in earlier steps
+- Suggestions contradict previous decisions documented in structured outputs
+- Step completion taking longer (token processing overhead increases with context size)
+- Generated summaries become generic rather than specific to this workshop
+- JSON extraction produces incomplete objects missing fields discussed earlier
+
+**Phase to address:**
+Phase 4 (Navigation & Back-Revise) - Must be architectural from day one. Context compression strategy affects database schema (context_files table), API design (which context gets passed to Gemini), and step navigation (summary generation on step completion).
 
 ---
 
-### Pitfall 1: Context Degradation Syndrome in Multi-Step Flows
+### Pitfall 2: Gemini Rate Limit Cascade Failures
 
-**What goes wrong:** AI conversation quality degrades significantly as users progress through your 10-step workshop. The AI exhibits what researchers call "Context Degradation Syndrome" - it loses track of earlier steps, makes contradictory suggestions, forgets user constraints, or provides generic responses that ignore accumulated context.
+**What goes wrong:**
+User is deep in step 8, making steady progress, then suddenly hits 429 "quota exceeded" errors. Chat stops working. Progress may be lost if auto-save hasn't caught the latest messages. User refreshes, tries again, gets another 429. Trust craters - the product feels unreliable precisely when the user is most invested (after 45+ minutes in the workshop). Free tier (15 RPM) is exhausted in minutes with concurrent users or a single user having rapid back-and-forth exchanges.
 
-**Why it happens:** LLM attention operates as a depleting budget. Research shows attention drops from 100% on early messages to 80% at message 20, 50% at message 40, and 20% at message 60. In a 10-step workshop with multiple exchanges per step, you hit this "soft limit" where the AI can technically see all prior messages but can't actually hold them in focus. The problem intensifies with reasoning frameworks or chain-of-thought prompting, which improve quality but consume significant context.
+**Why it happens:**
+Gemini API enforces rate limits across four independent dimensions: RPM (requests per minute), TPM (tokens per minute), RPD (requests per day), and IPM (images per minute). Exceeding ANY single dimension triggers 429 errors. Multi-dimensional tracking makes limits unpredictable - a user having a detailed conversation might hit TPM before RPM. Free tier was slashed 50-92% in December 2025 without prior notice. Rate limits are per-project, so all users share the same quota pool. Token bucket algorithm means burst usage creates rate limit "debt" that affects subsequent requests. Without backoff logic, your app will hammer the API with retries, making the problem worse.
 
-**Consequences:**
-- Users reach step 7-8 and find the AI asking questions already answered in step 2
-- Final Build Pack outputs are generic because AI lost domain-specific constraints from early steps
-- Users abandon workshops mid-way due to frustrating "the AI forgot everything" experiences
-- Generated PRDs lack coherence across sections because different sections reference different context windows
+**How to avoid:**
+Implement exponential backoff with jitter (wait 1s, 2s, 4s, 8s) on 429 responses with clear UI feedback ("AI is busy, retrying in 3s..."). Use multiple Gemini projects with key rotation to distribute load across separate quota pools. Implement request queuing with position indicator ("You're #2 in queue, ~30s wait"). Monitor rate limit margins via response headers and throttle proactively before hitting limits. Consider Tier 1 paid plan ($50 cumulative spend = 66x capacity increase: 15 RPM → 1000 RPM). Use Gemini context caching to reduce TPM consumption by 90% on repeated system prompts. Pre-calculate token budgets per step to stay within TPM limits.
 
-**Prevention:**
-1. **Implement context compacting between steps** - After each step completes, create a structured summary of critical information (user goals, constraints, decisions made) and inject it as "fresh" context for the next step
-2. **Use step-specific prompt engineering** - Each step's system prompt should explicitly reference the summary from previous steps, not rely on full conversation history
-3. **Store structured data separately** - Don't rely on conversation history for facts. Extract structured data (user profile, project constraints, feature decisions) into database tables and inject relevant pieces into each step's context
-4. **Limit conversation turns per step** - Design each step to complete in 3-5 turns maximum. More turns = more context pollution
-5. **Implement "memory refresh" checkpoints** - At steps 4 and 7, have the AI explicitly summarize what it knows about the project and ask user to confirm/correct
+**Warning signs:**
+- 429 errors in production logs
+- Users reporting "chat stopped working" after extended sessions
+- Error spike correlation with traffic increases
+- Rate limit errors concentrated during specific hours (peak usage)
+- Multiple users hitting limits simultaneously (shared quota pool exhaustion)
 
-**Detection:**
-- Monitor conversation turn count and context window usage per step
-- Track user reports of "AI forgot" or contradictory suggestions
-- Implement automated coherence scoring between step outputs
-- Watch for increased user drop-off at steps 6+
-
-**Phase impact:** Address in "Core Conversation Flow" phase - requires architecture from day one
+**Phase to address:**
+Phase 4 (Navigation & Back-Revise) for initial backoff/retry logic. Phase 6 (Production Hardening) for key rotation, queuing system, and monitoring. Do NOT defer to "fix in production" - rate limit cascade failures destroy trust and are hard to recover from.
 
 ---
 
-### Pitfall 2: Gemini API Rate Limit Cascade Failures
+### Pitfall 3: Neon Cold Start Death Spiral
 
-**What goes wrong:** Your workshop reaches a critical moment (user is deep in step 8, highly engaged) and suddenly hits rate limits. All AI responses fail with 429 errors. The user loses their progress, context evaporates, and trust in your platform craters. The issue is especially insidious because it won't appear during local development but will hit hard during peak usage or after a marketing push.
+**What goes wrong:**
+Users start a session after 5+ minutes of database inactivity. First page load takes 3-8 seconds while Neon compute wakes from scale-to-zero. User sees loading spinner, assumes the site is broken, refreshes the page. Refresh creates another cold start. Multiple tabs or users arriving simultaneously compound the problem. Users abandon before the app even loads, leaving high bounce rates in analytics with no way to diagnose the issue (they left before any tracking events fired).
 
-**Why it happens:** Gemini API applies four independent rate limit dimensions: RPM (requests per minute), TPM (tokens per minute), RPD (requests per day), and IPM (images per minute). Exceeding ANY single dimension triggers a 429 error. Limits are project-level (not per-API-key), and Google adjusted quotas in December 2025 without advance notice, causing unexpected 429s for previously stable applications. Production traffic patterns are unpredictable - a single viral post can drive thousands of concurrent workshop sessions.
+**Why it happens:**
+Neon Postgres uses serverless architecture with automatic scale-to-zero after 5 minutes of inactivity (free tier) or 300 seconds (paid tier, configurable). Cold start involves: (1) wake compute endpoint, (2) load data into memory, (3) establish connection. Each step adds latency (500ms-5s total). Subsequent requests are fast, but the initial wake is slow. Standard node-postgres driver expects persistent TCP connections, which don't exist in edge/serverless environments. WebSockets can't outlive a single request in Vercel Edge Functions or Cloudflare Workers. Using wrong driver (node-postgres instead of @neondatabase/serverless) multiplies connection overhead.
 
-**Consequences:**
-- Cascading failures during peak usage when multiple users hit the same project limit
-- Lost workshop progress for users mid-session when API calls start failing
-- Degraded user experience as your app attempts retries, creating lag and timeout issues
-- Revenue loss if you're on a paid tier and can't serve paying customers
-- Reputation damage from "unreliable AI platform" perception
+**How to avoid:**
+Use Neon serverless driver (`@neondatabase/serverless`) which supports HTTP and WebSocket connections optimized for edge environments. Configure connection timeout (`?connect_timeout=10`) to fail fast rather than hang. Implement health-check warming via Vercel cron job pinging database every 3-4 minutes to keep compute active during user hours. Improve UX for cold start scenarios with optimistic UI ("Waking up your workspace...") rather than generic spinner. Use connection pooling (PgBouncer) which Neon provides integrated - maintains warm connections masking cold starts. Monitor cold start frequency and duration to optimize warming schedule. Consider Neon's "always on" compute option on paid plans.
 
-**Prevention:**
-1. **Implement intelligent rate limit detection** - Track 429 responses and implement exponential backoff with jitter (not simple retries)
-2. **Use multiple Gemini projects with key rotation** - Distribute load across multiple Google Cloud projects, rotating API keys intelligently when approaching limits
-3. **Implement request queuing** - Queue AI requests during high load and provide UI feedback ("AI is thinking, 3 requests ahead of you")
-4. **Pre-calculate token budgets** - Estimate tokens per step, limit conversation turns to stay within TPM budgets across concurrent users
-5. **Build graceful degradation** - Have fallback responses for common scenarios when API is unavailable
-6. **Monitor rate limit margins** - Track your usage against limits in real-time, throttle new sessions when approaching capacity
-7. **Consider paid tier early** - Free tier is severely limited (15 RPM). Even Tier 1 paid (1000 RPM) gives 66x more capacity
+**Warning signs:**
+- First request after idle period taking 3-8+ seconds
+- Database connection timeout errors in logs
+- Analytics showing high bounce rate on initial page load
+- Users reporting "site is slow" or "won't load"
+- Server-side rendering timeouts on first page render
 
-**Detection:**
-- Set up alerts for 429 error rates above 1%
-- Monitor API response time p99 latency (spikes often precede rate limits)
-- Track concurrent active workshop sessions vs. known RPM limits
-- Log TPM consumption per request to identify token-heavy operations
-
-**Phase impact:** Address in "Infrastructure & Reliability" phase - requires monitoring, queuing, and multi-project architecture
+**Phase to address:**
+Phase 1 (Foundation) - Must use correct driver from day one. Switching from node-postgres to @neondatabase/serverless after building on wrong driver requires refactoring all database calls. Phase 6 (Production Hardening) for health-check warming cron job and monitoring.
 
 ---
 
-### Pitfall 3: Neon Cold Start Death Spiral on Vercel
+### Pitfall 4: Structured Output Extraction Failures
 
-**What goes wrong:** Users start a workshop session after 5+ minutes of database inactivity. The first page load takes 3-8 seconds while Neon compute wakes up. During this delay, the user's browser shows a loading spinner. Impatient, they refresh. This triggers another cold start. They refresh again. By the third refresh, they've abandoned your platform for being "too slow." Your analytics show high bounce rates but you can't figure out why.
+**What goes wrong:**
+User completes step 2 (Stakeholder Mapping) with a detailed conversation identifying 8 stakeholders. AI chat flows perfectly. User clicks "Continue to Step 3" expecting to proceed to User Research. System attempts to extract structured JSON from the conversation (stakeholders array with name, role, influence, interest fields). Extraction fails - Gemini returns a stakeholder object missing "interest" field, or returns markdown-wrapped JSON instead of pure JSON, or returns partial data from early in conversation but missing later additions. Step completion hangs. User is blocked from progressing. Retry logic fails because conversation history hasn't changed.
 
-**Why it happens:** Neon automatically suspends compute nodes after 5 minutes of inactivity (configurable on paid plans, but default on free tier). When a query arrives, Neon must reactivate the compute, introducing 500ms to several seconds of latency. Vercel serverless functions timeout quickly, and connection retries compound the problem. Using Prisma or traditional connection pools in serverless makes it worse - each cold function instance tries to establish a new TCP connection with 8+ roundtrips, hitting the cold compute simultaneously.
+**Why it happens:**
+Gemini's structured output mode (schema-constrained generation) is reliable but not perfect. Failures occur when: (1) conversation is ambiguous about field values (user discussed stakeholders but never explicitly stated "high influence"), (2) Gemini prioritizes conversational naturalness over schema compliance, returning markdown-formatted responses, (3) context window issues cause late-conversation data to be deprioritized, (4) schema itself is too strict (required fields that aren't always applicable), (5) temperature settings conflict (Gemini 3 defaults to 1.0 for reasoning, but structured output traditionally used lower temperature 0.0-0.3). Issue #6494 in Vercel AI SDK repo documents ongoing schema compatibility issues with Gemini 2.5. Issue #11396 reports Gemini 3 Preview outputting internal JSON as text when tools are provided. Gemini uses OpenAPI 3.0 schema subset, not full JSON Schema, leading to validation mismatches.
 
-**Consequences:**
-- First-time user experiences are terrible (7+ second page loads)
-- High bounce rates during off-peak hours when database has suspended
-- Connection timeout errors that cascade into application errors
-- Wasted Vercel function execution time waiting for database wake-up
-- Negative perception of platform performance
+**How to avoid:**
+Use explicit extraction prompts: "Based on the conversation above, extract exactly this JSON structure: {schema}. Do not include markdown formatting, only pure JSON." Implement retry logic with schema repair: if extraction fails validation, send repair prompt with the error ("The JSON is missing the 'interest' field for stakeholder 'CEO'. Please add this field."). Use Zod schema validation with detailed error messages. Implement partial extraction: if full schema fails, extract what's possible and prompt user to fill gaps via form UI. For Gemini 2.5, use temperature 0.0-0.3 for extraction requests (not main conversation). For Gemini 3, keep temperature 1.0 (default) to avoid looping/degradation. Use Gemini's responseMimeType: "application/json" to force JSON-only output. Test extraction with edge cases (empty conversations, very long conversations, ambiguous data). Show extracted data to user for confirmation before proceeding.
 
-**Prevention:**
-1. **Use Neon serverless driver (@neondatabase/serverless)** - Connects over HTTP/WebSocket with 3-4 roundtrips instead of 8+, much faster on cold starts
-2. **Configure connection pooling with Vercel Fluid** - Vercel's Fluid model keeps functions alive long enough to maintain warm connection pools, eliminating most cold starts
-3. **Add `?connect_timeout=10` to connection strings** - Give Neon 10 seconds to wake up before timeout (Neon docs confirm ~5 second wake time)
-4. **Implement connection retry logic** - On first connection failure, wait 2 seconds and retry once before showing user error
-5. **Use Neon's "always on" option** - Available on paid plans, prevents compute suspension entirely
-6. **Add health-check warming** - Use Vercel cron jobs to ping database every 3-4 minutes during business hours to keep compute warm
-7. **Show better UX during cold starts** - Don't show generic loading spinner. Show "Waking up your workspace..." with progress indicator
-8. **Cache aggressively** - Use React Server Components with aggressive caching to minimize database queries per page load
+**Warning signs:**
+- Step completion button stays disabled after apparent conversation conclusion
+- Database contains null/incomplete structured outputs
+- User reports "can't continue to next step"
+- Error logs showing Zod validation failures
+- JSON parsing errors in extraction endpoint
+- Extracted data missing information clearly discussed in conversation
 
-**Detection:**
-- Monitor database connection time separately from query execution time
-- Track correlation between time-since-last-query and first-query latency
-- Set up alerts for connection timeouts (not just query errors)
-- Measure p95 and p99 latency specifically for sessions with >5min gap
-
-**Phase impact:** Address in "Database Architecture" phase - requires driver selection and connection strategy from day one
+**Phase to address:**
+Phase 5 (Structured Outputs) - This entire phase focuses on reliable extraction. Do not assume structured outputs "just work" - require extensive testing with real conversation patterns, edge cases, and failure recovery.
 
 ---
 
-### Pitfall 4: Hallucinated PRD Death by 1000 Cuts
+### Pitfall 5: Auto-Save Race Conditions
 
-**What goes wrong:** Your 10-step workshop successfully guides users through ideation, empathy mapping, and solution definition. The AI generates a beautiful 12-page PRD full of detailed user stories, technical requirements, and success metrics. The user sends it to an AI coding agent or development team. Within hours, they discover that critical details are hallucinated - user segments mentioned in step 3 aren't in the PRD, technical constraints defined in step 6 are contradicted in the architecture section, and the AI cited statistics that don't exist. The user loses trust in your entire platform because the final deliverable is unreliable.
+**What goes wrong:**
+User is actively chatting in step 4. Auto-save fires every 30 seconds to persist conversation state. User completes the step and clicks "Continue to Step 5" triggering step completion save (conversation summary + structured output extraction). Both saves attempt to write to the same workshop/session simultaneously. Race condition: (1) Auto-save writes partial conversation, (2) Step completion reads stale conversation before auto-save completes, generates summary missing last 2 messages, (3) Step completion writes summary and transitions to step 5, (4) Auto-save completes, but step has already changed. Result: User arrives at step 5 with incomplete context from step 4. Extraction is based on incomplete conversation. Downstream steps build on faulty foundation.
 
-**Why it happens:** LLMs naturally generate plausible-sounding content when synthesizing information across a long context window. Without grounding in verified facts, the AI fills gaps with hallucinated details. The problem compounds in multi-step workflows where context degrades - the AI loses track of what was actually decided vs. what it thinks makes sense. PRDs are particularly vulnerable because they require internal consistency across multiple sections while maintaining factual accuracy about user research, market data, and technical constraints.
+**Why it happens:**
+Multiple concurrent write paths without coordination: (1) periodic auto-save timer, (2) step completion save, (3) user navigating back and updating previous step. Databases experience lost updates when concurrent transactions update same row without proper locking. Drizzle ORM doesn't automatically prevent race conditions - developer must implement optimistic or pessimistic locking. Vercel serverless functions can create multiple parallel executions of same operation if user rapidly clicks or has network hiccups causing retries. React 19 concurrent rendering can trigger multiple state updates that appear to happen "simultaneously" from backend perspective. Zustand persist middleware had race condition bugs in v5.0.9 and earlier (fixed in v5.0.10 January 2026).
 
-**Consequences:**
-- Users discover errors when trying to use the PRD, undermining trust in your entire platform
-- AI coding agents produce incorrect implementations based on hallucinated requirements
-- Users waste time fact-checking and rewriting the PRD, negating your platform's value proposition
-- Reputation damage as users share "WorkshopPilot generated fake requirements" stories
-- Higher churn as users conclude your AI outputs aren't production-ready
+**How to avoid:**
+Implement optimistic locking: add `version` column to sessions/steps tables, increment on every update, fail transaction if version changed (another update occurred). Use Drizzle's `onConflictDoUpdate` with version checking. Debounce auto-save with "save in progress" flag to prevent overlapping saves. Disable step transition buttons during auto-save. Use database transactions with serializable isolation level for step completion (read conversation → generate summary → write summary + transition step must be atomic). Implement idempotency keys for API requests to prevent duplicate processing on network retries. Coordinate writes via request queue - only one write operation per session at a time. Update to Zustand v5.0.10+ to avoid persist middleware race conditions.
 
-**Prevention:**
-1. **Implement RAG for PRD generation** - Store all user decisions in structured database tables, retrieve and inject them into PRD generation prompts (don't rely on conversation history)
-2. **Use constrained decoding for structured outputs** - Enable Gemini's structured output mode (JSON schema validation) to ensure PRD sections match expected format and include required fields
-3. **Add citation requirements** - Prompt engineering: "For each requirement, cite the specific workshop step where it was defined. If not explicitly defined, mark as [ASSUMPTION]"
-4. **Implement fact-checking layer** - After PRD generation, use a second LLM call to cross-reference each section against stored workshop data, flagging inconsistencies
-5. **Show user diffs before finalizing** - Generate PRD incrementally and show "What's new" after each step, allowing users to catch hallucinations early
-6. **Add human-in-the-loop validation** - Before final export, show a checklist: "Does this PRD accurately reflect your feature priorities from Step 4?" with ability to regenerate sections
-7. **Avoid asking AI to recall statistics** - If user mentions market data, store it as structured data and template it into PRD rather than asking AI to remember it
-8. **Use lower temperature for PRD generation** - Set temperature to 0.2-0.3 for final PRD generation to reduce creativity/hallucination
+**Warning signs:**
+- Step summaries occasionally missing recent conversation turns
+- Users reporting "my last message didn't save"
+- Database showing rapid succession of updates to same row (suggests race)
+- Inconsistent structured outputs (sometimes complete, sometimes partial)
+- Navigation transitions leaving incomplete data in previous step
 
-**Detection:**
-- Implement automated consistency checks: do PRD sections reference decisions from workshop data?
-- Track user PRD edit rates (high edit rates = hallucination or low quality)
-- Monitor support tickets mentioning "incorrect information" or "doesn't match workshop"
-- A/B test PRD generation with vs. without RAG, measure user satisfaction
-
-**Phase impact:** Address in "PRD Generation & Export" phase - requires RAG architecture and validation workflows
+**Phase to address:**
+Phase 4 (Navigation & Back-Revise) - Both auto-save and step transition are introduced in this phase. Must implement locking strategy from the start. Race conditions are hard to reproduce in local dev (single user) but appear in production (concurrent users, network variability).
 
 ---
 
-### Pitfall 5: The "Too Long, Didn't Finish" User Drop-off Crisis
+### Pitfall 6: Back-and-Revise Cascade Invalidation Failures
 
-**What goes wrong:** Users enthusiastically start your 10-step workshop. Analytics show great engagement through steps 1-3. Then you notice a cliff: 60% of users abandon between steps 4-6. You've built a comprehensive design thinking process, but users don't have the patience or time to complete it. Your core value proposition (generating a complete Build Pack) is never realized because users don't finish workshops.
+**What goes wrong:**
+User completes all 10 steps, reaches final Build Pack. Reviews Step 5 (Persona) and realizes the persona is wrong - they're building for CFOs, not IT managers. Goes back to step 5, has conversation with AI to revise persona. Clicks "Update Persona and Continue" expecting downstream steps to adapt. Instead: Step 6 (Journey Map) still references "IT Manager persona", Step 7 (Reframed HMW) still uses old problem statement, Step 9 (Concept Development) suggests features for wrong user. The entire journey from step 5 onward is now inconsistent. User must manually re-visit and re-generate every downstream step, taking 20+ minutes to fix what should be an automatic cascade update.
 
-**Why it happens:** Research on AI chatbot engagement shows that even fascinating conversations suffer drop-off, with chatbots using emotional manipulation tactics 37% of the time to keep users engaged. In workshop contexts, cognitive load accumulates - each step requires creative thinking and decision-making, which is mentally exhausting. Users start with high motivation but hit decision fatigue around step 4-5. Additionally, workshops often take 45-90 minutes to complete, but users allocate 15-20 minutes expecting quick results. Time perception is broken - users don't realize how long the process will take until they're halfway through.
+**Why it happens:**
+Downstream steps store structured outputs that reference upstream outputs by value (copied data) not by reference (pointer to canonical source). When upstream changes, there's no dependency tracking to identify affected downstream steps. Context compression stored step 5 persona snapshot in step 6's context - updating step 5 doesn't retroactively update step 6's cached context. User expects system to "understand" dependencies (persona → journey map → HMW → concepts) but these are implicit domain knowledge, not explicit in database schema. Regenerating all downstream steps automatically could destroy user's manual edits in those steps (user refined the journey map by hand). Cache invalidation strategies from 2026 show cascading invalidation requires dependency trees that automatically invalidate related items.
 
-**Consequences:**
-- Low completion rates (30-40%) mean most users never get value from your platform
-- Wasted AI costs on partial workshops that generate no value
-- Negative word-of-mouth from users who "tried it but it was too long"
-- Inability to showcase successful outputs because few exist
-- Skewed metrics - only your most motivated users complete workshops, hiding UX issues
+**How to avoid:**
+Implement explicit dependency graph in database: steps table has `depends_on` JSON field listing upstream step IDs. When step is updated, mark all dependent steps as `needs_regeneration: true` with UI indicators ("Step 6 may be outdated based on your changes to Step 5. Regenerate?"). Provide "cascade regenerate" option but require user confirmation (don't auto-destroy their work). Use soft invalidation: show warning but let user proceed, then inject revision context ("The user revised the persona in Step 5 from IT Manager to CFO. Adjust your journey map accordingly.") into conversation when they visit downstream step. Store references not values: journey map stores `persona_id` not persona data, always fetch latest from canonical source. Implement versioning: keep history of persona changes, allow user to see "Step 6 was generated with Persona v1, current is v2".
 
-**Prevention:**
-1. **Show progress and time estimates upfront** - "This workshop takes 45-60 minutes. We recommend scheduling dedicated time." Don't hide the commitment
-2. **Implement save-and-resume** - Allow users to save progress and return later. Send email reminders after 24 hours: "Your workshop is 40% complete"
-3. **Create checkpoint milestones** - After steps 3, 5, and 7, generate interim deliverables (lightweight outputs) so users feel progress
-4. **Offer multiple paths** - "Express mode" (5 steps, 20 minutes, basic PRD) vs. "Comprehensive mode" (10 steps, 60 minutes, detailed Build Pack)
-5. **Reduce cognitive load per step** - Use AI to suggest options instead of asking open-ended questions. "Here are 3 user personas based on your description - pick one or customize"
-6. **Add engaging interactions** - Mix question types (multiple choice, ranking, open-ended) to maintain engagement
-7. **Gamification** - "You're 50% complete! You've defined your core features and user personas. Next: technical architecture planning"
-8. **Detect abandonment intent** - If user is inactive for 3+ minutes, show: "Need a break? Save your progress and return anytime"
-9. **Optimize for mobile/async** - Allow voice input, make steps completable in 3-5 minute chunks during commute/downtime
+**Warning signs:**
+- Users manually re-doing multiple steps after revising early steps
+- Support requests: "Why doesn't changing step X update step Y?"
+- Inconsistent Build Pack outputs (persona says CFO, user stories say IT manager)
+- Users abandoning revision workflows (high back-navigation but no re-completion)
+- Database showing updated upstream steps but stale downstream outputs
 
-**Detection:**
-- Track completion rate by step (identify specific drop-off points)
-- Measure time-per-step and total session duration
-- Monitor return rates for saved workshops
-- Track user feedback about "too long" or "overwhelming"
-- A/B test step count and format variations
-
-**Phase impact:** Address in "User Engagement & Retention" phase - requires session management, UX optimization, and analytics
+**Phase to address:**
+Phase 4 (Navigation & Back-Revise) - The back-revise feature is introduced here. Dependency tracking and invalidation strategy must be designed upfront, not bolted on later. Retrofitting dependency system after data model is established requires migration of existing workshops.
 
 ---
 
-## Moderate Pitfalls
+### Pitfall 7: Streaming Interruption and Reconnection Failures
 
-Mistakes that cause delays or technical debt.
+**What goes wrong:**
+User is in step 3 receiving AI response. Gemini is streaming a long response (persona description, 400 tokens). User's network hiccups for 2 seconds (mobile hotspot, coffee shop wifi). Streaming connection breaks. User sees partial message cut off mid-sentence. Client-side useChat doesn't automatically reconnect. User is left with incomplete AI response, must refresh page to continue. Refresh causes loss of unsaved conversation turns. Issue #11865 in Vercel AI SDK reports stream resumption only works on page reload, not when users switch tabs or background the app. Issue #10926 documents streaming permanently breaking when Chat instance is replaced dynamically (e.g., "New Chat" button without full page refresh).
 
----
+**Why it happens:**
+Server-Sent Events (SSE) used by Vercel AI SDK streaming doesn't have automatic reconnection with resume capability - it can reconnect but starts a new stream, not resume mid-message. Vercel's serverless functions have timeout limits (10s Hobby, 60s Pro) - if stream exceeds timeout, connection terminates. Edge runtime has stricter constraints on streaming than Node.js runtime. Network instability is common but streaming is fragile. Buffering full response before sending would solve reliability but destroy real-time UX benefit of streaming. Next.js App Router requires specific runtime configuration (runtime = 'nodejs', dynamic = 'force-dynamic') or streaming routes timeout unexpectedly.
 
-### Pitfall 6: Clerk Authentication Cookie Chaos
+**How to avoid:**
+Implement streaming with fallback: detect stream failure (connection close without proper end marker), automatically retry request, buffer incomplete response client-side and prepend to retry continuation. Use Node.js runtime not Edge for streaming routes to avoid stricter timeout constraints. Configure maxDuration in route config for longer-running streams. Add `runtime = 'nodejs'` and `dynamic = 'force-dynamic'` exports to streaming route handlers. Provide "Regenerate" button for incomplete responses. Persist messages on server during streaming, not just on completion - if stream breaks, user can reload and see partial message rather than nothing. Implement connection health monitoring with proactive reconnection before timeout. Return immediately and stream in background using ReadableStream's start() function - don't await async operations before returning Response.
 
-**What goes wrong:** After deploying to Vercel production, users report intermittent authentication failures - they log in successfully but get logged out when navigating between pages, or session cookies don't persist across requests. The errors are inconsistent, making debugging nightmarish. You see `auth() was called but Clerk can't detect usage of clerkMiddleware()` errors in production logs but can't reproduce locally.
+**Warning signs:**
+- User reports "AI response cut off mid-sentence"
+- Streaming endpoints showing high rate of incomplete responses (no proper end marker)
+- Error logs: connection timeout, SSE connection closed unexpectedly
+- Users refreshing page during AI responses (attempting to fix broken stream)
+- Analytics showing conversation abandonment during AI turn (not user turn)
 
-**Why it happens:** Clerk's Next.js integration has specific requirements for middleware configuration, cookie settings, and domain setup. Common issues include: (1) clerkMiddleware() not configured to run on certain routes, causing auth() calls to fail; (2) cookie attributes (HttpOnly, Secure, SameSite) misconfigured for production domains; (3) JWT strategy mismatches between middleware and server components; (4) Clerk requiring custom domains in production (*.vercel.app domains not allowed for production apps).
-
-**Prevention:**
-1. **Configure clerkMiddleware correctly** - Ensure it runs on all authenticated routes, including API routes and Server Actions
-2. **Wrap app with ClerkProvider** - Must be at root layout level to make authentication globally accessible
-3. **Set up custom domain before production** - Clerk doesn't allow *.vercel.app for production; configure custom domain early
-4. **Review cookie settings** - Ensure Secure, HttpOnly, and SameSite=Lax for production
-5. **Don't rely solely on middleware** - Always validate sessions in Server Components and API Routes (defense in depth)
-6. **Test with actual production domain** - Cookie behavior differs between localhost, Vercel preview, and production domains
-7. **Update Next.js to patched versions** - Ensure Next.js >=15.2.3, >=14.2.25, >=13.5.9, or >=12.3.5 for security fixes
-
-**Detection:**
-- Monitor auth error rates in production vs. preview/dev environments
-- Track session persistence metrics (how often do users need to re-authenticate?)
-- Set up alerts for specific Clerk error codes
-- Test authentication flow on multiple browsers and devices
-
-**Phase impact:** Address in "Authentication & User Management" phase
+**Phase to address:**
+Phase 2 (Basic Conversation Flow) for initial streaming implementation with basic error handling. Phase 6 (Production Hardening) for reconnection logic, timeout configuration, and reliability improvements. Streaming is introduced early but reliability issues only surface under production network conditions.
 
 ---
 
-### Pitfall 7: Generic AI Responses Due to Insufficient Domain Grounding
+### Pitfall 8: Conversation-to-State Divergence
 
-**What goes wrong:** Your AI facilitator provides technically correct but utterly generic responses that could apply to any product in any domain. User says "I'm building a fintech app for small businesses" and the AI responds with "Great! Understanding your users is important. Who are your target users?" instead of "Fintech for small businesses involves specific challenges around cash flow visibility, payment processing, and regulatory compliance. Let's start by identifying whether you're targeting B2B payment processing, expense management, or financial planning."
+**What goes wrong:**
+User has conversation in step 4 (Research Sense Making) identifying 5 pain points and 5 gains. Conversation flows naturally, AI confirms understanding: "Great, I've captured 5 pains and 5 gains." User continues to step 5. Clicks "View Pain Points" in sidebar - UI shows only 3 pain points. User is confused: "We just discussed 5, where are the other 2?" Database query shows structured_output JSON only has 3 entries. Conversation diverged from database state. User trusts conversation (AI said it captured 5) but database is source of truth. Step 5 persona generation uses database state (3 pains) not conversation (5 pains), resulting in shallow persona.
 
-**Why it happens:** Base LLMs are general-purpose models trained to be helpful across all domains. Without explicit domain grounding, they default to safe, generic facilitation patterns. The AI doesn't know design thinking methodology deeply enough to ask probing questions specific to each step (e.g., empathy mapping should focus on emotional states and pain points, not just demographics).
+**Why it happens:**
+Conversation is a projection of state, but extraction happens asynchronously or unreliably. Timing issue: AI responds in conversation before extraction completes, saying "captured" when database write hasn't occurred yet. Extraction failure: AI conversational turn succeeded, extraction request failed (rate limit, timeout, validation error), but user only sees successful conversation. Partial extraction: Gemini extracts 3 pain points confidently, leaves 2 ambiguous ones as "unclear" and omits them. Chat interface shows success (conversation completed) but data layer shows failure (incomplete extraction). This is the "conversation as projection not source of truth" principle failing in practice.
 
-**Prevention:**
-1. **Create step-specific system prompts** - Each workshop step needs a detailed system prompt with methodology context: "You are facilitating the Define phase of design thinking, where we synthesize empathy findings into a clear problem statement..."
-2. **Use few-shot examples** - Include 3-5 examples of expert facilitator responses for each step type
-3. **Implement domain-specific question banks** - For common industries (SaaS, fintech, healthcare, e-commerce), pre-craft domain-aware follow-up questions
-4. **Fine-tune or use RAG with design thinking corpus** - Inject design thinking best practices, common pitfalls, and methodology guidance into context
-5. **Add facilitator persona** - System prompt: "You are an experienced design thinking facilitator with 10+ years running workshops for startups. You ask probing questions that challenge assumptions..."
+**How to avoid:**
+Never let AI claim "captured" or "saved" in conversation - use non-committal language like "I understand you've identified 5 pain points. Let's continue." Make extraction explicit and user-confirmable: after conversation, show extracted structured data in UI ("Here's what I captured: [list of 5 pains]. Does this look right?") before transitioning to next step. Implement optimistic UI: show extraction in progress ("Saving your pain points...") with success/failure feedback. Use transactional step completion: conversation + extraction + database write must all succeed or entire step remains incomplete. Provide manual edit capability: if extraction is wrong, user can directly edit structured output in form UI. Show both views: conversation history tab + structured data tab so user can see both representations. Implement extraction verification: have AI count items in its own response and compare to schema validation count.
 
-**Detection:**
-- User feedback about "AI feels robotic" or "not helpful"
-- Low rating scores on AI conversation quality
-- High rates of users skipping steps or providing minimal answers
-- Qualitative review of conversation transcripts
+**Warning signs:**
+- Users saying "AI said it captured X but I only see Y"
+- Discrepancy between conversation content and structured output counts
+- Step navigation blocked because structured output is incomplete
+- Users re-asking questions already answered (AI thought it captured data but didn't)
+- Support requests: "Where did my data go?"
 
-**Phase impact:** Address in "AI Prompt Engineering & Quality" phase
-
----
-
-### Pitfall 8: Structured Output Generation Failures Breaking PRD Export
-
-**What goes wrong:** After users complete the workshop, they click "Generate Build Pack" and get an error: "Failed to generate PRD. Please try again." On retry, it works but the PRD is missing sections or has malformed JSON. You investigate and discover the Gemini API returned valid text but not valid JSON, or the JSON schema didn't match your expected structure, causing parsing failures.
-
-**Why it happens:** LLM structured output generation has historically been unreliable - older GPT-4 models handled complex JSON tests only 35% of the time. While newer models (GPT-4 with structured outputs) achieve near-100% compliance, Gemini's structured output capabilities vary by model version. Without schema validation and retry logic, any generation failure results in user-facing errors.
-
-**Prevention:**
-1. **Use Gemini's native structured output mode** - Enable JSON schema validation in API requests to enforce schema compliance
-2. **Implement retry logic with exponential backoff** - On parsing failure, retry up to 3 times before showing user error
-3. **Validate output against JSON schema** - Use zod or similar library to validate API response before processing
-4. **Provide fallback templates** - If structured generation fails after retries, use a template-based approach with data insertion
-5. **Test with edge cases** - Ensure schema handles empty fields, long text, special characters, and nested structures
-6. **Lower temperature for structured outputs** - Set temperature to 0.1-0.3 to reduce variability
-7. **Simplify schema initially** - Start with flat structure, add complexity only as reliability is proven
-
-**Detection:**
-- Monitor structured output generation success rate
-- Track parsing errors and schema validation failures
-- Set up alerts for retry exhaustion (3+ failures)
-- Log malformed outputs for analysis
-
-**Phase impact:** Address in "PRD Generation & Export" phase
+**Phase to address:**
+Phase 5 (Structured Outputs) - Extraction reliability is core to this phase. Must implement confirmation UI and transactional completion. Can't defer because user trust is destroyed if conversation promises data that database doesn't contain.
 
 ---
 
-### Pitfall 9: Losing Workshop Context During Browser Refresh or Tab Close
+### Pitfall 9: Zustand State Persistence Desync with React Server Components
 
-**What goes wrong:** User is on step 6 of 10, has invested 40 minutes in the workshop. Their browser crashes or they accidentally close the tab. When they return, they're back at step 1 or see "Session expired." They rage-quit and write a 1-star review: "Lost all my work."
+**What goes wrong:**
+User completes step 3, navigates to step 4. Zustand store updates `currentStep: 4` in client-side state with persist middleware writing to localStorage. User refreshes page or opens new tab. Next.js App Router renders page server-side. Server components read `currentStep` from database (still shows 3 because auto-save hasn't fired yet). Client hydrates with localStorage value (4). UI flashes: initially shows step 3 (server render), then jumps to step 4 (client hydration). User sees jarring flash. Worse: if user navigates during flash, they might navigate from wrong step. Zustand documentation explicitly warns: "Using Zustand for adding state in React Server Components can lead to unexpected bugs and privacy issues."
 
-**Why it happens:** Relying solely on in-memory state (React context, Zustand without persistence) or short-lived server sessions means any client-side disruption loses progress. Vercel serverless functions don't maintain long-lived state between requests.
+**Why it happens:**
+Zustand is client-side state management but Next.js App Router uses server-side rendering. Server has no access to localStorage during SSR. Hydration mismatch occurs when server-rendered HTML differs from client-rendered HTML. Zustand persist middleware rehydrates asynchronously, causing temporary state mismatch. Concurrent rendering in React 19 can expose race conditions between server state and client state. State management anti-pattern: database is source of truth but Zustand cache becomes stale, leading to two sources of truth that diverge. React 19 uses useSyncExternalStore under the hood for state libs like Zustand, but this doesn't eliminate SSR hydration issues.
 
-**Prevention:**
-1. **Persist workshop state to database on every step completion** - Don't wait for user to explicitly save
-2. **Implement autosave every 30 seconds** - Save draft responses as user types
-3. **Use workshop session IDs** - Generate stable session ID on workshop start, store in URL or local storage
-4. **Add "Resume workshop" functionality** - On return, detect incomplete workshops and prompt: "You have an in-progress workshop. Continue?"
-5. **Client-side persistence as backup** - Use local storage or IndexedDB to cache state, sync to server when online
-6. **Show save status indicator** - "All changes saved" feedback so users feel confident
+**How to avoid:**
+Don't use Zustand for cross-server-client state that must be consistent. Use Zustand only for transient UI state (sidebar open/closed, current tab) not for workshop state (current step, conversation data). Use database as single source of truth: server components read from database, client components call server actions to update database, then client re-fetches. Implement optimistic updates: update Zustand immediately for responsive UI, send server action, rollback Zustand if server action fails. Use React 19's use() hook to suspend on server data fetching, ensuring client renders only after server data is ready. Suppress hydration warnings only after confirming they're harmless (use suppressHydrationWarning attribute carefully). If state MUST be cached client-side, use sessionStorage (tab-scoped) not localStorage (cross-tab shared).
 
-**Detection:**
-- Track workshop abandonment vs. explicit completion
-- Monitor session timeout rates
-- Track "resume workshop" usage rates
-- User feedback about lost progress
+**Warning signs:**
+- Hydration mismatch errors in console
+- UI flashing between different values on page load
+- currentStep in URL doesn't match currentStep in UI
+- User actions operating on wrong step (clicked next from step 3, but UI thought they were on step 4)
+- Different behavior on initial load vs subsequent navigations
 
-**Phase impact:** Address in "Session Management & Persistence" phase
-
----
-
-## Minor Pitfalls
-
-Mistakes that cause annoyance but are fixable.
+**Phase to address:**
+Phase 3 (Step Navigation) when Zustand is introduced for state management. Must establish data flow pattern (database is source of truth, Zustand is cache) from day one. Fixing hydration issues after architecture is established requires refactoring all state read/write paths.
 
 ---
 
-### Pitfall 10: Over-Engineering Workshop Prototypes in Early Steps
+### Pitfall 10: Gemini Temperature Inconsistency (Gemini 3 vs Earlier Models)
 
-**What goes wrong:** In the ideation/prototyping steps, users spend 30+ minutes describing every detail of their solution because the AI keeps asking follow-up questions. The workshop drags on, and the final PRD is bloated with premature decisions that should be deferred to implementation.
+**What goes wrong:**
+Developer builds structured output extraction on Gemini 2.5 Flash using temperature 0.1 for consistency (based on common LLM best practices: "lower temperature = more deterministic"). Extractions are reliable and deterministic. Google releases Gemini 3 with better reasoning capabilities. Developer upgrades to Gemini 3 expecting better results. Extractions start failing - Gemini 3 loops, gets stuck, or produces degraded outputs. Logs show Gemini 3 repeatedly generating similar but slightly different responses, never converging on final answer. Developer spends hours debugging schema, when the issue is temperature setting. Gemini 3 documentation states: "strongly recommends keeping temperature at default 1.0" because "changing temperature may lead to unexpected behavior such as looping or degraded performance."
 
-**Why it happens:** AI facilitation without constraints naturally keeps digging deeper with follow-up questions. In design thinking, prototyping should be low-fidelity and quick, but the AI doesn't know when to stop asking questions.
+**Why it happens:**
+Gemini model families have different optimization profiles. Gemini 2.5 and earlier models benefited from tuning temperature to control creativity vs determinism - lower temperature (0.0-0.3) produced more consistent structured outputs. Gemini 3 has fundamentally different reasoning architecture optimized for default temperature 1.0. Changing temperature below 1.0 on Gemini 3 disrupts internal reasoning loops, causes the model to second-guess itself, and degrades performance particularly on complex reasoning tasks. Developer intuition says "lower temperature = more consistent" but this breaks Gemini 3's reasoning capabilities. High temperature (1.0) injects randomness in token selection, but Gemini 3's reasoning layer compensates for this - removing the randomness breaks the balance.
 
-**Prevention:**
-1. **Set explicit turn limits per step** - After 3-5 exchanges, AI should summarize and move to next step
-2. **Prompt engineering for conciseness** - "Ask only the most critical questions needed to move forward"
-3. **UI hints about step duration** - "This step typically takes 5-7 minutes"
-4. **Provide "Skip detail for now" options** - Let users defer technical decisions
+**How to avoid:**
+Use model-specific temperature configurations: if model.startsWith('gemini-2'), use temperature 0.0-0.3 for structured outputs; if model.startsWith('gemini-3'), use temperature 1.0 (default). Read model-specific documentation before upgrading - "Gemini X has new features" doesn't mean "drop-in replacement." Test structured outputs extensively on new models before production deployment. Implement A/B testing: run Gemini 2.5 and Gemini 3 in parallel, compare extraction reliability and quality. Consider using Gemini 2.5 Flash for structured extraction even if Gemini 3 is used for conversation (split responsibilities by model strength). Document temperature configuration prominently in code comments to prevent future developers from "fixing" it incorrectly.
 
-**Detection:**
-- Track average time per step
-- Monitor total conversation turns per step
-- User feedback about "too many questions"
+**Warning signs:**
+- Structured output extraction succeeds on Gemini 2.5, fails on Gemini 3
+- Logs showing repeated similar responses (looping behavior)
+- Extraction requests taking much longer than expected (model not converging)
+- Zod validation errors increase after model upgrade
+- AI responses become generic or degraded after temperature adjustment
 
-**Phase impact:** Address in "UX Optimization" phase
-
----
-
-### Pitfall 11: No Visibility Into AI Reasoning Process
-
-**What goes wrong:** The AI suggests a feature priority or architecture decision, but users don't understand why. They don't trust the recommendation because it's a black box.
-
-**Why it happens:** LLMs provide answers without explaining reasoning unless explicitly prompted.
-
-**Prevention:**
-1. **Add "show reasoning" prompts** - For key decisions, ask AI to explain its reasoning
-2. **Show confidence levels** - "Based on your input, I'm 80% confident this is your primary user persona"
-3. **Cite workshop context** - "In Step 2, you mentioned budget constraints, so I'm recommending serverless architecture"
-
-**Detection:**
-- User feedback about trust/transparency
-- Users frequently rejecting AI suggestions
-
-**Phase impact:** Address in "AI Explainability" phase
+**Phase to address:**
+Phase 5 (Structured Outputs) for initial implementation with Gemini 2.5. Phase 6 (Production Hardening) for model upgrade testing and temperature tuning per model. Document temperature configuration prominently in code comments to prevent future developers from "fixing" it incorrectly.
 
 ---
 
-### Pitfall 12: No Mechanism for Users to Correct AI Mistakes Mid-Workshop
+## Technical Debt Patterns
 
-**What goes wrong:** In step 4, the AI misunderstands a user's input and builds the rest of the workshop on a false assumption. The user realizes it in step 7 but has no way to go back and correct it without restarting.
+Shortcuts that seem reasonable but create long-term problems.
 
-**Why it happens:** Linear workshop flow without edit capabilities.
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Skip database transactions for auto-save | Simpler code, no locking complexity | Race conditions under concurrent load, data corruption, lost updates | Never - race conditions are silent until production |
+| Store conversation as JSON blob instead of messages table | Faster to prototype, single read/write | Can't query conversation history, can't implement message-level features (edit/delete), can't analyze conversation patterns | MVP if you commit to migration before v1.0 |
+| Use full conversation history in every Gemini request (no compression) | Simpler context management, no summarization logic | Context degradation after step 4-5, high token costs, slow responses | Only for first 3 steps during prototyping |
+| Skip structured output validation | Faster development, no Zod schemas | Silent data corruption, downstream steps build on bad data, impossible to debug | Never - validation catches issues immediately vs hours later |
+| Use client-side state (Zustand) as source of truth | Responsive UI, no database round-trips | State loss on refresh, no sync across devices/tabs, hydration mismatches | Transient UI state only (sidebar open/close) |
+| Hard-code system prompts in route handlers | Easy to iterate, no database complexity | Prompt changes require deploy, can't A/B test, no prompt versioning | Early prototyping only, migrate to database before user testing |
+| Single Gemini API key (no rotation) | Simple configuration, no load balancing logic | Rate limit exhaustion affects all users simultaneously, no redundancy | Free tier development only |
+| Skip Neon health-check warming | Simpler architecture, no cron job | Cold starts on every first user after idle period, poor first impression | Development only, must fix before production launch |
+| Synchronous structured output extraction (block step transition until done) | Simple data flow, guaranteed consistency | Slow UX (3-5s wait), user sees loading spinner, feels broken | Acceptable if extraction is fast (<1s), otherwise use async with progress indicator |
+| Skip cascade invalidation (don't track dependencies) | Simpler data model, no graph traversal | Users must manually regenerate downstream steps after revisions, poor UX | MVP if advertised as "no back-editing" flow |
 
-**Prevention:**
-1. **Add "Edit previous steps" functionality** - Let users jump back, correct, and regenerate downstream content
-2. **Show editable summaries** - After each step, show "Here's what I understood" with inline editing
-3. **Detect contradictions** - If user input in step 7 contradicts step 3, flag it: "This seems to conflict with your earlier response about..."
+## Integration Gotchas
 
-**Detection:**
-- Users restarting workshops instead of completing
-- Support requests about "how do I fix a mistake"
+Common mistakes when connecting to external services in this specific stack.
 
-**Phase impact:** Address in "UX Polish" phase
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Vercel AI SDK + Gemini | Assuming structured outputs work identically to OpenAI | Gemini uses OpenAPI 3.0 schema subset not full JSON Schema. Use Vercel AI SDK's schema generation, don't hand-write schemas. Test extraction heavily. Set responseMimeType: "application/json". |
+| Neon Postgres + Vercel Edge | Using standard node-postgres driver in edge functions | Use @neondatabase/serverless driver. Configure connection timeout (?connect_timeout=10). Edge doesn't support TCP connections. |
+| Drizzle ORM + Neon | Using drizzle-orm/node-postgres import for serverless | Use drizzle-orm/neon-http for edge compatibility. Import from correct package path: drizzle-orm/neon-serverless for WebSocket. |
+| Clerk Auth + Next.js 16 | Missing clerkMiddleware in middleware.ts | Must export clerkMiddleware and configure public/protected routes. Middleware runs on all requests, improves edge auth performance. |
+| Clerk Auth + Custom Domain | Expecting auth to work on custom domain without configuration | Must configure custom domain in Clerk dashboard AND set CLERK_DOMAIN env var. Cookies are domain-bound. |
+| Gemini Context Caching + Streaming | Caching system prompt but expecting per-user customization | Cached content must be identical across requests. Put user-specific context AFTER cache boundary. Cache only stable system prompts + step definitions. |
+| Zustand Persist + Next.js SSR | Reading Zustand state in server components | Server components can't access localStorage. Only use Zustand in client components ('use client'). Suppress hydration warnings with suppressHydrationWarning. |
+| React 19 Concurrent Rendering + Vercel AI SDK | useChat causing multiple simultaneous requests | Vercel AI SDK 5+ decoupled from UI to support React 19. Use sendMessage() not handleSubmit(). Ensure single request inflight. |
+| Gemini Streaming + Next.js App Router | Streaming route timing out in production | Add runtime = 'nodejs' export (not edge). Add dynamic = 'force-dynamic'. Configure maxDuration. Edge runtime has stricter timeout. |
+| Drizzle Migrations + Vercel Build | Migrations failing in Vercel build pipeline with edge config | Run migrations in separate script before build, not during build. Use Node.js environment for migrations (drizzle-kit migrate), not edge. Edge can't run migrations. |
 
----
+## Performance Traps
 
-## Phase-Specific Warnings
+Patterns that work at small scale but fail as usage grows.
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Database Setup | Choosing wrong Neon driver for Vercel | Research Neon serverless driver vs. connection pooling before implementation |
-| API Integration | Not planning for Gemini rate limits | Design multi-project key rotation and request queuing from day one |
-| Authentication | Clerk cookie/domain issues | Set up custom domain and test production auth flow early |
-| Conversation Flow | Context degradation after step 5 | Implement context compacting and structured data extraction from step 1 |
-| PRD Generation | Hallucinated requirements | Build RAG architecture and validation layer into PRD generation |
-| User Engagement | High drop-off at step 4-6 | Add progress indicators, save-resume, and multiple workshop modes |
-| AI Quality | Generic, unhelpful responses | Invest in prompt engineering and domain-specific examples per step |
-| Session Management | Lost progress on browser refresh | Implement autosave and database persistence from MVP |
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Unbounded conversation history | Step 1-3 feels fast, step 7-10 slows down significantly (5s+ responses) | Implement hierarchical context compression at step boundaries, keep verbatim history only for current step | After 50+ messages (~step 5 at 10 msgs/step) |
+| No database query optimization (N+1 queries) | Single user feels fine, 10 concurrent users causes 3-5s page loads | Use Drizzle's with queries for relations, index foreign keys, batch requests | 10+ concurrent users |
+| Synchronous structured output extraction blocking UI | Extraction takes 2-3s, acceptable during prototyping | Move extraction to background job, show progress indicator, allow navigation before completion | User testing (users perceive >1s delay as "slow") |
+| Storing all messages in single table without partitioning | Query performance fine for first 1K messages | Partition messages table by conversation_id, implement retention policy (archive >90 days) | 10K+ messages per conversation |
+| No rate limit margin monitoring | Free tier quota works fine with 1-2 test users | Monitor rate limit headers (x-ratelimit-remaining), throttle proactively at 20% margin, alert at 10% | First production traffic spike |
+| Cold start on every Neon connection | Single user has 3-8s delay, acceptable in dev | Implement health-check warming (cron every 4 mins), use connection pooling (PgBouncer) | First real user session (production) |
+| Full re-summarization on every step | Step 1-2 summarization fast (<1s), step 8-9 slow (5s+ to summarize all history) | Incremental summarization: only summarize new content since last summary, merge summaries hierarchically | After step 5 (summarizing 40+ messages) |
+| No Gemini context caching | Token costs acceptable with 1-2 test workshops | Cache stable system prompts + step definitions (90% cost reduction), only send dynamic context uncached | 10+ workshops (token costs scale linearly) |
+| Client-side conversation state only | Single tab works fine, user never loses work | Persist conversation to database on every message, enable cross-tab sync | User refreshes, opens multiple tabs, or device dies |
 
----
+## Security Mistakes
 
-## Technology Stack Specific Warnings
+Domain-specific security issues beyond general web security.
 
-### Gemini API
-- **Rate limiting is multi-dimensional** - Monitor RPM, TPM, RPD, and IPM separately
-- **Free tier is inadequate for production** - 15 RPM means ~15 users max with 1 request/minute each
-- **Quotas can change without notice** - December 2025 adjustment broke many apps
-- **Project-level limits** - Can't scale by adding API keys to same project
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Storing API keys in client-side state/localStorage | API key leakage via browser devtools, XSS attacks can steal keys | Store API keys only in server-side environment variables, never send to client |
+| No authentication on database queries | Users can access other users' workshops by changing URL parameters | Use Clerk auth middleware, pass user.id to all database queries, filter by user ownership |
+| Exposing raw conversation history without filtering | Users can see system prompts revealing AI instructions, competitive intelligence leakage | Filter messages by role when displaying history, only show user/assistant messages, hide system messages |
+| No rate limiting on API routes beyond Gemini | Malicious user can spam database writes, exhaust server resources | Implement per-user rate limiting (e.g., 60 requests/minute) using middleware, separate from Gemini limits |
+| User input directly interpolated into prompts | Prompt injection: user types "ignore previous instructions and...", hijacks AI | Sanitize user input, use separate user message role (Gemini treats user messages as data not instructions) |
+| No validation on structured output before persistence | Malicious/malformed JSON crashes app, SQL injection via JSON fields | Always validate with Zod before database write, use parameterized queries (Drizzle handles this) |
+| Workshop data accessible via public URLs | Sharing workshop link exposes all data without auth check | Require authentication on all workshop routes, check user.id matches workshop.userId in database |
+| Gemini API errors exposing internal details to client | Error messages reveal database schema, API structure, rate limit details | Catch Gemini errors on server, return generic "AI unavailable" to client, log detailed errors internally |
 
-### Neon Postgres
-- **Cold starts are real** - Default 5-minute suspend causes 500ms-5s latency on first query
-- **Use serverless driver for serverless** - @neondatabase/serverless is optimized for Vercel
-- **Vercel Fluid enables connection pooling** - Standard postgres connections work with Vercel's new model
-- **Free tier has compute limits** - Frequent suspension on free tier; paid tier offers "always on"
+## UX Pitfalls
 
-### Clerk + Next.js
-- **Middleware must run on all auth routes** - Missing routes cause mysterious auth failures
-- **Production requires custom domain** - Can't use *.vercel.app for production
-- **Cookie configuration matters** - Incorrect settings break session persistence
-- **ClerkProvider must wrap entire app** - Root layout level required
+Common user experience mistakes in this domain.
 
-### Vercel Serverless
-- **No long-lived state** - Functions are stateless; persist everything to database or cache
-- **Cold starts affect all services** - Database, functions, and AI API all have cold start issues
-- **Timeouts are strict** - Plan for fast responses or use background jobs
-- **Fluid model changes game** - New Vercel Fluid allows connection pooling safely
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| No upfront time estimate | User starts workshop expecting 10 mins, realizes it's 60 mins at step 6, abandons | Show "This workshop takes 45-60 minutes. Express mode available (20 mins, 5 steps)." before starting |
+| No save/resume capability | User must complete all 10 steps in one sitting, life interrupts, work lost | Auto-save every 30s, allow close/resume anytime, send email reminder for incomplete workshops |
+| Generic AI responses (no domain adaptation) | AI asks "Who are your stakeholders?" same way for B2B SaaS and physical product | Use domain-specific question libraries, detect industry from initial description, tailor prompts |
+| No progress indicators | User doesn't know if they're 30% done or 80% done, time feels endless | Show "Step 3 of 10 (30%)" prominently, estimated time remaining, celebrate milestones |
+| Can't edit previous steps | User realizes mistake in step 2 while on step 8, must restart entire workshop | Allow back navigation with clear "Editing step 2 may affect steps 3-8" warning, offer cascade update |
+| AI explanation too verbose | User asks simple question, gets 500-word essay, scrolling fatigue | Enforce concise responses: 1-2 sentences for confirmations, bullet points for lists, "More details?" option |
+| No visibility into extraction process | User completes step conversation, clicks next, blocked with no explanation | Show "Extracting structured data..." progress, display extracted data for confirmation before proceeding |
+| Streaming with no partial content | User stares at blank message box for 3s before text appears | Show typing indicator immediately, display partial content as it streams, don't wait for complete response |
+| No error recovery path | AI fails mid-step, user sees "An error occurred", must refresh and lose progress | Offer "Retry", "Start this step over", or "Skip this step" options, preserve conversation history |
+| Can't see "AI's notes" | User wonders "Did the AI understand my pain points?", no way to verify | Provide "View Extracted Data" sidebar showing JSON outputs, let user verify AI captured correctly |
 
----
+## "Looks Done But Isn't" Checklist
+
+Things that appear complete but are missing critical pieces.
+
+- [ ] **Streaming chat working:** Often missing reconnection on network failure - verify stream interruption recovery, don't just test happy path
+- [ ] **Step navigation:** Often missing back-navigation with cascade invalidation - verify editing step 2 invalidates downstream steps, not just forward flow
+- [ ] **Auto-save implemented:** Often missing race condition prevention - verify concurrent auto-save + step completion doesn't corrupt data (test with rapid button clicking)
+- [ ] **Structured output extraction:** Often missing retry logic and partial extraction handling - verify extraction fails gracefully, doesn't block user forever
+- [ ] **Context compression:** Often missing memory refresh checkpoints - verify AI at step 8 still remembers key decisions from step 2 (test end-to-end conversation quality)
+- [ ] **Rate limit handling:** Often missing exponential backoff and UI feedback - verify 429 errors don't break app, show user-friendly message
+- [ ] **Database transactions:** Often missing optimistic locking for concurrent writes - verify two users editing same workshop doesn't cause lost updates
+- [ ] **Authentication:** Often missing ownership checks on data access - verify user A can't access user B's workshop by guessing URL parameters
+- [ ] **Error boundaries:** Often missing server action error handling - verify Gemini API failure doesn't crash entire page, shows recoverable error
+- [ ] **SSR hydration:** Often missing suppressHydrationWarning on client-only state - verify no console errors on page load, no UI flashing
+
+## Recovery Strategies
+
+When pitfalls occur despite prevention, how to recover.
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| Context degradation noticed in production | LOW | Deploy hierarchical compression hotfix, regenerate summaries for active workshops, add memory refresh checkpoints |
+| Gemini rate limit cascade failures | LOW | Add exponential backoff immediately (30 min deploy), purchase Tier 1 API access ($50, immediate upgrade), implement queuing (4 hour deploy) |
+| Neon cold start death spiral | LOW | Switch to @neondatabase/serverless driver (2 hour migration), add health-check cron (1 hour setup), improve loading UX (1 hour) |
+| Structured output extraction failing | MEDIUM | Add retry logic with schema repair (2 hour deploy), implement manual edit fallback UI (6 hour deploy), review and simplify schemas (4 hour refactor) |
+| Auto-save race conditions | MEDIUM | Add optimistic locking to database schema (migration required, 4 hours), implement request queue (6 hour refactor), add version column (migration + code update, 6 hours) |
+| Back-and-revise cascade invalidation missing | HIGH | Add dependency tracking to schema (migration, 4 hours), build dependency graph UI (12 hour feature), implement cascade update logic (8 hour feature). Total: 3 days |
+| Streaming interruption failures | MEDIUM | Add reconnection logic (4 hours), switch to Node.js runtime (2 hours), implement response buffering (4 hours), add "Regenerate" button (2 hours) |
+| Conversation-to-state divergence | MEDIUM | Add confirmation UI for extraction (6 hours), implement transactional step completion (4 hours), build manual edit capability (8 hours). Total: 2 days |
+| Zustand + RSC desync | HIGH | Refactor to database-as-source-of-truth (16 hours), remove Zustand persistence for workshop state (8 hours), add optimistic updates (8 hours). Total: 4 days - architectural change |
+| Gemini 3 temperature inconsistency | LOW | Add model-specific temperature config (1 hour), test extraction reliability (2 hours), update documentation (1 hour) |
+
+## Pitfall-to-Phase Mapping
+
+How roadmap phases should address these pitfalls.
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| Context Degradation Syndrome | Phase 4 (Navigation) | Test end-to-end: complete all 10 steps, verify step 10 AI references step 1 decisions accurately |
+| Gemini Rate Limit Cascade Failures | Phase 4 (basic), Phase 6 (complete) | Trigger 429 manually (exceed quota), verify exponential backoff + UI feedback works |
+| Neon Cold Start Death Spiral | Phase 1 (driver), Phase 6 (warming) | Wait 10 minutes idle, load app, verify <2s load time with health check warming |
+| Structured Output Extraction Failures | Phase 5 (Structured Outputs) | Test ambiguous conversations, empty conversations, very long conversations, verify extraction fails gracefully |
+| Auto-Save Race Conditions | Phase 4 (Navigation) | Simulate: auto-save mid-completion, verify no data corruption (use concurrent request testing) |
+| Back-and-Revise Cascade Invalidation | Phase 4 (Navigation) | Edit step 5, verify downstream steps marked outdated, cascade update works correctly |
+| Streaming Interruption Failures | Phase 2 (basic), Phase 6 (reliability) | Simulate network failure mid-stream (browser devtools network throttling), verify reconnection |
+| Conversation-to-State Divergence | Phase 5 (Structured Outputs) | Verify conversation and database show same structured data, test extraction confirmation UI |
+| Zustand + RSC Desync | Phase 3 (Step Navigation) | Verify no hydration warnings in console, no UI flashing on page load, database = source of truth |
+| Gemini Temperature Inconsistency | Phase 5 (Structured Outputs) | Test extraction on Gemini 2.5 (temp 0.1) vs Gemini 3 (temp 1.0), verify both work correctly |
 
 ## Sources
 
-### Official Documentation (HIGH confidence)
-- [Gemini API Rate Limits](https://ai.google.dev/gemini-api/docs/rate-limits)
-- [Neon Vercel Connection Methods](https://neon.com/docs/guides/vercel-connection-methods)
-- [Clerk Next.js Auth Error Documentation](https://clerk.com/docs/reference/nextjs/errors/auth-was-called)
+### Critical Pitfall Research (HIGH confidence)
 
-### Technical Research & Benchmarks (MEDIUM-HIGH confidence)
-- [Context Window Management for AI Agents](https://www.getmaxim.ai/articles/context-window-management-strategies-for-long-context-ai-agents-and-chatbots/)
-- [Building Multi-Turn Conversations: 2026 Playbook](https://medium.com/ai-simplified-in-plain-english/building-multi-turn-conversations-with-ai-agents-the-2026-playbook-45592425d1db)
-- [Context Degradation Syndrome](https://jameshoward.us/2024/11/26/context-degradation-syndrome-when-large-language-models-lose-the-plot)
-- [Neon Postgres Deep Dive: 2025 Updates](https://dev.to/dataformathub/neon-postgres-deep-dive-why-the-2025-updates-change-serverless-sql-5o0)
-- [Node.js + Neon Serverless Postgres: Millisecond Connections](https://medium.com/@kaushalsinh73/node-js-neon-serverless-postgres-millisecond-connections-at-scale-ecc2e5e9848a)
+**Context Degradation:**
+- [LLM Context Window Degradation Research](https://arxiv.org/pdf/2505.06120) - Academic research on multi-turn conversation quality degradation
+- [Context Rot Explained](https://redis.io/blog/context-rot/) - Performance degradation as input length increases
+- [Context Length Alone Hurts Performance](https://arxiv.org/html/2510.05381v1) - 13.9%-85% degradation research
+- [Context Window Overflow 2026](https://redis.io/blog/context-window-overflow/) - Effective capacity 60-70% of advertised
+- [Context Engineering: 2026 Frontier](https://medium.com/@mfardeen9520/context-engineering-the-new-frontier-of-production-ai-in-2026-efa789027b2a) - Compression patterns
+- [Context Window Management Strategies](https://www.getmaxim.ai/articles/context-window-management-strategies-for-long-context-ai-agents-and-chatbots/) - Hierarchical summarization
+- [Compressing Context](https://factory.ai/news/compressing-context) - Rolling summaries pattern
 
-### AI Quality & Hallucination Prevention (MEDIUM confidence)
-- [AI Hallucination: LLM Comparison 2026](https://research.aimultiple.com/ai-hallucination/)
-- [How to Prevent LLM Hallucinations: 5 Proven Strategies](https://www.voiceflow.com/blog/prevent-llm-hallucinations)
-- [10 Ways to Prevent AI Hallucinations [2026]](https://digitaldefynd.com/IQ/ways-to-prevent-ai-hallucinations/)
-- [Structured Output Generation in LLMs](https://agenta.ai/blog/the-guide-to-structured-outputs-and-function-calling-with-llms)
-- [LLMs Get Lost In Multi-Turn Conversation](https://arxiv.org/pdf/2505.06120)
+**Gemini Rate Limits:**
+- [Gemini API Rate Limits Documentation](https://ai.google.dev/gemini-api/docs/rate-limits) - Official multi-dimensional limits
+- [Gemini API Rate Limits Guide 2026](https://www.aifreeapi.com/en/posts/gemini-api-rate-limit-explained) - RPM/TPM/RPD/IPM details
+- [Gemini Rate Limits Per Tier](https://www.aifreeapi.com/en/posts/gemini-api-rate-limits-per-tier) - Free vs Tier 1 comparison
+- [Google Gemini Context Window](https://www.datastudios.org/post/google-gemini-context-window-token-limits-model-comparison-and-workflow-strategies-for-late-2025) - 1M token limits
 
-### PRD Generation & Quality (MEDIUM confidence)
-- [Using AI to Write PRDs](https://www.chatprd.ai/resources/using-ai-to-write-prd)
-- [How to Write PRDs for AI Coding Agents](https://medium.com/@haberlah/how-to-write-prds-for-ai-coding-agents-d60d72efb797)
-- [PRD Agent Case Study](https://www.leanware.co/case-studies/building-prd-agent-%E2%80%93-an-ai-powered-product-requirement-document-generator)
+**Neon Cold Starts:**
+- [Neon Serverless Driver Documentation](https://neon.com/docs/serverless/serverless-driver) - Edge optimization
+- [Neon Connection Pooling](https://neon.com/docs/connect/connection-pooling) - PgBouncer setup, 10K connection support
+- [Neon Postgres Deep Dive 2025](https://dev.to/dataformathub/neon-postgres-deep-dive-why-the-2025-updates-change-serverless-sql-5o0) - Cold start details
+- [Node.js + Neon Serverless](https://medium.com/@kaushalsinh73/node-js-neon-serverless-postgres-millisecond-connections-at-scale-ecc2e5e9848a) - Millisecond connections
 
-### Design Thinking Facilitation (MEDIUM confidence)
-- [Common Mistakes in Design Thinking Workshops](https://www.teamland.com/post/common-mistakes-to-avoid-in-design-thinking-workshops)
-- [Overcoming Barriers To Effective Design-Thinking Workshops](https://www.sciencedirect.com/science/article/pii/S1877050924015394)
-- [Design Thinking Facilitator Guide](https://voltagecontrol.com/blog/design-thinking-facilitator-guide-a-crash-course-in-the-basics/)
+**Structured Outputs:**
+- [Vercel AI SDK Google Generative AI](https://ai-sdk.dev/providers/ai-sdk-providers/google-generative-ai) - Gemini structured output support
+- [Vercel AI SDK Issue #6494](https://github.com/vercel/ai/issues/6494) - JSON schema support for Gemini 2.5
+- [Vercel AI SDK Issue #11396](https://github.com/vercel/ai/issues/11396) - Gemini 3 structured output bugs
+- [Gemini Structured Output Guide](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/multimodal/control-generated-output) - Official Google documentation
+- [AI SDK Generating Structured Data](https://ai-sdk.dev/docs/ai-sdk-core/generating-structured-data) - Zod schema patterns
 
-### User Engagement & Chatbot Statistics (MEDIUM confidence)
-- [80+ Chatbot Statistics & Trends in 2026](https://www.tidio.com/blog/chatbot-statistics/)
-- [State of Conversational AI: Trends 2026](https://masterofcode.com/blog/conversational-ai-trends)
-- [Why It's Hard to Say Goodbye to AI Chatbots](https://www.library.hbs.edu/working-knowledge/why-its-so-hard-to-say-goodbye-to-ai-chatbots)
+**Auto-Save Race Conditions:**
+- [Database Race Conditions Catalogue](https://www.ketanbhatt.com/p/db-concurrency-defects) - Lost updates, dirty writes
+- [Transactional Locking to Prevent Race Conditions](https://sqlfordevs.com/transaction-locking-prevent-race-condition) - Pessimistic locking patterns
+- [Off to the Races: 3 Ways to Avoid Race Conditions](https://www.aha.io/engineering/articles/off-to-the-races-3-ways-to-avoid-race-conditions) - Optimistic locking strategies
+- [Database Race Conditions Blog](https://blog.doyensec.com/2024/07/11/database-race-conditions.html) - Concurrency defects
 
-### Clerk Authentication Issues (MEDIUM confidence)
-- [Complete Authentication Guide for Next.js App Router 2025](https://clerk.com/articles/complete-authentication-guide-for-nextjs-app-router)
-- [Next.js Session Management: Solving Persistence Issues 2025](https://clerk.com/articles/nextjs-session-management-solving-nextauth-persistence-issues)
-- [Investigating Clerk Next.js Vulnerability](https://pilcrow.vercel.app/blog/clerk-nextjs-vulnerability)
+**Streaming Interruptions:**
+- [Vercel AI SDK Issue #11865](https://github.com/vercel/ai/issues/11865) - Stream resumption doesn't work when users switch tabs
+- [Vercel AI SDK Issue #10926](https://github.com/vercel/ai/issues/10926) - Streaming breaks when Chat instance replaced
+- [Fixing Slow SSE Streaming in Next.js](https://medium.com/@oyetoketoby80/fixing-slow-sse-server-sent-events-streaming-in-next-js-and-vercel-99f42fbdb996) - January 2026 streaming issues
+- [How to Solve Next.js Timeouts](https://www.inngest.com/blog/how-to-solve-nextjs-timeouts) - Runtime configuration
 
-### Rate Limiting & Production Issues (MEDIUM confidence)
-- [Gemini API Free Tier Rate Limits: Complete Guide 2026](https://www.aifreeapi.com/en/posts/gemini-api-free-tier-rate-limits)
-- [Bypassing Gemini API Rate Limits with Key Rotation](https://medium.com/@entekumejeffrey/bypassing-gemini-api-rate-limits-with-smart-key-rotation-in-next-js-8acdee9f9550)
-- [Neon Postgres Cold Start Problem (X/Twitter)](https://x.com/hipreetam93/status/1951152075410219056)
+**State Sync Issues:**
+- [LLMs Get Lost in Multi-Turn Conversation](https://arxiv.org/pdf/2505.06120) - Conversation divergence research
+- [ConflictSync: State Synchronization](https://arxiv.org/html/2505.01144) - Distributed state sync patterns
+- [Top Challenges in Data Sync](https://www.leadsforge.ai/blog/top-challenges-in-data-sync-and-how-to-solve-them) - Concurrent update conflicts
+
+**Zustand + React Server Components:**
+- [Zustand Discussion #2200](https://github.com/pmndrs/zustand/discussions/2200) - Using Zustand in RSC: misguided misinformation
+- [React State Management 2025: Context vs Zustand](https://dev.to/cristiansifuentes/react-state-management-in-2025-context-api-vs-zustand-385m) - RSC compatibility
+- [State Management Trends 2025](https://makersden.io/blog/react-state-management-in-2025) - useSyncExternalStore under the hood
+
+**Gemini Temperature:**
+- [Gemini 3 Developer Guide](https://ai.google.dev/gemini-api/docs/gemini-3) - Temperature recommendations (1.0 default)
+- [Gemini Parameter Adjustment](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/adjust-parameter-values) - Temperature effects
+- [Structured Outputs with Instructor](https://python.useinstructor.com/integrations/google/) - Temperature 0.1 for consistency
+
+**Cascade Invalidation:**
+- [Cache Invalidation Strategies 2026](https://oneuptime.com/blog/post/2026-01-30-cache-invalidation-strategies/view) - Cascading invalidation
+- [Event-Driven Sagas](https://medium.com/@alxkm/event-driven-sagas-architectural-patterns-for-reliable-workflow-management-fb5739359b93) - Workflow compensation
+
+### Integration Gotchas (MEDIUM-HIGH confidence)
+
+**AI Conversation Quality:**
+- [Evaluating Conversational AI](https://hamming.ai/blog/conversational-accuracy) - Beyond accuracy metrics
+- [Top Conversational AI Challenges](https://research.aimultiple.com/conversational-ai-challenges/) - Escalation timing
+- [Why Chatbots Fail 2026](https://salespeak.ai/blog/why-chatbots-fail-2026-alternatives) - Failure modes
+- [Evaluating Multi-Step Conversational AI](https://medium.com/unmind-tech/evaluating-multi-step-conversational-ai-is-hard-029623f64263) - Quality metrics
+
+**Next.js + Vercel:**
+- [Streaming AI Responses with Vercel AI SDK](https://www.9.agency/blog/streaming-ai-responses-vercel-ai-sdk) - Real-time chat UIs
+- [Real-time AI in Next.js](https://blog.logrocket.com/nextjs-vercel-ai-sdk-streaming/) - Streaming implementation
+
+---
+*Pitfalls research for: WorkshopPilot.ai v1.0 AI facilitation features*
+*Researched: 2026-02-08*
