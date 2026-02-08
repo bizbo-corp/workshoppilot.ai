@@ -8,6 +8,7 @@ import { Send } from 'lucide-react';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useAutoSave } from '@/hooks/use-auto-save';
 
 interface ChatPanelProps {
   stepOrder: number;
@@ -45,6 +46,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   });
 
   const isLoading = status === 'streaming' || status === 'submitted';
+
+  // Auto-save messages every 2 seconds (debounced) with 10s maxWait
+  useAutoSave(sessionId, step.id, messages);
 
   // Report live message count to parent
   React.useEffect(() => {
