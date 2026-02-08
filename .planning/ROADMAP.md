@@ -112,22 +112,22 @@ Plans:
 - [x] 08-02-PLAN.md — Arc phase database tracking and conversation state service (Complete 2026-02-08)
 - [x] 08-03-PLAN.md — Wire prompts and arc phase into chat API (Complete 2026-02-08)
 
-#### Phase 9: Structured Outputs
+#### Phase 9: Structured Outputs ✅
 **Goal**: Schema-driven extraction of JSON artifacts per step
 **Depends on**: Phase 8 (extraction depends on prompting quality and context)
 **Requirements**: OUT-01, OUT-02, OUT-03, OUT-04
 **Success Criteria** (what must be TRUE):
-  1. Each step produces a typed JSON artifact matching its Zod schema
-  2. System extracts structured outputs from conversation with retry logic and schema repair
-  3. User sees extracted output and confirms before step completion
-  4. Structured outputs render as formatted Markdown in the UI
-  5. Extraction failures are handled gracefully with fallback to manual edit form
+  1. ✅ Each step produces a typed JSON artifact matching its Zod schema
+  2. ✅ System extracts structured outputs from conversation with retry logic and schema repair
+  3. ✅ User sees extracted output and confirms before step completion
+  4. ✅ Structured outputs render as formatted Markdown in the UI
+  5. ✅ Extraction failures are handled gracefully with fallback to manual edit form
 **Plans**: 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Zod schemas for all 10 step artifacts and type system updates
-- [ ] 09-02-PLAN.md — Extraction service with retry logic and API endpoint
-- [ ] 09-03-PLAN.md — Output panel Markdown rendering, confirmation UI, and navigation gating
+- [x] 09-01-PLAN.md — Zod schemas for all 10 step artifacts and type system updates (Complete 2026-02-08)
+- [x] 09-02-PLAN.md — Extraction service with retry logic and API endpoint (Complete 2026-02-08)
+- [x] 09-03-PLAN.md — Output panel Markdown rendering, confirmation UI, and navigation gating (Complete 2026-02-08)
 
 #### Phase 10: Navigation & Persistence
 **Goal**: Back-revise navigation with auto-save and cascade updates
@@ -228,8 +228,8 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 6. Production Deployment | v0.5 | 3/3 | Complete | 2026-02-08 |
 | 7. Context Architecture | v1.0 | 3/3 | Complete | 2026-02-08 |
 | 8. AI Facilitation Engine | v1.0 | 3/3 | Complete | 2026-02-08 |
-| 9. Structured Outputs | v1.0 | 0/3 | Not started | - |
-| 10. Navigation & Persistence | v1.0 | 0/2 | Not started | - |
+| 9. Structured Outputs | v1.0 | 3/3 | Complete | 2026-02-08 |
+| 10. Navigation & Persistence | v1.0 | 0/2 | In progress | - |
 | 11. Discovery Steps (1-4) | v1.0 | 0/TBD | Not started | - |
 | 12. Definition Steps (5-7) | v1.0 | 0/TBD | Not started | - |
 | 13. Ideation & Validation Steps (8-10) | v1.0 | 0/TBD | Not started | - |
