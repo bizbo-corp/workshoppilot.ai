@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 10 of 14 (Navigation & Persistence)
-Plan: 1 of 2 complete
-Status: In progress
-Last activity: 2026-02-08 — Completed 10-01-PLAN.md
+Plan: 2 of 2 complete
+Status: Phase complete
+Last activity: 2026-02-08 — Completed 10-02-PLAN.md
 
-Progress: [█████████░░░░░░░░░░░] 64% (9 of 14 phases complete, 1 of 2 plans in phase 10)
+Progress: [██████████░░░░░░░░░░] 71% (10 of 14 phases complete, 2 of 2 plans in phase 10)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30
-- Average duration: 2.7 min
-- Total execution time: 1.89 hours
+- Total plans completed: 31
+- Average duration: 2.9 min
+- Total execution time: 2.01 hours
 
 **By Phase:**
 
@@ -36,17 +36,17 @@ Progress: [█████████░░░░░░░░░░░] 64% (9 
 | 07-context-architecture | 3 | 6 min | 2.0 min |
 | 08-ai-facilitation-engine | 3 | 10 min | 3.3 min |
 | 09-structured-outputs | 3 | 8.5 min | 2.8 min |
-| 10-navigation-persistence | 1 | 2.4 min | 2.4 min |
+| 10-navigation-persistence | 2 | 7.2 min | 3.6 min |
 
 **Recent Trend:**
 - v0.5 milestone: 6 phases, 19 plans in 2 days
 - Phase 7: Context Architecture completed (3 plans, 6 min)
 - Phase 8: AI Facilitation Engine completed (3 plans, 10 min)
 - Phase 9: Structured Outputs completed (3 plans, 8.5 min)
-- Phase 10: In progress (1 of 2 plans, 2.4 min)
+- Phase 10: Navigation & Persistence completed (2 plans, 7.2 min)
 - Trend: Stable velocity, consistent 2-3 min per plan
 
-*Updated after 10-01 completion*
+*Updated after 10-02 completion*
 
 ## Accumulated Context
 
@@ -96,7 +96,14 @@ Recent decisions affecting v1.0 work:
 - **Phase 10 Plan 1**: Flush-on-unmount handles save-before-navigate case automatically (no explicit navigation hooks needed)
 - **Phase 10 Plan 1**: needs_regeneration status clears timestamps like not_started (step must be re-completed)
 - **Phase 10 Plan 1**: use-debounce library chosen over lodash.debounce for React lifecycle integration
+- **Phase 10 Plan 2**: Back-navigation to completed steps is VIEW ONLY by default (prevents accidental invalidation)
+- **Phase 10 Plan 2**: Only clicking "Revise This Step" triggers cascade invalidation (explicit user action required)
+- **Phase 10 Plan 2**: Revised step resets to in_progress with arcPhase: orient (user re-enters editing mode)
+- **Phase 10 Plan 2**: needs_regeneration steps preserve artifacts as starting points for regeneration
+- **Phase 10 Plan 2**: Amber visual indicators (border-amber-500) distinguish needs_regeneration from other statuses
+- **Phase 10 Plan 2**: Complete steps show confirmed artifact, needs_regeneration shows artifact but unconfirmed
 - **Phase 10+**: Auto-save with debounce (2s, maxWait 10s) + optimistic locking prevents race conditions
+- **Phase 10+**: Cascade invalidation via explicit revision action, view-only back-navigation prevents accidents
 - **Phase 11-13**: Group steps into natural clusters (Discovery 1-4, Definition 5-7, Ideation/Validation 8-10)
 
 ### Pending Todos
@@ -120,11 +127,11 @@ Recent decisions affecting v1.0 work:
 
 ## Session Continuity
 
-Last session: 2026-02-08 (Phase 10 executing)
-Stopped at: Completed 10-01-PLAN.md
+Last session: 2026-02-08 (Phase 10 complete)
+Stopped at: Completed 10-02-PLAN.md
 Resume file: None
 
-**Next action:** Execute 10-02-PLAN.md (Back-navigation with cascade invalidation)
+**Next action:** Begin Phase 11 (Discovery Steps Implementation)
 
 ---
-*Last updated: 2026-02-08T06:29:15Z after 10-01 completion*
+*Last updated: 2026-02-08T06:37:30Z after 10-02 completion*
