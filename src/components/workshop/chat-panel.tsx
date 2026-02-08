@@ -55,6 +55,25 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     onMessageCountChange?.(messages.length);
   }, [messages.length, onMessageCountChange]);
 
+  // Fire arc phase transition after each AI response completes
+  React.useEffect(() => {
+    // Only trigger after ready state with at least one message
+    if (status === 'ready' && messages.length > 0) {
+      // Fire-and-forget arc phase transition based on message count
+      fetch('/api/chat/arc-transition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workshopId,
+          stepId: step.id,
+          messageCount: messages.length,
+        }),
+      }).catch(() => {
+        // Silently ignore errors - arc transition is non-critical
+      });
+    }
+  }, [status, messages.length, workshopId, step.id]);
+
   // Auto-scroll to bottom when new messages arrive
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
