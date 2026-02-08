@@ -129,21 +129,21 @@ Plans:
 - [x] 09-02-PLAN.md — Extraction service with retry logic and API endpoint (Complete 2026-02-08)
 - [x] 09-03-PLAN.md — Output panel Markdown rendering, confirmation UI, and navigation gating (Complete 2026-02-08)
 
-#### Phase 10: Navigation & Persistence
+#### Phase 10: Navigation & Persistence ✅
 **Goal**: Back-revise navigation with auto-save and cascade updates
 **Depends on**: Phase 9 (cascade invalidation requires structured outputs to track dependencies)
 **Requirements**: NAV-01, NAV-02, NAV-03, NAV-04
 **Success Criteria** (what must be TRUE):
-  1. User can navigate back to any completed step and view its output
-  2. User can revise earlier steps; downstream steps are marked as needing regeneration
-  3. System auto-saves conversation every 2 seconds (debounced, maxWait 10s) and on step completion
-  4. User can resume a workshop from where they left off after closing browser
-  5. Auto-save race conditions are prevented via optimistic locking
+  1. ✅ User can navigate back to any completed step and view its output
+  2. ✅ User can revise earlier steps; downstream steps are marked as needing regeneration
+  3. ✅ System auto-saves conversation every 2 seconds (debounced, maxWait 10s) and on step completion
+  4. ✅ User can resume a workshop from where they left off after closing browser
+  5. ✅ Auto-save race conditions are prevented via optimistic locking
 **Plans**: 2 plans
 
 Plans:
 - [x] 10-01-PLAN.md — Schema extension (needs_regeneration status) and debounced auto-save infrastructure (Complete 2026-02-08)
-- [ ] 10-02-PLAN.md — Back-navigation with artifact viewing and cascade invalidation on revision
+- [x] 10-02-PLAN.md — Back-navigation with artifact viewing and cascade invalidation on revision (Complete 2026-02-08)
 
 #### Phase 11: Discovery Steps (1-4)
 **Goal**: First 4 steps that gather and understand the problem
@@ -229,7 +229,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 7. Context Architecture | v1.0 | 3/3 | Complete | 2026-02-08 |
 | 8. AI Facilitation Engine | v1.0 | 3/3 | Complete | 2026-02-08 |
 | 9. Structured Outputs | v1.0 | 3/3 | Complete | 2026-02-08 |
-| 10. Navigation & Persistence | v1.0 | 1/2 | In progress | - |
+| 10. Navigation & Persistence | v1.0 | 2/2 | Complete | 2026-02-08 |
 | 11. Discovery Steps (1-4) | v1.0 | 0/TBD | Not started | - |
 | 12. Definition Steps (5-7) | v1.0 | 0/TBD | Not started | - |
 | 13. Ideation & Validation Steps (8-10) | v1.0 | 0/TBD | Not started | - |
