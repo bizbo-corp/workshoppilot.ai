@@ -35,7 +35,7 @@ interface WorkshopSidebarProps {
   sessionId: string;
   workshopSteps: Array<{
     stepId: string;
-    status: 'not_started' | 'in_progress' | 'complete';
+    status: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
   }>;
 }
 
@@ -94,6 +94,7 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
           {STEPS.map((step) => {
             const status = statusLookup.get(step.id) || 'not_started';
             const isComplete = status === 'complete';
+            const needsRegen = status === 'needs_regeneration';
             const isCurrent = step.order === currentStepNumber;
             const isAccessible = status !== 'not_started';
 
@@ -105,10 +106,14 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
                     'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-medium',
                     isComplete &&
                       'bg-primary text-primary-foreground',
+                    needsRegen &&
+                      'border-2 border-amber-500 bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400',
                     isCurrent &&
+                      !needsRegen &&
                       'border-2 border-primary bg-background text-primary',
                     !isComplete &&
                       !isCurrent &&
+                      !needsRegen &&
                       'border bg-background text-muted-foreground'
                   )}
                 >
@@ -125,7 +130,8 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
                     className={cn(
                       'flex-1 truncate text-sm',
                       isCurrent && 'font-semibold text-primary',
-                      !isCurrent && 'text-foreground'
+                      needsRegen && 'text-amber-600 dark:text-amber-400',
+                      !isCurrent && !needsRegen && 'text-foreground'
                     )}
                   >
                     {step.name}
@@ -147,7 +153,7 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
                       {content}
                     </Link>
                   ) : (
-                    <div className="cursor-not-allowed opacity-50">
+                    <div className="flex items-center gap-2 cursor-not-allowed opacity-50">
                       {content}
                     </div>
                   )}

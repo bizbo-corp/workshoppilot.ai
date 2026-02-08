@@ -25,7 +25,7 @@ interface MobileStepperProps {
   sessionId: string;
   workshopSteps: Array<{
     stepId: string;
-    status: 'not_started' | 'in_progress' | 'complete';
+    status: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
   }>;
 }
 
@@ -65,6 +65,7 @@ export function MobileStepper({ sessionId, workshopSteps }: MobileStepperProps) 
           {STEPS.map((step) => {
             const status = statusLookup.get(step.id) || 'not_started';
             const isComplete = status === 'complete';
+            const needsRegen = status === 'needs_regeneration';
             const isCurrent = step.order === currentStep;
             const isAccessible = status !== 'not_started';
 
@@ -76,10 +77,14 @@ export function MobileStepper({ sessionId, workshopSteps }: MobileStepperProps) 
                     'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-medium',
                     isComplete &&
                       'bg-primary text-primary-foreground',
+                    needsRegen &&
+                      'border-2 border-amber-500 bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400',
                     isCurrent &&
+                      !needsRegen &&
                       'border-2 border-primary bg-background text-primary',
                     !isComplete &&
                       !isCurrent &&
+                      !needsRegen &&
                       'border bg-background text-muted-foreground'
                   )}
                 >
@@ -96,7 +101,8 @@ export function MobileStepper({ sessionId, workshopSteps }: MobileStepperProps) 
                     className={cn(
                       'font-medium',
                       isCurrent && 'text-primary',
-                      !isCurrent && 'text-foreground'
+                      needsRegen && 'text-amber-600 dark:text-amber-400',
+                      !isCurrent && !needsRegen && 'text-foreground'
                     )}
                   >
                     {step.name}

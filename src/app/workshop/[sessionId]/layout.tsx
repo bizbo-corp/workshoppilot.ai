@@ -50,7 +50,7 @@ export default async function WorkshopLayout({
   // Convert to plain serializable array (no Map objects for RSC)
   const workshopSteps = session.workshop.steps.map((s) => ({
     stepId: s.stepId,
-    status: s.status as 'not_started' | 'in_progress' | 'complete',
+    status: s.status as 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration',
   }));
 
   return (

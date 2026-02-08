@@ -8,6 +8,7 @@ import { workshops, sessions, workshopSteps } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { createPrefixedId } from '@/lib/ids';
 import { STEPS } from '@/lib/workshop/step-metadata';
+import { invalidateDownstreamSteps } from '@/lib/navigation/cascade-invalidation';
 
 /**
  * Creates a new workshop session and redirects to step 1
@@ -170,6 +171,27 @@ export async function advanceToNextStep(
     return { nextStepOrder: nextStep.order };
   } catch (error) {
     console.error('Failed to advance to next step:', error);
+    throw error;
+  }
+}
+
+/**
+ * Revises a step by resetting it to in_progress and marking downstream steps as needs_regeneration
+ * Triggered when user clicks "Revise This Step" on a completed step
+ */
+export async function reviseStep(
+  workshopId: string,
+  stepId: string,
+  sessionId: string
+): Promise<void> {
+  try {
+    // Invalidate downstream steps (also resets the revised step itself)
+    await invalidateDownstreamSteps(workshopId, stepId);
+
+    // Revalidate workshop layout to refresh sidebar and step status
+    revalidatePath(`/workshop/${sessionId}`);
+  } catch (error) {
+    console.error('Failed to revise step:', error);
     throw error;
   }
 }
