@@ -39,11 +39,11 @@ export const workshopSteps = pgTable(
       .notNull()
       .references(() => stepDefinitions.id),
     status: text('status', {
-      enum: ['not_started', 'in_progress', 'complete'],
+      enum: ['not_started', 'in_progress', 'complete', 'needs_regeneration'],
     })
       .notNull()
       .default('not_started')
-      .$type<'not_started' | 'in_progress' | 'complete'>(),
+      .$type<'not_started' | 'in_progress' | 'complete' | 'needs_regeneration'>(),
     arcPhase: text('arc_phase', {
       enum: ['orient', 'gather', 'synthesize', 'refine', 'validate', 'complete'],
     })

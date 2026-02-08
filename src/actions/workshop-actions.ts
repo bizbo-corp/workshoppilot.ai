@@ -105,13 +105,13 @@ export async function renameWorkshop(workshopId: string, newName: string): Promi
 export async function updateStepStatus(
   workshopId: string,
   stepId: string,
-  status: 'not_started' | 'in_progress' | 'complete',
+  status: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration',
   sessionId: string
 ): Promise<void> {
   try {
     // Determine timestamp updates based on status
     const updates: {
-      status: 'not_started' | 'in_progress' | 'complete';
+      status: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
       startedAt?: Date | null;
       completedAt?: Date | null;
     } = { status };
@@ -120,7 +120,7 @@ export async function updateStepStatus(
       updates.completedAt = new Date();
     } else if (status === 'in_progress') {
       updates.startedAt = new Date();
-    } else if (status === 'not_started') {
+    } else if (status === 'not_started' || status === 'needs_regeneration') {
       updates.startedAt = null;
       updates.completedAt = null;
     }
