@@ -105,11 +105,12 @@ Plans:
   3. AI explains step purpose and references prior outputs when orienting user
   4. AI validates step output quality before allowing progression
   5. User can observe AI building on prior context (e.g., "Based on your persona Sarah from Step 5...")
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 08-01: TBD during planning
-- [ ] 08-02: TBD during planning
+- [ ] 08-01-PLAN.md — Step-specific prompt templates, arc phase instructions, and validation criteria
+- [ ] 08-02-PLAN.md — Arc phase database tracking and conversation state service
+- [ ] 08-03-PLAN.md — Wire prompts and arc phase into chat API
 
 #### Phase 9: Structured Outputs
 **Goal**: Schema-driven extraction of JSON artifacts per step
@@ -225,7 +226,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 5. Basic AI Integration | v0.5 | 4/4 | Complete | 2026-02-08 |
 | 6. Production Deployment | v0.5 | 3/3 | Complete | 2026-02-08 |
 | 7. Context Architecture | v1.0 | 3/3 | Complete | 2026-02-08 |
-| 8. AI Facilitation Engine | v1.0 | 0/TBD | Not started | - |
+| 8. AI Facilitation Engine | v1.0 | 0/3 | Not started | - |
 | 9. Structured Outputs | v1.0 | 0/TBD | Not started | - |
 | 10. Navigation & Persistence | v1.0 | 0/TBD | Not started | - |
 | 11. Discovery Steps (1-4) | v1.0 | 0/TBD | Not started | - |
@@ -234,4 +235,4 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 14. Production Hardening | v1.0 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-08 after Phase 7 completion*
+*Last updated: 2026-02-08 after Phase 8 planning*
