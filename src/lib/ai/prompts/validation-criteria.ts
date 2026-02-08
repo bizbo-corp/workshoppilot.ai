@@ -44,6 +44,11 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
         name: 'Avoids Solution Bias',
         description: 'HMW focuses on the problem, not a predetermined solution',
         checkPrompt: 'Is this HMW framed as a problem to solve rather than disguising a solution ("we need an app" is a solution, not a problem)?'
+      },
+      {
+        name: 'Altitude Check',
+        description: 'HMW is at balanced altitude -- not a feature request and not a vision statement',
+        checkPrompt: 'Has the HMW been assessed for altitude? It should not describe a specific feature or technology (too narrow) nor be an unsolvable vision statement (too broad). Did the user see multiple altitude options?'
       }
     ],
 
@@ -62,6 +67,11 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
         name: 'Relevance to Challenge',
         description: 'Stakeholders connect to the Step 1 challenge',
         checkPrompt: 'Are the identified stakeholders clearly relevant to the HMW challenge from Step 1?'
+      },
+      {
+        name: 'Completeness Check',
+        description: 'Missing stakeholder categories have been explored',
+        checkPrompt: 'Have we proactively checked for potentially missing stakeholders? Were decision-makers, regulators, internal team, partners, and indirect stakeholders explicitly considered (even if none exist for this project)?'
       }
     ],
 
@@ -80,6 +90,16 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
         name: 'Stakeholder Coverage',
         description: 'Research covers multiple stakeholder types from Step 2',
         checkPrompt: 'Does the research include insights from different stakeholder types identified in Step 2 (not just one user type)?'
+      },
+      {
+        name: 'Source Attribution',
+        description: 'Each insight is attributed to a specific stakeholder or source',
+        checkPrompt: 'Does each research insight identify which stakeholder or source it came from? Can we trace each finding back to a specific interview or data source?'
+      },
+      {
+        name: 'Behavioral Depth',
+        description: 'Research captures behaviors and workarounds, not just opinions',
+        checkPrompt: 'Do the insights include specific behaviors, workarounds, or concrete examples (not just abstract opinions like "users want it to be better")?'
       }
     ],
 
@@ -98,6 +118,16 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
         name: 'Research Grounding',
         description: 'All insights trace back to Step 3 research findings',
         checkPrompt: 'Can each pain, gain, and theme be directly linked to specific insights or quotes from Step 3 user research?'
+      },
+      {
+        name: 'Evidence Chain',
+        description: 'Every pain and gain traces to specific Step 3 research findings',
+        checkPrompt: 'Can every identified pain point and gain be directly linked to specific research findings from Step 3? Are there any insights that appear unsupported by the research data?'
+      },
+      {
+        name: 'Challenge Relevance',
+        description: 'Themes connect back to the original HMW from Step 1',
+        checkPrompt: 'Do the identified themes relate to the core challenge from Step 1? Is it clear how these research findings deepen our understanding of the original problem?'
       }
     ],
 
