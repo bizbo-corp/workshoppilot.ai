@@ -15,19 +15,16 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - ✓ Next.js project scaffold with Tailwind CSS + shadcn/ui — existing
 - ✓ Logo component and landing page — existing
 - ✓ Vercel deployment pipeline — existing
+- ✓ Clerk authentication with facilitator/participant roles — v0.5
+- ✓ Application scaffolding (header, sidebar, main area) — v0.5
+- ✓ All 10 design thinking step containers (hollow — structure only) — v0.5
+- ✓ Linear stepper/progress bar with step states — v0.5
+- ✓ Basic navigation (next/back, sequential enforcement) — v0.5
+- ✓ Database schema and Neon Postgres connection — v0.5
+- ✓ Basic AI chat with Gemini streaming at each step — v0.5
+- ✓ Deploy working shell to Vercel at workshoppilot.ai — v0.5
 
 ### Active
-
-#### MVP 0.5 — Application Shell
-- [ ] Clerk authentication with facilitator/participant roles
-- [ ] Application scaffolding (header, sidebar, main area, footer)
-- [ ] All 10 design thinking step containers (hollow — structure only)
-- [ ] Linear stepper/progress bar with step states
-- [ ] Basic navigation (next/back, sequential enforcement)
-- [ ] Database schema and Neon Postgres connection
-- [ ] State persistence (save/resume sessions)
-- [ ] Basic admin dashboard (facilitator views participant progress)
-- [ ] Deploy working shell to Vercel
 
 #### MVP 1.0 — Working Single-Player Product
 - [ ] AI chat as primary UI (Gemini API via chat interface)
@@ -121,20 +118,34 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - **Entry Friction**: Must be near-zero — user types idea and starts immediately, account required only for saving/collaboration
 - **Desktop-First**: MVP targets desktop browsers; mobile deferred to MMP/FFP
 - **Single Player First**: MVP 0.5 and 1.0 are single-user; collaboration starts at MMP
-- **Existing Codebase**: Next.js 16.1.1 scaffold already deployed to Vercel with basic landing page
+- **Existing Codebase**: Next.js 16.1.1 with full application shell deployed at workshoppilot.ai (v0.5 complete)
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| AI as primary UI (not sidebar) | Design thinking requires guided facilitation, not tool assistance | — Pending |
-| Gemini API for AI | Cost/capability balance for conversational facilitation | — Pending |
-| Neon Postgres for database | Serverless Postgres, pairs well with Vercel | — Pending |
-| Clerk for authentication | Managed auth with role support, fast to integrate | — Pending |
-| 4-milestone phasing (0.5 → 1.0 → MMP → FFP) | Ship scaffold first, validate architecture, then layer features | — Pending |
-| Text-first for MVP, canvas at MMP | Reduces initial complexity; chat-based DT still delivers value | — Pending |
-| Build Pack as primary output | Differentiator — outputs feed directly into AI coding tools | — Pending |
-| Structured JSON data model per step | Enables context passing, traceability, and export | — Pending |
+| AI as primary UI (not sidebar) | Design thinking requires guided facilitation, not tool assistance | ✓ Good — chat panel is primary interaction surface |
+| Gemini API for AI | Cost/capability balance for conversational facilitation | ✓ Good — Gemini 2.0 Flash fast and cheap for MVP |
+| Neon Postgres for database | Serverless Postgres, pairs well with Vercel | ✓ Good — edge-compatible, migrations work in build pipeline |
+| Clerk for authentication | Managed auth with role support, fast to integrate | ✓ Good — production keys required custom domain (expected) |
+| 4-milestone phasing (0.5 → 1.0 → MMP → FFP) | Ship scaffold first, validate architecture, then layer features | ✓ Good — v0.5 shipped in 2 days, architecture validated |
+| Text-first for MVP, canvas at MMP | Reduces initial complexity; chat-based DT still delivers value | — Pending (v1.0 will test) |
+| Build Pack as primary output | Differentiator — outputs feed directly into AI coding tools | — Pending (v1.0 will implement) |
+| Structured JSON data model per step | Enables context passing, traceability, and export | — Pending (v1.0 will implement) |
+| neon-http driver over WebSocket | Serverless-optimized, avoids connection pooling complexity | ✓ Good — works reliably in Vercel functions |
+| AI SDK 5 with DefaultChatTransport | Latest API with streaming and message persistence | ✓ Good — sendMessage pattern cleaner than handleSubmit |
+| Vercel Analytics + Speed Insights | Free performance monitoring from day one | ✓ Good — baseline data before real users |
+
+## Current State
+
+**Shipped:** v0.5 Application Shell (2026-02-08)
+**Live at:** https://workshoppilot.ai
+**Codebase:** 5,451 lines of TypeScript across 137 files
+**Tech stack validated:** Clerk + Neon + Gemini + Drizzle + Vercel — all working in production
+
+**Known issues:**
+- Next.js 16.1.1 "middleware" deprecation warning (non-blocking, suggests "proxy" convention)
+- Gemini free tier rate limits may be insufficient for multiple concurrent users
 
 ---
-*Last updated: 2026-02-07 after initialization*
+*Last updated: 2026-02-08 after v0.5 milestone*
