@@ -44,6 +44,12 @@ export const workshopSteps = pgTable(
       .notNull()
       .default('not_started')
       .$type<'not_started' | 'in_progress' | 'complete'>(),
+    arcPhase: text('arc_phase', {
+      enum: ['orient', 'gather', 'synthesize', 'refine', 'validate', 'complete'],
+    })
+      .notNull()
+      .default('orient')
+      .$type<'orient' | 'gather' | 'synthesize' | 'refine' | 'validate' | 'complete'>(),
     output: jsonb('output').$type<Record<string, unknown>>(),
     startedAt: timestamp('started_at', { mode: 'date', precision: 3 }),
     completedAt: timestamp('completed_at', { mode: 'date', precision: 3 }),
