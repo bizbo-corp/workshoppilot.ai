@@ -1,4 +1,7 @@
 import { google } from '@ai-sdk/google';
+import { getStepSpecificInstructions } from './prompts/step-prompts';
+import { getArcPhaseInstructions, type ArcPhase } from './prompts/arc-phases';
+import { getValidationCriteria } from './prompts/validation-criteria';
 
 /**
  * Gemini model configuration for chat
@@ -14,15 +17,25 @@ export const GENERIC_SYSTEM_PROMPT =
   'You are a helpful design thinking facilitator. Guide the user through the current step of the design thinking process. Be encouraging, ask probing questions, and help them think deeply about their ideas. Keep responses concise and actionable.';
 
 /**
+ * Re-export ArcPhase type for convenience
+ */
+export type { ArcPhase } from './prompts/arc-phases';
+
+/**
  * Build context-aware system prompt with three-tier memory
  *
  * Injects prior step knowledge into the AI's system prompt:
+ * - Arc Phase Instructions: Behavioral guidance for current conversational phase
+ * - Step-Specific Instructions: Methodology and goals for this design thinking step
  * - Persistent Memory: Structured artifacts from completed steps
  * - Long-term Memory: AI summaries from previous step conversations
  * - Context Usage Rules: How to reference prior knowledge
+ * - Validation Criteria: Quality checklist during Validate phase
  *
  * @param stepId - Semantic step ID ('challenge', 'stakeholder-mapping', etc.)
  * @param stepName - Display name ('Challenge', 'Stakeholder Mapping', etc.)
+ * @param arcPhase - Current arc phase (orient, gather, synthesize, refine, validate, complete)
+ * @param stepDescription - Brief description of what this step accomplishes
  * @param persistentContext - Tier 1: Structured artifacts from completed steps
  * @param summaries - Tier 2: AI summaries from previous steps
  * @returns Complete system prompt with injected context
@@ -30,13 +43,43 @@ export const GENERIC_SYSTEM_PROMPT =
 export function buildStepSystemPrompt(
   stepId: string,
   stepName: string,
+  arcPhase: ArcPhase,
+  stepDescription: string,
   persistentContext: string,
   summaries: string
 ): string {
-  // Base prompt for the current step
-  let prompt = `You are an AI design thinking facilitator guiding the user through Step: ${stepName}.
-Be encouraging, ask probing questions, and help them think deeply about their ideas.
-Keep responses concise and actionable.`;
+  // Base role: AI facilitator for this step
+  let prompt = `You are an AI design thinking facilitator guiding the user through Step: ${stepName}.`;
+
+  // During Orient phase, include step purpose explanation (AIE-03 requirement)
+  if (arcPhase === 'orient' && stepDescription) {
+    prompt += `\nThis step's purpose: ${stepDescription}. Explain this purpose to the user in your opening message so they understand what they'll accomplish and why it matters in the design thinking process.`;
+  }
+
+  // Add arc phase behavioral instructions
+  const arcPhaseInstructions = getArcPhaseInstructions(arcPhase);
+  if (arcPhaseInstructions) {
+    prompt += `\n\n${arcPhaseInstructions}`;
+  }
+
+  // Add step-specific instructions
+  const stepInstructions = getStepSpecificInstructions(stepId);
+  if (stepInstructions) {
+    prompt += `\n\nSTEP INSTRUCTIONS:
+${stepInstructions}`;
+  }
+
+  // During Validate phase, inject validation criteria
+  if (arcPhase === 'validate') {
+    const validationCriteria = getValidationCriteria(stepId);
+    if (validationCriteria.length > 0) {
+      prompt += `\n\nVALIDATION CRITERIA:
+Check the output against these quality criteria before allowing progression:`;
+      validationCriteria.forEach((criterion) => {
+        prompt += `\n- ${criterion.name}: ${criterion.checkPrompt}`;
+      });
+    }
+  }
 
   // Add Tier 1: Persistent Memory (structured artifacts)
   if (persistentContext) {
@@ -57,6 +100,12 @@ ${summaries}`;
 - Build on prior knowledge — do not re-ask questions already answered in earlier steps
 - If the user's current input contradicts a prior step output, note the discrepancy gently`;
   }
+
+  // Add general behavioral guidance
+  prompt += `\n\nGENERAL GUIDANCE:
+- Be encouraging, ask probing questions, and help them think deeply
+- Keep responses concise and actionable
+- Ask one question at a time during Gather phase`;
 
   return prompt;
 }
