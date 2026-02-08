@@ -2,7 +2,8 @@ import { streamText, convertToModelMessages } from 'ai';
 import { chatModel, buildStepSystemPrompt } from '@/lib/ai/chat-config';
 import { saveMessages } from '@/lib/ai/message-persistence';
 import { assembleStepContext } from '@/lib/context/assemble-context';
-import { getStepById } from '@/lib/workshop/step-metadata';
+import { getStepById, STEPS } from '@/lib/workshop/step-metadata';
+import { getCurrentArcPhase } from '@/lib/ai/conversation-state';
 
 /**
  * Increase Vercel serverless timeout for AI responses
@@ -34,14 +35,20 @@ export async function POST(req: Request) {
     // Assemble three-tier context for this step
     const stepContext = await assembleStepContext(workshopId, stepId, sessionId);
 
-    // Get step display name
+    // Get current arc phase from database
+    const arcPhase = await getCurrentArcPhase(workshopId, stepId);
+
+    // Get step metadata (display name and description)
     const step = getStepById(stepId);
     const stepName = step?.name || stepId;
+    const stepDescription = step?.description ?? '';
 
-    // Build context-aware system prompt
+    // Build context-aware system prompt with arc phase and step instructions
     const systemPrompt = buildStepSystemPrompt(
       stepId,
       stepName,
+      arcPhase,
+      stepDescription,
       stepContext.persistentContext,
       stepContext.summaries
     );
