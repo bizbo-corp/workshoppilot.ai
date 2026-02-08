@@ -139,11 +139,11 @@ Plans:
   3. System auto-saves conversation every 2 seconds (debounced, maxWait 10s) and on step completion
   4. User can resume a workshop from where they left off after closing browser
   5. Auto-save race conditions are prevented via optimistic locking
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 10-01: TBD during planning
-- [ ] 10-02: TBD during planning
+- [ ] 10-01-PLAN.md — Schema extension (needs_regeneration status) and debounced auto-save infrastructure
+- [ ] 10-02-PLAN.md — Back-navigation with artifact viewing and cascade invalidation on revision
 
 #### Phase 11: Discovery Steps (1-4)
 **Goal**: First 4 steps that gather and understand the problem
@@ -229,11 +229,11 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 7. Context Architecture | v1.0 | 3/3 | Complete | 2026-02-08 |
 | 8. AI Facilitation Engine | v1.0 | 3/3 | Complete | 2026-02-08 |
 | 9. Structured Outputs | v1.0 | 0/3 | Not started | - |
-| 10. Navigation & Persistence | v1.0 | 0/TBD | Not started | - |
+| 10. Navigation & Persistence | v1.0 | 0/2 | Not started | - |
 | 11. Discovery Steps (1-4) | v1.0 | 0/TBD | Not started | - |
 | 12. Definition Steps (5-7) | v1.0 | 0/TBD | Not started | - |
 | 13. Ideation & Validation Steps (8-10) | v1.0 | 0/TBD | Not started | - |
 | 14. Production Hardening | v1.0 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-08 after Phase 9 planning*
+*Last updated: 2026-02-08 after Phase 10 planning*
