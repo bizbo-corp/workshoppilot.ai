@@ -146,7 +146,7 @@ Plans:
 - [x] 10-02-PLAN.md — Back-navigation with artifact viewing and cascade invalidation on revision (Complete 2026-02-08)
 
 #### Phase 11: Discovery Steps (1-4)
-**Goal**: First 4 steps that gather and understand the problem
+**Goal**: Wire summary generation, arc phase transitions, and enriched prompts so Steps 1-4 work end-to-end with domain-expert AI facilitation
 **Depends on**: Phase 10 (requires foundation working)
 **Requirements**: S01-01, S01-02, S02-01, S02-02, S03-01, S03-02, S03-03, S04-01, S04-02
 **Success Criteria** (what must be TRUE):
@@ -155,13 +155,12 @@ Plans:
   3. User can complete Step 3 User Research where AI generates interview questions and simulates stakeholder responses as synthetic interviews
   4. User can complete Step 4 Research Sense Making where AI clusters research quotes into themes and extracts 5 top pains and 5 top gains with evidence
   5. All 4 steps follow Orient → Gather → Synthesize → Refine → Validate → Complete arc
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 11-01: TBD during planning
-- [ ] 11-02: TBD during planning
-- [ ] 11-03: TBD during planning
-- [ ] 11-04: TBD during planning
+- [ ] 11-01-PLAN.md — Summary generation on step advance and arc phase transition API
+- [ ] 11-02-PLAN.md — Enriched step prompts and validation criteria for Discovery steps
+- [ ] 11-03-PLAN.md — End-to-end integration testing and human verification
 
 #### Phase 12: Definition Steps (5-7)
 **Goal**: Steps that define persona, journey, and reframe the challenge
@@ -230,10 +229,10 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 8. AI Facilitation Engine | v1.0 | 3/3 | Complete | 2026-02-08 |
 | 9. Structured Outputs | v1.0 | 3/3 | Complete | 2026-02-08 |
 | 10. Navigation & Persistence | v1.0 | 2/2 | Complete | 2026-02-08 |
-| 11. Discovery Steps (1-4) | v1.0 | 0/TBD | Not started | - |
+| 11. Discovery Steps (1-4) | v1.0 | 0/3 | Not started | - |
 | 12. Definition Steps (5-7) | v1.0 | 0/TBD | Not started | - |
 | 13. Ideation & Validation Steps (8-10) | v1.0 | 0/TBD | Not started | - |
 | 14. Production Hardening | v1.0 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-08 after Phase 10 planning*
+*Last updated: 2026-02-08 after Phase 11 planning*
