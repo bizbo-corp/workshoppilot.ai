@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 7 - Context Architecture (v1.0 milestone)
+**Current focus:** Phase 8 - AI Facilitation Engine (v1.0 milestone) - COMPLETE
 
 ## Current Position
 
 Phase: 8 of 14 (AI Facilitation Engine)
-Plan: 1 of 3 complete
-Status: In progress
-Last activity: 2026-02-08 — Completed 08-01-PLAN.md (Step-Specific Prompts & Validation Criteria)
+Plan: 3 of 3 complete
+Status: Phase complete
+Last activity: 2026-02-08 — Completed 08-03-PLAN.md (Prompt Assembly & Integration)
 
-Progress: [███████░░░░░░░░░░░░░] 50% (7 of 14 phases complete, Phase 8 in progress)
+Progress: [████████░░░░░░░░░░░░] 57% (8 of 14 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23
-- Average duration: 2.7 min
-- Total execution time: 1.5 hours
+- Total plans completed: 26
+- Average duration: 2.6 min
+- Total execution time: 1.7 hours
 
 **By Phase:**
 
@@ -34,14 +34,15 @@ Progress: [███████░░░░░░░░░░░░░] 50% (7 
 | 05-ai-chat-integration | 2 | 9 min | 4.5 min |
 | 06-production-deployment | 2 | 12 min | 6.0 min |
 | 07-context-architecture | 3 | 6 min | 2.0 min |
-| 08-ai-facilitation-engine | 1 | 4 min | 4.0 min |
+| 08-ai-facilitation-engine | 3 | 10 min | 3.3 min |
 
 **Recent Trend:**
 - v0.5 milestone: 6 phases, 19 plans in 2 days
-- v1.0 in progress: Phase 8 (1 of 3 plans complete)
-- Trend: Stable velocity, predictable execution
+- Phase 7: Context Architecture completed (3 plans, 6 min)
+- Phase 8: AI Facilitation Engine completed (3 plans, 10 min)
+- Trend: Stable velocity, consistent execution
 
-*Updated after 08-01 completion*
+*Updated after 08-03 completion*
 
 ## Accumulated Context
 
@@ -67,6 +68,11 @@ Recent decisions affecting v1.0 work:
 - **Phase 8 Plan 1**: Validation criteria use specific checkPrompt questions instead of generic quality assessments
 - **Phase 8 Plan 1**: Prior context usage documented per step to guide AI on which outputs to reference
 - **Phase 8 Plan 1**: Steps grouped by cluster - Discovery (1-4) exploration, Definition (5-7) synthesis with heavy prior context, Ideation/Validation (8-10) creativity grounded in research
+- **Phase 8 Plan 3**: buildStepSystemPrompt expanded to 6 parameters (added arcPhase, stepDescription) to support arc-phase-aware prompts
+- **Phase 8 Plan 3**: Orient phase includes step purpose explanation in role section (satisfies AIE-03 requirement)
+- **Phase 8 Plan 3**: Validation criteria injected during Validate phase only (not shown in other phases to avoid prompt clutter)
+- **Phase 8 Plan 3**: Chat API reads arc phase from database via getCurrentArcPhase on every request (database is source of truth)
+- **Phase 8 Plan 3**: System prompts now contain 9 information layers (role, arc phase, step instructions, validation criteria, persistent memory, long-term memory, context rules, general guidance)
 - **Phase 9+**: Schema-driven extraction using Zod + AI SDK 6's streamText with output property
 - **Phase 10+**: Auto-save with debounce (2s, maxWait 10s) + optimistic locking prevents race conditions
 - **Phase 11-13**: Group steps into natural clusters (Discovery 1-4, Definition 5-7, Ideation/Validation 8-10)
@@ -88,14 +94,15 @@ Recent decisions affecting v1.0 work:
 - Phase count is higher (8 phases vs typical 5-8) due to foundational complexity — acceptable for "standard" depth given v1.0's architectural requirements
 - Steps 5-7 (Phase 12) and 8-10 (Phase 13) are grouped, may need refinement during planning if individual step complexity is high
 - Production hardening (Phase 14) can't be tested meaningfully until features exist — may discover issues late
+- Arc phase transitions not yet implemented (gap identified in 08-03 Known Limitations) — AI prompts are arc-phase-aware but transitions must be triggered manually or deferred to Phase 11+
 
 ## Session Continuity
 
-Last session: 2026-02-08 (Phase 8 in progress)
-Stopped at: Completed 08-01-PLAN.md (Step-Specific Prompts & Validation Criteria)
+Last session: 2026-02-08 (Phase 8 complete)
+Stopped at: Completed Phase 8 (AI Facilitation Engine) - all 3 plans executed
 Resume file: None
 
-**Next action:** Execute Plan 08-02 (Arc Phase Tracking) or 08-03 (Prompt Assembly)
+**Next action:** Execute Phase 9 (Structured Extraction Engine) - plan 09-01, 09-02, 09-03
 
 ---
-*Last updated: 2026-02-08T06:52:55Z after 08-01 completion*
+*Last updated: 2026-02-08T03:24:00Z after Phase 8 completion*

@@ -95,22 +95,22 @@ Plans:
 - [x] 07-02-PLAN.md — Context assembly, summary generation, and artifact persistence services (Complete 2026-02-08)
 - [x] 07-03-PLAN.md — Wire context into chat API and create step completion endpoint (Complete 2026-02-08)
 
-#### Phase 8: AI Facilitation Engine
+#### Phase 8: AI Facilitation Engine ✅
 **Goal**: Step-aware AI prompting with 6-phase conversational arc
 **Depends on**: Phase 7 (context system must exist to inject prior step outputs)
 **Requirements**: AIE-01, AIE-02, AIE-03, AIE-04, AIE-05
 **Success Criteria** (what must be TRUE):
-  1. Each step has dedicated system prompt that references prior step outputs by name
-  2. AI follows Orient → Gather → Synthesize → Refine → Validate → Complete arc per step
-  3. AI explains step purpose and references prior outputs when orienting user
-  4. AI validates step output quality before allowing progression
-  5. User can observe AI building on prior context (e.g., "Based on your persona Sarah from Step 5...")
+  1. ✅ Each step has dedicated system prompt that references prior step outputs by name
+  2. ✅ AI follows Orient → Gather → Synthesize → Refine → Validate → Complete arc per step
+  3. ✅ AI explains step purpose and references prior outputs when orienting user
+  4. ✅ AI validates step output quality before allowing progression
+  5. ✅ User can observe AI building on prior context (e.g., "Based on your persona Sarah from Step 5...")
 **Plans**: 3 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Step-specific prompt templates, arc phase instructions, and validation criteria
-- [ ] 08-02-PLAN.md — Arc phase database tracking and conversation state service
-- [ ] 08-03-PLAN.md — Wire prompts and arc phase into chat API
+- [x] 08-01-PLAN.md — Step-specific prompt templates, arc phase instructions, and validation criteria (Complete 2026-02-08)
+- [x] 08-02-PLAN.md — Arc phase database tracking and conversation state service (Complete 2026-02-08)
+- [x] 08-03-PLAN.md — Wire prompts and arc phase into chat API (Complete 2026-02-08)
 
 #### Phase 9: Structured Outputs
 **Goal**: Schema-driven extraction of JSON artifacts per step
