@@ -88,12 +88,12 @@ Plans:
   3. AI receives hierarchical context (short-term verbatim + long-term summaries + persistent JSON) when starting each step
   4. Context window stays under 15K tokens at Step 10 (vs 50K+ with naive full-history approach)
   5. Gemini context caching works for system prompts reducing input token costs by 90%
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 07-01: TBD during planning
-- [ ] 07-02: TBD during planning
-- [ ] 07-03: TBD during planning
+- [ ] 07-01-PLAN.md — Database schema for step_artifacts and step_summaries tables
+- [ ] 07-02-PLAN.md — Context assembly, summary generation, and artifact persistence services
+- [ ] 07-03-PLAN.md — Wire context into chat API and create step completion endpoint
 
 #### Phase 8: AI Facilitation Engine
 **Goal**: Step-aware AI prompting with 6-phase conversational arc
@@ -224,7 +224,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 4. Workshop Data Layer | v0.5 | 3/3 | Complete | 2026-02-08 |
 | 5. Basic AI Integration | v0.5 | 4/4 | Complete | 2026-02-08 |
 | 6. Production Deployment | v0.5 | 3/3 | Complete | 2026-02-08 |
-| 7. Context Architecture | v1.0 | 0/TBD | Not started | - |
+| 7. Context Architecture | v1.0 | 0/3 | In Progress | - |
 | 8. AI Facilitation Engine | v1.0 | 0/TBD | Not started | - |
 | 9. Structured Outputs | v1.0 | 0/TBD | Not started | - |
 | 10. Navigation & Persistence | v1.0 | 0/TBD | Not started | - |
@@ -234,4 +234,4 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 14. Production Hardening | v1.0 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-08 after v1.0 milestone roadmap creation*
+*Last updated: 2026-02-08 after Phase 7 planning*
