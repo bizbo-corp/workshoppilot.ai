@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 10 - Navigation & Persistence (v1.0 milestone)
+**Current focus:** Phase 11 - Discovery Steps 1-4 (v1.0 milestone)
 
 ## Current Position
 
-Phase: 10 of 14 (Navigation & Persistence)
-Plan: 2 of 2 complete
-Status: Phase complete
-Last activity: 2026-02-08 — Completed 10-02-PLAN.md
+Phase: 11 of 14 (Discovery Steps 1-4)
+Plan: 1 of 3 complete
+Status: In progress
+Last activity: 2026-02-08 — Completed 11-01-PLAN.md
 
-Progress: [██████████░░░░░░░░░░] 71% (10 of 14 phases complete, 2 of 2 plans in phase 10)
+Progress: [██████████░░░░░░░░░░] 73% (10 of 14 phases complete, 1 of 3 plans in phase 11)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 31
-- Average duration: 2.9 min
-- Total execution time: 2.01 hours
+- Total plans completed: 32
+- Average duration: 2.8 min
+- Total execution time: 2.03 hours
 
 **By Phase:**
 
@@ -37,6 +37,7 @@ Progress: [██████████░░░░░░░░░░] 71% (10
 | 08-ai-facilitation-engine | 3 | 10 min | 3.3 min |
 | 09-structured-outputs | 3 | 8.5 min | 2.8 min |
 | 10-navigation-persistence | 2 | 7.2 min | 3.6 min |
+| 11-discovery-steps-1-4 | 1 | 1 min | 1.0 min |
 
 **Recent Trend:**
 - v0.5 milestone: 6 phases, 19 plans in 2 days
@@ -44,9 +45,10 @@ Progress: [██████████░░░░░░░░░░] 71% (10
 - Phase 8: AI Facilitation Engine completed (3 plans, 10 min)
 - Phase 9: Structured Outputs completed (3 plans, 8.5 min)
 - Phase 10: Navigation & Persistence completed (2 plans, 7.2 min)
-- Trend: Stable velocity, consistent 2-3 min per plan
+- Phase 11: Discovery Steps 1-4 in progress (1 of 3 plans, 1 min)
+- Trend: Stable velocity, consistent 1-3 min per plan
 
-*Updated after 10-02 completion*
+*Updated after 11-01 completion*
 
 ## Accumulated Context
 
@@ -104,6 +106,10 @@ Recent decisions affecting v1.0 work:
 - **Phase 10 Plan 2**: Complete steps show confirmed artifact, needs_regeneration shows artifact but unconfirmed
 - **Phase 10+**: Auto-save with debounce (2s, maxWait 10s) + optimistic locking prevents race conditions
 - **Phase 10+**: Cascade invalidation via explicit revision action, view-only back-navigation prevents accidents
+- **Phase 11 Plan 1**: Summary generation embedded in advanceToNextStep server action (ensures summary exists before next step loads)
+- **Phase 11 Plan 1**: Message-count heuristic for arc transitions (0-2=orient, 3-8=gather, 9-14=synthesize, 15-18=refine, 19-22=validate, 23+=complete)
+- **Phase 11 Plan 1**: Fire-and-forget arc transition calls from client (non-critical, should not block chat UX)
+- **Phase 11 Plan 1**: Conditional DB writes for arc transitions (only write when phase changes, reduces load)
 - **Phase 11-13**: Group steps into natural clusters (Discovery 1-4, Definition 5-7, Ideation/Validation 8-10)
 
 ### Pending Todos
@@ -123,15 +129,14 @@ Recent decisions affecting v1.0 work:
 - Phase count is higher (8 phases vs typical 5-8) due to foundational complexity — acceptable for "standard" depth given v1.0's architectural requirements
 - Steps 5-7 (Phase 12) and 8-10 (Phase 13) are grouped, may need refinement during planning if individual step complexity is high
 - Production hardening (Phase 14) can't be tested meaningfully until features exist — may discover issues late
-- Arc phase transitions not yet implemented (gap identified in 08-03 Known Limitations) — AI prompts are arc-phase-aware but transitions must be triggered manually or deferred to Phase 11+
 
 ## Session Continuity
 
-Last session: 2026-02-08 (Phase 10 complete)
-Stopped at: Completed 10-02-PLAN.md
+Last session: 2026-02-08 (Phase 11 in progress)
+Stopped at: Completed 11-01-PLAN.md
 Resume file: None
 
-**Next action:** Begin Phase 11 (Discovery Steps Implementation)
+**Next action:** Continue Phase 11 with plan 02 (Discovery Steps prompts and schemas)
 
 ---
-*Last updated: 2026-02-08T06:37:30Z after 10-02 completion*
+*Last updated: 2026-02-08T07:13:41Z after 11-01 completion*
