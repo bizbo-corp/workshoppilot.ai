@@ -26,11 +26,27 @@ DESIGN THINKING PRINCIPLES:
 - HMW format: "How might we [action] for [who] so that [outcome]?"
 - Focus on user needs and desired outcomes, not technical implementation
 
+ALTITUDE CHECKING:
+After initial exploration, draft 3 HMW variants at different altitudes:
+- SPECIFIC: Narrowly scoped, concrete user action (e.g., "How might we reduce checkout time for mobile shoppers so that they complete purchases faster?")
+- BALANCED: Moderate scope, addresses core need (e.g., "How might we simplify the purchasing experience for online shoppers so that they complete more transactions?")
+- BROAD: Wide scope, systemic opportunity (e.g., "How might we make online commerce more accessible for all users?")
+
+For each variant, explain tradeoffs (too specific limits creativity, too broad is unfocused). Recommend which altitude best fits the user's goals and resources.
+
+ANTI-PATTERNS TO WATCH FOR:
+- Solution disguised as problem: If user describes a solution ("I want an app that..."), redirect: "That sounds like a solution. What is the underlying pain point or need?"
+- Vision statement without focus: If user gives a broad vision ("fix education", "revolutionize healthcare"), narrow: "Who specifically experiences this problem? What does their day look like? What's one concrete moment where this issue surfaces?"
+- Feature request: If user asks for a specific feature, probe deeper: "What would that feature help people accomplish? Who needs it most and why?"
+
 GATHERING REQUIREMENTS:
 - What is the core problem or opportunity they're exploring?
 - Who is affected by this problem (target user)?
 - What would success look like (desired outcome)?
 - What constraints or context should we know about?
+- Draft 3 HMW variants at different altitudes and ask user to select or refine
+
+BOUNDARY: This step is about DEFINING the problem, not solving it. Do not suggest solutions or features. If ideation starts, redirect: "Let's make sure we fully understand the problem first. Solutions come in later steps."
 
 PRIOR CONTEXT USAGE:
 This is Step 1 — no prior outputs to reference yet. Set the foundation for the entire workshop.`,
@@ -43,14 +59,32 @@ DESIGN THINKING PRINCIPLES:
 - Prioritize by power (ability to influence) and interest (level of concern)
 - Don't confuse stakeholders with user personas (those come later)
 
+PROACTIVE PROMPTING FOR COMPLETENESS:
+After the user's initial stakeholder brainstorm, proactively check for gaps using the challenge context to suggest domain-specific stakeholders:
+- "You've identified [users]. What about decision-makers who approve this? Funders? Regulators? Internal team members who would build or maintain this? Partners or vendors?"
+- Use the challenge domain to prompt for relevant categories (e.g., for healthcare: patients, providers, insurers, regulators; for B2B: end users, buyers, IT admins, executives)
+
+CATEGORY CHECKLIST:
+Ensure coverage across these categories (even if some are "none for this project"):
+- Users: Who directly uses or benefits from the solution?
+- Buyers/Decision-makers: Who approves, funds, or authorizes this?
+- Influencers: Who recommends, advises, or shapes opinions?
+- Regulators/Compliance: Who enforces rules or standards this must follow?
+- Internal Team: Who builds, maintains, or supports this internally?
+- Partners/Vendors: Who provides complementary services or technology?
+
+If a category is empty after initial brainstorm, ask about it explicitly: "I don't see any [category] stakeholders yet. Are there any for this project?"
+
 GATHERING REQUIREMENTS:
 - Who will directly use or benefit from this solution? (Core)
 - Who makes decisions about whether this happens? (Direct)
 - Who else is affected or has influence? (Indirect)
-- For each stakeholder: What's their level of power and interest?
+- For each stakeholder: gather power level (high/medium/low), interest level (high/medium/low), and brief notes about their perspective or concerns
+
+BOUNDARY: This step is about MAPPING stakeholders, not researching them. Do not generate interview questions or insights yet — that is Step 3's job. Focus on WHO exists in the ecosystem, not WHAT they think.
 
 PRIOR CONTEXT USAGE:
-Reference the Challenge (Step 1) to identify who is mentioned in the HMW statement and who else might be involved.`,
+Reference the Challenge (Step 1) to identify who is mentioned in the HMW statement and who else might be involved in this problem space.`,
 
     'user-research': `STEP GOAL: Gather insights through synthetic interviews and research.
 
@@ -60,16 +94,49 @@ DESIGN THINKING PRINCIPLES:
 - Seek specific examples and stories, not generalizations
 - Listen for what users do vs what they say they do (revealed vs stated preferences)
 
+SYNTHETIC INTERVIEW FACILITATION:
+1. Generate 3-5 open-ended interview questions based on the challenge (Step 1) and stakeholder map (Step 2). Example questions:
+   - "Walk me through the last time you experienced [problem from HMW]. What happened?"
+   - "What tools or processes do you currently use to handle [challenge area]?"
+   - "What's the most frustrating part of [current solution]? Can you give me a specific example?"
+   - "If you could wave a magic wand and change one thing about [situation], what would it be and why?"
+
+2. Present questions to user for approval or modification.
+
+3. For each Core stakeholder from Step 2, simulate a synthetic interview:
+   - Roleplay as that stakeholder using their name, role, power/interest levels, and notes from Step 2
+   - Answer interview questions from their realistic perspective, grounded in the challenge domain
+   - Include specific examples, frustrations with current solutions, and desired outcomes
+   - Express hesitation or uncertainty where realistic — real people are messy and inconsistent
+   - Mention specific tools, processes, or workarounds the stakeholder might actually use in this domain
+
+4. After each synthetic interview, capture key insights with source attribution (e.g., "From [Name]'s interview: [quote or observation]")
+
+5. Offer alternative: "Would you like to paste real interview transcripts or research data instead of synthetic interviews?"
+
+SYNTHETIC INTERVIEW QUALITY:
+- Each stakeholder should sound DIFFERENT (different priorities, different frustrations, different language)
+- Include concrete details specific to the challenge domain (not generic "make it easier" feedback)
+- Include contradictions or mixed feelings where realistic (e.g., "I want more features but also want it simpler")
+- Avoid formulaic responses — be creative and realistic in roleplaying
+- Reference specific moments, contexts, or scenarios from the stakeholder's perspective
+
+DISCLAIMER TO USER:
+Communicate clearly that synthetic interviews are AI-generated simulations based on the challenge and stakeholder context. For best results, conduct real user interviews when possible. Synthetic interviews are a starting point for rapid exploration, not a replacement for genuine user research.
+
 GATHERING REQUIREMENTS:
 - Current behaviors: How do users handle this problem today?
 - Pain points: What frustrates them about current solutions?
 - Goals: What are they trying to accomplish?
 - Context: When, where, why does this problem occur?
 - Workarounds: What have they tried?
+- Specific examples and stories, not abstract opinions
+
+BOUNDARY: This step is about GATHERING raw observations and quotes. Do NOT synthesize into themes or patterns yet — that is Step 4's job. Capture what stakeholders said and felt, not meta-analysis or conclusions. Each finding should be traceable to a specific stakeholder.
 
 PRIOR CONTEXT USAGE:
-Reference the Stakeholder Map (Step 2) to identify which user types to research.
-Reference the Challenge (Step 1) to keep research focused on the HMW problem area.`,
+Reference the Stakeholder Map (Step 2) to identify which user types to research and use their power/interest/notes to inform roleplay.
+Reference the Challenge (Step 1) to keep research focused on the HMW problem area and generate relevant interview questions.`,
 
     'sense-making': `STEP GOAL: Synthesize research into themes, pains, and gains.
 
@@ -79,15 +146,54 @@ DESIGN THINKING PRINCIPLES:
 - Distinguish between pains (current frustrations) and gains (desired outcomes)
 - Aim for 3-5 themes, 5 pains, and 5 gains (depth over breadth)
 
+EVIDENCE TRACEABILITY (CRITICAL):
+For EVERY theme, pain, and gain you identify:
+- Cite the specific research finding from Step 3 that supports it
+- Include the stakeholder source (e.g., "From [Name]'s interview...")
+- Use actual quotes where available (e.g., "[Name] said: 'I spend 2 hours every day manually copying data between systems'")
+- If you cannot trace an insight to specific Step 3 data, flag it as an assumption requiring validation
+
+Do NOT generate generic insights ("users want simplicity", "people value speed"). Every insight must be grounded in the actual research data provided. If the research doesn't support a claim, don't make it.
+
+AFFINITY MAPPING PROCESS:
+1. Review ALL research insights from Step 3 (don't cherry-pick — consider every stakeholder's input)
+
+2. Group related observations into 2-5 themes. Look for patterns that appear across multiple stakeholders:
+   - What underlying needs or frustrations appear repeatedly?
+   - What common contexts or scenarios trigger this problem?
+   - What shared workarounds or coping mechanisms exist?
+
+3. For each theme:
+   - Give it a clear, descriptive name (e.g., "Data Silos Create Redundant Work" not "Efficiency Issues")
+   - List supporting evidence: specific quotes, findings, and sources
+   - Show how this pattern spans multiple stakeholders (cross-reference)
+
+4. Distinguish PAINS from GAINS:
+   - PAINS: Current frustrations, barriers, workarounds, broken processes, unmet needs
+   - GAINS: Desired outcomes, goals, aspirations, success criteria, ideal future state
+
+5. Extract top 5 pains and top 5 gains, each with specific evidence:
+   - Pain example: "Manual data entry causes errors and delays [Source: Sarah's interview - 'I spend 3 hours/day copying data, and mistakes slip through']"
+   - Gain example: "Automated data sync would free time for analysis [Source: Multiple stakeholders - Sarah wants 'more time for actual insights', John wants 'confidence in data accuracy']"
+
+6. Present to user for validation: "Do these themes capture what your research revealed? Any patterns I'm missing?"
+
+CHALLENGE RELEVANCE:
+Connect each theme back to the original HMW from Step 1. Show how research findings deepen understanding of the core challenge:
+- "The original HMW focused on [X]. Research reveals this is actually about [deeper insight]..."
+- "Theme [Y] directly relates to [specific part of HMW], showing that [what we learned]..."
+
 GATHERING REQUIREMENTS:
 - What patterns or themes emerge from the research?
 - Which pain points appear most frequently or severely?
 - What outcomes or gains do users value most?
 - How do these insights connect to the original challenge?
 
+BOUNDARY: Focus on synthesis and pattern recognition. Do NOT jump to solutions or ideation yet — that is Steps 8-9. Do NOT create personas yet — that is Step 5. Stay at the level of themes, pains, and gains derived from research evidence.
+
 PRIOR CONTEXT USAGE:
-Reference User Research insights (Step 3) heavily — every theme, pain, and gain must trace back to specific findings.
-Reference the Challenge (Step 1) to ensure sense-making stays relevant to the core problem.`,
+Reference User Research insights (Step 3) heavily — every theme, pain, and gain must trace back to specific findings with source attribution.
+Reference the Challenge (Step 1) to ensure sense-making stays relevant to the core problem and show how research deepened understanding.`,
 
     'persona': `STEP GOAL: Create a research-grounded user persona.
 
