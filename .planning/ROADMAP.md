@@ -142,7 +142,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Schema extension (needs_regeneration status) and debounced auto-save infrastructure
+- [x] 10-01-PLAN.md — Schema extension (needs_regeneration status) and debounced auto-save infrastructure (Complete 2026-02-08)
 - [ ] 10-02-PLAN.md — Back-navigation with artifact viewing and cascade invalidation on revision
 
 #### Phase 11: Discovery Steps (1-4)
@@ -229,7 +229,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 7. Context Architecture | v1.0 | 3/3 | Complete | 2026-02-08 |
 | 8. AI Facilitation Engine | v1.0 | 3/3 | Complete | 2026-02-08 |
 | 9. Structured Outputs | v1.0 | 3/3 | Complete | 2026-02-08 |
-| 10. Navigation & Persistence | v1.0 | 0/2 | In progress | - |
+| 10. Navigation & Persistence | v1.0 | 1/2 | In progress | - |
 | 11. Discovery Steps (1-4) | v1.0 | 0/TBD | Not started | - |
 | 12. Definition Steps (5-7) | v1.0 | 0/TBD | Not started | - |
 | 13. Ideation & Validation Steps (8-10) | v1.0 | 0/TBD | Not started | - |
