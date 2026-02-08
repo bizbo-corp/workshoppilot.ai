@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { sessions } from '@/db/schema';
+import { sessions, stepArtifacts } from '@/db/schema';
 import { getStepByOrder, STEPS } from '@/lib/workshop/step-metadata';
 import { loadMessages } from '@/lib/ai/message-persistence';
 import { StepContainer } from '@/components/workshop/step-container';
@@ -65,6 +65,20 @@ export default async function StepPage({ params }: StepPageProps) {
   // Load chat messages for this session and step
   const initialMessages = await loadMessages(sessionId, step.id);
 
+  // Query existing artifact for completed or needs_regeneration steps
+  let initialArtifact: Record<string, unknown> | null = null;
+  if (stepRecord && (stepRecord.status === 'complete' || stepRecord.status === 'needs_regeneration')) {
+    const artifactRecord = await db
+      .select()
+      .from(stepArtifacts)
+      .where(eq(stepArtifacts.workshopStepId, stepRecord.id))
+      .limit(1);
+
+    if (artifactRecord.length > 0) {
+      initialArtifact = artifactRecord[0].artifact;
+    }
+  }
+
   return (
     <div className="flex h-full flex-col">
       {/* Step header */}
@@ -84,6 +98,8 @@ export default async function StepPage({ params }: StepPageProps) {
           sessionId={sessionId}
           workshopId={session.workshop.id}
           initialMessages={initialMessages}
+          initialArtifact={initialArtifact}
+          stepStatus={stepRecord?.status}
         />
       </div>
     </div>

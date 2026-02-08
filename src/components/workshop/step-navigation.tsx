@@ -4,6 +4,7 @@
  * Features:
  * - Next button: marks current step complete, next step in_progress
  * - Back button: navigates to previous step (no state change)
+ * - Revise button: shown on completed steps, triggers cascade invalidation
  * - Loading state prevents double-clicks
  * - Hidden on first/last steps appropriately
  */
@@ -12,7 +13,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { advanceToNextStep } from '@/actions/workshop-actions';
 import { STEPS } from '@/lib/workshop/step-metadata';
@@ -22,6 +23,8 @@ interface StepNavigationProps {
   workshopId: string;
   currentStepOrder: number;
   artifactConfirmed?: boolean;
+  stepStatus?: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
+  onRevise?: () => void;
 }
 
 export function StepNavigation({
@@ -29,12 +32,15 @@ export function StepNavigation({
   workshopId,
   currentStepOrder,
   artifactConfirmed = false,
+  stepStatus,
+  onRevise,
 }: StepNavigationProps) {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
 
   const isFirstStep = currentStepOrder === 1;
   const isLastStep = currentStepOrder === STEPS.length;
+  const isCompleted = stepStatus === 'complete';
 
   const handleNext = async () => {
     // Guard: prevent double-clicks and navigation from last step
@@ -89,8 +95,20 @@ export function StepNavigation({
         <div /> /* Spacer */
       )}
 
-      {/* Right: Next button (hidden on step 10) */}
-      {!isLastStep ? (
+      {/* Right: Conditional button based on step status */}
+      {isCompleted ? (
+        // Viewing a completed step: show Revise button (no Next button)
+        <Button
+          onClick={onRevise}
+          disabled={isNavigating}
+          variant="outline"
+          className="border-amber-500 text-amber-600 hover:bg-amber-50 dark:border-amber-400 dark:text-amber-400 dark:hover:bg-amber-950"
+        >
+          <AlertTriangle className="mr-2 h-4 w-4" />
+          Revise This Step
+        </Button>
+      ) : !isLastStep ? (
+        // In progress or needs_regeneration: show Next button
         <Button
           onClick={handleNext}
           disabled={isNavigating}
@@ -100,7 +118,7 @@ export function StepNavigation({
           {!isNavigating && <ChevronRight className="ml-2 h-4 w-4" />}
         </Button>
       ) : (
-        <div /> /* Spacer */
+        <div /> /* Spacer for last step */
       )}
     </div>
   );

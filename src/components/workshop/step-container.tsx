@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import type { UIMessage } from 'ai';
 import { ChatPanel } from './chat-panel';
@@ -10,12 +11,15 @@ import { StepNavigation } from './step-navigation';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { reviseStep } from '@/actions/workshop-actions';
 
 interface StepContainerProps {
   stepOrder: number;
   sessionId: string;
   workshopId: string;
   initialMessages?: UIMessage[];
+  initialArtifact?: Record<string, unknown> | null;
+  stepStatus?: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
 }
 
 export function StepContainer({
@@ -23,14 +27,26 @@ export function StepContainer({
   sessionId,
   workshopId,
   initialMessages,
+  initialArtifact,
+  stepStatus,
 }: StepContainerProps) {
+  const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
 
   // Extraction state
-  const [artifact, setArtifact] = React.useState<Record<string, unknown> | null>(null);
+  // Pre-populate artifact if viewing completed/needs_regeneration step
+  const [artifact, setArtifact] = React.useState<Record<string, unknown> | null>(
+    initialArtifact || null
+  );
   const [isExtracting, setIsExtracting] = React.useState(false);
   const [extractionError, setExtractionError] = React.useState<string | null>(null);
-  const [artifactConfirmed, setArtifactConfirmed] = React.useState(false);
+
+  // Artifact confirmation state
+  // For complete steps: pre-set confirmed (artifact was already confirmed)
+  // For needs_regeneration: not confirmed (needs re-confirmation after revision)
+  const [artifactConfirmed, setArtifactConfirmed] = React.useState(
+    stepStatus === 'complete' && initialArtifact !== null
+  );
 
   // Live message count for "Extract Output" button visibility
   const [liveMessageCount, setLiveMessageCount] = React.useState(initialMessages?.length || 0);
@@ -108,6 +124,28 @@ export function StepContainer({
     setArtifact(null);
   }, []);
 
+  // Handle revision (cascade invalidation)
+  const handleRevise = React.useCallback(async () => {
+    try {
+      // Get current step ID from step-metadata
+      const { getStepByOrder } = await import('@/lib/workshop/step-metadata');
+      const step = getStepByOrder(stepOrder);
+
+      if (!step) {
+        console.error('Step not found for revision');
+        return;
+      }
+
+      // Trigger cascade invalidation server action
+      await reviseStep(workshopId, step.id, sessionId);
+
+      // Refresh the page to reload with updated status
+      router.refresh();
+    } catch (error) {
+      console.error('Failed to revise step:', error);
+    }
+  }, [workshopId, stepOrder, sessionId, router]);
+
   // Render content section
   const renderContent = () => (
     <>
@@ -171,6 +209,8 @@ export function StepContainer({
           workshopId={workshopId}
           currentStepOrder={stepOrder}
           artifactConfirmed={artifactConfirmed}
+          stepStatus={stepStatus}
+          onRevise={handleRevise}
         />
       </div>
     );
@@ -202,6 +242,8 @@ export function StepContainer({
         workshopId={workshopId}
         currentStepOrder={stepOrder}
         artifactConfirmed={artifactConfirmed}
+        stepStatus={stepStatus}
+        onRevise={handleRevise}
       />
     </div>
   );
