@@ -175,9 +175,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 12-01-PLAN.md — Updated schemas, enriched prompts, and validation criteria for Definition steps
-- [ ] 12-02-PLAN.md — Step-specific UI components (PersonaCard, JourneyMapGrid, HMWBuilder)
-- [ ] 12-03-PLAN.md — Schema-prompt alignment verification and human verification
+- [x] 12-01-PLAN.md — Updated schemas, enriched prompts, and validation criteria for Definition steps (Complete 2026-02-09)
+- [x] 12-02-PLAN.md — Step-specific UI components (PersonaCard, JourneyMapGrid, HMWBuilder) (Complete 2026-02-09)
+- [x] 12-03-PLAN.md — Schema-prompt alignment verification and human verification (Complete 2026-02-09)
 
 #### Phase 13: Ideation & Validation Steps (8-10)
 **Goal**: Steps that generate ideas, develop concepts, and synthesize journey
@@ -230,9 +230,9 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 9. Structured Outputs | v1.0 | 3/3 | Complete | 2026-02-08 |
 | 10. Navigation & Persistence | v1.0 | 2/2 | Complete | 2026-02-08 |
 | 11. Discovery Steps (1-4) | v1.0 | 3/3 | Complete | 2026-02-08 |
-| 12. Definition Steps (5-7) | v1.0 | 0/3 | Not started | - |
+| 12. Definition Steps (5-7) | v1.0 | 3/3 | Complete | 2026-02-09 |
 | 13. Ideation & Validation Steps (8-10) | v1.0 | 0/TBD | Not started | - |
 | 14. Production Hardening | v1.0 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-09 after Phase 12 planning*
+*Last updated: 2026-02-09 after Phase 12 completion*
