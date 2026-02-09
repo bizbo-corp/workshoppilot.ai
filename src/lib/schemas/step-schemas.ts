@@ -316,7 +316,7 @@ export type ReframeArtifact = z.infer<typeof reframeArtifactSchema>;
  * Multi-round ideation with clusters, brain writing, and Crazy 8s
  */
 export const ideationArtifactSchema = z.object({
-  hmwPrompt: z
+  reframedHmw: z
     .string()
     .describe('The reframed HMW statement from Step 7 used as the ideation prompt'),
   clusters: z
@@ -333,6 +333,10 @@ export const ideationArtifactSchema = z.object({
                 .optional()
                 .default(false)
                 .describe('Whether this is a deliberately provocative wild card idea'),
+              source: z
+                .literal('mind-mapping')
+                .optional()
+                .describe('Sub-step that generated this idea'),
             })
           )
           .min(2)
@@ -354,8 +358,12 @@ export const ideationArtifactSchema = z.object({
     .array(
       z.object({
         originalTitle: z.string().describe('Title of the original idea that was built upon'),
-        evolution: z.string().describe('How the idea evolved through 3 rounds of "Yes, and..." building'),
+        evolutionDescription: z.string().describe('How the idea evolved through 3 rounds of "Yes, and..." building'),
         finalVersion: z.string().describe('The idea after 3 rounds of brain writing enhancement'),
+        source: z
+          .literal('brain-writing')
+          .optional()
+          .describe('Sub-step that generated this idea'),
       })
     )
     .optional()
@@ -365,11 +373,15 @@ export const ideationArtifactSchema = z.object({
       z.object({
         title: z.string().describe('Quick rapid-fire idea title'),
         description: z.string().describe('Brief description from the Crazy 8s round'),
+        source: z
+          .literal('crazy-eights')
+          .optional()
+          .describe('Sub-step that generated this idea'),
       })
     )
     .optional()
     .describe('8 rapid-fire ideas from the Crazy 8s round'),
-  selectedIdeas: z
+  selectedIdeaTitles: z
     .array(z.string())
     .min(1)
     .max(4)

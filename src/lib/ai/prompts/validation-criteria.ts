@@ -242,24 +242,34 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
 
     'ideation': [
       {
-        name: 'Cluster Quality',
-        description: 'AI generated 3-4 themed clusters with 3-4 ideas each',
-        checkPrompt: 'Were 3-4 themed clusters generated from the HMW, each containing 3-4 ideas? Are the themes genuinely different approaches (not variations of one idea)?'
+        name: 'Mind Mapping Quality',
+        description: 'Mind Mapping sub-step produced 3-4 themed clusters with wild cards',
+        checkPrompt: 'Does the Mind Mapping sub-step (8a) produce 3-4 themed clusters, each containing 3-4 ideas including 1-2 wild cards? Are the themes genuinely different approaches (not variations of one idea)?'
       },
       {
         name: 'Wild Card Creativity',
-        description: 'Each cluster includes genuinely provocative wild card ideas',
-        checkPrompt: 'Does each cluster include 1-2 wild card ideas that are genuinely unconventional and boundary-pushing? Do the wild cards challenge assumptions or draw from other industries (not just slight variations of normal ideas)?'
+        description: 'Wild card ideas feel genuinely unconventional',
+        checkPrompt: 'Do the wild card ideas challenge assumptions or draw from other industries? Do they feel genuinely unconventional and boundary-pushing (not just slight variations of normal ideas)?'
+      },
+      {
+        name: 'Crazy 8s Volume',
+        description: 'Crazy 8s sub-step produced 8 rapid-fire ideas',
+        checkPrompt: 'Does the Crazy 8s sub-step (8b) produce 8 rapid-fire ideas? Are these ideas rough and quick (embracing speed over polish)?'
       },
       {
         name: 'Brain Writing Coherence',
-        description: 'Brain writing evolved ideas without losing coherence',
-        checkPrompt: 'Did the 3 rounds of brain writing enhance ideas meaningfully without bloating them? Is each enhanced idea still coherent and focused (not a pile of unrelated features)?'
+        description: 'Brain Writing sub-step evolved 5-8 ideas through 3 rounds',
+        checkPrompt: 'Does the Brain Writing sub-step (8c) evolve 5-8 favorite ideas through 3 rounds of "Yes, and..." building? Did each enhancement add value without feature bloat? Is each enhanced idea still coherent and focused?'
+      },
+      {
+        name: 'Sub-Step Order',
+        description: 'Sub-steps executed in correct order: Mind Mapping -> Crazy 8s -> Brain Writing',
+        checkPrompt: 'Were the sub-steps executed in the correct order: Mind Mapping (8a) first, then Crazy 8s (8b), then Brain Writing (8c)? Did Brain Writing reference ideas from the previous sub-steps?'
       },
       {
         name: 'Idea Volume',
-        description: 'Sufficient quantity of distinct ideas generated across all rounds',
-        checkPrompt: 'Are there at least 15+ distinct ideas across all rounds (clusters + user ideas + brain writing + Crazy 8s)? Do the ideas span different categories and approaches?'
+        description: 'Sufficient quantity of distinct ideas generated across all sub-steps',
+        checkPrompt: 'Are there at least 15+ distinct ideas across all sub-steps (Mind Mapping clusters + user ideas + Crazy 8s + Brain Writing)? Do the ideas span different categories and approaches?'
       },
       {
         name: 'HMW Alignment',
@@ -268,7 +278,7 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
       },
       {
         name: 'Selection Discipline',
-        description: 'User selected max 3-4 ideas with AI enforcement',
+        description: 'User selected 1-4 ideas for concept development',
         checkPrompt: 'Did the user select 1-4 ideas for concept development (not more)? Did AI enforce the hard limit if the user tried to select too many?'
       }
     ],
