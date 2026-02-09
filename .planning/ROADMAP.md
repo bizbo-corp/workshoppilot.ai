@@ -189,12 +189,12 @@ Plans:
   3. User can complete Step 10 Validate where AI generates synthesis summary recapping the full 10-step journey
   4. Step 10 summary includes key outputs from each step (challenge, stakeholders, research, persona, journey, HMW, ideas, concept)
   5. User can observe their full journey from vague idea to validated concept in the Step 10 summary
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 13-01: TBD during planning
-- [ ] 13-02: TBD during planning
-- [ ] 13-03: TBD during planning
+- [ ] 13-01-PLAN.md — Updated schemas, enriched prompts, and validation criteria for Steps 8-10
+- [ ] 13-02-PLAN.md — Step-specific UI components (IdeationClusterView, ConceptSheetView, SynthesisSummaryView)
+- [ ] 13-03-PLAN.md — Schema-prompt alignment verification and human verification
 
 #### Phase 14: Production Hardening
 **Goal**: Rate limit handling, cold start prevention, and streaming reconnection
