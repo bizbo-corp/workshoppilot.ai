@@ -13,7 +13,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { advanceToNextStep } from '@/actions/workshop-actions';
 import { STEPS } from '@/lib/workshop/step-metadata';
@@ -25,6 +25,7 @@ interface StepNavigationProps {
   artifactConfirmed?: boolean;
   stepStatus?: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
   onRevise?: () => void;
+  onReset?: () => void;
 }
 
 export function StepNavigation({
@@ -34,6 +35,7 @@ export function StepNavigation({
   artifactConfirmed = false,
   stepStatus,
   onRevise,
+  onReset,
 }: StepNavigationProps) {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
@@ -85,15 +87,27 @@ export function StepNavigation({
 
   return (
     <div className="flex items-center justify-between border-t bg-background px-6 py-4">
-      {/* Left: Back button (hidden on step 1) */}
-      {!isFirstStep ? (
-        <Button variant="ghost" onClick={handleBack} disabled={isNavigating}>
-          <ChevronLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-      ) : (
-        <div /> /* Spacer */
-      )}
+      {/* Left: Back and Reset buttons */}
+      <div className="flex items-center gap-2">
+        {!isFirstStep && (
+          <Button variant="ghost" onClick={handleBack} disabled={isNavigating}>
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+        )}
+        {(stepStatus === 'in_progress' || stepStatus === 'needs_regeneration') && onReset && (
+          <Button
+            onClick={onReset}
+            variant="ghost"
+            size="sm"
+            disabled={isNavigating}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Reset
+          </Button>
+        )}
+      </div>
 
       {/* Right: Conditional button based on step status */}
       {isCompleted ? (

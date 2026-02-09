@@ -8,10 +8,12 @@ import { ChatPanel } from './chat-panel';
 import { OutputPanel } from './output-panel';
 import { ArtifactConfirmation } from './artifact-confirmation';
 import { StepNavigation } from './step-navigation';
+import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { reviseStep } from '@/actions/workshop-actions';
+import { reviseStep, resetStep } from '@/actions/workshop-actions';
+import { getStepByOrder } from '@/lib/workshop/step-metadata';
 
 interface StepContainerProps {
   stepOrder: number;
@@ -51,6 +53,10 @@ export function StepContainer({
   // Live message count for "Extract Output" button visibility
   const [liveMessageCount, setLiveMessageCount] = React.useState(initialMessages?.length || 0);
   const hasEnoughMessages = liveMessageCount >= 4; // At least 2 exchanges
+
+  // Reset dialog state
+  const [showResetDialog, setShowResetDialog] = React.useState(false);
+  const [isResetting, setIsResetting] = React.useState(false);
 
   React.useEffect(() => {
     const checkMobile = () => {
@@ -146,6 +152,30 @@ export function StepContainer({
     }
   }, [workshopId, stepOrder, sessionId, router]);
 
+  // Handle reset (clear data and cascade invalidation)
+  const handleReset = React.useCallback(async () => {
+    try {
+      setIsResetting(true);
+      const step = getStepByOrder(stepOrder);
+      if (!step) {
+        console.error('Step not found for reset');
+        return;
+      }
+      await resetStep(workshopId, step.id, sessionId);
+      setShowResetDialog(false);
+      // Reset local state
+      setArtifact(null);
+      setArtifactConfirmed(false);
+      setExtractionError(null);
+      // Refresh page to reload with cleared state
+      router.refresh();
+    } catch (error) {
+      console.error('Failed to reset step:', error);
+    } finally {
+      setIsResetting(false);
+    }
+  }, [workshopId, stepOrder, sessionId, router]);
+
   // Render content section
   const renderContent = () => (
     <div className="flex h-full min-h-0 flex-col">
@@ -211,6 +241,14 @@ export function StepContainer({
           artifactConfirmed={artifactConfirmed}
           stepStatus={stepStatus}
           onRevise={handleRevise}
+          onReset={() => setShowResetDialog(true)}
+        />
+        <ResetStepDialog
+          open={showResetDialog}
+          onOpenChange={setShowResetDialog}
+          onConfirm={handleReset}
+          isResetting={isResetting}
+          stepName={getStepByOrder(stepOrder)?.name || `Step ${stepOrder}`}
         />
       </div>
     );
@@ -244,6 +282,14 @@ export function StepContainer({
         artifactConfirmed={artifactConfirmed}
         stepStatus={stepStatus}
         onRevise={handleRevise}
+        onReset={() => setShowResetDialog(true)}
+      />
+      <ResetStepDialog
+        open={showResetDialog}
+        onOpenChange={setShowResetDialog}
+        onConfirm={handleReset}
+        isResetting={isResetting}
+        stepName={getStepByOrder(stepOrder)?.name || `Step ${stepOrder}`}
       />
     </div>
   );
