@@ -6,6 +6,9 @@ import { Loader2 } from 'lucide-react';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { PersonaCard } from './persona-card';
+import { JourneyMapGrid } from './journey-map-grid';
+import { HMWBuilder } from './hmw-builder';
 
 interface OutputPanelProps {
   stepOrder: number;
@@ -161,8 +164,67 @@ export function OutputPanel({
     );
   }
 
-  // State 4: Artifact available (render as Markdown)
+  // State 4: Artifact available
   if (artifact) {
+    // Step-specific rendering for Definition steps (5-7)
+    if (stepOrder === 5) {
+      return (
+        <div className="flex h-full flex-col overflow-y-auto p-6">
+          <div className="mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+              <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
+                Extracted
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review your extracted output below
+            </p>
+          </div>
+          <PersonaCard persona={artifact} />
+        </div>
+      );
+    }
+
+    if (stepOrder === 6) {
+      return (
+        <div className="flex h-full flex-col overflow-y-auto p-6">
+          <div className="mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+              <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
+                Extracted
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review your extracted output below
+            </p>
+          </div>
+          <JourneyMapGrid artifact={artifact} />
+        </div>
+      );
+    }
+
+    if (stepOrder === 7) {
+      return (
+        <div className="flex h-full flex-col overflow-y-auto p-6">
+          <div className="mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+              <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
+                Extracted
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review your extracted output below
+            </p>
+          </div>
+          <HMWBuilder artifact={artifact} />
+        </div>
+      );
+    }
+
+    // Default: Generic markdown rendering for other steps
     const markdown = formatArtifactAsMarkdown(artifact, stepOrder);
 
     return (
