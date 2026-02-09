@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db/client';
-import { workshops, sessions, workshopSteps } from '@/db/schema';
+import { workshops, sessions, workshopSteps, chatMessages, stepArtifacts, stepSummaries } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { createPrefixedId } from '@/lib/ids';
 import { STEPS, getStepById } from '@/lib/workshop/step-metadata';
@@ -225,6 +225,66 @@ export async function reviseStep(
     revalidatePath(`/workshop/${sessionId}`);
   } catch (error) {
     console.error('Failed to revise step:', error);
+    throw error;
+  }
+}
+
+/**
+ * Resets a step by clearing conversation, artifact, and summary data
+ * Triggered when user clicks "Reset Step" on an in-progress or needs_regeneration step
+ * More destructive than reviseStep - clears all data for a fresh start
+ */
+export async function resetStep(
+  workshopId: string,
+  stepId: string,
+  sessionId: string
+): Promise<void> {
+  try {
+    // Find the workshop step record
+    const workshopStepResult = await db
+      .select({ id: workshopSteps.id })
+      .from(workshopSteps)
+      .where(
+        and(
+          eq(workshopSteps.workshopId, workshopId),
+          eq(workshopSteps.stepId, stepId)
+        )
+      )
+      .limit(1);
+
+    if (workshopStepResult.length === 0) {
+      throw new Error(`Workshop step not found: ${stepId}`);
+    }
+
+    const workshopStepRecord = workshopStepResult[0];
+
+    // Delete chat messages for this step
+    await db
+      .delete(chatMessages)
+      .where(
+        and(
+          eq(chatMessages.sessionId, sessionId),
+          eq(chatMessages.stepId, stepId)
+        )
+      );
+
+    // Delete step artifact
+    await db
+      .delete(stepArtifacts)
+      .where(eq(stepArtifacts.workshopStepId, workshopStepRecord.id));
+
+    // Delete step summary
+    await db
+      .delete(stepSummaries)
+      .where(eq(stepSummaries.workshopStepId, workshopStepRecord.id));
+
+    // Invalidate downstream steps (also resets current step to in_progress with arcPhase: orient)
+    await invalidateDownstreamSteps(workshopId, stepId);
+
+    // Revalidate workshop layout to refresh sidebar and step status
+    revalidatePath(`/workshop/${sessionId}`);
+  } catch (error) {
+    console.error('Failed to reset step:', error);
     throw error;
   }
 }
