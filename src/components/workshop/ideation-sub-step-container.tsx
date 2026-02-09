@@ -12,9 +12,21 @@ import { StepNavigation } from './step-navigation';
 import { IdeaSelection } from './idea-selection';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Lightbulb, Zap, PenTool, Check, Sparkles } from 'lucide-react';
+import { Lightbulb, Zap, PenTool, Check, Sparkles, ArrowRight } from 'lucide-react';
 
 type IdeationSubStep = 'mind-mapping' | 'crazy-eights' | 'brain-writing';
+
+const SUB_STEP_ORDER: IdeationSubStep[] = ['mind-mapping', 'crazy-eights', 'brain-writing'];
+const SUB_STEP_LABELS: Record<IdeationSubStep, string> = {
+  'mind-mapping': 'Mind Mapping',
+  'crazy-eights': 'Crazy 8s',
+  'brain-writing': 'Brain Writing',
+};
+
+function getNextSubStep(current: IdeationSubStep): IdeationSubStep | null {
+  const idx = SUB_STEP_ORDER.indexOf(current);
+  return idx < SUB_STEP_ORDER.length - 1 ? SUB_STEP_ORDER[idx + 1] : null;
+}
 
 interface IdeationSubStepContainerProps {
   sessionId: string;
@@ -144,6 +156,16 @@ export function IdeationSubStepContainer({
     setArtifact(null);
   }, []);
 
+  // Complete a sub-step and auto-advance to next
+  const handleSubStepComplete = React.useCallback((subStep: IdeationSubStep) => {
+    if (subStep === 'mind-mapping') setMindMappingEngaged(true);
+    if (subStep === 'crazy-eights') setCrazyEightsEngaged(true);
+    if (subStep === 'brain-writing') setBrainWritingEngaged(true);
+
+    const next = getNextSubStep(subStep);
+    if (next) setCurrentSubStep(next);
+  }, []);
+
   const hasEnoughMessages = liveMessageCount >= 4;
 
   // Extract all ideas from artifact for IdeaSelection
@@ -214,15 +236,32 @@ export function IdeationSubStepContainer({
           subStep={subStep}
         />
       </div>
-      {/* Extract Output button -- only shown in the active tab when conditions met */}
-      {currentSubStep === subStep && hasEnoughMessages && !artifact && !isExtracting && (
-        <div className="flex shrink-0 justify-center border-t bg-background p-4">
-          <Button onClick={extractArtifact} variant="outline" size="sm">
-            <Sparkles className="mr-2 h-4 w-4" />
-            Extract Output
-          </Button>
-        </div>
-      )}
+      {/* Sub-step action: Continue to next OR Extract Output on last sub-step */}
+      {currentSubStep === subStep && hasEnoughMessages && (() => {
+        const next = getNextSubStep(subStep);
+        if (next) {
+          return (
+            <div className="flex shrink-0 justify-center border-t bg-background p-4">
+              <Button onClick={() => handleSubStepComplete(subStep)} size="sm">
+                <ArrowRight className="mr-2 h-4 w-4" />
+                Continue to {SUB_STEP_LABELS[next]}
+              </Button>
+            </div>
+          );
+        }
+        // Last sub-step: show Extract Output
+        if (!artifact && !isExtracting) {
+          return (
+            <div className="flex shrink-0 justify-center border-t bg-background p-4">
+              <Button onClick={extractArtifact} variant="outline" size="sm">
+                <Sparkles className="mr-2 h-4 w-4" />
+                Extract Output
+              </Button>
+            </div>
+          );
+        }
+        return null;
+      })()}
     </div>
   );
 

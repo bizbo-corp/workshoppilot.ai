@@ -59,6 +59,9 @@ export function StepContainer({
   const [showResetDialog, setShowResetDialog] = React.useState(false);
   const [isResetting, setIsResetting] = React.useState(false);
 
+  // Reset key forces ChatPanel/IdeationSubStepContainer to re-mount (clearing useChat state)
+  const [resetKey, setResetKey] = React.useState(0);
+
   React.useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -168,7 +171,9 @@ export function StepContainer({
       setArtifact(null);
       setArtifactConfirmed(false);
       setExtractionError(null);
-      // Refresh page to reload with cleared state
+      // Force re-mount of ChatPanel/IdeationSubStepContainer to clear useChat state
+      setResetKey(prev => prev + 1);
+      // Refresh page to reload with cleared server state
       router.refresh();
     } catch (error) {
       console.error('Failed to reset step:', error);
@@ -182,6 +187,7 @@ export function StepContainer({
     return (
       <>
         <IdeationSubStepContainer
+          key={resetKey}
           sessionId={sessionId}
           workshopId={workshopId}
           initialMessages={initialMessages}
@@ -206,6 +212,7 @@ export function StepContainer({
     <div className="flex h-full min-h-0 flex-col">
       <div className="min-h-0 flex-1">
         <ChatPanel
+          key={resetKey}
           stepOrder={stepOrder}
           sessionId={sessionId}
           workshopId={workshopId}
