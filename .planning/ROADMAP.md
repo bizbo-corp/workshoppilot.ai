@@ -196,6 +196,24 @@ Plans:
 - [x] 13-02-PLAN.md — Step-specific UI components (IdeationClusterView, ConceptSheetView, SynthesisSummaryView) (Complete 2026-02-09)
 - [x] 13-03-PLAN.md — Schema-prompt alignment verification and human verification (Complete 2026-02-10)
 
+#### Phase 13.1: Reset Step & Step 8 Ideation Sub-Steps (INSERTED)
+**Goal**: Add step reset functionality and restructure Step 8 Ideation into internal sub-steps (8a Mind Mapping, 8b Crazy 8s, 8c Brain Writing) preserving the 10-step mental model
+**Depends on**: Phase 13 (requires completed Step 8 implementation to restructure)
+**Requirements**: From next-features.md
+**Success Criteria** (what must be TRUE):
+  1. User can reset any in-progress or completed step, clearing conversation, artifact, and summary with confirmation dialog
+  2. Resetting a step cascade-invalidates downstream steps (reusing Phase 10 mechanism)
+  3. Step 8 has internal sub-step navigation (8a Mind Mapping → 8b Crazy 8s → 8c Brain Writing) within the existing step container
+  4. Each sub-step produces intermediate output visible in the output panel
+  5. Users can select ideas from all sub-steps via interactive chat-pane selection with free-text "Add your own idea" input
+  6. Selected ideas (max 3-4) flow forward to Step 9 Concept Development as before
+**Plans**: 3 plans
+
+Plans:
+- [ ] 13.1-01-PLAN.md — Reset Step server action, confirmation dialog, and UI wiring
+- [ ] 13.1-02-PLAN.md — Step 8 sub-step prompts, schema alignment, tabs install
+- [ ] 13.1-03-PLAN.md — Step 8 sub-step UI container, interactive idea selection, chat API wiring
+
 #### Phase 14: Production Hardening
 **Goal**: Rate limit handling, cold start prevention, and streaming reconnection
 **Depends on**: Phase 13 (production issues only surface under load with real features)
@@ -215,7 +233,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14
+Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 13.1 → 14
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -232,7 +250,8 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 11. Discovery Steps (1-4) | v1.0 | 3/3 | Complete | 2026-02-08 |
 | 12. Definition Steps (5-7) | v1.0 | 3/3 | Complete | 2026-02-09 |
 | 13. Ideation & Validation Steps (8-10) | v1.0 | 3/3 | Complete | 2026-02-10 |
+| 13.1 Reset Step & Step 8 Sub-Steps | v1.0 | 0/TBD | Not started | - |
 | 14. Production Hardening | v1.0 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-10 after Phase 13 completion*
+*Last updated: 2026-02-10 after Phase 13.1 insertion*
