@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 14 - Production Hardening (v1.0 milestone)
+**Current focus:** Phase 13.1 - Reset Step & Step 8 Ideation Sub-Steps (v1.0 milestone)
 
 ## Current Position
 
-Phase: 14 of 14 (Production Hardening)
-Plan: 0 of TBD complete
-Status: Not started
-Last activity: 2026-02-10 — Completed Phase 13 (all 3 plans)
+Phase: 13.1 of 14 (Reset Step & Step 8 Ideation Sub-Steps)
+Plan: 1 of 3 complete
+Status: In progress
+Last activity: 2026-02-10 — Completed 13.1-01-PLAN.md (Reset Step functionality)
 
-Progress: [██████████████████░░] 93% (13 of 14 phases complete)
+Progress: [██████████████████░░] 93% (13 of 14+ phases complete, 1 of 3 plans in Phase 13.1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 40
+- Total plans completed: 41
 - Average duration: 2.9 min
-- Total execution time: 2.65 hours
+- Total execution time: 2.70 hours
 
 **By Phase:**
 
@@ -40,6 +40,7 @@ Progress: [██████████████████░░] 93% (13
 | 11-discovery-steps-1-4 | 3 | 6 min | 2.0 min |
 | 12-definition-steps-5-7 | 3 | 18 min | 6.0 min |
 | 13-ideation-validation-steps-8-10 | 3 | 14 min | 4.7 min |
+| 13.1-reset-step-step-8-ideation-sub-steps | 1 | 3 min | 3.0 min |
 
 **Recent Trend:**
 - v0.5 milestone: 6 phases, 19 plans in 2 days
@@ -169,6 +170,14 @@ Recent decisions affecting v1.0 work:
 - **Phase 13+**: SWOT quadrant colors provide semantic recognition: green strengths, red weaknesses, blue opportunities, amber threats
 - **Phase 13+**: Feasibility dots (1-5 filled) with traffic light colors provide at-a-glance scoring
 - **Phase 13+**: Confidence gauge combines large numeric score + horizontal bar + research quality badge for comprehensive assessment
+- **Phase 13.1 Plan 1**: resetStep more destructive than reviseStep - deletes messages/artifacts/summaries before cascade invalidation
+- **Phase 13.1 Plan 1**: Reset button shown only on in_progress and needs_regeneration steps (not completed steps)
+- **Phase 13.1 Plan 1**: ResetStepDialog uses variant='destructive' with red button to emphasize data loss risk
+- **Phase 13.1 Plan 1**: Dialog renders once as portal outside mobile/desktop layout ternary (avoids duplication)
+
+### Roadmap Evolution
+
+- Phase 13.1 inserted after Phase 13: Reset Step & Step 8 Ideation Sub-Steps (feature improvement before production hardening)
 
 ### Pending Todos
 
@@ -186,15 +195,16 @@ Recent decisions affecting v1.0 work:
 **Current concerns:**
 - Phase count is higher (8 phases vs typical 5-8) due to foundational complexity — acceptable for "standard" depth given v1.0's architectural requirements
 - Phase 13 completed with 3 plans — all 10 design thinking steps now feature-complete and human-verified
-- Production hardening (Phase 14) is the final phase — all features exist, ready for load testing and resilience
+- Phase 13.1 inserted for Reset Step + Step 8 sub-step restructure before production hardening
+- Production hardening (Phase 14) remains final phase
 
 ## Session Continuity
 
-Last session: 2026-02-10 (Phase 13 complete)
-Stopped at: Completed Phase 13 (all 3 plans)
-Resume file: .planning/phases/13-ideation-validation-steps-8-10/13-03-SUMMARY.md
+Last session: 2026-02-10 (Phase 13.1 Plan 1 completed)
+Stopped at: Phase 13.1 Plan 1 execution complete (Reset Step functionality)
+Resume file: .planning/phases/13.1-reset-step-step-8-ideation-sub-steps/13.1-01-SUMMARY.md
 
-**Next action:** Plan and execute Phase 14 (Production Hardening)
+**Next action:** Execute Phase 13.1 Plan 2 (`/gsd:execute-phase 13.1 --plan 02`)
 
 ---
-*Last updated: 2026-02-10 after Phase 13 completion*
+*Last updated: 2026-02-10 after Phase 13.1 Plan 1 completion*
