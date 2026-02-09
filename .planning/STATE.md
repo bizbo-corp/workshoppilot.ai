@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 11 - Discovery Steps 1-4 (v1.0 milestone)
+**Current focus:** Phase 12 - Definition Steps 5-7 (v1.0 milestone)
 
 ## Current Position
 
-Phase: 11 of 14 (Discovery Steps 1-4)
-Plan: 3 of 3 complete
+Phase: 12 of 14 (Definition Steps 5-7)
+Plan: 1 of 1 complete
 Status: Phase complete
-Last activity: 2026-02-08 — Completed 11-03-PLAN.md
+Last activity: 2026-02-09 — Completed 12-01-PLAN.md
 
-Progress: [███████████░░░░░░░░░] 79% (11 of 14 phases complete)
+Progress: [████████████░░░░░░░░] 86% (12 of 14 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 34
-- Average duration: 2.8 min
-- Total execution time: 2.11 hours
+- Total plans completed: 35
+- Average duration: 2.9 min
+- Total execution time: 2.21 hours
 
 **By Phase:**
 
@@ -38,6 +38,7 @@ Progress: [███████████░░░░░░░░░] 79% (11
 | 09-structured-outputs | 3 | 8.5 min | 2.8 min |
 | 10-navigation-persistence | 2 | 7.2 min | 3.6 min |
 | 11-discovery-steps-1-4 | 3 | 6 min | 2.0 min |
+| 12-definition-steps-5-7 | 1 | 6 min | 6.0 min |
 
 **Recent Trend:**
 - v0.5 milestone: 6 phases, 19 plans in 2 days
@@ -46,7 +47,8 @@ Progress: [███████████░░░░░░░░░] 79% (11
 - Phase 9: Structured Outputs completed (3 plans, 8.5 min)
 - Phase 10: Navigation & Persistence completed (2 plans, 7.2 min)
 - Phase 11: Discovery Steps 1-4 completed (3 plans, 6 min)
-- Trend: Stable velocity, consistent 1-3 min per plan
+- Phase 12: Definition Steps 5-7 completed (1 plan, 6 min)
+- Trend: Stable velocity, consistent 2-6 min per plan
 
 *Updated after 11-03 completion*
 
@@ -120,6 +122,17 @@ Recent decisions affecting v1.0 work:
 - **Phase 11 Plan 3**: No code changes needed for alignment — prompts and schemas matched perfectly
 - **Phase 11 Plan 3**: Human verified end-to-end flow for Steps 1-4
 - **Phase 11-13**: Group steps into natural clusters (Discovery 1-4, Definition 5-7, Ideation/Validation 8-10)
+- **Phase 12 Plan 1**: Step 5 persona schema adds gains (required), motivations, frustrations, dayInTheLife (optional)
+- **Phase 12 Plan 1**: Step 6 journey schema uses 7 layers (action, goals, barriers, touchpoints, emotions, momentsOfTruth, opportunities) with traffic light emotion enum
+- **Phase 12 Plan 1**: Step 7 reframe schema uses 4-part HMW builder with multiple statements array and selectedForIdeation
+- **Phase 12 Plan 1**: Step 5 AI proactively drafts ALL persona fields (not Q&A session), user reviews/refines
+- **Phase 12 Plan 1**: Step 5 evidence traceability: pains/gains MUST cite Step 4, demographics can be inferred from context
+- **Phase 12 Plan 1**: Step 6 AI suggests stages collaboratively, populates 7 layers from research, identifies dip with rationale
+- **Phase 12 Plan 1**: Step 7 AI drafts fresh HMW from scratch (not evolution of Step 1) using 4-part builder with 2-3 options per field
+- **Phase 12 Plan 1**: All 3 Definition steps include BOUNDARY instructions preventing premature ideation
+- **Phase 12+**: Persona optional fields (motivations, frustrations, dayInTheLife) auto-populate when conversation data exists but skippable
+- **Phase 12+**: Journey traffic light emotions (positive/neutral/negative) enable reliable AI extraction and UI color mapping
+- **Phase 12+**: Multi-persona support (1-3 personas) with research-driven count, not fixed upfront
 
 ### Pending Todos
 
@@ -136,16 +149,16 @@ Recent decisions affecting v1.0 work:
 
 **Current concerns:**
 - Phase count is higher (8 phases vs typical 5-8) due to foundational complexity — acceptable for "standard" depth given v1.0's architectural requirements
-- Steps 5-7 (Phase 12) and 8-10 (Phase 13) are grouped, may need refinement during planning if individual step complexity is high
+- Phase 12 completed with single plan (schema + prompt enrichment combined) — efficient grouping validated
 - Production hardening (Phase 14) can't be tested meaningfully until features exist — may discover issues late
 
 ## Session Continuity
 
-Last session: 2026-02-08 (Phase 11 complete)
-Stopped at: Completed 11-03-PLAN.md
+Last session: 2026-02-09 (Phase 12 complete)
+Stopped at: Completed 12-01-PLAN.md
 Resume file: None
 
-**Next action:** Plan Phase 12 (Definition Steps 5-7)
+**Next action:** Plan Phase 13 (Ideation/Validation Steps 8-10)
 
 ---
-*Last updated: 2026-02-08 after Phase 11 completion*
+*Last updated: 2026-02-09 after Phase 12 completion*
