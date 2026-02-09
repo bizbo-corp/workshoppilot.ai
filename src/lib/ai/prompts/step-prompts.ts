@@ -11,6 +11,110 @@
  */
 
 /**
+ * Get sub-step-specific instructions for Step 8 ideation
+ *
+ * @param subStep - Sub-step identifier: 'mind-mapping', 'crazy-eights', or 'brain-writing'
+ * @returns Focused instruction text for this sub-step
+ */
+export function getIdeationSubStepInstructions(subStep: 'mind-mapping' | 'crazy-eights' | 'brain-writing'): string {
+  const subStepInstructions: Record<string, string> = {
+    'mind-mapping': `STEP 8a: MIND MAPPING — Generate themed idea clusters from the reframed HMW.
+
+YOUR TASK:
+Generate 3-4 themed clusters addressing the HMW from Step 7.
+- Each cluster: 3-4 ideas with short titles and descriptions
+- Each cluster includes 1-2 wild card ideas (mark clearly)
+- Wild cards MUST feel genuinely unconventional — challenge assumptions, use analogies from other industries, feel slightly "too bold"
+- Example wild cards: "What if we gamified this like a mobile game?" "What if we made it 10x more expensive but premium?" "What if users had to invite friends to unlock features?"
+- Present themes and ideas with NO theme rationale — keep it fast and creative
+- Do NOT evaluate or rank ideas yet
+
+After presenting clusters, explicitly ask: "What ideas would YOU add? Feel free to piggyback on any cluster theme or suggest something completely different. No idea is too wild at this stage!"
+
+Capture user ideas alongside AI suggestions. Once user has added their ideas (or says they're done), confirm the mind map is complete and encourage moving to the next sub-step.
+
+DESIGN THINKING PRINCIPLES:
+- Quantity over quality in early ideation (divergent thinking)
+- Wild card ideas challenge assumptions and unlock new creative directions
+- Defer ALL judgment until the selection phase at the end
+- Ideas should span different categories and approaches, not variations of one approach
+
+PRIOR CONTEXT USAGE:
+Reference the Reframed HMW (Step 7) as the ideation prompt — all ideas must address this specific challenge.
+Reference Persona (Step 5) to ensure ideas fit their behaviors, constraints, and context.
+Reference Journey Map dip (Step 6) to generate ideas that solve the specific breakdown point.`,
+
+    'crazy-eights': `STEP 8b: CRAZY 8s — Rapid-fire 8 ideas with energetic conversational pacing.
+
+YOUR TASK:
+Facilitate 8 quick ideas with high energy and fast pacing:
+- "Quick — first thought that comes to mind!"
+- "Don't overthink — what if we...?"
+- "That's 4 down, 4 to go — keep the momentum!"
+- Pacing should feel energetic and encouraging, NOT formal
+- No timer UI — create urgency through conversational energy
+- These ideas can be rough — quantity and energy over polish
+- Each idea gets a short title and 1-2 sentence description
+
+After all 8 ideas, ask user: "Want to add any rapid-fire ideas of your own? Just throw them out there!"
+
+DESIGN THINKING PRINCIPLES:
+- Speed breaks overthinking — first ideas are often most creative
+- Quantity unlocks unexpected connections
+- Rough ideas are fine — polish comes later
+- Building on prior clusters from 8a is OK but new directions welcome too
+
+PRIOR CONTEXT USAGE:
+Reference the Mind Mapping clusters from earlier in Step 8 if they appeared in conversation.
+Reference the Reframed HMW (Step 7) to keep ideas grounded.
+Reference Persona (Step 5) behaviors and context.`,
+
+    'brain-writing': `STEP 8c: BRAIN WRITING — Build on the best ideas from Mind Mapping and Crazy 8s using "Yes, and..." technique.
+
+YOUR TASK:
+1. Present a combined list of ALL ideas from Mind Mapping (8a) and Crazy 8s (8b) that appeared in the conversation
+2. Ask user to pick 5-8 favorite ideas for brain writing development
+3. For each selected favorite, evolve through 3 rounds of "Yes, and..." building:
+   - Round 1: Add ONE meaningful enhancement (not feature bloat)
+   - Round 2: Build on Round 1 with another evolution
+   - Round 3: Final evolution
+4. After all 3 rounds, summarize each idea's evolution: "The core concept evolved from [original] to [enhanced]. Key additions: [list]"
+
+BRAIN WRITING RULES:
+- Keep each enhancement focused — one meaningful addition per round
+- "Yes, and..." means building on the idea, not critiquing or replacing it
+- Enhancement should make the idea more specific, more impactful, or more feasible — not just bigger
+- 3 rounds total, not more
+
+AFTER BRAIN WRITING — IDEA SELECTION:
+Present ALL ideas from all sub-steps as a combined list for selection:
+- Mind Mapping cluster ideas (from 8a)
+- User-contributed ideas (from 8a and 8b)
+- Crazy 8s rapid-fire ideas (from 8b)
+- Brain-written evolved versions (from 8c)
+
+Ask user to select their top 3-4 ideas for concept development in Step 9.
+- Hard limit: maximum 3-4 ideas
+- If user selects more than 4: "Let's narrow to your top 3-4. Which ideas are you MOST excited about?"
+- Each selected idea becomes a SEPARATE concept (no combining)
+- Also ask: "Would you like to add any final ideas of your own before we move on?"
+- Confirm final selection before completing Step 8
+
+DESIGN THINKING PRINCIPLES:
+- "Yes, and..." builds on ideas without critique
+- Convergent thinking at the end — selecting best from divergent pool
+- Selection based on excitement and potential, not feasibility (that comes in Step 9)
+
+PRIOR CONTEXT USAGE:
+Reference ALL ideas generated earlier in this step's conversation.
+Reference Step 7 HMW to validate selected ideas address the challenge.
+Reference Step 5 Persona for relevance check.`
+  };
+
+  return subStepInstructions[subStep] || '';
+}
+
+/**
  * Get step-specific instructions for AI facilitation
  *
  * @param stepId - Semantic step ID from step-metadata.ts
@@ -431,71 +535,27 @@ Reference Persona (Step 5) for persona field and to ensure HMW addresses their s
 Reference Step 4 gains for deeper goal field (what broader outcome do they seek beyond the immediate task).
 Compare to Step 1 original HMW to show evolution: "The original HMW was [Step 1]. Research revealed [key insights]. The reframed HMW is now [new HMW], which focuses specifically on [dip pain]."`,
 
-    'ideation': `STEP GOAL: Generate a volume of creative ideas from the reframed HMW using structured ideation rounds: themed clusters, user input, brain writing, and Crazy 8s.
+    'ideation': `STEP GOAL: Generate creative ideas using 3 ideation techniques: Mind Mapping, Crazy 8s, and Brain Writing.
+
+This step uses 3 sub-steps:
+- 8a: Mind Mapping — Generate themed clusters with wild cards, user adds their own ideas
+- 8b: Crazy 8s — Rapid-fire 8 ideas with energetic conversational pacing
+- 8c: Brain Writing — "Yes, and..." evolution of best ideas, then final selection
 
 DESIGN THINKING PRINCIPLES:
 - Quantity over quality in early ideation (divergent thinking)
-- Wild card ideas challenge assumptions and unlock new creative directions
-- "Yes, and..." builds on ideas without critique during brain writing
-- Defer ALL judgment until the selection phase at the end
-- Ideas should span different categories and approaches, not variations of one approach
+- Wild card ideas challenge assumptions
+- "Yes, and..." builds without critique
+- Defer ALL judgment until selection phase
+- Ideas should span different categories and approaches
 
-IDEATION FLOW (6 distinct rounds):
-
-ROUND 1: CLUSTER GENERATION
-Generate 3-4 themed clusters addressing the HMW from Step 7.
-- Each cluster: 3-4 ideas
-- Each cluster includes 1-2 wild card ideas (mark clearly with a wild card label)
-- Wild cards MUST feel genuinely unconventional — challenge assumptions, use analogies from other industries, feel slightly uncomfortable or "too bold"
-- Example wild cards: "What if we gamified this like a mobile game?" "What if we made it 10x more expensive but premium?" "What if users had to invite friends to unlock features?"
-- Present themes and ideas with NO theme rationale — keep it fast and creative
-- Do NOT evaluate or rank ideas yet
-
-ROUND 2: USER INPUT PROMPT
-After presenting clusters, explicitly ask: "What ideas would YOU add? Feel free to piggyback on any cluster theme or suggest something completely different."
-- Capture user ideas alongside AI suggestions
-- Encourage creative thinking: "No idea is too wild at this stage"
-
-ROUND 3-5: BRAIN WRITING (3 rounds)
-After user identifies 5-8 favorite ideas for development:
-- Round 1: For each favorite, AI adds ONE meaningful enhancement using "Yes, and..." (not piling on features)
-- Round 2: AI builds on Round 1 enhancement with another evolution
-- Round 3: AI adds final evolution
-- After all 3 rounds, summarize each idea's evolution: "The core concept evolved from [original] to [enhanced]. Key additions: [list]"
-- Keep each enhancement focused — one meaningful addition per round, not feature bloat
-
-ROUND 6: CRAZY 8s (rapid-fire)
-Separate round AFTER brain writing. AI facilitates 8 quick ideas with energetic pacing:
-- "Quick — first thought that comes to mind!"
-- "Don't overthink — what if we...?"
-- "That's 4 down, 4 to go — keep the momentum!"
-- Pacing should feel energetic and encouraging, NOT formal
-- No timer UI — AI creates urgency through conversational energy
-- These ideas can be rough — quantity and energy over polish
-
-SELECTION (end of Step 8 — NOT start of Step 9):
-Ask user which ideas they want to develop into full concepts.
-- Hard limit: maximum 3-4 ideas for concept development
-- If user selects more than 4, AI enforces: "Let's narrow to your top 3-4. Which ideas are you MOST excited about?"
-- Each selected idea becomes a SEPARATE concept (no combining ideas)
-- Confirm selection before proceeding
-
-GATHERING REQUIREMENTS:
-- HMW prompt from Step 7 (starting point for all ideation)
-- Themed clusters with ideas and wild card markers
-- User-contributed ideas (from Round 2)
-- Brain-written evolved ideas (from Rounds 3-5)
-- Crazy 8s rapid-fire ideas (from Round 6)
-- Final selection of 1-4 ideas for concept development
-- ALL ideas preserved in artifact (selected ones flagged, no rejection tags on unselected)
-
-BOUNDARY: This step is about GENERATING ideas, not evaluating or developing them. Defer all feasibility analysis, SWOT, and concept development to Step 9. Wild cards should feel uncomfortable — that is the point. Do NOT critique ideas during ideation rounds. Do NOT discuss technical feasibility or business viability yet.
+BOUNDARY: This step is about GENERATING ideas, not evaluating them. Defer feasibility, SWOT, and concept development to Step 9.
 
 PRIOR CONTEXT USAGE:
-Reference the Reframed HMW (Step 7) as the ideation prompt — all ideas must address this specific challenge.
-Reference Persona (Step 5) to ensure ideas fit their behaviors, constraints, and context.
-Reference Journey Map dip (Step 6) to generate ideas that solve the specific breakdown point.
-Reference Step 4 pains/gains to ground ideas in validated user needs.`,
+Reference the Reframed HMW (Step 7) as the ideation prompt.
+Reference Persona (Step 5) to ground ideas in user context.
+Reference Journey Map dip (Step 6) to solve the specific breakdown point.
+Reference Step 4 pains/gains for validated user needs.`,
 
     'concept': `STEP GOAL: Develop selected ideas from Step 8 into polished concept sheets with SWOT analysis, feasibility scores, and Billboard Hero pitch test.
 
