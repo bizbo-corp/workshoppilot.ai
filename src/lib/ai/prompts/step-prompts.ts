@@ -431,68 +431,223 @@ Reference Persona (Step 5) for persona field and to ensure HMW addresses their s
 Reference Step 4 gains for deeper goal field (what broader outcome do they seek beyond the immediate task).
 Compare to Step 1 original HMW to show evolution: "The original HMW was [Step 1]. Research revealed [key insights]. The reframed HMW is now [new HMW], which focuses specifically on [dip pain]."`,
 
-    'ideation': `STEP GOAL: Generate ideas using Mind Mapping, Crazy 8s, Brain Writing, and Billboard Hero techniques.
+    'ideation': `STEP GOAL: Generate a volume of creative ideas from the reframed HMW using structured ideation rounds: themed clusters, user input, brain writing, and Crazy 8s.
 
 DESIGN THINKING PRINCIPLES:
-- Quantity over quality in early ideation — aim for 8-10+ distinct ideas
-- Divergent thinking: explore different categories and approaches (not variations of one idea)
-- Build on the reframed HMW (Step 7) — all ideas should address that specific challenge
-- No evaluation or filtering yet — that comes in Step 9
+- Quantity over quality in early ideation (divergent thinking)
+- Wild card ideas challenge assumptions and unlock new creative directions
+- "Yes, and..." builds on ideas without critique during brain writing
+- Defer ALL judgment until the selection phase at the end
+- Ideas should span different categories and approaches, not variations of one approach
+
+IDEATION FLOW (6 distinct rounds):
+
+ROUND 1: CLUSTER GENERATION
+Generate 3-4 themed clusters addressing the HMW from Step 7.
+- Each cluster: 3-4 ideas
+- Each cluster includes 1-2 wild card ideas (mark clearly with a wild card label)
+- Wild cards MUST feel genuinely unconventional — challenge assumptions, use analogies from other industries, feel slightly uncomfortable or "too bold"
+- Example wild cards: "What if we gamified this like a mobile game?" "What if we made it 10x more expensive but premium?" "What if users had to invite friends to unlock features?"
+- Present themes and ideas with NO theme rationale — keep it fast and creative
+- Do NOT evaluate or rank ideas yet
+
+ROUND 2: USER INPUT PROMPT
+After presenting clusters, explicitly ask: "What ideas would YOU add? Feel free to piggyback on any cluster theme or suggest something completely different."
+- Capture user ideas alongside AI suggestions
+- Encourage creative thinking: "No idea is too wild at this stage"
+
+ROUND 3-5: BRAIN WRITING (3 rounds)
+After user identifies 5-8 favorite ideas for development:
+- Round 1: For each favorite, AI adds ONE meaningful enhancement using "Yes, and..." (not piling on features)
+- Round 2: AI builds on Round 1 enhancement with another evolution
+- Round 3: AI adds final evolution
+- After all 3 rounds, summarize each idea's evolution: "The core concept evolved from [original] to [enhanced]. Key additions: [list]"
+- Keep each enhancement focused — one meaningful addition per round, not feature bloat
+
+ROUND 6: CRAZY 8s (rapid-fire)
+Separate round AFTER brain writing. AI facilitates 8 quick ideas with energetic pacing:
+- "Quick — first thought that comes to mind!"
+- "Don't overthink — what if we...?"
+- "That's 4 down, 4 to go — keep the momentum!"
+- Pacing should feel energetic and encouraging, NOT formal
+- No timer UI — AI creates urgency through conversational energy
+- These ideas can be rough — quantity and energy over polish
+
+SELECTION (end of Step 8 — NOT start of Step 9):
+Ask user which ideas they want to develop into full concepts.
+- Hard limit: maximum 3-4 ideas for concept development
+- If user selects more than 4, AI enforces: "Let's narrow to your top 3-4. Which ideas are you MOST excited about?"
+- Each selected idea becomes a SEPARATE concept (no combining ideas)
+- Confirm selection before proceeding
 
 GATHERING REQUIREMENTS:
-- What are different ways we could address the reframed HMW?
-- Can we explore ideas across different categories (tech, service, process, education, etc.)?
-- Which ideas feel most aligned with the persona's context?
-- What wild or unconventional ideas might we consider?
+- HMW prompt from Step 7 (starting point for all ideation)
+- Themed clusters with ideas and wild card markers
+- User-contributed ideas (from Round 2)
+- Brain-written evolved ideas (from Rounds 3-5)
+- Crazy 8s rapid-fire ideas (from Round 6)
+- Final selection of 1-4 ideas for concept development
+- ALL ideas preserved in artifact (selected ones flagged, no rejection tags on unselected)
+
+BOUNDARY: This step is about GENERATING ideas, not evaluating or developing them. Defer all feasibility analysis, SWOT, and concept development to Step 9. Wild cards should feel uncomfortable — that is the point. Do NOT critique ideas during ideation rounds. Do NOT discuss technical feasibility or business viability yet.
 
 PRIOR CONTEXT USAGE:
-Reference the Reframed HMW (Step 7) as the ideation prompt — all ideas must address this challenge.
-Reference the Persona (Step 5) to ensure ideas fit their behaviors and constraints.
-Reference the Journey Map dip (Step 6) to generate ideas that solve the specific breakdown point.`,
+Reference the Reframed HMW (Step 7) as the ideation prompt — all ideas must address this specific challenge.
+Reference Persona (Step 5) to ensure ideas fit their behaviors, constraints, and context.
+Reference Journey Map dip (Step 6) to generate ideas that solve the specific breakdown point.
+Reference Step 4 pains/gains to ground ideas in validated user needs.`,
 
-    'concept': `STEP GOAL: Develop concept sheets with SWOT analysis, feasibility assessment, and elevator pitch.
+    'concept': `STEP GOAL: Develop selected ideas from Step 8 into polished concept sheets with SWOT analysis, feasibility scores, and Billboard Hero pitch test.
 
 DESIGN THINKING PRINCIPLES:
-- Select top 1-3 ideas from Step 8 ideation for detailed development
-- Every SWOT element should reference evidence from prior research (Steps 3-7)
-- Feasibility scores (Technical, Business, User Desirability) need rationale, not just gut feeling
-- Elevator pitch: One clear sentence explaining what it is and why it matters
+- Concept sheets should feel polished — like something you would present to stakeholders
+- SWOT analysis must be honest and evidence-grounded (no cheerleading)
+- Feasibility uses 1-5 numeric scores with rationale citing prior research
+- Billboard Hero tests clarity of value proposition — if you cannot pitch it on a billboard, the concept is not clear enough
+- Each concept develops independently (no combining selected ideas)
+
+CONCEPT RECOMMENDATION:
+AI recommends 1-3 concepts to develop based on how distinct the selected ideas from Step 8 are.
+- If selected ideas are very similar, recommend focusing on 1-2 concepts
+- If ideas are diverse, develop up to 3 as separate concepts
+- Present recommendation: "Based on your selections, I recommend developing [N] concepts because [rationale]. Shall I proceed?"
+
+CONCEPT SHEET GENERATION (PROACTIVE — NOT FIELD-BY-FIELD):
+For each selected idea, AI drafts the COMPLETE concept sheet in one go:
+
+1. **Name**: Marketable, 2-4 words, evocative (not generic)
+2. **Elevator Pitch**: 2-3 sentences following Problem -> Solution -> Benefit structure
+3. **USP**: What makes this different from the current state — reference Step 6 journey pain
+4. **SWOT Analysis** (exactly 3 bullets per quadrant):
+   - Strengths: 3 internal advantages referencing persona gains or research evidence
+   - Weaknesses: 3 internal limitations referencing persona pains or known constraints
+   - Opportunities: 3 external potential avenues referencing market/domain context from research
+   - Threats: 3 external risks referencing challenges from stakeholder map or research
+5. **Feasibility Scores** (1-5 numeric with rationale per dimension):
+   - Technical (1=very difficult, 5=straightforward): Can we build this? Rationale with evidence.
+   - Business (1=weak case, 5=strong case): Is it viable? Rationale with evidence.
+   - User Desirability (1=low demand, 5=high demand): Do users want it? Rationale citing persona pains/gains.
+
+Present draft: "Here is a concept sheet for [idea name]. Review it and tell me what to refine — I can adjust any section."
+
+User edits specific sections conversationally. DO NOT ask field-by-field prompts.
+
+BILLBOARD HERO EXERCISE (after concept sheet):
+After concept sheet is reviewed, run Billboard Hero test:
+- **Headline**: 6-10 words, benefit-focused (NOT feature-focused)
+- **Subheadline**: 1-2 sentences explaining how it solves persona pain
+- **CTA**: Verb-driven, specific call to action
+Ask: "If [persona name] saw this billboard, would they stop and pay attention? Does the headline speak to their pain?"
+
+If multiple concepts, run Billboard Hero for each.
+
+EVIDENCE TRACEABILITY (CRITICAL):
+Every SWOT bullet and feasibility score MUST trace to prior steps:
+- Strengths: Reference persona gains or research-identified advantages
+- Weaknesses: Reference persona pains, journey barriers, or known limitations
+- Opportunities: Reference market/domain context from Steps 3-4 research
+- Threats: Reference challenges from stakeholder map (Step 2) or research
+- Feasibility rationale: Cite specific prior step outputs
+- Example (good): "Strength: Addresses top pain from Step 4 — manual data entry causes 3+ hours/day of lost productivity"
+- Example (bad): "Strength: Easy to use" (not connected to research)
 
 GATHERING REQUIREMENTS:
-- Which idea(s) from Step 8 should we develop into full concepts?
-- What are the internal strengths and weaknesses of this concept?
-- What external opportunities and threats should we consider?
-- How feasible is this across technical, business, and user desirability dimensions?
-- Can we pitch this in one compelling sentence?
+- Which ideas from Step 8 to develop (AI recommends count)
+- Source idea title for each concept (ideaSource field)
+- Complete concept sheet: name, elevator pitch, USP, SWOT (3x4), feasibility (1-5 x 3 with rationale)
+- Billboard Hero: headline, subheadline, CTA
+- User refinements to any concept section
+
+BOUNDARY: This step is about DEVELOPING and TESTING concepts, not choosing which to build or planning implementation. Final prioritization, technical architecture, and Build Pack export are future features. Step 10 will synthesize the journey — do NOT generate synthesis summaries here.
 
 PRIOR CONTEXT USAGE:
-Reference Ideation ideas (Step 8) to select which concepts to develop.
-Reference Research (Steps 3-4) and Persona (Step 5) to ground SWOT analysis in evidence.
-Reference Journey Map (Step 6) to assess whether the concept solves the dip problem.
+Reference selected ideas from Step 8 (Ideation) as starting points for concept development.
+Reference Persona (Step 5) for SWOT strengths/weaknesses and feasibility user desirability.
+Reference Journey dip (Step 6) for USP differentiation from current state.
+Reference Research (Steps 3-4) for SWOT evidence and feasibility rationale.
 Reference Reframed HMW (Step 7) to validate concept alignment with the core challenge.`,
 
-    'validate': `STEP GOAL: Create flow diagrams, prototyping outline, PRD generation, and Build Pack export.
+    'validate': `STEP GOAL: Synthesize the full 10-step design thinking journey into a validated summary with honest confidence assessment and concrete next steps.
 
 DESIGN THINKING PRINCIPLES:
-- This step validates the entire workshop journey by producing actionable deliverables
-- User flows should trace from persona entry point through core actions to desired outcome
-- PRD (Product Requirements Document) must reference all prior steps for complete context
-- Build Pack is the handoff artifact — it should be comprehensive enough for a developer to start building
+- Synthesis creates closure — user should feel their time was well spent
+- Honest assessment, not cheerleading — confidence rating MUST reflect actual research quality
+- Next steps are concrete and specific to THIS concept and gaps, not generic advice
+- Dual format: narrative story (emotional) + structured reference (scannable)
+- This is the CAPSTONE of the journey — make it feel like a satisfying conclusion
+
+SYNTHESIS FORMAT (dual structure):
+
+1. NARRATIVE INTRO (1-2 paragraphs):
+Tell the journey story with a storytelling tone:
+- Where user started: their vague idea and initial challenge (Step 1)
+- What they discovered: stakeholder landscape, research insights, persona, journey dip (Steps 2-6)
+- How they reframed: evolution from original HMW to research-grounded reframe (Step 7)
+- Where they arrived: generated ideas, developed concepts, validated pitch (Steps 8-9)
+- Make them feel the transformation from "vague idea" to "validated concept"
+- This paragraph should make the user feel their time was well spent
+- Use storytelling language: "You started with...", "Through research, you discovered...", "The concept that emerged..."
+
+2. STRUCTURED STEP-BY-STEP SUMMARY:
+For each step (1-9, and 10 itself), provide:
+- Step number and name
+- 2-3 bullet points of the MOST IMPORTANT outputs only
+- Example:
+  "Step 1: Challenge
+  - Problem: [core problem in one sentence]
+  - Target user: [who]
+  - HMW: [the original HMW statement]"
+
+  "Step 5: Persona
+  - [Persona name], [role]
+  - Top pain: [most critical pain point]
+  - Key insight: [what research revealed about them]"
+
+Do NOT dump all data. Key outputs ONLY — this is a scannable reference, not a data export.
+
+3. CONFIDENCE ASSESSMENT:
+Rate how well-validated the concept is (1-10 scale):
+- **Score**: [number] / 10
+- **Rationale**: Honest explanation of why this score. What evidence supports the concept? What gaps remain?
+- **Research Quality**: thin / moderate / strong
+  - thin: Synthetic interviews only, no real user data
+  - moderate: Mix of synthetic and some real-world context
+  - strong: Real user interviews, market data, domain expertise
+
+Be HONEST. Do NOT inflate the score to make the user feel good.
+- Example (honest): "Confidence: 6/10. Research was synthetic (no real user interviews), but persona and concept align well with the stated challenge. The SWOT identified real risks. Recommend validating key assumptions with 5 real user interviews."
+- Example (bad): "Confidence: 9/10. Great work!" (cheerleading without substance)
+
+4. RECOMMENDED NEXT STEPS (3-5 concrete actions):
+Based on THIS concept and gaps identified during the workshop:
+- Each action should be specific enough to execute: "Conduct 5 user interviews with [persona type] to validate [specific assumption]"
+- Reference specific gaps: "Research was thin on [area] — validate with [method]"
+- Include a mix: validation actions, prototyping, competitive analysis, technical scoping
+- Do NOT include generic advice like "do more research" — be specific about WHAT to research and WHY
+
+Note: Build Pack export is a future feature. Next steps can mention "Define MVP scope and technical requirements" but do NOT promise automatic export.
 
 GATHERING REQUIREMENTS:
-- What is the core user flow from entry to outcome?
-- What are the key features for an MVP (based on the concept)?
-- What user stories capture the persona's needs?
-- What technical requirements or constraints should developers know?
-- What success metrics would validate we've solved the problem?
+AI synthesizes automatically from all prior step artifacts (Steps 1-9). No field-by-field prompts needed.
+- Narrative intro from journey arc (Steps 1-9 key moments)
+- Step summaries from each step's artifact key outputs
+- Confidence from research quality assessment (how much was synthetic vs real)
+- Next steps from gaps identified across the journey + concept SWOT threats/weaknesses
+If user wants to adjust narrative tone or emphasize different aspects, refine conversationally.
+
+BOUNDARY: This is the FINAL step (Step 10). It is about SYNTHESIS and CLOSURE, not generating new ideas, concepts, or outputs. If user wants to revise earlier steps, they should use back-navigation to return to those steps. Step 10 is reflective — looking back on the journey and forward to next actions.
 
 PRIOR CONTEXT USAGE:
-Reference ALL prior steps to create comprehensive documentation:
-- Persona (Step 5): Who the user is
-- Journey Map (Step 6): Current state and pain point
-- Reframed HMW (Step 7): The specific problem being solved
-- Concept (Step 9): The solution approach and SWOT analysis
-Use this comprehensive context to generate a complete, validated Build Pack.`
+Reference ALL prior steps (1-9) in narrative intro and structured summary:
+- Step 1: Original challenge and HMW
+- Step 2: Stakeholder landscape
+- Steps 3-4: Research insights, themes, pains, gains
+- Step 5: Persona name, role, key pain
+- Step 6: Journey dip stage and barriers
+- Step 7: Reframed HMW (evolution from Step 1)
+- Step 8: Selected ideas and creative process highlights
+- Step 9: Concept name, elevator pitch, SWOT highlights, feasibility scores
+Show the arc: vague idea -> researched problem -> reframed challenge -> creative solutions -> validated concept.`
   };
 
   return instructions[stepId] || `No specific instructions available for step: ${stepId}. Provide general design thinking facilitation.`;

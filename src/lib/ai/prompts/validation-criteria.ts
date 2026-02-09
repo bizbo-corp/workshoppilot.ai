@@ -242,65 +242,90 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
 
     'ideation': [
       {
-        name: 'Quantity Threshold',
-        description: 'Minimum 8-10 distinct ideas generated',
-        checkPrompt: 'Are there at least 8-10 distinct ideas (not variations of the same concept)?'
+        name: 'Cluster Quality',
+        description: 'AI generated 3-4 themed clusters with 3-4 ideas each',
+        checkPrompt: 'Were 3-4 themed clusters generated from the HMW, each containing 3-4 ideas? Are the themes genuinely different approaches (not variations of one idea)?'
       },
       {
-        name: 'Category Diversity',
-        description: 'Ideas span different approaches and categories',
-        checkPrompt: 'Do the ideas explore different categories or approaches (e.g., tech solutions, service design, process changes, education) rather than just variations of one approach?'
+        name: 'Wild Card Creativity',
+        description: 'Each cluster includes genuinely provocative wild card ideas',
+        checkPrompt: 'Does each cluster include 1-2 wild card ideas that are genuinely unconventional and boundary-pushing? Do the wild cards challenge assumptions or draw from other industries (not just slight variations of normal ideas)?'
+      },
+      {
+        name: 'Brain Writing Coherence',
+        description: 'Brain writing evolved ideas without losing coherence',
+        checkPrompt: 'Did the 3 rounds of brain writing enhance ideas meaningfully without bloating them? Is each enhanced idea still coherent and focused (not a pile of unrelated features)?'
+      },
+      {
+        name: 'Idea Volume',
+        description: 'Sufficient quantity of distinct ideas generated across all rounds',
+        checkPrompt: 'Are there at least 15+ distinct ideas across all rounds (clusters + user ideas + brain writing + Crazy 8s)? Do the ideas span different categories and approaches?'
       },
       {
         name: 'HMW Alignment',
         description: 'Ideas address the reframed challenge from Step 7',
-        checkPrompt: 'Does each idea clearly address the reframed HMW statement from Step 7?'
+        checkPrompt: 'Do the generated ideas clearly address the reframed HMW statement from Step 7? Can each idea be connected to the persona pain point?'
+      },
+      {
+        name: 'Selection Discipline',
+        description: 'User selected max 3-4 ideas with AI enforcement',
+        checkPrompt: 'Did the user select 1-4 ideas for concept development (not more)? Did AI enforce the hard limit if the user tried to select too many?'
       }
     ],
 
     'concept': [
       {
-        name: 'Completeness',
-        description: 'Concept has all required elements',
-        checkPrompt: 'Does the concept sheet include: name, elevator pitch, unique selling proposition, SWOT analysis, and feasibility scores (technical, business, user desirability)?'
+        name: 'Concept Completeness',
+        description: 'Each concept has all required elements: name, pitch, USP, SWOT, feasibility, billboard',
+        checkPrompt: 'Does each concept sheet include: name, elevator pitch, USP, SWOT analysis (3 bullets per quadrant), and feasibility scores (1-5 numeric with rationale for each dimension)?'
       },
       {
-        name: 'Evidence-Based SWOT',
-        description: 'SWOT elements reference research and persona',
-        checkPrompt: 'Are the SWOT elements (strengths, weaknesses, opportunities, threats) grounded in evidence from prior research (Steps 3-7) rather than generic assumptions?'
+        name: 'SWOT Evidence',
+        description: 'SWOT bullets reference prior research and persona',
+        checkPrompt: 'Do the SWOT bullets trace to prior step evidence? Strengths to persona gains, weaknesses to persona pains, opportunities to research context, threats to stakeholder/research challenges? Are there any generic bullets not grounded in research?'
       },
       {
-        name: 'Feasibility Realism',
-        description: 'Feasibility scores have clear rationale',
-        checkPrompt: 'Do the feasibility scores (technical, business, user desirability) include specific reasoning rather than just gut-feeling ratings?'
+        name: 'Feasibility Rationale',
+        description: 'Feasibility scores have specific rationale with evidence',
+        checkPrompt: 'Do the 1-5 feasibility scores (technical, business, user desirability) each include specific reasoning citing prior steps? Are the rationales honest (acknowledging uncertainty where it exists)?'
+      },
+      {
+        name: 'Billboard Clarity',
+        description: 'Billboard Hero headline communicates value proposition clearly',
+        checkPrompt: 'Does the Billboard Hero headline (6-10 words) communicate a clear benefit? Is it benefit-focused (not feature-focused)? Would the persona stop and pay attention to this billboard?'
       },
       {
         name: 'Dip Solution',
         description: 'Concept addresses the journey map dip from Step 6',
-        checkPrompt: 'Does the concept clearly address the critical pain point (dip) identified in the journey map from Step 6?'
+        checkPrompt: 'Does the concept clearly address the critical pain point (dip) identified in the journey map from Step 6? Is the connection explicit in the elevator pitch or USP?'
       }
     ],
 
     'validate': [
       {
-        name: 'Comprehensiveness',
-        description: 'Validation references all 10 prior steps',
-        checkPrompt: 'Does the validation documentation reference outputs from all prior steps (challenge, stakeholders, research, sense-making, persona, journey, reframe, ideation, concept)?'
+        name: 'Narrative Quality',
+        description: 'Narrative intro tells the journey story compellingly',
+        checkPrompt: 'Does the narrative intro tell a compelling story from vague idea to validated concept? Does it make the user feel their time was well spent? Is it storytelling (not a dry summary)?'
       },
       {
-        name: 'Narrative Coherence',
-        description: 'Story flows from problem through research to solution',
-        checkPrompt: 'Does the Build Pack tell a coherent story from the original problem (Step 1) through research and insights (Steps 2-7) to the validated solution (Steps 8-10)?'
+        name: 'Step Coverage',
+        description: 'Structured summary covers all 9-10 steps with key outputs',
+        checkPrompt: 'Does the structured summary include key outputs from Steps 1-9 (and Step 10 itself)? Are there 2-3 bullet points per step capturing the MOST important outputs (not a data dump)?'
       },
       {
-        name: 'Actionability',
-        description: 'PRD and user stories are developer-ready',
-        checkPrompt: 'Are the PRD and user stories specific and complete enough for a developer to understand what to build without needing to ask clarifying questions?'
+        name: 'Confidence Honesty',
+        description: 'Confidence assessment is honest with specific rationale',
+        checkPrompt: 'Is the confidence score honest (not inflated to make the user feel good)? Does the rationale explain what evidence supports the concept AND what gaps remain? Does research quality accurately reflect whether interviews were synthetic vs real?'
       },
       {
-        name: 'Flow Diagram Completeness',
-        description: 'User flow covers persona entry to outcome',
-        checkPrompt: 'Does the user flow diagram show the complete path from the persona\'s entry point through core actions to achieving the desired outcome from the HMW?'
+        name: 'Next Steps Specificity',
+        description: 'Recommended next steps are concrete and specific to this concept',
+        checkPrompt: 'Are the 3-5 next steps specific to THIS concept and workshop (not generic advice like "do more research")? Do they reference specific gaps identified during the journey? Are they actionable enough to execute?'
+      },
+      {
+        name: 'Journey Arc Coherence',
+        description: 'Summary shows clear arc from problem to validated concept',
+        checkPrompt: 'Does the overall summary show a clear arc: problem definition -> research -> persona/journey -> reframe -> ideation -> concept -> validation? Can the user see how each step built on the previous ones?'
       }
     ]
   };
