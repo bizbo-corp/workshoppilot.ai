@@ -313,139 +313,213 @@ export type ReframeArtifact = z.infer<typeof reframeArtifactSchema>;
 
 /**
  * Step 8: Ideation
- * Generated ideas addressing the refined HMW
+ * Multi-round ideation with clusters, brain writing, and Crazy 8s
  */
 export const ideationArtifactSchema = z.object({
   hmwPrompt: z
     .string()
-    .describe('The HMW statement used as the ideation prompt'),
-  ideas: z
+    .describe('The reframed HMW statement from Step 7 used as the ideation prompt'),
+  clusters: z
     .array(
       z.object({
-        title: z.string().describe('Short, memorable idea title'),
-        description: z
-          .string()
-          .describe('Clear description of the idea and how it works'),
-        category: z
-          .string()
-          .optional()
-          .describe(
-            'Category or type of idea (e.g., digital tool, process change, service, etc.)'
-          ),
+        theme: z.string().describe('Theme name for this idea cluster'),
+        ideas: z
+          .array(
+            z.object({
+              title: z.string().describe('Short, memorable idea title'),
+              description: z.string().describe('Clear description of the idea and how it addresses the HMW'),
+              isWildCard: z
+                .boolean()
+                .optional()
+                .default(false)
+                .describe('Whether this is a deliberately provocative wild card idea'),
+            })
+          )
+          .min(2)
+          .describe('Ideas within this themed cluster (3-4 per cluster, including 1-2 wild cards)'),
       })
     )
-    .min(1)
-    .describe('List of generated ideas from ideation techniques'),
-  topIdeas: z
-    .array(z.string())
-    .max(3)
+    .min(2)
+    .describe('3-4 themed idea clusters generated from the HMW statement'),
+  userIdeas: z
+    .array(
+      z.object({
+        title: z.string().describe('User-contributed idea title'),
+        description: z.string().describe('Description of the user-contributed idea'),
+      })
+    )
     .optional()
-    .describe('Top 3 idea titles selected for further development'),
+    .describe('Ideas contributed by the user during the input round'),
+  brainWrittenIdeas: z
+    .array(
+      z.object({
+        originalTitle: z.string().describe('Title of the original idea that was built upon'),
+        evolution: z.string().describe('How the idea evolved through 3 rounds of "Yes, and..." building'),
+        finalVersion: z.string().describe('The idea after 3 rounds of brain writing enhancement'),
+      })
+    )
+    .optional()
+    .describe('Ideas evolved through 3 rounds of brain writing using "Yes, and..." technique'),
+  crazyEightsIdeas: z
+    .array(
+      z.object({
+        title: z.string().describe('Quick rapid-fire idea title'),
+        description: z.string().describe('Brief description from the Crazy 8s round'),
+      })
+    )
+    .optional()
+    .describe('8 rapid-fire ideas from the Crazy 8s round'),
+  selectedIdeas: z
+    .array(z.string())
+    .min(1)
+    .max(4)
+    .describe('Titles of the 1-4 ideas selected for concept development in Step 9 (hard limit: max 3-4)'),
 });
 
 export type IdeationArtifact = z.infer<typeof ideationArtifactSchema>;
 
 /**
  * Step 9: Concept Development
- * Developed concept with SWOT and feasibility analysis
+ * Complete concept sheet with SWOT (3 bullets/quadrant), 1-5 feasibility, and Billboard Hero
  */
 export const conceptArtifactSchema = z.object({
-  name: z.string().describe('Concept name or title'),
-  elevatorPitch: z
-    .string()
-    .describe(
-      'One or two sentence elevator pitch explaining the concept value proposition'
-    ),
-  usp: z
-    .string()
-    .optional()
-    .describe('Unique Selling Proposition: what makes this concept distinctive'),
-  swot: z
-    .object({
-      strengths: z
-        .array(z.string())
-        .min(1)
-        .describe('Internal strengths of the concept'),
-      weaknesses: z
-        .array(z.string())
-        .min(1)
-        .describe('Internal weaknesses or limitations'),
-      opportunities: z
-        .array(z.string())
-        .min(1)
-        .describe('External opportunities for the concept'),
-      threats: z
-        .array(z.string())
-        .min(1)
-        .describe('External threats or risks'),
-    })
-    .describe('SWOT analysis (Strengths, Weaknesses, Opportunities, Threats)'),
-  feasibility: z
-    .object({
-      technical: z
-        .enum(['high', 'medium', 'low'])
-        .describe('Technical feasibility: can we build it?'),
-      business: z
-        .enum(['high', 'medium', 'low'])
-        .describe('Business feasibility: is it viable?'),
-      userDesirability: z
-        .enum(['high', 'medium', 'low'])
-        .describe('User desirability: do users want it?'),
-      rationale: z
-        .string()
-        .optional()
-        .describe('Rationale or explanation for feasibility ratings'),
-    })
-    .optional()
-    .describe('Feasibility assessment across technical, business, and user dimensions'),
-  nextSteps: z
-    .array(z.string())
-    .optional()
-    .describe('Recommended next steps or action items'),
+  concepts: z
+    .array(
+      z.object({
+        ideaSource: z
+          .string()
+          .describe('Title of the Step 8 selected idea this concept develops'),
+        name: z
+          .string()
+          .describe('Marketable concept name (2-4 words, evocative)'),
+        elevatorPitch: z
+          .string()
+          .describe('2-3 sentence elevator pitch: Problem, Solution, Benefit'),
+        usp: z
+          .string()
+          .describe('Unique Selling Proposition: what makes this different from the current state'),
+        swot: z
+          .object({
+            strengths: z
+              .array(z.string())
+              .min(3)
+              .max(3)
+              .describe('3 internal strengths referencing persona gains or research evidence'),
+            weaknesses: z
+              .array(z.string())
+              .min(3)
+              .max(3)
+              .describe('3 internal weaknesses referencing persona pains or limitations'),
+            opportunities: z
+              .array(z.string())
+              .min(3)
+              .max(3)
+              .describe('3 external opportunities referencing market/domain context from research'),
+            threats: z
+              .array(z.string())
+              .min(3)
+              .max(3)
+              .describe('3 external threats referencing challenges from stakeholder map or research'),
+          })
+          .describe('SWOT analysis with exactly 3 evidence-based bullets per quadrant'),
+        feasibility: z
+          .object({
+            technical: z
+              .number()
+              .int()
+              .min(1)
+              .max(5)
+              .describe('Technical feasibility score (1=very difficult, 5=straightforward)'),
+            technicalRationale: z
+              .string()
+              .describe('Rationale for technical score with evidence from prior steps'),
+            business: z
+              .number()
+              .int()
+              .min(1)
+              .max(5)
+              .describe('Business viability score (1=weak case, 5=strong case)'),
+            businessRationale: z
+              .string()
+              .describe('Rationale for business score with evidence from prior steps'),
+            userDesirability: z
+              .number()
+              .int()
+              .min(1)
+              .max(5)
+              .describe('User desirability score (1=low demand, 5=high demand)'),
+            userDesirabilityRationale: z
+              .string()
+              .describe('Rationale for user desirability score citing persona pains/gains'),
+          })
+          .describe('Feasibility assessment with 1-5 numeric scores and evidence-based rationale per dimension'),
+        billboardHero: z
+          .object({
+            headline: z
+              .string()
+              .describe('6-10 word benefit-focused billboard headline'),
+            subheadline: z
+              .string()
+              .describe('1-2 sentence explanation of how it solves persona pain'),
+            cta: z
+              .string()
+              .describe('Verb-driven, specific call to action'),
+          })
+          .optional()
+          .describe('Billboard Hero exercise testing if the concept pitch is clear and compelling'),
+      })
+    )
+    .min(1)
+    .max(3)
+    .describe('1-3 developed concepts, each from a separate Step 8 selected idea'),
 });
 
 export type ConceptArtifact = z.infer<typeof conceptArtifactSchema>;
 
 /**
- * Step 10: Validate & Build Pack
- * User flows, PRD outline, and build pack components
+ * Step 10: Validate & Synthesis
+ * Dual-format synthesis: narrative + structured summary with confidence assessment
  */
 export const validateArtifactSchema = z.object({
-  userFlow: z
+  narrativeIntro: z
     .string()
-    .describe(
-      'User flow diagram or description showing how users interact with the solution'
-    ),
-  prdOutline: z
+    .describe('1-2 paragraph storytelling narrative of the journey from vague idea to validated concept'),
+  stepSummaries: z
+    .array(
+      z.object({
+        stepNumber: z.number().int().min(1).max(10).describe('Step number (1-10)'),
+        stepName: z.string().describe('Step name (e.g., Challenge, Stakeholder Mapping)'),
+        keyOutputs: z
+          .array(z.string())
+          .min(1)
+          .max(3)
+          .describe('2-3 most important outputs from this step'),
+      })
+    )
+    .min(9)
+    .max(10)
+    .describe('Structured summary of key outputs from each step of the journey'),
+  confidenceAssessment: z
     .object({
-      overview: z
+      score: z
+        .number()
+        .int()
+        .min(1)
+        .max(10)
+        .describe('Confidence score 1-10 rating how well-validated the concept is'),
+      rationale: z
         .string()
-        .describe('Product overview and objectives'),
-      targetUsers: z
-        .string()
-        .describe('Target user segments and personas'),
-      coreFeatures: z
-        .array(z.string())
-        .min(2)
-        .describe('Core features for MVP'),
-      userStories: z
-        .array(z.string())
-        .optional()
-        .describe('User stories in format: As a [who], I want [what], so that [why]'),
-      technicalRequirements: z
-        .string()
-        .optional()
-        .describe('High-level technical requirements or stack'),
-      successMetrics: z
-        .array(z.string())
-        .optional()
-        .describe('Key metrics to measure success'),
+        .describe('Honest explanation of why this score — what was strong, what was weak'),
+      researchQuality: z
+        .enum(['thin', 'moderate', 'strong'])
+        .describe('Assessment of research quality: thin (synthetic only), moderate (some real data), strong (real interviews + data)'),
     })
-    .describe('PRD outline for the Build Pack'),
-  journeySummary: z
-    .string()
-    .optional()
-    .describe('Summary of the entire design thinking journey and key outcomes'),
+    .describe('Honest confidence assessment of how well-validated the concept is based on research quality'),
+  recommendedNextSteps: z
+    .array(z.string())
+    .min(3)
+    .max(5)
+    .describe('3-5 concrete, specific next actions based on concept and gaps identified — NOT generic advice'),
 });
 
 export type ValidateArtifact = z.infer<typeof validateArtifactSchema>;
