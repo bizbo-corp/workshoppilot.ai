@@ -415,10 +415,13 @@ Show user the traceability: "This HMW is grounded in [dip stage name] where [per
 Present both traceability and quality assessment to user before finalizing.
 
 GATHERING REQUIREMENTS (4-PART BUILDER):
+- Original HMW: The original How Might We statement from Step 1 (for reference/comparison)
 - Given that: What specific context or barrier from the journey dip? (from Step 6 dip barriers)
 - Persona: Which user type or persona characteristic? (from Step 5)
 - Immediate goal: What should they accomplish at that moment? (from Step 6 stage goals + Step 5 persona goals)
 - Deeper goal: What's the broader emotional or life outcome? (from Step 4 gains + Step 5 persona motivations)
+- Insights applied: List the key insights from research (Steps 3-6) that informed this reframe
+- Evolution (optional): Explain how and why the HMW evolved from original to reframed
 
 BOUNDARY: This step is about REFRAMING the problem with research clarity, not solving it. Do not suggest solutions, features, or ideas yet — that is Step 8. The HMW opens up the solution space without prescribing a specific approach. If ideation starts, redirect: "Let's finalize the reframed challenge first. In Step 8, we'll generate many ideas to address this HMW."
 
