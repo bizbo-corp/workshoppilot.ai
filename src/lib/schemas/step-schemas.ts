@@ -176,6 +176,23 @@ export const personaArtifactSchema = z.object({
     .min(1)
     .max(5)
     .describe('Key pain points, frustrations, or obstacles they face'),
+  gains: z
+    .array(z.string())
+    .min(1)
+    .max(5)
+    .describe('Desired gains, outcomes, or improvements this persona seeks'),
+  motivations: z
+    .array(z.string())
+    .optional()
+    .describe('What drives this persona — their motivations for seeking a solution'),
+  frustrations: z
+    .array(z.string())
+    .optional()
+    .describe('Specific frustrations beyond pain points — daily annoyances and friction'),
+  dayInTheLife: z
+    .string()
+    .optional()
+    .describe('Brief day-in-the-life scenario showing how the problem manifests in their routine'),
   behaviors: z
     .array(z.string())
     .optional()
@@ -196,17 +213,31 @@ export const journeyMappingArtifactSchema = z.object({
     .array(
       z.object({
         name: z.string().describe('Stage name or phase'),
-        actions: z
+        action: z
           .string()
           .describe('What the user does in this stage'),
-        thoughts: z
+        goals: z
           .string()
-          .describe('What the user is thinking during this stage'),
+          .describe('What the user is trying to achieve in this stage'),
+        barriers: z
+          .string()
+          .describe('Obstacles, pain points, or friction the user encounters in this stage'),
+        touchpoints: z
+          .string()
+          .describe('Tools, systems, people, or interfaces the user interacts with in this stage'),
         emotions: z
-          .string()
+          .enum(['positive', 'neutral', 'negative'])
           .describe(
-            'How the user feels (emotional state: positive, neutral, negative, frustrated, etc.)'
+            'Emotional state using traffic light: positive (green/good), neutral (orange/ok), negative (red/pain)'
           ),
+        momentsOfTruth: z
+          .string()
+          .optional()
+          .describe('Critical moments where user forms strong opinions or makes key decisions'),
+        opportunities: z
+          .string()
+          .optional()
+          .describe('Potential opportunities for improvement or intervention in this stage'),
         isDip: z
           .boolean()
           .optional()
@@ -216,40 +247,65 @@ export const journeyMappingArtifactSchema = z.object({
     )
     .min(4)
     .max(8)
-    .describe('Stages of the user journey from start to end'),
+    .describe('Stages of the user journey from start to end with 7 layers per stage'),
   dipSummary: z
     .string()
     .describe(
       'Summary of the critical dip: the key breakdown point or frustration in the journey'
     ),
+  dipRationale: z
+    .string()
+    .optional()
+    .describe('Explanation for why this stage was identified as the critical dip'),
 });
 
 export type JourneyMappingArtifact = z.infer<typeof journeyMappingArtifactSchema>;
 
 /**
  * Step 7: Reframe Challenge
- * Refined HMW based on research insights
+ * Fresh HMW using 4-part builder based on research insights
  */
 export const reframeArtifactSchema = z.object({
   originalHmw: z
     .string()
     .describe('The original How Might We statement from Step 1'),
+  hmwStatements: z
+    .array(
+      z.object({
+        givenThat: z
+          .string()
+          .describe('Context or situation from research (Given that...)'),
+        persona: z
+          .string()
+          .describe('Specific persona or user type (How might we help [persona]...)'),
+        immediateGoal: z
+          .string()
+          .describe('Immediate action or outcome (do/be/feel/achieve...)'),
+        deeperGoal: z
+          .string()
+          .describe('Deeper emotional or broader outcome (So they can...)'),
+        fullStatement: z
+          .string()
+          .describe('Complete HMW statement combining all 4 parts'),
+      })
+    )
+    .min(1)
+    .describe('One or more reframed HMW statements built using the 4-part template'),
+  selectedForIdeation: z
+    .array(z.number())
+    .optional()
+    .describe('Array of indices indicating which HMW statements to carry into Step 8 ideation'),
   insightsApplied: z
     .array(z.string())
     .min(1)
     .describe(
       'Key insights from research (Steps 3-6) that informed the reframe'
     ),
-  refinedHmw: z
-    .string()
-    .describe(
-      'The refined How Might We statement incorporating research insights and focusing on the critical dip'
-    ),
   evolution: z
     .string()
     .optional()
     .describe(
-      'Explanation of how and why the HMW evolved from original to refined'
+      'Explanation of how and why the HMW evolved from original to reframed'
     ),
 });
 
