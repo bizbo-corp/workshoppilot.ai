@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 13.1 of 14 (Reset Step & Step 8 Ideation Sub-Steps)
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: In progress
-Last activity: 2026-02-10 — Completed 13.1-01-PLAN.md (Reset Step functionality)
+Last activity: 2026-02-10 — Completed 13.1-02-PLAN.md (Step 8 sub-step foundation)
 
-Progress: [██████████████████░░] 93% (13 of 14+ phases complete, 1 of 3 plans in Phase 13.1)
+Progress: [██████████████████░░] 93% (13 of 14+ phases complete, 2 of 3 plans in Phase 13.1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 41
+- Total plans completed: 42
 - Average duration: 2.9 min
-- Total execution time: 2.70 hours
+- Total execution time: 2.73 hours
 
 **By Phase:**
 
@@ -40,7 +40,7 @@ Progress: [██████████████████░░] 93% (13
 | 11-discovery-steps-1-4 | 3 | 6 min | 2.0 min |
 | 12-definition-steps-5-7 | 3 | 18 min | 6.0 min |
 | 13-ideation-validation-steps-8-10 | 3 | 14 min | 4.7 min |
-| 13.1-reset-step-step-8-ideation-sub-steps | 1 | 3 min | 3.0 min |
+| 13.1-reset-step-step-8-ideation-sub-steps | 2 | 6 min | 3.0 min |
 
 **Recent Trend:**
 - v0.5 milestone: 6 phases, 19 plans in 2 days
@@ -174,6 +174,10 @@ Recent decisions affecting v1.0 work:
 - **Phase 13.1 Plan 1**: Reset button shown only on in_progress and needs_regeneration steps (not completed steps)
 - **Phase 13.1 Plan 1**: ResetStepDialog uses variant='destructive' with red button to emphasize data loss risk
 - **Phase 13.1 Plan 1**: Dialog renders once as portal outside mobile/desktop layout ternary (avoids duplication)
+- **Phase 13.1 Plan 2**: Step 8 sub-step order is Mind Mapping -> Crazy 8s -> Brain Writing (Crazy 8s before Brain Writing per user decision)
+- **Phase 13.1 Plan 2**: getIdeationSubStepInstructions provides focused prompts for each sub-step (8a, 8b, 8c), main ideation prompt is coordinator
+- **Phase 13.1 Plan 2**: Schema field names aligned with ideation-cluster-view.tsx: reframedHmw, evolutionDescription, selectedIdeaTitles
+- **Phase 13.1 Plan 2**: Source tracking fields added to ideation schema (optional) for future sub-step filtering
 
 ### Roadmap Evolution
 
@@ -200,11 +204,11 @@ Recent decisions affecting v1.0 work:
 
 ## Session Continuity
 
-Last session: 2026-02-10 (Phase 13.1 Plan 1 completed)
-Stopped at: Phase 13.1 Plan 1 execution complete (Reset Step functionality)
-Resume file: .planning/phases/13.1-reset-step-step-8-ideation-sub-steps/13.1-01-SUMMARY.md
+Last session: 2026-02-10 (Phase 13.1 Plan 2 completed)
+Stopped at: Phase 13.1 Plan 2 execution complete (Step 8 sub-step foundation)
+Resume file: .planning/phases/13.1-reset-step-step-8-ideation-sub-steps/13.1-02-SUMMARY.md
 
-**Next action:** Execute Phase 13.1 Plan 2 (`/gsd:execute-phase 13.1 --plan 02`)
+**Next action:** Execute Phase 13.1 Plan 3 (`/gsd:execute-phase 13.1 --plan 03`)
 
 ---
-*Last updated: 2026-02-10 after Phase 13.1 Plan 1 completion*
+*Last updated: 2026-02-10 after Phase 13.1 Plan 2 completion*
