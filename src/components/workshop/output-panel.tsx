@@ -9,6 +9,9 @@ import { cn } from '@/lib/utils';
 import { PersonaCard } from './persona-card';
 import { JourneyMapGrid } from './journey-map-grid';
 import { HMWBuilder } from './hmw-builder';
+import { IdeationClusterView } from './ideation-cluster-view';
+import { ConceptSheetView } from './concept-sheet-view';
+import { SynthesisSummaryView } from './synthesis-summary-view';
 
 interface OutputPanelProps {
   stepOrder: number;
@@ -220,6 +223,64 @@ export function OutputPanel({
             </p>
           </div>
           <HMWBuilder artifact={artifact} />
+        </div>
+      );
+    }
+
+    // Step-specific rendering for Ideation & Validation steps (8-10)
+    if (stepOrder === 8) {
+      return (
+        <div className="flex h-full flex-col overflow-y-auto p-6">
+          <div className="mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+              <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
+                Extracted
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review your extracted output below
+            </p>
+          </div>
+          <IdeationClusterView artifact={artifact} />
+        </div>
+      );
+    }
+
+    if (stepOrder === 9) {
+      return (
+        <div className="flex h-full flex-col overflow-y-auto p-6">
+          <div className="mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+              <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
+                Extracted
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review your extracted output below
+            </p>
+          </div>
+          <ConceptSheetView artifact={artifact} />
+        </div>
+      );
+    }
+
+    if (stepOrder === 10) {
+      return (
+        <div className="flex h-full flex-col overflow-y-auto p-6">
+          <div className="mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+              <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
+                Extracted
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review your extracted output below
+            </p>
+          </div>
+          <SynthesisSummaryView artifact={artifact} />
         </div>
       );
     }
