@@ -168,16 +168,16 @@ Plans:
 **Requirements**: S05-01, S05-02, S06-01, S06-02, S07-01, S07-02
 **Success Criteria** (what must be TRUE):
   1. User can complete Step 5 Persona Development where AI synthesizes research into persona with name, role, bio, quote, pains, gains traced back to Step 4 themes
-  2. User can complete Step 6 Journey Mapping where AI auto-generates journey map (4-8 stages × 5 layers) based on persona and identifies "the dip" (biggest pain point)
+  2. User can complete Step 6 Journey Mapping where AI auto-generates journey map (4-8 stages × 7 layers) based on persona and identifies "the dip" (biggest pain point)
   3. User can complete Step 7 Reframing Challenge where AI suggests HMW statement components with options for each field and validates alignment with challenge, persona, and journey dip
   4. Persona pains/gains trace back to Step 4 research themes (not hallucinated)
   5. Journey dip identification is evidence-based from persona pains and research insights
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 12-01: TBD during planning
-- [ ] 12-02: TBD during planning
-- [ ] 12-03: TBD during planning
+- [ ] 12-01-PLAN.md — Updated schemas, enriched prompts, and validation criteria for Definition steps
+- [ ] 12-02-PLAN.md — Step-specific UI components (PersonaCard, JourneyMapGrid, HMWBuilder)
+- [ ] 12-03-PLAN.md — Schema-prompt alignment verification and human verification
 
 #### Phase 13: Ideation & Validation Steps (8-10)
 **Goal**: Steps that generate ideas, develop concepts, and synthesize journey
@@ -230,9 +230,9 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 9. Structured Outputs | v1.0 | 3/3 | Complete | 2026-02-08 |
 | 10. Navigation & Persistence | v1.0 | 2/2 | Complete | 2026-02-08 |
 | 11. Discovery Steps (1-4) | v1.0 | 3/3 | Complete | 2026-02-08 |
-| 12. Definition Steps (5-7) | v1.0 | 0/TBD | Not started | - |
+| 12. Definition Steps (5-7) | v1.0 | 0/3 | Not started | - |
 | 13. Ideation & Validation Steps (8-10) | v1.0 | 0/TBD | Not started | - |
 | 14. Production Hardening | v1.0 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-08 after Phase 11 planning*
+*Last updated: 2026-02-09 after Phase 12 planning*
