@@ -9,6 +9,7 @@ import { OutputPanel } from './output-panel';
 import { ArtifactConfirmation } from './artifact-confirmation';
 import { StepNavigation } from './step-navigation';
 import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
+import { IdeationSubStepContainer } from './ideation-sub-step-container';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -175,6 +176,30 @@ export function StepContainer({
       setIsResetting(false);
     }
   }, [workshopId, stepOrder, sessionId, router]);
+
+  // Step 8 uses specialized sub-step container
+  if (stepOrder === 8) {
+    return (
+      <>
+        <IdeationSubStepContainer
+          sessionId={sessionId}
+          workshopId={workshopId}
+          initialMessages={initialMessages}
+          initialArtifact={initialArtifact}
+          stepStatus={stepStatus}
+          onRevise={handleRevise}
+          onReset={() => setShowResetDialog(true)}
+        />
+        <ResetStepDialog
+          open={showResetDialog}
+          onOpenChange={setShowResetDialog}
+          onConfirm={handleReset}
+          isResetting={isResetting}
+          stepName={getStepByOrder(stepOrder)?.name || `Step ${stepOrder}`}
+        />
+      </>
+    );
+  }
 
   // Render content section
   const renderContent = () => (

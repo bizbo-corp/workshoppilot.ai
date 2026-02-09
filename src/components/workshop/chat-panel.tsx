@@ -34,9 +34,10 @@ interface ChatPanelProps {
   workshopId: string;
   initialMessages?: UIMessage[];
   onMessageCountChange?: (count: number) => void;
+  subStep?: 'mind-mapping' | 'crazy-eights' | 'brain-writing';
 }
 
-export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange }: ChatPanelProps) {
+export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const hasAutoStarted = React.useRef(false);
@@ -55,9 +56,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     () =>
       new DefaultChatTransport({
         api: '/api/chat',
-        body: { sessionId, stepId: step.id, workshopId },
+        body: { sessionId, stepId: step.id, workshopId, subStep },
       }),
-    [sessionId, step.id, workshopId]
+    [sessionId, step.id, workshopId, subStep]
   );
 
   const { messages, sendMessage, status } = useChat({

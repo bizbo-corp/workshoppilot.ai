@@ -46,7 +46,8 @@ export function buildStepSystemPrompt(
   arcPhase: ArcPhase,
   stepDescription: string,
   persistentContext: string,
-  summaries: string
+  summaries: string,
+  instructionsOverride?: string
 ): string {
   // Base role: AI facilitator for this step
   let prompt = `You are an AI design thinking facilitator guiding the user through Step: ${stepName}.`;
@@ -63,7 +64,7 @@ export function buildStepSystemPrompt(
   }
 
   // Add step-specific instructions
-  const stepInstructions = getStepSpecificInstructions(stepId);
+  const stepInstructions = instructionsOverride || getStepSpecificInstructions(stepId);
   if (stepInstructions) {
     prompt += `\n\nSTEP INSTRUCTIONS:
 ${stepInstructions}`;

@@ -22,7 +22,7 @@ export const maxDuration = 30;
  */
 export async function POST(req: Request) {
   try {
-    const { messages, sessionId, stepId, workshopId } = await req.json();
+    const { messages, sessionId, stepId, workshopId, subStep } = await req.json();
 
     // Validate required parameters
     if (!sessionId || !stepId || !workshopId) {
@@ -43,6 +43,13 @@ export async function POST(req: Request) {
     const stepName = step?.name || stepId;
     const stepDescription = step?.description ?? '';
 
+    // Sub-step prompt override for Step 8 Ideation
+    let instructionsOverride: string | undefined;
+    if (stepId === 'ideation' && subStep) {
+      const { getIdeationSubStepInstructions } = await import('@/lib/ai/prompts/step-prompts');
+      instructionsOverride = getIdeationSubStepInstructions(subStep);
+    }
+
     // Build context-aware system prompt with arc phase and step instructions
     const systemPrompt = buildStepSystemPrompt(
       stepId,
@@ -50,7 +57,8 @@ export async function POST(req: Request) {
       arcPhase,
       stepDescription,
       stepContext.persistentContext,
-      stepContext.summaries
+      stepContext.summaries,
+      instructionsOverride
     );
 
     // Convert messages to model format
