@@ -87,7 +87,7 @@ export function WorkshopHeader({
     <>
       <header className="flex min-h-16 items-center justify-between border-b bg-background px-6 py-2">
         {/* Left section: Logo + workshop name + step indicator */}
-        <div className="flex flex-col justify-center">
+        <div className="flex items-center">
           <div className="hidden md:flex md:items-center md:gap-2">
             {isEditing ? (
               <input
@@ -114,20 +114,15 @@ export function WorkshopHeader({
                 <span className="text-xs text-muted-foreground">
                   Step {currentStep.order}
                 </span>
+                <span className="text-xs text-muted-foreground">/</span>
+                <span className="text-xs font-medium text-foreground">
+                  {currentStep.name}
+                </span>
               </>
             )}
           </div>
 
-          {currentStep && (
-            <div className="flex items-baseline gap-3">
-              <span className="text-sm font-semibold text-foreground">
-                {currentStep.name}
-              </span>
-              <span className="hidden text-sm text-muted-foreground md:inline-block">
-                {currentStep.description}
-              </span>
-            </div>
-          )}
+          {/* Description hidden — available via step metadata if needed */}
         </div>
 
         <div className="flex items-center gap-2">

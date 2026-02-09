@@ -270,10 +270,7 @@ export function OutputPanel({
 
       {/* Mock content */}
       <div
-        className={cn(
-          'flex-1 rounded-lg border bg-card p-4 shadow-xs',
-          'prose prose-sm dark:prose-invert max-w-none'
-        )}
+        className="flex-1 rounded-lg border bg-card p-4 shadow-xs"
       >
         <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-muted-foreground">
           {step.mockOutputContent}
