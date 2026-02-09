@@ -9,7 +9,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { LogOut } from "lucide-react";
@@ -18,19 +18,62 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ExitWorkshopDialog } from "@/components/dialogs/exit-workshop-dialog";
 import { getStepByOrder } from "@/lib/workshop/step-metadata";
 import { SignInModal } from "@/components/auth/sign-in-modal";
+import { renameWorkshop } from "@/actions/workshop-actions";
 
 interface WorkshopHeaderProps {
   sessionId: string;
+  workshopId: string;
   workshopName?: string;
 }
 
 export function WorkshopHeader({
   sessionId,
+  workshopId,
   workshopName = "New Workshop",
 }: WorkshopHeaderProps) {
   const pathname = usePathname();
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [displayName, setDisplayName] = useState(workshopName);
+  const [editValue, setEditValue] = useState(workshopName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focus input when entering edit mode
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleStartEdit = () => {
+    setEditValue(displayName);
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== displayName) {
+      setDisplayName(trimmed);
+      await renameWorkshop(workshopId, trimmed);
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditValue(displayName);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === 'Escape') {
+      handleCancel();
+    }
+  };
 
   // Extract current step from pathname
   // Pathname format: /workshop/[sessionId]/step/[stepNumber]
@@ -46,9 +89,25 @@ export function WorkshopHeader({
         {/* Left section: Logo + workshop name + step indicator */}
         <div className="flex flex-col justify-center">
           <div className="hidden md:flex md:items-center md:gap-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              {workshopName}
-            </span>
+            {isEditing ? (
+              <input
+                ref={inputRef}
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={handleSave}
+                onKeyDown={handleKeyDown}
+                maxLength={100}
+                className="text-xs font-medium text-muted-foreground bg-transparent border-b border-primary outline-none px-0 py-0"
+              />
+            ) : (
+              <button
+                onClick={handleStartEdit}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                title="Click to rename workshop"
+              >
+                {displayName}
+              </button>
+            )}
             {currentStep && (
               <>
                 <span className="text-xs text-muted-foreground">/</span>

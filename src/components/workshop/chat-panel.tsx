@@ -11,6 +11,23 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/hooks/use-auto-save';
 
+/**
+ * Parse [SUGGESTIONS]...[/SUGGESTIONS] block from AI content.
+ * Returns clean content (block removed) and extracted suggestion strings.
+ */
+function parseSuggestions(content: string): { cleanContent: string; suggestions: string[] } {
+  const match = content.match(/\[SUGGESTIONS\]([\s\S]*?)\[\/SUGGESTIONS\]/);
+  if (!match) return { cleanContent: content, suggestions: [] };
+
+  const cleanContent = content.replace(/\[SUGGESTIONS\][\s\S]*?\[\/SUGGESTIONS\]/, '').trim();
+  const suggestions = match[1]
+    .split('\n')
+    .map((line) => line.replace(/^[-*•]\s*/, '').trim())
+    .filter((line) => line.length > 0);
+
+  return { cleanContent, suggestions };
+}
+
 interface ChatPanelProps {
   stepOrder: number;
   sessionId: string;
@@ -22,7 +39,9 @@ interface ChatPanelProps {
 export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const hasAutoStarted = React.useRef(false);
   const [inputValue, setInputValue] = React.useState('');
+  const [suggestions, setSuggestions] = React.useState<string[]>([]);
 
   if (!step) {
     return (
@@ -75,6 +94,34 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
   }, [status, messages.length, workshopId, step.id]);
 
+  // Extract suggestions from last assistant message when AI finishes responding
+  React.useEffect(() => {
+    if (status === 'ready' && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.role === 'assistant') {
+        const textParts = lastMsg.parts?.filter((p) => p.type === 'text') || [];
+        const content = textParts.map((p) => p.text).join('\n');
+        const { suggestions: parsed } = parseSuggestions(content);
+        setSuggestions(parsed);
+      }
+    }
+    // Clear suggestions while AI is responding
+    if (status === 'streaming' || status === 'submitted') {
+      setSuggestions([]);
+    }
+  }, [status, messages]);
+
+  // Auto-start: send trigger message when entering a step with no messages
+  React.useEffect(() => {
+    if (messages.length === 0 && status === 'ready' && !hasAutoStarted.current) {
+      hasAutoStarted.current = true;
+      sendMessage({
+        role: 'user',
+        parts: [{ type: 'text', text: '__step_start__' }],
+      });
+    }
+  }, [messages.length, status, sendMessage]);
+
   // Auto-scroll to bottom when new messages arrive
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -90,6 +137,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       parts: [{ type: 'text', text: inputValue }],
     });
     setInputValue('');
+    setSuggestions([]);
   };
 
   // Handle Enter to send (Shift+Enter for newline)
@@ -106,21 +154,25 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
-          // Welcome message when chat is empty
+          // Loading indicator while AI auto-starts
           <div className="flex items-start gap-3">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
               AI
             </div>
             <div className="flex-1">
-              <div className="rounded-lg bg-muted p-3 text-sm">
-                {step.greeting}
+              <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+                AI is thinking...
               </div>
             </div>
           </div>
         ) : (
-          // Render conversation messages
+          // Render conversation messages (filter out __step_start__ trigger)
           <div className="space-y-4">
-            {messages.map((message, index) => {
+            {messages.filter((m) => {
+              if (m.role !== 'user') return true;
+              const text = m.parts?.filter((p) => p.type === 'text').map((p) => p.text).join('') || '';
+              return text !== '__step_start__';
+            }).map((message, index) => {
               const textParts = message.parts?.filter((part) => part.type === 'text') || [];
               const content = textParts.map((part) => part.text).join('\n');
 
@@ -136,7 +188,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                 );
               }
 
-              // Assistant message
+              // Assistant message — strip [SUGGESTIONS] block from display
+              const { cleanContent } = parseSuggestions(content);
               return (
                 <div key={`${message.id}-${index}`} className="flex items-start gap-3">
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -144,7 +197,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                   </div>
                   <div className="flex-1">
                     <div className="rounded-lg bg-muted p-3 text-sm prose prose-sm dark:prose-invert max-w-none">
-                      <ReactMarkdown>{content}</ReactMarkdown>
+                      <ReactMarkdown>{cleanContent}</ReactMarkdown>
                     </div>
                   </div>
                 </div>
@@ -170,6 +223,24 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
           </div>
         )}
       </div>
+
+      {/* Suggestion pills */}
+      {suggestions.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-4 pb-2">
+          {suggestions.map((suggestion, i) => (
+            <button
+              key={i}
+              onClick={() => {
+                setInputValue(suggestion);
+                setSuggestions([]);
+              }}
+              className="rounded-full border border-input bg-background px-3 py-1.5 text-xs text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Input area */}
       <div className="border-t bg-background p-4">

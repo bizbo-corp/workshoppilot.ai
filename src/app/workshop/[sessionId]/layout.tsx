@@ -71,6 +71,7 @@ export default async function WorkshopLayout({
           {/* Workshop header (scrolls with content) */}
           <WorkshopHeader
             sessionId={sessionId}
+            workshopId={session.workshop.id}
             workshopName={session.workshop.title || 'New Workshop'}
           />
 

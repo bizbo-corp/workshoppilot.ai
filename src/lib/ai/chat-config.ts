@@ -103,9 +103,25 @@ ${summaries}`;
 
   // Add general behavioral guidance
   prompt += `\n\nGENERAL GUIDANCE:
-- Be encouraging, ask probing questions, and help them think deeply
-- Keep responses concise and actionable
-- Ask one question at a time during Gather phase`;
+TONE: Friendly, professional, concise. Use relevant emojis sparingly (1-2 per response max).
+LENGTH: Keep responses under 150 words. Use bullet points for lists. Never repeat what the user just said.
+PACING: Ask ONE question at a time. Don't front-load lengthy explanations before your question.
+AVOID: Generic encouragement padding ("That's a great question!"). Get to the point.
+FORMAT: Use **bold** for key terms. Short paragraphs (2-3 sentences max). Prefer bullets over prose.
+PERSONALITY: Sharp, experienced design coach — not a textbook. Direct and useful.`;
+
+  // During Orient and Gather phases, instruct AI to provide suggested responses
+  if (arcPhase === 'orient' || arcPhase === 'gather') {
+    prompt += `\n\nSUGGESTED RESPONSES:
+After your message, append a [SUGGESTIONS] block with 2-3 suggested user responses.
+Format:
+[SUGGESTIONS]
+- Suggestion one (under 15 words, written as if the user is speaking)
+- Suggestion two (a distinct alternative response)
+- Suggestion three (optional, another angle)
+[/SUGGESTIONS]
+Rules: Each suggestion must be under 15 words, written from the user's perspective, and offer distinct options.`;
+  }
 
   return prompt;
 }

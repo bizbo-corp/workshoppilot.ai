@@ -13,7 +13,7 @@ export interface StepDefinition {
   slug: string;             // URL-friendly (same as id): 'challenge', 'stakeholder-mapping', etc.
   name: string;             // Display name: 'Challenge', 'Stakeholder Mapping', etc.
   description: string;      // Brief description of what this step does
-  greeting: string;         // AI greeting message
+  greeting: string;         // Legacy: AI now auto-starts via __step_start__ trigger. Kept as fallback.
   mockOutputType: string;   // Type label for output panel
   mockOutputContent: string; // Structured placeholder content for the output panel
 }
