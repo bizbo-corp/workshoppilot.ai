@@ -151,6 +151,16 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
         name: 'Internal Consistency',
         description: 'Persona traits don\'t conflict (no Frankenstein persona)',
         checkPrompt: 'Are all the persona traits consistent with each other, or are there conflicting characteristics that suggest merging incompatible user types?'
+      },
+      {
+        name: 'Evidence Traceability',
+        description: 'Pains and gains explicitly trace to Step 4 with source attribution',
+        checkPrompt: 'Can each pain and gain be directly linked to specific Step 4 research findings? Is the source evidence clear and traceable?'
+      },
+      {
+        name: 'Multi-Persona Coverage',
+        description: 'Persona count matches research diversity (1-3 personas as needed)',
+        checkPrompt: 'If research shows distinct user types with different needs, are multiple personas created? If research is homogeneous, is a single persona sufficient? Does the persona count match the actual user diversity revealed in research?'
       }
     ],
 
@@ -162,18 +172,33 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
       },
       {
         name: 'Multi-Layer Depth',
-        description: 'Each stage has actions, thoughts, and emotions',
-        checkPrompt: 'Does each journey stage include all three layers: what the persona does (actions), what they think (thoughts), and how they feel (emotions)?'
+        description: 'Each stage has all 7 layers populated',
+        checkPrompt: 'Does each journey stage include all 7 layers: action, goals, barriers, touchpoints, emotions (traffic light), moments of truth (if applicable), and opportunities (if applicable)?'
+      },
+      {
+        name: 'Layer Depth',
+        description: 'Each layer contains specific, research-grounded details (not generic)',
+        checkPrompt: 'Are the layers populated with specific details from research (not generic placeholders like "user is frustrated")? Do barriers reference Step 4 pains? Do goals reference persona goals? Do touchpoints mention specific tools from Step 3?'
+      },
+      {
+        name: 'Emotional Variance',
+        description: 'Emotions vary across stages and reflect barrier severity',
+        checkPrompt: 'Do emotions vary across the journey (not all negative or all positive)? Do emotions match barrier severity (severe barriers = negative emotion, minimal barriers = positive/neutral emotion)?'
       },
       {
         name: 'Dip Identification',
-        description: 'The critical pain point (dip) is clearly marked',
-        checkPrompt: 'Is there a clear "dip" stage where the persona experiences the most acute pain or breakdown, and is this explicitly identified as the critical opportunity?'
+        description: 'The critical pain point (dip) is clearly marked with rationale',
+        checkPrompt: 'Is there a clear "dip" stage where the persona experiences the most acute pain or breakdown? Is there a rationale explaining why this stage is the dip?'
+      },
+      {
+        name: 'Dip Evidence',
+        description: 'Dip stage has specific barriers and negative emotion grounded in research',
+        checkPrompt: 'Does the dip stage contain specific barriers from Step 4 pains? Is the emotion negative (reflecting the severity)? Can the dip be traced to research evidence (not assumed)?'
       },
       {
         name: 'Persona Grounding',
         description: 'Journey reflects the specific persona from Step 5',
-        checkPrompt: 'Is this journey specific to the persona from Step 5 (using their name, context, and behaviors) rather than a generic user journey?'
+        checkPrompt: 'Is this journey specific to the persona from Step 5 (using their context and behaviors) rather than a generic user journey? Note: The journey should use generic references ("the user") in stage descriptions, but the overall journey should reflect the specific persona\'s context.'
       }
     ],
 
@@ -182,6 +207,21 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
         name: 'Research Alignment',
         description: 'Reframed HMW references persona and journey dip',
         checkPrompt: 'Does the reframed HMW explicitly reference insights from the persona (Step 5) and the journey map dip (Step 6)?'
+      },
+      {
+        name: 'Dip Alignment',
+        description: 'HMW "Given that" field traces directly to journey dip barriers',
+        checkPrompt: 'Does the "Given that" context trace directly to specific barriers from the journey dip stage (Step 6)? Is the connection explicit and evidence-based?'
+      },
+      {
+        name: 'Evidence Traceability',
+        description: 'Each HMW component traces to specific prior research',
+        checkPrompt: 'Can each of the 4 HMW parts be traced to specific research? Given that (dip barriers), persona (Step 5), immediate goal (journey goals/persona goals), deeper goal (Step 4 gains)?'
+      },
+      {
+        name: 'Fresh Rewrite',
+        description: 'HMW is a fresh rewrite from scratch, not evolution of Step 1',
+        checkPrompt: 'Is this HMW drafted fresh from research (not just tweaking Step 1 wording)? Does it feel like a new statement grounded in all accumulated insights rather than a minor refinement?'
       },
       {
         name: 'Narrower Focus',
@@ -195,8 +235,8 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
       },
       {
         name: 'Context Specificity',
-        description: 'HMW includes specific context (who/when/so that)',
-        checkPrompt: 'Does the HMW include specific context: who (persona), when (journey stage or context), and so that (measurable outcome)?'
+        description: 'HMW uses 4-part structure with specific details in each field',
+        checkPrompt: 'Does the HMW use the 4-part structure (Given that / persona / immediate goal / deeper goal) with specific, research-grounded details in each field (not generic statements)?'
       }
     ],
 
