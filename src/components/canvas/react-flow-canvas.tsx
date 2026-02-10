@@ -17,13 +17,17 @@ import '@xyflow/react/dist/style.css';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { PostItNode, type PostItNodeData } from './post-it-node';
+import { GroupNode } from './group-node';
 import { CanvasToolbar } from './canvas-toolbar';
 import { ColorPicker } from './color-picker';
 import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
 import type { PostItColor } from '@/stores/canvas-store';
 
 // Define node types OUTSIDE component for stable reference
-const nodeTypes = { postIt: PostItNode };
+const nodeTypes = {
+  postIt: PostItNode,
+  group: GroupNode,
+};
 
 export interface ReactFlowCanvasProps {
   sessionId: string;
@@ -38,6 +42,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const updatePostIt = useCanvasStore((s) => s.updatePostIt);
   const deletePostIt = useCanvasStore((s) => s.deletePostIt);
   const batchDeletePostIts = useCanvasStore((s) => s.batchDeletePostIts);
+  const groupPostIts = useCanvasStore((s) => s.groupPostIts);
+  const ungroupPostIts = useCanvasStore((s) => s.ungroupPostIts);
 
   // Store API for temporal undo/redo access
   const storeApi = useCanvasStoreApi();
@@ -75,7 +81,11 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     x: number;
     y: number;
     currentColor: PostItColor;
+    nodeType: string;
   } | null>(null);
+
+  // Track selected nodes for Group button visibility
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
 
   // Snap position to grid
   const snapToGrid = useCallback(
@@ -150,10 +160,19 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
   // Convert store post-its to ReactFlow nodes
   const nodes = useMemo<Node[]>(() => {
-    return postIts.map((postIt) => ({
+    // Sort: groups first (parents before children for ReactFlow)
+    const sorted = [...postIts].sort((a, b) => {
+      if (a.type === 'group' && b.type !== 'group') return -1;
+      if (a.type !== 'group' && b.type === 'group') return 1;
+      return 0;
+    });
+
+    return sorted.map((postIt) => ({
       id: postIt.id,
-      type: 'postIt',
+      type: postIt.type || 'postIt',
       position: postIt.position,
+      parentId: postIt.parentId,
+      extent: postIt.parentId ? ('parent' as const) : undefined,
       data: {
         text: postIt.text,
         color: postIt.color || 'yellow',
@@ -161,7 +180,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         onTextChange: handleTextChange,
         onEditComplete: handleEditComplete,
       } as PostItNodeData,
-      style: { width: postIt.width, height: 'auto' },
+      style: postIt.type === 'group'
+        ? { width: postIt.width, height: postIt.height }
+        : { width: postIt.width, height: 'auto' },
     }));
   }, [postIts, editingNodeId, handleTextChange, handleEditComplete]);
 
@@ -239,13 +260,41 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   // Handle node deletion
   const handleNodesDelete = useCallback(
     (deleted: Node[]) => {
-      const ids = deleted.map(n => n.id);
-      batchDeletePostIts(ids);
+      deleted.forEach(node => {
+        if (node.type === 'group') {
+          // Ungroup children first, then remove group
+          ungroupPostIts(node.id);
+        }
+      });
+      // Delete non-group nodes
+      const nonGroupIds = deleted
+        .filter(n => n.type !== 'group')
+        .map(n => n.id);
+      if (nonGroupIds.length > 0) {
+        batchDeletePostIts(nonGroupIds);
+      }
     },
-    [batchDeletePostIts]
+    [ungroupPostIts, batchDeletePostIts]
   );
 
-  // Handle right-click on nodes (color picker)
+  // Handle selection change for Group button visibility
+  const handleSelectionChange = useCallback(({ nodes }: { nodes: Node[] }) => {
+    // Only count non-group nodes for grouping eligibility
+    const nonGroupIds = nodes
+      .filter(n => n.type !== 'group')
+      .map(n => n.id);
+    setSelectedNodeIds(nonGroupIds);
+  }, []);
+
+  // Handle Group button click
+  const handleGroup = useCallback(() => {
+    if (selectedNodeIds.length >= 2) {
+      groupPostIts(selectedNodeIds);
+      setSelectedNodeIds([]); // Clear selection after grouping
+    }
+  }, [selectedNodeIds, groupPostIts]);
+
+  // Handle right-click on nodes (color picker or ungroup)
   const handleNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.preventDefault();
@@ -255,6 +304,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         x: event.clientX,
         y: event.clientY,
         currentColor: postIt?.color || 'yellow',
+        nodeType: node.type || 'postIt',
       });
     },
     [postIts]
@@ -327,6 +377,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         onNodeContextMenu={handleNodeContextMenu}
         onPaneClick={handlePaneClick}
         onMoveStart={handleMoveStart}
+        onSelectionChange={handleSelectionChange}
         snapToGrid={true}
         snapGrid={[GRID_SIZE, GRID_SIZE]}
         fitView={postIts.length > 0}
@@ -367,17 +418,35 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         onRedo={handleRedo}
         canUndo={canUndo}
         canRedo={canRedo}
+        onGroup={handleGroup}
+        canGroup={selectedNodeIds.length >= 2}
       />
 
-      {/* Color picker context menu */}
-      {contextMenu && (
+      {/* Context menu: ungroup for groups, color picker for post-its */}
+      {contextMenu && contextMenu.nodeType === 'group' ? (
+        <div
+          className="fixed z-50 bg-white rounded-lg shadow-lg border border-gray-200 p-1"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
+          <button
+            className="relative z-50 px-3 py-1.5 text-sm hover:bg-gray-100 rounded w-full text-left"
+            onClick={() => {
+              ungroupPostIts(contextMenu.nodeId);
+              setContextMenu(null);
+            }}
+          >
+            Ungroup
+          </button>
+        </div>
+      ) : contextMenu ? (
         <ColorPicker
           position={{ x: contextMenu.x, y: contextMenu.y }}
           currentColor={contextMenu.currentColor}
           onColorSelect={handleColorSelect}
           onClose={() => setContextMenu(null)}
         />
-      )}
+      ) : null}
 
       {/* Empty state hint */}
       {postIts.length === 0 && (

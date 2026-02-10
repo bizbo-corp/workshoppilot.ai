@@ -8,9 +8,11 @@ export interface CanvasToolbarProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  onGroup: () => void;
+  canGroup: boolean;
 }
 
-export function CanvasToolbar({ onAddPostIt, onUndo, onRedo, canUndo, canRedo }: CanvasToolbarProps) {
+export function CanvasToolbar({ onAddPostIt, onUndo, onRedo, canUndo, canRedo, onGroup, canGroup }: CanvasToolbarProps) {
   return (
     <div className="absolute top-4 left-4 z-10 flex gap-2">
       <button
@@ -43,6 +45,14 @@ export function CanvasToolbar({ onAddPostIt, onUndo, onRedo, canUndo, canRedo }:
       >
         Redo
       </button>
+      {canGroup && (
+        <button
+          onClick={onGroup}
+          className="bg-white rounded-lg shadow-md hover:shadow-lg px-4 py-2 text-sm font-medium text-gray-700 transition-shadow duration-150"
+        >
+          Group
+        </button>
+      )}
     </div>
   );
 }
