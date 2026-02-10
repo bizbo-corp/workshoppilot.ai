@@ -1,58 +1,58 @@
-## Quick fixes
+# Post-v1.0 Feature Ideas
 
-AI chat starts first message before user types at each step. Remove "Hello! Welcome to the Challenge step." as it is unnecessary.
+Captured observations and improvement ideas to consider after v1.0 milestone (Phase 14 completion). Not committed to any milestone yet — to be evaluated during MMP planning.
 
-## Nice to have
+---
 
-- Workshop title as edit-in-place title
+## 1. Reset Step
 
-## Personality
+**Problem:** Users who go down a wrong path in a step have no clean way to start over without navigating away and back.
 
-- LLM generated text is more concise
-- Faciltator personality - fun, professional - User chooses facilitator style
-- Emojis in and amongst text for more fun readability style
-- Cut down intro text and overall length of AI responses. 
+**Proposed Behavior:**
 
-## Structured Inputs/Outputs
+- "Reset Step" action clears conversation and extracted artifact for the current step
+- Confirmation dialog: "This will clear your conversation and any extracted output for this step. Continue?"
+- Step status resets to `in_progress` with `arcPhase: orient`
+- Downstream steps cascade-invalidated (same mechanism as "Revise This Step" from Phase 10)
+- Chat panel clears, AI re-orients the user from scratch
 
-- UI in chat window e.g dropdown for HMW statement
-- Generate image for persona
+**Implementation Notes:**
 
-## Auto ask questions
+- Leverages existing cascade invalidation logic (Phase 10 Plan 2)
+- New server action: `resetStep(workshopId, stepId)` — clears messages, artifact, summary, resets status
+- UI: "Reset Step" option in step actions (alongside "Revise This Step" for completed steps)
 
-- Buttons in chat e.g: 
-    - What do you want to ask the Business Leader?
+---
 
-      [Walk me through the last time you tried to improve employee engagement. What happened?]
+## 2. Restructure Step 8 Ideation into Sub-Steps
 
-      [What's the most frustrating part of current solutions for improving employee engagement? Can you give me a specific example?]
+**Problem:** Step 8 packs 6 ideation rounds into a single conversational flow (cluster generation, user input, brain writing x3, Crazy 8s, selection). It's the longest and most complex step. The ordering should also be revised — Crazy 8s (rapid divergent thinking) should come *before* Brain Writing (building on ideas), not after.
 
-      [If you could wave a magic wand and change one thing about employee engagement, what would it be and why?]
-        - Made in relation to the challenge in the perspective of the stakeholder
-        - 
-        - 
+**Proposed Structure:**
 
+- **Step 8a: Mind Mapping** — AI generates themed clusters with wild cards, user adds their own ideas
+- **Step 8b: Crazy 8s** — Rapid-fire idea generation (8 ideas with energetic conversational pacing)
+- **Step 8c: Brain Writing** — "Yes, and..." evolution of best ideas from 8a and 8b
 
+**Idea Selection UX:**
 
-Step e.g: Ideation starts with:
+- Ideas from all 3 sub-steps presented as a combined set
+- Users select ideas directly within the chat pane (interactive selection, not just text)
+- Users can add their own via free-text input ("Add your own idea" field below AI-generated list)
+- Selected ideas (max 3-4) flow forward to Step 9 Concept Development
 
-Time to get creative! We'll use multiple ideation techniques -- Mind Mapping, Crazy 8s, Brain Writing, and Billboard Hero -- to generate a wide range of solutions.
+**UX Considerations:**
 
-[I have to write something to see the next message like: "OK]
+- Sub-steps could use a tabbed or accordion UI within Step 8's container
+- Each sub-step produces intermediate output visible in the output panel
+- Selection state persists across sub-steps (select from 8a, still selected in 8c)
+- Inline idea chips with toggle selection vs. separate selection panel
+- Progress indicator shows sub-step progress (8a/8b/8c) within overall Step 8
 
-then I get:
+**Implementation Impact:**
 
-Welcome to the Ideation phase! Now we get to explore potential solutions.
-
-In this step, we'll use techniques like Mind Mapping, Crazy 8s, Brain Writing, and Billboard Hero to generate a wide range of ideas. The goal is to come up with as many possibilities as we can, focusing on quantity over quality at this stage. Don't worry about filtering or evaluating ideas just yet – that comes later. (blah blah blah)
-
-[I'd rather it be like this.]
-
-AI: In this Ideation phase, we'll use techniques like Mind Mapping, Crazy 8s, Brain Writing, and Billboard Hero to generate a wide range of ideas. The goal is to come up with as many possibilities as we can, focusing on quantity over quality at this stage. Don't worry about filtering or evaluating ideas just yet – that comes later.
-
-AI: Let's first start brainstorming. What are some initial ideas that come to mind when you think about addressing this HMW statement? Don't hold back – any idea is a good idea at this point! 
-
-
-
-
-
+- Step metadata changes: sub-step support or splitting into 3 separate steps (expanding total to 12)
+- Schema changes: each sub-step gets own artifact, or Step 8 artifact retains current multi-round structure
+- Prompt changes: each sub-step gets focused prompt instead of current 6-round mega-prompt
+- Navigation: back-navigation within sub-steps vs. treating each as independent step
+- **Key trade-off:** Sub-steps within a step (preserves 10-step mental model) vs. expanding to 12 steps (simpler implementation, breaks familiar structure)

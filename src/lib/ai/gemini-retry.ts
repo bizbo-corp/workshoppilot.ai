@@ -1,5 +1,5 @@
-import { streamText, generateText } from 'ai';
-import { backOff } from 'exponential-backoff';
+import { streamText, generateText } from "ai";
+import { backOff } from "exponential-backoff";
 
 /**
  * Checks if an error is a Gemini rate limit error (429/RESOURCE_EXHAUSTED)
@@ -11,13 +11,16 @@ export function isGeminiRateLimitError(error: unknown): boolean {
   const errorLower = errorStr.toLowerCase();
 
   // Check for HTTP 429 status
-  if (errorStr.includes('429')) return true;
+  if (errorStr.includes("429")) return true;
 
   // Check for RESOURCE_EXHAUSTED code
-  if (errorStr.includes('RESOURCE_EXHAUSTED')) return true;
+  if (errorStr.includes("RESOURCE_EXHAUSTED")) return true;
 
   // Check for rate limit / quota exceeded messages
-  if (errorLower.includes('rate limit') || errorLower.includes('quota exceeded')) {
+  if (
+    errorLower.includes("rate limit") ||
+    errorLower.includes("quota exceeded")
+  ) {
     return true;
   }
 
@@ -32,14 +35,14 @@ const BACKOFF_CONFIG = {
   timeMultiple: 2, // Exponential (2x each retry)
   numOfAttempts: 5, // Up to 5 attempts
   maxDelay: 15000, // Cap at 15 seconds
-  jitter: 'full' as const, // Full jitter to avoid thundering herd
+  jitter: "full" as const, // Full jitter to avoid thundering herd
 };
 
 /**
  * Wraps streamText with exponential backoff retry for rate limit errors
  */
 export async function streamTextWithRetry(
-  config: Parameters<typeof streamText>[0]
+  config: Parameters<typeof streamText>[0],
 ): Promise<ReturnType<typeof streamText>> {
   return backOff(
     async () => {
@@ -51,7 +54,7 @@ export async function streamTextWithRetry(
           throw error;
         } else {
           // Non-rate-limit errors should not be retried — fail fast
-          const sentinel = new Error('NON_RETRYABLE');
+          const sentinel = new Error("NON_RETRYABLE");
           (sentinel as any).cause = error;
           throw sentinel;
         }
@@ -61,8 +64,11 @@ export async function streamTextWithRetry(
       ...BACKOFF_CONFIG,
       retry: (error, attemptNumber) => {
         // Check for sentinel error (non-retryable)
-        if (error instanceof Error && error.message === 'NON_RETRYABLE') {
-          console.error('Non-rate-limit error encountered, failing immediately:', error.cause);
+        if (error instanceof Error && error.message === "NON_RETRYABLE") {
+          console.error(
+            "Non-rate-limit error encountered, failing immediately:",
+            error.cause,
+          );
           return false; // Do not retry
         }
 
@@ -70,13 +76,13 @@ export async function streamTextWithRetry(
         if (attemptNumber > 1) {
           console.warn(
             `Gemini rate limit hit, retry attempt ${attemptNumber}/${BACKOFF_CONFIG.numOfAttempts}`,
-            error instanceof Error ? error.message : String(error)
+            error instanceof Error ? error.message : String(error),
           );
         }
 
         return true; // Retry rate limit errors
       },
-    }
+    },
   );
 }
 
@@ -84,7 +90,7 @@ export async function streamTextWithRetry(
  * Wraps generateText with exponential backoff retry for rate limit errors
  */
 export async function generateTextWithRetry(
-  config: Parameters<typeof generateText>[0]
+  config: Parameters<typeof generateText>[0],
 ): Promise<ReturnType<typeof generateText>> {
   return backOff(
     async () => {
@@ -96,7 +102,7 @@ export async function generateTextWithRetry(
           throw error;
         } else {
           // Non-rate-limit errors should not be retried — fail fast
-          const sentinel = new Error('NON_RETRYABLE');
+          const sentinel = new Error("NON_RETRYABLE");
           (sentinel as any).cause = error;
           throw sentinel;
         }
@@ -106,8 +112,11 @@ export async function generateTextWithRetry(
       ...BACKOFF_CONFIG,
       retry: (error, attemptNumber) => {
         // Check for sentinel error (non-retryable)
-        if (error instanceof Error && error.message === 'NON_RETRYABLE') {
-          console.error('Non-rate-limit error encountered, failing immediately:', error.cause);
+        if (error instanceof Error && error.message === "NON_RETRYABLE") {
+          console.error(
+            "Non-rate-limit error encountered, failing immediately:",
+            error.cause,
+          );
           return false; // Do not retry
         }
 
@@ -115,12 +124,12 @@ export async function generateTextWithRetry(
         if (attemptNumber > 1) {
           console.warn(
             `Gemini rate limit hit, retry attempt ${attemptNumber}/${BACKOFF_CONFIG.numOfAttempts}`,
-            error instanceof Error ? error.message : String(error)
+            error instanceof Error ? error.message : String(error),
           );
         }
 
         return true; // Retry rate limit errors
       },
-    }
+    },
   );
 }
