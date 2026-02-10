@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 15 - Canvas Infrastructure & SSR Safety
+**Current focus:** Phase 17 - Canvas Core Interactions
 
 ## Current Position
 
 Milestone: v1.1 Canvas Foundation
-Phase: 15 of 20 (Canvas Infrastructure & SSR Safety)
-Plan: 3 of 3 complete
-Status: Phase complete
-Last activity: 2026-02-10 — Completed 15-03-PLAN.md
+Phase: 17 of 20 (Canvas Core Interactions)
+Plan: 1 of 3 complete
+Status: In progress
+Last activity: 2026-02-10 — Completed 17-01-PLAN.md
 
-Progress: [█████████████████████░░░] 78% (47 plans complete across v0.5 + v1.0 + v1.1)
+Progress: [████████████████████░░░░] 80% (48 plans complete across v0.5 + v1.0 + v1.1)
 
 ## Completed Milestones
 
@@ -25,7 +25,7 @@ Progress: [█████████████████████░░
 | v1.0 Working AI Facilitation | 7-14 | 25 | 2026-02-10 |
 
 **Cumulative stats:**
-- 15 phases, 47 plans completed
+- 48 plans completed (15 phases complete, Phase 17 in progress)
 - ~12,500 lines of TypeScript across ~276 files
 - 5 days total (2026-02-07 → 2026-02-10)
 
@@ -56,6 +56,10 @@ Recent decisions affecting v1.1:
 - **Auto-save timing** (15-03): 2s debounce with 10s maxWait, matching existing chat auto-save pattern
 - **Silent retry** (15-03): First 2 failures logged but hidden, error UI shown after 3 consecutive failures
 - **Force-save** (15-03): On component unmount and beforeunload to prevent data loss on navigation
+- **Undo/redo middleware** (17-01): Zundo temporal() wrapper with 50-state limit, partialize excludes isDirty for transient state isolation
+- **PostIt color model** (17-01): Optional color field (defaults to 'yellow') with 5 presets (yellow, pink, blue, green, orange)
+- **Edit mode visual feedback** (17-01): Edit ring (blue-400) distinct from selection ring (blue-500), maxLength={200} enforced at textarea
+- **COLOR_CLASSES pattern** (17-01): Record<PostItColor, string> mapping for consistent color rendering across components
 
 ### Known Tech Debt
 
@@ -81,9 +85,9 @@ From research (research/SUMMARY.md):
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Phase 15 complete (Canvas infrastructure, interactions, and persistence working end-to-end)
-Resume file: .planning/phases/15-canvas-infrastructure-ssr-safety/15-03-SUMMARY.md
-Next action: Begin Phase 16 (Split-Screen Layout) or next milestone phase
+Stopped at: Phase 17, Plan 1 complete (Canvas core data model and undo/redo foundation established)
+Resume file: .planning/phases/17-canvas-core-interactions/17-01-SUMMARY.md
+Next action: Execute 17-02-PLAN.md (toolbar controls with color picker, undo/redo, delete)
 
 ---
-*Last updated: 2026-02-10 after completing 15-03-PLAN.md*
+*Last updated: 2026-02-10 after completing 17-01-PLAN.md*
