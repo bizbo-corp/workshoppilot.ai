@@ -39,7 +39,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 
 #### v1.1 — Canvas Foundation
 - [ ] Split-screen layout for all 10 steps (chat left, panel right)
-- [ ] Canvas component with post-its (create, move, color-code, cluster/group)
+- [ ] ReactFlow canvas with custom post-it nodes (create, move, color-code, cluster/group)
 - [ ] Step 2 Stakeholder Mapping canvas — cluster stakeholders by influence/interest
 - [ ] Step 4 Research Sense Making canvas — cluster insights into themes
 - [ ] AI → Canvas: suggest items in chat with "Add to canvas" confirmation
@@ -138,6 +138,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | neon-http driver over WebSocket | Serverless-optimized, avoids connection pooling complexity | ✓ Good |
 | AI SDK 6 with DefaultChatTransport | Latest API with streaming and message persistence | ✓ Good |
 | Vercel Analytics + Speed Insights | Free performance monitoring from day one | ✓ Good |
+| ReactFlow for canvas (not Tldraw/Excalidraw) | Graph-first data model (nodes+edges), MIT free, ~200KB, structured relationships queryable for AI context. Tldraw $6K/yr, Excalidraw drawing-first with manual relationship parsing | — Pending |
 
 ## Current State
 
