@@ -57,11 +57,12 @@ See `milestones/v1.0-ROADMAP.md` for full details.
   4. User can drag post-its to reposition them
   5. Canvas state auto-saves to database (debounced 2s)
   6. Canvas state loads from database when returning to step
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 15-01: TBD
-- [ ] 15-02: TBD
+- [ ] 15-01-PLAN.md — Canvas infrastructure foundation (install @xyflow/react, Zustand store, provider, post-it node, SSR-safe wrapper)
+- [ ] 15-02-PLAN.md — ReactFlow canvas with all interactions (dot grid, double-click creation, toolbar, drag, snap-to-grid)
+- [ ] 15-03-PLAN.md — Persistence layer and step integration (server actions, auto-save hook, force-save, step page wiring)
 
 #### Phase 16: Split-Screen Layout & Step Container Integration
 **Goal**: Split-screen layout responsive across desktop and mobile
