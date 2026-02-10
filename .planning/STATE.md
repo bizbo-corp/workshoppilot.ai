@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 16 - Split-Screen Layout
+**Current focus:** Phase 18 - Step-Specific Canvases
 
 ## Current Position
 
 Milestone: v1.1 Canvas Foundation
-Phase: 16 of 20 (Split-Screen Layout)
-Plan: 3 of 3 complete
-Status: Phase complete
-Last activity: 2026-02-11 — Completed 16-03-PLAN.md (Phase 16 complete)
+Phase: 18 of 20 (Step-Specific Canvases)
+Plan: 1 of 2
+Status: In progress
+Last activity: 2026-02-11 — Completed 18-01-PLAN.md (Quadrant infrastructure complete)
 
-Progress: [████████████████████░░░░] 85% (53 plans complete across v0.5 + v1.0 + v1.1)
+Progress: [████████████████████░░░░] 86% (54 plans complete across v0.5 + v1.0 + v1.1)
 
 ## Completed Milestones
 
@@ -25,8 +25,8 @@ Progress: [████████████████████░░░
 | v1.0 Working AI Facilitation | 7-14 | 25 | 2026-02-10 |
 
 **Cumulative stats:**
-- 53 plans completed (16 phases complete)
-- ~13,200 lines of TypeScript across ~285 files
+- 54 plans completed (16 phases complete, 2 phases partial)
+- ~13,550 lines of TypeScript across ~288 files
 - 5 days total (2026-02-07 → 2026-02-11)
 
 **Velocity:**
@@ -76,6 +76,10 @@ Recent decisions affecting v1.1:
 - **Mobile tab pattern** (16-02): Chat/Canvas tabs at bottom above step navigation, CSS hidden toggle for instant switching
 - **Panel collapse pattern** (16-02): Desktop panels collapse to 40px icon strips, enabling full-chat or full-canvas focus modes
 - **Checkpoint verification pattern** (16-03): Automated polish (build/lint/grep) before human verification checkpoint for efficient UX review
+- **Center-point quadrant detection** (18-01): Use post-it center (x + width/2, y + height/2) for quadrant assignment, not top-left corner
+- **Viewport-aware overlay** (18-01): ReactFlow useStore selector for reactive viewport subscription in QuadrantOverlay SVG component
+- **Fixed label offset** (18-01): 80px fixed offset for quadrant labels (not scaled by zoom) to maintain readability at all zoom levels
+- **Step-specific canvas config** (18-01): Configuration registry with semantic step IDs ('stakeholder-mapping', 'sense-making') matching step-metadata.ts
 
 ### Known Tech Debt
 
@@ -101,9 +105,9 @@ From research (research/SUMMARY.md):
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Phase 16 complete - All 3 plans done (Split-screen layout fully verified and production-ready)
-Resume file: .planning/phases/16-split-screen-layout/16-03-SUMMARY.md
-Next action: Begin Phase 17 (Canvas Toolbar) or plan next phase
+Stopped at: Phase 18, Plan 01 complete - Quadrant infrastructure ready for integration
+Resume file: .planning/phases/18-step-specific-canvases/18-01-SUMMARY.md
+Next action: Execute Phase 18, Plan 02 (wire quadrant detection into ReactFlowCanvas)
 
 ---
-*Last updated: 2026-02-11 after completing Phase 16 (16-03-PLAN.md)*
+*Last updated: 2026-02-11 after completing Phase 18, Plan 01 (18-01-PLAN.md)*
