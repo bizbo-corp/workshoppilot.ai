@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 17 - Canvas Core Interactions
+**Current focus:** Phase 16 - Split-Screen Layout
 
 ## Current Position
 
 Milestone: v1.1 Canvas Foundation
-Phase: 17 of 20 (Canvas Core Interactions)
-Plan: 3 of 3 complete
-Status: Phase complete
-Last activity: 2026-02-10 — Completed 17-03-PLAN.md
+Phase: 16 of 20 (Split-Screen Layout)
+Plan: 1 of 2 complete
+Status: In progress
+Last activity: 2026-02-11 — Completed 16-01-PLAN.md
 
-Progress: [████████████████████░░░░] 83% (50 plans complete across v0.5 + v1.0 + v1.1)
+Progress: [████████████████████░░░░] 84% (51 plans complete across v0.5 + v1.0 + v1.1)
 
 ## Completed Milestones
 
@@ -25,9 +25,9 @@ Progress: [████████████████████░░░
 | v1.0 Working AI Facilitation | 7-14 | 25 | 2026-02-10 |
 
 **Cumulative stats:**
-- 50 plans completed (16 phases complete)
-- ~12,900 lines of TypeScript across ~278 files
-- 5 days total (2026-02-07 → 2026-02-10)
+- 51 plans completed (16 phases complete)
+- ~13,100 lines of TypeScript across ~280 files
+- 5 days total (2026-02-07 → 2026-02-11)
 
 **Velocity:**
 - v0.5: 2 days, 6 phases, 19 plans
@@ -69,6 +69,10 @@ Recent decisions affecting v1.1:
 - **Ungroup preservation** (17-03): Children converted back to absolute positions, preserving canvas location
 - **Group deletion behavior** (17-03): Auto-ungroups children instead of deleting them, prevents accidental data loss
 - **Parent-child rendering** (17-03): Groups sorted first in nodes array for ReactFlow parent-before-children requirement
+- **Split-screen layout** (16-01): Chat panel defaults to 25% (~320px), right panel 75%, canvas visible on ALL steps
+- **Invisible divider** (16-01): w-0 class with hover/drag opacity reveal for cleaner visual split
+- **Panel persistence** (16-01): react-resizable-panels id prop persists sizes across steps via localStorage
+- **Accordion expansion pattern** (16-01): onExpandedChange callback from child to parent enables conditional layout switching
 
 ### Known Tech Debt
 
@@ -93,10 +97,10 @@ From research (research/SUMMARY.md):
 
 ## Session Continuity
 
-Last session: 2026-02-10
-Stopped at: Phase 17 complete (Canvas core interactions: undo/redo, colors, multi-select, delete, grouping)
-Resume file: .planning/phases/17-canvas-core-interactions/17-03-SUMMARY.md
-Next action: Begin Phase 18 (next phase in v1.1 roadmap)
+Last session: 2026-02-11
+Stopped at: Phase 16 Plan 01 complete (Split-screen desktop layout with 320px chat, canvas on all steps, output accordion)
+Resume file: .planning/phases/16-split-screen-layout/16-01-SUMMARY.md
+Next action: Continue Phase 16 Plan 02 (mobile tab layout)
 
 ---
-*Last updated: 2026-02-10 after completing 17-03-PLAN.md*
+*Last updated: 2026-02-11 after completing 16-01-PLAN.md*
