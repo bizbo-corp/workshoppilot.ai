@@ -1,241 +1,585 @@
-# Pitfalls Research: v1.0 AI Facilitation Features
+# Pitfalls Research: Canvas/Post-It Integration
 
-**Domain:** Multi-step AI facilitation with context memory (adding features to existing system)
-**Researched:** 2026-02-08
-**Confidence:** MEDIUM-HIGH
+**Domain:** Adding canvas/whiteboard post-it functionality to existing Next.js AI facilitation app
+**Researched:** 2026-02-10
+**Confidence:** HIGH
 
-**Context:** This research focuses on common mistakes when ADDING step-aware AI facilitation, dual-layer context architecture, back-and-revise navigation, and auto-save to the EXISTING WorkshopPilot.ai v0.5 system (Next.js 16.1.1 App Router, Neon Postgres, Drizzle ORM, Vercel AI SDK 5, Gemini 2.0 Flash, Clerk auth).
+**Context:** This research focuses on common mistakes when ADDING split-screen canvas/post-it functionality to the EXISTING WorkshopPilot.ai v1.0 system (Next.js 16.1.1 App Router, React 19, Neon Postgres, Drizzle ORM, Vercel AI SDK, Gemini 2.0 Flash, Zustand state). Specifically addresses pitfalls for Steps 2 (Stakeholder Mapping) and 4 (Research Sense Making) where users interact with both AI chat and visual canvas.
 
 ## Critical Pitfalls
 
-### Pitfall 1: Context Degradation Syndrome in 10-Step Workshops
+### Pitfall 1: SSR/Hydration Mismatch with Canvas Libraries
 
 **What goes wrong:**
-AI quality degrades significantly after step 4-5 as conversation history grows. Users reach step 7-8 and the AI asks questions already answered in step 2, suggests ideas that contradict earlier decisions, or loses track of the project's core problem statement. Attention drops from 100% on early messages to 50% at message 40. The AI becomes progressively less useful as the user progresses through the 10-step workshop, precisely when they need the most contextual support.
+App builds successfully, deploys to Vercel, but crashes on initial page load with "Text content does not match server-rendered HTML" hydration errors. Canvas element renders as empty `<div>` on server, but attempts to render full interactive canvas on client. React throws hydration mismatch errors. In worst cases, Next.js renders canvas components on server side, causing "window is not defined" or "document is not defined" errors because canvas libraries (Tldraw, ReactFlow, Konva) assume browser-only environment with DOM and Canvas API access.
 
 **Why it happens:**
-LLMs do not use their context uniformly - performance becomes increasingly unreliable as input length grows, even when well within the model's advertised limits. This phenomenon ("context rot") means effective capacity is usually 60-70% of the advertised maximum. A model claiming 200k tokens typically becomes unreliable around 130k. Models work best when relevant information sits at the very beginning or end of the context window, but struggle when buried in the middle. In a 10-step workshop with 5-7 conversational turns per step, you accumulate 50-70 messages - even with Gemini's 1M token context window, retrieval accuracy degrades 13.9%-85% as context grows. Research shows one token difference in an early turn can lead to cascading deviations, observed as "stagnated unreliability."
+Canvas libraries are fundamentally client-side only - they require browser Canvas API, touch/mouse events, and DOM manipulation that don't exist in Node.js server environment. Next.js App Router defaults to Server Components with SSR. When you import a canvas library in a Server Component, Next.js attempts to execute canvas code during server rendering, hitting browser-only APIs. Even when properly marked as Client Components with `'use client'`, hydration mismatches occur if the canvas library renders differently on initial client hydration vs. server HTML output. React-konva documentation explicitly states: "On the server side it will render just empty div. So it doesn't make much sense to use react-konva for server-side rendering." Tldraw had SSR working in v3.7.2 but broke in later versions due to core-js import issues (GitHub issue #5543, #6567).
 
 **How to avoid:**
-Implement hierarchical context compression with three tiers: (1) short-term memory keeps current step messages verbatim, (2) long-term memory stores previous step summaries + structured JSON outputs, (3) persistent memory maintains all structured outputs in database. Trigger summarization when step completes, not when token limit approaches. Use step-specific prompts that reference structured outputs ("The user's HMW statement from Step 7 is: {hmw_statement}") rather than relying on full conversation history. Add memory refresh checkpoints at steps 4 and 7 where the AI explicitly recaps key decisions before proceeding. Use Gemini context caching for stable system prompts and step definitions (90% cost savings on repeated prompts).
+Use Next.js dynamic imports with `ssr: false` to force client-side only rendering:
+
+```typescript
+'use client';
+import dynamic from 'next/dynamic';
+
+const StakeholderCanvas = dynamic(
+  () => import('@/components/canvas/stakeholder-canvas'),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse">Loading canvas...</div>
+  }
+);
+```
+
+Place the `'use client'` directive at the TOP of the file that imports the canvas library, not in the canvas component itself. Ensure ALL canvas-related code (including helper utilities that reference canvas context, touch events, etc.) is inside the dynamically imported boundary. Test in production Vercel environment, not just local dev - Vercel's Edge Runtime has stricter SSR enforcement than local Next.js dev server. For Konva specifically, configure `connect_timeout=10` to fail fast rather than hang. Use loading states that match server-rendered layout to prevent layout shift when canvas hydrates.
 
 **Warning signs:**
-- AI asks questions already answered in earlier steps
-- Suggestions contradict previous decisions documented in structured outputs
-- Step completion taking longer (token processing overhead increases with context size)
-- Generated summaries become generic rather than specific to this workshop
-- JSON extraction produces incomplete objects missing fields discussed earlier
+- "window is not defined" errors in server logs
+- "document is not defined" errors during build
+- Hydration mismatch warnings in browser console
+- Canvas appears blank on initial page load, then flashes in after hydration
+- Different layout between server HTML (view source) and client render
+- Vercel build succeeds but runtime errors on first page visit
 
 **Phase to address:**
-Phase 4 (Navigation & Back-Revise) - Must be architectural from day one. Context compression strategy affects database schema (context_files table), API design (which context gets passed to Gemini), and step navigation (summary generation on step completion).
+Phase 1 (Canvas Foundation) - Must be architectural from day one. You cannot retrofit SSR-safe imports after building canvas features with wrong import strategy. All canvas components must use dynamic import with `ssr: false` from the start.
 
 ---
 
-### Pitfall 2: Gemini Rate Limit Cascade Failures
+### Pitfall 2: Bidirectional State Sync Race Conditions
 
 **What goes wrong:**
-User is deep in step 8, making steady progress, then suddenly hits 429 "quota exceeded" errors. Chat stops working. Progress may be lost if auto-save hasn't caught the latest messages. User refreshes, tries again, gets another 429. Trust craters - the product feels unreliable precisely when the user is most invested (after 45+ minutes in the workshop). Free tier (15 RPM) is exhausted in minutes with concurrent users or a single user having rapid back-and-forth exchanges.
+AI suggests 5 stakeholders in chat. User clicks "Add to canvas" button. Canvas updates with 5 post-its. User drags one post-it to different position on canvas. AI doesn't "see" the move - next suggestion references old positions. User edits post-it text directly on canvas ("CEO" → "Chief Executive Officer"). AI continues using old text "CEO" in subsequent messages. Or worse: User edits canvas, triggers AI response, AI's response triggers canvas update, which triggers state change, which triggers another AI call - infinite loop. Race condition: canvas update writes to Zustand store at same moment AI response writes to same store, one update clobbers the other.
 
 **Why it happens:**
-Gemini API enforces rate limits across four independent dimensions: RPM (requests per minute), TPM (tokens per minute), RPD (requests per day), and IPM (images per minute). Exceeding ANY single dimension triggers 429 errors. Multi-dimensional tracking makes limits unpredictable - a user having a detailed conversation might hit TPM before RPM. Free tier was slashed 50-92% in December 2025 without prior notice. Rate limits are per-project, so all users share the same quota pool. Token bucket algorithm means burst usage creates rate limit "debt" that affects subsequent requests. Without backoff logic, your app will hammer the API with retries, making the problem worse.
+Multiple sources of truth without clear ownership - both AI and canvas can initiate state changes. State synchronization becomes bidirectional instead of unidirectional data flow. React's concurrent rendering (React 19) can batch state updates in unpredictable order, causing canvas render with stale data while AI has fresh data. Zustand's `useSyncExternalStore` (under the hood) prevents some race conditions but doesn't prevent logical races where canvas update and AI update both modify same post-it simultaneously. Developers fall into "prop syncing" anti-pattern where canvas component mirrors props in local state, creating two sources of truth. As Kent C. Dodds states: "Don't Sync State. Derive It!" - when same data duplicated between state variables, it's difficult to keep in sync. React documentation warns: "Syncing state with props is an anti-pattern" because it creates confusion about which state is canonical.
 
 **How to avoid:**
-Implement exponential backoff with jitter (wait 1s, 2s, 4s, 8s) on 429 responses with clear UI feedback ("AI is busy, retrying in 3s..."). Use multiple Gemini projects with key rotation to distribute load across separate quota pools. Implement request queuing with position indicator ("You're #2 in queue, ~30s wait"). Monitor rate limit margins via response headers and throttle proactively before hitting limits. Consider Tier 1 paid plan ($50 cumulative spend = 66x capacity increase: 15 RPM → 1000 RPM). Use Gemini context caching to reduce TPM consumption by 90% on repeated system prompts. Pre-calculate token budgets per step to stay within TPM limits.
+Establish single source of truth: Zustand store is canonical, both AI and canvas are projections. Implement unidirectional data flow:
+- AI updates → Zustand store → Canvas reads from store
+- Canvas updates → Zustand store → AI reads from store on next request (NOT reactively)
+
+Use event-driven architecture with debouncing:
+
+```typescript
+// Canvas component
+const handlePostItDrag = useMemo(
+  () => debounce((id, position) => {
+    updatePostItPosition(id, position); // Updates Zustand
+    // AI does NOT react to this change
+  }, 300),
+  []
+);
+```
+
+AI only reads canvas state when user explicitly sends message, not on every canvas change. Use optimistic updates for AI suggestions:
+
+```typescript
+// AI suggests stakeholders
+const tempId = `temp-${Date.now()}`;
+addPostIt({ id: tempId, ...aiSuggestion }); // Optimistic
+await saveToDatabase();
+updatePostItId(tempId, dbId); // Reconcile with real ID
+```
+
+Implement version tracking to detect conflicts:
+
+```typescript
+interface PostIt {
+  id: string;
+  version: number; // Increment on every update
+  lastModifiedBy: 'user' | 'ai';
+}
+```
+
+Never put canvas state in React component state - always derive from Zustand store. Use Zustand's transient updates feature for high-frequency canvas events (drag, resize) that don't need to trigger re-renders.
 
 **Warning signs:**
-- 429 errors in production logs
-- Users reporting "chat stopped working" after extended sessions
-- Error spike correlation with traffic increases
-- Rate limit errors concentrated during specific hours (peak usage)
-- Multiple users hitting limits simultaneously (shared quota pool exhaustion)
+- Canvas flickers during AI responses (conflicting updates)
+- Post-it positions "jump back" after drag (stale state overwrite)
+- Infinite render loops in React DevTools
+- AI suggestions referencing outdated canvas state
+- Database showing rapid succession of updates to same post-it
+- Users reporting "my changes got erased" when AI responds
 
 **Phase to address:**
-Phase 4 (Navigation & Back-Revise) for initial backoff/retry logic. Phase 6 (Production Hardening) for key rotation, queuing system, and monitoring. Do NOT defer to "fix in production" - rate limit cascade failures destroy trust and are hard to recover from.
+Phase 2 (State Sync Architecture) - Must be designed upfront before implementing canvas OR AI integration. Retrofitting unidirectional flow after building bidirectional sync requires rewriting both AI and canvas components.
 
 ---
 
-### Pitfall 3: Neon Cold Start Death Spiral
+### Pitfall 3: Canvas Bundle Size Explosion
 
 **What goes wrong:**
-Users start a session after 5+ minutes of database inactivity. First page load takes 3-8 seconds while Neon compute wakes from scale-to-zero. User sees loading spinner, assumes the site is broken, refreshes the page. Refresh creates another cold start. Multiple tabs or users arriving simultaneously compound the problem. Users abandon before the app even loads, leaving high bounce rates in analytics with no way to diagnose the issue (they left before any tracking events fired).
+MVP v1.0 had 180KB initial JavaScript bundle with fast First Contentful Paint (FCP) under 1 second. After adding Tldraw or Fabric.js canvas library, bundle balloons to 850KB+. FCP increases to 3.8 seconds. Lighthouse score drops from 95 to 68. Mobile users on 3G connections see 8-10 second load times. Vercel function deployment hits 250MB unzipped size limit. Even with code splitting, the canvas route downloads 600KB+ of JavaScript before showing any UI. Users bounce before canvas even loads.
 
 **Why it happens:**
-Neon Postgres uses serverless architecture with automatic scale-to-zero after 5 minutes of inactivity (free tier) or 300 seconds (paid tier, configurable). Cold start involves: (1) wake compute endpoint, (2) load data into memory, (3) establish connection. Each step adds latency (500ms-5s total). Subsequent requests are fast, but the initial wake is slow. Standard node-postgres driver expects persistent TCP connections, which don't exist in edge/serverless environments. WebSockets can't outlive a single request in Vercel Edge Functions or Cloudflare Workers. Using wrong driver (node-postgres instead of @neondatabase/serverless) multiplies connection overhead.
+Canvas libraries are feature-rich and heavy. Tldraw core is ~200KB minified, but with peer dependencies (signia, zustand internals, vector math libraries) grows to 400-600KB. Fabric.js is ~500KB minified. Konva is ~300KB. ReactFlow is ~250KB. These are MINIFIED sizes - unminified development bundles are 2-4x larger. Canvas libraries often bundle their own state management, undo/redo systems, and utility libraries that duplicate what you already have (Zustand, etc.). Next.js Bundle Analyzer shows canvas libraries pulling in transitive dependencies (lodash, moment.js, etc.) that bloat bundle. Vercel's research shows bundle size directly impacts FCP - every 100KB adds ~300ms to load time on 3G. Next.js default behavior bundles all imports into single chunk unless explicitly code-split. Dynamic imports help but only if done correctly - dynamic import of component that imports 10 other modules still bundles all 10.
 
 **How to avoid:**
-Use Neon serverless driver (`@neondatabase/serverless`) which supports HTTP and WebSocket connections optimized for edge environments. Configure connection timeout (`?connect_timeout=10`) to fail fast rather than hang. Implement health-check warming via Vercel cron job pinging database every 3-4 minutes to keep compute active during user hours. Improve UX for cold start scenarios with optimistic UI ("Waking up your workspace...") rather than generic spinner. Use connection pooling (PgBouncer) which Neon provides integrated - maintains warm connections masking cold starts. Monitor cold start frequency and duration to optimize warming schedule. Consider Neon's "always on" compute option on paid plans.
+Use aggressive code splitting and lazy loading:
+
+```typescript
+// Split canvas library from main bundle
+const StakeholderCanvas = dynamic(
+  () => import('@/components/canvas/stakeholder-canvas'),
+  {
+    ssr: false,
+    loading: () => <CanvasSkeleton /> // Match layout to prevent shift
+  }
+);
+
+// Further split heavy features
+const ExportToPDF = dynamic(
+  () => import('@/lib/canvas-export'),
+  { ssr: false }
+);
+```
+
+Choose lightweight canvas libraries - Konva (300KB) over Fabric.js (500KB) or Tldraw (600KB with deps) if you only need basic shapes. For post-it notes, consider building custom canvas implementation using HTML5 Canvas API directly (0KB library overhead) or using absolutely positioned div elements instead of canvas (no Canvas API needed). Use Next.js Bundle Analyzer to identify bloat:
+
+```bash
+npm install @next/bundle-analyzer
+# Analyze which canvas imports are largest
+```
+
+Implement route-based splitting - canvas library only loads on Steps 2 and 4:
+
+```typescript
+// app/workshop/[id]/step-2/page.tsx
+// Canvas library ONLY bundled in this route
+```
+
+Use tree-shaking compatible imports:
+
+```typescript
+// Bad: Imports entire library
+import Konva from 'konva';
+
+// Good: Only imports what you need
+import { Stage, Layer, Rect } from 'konva/lib/shapes';
+```
+
+Monitor bundle size in CI/CD - fail builds if canvas route exceeds budget (300KB initial load). Use Vercel's speed insights to track real-world FCP impact. Consider canvas library CDN loading for truly massive libraries (trade bundle size for runtime dependency).
 
 **Warning signs:**
-- First request after idle period taking 3-8+ seconds
-- Database connection timeout errors in logs
-- Analytics showing high bounce rate on initial page load
-- Users reporting "site is slow" or "won't load"
-- Server-side rendering timeouts on first page render
+- Next.js build output showing large page sizes (>500KB)
+- Lighthouse FCP score regressing after canvas integration
+- Vercel deployment warnings about function size
+- Users on mobile reporting slow loads
+- Network tab showing 1MB+ of JavaScript downloads
+- Bundle analyzer showing duplicate dependencies
 
 **Phase to address:**
-Phase 1 (Foundation) - Must use correct driver from day one. Switching from node-postgres to @neondatabase/serverless after building on wrong driver requires refactoring all database calls. Phase 6 (Production Hardening) for health-check warming cron job and monitoring.
+Phase 1 (Canvas Foundation) - Choose lightweight library from the start. Phase 5 (Performance Optimization) for bundle analysis, code splitting refinement, and monitoring. Do NOT defer - bundle size impacts adoption.
 
 ---
 
-### Pitfall 4: Structured Output Extraction Failures
+### Pitfall 4: Mobile/Responsive Canvas Layout Collapse
 
 **What goes wrong:**
-User completes step 2 (Stakeholder Mapping) with a detailed conversation identifying 8 stakeholders. AI chat flows perfectly. User clicks "Continue to Step 3" expecting to proceed to User Research. System attempts to extract structured JSON from the conversation (stakeholders array with name, role, influence, interest fields). Extraction fails - Gemini returns a stakeholder object missing "interest" field, or returns markdown-wrapped JSON instead of pure JSON, or returns partial data from early in conversation but missing later additions. Step completion hangs. User is blocked from progressing. Retry logic fails because conversation history hasn't changed.
+Canvas works perfectly on desktop (1920px viewport). Deploy to production, test on mobile, and canvas becomes unusable. Post-its render at 2px x 2px (sized for desktop, shrunk to mobile). Touch events don't work - tapping post-it doesn't select it. Pinch-to-zoom triggers browser zoom instead of canvas zoom, breaking layout. Split-screen layout (chat + canvas) collapses on mobile - chat takes full height, canvas gets 100px sliver at bottom. Stakeholder map designed for 1200px width is completely illegible at 375px. Canvas scrolls horizontally requiring two-finger pan, but browser interprets as back-navigation gesture.
 
 **Why it happens:**
-Gemini's structured output mode (schema-constrained generation) is reliable but not perfect. Failures occur when: (1) conversation is ambiguous about field values (user discussed stakeholders but never explicitly stated "high influence"), (2) Gemini prioritizes conversational naturalness over schema compliance, returning markdown-formatted responses, (3) context window issues cause late-conversation data to be deprioritized, (4) schema itself is too strict (required fields that aren't always applicable), (5) temperature settings conflict (Gemini 3 defaults to 1.0 for reasoning, but structured output traditionally used lower temperature 0.0-0.3). Issue #6494 in Vercel AI SDK repo documents ongoing schema compatibility issues with Gemini 2.5. Issue #11396 reports Gemini 3 Preview outputting internal JSON as text when tools are provided. Gemini uses OpenAPI 3.0 schema subset, not full JSON Schema, leading to validation mismatches.
+Canvas elements use absolute pixel coordinates that don't translate to responsive breakpoints. Drawing at (500, 300) on desktop renders off-screen on 375px mobile viewport. Developers test at "standard" breakpoints (768px, 1024px) but miss awkward in-between states like 820px tablet split-screen or 912px where layouts often break. Touch events require special handling - mouse events (onClick, onMouseMove) don't work on mobile, need touch equivalents (onTouchStart, onTouchMove). Touch-action CSS property defaults to `auto` allowing browser gestures (pinch zoom, swipe back) which conflicts with canvas gestures. Safari mobile has LIMITED touch-action support - only `auto` and `manipulation` work, others ignored. Traditional CSS breakpoints don't work for canvas coordinate systems - a post-it at x:600 doesn't "break" to new line at mobile width, it just moves off-screen. Container queries would help but have limited browser support and don't solve coordinate translation problem.
 
 **How to avoid:**
-Use explicit extraction prompts: "Based on the conversation above, extract exactly this JSON structure: {schema}. Do not include markdown formatting, only pure JSON." Implement retry logic with schema repair: if extraction fails validation, send repair prompt with the error ("The JSON is missing the 'interest' field for stakeholder 'CEO'. Please add this field."). Use Zod schema validation with detailed error messages. Implement partial extraction: if full schema fails, extract what's possible and prompt user to fill gaps via form UI. For Gemini 2.5, use temperature 0.0-0.3 for extraction requests (not main conversation). For Gemini 3, keep temperature 1.0 (default) to avoid looping/degradation. Use Gemini's responseMimeType: "application/json" to force JSON-only output. Test extraction with edge cases (empty conversations, very long conversations, ambiguous data). Show extracted data to user for confirmation before proceeding.
+Implement responsive canvas scaling system that translates between viewport coordinates and canvas coordinates:
+
+```typescript
+const useResponsiveCanvas = () => {
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const updateScale = () => {
+      const baseWidth = 1200; // Desktop design width
+      const currentWidth = window.innerWidth;
+      setScale(currentWidth / baseWidth);
+    };
+
+    window.addEventListener('resize', updateScale);
+    updateScale();
+    return () => window.removeEventListener('resize', updateScale);
+  }, []);
+
+  return scale;
+};
+```
+
+Use viewport-relative units for canvas sizing, not fixed pixels:
+
+```typescript
+// Bad: Fixed size
+<Stage width={1200} height={800} />
+
+// Good: Responsive
+<Stage width={containerWidth} height={containerHeight} />
+```
+
+Implement mobile-first layout strategy - stack chat above/below canvas on mobile (<768px), side-by-side on desktop (>768px). Use CSS touch-action to prevent browser gestures:
+
+```css
+.canvas-container {
+  touch-action: none; /* Disable all browser touch gestures */
+}
+```
+
+For production, combine viewport meta with CSS touch-action and JavaScript event prevention:
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+```
+
+Handle touch events explicitly:
+
+```typescript
+// Support both mouse and touch
+const handlePointerDown = (e: PointerEvent) => {
+  // Works for mouse, touch, and pen
+};
+```
+
+Test at REAL breakpoints including awkward ones: 375px (iPhone), 414px (iPhone Plus), 768px (iPad portrait), 820px (iPad split-screen), 912px (Surface), 1024px (iPad landscape), 1366px (laptop). Use browser DevTools device emulation but also test on real devices - touch behavior differs.
 
 **Warning signs:**
-- Step completion button stays disabled after apparent conversation conclusion
-- Database contains null/incomplete structured outputs
-- User reports "can't continue to next step"
-- Error logs showing Zod validation failures
-- JSON parsing errors in extraction endpoint
-- Extracted data missing information clearly discussed in conversation
+- Canvas content rendering off-screen on mobile
+- Touch interactions not working (tap, drag, pinch)
+- Layout breaking at unexpected widths (820px, 912px)
+- Users reporting "can't use on phone"
+- Horizontal scroll appearing on mobile
+- Pinch gesture zooming entire page instead of canvas
 
 **Phase to address:**
-Phase 5 (Structured Outputs) - This entire phase focuses on reliable extraction. Do not assume structured outputs "just work" - require extensive testing with real conversation patterns, edge cases, and failure recovery.
+Phase 1 (Canvas Foundation) - Responsive architecture must be baked in from start. Phase 3 (Mobile Optimization) for touch gesture handling and specific breakpoint tuning. Retrofitting responsive canvas after building for desktop-only is nearly a full rewrite.
 
 ---
 
-### Pitfall 5: Auto-Save Race Conditions
+### Pitfall 5: Canvas State Serialization and Persistence Failures
 
 **What goes wrong:**
-User is actively chatting in step 4. Auto-save fires every 30 seconds to persist conversation state. User completes the step and clicks "Continue to Step 5" triggering step completion save (conversation summary + structured output extraction). Both saves attempt to write to the same workshop/session simultaneously. Race condition: (1) Auto-save writes partial conversation, (2) Step completion reads stale conversation before auto-save completes, generates summary missing last 2 messages, (3) Step completion writes summary and transitions to step 5, (4) Auto-save completes, but step has already changed. Result: User arrives at step 5 with incomplete context from step 4. Extraction is based on incomplete conversation. Downstream steps build on faulty foundation.
+User spends 20 minutes arranging 12 stakeholder post-its on canvas into perfect spatial layout showing power dynamics and relationships. Clicks "Save and Continue to Step 3". Returns to Step 2 later to review stakeholders. Canvas loads with all 12 post-its but they're stacked in top-left corner - all position data lost. Or: Canvas state saved to Postgres JSONB column, but undo/redo history (300 operations) balloons JSON to 2.5MB. Postgres TOAST compression kicks in, adding 200ms retrieval latency. Database queries slow to a crawl. Or: User's canvas has Date objects and custom class instances that JSON.stringify() converts to strings, breaking reconstruction. Undo breaks with "Cannot read property 'x' of undefined" because deserialized objects lost methods.
 
 **Why it happens:**
-Multiple concurrent write paths without coordination: (1) periodic auto-save timer, (2) step completion save, (3) user navigating back and updating previous step. Databases experience lost updates when concurrent transactions update same row without proper locking. Drizzle ORM doesn't automatically prevent race conditions - developer must implement optimistic or pessimistic locking. Vercel serverless functions can create multiple parallel executions of same operation if user rapidly clicks or has network hiccups causing retries. React 19 concurrent rendering can trigger multiple state updates that appear to happen "simultaneously" from backend perspective. Zustand persist middleware had race condition bugs in v5.0.9 and earlier (fixed in v5.0.10 January 2026).
+Canvas state is complex: positions, sizes, colors, z-index, custom properties, relationships. Naive JSON serialization loses information. Date objects become ISO strings, class instances lose prototypes, functions disappear entirely. Snapshot-based undo/redo stores entire state for each operation - after 300 operations (typical 20 minute session), you have 300 full copies of canvas state. At 8KB per snapshot, that's 2.4MB. Postgres applies TOAST (The Oversized-Attribute Storage Technique) to JSONB exceeding 2KB, storing externally with decompression overhead. Loading 2.5MB JSONB from TOAST table adds 200-500ms latency. JSON Patch approach (storing deltas not snapshots) can reduce size 100x but requires specialized library (Travels, Mutative). Developers assume JSON.stringify() → database → JSON.parse() is lossless, but it's not for complex objects.
 
 **How to avoid:**
-Implement optimistic locking: add `version` column to sessions/steps tables, increment on every update, fail transaction if version changed (another update occurred). Use Drizzle's `onConflictDoUpdate` with version checking. Debounce auto-save with "save in progress" flag to prevent overlapping saves. Disable step transition buttons during auto-save. Use database transactions with serializable isolation level for step completion (read conversation → generate summary → write summary + transition step must be atomic). Implement idempotency keys for API requests to prevent duplicate processing on network retries. Coordinate writes via request queue - only one write operation per session at a time. Update to Zustand v5.0.10+ to avoid persist middleware race conditions.
+Store minimal serializable state, reconstruct complex objects on load:
+
+```typescript
+// Bad: Store everything
+const saveCanvas = () => {
+  const state = canvas.toJSON(); // Includes EVERYTHING
+  saveToDatabase(state); // 500KB+
+};
+
+// Good: Store only essentials
+const saveCanvas = () => {
+  const state = {
+    postIts: postIts.map(p => ({
+      id: p.id,
+      x: p.x,
+      y: p.y,
+      text: p.text,
+      color: p.color
+      // Omit methods, derived properties
+    }))
+  };
+  saveToDatabase(state); // 5KB
+};
+```
+
+Use JSON Patch for undo/redo to store deltas not snapshots:
+
+```typescript
+import { Travels } from '@mutativejs/travels';
+
+// Stores ~100x smaller history
+const travels = new Travels(initialState);
+travels.go((draft) => {
+  draft.postIts[0].x += 10; // Records delta, not full state
+});
+```
+
+For Postgres JSONB storage, avoid deeply nested structures and large arrays in single document:
+
+```typescript
+// Anti-pattern: One massive JSONB document
+{
+  canvas_state: {
+    postIts: [...300 items...],
+    history: [...300 snapshots...]
+  }
+}
+
+// Better: Separate tables
+// workshops table: { id, current_canvas_state JSONB }
+// canvas_history table: { workshop_id, operation_index, delta JSONB }
+```
+
+Use Postgres GIN indexes for JSONB queries:
+
+```sql
+CREATE INDEX idx_canvas_state ON workshops USING GIN (canvas_state);
+```
+
+Implement incremental saves - save position changes debounced, not on every pixel:
+
+```typescript
+const debouncedSave = debounce((state) => {
+  saveToDatabase(state);
+}, 2000); // Save every 2 seconds max
+```
+
+Convert complex types before serialization:
+
+```typescript
+const serializePostIt = (postIt) => ({
+  ...postIt,
+  createdAt: postIt.createdAt.getTime(), // Date → timestamp
+  // Store IDs not instances
+});
+```
+
+Test serialization round-trip: `loadCanvas(saveCanvas(state))` should equal original state.
 
 **Warning signs:**
-- Step summaries occasionally missing recent conversation turns
-- Users reporting "my last message didn't save"
-- Database showing rapid succession of updates to same row (suggests race)
-- Inconsistent structured outputs (sometimes complete, sometimes partial)
-- Navigation transitions leaving incomplete data in previous step
+- Canvas loads with lost position/formatting data
+- Database JSONB columns exceeding 100KB
+- Slow canvas load times (>500ms) on revisit
+- Undo/redo consuming excessive memory
+- JSON.parse() errors on canvas load
+- "Cannot read property" errors after deserialization
+- Postgres query performance degrading as canvas complexity grows
 
 **Phase to address:**
-Phase 4 (Navigation & Back-Revise) - Both auto-save and step transition are introduced in this phase. Must implement locking strategy from the start. Race conditions are hard to reproduce in local dev (single user) but appear in production (concurrent users, network variability).
+Phase 2 (State Sync Architecture) for serialization strategy. Phase 4 (Persistence & Auto-Save) for database schema, JSONB optimization, and undo/redo implementation. Must design serialization format BEFORE implementing canvas features - changing format requires data migration.
 
 ---
 
-### Pitfall 6: Back-and-Revise Cascade Invalidation Failures
+### Pitfall 6: AI-Canvas Coordination Race Conditions
 
 **What goes wrong:**
-User completes all 10 steps, reaches final Build Pack. Reviews Step 5 (Persona) and realizes the persona is wrong - they're building for CFOs, not IT managers. Goes back to step 5, has conversation with AI to revise persona. Clicks "Update Persona and Continue" expecting downstream steps to adapt. Instead: Step 6 (Journey Map) still references "IT Manager persona", Step 7 (Reframed HMW) still uses old problem statement, Step 9 (Concept Development) suggests features for wrong user. The entire journey from step 5 onward is now inconsistent. User must manually re-visit and re-generate every downstream step, taking 20+ minutes to fix what should be an automatic cascade update.
+User asks AI "Add the Engineering VP stakeholder". AI streams response confirming "I've added Engineering VP to your stakeholder map". UI shows optimistic update - new post-it appears on canvas. But database save fails (network timeout). User doesn't notice. Continues working, rearranges stakeholders including the Engineering VP post-it. Navigates to Step 3. Canvas state without Engineering VP saves successfully. Returns to Step 2 later - Engineering VP is missing. Or worse: AI suggests stakeholder, starts streaming response, user immediately starts dragging post-it while AI is mid-stream. AI response completes, overwrites post-it position with original suggested position, user's drag is lost.
 
 **Why it happens:**
-Downstream steps store structured outputs that reference upstream outputs by value (copied data) not by reference (pointer to canonical source). When upstream changes, there's no dependency tracking to identify affected downstream steps. Context compression stored step 5 persona snapshot in step 6's context - updating step 5 doesn't retroactively update step 6's cached context. User expects system to "understand" dependencies (persona → journey map → HMW → concepts) but these are implicit domain knowledge, not explicit in database schema. Regenerating all downstream steps automatically could destroy user's manual edits in those steps (user refined the journey map by hand). Cache invalidation strategies from 2026 show cascading invalidation requires dependency trees that automatically invalidate related items.
+Optimistic UI updates (show change before confirming success) improve perceived performance but create consistency risks. AI streaming responses take 2-5 seconds. User can interact with optimistically-updated canvas during stream. If stream completes after user interaction, AI's final state overwrites user changes. Network failures between AI response and database save leave partial state. Vercel serverless functions have 10-60 second timeout - long AI responses can timeout mid-stream. Race condition: (1) AI generates post-it with id "temp-123", (2) Canvas renders temp-123, (3) User drags temp-123, (4) AI completes, assigns real DB id "pk-456", (5) Canvas update replaces temp-123 with pk-456, (6) User's drag event still references temp-123, update fails. No rollback strategy for failed optimistic updates means UI shows state that doesn't exist in database.
 
 **How to avoid:**
-Implement explicit dependency graph in database: steps table has `depends_on` JSON field listing upstream step IDs. When step is updated, mark all dependent steps as `needs_regeneration: true` with UI indicators ("Step 6 may be outdated based on your changes to Step 5. Regenerate?"). Provide "cascade regenerate" option but require user confirmation (don't auto-destroy their work). Use soft invalidation: show warning but let user proceed, then inject revision context ("The user revised the persona in Step 5 from IT Manager to CFO. Adjust your journey map accordingly.") into conversation when they visit downstream step. Store references not values: journey map stores `persona_id` not persona data, always fetch latest from canonical source. Implement versioning: keep history of persona changes, allow user to see "Step 6 was generated with Persona v1, current is v2".
+Implement proper optimistic update lifecycle with rollback:
+
+```typescript
+const addStakeholder = async (aiSuggestion) => {
+  // 1. Optimistic update
+  const tempId = `temp-${Date.now()}`;
+  const optimisticPostIt = {
+    id: tempId,
+    ...aiSuggestion,
+    _optimistic: true // Flag for UI
+  };
+
+  addPostIt(optimisticPostIt);
+
+  try {
+    // 2. Database save
+    const saved = await savePostIt(aiSuggestion);
+
+    // 3. Reconcile with real ID
+    replacePostIt(tempId, saved);
+
+  } catch (error) {
+    // 4. Rollback on failure
+    removePostIt(tempId);
+    showError("Failed to save stakeholder");
+  }
+};
+```
+
+Use React 19's `useOptimistic` hook for automatic rollback:
+
+```typescript
+const [postIts, addOptimisticPostIt] = useOptimistic(
+  postItsFromServer,
+  (state, newPostIt) => [...state, newPostIt]
+);
+```
+
+Lock canvas during AI streaming to prevent user edits:
+
+```typescript
+const [isAIResponding, setIsAIResponding] = useState(false);
+
+// Disable drag/edit during AI stream
+<PostIt
+  draggable={!isAIResponding && !postIt._optimistic}
+/>
+```
+
+Implement version-based conflict detection:
+
+```typescript
+interface PostIt {
+  id: string;
+  version: number;
+  lastModifiedBy: 'user' | 'ai';
+  modifiedAt: number;
+}
+
+const handleConflict = (userVersion, aiVersion) => {
+  if (userVersion.modifiedAt > aiVersion.modifiedAt) {
+    // User's change wins (Last Write Wins strategy)
+    return userVersion;
+  }
+  // Or: Show merge UI for user to resolve
+};
+```
+
+Use idempotency keys for AI requests to prevent duplicate processing:
+
+```typescript
+const idempotencyKey = `${workshopId}-${stepId}-${Date.now()}`;
+await fetch('/api/ai/suggest', {
+  headers: { 'Idempotency-Key': idempotencyKey }
+});
+```
+
+Save incrementally with conflict detection:
+
+```typescript
+const saveWithOptimisticLock = async (postIt) => {
+  const result = await db.update(postIts)
+    .set({
+      ...postIt,
+      version: postIt.version + 1
+    })
+    .where(
+      and(
+        eq(postIts.id, postIt.id),
+        eq(postIts.version, postIt.version) // Fail if version changed
+      )
+    );
+
+  if (result.rowCount === 0) {
+    throw new ConflictError('Post-it was modified by another process');
+  }
+};
+```
 
 **Warning signs:**
-- Users manually re-doing multiple steps after revising early steps
-- Support requests: "Why doesn't changing step X update step Y?"
-- Inconsistent Build Pack outputs (persona says CFO, user stories say IT manager)
-- Users abandoning revision workflows (high back-navigation but no re-completion)
-- Database showing updated upstream steps but stale downstream outputs
+- Canvas changes reverting after AI responses
+- "Failed to update" errors with no clear cause
+- Post-its appearing then disappearing
+- Duplicate post-its on canvas after refresh
+- Database state inconsistent with canvas display
+- Users reporting "AI erased my changes"
 
 **Phase to address:**
-Phase 4 (Navigation & Back-Revise) - The back-revise feature is introduced here. Dependency tracking and invalidation strategy must be designed upfront, not bolted on later. Retrofitting dependency system after data model is established requires migration of existing workshops.
+Phase 2 (State Sync Architecture) for optimistic update patterns and conflict detection. Phase 3 (AI Integration) for streaming coordination. Must implement BEFORE building AI suggestion features - retrofitting proper state management into existing optimistic UI is complex.
 
 ---
 
-### Pitfall 7: Streaming Interruption and Reconnection Failures
+### Pitfall 7: Touch Event and Gesture Conflicts on Mobile Canvas
 
 **What goes wrong:**
-User is in step 3 receiving AI response. Gemini is streaming a long response (persona description, 400 tokens). User's network hiccups for 2 seconds (mobile hotspot, coffee shop wifi). Streaming connection breaks. User sees partial message cut off mid-sentence. Client-side useChat doesn't automatically reconnect. User is left with incomplete AI response, must refresh page to continue. Refresh causes loss of unsaved conversation turns. Issue #11865 in Vercel AI SDK reports stream resumption only works on page reload, not when users switch tabs or background the app. Issue #10926 documents streaming permanently breaking when Chat instance is replaced dynamically (e.g., "New Chat" button without full page refresh).
+Canvas works perfectly with mouse on desktop. Test on iPad and interactions break. Single tap should select post-it but nothing happens. Two-finger pinch should zoom canvas but triggers browser page zoom. Dragging post-it triggers iOS back-navigation swipe gesture. Scroll canvas vertically but browser interprets as pull-to-refresh. Canvas pan interferes with split-screen chat scroll. User can't distinguish between "tap to select" vs "long press to show context menu" because both trigger at same time.
 
 **Why it happens:**
-Server-Sent Events (SSE) used by Vercel AI SDK streaming doesn't have automatic reconnection with resume capability - it can reconnect but starts a new stream, not resume mid-message. Vercel's serverless functions have timeout limits (10s Hobby, 60s Pro) - if stream exceeds timeout, connection terminates. Edge runtime has stricter constraints on streaming than Node.js runtime. Network instability is common but streaming is fragile. Buffering full response before sending would solve reliability but destroy real-time UX benefit of streaming. Next.js App Router requires specific runtime configuration (runtime = 'nodejs', dynamic = 'force-dynamic') or streaming routes timeout unexpectedly.
+Touch events are fundamentally different from mouse events. Mouse has hover state, single pointer, separate events for different actions. Touch has no hover, multi-touch (multiple simultaneous pointers), and same gesture (finger down + move) could mean drag, scroll, or pan depending on context. Browser default touch behaviors conflict with canvas interactions: double-tap = zoom, pinch = zoom/scale, swipe = navigate, long-press = context menu, pull-down = refresh. CSS `touch-action` property disables browser defaults but Safari mobile only supports `auto` and `manipulation` values, ignoring `none`, `pan-x`, etc. Pointer events (PointerEvent API) unify mouse/touch/pen but require explicit handling. Passive event listeners (default in modern browsers) can't preventDefault(), breaking gesture prevention.
+
+Touch events fire in sequence: touchstart → touchmove → touchend. Missing ANY step breaks gesture detection. User puts two fingers on canvas (pinch start), browser captures event for page zoom, canvas never receives touchmove, gesture tracking breaks. Canvas libraries (Konva, Fabric) assume non-passive listeners to preventDefault() but modern browsers force passive for performance, causing conflicts.
 
 **How to avoid:**
-Implement streaming with fallback: detect stream failure (connection close without proper end marker), automatically retry request, buffer incomplete response client-side and prepend to retry continuation. Use Node.js runtime not Edge for streaming routes to avoid stricter timeout constraints. Configure maxDuration in route config for longer-running streams. Add `runtime = 'nodejs'` and `dynamic = 'force-dynamic'` exports to streaming route handlers. Provide "Regenerate" button for incomplete responses. Persist messages on server during streaming, not just on completion - if stream breaks, user can reload and see partial message rather than nothing. Implement connection health monitoring with proactive reconnection before timeout. Return immediately and stream in background using ReadableStream's start() function - don't await async operations before returning Response.
+Use Pointer Events API instead of separate mouse/touch handlers:
+
+```typescript
+// Bad: Separate handlers
+<PostIt
+  onMouseDown={handleMouseDown}
+  onTouchStart={handleTouchStart}
+/>
+
+// Good: Unified handler
+<PostIt
+  onPointerDown={handlePointerDown} // Works for mouse, touch, pen
+/>
+```
+
+Disable browser touch gestures on canvas with CSS:
+
+```css
+.canvas-container {
+  touch-action: none; /* Disable all browser gestures */
+  /* Or specific disabling */
+  touch-action: pan-x pan-y; /* Allow scroll, disable pinch/zoom */
+}
+```
+
+For production, combine multiple prevention layers:
+
+```html
+<!-- Viewport: disable user zoom -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+```
+
+```css
+/* CSS: prevent gestures */
+.canvas-container {
+  touch-action: manipulation; /* Safari mobile compatible */
+  -webkit-user-select: none; /* Prevent text selection */
+  -webkit-touch-callout: none; /* Prevent iOS callout */
+}
+```
+
+```typescript
+// JS: preventDefault on specific gestures
+const handleTouchMove = (e: TouchEvent) => {
+  if (e.touches.length > 1) {
+    e.preventDefault(); // Prevent pinch
+  }
+};
+
+canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+```
+
+Implement custom gesture detection for canvas interactions:
+
+```typescript
+const detectGesture = (touches: TouchList) => {
+  if (touches.length === 1) {
+    return 'drag'; // Single finger = move post-it
+  } else if (touches.length === 2) {
+    return 'pinch'; // Two fingers = zoom canvas
+  }
+};
+```
+
+Use timeout-based long-press detection:
+
+```typescript
+let longPressTimer: NodeJS.Timeout;
+
+const handlePointerDown = (e: PointerEvent) => {
+  longPressTimer = setTimeout(() => {
+    showContextMenu(); // Long press detected
+  }, 500);
+};
+
+const handlePointerUp = () => {
+  clearTimeout(longPressTimer); // Cancel if released early
+};
+```
+
+Test on real devices - iOS Safari, Android Chrome, iPad - not just desktop emulation. Emulation doesn't accurately simulate touch timing, multi-touch coordination, or browser gesture conflicts.
 
 **Warning signs:**
-- User reports "AI response cut off mid-sentence"
-- Streaming endpoints showing high rate of incomplete responses (no proper end marker)
-- Error logs: connection timeout, SSE connection closed unexpectedly
-- Users refreshing page during AI responses (attempting to fix broken stream)
-- Analytics showing conversation abandonment during AI turn (not user turn)
+- Canvas interactions not working on mobile/tablet
+- Browser zoom/navigation triggered by canvas gestures
+- Inability to distinguish tap vs long-press
+- Drag starting when user trying to scroll
+- Multi-touch gestures breaking single-touch interactions
+- Different behavior in iOS Safari vs Chrome
 
 **Phase to address:**
-Phase 2 (Basic Conversation Flow) for initial streaming implementation with basic error handling. Phase 6 (Production Hardening) for reconnection logic, timeout configuration, and reliability improvements. Streaming is introduced early but reliability issues only surface under production network conditions.
-
----
-
-### Pitfall 8: Conversation-to-State Divergence
-
-**What goes wrong:**
-User has conversation in step 4 (Research Sense Making) identifying 5 pain points and 5 gains. Conversation flows naturally, AI confirms understanding: "Great, I've captured 5 pains and 5 gains." User continues to step 5. Clicks "View Pain Points" in sidebar - UI shows only 3 pain points. User is confused: "We just discussed 5, where are the other 2?" Database query shows structured_output JSON only has 3 entries. Conversation diverged from database state. User trusts conversation (AI said it captured 5) but database is source of truth. Step 5 persona generation uses database state (3 pains) not conversation (5 pains), resulting in shallow persona.
-
-**Why it happens:**
-Conversation is a projection of state, but extraction happens asynchronously or unreliably. Timing issue: AI responds in conversation before extraction completes, saying "captured" when database write hasn't occurred yet. Extraction failure: AI conversational turn succeeded, extraction request failed (rate limit, timeout, validation error), but user only sees successful conversation. Partial extraction: Gemini extracts 3 pain points confidently, leaves 2 ambiguous ones as "unclear" and omits them. Chat interface shows success (conversation completed) but data layer shows failure (incomplete extraction). This is the "conversation as projection not source of truth" principle failing in practice.
-
-**How to avoid:**
-Never let AI claim "captured" or "saved" in conversation - use non-committal language like "I understand you've identified 5 pain points. Let's continue." Make extraction explicit and user-confirmable: after conversation, show extracted structured data in UI ("Here's what I captured: [list of 5 pains]. Does this look right?") before transitioning to next step. Implement optimistic UI: show extraction in progress ("Saving your pain points...") with success/failure feedback. Use transactional step completion: conversation + extraction + database write must all succeed or entire step remains incomplete. Provide manual edit capability: if extraction is wrong, user can directly edit structured output in form UI. Show both views: conversation history tab + structured data tab so user can see both representations. Implement extraction verification: have AI count items in its own response and compare to schema validation count.
-
-**Warning signs:**
-- Users saying "AI said it captured X but I only see Y"
-- Discrepancy between conversation content and structured output counts
-- Step navigation blocked because structured output is incomplete
-- Users re-asking questions already answered (AI thought it captured data but didn't)
-- Support requests: "Where did my data go?"
-
-**Phase to address:**
-Phase 5 (Structured Outputs) - Extraction reliability is core to this phase. Must implement confirmation UI and transactional completion. Can't defer because user trust is destroyed if conversation promises data that database doesn't contain.
-
----
-
-### Pitfall 9: Zustand State Persistence Desync with React Server Components
-
-**What goes wrong:**
-User completes step 3, navigates to step 4. Zustand store updates `currentStep: 4` in client-side state with persist middleware writing to localStorage. User refreshes page or opens new tab. Next.js App Router renders page server-side. Server components read `currentStep` from database (still shows 3 because auto-save hasn't fired yet). Client hydrates with localStorage value (4). UI flashes: initially shows step 3 (server render), then jumps to step 4 (client hydration). User sees jarring flash. Worse: if user navigates during flash, they might navigate from wrong step. Zustand documentation explicitly warns: "Using Zustand for adding state in React Server Components can lead to unexpected bugs and privacy issues."
-
-**Why it happens:**
-Zustand is client-side state management but Next.js App Router uses server-side rendering. Server has no access to localStorage during SSR. Hydration mismatch occurs when server-rendered HTML differs from client-rendered HTML. Zustand persist middleware rehydrates asynchronously, causing temporary state mismatch. Concurrent rendering in React 19 can expose race conditions between server state and client state. State management anti-pattern: database is source of truth but Zustand cache becomes stale, leading to two sources of truth that diverge. React 19 uses useSyncExternalStore under the hood for state libs like Zustand, but this doesn't eliminate SSR hydration issues.
-
-**How to avoid:**
-Don't use Zustand for cross-server-client state that must be consistent. Use Zustand only for transient UI state (sidebar open/closed, current tab) not for workshop state (current step, conversation data). Use database as single source of truth: server components read from database, client components call server actions to update database, then client re-fetches. Implement optimistic updates: update Zustand immediately for responsive UI, send server action, rollback Zustand if server action fails. Use React 19's use() hook to suspend on server data fetching, ensuring client renders only after server data is ready. Suppress hydration warnings only after confirming they're harmless (use suppressHydrationWarning attribute carefully). If state MUST be cached client-side, use sessionStorage (tab-scoped) not localStorage (cross-tab shared).
-
-**Warning signs:**
-- Hydration mismatch errors in console
-- UI flashing between different values on page load
-- currentStep in URL doesn't match currentStep in UI
-- User actions operating on wrong step (clicked next from step 3, but UI thought they were on step 4)
-- Different behavior on initial load vs subsequent navigations
-
-**Phase to address:**
-Phase 3 (Step Navigation) when Zustand is introduced for state management. Must establish data flow pattern (database is source of truth, Zustand is cache) from day one. Fixing hydration issues after architecture is established requires refactoring all state read/write paths.
-
----
-
-### Pitfall 10: Gemini Temperature Inconsistency (Gemini 3 vs Earlier Models)
-
-**What goes wrong:**
-Developer builds structured output extraction on Gemini 2.5 Flash using temperature 0.1 for consistency (based on common LLM best practices: "lower temperature = more deterministic"). Extractions are reliable and deterministic. Google releases Gemini 3 with better reasoning capabilities. Developer upgrades to Gemini 3 expecting better results. Extractions start failing - Gemini 3 loops, gets stuck, or produces degraded outputs. Logs show Gemini 3 repeatedly generating similar but slightly different responses, never converging on final answer. Developer spends hours debugging schema, when the issue is temperature setting. Gemini 3 documentation states: "strongly recommends keeping temperature at default 1.0" because "changing temperature may lead to unexpected behavior such as looping or degraded performance."
-
-**Why it happens:**
-Gemini model families have different optimization profiles. Gemini 2.5 and earlier models benefited from tuning temperature to control creativity vs determinism - lower temperature (0.0-0.3) produced more consistent structured outputs. Gemini 3 has fundamentally different reasoning architecture optimized for default temperature 1.0. Changing temperature below 1.0 on Gemini 3 disrupts internal reasoning loops, causes the model to second-guess itself, and degrades performance particularly on complex reasoning tasks. Developer intuition says "lower temperature = more consistent" but this breaks Gemini 3's reasoning capabilities. High temperature (1.0) injects randomness in token selection, but Gemini 3's reasoning layer compensates for this - removing the randomness breaks the balance.
-
-**How to avoid:**
-Use model-specific temperature configurations: if model.startsWith('gemini-2'), use temperature 0.0-0.3 for structured outputs; if model.startsWith('gemini-3'), use temperature 1.0 (default). Read model-specific documentation before upgrading - "Gemini X has new features" doesn't mean "drop-in replacement." Test structured outputs extensively on new models before production deployment. Implement A/B testing: run Gemini 2.5 and Gemini 3 in parallel, compare extraction reliability and quality. Consider using Gemini 2.5 Flash for structured extraction even if Gemini 3 is used for conversation (split responsibilities by model strength). Document temperature configuration prominently in code comments to prevent future developers from "fixing" it incorrectly.
-
-**Warning signs:**
-- Structured output extraction succeeds on Gemini 2.5, fails on Gemini 3
-- Logs showing repeated similar responses (looping behavior)
-- Extraction requests taking much longer than expected (model not converging)
-- Zod validation errors increase after model upgrade
-- AI responses become generic or degraded after temperature adjustment
-
-**Phase to address:**
-Phase 5 (Structured Outputs) for initial implementation with Gemini 2.5. Phase 6 (Production Hardening) for model upgrade testing and temperature tuning per model. Document temperature configuration prominently in code comments to prevent future developers from "fixing" it incorrectly.
+Phase 1 (Canvas Foundation) for Pointer Events API and basic touch-action. Phase 3 (Mobile Optimization) for comprehensive gesture detection and cross-device testing. Touch support must be architectural - cannot bolt-on after building mouse-only canvas.
 
 ---
 
@@ -245,33 +589,33 @@ Shortcuts that seem reasonable but create long-term problems.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Skip database transactions for auto-save | Simpler code, no locking complexity | Race conditions under concurrent load, data corruption, lost updates | Never - race conditions are silent until production |
-| Store conversation as JSON blob instead of messages table | Faster to prototype, single read/write | Can't query conversation history, can't implement message-level features (edit/delete), can't analyze conversation patterns | MVP if you commit to migration before v1.0 |
-| Use full conversation history in every Gemini request (no compression) | Simpler context management, no summarization logic | Context degradation after step 4-5, high token costs, slow responses | Only for first 3 steps during prototyping |
-| Skip structured output validation | Faster development, no Zod schemas | Silent data corruption, downstream steps build on bad data, impossible to debug | Never - validation catches issues immediately vs hours later |
-| Use client-side state (Zustand) as source of truth | Responsive UI, no database round-trips | State loss on refresh, no sync across devices/tabs, hydration mismatches | Transient UI state only (sidebar open/close) |
-| Hard-code system prompts in route handlers | Easy to iterate, no database complexity | Prompt changes require deploy, can't A/B test, no prompt versioning | Early prototyping only, migrate to database before user testing |
-| Single Gemini API key (no rotation) | Simple configuration, no load balancing logic | Rate limit exhaustion affects all users simultaneously, no redundancy | Free tier development only |
-| Skip Neon health-check warming | Simpler architecture, no cron job | Cold starts on every first user after idle period, poor first impression | Development only, must fix before production launch |
-| Synchronous structured output extraction (block step transition until done) | Simple data flow, guaranteed consistency | Slow UX (3-5s wait), user sees loading spinner, feels broken | Acceptable if extraction is fast (<1s), otherwise use async with progress indicator |
-| Skip cascade invalidation (don't track dependencies) | Simpler data model, no graph traversal | Users must manually regenerate downstream steps after revisions, poor UX | MVP if advertised as "no back-editing" flow |
+| Using regular imports instead of dynamic imports for canvas library | Simpler code, no loading state needed | Breaks SSR, causes hydration errors, shipped to production | Never - always use dynamic imports with ssr: false |
+| Storing full canvas snapshots for undo/redo | Easy to implement (just save state) | 100x memory usage, slow DB queries, TOAST overhead | Only for prototype with <10 operations, migrate before launch |
+| Bidirectional AI ↔ Canvas state sync | Feels "reactive" and "magic" | Race conditions, infinite loops, lost updates | Never - unidirectional flow is mandatory |
+| Fixed pixel canvas sizing (1200x800px) | Works on your laptop | Breaks mobile, tablet, split-screen | Never - responsive scaling is foundational |
+| Mouse event handlers only (onClick, onMouseMove) | Works on desktop | Completely broken on touch devices | Only if explicitly desktop-only MVP, document clearly |
+| Saving canvas state on every interaction | Real-time persistence | DB hammering, rate limit exhaustion, race conditions | Never - use debounced saves (2-5s) |
+| Using large canvas library (Tldraw 600KB) for simple post-its | Feature-rich, professional UI | 3x bundle size, 2s slower FCP, mobile unusable | Only if you NEED 90% of features, otherwise overkill |
+| Prop-syncing canvas state to React component state | Seems like "React best practice" | Two sources of truth, sync bugs, stale data | Never - derive from single source (Zustand) |
+| Hardcoding canvas to desktop breakpoint | Faster development | Total rewrite for mobile support | Only if 100% certain desktop-only forever |
+| JSON.stringify() for canvas persistence | One line of code | Lost data for Dates/classes, no undo optimization | Only for throwaway prototype, never production |
 
 ## Integration Gotchas
 
-Common mistakes when connecting to external services in this specific stack.
+Common mistakes when integrating canvas with existing WorkshopPilot.ai system.
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| Vercel AI SDK + Gemini | Assuming structured outputs work identically to OpenAI | Gemini uses OpenAPI 3.0 schema subset not full JSON Schema. Use Vercel AI SDK's schema generation, don't hand-write schemas. Test extraction heavily. Set responseMimeType: "application/json". |
-| Neon Postgres + Vercel Edge | Using standard node-postgres driver in edge functions | Use @neondatabase/serverless driver. Configure connection timeout (?connect_timeout=10). Edge doesn't support TCP connections. |
-| Drizzle ORM + Neon | Using drizzle-orm/node-postgres import for serverless | Use drizzle-orm/neon-http for edge compatibility. Import from correct package path: drizzle-orm/neon-serverless for WebSocket. |
-| Clerk Auth + Next.js 16 | Missing clerkMiddleware in middleware.ts | Must export clerkMiddleware and configure public/protected routes. Middleware runs on all requests, improves edge auth performance. |
-| Clerk Auth + Custom Domain | Expecting auth to work on custom domain without configuration | Must configure custom domain in Clerk dashboard AND set CLERK_DOMAIN env var. Cookies are domain-bound. |
-| Gemini Context Caching + Streaming | Caching system prompt but expecting per-user customization | Cached content must be identical across requests. Put user-specific context AFTER cache boundary. Cache only stable system prompts + step definitions. |
-| Zustand Persist + Next.js SSR | Reading Zustand state in server components | Server components can't access localStorage. Only use Zustand in client components ('use client'). Suppress hydration warnings with suppressHydrationWarning. |
-| React 19 Concurrent Rendering + Vercel AI SDK | useChat causing multiple simultaneous requests | Vercel AI SDK 5+ decoupled from UI to support React 19. Use sendMessage() not handleSubmit(). Ensure single request inflight. |
-| Gemini Streaming + Next.js App Router | Streaming route timing out in production | Add runtime = 'nodejs' export (not edge). Add dynamic = 'force-dynamic'. Configure maxDuration. Edge runtime has stricter timeout. |
-| Drizzle Migrations + Vercel Build | Migrations failing in Vercel build pipeline with edge config | Run migrations in separate script before build, not during build. Use Node.js environment for migrations (drizzle-kit migrate), not edge. Edge can't run migrations. |
+| Integration Point | Common Mistake | Correct Approach |
+|-------------------|----------------|------------------|
+| Next.js App Router | Importing canvas library in Server Component | Mark component file with `'use client'`, use dynamic import with `ssr: false` |
+| React 19 Concurrent Rendering | Assuming synchronous state updates | Use `useOptimistic` for canvas updates during AI streaming |
+| Zustand State | Creating separate canvas state store | Integrate canvas state into existing workshop store, single source of truth |
+| Vercel Deployment | Shipping canvas library in main bundle | Code-split canvas routes, lazy load only for Steps 2 & 4 |
+| Neon Postgres JSONB | Storing massive canvas history in single JSONB column | Use separate canvas_history table with deltas, GIN indexes |
+| AI Streaming | Letting AI responses overwrite in-flight canvas changes | Lock canvas during AI stream or implement conflict resolution |
+| Mobile Responsive | Using CSS breakpoints only | Implement canvas coordinate translation + touch-action CSS |
+| Auto-Save | Saving on every canvas interaction | Debounce saves (2-5s), optimistic locking with version column |
+| Gemini Context | Sending full canvas pixel data to AI | Send structured JSON (post-it IDs, positions, text) not raw canvas |
+| Clerk Auth | Allowing unauthenticated canvas access | Verify auth in canvas API routes, not just client components |
 
 ## Performance Traps
 
@@ -279,15 +623,14 @@ Patterns that work at small scale but fail as usage grows.
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Unbounded conversation history | Step 1-3 feels fast, step 7-10 slows down significantly (5s+ responses) | Implement hierarchical context compression at step boundaries, keep verbatim history only for current step | After 50+ messages (~step 5 at 10 msgs/step) |
-| No database query optimization (N+1 queries) | Single user feels fine, 10 concurrent users causes 3-5s page loads | Use Drizzle's with queries for relations, index foreign keys, batch requests | 10+ concurrent users |
-| Synchronous structured output extraction blocking UI | Extraction takes 2-3s, acceptable during prototyping | Move extraction to background job, show progress indicator, allow navigation before completion | User testing (users perceive >1s delay as "slow") |
-| Storing all messages in single table without partitioning | Query performance fine for first 1K messages | Partition messages table by conversation_id, implement retention policy (archive >90 days) | 10K+ messages per conversation |
-| No rate limit margin monitoring | Free tier quota works fine with 1-2 test users | Monitor rate limit headers (x-ratelimit-remaining), throttle proactively at 20% margin, alert at 10% | First production traffic spike |
-| Cold start on every Neon connection | Single user has 3-8s delay, acceptable in dev | Implement health-check warming (cron every 4 mins), use connection pooling (PgBouncer) | First real user session (production) |
-| Full re-summarization on every step | Step 1-2 summarization fast (<1s), step 8-9 slow (5s+ to summarize all history) | Incremental summarization: only summarize new content since last summary, merge summaries hierarchically | After step 5 (summarizing 40+ messages) |
-| No Gemini context caching | Token costs acceptable with 1-2 test workshops | Cache stable system prompts + step definitions (90% cost reduction), only send dynamic context uncached | 10+ workshops (token costs scale linearly) |
-| Client-side conversation state only | Single tab works fine, user never loses work | Persist conversation to database on every message, enable cross-tab sync | User refreshes, opens multiple tabs, or device dies |
+| Storing entire canvas as single JSONB document | Works fine initially, then queries slow to 500ms+ | Separate canvas_state (current) from canvas_history (deltas), use GIN indexes | >50KB canvas state (~100 post-its with history) |
+| Re-rendering entire canvas on every Zustand update | Smooth with 5 post-its, janky with 50 | Use Zustand selectors to subscribe to specific post-its, memo canvas layers | >30 interactive elements |
+| Keeping full undo history in memory | Works during session, crashes on reload | Store undo deltas in database, paginate history (last 50 in memory) | >200 undo operations |
+| Sending all canvas data to AI on every message | Fast with 3 stakeholders, slow with 15 | Send only IDs + summary, fetch details server-side if needed | >10 canvas entities |
+| Naive JSON serialization for persistence | Works until Dates/classes appear | Convert complex types pre-serialization, reconstruct on load | First use of Date or class instance |
+| Loading canvas library on all pages | Doesn't notice with fast connection | Route-based code splitting, load only on canvas steps | Noticed on mobile 3G (3-8s delay) |
+| Auto-save on every pixel of drag | Fine with 1 concurrent user, DB meltdown with 10 | Debounce saves 2-5s, batch updates | >5 concurrent users with active dragging |
+| Synchronous AI → Canvas updates | Feels instant, until AI response has 8 suggestions | Use streaming with progressive updates, show loading states | AI response >2 seconds |
 
 ## Security Mistakes
 
@@ -295,46 +638,48 @@ Domain-specific security issues beyond general web security.
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Storing API keys in client-side state/localStorage | API key leakage via browser devtools, XSS attacks can steal keys | Store API keys only in server-side environment variables, never send to client |
-| No authentication on database queries | Users can access other users' workshops by changing URL parameters | Use Clerk auth middleware, pass user.id to all database queries, filter by user ownership |
-| Exposing raw conversation history without filtering | Users can see system prompts revealing AI instructions, competitive intelligence leakage | Filter messages by role when displaying history, only show user/assistant messages, hide system messages |
-| No rate limiting on API routes beyond Gemini | Malicious user can spam database writes, exhaust server resources | Implement per-user rate limiting (e.g., 60 requests/minute) using middleware, separate from Gemini limits |
-| User input directly interpolated into prompts | Prompt injection: user types "ignore previous instructions and...", hijacks AI | Sanitize user input, use separate user message role (Gemini treats user messages as data not instructions) |
-| No validation on structured output before persistence | Malicious/malformed JSON crashes app, SQL injection via JSON fields | Always validate with Zod before database write, use parameterized queries (Drizzle handles this) |
-| Workshop data accessible via public URLs | Sharing workshop link exposes all data without auth check | Require authentication on all workshop routes, check user.id matches workshop.userId in database |
-| Gemini API errors exposing internal details to client | Error messages reveal database schema, API structure, rate limit details | Catch Gemini errors on server, return generic "AI unavailable" to client, log detailed errors internally |
+| Storing canvas images/exports in public Vercel blob storage | Anyone with URL can view stakeholder maps (potential PII/confidential) | Use authenticated Vercel blob URLs with 1-hour expiry, or Neon Postgres bytea column |
+| Trusting client-sent canvas state without validation | User can inject arbitrary post-its (XSS via SVG, data exfiltration) | Validate ALL canvas data server-side with Zod schema before DB save |
+| Sharing canvas state between workshops via query params | Workshop A user can access Workshop B canvas by changing URL param | Verify workshop ownership in API routes, use Clerk userId check |
+| No rate limiting on canvas save endpoint | Attacker can spam saves, exhaust DB connections, DOS other users | Rate limit per userId (10 saves/minute), use Vercel KV for tracking |
+| Embedding user-generated text in canvas without sanitization | XSS via post-it text containing `<script>` tags | Sanitize text with DOMPurify before rendering on canvas |
+| Allowing unlimited canvas state size | User can upload 10MB canvas, exhaust JSONB storage quota | Limit canvas state to 500KB server-side, reject oversized payloads |
+| Exposing database IDs in canvas export JSON | Attacker can infer user count, workshop creation rate | Use UUIDs not sequential IDs, or omit IDs from exports |
+| No CORS restrictions on canvas API routes | Cross-site requests can trigger canvas saves | Set CORS headers to only allow same-origin or specific domains |
 
 ## UX Pitfalls
 
-Common user experience mistakes in this domain.
+Common user experience mistakes in canvas integration.
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| No upfront time estimate | User starts workshop expecting 10 mins, realizes it's 60 mins at step 6, abandons | Show "This workshop takes 45-60 minutes. Express mode available (20 mins, 5 steps)." before starting |
-| No save/resume capability | User must complete all 10 steps in one sitting, life interrupts, work lost | Auto-save every 30s, allow close/resume anytime, send email reminder for incomplete workshops |
-| Generic AI responses (no domain adaptation) | AI asks "Who are your stakeholders?" same way for B2B SaaS and physical product | Use domain-specific question libraries, detect industry from initial description, tailor prompts |
-| No progress indicators | User doesn't know if they're 30% done or 80% done, time feels endless | Show "Step 3 of 10 (30%)" prominently, estimated time remaining, celebrate milestones |
-| Can't edit previous steps | User realizes mistake in step 2 while on step 8, must restart entire workshop | Allow back navigation with clear "Editing step 2 may affect steps 3-8" warning, offer cascade update |
-| AI explanation too verbose | User asks simple question, gets 500-word essay, scrolling fatigue | Enforce concise responses: 1-2 sentences for confirmations, bullet points for lists, "More details?" option |
-| No visibility into extraction process | User completes step conversation, clicks next, blocked with no explanation | Show "Extracting structured data..." progress, display extracted data for confirmation before proceeding |
-| Streaming with no partial content | User stares at blank message box for 3s before text appears | Show typing indicator immediately, display partial content as it streams, don't wait for complete response |
-| No error recovery path | AI fails mid-step, user sees "An error occurred", must refresh and lose progress | Offer "Retry", "Start this step over", or "Skip this step" options, preserve conversation history |
-| Can't see "AI's notes" | User wonders "Did the AI understand my pain points?", no way to verify | Provide "View Extracted Data" sidebar showing JSON outputs, let user verify AI captured correctly |
+| No loading state when canvas initializing | Blank white screen 2-5s, user thinks it's broken | Show skeleton with post-it placeholders, "Loading canvas..." message |
+| AI adds post-it without visual feedback | User unsure if AI heard them, confusion | Animate post-it appearance, highlight for 2s, show "Added by AI" badge |
+| Canvas zoom resets on every re-render | User zooms to see detail, Zustand update resets zoom to default | Persist zoom/pan state in Zustand, restore on re-render |
+| No undo button when AI makes unwanted changes | User stuck with AI suggestions they don't want | Provide "Undo AI suggestion" button, clearly separated from manual undo |
+| Canvas interaction blocks chat input | User can't type message while dragging post-it | Ensure drag events don't preventDefault() on chat input focus |
+| Post-it text too small on mobile | Readable on desktop, 8px font on mobile is illegible | Use viewport-relative font sizes (clamp(12px, 2vw, 16px)) |
+| No indication canvas is locked during AI streaming | User tries to drag, nothing happens, frustration | Show "AI is thinking..." overlay on canvas, disable cursor changes to not-allowed |
+| Lost work when accidentally navigating away | User spent 20min arranging canvas, back button = lost work | Auto-save every 5s, show "Unsaved changes" warning on navigation |
+| Unclear which post-its are AI vs user-created | User can't distinguish sources, lacks trust | Color-code or badge post-its ("AI suggestion" vs "You added") |
+| No mobile tutorial for touch gestures | User doesn't know two-finger pinch zooms, one-finger pans | Show tooltip on first mobile visit: "Drag to move, pinch to zoom" |
 
 ## "Looks Done But Isn't" Checklist
 
 Things that appear complete but are missing critical pieces.
 
-- [ ] **Streaming chat working:** Often missing reconnection on network failure - verify stream interruption recovery, don't just test happy path
-- [ ] **Step navigation:** Often missing back-navigation with cascade invalidation - verify editing step 2 invalidates downstream steps, not just forward flow
-- [ ] **Auto-save implemented:** Often missing race condition prevention - verify concurrent auto-save + step completion doesn't corrupt data (test with rapid button clicking)
-- [ ] **Structured output extraction:** Often missing retry logic and partial extraction handling - verify extraction fails gracefully, doesn't block user forever
-- [ ] **Context compression:** Often missing memory refresh checkpoints - verify AI at step 8 still remembers key decisions from step 2 (test end-to-end conversation quality)
-- [ ] **Rate limit handling:** Often missing exponential backoff and UI feedback - verify 429 errors don't break app, show user-friendly message
-- [ ] **Database transactions:** Often missing optimistic locking for concurrent writes - verify two users editing same workshop doesn't cause lost updates
-- [ ] **Authentication:** Often missing ownership checks on data access - verify user A can't access user B's workshop by guessing URL parameters
-- [ ] **Error boundaries:** Often missing server action error handling - verify Gemini API failure doesn't crash entire page, shows recoverable error
-- [ ] **SSR hydration:** Often missing suppressHydrationWarning on client-only state - verify no console errors on page load, no UI flashing
+- [ ] **Canvas SSR Compatibility:** Often missing dynamic import with `ssr: false` — verify no "window is not defined" errors in Vercel server logs
+- [ ] **Touch Event Support:** Often missing onPointerDown handlers — verify interactions work on real iPad/mobile device, not just desktop
+- [ ] **Responsive Scaling:** Often missing coordinate translation — verify canvas usable at 375px mobile width, not just 1920px desktop
+- [ ] **State Persistence:** Often missing proper serialization — verify canvas reloads identically after save/refresh, including positions
+- [ ] **Optimistic Updates:** Often missing rollback logic — verify failed save reverts canvas to previous state with user feedback
+- [ ] **Bundle Size:** Often missing code splitting — verify canvas route <300KB initial JavaScript bundle via Next.js Bundle Analyzer
+- [ ] **Auto-Save:** Often missing debouncing — verify saves happen every 2-5s max, not every drag pixel
+- [ ] **Conflict Resolution:** Often missing version tracking — verify simultaneous AI + user updates don't clobber each other
+- [ ] **Mobile Gestures:** Often missing touch-action CSS — verify browser pinch-zoom doesn't interfere with canvas zoom
+- [ ] **Undo/Redo:** Often missing delta storage — verify undo history doesn't exceed 100KB in database
+- [ ] **AI Coordination:** Often missing streaming locks — verify user canvas edits during AI response don't get overwritten
+- [ ] **Error Recovery:** Often missing graceful degradation — verify canvas shows cached state if API fails, doesn't blank out
 
 ## Recovery Strategies
 
@@ -342,16 +687,16 @@ When pitfalls occur despite prevention, how to recover.
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Context degradation noticed in production | LOW | Deploy hierarchical compression hotfix, regenerate summaries for active workshops, add memory refresh checkpoints |
-| Gemini rate limit cascade failures | LOW | Add exponential backoff immediately (30 min deploy), purchase Tier 1 API access ($50, immediate upgrade), implement queuing (4 hour deploy) |
-| Neon cold start death spiral | LOW | Switch to @neondatabase/serverless driver (2 hour migration), add health-check cron (1 hour setup), improve loading UX (1 hour) |
-| Structured output extraction failing | MEDIUM | Add retry logic with schema repair (2 hour deploy), implement manual edit fallback UI (6 hour deploy), review and simplify schemas (4 hour refactor) |
-| Auto-save race conditions | MEDIUM | Add optimistic locking to database schema (migration required, 4 hours), implement request queue (6 hour refactor), add version column (migration + code update, 6 hours) |
-| Back-and-revise cascade invalidation missing | HIGH | Add dependency tracking to schema (migration, 4 hours), build dependency graph UI (12 hour feature), implement cascade update logic (8 hour feature). Total: 3 days |
-| Streaming interruption failures | MEDIUM | Add reconnection logic (4 hours), switch to Node.js runtime (2 hours), implement response buffering (4 hours), add "Regenerate" button (2 hours) |
-| Conversation-to-state divergence | MEDIUM | Add confirmation UI for extraction (6 hours), implement transactional step completion (4 hours), build manual edit capability (8 hours). Total: 2 days |
-| Zustand + RSC desync | HIGH | Refactor to database-as-source-of-truth (16 hours), remove Zustand persistence for workshop state (8 hours), add optimistic updates (8 hours). Total: 4 days - architectural change |
-| Gemini 3 temperature inconsistency | LOW | Add model-specific temperature config (1 hour), test extraction reliability (2 hours), update documentation (1 hour) |
+| SSR Hydration Errors | LOW | Wrap component in dynamic import with `ssr: false`, redeploy (30 min fix) |
+| Bidirectional State Races | HIGH | Refactor to unidirectional flow, add version tracking, test thoroughly (2-3 days) |
+| Bundle Size Explosion | MEDIUM | Add route-based code splitting, choose lighter library, remove unused features (1 day) |
+| Responsive Layout Collapse | HIGH | Implement coordinate translation, mobile-first CSS, retest all breakpoints (2-3 days) |
+| Serialization Data Loss | MEDIUM | Add pre-serialization converter, migrate existing DB data, validate round-trips (1-2 days) |
+| AI-Canvas Race Conditions | MEDIUM | Add optimistic locking, implement useOptimistic, add conflict UI (1-2 days) |
+| Touch Event Conflicts | MEDIUM | Switch to Pointer Events, add touch-action CSS, test on real devices (1 day) |
+| JSONB Performance Degradation | MEDIUM | Separate canvas_history table, add GIN indexes, migrate data (1-2 days) |
+| Lost Canvas Work | LOW | Implement auto-save, add navigation warnings, restore from DB (4-6 hours) |
+| Canvas Zoom Reset Bug | LOW | Persist zoom/pan in Zustand, restore on render, test edge cases (2-3 hours) |
 
 ## Pitfall-to-Phase Mapping
 
@@ -359,92 +704,64 @@ How roadmap phases should address these pitfalls.
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Context Degradation Syndrome | Phase 4 (Navigation) | Test end-to-end: complete all 10 steps, verify step 10 AI references step 1 decisions accurately |
-| Gemini Rate Limit Cascade Failures | Phase 4 (basic), Phase 6 (complete) | Trigger 429 manually (exceed quota), verify exponential backoff + UI feedback works |
-| Neon Cold Start Death Spiral | Phase 1 (driver), Phase 6 (warming) | Wait 10 minutes idle, load app, verify <2s load time with health check warming |
-| Structured Output Extraction Failures | Phase 5 (Structured Outputs) | Test ambiguous conversations, empty conversations, very long conversations, verify extraction fails gracefully |
-| Auto-Save Race Conditions | Phase 4 (Navigation) | Simulate: auto-save mid-completion, verify no data corruption (use concurrent request testing) |
-| Back-and-Revise Cascade Invalidation | Phase 4 (Navigation) | Edit step 5, verify downstream steps marked outdated, cascade update works correctly |
-| Streaming Interruption Failures | Phase 2 (basic), Phase 6 (reliability) | Simulate network failure mid-stream (browser devtools network throttling), verify reconnection |
-| Conversation-to-State Divergence | Phase 5 (Structured Outputs) | Verify conversation and database show same structured data, test extraction confirmation UI |
-| Zustand + RSC Desync | Phase 3 (Step Navigation) | Verify no hydration warnings in console, no UI flashing on page load, database = source of truth |
-| Gemini Temperature Inconsistency | Phase 5 (Structured Outputs) | Test extraction on Gemini 2.5 (temp 0.1) vs Gemini 3 (temp 1.0), verify both work correctly |
+| SSR/Hydration Mismatch | Phase 1: Canvas Foundation | No "window is not defined" errors in Vercel logs, clean hydration in React DevTools |
+| Bidirectional State Races | Phase 2: State Sync Architecture | Zustand state mutations only from actions, no prop-syncing, stress test with rapid interactions |
+| Bundle Size Explosion | Phase 1: Canvas Foundation + Phase 5: Performance | Next.js build shows canvas route <300KB, Lighthouse FCP <2s |
+| Mobile Layout Collapse | Phase 1: Canvas Foundation + Phase 3: Mobile Optimization | Canvas usable at 375px width, all interactions work on real iPad |
+| Serialization Failures | Phase 2: State Sync + Phase 4: Persistence | Round-trip test: `load(save(state)) === state`, no data loss after refresh |
+| AI-Canvas Race Conditions | Phase 2: State Sync + Phase 3: AI Integration | Concurrent AI response + user edit doesn't clobber either change |
+| Touch Event Conflicts | Phase 3: Mobile Optimization | Pinch-zoom controls canvas not browser, drag doesn't trigger back-navigation |
+| JSONB Performance | Phase 4: Persistence & Auto-Save | Canvas load time <200ms for 50 post-its, database queries use GIN indexes |
+| Lost Work | Phase 4: Persistence & Auto-Save | Auto-save every 5s, navigation shows "Unsaved changes" warning |
+| Context Size | Phase 3: AI Integration | Canvas state sent to AI <10KB, uses structured summary not raw pixels |
 
 ## Sources
 
-### Critical Pitfall Research (HIGH confidence)
+**SSR/Hydration:**
+- [Tldraw Next.js SSR Issues - GitHub Issue #6567](https://github.com/tldraw/tldraw/issues/6567)
+- [React-Konva SSR Documentation](https://www.npmjs.com/package/react-konva)
+- [Next.js Hydration Errors in 2026 - Medium](https://medium.com/@blogs-world/next-js-hydration-errors-in-2026-the-real-causes-fixes-and-prevention-checklist-4a8304d53702)
+- [Next.js Server and Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components)
 
-**Context Degradation:**
-- [LLM Context Window Degradation Research](https://arxiv.org/pdf/2505.06120) - Academic research on multi-turn conversation quality degradation
-- [Context Rot Explained](https://redis.io/blog/context-rot/) - Performance degradation as input length increases
-- [Context Length Alone Hurts Performance](https://arxiv.org/html/2510.05381v1) - 13.9%-85% degradation research
-- [Context Window Overflow 2026](https://redis.io/blog/context-window-overflow/) - Effective capacity 60-70% of advertised
-- [Context Engineering: 2026 Frontier](https://medium.com/@mfardeen9520/context-engineering-the-new-frontier-of-production-ai-in-2026-efa789027b2a) - Compression patterns
-- [Context Window Management Strategies](https://www.getmaxim.ai/articles/context-window-management-strategies-for-long-context-ai-agents-and-chatbots/) - Hierarchical summarization
-- [Compressing Context](https://factory.ai/news/compressing-context) - Rolling summaries pattern
+**State Synchronization:**
+- [Don't Sync State. Derive It! - Kent C. Dodds](https://kentcdodds.com/blog/dont-sync-state-derive-it)
+- [React State Management 2025 - Medium](https://medium.com/@QuarkAndCode/state-management-2025-react-server-state-url-state-dapr-agent-sync-d8a1f6c59288)
+- [Synchronizing with Effects - React Docs](https://react.dev/learn/synchronizing-with-effects)
+- [Zustand GitHub](https://github.com/pmndrs/zustand)
 
-**Gemini Rate Limits:**
-- [Gemini API Rate Limits Documentation](https://ai.google.dev/gemini-api/docs/rate-limits) - Official multi-dimensional limits
-- [Gemini API Rate Limits Guide 2026](https://www.aifreeapi.com/en/posts/gemini-api-rate-limit-explained) - RPM/TPM/RPD/IPM details
-- [Gemini Rate Limits Per Tier](https://www.aifreeapi.com/en/posts/gemini-api-rate-limits-per-tier) - Free vs Tier 1 comparison
-- [Google Gemini Context Window](https://www.datastudios.org/post/google-gemini-context-window-token-limits-model-comparison-and-workflow-strategies-for-late-2025) - 1M token limits
+**Bundle Size:**
+- [Next.js Package Bundling Guide](https://nextjs.org/docs/app/guides/package-bundling)
+- [Next.js Bundle Size Discussions](https://github.com/vercel/next.js/discussions/73956)
+- [Vercel Agent Skills Announcement](https://www.marktechpost.com/2026/01/18/vercel-releases-agent-skills-a-package-manager-for-ai-coding-agents-with-10-years-of-react-and-next-js-optimisation-rules/)
 
-**Neon Cold Starts:**
-- [Neon Serverless Driver Documentation](https://neon.com/docs/serverless/serverless-driver) - Edge optimization
-- [Neon Connection Pooling](https://neon.com/docs/connect/connection-pooling) - PgBouncer setup, 10K connection support
-- [Neon Postgres Deep Dive 2025](https://dev.to/dataformathub/neon-postgres-deep-dive-why-the-2025-updates-change-serverless-sql-5o0) - Cold start details
-- [Node.js + Neon Serverless](https://medium.com/@kaushalsinh73/node-js-neon-serverless-postgres-millisecond-connections-at-scale-ecc2e5e9848a) - Millisecond connections
+**Responsive Design:**
+- [Responsive Design Breakpoints 2025 - BrowserStack](https://www.browserstack.com/guide/responsive-design-breakpoints)
+- [Responsive Web Design in 2026 - Keel Info](https://www.keelis.com/blog/responsive-web-design-in-2026:-trends-and-best-practices)
 
-**Structured Outputs:**
-- [Vercel AI SDK Google Generative AI](https://ai-sdk.dev/providers/ai-sdk-providers/google-generative-ai) - Gemini structured output support
-- [Vercel AI SDK Issue #6494](https://github.com/vercel/ai/issues/6494) - JSON schema support for Gemini 2.5
-- [Vercel AI SDK Issue #11396](https://github.com/vercel/ai/issues/11396) - Gemini 3 structured output bugs
-- [Gemini Structured Output Guide](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/multimodal/control-generated-output) - Official Google documentation
-- [AI SDK Generating Structured Data](https://ai-sdk.dev/docs/ai-sdk-core/generating-structured-data) - Zod schema patterns
+**Canvas Persistence:**
+- [Konva Save and Load Best Practices](https://konvajs.org/docs/data_and_serialization/Best_Practices.html)
+- [Konva React Undo/Redo](https://konvajs.org/docs/react/Undo-Redo.html)
+- [Travels: JSON Patch Undo/Redo](https://github.com/mutativejs/travels)
+- [PostgreSQL JSONB Performance](https://www.architecture-weekly.com/p/postgresql-jsonb-powerful-storage)
+- [Postgres JSONB TOAST Performance - pganalyze](https://pganalyze.com/blog/5mins-postgres-jsonb-toast)
 
-**Auto-Save Race Conditions:**
-- [Database Race Conditions Catalogue](https://www.ketanbhatt.com/p/db-concurrency-defects) - Lost updates, dirty writes
-- [Transactional Locking to Prevent Race Conditions](https://sqlfordevs.com/transaction-locking-prevent-race-condition) - Pessimistic locking patterns
-- [Off to the Races: 3 Ways to Avoid Race Conditions](https://www.aha.io/engineering/articles/off-to-the-races-3-ways-to-avoid-race-conditions) - Optimistic locking strategies
-- [Database Race Conditions Blog](https://blog.doyensec.com/2024/07/11/database-race-conditions.html) - Concurrency defects
+**Optimistic UI:**
+- [Understanding React useOptimistic - LogRocket](https://blog.logrocket.com/understanding-optimistic-ui-react-useoptimistic-hook/)
+- [Optimistic UI Updates and Conflict Resolution - Borstch](https://borstch.com/snippet/optimistic-ui-updates-and-conflict-resolution)
+- [TanStack Query Optimistic Updates](https://tanstack.com/query/v4/docs/react/guides/optimistic-updates)
+- [React 19 useOptimistic - Codefinity](https://codefinity.com/blog/React-19-useOptimistic)
 
-**Streaming Interruptions:**
-- [Vercel AI SDK Issue #11865](https://github.com/vercel/ai/issues/11865) - Stream resumption doesn't work when users switch tabs
-- [Vercel AI SDK Issue #10926](https://github.com/vercel/ai/issues/10926) - Streaming breaks when Chat instance replaced
-- [Fixing Slow SSE Streaming in Next.js](https://medium.com/@oyetoketoby80/fixing-slow-sse-server-sent-events-streaming-in-next-js-and-vercel-99f42fbdb996) - January 2026 streaming issues
-- [How to Solve Next.js Timeouts](https://www.inngest.com/blog/how-to-solve-nextjs-timeouts) - Runtime configuration
+**Touch Events:**
+- [Touch Events - MDN](https://developer.mozilla.org/en-US/docs/Web/API/Touch_events)
+- [Pinch Zoom Gestures - MDN](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events/Pinch_zoom_gestures)
+- [touch-action CSS - MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action)
+- [Konva Multi-touch Scale](https://konvajs.org/docs/sandbox/Multi-touch_Scale_Stage.html)
 
-**State Sync Issues:**
-- [LLMs Get Lost in Multi-Turn Conversation](https://arxiv.org/pdf/2505.06120) - Conversation divergence research
-- [ConflictSync: State Synchronization](https://arxiv.org/html/2505.01144) - Distributed state sync patterns
-- [Top Challenges in Data Sync](https://www.leadsforge.ai/blog/top-challenges-in-data-sync-and-how-to-solve-them) - Concurrent update conflicts
-
-**Zustand + React Server Components:**
-- [Zustand Discussion #2200](https://github.com/pmndrs/zustand/discussions/2200) - Using Zustand in RSC: misguided misinformation
-- [React State Management 2025: Context vs Zustand](https://dev.to/cristiansifuentes/react-state-management-in-2025-context-api-vs-zustand-385m) - RSC compatibility
-- [State Management Trends 2025](https://makersden.io/blog/react-state-management-in-2025) - useSyncExternalStore under the hood
-
-**Gemini Temperature:**
-- [Gemini 3 Developer Guide](https://ai.google.dev/gemini-api/docs/gemini-3) - Temperature recommendations (1.0 default)
-- [Gemini Parameter Adjustment](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/adjust-parameter-values) - Temperature effects
-- [Structured Outputs with Instructor](https://python.useinstructor.com/integrations/google/) - Temperature 0.1 for consistency
-
-**Cascade Invalidation:**
-- [Cache Invalidation Strategies 2026](https://oneuptime.com/blog/post/2026-01-30-cache-invalidation-strategies/view) - Cascading invalidation
-- [Event-Driven Sagas](https://medium.com/@alxkm/event-driven-sagas-architectural-patterns-for-reliable-workflow-management-fb5739359b93) - Workflow compensation
-
-### Integration Gotchas (MEDIUM-HIGH confidence)
-
-**AI Conversation Quality:**
-- [Evaluating Conversational AI](https://hamming.ai/blog/conversational-accuracy) - Beyond accuracy metrics
-- [Top Conversational AI Challenges](https://research.aimultiple.com/conversational-ai-challenges/) - Escalation timing
-- [Why Chatbots Fail 2026](https://salespeak.ai/blog/why-chatbots-fail-2026-alternatives) - Failure modes
-- [Evaluating Multi-Step Conversational AI](https://medium.com/unmind-tech/evaluating-multi-step-conversational-ai-is-hard-029623f64263) - Quality metrics
-
-**Next.js + Vercel:**
-- [Streaming AI Responses with Vercel AI SDK](https://www.9.agency/blog/streaming-ai-responses-vercel-ai-sdk) - Real-time chat UIs
-- [Real-time AI in Next.js](https://blog.logrocket.com/nextjs-vercel-ai-sdk-streaming/) - Streaming implementation
+**Vercel Deployment:**
+- [Vercel Function Timeouts](https://vercel.com/kb/guide/what-can-i-do-about-vercel-serverless-functions-timing-out)
+- [Vercel Functions Limits](https://vercel.com/docs/functions/limitations)
 
 ---
-*Pitfalls research for: WorkshopPilot.ai v1.0 AI facilitation features*
-*Researched: 2026-02-08*
+*Pitfalls research for: Canvas/Post-It Integration for WorkshopPilot.ai*
+*Researched: 2026-02-10*
+*Confidence: HIGH - Based on Next.js 16.1.1, React 19, official documentation, and 2026 community best practices*

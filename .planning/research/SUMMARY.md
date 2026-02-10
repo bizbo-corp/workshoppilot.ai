@@ -1,281 +1,419 @@
 # Project Research Summary
 
-**Project:** WorkshopPilot.ai v1.0 AI Facilitation Features
-**Domain:** Multi-step AI-guided conversational platform for design thinking workshops
-**Researched:** 2026-02-08
+**Project:** WorkshopPilot.ai v1.1 — Canvas & Post-It Features
+**Domain:** Interactive canvas integration for design thinking facilitation (Steps 2 & 4)
+**Researched:** 2026-02-10
 **Confidence:** HIGH
 
 ## Executive Summary
 
-WorkshopPilot v1.0 adds AI facilitation capabilities to the existing v0.5 shell (Next.js 16.1.1 App Router, Neon Postgres, Drizzle ORM, Gemini 2.0 Flash via Vercel AI SDK 6.0.77, Clerk auth). Research reveals this requires a **dual-layer context architecture** where structured JSON artifacts and conversation summaries form the source of truth, with conversations serving as a projection of state. The critical finding: standard chat patterns break down after step 4-5 due to context degradation syndrome—attention drops from 100% on early messages to 50% at message 40 even within Gemini's 1M token window.
+WorkshopPilot v1.1 adds split-screen canvas functionality to Steps 2 (Stakeholder Mapping) and 4 (Research Sense Making), enabling users to interact with both AI chat and visual post-it canvas simultaneously. Research confirms this is achievable WITHOUT heavy canvas libraries — the recommended approach uses div-based post-its with @dnd-kit for drag-and-drop (10KB total), avoiding Tldraw (600KB) or ReactFlow (200KB) bloat. The canvas is NOT a separate feature but a **projection of AI-controlled structured outputs**: AI suggests → user confirms → canvas updates; canvas changes → AI reads silently via context.
 
-The recommended approach treats the backend as an **orchestration layer** managing a state machine (10 steps × 6 phases each), not a thin API. Key technologies needed: Zustand (state management with cascading updates), use-debounce (auto-save without database spam), and AI SDK 6's new `streamText` with `output` property for structured outputs. Fortunately, NO major new dependencies required—v1.0 uses the existing stack differently.
+The key architectural insight: maintain unidirectional data flow through Zustand as single source of truth, avoiding bidirectional state sync race conditions. Canvas state persists in existing stepArtifacts JSONB column (no schema migration needed), loaded with dynamic imports to prevent SSR hydration errors. Mobile responsiveness must be built-in from day one — touch events, coordinate scaling, and viewport adaptation cannot be retrofitted after desktop-only implementation.
 
-The biggest risks are: (1) **context degradation** requiring hierarchical compression from day one (architectural, can't retrofit), (2) **Gemini rate limits** with multi-dimensional tracking (RPM/TPM/RPD/IPM) that can cascade to complete failures, (3) **Neon cold starts** killing first impressions unless using correct serverless driver and health-check warming, and (4) **auto-save race conditions** corrupting data under concurrent load. All are preventable with proper architecture established in early phases.
+Critical risks center on SSR compatibility (canvas libraries crash Next.js server rendering), state synchronization complexity (AI and canvas competing for updates), and bundle size explosion (Tldraw adds 600KB). These are preventable with proper architecture: dynamic imports with `ssr: false`, unidirectional Zustand flow, and lightweight custom canvas components instead of feature-rich libraries.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**No major new dependencies needed—v1.0 uses existing stack differently.** The base stack (Next.js 16.1.1 + React 19 + Tailwind 4 + shadcn/ui + Clerk + Neon + Drizzle + Gemini 2.0 Flash via AI SDK 6.0.77) was validated for v0.5 and remains unchanged. Only two new packages required:
+Research confirms **NO major canvas library needed** for WorkshopPilot's use case. Post-its are simple colored rectangles (div + CSS), not complex graphics requiring Canvas 2D API or infinite whiteboards. The only NEW dependency is @dnd-kit (10KB) for drag-and-drop interactions.
 
-**Core technologies (existing, new usage):**
-- **Vercel AI SDK 6.0.77**: Already installed; NEW usage is `streamText` with `output` property for structured outputs per step (replaces deprecated `generateObject`)
-- **Zod 4.3.6**: Already installed; NEW usage is defining artifact schemas per step (HMW statement, persona, journey map)
-- **Drizzle ORM 0.45.1**: Already installed; NEW tables needed for `step_artifacts` and `step_summaries`
-- **Neon Postgres**: Already installed; NEW data is structured artifacts + conversation summaries
-- **date-fns 4.1.0**: Already installed; NEW usage for "last saved at" timestamps
+**Core technologies (UNCHANGED from v1.0):**
+- Next.js 16.1.1 — Server Actions for post-it CRUD, React 19 support
+- React 19.2 — Components for post-its, canvas container
+- Tailwind CSS 4 — Post-it colors via Tailwind classes (bg-yellow-200, etc.)
+- Zustand 5.0.3 — Canvas state management (extends existing pattern from v1.0)
+- react-resizable-panels 4.6.2 — Split-screen layout (ALREADY INSTALLED)
+- Drizzle ORM + Neon Postgres — Persist canvas items in stepArtifacts JSONB column
 
-**New packages for v1.0:**
-- **Zustand 5.0.3** (1.5KB): Global state for step artifacts in memory, computed/derived state for cascading context updates when user revises earlier steps. Selective subscriptions prevent unnecessary re-renders across 10 steps
-- **use-debounce 10.1.0**: Debounce user input before auto-save, prevents database spam, has `maxWait` option ensuring saves happen even during continuous typing
+**NEW for v1.1:**
+- **@dnd-kit/core + @dnd-kit/sortable** (10KB minified) — Drag-and-drop, grouping/clustering, collision detection, auto-scroll. Modern Pointer Events API (works on touch + mouse). Lightweight alternative to react-dnd (20KB), react-beautiful-dnd (deprecated), or custom implementation (200+ lines).
 
 **What NOT to install:**
-- zustand-computed, derive-zustand (over-engineering for linear 10-step flow)
-- react-query, swr (Next.js Server Actions already handle mutations)
-- lodash.debounce (use-debounce is React-specific with hooks API)
-- LangChain (adds abstraction overhead for WorkshopPilot's specific needs)
-- Vector databases (context files with summaries + JSON are sufficient)
+- Tldraw 4.3.1 — 600KB with deps, infinite canvas + drawing tools we don't need
+- ReactFlow 11.11.4 — 200KB, designed for workflow diagrams with connections (we cluster, not connect)
+- Konva/react-konva 19.2.0 — 335KB, Canvas 2D API for complex graphics (post-its are divs)
+- react-colorful — 2.8KB, color picker UI (6 preset colors are sufficient, no picker needed)
+
+**Rationale for div-based approach:** Post-its are UI elements (text + color), not graphics. Divs provide native accessibility (focus, screen readers), text editing (contenteditable), and styling (Tailwind). Canvas 2D API is overkill for <50 post-its — better for 1000+ animated elements. Bundle impact: 10KB vs 600KB for Tldraw.
 
 ### Expected Features
 
-**Must have (table stakes)—users expect these:**
-- **Step-aware AI prompting**: Each step has dedicated system prompt with context injection from prior steps (essential for quality outputs)
-- **Context memory across steps**: Dual-layer architecture with structured JSON artifacts + conversation summaries enables forward context flow
-- **Structured outputs per step**: JSON schemas with Markdown rendering provide tangible deliverables (HMW statement, persona, journey map, etc.)
-- **Auto-save**: Periodic saves during conversation + on step completion prevent 60% mid-workshop drop-off (critical for retention)
-- **Back-and-revise navigation**: Allow revisiting prior steps with cascade context updates to subsequent steps
-- **Step completion validation**: AI checks output quality before allowing progression to ensure quality
+Research identifies clear feature categories from Miro, FigJam, and MURAL patterns:
 
-**Should have (competitive advantages)—differentiators:**
-- **Orient → Gather → Synthesize → Refine → Validate → Complete arc**: Structured 6-phase conversational pattern per step ensures quality outputs
-- **Synthetic user interviews (Step 3)**: AI simulates persona responses based on stakeholder map, removes biggest barrier to user research for non-experts
-- **Affinity mapping automation (Step 4)**: AI auto-clusters research quotes into themes, extracts 5 pains/5 gains (replaces 2-hour manual clustering)
-- **Journey map auto-generation (Step 6)**: Full journey board (4-8 stages × 5 layers) with "the dip" identified in seconds (requires strong context understanding)
-- **HMW auto-suggestions (Step 7)**: Dropdown with 5 AI-generated goal options per field, validates alignment with Challenge + Journey Dip
-- **Text-based mind mapping (Step 8)**: Hierarchical ideation structure without visual complexity, "I'm stuck" wildcard prompts
-- **Conversational UI as primary interface**: AI leads, user responds—not "chatbot assistant" pattern. Chat is primary, forms/canvases are secondary outputs
+**Must have (table stakes) — launch blockers:**
+- **Post-it CRUD** — Create (click or "s" key), edit text (double-click inline), delete (Backspace), color-code (5 colors)
+- **Drag-and-drop positioning** — Click-drag to move, visual feedback during drag
+- **Multi-select** — Shift+click or drag-select box for bulk operations (move, color, delete)
+- **Group/cluster post-its** — Proximity-based visual grouping for affinity mapping (Step 4)
+- **Pan & zoom** — Space+drag or two-finger trackpad for navigation
+- **Auto-save canvas state** — Debounced 2s saves, persist positions/text/colors to database
+- **AI → Canvas sync** — "Add to canvas" button in chat triggers post-it creation
+- **Canvas → AI sync** — AI reads canvas state silently (post-it positions, groups) and references in conversation
+- **Step-specific templates** — Step 2: 2×2 quadrant grid (Power × Interest), Step 4: freeform canvas
+- **Undo/redo (basic)** — Ctrl+Z/Ctrl+Shift+Z for create/delete/move/color
 
-**Defer (v2+)—not essential for launch:**
-- Visual canvas tools (Tldraw/ReactFlow integration adds complexity)
-- Real-time collaboration (websockets, state sync, conflict resolution—scope explosion)
-- Voice input (transcription overhead; text validates flow first)
-- Multi-language support (translation, cultural adaptation, testing overhead)
+**Should have (competitive advantage) — defer to v1.2:**
+- **AI-named clusters** — After user groups 3+ post-its, AI suggests cluster theme name
+- **Bulk mode creation** — Paste stakeholder list → each line becomes post-it
+- **Alignment guides** — Smart guides show vertical/horizontal alignment during drag
+- **Snap-to-grid toggle** — Optional magnetic snap (Step 2 quadrants)
+- **Minimap** — Viewport overview when zoomed in (>50 post-its)
+- **Export canvas as PNG** — Share snapshot externally
+
+**Anti-features (defer indefinitely) — scope creep risks:**
+- Real-time collaboration — CRDT conflict resolution, cursor presence, websocket complexity (defer to MMP v2.0)
+- Freeform drawing/sketching — Pen tool, stroke rendering, eraser (no design thinking value)
+- Infinite canvas — Performance degradation >200 post-its (bounded 4000×3000px is sufficient)
+- Post-it rich text formatting — Bold/bullets/links add UI complexity without value (plain text only)
+- Custom shapes/sizes — Cognitive overhead, spatial layout challenges (fixed-size rectangles only)
+- Nested groups — UI complexity, depth management issues (flat clustering only)
 
 ### Architecture Approach
 
-AI-guided multi-step platforms require **orchestration architecture** where backend acts as state machine managing context, tools, and permissions rather than thin API layer. The critical insight: **conversation is a projection of state, not the source of truth**—this prevents runaway costs and enables resumability.
+Canvas integrates into existing Next.js App Router architecture via **conditional rendering in StepContainer**. The right panel switches between OutputPanel (Steps 1,3,5-10) and CanvasPanel (Steps 2,4) based on step metadata. Canvas state lives in dedicated Zustand store (canvasStore), parallel to existing workshopStore/chatStore pattern.
 
 **Major components:**
-1. **Step Engine (State Machine)**: Determines current step and phase, loads step-specific prompt template, enforces sequential progression rules, manages completion criteria
-2. **Context Manager (Memory Layer)**: Assembles conversation context within token budget, implements hierarchical summarization (short-term: current step verbatim, long-term: prior step summaries + JSON outputs, persistent: all structured outputs in DB), applies Gemini context caching
-3. **Conversation Orchestrator**: Routes messages to Gemini API, streams responses to frontend, triggers structured output extraction, persists conversation turns to database
-4. **Structured Output Extractor (Schema Validator)**: Defines Zod schemas per step, extracts JSON from conversation using Gemini's schema-constrained generation, validates against schema, persists as step outputs
-5. **Data Layer (Neon Postgres)**: Persists all application state (workshops, sessions, steps, conversations, messages, outputs), enables resumability
+1. **canvasStore (Zustand)** — Single source of truth for post-it items, positions, groups. Actions: addItem, updateItem, removeItem, syncToServer.
+2. **BaseCanvas** — Shared infrastructure for drag-and-drop, item rendering, state sync. Wraps step-specific canvases.
+3. **StakeholderCanvas (Step 2)** — Bullseye ring layout (SVG circles), ring detection on drop, metadata: { ring: 'inner' | 'middle' | 'outer' }.
+4. **ResearchThemeCanvas (Step 4)** — Empathy map quadrants (CSS Grid), quadrant detection on drop, metadata: { quadrant: 'said' | 'thought' | 'felt' | 'experienced' }.
+5. **CanvasPanel** — Wrapper component that conditionally renders step-specific canvas, connects to canvasStore, handles auto-save.
+6. **API route: /api/canvas/sync** — Persists canvas items to stepArtifacts.artifact.canvasItems JSONB column, authentication + ownership verification.
 
-**Key patterns to follow:**
-- **Orchestration over APIs**: Backend is intelligent orchestrator managing state, not thin API layer
-- **Conversation as projection**: Treat conversation as view of underlying state; store structured outputs (JSON) separately from raw messages
-- **Hierarchical context compression**: Keep recent 10-20 messages verbatim (short-term), compress older into summaries (long-term), store all step outputs as JSON (persistent)
-- **Schema-driven structured outputs**: Define Zod schema per step, use Gemini's `responseSchema` parameter for constrained generation
-- **Context caching for cost optimization**: Use Gemini's context caching for stable system prompts (7K tokens), reduces input token costs by 90%
-- **Server-side streaming with persistence**: Stream responses real-time while buffering for database persistence
+**Key patterns:**
+- **Unidirectional data flow:** AI updates → Zustand → Canvas reads. Canvas updates → Zustand → AI reads on next request (NOT reactively).
+- **Canvas as projection:** Canvas state stored IN stepArtifacts.artifact.canvasItems as part of structured output, not separate table. Canvas is visualization of artifacts, not independent state.
+- **Debounced auto-save:** 2s debounce, 10s maxWait using existing use-debounce pattern from v1.0 chat auto-save.
+- **Dynamic imports with ssr: false:** All canvas components use Next.js dynamic imports to prevent SSR hydration errors (canvas libraries require browser APIs).
+- **Responsive coordinate translation:** Canvas coordinates scale based on viewport width (baseWidth: 1200px → currentWidth). Mobile stacks chat above canvas.
+
+**Database integration:**
+- **No schema migration needed** — Canvas items stored in existing stepArtifacts.artifact.canvasItems array (JSONB column).
+- **AI context injection** — assembleStepContext() function includes formatted canvas state (grouped by ring/quadrant) in system prompt for Steps 2 and 4.
 
 ### Critical Pitfalls
 
-1. **Context Degradation Syndrome in 10-Step Workshops**: AI quality degrades significantly after step 4-5 as conversation history grows. Attention drops from 100% on early messages to 50% at message 40. Models work best when relevant information sits at beginning or end of context window, struggle when buried in middle. **Prevention**: Implement hierarchical context compression with three tiers from day one (architectural decision, can't retrofit). Trigger summarization when step completes. Add memory refresh checkpoints at steps 4 and 7 where AI explicitly recaps key decisions. Use Gemini context caching for stable system prompts (90% cost savings).
+Research identified 7 critical pitfalls from Next.js App Router + React 19 + canvas library integration:
 
-2. **Gemini Rate Limit Cascade Failures**: User hits 429 "quota exceeded" errors mid-session, chat stops working, trust craters. Gemini enforces rate limits across FOUR independent dimensions (RPM, TPM, RPD, IPM)—exceeding ANY triggers 429. Free tier was slashed 50-92% in December 2025 without notice. Rate limits are per-project (all users share quota pool). **Prevention**: Implement exponential backoff with jitter on 429 responses with clear UI feedback. Use multiple Gemini projects with key rotation. Implement request queuing with position indicator. Monitor rate limit margins and throttle proactively before hitting limits. Consider Tier 1 paid plan ($50 = 66x capacity increase).
+1. **SSR/Hydration Mismatch** — Canvas libraries (Tldraw, Konva) assume browser-only environment. Importing in Server Component causes "window is not defined" errors. Even in Client Components, hydration mismatches occur if server HTML differs from client render. **Prevention:** Dynamic imports with `ssr: false` for ALL canvas components, test in Vercel production (stricter than local dev).
 
-3. **Neon Cold Start Death Spiral**: Users start session after 5+ minutes of inactivity. First page load takes 3-8 seconds while Neon compute wakes from scale-to-zero. User sees spinner, assumes site is broken, refreshes (creates another cold start). Neon serverless architecture scales to zero after 5 minutes (free) or 300 seconds (paid). Cold start involves: wake compute, load data, establish connection. **Prevention**: Use `@neondatabase/serverless` driver (not node-postgres) optimized for edge environments. Configure connection timeout (`?connect_timeout=10`). Implement health-check warming via Vercel cron job pinging database every 3-4 minutes. Use PgBouncer connection pooling. Consider "always on" compute on paid plans.
+2. **Bidirectional State Sync Race Conditions** — Multiple sources of truth (AI and canvas both initiating updates) create race conditions. Canvas update writes to Zustand at same moment AI response writes, one clobbers the other. React 19 concurrent rendering batches updates unpredictably. **Prevention:** Establish Zustand as single source of truth, unidirectional flow (AI → Zustand → Canvas, Canvas → Zustand → AI reads on next request), use optimistic updates with rollback, NO prop-syncing (derive from store).
 
-4. **Structured Output Extraction Failures**: User completes step with detailed conversation, clicks "Continue," extraction fails (missing fields, markdown-wrapped JSON instead of pure JSON, partial data). Step completion hangs, user blocked from progressing. Gemini's structured output mode is reliable but not perfect—failures occur when conversation is ambiguous about field values, Gemini prioritizes conversational naturalness over schema compliance, or context window issues cause late-conversation data to be deprioritized. **Prevention**: Use explicit extraction prompts with schema. Implement retry logic with schema repair. Use temperature 0.0-0.3 for Gemini 2.5 extraction requests, temperature 1.0 for Gemini 3 (model-specific). Use `responseMimeType: "application/json"` to force JSON-only output. Show extracted data to user for confirmation before proceeding.
+3. **Bundle Size Explosion** — Tldraw adds 600KB (FCP increases 3.8s, Lighthouse score 95→68). Fabric.js 500KB, Konva 300KB. Canvas libraries bundle transitive dependencies (lodash, vector math) duplicating existing utilities. **Prevention:** Aggressive code splitting (dynamic imports per route), choose lightweight @dnd-kit (10KB) over heavy libraries, monitor bundle size in CI (fail if canvas route >300KB).
 
-5. **Auto-Save Race Conditions**: Auto-save fires every 30 seconds, user completes step clicking "Continue," both saves attempt to write to same workshop/session simultaneously. Race condition: auto-save writes partial conversation, step completion reads stale conversation, generates summary missing last 2 messages, writes and transitions to next step. User arrives with incomplete context. **Prevention**: Implement optimistic locking with `version` column, increment on every update, fail if version changed. Debounce auto-save with "save in progress" flag. Disable step transition buttons during auto-save. Use database transactions with serializable isolation for step completion. Implement idempotency keys for API requests.
+4. **Mobile/Responsive Canvas Collapse** — Canvas coordinates use absolute pixels that don't translate to mobile. Post-its render at 2px on mobile, touch events don't work (onMouseMove fails on mobile). Traditional CSS breakpoints don't solve coordinate translation. **Prevention:** Responsive canvas scaling (viewport coordinates → canvas coordinates), mobile-first layout (stack chat/canvas), touch-action CSS to prevent browser gestures, test at REAL breakpoints (375px, 768px, 820px, 912px).
+
+5. **Canvas State Serialization Failures** — JSON.stringify loses Date objects (become strings), class instances (lose prototypes), functions (disappear). Snapshot-based undo/redo stores 300 copies of full state (2.4MB). Postgres TOAST compression adds 200ms latency for large JSONB. **Prevention:** Store minimal serializable state (IDs, positions, text), use JSON Patch for undo deltas (100x smaller), avoid deeply nested JSONB, GIN indexes for queries, test round-trip: load(save(state)) === state.
+
+6. **AI-Canvas Coordination Race Conditions** — Optimistic updates (show change before DB confirms) create consistency risks. AI streams response (2-5s), user drags post-it during stream, AI completes and overwrites user's drag. Network failures leave partial state. **Prevention:** Optimistic update lifecycle with rollback, use React 19 useOptimistic hook, lock canvas during AI streaming, version-based conflict detection, idempotency keys for AI requests.
+
+7. **Touch Event and Gesture Conflicts** — Browser gestures conflict with canvas: double-tap = zoom, pinch = zoom, swipe = navigate, long-press = context menu. CSS touch-action Safari mobile only supports 'auto' and 'manipulation', ignores 'none'. Passive event listeners can't preventDefault(). **Prevention:** Pointer Events API (unified mouse/touch/pen), touch-action: manipulation CSS, viewport meta with user-scalable=no, custom gesture detection, test on REAL devices (iOS Safari, Android Chrome).
 
 ## Implications for Roadmap
 
-Based on research, v1.0 should be structured into 6 phases addressing foundational concerns first, then building features incrementally. Critical architectural decisions (context compression, dual-layer architecture) must be established in early phases—they're not retrofittable.
+Based on research findings, suggested phase structure for v1.1 Canvas Foundation:
 
-### Phase 1: Dual-Layer Context Architecture
-**Rationale:** Foundation for all AI facilitation features. Context management architecture affects database schema (step_artifacts, step_summaries tables), API design (which context gets passed to Gemini), and step navigation (summary generation on step completion). Must be architectural from day one—can't retrofit hierarchical compression after building on flat conversation history.
+### Phase 1: Canvas Infrastructure & SSR Safety
+**Rationale:** Foundation must handle SSR compatibility and basic canvas state BEFORE step-specific implementations. SSR issues break deployment (Pitfall #1), state architecture locks in patterns for all future features (Pitfall #2).
 
-**Delivers:** Database schema with step_artifacts and step_summaries tables, context manager that assembles short-term (current step messages) + long-term (prior step summaries + JSON) + persistent (all structured outputs) context, Gemini context caching for stable system prompts.
+**Delivers:**
+- canvasStore (Zustand) with items, selectedIds, viewport state
+- BaseCanvas component with dynamic import (ssr: false) and drag-drop infrastructure
+- CanvasItemPostIt shared component (div-based, Tailwind styled)
+- API route /api/canvas/sync for persistence to stepArtifacts
+- useCanvasAutosave hook (2s debounce, 10s maxWait)
 
-**Addresses:** Context Degradation Syndrome pitfall (critical), establishes conversation-as-projection principle
+**Addresses:**
+- SSR/hydration mismatch (Pitfall #1) — dynamic imports established
+- Bidirectional state races (Pitfall #2) — unidirectional Zustand flow defined
+- Bundle size explosion (Pitfall #3) — lightweight div-based approach, no heavy libraries
 
-**Avoids:** Building on wrong foundation (full message history forwarding), needing major refactor at step 4-5 when context degrades
+**Avoids:**
+- "window is not defined" Vercel deployment errors
+- Prop-syncing anti-pattern (single source of truth)
+- Canvas library lock-in before validating needs
 
-### Phase 2: Step-Aware AI Prompting
-**Rationale:** Each of 10 steps has different goals, outputs, validation criteria. Generic AI assistant produces low-quality outputs. Step-specific system prompts must reference prior step outputs ("Based on your persona Sarah from Step 5...") not rely on full conversation history.
+**Research flag:** Standard patterns (Zustand stores, Next.js dynamic imports) — skip research-phase.
 
-**Delivers:** Step Engine as state machine managing 10 steps × 6 phases each (Orient → Gather → Synthesize → Refine → Validate → Complete), step-specific prompt templates, prompt template selection logic per phase, context injection from prior steps
+---
 
-**Addresses:** Step-aware AI prompting feature (must-have), Orient → Gather → Synthesize arc feature (competitive advantage)
+### Phase 2: Step Container Integration & Split-Screen Layout
+**Rationale:** Modify existing StepContainer to conditionally render canvas, establishing responsive layout BEFORE implementing step-specific canvases. Layout architecture (Pitfall #4) must be mobile-first from start.
 
-**Uses:** Gemini 2.0 Flash via AI SDK 6.0.77 with context from Phase 1's Context Manager
+**Delivers:**
+- StepContainer modification: renderRightPanel() conditional logic
+- CanvasPanel wrapper component (connects to canvasStore)
+- Split-screen layout with react-resizable-panels (chat left, canvas right)
+- Mobile responsive stacking (chat above canvas on <768px)
+- Canvas coordinate translation for viewport scaling
 
-**Implements:** Step Engine and Conversation Orchestrator components from architecture
+**Uses:**
+- react-resizable-panels 4.6.2 (already installed)
+- Tailwind responsive breakpoints
+- useResponsiveCanvas hook for scaling
 
-### Phase 3: Structured Outputs Per Step
-**Rationale:** Users need tangible deliverables (HMW statement, persona card, journey map), not just conversation. Downstream steps require structured inputs (Step 6 needs Step 5 persona as JSON, not free text). Schema-driven extraction ensures data consistency and enables type-safe context passing.
+**Implements:**
+- Conditional rendering pattern (Architecture component: StepContainer)
+- Responsive canvas scaling (Prevention for Pitfall #4)
 
-**Delivers:** Zod schemas for all 10 steps, Structured Output Extractor using AI SDK 6's `streamText` with `output` property, extraction with retry logic and schema repair, validation before persistence, confirmation UI showing extracted data to user
+**Avoids:**
+- Desktop-only implementation requiring mobile rewrite
+- Fixed-pixel canvas sizing breaking on tablet/mobile
 
-**Addresses:** Structured outputs per step feature (must-have), extraction failures pitfall (critical)
+**Research flag:** Standard Next.js layout patterns — skip research-phase.
 
-**Uses:** Zod 4.3.6 (already installed), Gemini's `responseSchema` parameter for constrained generation, model-specific temperature (0.0-0.3 for Gemini 2.5, 1.0 for Gemini 3)
+---
 
-**Implements:** Structured Output Extractor component, transactional step completion
+### Phase 3: Stakeholder Canvas (Step 2)
+**Rationale:** Implement first step-specific canvas with simpler layout (static bullseye rings) before tackling freeform clustering in Step 4. Validates canvas infrastructure with constrained use case.
 
-### Phase 4: Navigation & Back-Revise
-**Rationale:** Users realize mistakes in earlier steps, need to revise without restarting entire workshop. Back-navigation with cascade context updates is complex—requires dependency tracking, invalidation strategy, and prevention of race conditions between auto-save and step transitions.
+**Delivers:**
+- StakeholderCanvas component with bullseye ring layout (SVG circles)
+- Ring detection logic (distance from center: <150px = inner, <250px = middle, <350px = outer)
+- Post-it metadata: { ring: 'inner' | 'middle' | 'outer' }
+- AI context injection: formatCanvasForAI() groups stakeholders by ring
+- 2×2 quadrant grid template (Power × Interest) with snap-to-quadrant
 
-**Delivers:** Back-navigation allowing step revisitation, dependency graph tracking which steps depend on which upstream outputs, cascade invalidation marking downstream steps as "needs regeneration," auto-save with debounced saves (use-debounce 10.1.0) every 2 seconds + maxWait 10 seconds, optimistic locking preventing race conditions, step transition coordination
+**Addresses:**
+- Step 2 table stakes features (stakeholder mapping canvas)
+- AI-canvas bidirectional sync (Canvas → AI silent read)
 
-**Addresses:** Back-and-revise navigation feature (must-have), auto-save feature (must-have), cascade invalidation failures pitfall, auto-save race conditions pitfall
+**Implements:**
+- BaseCanvas extension for step-specific layout
+- Canvas state serialization (minimal: id, x, y, text, color, ring)
 
-**Uses:** use-debounce 10.1.0, database transactions with optimistic locking (version column), Zustand 5.0.3 for client-side artifact state with computed selectors for staleness detection
+**Avoids:**
+- Over-engineering with infinite canvas (bounded layout sufficient)
+- Custom shape complexity (fixed rectangles only)
 
-**Implements:** Auto-save with race condition prevention from day one (architectural)
+**Research flag:** Skip research-phase — stakeholder mapping patterns well-documented (Power/Interest grid is standard).
 
-### Phase 5: AI Facilitation for All 10 Steps
-**Rationale:** With foundation established (context architecture, step engine, structured outputs, navigation), implement step-specific facilitation logic for each of 10 design thinking steps. Each step has unique conversational arc, output schema, and validation criteria.
+---
 
-**Delivers:** Step 1 (Challenge): HMW statement extraction, Step 2 (Stakeholders): hierarchical stakeholder mapping, Step 3 (User Research): synthetic AI interviews simulating persona responses, Step 4 (Research Sense Making): affinity mapping automation extracting 5 pains/5 gains, Step 5 (Persona): AI-generated persona from research evidence, Step 6 (Journey Mapping): full journey board auto-generation with "the dip" identification, Step 7 (Reframe): HMW auto-suggestions with validation, Step 8 (Ideation): text-based mind mapping with AI theme suggestions, Step 9 (Concept Development): SWOT + feasibility AI scoring, Step 10 (Validate): synthesis summary recap
+### Phase 4: Research Theme Canvas (Step 4)
+**Rationale:** Second canvas implementation introduces clustering/grouping complexity. Validates @dnd-kit sortable features and proximity-based grouping.
 
-**Addresses:** All competitive advantage features (synthetic interviews, affinity mapping, journey map auto-generation, HMW suggestions, mind mapping, SWOT/feasibility scoring)
+**Delivers:**
+- ResearchThemeCanvas component with empathy map quadrants (CSS Grid)
+- Quadrant detection logic (x/y coordinate thresholds)
+- Post-it metadata: { quadrant: 'said' | 'thought' | 'felt' | 'experienced', type: 'pain' | 'gain' }
+- Proximity-based clustering detection (3+ post-its within 50px)
+- AI context injection: formatCanvasForAI() groups insights by quadrant
 
-**Uses:** All foundation from Phases 1-4, step-specific Zod schemas, domain-adapted conversational prompts
+**Addresses:**
+- Step 4 table stakes features (research sense making canvas)
+- Grouping/clustering interactions (@dnd-kit sortable)
 
-**Implements:** Complete 10-step workflow with AI facilitation
+**Uses:**
+- @dnd-kit/sortable for cluster stacking
+- SortableContext with verticalListSortingStrategy
 
-### Phase 6: Production Hardening
-**Rationale:** Features work in development but break under production conditions (network variability, concurrent users, rate limits, cold starts). Production hardening is not optional—rate limit cascade failures and cold start death spirals destroy trust and are hard to recover from.
+**Avoids:**
+- AI auto-arrange (removes user agency, unpredictable)
+- Nested groups (UI complexity without value)
 
-**Delivers:** Exponential backoff with jitter on Gemini 429 errors with UI feedback ("AI is busy, retrying in 3s..."), multiple Gemini projects with key rotation for rate limit distribution, request queuing with position indicator, rate limit margin monitoring and proactive throttling, Neon health-check warming via Vercel cron job (every 4 minutes), streaming reconnection logic for network failures, connection timeout configuration, error boundaries for graceful degradation, monitoring and alerting for rate limits/cold starts/extraction failures
+**Research flag:** Skip research-phase — empathy mapping and affinity diagramming are established UX patterns.
 
-**Addresses:** Gemini rate limit cascade failures pitfall (critical), Neon cold start death spiral pitfall (critical), streaming interruption failures pitfall
+---
 
-**Uses:** Vercel cron jobs for health-check warming, Gemini context caching (90% cost savings on system prompts), multiple API keys/projects for redundancy
+### Phase 5: AI Integration & Optimistic Updates
+**Rationale:** Connect AI suggestions to canvas creation, implementing proper optimistic update lifecycle with rollback. Must address Pitfall #6 (AI-canvas race conditions) before users interact with feature.
 
-**Implements:** Production reliability patterns that can't be tested in local dev (concurrent users, network variability)
+**Delivers:**
+- "Add to canvas" button in chat for AI suggestions
+- Optimistic post-it creation with temporary IDs
+- ID reconciliation after database save (temp → real ID)
+- Rollback on save failure with user notification
+- Version-based conflict detection (lastModifiedBy: 'user' | 'ai')
+
+**Addresses:**
+- AI → Canvas sync (Feature: AI suggests → canvas updates)
+- AI-canvas race conditions (Pitfall #6)
+
+**Implements:**
+- React 19 useOptimistic hook for automatic rollback
+- Canvas locking during AI streaming (disable drag while isAIResponding)
+- Idempotency keys for AI requests
+
+**Avoids:**
+- Optimistic updates without rollback (lost work on failure)
+- Simultaneous AI + user edits clobbering each other
+
+**Research flag:** NEEDS research-phase — AI streaming coordination patterns less documented, may need experimentation with Vercel AI SDK + Zustand interaction.
+
+---
+
+### Phase 6: Mobile Touch Optimization
+**Rationale:** Validate touch interactions on real devices, refine gesture handling. Pitfall #7 (touch conflicts) requires device testing, cannot be fully validated in desktop emulation.
+
+**Delivers:**
+- Pointer Events API handlers (onPointerDown/Move/Up)
+- touch-action: manipulation CSS (Safari mobile compatible)
+- Custom gesture detection (1 finger = drag, 2 fingers = zoom)
+- Long-press detection with timeout (500ms)
+- Mobile breakpoint refinement (375px, 414px, 768px, 820px, 912px)
+
+**Addresses:**
+- Touch event conflicts (Pitfall #7)
+- Mobile layout collapse (Pitfall #4 completion)
+
+**Uses:**
+- Pointer Events API (unified mouse/touch/pen)
+- CSS touch-action property
+- Viewport meta: user-scalable=no
+
+**Avoids:**
+- Separate mouse/touch handlers (use unified PointerEvent)
+- Browser gesture conflicts (pinch-zoom, swipe-back)
+
+**Research flag:** NEEDS research-phase — Touch gesture best practices on iOS Safari vs Android Chrome differ, may need device-specific handling.
+
+---
+
+### Phase 7: Bundle Optimization & Performance Validation
+**Rationale:** Verify bundle size, FCP, and production performance before launch. Pitfall #3 (bundle explosion) must be caught in CI before affecting users.
+
+**Delivers:**
+- Next.js Bundle Analyzer integration
+- Route-based code splitting verification (canvas only loads on Steps 2,4)
+- Bundle size budget CI check (fail if canvas route >300KB)
+- Lighthouse FCP target: <2s on 3G
+- JSONB query performance validation (<200ms canvas load)
+
+**Addresses:**
+- Bundle size explosion (Pitfall #3)
+- Canvas state serialization performance (Pitfall #5)
+
+**Uses:**
+- @next/bundle-analyzer
+- Vercel Speed Insights
+- Postgres GIN indexes for JSONB queries
+
+**Avoids:**
+- Production bundle surprises (catch regressions in CI)
+- JSONB TOAST overhead (keep canvas state <100KB)
+
+**Research flag:** Standard Next.js optimization patterns — skip research-phase.
+
+---
 
 ### Phase Ordering Rationale
 
-- **Phase 1 must come first**: Context architecture affects database schema, API design, and step navigation. Can't retrofit hierarchical compression after building on flat message history. This is architectural, not additive.
+**Why this sequence:**
+1. **Infrastructure first** (Phase 1) — SSR safety and state architecture are foundational, cannot retrofit
+2. **Layout second** (Phase 2) — Responsive architecture must exist before step-specific implementations
+3. **Simple canvas before complex** (Phase 3 → 4) — Stakeholder mapping (constrained layout) validates infrastructure before freeform clustering
+4. **AI integration after canvas basics** (Phase 5) — Need working canvas to test AI suggestions and optimistic updates
+5. **Mobile optimization late** (Phase 6) — Requires working desktop implementation to refine for touch
+6. **Performance last** (Phase 7) — Bundle optimization measurable only when all features integrated
 
-- **Phase 2 depends on Phase 1**: Step-specific prompts require context injection from prior steps. Context Manager must exist to assemble short-term + long-term + persistent context before Step Engine can reference it.
+**Why NOT parallel:**
+- Phase 1-2 must be sequential (layout depends on infrastructure)
+- Phase 3-4 COULD be parallel but share learnings (do 3 first, apply to 4)
+- Phase 5 depends on Phase 3-4 (need canvas to add AI suggestions to)
+- Phase 6-7 can be parallel (touch optimization + bundle analysis independent)
 
-- **Phase 3 depends on Phases 1-2**: Structured outputs require conversation orchestration (Phase 2) and storage in step_artifacts table (Phase 1). Extraction uses context from Phase 1's Context Manager.
-
-- **Phase 4 depends on Phases 1-3**: Back-navigation with cascade invalidation requires structured outputs (Phase 3) to track dependencies. Auto-save race condition prevention needs database schema from Phase 1.
-
-- **Phase 5 depends on Phases 1-4**: Step-specific features require foundation (context, prompting, extraction, navigation) working correctly. Building features on broken foundation leads to quality issues discovered too late.
-
-- **Phase 6 is last**: Production hardening addresses issues that only surface under production conditions (concurrent load, network variability, real rate limits). Can't test meaningfully until core features exist.
-
-**Grouping strategy:** Foundation first (Phases 1-4), then features (Phase 5), then reliability (Phase 6). This avoids pitfall of building features on broken foundation, then needing major refactor when architectural issues surface.
+**Critical dependencies:**
+- All phases depend on Phase 1 (canvasStore is single source of truth)
+- Phase 3-7 depend on Phase 2 (StepContainer conditional rendering)
+- Phase 5 depends on Phase 3-4 (AI adds to existing canvas implementations)
 
 ### Research Flags
 
-**Phases likely needing deeper research during planning:**
-- **Phase 3 (Structured Outputs)**: Gemini structured output mode has known issues (GitHub issues #6494, #11396). May need research into fallback extraction strategies, schema compatibility across Gemini 2.5 vs 3, temperature tuning per model.
-- **Phase 5 (Step 5 Persona Generation)**: AI-generated personas from evidence is complex domain—needs research into persona quality validation, traceability to research quotes, avoiding generic/hallucinated persona details.
-- **Phase 5 (Step 6 Journey Map Auto-Generation)**: Full journey board (4-8 stages × 5 layers) is most complex structured output. Needs research into journey map structure patterns, "the dip" detection strategies, granular auto-suggest for cell editing.
+**Phases likely needing `/gsd:research-phase` during planning:**
+- **Phase 5 (AI Integration)** — Streaming coordination with Vercel AI SDK + Zustand requires experimentation. Optimistic updates with React 19 useOptimistic + Next.js Server Actions pattern less documented.
+- **Phase 6 (Mobile Touch)** — iOS Safari vs Android Chrome gesture handling differences. Touch-action CSS cross-browser compatibility. May need device-specific polyfills.
 
-**Phases with standard patterns (skip research-phase):**
-- **Phase 1 (Dual-Layer Context)**: Hierarchical summarization, context compression, database schema design are well-documented patterns with multiple high-confidence sources.
-- **Phase 2 (Step-Aware Prompting)**: Step-specific system prompts, state machine for phases, prompt template selection are standard conversational AI patterns.
-- **Phase 4 (Navigation & Back-Revise)**: Auto-save with debounce, optimistic locking, cascade invalidation have established patterns from 2026 state management research.
-- **Phase 6 (Production Hardening)**: Exponential backoff, health-check warming, rate limit monitoring are standard production reliability patterns.
+**Phases with well-documented patterns (skip research):**
+- **Phase 1 (Canvas Infrastructure)** — Zustand stores, Next.js dynamic imports, debounced auto-save are established patterns
+- **Phase 2 (Layout)** — react-resizable-panels, responsive breakpoints, StepContainer modification are standard Next.js patterns
+- **Phase 3 (Stakeholder Canvas)** — Power/Interest quadrant grid is well-documented stakeholder mapping UX pattern
+- **Phase 4 (Research Canvas)** — Empathy mapping and affinity diagramming are standard design thinking patterns
+- **Phase 7 (Performance)** — Next.js Bundle Analyzer, Lighthouse metrics, JSONB optimization are documented
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Base stack (Next.js, Neon, Drizzle, Gemini via AI SDK 6) already deployed at workshoppilot.ai. Only 2 new packages needed (Zustand, use-debounce) with clear purpose and rationale. Verified AI SDK 6.0.77 supports structured outputs via `output` property. |
-| Features | HIGH | Feature requirements derived from Obsidian specs (10-step workshop flow documented in detail). Table stakes vs differentiators validated against competitor analysis (Mural AI, IDEO U, TheyDo AI). Conversational arc pattern (Orient → Gather → Synthesize → Refine → Validate → Complete) is consistent across all steps. |
-| Architecture | HIGH | Orchestration architecture validated against official Next.js docs on Server Actions, Gemini API documentation on context caching, industry patterns from WebSearch 2026. Component boundaries (Step Engine, Context Manager, Conversation Orchestrator, Structured Output Extractor) have clear responsibilities and data flow. Database schema design follows PostgreSQL best practices. |
-| Pitfalls | MEDIUM-HIGH | Critical pitfalls (context degradation, rate limits, cold starts, extraction failures, race conditions) are well-documented with HIGH confidence sources (academic research, official API docs, GitHub issues). Prevention strategies validated across multiple sources. UX pitfalls (no save/resume, can't edit previous steps) derived from general conversational AI patterns. Gemini-specific issues (temperature inconsistency Gemini 2.5 vs 3, structured output bugs) documented in Vercel AI SDK GitHub issues and official Gemini docs. |
+| Stack | **HIGH** | @dnd-kit recommended in 2026 drag-and-drop library rankings, react-resizable-panels already installed and working in v1.0, Zustand + Next.js 16.1.1 proven stack |
+| Features | **MEDIUM-HIGH** | Feature categories validated across Miro, FigJam, MURAL (leading tools). Table stakes clear, but AI-specific patterns (suggestions → canvas) less documented. |
+| Architecture | **HIGH** | Unidirectional Zustand flow is established React pattern, stepArtifacts JSONB persistence already working in v1.0, dynamic imports solve SSR issues (documented Next.js pattern) |
+| Pitfalls | **HIGH** | All 7 pitfalls sourced from official docs (Next.js, React, MDN) + real production issues (Tldraw GitHub issues, Kent C. Dodds articles, NN/g research) |
 
-**Overall confidence:** HIGH
+**Overall confidence:** **HIGH**
 
-Research is comprehensive with 40+ sources (official docs, academic papers, 2026 industry articles, GitHub issues, existing codebase verification). Stack decisions are minimal (only 2 new packages) and well-justified. Architecture patterns are validated against multiple sources. Pitfalls are specific with clear prevention strategies and recovery costs.
+Research synthesized from official documentation (Next.js 16.1.1, React 19, Vercel AI SDK), established UX patterns (stakeholder mapping, empathy maps, affinity diagramming), and 2026 community consensus (dnd-kit recommendations, bundle size best practices). Lower confidence areas (AI streaming coordination, mobile touch edge cases) flagged for research-phase during planning.
 
 ### Gaps to Address
 
-- **Actual token usage per step**: Research provides estimates (Step 10 sees ~1,350 tokens with dual-layer context vs 10,000 with full history) but requires profiling with real conversations to validate token budget allocation (system prompt: 2K, step context: 5K, conversation history: 8K, user input: 1K, reserved: 1K).
+**Areas needing validation during implementation:**
 
-- **Optimal summarization thresholds**: Research suggests summarization after 30 messages or 20K tokens, but optimal trigger point may need experimentation based on actual conversation patterns in 10-step workshops.
+1. **Gemini API context size limits with canvas state** — How to handle: Test with 50-post-it canvas state (estimated 10KB JSON). If context exceeds limits, implement canvas state compression (send summary, not full details).
 
-- **Gemini context caching TTL optimization**: Recommended 3600s (1 hour) cache TTL for system prompts, but optimal balance between cost savings and cache miss rate needs tuning in production.
+2. **React 19 useOptimistic hook + Zustand interaction** — How to handle: Phase 5 research-phase to experiment with optimistic updates pattern. May need custom implementation if useOptimistic doesn't play well with Zustand stores.
 
-- **Cascade invalidation UX flow**: Research identifies need for dependency tracking and invalidation, but exact UX flow (automatic regeneration vs user confirmation, show diff of changes, preserve manual edits) needs validation during implementation.
+3. **touch-action CSS Safari mobile compatibility** — How to handle: Phase 6 research-phase to test on real iOS Safari 17+. Fallback: JavaScript event.preventDefault() if CSS approach fails.
 
-- **Extraction retry strategies**: Research recommends retry with schema repair prompt, but number of retries (1? 3?), backoff timing, and fallback to manual edit form need testing with real extraction failure patterns.
+4. **JSONB performance at >100 post-its** — How to handle: Load test with large canvas states (100-200 post-its). If TOAST overhead >200ms, migrate to separate canvas_items table with foreign key to stepArtifacts.
 
-**How to handle during planning/execution:**
-- Phase 1: Implement context budget allocation with monitoring/logging to measure actual usage
-- Phase 3: Build extraction retry logic with configurable retry count, collect failure patterns for tuning
-- Phase 4: A/B test cascade invalidation UX flows (auto-regenerate vs confirm) with early users
-- Phase 6: Monitor Gemini cache hit rates and token costs, tune TTL based on production data
+5. **AI streaming + optimistic canvas updates race conditions** — How to handle: Phase 5 research-phase to test edge cases. Implement version tracking and Last Write Wins strategy if conflicts detected.
 
-All gaps are tuning/optimization issues, not blocking unknowns. Core architecture and prevention strategies are clear.
+**Deferred to post-v1.1 (validation needed before implementation):**
+- Real-time collaboration (CRDT vs Operational Transform choice)
+- AI auto-clustering algorithm (proximity threshold, minimum cluster size)
+- Undo/redo beyond basic (canvas-specific vs app-wide history)
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
-**Official Documentation:**
-- Gemini API Documentation (ai.google.dev) — Context management, structured outputs, rate limits, context caching
-- Vercel AI SDK Documentation (ai-sdk.dev) — AI SDK 6 structured outputs with `output` property, Gemini provider integration
-- Next.js Documentation (nextjs.org) — Server Actions, App Router, streaming
-- Neon Documentation (neon.com/docs) — Serverless driver, connection pooling, scale-to-zero behavior
-- Drizzle ORM Documentation — Schema definition, migrations, edge compatibility
-- Zustand Documentation (zustand.docs.pmnd.rs) — State management patterns, persist middleware
+**Stack & Architecture:**
+- [Top 5 Drag-and-Drop Libraries for React 2026](https://puckeditor.com/blog/top-5-drag-and-drop-libraries-for-react) — dnd-kit recommended, bundle size comparisons
+- [@dnd-kit/core npm](https://www.npmjs.com/package/@dnd-kit/core) — Official docs, 6.3.1, 10KB bundle verified
+- [dnd-kit Documentation](https://docs.dndkit.com) — API reference, sortable preset
+- [react-resizable-panels npm](https://www.npmjs.com/package/react-resizable-panels) — 4.6.2, React 19 compatible
+- [Shadcn Resizable Component](https://ui.shadcn.com/docs/components/radix/resizable) — Built on react-resizable-panels
+- [Next.js Server and Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components) — SSR patterns
 
-**Verified Codebase:**
-- `/Users/michaelchristie/devProjects/workshoppilot.ai/package.json` — ai@6.0.77, @ai-sdk/google@3.0.22, zod@4.3.6, drizzle-orm@0.45.1 confirmed installed
-- `/Users/michaelchristie/devProjects/workshoppilot.ai/src/app/api/chat/route.ts` — Current AI SDK usage with streamText
-- `/Users/michaelchristie/devProjects/workshoppilot.ai/src/db/schema/` — Existing database schema patterns
+**Features & UX:**
+- [Miro Online Sticky Notes with AI](https://miro.com/online-sticky-notes/) — Feature comparison
+- [FigJam AI Sort and Summarize](https://help.figma.com/hc/en-us/articles/18711926790423-Sort-and-summarize-stickies-with-FigJam-AI) — AI-canvas patterns
+- [Affinity Diagrams: How to Cluster Ideas](https://www.interaction-design.org/literature/article/affinity-diagrams-learn-how-to-cluster-and-bundle-ideas-and-facts) — IxDF clustering patterns
+- [Stakeholder Mapping: The Complete Guide](https://www.interaction-design.org/literature/article/map-the-stakeholders) — Power/Interest grid
+- [Power Interest Grid for Stakeholder Analysis](https://creately.com/diagram/example/jripkdb22/power-interest-grid-for-stakeholder-analysis) — Quadrant templates
 
-**Obsidian Specifications:**
-- `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/lifeOS/10_Projects/WorkshopPilot/Design Thinking/Steps/` — Detailed specs for all 10 steps with common features, conversational arc patterns
+**Pitfalls:**
+- [Tldraw Next.js SSR Issues - GitHub #6567](https://github.com/tldraw/tldraw/issues/6567) — Real SSR hydration errors
+- [Don't Sync State. Derive It! - Kent C. Dodds](https://kentcdodds.com/blog/dont-sync-state-derive-it) — Bidirectional sync anti-pattern
+- [Next.js Hydration Errors in 2026](https://medium.com/@blogs-world/next-js-hydration-errors-in-2026-the-real-causes-fixes-and-prevention-checklist-4a8304d53702) — SSR debugging
+- [React useOptimistic Hook](https://blog.logrocket.com/understanding-optimistic-ui-react-useoptimistic-hook/) — Optimistic updates pattern
+- [Touch Events - MDN](https://developer.mozilla.org/en-US/docs/Web/API/Touch_events) — Touch vs mouse differences
+- [touch-action CSS - MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action) — Browser gesture control
 
-### Secondary (MEDIUM-HIGH confidence)
+### Secondary (MEDIUM confidence)
 
-**Academic Research:**
-- [LLM Context Window Degradation Research](https://arxiv.org/pdf/2505.06120) — Multi-turn conversation quality degradation, attention drops 50% at message 40
-- [Context Length Alone Hurts Performance](https://arxiv.org/html/2510.05381v1) — 13.9%-85% degradation in retrieval accuracy as context grows
+**Architecture Patterns:**
+- [Using State Management with React Flow](https://reactflow.dev/learn/advanced-use/state-management) — Zustand integration
+- [Building Kanban Board with dnd-kit](https://marmelab.com/blog/2026/01/15/building-a-kanban-board-with-shadcn.html) — Grouping example
+- [Infinite Canvas Tutorial - Lesson 8 Performance](https://antv.vision/infinite-canvas-tutorial/guide/lesson-008) — Optimization patterns
 
-**2026 Industry Patterns:**
-- [Next.js Backend for Conversational AI in 2026](https://www.sashido.io/en/blog/nextjs-backend-conversational-ai-2026) — Orchestration architecture patterns
-- [Building Multi-Turn Conversations with AI Agents: The 2026 Playbook](https://medium.com/ai-simplified-in-plain-english/building-multi-turn-conversations-with-ai-agents-the-2026-playbook-45592425d1db) — State machine patterns
-- [Context Engineering: The New Frontier of Production AI in 2026](https://medium.com/@mfardeen9520/context-engineering-the-new-frontier-of-production-ai-in-2026-efa789027b2a) — Hierarchical compression strategies
-- [Context Window Management Strategies](https://www.getmaxim.ai/articles/context-window-management-strategies-for-long-context-ai-agents-and-chatbots/) — Balance context carefully for multi-turn interactions
+**Performance & Serialization:**
+- [PostgreSQL JSONB Performance](https://www.architecture-weekly.com/p/postgresql-jsonb-powerful-storage) — JSONB best practices
+- [Postgres JSONB TOAST - pganalyze](https://pganalyze.com/blog/5mins-postgres-jsonb-toast) — Large JSONB overhead
+- [Konva Save and Load Best Practices](https://konvajs.org/docs/data_and_serialization/Best_Practices.html) — Canvas serialization
+- [Travels: JSON Patch Undo/Redo](https://github.com/mutativejs/travels) — Delta-based history
 
-**GitHub Issues (Vercel AI SDK):**
-- [Issue #6494](https://github.com/vercel/ai/issues/6494) — Gemini 2.5 JSON schema support compatibility
-- [Issue #11396](https://github.com/vercel/ai/issues/11396) — Gemini 3 Preview structured output bugs (outputs internal JSON as text when tools provided)
-- [Issue #11865](https://github.com/vercel/ai/issues/11865) — Stream resumption only works on page reload, not tab switch
-- [Issue #10926](https://github.com/vercel/ai/issues/10926) — Streaming breaks when Chat instance replaced dynamically
+### Tertiary (LOW confidence, needs validation)
 
-### Tertiary (MEDIUM confidence)
+**Mobile Gestures:**
+- [Konva Multi-touch Scale](https://konvajs.org/docs/sandbox/Multi-touch_Scale_Stage.html) — Pinch zoom example (Konva-specific, may not apply to div-based approach)
+- [Responsive Design Breakpoints 2025](https://www.browserstack.com/guide/responsive-design-breakpoints) — Standard breakpoints (may miss awkward device widths)
 
-**Community Tutorials & Guides:**
-- [Structured Outputs with Vercel AI SDK](https://www.aihero.dev/structured-outputs-with-vercel-ai-sdk) — Community tutorial verified against official docs
-- [use-debounce npm package](https://www.npmjs.com/package/use-debounce) — Version 10.1.0 features (maxWait, flush)
-- [Autosave with React Hooks](https://www.synthace.com/blog/autosave-with-react-hooks) — Production pattern with debounce + useEffect
-- [Database Race Conditions Catalogue](https://www.ketanbhatt.com/p/db-concurrency-defects) — Lost updates, dirty writes patterns
-- [Cache Invalidation Strategies 2026](https://oneuptime.com/blog/post/2026-01-30-cache-invalidation-strategies/view) — Cascading invalidation patterns
-
-**Competitor Analysis:**
-- Mural AI (canvas + AI sidebar, assistant role)
-- IDEO U Workshops (educational, manual exercises)
-- TheyDo AI (journey canvas + AI suggestions)
-- WorkshopPilot differentiators: AI as facilitator (not assistant), chat-first (not canvas), synthetic research, end-to-end automation
+**Bundle Optimization:**
+- [Next.js Package Bundling Guide](https://nextjs.org/docs/app/guides/package-bundling) — General guidance (canvas-specific tuning needed)
 
 ---
-*Research completed: 2026-02-08*
+*Research completed: 2026-02-10*
 *Ready for roadmap: yes*
