@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 
 Milestone: v1.1 Canvas Foundation
 Phase: 17 of 20 (Canvas Core Interactions)
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: In progress
-Last activity: 2026-02-10 — Completed 17-01-PLAN.md
+Last activity: 2026-02-10 — Completed 17-02-PLAN.md
 
-Progress: [████████████████████░░░░] 80% (48 plans complete across v0.5 + v1.0 + v1.1)
+Progress: [████████████████████░░░░] 82% (49 plans complete across v0.5 + v1.0 + v1.1)
 
 ## Completed Milestones
 
@@ -25,8 +25,8 @@ Progress: [████████████████████░░░
 | v1.0 Working AI Facilitation | 7-14 | 25 | 2026-02-10 |
 
 **Cumulative stats:**
-- 48 plans completed (15 phases complete, Phase 17 in progress)
-- ~12,500 lines of TypeScript across ~276 files
+- 49 plans completed (15 phases complete, Phase 17 in progress)
+- ~12,700 lines of TypeScript across ~277 files
 - 5 days total (2026-02-07 → 2026-02-10)
 
 **Velocity:**
@@ -60,6 +60,10 @@ Recent decisions affecting v1.1:
 - **PostIt color model** (17-01): Optional color field (defaults to 'yellow') with 5 presets (yellow, pink, blue, green, orange)
 - **Edit mode visual feedback** (17-01): Edit ring (blue-400) distinct from selection ring (blue-500), maxLength={200} enforced at textarea
 - **COLOR_CLASSES pattern** (17-01): Record<PostItColor, string> mapping for consistent color rendering across components
+- **Multi-select pattern** (17-02): Shift+click and drag-select box with SelectionMode.Partial (Ctrl disabled to avoid undo conflict)
+- **Delete safety** (17-02): Conditional deleteKeyCode (null when editingNodeId set) prevents deletion during text input
+- **Undo/redo integration** (17-02): Temporal store subscription for reactive toolbar state, mod+z keyboard shortcuts cross-platform
+- **Color picker UX** (17-02): Right-click context menu with fixed positioning, closes on viewport change/click outside
 
 ### Known Tech Debt
 
@@ -85,9 +89,9 @@ From research (research/SUMMARY.md):
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Phase 17, Plan 1 complete (Canvas core data model and undo/redo foundation established)
-Resume file: .planning/phases/17-canvas-core-interactions/17-01-SUMMARY.md
-Next action: Execute 17-02-PLAN.md (toolbar controls with color picker, undo/redo, delete)
+Stopped at: Phase 17, Plan 2 complete (Multi-select, delete, undo/redo, color picker interactions wired up)
+Resume file: .planning/phases/17-canvas-core-interactions/17-02-SUMMARY.md
+Next action: Execute 17-03-PLAN.md (grouping and hierarchy)
 
 ---
-*Last updated: 2026-02-10 after completing 17-01-PLAN.md*
+*Last updated: 2026-02-10 after completing 17-02-PLAN.md*
