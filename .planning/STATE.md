@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 14 of 14 (Production Hardening)
-Plan: 0 of TBD complete
-Status: Not started
-Last activity: 2026-02-10 — Completed Phase 13.1 (Reset Step & Step 8 Sub-Steps)
+Plan: 1 of 2 complete
+Status: In progress
+Last activity: 2026-02-10 — Completed 14-01-PLAN.md (Rate limit retry & cold start prevention)
 
-Progress: [███████████████████░] 95% (14 of 15 phases complete, Phase 14 remaining)
+Progress: [███████████████████▓] 96% (14 of 15 phases complete, Phase 14: 1 of 2 plans done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 44
+- Total plans completed: 45
 - Average duration: 2.9 min
-- Total execution time: 2.87 hours
+- Total execution time: 2.92 hours
 
 **By Phase:**
 
@@ -41,15 +41,17 @@ Progress: [███████████████████░] 95% (14
 | 12-definition-steps-5-7 | 3 | 18 min | 6.0 min |
 | 13-ideation-validation-steps-8-10 | 3 | 14 min | 4.7 min |
 | 13.1-reset-step-step-8-ideation-sub-steps | 3 | 12 min | 4.0 min |
+| 14-production-hardening | 1 | 3 min | 3.0 min |
 
 **Recent Trend:**
 - v0.5 milestone: 6 phases, 19 plans in 2 days
 - Phase 7-11: Foundation + Discovery steps (5 phases, 14 plans)
 - Phase 12-13: Definition + Ideation steps (2 phases, 6 plans)
 - Phase 13.1: Reset Step + Step 8 sub-steps (3 plans, 12 min)
+- Phase 14: Production hardening (1 of 2 plans, 3 min)
 - Trend: Stable velocity, consistent 2-8 min per plan
 
-*Updated after Phase 13.1 completion*
+*Updated after Phase 14 Plan 01 completion*
 
 ## Accumulated Context
 
@@ -69,6 +71,10 @@ Recent decisions affecting current work:
 - **Phase 13.1 Plan 3**: Selection merge in handleConfirm before artifactConfirmed (selectedIdeaTitles + userIdeas)
 - **Phase 13.1 Plan 3**: resetKey counter forces component re-mount to clear useChat state on reset
 - **Phase 13.1 Plan 3**: Continue to [next] button on non-last sub-steps for explicit completion flow with auto-advance
+- **Phase 14 Plan 1**: Exponential-backoff library instead of custom retry logic (jitter, configurable delays, retry callbacks)
+- **Phase 14 Plan 1**: Sentinel error pattern ('NON_RETRYABLE') to distinguish retryable vs non-retryable errors
+- **Phase 14 Plan 1**: Optional CRON_SECRET auth (required in prod, optional in dev) for health endpoint
+- **Phase 14 Plan 1**: 4-minute cron interval keeps Neon active (5-minute scale-to-zero timeout)
 
 ### Roadmap Evolution
 
@@ -83,22 +89,23 @@ Recent decisions affecting current work:
 
 **From research (addressed in roadmap):**
 - Context degradation syndrome: Solved by Phase 7 hierarchical context architecture
-- Gemini rate limit cascade failures: Addressed in Phase 14 production hardening
-- Neon cold start death spiral: Addressed in Phase 14 with health-check warming
+- Gemini rate limit cascade failures: ✅ Solved in Phase 14 Plan 01 (exponential backoff with jitter)
+- Neon cold start death spiral: ✅ Solved in Phase 14 Plan 01 (4-minute cron warming)
 - Auto-save race conditions: Prevented in Phase 10 with optimistic locking
 
 **Current concerns:**
-- Production hardening (Phase 14) is the final phase — rate limits, cold starts, streaming reconnection
+- Phase 14 Plan 02 remaining: User-facing resilience UI (loading states, error toasts, retry UI)
+- User setup required for Plan 01: Generate and configure CRON_SECRET in Vercel
 - All 10 design thinking steps feature-complete and human-verified
-- v1.0 milestone nearly complete
+- v1.0 milestone nearly complete (1 plan remaining)
 
 ## Session Continuity
 
-Last session: 2026-02-10 (Phase 13.1 completed)
-Stopped at: Phase 13.1 complete, human verified and approved
-Resume file: None
+Last session: 2026-02-10 (Phase 14 in progress)
+Stopped at: Phase 14 Plan 01 complete (rate limit retry & cold start prevention)
+Resume file: .planning/phases/14-production-hardening/14-01-SUMMARY.md
 
-**Next action:** Plan Phase 14 (`/gsd:plan-phase 14`)
+**Next action:** Execute Phase 14 Plan 02 (user-facing resilience UI)
 
 ---
-*Last updated: 2026-02-10 after Phase 13.1 completion*
+*Last updated: 2026-02-10 after Phase 14 Plan 01 completion*
