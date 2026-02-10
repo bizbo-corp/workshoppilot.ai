@@ -11,8 +11,9 @@ const ReactFlowCanvas = dynamic(
 export interface CanvasWrapperProps {
   sessionId: string;
   stepId: string;
+  workshopId: string;
 }
 
-export function CanvasWrapper({ sessionId, stepId }: CanvasWrapperProps) {
-  return <ReactFlowCanvas sessionId={sessionId} stepId={stepId} />;
+export function CanvasWrapper({ sessionId, stepId, workshopId }: CanvasWrapperProps) {
+  return <ReactFlowCanvas sessionId={sessionId} stepId={stepId} workshopId={workshopId} />;
 }

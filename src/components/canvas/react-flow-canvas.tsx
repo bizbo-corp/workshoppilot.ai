@@ -15,6 +15,7 @@ import '@xyflow/react/dist/style.css';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { PostItNode, type PostItNodeData } from './post-it-node';
 import { CanvasToolbar } from './canvas-toolbar';
+import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
 
 // Define node types OUTSIDE component for stable reference
 const nodeTypes = { postIt: PostItNode };
@@ -22,13 +23,17 @@ const nodeTypes = { postIt: PostItNode };
 export interface ReactFlowCanvasProps {
   sessionId: string;
   stepId: string;
+  workshopId: string;
 }
 
-function ReactFlowCanvasInner({ sessionId, stepId }: ReactFlowCanvasProps) {
+function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvasProps) {
   // Store access
   const postIts = useCanvasStore((s) => s.postIts);
   const addPostIt = useCanvasStore((s) => s.addPostIt);
   const updatePostIt = useCanvasStore((s) => s.updatePostIt);
+
+  // Auto-save integration
+  const { saveStatus } = useCanvasAutosave(workshopId, stepId);
 
   // Editing state - track which node is being edited
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
@@ -245,16 +250,35 @@ function ReactFlowCanvasInner({ sessionId, stepId }: ReactFlowCanvasProps) {
         </div>
       )}
 
-      {/* Save status placeholder (will be wired in Plan 03) */}
-      <div className="absolute bottom-4 right-4"></div>
+      {/* Save status indicator */}
+      <div className="absolute bottom-3 right-3 z-10 text-xs text-muted-foreground flex items-center gap-1.5">
+        {saveStatus === 'saving' && (
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-yellow-500 animate-pulse" />
+            Saving...
+          </>
+        )}
+        {saveStatus === 'saved' && (
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+            Saved
+          </>
+        )}
+        {saveStatus === 'error' && (
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+            Save failed
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
-export function ReactFlowCanvas({ sessionId, stepId }: ReactFlowCanvasProps) {
+export function ReactFlowCanvas({ sessionId, stepId, workshopId }: ReactFlowCanvasProps) {
   return (
     <ReactFlowProvider>
-      <ReactFlowCanvasInner sessionId={sessionId} stepId={stepId} />
+      <ReactFlowCanvasInner sessionId={sessionId} stepId={stepId} workshopId={workshopId} />
     </ReactFlowProvider>
   );
 }

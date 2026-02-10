@@ -15,6 +15,7 @@ import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { reviseStep, resetStep } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
+import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 
 interface StepContainerProps {
   stepOrder: number;
@@ -235,30 +236,45 @@ export function StepContainer({
     </div>
   );
 
-  const renderOutput = () => (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-hidden">
-        <OutputPanel
-          stepOrder={stepOrder}
-          artifact={artifact}
-          isExtracting={isExtracting}
-          extractionError={extractionError}
-          onRetry={extractArtifact}
-        />
-      </div>
-      {/* Confirmation UI (shown when artifact exists) */}
-      {artifact && (
-        <div className="border-t bg-background p-4">
-          <ArtifactConfirmation
-            onConfirm={handleConfirm}
-            onEdit={handleEdit}
-            isConfirming={false}
-            isConfirmed={artifactConfirmed}
+  const renderOutput = () => {
+    const stepMeta = getStepByOrder(stepOrder);
+
+    return (
+      <div className="flex h-full flex-col">
+        {/* Canvas (above output panel) */}
+        <div className="min-h-[300px] flex-1 border-b">
+          <CanvasWrapper
+            sessionId={sessionId}
+            stepId={stepMeta?.id || ''}
+            workshopId={workshopId}
           />
         </div>
-      )}
-    </div>
-  );
+
+        {/* Output panel (below canvas) */}
+        <div className="flex-1 overflow-hidden">
+          <OutputPanel
+            stepOrder={stepOrder}
+            artifact={artifact}
+            isExtracting={isExtracting}
+            extractionError={extractionError}
+            onRetry={extractArtifact}
+          />
+        </div>
+
+        {/* Confirmation UI (shown when artifact exists) */}
+        {artifact && (
+          <div className="border-t bg-background p-4">
+            <ArtifactConfirmation
+              onConfirm={handleConfirm}
+              onEdit={handleEdit}
+              isConfirming={false}
+              isConfirmed={artifactConfirmed}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Mobile: stacked layout
   if (isMobile) {

@@ -5,6 +5,9 @@ import { sessions, stepArtifacts } from "@/db/schema";
 import { getStepByOrder, STEPS } from "@/lib/workshop/step-metadata";
 import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
+import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
+import { loadCanvasState } from "@/actions/canvas-actions";
+import type { PostIt } from "@/stores/canvas-store";
 
 interface StepPageProps {
   params: Promise<{
@@ -83,16 +86,22 @@ export default async function StepPage({ params }: StepPageProps) {
     }
   }
 
+  // Load canvas state for this step
+  const canvasData = await loadCanvasState(session.workshop.id, step.id);
+  const initialCanvasPostIts: PostIt[] = canvasData?.postIts || [];
+
   return (
     <div className="h-full">
-      <StepContainer
-        stepOrder={stepNumber}
-        sessionId={sessionId}
-        workshopId={session.workshop.id}
-        initialMessages={initialMessages}
-        initialArtifact={initialArtifact}
-        stepStatus={stepRecord?.status}
-      />
+      <CanvasStoreProvider initialPostIts={initialCanvasPostIts}>
+        <StepContainer
+          stepOrder={stepNumber}
+          sessionId={sessionId}
+          workshopId={session.workshop.id}
+          initialMessages={initialMessages}
+          initialArtifact={initialArtifact}
+          stepStatus={stepRecord?.status}
+        />
+      </CanvasStoreProvider>
     </div>
   );
 }
