@@ -77,9 +77,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 16-01-PLAN.md — Desktop layout: RightPanel (canvas+accordion), 320px chat, invisible divider, autoSaveId
-- [ ] 16-02-PLAN.md — Mobile tabs + desktop collapse/expand functionality
-- [ ] 16-03-PLAN.md — Polish, verification, and human sign-off
+- [x] 16-01-PLAN.md — Desktop layout: RightPanel (canvas+accordion), 320px chat, invisible divider, autoSaveId
+- [x] 16-02-PLAN.md — Mobile tabs + desktop collapse/expand functionality
+- [x] 16-03-PLAN.md — Polish, verification, and human sign-off
 
 #### Phase 17: Canvas Core Interactions
 **Goal**: Post-it editing, color-coding, multi-select, undo/redo working
@@ -161,11 +161,11 @@ Phases execute in numeric order: 15 → 16 → 17 → 18 → 19 → 20
 | 1-6 | v0.5 | 19/19 | Complete | 2026-02-08 |
 | 7-14 | v1.0 | 25/25 | Complete | 2026-02-10 |
 | 15. Canvas Infrastructure | v1.1 | 3/3 | Complete | 2026-02-10 |
-| 16. Split-Screen Layout | v1.1 | 0/1 | Planning | - |
+| 16. Split-Screen Layout | v1.1 | 3/3 | Complete | 2026-02-11 |
 | 17. Canvas Core Interactions | v1.1 | 3/3 | Complete | 2026-02-10 |
 | 18. Step-Specific Canvases | v1.1 | 0/TBD | Not started | - |
 | 19. AI-Canvas Integration | v1.1 | 0/TBD | Not started | - |
 | 20. Bundle Optimization | v1.1 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-11 after Phase 16 planning complete*
+*Last updated: 2026-02-11 after Phase 16 execution complete*
