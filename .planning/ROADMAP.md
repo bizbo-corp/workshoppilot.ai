@@ -65,18 +65,21 @@ Plans:
 - [x] 15-03-PLAN.md — Persistence layer and step integration (server actions, auto-save hook, force-save, step page wiring)
 
 #### Phase 16: Split-Screen Layout & Step Container Integration
-**Goal**: Split-screen layout responsive across desktop and mobile
+**Goal**: Split-screen layout with 320px chat left, canvas+output right, collapsible panels, mobile tabs
 **Depends on**: Phase 15
 **Requirements**: LAYOUT-01, LAYOUT-02, LAYOUT-03, LAYOUT-04
 **Success Criteria** (what must be TRUE):
-  1. User sees chat panel left, right panel right on all steps
-  2. User can resize divider between panels
-  3. Steps without canvas show placeholder right panel
-  4. On mobile viewports, chat stacks above right panel vertically
-**Plans**: 1 plan
+  1. User sees chat panel (320px default) left, canvas+output right panel on all steps
+  2. User can resize invisible divider between panels, sizes persist across steps
+  3. Canvas renders on ALL steps, output accordion at bottom of right panel
+  4. On mobile (<768px), tabs switch between Chat and Canvas (one at a time)
+  5. Both panels collapsible to thin icon strips on desktop
+**Plans**: 3 plans
 
 Plans:
-- [ ] 16-01-PLAN.md — Refactor step-container with dedicated RightPanel component (conditional canvas/output/placeholder, responsive layout)
+- [ ] 16-01-PLAN.md — Desktop layout: RightPanel (canvas+accordion), 320px chat, invisible divider, autoSaveId
+- [ ] 16-02-PLAN.md — Mobile tabs + desktop collapse/expand functionality
+- [ ] 16-03-PLAN.md — Polish, verification, and human sign-off
 
 #### Phase 17: Canvas Core Interactions
 **Goal**: Post-it editing, color-coding, multi-select, undo/redo working
