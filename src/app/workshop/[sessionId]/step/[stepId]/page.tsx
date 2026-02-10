@@ -82,7 +82,9 @@ export default async function StepPage({ params }: StepPageProps) {
       .limit(1);
 
     if (artifactRecord.length > 0) {
-      initialArtifact = artifactRecord[0].artifact;
+      // Exclude _canvas key — canvas data is loaded separately via loadCanvasState
+      const { _canvas, ...extractedArtifact } = artifactRecord[0].artifact as Record<string, unknown>;
+      initialArtifact = Object.keys(extractedArtifact).length > 0 ? extractedArtifact : null;
     }
   }
 

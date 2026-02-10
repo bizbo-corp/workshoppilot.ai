@@ -6,8 +6,8 @@ import { eq, and } from 'drizzle-orm';
 import type { PostIt } from '@/stores/canvas-store';
 
 /**
- * Save canvas state to stepArtifacts JSONB column
- * Uses optimistic locking to prevent concurrent update conflicts
+ * Save canvas state to stepArtifacts JSONB column under the `_canvas` key.
+ * Merges with existing artifact data so AI extraction outputs are preserved.
  *
  * @param workshopId - The workshop ID (wks_xxx)
  * @param stepId - The semantic step ID ('challenge', 'stakeholder-mapping', etc.)
@@ -40,28 +40,34 @@ export async function saveCanvasState(
 
     const workshopStepId = workshopStepRecords[0].id;
 
-    // Check for existing artifact
+    // Check for existing artifact — read full artifact to merge
     const existingArtifacts = await db
       .select({
         id: stepArtifacts.id,
         version: stepArtifacts.version,
+        artifact: stepArtifacts.artifact,
       })
       .from(stepArtifacts)
       .where(eq(stepArtifacts.workshopStepId, workshopStepId))
       .limit(1);
 
     if (existingArtifacts.length > 0) {
-      // Update existing artifact with optimistic locking
+      // Merge canvas state into existing artifact, preserving extraction data
       const existing = existingArtifacts[0];
       const currentVersion = existing.version;
       const newVersion = currentVersion + 1;
+      const existingArtifact = (existing.artifact || {}) as Record<string, unknown>;
+
+      const mergedArtifact = {
+        ...existingArtifact,
+        _canvas: canvasState,
+      };
 
       await db
         .update(stepArtifacts)
         .set({
-          artifact: canvasState,
+          artifact: mergedArtifact,
           version: newVersion,
-          extractedAt: new Date(),
         })
         .where(
           and(
@@ -69,16 +75,12 @@ export async function saveCanvasState(
             eq(stepArtifacts.version, currentVersion)
           )
         );
-
-      // Note: Drizzle doesn't expose rowCount for optimistic lock verification
-      // Per research: log warning for Phase 15, defer merge logic to Phase 16+
-      // Trust that WHERE clause prevents conflicts for now
     } else {
-      // Insert new artifact
+      // Insert new artifact with canvas under _canvas key
       await db.insert(stepArtifacts).values({
         workshopStepId,
         stepId,
-        artifact: canvasState,
+        artifact: { _canvas: canvasState },
         schemaVersion: 'canvas-1.0',
         version: 1,
       });
@@ -139,9 +141,18 @@ export async function loadCanvasState(
       return null;
     }
 
-    const artifact = artifactRecords[0].artifact;
+    const artifact = artifactRecords[0].artifact as Record<string, unknown> | null;
 
-    // Check if artifact has postIts array
+    // Read canvas data from the _canvas key (new format)
+    if (artifact && typeof artifact === 'object' && '_canvas' in artifact) {
+      const canvas = artifact._canvas as { postIts?: PostIt[] };
+      if (canvas?.postIts) {
+        return { postIts: canvas.postIts };
+      }
+    }
+
+    // Backward compat: if postIts is at the top level (old format before fix),
+    // read it but it won't be written back this way
     if (artifact && typeof artifact === 'object' && 'postIts' in artifact) {
       return artifact as { postIts: PostIt[] };
     }

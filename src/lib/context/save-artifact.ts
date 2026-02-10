@@ -61,10 +61,21 @@ export async function saveStepArtifact(
     const currentVersion = existing[0].version;
     const newVersion = currentVersion + 1;
 
+    // Preserve _canvas key from existing artifact if present
+    const existingRecord = await db
+      .select({ artifact: stepArtifacts.artifact })
+      .from(stepArtifacts)
+      .where(eq(stepArtifacts.id, existing[0].id))
+      .limit(1);
+    const existingArtifact = (existingRecord[0]?.artifact || {}) as Record<string, unknown>;
+    const mergedArtifact = existingArtifact._canvas
+      ? { ...artifact, _canvas: existingArtifact._canvas }
+      : artifact;
+
     const result = await db
       .update(stepArtifacts)
       .set({
-        artifact,
+        artifact: mergedArtifact,
         schemaVersion,
         version: newVersion,
         extractedAt: new Date(),
@@ -75,11 +86,6 @@ export async function saveStepArtifact(
           eq(stepArtifacts.version, currentVersion)
         )
       );
-
-    // Check if update succeeded (rowCount should be 1)
-    // Note: Drizzle doesn't return rowCount directly, but if no error thrown, it succeeded
-    // For strict optimistic locking, we'd need to verify with a follow-up query
-    // For now, trust that the version check in WHERE clause prevents conflicts
   } else {
     // Insert new artifact
     await db.insert(stepArtifacts).values({

@@ -75,6 +75,19 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     previousPostItCount.current = postIts.length;
   }, [postIts]);
 
+  // Handle text change from PostItNode textarea
+  const handleTextChange = useCallback(
+    (id: string, text: string) => {
+      updatePostIt(id, { text });
+    },
+    [updatePostIt]
+  );
+
+  // Handle edit complete (textarea blur)
+  const handleEditComplete = useCallback((id: string) => {
+    setEditingNodeId(null);
+  }, []);
+
   // Convert store post-its to ReactFlow nodes
   const nodes = useMemo<Node[]>(() => {
     return postIts.map((postIt) => ({
@@ -89,20 +102,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       } as PostItNodeData,
       style: { width: postIt.width, height: 'auto' },
     }));
-  }, [postIts, editingNodeId]);
-
-  // Handle text change from PostItNode textarea
-  const handleTextChange = useCallback(
-    (id: string, text: string) => {
-      updatePostIt(id, { text });
-    },
-    [updatePostIt]
-  );
-
-  // Handle edit complete (textarea blur)
-  const handleEditComplete = useCallback((id: string) => {
-    setEditingNodeId(null);
-  }, []);
+  }, [postIts, editingNodeId, handleTextChange, handleEditComplete]);
 
   // Create post-it at position and set as editing
   const createPostItAtPosition = useCallback(
