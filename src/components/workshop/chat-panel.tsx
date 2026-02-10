@@ -5,7 +5,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import TextareaAutosize from 'react-textarea-autosize';
 import ReactMarkdown from 'react-markdown';
-import { Send } from 'lucide-react';
+import { Send, Loader2 } from 'lucide-react';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -41,8 +41,11 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const step = getStepByOrder(stepOrder);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const hasAutoStarted = React.useRef(false);
+  const countdownRef = React.useRef<NodeJS.Timeout | null>(null);
   const [inputValue, setInputValue] = React.useState('');
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
+  const [rateLimitInfo, setRateLimitInfo] = React.useState<{ retryAfter: number } | null>(null);
+  const [streamError, setStreamError] = React.useState(false);
 
   if (!step) {
     return (
@@ -61,9 +64,39 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     [sessionId, step.id, workshopId, subStep]
   );
 
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status, setMessages } = useChat({
     transport,
     messages: initialMessages,
+    onError: (error) => {
+      // Check if this is a rate limit error from our API
+      const errorStr = error?.message || '';
+      if (errorStr.includes('rate_limit_exceeded') || errorStr.includes('429')) {
+        let retryAfter = 30;
+        try {
+          const parsed = JSON.parse(errorStr);
+          if (parsed.retryAfter) retryAfter = parsed.retryAfter;
+        } catch {
+          // Use default
+        }
+
+        setRateLimitInfo({ retryAfter });
+
+        // Start countdown
+        if (countdownRef.current) clearInterval(countdownRef.current);
+        countdownRef.current = setInterval(() => {
+          setRateLimitInfo((prev) => {
+            if (!prev || prev.retryAfter <= 1) {
+              if (countdownRef.current) clearInterval(countdownRef.current);
+              return null;
+            }
+            return { retryAfter: prev.retryAfter - 1 };
+          });
+        }, 1000);
+      } else {
+        // Non-rate-limit streaming error
+        setStreamError(true);
+      }
+    },
   });
 
   const isLoading = status === 'streaming' || status === 'submitted';
@@ -111,6 +144,30 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       setSuggestions([]);
     }
   }, [status, messages]);
+
+  // Clear stream error on successful completion
+  React.useEffect(() => {
+    if (status === 'ready') {
+      setStreamError(false);
+      // Don't clear rateLimitInfo here — let the countdown finish
+    }
+  }, [status]);
+
+  // Stream timeout detection
+  React.useEffect(() => {
+    if (status !== 'streaming') return;
+    const timeout = setTimeout(() => {
+      setStreamError(true);
+    }, 30000);
+    return () => clearTimeout(timeout);
+  }, [status, messages.length]);
+
+  // Cleanup countdown on unmount
+  React.useEffect(() => {
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
 
   // Auto-start: send trigger message when entering a step with no messages
   React.useEffect(() => {
@@ -219,6 +276,44 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               </div>
             )}
 
+            {/* Stream error recovery */}
+            {streamError && !isLoading && (
+              <div className="flex items-start gap-3">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  AI
+                </div>
+                <div className="flex-1">
+                  <div className="rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20 p-3 text-sm">
+                    <p className="text-yellow-800 dark:text-yellow-200">Response was interrupted.</p>
+                    <Button
+                      onClick={() => {
+                        setStreamError(false);
+                        // Find last user message and resend it
+                        const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+                        if (lastUserMsg) {
+                          // Remove failed assistant response if present
+                          const lastMsg = messages[messages.length - 1];
+                          if (lastMsg.role === 'assistant') {
+                            setMessages(messages.slice(0, -1));
+                          }
+                          // Resend last user message
+                          sendMessage({
+                            role: 'user',
+                            parts: lastUserMsg.parts || [],
+                          });
+                        }
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                    >
+                      Retry Response
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Auto-scroll target */}
             <div ref={messagesEndRef} />
           </div>
@@ -243,6 +338,14 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         </div>
       )}
 
+      {/* Rate limit banner */}
+      {rateLimitInfo && (
+        <div className="mx-4 mb-2 flex items-center gap-2 rounded-md border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20 px-3 py-2 text-sm text-yellow-800 dark:text-yellow-200">
+          <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+          <span>AI is busy. Try again in {rateLimitInfo.retryAfter}s...</span>
+        </div>
+      )}
+
       {/* Input area */}
       <div className="border-t bg-background p-4">
         <form onSubmit={handleSend} className="flex gap-2">
@@ -252,7 +355,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type your message..."
+            placeholder={rateLimitInfo ? 'Waiting for AI to become available...' : 'Type your message...'}
+            disabled={isLoading || !!rateLimitInfo}
             className={cn(
               'flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow]',
               'placeholder:text-muted-foreground',
@@ -262,7 +366,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
           />
           <Button
             type="submit"
-            disabled={isLoading || !inputValue.trim()}
+            disabled={isLoading || !inputValue.trim() || !!rateLimitInfo}
             size="icon"
             variant="default"
             aria-label="Send message"
