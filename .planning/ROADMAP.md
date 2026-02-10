@@ -40,7 +40,7 @@ See `milestones/v1.0-ROADMAP.md` for full details.
 
 </details>
 
-### 🚧 v1.1 Canvas Foundation (In Progress)
+### v1.1 Canvas Foundation (In Progress)
 
 **Milestone Goal:** Split-screen layout with interactive post-it canvas for Steps 2 (Stakeholder Mapping) and 4 (Research Sense Making), enabling visual clustering alongside AI facilitation.
 
@@ -73,10 +73,10 @@ Plans:
   2. User can resize divider between panels
   3. Steps without canvas show placeholder right panel
   4. On mobile viewports, chat stacks above right panel vertically
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 16-01: TBD
+- [ ] 16-01-PLAN.md — Refactor step-container with dedicated RightPanel component (conditional canvas/output/placeholder, responsive layout)
 
 #### Phase 17: Canvas Core Interactions
 **Goal**: Post-it editing, color-coding, multi-select, undo/redo working
@@ -142,7 +142,7 @@ Plans:
 Plans:
 - [ ] 20-01: TBD
 
-### 📋 MMP Visual & Collaborative (Planned)
+### MMP Visual & Collaborative (Planned)
 
 **Milestone Goal:** Canvas for remaining steps (6 Journey Map, 8 Ideation, 9 Concepts), visual components (radar charts, persona builder), basic multi-user collaboration, responsive tablet support.
 
@@ -158,11 +158,11 @@ Phases execute in numeric order: 15 → 16 → 17 → 18 → 19 → 20
 | 1-6 | v0.5 | 19/19 | Complete | 2026-02-08 |
 | 7-14 | v1.0 | 25/25 | Complete | 2026-02-10 |
 | 15. Canvas Infrastructure | v1.1 | 3/3 | Complete | 2026-02-10 |
-| 16. Split-Screen Layout | v1.1 | 0/TBD | Not started | - |
+| 16. Split-Screen Layout | v1.1 | 0/1 | Planning | - |
 | 17. Canvas Core Interactions | v1.1 | 3/3 | Complete | 2026-02-10 |
 | 18. Step-Specific Canvases | v1.1 | 0/TBD | Not started | - |
 | 19. AI-Canvas Integration | v1.1 | 0/TBD | Not started | - |
 | 20. Bundle Optimization | v1.1 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-10 after Phase 17 execution complete*
+*Last updated: 2026-02-11 after Phase 16 planning complete*
