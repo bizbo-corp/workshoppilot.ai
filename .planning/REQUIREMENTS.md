@@ -101,37 +101,39 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LAYOUT-01 | TBD | Pending |
-| LAYOUT-02 | TBD | Pending |
-| LAYOUT-03 | TBD | Pending |
-| LAYOUT-04 | TBD | Pending |
-| CANV-01 | TBD | Pending |
-| CANV-02 | TBD | Pending |
-| CANV-03 | TBD | Pending |
-| CANV-04 | TBD | Pending |
-| CANV-05 | TBD | Pending |
-| CANV-06 | TBD | Pending |
-| CANV-07 | TBD | Pending |
-| CANV-08 | TBD | Pending |
-| CANV-09 | TBD | Pending |
-| STK-01 | TBD | Pending |
-| STK-02 | TBD | Pending |
-| STK-03 | TBD | Pending |
-| RSM-01 | TBD | Pending |
-| RSM-02 | TBD | Pending |
-| RSM-03 | TBD | Pending |
-| AICV-01 | TBD | Pending |
-| AICV-02 | TBD | Pending |
-| AICV-03 | TBD | Pending |
-| PERS-01 | TBD | Pending |
-| PERS-02 | TBD | Pending |
-| PERS-03 | TBD | Pending |
+| LAYOUT-01 | Phase 16 | Pending |
+| LAYOUT-02 | Phase 16 | Pending |
+| LAYOUT-03 | Phase 16 | Pending |
+| LAYOUT-04 | Phase 16 | Pending |
+| CANV-01 | Phase 15 | Pending |
+| CANV-02 | Phase 17 | Pending |
+| CANV-03 | Phase 17 | Pending |
+| CANV-04 | Phase 15 | Pending |
+| CANV-05 | Phase 17 | Pending |
+| CANV-06 | Phase 17 | Pending |
+| CANV-07 | Phase 17 | Pending |
+| CANV-08 | Phase 17 | Pending |
+| CANV-09 | Phase 17 | Pending |
+| STK-01 | Phase 18 | Pending |
+| STK-02 | Phase 18 | Pending |
+| STK-03 | Phase 19 | Pending |
+| RSM-01 | Phase 18 | Pending |
+| RSM-02 | Phase 18 | Pending |
+| RSM-03 | Phase 19 | Pending |
+| AICV-01 | Phase 19 | Pending |
+| AICV-02 | Phase 19 | Pending |
+| AICV-03 | Phase 19 | Pending |
+| PERS-01 | Phase 15 | Pending |
+| PERS-02 | Phase 15 | Pending |
+| PERS-03 | Phase 15 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25
+- Mapped to phases: 25
+- Unmapped: 0
+
+✓ 100% requirement coverage validated
 
 ---
 *Requirements defined: 2026-02-10*
-*Last updated: 2026-02-10 after initial definition*
+*Last updated: 2026-02-10 after roadmap creation*

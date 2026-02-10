@@ -4,7 +4,8 @@
 
 - ✅ **v0.5 Application Shell** - Phases 1-6 (shipped 2026-02-08)
 - ✅ **v1.0 Working AI Facilitation** - Phases 7-14 (shipped 2026-02-10)
-- 📋 **MMP Visual & Collaborative** - Phases TBD (planned)
+- 🚧 **v1.1 Canvas Foundation** - Phases 15-20 (in progress)
+- 📋 **MMP Visual & Collaborative** - Phases 21+ (planned)
 
 ## Phases
 
@@ -39,12 +40,127 @@ See `milestones/v1.0-ROADMAP.md` for full details.
 
 </details>
 
+### 🚧 v1.1 Canvas Foundation (In Progress)
+
+**Milestone Goal:** Split-screen layout with interactive post-it canvas for Steps 2 (Stakeholder Mapping) and 4 (Research Sense Making), enabling visual clustering alongside AI facilitation.
+
+**Approach:** Infrastructure-first, SSR-safe foundation using ReactFlow (@xyflow/react, MIT, ~200KB) for graph-first canvas with custom post-it nodes. ReactFlow provides built-in pan/zoom, multi-select, drag-and-drop, grouping, and queryable node/edge relationships for AI context. Canvas state lives in Zustand store as single source of truth, persisting to existing stepArtifacts JSONB column. Unidirectional data flow: AI → Zustand → Canvas (for AI suggestions), Canvas → Zustand → AI reads on next request (for canvas awareness).
+
+#### Phase 15: Canvas Infrastructure & SSR Safety
+**Goal**: Canvas state foundation with SSR-safe dynamic imports
+**Depends on**: Phase 14
+**Requirements**: CANV-01, CANV-04, PERS-01, PERS-02, PERS-03
+**Success Criteria** (what must be TRUE):
+  1. Canvas state stored in Zustand store (single source of truth)
+  2. Canvas components load without SSR hydration errors
+  3. User can create post-it notes on canvas
+  4. User can drag post-its to reposition them
+  5. Canvas state auto-saves to database (debounced 2s)
+  6. Canvas state loads from database when returning to step
+**Plans**: TBD
+
+Plans:
+- [ ] 15-01: TBD
+- [ ] 15-02: TBD
+
+#### Phase 16: Split-Screen Layout & Step Container Integration
+**Goal**: Split-screen layout responsive across desktop and mobile
+**Depends on**: Phase 15
+**Requirements**: LAYOUT-01, LAYOUT-02, LAYOUT-03, LAYOUT-04
+**Success Criteria** (what must be TRUE):
+  1. User sees chat panel left, right panel right on all steps
+  2. User can resize divider between panels
+  3. Steps without canvas show placeholder right panel
+  4. On mobile viewports, chat stacks above right panel vertically
+**Plans**: TBD
+
+Plans:
+- [ ] 16-01: TBD
+
+#### Phase 17: Canvas Core Interactions
+**Goal**: Post-it editing, color-coding, multi-select, undo/redo working
+**Depends on**: Phase 16
+**Requirements**: CANV-02, CANV-03, CANV-05, CANV-06, CANV-07, CANV-08, CANV-09
+**Success Criteria** (what must be TRUE):
+  1. User can edit post-it text inline (double-click to edit)
+  2. User can delete post-its (Backspace or Delete key)
+  3. User can color-code post-its from preset color palette
+  4. User can select multiple post-its (Shift+click or drag-select box)
+  5. User can pan and zoom the canvas
+  6. User can undo/redo canvas actions (Ctrl+Z / Ctrl+Shift+Z)
+  7. User can group related post-its together (proximity-based clustering)
+**Plans**: TBD
+
+Plans:
+- [ ] 17-01: TBD
+- [ ] 17-02: TBD
+
+#### Phase 18: Step-Specific Canvases (Steps 2 & 4)
+**Goal**: Stakeholder and Research canvases with quadrant layouts
+**Depends on**: Phase 17
+**Requirements**: STK-01, STK-02, STK-03, RSM-01, RSM-02, RSM-03
+**Success Criteria** (what must be TRUE):
+  1. Step 2 displays Power x Interest quadrant grid
+  2. Post-its snap to quadrant based on drop position in Step 2
+  3. Step 4 displays empathy map quadrants (Said/Thought/Felt/Experienced)
+  4. Post-its can be positioned within empathy map quadrants in Step 4
+**Plans**: TBD
+
+Plans:
+- [ ] 18-01: TBD
+- [ ] 18-02: TBD
+
+#### Phase 19: AI-Canvas Integration
+**Goal**: Bidirectional sync between AI chat and canvas
+**Depends on**: Phase 18
+**Requirements**: AICV-01, AICV-02, AICV-03, STK-03, RSM-03
+**Success Criteria** (what must be TRUE):
+  1. AI suggestions in chat include "Add to canvas" action button
+  2. Clicking "Add to canvas" creates post-it from AI suggestion
+  3. AI references canvas state in conversation (reads silently)
+  4. AI context includes stakeholders grouped by quadrant (Step 2)
+  5. AI context includes insights grouped by quadrant (Step 4)
+**Plans**: TBD
+
+Plans:
+- [ ] 19-01: TBD
+- [ ] 19-02: TBD
+
+#### Phase 20: Bundle Optimization & Mobile Refinement
+**Goal**: Production performance validated, mobile gestures refined
+**Depends on**: Phase 19
+**Requirements**: (Performance validation across requirements)
+**Success Criteria** (what must be TRUE):
+  1. Canvas route bundle size under 300KB
+  2. First Contentful Paint under 2s on 3G network
+  3. Touch interactions work on iOS Safari and Android Chrome
+  4. Canvas coordinates scale correctly on mobile viewports
+**Plans**: TBD
+
+Plans:
+- [ ] 20-01: TBD
+
+### 📋 MMP Visual & Collaborative (Planned)
+
+**Milestone Goal:** Canvas for remaining steps (6 Journey Map, 8 Ideation, 9 Concepts), visual components (radar charts, persona builder), basic multi-user collaboration, responsive tablet support.
+
+(Phases 21+ to be defined)
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 15 → 16 → 17 → 18 → 19 → 20
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1-6 | v0.5 | 19/19 | Complete | 2026-02-08 |
 | 7-14 | v1.0 | 25/25 | Complete | 2026-02-10 |
+| 15. Canvas Infrastructure | v1.1 | 0/TBD | Not started | - |
+| 16. Split-Screen Layout | v1.1 | 0/TBD | Not started | - |
+| 17. Canvas Core Interactions | v1.1 | 0/TBD | Not started | - |
+| 18. Step-Specific Canvases | v1.1 | 0/TBD | Not started | - |
+| 19. AI-Canvas Integration | v1.1 | 0/TBD | Not started | - |
+| 20. Bundle Optimization | v1.1 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-10 after v1.0 milestone completion*
+*Last updated: 2026-02-10 after v1.1 milestone roadmap creation*
