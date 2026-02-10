@@ -7,12 +7,15 @@ import {
   useReactFlow,
   Background,
   BackgroundVariant,
+  Controls,
+  SelectionMode,
   type Node,
   type NodeChange,
   applyNodeChanges,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useCanvasStore } from '@/providers/canvas-store-provider';
+import { useHotkeys } from 'react-hotkeys-hook';
+import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { PostItNode, type PostItNodeData } from './post-it-node';
 import { CanvasToolbar } from './canvas-toolbar';
 import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
@@ -31,6 +34,11 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const postIts = useCanvasStore((s) => s.postIts);
   const addPostIt = useCanvasStore((s) => s.addPostIt);
   const updatePostIt = useCanvasStore((s) => s.updatePostIt);
+  const deletePostIt = useCanvasStore((s) => s.deletePostIt);
+  const batchDeletePostIts = useCanvasStore((s) => s.batchDeletePostIts);
+
+  // Store API for temporal undo/redo access
+  const storeApi = useCanvasStoreApi();
 
   // Auto-save integration
   const { saveStatus } = useCanvasAutosave(workshopId, stepId);
@@ -55,6 +63,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   // Grid snap size (matches dot grid)
   const GRID_SIZE = 20;
 
+  // Undo/redo state
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
   // Snap position to grid
   const snapToGrid = useCallback(
     (position: { x: number; y: number }) => ({
@@ -63,6 +75,44 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     }),
     []
   );
+
+  // Undo/redo handlers
+  const handleUndo = useCallback(() => {
+    const temporalStore = storeApi.temporal;
+    const pastStates = temporalStore.getState().pastStates;
+    if (pastStates.length > 0) {
+      temporalStore.getState().undo();
+    }
+  }, [storeApi]);
+
+  const handleRedo = useCallback(() => {
+    const temporalStore = storeApi.temporal;
+    const futureStates = temporalStore.getState().futureStates;
+    if (futureStates.length > 0) {
+      temporalStore.getState().redo();
+    }
+  }, [storeApi]);
+
+  // Keyboard shortcuts for undo/redo
+  useHotkeys('mod+z', (e) => {
+    e.preventDefault();
+    handleUndo();
+  }, { enableOnFormTags: false });
+
+  useHotkeys(['mod+shift+z', 'ctrl+y'], (e) => {
+    e.preventDefault();
+    handleRedo();
+  }, { enableOnFormTags: false });
+
+  // Subscribe to temporal store for undo/redo state
+  useEffect(() => {
+    const temporalStore = storeApi.temporal;
+    const unsubscribe = temporalStore.subscribe((state) => {
+      setCanUndo(state.pastStates.length > 0);
+      setCanRedo(state.futureStates.length > 0);
+    });
+    return unsubscribe;
+  }, [storeApi]);
 
   // Handle editing the most recently created post-it
   useEffect(() => {
@@ -176,6 +226,15 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     [nodes, snapToGrid, updatePostIt]
   );
 
+  // Handle node deletion
+  const handleNodesDelete = useCallback(
+    (deleted: Node[]) => {
+      const ids = deleted.map(n => n.id);
+      batchDeletePostIts(ids);
+    },
+    [batchDeletePostIts]
+  );
+
   // Handle node double-click (enter edit mode)
   const handleNodeDoubleClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
@@ -229,9 +288,19 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         minZoom={0.3}
         maxZoom={2}
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-        deleteKeyCode={null}
-        selectionKeyCode={null}
         zoomOnDoubleClick={false}
+        // Multi-select (CANV-06)
+        selectionKeyCode="Shift"
+        multiSelectionKeyCode={null}
+        selectionOnDrag={true}
+        selectionMode={SelectionMode.Partial}
+        // Delete (CANV-03)
+        deleteKeyCode={editingNodeId ? null : ["Backspace", "Delete"]}
+        onNodesDelete={handleNodesDelete}
+        // Pan/Zoom (CANV-07)
+        panOnDrag={true}
+        zoomOnScroll={true}
+        zoomOnPinch={true}
       >
         <Background
           variant={BackgroundVariant.Dots}
@@ -239,10 +308,20 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           size={1}
           color="#d1d5db"
         />
+        <Controls
+          showInteractive={false}
+          className="!shadow-md"
+        />
       </ReactFlow>
 
       {/* Toolbar */}
-      <CanvasToolbar onAddPostIt={handleToolbarAdd} />
+      <CanvasToolbar
+        onAddPostIt={handleToolbarAdd}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+      />
 
       {/* Empty state hint */}
       {postIts.length === 0 && (
