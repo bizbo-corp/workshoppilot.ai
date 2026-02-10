@@ -5,17 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import type { UIMessage } from 'ai';
 import { ChatPanel } from './chat-panel';
-import { OutputPanel } from './output-panel';
-import { ArtifactConfirmation } from './artifact-confirmation';
+import { RightPanel } from './right-panel';
 import { StepNavigation } from './step-navigation';
 import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
 import { IdeationSubStepContainer } from './ideation-sub-step-container';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { reviseStep, resetStep } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
-import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 
 interface StepContainerProps {
   stepOrder: number;
@@ -236,52 +233,26 @@ export function StepContainer({
     </div>
   );
 
-  const renderOutput = () => {
-    const stepMeta = getStepByOrder(stepOrder);
-
-    return (
-      <div className="flex h-full flex-col">
-        {/* Canvas (above output panel) */}
-        <div className="min-h-[300px] flex-1 border-b">
-          <CanvasWrapper
-            sessionId={sessionId}
-            stepId={stepMeta?.id || ''}
-            workshopId={workshopId}
-          />
-        </div>
-
-        {/* Output panel (below canvas) */}
-        <div className="flex-1 overflow-hidden">
-          <OutputPanel
-            stepOrder={stepOrder}
-            artifact={artifact}
-            isExtracting={isExtracting}
-            extractionError={extractionError}
-            onRetry={extractArtifact}
-          />
-        </div>
-
-        {/* Confirmation UI (shown when artifact exists) */}
-        {artifact && (
-          <div className="border-t bg-background p-4">
-            <ArtifactConfirmation
-              onConfirm={handleConfirm}
-              onEdit={handleEdit}
-              isConfirming={false}
-              isConfirmed={artifactConfirmed}
-            />
-          </div>
-        )}
-      </div>
-    );
-  };
 
   // Mobile: stacked layout
   if (isMobile) {
     return (
       <div className="flex h-full flex-col">
         <div className="min-h-0 flex-1 border-b">{renderContent()}</div>
-        <div className="min-h-0 flex-1">{renderOutput()}</div>
+        <div className="min-h-0 flex-1">
+          <RightPanel
+            stepOrder={stepOrder}
+            sessionId={sessionId}
+            workshopId={workshopId}
+            artifact={artifact}
+            isExtracting={isExtracting}
+            extractionError={extractionError}
+            onRetry={extractArtifact}
+            artifactConfirmed={artifactConfirmed}
+            onConfirm={handleConfirm}
+            onEdit={handleEdit}
+          />
+        </div>
         <StepNavigation
           sessionId={sessionId}
           workshopId={workshopId}
@@ -306,20 +277,31 @@ export function StepContainer({
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-hidden">
-        <Group orientation="horizontal" className="h-full">
-          <Panel defaultSize={50} minSize={30}>
+        <Group orientation="horizontal" className="h-full" id="workshop-panels">
+          <Panel defaultSize={25} minSize={15}>
             {renderContent()}
           </Panel>
 
-          <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
-            {/* Invisible touch-friendly hit area */}
-            <div className="absolute inset-y-0 -left-3 -right-3" />
-            {/* Visual indicator on hover */}
-            <div className="absolute inset-y-0 left-0 w-px bg-ring opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
+          <Separator className="group relative w-0 hover:w-px data-[resize-handle-state=drag]:w-px">
+            {/* Invisible touch-friendly hit area (24px wide) */}
+            <div className="absolute inset-y-0 -left-3 -right-3 cursor-col-resize" />
+            {/* Visual indicator on hover only */}
+            <div className="absolute inset-y-0 left-0 w-px bg-border opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
           </Separator>
 
-          <Panel defaultSize={50} minSize={25}>
-            {renderOutput()}
+          <Panel defaultSize={75} minSize={40}>
+            <RightPanel
+              stepOrder={stepOrder}
+              sessionId={sessionId}
+              workshopId={workshopId}
+              artifact={artifact}
+              isExtracting={isExtracting}
+              extractionError={extractionError}
+              onRetry={extractArtifact}
+              artifactConfirmed={artifactConfirmed}
+              onConfirm={handleConfirm}
+              onEdit={handleEdit}
+            />
           </Panel>
         </Group>
       </div>
