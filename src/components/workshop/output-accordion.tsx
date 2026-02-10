@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { ChevronUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { OutputPanel } from './output-panel';
 import { ArtifactConfirmation } from './artifact-confirmation';
 

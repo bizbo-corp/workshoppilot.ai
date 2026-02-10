@@ -11,7 +11,7 @@ import { StepNavigation } from './step-navigation';
 import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
 import { IdeationSubStepContainer } from './ideation-sub-step-container';
 import { Button } from '@/components/ui/button';
-import { Sparkles, MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose } from 'lucide-react';
+import { Sparkles, MessageSquare, LayoutGrid, PanelLeftClose } from 'lucide-react';
 import { reviseStep, resetStep } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { cn } from '@/lib/utils';
@@ -74,6 +74,11 @@ export function StepContainer({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Reset mobile tab to 'chat' when navigating between steps
+  React.useEffect(() => {
+    setMobileTab('chat');
+  }, [stepOrder]);
 
   // Extract artifact from conversation
   const extractArtifact = React.useCallback(async () => {
