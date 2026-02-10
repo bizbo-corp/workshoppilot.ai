@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 
 Milestone: v1.1 Canvas Foundation
 Phase: 16 of 20 (Split-Screen Layout)
-Plan: 1 of 2 complete
-Status: In progress
-Last activity: 2026-02-11 — Completed 16-01-PLAN.md
+Plan: 2 of 2 complete
+Status: Phase complete
+Last activity: 2026-02-11 — Completed 16-02-PLAN.md
 
-Progress: [████████████████████░░░░] 84% (51 plans complete across v0.5 + v1.0 + v1.1)
+Progress: [████████████████████░░░░] 85% (52 plans complete across v0.5 + v1.0 + v1.1)
 
 ## Completed Milestones
 
@@ -73,6 +73,8 @@ Recent decisions affecting v1.1:
 - **Invisible divider** (16-01): w-0 class with hover/drag opacity reveal for cleaner visual split
 - **Panel persistence** (16-01): react-resizable-panels id prop persists sizes across steps via localStorage
 - **Accordion expansion pattern** (16-01): onExpandedChange callback from child to parent enables conditional layout switching
+- **Mobile tab pattern** (16-02): Chat/Canvas tabs at bottom above step navigation, CSS hidden toggle for instant switching
+- **Panel collapse pattern** (16-02): Desktop panels collapse to 40px icon strips, enabling full-chat or full-canvas focus modes
 
 ### Known Tech Debt
 
@@ -98,9 +100,9 @@ From research (research/SUMMARY.md):
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Phase 16 Plan 01 complete (Split-screen desktop layout with 320px chat, canvas on all steps, output accordion)
-Resume file: .planning/phases/16-split-screen-layout/16-01-SUMMARY.md
-Next action: Continue Phase 16 Plan 02 (mobile tab layout)
+Stopped at: Phase 16 complete (Split-screen layout with desktop resizable panels, mobile tabs, and collapse/expand)
+Resume file: .planning/phases/16-split-screen-layout/16-02-SUMMARY.md
+Next action: Begin Phase 17 (if planned) or next milestone phase
 
 ---
-*Last updated: 2026-02-11 after completing 16-01-PLAN.md*
+*Last updated: 2026-02-11 after completing 16-02-PLAN.md*
