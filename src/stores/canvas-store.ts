@@ -1,5 +1,6 @@
 import { createStore } from 'zustand/vanilla';
 import { temporal } from 'zundo';
+import type { Quadrant } from '@/lib/canvas/quadrant-detection';
 
 export type PostItColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange';
 
@@ -12,6 +13,7 @@ export type PostIt = {
   color?: PostItColor;
   parentId?: string;
   type?: 'postIt' | 'group';
+  quadrant?: Quadrant; // Quadrant position for steps with quadrant layout
 };
 
 export type CanvasState = {
