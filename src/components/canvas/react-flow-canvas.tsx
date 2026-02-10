@@ -96,6 +96,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       position: postIt.position,
       data: {
         text: postIt.text,
+        color: postIt.color || 'yellow',
         isEditing: editingNodeId === postIt.id,
         onTextChange: handleTextChange,
         onEditComplete: handleEditComplete,
