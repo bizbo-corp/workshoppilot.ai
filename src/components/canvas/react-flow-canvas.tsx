@@ -11,6 +11,7 @@ import {
   SelectionMode,
   type Node,
   type NodeChange,
+  type ReactFlowInstance,
   applyNodeChanges,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -22,6 +23,9 @@ import { CanvasToolbar } from './canvas-toolbar';
 import { ColorPicker } from './color-picker';
 import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
 import type { PostItColor } from '@/stores/canvas-store';
+import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
+import { QuadrantOverlay } from './quadrant-overlay';
+import { detectQuadrant } from '@/lib/canvas/quadrant-detection';
 
 // Define node types OUTSIDE component for stable reference
 const nodeTypes = {
@@ -50,6 +54,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
   // Auto-save integration
   const { saveStatus } = useCanvasAutosave(workshopId, stepId);
+
+  // Step-specific canvas configuration
+  const stepConfig = getStepCanvasConfig(stepId);
 
   // Editing state - track which node is being edited
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
@@ -192,15 +199,21 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       const flowPosition = screenToFlowPosition({ x: clientX, y: clientY });
       const snappedPosition = snapToGrid(flowPosition);
 
+      // Detect initial quadrant
+      const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
+        ? detectQuadrant(snappedPosition, 120, 120, stepConfig.quadrantType)
+        : undefined;
+
       shouldEditLatest.current = true;
       addPostIt({
         text: '',
         position: snappedPosition,
         width: 120,
         height: 120,
+        quadrant,
       });
     },
-    [screenToFlowPosition, snapToGrid, addPostIt]
+    [screenToFlowPosition, snapToGrid, addPostIt, stepConfig]
   );
 
   // Handle toolbar "+" creation (dealing-cards offset)
@@ -225,14 +238,20 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
     const snappedPosition = snapToGrid(position);
 
+    // Detect initial quadrant
+    const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
+      ? detectQuadrant(snappedPosition, 120, 120, stepConfig.quadrantType)
+      : undefined;
+
     shouldEditLatest.current = true;
     addPostIt({
       text: '',
       position: snappedPosition,
       width: 120,
       height: 120,
+      quadrant,
     });
-  }, [postIts, screenToFlowPosition, snapToGrid, addPostIt]);
+  }, [postIts, screenToFlowPosition, snapToGrid, addPostIt, stepConfig]);
 
   // Handle node drag
   const handleNodesChange = useCallback(
@@ -248,13 +267,24 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           change.position
         ) {
           const snappedPosition = snapToGrid(change.position);
-          updatePostIt(change.id, { position: snappedPosition });
+
+          // Detect quadrant if step has quadrant layout
+          const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
+            ? detectQuadrant(
+                snappedPosition,
+                120, // post-it default width
+                120, // post-it default height
+                stepConfig.quadrantType
+              )
+            : undefined;
+
+          updatePostIt(change.id, { position: snappedPosition, quadrant });
         }
       });
 
       return updatedNodes;
     },
-    [nodes, snapToGrid, updatePostIt]
+    [nodes, snapToGrid, updatePostIt, stepConfig]
   );
 
   // Handle node deletion
@@ -356,6 +386,22 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     [createPostItAtPosition]
   );
 
+  // Handle ReactFlow initialization (for empty quadrant canvas centering)
+  const handleInit = useCallback((instance: ReactFlowInstance) => {
+    if (stepConfig.hasQuadrants && postIts.length === 0) {
+      // Center viewport on (0,0) for quadrant steps
+      const container = document.querySelector('.react-flow');
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        instance.setViewport({
+          x: rect.width / 2,
+          y: rect.height / 2,
+          zoom: 1,
+        });
+      }
+    }
+  }, [stepConfig, postIts.length]);
+
   // Auto-fit view on mount if nodes exist
   useEffect(() => {
     if (postIts.length > 0 && !hasFitView.current) {
@@ -378,6 +424,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         onPaneClick={handlePaneClick}
         onMoveStart={handleMoveStart}
         onSelectionChange={handleSelectionChange}
+        onInit={handleInit}
         snapToGrid={true}
         snapGrid={[GRID_SIZE, GRID_SIZE]}
         fitView={postIts.length > 0}
@@ -409,6 +456,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           showInteractive={false}
           className="!shadow-md"
         />
+        {stepConfig.hasQuadrants && stepConfig.quadrantConfig && (
+          <QuadrantOverlay config={stepConfig.quadrantConfig} />
+        )}
       </ReactFlow>
 
       {/* Toolbar */}
