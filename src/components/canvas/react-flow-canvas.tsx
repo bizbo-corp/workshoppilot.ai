@@ -18,7 +18,9 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { PostItNode, type PostItNodeData } from './post-it-node';
 import { CanvasToolbar } from './canvas-toolbar';
+import { ColorPicker } from './color-picker';
 import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
+import type { PostItColor } from '@/stores/canvas-store';
 
 // Define node types OUTSIDE component for stable reference
 const nodeTypes = { postIt: PostItNode };
@@ -66,6 +68,14 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   // Undo/redo state
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+
+  // Context menu state for color picker
+  const [contextMenu, setContextMenu] = useState<{
+    nodeId: string;
+    x: number;
+    y: number;
+    currentColor: PostItColor;
+  } | null>(null);
 
   // Snap position to grid
   const snapToGrid = useCallback(
@@ -235,6 +245,37 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     [batchDeletePostIts]
   );
 
+  // Handle right-click on nodes (color picker)
+  const handleNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault();
+      const postIt = postIts.find(p => p.id === node.id);
+      setContextMenu({
+        nodeId: node.id,
+        x: event.clientX,
+        y: event.clientY,
+        currentColor: postIt?.color || 'yellow',
+      });
+    },
+    [postIts]
+  );
+
+  // Handle color selection from picker
+  const handleColorSelect = useCallback(
+    (color: PostItColor) => {
+      if (contextMenu) {
+        updatePostIt(contextMenu.nodeId, { color });
+        setContextMenu(null);
+      }
+    },
+    [contextMenu, updatePostIt]
+  );
+
+  // Close context menu on viewport move
+  const handleMoveStart = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
   // Handle node double-click (enter edit mode)
   const handleNodeDoubleClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
@@ -246,6 +287,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   // Handle pane click (double-click detection + deselect)
   const handlePaneClick = useCallback(
     (event: React.MouseEvent) => {
+      // Close context menu if open
+      setContextMenu(null);
+
       const now = Date.now();
       const timeSinceLastClick = now - lastPaneClickTime.current;
 
@@ -280,7 +324,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         nodeTypes={nodeTypes}
         onNodesChange={handleNodesChange}
         onNodeDoubleClick={handleNodeDoubleClick}
+        onNodeContextMenu={handleNodeContextMenu}
         onPaneClick={handlePaneClick}
+        onMoveStart={handleMoveStart}
         snapToGrid={true}
         snapGrid={[GRID_SIZE, GRID_SIZE]}
         fitView={postIts.length > 0}
@@ -322,6 +368,16 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         canUndo={canUndo}
         canRedo={canRedo}
       />
+
+      {/* Color picker context menu */}
+      {contextMenu && (
+        <ColorPicker
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          currentColor={contextMenu.currentColor}
+          onColorSelect={handleColorSelect}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
 
       {/* Empty state hint */}
       {postIts.length === 0 && (
