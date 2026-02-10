@@ -112,8 +112,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 18-01-PLAN.md — Quadrant foundation (step config, detection logic, PostIt model extension, QuadrantOverlay component)
-- [ ] 18-02-PLAN.md — Canvas integration (wire overlay into ReactFlowCanvas, quadrant detection on drag, AI context assembly)
+- [x] 18-01-PLAN.md — Quadrant foundation (step config, detection logic, PostIt model extension, QuadrantOverlay component)
+- [x] 18-02-PLAN.md — Canvas integration (wire overlay into ReactFlowCanvas, quadrant detection on drag, AI context assembly)
 
 #### Phase 19: AI-Canvas Integration
 **Goal**: Bidirectional sync between AI chat and canvas
@@ -163,9 +163,9 @@ Phases execute in numeric order: 15 → 16 → 17 → 18 → 19 → 20
 | 15. Canvas Infrastructure | v1.1 | 3/3 | Complete | 2026-02-10 |
 | 16. Split-Screen Layout | v1.1 | 3/3 | Complete | 2026-02-11 |
 | 17. Canvas Core Interactions | v1.1 | 3/3 | Complete | 2026-02-10 |
-| 18. Step-Specific Canvases | v1.1 | 0/TBD | Not started | - |
+| 18. Step-Specific Canvases | v1.1 | 2/2 | Complete | 2026-02-11 |
 | 19. AI-Canvas Integration | v1.1 | 0/TBD | Not started | - |
 | 20. Bundle Optimization | v1.1 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-11 after Phase 16 execution complete*
+*Last updated: 2026-02-11 after Phase 18 execution complete*
