@@ -1,8 +1,8 @@
 import { db } from '@/db/client';
 import { chatMessages, stepSummaries } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
-import { generateText } from 'ai';
 import { google } from '@ai-sdk/google';
+import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
 
 /**
  * Generate AI-powered conversation summary on step completion
@@ -46,8 +46,8 @@ export async function generateStepSummary(
       .map((row) => `${row.role}: ${row.content}`)
       .join('\n');
 
-    // Generate summary via Gemini
-    const result = await generateText({
+    // Generate summary via Gemini with rate limit retry
+    const result = await generateTextWithRetry({
       model: google('gemini-2.0-flash'),
       temperature: 0.1, // Low for factual accuracy
       prompt: `INSTRUCTIONS:

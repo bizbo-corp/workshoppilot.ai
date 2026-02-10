@@ -1,9 +1,10 @@
-import { streamText, convertToModelMessages } from 'ai';
+import { convertToModelMessages } from 'ai';
 import { chatModel, buildStepSystemPrompt } from '@/lib/ai/chat-config';
 import { saveMessages } from '@/lib/ai/message-persistence';
 import { assembleStepContext } from '@/lib/context/assemble-context';
 import { getStepById, STEPS } from '@/lib/workshop/step-metadata';
 import { getCurrentArcPhase } from '@/lib/ai/conversation-state';
+import { streamTextWithRetry, isGeminiRateLimitError } from '@/lib/ai/gemini-retry';
 
 /**
  * Increase Vercel serverless timeout for AI responses
@@ -64,8 +65,8 @@ export async function POST(req: Request) {
     // Convert messages to model format
     const modelMessages = await convertToModelMessages(messages);
 
-    // Stream Gemini response with context-aware prompt
-    const result = streamText({
+    // Stream Gemini response with context-aware prompt and rate limit retry
+    const result = await streamTextWithRetry({
       model: chatModel,
       system: systemPrompt,
       messages: modelMessages,
@@ -86,6 +87,26 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error('Chat API error:', error);
+
+    // Handle rate limit errors specifically after all retries exhausted
+    if (isGeminiRateLimitError(error)) {
+      return new Response(
+        JSON.stringify({
+          error: 'rate_limit_exceeded',
+          message: 'The AI is currently experiencing high demand. Please try again in a few moments.',
+          retryAfter: 30,
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': '30',
+          },
+        }
+      );
+    }
+
+    // Generic error for non-rate-limit failures
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

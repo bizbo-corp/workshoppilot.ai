@@ -5,11 +5,12 @@
  * from conversation history, with retry logic and Zod validation.
  */
 
-import { streamText, Output } from 'ai';
+import { Output } from 'ai';
 import type { ModelMessage } from 'ai';
 import { google } from '@ai-sdk/google';
 import { getSchemaForStep } from '@/lib/schemas';
 import { getStepById } from '@/lib/workshop/step-metadata';
+import { streamTextWithRetry } from '@/lib/ai/gemini-retry';
 
 /**
  * Custom error for extraction failures
@@ -74,8 +75,8 @@ export async function extractStepArtifact(
         }
       });
 
-      // Call streamText with Output.object
-      const result = streamText({
+      // Call streamText with Output.object and rate limit retry
+      const result = await streamTextWithRetry({
         model: google('gemini-2.0-flash'),
         system: extractionPrompt,
         messages: modelMessages,
