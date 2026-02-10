@@ -93,9 +93,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 17-01-PLAN.md — Store + node foundation (Zundo temporal middleware, PostIt color/grouping fields, PostItNode edit enhancements)
-- [ ] 17-02-PLAN.md — Canvas interactions (multi-select, delete, pan/zoom, undo/redo, color picker context menu)
-- [ ] 17-03-PLAN.md — Grouping with sub-flows (GroupNode component, group/ungroup actions, toolbar Group button)
+- [x] 17-01-PLAN.md — Store + node foundation (Zundo temporal middleware, PostIt color/grouping fields, PostItNode edit enhancements)
+- [x] 17-02-PLAN.md — Canvas interactions (multi-select, delete, pan/zoom, undo/redo, color picker context menu)
+- [x] 17-03-PLAN.md — Grouping with sub-flows (GroupNode component, group/ungroup actions, toolbar Group button)
 
 #### Phase 18: Step-Specific Canvases (Steps 2 & 4)
 **Goal**: Stakeholder and Research canvases with quadrant layouts
@@ -159,10 +159,10 @@ Phases execute in numeric order: 15 → 16 → 17 → 18 → 19 → 20
 | 7-14 | v1.0 | 25/25 | Complete | 2026-02-10 |
 | 15. Canvas Infrastructure | v1.1 | 3/3 | Complete | 2026-02-10 |
 | 16. Split-Screen Layout | v1.1 | 0/TBD | Not started | - |
-| 17. Canvas Core Interactions | v1.1 | 0/TBD | Not started | - |
+| 17. Canvas Core Interactions | v1.1 | 3/3 | Complete | 2026-02-10 |
 | 18. Step-Specific Canvases | v1.1 | 0/TBD | Not started | - |
 | 19. AI-Canvas Integration | v1.1 | 0/TBD | Not started | - |
 | 20. Bundle Optimization | v1.1 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-10 after Phase 15 execution complete*
+*Last updated: 2026-02-10 after Phase 17 execution complete*
