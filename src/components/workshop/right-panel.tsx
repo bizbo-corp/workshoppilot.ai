@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
+import { PanelRightClose } from 'lucide-react';
 import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { OutputAccordion } from './output-accordion';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
@@ -17,6 +18,7 @@ interface RightPanelProps {
   artifactConfirmed: boolean;
   onConfirm: () => void;
   onEdit: () => void;
+  onCollapse?: () => void;
 }
 
 export function RightPanel({
@@ -30,6 +32,7 @@ export function RightPanel({
   artifactConfirmed,
   onConfirm,
   onEdit,
+  onCollapse,
 }: RightPanelProps) {
   const [isAccordionExpanded, setIsAccordionExpanded] = React.useState(true);
   const stepMeta = getStepByOrder(stepOrder);
@@ -40,7 +43,19 @@ export function RightPanel({
   // When accordion is collapsed or hidden, show full-height canvas
   if (!showOutput || !isAccordionExpanded) {
     return (
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col relative">
+        {/* Collapse button */}
+        {onCollapse && (
+          <div className="absolute top-2 right-2 z-10">
+            <button
+              onClick={onCollapse}
+              className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
+              title="Collapse canvas"
+            >
+              <PanelRightClose className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         {/* Canvas section - full height */}
         <div className="min-h-0 flex-1">
           <CanvasWrapper
@@ -70,7 +85,19 @@ export function RightPanel({
 
   // When accordion is expanded, split vertically 50/50
   return (
-    <div className="h-full">
+    <div className="h-full relative">
+      {/* Collapse button */}
+      {onCollapse && (
+        <div className="absolute top-2 right-2 z-10">
+          <button
+            onClick={onCollapse}
+            className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
+            title="Collapse canvas"
+          >
+            <PanelRightClose className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       <Group orientation="vertical">
         {/* Canvas panel - top 50% */}
         <Panel defaultSize={50} minSize={30}>

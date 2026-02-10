@@ -11,7 +11,7 @@ import { StepNavigation } from './step-navigation';
 import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
 import { IdeationSubStepContainer } from './ideation-sub-step-container';
 import { Button } from '@/components/ui/button';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose } from 'lucide-react';
 import { reviseStep, resetStep } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { cn } from '@/lib/utils';
@@ -36,6 +36,8 @@ export function StepContainer({
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
   const [mobileTab, setMobileTab] = React.useState<'chat' | 'canvas'>('chat');
+  const [chatCollapsed, setChatCollapsed] = React.useState(false);
+  const [canvasCollapsed, setCanvasCollapsed] = React.useState(false);
 
   // Extraction state
   // Pre-populate artifact if viewing completed/needs_regeneration step
@@ -211,6 +213,17 @@ export function StepContainer({
   // Render content section
   const renderContent = () => (
     <div className="flex h-full min-h-0 flex-col">
+      {!isMobile && (
+        <div className="flex justify-end px-2 pt-2">
+          <button
+            onClick={() => setChatCollapsed(true)}
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            title="Collapse chat"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       <div className="min-h-0 flex-1">
         <ChatPanel
           key={resetKey}
@@ -287,37 +300,91 @@ export function StepContainer({
     );
   }
 
-  // Desktop: resizable panels
+  // Desktop: resizable panels with collapse/expand
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-hidden">
-        <Group orientation="horizontal" className="h-full" id="workshop-panels">
-          <Panel defaultSize={25} minSize={15}>
-            {renderContent()}
-          </Panel>
+        <div className="flex h-full">
+          {/* Chat panel or collapsed strip */}
+          {chatCollapsed ? (
+            <div className="flex w-10 flex-col items-center border-r bg-muted/30 py-4">
+              <button
+                onClick={() => setChatCollapsed(false)}
+                className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                title="Expand chat"
+              >
+                <MessageSquare className="h-5 w-5" />
+              </button>
+            </div>
+          ) : canvasCollapsed ? (
+            // Chat takes full width when canvas is collapsed
+            <div className="flex-1">{renderContent()}</div>
+          ) : (
+            // Both panels open: use resizable Group
+            <>
+              <Group orientation="horizontal" className="flex-1" id="workshop-panels">
+                <Panel defaultSize={25} minSize={15}>
+                  {renderContent()}
+                </Panel>
 
-          <Separator className="group relative w-0 hover:w-px data-[resize-handle-state=drag]:w-px">
-            {/* Invisible touch-friendly hit area (24px wide) */}
-            <div className="absolute inset-y-0 -left-3 -right-3 cursor-col-resize" />
-            {/* Visual indicator on hover only */}
-            <div className="absolute inset-y-0 left-0 w-px bg-border opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
-          </Separator>
+                <Separator className="group relative w-0 hover:w-px data-[resize-handle-state=drag]:w-px">
+                  {/* Invisible touch-friendly hit area (24px wide) */}
+                  <div className="absolute inset-y-0 -left-3 -right-3 cursor-col-resize" />
+                  {/* Visual indicator on hover only */}
+                  <div className="absolute inset-y-0 left-0 w-px bg-border opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
+                </Separator>
 
-          <Panel defaultSize={75} minSize={40}>
-            <RightPanel
-              stepOrder={stepOrder}
-              sessionId={sessionId}
-              workshopId={workshopId}
-              artifact={artifact}
-              isExtracting={isExtracting}
-              extractionError={extractionError}
-              onRetry={extractArtifact}
-              artifactConfirmed={artifactConfirmed}
-              onConfirm={handleConfirm}
-              onEdit={handleEdit}
-            />
-          </Panel>
-        </Group>
+                <Panel defaultSize={75} minSize={40}>
+                  <RightPanel
+                    stepOrder={stepOrder}
+                    sessionId={sessionId}
+                    workshopId={workshopId}
+                    artifact={artifact}
+                    isExtracting={isExtracting}
+                    extractionError={extractionError}
+                    onRetry={extractArtifact}
+                    artifactConfirmed={artifactConfirmed}
+                    onConfirm={handleConfirm}
+                    onEdit={handleEdit}
+                    onCollapse={() => setCanvasCollapsed(true)}
+                  />
+                </Panel>
+              </Group>
+            </>
+          )}
+
+          {/* Canvas panel or collapsed strip (when chat is collapsed but canvas is not) */}
+          {chatCollapsed && !canvasCollapsed && (
+            <div className="flex-1">
+              <RightPanel
+                stepOrder={stepOrder}
+                sessionId={sessionId}
+                workshopId={workshopId}
+                artifact={artifact}
+                isExtracting={isExtracting}
+                extractionError={extractionError}
+                onRetry={extractArtifact}
+                artifactConfirmed={artifactConfirmed}
+                onConfirm={handleConfirm}
+                onEdit={handleEdit}
+                onCollapse={() => setCanvasCollapsed(true)}
+              />
+            </div>
+          )}
+
+          {/* Canvas collapsed strip */}
+          {canvasCollapsed && (
+            <div className="flex w-10 flex-col items-center border-l bg-muted/30 py-4">
+              <button
+                onClick={() => setCanvasCollapsed(false)}
+                className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                title="Expand canvas"
+              >
+                <LayoutGrid className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       <StepNavigation
         sessionId={sessionId}
