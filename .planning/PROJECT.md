@@ -37,10 +37,17 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 
 ### Active
 
-#### MMP — Visual & Collaborative
-- [ ] Canvas tool with post-its (Tldraw or ReactFlow)
-- [ ] Split-screen mode (chat + canvas/form)
-- [ ] AI auto-suggest with UI to add/edit entries
+#### v1.1 — Canvas Foundation
+- [ ] Split-screen layout for all 10 steps (chat left, panel right)
+- [ ] Canvas component with post-its (create, move, color-code, cluster/group)
+- [ ] Step 2 Stakeholder Mapping canvas — cluster stakeholders by influence/interest
+- [ ] Step 4 Research Sense Making canvas — cluster insights into themes
+- [ ] AI → Canvas: suggest items in chat with "Add to canvas" confirmation
+- [ ] Canvas → AI: AI reads canvas state silently, references when relevant
+- [ ] Non-canvas steps: placeholder right panel (ready for future tools)
+
+#### Future — MMP (Visual & Collaborative)
+- [ ] Canvas for remaining steps (6 Journey Map, 8 Ideation, 9 Concepts)
 - [ ] Visual stakeholder radar chart
 - [ ] Empathy map canvas
 - [ ] Journey map grid UI with cell/row/column suggestions
@@ -56,7 +63,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - [ ] Video explanations per step
 - [ ] Build Pack export (PRDs, user stories, tech specs for AI coders)
 
-#### FFP — Full Platform
+#### Future — FFP (Full Platform)
 - [ ] AI + canvas working side-by-side (auto-suggest, auto-complete nodes)
 - [ ] Real-time multiplayer (WebSockets)
 - [ ] EzyDraw component (in-app sketching, sketch enhancement)
@@ -146,7 +153,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Step 10 Validate produces synthesis summary only (no Build Pack export yet)
 - CRON_SECRET needs to be configured in Vercel dashboard for production cron warming
 
-**Next milestone:** MMP (Visual & Collaborative) — canvas tools, split-screen mode, visual components, Build Pack export, basic multi-user collaboration
+**Current milestone:** v1.1 Canvas Foundation — split-screen layout + post-it canvas for Steps 2 & 4
 
 ---
-*Last updated: 2026-02-10 after v1.0 milestone*
+*Last updated: 2026-02-10 after v1.1 milestone start*
