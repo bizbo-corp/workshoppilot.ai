@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 
 Milestone: v1.1 Canvas Foundation
 Phase: 15 of 20 (Canvas Infrastructure & SSR Safety)
-Plan: 2 of 3 complete
-Status: In progress
-Last activity: 2026-02-10 — Completed 15-02-PLAN.md
+Plan: 3 of 3 complete
+Status: Phase complete
+Last activity: 2026-02-10 — Completed 15-03-PLAN.md
 
-Progress: [████████████████████░░░░] 76% (46 plans complete across v0.5 + v1.0 + v1.1)
+Progress: [█████████████████████░░░] 78% (47 plans complete across v0.5 + v1.0 + v1.1)
 
 ## Completed Milestones
 
@@ -25,8 +25,8 @@ Progress: [████████████████████░░░
 | v1.0 Working AI Facilitation | 7-14 | 25 | 2026-02-10 |
 
 **Cumulative stats:**
-- 14 phases, 44 plans completed
-- 12,131 lines of TypeScript across ~270 files
+- 15 phases, 47 plans completed
+- ~12,500 lines of TypeScript across ~276 files
 - 5 days total (2026-02-07 → 2026-02-10)
 
 **Velocity:**
@@ -52,6 +52,10 @@ Recent decisions affecting v1.1:
 - **Auto-edit mode** (15-02): shouldEditLatest ref flag + useEffect watching postIts array length to activate edit on new post-it
 - **Dealing-cards offset** (15-02): Toolbar + button places post-its at +30x, +30y from last post-it position
 - **Snap-to-grid** (15-02): 20px grid matching dot grid background, applied to creation and drag operations
+- **Canvas persistence** (15-03): Stored in stepArtifacts JSONB column with schemaVersion 'canvas-1.0', no new migrations needed
+- **Auto-save timing** (15-03): 2s debounce with 10s maxWait, matching existing chat auto-save pattern
+- **Silent retry** (15-03): First 2 failures logged but hidden, error UI shown after 3 consecutive failures
+- **Force-save** (15-03): On component unmount and beforeunload to prevent data loss on navigation
 
 ### Known Tech Debt
 
@@ -77,9 +81,9 @@ From research (research/SUMMARY.md):
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Phase 15 Plan 02 complete (ReactFlow canvas component with all interactions)
-Resume file: .planning/phases/15-canvas-infrastructure-ssr-safety/15-02-SUMMARY.md
-Next action: Execute Plan 15-03 (persistence layer with auto-save)
+Stopped at: Phase 15 complete (Canvas infrastructure, interactions, and persistence working end-to-end)
+Resume file: .planning/phases/15-canvas-infrastructure-ssr-safety/15-03-SUMMARY.md
+Next action: Begin Phase 16 (Split-Screen Layout) or next milestone phase
 
 ---
-*Last updated: 2026-02-10 after completing 15-02-PLAN.md*
+*Last updated: 2026-02-10 after completing 15-03-PLAN.md*
