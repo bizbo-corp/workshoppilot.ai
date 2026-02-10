@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 
 Milestone: v1.1 Canvas Foundation
 Phase: 15 of 20 (Canvas Infrastructure & SSR Safety)
-Plan: Ready to plan
-Status: Ready to plan
-Last activity: 2026-02-10 — v1.1 roadmap created
+Plan: 1 of 3 complete
+Status: In progress
+Last activity: 2026-02-10 — Completed 15-01-PLAN.md
 
-Progress: [████████████████████░░░░] 73% (44 plans complete across v0.5 + v1.0, v1.1 plans TBD)
+Progress: [████████████████████░░░░] 75% (45 plans complete across v0.5 + v1.0 + v1.1)
 
 ## Completed Milestones
 
@@ -44,6 +44,10 @@ Recent decisions affecting v1.1:
 - **Canvas library choice**: ReactFlow (@xyflow/react) for v1.1 — MIT, ~200KB, graph-first data model with queryable relationships for AI context
 - **Context architecture**: Hierarchical compression proven in v1.0, canvas state extends via stepArtifacts JSONB
 - **State management**: Zustand single source of truth, unidirectional flow, no prop-syncing
+- **Canvas store pattern** (15-01): Zustand factory pattern with `createStore` from zustand/vanilla for SSR safety and per-request isolation
+- **Post-it visual design** (15-01): Classic yellow (amber-100), 120x120px, shadow-md, system font, no rotation, hover lift
+- **SSR safety** (15-01): next/dynamic with ssr: false for ReactFlow canvas to prevent hydration errors
+- **Canvas edit UX** (15-01): nodrag/nopan classes on textarea prevent ReactFlow pan/zoom during text input
 
 ### Known Tech Debt
 
@@ -69,9 +73,9 @@ From research (research/SUMMARY.md):
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: v1.1 roadmap created, 6 phases defined (15-20), 25 requirements mapped
-Resume file: None
-Next action: `/gsd:plan-phase 15` to plan Canvas Infrastructure & SSR Safety
+Stopped at: Phase 15 Plan 01 complete (canvas infrastructure & SSR safety foundation)
+Resume file: .planning/phases/15-canvas-infrastructure-ssr-safety/15-01-SUMMARY.md
+Next action: Execute Plan 15-02 (ReactFlow canvas component) or 15-03 (persistence layer)
 
 ---
-*Last updated: 2026-02-10 after v1.1 roadmap creation*
+*Last updated: 2026-02-10 after completing 15-01-PLAN.md*
