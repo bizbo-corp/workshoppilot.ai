@@ -224,11 +224,11 @@ Plans:
   3. System handles streaming interruptions gracefully with reconnection logic
   4. Multiple concurrent users can complete workshops without rate limit cascade failures
   5. First page load after 5+ minutes inactivity is fast (no 3-8 second cold start)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 14-01: TBD during planning
-- [ ] 14-02: TBD during planning
+- [ ] 14-01-PLAN.md — Rate limit retry infrastructure (exponential backoff) and Neon cold start prevention (cron warming)
+- [ ] 14-02-PLAN.md — Client-side rate limit feedback UI and streaming error recovery
 
 ## Progress
 
@@ -251,7 +251,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 1
 | 12. Definition Steps (5-7) | v1.0 | 3/3 | Complete | 2026-02-09 |
 | 13. Ideation & Validation Steps (8-10) | v1.0 | 3/3 | Complete | 2026-02-10 |
 | 13.1 Reset Step & Step 8 Sub-Steps | v1.0 | 3/3 | Complete | 2026-02-10 |
-| 14. Production Hardening | v1.0 | 0/TBD | Not started | - |
+| 14. Production Hardening | v1.0 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-02-10 after Phase 13.1 completion*
+*Last updated: 2026-02-10 after Phase 14 planning*
