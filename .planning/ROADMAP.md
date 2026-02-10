@@ -109,11 +109,11 @@ Plans:
   2. Post-its snap to quadrant based on drop position in Step 2
   3. Step 4 displays empathy map quadrants (Said/Thought/Felt/Experienced)
   4. Post-its can be positioned within empathy map quadrants in Step 4
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 18-01: TBD
-- [ ] 18-02: TBD
+- [ ] 18-01-PLAN.md — Quadrant foundation (step config, detection logic, PostIt model extension, QuadrantOverlay component)
+- [ ] 18-02-PLAN.md — Canvas integration (wire overlay into ReactFlowCanvas, quadrant detection on drag, AI context assembly)
 
 #### Phase 19: AI-Canvas Integration
 **Goal**: Bidirectional sync between AI chat and canvas
