@@ -60,9 +60,9 @@ See `milestones/v1.0-ROADMAP.md` for full details.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 15-01-PLAN.md — Canvas infrastructure foundation (install @xyflow/react, Zustand store, provider, post-it node, SSR-safe wrapper)
-- [ ] 15-02-PLAN.md — ReactFlow canvas with all interactions (dot grid, double-click creation, toolbar, drag, snap-to-grid)
-- [ ] 15-03-PLAN.md — Persistence layer and step integration (server actions, auto-save hook, force-save, step page wiring)
+- [x] 15-01-PLAN.md — Canvas infrastructure foundation (install @xyflow/react, Zustand store, provider, post-it node, SSR-safe wrapper)
+- [x] 15-02-PLAN.md — ReactFlow canvas with all interactions (dot grid, double-click creation, toolbar, drag, snap-to-grid)
+- [x] 15-03-PLAN.md — Persistence layer and step integration (server actions, auto-save hook, force-save, step page wiring)
 
 #### Phase 16: Split-Screen Layout & Step Container Integration
 **Goal**: Split-screen layout responsive across desktop and mobile
@@ -156,7 +156,7 @@ Phases execute in numeric order: 15 → 16 → 17 → 18 → 19 → 20
 |-------|-----------|----------------|--------|-----------|
 | 1-6 | v0.5 | 19/19 | Complete | 2026-02-08 |
 | 7-14 | v1.0 | 25/25 | Complete | 2026-02-10 |
-| 15. Canvas Infrastructure | v1.1 | 0/TBD | Not started | - |
+| 15. Canvas Infrastructure | v1.1 | 3/3 | Complete | 2026-02-10 |
 | 16. Split-Screen Layout | v1.1 | 0/TBD | Not started | - |
 | 17. Canvas Core Interactions | v1.1 | 0/TBD | Not started | - |
 | 18. Step-Specific Canvases | v1.1 | 0/TBD | Not started | - |
@@ -164,4 +164,4 @@ Phases execute in numeric order: 15 → 16 → 17 → 18 → 19 → 20
 | 20. Bundle Optimization | v1.1 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-10 after v1.1 milestone roadmap creation*
+*Last updated: 2026-02-10 after Phase 15 execution complete*
