@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 
 Milestone: v1.1 Canvas Foundation
 Phase: 17 of 20 (Canvas Core Interactions)
-Plan: 2 of 3 complete
-Status: In progress
-Last activity: 2026-02-10 — Completed 17-02-PLAN.md
+Plan: 3 of 3 complete
+Status: Phase complete
+Last activity: 2026-02-10 — Completed 17-03-PLAN.md
 
-Progress: [████████████████████░░░░] 82% (49 plans complete across v0.5 + v1.0 + v1.1)
+Progress: [████████████████████░░░░] 83% (50 plans complete across v0.5 + v1.0 + v1.1)
 
 ## Completed Milestones
 
@@ -25,8 +25,8 @@ Progress: [████████████████████░░░
 | v1.0 Working AI Facilitation | 7-14 | 25 | 2026-02-10 |
 
 **Cumulative stats:**
-- 49 plans completed (15 phases complete, Phase 17 in progress)
-- ~12,700 lines of TypeScript across ~277 files
+- 50 plans completed (16 phases complete)
+- ~12,900 lines of TypeScript across ~278 files
 - 5 days total (2026-02-07 → 2026-02-10)
 
 **Velocity:**
@@ -64,6 +64,11 @@ Recent decisions affecting v1.1:
 - **Delete safety** (17-02): Conditional deleteKeyCode (null when editingNodeId set) prevents deletion during text input
 - **Undo/redo integration** (17-02): Temporal store subscription for reactive toolbar state, mod+z keyboard shortcuts cross-platform
 - **Color picker UX** (17-02): Right-click context menu with fixed positioning, closes on viewport change/click outside
+- **Group visual design** (17-03): Translucent gray-100 background with dashed gray-300 border, NodeResizer for manual sizing
+- **Grouping mechanics** (17-03): Bounding box calculation with 20px padding, children positioned relatively inside parent
+- **Ungroup preservation** (17-03): Children converted back to absolute positions, preserving canvas location
+- **Group deletion behavior** (17-03): Auto-ungroups children instead of deleting them, prevents accidental data loss
+- **Parent-child rendering** (17-03): Groups sorted first in nodes array for ReactFlow parent-before-children requirement
 
 ### Known Tech Debt
 
@@ -89,9 +94,9 @@ From research (research/SUMMARY.md):
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Phase 17, Plan 2 complete (Multi-select, delete, undo/redo, color picker interactions wired up)
-Resume file: .planning/phases/17-canvas-core-interactions/17-02-SUMMARY.md
-Next action: Execute 17-03-PLAN.md (grouping and hierarchy)
+Stopped at: Phase 17 complete (Canvas core interactions: undo/redo, colors, multi-select, delete, grouping)
+Resume file: .planning/phases/17-canvas-core-interactions/17-03-SUMMARY.md
+Next action: Begin Phase 18 (next phase in v1.1 roadmap)
 
 ---
-*Last updated: 2026-02-10 after completing 17-02-PLAN.md*
+*Last updated: 2026-02-10 after completing 17-03-PLAN.md*
