@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 
 Milestone: v1.1 Canvas Foundation
 Phase: 15 of 20 (Canvas Infrastructure & SSR Safety)
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: In progress
-Last activity: 2026-02-10 — Completed 15-01-PLAN.md
+Last activity: 2026-02-10 — Completed 15-02-PLAN.md
 
-Progress: [████████████████████░░░░] 75% (45 plans complete across v0.5 + v1.0 + v1.1)
+Progress: [████████████████████░░░░] 76% (46 plans complete across v0.5 + v1.0 + v1.1)
 
 ## Completed Milestones
 
@@ -48,6 +48,10 @@ Recent decisions affecting v1.1:
 - **Post-it visual design** (15-01): Classic yellow (amber-100), 120x120px, shadow-md, system font, no rotation, hover lift
 - **SSR safety** (15-01): next/dynamic with ssr: false for ReactFlow canvas to prevent hydration errors
 - **Canvas edit UX** (15-01): nodrag/nopan classes on textarea prevent ReactFlow pan/zoom during text input
+- **Double-click creation** (15-02): Manual detection using onPaneClick with 300ms threshold (ReactFlow has no native onPaneDoubleClick)
+- **Auto-edit mode** (15-02): shouldEditLatest ref flag + useEffect watching postIts array length to activate edit on new post-it
+- **Dealing-cards offset** (15-02): Toolbar + button places post-its at +30x, +30y from last post-it position
+- **Snap-to-grid** (15-02): 20px grid matching dot grid background, applied to creation and drag operations
 
 ### Known Tech Debt
 
@@ -73,9 +77,9 @@ From research (research/SUMMARY.md):
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Phase 15 Plan 01 complete (canvas infrastructure & SSR safety foundation)
-Resume file: .planning/phases/15-canvas-infrastructure-ssr-safety/15-01-SUMMARY.md
-Next action: Execute Plan 15-02 (ReactFlow canvas component) or 15-03 (persistence layer)
+Stopped at: Phase 15 Plan 02 complete (ReactFlow canvas component with all interactions)
+Resume file: .planning/phases/15-canvas-infrastructure-ssr-safety/15-02-SUMMARY.md
+Next action: Execute Plan 15-03 (persistence layer with auto-save)
 
 ---
-*Last updated: 2026-02-10 after completing 15-01-PLAN.md*
+*Last updated: 2026-02-10 after completing 15-02-PLAN.md*
