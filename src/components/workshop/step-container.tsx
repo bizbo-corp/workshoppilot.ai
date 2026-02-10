@@ -6,6 +6,7 @@ import { Group, Panel, Separator } from 'react-resizable-panels';
 import type { UIMessage } from 'ai';
 import { ChatPanel } from './chat-panel';
 import { RightPanel } from './right-panel';
+import { MobileTabBar } from './mobile-tab-bar';
 import { StepNavigation } from './step-navigation';
 import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
 import { IdeationSubStepContainer } from './ideation-sub-step-container';
@@ -13,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import { reviseStep, resetStep } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
+import { cn } from '@/lib/utils';
 
 interface StepContainerProps {
   stepOrder: number;
@@ -33,6 +35,7 @@ export function StepContainer({
 }: StepContainerProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
+  const [mobileTab, setMobileTab] = React.useState<'chat' | 'canvas'>('chat');
 
   // Extraction state
   // Pre-populate artifact if viewing completed/needs_regeneration step
@@ -234,25 +237,36 @@ export function StepContainer({
   );
 
 
-  // Mobile: stacked layout
+  // Mobile: tab-based layout
   if (isMobile) {
     return (
       <div className="flex h-full flex-col">
-        <div className="min-h-0 flex-1 border-b">{renderContent()}</div>
-        <div className="min-h-0 flex-1">
-          <RightPanel
-            stepOrder={stepOrder}
-            sessionId={sessionId}
-            workshopId={workshopId}
-            artifact={artifact}
-            isExtracting={isExtracting}
-            extractionError={extractionError}
-            onRetry={extractArtifact}
-            artifactConfirmed={artifactConfirmed}
-            onConfirm={handleConfirm}
-            onEdit={handleEdit}
-          />
+        {/* Content area - show one panel at a time */}
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {/* Both panels mounted, visibility toggled with CSS for instant switching */}
+          <div className={cn('h-full', mobileTab !== 'chat' && 'hidden')}>
+            {renderContent()}
+          </div>
+          <div className={cn('h-full', mobileTab !== 'canvas' && 'hidden')}>
+            <RightPanel
+              stepOrder={stepOrder}
+              sessionId={sessionId}
+              workshopId={workshopId}
+              artifact={artifact}
+              isExtracting={isExtracting}
+              extractionError={extractionError}
+              onRetry={extractArtifact}
+              artifactConfirmed={artifactConfirmed}
+              onConfirm={handleConfirm}
+              onEdit={handleEdit}
+            />
+          </div>
         </div>
+
+        {/* Tab bar - above step navigation */}
+        <MobileTabBar activeTab={mobileTab} onTabChange={setMobileTab} />
+
+        {/* Step navigation - fixed at bottom, full width */}
         <StepNavigation
           sessionId={sessionId}
           workshopId={workshopId}
