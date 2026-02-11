@@ -27,6 +27,9 @@ import type { PostItColor } from '@/stores/canvas-store';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { QuadrantOverlay } from './quadrant-overlay';
 import { detectQuadrant } from '@/lib/canvas/quadrant-detection';
+import { GridOverlay } from './grid-overlay';
+import { positionToCell, snapToCell } from '@/lib/canvas/grid-layout';
+import type { CellCoordinate } from '@/lib/canvas/grid-layout';
 
 // Define node types OUTSIDE component for stable reference
 const nodeTypes = {
@@ -100,6 +103,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
   // Track selected nodes for Group button visibility
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+
+  // Grid cell highlighting state
+  const [highlightedCell, setHighlightedCell] = useState<CellCoordinate | null>(null);
 
   // Snap position to grid
   const snapToGrid = useCallback(
@@ -204,21 +210,45 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const createPostItAtPosition = useCallback(
     (clientX: number, clientY: number) => {
       const flowPosition = screenToFlowPosition({ x: clientX, y: clientY });
-      const snappedPosition = snapToGrid(flowPosition);
 
-      // Detect initial quadrant
-      const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
-        ? detectQuadrant(snappedPosition, 120, 120, stepConfig.quadrantType)
-        : undefined;
+      // Grid-based snap and cell assignment for grid steps
+      if (stepConfig.hasGrid && stepConfig.gridConfig) {
+        const snappedPosition = snapToCell(flowPosition, stepConfig.gridConfig);
+        const cell = positionToCell(snappedPosition, stepConfig.gridConfig);
 
-      shouldEditLatest.current = true;
-      addPostIt({
-        text: '',
-        position: snappedPosition,
-        width: 120,
-        height: 120,
-        quadrant,
-      });
+        const cellAssignment = cell
+          ? {
+              row: stepConfig.gridConfig.rows[cell.row].id,
+              col: stepConfig.gridConfig.columns[cell.col].id,
+            }
+          : undefined;
+
+        shouldEditLatest.current = true;
+        addPostIt({
+          text: '',
+          position: snappedPosition,
+          width: 120,
+          height: 120,
+          cellAssignment,
+        });
+      } else {
+        // Quadrant-based snap and detection for quadrant/standard steps
+        const snappedPosition = snapToGrid(flowPosition);
+
+        // Detect initial quadrant
+        const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
+          ? detectQuadrant(snappedPosition, 120, 120, stepConfig.quadrantType)
+          : undefined;
+
+        shouldEditLatest.current = true;
+        addPostIt({
+          text: '',
+          position: snappedPosition,
+          width: 120,
+          height: 120,
+          quadrant,
+        });
+      }
     },
     [screenToFlowPosition, snapToGrid, addPostIt, stepConfig]
   );
@@ -243,21 +273,44 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       position = center;
     }
 
-    const snappedPosition = snapToGrid(position);
+    // Grid-based snap and cell assignment for grid steps
+    if (stepConfig.hasGrid && stepConfig.gridConfig) {
+      const snappedPosition = snapToCell(position, stepConfig.gridConfig);
+      const cell = positionToCell(snappedPosition, stepConfig.gridConfig);
 
-    // Detect initial quadrant
-    const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
-      ? detectQuadrant(snappedPosition, 120, 120, stepConfig.quadrantType)
-      : undefined;
+      const cellAssignment = cell
+        ? {
+            row: stepConfig.gridConfig.rows[cell.row].id,
+            col: stepConfig.gridConfig.columns[cell.col].id,
+          }
+        : undefined;
 
-    shouldEditLatest.current = true;
-    addPostIt({
-      text: '',
-      position: snappedPosition,
-      width: 120,
-      height: 120,
-      quadrant,
-    });
+      shouldEditLatest.current = true;
+      addPostIt({
+        text: '',
+        position: snappedPosition,
+        width: 120,
+        height: 120,
+        cellAssignment,
+      });
+    } else {
+      // Quadrant-based snap and detection for quadrant/standard steps
+      const snappedPosition = snapToGrid(position);
+
+      // Detect initial quadrant
+      const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
+        ? detectQuadrant(snappedPosition, 120, 120, stepConfig.quadrantType)
+        : undefined;
+
+      shouldEditLatest.current = true;
+      addPostIt({
+        text: '',
+        position: snappedPosition,
+        width: 120,
+        height: 120,
+        quadrant,
+      });
+    }
   }, [postIts, screenToFlowPosition, snapToGrid, addPostIt, stepConfig]);
 
   // Handle node drag
@@ -273,25 +326,54 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           change.dragging === false &&
           change.position
         ) {
-          const snappedPosition = snapToGrid(change.position);
+          // Grid-based snap and cell assignment for grid steps
+          if (stepConfig.hasGrid && stepConfig.gridConfig) {
+            const snappedPosition = snapToCell(change.position, stepConfig.gridConfig);
+            const cell = positionToCell(snappedPosition, stepConfig.gridConfig);
 
-          // Detect quadrant if step has quadrant layout
-          const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
-            ? detectQuadrant(
-                snappedPosition,
-                120, // post-it default width
-                120, // post-it default height
-                stepConfig.quadrantType
-              )
-            : undefined;
+            // Build cell assignment if position is within grid
+            const cellAssignment = cell
+              ? {
+                  row: stepConfig.gridConfig.rows[cell.row].id,
+                  col: stepConfig.gridConfig.columns[cell.col].id,
+                }
+              : undefined;
 
-          updatePostIt(change.id, { position: snappedPosition, quadrant });
+            updatePostIt(change.id, { position: snappedPosition, cellAssignment });
+            setHighlightedCell(null); // Clear highlight on drop
+          } else {
+            // Quadrant-based snap and detection for quadrant steps
+            const snappedPosition = snapToGrid(change.position);
+
+            // Detect quadrant if step has quadrant layout
+            const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
+              ? detectQuadrant(
+                  snappedPosition,
+                  120, // post-it default width
+                  120, // post-it default height
+                  stepConfig.quadrantType
+                )
+              : undefined;
+
+            updatePostIt(change.id, { position: snappedPosition, quadrant });
+          }
         }
       });
 
       return updatedNodes;
     },
     [nodes, snapToGrid, updatePostIt, stepConfig]
+  );
+
+  // Handle node drag (real-time cell highlighting)
+  const handleNodeDrag = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      if (stepConfig.hasGrid && stepConfig.gridConfig) {
+        const cell = positionToCell(node.position, stepConfig.gridConfig);
+        setHighlightedCell(cell); // null if outside grid
+      }
+    },
+    [stepConfig]
   );
 
   // Handle node deletion
@@ -393,7 +475,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     [createPostItAtPosition]
   );
 
-  // Handle ReactFlow initialization (for empty quadrant canvas centering)
+  // Handle ReactFlow initialization (for empty quadrant/grid canvas centering)
   const handleInit = useCallback((instance: ReactFlowInstance) => {
     if (stepConfig.hasQuadrants && postIts.length === 0) {
       // Center viewport on (0,0) for quadrant steps
@@ -406,6 +488,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           zoom: 1,
         });
       }
+    } else if (stepConfig.hasGrid && postIts.length === 0) {
+      // Show grid origin area for grid steps
+      instance.setViewport({
+        x: 50,  // Small left margin
+        y: 20,  // Small top margin
+        zoom: 1,
+      });
     }
   }, [stepConfig, postIts.length]);
 
@@ -426,6 +515,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         edges={[]}
         nodeTypes={nodeTypes}
         onNodesChange={handleNodesChange}
+        onNodeDrag={handleNodeDrag}
         onNodeDoubleClick={handleNodeDoubleClick}
         onNodeContextMenu={handleNodeContextMenu}
         onPaneClick={handlePaneClick}
@@ -465,6 +555,12 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         />
         {stepConfig.hasQuadrants && stepConfig.quadrantConfig && (
           <QuadrantOverlay config={stepConfig.quadrantConfig} />
+        )}
+        {stepConfig.hasGrid && stepConfig.gridConfig && (
+          <GridOverlay
+            config={stepConfig.gridConfig}
+            highlightedCell={highlightedCell}
+          />
         )}
       </ReactFlow>
 
