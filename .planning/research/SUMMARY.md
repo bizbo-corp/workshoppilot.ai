@@ -1,419 +1,350 @@
-# Project Research Summary
+# Project Research Summary: v1.2 Grid/Swimlane Canvas Features
 
-**Project:** WorkshopPilot.ai v1.1 — Canvas & Post-It Features
-**Domain:** Interactive canvas integration for design thinking facilitation (Steps 2 & 4)
-**Researched:** 2026-02-10
+**Project:** WorkshopPilot.ai v1.2 Canvas Whiteboard Enhancement
+**Domain:** Interactive canvas whiteboard with structured grid/swimlane layouts and AI-driven placement
+**Researched:** 2026-02-11
 **Confidence:** HIGH
 
 ## Executive Summary
 
-WorkshopPilot v1.1 adds split-screen canvas functionality to Steps 2 (Stakeholder Mapping) and 4 (Research Sense Making), enabling users to interact with both AI chat and visual post-it canvas simultaneously. Research confirms this is achievable WITHOUT heavy canvas libraries — the recommended approach uses div-based post-its with @dnd-kit for drag-and-drop (10KB total), avoiding Tldraw (600KB) or ReactFlow (200KB) bloat. The canvas is NOT a separate feature but a **projection of AI-controlled structured outputs**: AI suggests → user confirms → canvas updates; canvas changes → AI reads silently via context.
+WorkshopPilot.ai v1.2 adds structured grid/swimlane canvas features to the existing ReactFlow-based canvas foundation. This research reveals that **no new libraries are required** — all features can be built using existing ReactFlow 12.10.0 APIs with custom logic. The milestone extends v1.1's canvas capabilities to support Step 6 (Journey Map with fixed swimlane rows and user-addable stage columns) and retrofits Steps 2 & 4 to render structured output data as organized canvas nodes.
 
-The key architectural insight: maintain unidirectional data flow through Zustand as single source of truth, avoiding bidirectional state sync race conditions. Canvas state persists in existing stepArtifacts JSONB column (no schema migration needed), loaded with dynamic imports to prevent SSR hydration errors. Mobile responsiveness must be built-in from day one — touch events, coordinate scaling, and viewport adaptation cannot be retrofitted after desktop-only implementation.
+The recommended approach centers on three architectural patterns: (1) semantic ID-based grid coordinates that survive column reordering, (2) AI suggest-then-confirm placement with validation against current grid state, and (3) single source of truth with dual UI projections (output panel + canvas) to prevent sync bugs. These patterns directly address the top risks: coordinate system confusion between free-form and cell-based positioning, dynamic column operations breaking state, and output-canvas state divergence.
 
-Critical risks center on SSR compatibility (canvas libraries crash Next.js server rendering), state synchronization complexity (AI and canvas competing for updates), and bundle size explosion (Tldraw adds 600KB). These are preventable with proper architecture: dynamic imports with `ssr: false`, unidirectional Zustand flow, and lightweight custom canvas components instead of feature-rich libraries.
+Key risks are manageable with proper architectural foundation. The primary risk is **coordinate system confusion** between ReactFlow's continuous pixel space and grid's discrete cell space — mitigated with bidirectional coordinate translation layer established in Phase 1. Secondary risk is **dynamic column operations** (add/remove/reorder stages) breaking card positions — solved with semantic column IDs instead of array indices. Third risk is **output panel and canvas showing different data** for Steps 2 & 4 — prevented by unified data model with dual projections. All three risks are architectural decisions that must be made correctly upfront; they cannot be easily retrofitted.
 
 ## Key Findings
 
 ### Recommended Stack
 
-Research confirms **NO major canvas library needed** for WorkshopPilot's use case. Post-its are simple colored rectangles (div + CSS), not complex graphics requiring Canvas 2D API or infinite whiteboards. The only NEW dependency is @dnd-kit (10KB) for drag-and-drop interactions.
+**NO NEW PACKAGES NEEDED.** All v1.2 features build on existing v1.1 stack with custom implementation patterns. Existing stack (Next.js 16.1.1, React 19, ReactFlow 12.10.0, Zustand, Tailwind 4, shadcn/ui, Gemini API via Vercel AI SDK 6) fully supports grid layouts through native ReactFlow APIs.
 
-**Core technologies (UNCHANGED from v1.0):**
-- Next.js 16.1.1 — Server Actions for post-it CRUD, React 19 support
-- React 19.2 — Components for post-its, canvas container
-- Tailwind CSS 4 — Post-it colors via Tailwind classes (bg-yellow-200, etc.)
-- Zustand 5.0.3 — Canvas state management (extends existing pattern from v1.0)
-- react-resizable-panels 4.6.2 — Split-screen layout (ALREADY INSTALLED)
-- Drizzle ORM + Neon Postgres — Persist canvas items in stepArtifacts JSONB column
+**Core technologies (existing, no changes):**
+- **ReactFlow 12.10.0**: Grid overlay via custom SVG component (similar to existing QuadrantOverlay), cell-based snap via custom logic overriding built-in snapGrid, programmatic node placement for AI-driven card creation. Native APIs support everything needed.
+- **Zustand (existing)**: Extend canvas store with `cellAssignment` field on PostIt type, add grid configuration state for dynamic columns. No new packages.
+- **Tailwind CSS 4**: Grid cell styling, swimlane visual treatment. CSS-only implementation.
+- **Gemini API (existing)**: AI returns structured cell coordinates `{rowId: string, columnIndex: number}` in JSON response. No new capabilities needed.
 
-**NEW for v1.1:**
-- **@dnd-kit/core + @dnd-kit/sortable** (10KB minified) — Drag-and-drop, grouping/clustering, collision detection, auto-scroll. Modern Pointer Events API (works on touch + mouse). Lightweight alternative to react-dnd (20KB), react-beautiful-dnd (deprecated), or custom implementation (200+ lines).
+**New patterns (not packages):**
+1. **Grid coordinate utilities** (`grid-layout.ts`): Math functions for cell-to-position and position-to-cell transforms. Pure TypeScript, ~100 lines.
+2. **Custom snap logic** (`grid-snap.ts`): Calculate nearest cell center, override ReactFlow's built-in snap. Solves multi-select drag bug (ReactFlow #1579).
+3. **Swimlane overlay** (`grid-overlay.tsx`): SVG component for row labels and column headers. Reuses QuadrantOverlay pattern from v1.1 Steps 2 & 4.
+4. **AI placement engine** (`ai-placement-engine.ts`): Parse AI suggestions, validate against current grid, handle stale references. ~150 lines.
 
-**What NOT to install:**
-- Tldraw 4.3.1 — 600KB with deps, infinite canvas + drawing tools we don't need
-- ReactFlow 11.11.4 — 200KB, designed for workflow diagrams with connections (we cluster, not connect)
-- Konva/react-konva 19.2.0 — 335KB, Canvas 2D API for complex graphics (post-its are divs)
-- react-colorful — 2.8KB, color picker UI (6 preset colors are sufficient, no picker needed)
-
-**Rationale for div-based approach:** Post-its are UI elements (text + color), not graphics. Divs provide native accessibility (focus, screen readers), text editing (contenteditable), and styling (Tailwind). Canvas 2D API is overkill for <50 post-its — better for 1000+ animated elements. Bundle impact: 10KB vs 600KB for Tldraw.
+**Total bundle impact: 0 KB** (no new npm packages). Gzipped Next.js bundle increase < 2 KB (app code only).
 
 ### Expected Features
 
-Research identifies clear feature categories from Miro, FigJam, and MURAL patterns:
+**Table stakes (must have for v1.2 launch):**
+- **Visual grid structure**: Fixed swimlane rows (Actions, Thoughts, Feelings, Pain Points, Opportunities) + dynamic stage columns. ReactFlow Background component + custom SVG overlay.
+- **Snap to cell boundaries**: Custom snap logic maps positions to cell boundaries (not cell centers like Miro — user frustration documented). Addresses ReactFlow multi-select bug #1579 with group-aware snap.
+- **Cell-aware item placement**: Store `{row, column}` metadata with nodes. Critical for AI reasoning about grid structure.
+- **Add/remove columns dynamically**: User adds journey stages (Awareness, Consideration, Purchase). "+Add Stage" button, "×" delete, min 2 / max 10 columns.
+- **AI suggest-then-confirm placement**: AI proposes cell + content, highlights target cell (pulsing yellow border), action button "Add to Canvas". Novel interaction pattern not found in Miro/FigJam/Lucidspark.
 
-**Must have (table stakes) — launch blockers:**
-- **Post-it CRUD** — Create (click or "s" key), edit text (double-click inline), delete (Backspace), color-code (5 colors)
-- **Drag-and-drop positioning** — Click-drag to move, visual feedback during drag
-- **Multi-select** — Shift+click or drag-select box for bulk operations (move, color, delete)
-- **Group/cluster post-its** — Proximity-based visual grouping for affinity mapping (Step 4)
-- **Pan & zoom** — Space+drag or two-finger trackpad for navigation
-- **Auto-save canvas state** — Debounced 2s saves, persist positions/text/colors to database
-- **AI → Canvas sync** — "Add to canvas" button in chat triggers post-it creation
-- **Canvas → AI sync** — AI reads canvas state silently (post-it positions, groups) and references in conversation
-- **Step-specific templates** — Step 2: 2×2 quadrant grid (Power × Interest), Step 4: freeform canvas
-- **Undo/redo (basic)** — Ctrl+Z/Ctrl+Shift+Z for create/delete/move/color
+**Should have (v1.3+ after validation):**
+- **Resize columns**: Drag handles on column borders. Trigger: User feedback on width constraints.
+- **Structured output → canvas migration** (Steps 2 & 4 retrofit): Output panel fields auto-populate canvas in organized layout. High user value but complex implementation.
+- **Cell completion indicators**: Visual cues for coverage (empty vs filled cells). Helps users see progress.
+- **AI gap detection**: AI notices empty critical cells and prompts. Proactive facilitation.
 
-**Should have (competitive advantage) — defer to v1.2:**
-- **AI-named clusters** — After user groups 3+ post-its, AI suggests cluster theme name
-- **Bulk mode creation** — Paste stakeholder list → each line becomes post-it
-- **Alignment guides** — Smart guides show vertical/horizontal alignment during drag
-- **Snap-to-grid toggle** — Optional magnetic snap (Step 2 quadrants)
-- **Minimap** — Viewport overview when zoomed in (>50 post-its)
-- **Export canvas as PNG** — Share snapshot externally
+**Defer (v2+ until PMF established):**
+- **Context-aware grids for other steps**: Expand grid concept to Steps 5, 8. Need to validate Step 6 first.
+- **Export grid as structured data**: CSV/JSON export. Useful for reporting but not critical for v1.2 validation.
+- **Variable row heights**: Adds complexity. Uniform heights work for 90% of cases.
 
-**Anti-features (defer indefinitely) — scope creep risks:**
-- Real-time collaboration — CRDT conflict resolution, cursor presence, websocket complexity (defer to MMP v2.0)
-- Freeform drawing/sketching — Pen tool, stroke rendering, eraser (no design thinking value)
-- Infinite canvas — Performance degradation >200 post-its (bounded 4000×3000px is sufficient)
-- Post-it rich text formatting — Bold/bullets/links add UI complexity without value (plain text only)
-- Custom shapes/sizes — Cognitive overhead, spatial layout challenges (fixed-size rectangles only)
-- Nested groups — UI complexity, depth management issues (flat clustering only)
+**Anti-features (commonly requested but problematic):**
+- **User-defined custom rows**: Breaks AI placement assumptions, creates analysis paralysis. Journey maps have established patterns (Actions, Thoughts, Feelings per Nielsen Norman Group). Offer 2-3 presets instead.
+- **Auto-arrange/auto-layout**: Removes user agency, difficult to undo gracefully. Use AI suggest-then-confirm instead.
+- **Merge/split cells like spreadsheets**: Breaks stage × lane structure, adds complexity for minimal value. Use spanning items or connection lines instead.
 
 ### Architecture Approach
 
-Canvas integrates into existing Next.js App Router architecture via **conditional rendering in StepContainer**. The right panel switches between OutputPanel (Steps 1,3,5-10) and CanvasPanel (Steps 2,4) based on step metadata. Canvas state lives in dedicated Zustand store (canvasStore), parallel to existing workshopStore/chatStore pattern.
+The architecture extends existing v1.1 canvas foundation (ReactFlow wrapper, Zustand store with temporal undo/redo, auto-save to stepArtifacts JSONB, bidirectional AI-canvas integration) with grid-specific layers. Three core architectural patterns emerge from research:
 
 **Major components:**
-1. **canvasStore (Zustand)** — Single source of truth for post-it items, positions, groups. Actions: addItem, updateItem, removeItem, syncToServer.
-2. **BaseCanvas** — Shared infrastructure for drag-and-drop, item rendering, state sync. Wraps step-specific canvases.
-3. **StakeholderCanvas (Step 2)** — Bullseye ring layout (SVG circles), ring detection on drop, metadata: { ring: 'inner' | 'middle' | 'outer' }.
-4. **ResearchThemeCanvas (Step 4)** — Empathy map quadrants (CSS Grid), quadrant detection on drop, metadata: { quadrant: 'said' | 'thought' | 'felt' | 'experienced' }.
-5. **CanvasPanel** — Wrapper component that conditionally renders step-specific canvas, connects to canvasStore, handles auto-save.
-6. **API route: /api/canvas/sync** — Persists canvas items to stepArtifacts.artifact.canvasItems JSONB column, authentication + ownership verification.
 
-**Key patterns:**
-- **Unidirectional data flow:** AI updates → Zustand → Canvas reads. Canvas updates → Zustand → AI reads on next request (NOT reactively).
-- **Canvas as projection:** Canvas state stored IN stepArtifacts.artifact.canvasItems as part of structured output, not separate table. Canvas is visualization of artifacts, not independent state.
-- **Debounced auto-save:** 2s debounce, 10s maxWait using existing use-debounce pattern from v1.0 chat auto-save.
-- **Dynamic imports with ssr: false:** All canvas components use Next.js dynamic imports to prevent SSR hydration errors (canvas libraries require browser APIs).
-- **Responsive coordinate translation:** Canvas coordinates scale based on viewport width (baseWidth: 1200px → currentWidth). Mobile stacks chat above canvas.
+1. **Coordinate Translation Layer** (`grid-layout.ts`, `grid-detection.ts`): Bidirectional conversion between ReactFlow's pixel coordinates (x, y) and grid cell coordinates (row, col). Handles zoom-independent calculations. Prevents primary pitfall: coordinate system confusion.
 
-**Database integration:**
-- **No schema migration needed** — Canvas items stored in existing stepArtifacts.artifact.canvasItems array (JSONB column).
-- **AI context injection** — assembleStepContext() function includes formatted canvas state (grouped by ring/quadrant) in system prompt for Steps 2 and 4.
+2. **Grid Overlay System** (`grid-overlay.tsx`, `step-canvas-config.ts`): SVG overlay for swimlane labels and cell boundaries, viewport-aware transformation with pan/zoom. Reuses proven QuadrantOverlay pattern. Config-driven per step (quadrant vs grid vs freeform).
+
+3. **AI Placement Engine** (`ai-placement-engine.ts`, AI prompt updates): Parse [GRID_ITEM] markup, validate placements against current grid state (not request-time snapshot), handle semantic column references with fallback. Novel suggest-then-confirm UX.
+
+4. **Unified Data Model** (modified `canvas-store.ts`, database schema): Single source of truth with optional `cellAssignment` field on PostIt type. Both output panel and canvas are projections of same entity. Prevents split-brain state divergence.
+
+5. **Step-Scoped State** (modified store structure): Canvas state isolated per step, lazy load/unload on navigation. Prevents cross-step contamination (Steps 2, 4, 6 have different schemas).
+
+**Data flow patterns:**
+- **AI-driven placement**: User chats → AI suggests with cell coordinates → ChatPanel parses [GRID_ITEM] markup → Validates against current grid → User confirms → Canvas store creates node at calculated position → Snaps to cell center → Auto-saves to DB.
+- **Output→Canvas migration**: User completes step → Artifact extracted → New transformer maps fields to grid cells/quadrants → Batch creates canvas nodes → Canvas becomes primary view → User edits on canvas → State syncs back to stepArtifacts JSONB.
+
+**Key architectural decisions:**
+- Use semantic IDs (UUIDs) for columns/rows, not array indices. Survives reordering.
+- Disable ReactFlow's built-in `snapGrid` for grid steps due to multi-select bug. Implement custom snap.
+- Store both pixel position (ReactFlow requires) and cell assignment (grid logic requires) on each node.
+- Validate AI placements against current grid state, not request-time snapshot (user may have added/removed columns during 2-5s AI response).
 
 ### Critical Pitfalls
 
-Research identified 7 critical pitfalls from Next.js App Router + React 19 + canvas library integration:
+Research identified 7 critical pitfalls, all with proven prevention strategies:
 
-1. **SSR/Hydration Mismatch** — Canvas libraries (Tldraw, Konva) assume browser-only environment. Importing in Server Component causes "window is not defined" errors. Even in Client Components, hydration mismatches occur if server HTML differs from client render. **Prevention:** Dynamic imports with `ssr: false` for ALL canvas components, test in Vercel production (stricter than local dev).
+1. **Grid Coordinate System Confusion (Free-Form vs Cell-Based)** — ReactFlow's continuous pixel space vs grid's discrete cell constraints create coordinate conflicts. Multi-select drag breaks snap-to-grid (ReactFlow #1579), zoom degrades snap precision. **Avoid:** Implement coordinate translation layer (pixelToCell, cellToPixel), custom snap logic for grid steps, zoom-independent calculations, test at 50%/100%/250% zoom.
 
-2. **Bidirectional State Sync Race Conditions** — Multiple sources of truth (AI and canvas both initiating updates) create race conditions. Canvas update writes to Zustand at same moment AI response writes, one clobbers the other. React 19 concurrent rendering batches updates unpredictably. **Prevention:** Establish Zustand as single source of truth, unidirectional flow (AI → Zustand → Canvas, Canvas → Zustand → AI reads on next request), use optimistic updates with rollback, NO prop-syncing (derive from store).
+2. **Dynamic Column Addition Breaking Layout and State** — User adds/removes journey stage columns while cards reference array indices. Column 3 deleted → cards at index 4 become index 3 (wrong stage). AI suggests placement for deleted column. **Avoid:** Use semantic IDs (col-uuid) not indices, validate AI placements against current grid, implement card migration on column delete, undo/redo captures structural changes.
 
-3. **Bundle Size Explosion** — Tldraw adds 600KB (FCP increases 3.8s, Lighthouse score 95→68). Fabric.js 500KB, Konva 300KB. Canvas libraries bundle transitive dependencies (lodash, vector math) duplicating existing utilities. **Prevention:** Aggressive code splitting (dynamic imports per route), choose lightweight @dnd-kit (10KB) over heavy libraries, monitor bundle size in CI (fail if canvas route >300KB).
+3. **Snap-to-Cell Constraint Conflicts with Free-Form Editing** — Snap-to-cell forces center alignment but users want fine-tuning. Snap calculation on every drag event (60fps) causes lag. **Avoid:** Implement "loose" snap with sub-cell offset positioning, debounce snap calculations (50ms), snap-on-drag-end not during-drag, visual ghost outline of target cell.
 
-4. **Mobile/Responsive Canvas Collapse** — Canvas coordinates use absolute pixels that don't translate to mobile. Post-its render at 2px on mobile, touch events don't work (onMouseMove fails on mobile). Traditional CSS breakpoints don't solve coordinate translation. **Prevention:** Responsive canvas scaling (viewport coordinates → canvas coordinates), mobile-first layout (stack chat/canvas), touch-action CSS to prevent browser gestures, test at REAL breakpoints (375px, 768px, 820px, 912px).
+4. **Output Panel → Canvas Migration State Inconsistency** — Steps 2 & 4 retrofit creates two representations of same data (output panel form + canvas nodes). Edit in one view doesn't update the other. **Avoid:** Establish single source of truth in Zustand store, both UIs are projections, unified undo/redo, migration script for existing workshops with feature flag rollout.
 
-5. **Canvas State Serialization Failures** — JSON.stringify loses Date objects (become strings), class instances (lose prototypes), functions (disappear). Snapshot-based undo/redo stores 300 copies of full state (2.4MB). Postgres TOAST compression adds 200ms latency for large JSONB. **Prevention:** Store minimal serializable state (IDs, positions, text), use JSON Patch for undo deltas (100x smaller), avoid deeply nested JSONB, GIN indexes for queries, test round-trip: load(save(state)) === state.
+5. **AI Placement Suggestions Becoming Stale During User Editing** — User modifies grid (add column) during 2-5s AI response window. AI placement references old grid structure, cards appear in wrong columns. **Avoid:** Grid structure versioning with validation, semantic column references (label not index), validate each suggestion as it streams, optional grid locking during AI placement.
 
-6. **AI-Canvas Coordination Race Conditions** — Optimistic updates (show change before DB confirms) create consistency risks. AI streams response (2-5s), user drags post-it during stream, AI completes and overwrites user's drag. Network failures leave partial state. **Prevention:** Optimistic update lifecycle with rollback, use React 19 useOptimistic hook, lock canvas during AI streaming, version-based conflict detection, idempotency keys for AI requests.
+6. **Swimlane Row Height Rigidity Breaking Content Adaptability** — Fixed 120px rows cause text overflow, mobile viewport consumed by 5 rows. Multiple cards in same cell overlap. **Avoid:** Flexible row heights with min/max constraints, content-based sizing, cell stacking for multiple cards, responsive row sizing for mobile, manual resize handles.
 
-7. **Touch Event and Gesture Conflicts** — Browser gestures conflict with canvas: double-tap = zoom, pinch = zoom, swipe = navigate, long-press = context menu. CSS touch-action Safari mobile only supports 'auto' and 'manipulation', ignores 'none'. Passive event listeners can't preventDefault(). **Prevention:** Pointer Events API (unified mouse/touch/pen), touch-action: manipulation CSS, viewport meta with user-scalable=no, custom gesture detection, test on REAL devices (iOS Safari, Android Chrome).
+7. **Cross-Step Canvas State Contamination** — Single Zustand store accumulates canvas state from all steps. Step 2 quadrant canvas bleeds into Step 6 grid canvas. Memory bloats as user visits multiple steps. **Avoid:** Step-scoped state structure, lazy load on mount / persist on unmount, per-step undo/redo stacks, AI context filtered to current step only.
+
+**Prevention priority:** Pitfalls 1, 2, 4, 7 are architectural — must be addressed in Phase 1 (foundational architecture) or require expensive refactoring later. Pitfalls 3, 5, 6 are tuning — can iterate after MVP validation.
 
 ## Implications for Roadmap
 
-Based on research findings, suggested phase structure for v1.1 Canvas Foundation:
+Based on combined research, recommend **5 phases** structured around architectural dependencies and risk mitigation:
 
-### Phase 1: Canvas Infrastructure & SSR Safety
-**Rationale:** Foundation must handle SSR compatibility and basic canvas state BEFORE step-specific implementations. SSR issues break deployment (Pitfall #1), state architecture locks in patterns for all future features (Pitfall #2).
-
-**Delivers:**
-- canvasStore (Zustand) with items, selectedIds, viewport state
-- BaseCanvas component with dynamic import (ssr: false) and drag-drop infrastructure
-- CanvasItemPostIt shared component (div-based, Tailwind styled)
-- API route /api/canvas/sync for persistence to stepArtifacts
-- useCanvasAutosave hook (2s debounce, 10s maxWait)
-
-**Addresses:**
-- SSR/hydration mismatch (Pitfall #1) — dynamic imports established
-- Bidirectional state races (Pitfall #2) — unidirectional Zustand flow defined
-- Bundle size explosion (Pitfall #3) — lightweight div-based approach, no heavy libraries
-
-**Avoids:**
-- "window is not defined" Vercel deployment errors
-- Prop-syncing anti-pattern (single source of truth)
-- Canvas library lock-in before validating needs
-
-**Research flag:** Standard patterns (Zustand stores, Next.js dynamic imports) — skip research-phase.
-
----
-
-### Phase 2: Step Container Integration & Split-Screen Layout
-**Rationale:** Modify existing StepContainer to conditionally render canvas, establishing responsive layout BEFORE implementing step-specific canvases. Layout architecture (Pitfall #4) must be mobile-first from start.
+### Phase 1: Grid Foundation & Coordinate System
+**Rationale:** Establishes coordinate translation layer, semantic ID architecture, and step-scoped state before any feature implementation. These are architectural decisions that cannot be easily retrofitted. Addresses pitfalls 1, 2, 7 (coordinate confusion, dynamic columns, cross-step contamination).
 
 **Delivers:**
-- StepContainer modification: renderRightPanel() conditional logic
-- CanvasPanel wrapper component (connects to canvasStore)
-- Split-screen layout with react-resizable-panels (chat left, canvas right)
-- Mobile responsive stacking (chat above canvas on <768px)
-- Canvas coordinate translation for viewport scaling
+- Coordinate translation utilities (pixelToCell, cellToPixel)
+- Grid configuration system with semantic IDs
+- Step-scoped canvas state structure
+- Custom snap-to-cell logic (fixes ReactFlow multi-select bug)
+- Grid overlay component (SVG swimlane labels)
 
-**Uses:**
-- react-resizable-panels 4.6.2 (already installed)
-- Tailwind responsive breakpoints
-- useResponsiveCanvas hook for scaling
+**Addresses features:**
+- Visual grid structure (table stakes)
+- Snap to cell boundaries (table stakes)
+- Cell-aware item placement (table stakes)
 
-**Implements:**
-- Conditional rendering pattern (Architecture component: StepContainer)
-- Responsive canvas scaling (Prevention for Pitfall #4)
+**Avoids pitfalls:**
+- Grid coordinate system confusion (critical)
+- Dynamic column operations breaking state (critical)
+- Cross-step canvas state contamination (critical)
 
-**Avoids:**
-- Desktop-only implementation requiring mobile rewrite
-- Fixed-pixel canvas sizing breaking on tablet/mobile
+**Implementation notes:**
+- NO new packages. Pure TypeScript utilities + React components.
+- Grid overlay reuses QuadrantOverlay pattern (proven in v1.1).
+- Test extensively at multiple zoom levels (50%, 100%, 150%, 250%).
 
-**Research flag:** Standard Next.js layout patterns — skip research-phase.
-
----
-
-### Phase 3: Stakeholder Canvas (Step 2)
-**Rationale:** Implement first step-specific canvas with simpler layout (static bullseye rings) before tackling freeform clustering in Step 4. Validates canvas infrastructure with constrained use case.
+### Phase 2: Dynamic Grid Structure (Column Management)
+**Rationale:** Builds on Phase 1's semantic ID foundation to enable user-controlled stage columns. Directly addresses Journey Map Step 6 requirement for user-addable stages. Requires Phase 1's coordinate system to recalculate positions on structural changes.
 
 **Delivers:**
-- StakeholderCanvas component with bullseye ring layout (SVG circles)
-- Ring detection logic (distance from center: <150px = inner, <250px = middle, <350px = outer)
-- Post-it metadata: { ring: 'inner' | 'middle' | 'outer' }
-- AI context injection: formatCanvasForAI() groups stakeholders by ring
-- 2×2 quadrant grid template (Power × Interest) with snap-to-quadrant
+- Add/remove stage columns UI
+- Column reordering (drag to reorder)
+- Card migration on column delete
+- Grid structure persistence to database
+- Undo/redo for structural changes
 
-**Addresses:**
-- Step 2 table stakes features (stakeholder mapping canvas)
-- AI-canvas bidirectional sync (Canvas → AI silent read)
+**Addresses features:**
+- Add/remove columns dynamically (table stakes)
+- Column header labels (table stakes)
 
-**Implements:**
-- BaseCanvas extension for step-specific layout
-- Canvas state serialization (minimal: id, x, y, text, color, ring)
+**Avoids pitfalls:**
+- Dynamic column addition breaking layout (critical)
 
-**Avoids:**
-- Over-engineering with infinite canvas (bounded layout sufficient)
-- Custom shape complexity (fixed rectangles only)
+**Implementation notes:**
+- Max 10 columns (prevent horizontal scroll hell)
+- Confirmation dialog on column delete ("10 cards will move to adjacent stage")
+- Atomic operations: structural change + affected card migration in single transaction
 
-**Research flag:** Skip research-phase — stakeholder mapping patterns well-documented (Power/Interest grid is standard).
-
----
-
-### Phase 4: Research Theme Canvas (Step 4)
-**Rationale:** Second canvas implementation introduces clustering/grouping complexity. Validates @dnd-kit sortable features and proximity-based grouping.
+### Phase 3: AI Suggest-Then-Confirm Placement
+**Rationale:** Implements AI-driven placement on top of stable grid foundation from Phases 1-2. Validation logic prevents stale placement bugs. This is the key differentiator vs Miro/FigJam (they don't suggest specific cell placement).
 
 **Delivers:**
-- ResearchThemeCanvas component with empathy map quadrants (CSS Grid)
-- Quadrant detection logic (x/y coordinate thresholds)
-- Post-it metadata: { quadrant: 'said' | 'thought' | 'felt' | 'experienced', type: 'pain' | 'gain' }
-- Proximity-based clustering detection (3+ post-its within 50px)
-- AI context injection: formatCanvasForAI() groups insights by quadrant
+- AI cell coordinate suggestion (rowId, columnIndex in JSON)
+- [GRID_ITEM] markup parser in ChatPanel
+- Grid structure validation layer
+- Cell highlighting on AI suggestion (pulsing yellow border)
+- Action buttons for confirm/reject
 
-**Addresses:**
-- Step 4 table stakes features (research sense making canvas)
-- Grouping/clustering interactions (@dnd-kit sortable)
+**Addresses features:**
+- AI suggest-then-confirm placement (table stakes, differentiator)
+- Cell highlighting on AI suggestion (table stakes)
 
-**Uses:**
-- @dnd-kit/sortable for cluster stacking
-- SortableContext with verticalListSortingStrategy
+**Avoids pitfalls:**
+- AI placement suggestions becoming stale (critical)
 
-**Avoids:**
-- AI auto-arrange (removes user agency, unpredictable)
-- Nested groups (UI complexity without value)
+**Implementation notes:**
+- Validate against current grid state, not request-time snapshot
+- Semantic column references (label match) with fallback
+- Progressive validation during streaming (show warnings in real-time)
+- Optional: grid locking during AI placement (UX trade-off)
 
-**Research flag:** Skip research-phase — empathy mapping and affinity diagramming are established UX patterns.
-
----
-
-### Phase 5: AI Integration & Optimistic Updates
-**Rationale:** Connect AI suggestions to canvas creation, implementing proper optimistic update lifecycle with rollback. Must address Pitfall #6 (AI-canvas race conditions) before users interact with feature.
+### Phase 4: Steps 2 & 4 Canvas Retrofit
+**Rationale:** Extends grid/structured canvas concept to existing quadrant steps. Highest user value (organized stakeholder/empathy data) but complex due to unified data model requirement. Depends on Phase 1's coordinate system and state architecture.
 
 **Delivers:**
-- "Add to canvas" button in chat for AI suggestions
-- Optimistic post-it creation with temporary IDs
-- ID reconciliation after database save (temp → real ID)
-- Rollback on save failure with user notification
-- Version-based conflict detection (lastModifiedBy: 'user' | 'ai')
+- Unified data model (single source of truth)
+- Output panel → canvas node transformer
+- AI-driven initial placement in quadrants
+- Migration script for existing workshops
+- Feature flag rollout
 
-**Addresses:**
-- AI → Canvas sync (Feature: AI suggests → canvas updates)
-- AI-canvas race conditions (Pitfall #6)
+**Addresses features:**
+- Structured output → canvas migration (should have, high value)
 
-**Implements:**
-- React 19 useOptimistic hook for automatic rollback
-- Canvas locking during AI streaming (disable drag while isAIResponding)
-- Idempotency keys for AI requests
+**Avoids pitfalls:**
+- Output panel → canvas migration state inconsistency (critical)
 
-**Avoids:**
-- Optimistic updates without rollback (lost work on failure)
-- Simultaneous AI + user edits clobbering each other
+**Implementation notes:**
+- Unified schema: entity has both form fields (output) and position (canvas)
+- Both UIs are projections of same Zustand store entity
+- Migration adds default positions to existing output-only workshops
+- Phase carefully: feature flag → internal testing → gradual rollout
 
-**Research flag:** NEEDS research-phase — AI streaming coordination patterns less documented, may need experimentation with Vercel AI SDK + Zustand interaction.
-
----
-
-### Phase 6: Mobile Touch Optimization
-**Rationale:** Validate touch interactions on real devices, refine gesture handling. Pitfall #7 (touch conflicts) requires device testing, cannot be fully validated in desktop emulation.
+### Phase 5: UX Refinement & Validation
+**Rationale:** Tunes interaction patterns based on real usage. Addresses subjective pitfalls (snap threshold, row heights) that require user feedback to optimize.
 
 **Delivers:**
-- Pointer Events API handlers (onPointerDown/Move/Up)
-- touch-action: manipulation CSS (Safari mobile compatible)
-- Custom gesture detection (1 finger = drag, 2 fingers = zoom)
-- Long-press detection with timeout (500ms)
-- Mobile breakpoint refinement (375px, 414px, 768px, 820px, 912px)
+- Snap threshold tuning (debouncing, dead zone)
+- Flexible row heights with manual resize
+- Cell completion indicators
+- Mobile grid optimization
+- Performance optimization (if needed)
 
-**Addresses:**
-- Touch event conflicts (Pitfall #7)
-- Mobile layout collapse (Pitfall #4 completion)
+**Addresses features:**
+- Cell completion indicators (should have)
+- Resize columns (should have)
 
-**Uses:**
-- Pointer Events API (unified mouse/touch/pen)
-- CSS touch-action property
-- Viewport meta: user-scalable=no
+**Avoids pitfalls:**
+- Snap-to-cell constraint conflicts (tuning)
+- Swimlane row height rigidity (tuning)
 
-**Avoids:**
-- Separate mouse/touch handlers (use unified PointerEvent)
-- Browser gesture conflicts (pinch-zoom, swipe-back)
-
-**Research flag:** NEEDS research-phase — Touch gesture best practices on iOS Safari vs Android Chrome differ, may need device-specific handling.
-
----
-
-### Phase 7: Bundle Optimization & Performance Validation
-**Rationale:** Verify bundle size, FCP, and production performance before launch. Pitfall #3 (bundle explosion) must be caught in CI before affecting users.
-
-**Delivers:**
-- Next.js Bundle Analyzer integration
-- Route-based code splitting verification (canvas only loads on Steps 2,4)
-- Bundle size budget CI check (fail if canvas route >300KB)
-- Lighthouse FCP target: <2s on 3G
-- JSONB query performance validation (<200ms canvas load)
-
-**Addresses:**
-- Bundle size explosion (Pitfall #3)
-- Canvas state serialization performance (Pitfall #5)
-
-**Uses:**
-- @next/bundle-analyzer
-- Vercel Speed Insights
-- Postgres GIN indexes for JSONB queries
-
-**Avoids:**
-- Production bundle surprises (catch regressions in CI)
-- JSONB TOAST overhead (keep canvas state <100KB)
-
-**Research flag:** Standard Next.js optimization patterns — skip research-phase.
-
----
+**Implementation notes:**
+- Gather user feedback from Phases 1-4 before implementing
+- A/B test snap threshold values (10px vs 20px vs 30px)
+- Monitor performance metrics (drag fps, snap calculation time)
+- Defer if no performance issues emerge
 
 ### Phase Ordering Rationale
 
-**Why this sequence:**
-1. **Infrastructure first** (Phase 1) — SSR safety and state architecture are foundational, cannot retrofit
-2. **Layout second** (Phase 2) — Responsive architecture must exist before step-specific implementations
-3. **Simple canvas before complex** (Phase 3 → 4) — Stakeholder mapping (constrained layout) validates infrastructure before freeform clustering
-4. **AI integration after canvas basics** (Phase 5) — Need working canvas to test AI suggestions and optimistic updates
-5. **Mobile optimization late** (Phase 6) — Requires working desktop implementation to refine for touch
-6. **Performance last** (Phase 7) — Bundle optimization measurable only when all features integrated
+**Sequential dependencies:**
+1. Phase 1 MUST complete before 2-5 (foundational architecture)
+2. Phase 2 MUST complete before Phase 3 (AI needs stable grid structure)
+3. Phase 4 can run parallel to Phase 3 (different steps, different features)
+4. Phase 5 requires feedback from Phases 1-4 (iterative tuning)
 
-**Why NOT parallel:**
-- Phase 1-2 must be sequential (layout depends on infrastructure)
-- Phase 3-4 COULD be parallel but share learnings (do 3 first, apply to 4)
-- Phase 5 depends on Phase 3-4 (need canvas to add AI suggestions to)
-- Phase 6-7 can be parallel (touch optimization + bundle analysis independent)
+**Risk mitigation ordering:**
+- Phases 1-2 address architectural pitfalls (expensive to retrofit)
+- Phase 3 addresses feature-level pitfalls (validation logic)
+- Phase 4 addresses integration pitfalls (unified data model)
+- Phase 5 addresses UX pitfalls (subjective tuning)
 
-**Critical dependencies:**
-- All phases depend on Phase 1 (canvasStore is single source of truth)
-- Phase 3-7 depend on Phase 2 (StepContainer conditional rendering)
-- Phase 5 depends on Phase 3-4 (AI adds to existing canvas implementations)
+**Grouping logic:**
+- Phase 1: All coordinate system concerns together
+- Phase 2: All grid structure mutations together
+- Phase 3: All AI placement logic together
+- Phase 4: All output-canvas sync concerns together
+- Phase 5: All UX polish together
 
 ### Research Flags
 
 **Phases likely needing `/gsd:research-phase` during planning:**
-- **Phase 5 (AI Integration)** — Streaming coordination with Vercel AI SDK + Zustand requires experimentation. Optimistic updates with React 19 useOptimistic + Next.js Server Actions pattern less documented.
-- **Phase 6 (Mobile Touch)** — iOS Safari vs Android Chrome gesture handling differences. Touch-action CSS cross-browser compatibility. May need device-specific polyfills.
 
-**Phases with well-documented patterns (skip research):**
-- **Phase 1 (Canvas Infrastructure)** — Zustand stores, Next.js dynamic imports, debounced auto-save are established patterns
-- **Phase 2 (Layout)** — react-resizable-panels, responsive breakpoints, StepContainer modification are standard Next.js patterns
-- **Phase 3 (Stakeholder Canvas)** — Power/Interest quadrant grid is well-documented stakeholder mapping UX pattern
-- **Phase 4 (Research Canvas)** — Empathy mapping and affinity diagramming are standard design thinking patterns
-- **Phase 7 (Performance)** — Next.js Bundle Analyzer, Lighthouse metrics, JSONB optimization are documented
+- **Phase 4** (Steps 2 & 4 Retrofit): Complex data migration strategy, potential schema conflicts with existing workshops. Research: data migration patterns for canvas retrofitting, conflict resolution strategies.
+
+**Phases with standard patterns (skip research-phase):**
+
+- **Phase 1** (Grid Foundation): Standard ReactFlow coordinate math, well-documented SVG overlay patterns. Reuses v1.1 QuadrantOverlay approach.
+- **Phase 2** (Column Management): Standard CRUD operations with semantic IDs. Established Zustand patterns.
+- **Phase 3** (AI Placement): Extends existing [CANVAS_ITEM] markup pattern. Validation logic is straightforward conditional checks.
+- **Phase 5** (UX Refinement): User feedback-driven iteration, not research-driven.
+
+**Special note:** All phases build on existing v1.1 canvas foundation. No phases require external library research (stack research complete).
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | @dnd-kit recommended in 2026 drag-and-drop library rankings, react-resizable-panels already installed and working in v1.0, Zustand + Next.js 16.1.1 proven stack |
-| Features | **MEDIUM-HIGH** | Feature categories validated across Miro, FigJam, MURAL (leading tools). Table stakes clear, but AI-specific patterns (suggestions → canvas) less documented. |
-| Architecture | **HIGH** | Unidirectional Zustand flow is established React pattern, stepArtifacts JSONB persistence already working in v1.0, dynamic imports solve SSR issues (documented Next.js pattern) |
-| Pitfalls | **HIGH** | All 7 pitfalls sourced from official docs (Next.js, React, MDN) + real production issues (Tldraw GitHub issues, Kent C. Dodds articles, NN/g research) |
+| Stack | **HIGH** | ReactFlow 12.10.0 official docs confirm all required APIs exist. No new packages needed. Bundle impact verified (0 KB). |
+| Features | **MEDIUM** | Table stakes features validated against Miro/FigJam/Lucidspark. AI suggest-then-confirm is novel (no direct comparison). Defer list based on NN/G journey mapping best practices. |
+| Architecture | **HIGH** | Patterns proven in v1.1 (QuadrantOverlay, Zustand canvas store, bidirectional AI). Grid-specific patterns well-documented in ReactFlow community (swimlane discussions, snap issues). |
+| Pitfalls | **MEDIUM-HIGH** | 7 critical pitfalls identified from ReactFlow GitHub issues, community discussions, and v1.1 learnings. Prevention strategies validated against official docs. Multi-select snap bug documented (ReactFlow #1579). Coordinate confusion pattern observed across 3+ sources. |
 
-**Overall confidence:** **HIGH**
+**Overall confidence: HIGH**
 
-Research synthesized from official documentation (Next.js 16.1.1, React 19, Vercel AI SDK), established UX patterns (stakeholder mapping, empathy maps, affinity diagramming), and 2026 community consensus (dnd-kit recommendations, bundle size best practices). Lower confidence areas (AI streaming coordination, mobile touch edge cases) flagged for research-phase during planning.
+The combination of (1) no new packages required, (2) proven v1.1 foundation to build on, (3) well-documented ReactFlow APIs, and (4) identified pitfalls with prevention strategies gives high confidence in feasibility and approach.
 
 ### Gaps to Address
 
-**Areas needing validation during implementation:**
+**During Phase 1 implementation:**
+- **Snap threshold tuning**: Research recommends 20px threshold but may need adjustment based on actual card sizes and user behavior. Plan to A/B test 10px/20px/30px during Phase 5.
+- **Column width defaults**: Research doesn't specify initial column widths. Options: (a) all equal, (b) first column wider (common pattern), (c) auto-calculated from viewport. Decide during Phase 2 based on Step 6 Journey Map mockups.
+- **Cell overflow handling**: If card content exceeds cell height, research proposes flexible rows OR scroll within cell. Decision requires UX testing — defer to Phase 5.
 
-1. **Gemini API context size limits with canvas state** — How to handle: Test with 50-post-it canvas state (estimated 10KB JSON). If context exceeds limits, implement canvas state compression (send summary, not full details).
+**During Phase 4 implementation:**
+- **Migration strategy for 500+ existing workshops**: Research covers technical migration (add default positions) but not rollout strategy. Need: feature flag system, gradual rollout plan, rollback procedure if migration issues emerge.
+- **Output panel deprecation timeline**: Research establishes unified data model but doesn't specify when/how to phase out output panel form UI for Steps 2 & 4. Decision: keep both views initially (canvas + output tabs), deprecate output form after v1.3 validation if canvas proves superior.
 
-2. **React 19 useOptimistic hook + Zustand interaction** — How to handle: Phase 5 research-phase to experiment with optimistic updates pattern. May need custom implementation if useOptimistic doesn't play well with Zustand stores.
-
-3. **touch-action CSS Safari mobile compatibility** — How to handle: Phase 6 research-phase to test on real iOS Safari 17+. Fallback: JavaScript event.preventDefault() if CSS approach fails.
-
-4. **JSONB performance at >100 post-its** — How to handle: Load test with large canvas states (100-200 post-its). If TOAST overhead >200ms, migrate to separate canvas_items table with foreign key to stepArtifacts.
-
-5. **AI streaming + optimistic canvas updates race conditions** — How to handle: Phase 5 research-phase to test edge cases. Implement version tracking and Last Write Wins strategy if conflicts detected.
-
-**Deferred to post-v1.1 (validation needed before implementation):**
-- Real-time collaboration (CRDT vs Operational Transform choice)
-- AI auto-clustering algorithm (proximity threshold, minimum cluster size)
-- Undo/redo beyond basic (canvas-specific vs app-wide history)
+**Throughout v1.2 milestone:**
+- **Mobile grid optimization**: Research proposes responsive cell sizing (60px mobile vs 80px desktop row height) but defer to Phase 5. May discover mobile grid is fundamentally problematic and require tablet-first approach instead. Monitor mobile usage analytics post-launch.
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
-**Stack & Architecture:**
-- [Top 5 Drag-and-Drop Libraries for React 2026](https://puckeditor.com/blog/top-5-drag-and-drop-libraries-for-react) — dnd-kit recommended, bundle size comparisons
-- [@dnd-kit/core npm](https://www.npmjs.com/package/@dnd-kit/core) — Official docs, 6.3.1, 10KB bundle verified
-- [dnd-kit Documentation](https://docs.dndkit.com) — API reference, sortable preset
-- [react-resizable-panels npm](https://www.npmjs.com/package/react-resizable-panels) — 4.6.2, React 19 compatible
-- [Shadcn Resizable Component](https://ui.shadcn.com/docs/components/radix/resizable) — Built on react-resizable-panels
-- [Next.js Server and Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components) — SSR patterns
+**ReactFlow Official Documentation:**
+- [ReactFlow API Reference](https://reactflow.dev/api-reference) — Node positioning, snap behavior, Background component
+- [ReactFlow Custom Nodes](https://reactflow.dev/learn/customization/custom-nodes) — Custom node implementation
+- [ReactFlow SnapGrid Type](https://reactflow.dev/api-reference/types/snap-grid) — Grid snapping functionality
+- [ReactFlow Background Component](https://reactflow.dev/api-reference/components/background) — Grid line rendering
+- [ReactFlow Dynamic Layouting](https://reactflow.dev/examples/layout/dynamic-layouting) — Programmatic node positioning
 
-**Features & UX:**
-- [Miro Online Sticky Notes with AI](https://miro.com/online-sticky-notes/) — Feature comparison
-- [FigJam AI Sort and Summarize](https://help.figma.com/hc/en-us/articles/18711926790423-Sort-and-summarize-stickies-with-FigJam-AI) — AI-canvas patterns
-- [Affinity Diagrams: How to Cluster Ideas](https://www.interaction-design.org/literature/article/affinity-diagrams-learn-how-to-cluster-and-bundle-ideas-and-facts) — IxDF clustering patterns
-- [Stakeholder Mapping: The Complete Guide](https://www.interaction-design.org/literature/article/map-the-stakeholders) — Power/Interest grid
-- [Power Interest Grid for Stakeholder Analysis](https://creately.com/diagram/example/jripkdb22/power-interest-grid-for-stakeholder-analysis) — Quadrant templates
+**ReactFlow GitHub Issues (verified bugs):**
+- [Issue #1579: MultiSelection-Drag breaks Snap-To-Grid](https://github.com/wbkd/react-flow/issues/1579) — Documents multi-select snap bug, informs custom snap requirement
+- [Issue #2440: Toggle between old snapGrid and new one](https://github.com/wbkd/react-flow/issues/2440) — Snap behavior changes across versions
 
-**Pitfalls:**
-- [Tldraw Next.js SSR Issues - GitHub #6567](https://github.com/tldraw/tldraw/issues/6567) — Real SSR hydration errors
-- [Don't Sync State. Derive It! - Kent C. Dodds](https://kentcdodds.com/blog/dont-sync-state-derive-it) — Bidirectional sync anti-pattern
-- [Next.js Hydration Errors in 2026](https://medium.com/@blogs-world/next-js-hydration-errors-in-2026-the-real-causes-fixes-and-prevention-checklist-4a8304d53702) — SSR debugging
-- [React useOptimistic Hook](https://blog.logrocket.com/understanding-optimistic-ui-react-useoptimistic-hook/) — Optimistic updates pattern
-- [Touch Events - MDN](https://developer.mozilla.org/en-US/docs/Web/API/Touch_events) — Touch vs mouse differences
-- [touch-action CSS - MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action) — Browser gesture control
+**Journey Mapping Best Practices:**
+- [Nielsen Norman Group: Journey Mapping 101](https://www.nngroup.com/articles/journey-mapping-101/) — **AUTHORITATIVE SOURCE** for journey map structure (5 components: Actor, Scenario, Phases, Actions/Mindsets/Emotions, Opportunities). Informs fixed row structure (Actions, Thoughts, Feelings, Pain Points, Opportunities).
+- [NN/G: UX Mapping Methods Compared](https://www.nngroup.com/articles/ux-mapping-cheat-sheet/) — Empathy map vs journey map distinctions
 
 ### Secondary (MEDIUM confidence)
 
-**Architecture Patterns:**
-- [Using State Management with React Flow](https://reactflow.dev/learn/advanced-use/state-management) — Zustand integration
-- [Building Kanban Board with dnd-kit](https://marmelab.com/blog/2026/01/15/building-a-kanban-board-with-shadcn.html) — Grouping example
-- [Infinite Canvas Tutorial - Lesson 8 Performance](https://antv.vision/infinite-canvas-tutorial/guide/lesson-008) — Optimization patterns
+**Whiteboard Tool Competitor Research:**
+- [Miro Community: Snap to Grid Frustration](https://community.miro.com/ideas/snap-to-grid-205) — Documents user frustration with cell center snapping (not edges). Informs cell-boundary snap decision.
+- [Miro Tables Documentation](https://help.miro.com/hc/en-us/articles/22760922335506-Tables) — Row/column management patterns
+- [FigJam Tables](https://help.figma.com/hc/en-us/articles/12583849250199-Tables-in-FigJam) — Add/remove columns, table structure
+- [Microsoft Copilot in Whiteboard](https://support.microsoft.com/en-us/office/welcome-to-copilot-in-whiteboard-17e8cddb-9bae-4813-bd2b-a9f108b0b43e) — AI suggests sticky notes but no specific cell placement (validates WorkshopPilot's differentiation)
 
-**Performance & Serialization:**
-- [PostgreSQL JSONB Performance](https://www.architecture-weekly.com/p/postgresql-jsonb-powerful-storage) — JSONB best practices
-- [Postgres JSONB TOAST - pganalyze](https://pganalyze.com/blog/5mins-postgres-jsonb-toast) — Large JSONB overhead
-- [Konva Save and Load Best Practices](https://konvajs.org/docs/data_and_serialization/Best_Practices.html) — Canvas serialization
-- [Travels: JSON Patch Undo/Redo](https://github.com/mutativejs/travels) — Delta-based history
+**ReactFlow Community:**
+- [GitHub Discussion #2359: Swimlane Implementation](https://github.com/xyflow/xyflow/discussions/2359) — Community approaches to swimlanes
+- [reactflow-swimlane Package](https://github.com/liang-faan/reactflow-swimlane) — Reference implementation (unmaintained, for patterns only)
+- [ReactFlow Performance Guide](https://reactflow.dev/learn/advanced-use/performance) — Optimization strategies
+
+**AI Workflow Patterns:**
+- [Storyteq: AI Content Approval Workflows](https://storyteq.com/blog/how-do-ai-content-generation-tools-handle-content-approval-workflows/) — Suggest-confirm patterns in AI tools
+- [Canvas3D: AI Spatial Placement](https://arxiv.org/html/2508.07135v1) — LLM agent placement algorithms
 
 ### Tertiary (LOW confidence, needs validation)
 
-**Mobile Gestures:**
-- [Konva Multi-touch Scale](https://konvajs.org/docs/sandbox/Multi-touch_Scale_Stage.html) — Pinch zoom example (Konva-specific, may not apply to div-based approach)
-- [Responsive Design Breakpoints 2025](https://www.browserstack.com/guide/responsive-design-breakpoints) — Standard breakpoints (may miss awkward device widths)
+- [Swimlane Diagrams for UX (Medium)](https://sepantapouya.medium.com/swimlane-diagram-a-ux-designers-secret-weapon-for-order-in-chaos-fb9aa00927d5) — Swimlane UX applications (opinion piece, validates patterns)
+- [Jeda.ai AI Whiteboard](https://www.jeda.ai/ai-whiteboard) — In-place discussions per object (competitor feature reference)
 
-**Bundle Optimization:**
-- [Next.js Package Bundling Guide](https://nextjs.org/docs/app/guides/package-bundling) — General guidance (canvas-specific tuning needed)
+### Internal (WorkshopPilot codebase)
+
+- `.planning/research/STACK.md` — v1.2 stack research (no new packages)
+- `.planning/research/FEATURES_V1.2_GRID_SWIMLANE.md` — Feature prioritization and anti-features
+- `.planning/research/ARCHITECTURE_V1.2_GRID_SWIMLANE.md` — Component responsibilities and data flow
+- `.planning/research/PITFALLS.md` — 7 critical pitfalls with prevention strategies
+- `.planning/codebase/ARCHITECTURE.md` — v1.1 canvas foundation (QuadrantOverlay pattern, Zustand store structure)
 
 ---
-*Research completed: 2026-02-10*
-*Ready for roadmap: yes*
+
+**Research synthesis completed: 2026-02-11**
+
+**Key takeaways for roadmap:**
+1. Zero new dependencies (0 KB bundle impact)
+2. Five-phase structure addresses risks sequentially
+3. Phase 1-2 are architectural (cannot defer), Phase 3-5 are feature/tuning (can adjust scope)
+4. Novel AI suggest-then-confirm placement is primary differentiator vs competitors
+5. Steps 2 & 4 retrofit (Phase 4) is highest complexity, needs careful data migration
+
+**Ready for roadmap creation: YES**
