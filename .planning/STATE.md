@@ -13,7 +13,7 @@ Milestone: v1.1 Canvas Foundation
 Phase: 19 of 20 (AI-Canvas Integration)
 Plan: 1 of 2
 Status: In progress
-Last activity: 2026-02-11 — Completed 19-02-PLAN.md (Chat-to-canvas action buttons)
+Last activity: 2026-02-11 — Completed 19-01-PLAN.md (AI system prompt canvas integration)
 
 Progress: [█████████████████████░░░] 90% (56 plans complete across v0.5 + v1.0 + v1.1)
 
@@ -83,6 +83,9 @@ Recent decisions affecting v1.1:
 - **Quadrant at creation** (18-02): Detect quadrant immediately on post-it creation (double-click, toolbar) for instant feedback
 - **Empty canvas centering** (18-02): onInit callback centers viewport on (0,0) for empty quadrant canvases using container dimensions
 - **Phase 19 AI wiring** (18-02): Canvas context assembly functions created in Phase 18, wired to AI pipeline in Phase 19 per roadmap separation
+- **Canvas context as Tier 4** (19-01): Canvas state injected after persistent/summaries, before messages - visual short-term memory
+- **Canvas action markup** (19-01): [CANVAS_ITEM] markup instructions only on Steps 2 and 4 during gather/synthesize arc phases
+- **Canvas duplication prevention** (19-01): AI instructed to NOT re-suggest items already on canvas for better conversation flow
 - **Canvas item parsing** (19-02): parseCanvasItems function extracts [CANVAS_ITEM] markup and strips it from displayed AI messages
 - **Dual parser composition** (19-02): Parse suggestions first, then canvas items from cleaned result to avoid parser interaction
 - **Action button UX** (19-02): "Add to canvas" buttons below AI messages show full item text with Plus icon, distinct from suggestion pills
@@ -113,9 +116,9 @@ From research (research/SUMMARY.md):
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Phase 19, Plan 02 complete - Chat-to-canvas action buttons with [CANVAS_ITEM] markup parsing
-Resume file: .planning/phases/19-ai-canvas-integration/19-02-SUMMARY.md
-Next action: Continue Phase 19 (AI-Canvas Integration) - next plan is to wire canvas context into AI system prompts
+Stopped at: Phase 19 Plan 01 complete - AI system prompt now includes canvas state and action markup instructions
+Resume file: .planning/phases/19-ai-canvas-integration/19-01-SUMMARY.md
+Next action: Phase 19 Plan 02 - Parse [CANVAS_ITEM] markup and render "Add to canvas" buttons in chat UI
 
 ---
-*Last updated: 2026-02-11 after completing Phase 19, Plan 02 (19-02-PLAN.md)*
+*Last updated: 2026-02-11 after completing Phase 19, Plan 01 (19-01-PLAN.md)*
