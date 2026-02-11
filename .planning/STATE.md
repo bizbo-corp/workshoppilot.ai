@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
 
-**Current focus:** v1.2 Canvas Whiteboard - Phase 23 AI Suggest-Then-Confirm Placement
+**Current focus:** v1.2 Canvas Whiteboard - Phase 24 Output-to-Canvas Retrofit
 
 ## Current Position
 
-Phase: 23 of 24 (AI Suggest-Then-Confirm Placement)
-Plan: 2 of 2 complete
-Status: Phase complete
-Last activity: 2026-02-11 — Completed 23-02-PLAN.md (preview node UI and cell highlighting)
+Phase: 24 of 24 (Output-to-Canvas Retrofit)
+Plan: 1 of 6 complete
+Status: In progress
+Last activity: 2026-02-11 — Completed 24-01-PLAN.md (ring layout and empathy zones)
 
-Progress: [████████████████████░░░░] 92% (65/71 plans across all milestones)
+Progress: [████████████████████░░░░] 93% (66/71 plans across all milestones)
 
 ## Completed Milestones
 
@@ -26,15 +26,15 @@ Progress: [████████████████████░░░
 | v1.1 Canvas Foundation | 15-20 | 15 | 2026-02-11 |
 
 **Cumulative stats:**
-- 65 plans completed (23 phases complete)
-- ~15,400 lines of TypeScript across ~300 files
+- 66 plans completed (23 phases complete, phase 24 in progress)
+- ~15,800 lines of TypeScript across ~305 files
 - 5 days total (2026-02-07 → 2026-02-11)
 
 **Velocity:**
 - v0.5: 2 days, 6 phases, 19 plans (~25 min/plan)
 - v1.0: 3 days, 8 phases, 25 plans (~25 min/plan)
 - v1.1: 2 days, 6 phases, 15 plans (~25 min/plan)
-- v1.2: In progress, 5 plans complete (~3 min/plan average)
+- v1.2: In progress, 6 plans complete (~3 min/plan average)
 
 ## Accumulated Context
 
@@ -59,6 +59,10 @@ Recent decisions affecting v1.2 work:
 - [Phase 23]: Preview nodes render as early return branch in PostItNode for cleaner conditional logic
 - [Phase 23]: highlightedCell moved to canvas store for cross-component communication between chat-panel and ReactFlowCanvas
 - [Phase 23]: Yellow pulse animation uses Tailwind animate-pulse for attention-grabbing cell highlights
+- [Phase 24-01]: Ring layout uses concentric circles at 320px, 520px, 720px radii for stakeholder importance tiers
+- [Phase 24-01]: Empathy zone layout follows classic empathy map (4 quadrants + 2 strips for pains/gains)
+- [Phase 24-01]: Stakeholder importance scoring: power + interest (each 1-3), ring assignment >=5 inner, >=3 middle, else outer
+- [Phase 24-01]: Migration helpers are pure functions (no side effects) that convert artifact data to positioned post-its
 
 ### Known Tech Debt
 
@@ -87,13 +91,13 @@ Recent decisions affecting v1.2 work:
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 23-02-PLAN.md (preview node UI and cell highlighting)
-Resume file: .planning/phases/24-canvas-retrofits/24-RESEARCH.md
+Stopped at: Completed 24-01-PLAN.md (ring layout and empathy zones)
+Resume file: .planning/phases/24-output-to-canvas-retrofit/24-02-PLAN.md
 
 **Next steps:**
-1. Phase 23 complete: AI suggest-then-confirm placement (data layer + UI)
-2. Begin Phase 24 Canvas Retrofits (Steps 2 & 4 canvas overlays)
-3. 6 plans remaining in v1.2 milestone (Phase 24 has 6 plans)
+1. Phase 24-01 complete: Ring layout and empathy zone layout modules
+2. Continue Phase 24 Canvas Retrofits (next: overlay UI components)
+3. 5 plans remaining in v1.2 milestone (Phase 24 has 6 plans total)
 
 ---
 *Last updated: 2026-02-11 after completing Phase 23 (23-02-PLAN.md)*
