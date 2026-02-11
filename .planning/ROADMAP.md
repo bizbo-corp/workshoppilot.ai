@@ -79,10 +79,11 @@ Plans:
   2. User can inline-edit column header labels and changes persist immediately
   3. User can remove stage columns with confirmation dialog showing card migration, and cards move to adjacent column automatically
   4. Column operations (add/remove/edit) complete in under 500ms with smooth UI feedback
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 22-01: TBD
+- [ ] 22-01-PLAN.md — Enlarge grid cells, extend canvas store with dynamic column state, post-it auto-size and drag feedback
+- [ ] 22-02-PLAN.md — Column UI: editable headers, +Add Stage button, delete confirmation dialog, grid overlay wiring
 
 ### Phase 23: AI Suggest-Then-Confirm Placement
 **Goal**: AI proposes content with specific cell placement, user confirms or adjusts
@@ -125,9 +126,9 @@ Phases execute in numeric order: 21 → 22 → 23 → 24 → ...
 | 7-14 | v1.0 | 25/25 | Complete | 2026-02-10 |
 | 15-20 | v1.1 | 15/15 | Complete | 2026-02-11 |
 | 21. Grid Foundation | v1.2 | 2/2 | Complete | 2026-02-11 |
-| 22. Dynamic Grid Structure | v1.2 | 0/? | Not started | - |
+| 22. Dynamic Grid Structure | v1.2 | 0/2 | Planned | - |
 | 23. AI Placement | v1.2 | 0/? | Not started | - |
 | 24. Output-to-Canvas Retrofit | v1.2 | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-02-11 after Phase 21 Grid Foundation complete*
+*Last updated: 2026-02-11 after Phase 22 planning complete*
