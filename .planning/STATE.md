@@ -5,15 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Planning next milestone (MMP Visual & Collaborative)
+**Current focus:** v1.2 Canvas Whiteboard — structured grid canvas, AI placement, output → canvas migration
 
 ## Current Position
 
-Milestone: Between milestones (v1.1 shipped, MMP not yet started)
-Status: Ready for next milestone
-Last activity: 2026-02-11 — v1.1 Canvas Foundation archived
-
-Progress: [████████████████████████] 100% (59 plans complete across v0.5 + v1.0 + v1.1)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-11 — Milestone v1.2 started
 
 ## Completed Milestones
 
@@ -54,8 +53,8 @@ Progress: [███████████████████████
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: v1.1 milestone archived, ready for MMP
-Next action: `/gsd:new-milestone` to start MMP Visual & Collaborative
+Stopped at: v1.2 milestone initialized, defining requirements
+Next action: Complete requirements → roadmap → `/gsd:plan-phase [N]`
 
 ---
-*Last updated: 2026-02-11 after v1.1 milestone archived*
+*Last updated: 2026-02-11 after v1.2 milestone started*

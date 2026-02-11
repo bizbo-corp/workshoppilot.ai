@@ -46,11 +46,21 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - [x] Canvas → AI: AI reads canvas state silently as Tier 4 context
 - [x] Mobile: tab-based switching, iOS Safari touch handling, bundle under 300KB
 
+## Current Milestone: v1.2 Canvas Whiteboard
+
+**Goal:** Evolve the canvas from a post-it board into a structured whiteboard with grid/swimlane layouts and AI-driven placement, starting with Journey Map (Step 6) and retrofitting Steps 2 & 4 to render structured outputs on canvas.
+
+**Target features:**
+- Step 6 Journey Map grid canvas with fixed swimlane rows and user-addable stage columns
+- AI suggest-then-confirm placement — AI proposes content in specific cells, user confirms/adjusts
+- Snap-to-cell behavior for canvas items within grid structures
+- Steps 2 & 4 retrofit — structured output data renders as organized canvas nodes (replaces output panel content)
+- User can add/remove/reorder cards within canvas sections
+- Output panel remains but canvas becomes the primary structured record
+
 #### Future — MMP (Visual & Collaborative)
-- [ ] Canvas for remaining steps (6 Journey Map, 8 Ideation, 9 Concepts)
+- [ ] Canvas for Steps 8 Ideation and 9 Concepts
 - [ ] Visual stakeholder radar chart
-- [ ] Empathy map canvas
-- [ ] Journey map grid UI with cell/row/column suggestions
 - [ ] Guided persona builder with per-field regeneration
 - [ ] Billboard Hero exercise (text-based pitch test)
 - [ ] Billboard template layouts
@@ -154,7 +164,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Step 10 Validate produces synthesis summary only (no Build Pack export yet)
 - CRON_SECRET needs to be configured in Vercel dashboard for production cron warming
 
-**Next milestone:** MMP Visual & Collaborative — canvas for remaining steps, visual components, Build Pack export, basic collaboration
+**Next milestone:** v1.2 Canvas Whiteboard — structured grid/swimlane canvas, AI-driven placement, output → canvas migration
 
 ---
-*Last updated: 2026-02-11 after v1.1 milestone*
+*Last updated: 2026-02-11 after v1.2 milestone started*
