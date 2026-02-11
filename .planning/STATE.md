@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 18 - Step-Specific Canvases
+**Current focus:** Phase 19 - AI-Canvas Integration
 
 ## Current Position
 
 Milestone: v1.1 Canvas Foundation
-Phase: 18 of 20 (Step-Specific Canvases)
-Plan: 2 of 2
-Status: Phase complete
-Last activity: 2026-02-11 — Completed 18-02-PLAN.md (Step-specific canvas integration complete)
+Phase: 19 of 20 (AI-Canvas Integration)
+Plan: 1 of 2
+Status: In progress
+Last activity: 2026-02-11 — Completed 19-02-PLAN.md (Chat-to-canvas action buttons)
 
-Progress: [█████████████████████░░░] 88% (55 plans complete across v0.5 + v1.0 + v1.1)
+Progress: [█████████████████████░░░] 90% (56 plans complete across v0.5 + v1.0 + v1.1)
 
 ## Completed Milestones
 
@@ -25,8 +25,8 @@ Progress: [█████████████████████░░
 | v1.0 Working AI Facilitation | 7-14 | 25 | 2026-02-10 |
 
 **Cumulative stats:**
-- 55 plans completed (18 phases complete)
-- ~13,750 lines of TypeScript across ~289 files
+- 56 plans completed (18 phases complete, Phase 19 in progress)
+- ~13,800 lines of TypeScript across ~289 files
 - 5 days total (2026-02-07 → 2026-02-11)
 
 **Velocity:**
@@ -83,6 +83,11 @@ Recent decisions affecting v1.1:
 - **Quadrant at creation** (18-02): Detect quadrant immediately on post-it creation (double-click, toolbar) for instant feedback
 - **Empty canvas centering** (18-02): onInit callback centers viewport on (0,0) for empty quadrant canvases using container dimensions
 - **Phase 19 AI wiring** (18-02): Canvas context assembly functions created in Phase 18, wired to AI pipeline in Phase 19 per roadmap separation
+- **Canvas item parsing** (19-02): parseCanvasItems function extracts [CANVAS_ITEM] markup and strips it from displayed AI messages
+- **Dual parser composition** (19-02): Parse suggestions first, then canvas items from cleaned result to avoid parser interaction
+- **Action button UX** (19-02): "Add to canvas" buttons below AI messages show full item text with Plus icon, distinct from suggestion pills
+- **Default post-it creation** (19-02): Position (0,0), 120x120 size, yellow color - user drags to desired location after AI suggests
+- **Duplicate handling in AI suggestions** (19-02): No state tracking of "already added" - allow duplicates, user can delete or undo (Option A)
 
 ### Known Tech Debt
 
@@ -108,9 +113,9 @@ From research (research/SUMMARY.md):
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Phase 18 complete - Step-specific canvases fully integrated with quadrant detection and AI context assembly
-Resume file: .planning/phases/18-step-specific-canvases/18-02-SUMMARY.md
-Next action: Begin Phase 19 (AI-Canvas Integration) - wire canvas context assembly into AI pipeline
+Stopped at: Phase 19, Plan 02 complete - Chat-to-canvas action buttons with [CANVAS_ITEM] markup parsing
+Resume file: .planning/phases/19-ai-canvas-integration/19-02-SUMMARY.md
+Next action: Continue Phase 19 (AI-Canvas Integration) - next plan is to wire canvas context into AI system prompts
 
 ---
-*Last updated: 2026-02-11 after completing Phase 18, Plan 02 (18-02-PLAN.md)*
+*Last updated: 2026-02-11 after completing Phase 19, Plan 02 (19-02-PLAN.md)*
