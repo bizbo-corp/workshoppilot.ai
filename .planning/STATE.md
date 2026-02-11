@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
 
-**Current focus:** v1.2 Canvas Whiteboard - Phase 21 Grid Foundation & Coordinate System
+**Current focus:** v1.2 Canvas Whiteboard - Phase 22 Dynamic Grid Structure
 
 ## Current Position
 
-Phase: 21 of 24 (Grid Foundation & Coordinate System)
-Plan: 2 of 2 complete
-Status: Phase complete
-Last activity: 2026-02-11 — Completed 21-02-PLAN.md (grid overlay rendering and interaction)
+Phase: 22 of 24 (Dynamic Grid Structure)
+Plan: 1 of 2 complete
+Status: In progress
+Last activity: 2026-02-11 — Completed 22-01-PLAN.md (grid foundation with dynamic columns)
 
-Progress: [████████████████████░░░░] 86% (61/71 plans across all milestones)
+Progress: [████████████████████░░░░] 87% (62/71 plans across all milestones)
 
 ## Completed Milestones
 
@@ -26,15 +26,15 @@ Progress: [████████████████████░░░
 | v1.1 Canvas Foundation | 15-20 | 15 | 2026-02-11 |
 
 **Cumulative stats:**
-- 61 plans completed (21 phases complete)
-- ~14,960 lines of TypeScript across ~296 files
+- 62 plans completed (21 phases complete, Phase 22 in progress)
+- ~15,090 lines of TypeScript across ~296 files
 - 5 days total (2026-02-07 → 2026-02-11)
 
 **Velocity:**
 - v0.5: 2 days, 6 phases, 19 plans (~25 min/plan)
 - v1.0: 3 days, 8 phases, 25 plans (~25 min/plan)
 - v1.1: 2 days, 6 phases, 15 plans (~25 min/plan)
-- v1.2: In progress, 1 plan complete (~15 min/plan)
+- v1.2: In progress, 2 plans complete (~5 min/plan average)
 
 ## Accumulated Context
 
@@ -49,6 +49,8 @@ Recent decisions affecting v1.2 work:
 - **Custom snap logic required** — ReactFlow built-in snapGrid has multi-select bug (issue #1579), implement custom cell-boundary snap
 - **Position as source of truth** (Phase 21) — cellAssignment is derived metadata, position remains authoritative for grid-based layouts
 - **Cell padding in GridConfig** (Phase 21) — 10px padding stored in config prevents nodes from touching cell borders, avoids magic numbers
+- [Phase 22-01]: Column width default set to 240px for comfortable post-it spacing
+- [Phase 22-01]: removeGridColumn prefers left-adjacent column for post-it reassignment (left-to-right reading order)
 
 ### Known Tech Debt
 
@@ -60,7 +62,7 @@ Recent decisions affecting v1.2 work:
 
 **Phase 24 complexity:** Steps 2 & 4 retrofit requires data migration strategy for existing workshops with output-only data. Migration script and feature flag rollout needed during Phase 24 planning.
 
-**Column width defaults:** Research doesn't specify initial column widths for journey map grid. Decide during Phase 22 planning: (a) all equal, (b) first wider, (c) auto-calculated from viewport.
+**Column width defaults:** RESOLVED in Phase 22-01 — All columns default to 240px for comfortable post-it spacing.
 
 **Mobile grid optimization:** Responsive cell sizing proposed but deferred. May discover mobile grid is problematic and require tablet-first approach instead.
 
@@ -77,13 +79,13 @@ Recent decisions affecting v1.2 work:
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Phase 21 complete (grid foundation & coordinate system)
-Resume file: .planning/phases/22-grid-resizing-and-column-management/22-01-PLAN.md
+Stopped at: Completed 22-01-PLAN.md (grid foundation with dynamic columns)
+Resume file: .planning/phases/22-dynamic-grid-structure/22-02-PLAN.md
 
 **Next steps:**
-1. Execute Phase 22 (grid resizing and column management)
+1. Execute Phase 22-02 (column management UI)
 2. Continue with Phase 23 after Phase 22 completion
 3. All 17 v1.2 requirements mapped to phases
 
 ---
-*Last updated: 2026-02-11 after completing 21-02-PLAN.md*
+*Last updated: 2026-02-11 after completing 22-01-PLAN.md*
