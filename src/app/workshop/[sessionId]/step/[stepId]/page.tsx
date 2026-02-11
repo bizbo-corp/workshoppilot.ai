@@ -8,6 +8,7 @@ import { StepContainer } from "@/components/workshop/step-container";
 import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
 import { loadCanvasState } from "@/actions/canvas-actions";
 import type { PostIt, GridColumn } from "@/stores/canvas-store";
+import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
 
 interface StepPageProps {
   params: Promise<{
@@ -90,8 +91,29 @@ export default async function StepPage({ params }: StepPageProps) {
 
   // Load canvas state for this step
   const canvasData = await loadCanvasState(session.workshop.id, step.id);
-  const initialCanvasPostIts: PostIt[] = canvasData?.postIts || [];
+  let initialCanvasPostIts: PostIt[] = canvasData?.postIts || [];
   const initialGridColumns: GridColumn[] = canvasData?.gridColumns || [];
+
+  // Lazy migration: if artifact exists but no canvas state, derive initial positions
+  if (initialCanvasPostIts.length === 0 && initialArtifact && step) {
+    if (step.id === 'stakeholder-mapping') {
+      const migratedPostIts = migrateStakeholdersToCanvas(initialArtifact);
+      initialCanvasPostIts = migratedPostIts.map(postIt => ({
+        ...postIt,
+        id: crypto.randomUUID(),
+        color: postIt.color || 'yellow',
+        type: postIt.type || 'postIt',
+      }));
+    } else if (step.id === 'sense-making') {
+      const migratedPostIts = migrateEmpathyToCanvas(initialArtifact);
+      initialCanvasPostIts = migratedPostIts.map(postIt => ({
+        ...postIt,
+        id: crypto.randomUUID(),
+        color: postIt.color || 'yellow',
+        type: postIt.type || 'postIt',
+      }));
+    }
+  }
 
   return (
     <div className="h-full">

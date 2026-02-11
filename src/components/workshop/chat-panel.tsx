@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
-import { computeCanvasPosition, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS } from '@/lib/canvas/canvas-position';
+import { computeCanvasPosition, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, ZONE_COLORS } from '@/lib/canvas/canvas-position';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 
 /** Steps that support canvas item auto-add */
@@ -257,7 +257,10 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         dynamicGridConfig,
       );
 
-      const color = (item.category && CATEGORY_COLORS[item.category]) || 'yellow';
+      // Color priority: category-specific > zone-specific > default yellow
+      const color = (item.category && CATEGORY_COLORS[item.category])
+        || (item.quadrant && ZONE_COLORS[item.quadrant])
+        || 'yellow';
 
       const newPostIt = {
         text: item.text,
