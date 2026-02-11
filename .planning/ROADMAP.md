@@ -81,21 +81,16 @@ Plans:
 - [x] 22-01-PLAN.md — Enlarge grid cells, extend canvas store with dynamic column state, post-it auto-size and drag feedback
 - [x] 22-02-PLAN.md — Column UI: editable headers, +Add Stage button, delete confirmation dialog, grid overlay wiring
 
-### Phase 23: AI Suggest-Then-Confirm Placement
+### Phase 23: AI Suggest-Then-Confirm Placement ✓
 **Goal**: AI proposes content with specific cell placement, user confirms or adjusts
 **Depends on**: Phase 22
 **Requirements**: AIPL-01, AIPL-02, AIPL-03, AIPL-04, AIPL-05
-**Success Criteria** (what must be TRUE):
-  1. AI suggests content via [GRID_ITEM] markup in chat responses with specific row and column coordinates
-  2. Suggested items appear as semi-transparent preview nodes with "Add to Canvas" and "Skip" action buttons
-  3. Target cell pulses with yellow border when AI suggests placement there, making destination obvious to user
-  4. User can click "Add to Canvas" to create permanent node or "Skip" to remove preview, with instant visual feedback
-  5. AI reads current grid canvas state (grouped by cell) as context and subsequent suggestions reference existing content accurately
-**Plans**: 2 plans
+**Status**: Complete (2026-02-11) — 6/6 must-haves verified
+**Plans**: 2/2 complete
 
 Plans:
-- [ ] 23-01-PLAN.md -- Store extensions (isPreview flag, confirm/reject actions), markup parser ([GRID_ITEM] support), AI prompt update, context filter
-- [ ] 23-02-PLAN.md -- Preview node UI in PostItNode, ReactFlowCanvas wiring, yellow pulse cell highlight, chat-panel cell highlighting
+- [x] 23-01-PLAN.md -- Store extensions (isPreview flag, confirm/reject actions), markup parser ([GRID_ITEM] support), AI prompt update, context filter
+- [x] 23-02-PLAN.md -- Preview node UI in PostItNode, ReactFlowCanvas wiring, yellow pulse cell highlight, chat-panel cell highlighting
 
 ### Phase 24: Output-to-Canvas Retrofit (Steps 2 & 4)
 **Goal**: Migrate Steps 2 & 4 from output panel to canvas-first rendering with unified data model
@@ -124,8 +119,8 @@ Phases execute in numeric order: 21 → 22 → 23 → 24 → ...
 | 15-20 | v1.1 | 15/15 | Complete | 2026-02-11 |
 | 21. Grid Foundation | v1.2 | 2/2 | Complete | 2026-02-11 |
 | 22. Dynamic Grid Structure | v1.2 | 2/2 | Complete | 2026-02-11 |
-| 23. AI Placement | v1.2 | 0/? | Not started | - |
+| 23. AI Placement | v1.2 | 2/2 | Complete | 2026-02-11 |
 | 24. Output-to-Canvas Retrofit | v1.2 | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-02-11 after Phase 22 execution complete*
+*Last updated: 2026-02-11 after Phase 23 execution complete*
