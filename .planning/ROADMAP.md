@@ -69,10 +69,11 @@ See `milestones/v1.1-ROADMAP.md` for full details.
   3. Grid overlay (lines, row labels, column headers) stays aligned with canvas during pan and zoom at all zoom levels (50%-250%)
   4. Target cell highlights with light blue background when user drags an item over it
   5. Grid canvas state persists to database via existing auto-save infrastructure without data loss
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 21-01: TBD
+- [ ] 21-01-PLAN.md -- Grid coordinate system, types, step config, PostIt extension
+- [ ] 21-02-PLAN.md -- Grid overlay component, canvas integration, snap/highlight, context assembly
 
 ### Phase 22: Dynamic Grid Structure (Column Management)
 **Goal**: Enable user-controlled journey stage columns with add/remove/edit operations
