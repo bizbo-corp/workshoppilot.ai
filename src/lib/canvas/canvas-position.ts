@@ -4,10 +4,12 @@
  * Used by chat-panel.tsx to auto-place items when the AI stream completes.
  */
 
-import type { PostIt } from '@/stores/canvas-store';
+import type { PostIt, PostItColor } from '@/stores/canvas-store';
 import type { Quadrant } from './quadrant-detection';
 import { getCellBounds, type GridConfig } from './grid-layout';
 import { STEP_CANVAS_CONFIGS } from './step-canvas-config';
+import { distributeCardsOnRing, type RingConfig } from './ring-layout';
+import { distributeCardsInZone, type EmpathyZoneConfig, type EmpathyZone } from './empathy-zones';
 
 export const POST_IT_WIDTH = 160;
 export const POST_IT_HEIGHT = 100;
@@ -45,13 +47,22 @@ const CATEGORY_BASES: Record<string, { x: number; y: number }> = {
 /**
  * Map persona categories to post-it colors
  */
-export const CATEGORY_COLORS: Record<string, 'blue' | 'pink' | 'green' | 'orange' | 'yellow'> = {
+export const CATEGORY_COLORS: Record<string, PostItColor> = {
   goals: 'blue',
   pains: 'pink',
   gains: 'green',
   motivations: 'orange',
   frustrations: 'pink',
   behaviors: 'yellow',
+};
+
+/**
+ * Map empathy zones to post-it colors
+ */
+export const ZONE_COLORS: Record<string, PostItColor> = {
+  pains: 'pink',
+  gains: 'green',
+  // Other zones use default 'yellow'
 };
 
 export type CanvasItemMetadata = {
@@ -80,6 +91,66 @@ export function computeCanvasPosition(
   quadrant?: Quadrant;
   cellAssignment?: { row: string; col: string };
 } {
+  // --- Ring-based steps (2: stakeholder-mapping with rings) ---
+  const stepConfig = STEP_CANVAS_CONFIGS[stepId];
+  if (stepConfig?.hasRings && metadata.quadrant) {
+    const ringConfig = stepConfig.ringConfig as RingConfig;
+    const ring = ringConfig.rings.find((r) => r.id === metadata.quadrant);
+
+    if (ring) {
+      // Count existing post-its in the same ring (stored in cellAssignment.row)
+      const sameRingPostIts = existingPostIts.filter(
+        (p) => p.cellAssignment?.row === metadata.quadrant,
+      );
+      const sameRingCount = sameRingPostIts.length;
+
+      // Get positions for all cards in this ring (including the new one)
+      const positions = distributeCardsOnRing(
+        sameRingCount + 1,
+        ring.radius,
+        ringConfig.center,
+      );
+
+      // Use the last position for the new card
+      const position = positions[positions.length - 1];
+
+      return {
+        position,
+        cellAssignment: { row: metadata.quadrant, col: '' },
+      };
+    }
+  }
+
+  // --- Empathy zone steps (4: sense-making with empathy zones) ---
+  if (stepConfig?.hasEmpathyZones && metadata.quadrant) {
+    const empathyZoneConfig = stepConfig.empathyZoneConfig as EmpathyZoneConfig;
+    const zone = empathyZoneConfig.zones[metadata.quadrant as EmpathyZone];
+
+    if (zone) {
+      // Count existing post-its in the same zone (stored in cellAssignment.row)
+      const sameZonePostIts = existingPostIts.filter(
+        (p) => p.cellAssignment?.row === metadata.quadrant,
+      );
+      const sameZoneCount = sameZonePostIts.length;
+
+      // Get positions for all cards in this zone (including the new one)
+      const positions = distributeCardsInZone(
+        sameZoneCount + 1,
+        zone.bounds,
+        { width: POST_IT_WIDTH, height: POST_IT_HEIGHT },
+        15, // padding
+      );
+
+      // Use the last position for the new card
+      const position = positions[positions.length - 1];
+
+      return {
+        position,
+        cellAssignment: { row: metadata.quadrant, col: '' },
+      };
+    }
+  }
+
   // --- Quadrant-based steps (2: stakeholder-mapping, 4: sense-making) ---
   if (metadata.quadrant && QUADRANT_BASES[metadata.quadrant]) {
     const base = QUADRANT_BASES[metadata.quadrant];
