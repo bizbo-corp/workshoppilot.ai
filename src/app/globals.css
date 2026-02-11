@@ -140,3 +140,22 @@
 .react-flow {
   touch-action: none;
 }
+
+/* Canvas cursor overrides — ReactFlow sets cursors on internal elements,
+   so we need to force-override via a parent class on the <ReactFlow> element. */
+.react-flow.cursor-pointer-tool,
+.react-flow.cursor-pointer-tool .react-flow__pane,
+.react-flow.cursor-pointer-tool .react-flow__node {
+  cursor: default !important;
+}
+
+.react-flow.cursor-hand-tool,
+.react-flow.cursor-hand-tool .react-flow__pane {
+  cursor: grab !important;
+}
+
+.react-flow.cursor-dragging,
+.react-flow.cursor-dragging .react-flow__pane,
+.react-flow.cursor-dragging .react-flow__node {
+  cursor: grabbing !important;
+}

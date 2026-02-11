@@ -98,14 +98,16 @@ export const PostItNode = memo(({ data, selected, id }: NodeProps<PostItNode>) =
         'hover:shadow-lg hover:-translate-y-0.5 transition-all duration-150',
         'cursor-pointer',
         selected && 'ring-2 ring-blue-500 ring-offset-1',
-        data.isEditing && 'ring-2 ring-blue-400 ring-offset-1'
+        data.isEditing && 'ring-2 ring-blue-400 ring-offset-1',
+        data.dragging && 'shadow-xl'
       )}
       style={{
         width: '120px',
         minHeight: '120px',
         touchAction: 'none',
-        opacity: data.dragging ? 0.6 : 1,
-        transition: 'opacity 150ms ease',
+        opacity: data.dragging ? 0.85 : 1,
+        transform: data.dragging ? 'scale(1.03)' : 'none',
+        transition: 'opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease',
       }}
     >
       {/* Hidden handles for future edge connections */}
