@@ -14,6 +14,10 @@ export type PostIt = {
   parentId?: string;
   type?: 'postIt' | 'group';
   quadrant?: Quadrant; // Quadrant position for steps with quadrant layout
+  cellAssignment?: {
+    row: string; // Row ID from GridConfig (e.g., 'actions', 'goals')
+    col: string; // Column ID from GridConfig (e.g., 'awareness', 'consideration')
+  };
 };
 
 export type CanvasState = {
