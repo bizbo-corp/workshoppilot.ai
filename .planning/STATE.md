@@ -12,10 +12,10 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 Milestone: v1.1 Canvas Foundation
 Phase: 20 of 20 (Bundle Optimization & Mobile Refinement)
 Plan: 2 of 2
-Status: In progress
-Last activity: 2026-02-11 — Completed 20-02-PLAN.md (iOS Safari Touch Handling)
+Status: Phase complete
+Last activity: 2026-02-11 — Completed 20-01-PLAN.md (Bundle Optimization & Mobile Refinement)
 
-Progress: [███████████████████████░] 96% (58 plans complete across v0.5 + v1.0 + v1.1)
+Progress: [████████████████████████] 100% (59 plans complete across v0.5 + v1.0 + v1.1)
 
 ## Completed Milestones
 
@@ -25,7 +25,7 @@ Progress: [███████████████████████
 | v1.0 Working AI Facilitation | 7-14 | 25 | 2026-02-10 |
 
 **Cumulative stats:**
-- 58 plans completed (19 phases complete, 1 phase in progress)
+- 59 plans completed (20 phases complete)
 - ~13,900 lines of TypeScript across ~290 files
 - 5 days total (2026-02-07 → 2026-02-11)
 
@@ -91,6 +91,11 @@ Recent decisions affecting v1.1:
 - **Action button UX** (19-02): "Add to canvas" buttons below AI messages show full item text with Plus icon, distinct from suggestion pills
 - **Default post-it creation** (19-02): Position (0,0), 120x120 size, yellow color - user drags to desired location after AI suggests
 - **Duplicate handling in AI suggestions** (19-02): No state tracking of "already added" - allow duplicates, user can delete or undo (Option A)
+- **lucide-react tree-shaking** (20-01): optimizePackageImports config for lucide-react (546 icons) prevents ~500KB bundle bloat via Next.js experimental feature
+- **iOS Safari zoom prevention** (20-01): maximumScale=1 and userScalable=false both required for reliable iOS Safari double-tap zoom prevention (conflicts with canvas double-click)
+- **dvh viewport units** (20-01): .canvas-container uses 100dvh with @supports fallback for iOS Safari collapsing toolbar (44-88px offset with regular vh)
+- **iOS scroll prevention** (20-01): overscroll-behavior:none on html/body prevents iOS bounce scroll interfering with canvas pan
+- **Canvas gesture prevention** (20-01): touch-action:none on .react-flow CSS class prevents default touch behaviors conflicting with ReactFlow pointer handling
 - **iOS Safari passive event workaround** (20-02): Native addEventListener with passive:false for preventDefault support on iOS Safari 11.3+ (React synthetic events don't support passive option)
 - **Touch handler container ref pattern** (20-02): Hook takes containerRef instead of CSS selector for React-idiomatic approach, avoids stale references
 - **Interactive element touch exclusion** (20-02): Allow touch on buttons/textareas/inputs/toolbar to preserve form interaction while preventing canvas scroll
@@ -120,9 +125,9 @@ From research (research/SUMMARY.md):
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Phase 20 Plan 02 complete - iOS Safari touch handling integrated
-Resume file: .planning/phases/20-bundle-optimization-mobile-refinement/20-02-SUMMARY.md
-Next action: Continue Phase 20 (remaining plans if any) or complete v1.1 milestone
+Stopped at: Phase 20 complete - All v1.1 Canvas Foundation work complete (59/59 plans)
+Resume file: .planning/phases/20-bundle-optimization-mobile-refinement/20-01-SUMMARY.md
+Next action: v1.1 Canvas Foundation milestone complete - ready for production deployment and milestone verification
 
 ---
-*Last updated: 2026-02-11 after completing 20-02-PLAN.md execution*
+*Last updated: 2026-02-11 after completing 20-01-PLAN.md execution*
