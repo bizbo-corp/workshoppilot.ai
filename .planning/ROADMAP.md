@@ -125,11 +125,11 @@ Plans:
   3. AI references canvas state in conversation (reads silently)
   4. AI context includes stakeholders grouped by quadrant (Step 2)
   5. AI context includes insights grouped by quadrant (Step 4)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 19-01: TBD
-- [ ] 19-02: TBD
+- [ ] 19-01-PLAN.md -- Wire canvas context into AI pipeline (assembleStepContext, buildStepSystemPrompt, chat route)
+- [ ] 19-02-PLAN.md -- Parse [CANVAS_ITEM] markup and render "Add to canvas" action buttons in ChatPanel
 
 #### Phase 20: Bundle Optimization & Mobile Refinement
 **Goal**: Production performance validated, mobile gestures refined
