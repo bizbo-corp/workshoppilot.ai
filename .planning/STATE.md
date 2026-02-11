@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 Phase: 21 of 24 (Grid Foundation & Coordinate System)
-Plan: None yet - ready to plan
-Status: Ready to plan
-Last activity: 2026-02-11 — v1.2 Canvas Whiteboard roadmap created
+Plan: 1 of 2 complete
+Status: In progress
+Last activity: 2026-02-11 — Completed 21-01-PLAN.md (grid coordinate system)
 
-Progress: [████████████████████░░░░] 83% (59/71 plans across all milestones)
+Progress: [████████████████████░░░░] 84% (60/71 plans across all milestones)
 
 ## Completed Milestones
 
@@ -26,14 +26,15 @@ Progress: [████████████████████░░░
 | v1.1 Canvas Foundation | 15-20 | 15 | 2026-02-11 |
 
 **Cumulative stats:**
-- 59 plans completed (20 phases complete)
-- ~14,400 lines of TypeScript across ~290 files
+- 60 plans completed (20 phases complete, 1 in progress)
+- ~14,540 lines of TypeScript across ~293 files
 - 5 days total (2026-02-07 → 2026-02-11)
 
 **Velocity:**
 - v0.5: 2 days, 6 phases, 19 plans (~25 min/plan)
 - v1.0: 3 days, 8 phases, 25 plans (~25 min/plan)
 - v1.1: 2 days, 6 phases, 15 plans (~25 min/plan)
+- v1.2: In progress, 1 plan complete (~15 min/plan)
 
 ## Accumulated Context
 
@@ -44,8 +45,10 @@ Recent decisions affecting v1.2 work:
 
 - **ReactFlow for canvas** (v1.1) — Graph-first data model with nodes+edges, MIT free, structured relationships queryable for AI context
 - **No new packages for v1.2** — All grid/swimlane features build on existing ReactFlow 12.10.0 APIs with custom implementation patterns
-- **Semantic IDs for columns/rows** — Use UUIDs not array indices to survive reordering operations
+- **Semantic IDs for columns/rows** (Phase 21) — Use string IDs not array indices to survive reordering operations. Implemented in grid-layout.ts GridConfig type
 - **Custom snap logic required** — ReactFlow built-in snapGrid has multi-select bug (issue #1579), implement custom cell-boundary snap
+- **Position as source of truth** (Phase 21) — cellAssignment is derived metadata, position remains authoritative for grid-based layouts
+- **Cell padding in GridConfig** (Phase 21) — 10px padding stored in config prevents nodes from touching cell borders, avoids magic numbers
 
 ### Known Tech Debt
 
@@ -74,13 +77,13 @@ Recent decisions affecting v1.2 work:
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: v1.2 Canvas Whiteboard roadmap created with 4 phases (21-24), 17 requirements mapped with 100% coverage
-Resume file: None
+Stopped at: Phase 21 Plan 01 complete (grid coordinate system foundation)
+Resume file: .planning/phases/21-grid-foundation-coordinate-system/21-02-PLAN.md
 
 **Next steps:**
-1. Plan Phase 21 (Grid Foundation) via `/gsd:plan-phase 21`
-2. Research phase may not be needed - existing ReactFlow research covers patterns
+1. Execute Phase 21 Plan 02 (grid overlay rendering and interaction)
+2. Continue with Phase 22 after Phase 21 completion
 3. All 17 v1.2 requirements mapped to phases
 
 ---
-*Last updated: 2026-02-11 after v1.2 roadmap created*
+*Last updated: 2026-02-11 after completing 21-01-PLAN.md*
