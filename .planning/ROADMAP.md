@@ -140,10 +140,11 @@ Plans:
   2. First Contentful Paint under 2s on 3G network
   3. Touch interactions work on iOS Safari and Android Chrome
   4. Canvas coordinates scale correctly on mobile viewports
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 20-01: TBD
+- [ ] 20-01-PLAN.md — Bundle optimization config + viewport meta + mobile CSS (optimizePackageImports, viewport export, dvh, overscroll, touch-action)
+- [ ] 20-02-PLAN.md — iOS Safari touch scroll prevention + canvas component mobile refinements
 
 ### MMP Visual & Collaborative (Planned)
 
@@ -165,7 +166,7 @@ Phases execute in numeric order: 15 → 16 → 17 → 18 → 19 → 20
 | 17. Canvas Core Interactions | v1.1 | 3/3 | Complete | 2026-02-10 |
 | 18. Step-Specific Canvases | v1.1 | 2/2 | Complete | 2026-02-11 |
 | 19. AI-Canvas Integration | v1.1 | 2/2 | Complete | 2026-02-11 |
-| 20. Bundle Optimization | v1.1 | 0/TBD | Not started | - |
+| 20. Bundle Optimization | v1.1 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-02-11 after Phase 19 execution complete*
+*Last updated: 2026-02-11 after Phase 20 planning complete*
