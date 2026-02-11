@@ -5,11 +5,12 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import TextareaAutosize from 'react-textarea-autosize';
 import ReactMarkdown from 'react-markdown';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Plus } from 'lucide-react';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/hooks/use-auto-save';
+import { useCanvasStore } from '@/providers/canvas-store-provider';
 
 /**
  * Parse [SUGGESTIONS]...[/SUGGESTIONS] block from AI content.
@@ -28,6 +29,28 @@ function parseSuggestions(content: string): { cleanContent: string; suggestions:
   return { cleanContent, suggestions };
 }
 
+/**
+ * Parse [CANVAS_ITEM]...[/CANVAS_ITEM] markup from AI content.
+ * Returns clean content (markup removed) and extracted canvas item strings.
+ */
+function parseCanvasItems(content: string): { cleanContent: string; canvasItems: string[] } {
+  const items: string[] = [];
+  const regex = /\[CANVAS_ITEM\](.*?)\[\/CANVAS_ITEM\]/g;
+  let match;
+
+  while ((match = regex.exec(content)) !== null) {
+    const text = match[1].trim();
+    if (text.length > 0) {
+      items.push(text);
+    }
+  }
+
+  // Remove markup from content for clean markdown rendering
+  const cleanContent = content.replace(/\s*\[CANVAS_ITEM\].*?\[\/CANVAS_ITEM\]\s*/g, ' ').trim();
+
+  return { cleanContent, canvasItems: items };
+}
+
 interface ChatPanelProps {
   stepOrder: number;
   sessionId: string;
@@ -39,6 +62,7 @@ interface ChatPanelProps {
 
 export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
+  const addPostIt = useCanvasStore((state) => state.addPostIt);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const hasAutoStarted = React.useRef(false);
   const countdownRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -207,6 +231,17 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
   };
 
+  // Handle adding AI-suggested item to canvas as a post-it
+  const handleAddToCanvas = React.useCallback((text: string) => {
+    addPostIt({
+      text,
+      position: { x: 0, y: 0 },
+      width: 120,
+      height: 120,
+      color: 'yellow',
+    });
+  }, [addPostIt]);
+
   return (
     <div className="flex h-full flex-col">
       {/* Messages area */}
@@ -246,8 +281,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                 );
               }
 
-              // Assistant message — strip [SUGGESTIONS] block from display
-              const { cleanContent } = parseSuggestions(content);
+              // Assistant message — strip [SUGGESTIONS] and [CANVAS_ITEM] markup
+              const { cleanContent: noSuggestions } = parseSuggestions(content);
+              const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noSuggestions);
               return (
                 <div key={`${message.id}-${index}`} className="flex items-start gap-3">
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -255,8 +291,22 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                   </div>
                   <div className="flex-1">
                     <div className="rounded-lg bg-muted p-3 text-sm prose prose-sm dark:prose-invert max-w-none">
-                      <ReactMarkdown>{cleanContent}</ReactMarkdown>
+                      <ReactMarkdown>{finalContent}</ReactMarkdown>
                     </div>
+                    {canvasItems.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {canvasItems.map((item, i) => (
+                          <button
+                            key={i}
+                            onClick={() => handleAddToCanvas(item)}
+                            className="inline-flex items-center gap-1 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                          >
+                            <Plus className="h-3 w-3" />
+                            {item}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
