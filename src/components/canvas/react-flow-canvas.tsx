@@ -58,6 +58,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const removeGridColumn = useCanvasStore((s) => s.removeGridColumn);
   const confirmPreview = useCanvasStore((s) => s.confirmPreview);
   const rejectPreview = useCanvasStore((s) => s.rejectPreview);
+  const highlightedCell = useCanvasStore((s) => s.highlightedCell);
+  const setHighlightedCell = useCanvasStore((s) => s.setHighlightedCell);
 
   // Store API for temporal undo/redo access
   const storeApi = useCanvasStoreApi();
@@ -112,9 +114,6 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
   // Track selected nodes for Group button visibility
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
-
-  // Grid cell highlighting state
-  const [highlightedCell, setHighlightedCell] = useState<CellCoordinate | null>(null);
 
   // Delete column dialog state
   const [deleteColumnDialog, setDeleteColumnDialog] = useState<{

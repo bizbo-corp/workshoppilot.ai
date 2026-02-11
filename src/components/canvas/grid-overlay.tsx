@@ -88,17 +88,28 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
     >
       {/* Cell highlight (render first so it's behind grid lines) */}
       {highlightedCell && (() => {
-        const bounds = getCellBounds(highlightedCell, config);
+        const bounds = getCellBounds(highlightedCell, { ...config, columns: effectiveColumns });
         const topLeft = toScreen(bounds.x, bounds.y);
         return (
-          <rect
-            x={topLeft.x}
-            y={topLeft.y}
-            width={bounds.width * zoom}
-            height={bounds.height * zoom}
-            fill="#dbeafe"
-            opacity={0.4}
-          />
+          <g className="animate-pulse">
+            <rect
+              x={topLeft.x}
+              y={topLeft.y}
+              width={bounds.width * zoom}
+              height={bounds.height * zoom}
+              fill="#fef3c7"
+              opacity={0.3}
+            />
+            <rect
+              x={topLeft.x}
+              y={topLeft.y}
+              width={bounds.width * zoom}
+              height={bounds.height * zoom}
+              fill="none"
+              stroke="#eab308"
+              strokeWidth={3}
+            />
+          </g>
         );
       })()}
 

@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { computeCanvasPosition, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS } from '@/lib/canvas/canvas-position';
+import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 
 /** Steps that support canvas item auto-add */
 const CANVAS_ENABLED_STEPS = ['stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping'];
@@ -100,6 +101,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const step = getStepByOrder(stepOrder);
   const addPostIt = useCanvasStore((state) => state.addPostIt);
   const postIts = useCanvasStore((state) => state.postIts);
+  const setHighlightedCell = useCanvasStore((state) => state.setHighlightedCell);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const hasAutoStarted = React.useRef(false);
   const countdownRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -251,10 +253,23 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
       addPostIt(newPostIt);
 
+      // Highlight target cell for grid items
+      if (item.isGridItem && cellAssignment) {
+        const stepConfig = getStepCanvasConfig(step.id);
+        const gridConfig = stepConfig.gridConfig;
+        if (gridConfig) {
+          const rowIndex = gridConfig.rows.findIndex(r => r.id === cellAssignment.row);
+          const colIndex = gridConfig.columns.findIndex(c => c.id === cellAssignment.col);
+          if (rowIndex !== -1 && colIndex !== -1) {
+            setHighlightedCell({ row: rowIndex, col: colIndex });
+          }
+        }
+      }
+
       // Track the added item for stagger calculation of subsequent items in this batch
       currentPostIts = [...currentPostIts, { ...newPostIt, id: 'pending' }];
     }
-  }, [status, messages, isCanvasStep, step.id, postIts, addPostIt]);
+  }, [status, messages, isCanvasStep, step.id, postIts, addPostIt, setHighlightedCell]);
 
   // Clear stream error on successful completion
   React.useEffect(() => {
