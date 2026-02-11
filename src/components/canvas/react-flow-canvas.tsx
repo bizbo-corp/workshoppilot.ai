@@ -31,6 +31,10 @@ import { GridOverlay } from './grid-overlay';
 import { positionToCell, snapToCell } from '@/lib/canvas/grid-layout';
 import type { CellCoordinate, GridConfig } from '@/lib/canvas/grid-layout';
 import { DeleteColumnDialog } from '@/components/dialogs/delete-column-dialog';
+import { ConcentricRingsOverlay } from './concentric-rings-overlay';
+import { EmpathyMapOverlay } from './empathy-map-overlay';
+import { detectRing } from '@/lib/canvas/ring-layout';
+import { getZoneForPosition } from '@/lib/canvas/empathy-zones';
 
 // Define node types OUTSIDE component for stable reference
 const nodeTypes = {
@@ -288,8 +292,42 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     (clientX: number, clientY: number) => {
       const flowPosition = screenToFlowPosition({ x: clientX, y: clientY });
 
+      // Ring-based snap and assignment for ring steps
+      if (stepConfig.hasRings && stepConfig.ringConfig) {
+        const snappedPosition = snapToGrid(flowPosition);
+        const ringId = detectRing(
+          { x: snappedPosition.x + 60, y: snappedPosition.y + 50 }, // card center
+          stepConfig.ringConfig
+        );
+
+        shouldEditLatest.current = true;
+        addPostIt({
+          text: '',
+          position: snappedPosition,
+          width: 120,
+          height: 120,
+          cellAssignment: { row: ringId, col: '' },
+        });
+      }
+      // Empathy zone snap and assignment for empathy zone steps
+      else if (stepConfig.hasEmpathyZones && stepConfig.empathyZoneConfig) {
+        const snappedPosition = snapToGrid(flowPosition);
+        const zone = getZoneForPosition(
+          { x: snappedPosition.x + 60, y: snappedPosition.y + 50 }, // card center
+          stepConfig.empathyZoneConfig
+        );
+
+        shouldEditLatest.current = true;
+        addPostIt({
+          text: '',
+          position: snappedPosition,
+          width: 120,
+          height: 120,
+          cellAssignment: zone ? { row: zone, col: '' } : undefined,
+        });
+      }
       // Grid-based snap and cell assignment for grid steps
-      if (stepConfig.hasGrid && dynamicGridConfig) {
+      else if (stepConfig.hasGrid && dynamicGridConfig) {
         const snappedPosition = snapToCell(flowPosition, dynamicGridConfig);
         const cell = positionToCell(snappedPosition, dynamicGridConfig);
 
@@ -350,8 +388,42 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       position = center;
     }
 
+    // Ring-based snap and assignment for ring steps
+    if (stepConfig.hasRings && stepConfig.ringConfig) {
+      const snappedPosition = snapToGrid(position);
+      const ringId = detectRing(
+        { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
+        stepConfig.ringConfig
+      );
+
+      shouldEditLatest.current = true;
+      addPostIt({
+        text: '',
+        position: snappedPosition,
+        width: 120,
+        height: 120,
+        cellAssignment: { row: ringId, col: '' },
+      });
+    }
+    // Empathy zone snap and assignment for empathy zone steps
+    else if (stepConfig.hasEmpathyZones && stepConfig.empathyZoneConfig) {
+      const snappedPosition = snapToGrid(position);
+      const zone = getZoneForPosition(
+        { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
+        stepConfig.empathyZoneConfig
+      );
+
+      shouldEditLatest.current = true;
+      addPostIt({
+        text: '',
+        position: snappedPosition,
+        width: 120,
+        height: 120,
+        cellAssignment: zone ? { row: zone, col: '' } : undefined,
+      });
+    }
     // Grid-based snap and cell assignment for grid steps
-    if (stepConfig.hasGrid && dynamicGridConfig) {
+    else if (stepConfig.hasGrid && dynamicGridConfig) {
       const snappedPosition = snapToCell(position, dynamicGridConfig);
       const cell = positionToCell(snappedPosition, dynamicGridConfig);
 
@@ -408,7 +480,23 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       position = center;
     }
 
-    if (stepConfig.hasGrid && dynamicGridConfig) {
+    if (stepConfig.hasRings && stepConfig.ringConfig) {
+      const snappedPosition = snapToGrid(position);
+      const ringId = detectRing(
+        { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
+        stepConfig.ringConfig
+      );
+      shouldEditLatest.current = true;
+      addPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment: { row: ringId, col: '' } });
+    } else if (stepConfig.hasEmpathyZones && stepConfig.empathyZoneConfig) {
+      const snappedPosition = snapToGrid(position);
+      const zone = getZoneForPosition(
+        { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
+        stepConfig.empathyZoneConfig
+      );
+      shouldEditLatest.current = true;
+      addPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment: zone ? { row: zone, col: '' } : undefined });
+    } else if (stepConfig.hasGrid && dynamicGridConfig) {
       const snappedPosition = snapToCell(position, dynamicGridConfig);
       const cell = positionToCell(snappedPosition, dynamicGridConfig);
       const cellAssignment = cell
@@ -487,8 +575,32 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         ) {
           // Clear dragging state
           setDraggingNodeId(null);
+          // Ring-based snap and assignment for ring steps
+          if (stepConfig.hasRings && stepConfig.ringConfig) {
+            const snappedPosition = snapToGrid(change.position);
+            const ringId = detectRing(
+              { x: snappedPosition.x + 60, y: snappedPosition.y + 50 }, // card center
+              stepConfig.ringConfig
+            );
+            updatePostIt(change.id, {
+              position: snappedPosition,
+              cellAssignment: { row: ringId, col: '' },
+            });
+          }
+          // Empathy zone snap and assignment for empathy zone steps
+          else if (stepConfig.hasEmpathyZones && stepConfig.empathyZoneConfig) {
+            const snappedPosition = snapToGrid(change.position);
+            const zone = getZoneForPosition(
+              { x: snappedPosition.x + 60, y: snappedPosition.y + 50 }, // card center
+              stepConfig.empathyZoneConfig
+            );
+            updatePostIt(change.id, {
+              position: snappedPosition,
+              cellAssignment: zone ? { row: zone, col: '' } : undefined,
+            });
+          }
           // Grid-based snap and cell assignment for grid steps
-          if (stepConfig.hasGrid && dynamicGridConfig) {
+          else if (stepConfig.hasGrid && dynamicGridConfig) {
             const snappedPosition = snapToCell(change.position, dynamicGridConfig);
             const cell = positionToCell(snappedPosition, dynamicGridConfig);
 
@@ -649,7 +761,29 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
   // Handle ReactFlow initialization (for empty quadrant/grid canvas centering)
   const handleInit = useCallback((instance: ReactFlowInstance) => {
-    if (stepConfig.hasQuadrants && postIts.length === 0) {
+    if (stepConfig.hasRings && postIts.length === 0) {
+      // Center viewport on (0,0) for ring layout
+      const container = document.querySelector('.react-flow');
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        instance.setViewport({
+          x: rect.width / 2,
+          y: rect.height / 2,
+          zoom: 0.7, // Slightly zoomed out so all 3 rings visible
+        });
+      }
+    } else if (stepConfig.hasEmpathyZones && postIts.length === 0) {
+      // Center viewport to show full empathy map
+      const container = document.querySelector('.react-flow');
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        instance.setViewport({
+          x: rect.width / 2 + 210, // Center horizontally on the zone layout
+          y: rect.height / 2 + 200, // Center vertically
+          zoom: 0.6, // Zoomed out enough to see all 6 zones
+        });
+      }
+    } else if (stepConfig.hasQuadrants && postIts.length === 0) {
       // Center viewport on (0,0) for quadrant steps
       const container = document.querySelector('.react-flow');
       if (container) {
@@ -751,6 +885,12 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         />
         {stepConfig.hasQuadrants && stepConfig.quadrantConfig && (
           <QuadrantOverlay config={stepConfig.quadrantConfig} />
+        )}
+        {stepConfig.hasRings && stepConfig.ringConfig && (
+          <ConcentricRingsOverlay config={stepConfig.ringConfig} />
+        )}
+        {stepConfig.hasEmpathyZones && stepConfig.empathyZoneConfig && (
+          <EmpathyMapOverlay config={stepConfig.empathyZoneConfig} />
         )}
         {stepConfig.hasGrid && dynamicGridConfig && (
           <GridOverlay
