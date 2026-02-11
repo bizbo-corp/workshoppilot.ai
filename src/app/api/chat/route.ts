@@ -59,6 +59,7 @@ export async function POST(req: Request) {
       stepDescription,
       stepContext.persistentContext,
       stepContext.summaries,
+      stepContext.canvasContext, // NEW: Tier 4 canvas context
       instructionsOverride
     );
 

@@ -29,6 +29,7 @@ export type { ArcPhase } from './prompts/arc-phases';
  * - Step-Specific Instructions: Methodology and goals for this design thinking step
  * - Persistent Memory: Structured artifacts from completed steps
  * - Long-term Memory: AI summaries from previous step conversations
+ * - Canvas State: Current canvas post-its grouped by quadrant (Tier 4)
  * - Context Usage Rules: How to reference prior knowledge
  * - Validation Criteria: Quality checklist during Validate phase
  *
@@ -38,6 +39,7 @@ export type { ArcPhase } from './prompts/arc-phases';
  * @param stepDescription - Brief description of what this step accomplishes
  * @param persistentContext - Tier 1: Structured artifacts from completed steps
  * @param summaries - Tier 2: AI summaries from previous steps
+ * @param canvasContext - Tier 4: Canvas state formatted for AI prompt
  * @returns Complete system prompt with injected context
  */
 export function buildStepSystemPrompt(
@@ -47,6 +49,7 @@ export function buildStepSystemPrompt(
   stepDescription: string,
   persistentContext: string,
   summaries: string,
+  canvasContext: string,
   instructionsOverride?: string
 ): string {
   // Base role: AI facilitator for this step
@@ -94,12 +97,26 @@ ${persistentContext}`;
 ${summaries}`;
   }
 
+  // Add Tier 4: Canvas State
+  if (canvasContext) {
+    prompt += `\n\nCANVAS STATE (Visual workspace for this step):
+${canvasContext}
+
+The canvas shows items the user has visually organized. Reference these naturally in conversation (e.g., "I see you have 3 stakeholders in the Manage Closely quadrant..."). Do not re-suggest items already on the canvas.`;
+  }
+
   // Add context usage instructions (only if we have context to use)
-  if (persistentContext || summaries) {
+  if (persistentContext || summaries || canvasContext) {
     prompt += `\n\nCONTEXT USAGE RULES:
 - Reference prior step outputs by name when relevant (e.g., "Based on your HMW statement from the Challenge step...")
 - Build on prior knowledge — do not re-ask questions already answered in earlier steps
 - If the user's current input contradicts a prior step output, note the discrepancy gently`;
+
+    // Add canvas-specific rule if canvas context exists
+    if (canvasContext) {
+      const itemType = stepId === 'stakeholder-mapping' ? 'stakeholders' : stepId === 'sense-making' ? 'insights' : 'items';
+      prompt += `\n- Reference canvas items naturally when discussing ${itemType}`;
+    }
   }
 
   // Add general behavioral guidance
@@ -122,6 +139,26 @@ Format:
 - Suggestion three (optional, another angle)
 [/SUGGESTIONS]
 Rules: Each suggestion must be under 15 words, written from the user's perspective, and offer distinct options.`;
+  }
+
+  // Canvas action markup instructions (Steps 2 and 4 only, during gather/synthesize)
+  if ((stepId === 'stakeholder-mapping' || stepId === 'sense-making') &&
+      (arcPhase === 'gather' || arcPhase === 'synthesize')) {
+    const itemType = stepId === 'stakeholder-mapping' ? 'stakeholders' : 'insights or observations';
+
+    prompt += `\n\nCANVAS ACTIONS:
+When suggesting ${itemType} the user should add to their canvas, wrap each item in [CANVAS_ITEM]...[/CANVAS_ITEM] tags.
+This creates an "Add to canvas" button so they can add it with one click.
+
+Format: [CANVAS_ITEM]Brief item text (max 80 characters)[/CANVAS_ITEM]
+
+Example: "Here are key stakeholders to consider: [CANVAS_ITEM]Product Manager - high influence[/CANVAS_ITEM] and [CANVAS_ITEM]End Users - primary beneficiaries[/CANVAS_ITEM]"
+
+Guidelines:
+- Only use for concrete ${itemType} that belong on the canvas
+- Keep text brief (fits on a post-it note)
+- Do not wrap questions, explanations, or general text in these tags
+- Limit to 3-5 items per message to avoid overwhelming the user`;
   }
 
   return prompt;
