@@ -5,12 +5,16 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import TextareaAutosize from 'react-textarea-autosize';
 import ReactMarkdown from 'react-markdown';
-import { Send, Loader2, Plus } from 'lucide-react';
+import { Send, Loader2, Plus, Check } from 'lucide-react';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
+import { computeCanvasPosition, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS } from '@/lib/canvas/canvas-position';
+
+/** Steps that support canvas item auto-add */
+const CANVAS_ENABLED_STEPS = ['stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping'];
 
 /**
  * Parse [SUGGESTIONS]...[/SUGGESTIONS] block from AI content.
@@ -30,23 +34,50 @@ function parseSuggestions(content: string): { cleanContent: string; suggestions:
 }
 
 /**
- * Parse [CANVAS_ITEM]...[/CANVAS_ITEM] markup from AI content.
- * Returns clean content (markup removed) and extracted canvas item strings.
+ * Parsed canvas item with optional position metadata
  */
-function parseCanvasItems(content: string): { cleanContent: string; canvasItems: string[] } {
-  const items: string[] = [];
-  const regex = /\[CANVAS_ITEM\](.*?)\[\/CANVAS_ITEM\]/g;
+type CanvasItemParsed = {
+  text: string;
+  quadrant?: string;
+  row?: string;
+  col?: string;
+  category?: string;
+};
+
+/**
+ * Parse [CANVAS_ITEM]...[/CANVAS_ITEM] markup from AI content.
+ * Supports optional attributes: quadrant="...", row="...", col="..."
+ * Returns clean content (markup removed) and extracted canvas items with metadata.
+ */
+function parseCanvasItems(content: string): { cleanContent: string; canvasItems: CanvasItemParsed[] } {
+  const items: CanvasItemParsed[] = [];
+  const regex = /\[CANVAS_ITEM(?:\s+([^\]]*))?\](.*?)\[\/CANVAS_ITEM\]/g;
   let match;
 
   while ((match = regex.exec(content)) !== null) {
-    const text = match[1].trim();
-    if (text.length > 0) {
-      items.push(text);
+    const attrString = match[1] || '';
+    const text = match[2].trim();
+    if (text.length === 0) continue;
+
+    // Parse attributes like quadrant="value" row="value" col="value"
+    const attrs: Record<string, string> = {};
+    const attrRegex = /(\w+)="([^"]*)"/g;
+    let attrMatch;
+    while ((attrMatch = attrRegex.exec(attrString)) !== null) {
+      attrs[attrMatch[1]] = attrMatch[2];
     }
+
+    items.push({
+      text,
+      quadrant: attrs.quadrant,
+      row: attrs.row,
+      col: attrs.col,
+      category: attrs.category,
+    });
   }
 
   // Remove markup from content for clean markdown rendering
-  const cleanContent = content.replace(/\s*\[CANVAS_ITEM\].*?\[\/CANVAS_ITEM\]\s*/g, ' ').trim();
+  const cleanContent = content.replace(/\s*\[CANVAS_ITEM(?:\s+[^\]]*?)?\].*?\[\/CANVAS_ITEM\]\s*/g, ' ').trim();
 
   return { cleanContent, canvasItems: items };
 }
@@ -63,9 +94,11 @@ interface ChatPanelProps {
 export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
   const addPostIt = useCanvasStore((state) => state.addPostIt);
+  const postIts = useCanvasStore((state) => state.postIts);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const hasAutoStarted = React.useRef(false);
   const countdownRef = React.useRef<NodeJS.Timeout | null>(null);
+  const lastProcessedMsgId = React.useRef<string | null>(null);
   const [inputValue, setInputValue] = React.useState('');
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
   const [rateLimitInfo, setRateLimitInfo] = React.useState<{ retryAfter: number } | null>(null);
@@ -78,6 +111,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       </div>
     );
   }
+
+  const isCanvasStep = CANVAS_ENABLED_STEPS.includes(step.id);
 
   const transport = React.useMemo(
     () =>
@@ -169,6 +204,52 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
   }, [status, messages]);
 
+  // Auto-add canvas items when AI finishes responding
+  React.useEffect(() => {
+    if (status !== 'ready' || messages.length === 0 || !isCanvasStep) return;
+
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role !== 'assistant') return;
+
+    // Skip if we already processed this message
+    if (lastProcessedMsgId.current === lastMsg.id) return;
+    lastProcessedMsgId.current = lastMsg.id;
+
+    const textParts = lastMsg.parts?.filter((p) => p.type === 'text') || [];
+    const content = textParts.map((p) => p.text).join('\n');
+    const { canvasItems } = parseCanvasItems(content);
+
+    if (canvasItems.length === 0) return;
+
+    // Add each item to canvas with computed position
+    // Use a running snapshot of postIts that includes items we're adding in this batch
+    let currentPostIts = [...postIts];
+    for (const item of canvasItems) {
+      const { position, quadrant, cellAssignment } = computeCanvasPosition(
+        step.id,
+        { quadrant: item.quadrant, row: item.row, col: item.col, category: item.category },
+        currentPostIts,
+      );
+
+      const color = (item.category && CATEGORY_COLORS[item.category]) || 'yellow';
+
+      const newPostIt = {
+        text: item.text,
+        position,
+        width: POST_IT_WIDTH,
+        height: POST_IT_HEIGHT,
+        color,
+        quadrant,
+        cellAssignment,
+      };
+
+      addPostIt(newPostIt);
+
+      // Track the added item for stagger calculation of subsequent items in this batch
+      currentPostIts = [...currentPostIts, { ...newPostIt, id: 'pending' }];
+    }
+  }, [status, messages, isCanvasStep, step.id, postIts, addPostIt]);
+
   // Clear stream error on successful completion
   React.useEffect(() => {
     if (status === 'ready') {
@@ -231,16 +312,17 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
   };
 
-  // Handle adding AI-suggested item to canvas as a post-it
-  const handleAddToCanvas = React.useCallback((text: string) => {
+  // Handle adding user message to canvas as a post-it
+  const handleAddUserMessageToCanvas = React.useCallback((text: string) => {
+    const { position } = computeCanvasPosition(step.id, {}, postIts);
     addPostIt({
       text,
-      position: { x: 0, y: 0 },
-      width: 120,
-      height: 120,
+      position,
+      width: POST_IT_WIDTH,
+      height: POST_IT_HEIGHT,
       color: 'yellow',
     });
-  }, [addPostIt]);
+  }, [addPostIt, postIts, step.id]);
 
   return (
     <div className="flex h-full flex-col">
@@ -271,10 +353,19 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
               if (message.role === 'user') {
                 return (
-                  <div key={`${message.id}-${index}`} className="flex items-start gap-3 justify-end">
+                  <div key={`${message.id}-${index}`} className="group flex items-start gap-3 justify-end">
                     <div className="flex-1 max-w-[80%]">
-                      <div className="rounded-lg bg-primary p-3 text-sm text-primary-foreground">
+                      <div className="relative rounded-lg bg-primary p-3 text-sm text-primary-foreground">
                         {content}
+                        {isCanvasStep && (
+                          <button
+                            onClick={() => handleAddUserMessageToCanvas(content)}
+                            className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-1 bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                            aria-label="Add to canvas"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -296,14 +387,13 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                     {canvasItems.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {canvasItems.map((item, i) => (
-                          <button
+                          <span
                             key={i}
-                            onClick={() => handleAddToCanvas(item)}
-                            className="inline-flex items-center gap-1 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                            className="inline-flex items-center gap-1 rounded-md border border-green-500/30 bg-green-50 dark:bg-green-950/20 px-2.5 py-1.5 text-xs font-medium text-green-700 dark:text-green-400"
                           >
-                            <Plus className="h-3 w-3" />
-                            {item}
-                          </button>
+                            <Check className="h-3 w-3" />
+                            {item.text}
+                          </span>
                         ))}
                       </div>
                     )}

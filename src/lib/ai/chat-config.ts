@@ -141,18 +141,56 @@ Format:
 Rules: Each suggestion must be under 15 words, written from the user's perspective, and offer distinct options.`;
   }
 
-  // Canvas action markup instructions (Steps 2 and 4 only, during gather/synthesize)
-  if ((stepId === 'stakeholder-mapping' || stepId === 'sense-making') &&
-      (arcPhase === 'gather' || arcPhase === 'synthesize')) {
-    const itemType = stepId === 'stakeholder-mapping' ? 'stakeholders' : 'insights or observations';
+  // Canvas action markup instructions for canvas-enabled steps
+  // Include refine phase so items can still be added when user adjusts/iterates
+  const canvasPhases = ['gather', 'synthesize', 'refine'];
+  if (['stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping'].includes(stepId) &&
+      canvasPhases.includes(arcPhase)) {
+    const itemType = stepId === 'stakeholder-mapping' ? 'stakeholders'
+      : stepId === 'sense-making' ? 'insights or observations'
+      : stepId === 'persona' ? 'persona traits'
+      : 'journey map items';
 
     prompt += `\n\nCANVAS ACTIONS:
 When suggesting ${itemType} the user should add to their canvas, wrap each item in [CANVAS_ITEM]...[/CANVAS_ITEM] tags.
-This creates an "Add to canvas" button so they can add it with one click.
+Items are auto-added to the canvas. Do not ask the user to click to add.`;
 
-Format: [CANVAS_ITEM]Brief item text (max 80 characters)[/CANVAS_ITEM]
+    // Step-specific attribute instructions
+    if (stepId === 'stakeholder-mapping') {
+      prompt += `
 
-Example: "Here are key stakeholders to consider: [CANVAS_ITEM]Product Manager - high influence[/CANVAS_ITEM] and [CANVAS_ITEM]End Users - primary beneficiaries[/CANVAS_ITEM]"
+Format: [CANVAS_ITEM quadrant="<quadrant>"]Brief item text (max 80 characters)[/CANVAS_ITEM]
+Valid quadrants: high-power-high-interest, high-power-low-interest, low-power-high-interest, low-power-low-interest
+
+Example: "Here are key stakeholders: [CANVAS_ITEM quadrant="high-power-high-interest"]Product Manager - high influence[/CANVAS_ITEM] and [CANVAS_ITEM quadrant="low-power-high-interest"]End Users - primary beneficiaries[/CANVAS_ITEM]"`;
+    } else if (stepId === 'sense-making') {
+      prompt += `
+
+Format: [CANVAS_ITEM quadrant="<quadrant>"]Brief item text (max 80 characters)[/CANVAS_ITEM]
+Valid quadrants: said, thought, felt, experienced
+
+Example: "From the interviews: [CANVAS_ITEM quadrant="said"]Nothing is in one place[/CANVAS_ITEM] and [CANVAS_ITEM quadrant="felt"]Guilt when tasks are missed[/CANVAS_ITEM]"`;
+    } else if (stepId === 'persona') {
+      prompt += `
+
+Format: [CANVAS_ITEM category="<category>"]Brief item text (max 80 characters)[/CANVAS_ITEM]
+
+Valid categories: goals, pains, gains, motivations, frustrations, behaviors
+
+When drafting or discussing persona traits, output each goal, pain, gain, motivation, frustration, or behavior as a canvas item. This populates the whiteboard with the persona's key attributes.
+
+Example: "Based on the research, Sarah's key traits include: [CANVAS_ITEM category="goals"]Never miss a vet appointment[/CANVAS_ITEM] [CANVAS_ITEM category="pains"]Uses 4 disconnected apps[/CANVAS_ITEM] [CANVAS_ITEM category="gains"]Single dashboard for all pets[/CANVAS_ITEM]"`;
+    } else if (stepId === 'journey-mapping') {
+      prompt += `
+
+Format: [CANVAS_ITEM row="<row>" col="<col>"]Brief item text (max 80 characters)[/CANVAS_ITEM]
+Valid rows: actions, goals, barriers, touchpoints, emotions, moments, opportunities
+Valid cols: awareness, consideration, decision, purchase, onboarding
+
+Example: "For the awareness stage: [CANVAS_ITEM row="actions" col="awareness"]Researches options online[/CANVAS_ITEM] and [CANVAS_ITEM row="emotions" col="awareness"]Curious but uncertain[/CANVAS_ITEM]"`;
+    }
+
+    prompt += `
 
 Guidelines:
 - Only use for concrete ${itemType} that belong on the canvas
