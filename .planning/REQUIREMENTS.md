@@ -77,30 +77,31 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GRID-01 | — | Pending |
-| GRID-02 | — | Pending |
-| GRID-03 | — | Pending |
-| GRID-04 | — | Pending |
-| GRID-05 | — | Pending |
-| GRID-06 | — | Pending |
-| DCOL-01 | — | Pending |
-| DCOL-02 | — | Pending |
-| DCOL-03 | — | Pending |
-| AIPL-01 | — | Pending |
-| AIPL-02 | — | Pending |
-| AIPL-03 | — | Pending |
-| AIPL-04 | — | Pending |
-| AIPL-05 | — | Pending |
-| RETRO-01 | — | Pending |
-| RETRO-02 | — | Pending |
-| RETRO-03 | — | Pending |
-| RETRO-04 | — | Pending |
+| GRID-01 | Phase 21 | Pending |
+| GRID-02 | Phase 21 | Pending |
+| GRID-03 | Phase 21 | Pending |
+| GRID-04 | Phase 21 | Pending |
+| GRID-05 | Phase 21 | Pending |
+| GRID-06 | Phase 21 | Pending |
+| DCOL-01 | Phase 22 | Pending |
+| DCOL-02 | Phase 22 | Pending |
+| DCOL-03 | Phase 22 | Pending |
+| AIPL-01 | Phase 23 | Pending |
+| AIPL-02 | Phase 23 | Pending |
+| AIPL-03 | Phase 23 | Pending |
+| AIPL-04 | Phase 23 | Pending |
+| AIPL-05 | Phase 23 | Pending |
+| RETRO-01 | Phase 24 | Pending |
+| RETRO-02 | Phase 24 | Pending |
+| RETRO-03 | Phase 24 | Pending |
+| RETRO-04 | Phase 24 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 (pending roadmap creation)
+- Mapped to phases: 17
+- Unmapped: 0
+- Coverage: 100%
 
 ---
 *Requirements defined: 2026-02-11*
-*Last updated: 2026-02-11 after initial definition*
+*Last updated: 2026-02-11 after v1.2 roadmap created*
