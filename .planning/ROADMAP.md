@@ -59,21 +59,16 @@ See `milestones/v1.1-ROADMAP.md` for full details.
 
 **Milestone Goal:** Evolve canvas from post-it board to structured whiteboard with grid/swimlane layouts, AI-driven placement, and output-to-canvas migration for Steps 2 & 4.
 
-### Phase 21: Grid Foundation & Coordinate System
+### Phase 21: Grid Foundation & Coordinate System ✓
 **Goal**: Establish grid architecture, coordinate translation, and snap-to-cell logic for Step 6 Journey Map
 **Depends on**: Phase 20
 **Requirements**: GRID-01, GRID-02, GRID-03, GRID-04, GRID-05, GRID-06
-**Success Criteria** (what must be TRUE):
-  1. User sees 7 fixed swimlane rows (Actions, Goals, Barriers, Touchpoints, Emotions, Moments of Truth, Opportunities) with labeled headers on Step 6 canvas
-  2. Post-it items snap to cell boundaries when dragged and dropped, storing cell assignment alongside pixel position
-  3. Grid overlay (lines, row labels, column headers) stays aligned with canvas during pan and zoom at all zoom levels (50%-250%)
-  4. Target cell highlights with light blue background when user drags an item over it
-  5. Grid canvas state persists to database via existing auto-save infrastructure without data loss
-**Plans**: 2 plans
+**Status**: Complete (2026-02-11) — 11/11 must-haves verified
+**Plans**: 2/2 complete
 
 Plans:
-- [ ] 21-01-PLAN.md -- Grid coordinate system, types, step config, PostIt extension
-- [ ] 21-02-PLAN.md -- Grid overlay component, canvas integration, snap/highlight, context assembly
+- [x] 21-01-PLAN.md -- Grid coordinate system, types, step config, PostIt extension
+- [x] 21-02-PLAN.md -- Grid overlay component, canvas integration, snap/highlight, context assembly
 
 ### Phase 22: Dynamic Grid Structure (Column Management)
 **Goal**: Enable user-controlled journey stage columns with add/remove/edit operations
@@ -129,10 +124,10 @@ Phases execute in numeric order: 21 → 22 → 23 → 24 → ...
 | 1-6 | v0.5 | 19/19 | Complete | 2026-02-08 |
 | 7-14 | v1.0 | 25/25 | Complete | 2026-02-10 |
 | 15-20 | v1.1 | 15/15 | Complete | 2026-02-11 |
-| 21. Grid Foundation | v1.2 | 0/? | Not started | - |
+| 21. Grid Foundation | v1.2 | 2/2 | Complete | 2026-02-11 |
 | 22. Dynamic Grid Structure | v1.2 | 0/? | Not started | - |
 | 23. AI Placement | v1.2 | 0/? | Not started | - |
 | 24. Output-to-Canvas Retrofit | v1.2 | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-02-11 after v1.2 Canvas Whiteboard roadmap created*
+*Last updated: 2026-02-11 after Phase 21 Grid Foundation complete*
