@@ -56,6 +56,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const gridColumns = useCanvasStore((s) => s.gridColumns);
   const setGridColumns = useCanvasStore((s) => s.setGridColumns);
   const removeGridColumn = useCanvasStore((s) => s.removeGridColumn);
+  const confirmPreview = useCanvasStore((s) => s.confirmPreview);
+  const rejectPreview = useCanvasStore((s) => s.rejectPreview);
 
   // Store API for temporal undo/redo access
   const storeApi = useCanvasStoreApi();
@@ -216,6 +218,17 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     setEditingNodeId(null);
   }, []);
 
+  // Handle preview confirmation and rejection
+  const handleConfirmPreview = useCallback((id: string) => {
+    confirmPreview(id);
+    setHighlightedCell(null);
+  }, [confirmPreview]);
+
+  const handleRejectPreview = useCallback((id: string) => {
+    rejectPreview(id);
+    setHighlightedCell(null);
+  }, [rejectPreview]);
+
   // Convert store post-its to ReactFlow nodes
   const nodes = useMemo<Node[]>(() => {
     // Sort: groups first (parents before children for ReactFlow)
@@ -225,25 +238,37 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       return 0;
     });
 
-    return sorted.map((postIt) => ({
-      id: postIt.id,
-      type: postIt.type || 'postIt',
-      position: postIt.position,
-      parentId: postIt.parentId,
-      extent: postIt.parentId ? ('parent' as const) : undefined,
-      data: {
-        text: postIt.text,
-        color: postIt.color || 'yellow',
-        isEditing: editingNodeId === postIt.id,
-        dragging: draggingNodeId === postIt.id,
-        onTextChange: handleTextChange,
-        onEditComplete: handleEditComplete,
-      } as PostItNodeData,
-      style: postIt.type === 'group'
-        ? { width: postIt.width, height: postIt.height }
-        : { width: postIt.width, height: 'auto' },
-    }));
-  }, [postIts, editingNodeId, draggingNodeId, handleTextChange, handleEditComplete]);
+    return sorted.map((postIt) => {
+      const isPreview = postIt.isPreview === true;
+
+      return {
+        id: postIt.id,
+        type: postIt.type || 'postIt',
+        position: postIt.position,
+        parentId: postIt.parentId,
+        extent: postIt.parentId ? ('parent' as const) : undefined,
+        draggable: !isPreview,
+        selectable: !isPreview,
+        data: {
+          text: postIt.text,
+          color: postIt.color || 'yellow',
+          isEditing: isPreview ? false : editingNodeId === postIt.id,
+          dragging: draggingNodeId === postIt.id,
+          onTextChange: handleTextChange,
+          onEditComplete: handleEditComplete,
+          ...(isPreview ? {
+            isPreview: true,
+            previewReason: postIt.previewReason,
+            onConfirm: handleConfirmPreview,
+            onReject: handleRejectPreview,
+          } : {}),
+        } as PostItNodeData,
+        style: postIt.type === 'group'
+          ? { width: postIt.width, height: postIt.height }
+          : { width: postIt.width, height: 'auto' },
+      };
+    });
+  }, [postIts, editingNodeId, draggingNodeId, handleTextChange, handleEditComplete, handleConfirmPreview, handleRejectPreview]);
 
   // Create post-it at position and set as editing
   const createPostItAtPosition = useCallback(
