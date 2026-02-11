@@ -7,6 +7,8 @@
 
 import type { QuadrantType } from './quadrant-detection';
 import type { GridConfig } from './grid-layout';
+import type { RingConfig } from './ring-layout';
+import type { EmpathyZoneConfig } from './empathy-zones';
 
 /**
  * Configuration for a quadrant layout
@@ -34,6 +36,10 @@ export type StepCanvasConfig = {
   quadrantConfig?: QuadrantConfig;
   hasGrid?: boolean;
   gridConfig?: GridConfig;
+  hasRings?: boolean;
+  ringConfig?: RingConfig;
+  hasEmpathyZones?: boolean;
+  empathyZoneConfig?: EmpathyZoneConfig;
 };
 
 /**
@@ -41,38 +47,60 @@ export type StepCanvasConfig = {
  * Keys MUST match step IDs from src/lib/workshop/step-metadata.ts
  */
 export const STEP_CANVAS_CONFIGS: Record<string, StepCanvasConfig> = {
-  // Step 2: Stakeholder Mapping - Power x Interest matrix
+  // Step 2: Stakeholder Mapping - Concentric rings by importance
   'stakeholder-mapping': {
-    hasQuadrants: true,
-    quadrantType: 'power-interest',
-    quadrantConfig: {
-      type: 'power-interest',
-      labels: {
-        topLeft: 'Keep Satisfied',
-        topRight: 'Manage Closely',
-        bottomLeft: 'Monitor',
-        bottomRight: 'Keep Informed',
-      },
-      axisLabels: {
-        horizontal: { left: 'Low Interest', right: 'High Interest' },
-        vertical: { top: 'High Power', bottom: 'Low Power' },
-      },
+    hasQuadrants: false,
+    hasRings: true,
+    ringConfig: {
+      rings: [
+        { id: 'inner', label: 'Most Important', radius: 320, color: '#3b82f6' }, // blue
+        { id: 'middle', radius: 520, color: '#8b5cf6' }, // purple
+        { id: 'outer', radius: 720, color: '#6366f1' }, // indigo
+      ],
+      center: { x: 0, y: 0 },
     },
   },
 
-  // Step 4: Sense Making - Empathy Map quadrants
+  // Step 4: Sense Making - 6-zone empathy map
   'sense-making': {
-    hasQuadrants: true,
-    quadrantType: 'empathy-map',
-    quadrantConfig: {
-      type: 'empathy-map',
-      labels: {
-        topLeft: 'Thought',
-        topRight: 'Felt',
-        bottomLeft: 'Said',
-        bottomRight: 'Experienced',
+    hasQuadrants: false,
+    hasEmpathyZones: true,
+    empathyZoneConfig: {
+      zones: {
+        // Top row: 2x2 quadrant grid
+        says: {
+          bounds: { x: -420, y: -700, width: 400, height: 330 },
+          label: 'Says',
+          color: '#94a3b8', // slate
+        },
+        thinks: {
+          bounds: { x: 20, y: -700, width: 400, height: 330 },
+          label: 'Thinks',
+          color: '#a1a1aa', // zinc
+        },
+        // Second row: 2x2 quadrant grid
+        feels: {
+          bounds: { x: -420, y: -350, width: 400, height: 330 },
+          label: 'Feels',
+          color: '#a3a3a3', // neutral
+        },
+        does: {
+          bounds: { x: 20, y: -350, width: 400, height: 330 },
+          label: 'Does',
+          color: '#9ca3af', // gray
+        },
+        // Bottom strips: pains and gains
+        pains: {
+          bounds: { x: -420, y: 0, width: 840, height: 250 },
+          label: 'Pains',
+          color: '#f87171', // warm red
+        },
+        gains: {
+          bounds: { x: -420, y: 270, width: 840, height: 250 },
+          label: 'Gains',
+          color: '#34d399', // cool green
+        },
       },
-      // No axis labels for empathy map
     },
   },
 
