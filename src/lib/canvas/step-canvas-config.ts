@@ -82,23 +82,23 @@ export const STEP_CANVAS_CONFIGS: Record<string, StepCanvasConfig> = {
     hasGrid: true,
     gridConfig: {
       rows: [
-        { id: 'actions', label: 'Actions', height: 120 },
-        { id: 'goals', label: 'Goals', height: 120 },
-        { id: 'barriers', label: 'Barriers', height: 120 },
-        { id: 'touchpoints', label: 'Touchpoints', height: 120 },
-        { id: 'emotions', label: 'Emotions', height: 100 },
-        { id: 'moments', label: 'Moments of Truth', height: 120 },
-        { id: 'opportunities', label: 'Opportunities', height: 120 },
+        { id: 'actions', label: 'Actions', height: 150 },
+        { id: 'goals', label: 'Goals', height: 150 },
+        { id: 'barriers', label: 'Barriers', height: 150 },
+        { id: 'touchpoints', label: 'Touchpoints', height: 150 },
+        { id: 'emotions', label: 'Emotions', height: 120 },
+        { id: 'moments', label: 'Moments of Truth', height: 150 },
+        { id: 'opportunities', label: 'Opportunities', height: 150 },
       ],
       columns: [
-        { id: 'awareness', label: 'Awareness', width: 200 },
-        { id: 'consideration', label: 'Consideration', width: 200 },
-        { id: 'decision', label: 'Decision', width: 200 },
-        { id: 'purchase', label: 'Purchase', width: 200 },
-        { id: 'onboarding', label: 'Onboarding', width: 200 },
+        { id: 'awareness', label: 'Awareness', width: 240 },
+        { id: 'consideration', label: 'Consideration', width: 240 },
+        { id: 'decision', label: 'Decision', width: 240 },
+        { id: 'purchase', label: 'Purchase', width: 240 },
+        { id: 'onboarding', label: 'Onboarding', width: 240 },
       ],
-      origin: { x: 140, y: 50 }, // 140px for row labels, 50px for column headers
-      cellPadding: 10,
+      origin: { x: 140, y: 60 }, // 140px for row labels, 60px for column headers
+      cellPadding: 15,
     },
   },
 };

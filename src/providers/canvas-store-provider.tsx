@@ -6,6 +6,7 @@ import {
   createCanvasStore,
   type CanvasStore,
   type PostIt,
+  type GridColumn,
 } from '@/stores/canvas-store';
 
 type CanvasStoreApi = ReturnType<typeof createCanvasStore>;
@@ -15,15 +16,17 @@ const CanvasStoreContext = createContext<CanvasStoreApi | null>(null);
 export interface CanvasStoreProviderProps {
   children: React.ReactNode;
   initialPostIts?: PostIt[];
+  initialGridColumns?: GridColumn[];
 }
 
 export function CanvasStoreProvider({
   children,
   initialPostIts,
+  initialGridColumns,
 }: CanvasStoreProviderProps) {
   // Create store ONCE per mount — ensures per-request isolation in SSR
   const [store] = useState(() =>
-    createCanvasStore({ postIts: initialPostIts || [] })
+    createCanvasStore({ postIts: initialPostIts || [], gridColumns: initialGridColumns || [] })
   );
 
   return (

@@ -1,8 +1,16 @@
 import { createStore } from 'zustand/vanilla';
 import { temporal } from 'zundo';
 import type { Quadrant } from '@/lib/canvas/quadrant-detection';
+import type { GridConfig } from '@/lib/canvas/grid-layout';
+import { getCellBounds } from '@/lib/canvas/grid-layout';
 
 export type PostItColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange';
+
+export type GridColumn = {
+  id: string;
+  label: string;
+  width: number;
+};
 
 export type PostIt = {
   id: string;
@@ -23,6 +31,7 @@ export type PostIt = {
 export type CanvasState = {
   postIts: PostIt[];
   isDirty: boolean;
+  gridColumns: GridColumn[]; // Dynamic columns, initialized from step config
 };
 
 export type CanvasActions = {
@@ -34,14 +43,19 @@ export type CanvasActions = {
   groupPostIts: (postItIds: string[]) => void;
   ungroupPostIts: (groupId: string) => void;
   setPostIts: (postIts: PostIt[]) => void;
+  setGridColumns: (gridColumns: GridColumn[]) => void;
+  addGridColumn: (label: string) => void;
+  updateGridColumn: (id: string, updates: Partial<GridColumn>) => void;
+  removeGridColumn: (id: string, gridConfig: GridConfig) => void;
   markClean: () => void;
 };
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { postIts: PostIt[] }) => {
+export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[] }) => {
   const DEFAULT_STATE: CanvasState = {
     postIts: initState?.postIts || [],
+    gridColumns: initState?.gridColumns || [],
     isDirty: false,
   };
 
@@ -173,6 +187,94 @@ export const createCanvasStore = (initState?: { postIts: PostIt[] }) => {
             // NOTE: Does NOT set isDirty — this is for loading from DB
           })),
 
+        setGridColumns: (gridColumns) =>
+          set(() => ({
+            gridColumns,
+            // NOTE: Does NOT set isDirty — this is for loading from DB
+          })),
+
+        addGridColumn: (label) =>
+          set((state) => ({
+            gridColumns: [
+              ...state.gridColumns,
+              {
+                id: crypto.randomUUID(),
+                label,
+                width: 240,
+              },
+            ],
+            isDirty: true,
+          })),
+
+        updateGridColumn: (id, updates) =>
+          set((state) => ({
+            gridColumns: state.gridColumns.map((col) =>
+              col.id === id ? { ...col, ...updates } : col
+            ),
+            isDirty: true,
+          })),
+
+        removeGridColumn: (id, gridConfig) =>
+          set((state) => {
+            // Find column index
+            const colIndex = state.gridColumns.findIndex((col) => col.id === id);
+            if (colIndex === -1) return state;
+
+            // Determine adjacent target column (prefer left, fall back to right)
+            const targetColIndex = colIndex > 0 ? colIndex - 1 : colIndex + 1;
+            const targetColumn = state.gridColumns[targetColIndex];
+
+            // Filter out deleted column
+            const filteredColumns = state.gridColumns.filter((col) => col.id !== id);
+
+            // Update post-its that reference deleted column
+            const updatedPostIts = state.postIts.map((postIt) => {
+              const cellAssignment = postIt.cellAssignment;
+              if (cellAssignment?.col === id) {
+                if (targetColumn) {
+                  // Move to adjacent column
+                  const newColIndex = filteredColumns.findIndex(
+                    (col) => col.id === targetColumn.id
+                  );
+                  const rowIndex = gridConfig.rows.findIndex(
+                    (row) => row.id === cellAssignment.row
+                  );
+
+                  if (newColIndex !== -1 && rowIndex !== -1) {
+                    const newPosition = getCellBounds(
+                      { row: rowIndex, col: newColIndex },
+                      { ...gridConfig, columns: filteredColumns }
+                    );
+
+                    return {
+                      ...postIt,
+                      cellAssignment: {
+                        row: cellAssignment.row,
+                        col: targetColumn.id,
+                      },
+                      position: {
+                        x: newPosition.x + gridConfig.cellPadding,
+                        y: newPosition.y + gridConfig.cellPadding,
+                      },
+                    };
+                  }
+                }
+                // No target column (deleting last column) - clear cellAssignment
+                return {
+                  ...postIt,
+                  cellAssignment: undefined,
+                };
+              }
+              return postIt;
+            });
+
+            return {
+              postIts: updatedPostIts,
+              gridColumns: filteredColumns,
+              isDirty: true,
+            };
+          }),
+
         markClean: () =>
           set(() => ({
             isDirty: false,
@@ -181,6 +283,7 @@ export const createCanvasStore = (initState?: { postIts: PostIt[] }) => {
       {
         partialize: (state) => ({
           postIts: state.postIts,
+          gridColumns: state.gridColumns,
         }),
         limit: 50,
         equality: (pastState, currentState) =>
