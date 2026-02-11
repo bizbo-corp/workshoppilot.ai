@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
 
-**Current focus:** v1.2 Canvas Whiteboard - Phase 22 Dynamic Grid Structure
+**Current focus:** v1.2 Canvas Whiteboard - Phase 23 AI Suggest-Then-Confirm Placement
 
 ## Current Position
 
-Phase: 22 of 24 (Dynamic Grid Structure)
-Plan: 2 of 2 complete
-Status: Phase complete
-Last activity: 2026-02-11 — Completed 22-02-PLAN.md (column management UI)
+Phase: 23 of 24 (AI Suggest-Then-Confirm Placement)
+Plan: 1 of 2 complete
+Status: In progress
+Last activity: 2026-02-11 — Completed 23-01-PLAN.md (AI suggest-then-confirm data layer)
 
-Progress: [████████████████████░░░░] 89% (63/71 plans across all milestones)
+Progress: [████████████████████░░░░] 90% (64/71 plans across all milestones)
 
 ## Completed Milestones
 
@@ -26,15 +26,15 @@ Progress: [████████████████████░░░
 | v1.1 Canvas Foundation | 15-20 | 15 | 2026-02-11 |
 
 **Cumulative stats:**
-- 63 plans completed (22 phases complete)
-- ~15,305 lines of TypeScript across ~299 files
+- 64 plans completed (22 phases complete)
+- ~15,309 lines of TypeScript across ~299 files
 - 5 days total (2026-02-07 → 2026-02-11)
 
 **Velocity:**
 - v0.5: 2 days, 6 phases, 19 plans (~25 min/plan)
 - v1.0: 3 days, 8 phases, 25 plans (~25 min/plan)
 - v1.1: 2 days, 6 phases, 15 plans (~25 min/plan)
-- v1.2: In progress, 3 plans complete (~4 min/plan average)
+- v1.2: In progress, 4 plans complete (~3 min/plan average)
 
 ## Accumulated Context
 
@@ -53,6 +53,9 @@ Recent decisions affecting v1.2 work:
 - [Phase 22-01]: removeGridColumn prefers left-adjacent column for post-it reassignment (left-to-right reading order)
 - [Phase 22-02]: foreignObject pattern for SVG + HTML hybrid interactive overlays (pointer-events-auto on foreignObject elements)
 - [Phase 22-02]: Empty columns deleted immediately without confirmation (no data loss risk)
+- [Phase 23]: Preview nodes use isPreview boolean flag for suggest-then-confirm flow
+- [Phase 23]: GRID_ITEM tags only for journey-mapping, other steps use CANVAS_ITEM auto-add
+- [Phase 23]: Preview nodes filtered from AI context at assembly layer
 
 ### Known Tech Debt
 
@@ -81,13 +84,13 @@ Recent decisions affecting v1.2 work:
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed Phase 22 (Dynamic Grid Structure) — 22-02-PLAN.md (column management UI)
-Resume file: .planning/phases/23-*/23-01-PLAN.md
+Stopped at: Completed 23-01-PLAN.md (AI suggest-then-confirm data layer)
+Resume file: .planning/phases/23-ai-suggest-then-confirm-placement/23-02-PLAN.md
 
 **Next steps:**
-1. Continue with Phase 23 (next v1.2 feature)
-2. All 17 v1.2 requirements mapped to phases
-3. Phase 22 complete: Dynamic grid structure with add/edit/delete columns
+1. Continue with Phase 23 Plan 02 (preview node UI components)
+2. Phase 23-01 complete: Preview node data model, dual-tag parser, AI context filtering
+3. All 17 v1.2 requirements mapped to phases
 
 ---
-*Last updated: 2026-02-11 after completing Phase 22 (22-02-PLAN.md)*
+*Last updated: 2026-02-11 after completing Phase 23 (23-01-PLAN.md)*
