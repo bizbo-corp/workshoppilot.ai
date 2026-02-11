@@ -71,6 +71,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   // Editing state - track which node is being edited
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
 
+  // Dragging state - track which node is being dragged for visual feedback
+  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+
   // ReactFlow hooks
   const { screenToFlowPosition, fitView } = useReactFlow();
 
@@ -197,6 +200,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         text: postIt.text,
         color: postIt.color || 'yellow',
         isEditing: editingNodeId === postIt.id,
+        dragging: draggingNodeId === postIt.id,
         onTextChange: handleTextChange,
         onEditComplete: handleEditComplete,
       } as PostItNodeData,
@@ -204,7 +208,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         ? { width: postIt.width, height: postIt.height }
         : { width: postIt.width, height: 'auto' },
     }));
-  }, [postIts, editingNodeId, handleTextChange, handleEditComplete]);
+  }, [postIts, editingNodeId, draggingNodeId, handleTextChange, handleEditComplete]);
 
   // Create post-it at position and set as editing
   const createPostItAtPosition = useCallback(
@@ -313,6 +317,14 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     }
   }, [postIts, screenToFlowPosition, snapToGrid, addPostIt, stepConfig]);
 
+  // Handle node drag start
+  const handleNodeDragStart = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      setDraggingNodeId(node.id);
+    },
+    []
+  );
+
   // Handle node drag
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -326,6 +338,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           change.dragging === false &&
           change.position
         ) {
+          // Clear dragging state
+          setDraggingNodeId(null);
           // Grid-based snap and cell assignment for grid steps
           if (stepConfig.hasGrid && stepConfig.gridConfig) {
             const snappedPosition = snapToCell(change.position, stepConfig.gridConfig);
@@ -511,11 +525,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   return (
     <div ref={canvasContainerRef} className="w-full h-full relative">
       <ReactFlow
+        className={draggingNodeId ? 'cursor-grabbing' : ''}
         nodes={nodes}
         edges={[]}
         nodeTypes={nodeTypes}
         onNodesChange={handleNodesChange}
         onNodeDrag={handleNodeDrag}
+        onNodeDragStart={handleNodeDragStart}
         onNodeDoubleClick={handleNodeDoubleClick}
         onNodeContextMenu={handleNodeContextMenu}
         onPaneClick={handlePaneClick}

@@ -2,6 +2,7 @@
 
 import { memo, useCallback } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import TextareaAutosize from 'react-textarea-autosize';
 import { cn } from '@/lib/utils';
 import type { PostItColor } from '@/stores/canvas-store';
 
@@ -17,6 +18,7 @@ export type PostItNodeData = {
   text: string;
   color: PostItColor;
   isEditing: boolean;
+  dragging?: boolean; // true during drag for opacity feedback
   onTextChange?: (id: string, text: string) => void;
   onEditComplete?: (id: string) => void;
 };
@@ -40,10 +42,17 @@ export const PostItNode = memo(({ data, selected, id }: NodeProps<PostItNode>) =
         'shadow-md rounded-sm p-3',
         'font-sans text-sm text-gray-800',
         'hover:shadow-lg hover:-translate-y-0.5 transition-all duration-150',
+        'cursor-pointer',
         selected && 'ring-2 ring-blue-500 ring-offset-1',
         data.isEditing && 'ring-2 ring-blue-400 ring-offset-1'
       )}
-      style={{ width: '120px', minHeight: '120px', touchAction: 'none' }}
+      style={{
+        width: '120px',
+        minHeight: '120px',
+        touchAction: 'none',
+        opacity: data.dragging ? 0.6 : 1,
+        transition: 'opacity 150ms ease',
+      }}
     >
       {/* Hidden handles for future edge connections */}
       <Handle
@@ -53,15 +62,18 @@ export const PostItNode = memo(({ data, selected, id }: NodeProps<PostItNode>) =
       />
 
       {data.isEditing ? (
-        <textarea
+        <TextareaAutosize
           autoFocus
           maxLength={200}
-          className="nodrag nopan bg-transparent border-none outline-none resize-none w-full h-full"
+          minRows={3}
+          maxRows={10}
+          className="nodrag nopan bg-transparent border-none outline-none resize-none w-full"
           defaultValue={data.text}
           onBlur={() => data.onEditComplete?.(id)}
           onChange={(e) => data.onTextChange?.(id, e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type here..."
+          style={{ overflow: 'hidden' }}
         />
       ) : (
         <p className="break-words whitespace-pre-wrap">{data.text || ''}</p>
