@@ -4,7 +4,7 @@
 
 - ✅ **v0.5 Application Shell** - Phases 1-6 (shipped 2026-02-08)
 - ✅ **v1.0 Working AI Facilitation** - Phases 7-14 (shipped 2026-02-10)
-- 🚧 **v1.1 Canvas Foundation** - Phases 15-20 (in progress)
+- ✅ **v1.1 Canvas Foundation** - Phases 15-20 (shipped 2026-02-11)
 - 📋 **MMP Visual & Collaborative** - Phases 21+ (planned)
 
 ## Phases
@@ -40,7 +40,7 @@ See `milestones/v1.0-ROADMAP.md` for full details.
 
 </details>
 
-### v1.1 Canvas Foundation (In Progress)
+### v1.1 Canvas Foundation (SHIPPED 2026-02-11)
 
 **Milestone Goal:** Split-screen layout with interactive post-it canvas for Steps 2 (Stakeholder Mapping) and 4 (Research Sense Making), enabling visual clustering alongside AI facilitation.
 
@@ -143,8 +143,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 20-01-PLAN.md — Bundle optimization config + viewport meta + mobile CSS (optimizePackageImports, viewport export, dvh, overscroll, touch-action)
-- [ ] 20-02-PLAN.md — iOS Safari touch scroll prevention + canvas component mobile refinements
+- [x] 20-01-PLAN.md — Bundle optimization config + viewport meta + mobile CSS (optimizePackageImports, viewport export, dvh, overscroll, touch-action)
+- [x] 20-02-PLAN.md — iOS Safari touch scroll prevention + canvas component mobile refinements
 
 ### MMP Visual & Collaborative (Planned)
 
@@ -166,7 +166,7 @@ Phases execute in numeric order: 15 → 16 → 17 → 18 → 19 → 20
 | 17. Canvas Core Interactions | v1.1 | 3/3 | Complete | 2026-02-10 |
 | 18. Step-Specific Canvases | v1.1 | 2/2 | Complete | 2026-02-11 |
 | 19. AI-Canvas Integration | v1.1 | 2/2 | Complete | 2026-02-11 |
-| 20. Bundle Optimization | v1.1 | 0/2 | Not started | - |
+| 20. Bundle Optimization | v1.1 | 2/2 | Complete | 2026-02-11 |
 
 ---
-*Last updated: 2026-02-11 after Phase 20 planning complete*
+*Last updated: 2026-02-11 after Phase 20 execution complete — v1.1 Canvas Foundation shipped*
