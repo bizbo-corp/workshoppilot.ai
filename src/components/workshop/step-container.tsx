@@ -11,13 +11,15 @@ import { StepNavigation } from './step-navigation';
 import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
 import { IdeationSubStepContainer } from './ideation-sub-step-container';
 import { Button } from '@/components/ui/button';
-import { Sparkles, MessageSquare, LayoutGrid, PanelLeftClose } from 'lucide-react';
+import { Sparkles, MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose } from 'lucide-react';
 import { reviseStep, resetStep } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { cn } from '@/lib/utils';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
+import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 
 const CANVAS_ENABLED_STEPS = ['stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping'];
+const CANVAS_ONLY_STEPS = ['stakeholder-mapping', 'sense-making'];
 
 interface StepContainerProps {
   stepOrder: number;
@@ -278,18 +280,26 @@ export function StepContainer({
             {renderContent()}
           </div>
           <div className={cn('h-full', mobileTab !== 'canvas' && 'hidden')}>
-            <RightPanel
-              stepOrder={stepOrder}
-              sessionId={sessionId}
-              workshopId={workshopId}
-              artifact={artifact}
-              isExtracting={isExtracting}
-              extractionError={extractionError}
-              onRetry={extractArtifact}
-              artifactConfirmed={effectiveConfirmed}
-              onConfirm={handleConfirm}
-              onEdit={handleEdit}
-            />
+            {step && CANVAS_ONLY_STEPS.includes(step.id) ? (
+              <CanvasWrapper
+                sessionId={sessionId}
+                stepId={step.id}
+                workshopId={workshopId}
+              />
+            ) : (
+              <RightPanel
+                stepOrder={stepOrder}
+                sessionId={sessionId}
+                workshopId={workshopId}
+                artifact={artifact}
+                isExtracting={isExtracting}
+                extractionError={extractionError}
+                onRetry={extractArtifact}
+                artifactConfirmed={effectiveConfirmed}
+                onConfirm={handleConfirm}
+                onEdit={handleEdit}
+              />
+            )}
           </div>
         </div>
 
@@ -352,19 +362,41 @@ export function StepContainer({
                 </Separator>
 
                 <Panel defaultSize={75} minSize={40}>
-                  <RightPanel
-                    stepOrder={stepOrder}
-                    sessionId={sessionId}
-                    workshopId={workshopId}
-                    artifact={artifact}
-                    isExtracting={isExtracting}
-                    extractionError={extractionError}
-                    onRetry={extractArtifact}
-                    artifactConfirmed={effectiveConfirmed}
-                    onConfirm={handleConfirm}
-                    onEdit={handleEdit}
-                    onCollapse={() => setCanvasCollapsed(true)}
-                  />
+                  {step && CANVAS_ONLY_STEPS.includes(step.id) ? (
+                    <div className="h-full relative">
+                      {/* Collapse button */}
+                      {!canvasCollapsed && (
+                        <div className="absolute top-2 right-2 z-10">
+                          <button
+                            onClick={() => setCanvasCollapsed(true)}
+                            className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
+                            title="Collapse canvas"
+                          >
+                            <PanelRightClose className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                      <CanvasWrapper
+                        sessionId={sessionId}
+                        stepId={step.id}
+                        workshopId={workshopId}
+                      />
+                    </div>
+                  ) : (
+                    <RightPanel
+                      stepOrder={stepOrder}
+                      sessionId={sessionId}
+                      workshopId={workshopId}
+                      artifact={artifact}
+                      isExtracting={isExtracting}
+                      extractionError={extractionError}
+                      onRetry={extractArtifact}
+                      artifactConfirmed={effectiveConfirmed}
+                      onConfirm={handleConfirm}
+                      onEdit={handleEdit}
+                      onCollapse={() => setCanvasCollapsed(true)}
+                    />
+                  )}
                 </Panel>
               </Group>
             </>
@@ -373,19 +405,39 @@ export function StepContainer({
           {/* Canvas panel or collapsed strip (when chat is collapsed but canvas is not) */}
           {chatCollapsed && !canvasCollapsed && (
             <div className="flex-1">
-              <RightPanel
-                stepOrder={stepOrder}
-                sessionId={sessionId}
-                workshopId={workshopId}
-                artifact={artifact}
-                isExtracting={isExtracting}
-                extractionError={extractionError}
-                onRetry={extractArtifact}
-                artifactConfirmed={effectiveConfirmed}
-                onConfirm={handleConfirm}
-                onEdit={handleEdit}
-                onCollapse={() => setCanvasCollapsed(true)}
-              />
+              {step && CANVAS_ONLY_STEPS.includes(step.id) ? (
+                <div className="h-full relative">
+                  {/* Collapse button */}
+                  <div className="absolute top-2 right-2 z-10">
+                    <button
+                      onClick={() => setCanvasCollapsed(true)}
+                      className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
+                      title="Collapse canvas"
+                    >
+                      <PanelRightClose className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <CanvasWrapper
+                    sessionId={sessionId}
+                    stepId={step.id}
+                    workshopId={workshopId}
+                  />
+                </div>
+              ) : (
+                <RightPanel
+                  stepOrder={stepOrder}
+                  sessionId={sessionId}
+                  workshopId={workshopId}
+                  artifact={artifact}
+                  isExtracting={isExtracting}
+                  extractionError={extractionError}
+                  onRetry={extractArtifact}
+                  artifactConfirmed={effectiveConfirmed}
+                  onConfirm={handleConfirm}
+                  onEdit={handleEdit}
+                  onCollapse={() => setCanvasCollapsed(true)}
+                />
+              )}
             </div>
           )}
 
