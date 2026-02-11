@@ -2,6 +2,8 @@ import { db } from '@/db/client';
 import { stepArtifacts, stepSummaries, chatMessages, workshopSteps } from '@/db/schema';
 import { eq, and, ne, asc } from 'drizzle-orm';
 import { getStepById } from '@/lib/workshop/step-metadata';
+import { loadCanvasState } from '@/actions/canvas-actions';
+import { assembleCanvasContextForStep } from '@/lib/workshop/context/canvas-context';
 import type { StepContext } from './types';
 
 /**
@@ -94,9 +96,17 @@ export async function assembleStepContext(
     content: row.content,
   }));
 
+  // Tier 4: Query canvas state for this step
+  const canvasState = await loadCanvasState(workshopId, currentStepId);
+  const canvasContext =
+    canvasState?.postIts && canvasState.postIts.length > 0
+      ? assembleCanvasContextForStep(currentStepId, canvasState.postIts)
+      : '';
+
   return {
     persistentContext,
     summaries,
+    canvasContext,
     messages,
   };
 }

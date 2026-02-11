@@ -34,10 +34,12 @@ export type ContextTier = 'short-term' | 'long-term' | 'persistent';
  * - persistentContext: Formatted JSON artifacts from completed steps
  * - summaries: AI-generated summaries from previous steps
  * - messages: Verbatim chat history for current step
+ * - canvasContext: Canvas state formatted for AI prompt (Tier 4)
  */
 export interface StepContext {
   persistentContext: string; // Formatted JSON artifacts
   summaries: string; // AI-generated summaries
+  canvasContext: string; // Canvas state formatted for AI prompt
   messages: Array<{
     role: string;
     content: string;
