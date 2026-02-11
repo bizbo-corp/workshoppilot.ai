@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Milestone: v1.1 Canvas Foundation
-Phase: 19 of 20 (AI-Canvas Integration)
+Phase: 20 of 20 (Bundle Optimization & Mobile Refinement)
 Plan: 2 of 2
-Status: Phase complete
-Last activity: 2026-02-11 — Completed Phase 19 (AI-Canvas Integration)
+Status: In progress
+Last activity: 2026-02-11 — Completed 20-02-PLAN.md (iOS Safari Touch Handling)
 
-Progress: [██████████████████████░░] 92% (57 plans complete across v0.5 + v1.0 + v1.1)
+Progress: [███████████████████████░] 96% (58 plans complete across v0.5 + v1.0 + v1.1)
 
 ## Completed Milestones
 
@@ -25,7 +25,7 @@ Progress: [██████████████████████░
 | v1.0 Working AI Facilitation | 7-14 | 25 | 2026-02-10 |
 
 **Cumulative stats:**
-- 57 plans completed (19 phases complete)
+- 58 plans completed (19 phases complete, 1 phase in progress)
 - ~13,900 lines of TypeScript across ~290 files
 - 5 days total (2026-02-07 → 2026-02-11)
 
@@ -91,6 +91,10 @@ Recent decisions affecting v1.1:
 - **Action button UX** (19-02): "Add to canvas" buttons below AI messages show full item text with Plus icon, distinct from suggestion pills
 - **Default post-it creation** (19-02): Position (0,0), 120x120 size, yellow color - user drags to desired location after AI suggests
 - **Duplicate handling in AI suggestions** (19-02): No state tracking of "already added" - allow duplicates, user can delete or undo (Option A)
+- **iOS Safari passive event workaround** (20-02): Native addEventListener with passive:false for preventDefault support on iOS Safari 11.3+ (React synthetic events don't support passive option)
+- **Touch handler container ref pattern** (20-02): Hook takes containerRef instead of CSS selector for React-idiomatic approach, avoids stale references
+- **Interactive element touch exclusion** (20-02): Allow touch on buttons/textareas/inputs/toolbar to preserve form interaction while preventing canvas scroll
+- **Belt-and-suspenders touchAction** (20-02): Inline touchAction:'none' on post-it nodes alongside global CSS for gesture prevention in React portal scenarios
 
 ### Known Tech Debt
 
@@ -116,9 +120,9 @@ From research (research/SUMMARY.md):
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Phase 19 complete - Bidirectional AI-canvas integration verified
-Resume file: .planning/phases/19-ai-canvas-integration/19-VERIFICATION.md
-Next action: Begin Phase 20 (Bundle Optimization & Mobile Refinement)
+Stopped at: Phase 20 Plan 02 complete - iOS Safari touch handling integrated
+Resume file: .planning/phases/20-bundle-optimization-mobile-refinement/20-02-SUMMARY.md
+Next action: Continue Phase 20 (remaining plans if any) or complete v1.1 milestone
 
 ---
-*Last updated: 2026-02-11 after completing Phase 19 execution*
+*Last updated: 2026-02-11 after completing 20-02-PLAN.md execution*
