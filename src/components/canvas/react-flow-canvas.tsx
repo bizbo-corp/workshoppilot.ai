@@ -22,6 +22,7 @@ import { GroupNode } from './group-node';
 import { CanvasToolbar } from './canvas-toolbar';
 import { ColorPicker } from './color-picker';
 import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
+import { usePreventScrollOnCanvas } from '@/hooks/use-prevent-scroll-on-canvas';
 import type { PostItColor } from '@/stores/canvas-store';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { QuadrantOverlay } from './quadrant-overlay';
@@ -51,6 +52,12 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
   // Store API for temporal undo/redo access
   const storeApi = useCanvasStoreApi();
+
+  // Container ref for iOS Safari scroll prevention
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  // Prevent iOS Safari page scroll when panning canvas
+  usePreventScrollOnCanvas(canvasContainerRef);
 
   // Auto-save integration
   const { saveStatus } = useCanvasAutosave(workshopId, stepId);
@@ -413,7 +420,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   }, [postIts.length, fitView]);
 
   return (
-    <div className="w-full h-full relative">
+    <div ref={canvasContainerRef} className="w-full h-full relative">
       <ReactFlow
         nodes={nodes}
         edges={[]}

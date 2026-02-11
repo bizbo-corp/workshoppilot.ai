@@ -43,7 +43,7 @@ export const PostItNode = memo(({ data, selected, id }: NodeProps<PostItNode>) =
         selected && 'ring-2 ring-blue-500 ring-offset-1',
         data.isEditing && 'ring-2 ring-blue-400 ring-offset-1'
       )}
-      style={{ width: '120px', minHeight: '120px' }}
+      style={{ width: '120px', minHeight: '120px', touchAction: 'none' }}
     >
       {/* Hidden handles for future edge connections */}
       <Handle
