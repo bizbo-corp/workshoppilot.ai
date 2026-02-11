@@ -15,6 +15,9 @@ import { Sparkles, MessageSquare, LayoutGrid, PanelLeftClose } from 'lucide-reac
 import { reviseStep, resetStep } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { cn } from '@/lib/utils';
+import { useCanvasStore } from '@/providers/canvas-store-provider';
+
+const CANVAS_ENABLED_STEPS = ['stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping'];
 
 interface StepContainerProps {
   stepOrder: number;
@@ -53,6 +56,15 @@ export function StepContainer({
   const [artifactConfirmed, setArtifactConfirmed] = React.useState(
     stepStatus === 'complete' && initialArtifact !== null
   );
+
+  // Canvas step detection — canvas steps skip extraction
+  const step = getStepByOrder(stepOrder);
+  const isCanvasStep = step ? CANVAS_ENABLED_STEPS.includes(step.id) : false;
+  const postIts = useCanvasStore((s) => s.postIts);
+  const canvasHasContent = postIts.length > 0;
+
+  // For canvas steps, activity is "confirmed" when post-its exist (no extraction needed)
+  const effectiveConfirmed = isCanvasStep ? canvasHasContent : artifactConfirmed;
 
   // Live message count for "Extract Output" button visibility
   const [liveMessageCount, setLiveMessageCount] = React.useState(initialMessages?.length || 0);
@@ -239,7 +251,7 @@ export function StepContainer({
           onMessageCountChange={setLiveMessageCount}
         />
       </div>
-      {hasEnoughMessages && !artifact && !isExtracting && (
+      {!isCanvasStep && hasEnoughMessages && !artifact && !isExtracting && (
         <div className="flex shrink-0 justify-center border-t bg-background p-4">
           <Button
             onClick={extractArtifact}
@@ -274,7 +286,7 @@ export function StepContainer({
               isExtracting={isExtracting}
               extractionError={extractionError}
               onRetry={extractArtifact}
-              artifactConfirmed={artifactConfirmed}
+              artifactConfirmed={effectiveConfirmed}
               onConfirm={handleConfirm}
               onEdit={handleEdit}
             />
@@ -289,7 +301,7 @@ export function StepContainer({
           sessionId={sessionId}
           workshopId={workshopId}
           currentStepOrder={stepOrder}
-          artifactConfirmed={artifactConfirmed}
+          artifactConfirmed={effectiveConfirmed}
           stepStatus={stepStatus}
           onRevise={handleRevise}
           onReset={() => setShowResetDialog(true)}
@@ -348,7 +360,7 @@ export function StepContainer({
                     isExtracting={isExtracting}
                     extractionError={extractionError}
                     onRetry={extractArtifact}
-                    artifactConfirmed={artifactConfirmed}
+                    artifactConfirmed={effectiveConfirmed}
                     onConfirm={handleConfirm}
                     onEdit={handleEdit}
                     onCollapse={() => setCanvasCollapsed(true)}
@@ -369,7 +381,7 @@ export function StepContainer({
                 isExtracting={isExtracting}
                 extractionError={extractionError}
                 onRetry={extractArtifact}
-                artifactConfirmed={artifactConfirmed}
+                artifactConfirmed={effectiveConfirmed}
                 onConfirm={handleConfirm}
                 onEdit={handleEdit}
                 onCollapse={() => setCanvasCollapsed(true)}
@@ -395,7 +407,7 @@ export function StepContainer({
         sessionId={sessionId}
         workshopId={workshopId}
         currentStepOrder={stepOrder}
-        artifactConfirmed={artifactConfirmed}
+        artifactConfirmed={effectiveConfirmed}
         stepStatus={stepStatus}
         onRevise={handleRevise}
         onReset={() => setShowResetDialog(true)}

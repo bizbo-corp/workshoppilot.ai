@@ -5,7 +5,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import TextareaAutosize from 'react-textarea-autosize';
 import ReactMarkdown from 'react-markdown';
-import { Send, Loader2, Plus, Check } from 'lucide-react';
+import { Send, Loader2, Plus, Check, LayoutGrid } from 'lucide-react';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -103,14 +103,16 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const postIts = useCanvasStore((state) => state.postIts);
   const gridColumns = useCanvasStore((state) => state.gridColumns);
   const setHighlightedCell = useCanvasStore((state) => state.setHighlightedCell);
+  const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
+  const selectedPostItIds = useCanvasStore((state) => state.selectedPostItIds);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const hasAutoStarted = React.useRef(false);
   const countdownRef = React.useRef<NodeJS.Timeout | null>(null);
-  const lastProcessedMsgId = React.useRef<string | null>(null);
   const [inputValue, setInputValue] = React.useState('');
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
   const [rateLimitInfo, setRateLimitInfo] = React.useState<{ retryAfter: number } | null>(null);
   const [streamError, setStreamError] = React.useState(false);
+  const [addedMessageIds, setAddedMessageIds] = React.useState<Set<string>>(() => new Set());
 
   if (!step) {
     return (
@@ -126,9 +128,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     () =>
       new DefaultChatTransport({
         api: '/api/chat',
-        body: { sessionId, stepId: step.id, workshopId, subStep },
+        body: { sessionId, stepId: step.id, workshopId, subStep, selectedPostItIds },
       }),
-    [sessionId, step.id, workshopId, subStep]
+    [sessionId, step.id, workshopId, subStep, selectedPostItIds]
   );
 
   const { messages, sendMessage, status, setMessages } = useChat({
@@ -212,22 +214,31 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
   }, [status, messages]);
 
-  // Auto-add canvas items when AI finishes responding
+  // Initialize addedMessageIds from history — messages that have canvas items AND canvas already has post-its
+  // This ensures reloaded pages show green badges, not "Add to Whiteboard" buttons
+  const hasInitializedAddedIds = React.useRef(false);
   React.useEffect(() => {
-    if (status !== 'ready' || messages.length === 0 || !isCanvasStep) return;
+    if (hasInitializedAddedIds.current || !isCanvasStep || postIts.length === 0) return;
+    hasInitializedAddedIds.current = true;
 
-    const lastMsg = messages[messages.length - 1];
-    if (lastMsg.role !== 'assistant') return;
+    const ids = new Set<string>();
+    for (const msg of messages) {
+      if (msg.role !== 'assistant') continue;
+      const textParts = msg.parts?.filter((p) => p.type === 'text') || [];
+      const content = textParts.map((p) => p.text).join('\n');
+      const { canvasItems } = parseCanvasItems(content);
+      if (canvasItems.length > 0) {
+        ids.add(msg.id);
+      }
+    }
+    if (ids.size > 0) {
+      setAddedMessageIds(ids);
+    }
+  }, [messages, isCanvasStep, postIts.length]);
 
-    // Skip if we already processed this message
-    if (lastProcessedMsgId.current === lastMsg.id) return;
-    lastProcessedMsgId.current = lastMsg.id;
-
-    const textParts = lastMsg.parts?.filter((p) => p.type === 'text') || [];
-    const content = textParts.map((p) => p.text).join('\n');
-    const { canvasItems } = parseCanvasItems(content);
-
-    if (canvasItems.length === 0) return;
+  // Handle adding AI-suggested canvas items to the whiteboard
+  const handleAddToWhiteboard = React.useCallback((messageId: string, canvasItems: CanvasItemParsed[]) => {
+    if (addedMessageIds.has(messageId)) return; // Guard against double-click
 
     // Build dynamic gridConfig from store columns for journey-mapping
     const stepConfig = getStepCanvasConfig(step.id);
@@ -237,7 +248,6 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       : baseGridConfig;
 
     // Add each item to canvas with computed position
-    // Use a running snapshot of postIts that includes items we're adding in this batch
     let currentPostIts = [...postIts];
     for (const item of canvasItems) {
       const { position, quadrant, cellAssignment } = computeCanvasPosition(
@@ -270,10 +280,12 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         }
       }
 
-      // Track the added item for stagger calculation of subsequent items in this batch
       currentPostIts = [...currentPostIts, { ...newPostIt, id: 'pending' }];
     }
-  }, [status, messages, isCanvasStep, step.id, postIts, gridColumns, addPostIt, setHighlightedCell]);
+
+    setAddedMessageIds(prev => new Set(prev).add(messageId));
+    setPendingFitView(true);
+  }, [addedMessageIds, step.id, gridColumns, postIts, addPostIt, setHighlightedCell, setPendingFitView]);
 
   // Clear stream error on successful completion
   React.useEffect(() => {
@@ -409,17 +421,39 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                     <div className="rounded-lg bg-muted p-3 text-sm prose prose-sm dark:prose-invert max-w-none">
                       <ReactMarkdown>{finalContent}</ReactMarkdown>
                     </div>
-                    {canvasItems.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {canvasItems.map((item, i) => (
-                          <span
-                            key={i}
-                            className="inline-flex items-center gap-1 rounded-md border border-green-500/30 bg-green-50 dark:bg-green-950/20 px-2.5 py-1.5 text-xs font-medium text-green-700 dark:text-green-400"
+                    {isCanvasStep && canvasItems.length > 0 && (
+                      <div className="mt-2">
+                        <div className="flex flex-wrap gap-2">
+                          {canvasItems.map((item, i) => {
+                            const isAdded = addedMessageIds.has(message.id);
+                            return (
+                              <span
+                                key={i}
+                                className={cn(
+                                  'inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium',
+                                  isAdded
+                                    ? 'border-green-500/30 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400'
+                                    : 'border-blue-500/30 bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400'
+                                )}
+                              >
+                                {isAdded && <Check className="h-3 w-3" />}
+                                {item.text}
+                              </span>
+                            );
+                          })}
+                        </div>
+                        {!addedMessageIds.has(message.id) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            disabled={isLoading}
+                            onClick={() => handleAddToWhiteboard(message.id, canvasItems)}
                           >
-                            <Check className="h-3 w-3" />
-                            {item.text}
-                          </span>
-                        ))}
+                            <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
+                            Add to Whiteboard
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -485,17 +519,24 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         )}
       </div>
 
-      {/* Suggestion pills */}
+      {/* Suggestion pills — instant-send on click */}
       {suggestions.length > 0 && (
         <div className="flex flex-wrap gap-2 px-4 pb-2">
           {suggestions.map((suggestion, i) => (
             <button
               key={i}
+              disabled={isLoading}
               onClick={() => {
-                setInputValue(suggestion);
                 setSuggestions([]);
+                sendMessage({
+                  role: 'user',
+                  parts: [{ type: 'text', text: suggestion }],
+                });
               }}
-              className="rounded-full border border-input bg-background px-3 py-1.5 text-xs text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              className={cn(
+                'rounded-full border border-input bg-background px-3 py-1.5 text-xs text-foreground hover:bg-accent hover:text-accent-foreground transition-colors',
+                'disabled:cursor-not-allowed disabled:opacity-50'
+              )}
             >
               {suggestion}
             </button>

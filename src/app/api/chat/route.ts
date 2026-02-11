@@ -5,6 +5,7 @@ import { assembleStepContext } from '@/lib/context/assemble-context';
 import { getStepById, STEPS } from '@/lib/workshop/step-metadata';
 import { getCurrentArcPhase } from '@/lib/ai/conversation-state';
 import { streamTextWithRetry, isGeminiRateLimitError } from '@/lib/ai/gemini-retry';
+import { loadCanvasState } from '@/actions/canvas-actions';
 
 /**
  * Increase Vercel serverless timeout for AI responses
@@ -23,7 +24,7 @@ export const maxDuration = 30;
  */
 export async function POST(req: Request) {
   try {
-    const { messages, sessionId, stepId, workshopId, subStep } = await req.json();
+    const { messages, sessionId, stepId, workshopId, subStep, selectedPostItIds } = await req.json();
 
     // Validate required parameters
     if (!sessionId || !stepId || !workshopId) {
@@ -35,6 +36,22 @@ export async function POST(req: Request) {
 
     // Assemble three-tier context for this step
     const stepContext = await assembleStepContext(workshopId, stepId, sessionId);
+
+    // Inject selected canvas items into context if any are selected
+    if (Array.isArray(selectedPostItIds) && selectedPostItIds.length > 0) {
+      const canvasState = await loadCanvasState(workshopId, stepId);
+      if (canvasState) {
+        const selectedTexts = canvasState.postIts
+          .filter(p => selectedPostItIds.includes(p.id))
+          .map(p => `- "${p.text}"`)
+          .filter(t => t !== '- ""');
+
+        if (selectedTexts.length > 0) {
+          const selectionBlock = `\n\nCURRENTLY SELECTED ON CANVAS:\n${selectedTexts.join('\n')}`;
+          stepContext.canvasContext = (stepContext.canvasContext || '') + selectionBlock;
+        }
+      }
+    }
 
     // Get current arc phase from database
     const arcPhase = await getCurrentArcPhase(workshopId, stepId);

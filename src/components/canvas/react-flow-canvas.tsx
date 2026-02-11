@@ -12,10 +12,10 @@ import {
   type Node,
   type NodeChange,
   type ReactFlowInstance,
-  applyNodeChanges,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { cn } from '@/lib/utils';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { PostItNode, type PostItNodeData } from './post-it-node';
 import { GroupNode } from './group-node';
@@ -51,7 +51,6 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const updatePostIt = useCanvasStore((s) => s.updatePostIt);
   const deletePostIt = useCanvasStore((s) => s.deletePostIt);
   const batchDeletePostIts = useCanvasStore((s) => s.batchDeletePostIts);
-  const groupPostIts = useCanvasStore((s) => s.groupPostIts);
   const ungroupPostIts = useCanvasStore((s) => s.ungroupPostIts);
   const gridColumns = useCanvasStore((s) => s.gridColumns);
   const setGridColumns = useCanvasStore((s) => s.setGridColumns);
@@ -60,6 +59,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const rejectPreview = useCanvasStore((s) => s.rejectPreview);
   const highlightedCell = useCanvasStore((s) => s.highlightedCell);
   const setHighlightedCell = useCanvasStore((s) => s.setHighlightedCell);
+  const pendingFitView = useCanvasStore((s) => s.pendingFitView);
+  const setPendingFitView = useCanvasStore((s) => s.setPendingFitView);
+  const setSelectedPostItIds = useCanvasStore((s) => s.setSelectedPostItIds);
 
   // Store API for temporal undo/redo access
   const storeApi = useCanvasStoreApi();
@@ -81,6 +83,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
   // Dragging state - track which node is being dragged for visual feedback
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+
+  // Pointer/Hand tool state
+  const [activeTool, setActiveTool] = useState<'pointer' | 'hand'>('pointer');
 
   // ReactFlow hooks
   const { screenToFlowPosition, fitView } = useReactFlow();
@@ -112,7 +117,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     nodeType: string;
   } | null>(null);
 
-  // Track selected nodes for Group button visibility
+  // Track selected nodes for controlled selection state
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
 
   // Delete column dialog state
@@ -183,6 +188,14 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     handleRedo();
   }, { enableOnFormTags: false });
 
+  // Spacebar hold → temporary Hand tool (only when not editing text)
+  useHotkeys('space', () => {
+    if (!editingNodeId) setActiveTool('hand');
+  }, { keydown: true, keyup: false, enableOnFormTags: false });
+  useHotkeys('space', () => {
+    if (!editingNodeId) setActiveTool('pointer');
+  }, { keydown: false, keyup: true, enableOnFormTags: false });
+
   // Subscribe to temporal store for undo/redo state
   useEffect(() => {
     const temporalStore = storeApi.temporal;
@@ -248,6 +261,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         extent: postIt.parentId ? ('parent' as const) : undefined,
         draggable: !isPreview,
         selectable: !isPreview,
+        selected: selectedNodeIds.includes(postIt.id),
         data: {
           text: postIt.text,
           color: postIt.color || 'yellow',
@@ -267,7 +281,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           : { width: postIt.width, height: 'auto' },
       };
     });
-  }, [postIts, editingNodeId, draggingNodeId, handleTextChange, handleEditComplete, handleConfirmPreview, handleRejectPreview]);
+  }, [postIts, editingNodeId, draggingNodeId, selectedNodeIds, handleTextChange, handleEditComplete, handleConfirmPreview, handleRejectPreview]);
 
   // Create post-it at position and set as editing
   const createPostItAtPosition = useCallback(
@@ -376,6 +390,54 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     }
   }, [postIts, screenToFlowPosition, snapToGrid, addPostIt, stepConfig, dynamicGridConfig]);
 
+  // Handle toolbar emotion post-it creation (with emoji + color preset)
+  const handleEmotionAdd = useCallback((emoji: string, color: PostItColor) => {
+    let position: { x: number; y: number };
+
+    if (postIts.length > 0) {
+      const lastPostIt = postIts[postIts.length - 1];
+      position = {
+        x: lastPostIt.position.x + 30,
+        y: lastPostIt.position.y + 30,
+      };
+    } else {
+      const center = screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+      position = center;
+    }
+
+    if (stepConfig.hasGrid && dynamicGridConfig) {
+      const snappedPosition = snapToCell(position, dynamicGridConfig);
+      const cell = positionToCell(snappedPosition, dynamicGridConfig);
+      const cellAssignment = cell
+        ? { row: dynamicGridConfig.rows[cell.row].id, col: dynamicGridConfig.columns[cell.col].id }
+        : undefined;
+
+      shouldEditLatest.current = true;
+      addPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment });
+    } else {
+      const snappedPosition = snapToGrid(position);
+      const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
+        ? detectQuadrant(snappedPosition, 120, 120, stepConfig.quadrantType)
+        : undefined;
+
+      shouldEditLatest.current = true;
+      addPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, quadrant });
+    }
+  }, [postIts, screenToFlowPosition, snapToGrid, addPostIt, stepConfig, dynamicGridConfig]);
+
+  // Handle delete selected nodes from toolbar
+  const handleDeleteSelected = useCallback(() => {
+    const selectedNodes = nodes.filter(n => n.selected);
+    // Ungroup any selected groups first
+    selectedNodes.filter(n => n.type === 'group').forEach(n => ungroupPostIts(n.id));
+    // Delete non-group selected
+    const nonGroupIds = selectedNodes.filter(n => n.type !== 'group').map(n => n.id);
+    if (nonGroupIds.length > 0) batchDeletePostIts(nonGroupIds);
+  }, [nodes, ungroupPostIts, batchDeletePostIts]);
+
   // Handle node drag start
   const handleNodeDragStart = useCallback(
     (_event: React.MouseEvent, node: Node) => {
@@ -384,11 +446,37 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     []
   );
 
-  // Handle node drag
+  // Handle all node changes (selection, position, removal)
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      // Apply changes to maintain ReactFlow's internal state
-      const updatedNodes = applyNodeChanges(changes, nodes);
+      // Handle selection changes — must persist so nodes stay selected across renders
+      const selectChanges = changes.filter((c): c is NodeChange & { type: 'select'; id: string; selected: boolean } => c.type === 'select');
+      if (selectChanges.length > 0) {
+        setSelectedNodeIds(prev => {
+          const next = new Set(prev);
+          selectChanges.forEach(c => {
+            if (c.selected) next.add(c.id);
+            else next.delete(c.id);
+          });
+          return Array.from(next);
+        });
+      }
+
+      // Handle remove changes (Delete/Backspace key)
+      const removeChanges = changes.filter(c => c.type === 'remove');
+      if (removeChanges.length > 0) {
+        const removedIds = removeChanges.map(c => c.id);
+        removedIds.forEach(id => {
+          const node = nodes.find(n => n.id === id);
+          if (node?.type === 'group') ungroupPostIts(id);
+        });
+        const nonGroupIds = removedIds.filter(id => {
+          const node = nodes.find(n => n.id === id);
+          return node?.type !== 'group';
+        });
+        if (nonGroupIds.length > 0) batchDeletePostIts(nonGroupIds);
+        return;
+      }
 
       // Update store when drag completes
       changes.forEach((change) => {
@@ -432,10 +520,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           }
         }
       });
-
-      return updatedNodes;
     },
-    [nodes, snapToGrid, updatePostIt, stepConfig, dynamicGridConfig]
+    [nodes, snapToGrid, updatePostIt, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts]
   );
 
   // Handle node drag (real-time cell highlighting)
@@ -469,22 +555,6 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     [ungroupPostIts, batchDeletePostIts]
   );
 
-  // Handle selection change for Group button visibility
-  const handleSelectionChange = useCallback(({ nodes }: { nodes: Node[] }) => {
-    // Only count non-group nodes for grouping eligibility
-    const nonGroupIds = nodes
-      .filter(n => n.type !== 'group')
-      .map(n => n.id);
-    setSelectedNodeIds(nonGroupIds);
-  }, []);
-
-  // Handle Group button click
-  const handleGroup = useCallback(() => {
-    if (selectedNodeIds.length >= 2) {
-      groupPostIts(selectedNodeIds);
-      setSelectedNodeIds([]); // Clear selection after grouping
-    }
-  }, [selectedNodeIds, groupPostIts]);
 
   // Handle delete column (passed to GridOverlay)
   const handleDeleteColumn = useCallback(
@@ -610,10 +680,32 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     }
   }, [postIts.length, fitView]);
 
+  // Animate viewport when items are added from chat panel
+  useEffect(() => {
+    if (pendingFitView) {
+      const timer = setTimeout(() => {
+        fitView({ padding: 0.2, duration: 400 });
+        setPendingFitView(false);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingFitView, fitView, setPendingFitView]);
+
+  // Sync local selection to shared store (via effect to avoid setState-during-render)
+  useEffect(() => {
+    setSelectedPostItIds(selectedNodeIds);
+  }, [selectedNodeIds, setSelectedPostItIds]);
+
   return (
     <div ref={canvasContainerRef} className="w-full h-full relative">
       <ReactFlow
-        className={draggingNodeId ? 'cursor-grabbing' : ''}
+        className={cn(
+          draggingNodeId
+            ? 'cursor-dragging'
+            : activeTool === 'hand'
+              ? 'cursor-hand-tool'
+              : 'cursor-pointer-tool',
+        )}
         nodes={nodes}
         edges={[]}
         nodeTypes={nodeTypes}
@@ -624,7 +716,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         onNodeContextMenu={handleNodeContextMenu}
         onPaneClick={handlePaneClick}
         onMoveStart={handleMoveStart}
-        onSelectionChange={handleSelectionChange}
+
         onInit={handleInit}
         snapToGrid={true}
         snapGrid={[GRID_SIZE, GRID_SIZE]}
@@ -637,13 +729,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         // Multi-select (CANV-06)
         selectionKeyCode="Shift"
         multiSelectionKeyCode={null}
-        selectionOnDrag={true}
+        selectionOnDrag={activeTool === 'pointer'}
         selectionMode={SelectionMode.Partial}
         // Delete (CANV-03)
         deleteKeyCode={editingNodeId ? null : ["Backspace", "Delete"]}
         onNodesDelete={handleNodesDelete}
-        // Pan/Zoom (CANV-07)
-        panOnDrag={true}
+        // Pan/Zoom (CANV-07) - dynamic based on active tool
+        panOnDrag={activeTool === 'hand'}
         zoomOnScroll={true}
         zoomOnPinch={true}
       >
@@ -672,12 +764,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       {/* Toolbar */}
       <CanvasToolbar
         onAddPostIt={handleToolbarAdd}
+        onAddEmotionPostIt={handleEmotionAdd}
         onUndo={handleUndo}
         onRedo={handleRedo}
         canUndo={canUndo}
         canRedo={canRedo}
-        onGroup={handleGroup}
-        canGroup={selectedNodeIds.length >= 2}
+        activeTool={activeTool}
+        onToolChange={setActiveTool}
       />
 
       {/* Context menu: ungroup for groups, color picker for post-its */}

@@ -35,6 +35,8 @@ export type CanvasState = {
   isDirty: boolean;
   gridColumns: GridColumn[]; // Dynamic columns, initialized from step config
   highlightedCell: { row: number; col: number } | null;
+  pendingFitView: boolean;
+  selectedPostItIds: string[];
 };
 
 export type CanvasActions = {
@@ -53,6 +55,8 @@ export type CanvasActions = {
   confirmPreview: (id: string) => void;
   rejectPreview: (id: string) => void;
   setHighlightedCell: (cell: { row: number; col: number } | null) => void;
+  setPendingFitView: (pending: boolean) => void;
+  setSelectedPostItIds: (ids: string[]) => void;
   markClean: () => void;
 };
 
@@ -64,6 +68,8 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
     gridColumns: initState?.gridColumns || [],
     isDirty: false,
     highlightedCell: null,
+    pendingFitView: false,
+    selectedPostItIds: [],
   };
 
   return createStore<CanvasStore>()(
@@ -299,6 +305,16 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
         setHighlightedCell: (cell) =>
           set(() => ({
             highlightedCell: cell,
+          })),
+
+        setPendingFitView: (pending) =>
+          set(() => ({
+            pendingFitView: pending,
+          })),
+
+        setSelectedPostItIds: (ids) =>
+          set(() => ({
+            selectedPostItIds: ids,
           })),
 
         markClean: () =>
