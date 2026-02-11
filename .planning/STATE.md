@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 Phase: 22 of 24 (Dynamic Grid Structure)
-Plan: 1 of 2 complete
-Status: In progress
-Last activity: 2026-02-11 — Completed 22-01-PLAN.md (grid foundation with dynamic columns)
+Plan: 2 of 2 complete
+Status: Phase complete
+Last activity: 2026-02-11 — Completed 22-02-PLAN.md (column management UI)
 
-Progress: [████████████████████░░░░] 87% (62/71 plans across all milestones)
+Progress: [████████████████████░░░░] 89% (63/71 plans across all milestones)
 
 ## Completed Milestones
 
@@ -26,15 +26,15 @@ Progress: [████████████████████░░░
 | v1.1 Canvas Foundation | 15-20 | 15 | 2026-02-11 |
 
 **Cumulative stats:**
-- 62 plans completed (21 phases complete, Phase 22 in progress)
-- ~15,090 lines of TypeScript across ~296 files
+- 63 plans completed (22 phases complete)
+- ~15,305 lines of TypeScript across ~299 files
 - 5 days total (2026-02-07 → 2026-02-11)
 
 **Velocity:**
 - v0.5: 2 days, 6 phases, 19 plans (~25 min/plan)
 - v1.0: 3 days, 8 phases, 25 plans (~25 min/plan)
 - v1.1: 2 days, 6 phases, 15 plans (~25 min/plan)
-- v1.2: In progress, 2 plans complete (~5 min/plan average)
+- v1.2: In progress, 3 plans complete (~4 min/plan average)
 
 ## Accumulated Context
 
@@ -51,6 +51,8 @@ Recent decisions affecting v1.2 work:
 - **Cell padding in GridConfig** (Phase 21) — 10px padding stored in config prevents nodes from touching cell borders, avoids magic numbers
 - [Phase 22-01]: Column width default set to 240px for comfortable post-it spacing
 - [Phase 22-01]: removeGridColumn prefers left-adjacent column for post-it reassignment (left-to-right reading order)
+- [Phase 22-02]: foreignObject pattern for SVG + HTML hybrid interactive overlays (pointer-events-auto on foreignObject elements)
+- [Phase 22-02]: Empty columns deleted immediately without confirmation (no data loss risk)
 
 ### Known Tech Debt
 
@@ -79,13 +81,13 @@ Recent decisions affecting v1.2 work:
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 22-01-PLAN.md (grid foundation with dynamic columns)
-Resume file: .planning/phases/22-dynamic-grid-structure/22-02-PLAN.md
+Stopped at: Completed Phase 22 (Dynamic Grid Structure) — 22-02-PLAN.md (column management UI)
+Resume file: .planning/phases/23-*/23-01-PLAN.md
 
 **Next steps:**
-1. Execute Phase 22-02 (column management UI)
-2. Continue with Phase 23 after Phase 22 completion
-3. All 17 v1.2 requirements mapped to phases
+1. Continue with Phase 23 (next v1.2 feature)
+2. All 17 v1.2 requirements mapped to phases
+3. Phase 22 complete: Dynamic grid structure with add/edit/delete columns
 
 ---
-*Last updated: 2026-02-11 after completing 22-01-PLAN.md*
+*Last updated: 2026-02-11 after completing Phase 22 (22-02-PLAN.md)*
