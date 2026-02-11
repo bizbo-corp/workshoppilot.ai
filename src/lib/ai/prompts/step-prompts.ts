@@ -368,7 +368,7 @@ DESIGN THINKING PRINCIPLES:
 - Emotions use traffic light system: positive (green/good), neutral (orange/ok), negative (red/pain)
 - Emotions should vary across stages and MUST reflect the barriers in each stage
 
-STAGE CREATION (COLLABORATIVE):
+STAGE CREATION (COLLABORATIVE — conversation only, no GRID_ITEM tags):
 1. Suggest 4-8 journey stages based on persona and challenge context
    - Example for healthcare: "Symptom Awareness → Scheduling Appointment → Waiting Room → Consultation → Treatment → Follow-up"
    - Example for e-commerce: "Product Discovery → Comparison → Cart → Checkout → Delivery → Post-Purchase"
@@ -377,43 +377,42 @@ STAGE CREATION (COLLABORATIVE):
 
 3. User confirms or modifies stage structure (add/remove/rename stages)
 
-4. Once stages are confirmed, populate all 7 layers for each stage (don't ask user to populate — YOU populate based on research)
+4. Do NOT use [GRID_ITEM] tags during stage creation — columns are structural, not post-its. The canvas columns will be set up separately.
 
-7-LAYER POPULATION (AI-DRIVEN):
-For EACH stage, populate all 7 layers based on prior research:
+7-LAYER POPULATION (ROW-BY-ROW — use [GRID_ITEM] tags):
+After stages are confirmed, populate ONE ROW at a time using [GRID_ITEM] tags.
+Items appear instantly on the canvas as you generate them.
 
-1. **Action**: What the persona does in this stage (observable behavior)
+ROW-BY-ROW FLOW:
+1. Start with the **Actions** row: generate one [GRID_ITEM] per confirmed stage/column
+2. After presenting the row, ask: "How does the **Actions** row look? Say 'next' for the next layer, or tell me what to change."
+3. When user says next (or approves), move to **Goals** row
+4. Continue through all 7 rows: Actions → Goals → Barriers → Touchpoints → Emotions → Moments of Truth → Opportunities
+
+For each row, generate items for ALL columns in a single message. One item per column per row is typical (4-8 items depending on stage count).
+
+ROW CONTENT GUIDANCE:
+1. **Actions**: What the persona does in this stage (observable behavior)
    - From: Step 5 persona behaviors + Step 3 research findings
-   - Example: "Searches multiple insurance websites to compare prices"
 
 2. **Goals**: What they're trying to achieve in this stage (desired outcome)
    - From: Step 5 persona goals + Step 4 gains relevant to this stage
-   - Example: "Find the best coverage at lowest cost"
 
 3. **Barriers**: Obstacles, pain points, or friction they encounter
    - From: Step 4 pains + Step 5 persona frustrations
-   - Example: "Confusing terminology, inconsistent pricing displays, can't compare apples-to-apples"
 
 4. **Touchpoints**: Tools, systems, people, or interfaces they interact with
    - From: Step 3 research mentions of specific tools/processes
-   - Example: "Company websites, comparison sites, PDF policy documents, customer service chat"
 
 5. **Emotions** (TRAFFIC LIGHT): How they feel — MUST reflect barriers
    - positive (green): Stage goes smoothly, goals achieved, minimal friction
    - neutral (orange): Some friction but manageable, mixed feelings
    - negative (red): High friction, barriers blocking goals, frustration/pain
    - Emotion MUST match barrier severity — if barriers are severe, emotion is negative
-   - From: Step 5 persona quote + Step 4 pain intensity
 
 6. **Moments of Truth** (OPTIONAL): Critical moments where they form strong opinions or make key decisions
-   - From: Step 3 research quotes mentioning decision points
-   - Example: "Decides whether to continue or give up" or "Realizes current solution won't work"
 
 7. **Opportunities** (OPTIONAL): Potential improvements or interventions
-   - From: Step 4 gains + inference about what could help
-   - Example: "Standardized comparison tool" or "Guided terminology explainer"
-
-Present populated journey to user: "Here's the journey map I've created based on your research. The 7 layers show [persona name]'s actions, goals, barriers, touchpoints, emotions, moments of truth, and opportunities at each stage. What needs adjustment?"
 
 DIP IDENTIFICATION (AI SUGGESTS, USER CONFIRMS):
 1. AI identifies the stage with the most severe barriers and negative emotion as the dip

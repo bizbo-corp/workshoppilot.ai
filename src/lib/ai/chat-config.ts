@@ -144,12 +144,11 @@ Rules: Each suggestion must be under 15 words, written from the user's perspecti
   // Canvas action markup instructions for canvas-enabled steps
   // Include refine phase so items can still be added when user adjusts/iterates
   const canvasPhases = ['gather', 'synthesize', 'refine'];
-  if (['stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping'].includes(stepId) &&
+  if (['stakeholder-mapping', 'sense-making', 'persona'].includes(stepId) &&
       canvasPhases.includes(arcPhase)) {
     const itemType = stepId === 'stakeholder-mapping' ? 'stakeholders'
       : stepId === 'sense-making' ? 'insights or observations'
-      : stepId === 'persona' ? 'persona traits'
-      : 'journey map items';
+      : 'persona traits';
 
     prompt += `\n\nCANVAS ACTIONS:
 When suggesting ${itemType} the user should add to their canvas, wrap each item in [CANVAS_ITEM]...[/CANVAS_ITEM] tags.
@@ -180,18 +179,6 @@ Valid categories: goals, pains, gains, motivations, frustrations, behaviors
 When drafting or discussing persona traits, output each goal, pain, gain, motivation, frustration, or behavior as a canvas item. This populates the whiteboard with the persona's key attributes.
 
 Example: "Based on the research, Sarah's key traits include: [CANVAS_ITEM category="goals"]Never miss a vet appointment[/CANVAS_ITEM] [CANVAS_ITEM category="pains"]Uses 4 disconnected apps[/CANVAS_ITEM] [CANVAS_ITEM category="gains"]Single dashboard for all pets[/CANVAS_ITEM]"`;
-    } else if (stepId === 'journey-mapping') {
-      prompt += `
-
-Format: [GRID_ITEM row="<row>" col="<col>"]Brief item text (max 80 characters)[/GRID_ITEM]
-Valid rows: actions, goals, barriers, touchpoints, emotions, moments, opportunities
-Valid cols: Use the column IDs from the canvas state (these are dynamic and user-editable)
-
-Items appear as PREVIEWS on the canvas. The user will see "Add to Canvas" and "Skip" buttons on each suggestion, and the target cell pulses yellow to show where you're suggesting placement.
-
-Example: "For the awareness stage: [GRID_ITEM row="actions" col="awareness"]Researches options online[/GRID_ITEM] and [GRID_ITEM row="emotions" col="awareness"]Curious but uncertain[/GRID_ITEM]"
-
-Important: Reference the current canvas state to avoid suggesting duplicates. Briefly explain WHY you're placing an item in a specific cell (e.g., "This goes in Actions/Awareness because...").`;
     }
 
     prompt += `
@@ -201,6 +188,26 @@ Guidelines:
 - Keep text brief (fits on a post-it note)
 - Do not wrap questions, explanations, or general text in these tags
 - Limit to 3-5 items per message to avoid overwhelming the user`;
+  }
+
+  // Journey-mapping GRID_ITEM instructions — always injected regardless of arc phase
+  // (Journey maps need 30-50+ items populated across the full conversation lifecycle)
+  if (stepId === 'journey-mapping') {
+    prompt += `\n\nCANVAS ACTIONS (Journey Map Grid):
+When populating journey map cells, wrap each item in [GRID_ITEM]...[/GRID_ITEM] tags.
+Items are added directly to the canvas. Do not ask the user to click to add.
+
+Format: [GRID_ITEM row="<row>" col="<col>"]Brief item text (max 80 characters)[/GRID_ITEM]
+Valid rows: actions, goals, barriers, touchpoints, emotions, moments, opportunities
+Valid cols: Use the column IDs from the canvas state below. Default columns are: awareness, consideration, decision, purchase, onboarding — but the user may have renamed or added columns, so always check the canvas state for current column IDs.
+
+Example: "For the awareness stage: [GRID_ITEM row="actions" col="awareness"]Researches options online[/GRID_ITEM] and [GRID_ITEM row="emotions" col="awareness"]Curious but uncertain[/GRID_ITEM]"
+
+Guidelines:
+- Only use for concrete journey map items that belong on the canvas
+- Keep text brief (fits on a post-it note)
+- Do not wrap questions, explanations, or general text in these tags
+- Reference the current canvas state to avoid suggesting duplicates`;
   }
 
   return prompt;

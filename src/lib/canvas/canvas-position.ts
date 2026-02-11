@@ -67,11 +67,14 @@ export type CanvasItemMetadata = {
  * - Steps 2 & 4: quadrant base offset + stagger per existing items in that quadrant
  * - Step 6: getCellBounds() + padding + stagger per existing items in that cell
  * - Fallback: stagger from (50, 50)
+ *
+ * @param gridConfigOverride - Optional dynamic GridConfig (e.g., from store columns) to use instead of static config
  */
 export function computeCanvasPosition(
   stepId: string,
   metadata: CanvasItemMetadata,
   existingPostIts: PostIt[],
+  gridConfigOverride?: GridConfig,
 ): {
   position: { x: number; y: number };
   quadrant?: Quadrant;
@@ -99,7 +102,7 @@ export function computeCanvasPosition(
   // --- Grid-based steps (6: journey-mapping) ---
   if (metadata.row && metadata.col) {
     const config = STEP_CANVAS_CONFIGS['journey-mapping'];
-    const gridConfig = config?.gridConfig as GridConfig | undefined;
+    const gridConfig = gridConfigOverride || (config?.gridConfig as GridConfig | undefined);
 
     if (gridConfig) {
       const rowIndex = gridConfig.rows.findIndex((r) => r.id === metadata.row);

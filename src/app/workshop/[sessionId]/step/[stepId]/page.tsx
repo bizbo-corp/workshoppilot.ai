@@ -7,7 +7,7 @@ import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
 import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
 import { loadCanvasState } from "@/actions/canvas-actions";
-import type { PostIt } from "@/stores/canvas-store";
+import type { PostIt, GridColumn } from "@/stores/canvas-store";
 
 interface StepPageProps {
   params: Promise<{
@@ -91,10 +91,11 @@ export default async function StepPage({ params }: StepPageProps) {
   // Load canvas state for this step
   const canvasData = await loadCanvasState(session.workshop.id, step.id);
   const initialCanvasPostIts: PostIt[] = canvasData?.postIts || [];
+  const initialGridColumns: GridColumn[] = canvasData?.gridColumns || [];
 
   return (
     <div className="h-full">
-      <CanvasStoreProvider initialPostIts={initialCanvasPostIts}>
+      <CanvasStoreProvider initialPostIts={initialCanvasPostIts} initialGridColumns={initialGridColumns}>
         <StepContainer
           stepOrder={stepNumber}
           sessionId={sessionId}

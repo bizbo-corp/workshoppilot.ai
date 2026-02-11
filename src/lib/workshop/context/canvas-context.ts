@@ -6,7 +6,7 @@
  * Other steps: Flat list of post-it text
  */
 
-import type { PostIt } from '@/stores/canvas-store';
+import type { PostIt, GridColumn } from '@/stores/canvas-store';
 import type { Quadrant } from '@/lib/canvas/quadrant-detection';
 import { getQuadrantLabel } from '@/lib/canvas/quadrant-detection';
 
@@ -67,10 +67,29 @@ export function assembleStakeholderCanvasContext(postIts: PostIt[]): string {
 /**
  * Assemble journey map canvas context for Step 6 (Journey Mapping)
  * Groups post-its by grid row (swimlane) and column (journey stage)
+ *
+ * @param postIts - Canvas post-its
+ * @param gridColumns - Dynamic grid columns (user-editable). Falls back to defaults if empty.
  */
-export function assembleJourneyMapCanvasContext(postIts: PostIt[]): string {
+export function assembleJourneyMapCanvasContext(postIts: PostIt[], gridColumns?: GridColumn[]): string {
   // Filter out group nodes and preview nodes
   const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+
+  // Determine column order: use dynamic gridColumns if provided, else defaults
+  const defaultColumns: Array<{ id: string; label: string }> = [
+    { id: 'awareness', label: 'Awareness' },
+    { id: 'consideration', label: 'Consideration' },
+    { id: 'decision', label: 'Decision' },
+    { id: 'purchase', label: 'Purchase' },
+    { id: 'onboarding', label: 'Onboarding' },
+  ];
+  const columns = gridColumns && gridColumns.length > 0 ? gridColumns : defaultColumns;
+
+  // If no items but columns exist, return column structure so AI knows available columns
+  if (items.length === 0 && columns.length > 0) {
+    const colList = columns.map(c => `${c.id} ("${c.label}")`).join(', ');
+    return `Journey map columns: ${colList}\nNo items placed yet.`;
+  }
 
   if (items.length === 0) return '';
 
@@ -120,6 +139,10 @@ export function assembleJourneyMapCanvasContext(postIts: PostIt[]): string {
   // Build sections
   const sections: string[] = [];
 
+  // Add column header for AI reference
+  const colList = columns.map(c => `${c.id} ("${c.label}")`).join(', ');
+  sections.push(`Journey map columns: ${colList}`);
+
   rowOrder.forEach(rowId => {
     const colGroups = rowGroups.get(rowId);
     if (!colGroups || colGroups.size === 0) return;
@@ -127,13 +150,12 @@ export function assembleJourneyMapCanvasContext(postIts: PostIt[]): string {
     const rowLabel = rowLabels[rowId] || rowId;
     const colSections: string[] = [];
 
-    // Iterate through columns in order
-    ['awareness', 'consideration', 'decision', 'purchase', 'onboarding'].forEach(colId => {
-      const colItems = colGroups.get(colId);
+    // Iterate through dynamic columns in order
+    columns.forEach(col => {
+      const colItems = colGroups.get(col.id);
       if (colItems && colItems.length > 0) {
-        const colLabel = colId.charAt(0).toUpperCase() + colId.slice(1);
         const itemList = colItems.map(p => p.text).join(', ');
-        colSections.push(`  ${colLabel}: ${itemList}`);
+        colSections.push(`  ${col.label}: ${itemList}`);
       }
     });
 
@@ -210,7 +232,12 @@ export function assembleEmpathyMapCanvasContext(postIts: PostIt[]): string {
  * Assemble canvas context for a specific step
  * Routes to step-specific assembly function based on stepId
  */
-export function assembleCanvasContextForStep(stepId: string, postIts: PostIt[]): string {
+export function assembleCanvasContextForStep(stepId: string, postIts: PostIt[], gridColumns?: GridColumn[]): string {
+  // For journey-mapping, always return context (even if no items) so AI sees column structure
+  if (stepId === 'journey-mapping') {
+    return assembleJourneyMapCanvasContext(postIts, gridColumns);
+  }
+
   // Filter out group nodes and preview nodes first
   const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
 
@@ -221,8 +248,6 @@ export function assembleCanvasContextForStep(stepId: string, postIts: PostIt[]):
     return assembleStakeholderCanvasContext(postIts);
   } else if (stepId === 'sense-making') {
     return assembleEmpathyMapCanvasContext(postIts);
-  } else if (stepId === 'journey-mapping') {
-    return assembleJourneyMapCanvasContext(postIts);
   } else {
     // Default: flat list for non-quadrant/non-grid steps
     const itemList = items

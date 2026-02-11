@@ -23,6 +23,7 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
 
   // Store access
   const postIts = useCanvasStore((s) => s.postIts);
+  const gridColumns = useCanvasStore((s) => s.gridColumns);
   const isDirty = useCanvasStore((s) => s.isDirty);
   const markClean = useCanvasStore((s) => s.markClean);
 
@@ -36,7 +37,10 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
 
       setSaveStatus('saving');
 
-      const result = await saveCanvasState(workshopId, stepId, { postIts });
+      const result = await saveCanvasState(workshopId, stepId, {
+        postIts,
+        ...(gridColumns.length > 0 ? { gridColumns } : {}),
+      });
 
       if (result.success) {
         // Success: mark clean and show saved indicator
@@ -70,12 +74,12 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
     { maxWait: 10000 } // Force save after 10 seconds max
   );
 
-  // Trigger save when postIts change and isDirty
+  // Trigger save when postIts or gridColumns change and isDirty
   useEffect(() => {
     if (isDirty) {
       debouncedSave();
     }
-  }, [postIts, isDirty, debouncedSave]);
+  }, [postIts, gridColumns, isDirty, debouncedSave]);
 
   // Force-save on component unmount
   useEffect(() => {

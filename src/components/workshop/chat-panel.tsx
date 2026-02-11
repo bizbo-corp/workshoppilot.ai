@@ -101,6 +101,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const step = getStepByOrder(stepOrder);
   const addPostIt = useCanvasStore((state) => state.addPostIt);
   const postIts = useCanvasStore((state) => state.postIts);
+  const gridColumns = useCanvasStore((state) => state.gridColumns);
   const setHighlightedCell = useCanvasStore((state) => state.setHighlightedCell);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const hasAutoStarted = React.useRef(false);
@@ -228,6 +229,13 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
     if (canvasItems.length === 0) return;
 
+    // Build dynamic gridConfig from store columns for journey-mapping
+    const stepConfig = getStepCanvasConfig(step.id);
+    const baseGridConfig = stepConfig.gridConfig;
+    const dynamicGridConfig = baseGridConfig && gridColumns.length > 0
+      ? { ...baseGridConfig, columns: gridColumns }
+      : baseGridConfig;
+
     // Add each item to canvas with computed position
     // Use a running snapshot of postIts that includes items we're adding in this batch
     let currentPostIts = [...postIts];
@@ -236,6 +244,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         step.id,
         { quadrant: item.quadrant, row: item.row, col: item.col, category: item.category },
         currentPostIts,
+        dynamicGridConfig,
       );
 
       const color = (item.category && CATEGORY_COLORS[item.category]) || 'yellow';
@@ -248,28 +257,23 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         color,
         quadrant,
         cellAssignment,
-        isPreview: item.isGridItem || false,
       };
 
       addPostIt(newPostIt);
 
       // Highlight target cell for grid items
-      if (item.isGridItem && cellAssignment) {
-        const stepConfig = getStepCanvasConfig(step.id);
-        const gridConfig = stepConfig.gridConfig;
-        if (gridConfig) {
-          const rowIndex = gridConfig.rows.findIndex(r => r.id === cellAssignment.row);
-          const colIndex = gridConfig.columns.findIndex(c => c.id === cellAssignment.col);
-          if (rowIndex !== -1 && colIndex !== -1) {
-            setHighlightedCell({ row: rowIndex, col: colIndex });
-          }
+      if (item.isGridItem && cellAssignment && dynamicGridConfig) {
+        const rowIndex = dynamicGridConfig.rows.findIndex(r => r.id === cellAssignment.row);
+        const colIndex = dynamicGridConfig.columns.findIndex(c => c.id === cellAssignment.col);
+        if (rowIndex !== -1 && colIndex !== -1) {
+          setHighlightedCell({ row: rowIndex, col: colIndex });
         }
       }
 
       // Track the added item for stagger calculation of subsequent items in this batch
       currentPostIts = [...currentPostIts, { ...newPostIt, id: 'pending' }];
     }
-  }, [status, messages, isCanvasStep, step.id, postIts, addPostIt, setHighlightedCell]);
+  }, [status, messages, isCanvasStep, step.id, postIts, gridColumns, addPostIt, setHighlightedCell]);
 
   // Clear stream error on successful completion
   React.useEffect(() => {
