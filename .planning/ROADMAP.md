@@ -102,10 +102,12 @@ Plans:
   3. User can add, remove, and reorder cards within canvas sections after initial migration, and changes sync to underlying data model
   4. Canvas becomes the primary structured record displayed by default, with output panel mirroring canvas state (single source of truth)
   5. Existing workshops with output-only data migrate seamlessly with default canvas positions, no data loss
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 24-01: TBD
+- [ ] 24-01-PLAN.md — Ring layout types, empathy zone types, step config updates, canvas position extensions, migration helpers
+- [ ] 24-02-PLAN.md — ConcentricRingsOverlay, EmpathyMapOverlay components, ReactFlowCanvas integration
+- [ ] 24-03-PLAN.md — Step container canvas-only retrofit, lazy migration at page level, Add to Whiteboard updates
 
 ## Progress
 
