@@ -91,10 +91,11 @@ Plans:
   3. Target cell pulses with yellow border when AI suggests placement there, making destination obvious to user
   4. User can click "Add to Canvas" to create permanent node or "Skip" to remove preview, with instant visual feedback
   5. AI reads current grid canvas state (grouped by cell) as context and subsequent suggestions reference existing content accurately
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 23-01: TBD
+- [ ] 23-01-PLAN.md -- Store extensions (isPreview flag, confirm/reject actions), markup parser ([GRID_ITEM] support), AI prompt update, context filter
+- [ ] 23-02-PLAN.md -- Preview node UI in PostItNode, ReactFlowCanvas wiring, yellow pulse cell highlight, chat-panel cell highlighting
 
 ### Phase 24: Output-to-Canvas Retrofit (Steps 2 & 4)
 **Goal**: Migrate Steps 2 & 4 from output panel to canvas-first rendering with unified data model
