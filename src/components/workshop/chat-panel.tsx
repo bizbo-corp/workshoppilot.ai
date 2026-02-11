@@ -42,6 +42,7 @@ type CanvasItemParsed = {
   row?: string;
   col?: string;
   category?: string;
+  isGridItem?: boolean;
 };
 
 /**
@@ -51,12 +52,13 @@ type CanvasItemParsed = {
  */
 function parseCanvasItems(content: string): { cleanContent: string; canvasItems: CanvasItemParsed[] } {
   const items: CanvasItemParsed[] = [];
-  const regex = /\[CANVAS_ITEM(?:\s+([^\]]*))?\](.*?)\[\/CANVAS_ITEM\]/g;
+  const regex = /\[(CANVAS_ITEM|GRID_ITEM)(?:\s+([^\]]*))?\](.*?)\[\/(CANVAS_ITEM|GRID_ITEM)\]/g;
   let match;
 
   while ((match = regex.exec(content)) !== null) {
-    const attrString = match[1] || '';
-    const text = match[2].trim();
+    const tagType = match[1]; // CANVAS_ITEM or GRID_ITEM
+    const attrString = match[2] || '';
+    const text = match[3].trim();
     if (text.length === 0) continue;
 
     // Parse attributes like quadrant="value" row="value" col="value"
@@ -73,11 +75,14 @@ function parseCanvasItems(content: string): { cleanContent: string; canvasItems:
       row: attrs.row,
       col: attrs.col,
       category: attrs.category,
+      isGridItem: tagType === 'GRID_ITEM',
     });
   }
 
   // Remove markup from content for clean markdown rendering
-  const cleanContent = content.replace(/\s*\[CANVAS_ITEM(?:\s+[^\]]*?)?\].*?\[\/CANVAS_ITEM\]\s*/g, ' ').trim();
+  const cleanContent = content
+    .replace(/\s*\[(CANVAS_ITEM|GRID_ITEM)(?:\s+[^\]]*?)?\].*?\[\/(CANVAS_ITEM|GRID_ITEM)\]\s*/g, ' ')
+    .trim();
 
   return { cleanContent, canvasItems: items };
 }
@@ -241,6 +246,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         color,
         quadrant,
         cellAssignment,
+        isPreview: item.isGridItem || false,
       };
 
       addPostIt(newPostIt);

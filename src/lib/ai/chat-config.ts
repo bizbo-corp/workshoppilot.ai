@@ -183,11 +183,15 @@ Example: "Based on the research, Sarah's key traits include: [CANVAS_ITEM catego
     } else if (stepId === 'journey-mapping') {
       prompt += `
 
-Format: [CANVAS_ITEM row="<row>" col="<col>"]Brief item text (max 80 characters)[/CANVAS_ITEM]
+Format: [GRID_ITEM row="<row>" col="<col>"]Brief item text (max 80 characters)[/GRID_ITEM]
 Valid rows: actions, goals, barriers, touchpoints, emotions, moments, opportunities
-Valid cols: awareness, consideration, decision, purchase, onboarding
+Valid cols: Use the column IDs from the canvas state (these are dynamic and user-editable)
 
-Example: "For the awareness stage: [CANVAS_ITEM row="actions" col="awareness"]Researches options online[/CANVAS_ITEM] and [CANVAS_ITEM row="emotions" col="awareness"]Curious but uncertain[/CANVAS_ITEM]"`;
+Items appear as PREVIEWS on the canvas. The user will see "Add to Canvas" and "Skip" buttons on each suggestion, and the target cell pulses yellow to show where you're suggesting placement.
+
+Example: "For the awareness stage: [GRID_ITEM row="actions" col="awareness"]Researches options online[/GRID_ITEM] and [GRID_ITEM row="emotions" col="awareness"]Curious but uncertain[/GRID_ITEM]"
+
+Important: Reference the current canvas state to avoid suggesting duplicates. Briefly explain WHY you're placing an item in a specific cell (e.g., "This goes in Actions/Awareness because...").`;
     }
 
     prompt += `
