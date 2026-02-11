@@ -2,7 +2,7 @@
 
 ## What This Is
 
-An AI-powered digital facilitator that guides anyone from a vague idea through a structured 10-step design thinking process, producing validated product specs. The AI isn't a sidebar assistant; it's the principal guide — leading users through conversational prompts, questioning, synthesizing, and generating structured outputs at each stage. Currently text-based; visual canvas and collaboration planned for MMP.
+An AI-powered digital facilitator that guides anyone from a vague idea through a structured 10-step design thinking process, producing validated product specs. The AI isn't a sidebar assistant; it's the principal guide — leading users through conversational prompts, questioning, synthesizing, and generating structured outputs at each stage. Features a split-screen layout with interactive post-it canvas for visual clustering alongside AI facilitation on Steps 2 (Stakeholder Mapping) and 4 (Research Sense Making).
 
 ## Core Value
 
@@ -37,14 +37,14 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 
 ### Active
 
-#### v1.1 — Canvas Foundation
-- [ ] Split-screen layout for all 10 steps (chat left, panel right)
-- [ ] ReactFlow canvas with custom post-it nodes (create, move, color-code, cluster/group)
-- [ ] Step 2 Stakeholder Mapping canvas — cluster stakeholders by influence/interest
-- [ ] Step 4 Research Sense Making canvas — cluster insights into themes
-- [ ] AI → Canvas: suggest items in chat with "Add to canvas" confirmation
-- [ ] Canvas → AI: AI reads canvas state silently, references when relevant
-- [ ] Non-canvas steps: placeholder right panel (ready for future tools)
+#### v1.1 — Canvas Foundation (SHIPPED)
+- [x] Split-screen layout for all 10 steps (chat left, canvas+output right)
+- [x] ReactFlow canvas with custom post-it nodes (create, edit, move, color-code, group/ungroup, undo/redo)
+- [x] Step 2 Stakeholder Mapping canvas — Power x Interest quadrant grid with auto-detection
+- [x] Step 4 Research Sense Making canvas — Empathy Map quadrants (Said/Thought/Felt/Experienced)
+- [x] AI → Canvas: [CANVAS_ITEM] markup with "Add to canvas" action buttons
+- [x] Canvas → AI: AI reads canvas state silently as Tier 4 context
+- [x] Mobile: tab-based switching, iOS Safari touch handling, bundle under 300KB
 
 #### Future — MMP (Visual & Collaborative)
 - [ ] Canvas for remaining steps (6 Journey Map, 8 Ideation, 9 Concepts)
@@ -138,15 +138,15 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | neon-http driver over WebSocket | Serverless-optimized, avoids connection pooling complexity | ✓ Good |
 | AI SDK 6 with DefaultChatTransport | Latest API with streaming and message persistence | ✓ Good |
 | Vercel Analytics + Speed Insights | Free performance monitoring from day one | ✓ Good |
-| ReactFlow for canvas (not Tldraw/Excalidraw) | Graph-first data model (nodes+edges), MIT free, ~200KB, structured relationships queryable for AI context. Tldraw $6K/yr, Excalidraw drawing-first with manual relationship parsing | — Pending |
+| ReactFlow for canvas (not Tldraw/Excalidraw) | Graph-first data model (nodes+edges), MIT free, ~200KB, structured relationships queryable for AI context. Tldraw $6K/yr, Excalidraw drawing-first with manual relationship parsing | ✓ Good — 110KB gzipped, quadrant layouts, AI-canvas integration |
 
 ## Current State
 
-**Shipped:** v1.0 Working AI Facilitation (2026-02-10)
+**Shipped:** v1.1 Canvas Foundation (2026-02-11)
 **Live at:** https://workshoppilot.ai
-**Codebase:** 12,131 lines of TypeScript across ~270 files
-**Tech stack:** Clerk + Neon + Gemini + Drizzle + AI SDK 6 + Vercel — all validated in production
-**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) = 5 days total
+**Codebase:** ~14,400 lines of TypeScript across ~290 files
+**Tech stack:** Clerk + Neon + Gemini + Drizzle + AI SDK 6 + ReactFlow + Zustand + Vercel — all validated in production
+**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) = 5 days total
 
 **Known issues / tech debt:**
 - Workshops table needs deletedAt column for soft delete
@@ -154,7 +154,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Step 10 Validate produces synthesis summary only (no Build Pack export yet)
 - CRON_SECRET needs to be configured in Vercel dashboard for production cron warming
 
-**Current milestone:** v1.1 Canvas Foundation — split-screen layout + post-it canvas for Steps 2 & 4
+**Next milestone:** MMP Visual & Collaborative — canvas for remaining steps, visual components, Build Pack export, basic collaboration
 
 ---
-*Last updated: 2026-02-10 after v1.1 milestone start*
+*Last updated: 2026-02-11 after v1.1 milestone*

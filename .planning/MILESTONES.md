@@ -1,5 +1,31 @@
 # Project Milestones: WorkshopPilot.ai
 
+## v1.1 Canvas Foundation (Shipped: 2026-02-11)
+
+**Delivered:** Split-screen layout with interactive post-it canvas for Steps 2 (Stakeholder Mapping) and 4 (Research Sense Making), featuring bidirectional AI-canvas integration, quadrant layouts, and mobile-optimized touch handling.
+
+**Phases completed:** 15-20 (15 plans total)
+
+**Key accomplishments:**
+- ReactFlow-based canvas with create, edit, drag, color-code, group/ungroup, undo/redo, and multi-select post-it nodes
+- Split-screen layout (resizable chat+canvas panels on desktop, tab-based switching on mobile, collapsible focus modes)
+- Step-specific quadrant canvases — Power x Interest (Step 2) and Empathy Map (Step 4) with automatic quadrant detection
+- Bidirectional AI-canvas integration — AI reads canvas state silently, suggests items via [CANVAS_ITEM] markup with "Add to canvas" action buttons
+- Canvas persistence with auto-save (2s debounce) to stepArtifacts JSONB, force-save on navigation
+- Bundle optimization (110KB gzipped, 63% under 300KB target) and iOS Safari touch handling with native passive:false event listeners
+
+**Stats:**
+- 72 files created/modified
+- ~14,400 lines of TypeScript (total codebase)
+- 6 phases, 15 plans
+- 2 days from v1.0 to v1.1 ship (2026-02-10 → 2026-02-11)
+
+**Git range:** `feat(15-01)` → `feat(20-02)`
+
+**What's next:** MMP (Visual & Collaborative) — canvas for remaining steps, visual components, Build Pack export, basic collaboration
+
+---
+
 ## v1.0 Working AI Facilitation (Shipped: 2026-02-10)
 
 **Delivered:** Complete AI-powered design thinking facilitator with all 10 steps working end-to-end, step-aware prompting, hierarchical context architecture, structured outputs, and production hardening.
