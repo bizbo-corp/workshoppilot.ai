@@ -26,6 +26,8 @@ export type PostIt = {
     row: string; // Row ID from GridConfig (e.g., 'actions', 'goals')
     col: string; // Column ID from GridConfig (e.g., 'awareness', 'consideration')
   };
+  isPreview?: boolean; // When true, indicates AI-suggested preview node awaiting confirmation
+  previewReason?: string; // Optional AI explanation for why this placement was suggested
 };
 
 export type CanvasState = {
@@ -47,6 +49,8 @@ export type CanvasActions = {
   addGridColumn: (label: string) => void;
   updateGridColumn: (id: string, updates: Partial<GridColumn>) => void;
   removeGridColumn: (id: string, gridConfig: GridConfig) => void;
+  confirmPreview: (id: string) => void;
+  rejectPreview: (id: string) => void;
   markClean: () => void;
 };
 
@@ -274,6 +278,20 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
               isDirty: true,
             };
           }),
+
+        confirmPreview: (id) =>
+          set((state) => ({
+            postIts: state.postIts.map((postIt) =>
+              postIt.id === id ? { ...postIt, isPreview: false, previewReason: undefined } : postIt
+            ),
+            isDirty: true,
+          })),
+
+        rejectPreview: (id) =>
+          set((state) => ({
+            postIts: state.postIts.filter((postIt) => postIt.id !== id),
+            isDirty: true,
+          })),
 
         markClean: () =>
           set(() => ({

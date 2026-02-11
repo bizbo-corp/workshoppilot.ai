@@ -69,8 +69,8 @@ export function assembleStakeholderCanvasContext(postIts: PostIt[]): string {
  * Groups post-its by grid row (swimlane) and column (journey stage)
  */
 export function assembleJourneyMapCanvasContext(postIts: PostIt[]): string {
-  // Filter out group nodes
-  const items = postIts.filter(p => !p.type || p.type === 'postIt');
+  // Filter out group nodes and preview nodes
+  const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
 
   if (items.length === 0) return '';
 
@@ -211,8 +211,8 @@ export function assembleEmpathyMapCanvasContext(postIts: PostIt[]): string {
  * Routes to step-specific assembly function based on stepId
  */
 export function assembleCanvasContextForStep(stepId: string, postIts: PostIt[]): string {
-  // Filter out group nodes first
-  const items = postIts.filter(p => !p.type || p.type === 'postIt');
+  // Filter out group nodes and preview nodes first
+  const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
 
   if (items.length === 0) return '';
 
