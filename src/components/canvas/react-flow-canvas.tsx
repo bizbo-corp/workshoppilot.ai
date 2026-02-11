@@ -23,13 +23,14 @@ import { CanvasToolbar } from './canvas-toolbar';
 import { ColorPicker } from './color-picker';
 import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
 import { usePreventScrollOnCanvas } from '@/hooks/use-prevent-scroll-on-canvas';
-import type { PostItColor } from '@/stores/canvas-store';
+import type { PostItColor, GridColumn } from '@/stores/canvas-store';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { QuadrantOverlay } from './quadrant-overlay';
 import { detectQuadrant } from '@/lib/canvas/quadrant-detection';
 import { GridOverlay } from './grid-overlay';
 import { positionToCell, snapToCell } from '@/lib/canvas/grid-layout';
-import type { CellCoordinate } from '@/lib/canvas/grid-layout';
+import type { CellCoordinate, GridConfig } from '@/lib/canvas/grid-layout';
+import { DeleteColumnDialog } from '@/components/dialogs/delete-column-dialog';
 
 // Define node types OUTSIDE component for stable reference
 const nodeTypes = {
@@ -52,6 +53,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const batchDeletePostIts = useCanvasStore((s) => s.batchDeletePostIts);
   const groupPostIts = useCanvasStore((s) => s.groupPostIts);
   const ungroupPostIts = useCanvasStore((s) => s.ungroupPostIts);
+  const gridColumns = useCanvasStore((s) => s.gridColumns);
+  const setGridColumns = useCanvasStore((s) => s.setGridColumns);
+  const removeGridColumn = useCanvasStore((s) => s.removeGridColumn);
 
   // Store API for temporal undo/redo access
   const storeApi = useCanvasStoreApi();
@@ -109,6 +113,37 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
   // Grid cell highlighting state
   const [highlightedCell, setHighlightedCell] = useState<CellCoordinate | null>(null);
+
+  // Delete column dialog state
+  const [deleteColumnDialog, setDeleteColumnDialog] = useState<{
+    open: boolean;
+    columnId: string;
+    columnLabel: string;
+    affectedCardCount: number;
+    migrationTarget: string | null;
+  } | null>(null);
+
+  // Initialize gridColumns from stepConfig on mount (when store has empty gridColumns but step has gridConfig)
+  useEffect(() => {
+    if (stepConfig.hasGrid && stepConfig.gridConfig && gridColumns.length === 0) {
+      // Seed dynamic columns from static step config (first load only)
+      const initialColumns: GridColumn[] = stepConfig.gridConfig.columns.map(col => ({
+        id: col.id,
+        label: col.label,
+        width: col.width,
+      }));
+      setGridColumns(initialColumns);
+    }
+  }, [stepConfig, gridColumns.length, setGridColumns]);
+
+  // Build dynamic gridConfig from store columns
+  const dynamicGridConfig = useMemo<GridConfig | undefined>(() => {
+    if (!stepConfig.hasGrid || !stepConfig.gridConfig || gridColumns.length === 0) return undefined;
+    return {
+      ...stepConfig.gridConfig,
+      columns: gridColumns,
+    };
+  }, [stepConfig, gridColumns]);
 
   // Snap position to grid
   const snapToGrid = useCallback(
@@ -216,14 +251,14 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       const flowPosition = screenToFlowPosition({ x: clientX, y: clientY });
 
       // Grid-based snap and cell assignment for grid steps
-      if (stepConfig.hasGrid && stepConfig.gridConfig) {
-        const snappedPosition = snapToCell(flowPosition, stepConfig.gridConfig);
-        const cell = positionToCell(snappedPosition, stepConfig.gridConfig);
+      if (stepConfig.hasGrid && dynamicGridConfig) {
+        const snappedPosition = snapToCell(flowPosition, dynamicGridConfig);
+        const cell = positionToCell(snappedPosition, dynamicGridConfig);
 
         const cellAssignment = cell
           ? {
-              row: stepConfig.gridConfig.rows[cell.row].id,
-              col: stepConfig.gridConfig.columns[cell.col].id,
+              row: dynamicGridConfig.rows[cell.row].id,
+              col: dynamicGridConfig.columns[cell.col].id,
             }
           : undefined;
 
@@ -254,7 +289,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         });
       }
     },
-    [screenToFlowPosition, snapToGrid, addPostIt, stepConfig]
+    [screenToFlowPosition, snapToGrid, addPostIt, stepConfig, dynamicGridConfig]
   );
 
   // Handle toolbar "+" creation (dealing-cards offset)
@@ -278,14 +313,14 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     }
 
     // Grid-based snap and cell assignment for grid steps
-    if (stepConfig.hasGrid && stepConfig.gridConfig) {
-      const snappedPosition = snapToCell(position, stepConfig.gridConfig);
-      const cell = positionToCell(snappedPosition, stepConfig.gridConfig);
+    if (stepConfig.hasGrid && dynamicGridConfig) {
+      const snappedPosition = snapToCell(position, dynamicGridConfig);
+      const cell = positionToCell(snappedPosition, dynamicGridConfig);
 
       const cellAssignment = cell
         ? {
-            row: stepConfig.gridConfig.rows[cell.row].id,
-            col: stepConfig.gridConfig.columns[cell.col].id,
+            row: dynamicGridConfig.rows[cell.row].id,
+            col: dynamicGridConfig.columns[cell.col].id,
           }
         : undefined;
 
@@ -315,7 +350,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         quadrant,
       });
     }
-  }, [postIts, screenToFlowPosition, snapToGrid, addPostIt, stepConfig]);
+  }, [postIts, screenToFlowPosition, snapToGrid, addPostIt, stepConfig, dynamicGridConfig]);
 
   // Handle node drag start
   const handleNodeDragStart = useCallback(
@@ -341,15 +376,15 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           // Clear dragging state
           setDraggingNodeId(null);
           // Grid-based snap and cell assignment for grid steps
-          if (stepConfig.hasGrid && stepConfig.gridConfig) {
-            const snappedPosition = snapToCell(change.position, stepConfig.gridConfig);
-            const cell = positionToCell(snappedPosition, stepConfig.gridConfig);
+          if (stepConfig.hasGrid && dynamicGridConfig) {
+            const snappedPosition = snapToCell(change.position, dynamicGridConfig);
+            const cell = positionToCell(snappedPosition, dynamicGridConfig);
 
             // Build cell assignment if position is within grid
             const cellAssignment = cell
               ? {
-                  row: stepConfig.gridConfig.rows[cell.row].id,
-                  col: stepConfig.gridConfig.columns[cell.col].id,
+                  row: dynamicGridConfig.rows[cell.row].id,
+                  col: dynamicGridConfig.columns[cell.col].id,
                 }
               : undefined;
 
@@ -376,18 +411,18 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
       return updatedNodes;
     },
-    [nodes, snapToGrid, updatePostIt, stepConfig]
+    [nodes, snapToGrid, updatePostIt, stepConfig, dynamicGridConfig]
   );
 
   // Handle node drag (real-time cell highlighting)
   const handleNodeDrag = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      if (stepConfig.hasGrid && stepConfig.gridConfig) {
-        const cell = positionToCell(node.position, stepConfig.gridConfig);
+      if (stepConfig.hasGrid && dynamicGridConfig) {
+        const cell = positionToCell(node.position, dynamicGridConfig);
         setHighlightedCell(cell); // null if outside grid
       }
     },
-    [stepConfig]
+    [stepConfig, dynamicGridConfig]
   );
 
   // Handle node deletion
@@ -426,6 +461,35 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       setSelectedNodeIds([]); // Clear selection after grouping
     }
   }, [selectedNodeIds, groupPostIts]);
+
+  // Handle delete column (passed to GridOverlay)
+  const handleDeleteColumn = useCallback(
+    (columnId: string, columnLabel: string, affectedCardCount: number, migrationTarget: string | null) => {
+      if (affectedCardCount === 0) {
+        // Empty column — delete immediately without dialog
+        if (dynamicGridConfig) {
+          removeGridColumn(columnId, dynamicGridConfig);
+        }
+      } else {
+        // Has cards — show confirmation dialog
+        setDeleteColumnDialog({
+          open: true,
+          columnId,
+          columnLabel,
+          affectedCardCount,
+          migrationTarget,
+        });
+      }
+    },
+    [removeGridColumn, dynamicGridConfig]
+  );
+
+  const handleConfirmDelete = useCallback(() => {
+    if (deleteColumnDialog && dynamicGridConfig) {
+      removeGridColumn(deleteColumnDialog.columnId, dynamicGridConfig);
+      setDeleteColumnDialog(null);
+    }
+  }, [deleteColumnDialog, removeGridColumn, dynamicGridConfig]);
 
   // Handle right-click on nodes (color picker or ungroup)
   const handleNodeContextMenu = useCallback(
@@ -502,7 +566,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           zoom: 1,
         });
       }
-    } else if (stepConfig.hasGrid && postIts.length === 0) {
+    } else if (stepConfig.hasGrid && dynamicGridConfig && postIts.length === 0) {
       // Show grid origin area for grid steps
       instance.setViewport({
         x: 50,  // Small left margin
@@ -510,7 +574,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         zoom: 1,
       });
     }
-  }, [stepConfig, postIts.length]);
+  }, [stepConfig, dynamicGridConfig, postIts.length]);
 
   // Auto-fit view on mount if nodes exist
   useEffect(() => {
@@ -572,10 +636,11 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         {stepConfig.hasQuadrants && stepConfig.quadrantConfig && (
           <QuadrantOverlay config={stepConfig.quadrantConfig} />
         )}
-        {stepConfig.hasGrid && stepConfig.gridConfig && (
+        {stepConfig.hasGrid && dynamicGridConfig && (
           <GridOverlay
-            config={stepConfig.gridConfig}
+            config={dynamicGridConfig}
             highlightedCell={highlightedCell}
+            onDeleteColumn={handleDeleteColumn}
           />
         )}
       </ReactFlow>
@@ -616,6 +681,20 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           onClose={() => setContextMenu(null)}
         />
       ) : null}
+
+      {/* Delete column dialog */}
+      {deleteColumnDialog && (
+        <DeleteColumnDialog
+          open={deleteColumnDialog.open}
+          onOpenChange={(open) => {
+            if (!open) setDeleteColumnDialog(null);
+          }}
+          onConfirm={handleConfirmDelete}
+          columnLabel={deleteColumnDialog.columnLabel}
+          affectedCardCount={deleteColumnDialog.affectedCardCount}
+          migrationTarget={deleteColumnDialog.migrationTarget}
+        />
+      )}
 
       {/* Empty state hint */}
       {postIts.length === 0 && (

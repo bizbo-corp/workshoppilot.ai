@@ -9,6 +9,9 @@
 import { useStore as useReactFlowStore, type ReactFlowState } from '@xyflow/react';
 import type { GridConfig, CellCoordinate } from '@/lib/canvas/grid-layout';
 import { getCellBounds } from '@/lib/canvas/grid-layout';
+import { useCanvasStore } from '@/providers/canvas-store-provider';
+import { EditableColumnHeader } from './editable-column-header';
+import { PlusCircle, X } from 'lucide-react';
 
 /**
  * Selector for viewport transformation
@@ -23,15 +26,25 @@ const viewportSelector = (state: ReactFlowState) => ({
 interface GridOverlayProps {
   config: GridConfig;
   highlightedCell?: CellCoordinate | null;
+  onDeleteColumn?: (columnId: string, columnLabel: string, affectedCardCount: number, migrationTarget: string | null) => void;
 }
 
 /**
  * GridOverlay renders grid lines, row labels, column headers, and cell highlighting
  * All elements transform with viewport pan/zoom
  */
-export function GridOverlay({ config, highlightedCell }: GridOverlayProps) {
+export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOverlayProps) {
   // Subscribe to viewport changes reactively
   const { x, y, zoom } = useReactFlowStore(viewportSelector);
+
+  // Subscribe to store state for dynamic columns
+  const gridColumns = useCanvasStore((s) => s.gridColumns);
+  const postIts = useCanvasStore((s) => s.postIts);
+  const updateGridColumn = useCanvasStore((s) => s.updateGridColumn);
+  const addGridColumn = useCanvasStore((s) => s.addGridColumn);
+
+  // Use gridColumns from store if available, otherwise fall back to config.columns
+  const effectiveColumns = gridColumns.length > 0 ? gridColumns : config.columns;
 
   // Helper to transform canvas coordinates to screen coordinates
   const toScreen = (canvasX: number, canvasY: number) => ({
@@ -49,10 +62,10 @@ export function GridOverlay({ config, highlightedCell }: GridOverlayProps) {
   // Add final bottom edge
   rowYPositions.push(accumulatedHeight);
 
-  // Calculate column X positions (accumulate widths from origin)
+  // Calculate column X positions (accumulate widths from origin) - use effectiveColumns
   const colXPositions: number[] = [];
   let accumulatedWidth = config.origin.x;
-  config.columns.forEach((col) => {
+  effectiveColumns.forEach((col) => {
     colXPositions.push(accumulatedWidth);
     accumulatedWidth += col.width;
   });
@@ -144,30 +157,80 @@ export function GridOverlay({ config, highlightedCell }: GridOverlayProps) {
         );
       })}
 
-      {/* Column header labels */}
-      {config.columns.map((col, index) => {
+      {/* Column headers with inline editing and delete */}
+      {effectiveColumns.map((col, index) => {
         const colLeft = colXPositions[index];
         const colRight = colXPositions[index + 1];
         const colWidth = colRight - colLeft;
         const colMidpoint = colLeft + colWidth / 2;
+        const headerPos = toScreen(colMidpoint, config.origin.y - 30);
+        const headerWidth = Math.max(160, colWidth * zoom);
 
-        const headerPos = toScreen(colMidpoint, config.origin.y - 25);
+        // Count cards in this column for delete confirmation
+        const cardsInColumn = postIts.filter(p => p.cellAssignment?.col === col.id).length;
+
+        // Find adjacent column for migration target
+        const leftAdjacentLabel = effectiveColumns[index - 1]?.label || null;
+        const rightAdjacentLabel = effectiveColumns[index + 1]?.label || null;
+        const migrationTarget = leftAdjacentLabel || rightAdjacentLabel;
 
         return (
-          <text
+          <foreignObject
             key={col.id}
-            x={headerPos.x}
-            y={headerPos.y}
-            fontSize={12}
-            fontWeight={600}
-            fill="#6b7280"
-            textAnchor="middle"
-            dominantBaseline="middle"
+            x={headerPos.x - headerWidth / 2}
+            y={headerPos.y - 12}
+            width={headerWidth}
+            height={28}
+            className="pointer-events-auto overflow-visible"
           >
-            {col.label}
-          </text>
+            <div className="flex items-center justify-center gap-0.5 group">
+              <EditableColumnHeader
+                label={col.label}
+                onSave={(newLabel) => updateGridColumn(col.id, { label: newLabel })}
+              />
+              {effectiveColumns.length > 1 && (
+                <button
+                  onClick={() => onDeleteColumn?.(col.id, col.label, cardsInColumn, migrationTarget)}
+                  className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-red-100 rounded transition-opacity"
+                  title="Delete column"
+                >
+                  <X className="h-3 w-3 text-red-500" />
+                </button>
+              )}
+            </div>
+          </foreignObject>
         );
       })}
+
+      {/* +Add Stage button after last column */}
+      {(() => {
+        const lastColRight = colXPositions[colXPositions.length - 1];
+        const addButtonPos = toScreen(lastColRight + 30, config.origin.y - 30);
+        const MAX_COLUMNS = 12;
+        return (
+          <foreignObject
+            x={addButtonPos.x}
+            y={addButtonPos.y - 10}
+            width={120}
+            height={28}
+            className="pointer-events-auto overflow-visible"
+          >
+            <button
+              onClick={() => {
+                if (effectiveColumns.length < MAX_COLUMNS) {
+                  addGridColumn(`Stage ${effectiveColumns.length + 1}`);
+                }
+              }}
+              disabled={effectiveColumns.length >= MAX_COLUMNS}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100/80 rounded px-2 py-1 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title={effectiveColumns.length >= MAX_COLUMNS ? 'Maximum 12 stages' : 'Add a new stage column'}
+            >
+              <PlusCircle className="h-3.5 w-3.5" />
+              Add Stage
+            </button>
+          </foreignObject>
+        );
+      })()}
 
       {/* Vertical column separator lines */}
       {colXPositions.map((colX, index) => {
