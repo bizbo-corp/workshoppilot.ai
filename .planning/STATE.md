@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 27 of 29 (UI Kit & Advanced Tools) — IN PROGRESS
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Active
-Last activity: 2026-02-12 — Completed plan 27-01: UI Kit Foundation & Dependencies
+Last activity: 2026-02-12 — Completed plan 27-02: Drag-and-Drop Integration
 
-Progress: [████████████████████████████████████████░] 87% (79/91 plans complete across project)
+Progress: [████████████████████████████████████████░] 88% (80/91 plans complete across project)
 
 ## Completed Milestones
 
@@ -36,7 +36,7 @@ Progress: [███████████████████████
 - v1.0: 3 days, 8 phases, 25 plans (~25 min/plan)
 - v1.1: 2 days, 6 phases, 15 plans (~25 min/plan)
 - v1.2: 2 days, 4 phases, 9 plans (~3 min/plan average)
-- v1.3: Phase 27 in progress (1/3 plans, ~3.5 min/plan average)
+- v1.3: Phase 27 in progress (2/3 plans, ~3 min/plan average)
 
 ## Accumulated Context
 
@@ -53,6 +53,9 @@ Progress: [███████████████████████
 
 ### Recent Decisions (v1.3)
 
+- **Group representative drag pattern** (Phase 27-02): Only first element in group is Konva-draggable, moves entire group via store delta operation for atomic behavior
+- **Drop position calculation** (Phase 27-02): Use active.rect.current.translated minus containerRect for accurate canvas-relative coordinates
+- **DroppableCanvas wrapper pattern** (Phase 27-02): Konva Stage cannot be droppable directly, wrapper div bridges DOM events to canvas
 - **UI kit groupId pattern** (Phase 27-01): Optional groupId on BaseElement for compound components, simpler than nested hierarchies for selection/move/delete
 - **Wireframe color palette** (Phase 27-01): Grays/whites/blues for UI kit to visually distinguish from user designs
 - **Cross-category search** (Phase 27-01): Palette search filters across all categories for better UX
@@ -99,10 +102,10 @@ Progress: [███████████████████████
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 27-01-PLAN.md
+Stopped at: Completed 27-02-PLAN.md
 Resume file: None
 
-**Next action:** `/gsd:execute-plan 27-02` to execute dnd-kit integration
+**Next action:** `/gsd:execute-plan 27-03` to add speech bubbles and emoji picker
 
 ## Performance Metrics
 
@@ -122,8 +125,9 @@ Resume file: None
 | 26 | 02 | 180s | 2 | 1 created, 2 modified | 2026-02-12 |
 | 26 | 03 | 205s | 2 | 1 created, 5 modified | 2026-02-12 |
 | 27 | 01 | 210s | 2 | 3 created, 3 modified | 2026-02-12 |
+| 27 | 02 | 150s | 2 | 1 created, 3 modified | 2026-02-12 |
 
 ---
 
-*Last updated: 2026-02-12 after completing plan 27-01 (UI Kit Foundation & Dependencies)*
+*Last updated: 2026-02-12 after completing plan 27-02 (Drag-and-Drop Integration)*
 
