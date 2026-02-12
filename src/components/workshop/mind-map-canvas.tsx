@@ -1,15 +1,18 @@
 'use client';
 
-import { useMemo, useEffect, useCallback } from 'react';
+import { useMemo, useEffect, useCallback, useState } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
+  Panel,
+  useReactFlow,
   type Node,
   type Edge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { Sparkles, Loader2 } from 'lucide-react';
 
 import { MindMapNode } from '@/components/canvas/mind-map-node';
 import { MindMapEdge } from '@/components/canvas/mind-map-edge';
@@ -25,6 +28,7 @@ import type {
   MindMapNodeState,
   MindMapEdgeState,
 } from '@/stores/canvas-store';
+import { Button } from '@/components/ui/button';
 
 // Define node and edge types outside component to prevent re-renders
 const nodeTypes = { mindMapNode: MindMapNode };
@@ -47,6 +51,10 @@ export function MindMapCanvas({
   const updateMindMapNode = useCanvasStore((state) => state.updateMindMapNode);
   const deleteMindMapNode = useCanvasStore((state) => state.deleteMindMapNode);
   const setMindMapState = useCanvasStore((state) => state.setMindMapState);
+
+  const { fitView } = useReactFlow();
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
   // Initialize with root node if empty
   useEffect(() => {
@@ -205,6 +213,94 @@ export function MindMapCanvas({
     [mindMapNodes, mindMapEdges, deleteMindMapNode]
   );
 
+  // Callback: AI theme suggestion
+  const handleSuggestThemes = useCallback(async () => {
+    setIsSuggesting(true);
+    setSuggestionError(null);
+
+    try {
+      // Get root node HMW statement
+      const rootNode = mindMapNodes.find((n) => n.isRoot);
+      if (!rootNode) {
+        setSuggestionError('No root node found');
+        return;
+      }
+
+      // Collect existing theme labels from level-1 nodes
+      const existingThemes = mindMapNodes
+        .filter((n) => n.level === 1)
+        .map((n) => n.label)
+        .filter(Boolean);
+
+      // Call AI suggestion endpoint
+      const response = await fetch('/api/ai/suggest-themes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workshopId,
+          hmwStatement: rootNode.label,
+          existingThemes,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate theme suggestions');
+      }
+
+      const data = await response.json();
+      const themes: string[] = data.themes || [];
+
+      if (themes.length === 0) {
+        setSuggestionError('No themes generated');
+        return;
+      }
+
+      // Add each theme as a level-1 child of root
+      const existingLevel1Count = mindMapNodes.filter((n) => n.level === 1).length;
+
+      themes.forEach((themeLabel, index) => {
+        // Determine theme color based on existing + new count
+        const colorIndex = (existingLevel1Count + index) % THEME_COLORS.length;
+        const themeColor = THEME_COLORS[colorIndex];
+
+        // Create new node
+        const newNodeId = crypto.randomUUID();
+        const newNode: MindMapNodeState = {
+          id: newNodeId,
+          label: themeLabel,
+          themeColorId: themeColor.id,
+          themeColor: themeColor.color,
+          themeBgColor: themeColor.bgColor,
+          isRoot: false,
+          level: 1,
+          parentId: 'root',
+        };
+
+        // Create new edge
+        const newEdge: MindMapEdgeState = {
+          id: `root-${newNodeId}`,
+          source: 'root',
+          target: newNodeId,
+          themeColor: themeColor.color,
+        };
+
+        addMindMapNode(newNode, newEdge);
+      });
+
+      // Fit view to show all nodes after adding themes
+      setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
+    } catch (error) {
+      console.error('Theme suggestion error:', error);
+      setSuggestionError('Failed to generate themes. Please try again.');
+    } finally {
+      setIsSuggesting(false);
+    }
+  }, [mindMapNodes, workshopId, addMindMapNode, fitView]);
+
+  // Check if button should be visible (< 6 level-1 branches)
+  const level1Count = mindMapNodes.filter((n) => n.level === 1).length;
+  const showSuggestButton = level1Count < 6;
+
   return (
     <div className="h-full w-full">
       <ReactFlow
@@ -235,6 +331,30 @@ export function MindMapCanvas({
           }}
           maskColor="rgba(0,0,0,0.1)"
         />
+
+        {showSuggestButton && (
+          <Panel position="top-right" className="!m-3">
+            <div className="bg-background border rounded-lg shadow-sm p-3 space-y-2">
+              <Button
+                onClick={handleSuggestThemes}
+                disabled={isSuggesting}
+                size="sm"
+                variant="outline"
+                className="gap-2"
+              >
+                {isSuggesting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                {isSuggesting ? 'Generating...' : 'Suggest Themes'}
+              </Button>
+              {suggestionError && (
+                <p className="text-xs text-destructive">{suggestionError}</p>
+              )}
+            </div>
+          </Panel>
+        )}
       </ReactFlow>
     </div>
   );
