@@ -167,3 +167,8 @@
 .react-flow__node.dragging {
   box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.15), -8px 8px 0 rgba(0, 0, 0, 0.04);
 }
+
+/* Canvas background with faint grey tint */
+.react-flow__renderer {
+  background-color: #fafafa !important;
+}

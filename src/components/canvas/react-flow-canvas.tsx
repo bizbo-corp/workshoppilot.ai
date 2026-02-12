@@ -1126,7 +1126,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         <Background
           variant={BackgroundVariant.Dots}
           gap={20}
-          size={1}
+          size={1.5}
           color="#d1d5db"
         />
         <Controls
