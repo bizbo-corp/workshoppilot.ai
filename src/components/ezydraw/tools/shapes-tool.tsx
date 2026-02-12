@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react';
 import { Rect, Circle as KonvaEllipse, Arrow, Line as KonvaLine, Group } from 'react-konva';
-import type { KonvaEventObject } from 'konva/lib/Node';
 import { useDrawingStore } from '@/providers/drawing-store-provider';
 import type {
   DrawingElement,
@@ -10,15 +9,9 @@ import type {
   CircleElement,
   ArrowElement,
   LineElement,
-  DiamondElement
+  DiamondElement,
 } from '@/lib/drawing/types';
-
-/**
- * ShapesTool - Handles creation of rectangles, circles, arrows, lines, and diamonds
- * via click-drag interaction.
- *
- * State pattern: Uses refs for performance (no 60fps re-renders during drag)
- */
+import type { PointerData } from './pencil-tool';
 
 type ShapePreview = {
   type: 'rectangle' | 'circle' | 'arrow' | 'line' | 'diamond';
@@ -33,43 +26,26 @@ type ShapePreview = {
   points?: number[];
 };
 
+const SHAPE_TOOL_NAMES = ['rectangle', 'circle', 'diamond', 'arrow', 'line'];
+
 /**
- * Hook that provides shape tool handlers and preview rendering
+ * Hook for shape tools — accepts simple {x,y} data, not Konva events.
  */
 export const useShapesTool = () => {
-  const { activeTool, strokeColor, fillColor, strokeWidth, addElement } = useDrawingStore(
-    (state) => ({
-      activeTool: state.activeTool,
-      strokeColor: state.strokeColor,
-      fillColor: state.fillColor,
-      strokeWidth: state.strokeWidth,
-      addElement: state.addElement,
-    })
-  );
+  const activeTool = useDrawingStore((s) => s.activeTool);
+  const strokeColor = useDrawingStore((s) => s.strokeColor);
+  const fillColor = useDrawingStore((s) => s.fillColor);
+  const strokeWidth = useDrawingStore((s) => s.strokeWidth);
+  const addElement = useDrawingStore((s) => s.addElement);
 
-  // Refs for performance - avoid re-renders during drag
   const isDrawingRef = useRef(false);
   const startPointRef = useRef({ x: 0, y: 0 });
   const previewShapeRef = useRef<ShapePreview | null>(null);
 
-  // Force update trigger for preview rendering
   const [, setForceUpdate] = useState(0);
 
-  const handlePointerDown = (e: KonvaEventObject<PointerEvent>) => {
-    const shapeTools: Array<typeof activeTool> = [
-      'rectangle',
-      'circle',
-      'diamond',
-      'arrow',
-      'line',
-    ];
-
-    if (!shapeTools.includes(activeTool)) return;
-
-    const stage = e.target.getStage();
-    const pos = stage?.getPointerPosition();
-
-    if (!pos) return;
+  const handleDown = (pos: PointerData) => {
+    if (!SHAPE_TOOL_NAMES.includes(activeTool)) return;
 
     isDrawingRef.current = true;
     startPointRef.current = { x: pos.x, y: pos.y };
@@ -78,61 +54,41 @@ export const useShapesTool = () => {
       x: pos.x,
       y: pos.y,
     };
-
-    e.evt.preventDefault();
   };
 
-  const handlePointerMove = (e: KonvaEventObject<PointerEvent>) => {
+  const handleMove = (pos: PointerData) => {
     if (!isDrawingRef.current || !previewShapeRef.current) return;
-
-    const stage = e.target.getStage();
-    const pos = stage?.getPointerPosition();
-
-    if (!pos) return;
 
     const startX = startPointRef.current.x;
     const startY = startPointRef.current.y;
     const currentX = pos.x;
     const currentY = pos.y;
-
     const type = previewShapeRef.current.type;
 
     switch (type) {
       case 'rectangle':
       case 'diamond': {
-        const width = Math.abs(currentX - startX);
-        const height = Math.abs(currentY - startY);
-        const x = Math.min(startX, currentX);
-        const y = Math.min(startY, currentY);
-
         previewShapeRef.current = {
           type,
-          x,
-          y,
-          width,
-          height,
+          x: Math.min(startX, currentX),
+          y: Math.min(startY, currentY),
+          width: Math.abs(currentX - startX),
+          height: Math.abs(currentY - startY),
         };
         break;
       }
-
       case 'circle': {
-        const radiusX = Math.abs(currentX - startX) / 2;
-        const radiusY = Math.abs(currentY - startY) / 2;
-        const centerX = (startX + currentX) / 2;
-        const centerY = (startY + currentY) / 2;
-
         previewShapeRef.current = {
           type: 'circle',
           x: 0,
           y: 0,
-          centerX,
-          centerY,
-          radiusX,
-          radiusY,
+          centerX: (startX + currentX) / 2,
+          centerY: (startY + currentY) / 2,
+          radiusX: Math.abs(currentX - startX) / 2,
+          radiusY: Math.abs(currentY - startY) / 2,
         };
         break;
       }
-
       case 'arrow':
       case 'line': {
         previewShapeRef.current = {
@@ -148,7 +104,7 @@ export const useShapesTool = () => {
     setForceUpdate((n) => n + 1);
   };
 
-  const handlePointerUp = () => {
+  const handleUp = () => {
     if (!isDrawingRef.current || !previewShapeRef.current) return;
 
     const preview = previewShapeRef.current;
@@ -170,97 +126,50 @@ export const useShapesTool = () => {
       case 'rectangle':
         if (preview.width !== undefined && preview.height !== undefined) {
           element = {
-            type: 'rectangle',
-            x: preview.x,
-            y: preview.y,
-            rotation: 0,
-            scaleX: 1,
-            scaleY: 1,
-            opacity: 1,
-            width: preview.width,
-            height: preview.height,
-            fill: fillColor,
-            stroke: strokeColor,
-            strokeWidth,
+            type: 'rectangle', x: preview.x, y: preview.y,
+            rotation: 0, scaleX: 1, scaleY: 1, opacity: 1,
+            width: preview.width, height: preview.height,
+            fill: fillColor, stroke: strokeColor, strokeWidth,
           } as Omit<RectangleElement, 'id'>;
         }
         break;
-
       case 'circle':
-        if (
-          preview.centerX !== undefined &&
-          preview.centerY !== undefined &&
-          preview.radiusX !== undefined &&
-          preview.radiusY !== undefined
-        ) {
+        if (preview.centerX !== undefined && preview.centerY !== undefined &&
+            preview.radiusX !== undefined && preview.radiusY !== undefined) {
           element = {
-            type: 'circle',
-            x: preview.centerX,
-            y: preview.centerY,
-            rotation: 0,
-            scaleX: 1,
-            scaleY: 1,
-            opacity: 1,
-            radiusX: preview.radiusX,
-            radiusY: preview.radiusY,
-            fill: fillColor,
-            stroke: strokeColor,
-            strokeWidth,
+            type: 'circle', x: preview.centerX, y: preview.centerY,
+            rotation: 0, scaleX: 1, scaleY: 1, opacity: 1,
+            radiusX: preview.radiusX, radiusY: preview.radiusY,
+            fill: fillColor, stroke: strokeColor, strokeWidth,
           } as Omit<CircleElement, 'id'>;
         }
         break;
-
       case 'arrow':
         if (preview.points && preview.points.length === 4) {
           element = {
-            type: 'arrow',
-            x: 0,
-            y: 0,
-            rotation: 0,
-            scaleX: 1,
-            scaleY: 1,
-            opacity: 1,
-            points: preview.points,
-            stroke: strokeColor,
-            strokeWidth,
-            pointerLength: 10,
-            pointerWidth: 10,
+            type: 'arrow', x: 0, y: 0,
+            rotation: 0, scaleX: 1, scaleY: 1, opacity: 1,
+            points: preview.points, stroke: strokeColor, strokeWidth,
+            pointerLength: 10, pointerWidth: 10,
           } as Omit<ArrowElement, 'id'>;
         }
         break;
-
       case 'line':
         if (preview.points && preview.points.length === 4) {
           element = {
-            type: 'line',
-            x: 0,
-            y: 0,
-            rotation: 0,
-            scaleX: 1,
-            scaleY: 1,
-            opacity: 1,
-            points: preview.points,
-            stroke: strokeColor,
-            strokeWidth,
+            type: 'line', x: 0, y: 0,
+            rotation: 0, scaleX: 1, scaleY: 1, opacity: 1,
+            points: preview.points, stroke: strokeColor, strokeWidth,
           } as Omit<LineElement, 'id'>;
         }
         break;
-
       case 'diamond':
         if (preview.width !== undefined && preview.height !== undefined) {
           element = {
-            type: 'diamond',
-            x: preview.x,
-            y: preview.y,
-            rotation: 0,
-            scaleX: 1,
-            scaleY: 1,
-            opacity: 1,
-            width: preview.width,
-            height: preview.height,
-            fill: fillColor,
-            stroke: strokeColor,
-            strokeWidth,
+            type: 'diamond', x: preview.x, y: preview.y,
+            rotation: 0, scaleX: 1, scaleY: 1, opacity: 1,
+            width: preview.width, height: preview.height,
+            fill: fillColor, stroke: strokeColor, strokeWidth,
           } as Omit<DiamondElement, 'id'>;
         }
         break;
@@ -270,16 +179,15 @@ export const useShapesTool = () => {
       addElement(element);
     }
 
-    // Reset refs
     isDrawingRef.current = false;
     previewShapeRef.current = null;
     setForceUpdate((n) => n + 1);
   };
 
   return {
-    handlePointerDown,
-    handlePointerMove,
-    handlePointerUp,
+    handleDown,
+    handleMove,
+    handleUp,
     previewShape: previewShapeRef.current,
     strokeColor,
     fillColor,
@@ -288,95 +196,44 @@ export const useShapesTool = () => {
 };
 
 /**
- * Component that renders the shape preview during drag
+ * Renders shape preview during drag.
  */
-export const ShapesTool = () => {
-  const { previewShape, strokeColor, fillColor, strokeWidth } = useShapesTool();
-
+export const ShapesToolPreview = ({
+  previewShape,
+  strokeColor,
+  fillColor,
+  strokeWidth,
+}: {
+  previewShape: ShapePreview | null;
+  strokeColor: string;
+  fillColor: string;
+  strokeWidth: number;
+}) => {
   if (!previewShape) return null;
 
   return (
     <Group>
       {previewShape.type === 'rectangle' && previewShape.width !== undefined && previewShape.height !== undefined && (
-        <Rect
-          x={previewShape.x}
-          y={previewShape.y}
-          width={previewShape.width}
-          height={previewShape.height}
-          fill={fillColor}
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
-          dash={[5, 5]}
-          opacity={0.6}
-          listening={false}
-        />
+        <Rect x={previewShape.x} y={previewShape.y} width={previewShape.width} height={previewShape.height}
+          fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} dash={[5, 5]} opacity={0.6} listening={false} />
       )}
-
-      {previewShape.type === 'circle' &&
-        previewShape.centerX !== undefined &&
-        previewShape.centerY !== undefined &&
-        previewShape.radiusX !== undefined &&
-        previewShape.radiusY !== undefined && (
-          <KonvaEllipse
-            x={previewShape.centerX}
-            y={previewShape.centerY}
-            radiusX={previewShape.radiusX}
-            radiusY={previewShape.radiusY}
-            fill={fillColor}
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-            dash={[5, 5]}
-            opacity={0.6}
-            listening={false}
-          />
-        )}
-
+      {previewShape.type === 'circle' && previewShape.centerX !== undefined && previewShape.centerY !== undefined &&
+        previewShape.radiusX !== undefined && previewShape.radiusY !== undefined && (
+        <KonvaEllipse x={previewShape.centerX} y={previewShape.centerY} radiusX={previewShape.radiusX} radiusY={previewShape.radiusY}
+          fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} dash={[5, 5]} opacity={0.6} listening={false} />
+      )}
       {previewShape.type === 'arrow' && previewShape.points && (
-        <Arrow
-          points={previewShape.points}
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
-          pointerLength={10}
-          pointerWidth={10}
-          dash={[5, 5]}
-          opacity={0.6}
-          listening={false}
-        />
+        <Arrow points={previewShape.points} stroke={strokeColor} strokeWidth={strokeWidth}
+          pointerLength={10} pointerWidth={10} dash={[5, 5]} opacity={0.6} listening={false} />
       )}
-
       {previewShape.type === 'line' && previewShape.points && (
-        <KonvaLine
-          points={previewShape.points}
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
-          dash={[5, 5]}
-          opacity={0.6}
-          listening={false}
-        />
+        <KonvaLine points={previewShape.points} stroke={strokeColor} strokeWidth={strokeWidth}
+          dash={[5, 5]} opacity={0.6} listening={false} />
       )}
-
       {previewShape.type === 'diamond' && previewShape.width !== undefined && previewShape.height !== undefined && (
-        <KonvaLine
-          x={previewShape.x}
-          y={previewShape.y}
-          points={[
-            previewShape.width / 2,
-            0,
-            previewShape.width,
-            previewShape.height / 2,
-            previewShape.width / 2,
-            previewShape.height,
-            0,
-            previewShape.height / 2,
-          ]}
-          closed={true}
-          fill={fillColor}
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
-          dash={[5, 5]}
-          opacity={0.6}
-          listening={false}
-        />
+        <KonvaLine x={previewShape.x} y={previewShape.y}
+          points={[previewShape.width / 2, 0, previewShape.width, previewShape.height / 2, previewShape.width / 2, previewShape.height, 0, previewShape.height / 2]}
+          closed={true} fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth} dash={[5, 5]} opacity={0.6} listening={false} />
       )}
     </Group>
   );

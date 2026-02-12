@@ -74,7 +74,7 @@ export function EzyDrawToolbar({ onSave, onCancel }: EzyDrawToolbarProps) {
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-10 flex h-12 items-center gap-1 border-b bg-white/95 px-3 backdrop-blur">
+    <div className="z-10 flex h-12 shrink-0 items-center gap-1 border-b bg-white/95 px-3 backdrop-blur dark:bg-zinc-900/95">
       {/* Left section: Tool buttons */}
       <div className="flex items-center gap-0.5">
         {TOOL_BUTTONS.map(({ tool, icon: Icon, label }) => (

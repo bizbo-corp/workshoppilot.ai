@@ -43,7 +43,7 @@ export function EzyDrawModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="max-w-[100vw] max-h-[100vh] w-screen h-screen p-0 rounded-none border-0 gap-0"
+        className="max-w-[100vw] sm:max-w-[100vw] max-h-[100vh] w-screen h-screen p-0 rounded-none border-0 gap-0 translate-x-[-50%] translate-y-[-50%]"
         showCloseButton={false}
       >
         <DialogTitle className="sr-only">EzyDraw - Drawing Canvas</DialogTitle>
