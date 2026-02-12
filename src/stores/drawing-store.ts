@@ -24,8 +24,12 @@ export type DrawingState = {
 
 export type DrawingActions = {
   addElement: (element: Omit<DrawingElement, 'id'>) => void;
+  addElements: (elements: Omit<DrawingElement, 'id'>[]) => void;
   updateElement: (id: string, updates: Partial<DrawingElement>) => void;
   deleteElement: (id: string) => void;
+  deleteElementGroup: (groupId: string) => void;
+  updateElementGroup: (groupId: string, updates: Partial<DrawingElement>) => void;
+  moveElementGroup: (groupId: string, deltaX: number, deltaY: number) => void;
   setElements: (elements: DrawingElement[]) => void;
   setActiveTool: (tool: DrawingTool) => void;
   setStrokeColor: (color: string) => void;
@@ -82,6 +86,24 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
         });
       },
 
+      addElements: (elements) => {
+        const newElements = elements.map((element) => ({
+          ...element,
+          id: createElementId(),
+        } as DrawingElement));
+
+        set((state) => {
+          const updatedElements = [...state.elements, ...newElements];
+          history.push(updatedElements);
+
+          return {
+            elements: updatedElements,
+            canUndo: history.canUndo,
+            canRedo: history.canRedo,
+          };
+        });
+      },
+
       updateElement: (id, updates) => {
         set((state) => {
           const newElements = state.elements.map((element) =>
@@ -105,6 +127,56 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
           return {
             elements: newElements,
             selectedElementId: state.selectedElementId === id ? null : state.selectedElementId,
+            canUndo: history.canUndo,
+            canRedo: history.canRedo,
+          };
+        });
+      },
+
+      deleteElementGroup: (groupId) => {
+        set((state) => {
+          const newElements = state.elements.filter((element) => element.groupId !== groupId);
+          history.push(newElements);
+
+          // Clear selection if selected element was in deleted group
+          const wasSelectedInGroup = state.selectedElementId &&
+            state.elements.find((el) => el.id === state.selectedElementId)?.groupId === groupId;
+
+          return {
+            elements: newElements,
+            selectedElementId: wasSelectedInGroup ? null : state.selectedElementId,
+            canUndo: history.canUndo,
+            canRedo: history.canRedo,
+          };
+        });
+      },
+
+      updateElementGroup: (groupId, updates) => {
+        set((state) => {
+          const newElements = state.elements.map((element) =>
+            element.groupId === groupId ? ({ ...element, ...updates } as DrawingElement) : element
+          );
+          history.push(newElements);
+
+          return {
+            elements: newElements,
+            canUndo: history.canUndo,
+            canRedo: history.canRedo,
+          };
+        });
+      },
+
+      moveElementGroup: (groupId, deltaX, deltaY) => {
+        set((state) => {
+          const newElements = state.elements.map((element) =>
+            element.groupId === groupId
+              ? ({ ...element, x: element.x + deltaX, y: element.y + deltaY } as DrawingElement)
+              : element
+          );
+          history.push(newElements);
+
+          return {
+            elements: newElements,
             canUndo: history.canUndo,
             canRedo: history.canRedo,
           };
