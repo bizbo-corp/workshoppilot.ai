@@ -95,12 +95,12 @@ See `milestones/v1.2-ROADMAP.md` for full details.
 **Plans**: 6 plans
 
 Plans:
-- [ ] 25-01-PLAN.md — Install deps, TypeScript types, Zustand drawing store, history manager
-- [ ] 25-02-PLAN.md — Fullscreen modal, Konva Stage, toolbar, lazy-load wrapper
-- [ ] 25-03-PLAN.md — Freehand pencil tool with perfect-freehand velocity strokes
-- [ ] 25-04-PLAN.md — Shapes tool (rectangle, circle, arrow, line, diamond) via click-drag
-- [ ] 25-05-PLAN.md — Select/move/resize, text labels, eraser tools
-- [ ] 25-06-PLAN.md — PNG export, undo/redo wiring, clear canvas, human verification
+- [x] 25-01-PLAN.md — Install deps, TypeScript types, Zustand drawing store, history manager
+- [x] 25-02-PLAN.md — Fullscreen modal, Konva Stage, toolbar, lazy-load wrapper
+- [x] 25-03-PLAN.md — Freehand pencil tool with perfect-freehand velocity strokes
+- [x] 25-04-PLAN.md — Shapes tool (rectangle, circle, arrow, line, diamond) via click-drag
+- [x] 25-05-PLAN.md — Select/move/resize, text labels, eraser tools
+- [x] 25-06-PLAN.md — PNG export, undo/redo wiring, clear canvas, human verification
 
 #### Phase 26: Drawing-Canvas Integration
 
@@ -215,7 +215,7 @@ Plans:
 | 7-14 | v1.0 | 25/25 | Complete | 2026-02-10 |
 | 15-20 | v1.1 | 15/15 | Complete | 2026-02-11 |
 | 21-24 | v1.2 | 9/9 | Complete | 2026-02-12 |
-| 25. EzyDraw Foundation | v1.3 | 0/6 | Not started | - |
+| 25. EzyDraw Foundation | v1.3 | 6/6 | Complete | 2026-02-12 |
 | 26. Drawing-Canvas Integration | v1.3 | 0/4 | Not started | - |
 | 27. UI Kit & Advanced Tools | v1.3 | 0/3 | Not started | - |
 | 28. Mind Map & Crazy 8s Canvases | v1.3 | 0/6 | Not started | - |
