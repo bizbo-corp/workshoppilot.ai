@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 ## Current Position
 
 Phase: 30 of 35 (UX Polish)
-Plan: 3 of TBD in current phase
+Plan: 1 of TBD in current phase (just completed)
 Status: In progress
-Last activity: 2026-02-12 — Completed plan 30-02 (Visible Panel Borders & Grip Handles)
+Last activity: 2026-02-12 — Completed plan 30-01 (Canvas Visual Polish)
 
 Progress: [████████████████████░░░░] 83% (29 of 35 phases complete)
 
@@ -37,10 +37,14 @@ Progress: [████████████████████░░░
 
 **Recent Trend:**
 - v1.3 milestone: 23 plans in 1 day (fastest execution)
-- v1.4 Phase 30-02: 2 min (visible panel borders & grip handles)
+- v1.4 Phase 30-01: 2 min (canvas visual polish)
 - Trend: Accelerating (increased familiarity with codebase and patterns)
 
-*Updated after plan 30-02 completion*
+*Updated after plan 30-01 completion*
+
+| Phase | Duration (s) | Tasks | Files |
+|-------|--------------|-------|-------|
+| 30-ux-polish P01 | 134 | 2 | 3 |
 
 ## Accumulated Context
 
@@ -57,6 +61,8 @@ Recent decisions affecting current work:
 - Phase 25-29: EzyDraw as standalone modal with dual storage (vector JSON + PNG in Vercel Blob)
 - Upcoming: Sharp consultant + charismatic AI personality (direct, efficient, "you got this!" energy)
 - Upcoming: Output panel as localhost-only dev tool (canvas is user-facing view)
+- [Phase 30-ux-polish]: Ghost trail effect uses dual box-shadows for depth perception on post-it drag
+- [Phase 30-ux-polish]: Canvas background uses #fafafa for subtle depth without compromising dot visibility
 
 ### Pending Todos
 
@@ -77,7 +83,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed plan 30-02 (Visible Panel Borders & Grip Handles)
+Stopped at: Completed plan 30-01 (Canvas Visual Polish)
 Resume file: None
 
 **Next action:** Continue Phase 30 UX Polish with next plan
