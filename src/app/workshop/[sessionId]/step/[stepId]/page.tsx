@@ -7,7 +7,7 @@ import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
 import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
 import { loadCanvasState } from "@/actions/canvas-actions";
-import type { PostIt, GridColumn } from "@/stores/canvas-store";
+import type { PostIt, GridColumn, DrawingNode } from "@/stores/canvas-store";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
 
 interface StepPageProps {
@@ -93,6 +93,7 @@ export default async function StepPage({ params }: StepPageProps) {
   const canvasData = await loadCanvasState(session.workshop.id, step.id);
   let initialCanvasPostIts: PostIt[] = canvasData?.postIts || [];
   const initialGridColumns: GridColumn[] = canvasData?.gridColumns || [];
+  const initialDrawingNodes: DrawingNode[] = canvasData?.drawingNodes || [];
 
   // Lazy migration: if artifact exists but no canvas state, derive initial positions
   if (initialCanvasPostIts.length === 0 && initialArtifact && step) {
@@ -117,7 +118,7 @@ export default async function StepPage({ params }: StepPageProps) {
 
   return (
     <div className="h-full">
-      <CanvasStoreProvider initialPostIts={initialCanvasPostIts} initialGridColumns={initialGridColumns}>
+      <CanvasStoreProvider initialPostIts={initialCanvasPostIts} initialGridColumns={initialGridColumns} initialDrawingNodes={initialDrawingNodes}>
         <StepContainer
           stepOrder={stepNumber}
           sessionId={sessionId}
