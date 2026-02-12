@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 ## Current Position
 
-Phase: 25 of 29 (EzyDraw Foundation) — COMPLETE
-Plan: 6 of 6 in current phase
-Status: Complete
-Last activity: 2026-02-12 — Completed phase 25: EzyDraw Foundation (all 6 plans + human verification)
+Phase: 26 of 29 (Drawing-Canvas Integration) — IN PROGRESS
+Plan: 2 of 4 in current phase
+Status: Active
+Last activity: 2026-02-12 — Completed 26-02: DrawingImageNode & Canvas Integration
 
-Progress: [██████████████████████████████████████░░] 85% (74/91 plans complete across project)
+Progress: [██████████████████████████████████████░░] 84% (76/91 plans complete across project)
 
 ## Completed Milestones
 
@@ -27,8 +27,8 @@ Progress: [███████████████████████
 | v1.2 Canvas Whiteboard | 21-24 | 9 | 2026-02-12 |
 
 **Cumulative stats:**
-- 74 plans completed (25 phases across 4 milestones + v1.3 in progress)
-- ~19,200+ lines of TypeScript across ~320 files
+- 76 plans completed (25 phases across 4 milestones + v1.3 in progress)
+- ~19,500+ lines of TypeScript across ~321 files
 - 6 days total (2026-02-07 → 2026-02-12)
 
 **Velocity:**
@@ -65,6 +65,9 @@ Progress: [███████████████████████
 - **SelectTool approach**: Read element from store (not node attrs) for type-aware transform logic; shapes normalize scale to 1, strokes keep scale
 - **Text editing pattern**: HTML textarea overlay (Konva standard) instead of Konva.TextPath for native editing UX
 - **Element interactivity**: commonProps pattern spreads id, listening, draggable, onClick, onDragEnd to all elements for consistent behavior
+- **Drawing persistence (Phase 26)**: Use simplify-js for Douglas-Peucker algorithm instead of custom implementation
+- **Drawing storage (Phase 26)**: Store drawings as JSONB array in stepArtifacts (not separate table) for atomic workshop data
+- **DrawingImageNode display (Phase 26)**: CSS background-image for PNG display (no Konva imports) preserves 600KB bundle budget
 
 ### Known Tech Debt
 
@@ -91,10 +94,10 @@ Progress: [███████████████████████
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Phase 25 complete
+Stopped at: Completed 26-02: DrawingImageNode & Canvas Integration
 Resume file: None
 
-**Next action:** `/gsd:plan-phase 26` to plan Drawing-Canvas Integration
+**Next action:** Execute plan 26-03 (Drawing Edit Flow)
 
 ## Performance Metrics
 
@@ -106,8 +109,10 @@ Resume file: None
 | 25 | 04 | 297s | 2 | 1 created, 1 modified | 2026-02-12 |
 | 25 | 05 | 258s | 2 | 3 created, 1 modified | 2026-02-12 |
 | 25 | 06 | ~1800s | 2 | 1 created, 6 modified | 2026-02-12 |
+| 26 | 01 | 143s | 2 | 3 created | 2026-02-12 |
+| 26 | 02 | 180s | 2 | 1 created, 2 modified | 2026-02-12 |
 
 ---
 
-*Last updated: 2026-02-12 after completing phase 25 (EzyDraw Foundation)*
+*Last updated: 2026-02-12 after completing plan 26-02 (DrawingImageNode & Canvas Integration)*
 
