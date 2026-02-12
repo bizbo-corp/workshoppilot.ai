@@ -144,8 +144,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 32-01-PLAN.md -- Soft delete schema (deletedAt column), deleteWorkshops server action, dashboard query filter
-- [ ] 32-02-PLAN.md -- Dashboard selection UI (checkboxes, select all, delete button, confirmation dialog)
+- [x] 32-01-PLAN.md -- Soft delete schema (deletedAt column), deleteWorkshops server action, dashboard query filter
+- [x] 32-02-PLAN.md -- Dashboard selection UI (checkboxes, select all, delete button, confirmation dialog)
 
 #### Phase 33: AI Personality
 
@@ -219,13 +219,13 @@ Plans:
 | 29. Visual Concept Cards | v1.3 | 4/4 | Complete | 2026-02-12 |
 | 30. UX Polish | v1.4 | 3/3 | Complete | 2026-02-13 |
 | 31. Output Panel Retirement | v1.4 | 1/1 | Complete | 2026-02-13 |
-| 32. Workshop Management | v1.4 | 0/2 | Planned | - |
+| 32. Workshop Management | v1.4 | 2/2 | Complete | 2026-02-13 |
 | 33. AI Personality | v1.4 | 0/TBD | Not started | - |
 | 34. Seed Data | v1.4 | 0/TBD | Not started | - |
 | 35. E2E Testing | v1.4 | 0/TBD | Not started | - |
 
 **Total v1.3:** 23 plans across 5 phases
-**Total project:** 91 plans across 29 phases, 5 milestones
+**Total project:** 93 plans across 29 phases, 5 milestones
 
 ---
 *Last updated: 2026-02-13 after Phase 31 planning*
