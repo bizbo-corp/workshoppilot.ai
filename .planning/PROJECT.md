@@ -52,24 +52,32 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 
 ### Active
 
-#### Future — MMP (Visual & Collaborative)
+#### Current — v1.4 Personal Workshop Polish
+- [ ] UX bug fixes: post-it drag feedback, cursor states, panel borders/grips, canvas dot BG, chat auto-scroll, journey map duplicate card bug
+- [ ] Output panel retirement: hide for users, localhost-only dev toggle in footer
+- [ ] AI personality (soul.md): sharp consultant + charismatic tone, message cadence/splitting, canvas bridging
+- [ ] Comprehensive PawPal seed data across all 10 steps including canvas state (CLI-only)
+- [ ] Workshop deletion: select + delete on dashboard with soft delete
+- [ ] End-to-end workshop testing pass across all 10 steps
+
+#### Future — MMP (Visual & Solo Polish)
 - [ ] Visual stakeholder radar chart
 - [ ] Guided persona builder with per-field regeneration
 - [ ] Billboard Hero exercise (text-based pitch test + EzyDraw visuals)
 - [ ] Billboard template layouts
-- [ ] Dot voting for idea selection
 - [ ] Timer function for time-boxed exercises
-- [ ] Basic multi-user collaboration
-- [ ] Brain Writing with real collaboration (multi-user)
 - [ ] Responsive tablet support
 - [ ] OAuth (Google)
 - [ ] Video explanations per step
 - [ ] Build Pack export (PRDs, user stories, tech specs for AI coders)
 
 #### Future — FFP (Full Platform)
+- [ ] Dot voting for idea selection
+- [ ] Basic multi-user collaboration
+- [ ] Brain Writing with real collaboration (multi-user)
+- [ ] Real-time multiplayer (WebSockets)
 - [ ] EzyDraw AI Enhance (rough sketch → clean wireframe)
 - [ ] AI + canvas working side-by-side (auto-suggest, auto-complete nodes)
-- [ ] Real-time multiplayer (WebSockets)
 - [ ] Voice input
 - [ ] AI pattern analysis and gap detection
 - [ ] Concept comparison (side-by-side evaluation)
@@ -119,7 +127,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - **AI Provider**: Google Gemini API (gemini-2.0-flash) — chosen for cost/capability balance
 - **Entry Friction**: Must be near-zero — user types idea and starts immediately
 - **Desktop-First**: MVP targets desktop browsers; mobile deferred to MMP/FFP
-- **Single Player First**: v0.5-v1.3 are single-user; collaboration starts at MMP
+- **Single Player First**: v0.5-v1.4 are single-user; collaboration deferred to FFP
 - **Existing Codebase**: ~25,400 lines TypeScript across ~352 files, 29 phases shipped, production at workshoppilot.ai
 
 ## Key Decisions
@@ -150,7 +158,10 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | EzyDraw as standalone modal (not ReactFlow extension) | Drawing needs different tools than graph editing; modal outputs image to canvas node | ✓ Good — clean separation, dual storage works well |
 | Konva.js for EzyDraw (not tldraw SDK) | ~98KB vs ~500KB for tldraw; Konva gives fine-grained control for custom tools | ✓ Good — bundle budget preserved |
 | Pull EzyDraw from FFP to v1.3 | Sketching is fundamental to Ideation exercises (Crazy 8s). Text descriptions miss the essence of design thinking | ✓ Good — visual ideation transforms Step 8/9 experience |
-| Skip Brain Writing in v1.3 | Brain Writing needs real multi-user collaboration to deliver value; AI simulation insufficient for visual mode | ✓ Good — deferred to MMP |
+| Skip Brain Writing in v1.3 | Brain Writing needs real multi-user collaboration to deliver value; AI simulation insufficient for visual mode | ✓ Good — deferred to FFP |
+| Defer all collaboration to FFP | Solo workshop experience must be polished first; multi-user adds complexity without validating core value | ✓ Good — focus on personal tool quality |
+| Sharp consultant + charismatic AI personality | Direct, efficient facilitation with "you got this!" energy; matches founder's facilitation style | — Pending |
+| Output panel as localhost-only dev tool | Canvas is the user-facing view; output panel is debug info for developer only | — Pending |
 | Dual storage for drawings (vector JSON + PNG) | Vector JSON enables re-editing, PNG enables fast display and canvas integration | ✓ Good — no Konva imports for display |
 | Dagre for mind map auto-layout | Tree layout algorithm prevents node overlap without manual positioning | ✓ Good — handles 3 levels cleanly |
 | AI concept generation from workshop context | Queries 4 prior steps for evidence-based SWOT/feasibility, not generic output | ✓ Good — grounded in actual workshop data |
@@ -170,7 +181,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - CRON_SECRET needs to be configured in Vercel dashboard for production cron warming
 - Mobile grid optimization deferred (may need tablet-first approach)
 
-**Next milestone:** TBD — potential directions: Build Pack export, collaboration features, Step 10 validation canvas, or production polish
+**Current milestone:** v1.4 Personal Workshop Polish — UX fixes, AI personality, output panel retirement, seed data, workshop management, E2E testing
 
 ---
-*Last updated: 2026-02-12 after v1.3 milestone*
+*Last updated: 2026-02-13 after v1.4 milestone start*
