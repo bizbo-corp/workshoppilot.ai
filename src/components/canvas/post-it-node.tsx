@@ -99,14 +99,14 @@ export const PostItNode = memo(({ data, selected, id }: NodeProps<PostItNode>) =
         'cursor-pointer',
         selected && 'ring-2 ring-blue-500 ring-offset-1',
         data.isEditing && 'ring-2 ring-blue-400 ring-offset-1',
-        data.dragging && 'shadow-xl'
+        data.dragging && 'shadow-xl ring-2 ring-blue-300/50 rotate-[2deg]'
       )}
       style={{
         width: '120px',
         minHeight: '120px',
         touchAction: 'none',
-        opacity: data.dragging ? 0.85 : 1,
-        transform: data.dragging ? 'scale(1.03)' : 'none',
+        opacity: data.dragging ? 0.7 : 1,
+        transform: data.dragging ? 'scale(1.05)' : 'none',
         transition: 'opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease',
       }}
     >

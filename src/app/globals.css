@@ -144,9 +144,12 @@
 /* Canvas cursor overrides — ReactFlow sets cursors on internal elements,
    so we need to force-override via a parent class on the <ReactFlow> element. */
 .react-flow.cursor-pointer-tool,
-.react-flow.cursor-pointer-tool .react-flow__pane,
-.react-flow.cursor-pointer-tool .react-flow__node {
+.react-flow.cursor-pointer-tool .react-flow__pane {
   cursor: default !important;
+}
+
+.react-flow.cursor-pointer-tool .react-flow__node {
+  cursor: pointer !important;
 }
 
 .react-flow.cursor-hand-tool,
@@ -158,4 +161,9 @@
 .react-flow.cursor-dragging .react-flow__pane,
 .react-flow.cursor-dragging .react-flow__node {
   cursor: grabbing !important;
+}
+
+/* Post-it drag ghost trail effect */
+.react-flow__node.dragging {
+  box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.15), -8px 8px 0 rgba(0, 0, 0, 0.04);
 }
