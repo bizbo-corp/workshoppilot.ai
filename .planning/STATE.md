@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 29 of 29 (Visual Concept Cards) — IN PROGRESS
-Plan: 1 of 4 in current phase
-Status: Active (29-01 complete: ConceptCardNode foundation)
-Last activity: 2026-02-12 — Completed 29-01-PLAN.md: ConceptCardNode component, types, and canvas store CRUD
+Plan: 3 of 4 in current phase
+Status: Active (29-03 complete: AI concept generation endpoint)
+Last activity: 2026-02-12 — Completed 29-03-PLAN.md: AI concept generation from workshop context
 
-Progress: [█████████████████████████████████████████░] 96% (88/91 plans complete across project)
+Progress: [█████████████████████████████████████████░] 97% (90/91 plans complete across project)
 
 ## Completed Milestones
 
@@ -27,8 +27,8 @@ Progress: [███████████████████████
 | v1.2 Canvas Whiteboard | 21-24 | 9 | 2026-02-12 |
 
 **Cumulative stats:**
-- 88 plans completed (28 phases across 4 milestones + v1.3 Phase 29 in progress)
-- ~22,700+ lines of TypeScript across ~347 files
+- 90 plans completed (28 phases across 4 milestones + v1.3 Phase 29 in progress)
+- ~23,000+ lines of TypeScript across ~348 files
 - 6 days total (2026-02-07 → 2026-02-12)
 
 **Velocity:**
@@ -36,7 +36,7 @@ Progress: [███████████████████████
 - v1.0: 3 days, 8 phases, 25 plans (~25 min/plan)
 - v1.1: 2 days, 6 phases, 15 plans (~25 min/plan)
 - v1.2: 2 days, 4 phases, 9 plans (~3 min/plan average)
-- v1.3: Phases 25-28 complete (19/23 plans), Phase 29 1/4 plans (~5 min/plan average)
+- v1.3: Phases 25-28 complete (19/23 plans), Phase 29 3/4 plans (~3 min/plan average)
 
 ## Accumulated Context
 
@@ -53,6 +53,9 @@ Progress: [███████████████████████
 
 ### Recent Decisions (v1.3)
 
+- **Multi-step context loading for AI concept generation** (Phase 29-03): Endpoint queries 4 prior steps (define, sense-making, challenge, stakeholder-mapping) to ground AI output in workshop evidence
+- **Temperature 0.5 for structured AI output** (Phase 29-03): Lower than sketch prompts (0.7) for consistent JSON generation with exact field structure
+- **Global regex for prompt token replacement** (Phase 29-03): Use /g flag since some tokens appear multiple times in CONCEPT_GENERATION_PROMPT
 - **Type alias for ConceptCardData** (Phase 29-01): Used type (not interface) to satisfy ReactFlow's Record<string, unknown> constraint on node data
 - **Grouped feasibility structure** (Phase 29-01): ConceptCardData groups score+rationale per dimension for cleaner component API (vs flat schema fields)
 - **canvasSize prop for constrained contexts** (Phase 28-05): EzyDrawModal accepts optional canvasSize (defaults to fullscreen), DroppableCanvas conditionally applies fixed dimensions or flex-1
@@ -114,10 +117,10 @@ Progress: [███████████████████████
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 29-01-PLAN.md
+Stopped at: Completed 29-03-PLAN.md
 Resume file: None
 
-**Next action:** `/gsd:execute-phase 29` to continue with 29-02-PLAN.md (Canvas Integration)
+**Next action:** `/gsd:execute-phase 29` to continue with 29-04-PLAN.md (Step 9 Integration)
 
 ## Performance Metrics
 
@@ -151,4 +154,6 @@ Resume file: None
 
 *Last updated: 2026-02-12 after completing 29-01 (ConceptCardNode foundation)*
 | Phase 29 P01 | 329 | 2 tasks | 3 files |
+| Phase 29 P03 | 142 | 2 tasks | 2 files |
+| Phase 29 P02 | 186 | 2 tasks | 5 files |
 
