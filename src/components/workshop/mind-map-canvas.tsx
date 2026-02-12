@@ -3,6 +3,7 @@
 import { useMemo, useEffect, useCallback, useState } from 'react';
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   MiniMap,
@@ -12,12 +13,12 @@ import {
   type Edge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Plus, Undo2, Redo2 } from 'lucide-react';
 
 import { MindMapNode } from '@/components/canvas/mind-map-node';
 import { MindMapEdge } from '@/components/canvas/mind-map-edge';
 import { getLayoutedElements } from '@/lib/canvas/mind-map-layout';
-import { useCanvasStore } from '@/providers/canvas-store-provider';
+import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import {
   THEME_COLORS,
   ROOT_COLOR,
@@ -40,7 +41,15 @@ export type MindMapCanvasProps = {
   hmwStatement?: string;
 };
 
-export function MindMapCanvas({
+export function MindMapCanvas(props: MindMapCanvasProps) {
+  return (
+    <ReactFlowProvider>
+      <MindMapCanvasInner {...props} />
+    </ReactFlowProvider>
+  );
+}
+
+function MindMapCanvasInner({
   workshopId,
   stepId,
   hmwStatement,
@@ -56,9 +65,15 @@ export function MindMapCanvas({
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
-  // Initialize with root node if empty
+  const storeApi = useCanvasStoreApi();
+
+  // Undo/redo state
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  // Initialize with root node if empty (always create, fallback label)
   useEffect(() => {
-    if (mindMapNodes.length === 0 && hmwStatement) {
+    if (mindMapNodes.length === 0) {
       const rootNode: MindMapNodeState = {
         id: 'root',
         label: hmwStatement || 'How might we...?',
@@ -72,45 +87,15 @@ export function MindMapCanvas({
     }
   }, [mindMapNodes.length, hmwStatement, setMindMapState]);
 
-  // Convert store state to ReactFlow nodes
-  const rfNodes: Node[] = useMemo(() => {
-    return mindMapNodes.map((nodeState) => ({
-      id: nodeState.id,
-      type: 'mindMapNode',
-      position: { x: 0, y: 0 }, // dagre will recalculate
-      data: {
-        label: nodeState.label,
-        themeColorId: nodeState.themeColorId,
-        themeColor: nodeState.themeColor,
-        themeBgColor: nodeState.themeBgColor,
-        isRoot: nodeState.isRoot,
-        level: nodeState.level,
-        onLabelChange: handleLabelChange,
-        onAddChild: handleAddChild,
-        onDelete: handleDelete,
-      },
-    }));
-  }, [mindMapNodes]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Convert store state to ReactFlow edges
-  const rfEdges: Edge[] = useMemo(() => {
-    return mindMapEdges.map((edgeState) => ({
-      id: edgeState.id,
-      source: edgeState.source,
-      target: edgeState.target,
-      type: 'mindMapEdge',
-      data: {
-        themeColor: edgeState.themeColor,
-      },
-    }));
-  }, [mindMapEdges]);
-
-  // Calculate dagre layout
-  const layoutedNodes = useMemo(() => {
-    if (rfNodes.length === 0) return [];
-    const { nodes } = getLayoutedElements(rfNodes, rfEdges, { direction: 'LR' });
-    return nodes;
-  }, [rfNodes, rfEdges]);
+  // Update root node label when hmwStatement arrives later
+  useEffect(() => {
+    if (hmwStatement && mindMapNodes.length > 0) {
+      const rootNode = mindMapNodes.find((n) => n.isRoot);
+      if (rootNode && rootNode.label === 'How might we...?') {
+        updateMindMapNode('root', { label: hmwStatement });
+      }
+    }
+  }, [hmwStatement, mindMapNodes, updateMindMapNode]);
 
   // Callback: Update node label (no layout recalculation)
   const handleLabelChange = useCallback(
@@ -213,6 +198,46 @@ export function MindMapCanvas({
     [mindMapNodes, mindMapEdges, deleteMindMapNode]
   );
 
+  // Convert store state to ReactFlow nodes
+  const rfNodes: Node[] = useMemo(() => {
+    return mindMapNodes.map((nodeState) => ({
+      id: nodeState.id,
+      type: 'mindMapNode',
+      position: { x: 0, y: 0 }, // dagre will recalculate
+      data: {
+        label: nodeState.label,
+        themeColorId: nodeState.themeColorId,
+        themeColor: nodeState.themeColor,
+        themeBgColor: nodeState.themeBgColor,
+        isRoot: nodeState.isRoot,
+        level: nodeState.level,
+        onLabelChange: handleLabelChange,
+        onAddChild: handleAddChild,
+        onDelete: handleDelete,
+      },
+    }));
+  }, [mindMapNodes, handleLabelChange, handleAddChild, handleDelete]);
+
+  // Convert store state to ReactFlow edges
+  const rfEdges: Edge[] = useMemo(() => {
+    return mindMapEdges.map((edgeState) => ({
+      id: edgeState.id,
+      source: edgeState.source,
+      target: edgeState.target,
+      type: 'mindMapEdge',
+      data: {
+        themeColor: edgeState.themeColor,
+      },
+    }));
+  }, [mindMapEdges]);
+
+  // Calculate dagre layout
+  const layoutedNodes = useMemo(() => {
+    if (rfNodes.length === 0) return [];
+    const { nodes } = getLayoutedElements(rfNodes, rfEdges, { direction: 'LR' });
+    return nodes;
+  }, [rfNodes, rfEdges]);
+
   // Callback: AI theme suggestion
   const handleSuggestThemes = useCallback(async () => {
     setIsSuggesting(true);
@@ -297,6 +322,62 @@ export function MindMapCanvas({
     }
   }, [mindMapNodes, workshopId, addMindMapNode, fitView]);
 
+  // Undo/redo handlers
+  const handleUndo = useCallback(() => {
+    const temporalStore = storeApi.temporal;
+    const pastStates = temporalStore.getState().pastStates;
+    if (pastStates.length > 0) {
+      temporalStore.getState().undo();
+    }
+  }, [storeApi]);
+
+  const handleRedo = useCallback(() => {
+    const temporalStore = storeApi.temporal;
+    const futureStates = temporalStore.getState().futureStates;
+    if (futureStates.length > 0) {
+      temporalStore.getState().redo();
+    }
+  }, [storeApi]);
+
+  // Subscribe to temporal store for undo/redo state
+  useEffect(() => {
+    const temporalStore = storeApi.temporal;
+    const unsubscribe = temporalStore.subscribe((state) => {
+      setCanUndo(state.pastStates.length > 0);
+      setCanRedo(state.futureStates.length > 0);
+    });
+    return unsubscribe;
+  }, [storeApi]);
+
+  // Add a disconnected node (level 1 child of root)
+  const handleAddNode = useCallback(() => {
+    const existingLevel1Nodes = mindMapNodes.filter((n) => n.level === 1);
+    const colorIndex = existingLevel1Nodes.length % THEME_COLORS.length;
+    const themeColor = THEME_COLORS[colorIndex];
+
+    const newNodeId = crypto.randomUUID();
+    const newNode: MindMapNodeState = {
+      id: newNodeId,
+      label: '',
+      themeColorId: themeColor.id,
+      themeColor: themeColor.color,
+      themeBgColor: themeColor.bgColor,
+      isRoot: false,
+      level: 1,
+      parentId: 'root',
+    };
+
+    const newEdge: MindMapEdgeState = {
+      id: `root-${newNodeId}`,
+      source: 'root',
+      target: newNodeId,
+      themeColor: themeColor.color,
+    };
+
+    addMindMapNode(newNode, newEdge);
+    setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
+  }, [mindMapNodes, addMindMapNode, fitView]);
+
   // Check if button should be visible (< 6 level-1 branches)
   const level1Count = mindMapNodes.filter((n) => n.level === 1).length;
   const showSuggestButton = level1Count < 6;
@@ -332,15 +413,25 @@ export function MindMapCanvas({
           maskColor="rgba(0,0,0,0.1)"
         />
 
-        {showSuggestButton && (
-          <Panel position="top-right" className="!m-3">
-            <div className="bg-background border rounded-lg shadow-sm p-3 space-y-2">
+        {/* Bottom toolbar */}
+        <Panel position="bottom-center" className="!mb-4">
+          <div className="flex items-center gap-2 rounded-lg border bg-background p-1.5 shadow-md">
+            <Button
+              onClick={handleAddNode}
+              size="sm"
+              variant="ghost"
+              className="gap-1.5"
+            >
+              <Plus className="h-4 w-4" />
+              Add Node
+            </Button>
+            {showSuggestButton && (
               <Button
                 onClick={handleSuggestThemes}
                 disabled={isSuggesting}
                 size="sm"
-                variant="outline"
-                className="gap-2"
+                variant="ghost"
+                className="gap-1.5"
               >
                 {isSuggesting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -349,12 +440,31 @@ export function MindMapCanvas({
                 )}
                 {isSuggesting ? 'Generating...' : 'Suggest Themes'}
               </Button>
-              {suggestionError && (
-                <p className="text-xs text-destructive">{suggestionError}</p>
-              )}
-            </div>
-          </Panel>
-        )}
+            )}
+            <div className="mx-1 h-5 w-px bg-border" />
+            <Button
+              onClick={handleUndo}
+              disabled={!canUndo}
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+            >
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={handleRedo}
+              disabled={!canRedo}
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+            >
+              <Redo2 className="h-4 w-4" />
+            </Button>
+          </div>
+          {suggestionError && (
+            <p className="mt-1 text-center text-xs text-destructive">{suggestionError}</p>
+          )}
+        </Panel>
       </ReactFlow>
     </div>
   );

@@ -28,6 +28,7 @@ interface StepContainerProps {
   initialMessages?: UIMessage[];
   initialArtifact?: Record<string, unknown> | null;
   stepStatus?: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
+  hmwStatement?: string;
 }
 
 export function StepContainer({
@@ -37,6 +38,7 @@ export function StepContainer({
   initialMessages,
   initialArtifact,
   stepStatus,
+  hmwStatement,
 }: StepContainerProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
@@ -217,6 +219,7 @@ export function StepContainer({
           stepStatus={stepStatus}
           onRevise={handleRevise}
           onReset={() => setShowResetDialog(true)}
+          hmwStatement={hmwStatement}
         />
         <ResetStepDialog
           open={showResetDialog}

@@ -39,6 +39,7 @@ interface IdeationSubStepContainerProps {
   stepStatus?: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
   onRevise?: () => void;
   onReset?: () => void;
+  hmwStatement?: string;
 }
 
 export function IdeationSubStepContainer({
@@ -49,6 +50,7 @@ export function IdeationSubStepContainer({
   stepStatus,
   onRevise,
   onReset,
+  hmwStatement,
 }: IdeationSubStepContainerProps) {
   const router = useRouter();
 
@@ -59,6 +61,7 @@ export function IdeationSubStepContainer({
     initialArtifact || null
   );
   const [liveMessageCount, setLiveMessageCount] = React.useState(0);
+  const [mobileView, setMobileView] = React.useState<'chat' | 'canvas'>('chat');
 
   // Extraction state
   const [isExtracting, setIsExtracting] = React.useState(false);
@@ -304,7 +307,7 @@ export function IdeationSubStepContainer({
           </TabsList>
         </div>
 
-        {/* Mind Mapping tab: canvas layout */}
+        {/* Mind Mapping tab: chat + canvas layout */}
         <TabsContent
           value="mind-mapping"
           forceMount
@@ -313,18 +316,67 @@ export function IdeationSubStepContainer({
             currentSubStep !== 'mind-mapping' && 'hidden'
           )}
         >
-          <div className="h-full">
-            {stepId && (
-              <MindMapCanvas
-                workshopId={workshopId}
-                stepId={stepId}
-                hmwStatement={artifact?.reframedHmw as string || ''}
-              />
-            )}
-          </div>
+          {isMobile ? (
+            <div className="flex h-full flex-col">
+              <div className="flex border-b px-4">
+                <button
+                  onClick={() => setMobileView('chat')}
+                  className={cn(
+                    'px-3 py-2 text-sm font-medium',
+                    mobileView === 'chat' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
+                  )}
+                >
+                  Chat
+                </button>
+                <button
+                  onClick={() => setMobileView('canvas')}
+                  className={cn(
+                    'px-3 py-2 text-sm font-medium',
+                    mobileView === 'canvas' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
+                  )}
+                >
+                  Mind Map
+                </button>
+              </div>
+              <div className="min-h-0 flex-1">
+                {mobileView === 'chat' ? (
+                  renderChatPanel('mind-mapping')
+                ) : (
+                  stepId && (
+                    <MindMapCanvas
+                      workshopId={workshopId}
+                      stepId={stepId}
+                      hmwStatement={hmwStatement || artifact?.reframedHmw as string || ''}
+                    />
+                  )
+                )}
+              </div>
+            </div>
+          ) : (
+            <Group orientation="horizontal" className="h-full">
+              <Panel defaultSize={40} minSize={30}>
+                {renderChatPanel('mind-mapping')}
+              </Panel>
+              <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
+                <div className="absolute inset-y-0 -left-3 -right-3" />
+                <div className="absolute inset-y-0 left-0 w-px bg-ring opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
+              </Separator>
+              <Panel defaultSize={60} minSize={30}>
+                <div className="h-full">
+                  {stepId && (
+                    <MindMapCanvas
+                      workshopId={workshopId}
+                      stepId={stepId}
+                      hmwStatement={hmwStatement || artifact?.reframedHmw as string || ''}
+                    />
+                  )}
+                </div>
+              </Panel>
+            </Group>
+          )}
         </TabsContent>
 
-        {/* Crazy 8s tab: canvas layout */}
+        {/* Crazy 8s tab: chat + canvas layout */}
         <TabsContent
           value="crazy-eights"
           forceMount
@@ -333,14 +385,62 @@ export function IdeationSubStepContainer({
             currentSubStep !== 'crazy-eights' && 'hidden'
           )}
         >
-          <div className="h-full">
-            {stepId && (
-              <Crazy8sCanvas
-                workshopId={workshopId}
-                stepId={stepId}
-              />
-            )}
-          </div>
+          {isMobile ? (
+            <div className="flex h-full flex-col">
+              <div className="flex border-b px-4">
+                <button
+                  onClick={() => setMobileView('chat')}
+                  className={cn(
+                    'px-3 py-2 text-sm font-medium',
+                    mobileView === 'chat' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
+                  )}
+                >
+                  Chat
+                </button>
+                <button
+                  onClick={() => setMobileView('canvas')}
+                  className={cn(
+                    'px-3 py-2 text-sm font-medium',
+                    mobileView === 'canvas' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
+                  )}
+                >
+                  Crazy 8s
+                </button>
+              </div>
+              <div className="min-h-0 flex-1">
+                {mobileView === 'chat' ? (
+                  renderChatPanel('crazy-eights')
+                ) : (
+                  stepId && (
+                    <Crazy8sCanvas
+                      workshopId={workshopId}
+                      stepId={stepId}
+                    />
+                  )
+                )}
+              </div>
+            </div>
+          ) : (
+            <Group orientation="horizontal" className="h-full">
+              <Panel defaultSize={40} minSize={30}>
+                {renderChatPanel('crazy-eights')}
+              </Panel>
+              <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
+                <div className="absolute inset-y-0 -left-3 -right-3" />
+                <div className="absolute inset-y-0 left-0 w-px bg-ring opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
+              </Separator>
+              <Panel defaultSize={60} minSize={30}>
+                <div className="h-full">
+                  {stepId && (
+                    <Crazy8sCanvas
+                      workshopId={workshopId}
+                      stepId={stepId}
+                    />
+                  )}
+                </div>
+              </Panel>
+            </Group>
+          )}
         </TabsContent>
 
         {/* Idea Selection tab: chat + output panel */}

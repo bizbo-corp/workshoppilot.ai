@@ -89,6 +89,43 @@ export default async function StepPage({ params }: StepPageProps) {
     }
   }
 
+  // For Step 8 (ideation), load the HMW statement from Step 7 (reframe) artifact
+  let hmwStatement: string | undefined;
+  if (step.id === 'ideation') {
+    const reframeStep = session.workshop.steps.find((s) => s.stepId === 'reframe');
+    if (reframeStep) {
+      const reframeArtifactRecord = await db
+        .select()
+        .from(stepArtifacts)
+        .where(eq(stepArtifacts.workshopStepId, reframeStep.id))
+        .limit(1);
+
+      if (reframeArtifactRecord.length > 0) {
+        const reframeArtifact = reframeArtifactRecord[0].artifact as Record<string, unknown>;
+        const hmwStatements = reframeArtifact.hmwStatements as Array<{ fullStatement: string }> | undefined;
+        const selectedIndices = reframeArtifact.selectedForIdeation as number[] | undefined;
+        const selectedIdx = selectedIndices?.[0] ?? 0;
+        hmwStatement = hmwStatements?.[selectedIdx]?.fullStatement;
+      }
+    }
+    // Fallback: try Step 1 challenge artifact
+    if (!hmwStatement) {
+      const challengeStep = session.workshop.steps.find((s) => s.stepId === 'challenge');
+      if (challengeStep) {
+        const challengeArtifactRecord = await db
+          .select()
+          .from(stepArtifacts)
+          .where(eq(stepArtifacts.workshopStepId, challengeStep.id))
+          .limit(1);
+
+        if (challengeArtifactRecord.length > 0) {
+          const challengeArtifact = challengeArtifactRecord[0].artifact as Record<string, unknown>;
+          hmwStatement = challengeArtifact.hmwStatement as string | undefined;
+        }
+      }
+    }
+  }
+
   // Load canvas state for this step
   const canvasData = await loadCanvasState(session.workshop.id, step.id);
   let initialCanvasPostIts: PostIt[] = canvasData?.postIts || [];
@@ -126,6 +163,7 @@ export default async function StepPage({ params }: StepPageProps) {
           initialMessages={initialMessages}
           initialArtifact={initialArtifact}
           stepStatus={stepRecord?.status}
+          hmwStatement={hmwStatement}
         />
       </CanvasStoreProvider>
     </div>
