@@ -164,8 +164,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 33-01-PLAN.md -- Soul.md personality definition, chat-config.ts personality injection + message brevity + canvas bridging, arc-phases.ts personality consistency
-- [ ] 33-02-PLAN.md -- Step-prompts.ts personality updates for all 10 steps + 3 sub-steps
+- [x] 33-01-PLAN.md -- Soul.md personality definition, chat-config.ts personality injection + message brevity + canvas bridging, arc-phases.ts personality consistency
+- [x] 33-02-PLAN.md -- Step-prompts.ts personality updates for all 10 steps + 3 sub-steps
 
 #### Phase 34: Seed Data
 
@@ -221,12 +221,12 @@ Plans:
 | 30. UX Polish | v1.4 | 3/3 | Complete | 2026-02-13 |
 | 31. Output Panel Retirement | v1.4 | 1/1 | Complete | 2026-02-13 |
 | 32. Workshop Management | v1.4 | 2/2 | Complete | 2026-02-13 |
-| 33. AI Personality | v1.4 | 0/TBD | Not started | - |
+| 33. AI Personality | v1.4 | 2/2 | Complete | 2026-02-13 |
 | 34. Seed Data | v1.4 | 0/TBD | Not started | - |
 | 35. E2E Testing | v1.4 | 0/TBD | Not started | - |
 
 **Total v1.3:** 23 plans across 5 phases
-**Total project:** 93 plans across 29 phases, 5 milestones
+**Total project:** 101 plans across 33 phases, 6 milestones
 
 ---
-*Last updated: 2026-02-13 after Phase 31 planning*
+*Last updated: 2026-02-13 after Phase 33 execution*
