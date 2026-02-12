@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 ## Current Position
 
-Phase: 28 of 29 (Mind Map & Crazy 8s Canvases) — COMPLETE
-Plan: 6 of 6 in current phase
-Status: Complete (verified 13/13 must-haves)
-Last activity: 2026-02-12 — Completed phase 28: Mind Map & Crazy 8s Canvases (6 plans + verification)
+Phase: 29 of 29 (Visual Concept Cards) — IN PROGRESS
+Plan: 1 of 4 in current phase
+Status: Active (29-01 complete: ConceptCardNode foundation)
+Last activity: 2026-02-12 — Completed 29-01-PLAN.md: ConceptCardNode component, types, and canvas store CRUD
 
-Progress: [█████████████████████████████████████████░] 95% (87/91 plans complete across project)
+Progress: [█████████████████████████████████████████░] 96% (88/91 plans complete across project)
 
 ## Completed Milestones
 
@@ -27,8 +27,8 @@ Progress: [███████████████████████
 | v1.2 Canvas Whiteboard | 21-24 | 9 | 2026-02-12 |
 
 **Cumulative stats:**
-- 87 plans completed (28 phases across 4 milestones + v1.3 in progress)
-- ~22,200+ lines of TypeScript across ~345 files
+- 88 plans completed (28 phases across 4 milestones + v1.3 Phase 29 in progress)
+- ~22,700+ lines of TypeScript across ~347 files
 - 6 days total (2026-02-07 → 2026-02-12)
 
 **Velocity:**
@@ -36,7 +36,7 @@ Progress: [███████████████████████
 - v1.0: 3 days, 8 phases, 25 plans (~25 min/plan)
 - v1.1: 2 days, 6 phases, 15 plans (~25 min/plan)
 - v1.2: 2 days, 4 phases, 9 plans (~3 min/plan average)
-- v1.3: Phases 25-28 complete (19/23 plans), Phase 29 next (~4 min/plan average)
+- v1.3: Phases 25-28 complete (19/23 plans), Phase 29 1/4 plans (~5 min/plan average)
 
 ## Accumulated Context
 
@@ -53,6 +53,8 @@ Progress: [███████████████████████
 
 ### Recent Decisions (v1.3)
 
+- **Type alias for ConceptCardData** (Phase 29-01): Used type (not interface) to satisfy ReactFlow's Record<string, unknown> constraint on node data
+- **Grouped feasibility structure** (Phase 29-01): ConceptCardData groups score+rationale per dimension for cleaner component API (vs flat schema fields)
 - **canvasSize prop for constrained contexts** (Phase 28-05): EzyDrawModal accepts optional canvasSize (defaults to fullscreen), DroppableCanvas conditionally applies fixed dimensions or flex-1
 - **AI prompt context loading** (Phase 28-05): Endpoint queries stepArtifacts for HMW statement, persona, mind map themes for contextual sketch suggestions
 - **Autosave expansion for Phase 28** (Phase 28-05): Extended to persist mindMapNodes, mindMapEdges, crazy8sSlots alongside existing postIts/gridColumns/drawingNodes
@@ -112,10 +114,10 @@ Progress: [███████████████████████
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Phase 28 complete
+Stopped at: Completed 29-01-PLAN.md
 Resume file: None
 
-**Next action:** `/gsd:plan-phase 29` to plan Visual Concept Cards
+**Next action:** `/gsd:execute-phase 29` to continue with 29-02-PLAN.md (Canvas Integration)
 
 ## Performance Metrics
 
@@ -143,8 +145,10 @@ Resume file: None
 | 28 | 05 | 369s | 2 | 2 created, 4 modified | 2026-02-12 |
 | 28 | 03 | 270s | 2 | 1 created, 1 modified | 2026-02-12 |
 | 28 | 06 | 558s | 2 | 9 modified | 2026-02-12 |
+| 29 | 01 | 329s | 2 | 2 created, 1 modified | 2026-02-12 |
 
 ---
 
-*Last updated: 2026-02-12 after completing phase 28 (Mind Map & Crazy 8s Canvases)*
+*Last updated: 2026-02-12 after completing 29-01 (ConceptCardNode foundation)*
+| Phase 29 P01 | 329 | 2 tasks | 3 files |
 
