@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Lightbulb, Zap, CheckCircle2, Check, Sparkles, ArrowRight, GripVertical } from 'lucide-react';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
+import { useDevOutput } from '@/hooks/use-dev-output';
 
 type IdeationSubStep = 'mind-mapping' | 'crazy-eights' | 'idea-selection';
 
@@ -53,6 +54,7 @@ export function IdeationSubStepContainer({
   hmwStatement,
 }: IdeationSubStepContainerProps) {
   const router = useRouter();
+  const { devOutputEnabled } = useDevOutput();
 
   // State management
   const [currentSubStep, setCurrentSubStep] = React.useState<IdeationSubStep>('mind-mapping');
@@ -219,8 +221,8 @@ export function IdeationSubStepContainer({
             </div>
           );
         }
-        // Last sub-step: show Extract Output
-        if (!artifact && !isExtracting) {
+        // Last sub-step: show Extract Output (only if dev output enabled)
+        if (devOutputEnabled && !artifact && !isExtracting) {
           return (
             <div className="flex shrink-0 justify-center border-t bg-background p-4">
               <Button onClick={extractArtifact} variant="outline" size="sm">
@@ -236,35 +238,42 @@ export function IdeationSubStepContainer({
   );
 
   // Render output panel with IdeaSelection and ArtifactConfirmation (for idea-selection tab only)
-  const renderOutputPanel = (subStep: IdeationSubStep) => (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto">
-        {/* IdeaSelection -- shown in idea-selection tab when artifact exists */}
-        {currentSubStep === subStep && subStep === 'idea-selection' && (
-          <div className="p-4">
-            <IdeaSelection
-              crazy8sSlots={crazy8sSlots}
-              mindMapThemes={mindMapThemes}
-              selectedSlotIds={selectedSlotIds}
-              onSelectionChange={setSelectedSlotIds}
-              maxSelection={4}
+  const renderOutputPanel = (subStep: IdeationSubStep) => {
+    // When dev output is disabled, return empty div to maintain layout
+    if (!devOutputEnabled) {
+      return <div className="h-full" />;
+    }
+
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex-1 overflow-y-auto">
+          {/* IdeaSelection -- shown in idea-selection tab when artifact exists */}
+          {currentSubStep === subStep && subStep === 'idea-selection' && (
+            <div className="p-4">
+              <IdeaSelection
+                crazy8sSlots={crazy8sSlots}
+                mindMapThemes={mindMapThemes}
+                selectedSlotIds={selectedSlotIds}
+                onSelectionChange={setSelectedSlotIds}
+                maxSelection={4}
+              />
+            </div>
+          )}
+        </div>
+        {/* ArtifactConfirmation below */}
+        {currentSubStep === subStep && artifact && (
+          <div className="border-t bg-background p-4">
+            <ArtifactConfirmation
+              onConfirm={handleConfirm}
+              onEdit={handleEdit}
+              isConfirming={false}
+              isConfirmed={artifactConfirmed}
             />
           </div>
         )}
       </div>
-      {/* ArtifactConfirmation below */}
-      {currentSubStep === subStep && artifact && (
-        <div className="border-t bg-background p-4">
-          <ArtifactConfirmation
-            onConfirm={handleConfirm}
-            onEdit={handleEdit}
-            isConfirming={false}
-            isConfirmed={artifactConfirmed}
-          />
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex h-full flex-col">

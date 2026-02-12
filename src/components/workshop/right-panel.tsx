@@ -6,6 +6,7 @@ import { PanelRightClose, GripHorizontal } from 'lucide-react';
 import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { OutputAccordion } from './output-accordion';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
+import { useDevOutput } from '@/hooks/use-dev-output';
 
 interface RightPanelProps {
   stepOrder: number;
@@ -36,9 +37,10 @@ export function RightPanel({
 }: RightPanelProps) {
   const [isAccordionExpanded, setIsAccordionExpanded] = React.useState(true);
   const stepMeta = getStepByOrder(stepOrder);
+  const { devOutputEnabled } = useDevOutput();
 
-  // Show output accordion when artifact exists or extraction in progress
-  const showOutput = artifact !== null || isExtracting || extractionError !== null;
+  // Show output accordion when artifact exists or extraction in progress AND dev output is enabled
+  const showOutput = devOutputEnabled && (artifact !== null || isExtracting || extractionError !== null);
 
   // When accordion is collapsed or hidden, show full-height canvas
   if (!showOutput || !isAccordionExpanded) {

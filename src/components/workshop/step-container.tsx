@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { ConceptCanvasOverlay } from './concept-canvas-overlay';
+import { useDevOutput } from '@/hooks/use-dev-output';
 
 const CANVAS_ENABLED_STEPS = ['stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping', 'concept'];
 const CANVAS_ONLY_STEPS = ['stakeholder-mapping', 'sense-making', 'concept'];
@@ -50,6 +51,7 @@ export function StepContainer({
   const [mobileTab, setMobileTab] = React.useState<'chat' | 'canvas'>('chat');
   const [chatCollapsed, setChatCollapsed] = React.useState(false);
   const [canvasCollapsed, setCanvasCollapsed] = React.useState(false);
+  const { devOutputEnabled } = useDevOutput();
 
   // Extraction state
   // Pre-populate artifact if viewing completed/needs_regeneration step
@@ -262,7 +264,7 @@ export function StepContainer({
           onMessageCountChange={setLiveMessageCount}
         />
       </div>
-      {!isCanvasStep && hasEnoughMessages && !artifact && !isExtracting && (
+      {devOutputEnabled && !isCanvasStep && hasEnoughMessages && !artifact && !isExtracting && (
         <div className="flex shrink-0 justify-center border-t bg-background p-4">
           <Button
             onClick={extractArtifact}
