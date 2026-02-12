@@ -13,10 +13,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, AlertTriangle, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertTriangle, RotateCcw, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { advanceToNextStep } from '@/actions/workshop-actions';
 import { STEPS } from '@/lib/workshop/step-metadata';
+import { useDevOutput } from '@/hooks/use-dev-output';
+import { cn } from '@/lib/utils';
 
 interface StepNavigationProps {
   sessionId: string;
@@ -39,6 +41,7 @@ export function StepNavigation({
 }: StepNavigationProps) {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
+  const { isDevMode, devOutputEnabled, toggleDevOutput } = useDevOutput();
 
   const isFirstStep = currentStepOrder === 1;
   const isLastStep = currentStepOrder === STEPS.length;
@@ -87,8 +90,22 @@ export function StepNavigation({
 
   return (
     <div className="flex items-center justify-between border-t bg-background px-6 py-4">
-      {/* Left: Back and Reset buttons */}
+      {/* Left: Dev toggle, Back and Reset buttons */}
       <div className="flex items-center gap-2">
+        {isDevMode && (
+          <Button
+            onClick={toggleDevOutput}
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "text-muted-foreground",
+              devOutputEnabled && "text-amber-600 bg-amber-50 hover:bg-amber-100 dark:text-amber-400 dark:bg-amber-950 dark:hover:bg-amber-900"
+            )}
+            title={devOutputEnabled ? "Hide output panel" : "Show output panel"}
+          >
+            <Bug className="h-4 w-4" />
+          </Button>
+        )}
         {!isFirstStep && (
           <Button variant="ghost" onClick={handleBack} disabled={isNavigating}>
             <ChevronLeft className="mr-2 h-4 w-4" />
