@@ -1,106 +1,77 @@
 'use client';
 
 import * as React from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { Plus, X, Check } from 'lucide-react';
-
-interface IdeaItem {
-  title: string;
-  description: string;
-  source: 'mind-mapping' | 'crazy-eights' | 'brain-writing' | 'user';
-  isWildCard?: boolean;
-}
+import { Check } from 'lucide-react';
+import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import type { MindMapNodeState } from '@/stores/canvas-store';
 
 interface IdeaSelectionProps {
-  ideas: IdeaItem[];
-  selectedTitles: string[];
-  onSelectionChange: (titles: string[]) => void;
-  userAddedIdeas: Array<{title: string; description: string}>;
-  onAddUserIdea: (idea: {title: string; description: string}) => void;
-  onRemoveUserIdea: (title: string) => void;
+  crazy8sSlots: Crazy8sSlot[];
+  mindMapThemes?: MindMapNodeState[];
+  selectedSlotIds: string[];
+  onSelectionChange: (slotIds: string[]) => void;
   maxSelection?: number;
 }
 
 export function IdeaSelection({
-  ideas,
-  selectedTitles,
+  crazy8sSlots,
+  mindMapThemes = [],
+  selectedSlotIds,
   onSelectionChange,
-  userAddedIdeas,
-  onAddUserIdea,
-  onRemoveUserIdea,
   maxSelection = 4,
 }: IdeaSelectionProps) {
-  const [newIdeaTitle, setNewIdeaTitle] = React.useState('');
-  const [newIdeaDescription, setNewIdeaDescription] = React.useState('');
-
-  const toggleSelection = (title: string) => {
-    if (selectedTitles.includes(title)) {
-      onSelectionChange(selectedTitles.filter(t => t !== title));
-    } else if (selectedTitles.length < maxSelection) {
-      onSelectionChange([...selectedTitles, title]);
+  const toggleSelection = (slotId: string) => {
+    if (selectedSlotIds.includes(slotId)) {
+      onSelectionChange(selectedSlotIds.filter(id => id !== slotId));
+    } else if (selectedSlotIds.length < maxSelection) {
+      onSelectionChange([...selectedSlotIds, slotId]);
     }
   };
 
-  const handleAddIdea = () => {
-    if (!newIdeaTitle.trim()) return;
+  // Filter to filled slots only (have imageUrl)
+  const filledSlots = crazy8sSlots.filter(slot => slot.imageUrl);
 
-    const newIdea = {
-      title: newIdeaTitle.trim(),
-      description: newIdeaDescription.trim(),
-    };
-
-    onAddUserIdea(newIdea);
-
-    // Auto-select if under max
-    if (selectedTitles.length < maxSelection) {
-      onSelectionChange([...selectedTitles, newIdea.title]);
-    }
-
-    // Clear inputs
-    setNewIdeaTitle('');
-    setNewIdeaDescription('');
-  };
-
-  // Group ideas by source
-  const mindMappingIdeas = ideas.filter(i => i.source === 'mind-mapping');
-  const crazyEightsIdeas = ideas.filter(i => i.source === 'crazy-eights');
-  const brainWritingIdeas = ideas.filter(i => i.source === 'brain-writing');
-  const userIdeas = ideas.filter(i => i.source === 'user');
-
-  const renderIdeaCard = (idea: IdeaItem) => {
-    const isSelected = selectedTitles.includes(idea.title);
-    const isDisabled = !isSelected && selectedTitles.length >= maxSelection;
+  const renderSketchCard = (slot: Crazy8sSlot) => {
+    const isSelected = selectedSlotIds.includes(slot.slotId);
+    const isDisabled = !isSelected && selectedSlotIds.length >= maxSelection;
+    const slotNumber = slot.slotId.replace('slot-', '');
 
     return (
       <button
-        key={idea.title}
-        onClick={() => toggleSelection(idea.title)}
+        key={slot.slotId}
+        onClick={() => toggleSelection(slot.slotId)}
         disabled={isDisabled}
         className={cn(
-          'w-full text-left rounded-lg border p-3 transition-colors',
+          'relative rounded-lg border p-2 transition-all',
           isSelected
-            ? 'border-green-500 bg-green-50/50 dark:bg-green-950/20'
+            ? 'border-blue-500 ring-2 ring-blue-500/20'
             : 'hover:border-primary/50',
           isDisabled && 'opacity-50 cursor-not-allowed'
         )}
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-sm">{idea.title}</span>
-              {idea.isWildCard && (
-                <span className="text-xs text-amber-600 font-medium">Wild Card</span>
-              )}
-              <span className="text-xs text-muted-foreground capitalize">
-                {idea.source.replace('-', ' ')}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">{idea.description}</p>
-          </div>
-          {isSelected && <Check className="h-4 w-4 text-green-600 shrink-0" />}
+        {/* Sketch thumbnail */}
+        <div className="aspect-square w-full overflow-hidden rounded bg-muted">
+          {slot.imageUrl && (
+            <img
+              src={slot.imageUrl}
+              alt={slot.title || `Sketch ${slotNumber}`}
+              className="h-full w-full object-contain"
+            />
+          )}
         </div>
+
+        {/* Slot title */}
+        <div className="mt-2 text-sm font-medium truncate">
+          {slot.title || `Sketch ${slotNumber}`}
+        </div>
+
+        {/* Checkbox overlay */}
+        {isSelected && (
+          <div className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-md">
+            <Check className="h-4 w-4" />
+          </div>
+        )}
       </button>
     );
   };
@@ -108,110 +79,53 @@ export function IdeaSelection({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="font-semibold text-sm">Select Ideas for Concept Development</h4>
+        <h4 className="font-semibold text-sm">Select Your Best Ideas from Crazy 8s Sketches</h4>
         <span className="text-xs text-muted-foreground">
-          {selectedTitles.length}/{maxSelection} selected
+          {selectedSlotIds.length}/{maxSelection} selected
         </span>
       </div>
 
-      {/* Mind Mapping Ideas */}
-      {mindMappingIdeas.length > 0 && (
-        <div className="space-y-2">
-          <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Mind Mapping
-          </h5>
-          {mindMappingIdeas.map(renderIdeaCard)}
-        </div>
-      )}
-
-      {/* Crazy 8s Ideas */}
-      {crazyEightsIdeas.length > 0 && (
-        <div className="space-y-2">
-          <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Crazy 8s
-          </h5>
-          {crazyEightsIdeas.map(renderIdeaCard)}
-        </div>
-      )}
-
-      {/* Brain Writing Ideas */}
-      {brainWritingIdeas.length > 0 && (
-        <div className="space-y-2">
-          <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Brain Writing
-          </h5>
-          {brainWritingIdeas.map(renderIdeaCard)}
-        </div>
-      )}
-
-      {/* User Ideas */}
-      {userIdeas.length > 0 && (
-        <div className="space-y-2">
-          <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Your Ideas
-          </h5>
-          {userIdeas.map(renderIdeaCard)}
-        </div>
-      )}
-
-      {/* Add your own idea */}
-      <div className="border-t pt-4">
-        <p className="text-sm font-medium mb-2">Add Your Own Idea</p>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Idea title..."
-            value={newIdeaTitle}
-            onChange={(e) => setNewIdeaTitle(e.target.value)}
-            className="flex-1"
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleAddIdea}
-            disabled={!newIdeaTitle.trim()}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        {newIdeaTitle.trim() && (
-          <Input
-            placeholder="Brief description (optional)..."
-            value={newIdeaDescription}
-            onChange={(e) => setNewIdeaDescription(e.target.value)}
-            className="mt-2"
-          />
-        )}
-
-        {/* User-added ideas list */}
-        {userAddedIdeas.map((idea) => (
-          <div
-            key={idea.title}
-            className="flex items-center justify-between mt-2 rounded border p-2"
-          >
-            <span className="text-sm">{idea.title}</span>
-            <button onClick={() => onRemoveUserIdea(idea.title)}>
-              <X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Selection summary */}
-      {selectedTitles.length > 0 && (
-        <div className="rounded-lg border border-green-500/50 bg-green-50/50 p-3 dark:bg-green-950/20">
-          <p className="text-xs font-semibold text-green-800 dark:text-green-200 mb-1">
-            Selected for Step 9:
+      {/* Mind Map Themes - context only */}
+      {mindMapThemes.length > 0 && (
+        <div className="rounded-lg border bg-muted/50 p-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            Themes from Mind Map
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {selectedTitles.map((title) => (
+          <div className="flex flex-wrap gap-2">
+            {mindMapThemes.map((theme) => (
               <span
-                key={title}
-                className="rounded-md bg-green-500/20 px-2 py-0.5 text-xs font-medium text-green-800 dark:text-green-200"
+                key={theme.id}
+                className="rounded-md px-2 py-1 text-xs font-medium"
+                style={{
+                  backgroundColor: `${theme.themeColor}20`,
+                  color: theme.themeColor,
+                  borderLeft: `3px solid ${theme.themeColor}`,
+                }}
               >
-                {title}
+                {theme.label}
               </span>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Crazy 8s Sketches Grid */}
+      {filledSlots.length > 0 ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {filledSlots.map(renderSketchCard)}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+          <p className="text-sm">No sketches yet. Complete the Crazy 8s tab first.</p>
+        </div>
+      )}
+
+      {/* Selection summary */}
+      {selectedSlotIds.length > 0 && (
+        <div className="rounded-lg border border-blue-500/50 bg-blue-50/50 p-3 dark:bg-blue-950/20">
+          <p className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-1">
+            Selected {selectedSlotIds.length} sketch{selectedSlotIds.length !== 1 ? 'es' : ''} for Step 9
+          </p>
         </div>
       )}
     </div>

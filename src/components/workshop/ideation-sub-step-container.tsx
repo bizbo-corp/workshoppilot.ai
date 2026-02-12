@@ -10,17 +10,20 @@ import { OutputPanel } from './output-panel';
 import { ArtifactConfirmation } from './artifact-confirmation';
 import { StepNavigation } from './step-navigation';
 import { IdeaSelection } from './idea-selection';
+import { MindMapCanvas } from './mind-map-canvas';
+import { Crazy8sCanvas } from './crazy-8s-canvas';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Lightbulb, Zap, PenTool, Check, Sparkles, ArrowRight } from 'lucide-react';
+import { Lightbulb, Zap, CheckCircle2, Check, Sparkles, ArrowRight } from 'lucide-react';
+import { useCanvasStore } from '@/providers/canvas-store-provider';
 
-type IdeationSubStep = 'mind-mapping' | 'crazy-eights' | 'brain-writing';
+type IdeationSubStep = 'mind-mapping' | 'crazy-eights' | 'idea-selection';
 
-const SUB_STEP_ORDER: IdeationSubStep[] = ['mind-mapping', 'crazy-eights', 'brain-writing'];
+const SUB_STEP_ORDER: IdeationSubStep[] = ['mind-mapping', 'crazy-eights', 'idea-selection'];
 const SUB_STEP_LABELS: Record<IdeationSubStep, string> = {
   'mind-mapping': 'Mind Mapping',
   'crazy-eights': 'Crazy 8s',
-  'brain-writing': 'Brain Writing',
+  'idea-selection': 'Idea Selection',
 };
 
 function getNextSubStep(current: IdeationSubStep): IdeationSubStep | null {
@@ -66,21 +69,20 @@ export function IdeationSubStepContainer({
     stepStatus === 'complete' && initialArtifact !== null
   );
 
-  // Selection state
-  const [selectedIdeas, setSelectedIdeas] = React.useState<string[]>([]);
-  const [userAddedIdeas, setUserAddedIdeas] = React.useState<Array<{title: string; description: string}>>([]);
+  // Selection state (slot IDs instead of idea titles)
+  const [selectedSlotIds, setSelectedSlotIds] = React.useState<string[]>([]);
 
   // Sub-step progress tracking
   const [mindMappingEngaged, setMindMappingEngaged] = React.useState(false);
   const [crazyEightsEngaged, setCrazyEightsEngaged] = React.useState(false);
-  const [brainWritingEngaged, setBrainWritingEngaged] = React.useState(false);
+  const [ideaSelectionEngaged, setIdeaSelectionEngaged] = React.useState(false);
 
   // Track engagement when user has enough messages in a sub-step
   React.useEffect(() => {
     if (liveMessageCount > 2) {
       if (currentSubStep === 'mind-mapping') setMindMappingEngaged(true);
       if (currentSubStep === 'crazy-eights') setCrazyEightsEngaged(true);
-      if (currentSubStep === 'brain-writing') setBrainWritingEngaged(true);
+      if (currentSubStep === 'idea-selection') setIdeaSelectionEngaged(true);
     }
   }, [liveMessageCount, currentSubStep]);
 
@@ -137,19 +139,12 @@ export function IdeationSubStepContainer({
     if (artifact) {
       const updatedArtifact = {
         ...artifact,
-        selectedIdeaTitles: selectedIdeas,
-        userIdeas: [
-          ...((artifact.userIdeas as Array<{title: string; description: string}>) || []),
-          ...userAddedIdeas.filter(ua =>
-            !((artifact.userIdeas as Array<{title: string; description: string}>) || [])
-              .some(existing => existing.title === ua.title)
-          ),
-        ],
+        selectedSketchSlotIds: selectedSlotIds,
       };
       setArtifact(updatedArtifact);
     }
     setArtifactConfirmed(true);
-  }, [artifact, selectedIdeas, userAddedIdeas]);
+  }, [artifact, selectedSlotIds]);
 
   const handleEdit = React.useCallback(() => {
     setArtifactConfirmed(false);
@@ -160,7 +155,7 @@ export function IdeationSubStepContainer({
   const handleSubStepComplete = React.useCallback((subStep: IdeationSubStep) => {
     if (subStep === 'mind-mapping') setMindMappingEngaged(true);
     if (subStep === 'crazy-eights') setCrazyEightsEngaged(true);
-    if (subStep === 'brain-writing') setBrainWritingEngaged(true);
+    if (subStep === 'idea-selection') setIdeaSelectionEngaged(true);
 
     const next = getNextSubStep(subStep);
     if (next) setCurrentSubStep(next);
@@ -168,60 +163,32 @@ export function IdeationSubStepContainer({
 
   const hasEnoughMessages = liveMessageCount >= 4;
 
-  // Extract all ideas from artifact for IdeaSelection
-  const allIdeasFromArtifact = React.useMemo(() => {
-    if (!artifact) return [];
-    const items: Array<{title: string; description: string; source: 'mind-mapping' | 'crazy-eights' | 'brain-writing' | 'user'; isWildCard?: boolean}> = [];
+  // Get canvas state for mind map and crazy 8s
+  const crazy8sSlots = useCanvasStore(state => state.crazy8sSlots);
+  const mindMapNodes = useCanvasStore(state => state.mindMapNodes);
 
-    // Clusters from mind mapping
-    const clusters = (artifact.clusters as Array<{theme: string; ideas: Array<{title: string; description: string; isWildCard?: boolean}>}>) || [];
-    clusters.forEach(cluster => {
-      cluster.ideas.forEach(idea => {
-        items.push({ ...idea, source: 'mind-mapping' });
-      });
-    });
+  // Extract mind map themes (level 1 nodes)
+  const mindMapThemes = React.useMemo(() => {
+    return mindMapNodes.filter(node => node.level === 1);
+  }, [mindMapNodes]);
 
-    // Crazy 8s ideas
-    const crazy8s = (artifact.crazyEightsIdeas as Array<{title: string; description: string}>) || [];
-    crazy8s.forEach(idea => {
-      items.push({ ...idea, source: 'crazy-eights' });
-    });
-
-    // Brain written ideas (use finalVersion as title)
-    const brainWritten = (artifact.brainWrittenIdeas as Array<{originalTitle: string; finalVersion: string; evolutionDescription: string}>) || [];
-    brainWritten.forEach(idea => {
-      items.push({
-        title: idea.finalVersion,
-        description: idea.evolutionDescription,
-        source: 'brain-writing'
-      });
-    });
-
-    // User ideas already in artifact
-    const existingUserIdeas = (artifact.userIdeas as Array<{title: string; description: string}>) || [];
-    existingUserIdeas.forEach(idea => {
-      items.push({ ...idea, source: 'user' });
-    });
-
-    return items;
-  }, [artifact]);
-
-  // Pre-populate selectedIdeas from artifact
+  // Pre-populate selectedSlotIds from artifact
   React.useEffect(() => {
-    if (artifact && (artifact.selectedIdeaTitles as string[])?.length > 0) {
-      setSelectedIdeas((artifact.selectedIdeaTitles as string[]) || []);
+    if (artifact && (artifact.selectedSketchSlotIds as string[])?.length > 0) {
+      setSelectedSlotIds((artifact.selectedSketchSlotIds as string[]) || []);
     }
   }, [artifact]);
 
-  // User idea handlers
-  const handleAddUserIdea = (idea: {title: string; description: string}) => {
-    setUserAddedIdeas(prev => [...prev, idea]);
-  };
-
-  const handleRemoveUserIdea = (title: string) => {
-    setUserAddedIdeas(prev => prev.filter(i => i.title !== title));
-    setSelectedIdeas(prev => prev.filter(t => t !== title));
-  };
+  // Get stepId for canvases
+  const [stepId, setStepId] = React.useState<string>('');
+  React.useEffect(() => {
+    const getStep = async () => {
+      const { getStepByOrder } = await import('@/lib/workshop/step-metadata');
+      const step = getStepByOrder(8);
+      if (step) setStepId(step.id);
+    };
+    getStep();
+  }, []);
 
   // Render chat panel with Extract Output button
   const renderChatPanel = (subStep: IdeationSubStep) => (
@@ -265,27 +232,18 @@ export function IdeationSubStepContainer({
     </div>
   );
 
-  // Render output panel with IdeaSelection and ArtifactConfirmation
+  // Render output panel with IdeaSelection and ArtifactConfirmation (for idea-selection tab only)
   const renderOutputPanel = (subStep: IdeationSubStep) => (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-y-auto">
-        <OutputPanel
-          stepOrder={8}
-          artifact={artifact}
-          isExtracting={isExtracting}
-          extractionError={extractionError}
-          onRetry={extractArtifact}
-        />
-        {/* IdeaSelection -- shown in brain-writing tab when artifact exists */}
-        {currentSubStep === subStep && subStep === 'brain-writing' && artifact && !artifactConfirmed && (
-          <div className="border-t p-4">
+        {/* IdeaSelection -- shown in idea-selection tab when artifact exists */}
+        {currentSubStep === subStep && subStep === 'idea-selection' && (
+          <div className="p-4">
             <IdeaSelection
-              ideas={allIdeasFromArtifact}
-              selectedTitles={selectedIdeas}
-              onSelectionChange={setSelectedIdeas}
-              userAddedIdeas={userAddedIdeas}
-              onAddUserIdea={handleAddUserIdea}
-              onRemoveUserIdea={handleRemoveUserIdea}
+              crazy8sSlots={crazy8sSlots}
+              mindMapThemes={mindMapThemes}
+              selectedSlotIds={selectedSlotIds}
+              onSelectionChange={setSelectedSlotIds}
               maxSelection={4}
             />
           </div>
@@ -315,7 +273,7 @@ export function IdeationSubStepContainer({
           <span className="text-muted-foreground">
             {currentSubStep === 'mind-mapping' && '8a: Mind Mapping'}
             {currentSubStep === 'crazy-eights' && '8b: Crazy 8s'}
-            {currentSubStep === 'brain-writing' && '8c: Brain Writing'}
+            {currentSubStep === 'idea-selection' && '8c: Idea Selection'}
           </span>
         </div>
       </div>
@@ -338,52 +296,88 @@ export function IdeationSubStepContainer({
               Crazy 8s
               {crazyEightsEngaged && <Check className="h-3 w-3 text-green-600" />}
             </TabsTrigger>
-            <TabsTrigger value="brain-writing" className="gap-2">
-              <PenTool className="h-3.5 w-3.5" />
-              Brain Writing
-              {brainWritingEngaged && <Check className="h-3 w-3 text-green-600" />}
+            <TabsTrigger value="idea-selection" className="gap-2">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Idea Selection
+              {ideaSelectionEngaged && <Check className="h-3 w-3 text-green-600" />}
             </TabsTrigger>
           </TabsList>
         </div>
 
-        {/* Each tab: forceMount + hidden class for state preservation */}
-        {(['mind-mapping', 'crazy-eights', 'brain-writing'] as const).map((subStep) => (
-          <TabsContent
-            key={subStep}
-            value={subStep}
-            forceMount
-            className={cn(
-              'flex-1 min-h-0 mt-0',
-              currentSubStep !== subStep && 'hidden'
+        {/* Mind Mapping tab: canvas layout */}
+        <TabsContent
+          value="mind-mapping"
+          forceMount
+          className={cn(
+            'flex-1 min-h-0 mt-0',
+            currentSubStep !== 'mind-mapping' && 'hidden'
+          )}
+        >
+          <div className="h-full">
+            {stepId && (
+              <MindMapCanvas
+                workshopId={workshopId}
+                stepId={stepId}
+                hmwStatement={artifact?.reframedHmw as string || ''}
+              />
             )}
-          >
-            {isMobile ? (
-              /* Mobile: stacked layout */
-              <div className="flex h-full flex-col">
-                <div className="min-h-0 flex-1 border-b">
-                  {renderChatPanel(subStep)}
-                </div>
-                <div className="min-h-0 flex-1">
-                  {renderOutputPanel(subStep)}
-                </div>
+          </div>
+        </TabsContent>
+
+        {/* Crazy 8s tab: canvas layout */}
+        <TabsContent
+          value="crazy-eights"
+          forceMount
+          className={cn(
+            'flex-1 min-h-0 mt-0',
+            currentSubStep !== 'crazy-eights' && 'hidden'
+          )}
+        >
+          <div className="h-full">
+            {stepId && (
+              <Crazy8sCanvas
+                workshopId={workshopId}
+                stepId={stepId}
+              />
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Idea Selection tab: chat + output panel */}
+        <TabsContent
+          value="idea-selection"
+          forceMount
+          className={cn(
+            'flex-1 min-h-0 mt-0',
+            currentSubStep !== 'idea-selection' && 'hidden'
+          )}
+        >
+          {isMobile ? (
+            /* Mobile: stacked layout */
+            <div className="flex h-full flex-col">
+              <div className="min-h-0 flex-1 border-b">
+                {renderChatPanel('idea-selection')}
               </div>
-            ) : (
-              /* Desktop: resizable panels */
-              <Group orientation="horizontal" className="h-full">
-                <Panel defaultSize={50} minSize={30}>
-                  {renderChatPanel(subStep)}
-                </Panel>
-                <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
-                  <div className="absolute inset-y-0 -left-3 -right-3" />
-                  <div className="absolute inset-y-0 left-0 w-px bg-ring opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
-                </Separator>
-                <Panel defaultSize={50} minSize={25}>
-                  {renderOutputPanel(subStep)}
-                </Panel>
-              </Group>
-            )}
-          </TabsContent>
-        ))}
+              <div className="min-h-0 flex-1">
+                {renderOutputPanel('idea-selection')}
+              </div>
+            </div>
+          ) : (
+            /* Desktop: resizable panels */
+            <Group orientation="horizontal" className="h-full">
+              <Panel defaultSize={40} minSize={30}>
+                {renderChatPanel('idea-selection')}
+              </Panel>
+              <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
+                <div className="absolute inset-y-0 -left-3 -right-3" />
+                <div className="absolute inset-y-0 left-0 w-px bg-ring opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
+              </Separator>
+              <Panel defaultSize={60} minSize={30}>
+                {renderOutputPanel('idea-selection')}
+              </Panel>
+            </Group>
+          )}
+        </TabsContent>
       </Tabs>
 
       {/* Step navigation (shared across all sub-steps) */}
