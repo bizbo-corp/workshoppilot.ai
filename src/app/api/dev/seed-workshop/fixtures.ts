@@ -12,10 +12,12 @@
  * - Selected ideas in Step 8 become concepts in Step 9
  */
 
-import type { PostIt, PostItColor } from '@/stores/canvas-store';
+import type { PostIt, PostItColor, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
 import type { Quadrant } from '@/lib/canvas/quadrant-detection';
 import { getCellBounds, type GridConfig } from '@/lib/canvas/grid-layout';
 import { STEP_CANVAS_CONFIGS } from '@/lib/canvas/step-canvas-config';
+import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,6 +27,13 @@ export type StepFixture = {
   artifact: Record<string, unknown>;
   summary: string;
   canvas?: PostIt[];
+  canvasData?: {
+    postIts?: PostIt[];
+    mindMapNodes?: MindMapNodeState[];
+    mindMapEdges?: MindMapEdgeState[];
+    crazy8sSlots?: Crazy8sSlot[];
+    conceptCards?: ConceptCardData[];
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -158,6 +167,16 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
       quadrantPostIt('Pet Sitters /\nDog Walkers', 'low-power-high-interest', 1, 'orange'),
       quadrantPostIt('Local Pet Stores', 'low-power-low-interest', 0, 'yellow'),
     ],
+    canvasData: {
+      postIts: [
+        quadrantPostIt('Pet Owners\n(Primary Users)', 'high-power-high-interest', 0, 'yellow'),
+        quadrantPostIt('Veterinarians', 'high-power-high-interest', 1, 'blue'),
+        quadrantPostIt('Pet Insurance\nCompanies', 'high-power-low-interest', 0, 'pink'),
+        quadrantPostIt('Pet Food Brands', 'low-power-high-interest', 0, 'green'),
+        quadrantPostIt('Pet Sitters /\nDog Walkers', 'low-power-high-interest', 1, 'orange'),
+        quadrantPostIt('Local Pet Stores', 'low-power-low-interest', 0, 'yellow'),
+      ],
+    },
   },
 
   // =========================================================================
@@ -228,6 +247,24 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
       quadrantPostIt('Morning routine\ncascade failures', 'experienced', 1, 'green'),
       quadrantPostIt('Vet portal, calendar,\nnotes app juggle', 'experienced', 2, 'green'),
     ],
+    canvasData: {
+      postIts: [
+        // Said quadrant (bottom-left: X<0, Y>=0)
+        quadrantPostIt('"Nothing is in\none place"', 'said', 0, 'yellow'),
+        quadrantPostIt('"Tell me before\nit\'s overdue"', 'said', 1, 'yellow'),
+        quadrantPostIt('"I feel terrible\nwhen I forget"', 'said', 2, 'yellow'),
+        // Thought quadrant (top-left: X<0, Y<0)
+        quadrantPostIt('Am I a good\npet parent?', 'thought', 0, 'blue'),
+        quadrantPostIt('There must be\na better way', 'thought', 1, 'blue'),
+        // Felt quadrant (top-right: X>=0, Y<0)
+        quadrantPostIt('Guilt when\ntasks are missed', 'felt', 0, 'pink'),
+        quadrantPostIt('Overwhelmed by\nmulti-pet logistics', 'felt', 1, 'pink'),
+        // Experienced quadrant (bottom-right: X>=0, Y>=0)
+        quadrantPostIt('Missed flea\nmedicine by 3 days', 'experienced', 0, 'green'),
+        quadrantPostIt('Morning routine\ncascade failures', 'experienced', 1, 'green'),
+        quadrantPostIt('Vet portal, calendar,\nnotes app juggle', 'experienced', 2, 'green'),
+      ],
+    },
   },
 
   // =========================================================================
@@ -374,6 +411,40 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
       journeyPostIt('Positive\n😊', 'emotions', 'purchase', 'orange'),
       journeyPostIt('Negative\n😟 (DIP)', 'emotions', 'onboarding', 'pink'),
     ],
+    canvasData: {
+      postIts: [
+        // Row: actions
+        journeyPostIt('Realizes she\'s struggling\nwith pet care', 'actions', 'awareness', 'yellow'),
+        journeyPostIt('Researches pet\ncare apps', 'actions', 'consideration', 'yellow'),
+        journeyPostIt('Downloads PawPal,\nadds pet profiles', 'actions', 'decision', 'yellow'),
+        journeyPostIt('Sets up routines\nand appointments', 'actions', 'purchase', 'yellow'),
+        journeyPostIt('Daily check-ins\nand task completion', 'actions', 'onboarding', 'yellow'),
+        // Row: goals
+        journeyPostIt('Acknowledge the\nproblem exists', 'goals', 'awareness', 'blue'),
+        journeyPostIt('Find a unified\npet care solution', 'goals', 'consideration', 'blue'),
+        journeyPostIt('Get set up\nquickly', 'goals', 'decision', 'blue'),
+        journeyPostIt('Experience the\naha moment', 'goals', 'purchase', 'blue'),
+        journeyPostIt('Never miss a\ncare task', 'goals', 'onboarding', 'blue'),
+        // Row: barriers
+        journeyPostIt('Normalizes the\nstruggle', 'barriers', 'awareness', 'pink'),
+        journeyPostIt('Apps focus on\nsingle features', 'barriers', 'consideration', 'pink'),
+        journeyPostIt('Long onboarding\nforms', 'barriers', 'decision', 'pink'),
+        journeyPostIt('Manual entry\nis tedious', 'barriers', 'purchase', 'pink'),
+        journeyPostIt('Notification\nfatigue', 'barriers', 'onboarding', 'pink'),
+        // Row: touchpoints
+        journeyPostIt('Pet communities,\ndog park chats', 'touchpoints', 'awareness', 'green'),
+        journeyPostIt('App Store,\nreviews, forums', 'touchpoints', 'consideration', 'green'),
+        journeyPostIt('Onboarding flow,\nprofile setup', 'touchpoints', 'decision', 'green'),
+        journeyPostIt('Routine builder,\ncalendar sync', 'touchpoints', 'purchase', 'green'),
+        journeyPostIt('Push notifications,\ndashboard, widget', 'touchpoints', 'onboarding', 'green'),
+        // Row: emotions
+        journeyPostIt('Neutral\n😐', 'emotions', 'awareness', 'orange'),
+        journeyPostIt('Neutral\n😐', 'emotions', 'consideration', 'orange'),
+        journeyPostIt('Positive\n😊', 'emotions', 'decision', 'orange'),
+        journeyPostIt('Positive\n😊', 'emotions', 'purchase', 'orange'),
+        journeyPostIt('Negative\n😟 (DIP)', 'emotions', 'onboarding', 'pink'),
+      ],
+    },
   },
 
   // =========================================================================
@@ -458,6 +529,185 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
     },
     summary:
       '- 3 mind map themes: Smart Routine Engine, Unified Pet Dashboard, Care Delegation\n- 8 Crazy 8s visual sketches exploring different approaches\n- 3 sketches selected for concept development (slots 1, 4, 7)',
+    canvasData: (() => {
+      // Mind map nodes and edges for Step 8a
+      // Generate IDs upfront for proper edge connections
+      const rootId = crypto.randomUUID();
+      const theme1Id = crypto.randomUUID();
+      const theme2Id = crypto.randomUUID();
+      const theme3Id = crypto.randomUUID();
+
+      // Theme 1 children (Smart Routine Engine)
+      const t1c1Id = crypto.randomUUID();
+      const t1c2Id = crypto.randomUUID();
+      const t1c3Id = crypto.randomUUID();
+
+      // Theme 2 children (Unified Pet Dashboard)
+      const t2c1Id = crypto.randomUUID();
+      const t2c2Id = crypto.randomUUID();
+      const t2c3Id = crypto.randomUUID();
+
+      // Theme 3 children (Care Delegation)
+      const t3c1Id = crypto.randomUUID();
+      const t3c2Id = crypto.randomUUID();
+
+      return {
+        mindMapNodes: [
+          // Root node (level 0)
+          {
+            id: rootId,
+            label: 'Intelligently-timed care nudges for multi-pet owners',
+            isRoot: true,
+            level: 0,
+            themeColorId: 'root',
+            themeColor: '#6b7280',
+            themeBgColor: '#f3f4f6',
+          },
+          // Theme branches (level 1)
+          {
+            id: theme1Id,
+            label: 'Smart Routine Engine',
+            isRoot: false,
+            level: 1,
+            parentId: rootId,
+            themeColorId: 'blue',
+            themeColor: '#3b82f6',
+            themeBgColor: '#dbeafe',
+          },
+          {
+            id: theme2Id,
+            label: 'Unified Pet Dashboard',
+            isRoot: false,
+            level: 1,
+            parentId: rootId,
+            themeColorId: 'green',
+            themeColor: '#10b981',
+            themeBgColor: '#d1fae5',
+          },
+          {
+            id: theme3Id,
+            label: 'Care Delegation',
+            isRoot: false,
+            level: 1,
+            parentId: rootId,
+            themeColorId: 'purple',
+            themeColor: '#8b5cf6',
+            themeBgColor: '#ede9fe',
+          },
+          // Theme 1 ideas (Smart Routine Engine - level 2)
+          {
+            id: t1c1Id,
+            label: 'Morning Routine Autopilot',
+            isRoot: false,
+            level: 2,
+            parentId: theme1Id,
+            themeColorId: 'blue',
+            themeColor: '#3b82f6',
+            themeBgColor: '#dbeafe',
+          },
+          {
+            id: t1c2Id,
+            label: 'Adaptive Notification Timing',
+            isRoot: false,
+            level: 2,
+            parentId: theme1Id,
+            themeColorId: 'blue',
+            themeColor: '#3b82f6',
+            themeBgColor: '#dbeafe',
+          },
+          {
+            id: t1c3Id,
+            label: 'Routine Recovery Mode',
+            isRoot: false,
+            level: 2,
+            parentId: theme1Id,
+            themeColorId: 'blue',
+            themeColor: '#3b82f6',
+            themeBgColor: '#dbeafe',
+          },
+          // Theme 2 ideas (Unified Pet Dashboard - level 2)
+          {
+            id: t2c1Id,
+            label: 'Glanceable Widget',
+            isRoot: false,
+            level: 2,
+            parentId: theme2Id,
+            themeColorId: 'green',
+            themeColor: '#10b981',
+            themeBgColor: '#d1fae5',
+          },
+          {
+            id: t2c2Id,
+            label: 'Vet Data Bridge',
+            isRoot: false,
+            level: 2,
+            parentId: theme2Id,
+            themeColorId: 'green',
+            themeColor: '#10b981',
+            themeBgColor: '#d1fae5',
+          },
+          {
+            id: t2c3Id,
+            label: 'Pet Care Score',
+            isRoot: false,
+            level: 2,
+            parentId: theme2Id,
+            themeColorId: 'green',
+            themeColor: '#10b981',
+            themeBgColor: '#d1fae5',
+          },
+          // Theme 3 ideas (Care Delegation - level 2)
+          {
+            id: t3c1Id,
+            label: 'Sitter Share Link',
+            isRoot: false,
+            level: 2,
+            parentId: theme3Id,
+            themeColorId: 'purple',
+            themeColor: '#8b5cf6',
+            themeBgColor: '#ede9fe',
+          },
+          {
+            id: t3c2Id,
+            label: 'Family Care Calendar',
+            isRoot: false,
+            level: 2,
+            parentId: theme3Id,
+            themeColorId: 'purple',
+            themeColor: '#8b5cf6',
+            themeBgColor: '#ede9fe',
+          },
+        ],
+        mindMapEdges: [
+          // Root to themes
+          { id: crypto.randomUUID(), source: rootId, target: theme1Id, themeColor: '#3b82f6' },
+          { id: crypto.randomUUID(), source: rootId, target: theme2Id, themeColor: '#10b981' },
+          { id: crypto.randomUUID(), source: rootId, target: theme3Id, themeColor: '#8b5cf6' },
+          // Theme 1 to ideas
+          { id: crypto.randomUUID(), source: theme1Id, target: t1c1Id, themeColor: '#3b82f6' },
+          { id: crypto.randomUUID(), source: theme1Id, target: t1c2Id, themeColor: '#3b82f6' },
+          { id: crypto.randomUUID(), source: theme1Id, target: t1c3Id, themeColor: '#3b82f6' },
+          // Theme 2 to ideas
+          { id: crypto.randomUUID(), source: theme2Id, target: t2c1Id, themeColor: '#10b981' },
+          { id: crypto.randomUUID(), source: theme2Id, target: t2c2Id, themeColor: '#10b981' },
+          { id: crypto.randomUUID(), source: theme2Id, target: t2c3Id, themeColor: '#10b981' },
+          // Theme 3 to ideas
+          { id: crypto.randomUUID(), source: theme3Id, target: t3c1Id, themeColor: '#8b5cf6' },
+          { id: crypto.randomUUID(), source: theme3Id, target: t3c2Id, themeColor: '#8b5cf6' },
+        ],
+        // Crazy 8s slots for Step 8b
+        crazy8sSlots: [
+          { slotId: 'slot-1', title: 'Pet Care Pomodoro' },
+          { slotId: 'slot-2', title: 'Guilt-Free Guarantee' },
+          { slotId: 'slot-3', title: 'Neighborhood Pet Network' },
+          { slotId: 'slot-4', title: 'Smart Bowl Integration' },
+          { slotId: 'slot-5', title: 'Vet Video Triage' },
+          { slotId: 'slot-6', title: 'Pet Personality Profiles' },
+          { slotId: 'slot-7', title: 'Care Streaks & Badges' },
+          { slotId: 'slot-8', title: 'Auto-Reorder Supplies' },
+        ],
+      };
+    })(),
   },
 
   // =========================================================================
@@ -520,6 +770,108 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
     },
     summary:
       '- 2 concepts developed: PawPal Autopilot (AI morning routine) and PawPal At-a-Glance (home screen widget)\n- Autopilot scores highest: Technical 4, Business 4, Desirability 5\n- At-a-Glance is technically simple (5) but weaker on business (3)\n- Billboard Hero tests: "Your Pets Are Cared For. Before You Even Ask." (Autopilot)',
+    canvasData: {
+      conceptCards: [
+        {
+          id: crypto.randomUUID(),
+          position: { x: 100, y: 100 },
+          conceptName: 'PawPal Autopilot',
+          ideaSource: 'Morning Routine Autopilot',
+          elevatorPitch: 'PawPal Autopilot is an AI-powered morning routine engine that sequences your pet care tasks around your calendar, adapts when schedules change, and ensures nothing falls through the cracks. It turns chaotic mornings into confident ones.',
+          usp: 'Unlike generic reminder apps, Autopilot understands multi-pet care sequences and proactively reschedules when your day changes — before you even realize there\'s a conflict.',
+          swot: {
+            strengths: [
+              'Directly addresses Sarah\'s #1 pain: morning routine fragility',
+              'Proactive rather than reactive — prevents guilt before it happens',
+              'Multi-pet aware: handles different schedules for Biscuit and Mochi simultaneously',
+            ],
+            weaknesses: [
+              'Requires calendar integration permissions that some users resist',
+              'AI scheduling accuracy may frustrate early adopters if imperfect',
+              'Higher development complexity than a simple reminder system',
+            ],
+            opportunities: [
+              'Pet care app market growing 20% annually with no dominant "smart routine" player',
+              'Smart home device ecosystem enables richer context signals',
+              'Corporate pet benefit programs could be a B2B channel',
+            ],
+            threats: [
+              'Apple/Google could add pet care features to their native reminder apps',
+              'User trust in AI scheduling is still developing — one bad experience erodes confidence',
+              'Pet care routines are deeply personal — automated suggestions may feel presumptuous',
+            ],
+          },
+          feasibility: {
+            technical: {
+              score: 4,
+              rationale: 'Calendar API integration is well-established. ML-based timing optimization requires training data but can start with rule-based heuristics.',
+            },
+            business: {
+              score: 4,
+              rationale: 'Clear willingness to pay among pet owners ($50B US pet industry). Subscription model aligned with ongoing care needs.',
+            },
+            userDesirability: {
+              score: 5,
+              rationale: 'Directly solves Sarah\'s top 3 pains: tool fragmentation, morning routine fragility, and guilt from missed tasks.',
+            },
+          },
+          billboardHero: {
+            headline: 'Your Pets Are Cared For. Before You Even Ask.',
+            subheadline: 'PawPal Autopilot adapts your pet care routine to your calendar — so Biscuit and Mochi always get what they need, even on your busiest days.',
+            cta: 'Start Your Free Autopilot Trial',
+          },
+        },
+        {
+          id: crypto.randomUUID(),
+          position: { x: 130, y: 130 },
+          conceptName: 'PawPal At-a-Glance',
+          ideaSource: 'Glanceable Widget',
+          elevatorPitch: 'PawPal At-a-Glance puts your pets\' care status right on your home screen. One glance shows what\'s done, what\'s next, and what needs attention — no app opening required. It\'s the care dashboard Sarah wished she had.',
+          usp: 'The only pet care widget that shows multi-pet status with emotional pet photos, color-coded urgency, and tomorrow\'s preview — turning your lock screen into a care confidence check.',
+          swot: {
+            strengths: [
+              'Zero-friction: visible without opening app reduces the "another app" problem',
+              'Emotional engagement through pet photos increases daily interaction',
+              'Simple concept that\'s easy to understand and adopt immediately',
+            ],
+            weaknesses: [
+              'Widget real estate is limited on both iOS and Android',
+              'Dependent on OS widget frameworks that change with each update',
+              'May not be sufficient as standalone value prop — needs core app behind it',
+            ],
+            opportunities: [
+              'Lock screen widgets (iOS 16+, Android 14+) are underutilized by pet apps',
+              'Can serve as the entry point that drives users to deeper features',
+              'Shareable widget screenshots could drive organic social media growth',
+            ],
+            threats: [
+              'OS widget API changes could break functionality',
+              'Users with many widgets may not have room',
+              'Competitors could replicate basic widget quickly',
+            ],
+          },
+          feasibility: {
+            technical: {
+              score: 5,
+              rationale: 'Widget frameworks are mature on both platforms. Real-time data sync is the only moderate complexity.',
+            },
+            business: {
+              score: 3,
+              rationale: 'Widget alone doesn\'t drive revenue — must convert users to full app features. Good for acquisition, weak for monetization.',
+            },
+            userDesirability: {
+              score: 4,
+              rationale: 'Addresses tool fragmentation pain by putting status front and center, but doesn\'t solve the deeper routine management need.',
+            },
+          },
+          billboardHero: {
+            headline: 'Everything About Your Pet. One Glance Away.',
+            subheadline: 'PawPal At-a-Glance shows Biscuit and Mochi\'s care status on your home screen — so you always know what\'s done and what\'s next.',
+            cta: 'Add PawPal To Your Home Screen',
+          },
+        },
+      ],
+    },
   },
 
   // =========================================================================
