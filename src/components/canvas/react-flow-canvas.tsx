@@ -36,6 +36,10 @@ import { ConcentricRingsOverlay } from './concentric-rings-overlay';
 import { EmpathyMapOverlay } from './empathy-map-overlay';
 import { detectRing } from '@/lib/canvas/ring-layout';
 import { getZoneForPosition } from '@/lib/canvas/empathy-zones';
+import { EzyDrawLoader } from '@/components/ezydraw/ezydraw-loader';
+import { simplifyDrawingElements } from '@/lib/drawing/simplify';
+import { saveDrawing, updateDrawing, loadDrawing } from '@/actions/drawing-actions';
+import type { DrawingElement } from '@/lib/drawing/types';
 
 // Define node types OUTSIDE component for stable reference
 const nodeTypes = {
@@ -59,6 +63,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const batchDeletePostIts = useCanvasStore((s) => s.batchDeletePostIts);
   const ungroupPostIts = useCanvasStore((s) => s.ungroupPostIts);
   const drawingNodes = useCanvasStore((s) => s.drawingNodes);
+  const addDrawingNode = useCanvasStore((s) => s.addDrawingNode);
   const updateDrawingNode = useCanvasStore((s) => s.updateDrawingNode);
   const deleteDrawingNode = useCanvasStore((s) => s.deleteDrawingNode);
   const gridColumns = useCanvasStore((s) => s.gridColumns);
@@ -136,6 +141,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     columnLabel: string;
     affectedCardCount: number;
     migrationTarget: string | null;
+  } | null>(null);
+
+  // EzyDraw modal state
+  const [ezyDrawState, setEzyDrawState] = useState<{
+    isOpen: boolean;
+    drawingId?: string;           // undefined = new drawing, string = re-editing
+    initialElements?: DrawingElement[];
   } | null>(null);
 
   // Initialize gridColumns from stepConfig on mount (when store has empty gridColumns but step has gridConfig)
@@ -745,6 +757,61 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     }
   }, [deleteColumnDialog, removeGridColumn, dynamicGridConfig]);
 
+  // Handle drawing save from EzyDraw modal
+  const handleDrawingSave = useCallback(
+    async (result: { pngDataUrl: string; elements: DrawingElement[] }) => {
+      const simplifiedElements = simplifyDrawingElements(result.elements);
+      const vectorJson = JSON.stringify(simplifiedElements);
+
+      // Default stage dimensions (EzyDraw canvas size)
+      const width = 1920;
+      const height = 1080;
+
+      if (ezyDrawState?.drawingId) {
+        // Re-edit: update existing drawing
+        const response = await updateDrawing({
+          workshopId,
+          stepId,
+          drawingId: ezyDrawState.drawingId,
+          pngBase64: result.pngDataUrl,
+          vectorJson,
+          width,
+          height,
+        });
+        if (response.success && response.pngUrl) {
+          updateDrawingNode(ezyDrawState.drawingId, { imageUrl: response.pngUrl });
+        }
+      } else {
+        // New drawing: save and add to canvas
+        const response = await saveDrawing({
+          workshopId,
+          stepId,
+          pngBase64: result.pngDataUrl,
+          vectorJson,
+          width,
+          height,
+        });
+        if (response.success && response.drawingId && response.pngUrl) {
+          // Place at viewport center
+          const center = screenToFlowPosition({
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2,
+          });
+          addDrawingNode({
+            drawingId: response.drawingId,
+            imageUrl: response.pngUrl,
+            position: center,
+            width,
+            height,
+          });
+        }
+      }
+
+      setEzyDrawState(null); // Close modal
+    },
+    [ezyDrawState, workshopId, stepId, screenToFlowPosition, addDrawingNode, updateDrawingNode]
+  );
+
   // Handle right-click on nodes (color picker or ungroup)
   const handleNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: Node) => {
@@ -998,6 +1065,17 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           columnLabel={deleteColumnDialog.columnLabel}
           affectedCardCount={deleteColumnDialog.affectedCardCount}
           migrationTarget={deleteColumnDialog.migrationTarget}
+        />
+      )}
+
+      {/* EzyDraw modal */}
+      {ezyDrawState?.isOpen && (
+        <EzyDrawLoader
+          isOpen={true}
+          onClose={() => setEzyDrawState(null)}
+          onSave={handleDrawingSave}
+          initialElements={ezyDrawState.initialElements}
+          drawingId={ezyDrawState.drawingId}
         />
       )}
 

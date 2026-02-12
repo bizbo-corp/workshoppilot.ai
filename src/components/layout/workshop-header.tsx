@@ -174,8 +174,9 @@ export function WorkshopHeader({
         <EzyDrawLoader
           isOpen={ezyDrawOpen}
           onClose={() => setEzyDrawOpen(false)}
-          onSave={(dataURL) => {
-            console.log('EzyDraw saved PNG:', dataURL.substring(0, 100) + '...');
+          onSave={(result) => {
+            console.log('EzyDraw saved PNG:', result.pngDataUrl.substring(0, 100) + '...');
+            console.log('EzyDraw saved elements:', result.elements.length, 'elements');
             setEzyDrawOpen(false);
           }}
         />
