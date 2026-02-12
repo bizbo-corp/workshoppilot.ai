@@ -692,3 +692,69 @@ Show the arc: vague idea -> researched problem -> reframed challenge -> creative
 
   return instructions[stepId] || `No specific instructions available for step: ${stepId}. Provide general design thinking facilitation.`;
 }
+
+/**
+ * Prompt template for AI concept card generation from selected Crazy 8s sketches.
+ * Placeholder tokens: {personaName}, {personaGoals}, {personaPains}, {hmwStatement},
+ * {crazy8sTitle}, {slotId}, {keyInsights}, {stakeholderChallenges}
+ */
+export const CONCEPT_GENERATION_PROMPT = `You are facilitating Step 9 (Develop Concepts) of a design thinking workshop.
+
+**Workshop Context:**
+- Persona: {personaName}
+  - Goals: {personaGoals}
+  - Pain Points: {personaPains}
+- HMW Statement: {hmwStatement}
+- Selected Crazy 8s Sketch: "{crazy8sTitle}" (Slot {slotId})
+- Key Research Insights: {keyInsights}
+- Stakeholder Challenges: {stakeholderChallenges}
+
+**Task:**
+Develop a complete concept card for this Crazy 8s sketch. The concept should:
+1. Directly address the HMW statement
+2. Solve at least one persona pain point
+3. Build on the direction suggested by the sketch title
+4. Be grounded in research evidence from earlier steps
+
+**Output JSON Structure:**
+{
+  "conceptName": "2-4 word marketable name (evocative, memorable)",
+  "elevatorPitch": "2-3 sentence pitch following Problem → Solution → Benefit structure",
+  "usp": "One sentence: what makes this concept different from current solutions",
+  "swot": {
+    "strengths": ["strength 1 citing specific persona gains", "strength 2 citing research evidence", "strength 3"],
+    "weaknesses": ["weakness 1 citing specific persona pains or limitations", "weakness 2", "weakness 3"],
+    "opportunities": ["opportunity 1 from research insights", "opportunity 2 from market context", "opportunity 3"],
+    "threats": ["threat 1 from stakeholder challenges", "threat 2", "threat 3"]
+  },
+  "feasibility": {
+    "technical": {
+      "score": 1-5,
+      "rationale": "Why this score, citing specific workshop evidence"
+    },
+    "business": {
+      "score": 1-5,
+      "rationale": "Why this score, citing market/stakeholder evidence"
+    },
+    "userDesirability": {
+      "score": 1-5,
+      "rationale": "Why this score, citing persona pains and gains"
+    }
+  },
+  "billboardHero": {
+    "headline": "6-10 word benefit-focused headline",
+    "subheadline": "1-2 sentence explanation of how it solves the persona's pain",
+    "cta": "Specific verb-driven call to action (e.g., 'Start your free trial')"
+  }
+}
+
+**Evidence Requirements:**
+- SWOT strengths MUST reference persona goals: {personaGoals}
+- SWOT weaknesses MUST reference persona pains: {personaPains}
+- SWOT opportunities MUST reference research: {keyInsights}
+- SWOT threats MUST reference stakeholder challenges: {stakeholderChallenges}
+- Feasibility rationales MUST cite specific workshop data (not generic reasoning)
+- Scores should be realistic (don't default to all 4s and 5s)
+- Each SWOT quadrant MUST have EXACTLY 3 items
+
+Output ONLY valid JSON. No markdown, no code blocks, no explanation.`;
