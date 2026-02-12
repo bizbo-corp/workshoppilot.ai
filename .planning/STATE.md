@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 25 of 29 (EzyDraw Foundation)
-Plan: 4 of 6 in current phase
+Plan: 5 of 6 in current phase
 Status: In progress
-Last activity: 2026-02-12 — Completed plan 25-04: Shapes Tool Implementation
+Last activity: 2026-02-12 — Completed plan 25-05: Interactive Tools (Select, Text, Eraser)
 
-Progress: [████████████████████████████████████░░░░] 79% (72/91 plans complete across project)
+Progress: [████████████████████████████████████░░░░] 80% (73/91 plans complete across project)
 
 ## Completed Milestones
 
@@ -62,6 +62,9 @@ Progress: [███████████████████████
 - **Stage ref pattern**: forwardRef + useImperativeHandle exposes getStage() and toDataURL() for PNG export
 - **Ref-based drawing state**: Use refs (not useState) for 60fps drawing to avoid re-render lag
 - **perfect-freehand strokes**: Filled closed Lines with velocity-based outlines (size=strokeWidth*4, thinning/smoothing/streamline=0.5)
+- **SelectTool approach**: Read element from store (not node attrs) for type-aware transform logic; shapes normalize scale to 1, strokes keep scale
+- **Text editing pattern**: HTML textarea overlay (Konva standard) instead of Konva.TextPath for native editing UX
+- **Element interactivity**: commonProps pattern spreads id, listening, draggable, onClick, onDragEnd to all elements for consistent behavior
 
 ### Known Tech Debt
 
@@ -88,10 +91,10 @@ Progress: [███████████████████████
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed plan 25-04 (Shapes Tool Implementation)
+Stopped at: Completed plan 25-05 (Interactive Tools: Select, Text, Eraser)
 Resume file: None
 
-**Next action:** Continue with plan 25-05
+**Next action:** Continue with plan 25-06
 
 ## Performance Metrics
 
@@ -101,8 +104,9 @@ Resume file: None
 | 25 | 02 | 112s | 2 | 4 created | 2026-02-12 |
 | 25 | 03 | 157s | 2 | 1 created, 1 modified | 2026-02-12 |
 | 25 | 04 | 297s | 2 | 1 created, 1 modified | 2026-02-12 |
+| 25 | 05 | 258s | 2 | 3 created, 1 modified | 2026-02-12 |
 
 ---
 
-*Last updated: 2026-02-12 after completing plan 25-04*
+*Last updated: 2026-02-12 after completing plan 25-05*
 
