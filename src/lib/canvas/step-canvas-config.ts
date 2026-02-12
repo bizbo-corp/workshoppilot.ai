@@ -89,14 +89,14 @@ export const STEP_CANVAS_CONFIGS: Record<string, StepCanvasConfig> = {
           label: 'Does',
           color: '#9ca3af', // gray
         },
-        // Bottom strips: pains and gains
+        // Right-side vertical strips: pains and gains
         pains: {
-          bounds: { x: -420, y: 0, width: 840, height: 250 },
+          bounds: { x: 440, y: -700, width: 250, height: 330 },
           label: 'Pains',
           color: '#f87171', // warm red
         },
         gains: {
-          bounds: { x: -420, y: 270, width: 840, height: 250 },
+          bounds: { x: 440, y: -350, width: 250, height: 330 },
           label: 'Gains',
           color: '#34d399', // cool green
         },
@@ -128,6 +128,13 @@ export const STEP_CANVAS_CONFIGS: Record<string, StepCanvasConfig> = {
       origin: { x: 140, y: 60 }, // 140px for row labels, 60px for column headers
       cellPadding: 15,
     },
+  },
+
+  // Step 8: Ideation - Mind Map and Crazy 8s canvases
+  'ideation': {
+    hasQuadrants: false,
+    // Mind map uses custom dagre layout (not grid/quadrant overlays)
+    // Crazy 8s uses HTML grid overlay (not canvas grid)
   },
 };
 
