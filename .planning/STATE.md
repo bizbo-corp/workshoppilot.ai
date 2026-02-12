@@ -13,7 +13,7 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 Phase: 30 of 35 (UX Polish)
 Plan: 3 of TBD in current phase
 Status: In progress
-Last activity: 2026-02-12 — Completed plan 30-03 (UX behavior fixes)
+Last activity: 2026-02-12 — Completed plan 30-02 (Visible Panel Borders & Grip Handles)
 
 Progress: [████████████████████░░░░] 83% (29 of 35 phases complete)
 
@@ -37,10 +37,10 @@ Progress: [████████████████████░░░
 
 **Recent Trend:**
 - v1.3 milestone: 23 plans in 1 day (fastest execution)
-- v1.4 Phase 30-03: 1 min (behavior fixes)
+- v1.4 Phase 30-02: 2 min (visible panel borders & grip handles)
 - Trend: Accelerating (increased familiarity with codebase and patterns)
 
-*Updated after plan 30-03 completion*
+*Updated after plan 30-02 completion*
 
 ## Accumulated Context
 
@@ -49,9 +49,9 @@ Progress: [████████████████████░░░
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Phase 30-03: Chat auto-scroll threshold 150px from bottom (balances UX: auto-scroll when near bottom, preserve position when reading history)
-- Phase 30-03: Mount-time scroll uses 'instant' behavior (no jarring animation on page load)
-- Phase 30-03: Grid columns initialization guarded with hadInitialGridColumns ref (prevents overwriting saved state on Journey Map)
+- Phase 30-02: Always-visible 1px borders (w-px bg-border) for panel separators instead of invisible-by-default
+- Phase 30-02: Grip handles (GripVertical/GripHorizontal) appear on hover with fade-in transition for discoverability
+- Phase 30-02: Invisible hit area extends 8px beyond separator for touch-friendly dragging
 - Phase 29: AI concept generation from workshop context (queries 4 prior steps for evidence-based SWOT/feasibility)
 - Phase 27: UI kit with drag-and-drop wireframe components, speech bubbles, emoji stamps
 - Phase 25-29: EzyDraw as standalone modal with dual storage (vector JSON + PNG in Vercel Blob)
@@ -77,7 +77,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed plan 30-03 (Chat auto-scroll reliability + Journey Map duplicate fix)
+Stopped at: Completed plan 30-02 (Visible Panel Borders & Grip Handles)
 Resume file: None
 
 **Next action:** Continue Phase 30 UX Polish with next plan
