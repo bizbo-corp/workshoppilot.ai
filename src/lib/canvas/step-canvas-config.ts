@@ -136,6 +136,12 @@ export const STEP_CANVAS_CONFIGS: Record<string, StepCanvasConfig> = {
     // Mind map uses custom dagre layout (not grid/quadrant overlays)
     // Crazy 8s uses HTML grid overlay (not canvas grid)
   },
+
+  // Step 9: Concept Development - Concept card canvas
+  'concept': {
+    hasQuadrants: false,
+    // Concept cards use dealing-cards layout (no grid/quadrant/ring overlays)
+  },
 };
 
 /**

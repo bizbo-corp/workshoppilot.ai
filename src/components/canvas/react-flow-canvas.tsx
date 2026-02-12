@@ -20,7 +20,9 @@ import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-prov
 import { PostItNode, type PostItNodeData } from './post-it-node';
 import { GroupNode } from './group-node';
 import { DrawingImageNode } from './drawing-image-node';
+import { ConceptCardNode } from './concept-card-node';
 import { CanvasToolbar } from './canvas-toolbar';
+import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import { ColorPicker } from './color-picker';
 import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
 import { usePreventScrollOnCanvas } from '@/hooks/use-prevent-scroll-on-canvas';
@@ -46,6 +48,7 @@ const nodeTypes = {
   postIt: PostItNode,
   group: GroupNode,
   drawingImage: DrawingImageNode,
+  conceptCard: ConceptCardNode,
 };
 
 export interface ReactFlowCanvasProps {
@@ -66,6 +69,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const addDrawingNode = useCanvasStore((s) => s.addDrawingNode);
   const updateDrawingNode = useCanvasStore((s) => s.updateDrawingNode);
   const deleteDrawingNode = useCanvasStore((s) => s.deleteDrawingNode);
+  const conceptCards = useCanvasStore((s) => s.conceptCards);
+  const updateConceptCard = useCanvasStore((s) => s.updateConceptCard);
+  const deleteConceptCard = useCanvasStore((s) => s.deleteConceptCard);
   const gridColumns = useCanvasStore((s) => s.gridColumns);
   const setGridColumns = useCanvasStore((s) => s.setGridColumns);
   const removeGridColumn = useCanvasStore((s) => s.removeGridColumn);
@@ -251,6 +257,66 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     setEditingNodeId(null);
   }, []);
 
+  // Handle concept card field changes
+  const handleConceptFieldChange = useCallback(
+    (id: string, field: string, value: string) => {
+      // Handle nested fields like 'billboardHero.headline'
+      if (field.includes('.')) {
+        const [parent, child] = field.split('.');
+        const card = conceptCards.find((c) => c.id === id);
+        if (card && card[parent as keyof ConceptCardData]) {
+          updateConceptCard(id, {
+            [parent]: {
+              ...(card[parent as keyof ConceptCardData] as Record<string, unknown>),
+              [child]: value,
+            },
+          });
+        }
+      } else {
+        updateConceptCard(id, { [field]: value });
+      }
+    },
+    [conceptCards, updateConceptCard]
+  );
+
+  const handleConceptSWOTChange = useCallback(
+    (id: string, quadrant: string, index: number, value: string) => {
+      const card = conceptCards.find((c) => c.id === id);
+      if (!card) return;
+
+      const updatedQuadrant = [...card.swot[quadrant as keyof typeof card.swot]];
+      updatedQuadrant[index] = value;
+
+      updateConceptCard(id, {
+        swot: {
+          ...card.swot,
+          [quadrant]: updatedQuadrant,
+        },
+      });
+    },
+    [conceptCards, updateConceptCard]
+  );
+
+  const handleConceptFeasibilityChange = useCallback(
+    (id: string, dimension: string, score?: number, rationale?: string) => {
+      const card = conceptCards.find((c) => c.id === id);
+      if (!card) return;
+
+      const currentDimension = card.feasibility[dimension as keyof typeof card.feasibility];
+
+      updateConceptCard(id, {
+        feasibility: {
+          ...card.feasibility,
+          [dimension]: {
+            score: score !== undefined ? score : currentDimension.score,
+            rationale: rationale !== undefined ? rationale : currentDimension.rationale,
+          },
+        },
+      });
+    },
+    [conceptCards, updateConceptCard]
+  );
+
   // Handle preview confirmation and rejection
   const handleConfirmPreview = useCallback((id: string) => {
     confirmPreview(id);
@@ -325,8 +391,25 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       };
     });
 
-    return [...postItReactFlowNodes, ...drawingReactFlowNodes];
-  }, [postIts, drawingNodes, editingNodeId, draggingNodeId, selectedNodeIds, handleTextChange, handleEditComplete, handleConfirmPreview, handleRejectPreview]);
+    // Add concept card nodes
+    const conceptCardReactFlowNodes: Node[] = conceptCards.map((card) => ({
+      id: card.id,
+      type: 'conceptCard' as const,
+      position: card.position,
+      draggable: true,
+      selectable: true,
+      selected: selectedNodeIds.includes(card.id),
+      data: {
+        ...card,
+        onFieldChange: handleConceptFieldChange,
+        onSWOTChange: handleConceptSWOTChange,
+        onFeasibilityChange: handleConceptFeasibilityChange,
+      },
+      style: { width: 400 },
+    }));
+
+    return [...postItReactFlowNodes, ...drawingReactFlowNodes, ...conceptCardReactFlowNodes];
+  }, [postIts, drawingNodes, conceptCards, editingNodeId, draggingNodeId, selectedNodeIds, handleTextChange, handleEditComplete, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange]);
 
   // Create post-it at position and set as editing
   const createPostItAtPosition = useCallback(
@@ -564,10 +647,12 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     selectedNodes.filter(n => n.type === 'group').forEach(n => ungroupPostIts(n.id));
     // Delete selected drawing nodes
     selectedNodes.filter(n => n.type === 'drawingImage').forEach(n => deleteDrawingNode(n.id));
-    // Delete non-group, non-drawing postIt nodes
-    const postItIds = selectedNodes.filter(n => n.type !== 'group' && n.type !== 'drawingImage').map(n => n.id);
+    // Delete selected concept cards
+    selectedNodes.filter(n => n.type === 'conceptCard').forEach(n => deleteConceptCard(n.id));
+    // Delete non-group, non-drawing, non-conceptCard postIt nodes
+    const postItIds = selectedNodes.filter(n => n.type !== 'group' && n.type !== 'drawingImage' && n.type !== 'conceptCard').map(n => n.id);
     if (postItIds.length > 0) batchDeletePostIts(postItIds);
-  }, [nodes, ungroupPostIts, batchDeletePostIts, deleteDrawingNode]);
+  }, [nodes, ungroupPostIts, batchDeletePostIts, deleteDrawingNode, deleteConceptCard]);
 
   // Handle node drag start
   const handleNodeDragStart = useCallback(
@@ -603,11 +688,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
             ungroupPostIts(id);
           } else if (node?.type === 'drawingImage') {
             deleteDrawingNode(id);
+          } else if (node?.type === 'conceptCard') {
+            deleteConceptCard(id);
           }
         });
         const postItIds = removedIds.filter(id => {
           const node = nodes.find(n => n.id === id);
-          return node?.type !== 'group' && node?.type !== 'drawingImage';
+          return node?.type !== 'group' && node?.type !== 'drawingImage' && node?.type !== 'conceptCard';
         });
         if (postItIds.length > 0) batchDeletePostIts(postItIds);
         return;
@@ -629,6 +716,14 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
             // Handle drawing node position update with snap-to-grid
             const snappedPosition = snapToGrid(change.position);
             updateDrawingNode(change.id, { position: snappedPosition });
+            return;
+          }
+
+          // Check if this is a concept card node
+          const conceptCard = conceptCards.find((cc) => cc.id === change.id);
+          if (conceptCard) {
+            const snappedPosition = snapToGrid(change.position);
+            updateConceptCard(change.id, { position: snappedPosition });
             return;
           }
 
@@ -690,7 +785,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         }
       });
     },
-    [nodes, drawingNodes, snapToGrid, updatePostIt, updateDrawingNode, deleteDrawingNode, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts]
+    [nodes, drawingNodes, conceptCards, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, deleteDrawingNode, deleteConceptCard, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts]
   );
 
   // Handle node drag (real-time cell highlighting)
@@ -714,17 +809,20 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         } else if (node.type === 'drawingImage') {
           // Delete drawing node
           deleteDrawingNode(node.id);
+        } else if (node.type === 'conceptCard') {
+          // Delete concept card
+          deleteConceptCard(node.id);
         }
       });
-      // Delete non-group, non-drawing postIt nodes
+      // Delete non-group, non-drawing, non-conceptCard postIt nodes
       const postItIds = deleted
-        .filter(n => n.type !== 'group' && n.type !== 'drawingImage')
+        .filter(n => n.type !== 'group' && n.type !== 'drawingImage' && n.type !== 'conceptCard')
         .map(n => n.id);
       if (postItIds.length > 0) {
         batchDeletePostIts(postItIds);
       }
     },
-    [ungroupPostIts, batchDeletePostIts, deleteDrawingNode]
+    [ungroupPostIts, batchDeletePostIts, deleteDrawingNode, deleteConceptCard]
   );
 
 
