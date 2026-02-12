@@ -6,7 +6,7 @@
 - ✅ **v1.0 Working AI Facilitation** - Phases 7-14 (shipped 2026-02-10)
 - ✅ **v1.1 Canvas Foundation** - Phases 15-20 (shipped 2026-02-11)
 - ✅ **v1.2 Canvas Whiteboard** - Phases 21-24 (shipped 2026-02-12)
-- 🚧 **v1.3 EzyDraw & Visual Ideation** - Phases 25-29 (in progress)
+- ✅ **v1.3 EzyDraw & Visual Ideation** - Phases 25-29 (shipped 2026-02-12)
 
 ## Phases
 
@@ -67,7 +67,7 @@ See `milestones/v1.2-ROADMAP.md` for full details.
 
 </details>
 
-### 🚧 v1.3 EzyDraw & Visual Ideation (In Progress)
+### ✅ v1.3 EzyDraw & Visual Ideation (SHIPPED 2026-02-12)
 
 **Milestone Goal:** Transform Steps 8 and 9 from text-only to visual-first with a reusable in-app drawing tool.
 
@@ -202,10 +202,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 29-01-PLAN.md — ConceptCardNode component + ConceptCardData type + canvas store concept card slice
-- [ ] 29-02-PLAN.md — Register conceptCard node type, dealing-cards layout, autosave + persistence
-- [ ] 29-03-PLAN.md — AI concept generation API endpoint with workshop context
-- [ ] 29-04-PLAN.md — Step 9 canvas container wiring, concept generation overlay, data flow
+- [x] 29-01-PLAN.md — ConceptCardNode component + ConceptCardData type + canvas store concept card slice
+- [x] 29-02-PLAN.md — Register conceptCard node type, dealing-cards layout, autosave + persistence
+- [x] 29-03-PLAN.md — AI concept generation API endpoint with workshop context
+- [x] 29-04-PLAN.md — Step 9 canvas container wiring, concept generation overlay, data flow
 
 ## Progress
 
@@ -219,10 +219,10 @@ Plans:
 | 26. Drawing-Canvas Integration | v1.3 | 4/4 | Complete | 2026-02-12 |
 | 27. UI Kit & Advanced Tools | v1.3 | 3/3 | Complete | 2026-02-12 |
 | 28. Mind Map & Crazy 8s Canvases | v1.3 | 6/6 | Complete | 2026-02-12 |
-| 29. Visual Concept Cards | v1.3 | 0/4 | Not started | - |
+| 29. Visual Concept Cards | v1.3 | 4/4 | Complete | 2026-02-12 |
 
 **Total v1.3:** 23 plans across 5 phases
 **Total project:** 91 plans across 29 phases, 5 milestones
 
 ---
-*Last updated: 2026-02-12 after Phase 28 completion*
+*Last updated: 2026-02-12 after Phase 29 completion — v1.3 milestone shipped*
