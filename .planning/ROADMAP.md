@@ -144,9 +144,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 27-01: Build UI kit component palette with 10 pre-built shapes
-- [ ] 27-02: Implement drag-and-drop using dnd-kit for UI kit placement
-- [ ] 27-03: Add speech bubbles tool and emoji picker (@emoji-mart/react)
+- [ ] 27-01-PLAN.md — Install deps, extend types (groupId, SpeechBubbleElement, EmojiElement), create 10 UI kit factories and palette sidebar
+- [ ] 27-02-PLAN.md — Wire dnd-kit drag-drop from palette to canvas, add group operations to store, group-aware stage rendering
+- [ ] 27-03-PLAN.md — Speech bubble tool with adjustable tail, lazy-loaded emoji picker, toolbar and stage integration
 
 #### Phase 28: Mind Map & Crazy 8s Canvases
 
