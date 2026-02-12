@@ -144,9 +144,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 27-01-PLAN.md — Install deps, extend types (groupId, SpeechBubbleElement, EmojiElement), create 10 UI kit factories and palette sidebar
-- [ ] 27-02-PLAN.md — Wire dnd-kit drag-drop from palette to canvas, add group operations to store, group-aware stage rendering
-- [ ] 27-03-PLAN.md — Speech bubble tool with adjustable tail, lazy-loaded emoji picker, toolbar and stage integration
+- [x] 27-01-PLAN.md — Install deps, extend types (groupId, SpeechBubbleElement, EmojiElement), create 10 UI kit factories and palette sidebar
+- [x] 27-02-PLAN.md — Wire dnd-kit drag-drop from palette to canvas, add group operations to store, group-aware stage rendering
+- [x] 27-03-PLAN.md — Speech bubble tool with adjustable tail, lazy-loaded emoji picker, toolbar and stage integration
 
 #### Phase 28: Mind Map & Crazy 8s Canvases
 
@@ -217,7 +217,7 @@ Plans:
 | 21-24 | v1.2 | 9/9 | Complete | 2026-02-12 |
 | 25. EzyDraw Foundation | v1.3 | 6/6 | Complete | 2026-02-12 |
 | 26. Drawing-Canvas Integration | v1.3 | 4/4 | Complete | 2026-02-12 |
-| 27. UI Kit & Advanced Tools | v1.3 | 0/3 | Not started | - |
+| 27. UI Kit & Advanced Tools | v1.3 | 3/3 | Complete | 2026-02-12 |
 | 28. Mind Map & Crazy 8s Canvases | v1.3 | 0/6 | Not started | - |
 | 29. Visual Concept Cards | v1.3 | 0/4 | Not started | - |
 
@@ -225,4 +225,4 @@ Plans:
 **Total project:** 91 plans across 29 phases, 5 milestones
 
 ---
-*Last updated: 2026-02-12 after v1.3 milestone roadmap creation*
+*Last updated: 2026-02-12 after Phase 27 completion*
