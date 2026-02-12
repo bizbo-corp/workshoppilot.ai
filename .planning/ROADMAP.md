@@ -122,10 +122,10 @@ Plans:
 2. Localhost developers can toggle output panel visibility via footer button
 3. Output panel toggle state persists across page navigation in dev mode
 
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 31-01: TBD during planning
+- [ ] 31-01-PLAN.md -- Dev output hook, gate output panel visibility, add localhost toggle to footer
 
 #### Phase 32: Workshop Management
 
@@ -217,7 +217,7 @@ Plans:
 | 28. Mind Map & Crazy 8s Canvases | v1.3 | 6/6 | Complete | 2026-02-12 |
 | 29. Visual Concept Cards | v1.3 | 4/4 | Complete | 2026-02-12 |
 | 30. UX Polish | v1.4 | 3/3 | Complete | 2026-02-13 |
-| 31. Output Panel Retirement | v1.4 | 0/TBD | Not started | - |
+| 31. Output Panel Retirement | v1.4 | 0/1 | Not started | - |
 | 32. Workshop Management | v1.4 | 0/TBD | Not started | - |
 | 33. AI Personality | v1.4 | 0/TBD | Not started | - |
 | 34. Seed Data | v1.4 | 0/TBD | Not started | - |
@@ -227,4 +227,4 @@ Plans:
 **Total project:** 91 plans across 29 phases, 5 milestones
 
 ---
-*Last updated: 2026-02-13 after Phase 30 planning*
+*Last updated: 2026-02-13 after Phase 31 planning*
