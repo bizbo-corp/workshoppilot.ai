@@ -19,6 +19,8 @@ import { Clock, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 interface WorkshopCardProps {
   workshopId: string;
@@ -28,6 +30,8 @@ interface WorkshopCardProps {
   currentStepName: string;
   updatedAt: Date;
   onRename: (workshopId: string, newName: string) => Promise<void>;
+  selected?: boolean;
+  onSelect?: () => void;
 }
 
 export function WorkshopCard({
@@ -38,6 +42,8 @@ export function WorkshopCard({
   currentStepName,
   updatedAt,
   onRename,
+  selected = false,
+  onSelect,
 }: WorkshopCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(title);
@@ -73,7 +79,26 @@ export function WorkshopCard({
   };
 
   return (
-    <Card className="group relative overflow-hidden border border-border transition-all hover:shadow-md dark:hover:border-gray-700">
+    <Card className={cn(
+      "group relative overflow-hidden border border-border transition-all hover:shadow-md dark:hover:border-gray-700",
+      selected && "ring-2 ring-primary border-primary"
+    )}>
+      {onSelect && (
+        <div
+          className="absolute right-3 top-3 z-10"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onSelect();
+          }}
+        >
+          <Checkbox
+            checked={selected}
+            aria-label={`Select ${title}`}
+            className="h-5 w-5"
+          />
+        </div>
+      )}
       <Link href={`/workshop/${sessionId}/step/${currentStep}`}>
         <CardContent className="p-6">
           {/* Workshop name with inline edit */}
