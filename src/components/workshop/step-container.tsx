@@ -373,12 +373,7 @@ export function StepContainer({
                   {renderContent()}
                 </Panel>
 
-                <Separator className="group relative w-0 hover:w-px data-[resize-handle-state=drag]:w-px">
-                  {/* Invisible touch-friendly hit area (24px wide) */}
-                  <div className="absolute inset-y-0 -left-3 -right-3 cursor-col-resize" />
-                  {/* Visual indicator on hover only */}
-                  <div className="absolute inset-y-0 left-0 w-px bg-border opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
-                </Separator>
+                <Separator className="group relative w-px bg-border" />
 
                 <Panel defaultSize={75} minSize={40}>
                   {step && CANVAS_ONLY_STEPS.includes(step.id) ? (

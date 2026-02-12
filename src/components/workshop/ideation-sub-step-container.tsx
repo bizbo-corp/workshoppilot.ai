@@ -357,10 +357,7 @@ export function IdeationSubStepContainer({
               <Panel defaultSize={40} minSize={30}>
                 {renderChatPanel('mind-mapping')}
               </Panel>
-              <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
-                <div className="absolute inset-y-0 -left-3 -right-3" />
-                <div className="absolute inset-y-0 left-0 w-px bg-ring opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
-              </Separator>
+              <Separator className="group relative w-px bg-border" />
               <Panel defaultSize={60} minSize={30}>
                 <div className="h-full">
                   {stepId && (
@@ -425,10 +422,7 @@ export function IdeationSubStepContainer({
               <Panel defaultSize={40} minSize={30}>
                 {renderChatPanel('crazy-eights')}
               </Panel>
-              <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
-                <div className="absolute inset-y-0 -left-3 -right-3" />
-                <div className="absolute inset-y-0 left-0 w-px bg-ring opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
-              </Separator>
+              <Separator className="group relative w-px bg-border" />
               <Panel defaultSize={60} minSize={30}>
                 <div className="h-full">
                   {stepId && (
@@ -468,10 +462,7 @@ export function IdeationSubStepContainer({
               <Panel defaultSize={40} minSize={30}>
                 {renderChatPanel('idea-selection')}
               </Panel>
-              <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
-                <div className="absolute inset-y-0 -left-3 -right-3" />
-                <div className="absolute inset-y-0 left-0 w-px bg-ring opacity-0 transition-opacity group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100" />
-              </Separator>
+              <Separator className="group relative w-px bg-border" />
               <Panel defaultSize={60} minSize={30}>
                 {renderOutputPanel('idea-selection')}
               </Panel>
