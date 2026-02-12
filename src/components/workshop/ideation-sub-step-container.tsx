@@ -14,7 +14,7 @@ import { MindMapCanvas } from './mind-map-canvas';
 import { Crazy8sCanvas } from './crazy-8s-canvas';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Lightbulb, Zap, CheckCircle2, Check, Sparkles, ArrowRight } from 'lucide-react';
+import { Lightbulb, Zap, CheckCircle2, Check, Sparkles, ArrowRight, GripVertical } from 'lucide-react';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 
 type IdeationSubStep = 'mind-mapping' | 'crazy-eights' | 'idea-selection';
@@ -357,7 +357,14 @@ export function IdeationSubStepContainer({
               <Panel defaultSize={40} minSize={30}>
                 {renderChatPanel('mind-mapping')}
               </Panel>
-              <Separator className="group relative w-px bg-border" />
+              <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
+                <div className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100 transition-opacity">
+                  <div className="flex h-6 w-4 items-center justify-center rounded-sm bg-border">
+                    <GripVertical className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                </div>
+              </Separator>
               <Panel defaultSize={60} minSize={30}>
                 <div className="h-full">
                   {stepId && (
@@ -422,7 +429,14 @@ export function IdeationSubStepContainer({
               <Panel defaultSize={40} minSize={30}>
                 {renderChatPanel('crazy-eights')}
               </Panel>
-              <Separator className="group relative w-px bg-border" />
+              <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
+                <div className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100 transition-opacity">
+                  <div className="flex h-6 w-4 items-center justify-center rounded-sm bg-border">
+                    <GripVertical className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                </div>
+              </Separator>
               <Panel defaultSize={60} minSize={30}>
                 <div className="h-full">
                   {stepId && (
@@ -462,7 +476,14 @@ export function IdeationSubStepContainer({
               <Panel defaultSize={40} minSize={30}>
                 {renderChatPanel('idea-selection')}
               </Panel>
-              <Separator className="group relative w-px bg-border" />
+              <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
+                <div className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100 transition-opacity">
+                  <div className="flex h-6 w-4 items-center justify-center rounded-sm bg-border">
+                    <GripVertical className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                </div>
+              </Separator>
               <Panel defaultSize={60} minSize={30}>
                 {renderOutputPanel('idea-selection')}
               </Panel>

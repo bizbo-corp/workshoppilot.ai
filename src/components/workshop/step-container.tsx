@@ -11,7 +11,7 @@ import { StepNavigation } from './step-navigation';
 import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
 import { IdeationSubStepContainer } from './ideation-sub-step-container';
 import { Button } from '@/components/ui/button';
-import { Sparkles, MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose } from 'lucide-react';
+import { Sparkles, MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical } from 'lucide-react';
 import { reviseStep, resetStep } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { cn } from '@/lib/utils';
@@ -373,7 +373,14 @@ export function StepContainer({
                   {renderContent()}
                 </Panel>
 
-                <Separator className="group relative w-px bg-border" />
+                <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
+                  <div className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize" />
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100 transition-opacity">
+                    <div className="flex h-6 w-4 items-center justify-center rounded-sm bg-border">
+                      <GripVertical className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                  </div>
+                </Separator>
 
                 <Panel defaultSize={75} minSize={40}>
                   {step && CANVAS_ONLY_STEPS.includes(step.id) ? (

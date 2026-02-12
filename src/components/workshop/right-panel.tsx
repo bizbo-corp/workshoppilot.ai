@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
-import { PanelRightClose } from 'lucide-react';
+import { PanelRightClose, GripHorizontal } from 'lucide-react';
 import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { OutputAccordion } from './output-accordion';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
@@ -109,7 +109,14 @@ export function RightPanel({
         </Panel>
 
         {/* Horizontal separator */}
-        <Separator className="h-px bg-border hover:bg-ring" />
+        <Separator className="group relative h-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
+          <div className="absolute inset-x-0 -top-1 -bottom-1 cursor-row-resize" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100 transition-opacity">
+            <div className="flex h-4 w-6 items-center justify-center rounded-sm bg-border">
+              <GripHorizontal className="h-3 w-3 text-muted-foreground" />
+            </div>
+          </div>
+        </Separator>
 
         {/* Output accordion panel - bottom 50% */}
         <Panel defaultSize={50} minSize={20}>
