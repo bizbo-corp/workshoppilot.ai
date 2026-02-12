@@ -17,7 +17,7 @@ import { useDrawingStore } from '@/providers/drawing-store-provider';
  * Note: Selection logic (onClick handlers) is in EzyDrawStage element rendering.
  * This component only manages the Transformer UI and updates.
  */
-export function SelectTool({ stageRef }: { stageRef: React.RefObject<Konva.Stage> }) {
+export function SelectTool({ stageRef }: { stageRef: React.RefObject<Konva.Stage | null> }) {
   const transformerRef = useRef<Konva.Transformer>(null);
   const selectedElementId = useDrawingStore((state) => state.selectedElementId);
   const elements = useDrawingStore((state) => state.elements);

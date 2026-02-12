@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
-import { Stage, Layer, Line, Rect, Ellipse, Arrow } from 'react-konva';
+import { Stage, Layer, Line, Rect, Ellipse, Arrow, Text } from 'react-konva';
 import type Konva from 'konva';
 import { useDrawingStore } from '@/providers/drawing-store-provider';
 import { PencilTool } from '@/components/ezydraw/tools/pencil-tool';
 import { ShapesTool, useShapesTool } from '@/components/ezydraw/tools/shapes-tool';
+import { SelectTool } from '@/components/ezydraw/tools/select-tool';
+import { TextTool } from '@/components/ezydraw/tools/text-tool';
+import { eraserCursor } from '@/components/ezydraw/tools/eraser-tool';
 import type { DrawingElement } from '@/lib/drawing/types';
+import { createElementId } from '@/lib/drawing/types';
 
 export interface EzyDrawStageHandle {
   getStage: () => Konva.Stage | null;
@@ -23,9 +27,25 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
     height: typeof window !== 'undefined' ? window.innerHeight - 48 : 600, // 48px for toolbar
   });
 
+  // Text editing state
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [editingPosition, setEditingPosition] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    fontSize: number;
+  } | null>(null);
+
   // Get elements and active tool from drawing store
   const elements = useDrawingStore((state: { elements: DrawingElement[] }) => state.elements);
   const activeTool = useDrawingStore((state) => state.activeTool);
+  const addElement = useDrawingStore((state) => state.addElement);
+  const updateElement = useDrawingStore((state) => state.updateElement);
+  const deleteElement = useDrawingStore((state) => state.deleteElement);
+  const selectElement = useDrawingStore((state) => state.selectElement);
+  const strokeColor = useDrawingStore((state) => state.strokeColor);
+  const fontSize = useDrawingStore((state) => state.fontSize);
 
   // Get shape tool handlers
   const shapeHandlers = useShapesTool();
@@ -61,11 +81,80 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
     };
   }, []);
 
+  // Handle text element creation
+  const handleTextClick = (x: number, y: number) => {
+    const newTextId = createElementId();
+    addElement({
+      type: 'text',
+      x,
+      y,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 1,
+      text: 'Text',
+      fontSize: fontSize,
+      fill: strokeColor,
+      width: 200,
+      fontFamily: 'sans-serif',
+    } as Omit<DrawingElement, 'id'>);
+    // Immediately select and edit the new text
+    setTimeout(() => {
+      selectElement(newTextId);
+      startTextEditing(newTextId, x, y, 200, fontSize, 'Text');
+    }, 0);
+  };
+
+  // Start text editing
+  const startTextEditing = (
+    id: string,
+    x: number,
+    y: number,
+    width: number,
+    fontSize: number,
+    text: string
+  ) => {
+    setEditingTextId(id);
+    setEditingText(text);
+    setEditingPosition({ x, y, width, fontSize });
+  };
+
+  // Finish text editing
+  const finishTextEditing = () => {
+    if (editingTextId && editingText.trim() !== '') {
+      updateElement(editingTextId, { text: editingText });
+    }
+    setEditingTextId(null);
+    setEditingText('');
+    setEditingPosition(null);
+  };
+
+  // Get cursor style based on active tool
+  const getCursorStyle = () => {
+    switch (activeTool) {
+      case 'pencil':
+      case 'rectangle':
+      case 'circle':
+      case 'diamond':
+      case 'arrow':
+      case 'line':
+        return 'crosshair';
+      case 'text':
+        return 'text';
+      case 'eraser':
+        return eraserCursor;
+      case 'select':
+        return 'default';
+      default:
+        return 'default';
+    }
+  };
+
   return (
     <div
-      style={{ touchAction: 'none' }}
+      style={{ touchAction: 'none', cursor: getCursorStyle() }}
       onTouchMove={(e) => e.preventDefault()}
-      className="flex-1 overflow-hidden bg-white"
+      className="flex-1 overflow-hidden bg-white relative"
     >
       <Stage
         ref={stageRef}
@@ -80,6 +169,22 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
             width={dimensions.width}
             height={dimensions.height}
             fill="transparent"
+            onClick={(e) => {
+              // Text tool: create new text at click position
+              if (activeTool === 'text') {
+                const stage = e.target.getStage();
+                if (stage) {
+                  const pos = stage.getPointerPosition();
+                  if (pos) {
+                    handleTextClick(pos.x, pos.y);
+                  }
+                }
+              }
+              // Select tool: clicking empty space deselects
+              if (activeTool === 'select') {
+                selectElement(null);
+              }
+            }}
             onPointerDown={(e) => {
               // Delegate to shape tool handlers
               if (['rectangle', 'circle', 'arrow', 'line', 'diamond'].includes(activeTool)) {
@@ -100,17 +205,42 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
 
           {/* Render completed elements from store */}
           {elements.map((element) => {
+            // Common props for interactivity
+            const isInteractive = activeTool === 'select' || activeTool === 'eraser';
+            const isDraggable = activeTool === 'select';
+            const commonProps = {
+              id: element.id,
+              listening: isInteractive,
+              draggable: isDraggable,
+              onClick: (e: Konva.KonvaEventObject<MouseEvent>) => {
+                e.cancelBubble = true; // Prevent event from reaching interaction rect
+                if (activeTool === 'select') {
+                  selectElement(element.id);
+                } else if (activeTool === 'eraser') {
+                  deleteElement(element.id);
+                }
+              },
+              onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
+                if (activeTool === 'select') {
+                  updateElement(element.id, {
+                    x: e.target.x(),
+                    y: e.target.y(),
+                  });
+                }
+              },
+            };
+
             // Pencil stroke
             if (element.type === 'pencil') {
               return (
                 <Line
                   key={element.id}
+                  {...commonProps}
                   points={element.points}
                   fill={element.fill}
                   stroke={element.stroke}
                   strokeWidth={element.strokeWidth}
                   closed={true}
-                  listening={false}
                   perfectDrawEnabled={false}
                   x={element.x}
                   y={element.y}
@@ -127,6 +257,7 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
               return (
                 <Rect
                   key={element.id}
+                  {...commonProps}
                   x={element.x}
                   y={element.y}
                   width={element.width}
@@ -147,6 +278,7 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
               return (
                 <Ellipse
                   key={element.id}
+                  {...commonProps}
                   x={element.x}
                   y={element.y}
                   radiusX={element.radiusX}
@@ -167,6 +299,7 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
               return (
                 <Arrow
                   key={element.id}
+                  {...commonProps}
                   x={element.x}
                   y={element.y}
                   points={element.points}
@@ -187,6 +320,7 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
               return (
                 <Line
                   key={element.id}
+                  {...commonProps}
                   x={element.x}
                   y={element.y}
                   points={element.points}
@@ -205,6 +339,7 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
               return (
                 <Line
                   key={element.id}
+                  {...commonProps}
                   x={element.x}
                   y={element.y}
                   points={[
@@ -229,7 +364,41 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
               );
             }
 
-            // Text and other types (future)
+            // Text
+            if (element.type === 'text') {
+              return (
+                <Text
+                  key={element.id}
+                  {...commonProps}
+                  x={element.x}
+                  y={element.y}
+                  text={element.text}
+                  fontSize={element.fontSize}
+                  fill={element.fill}
+                  width={element.width}
+                  fontFamily={element.fontFamily}
+                  rotation={element.rotation}
+                  scaleX={element.scaleX}
+                  scaleY={element.scaleY}
+                  opacity={element.opacity}
+                  onDblClick={(e) => {
+                    e.cancelBubble = true;
+                    // Start inline editing
+                    const node = e.target;
+                    const absPos = node.getAbsolutePosition();
+                    startTextEditing(
+                      element.id,
+                      absPos.x,
+                      absPos.y,
+                      element.width,
+                      element.fontSize,
+                      element.text
+                    );
+                  }}
+                />
+              );
+            }
+
             return null;
           })}
 
@@ -240,9 +409,20 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
           <ShapesTool />
         </Layer>
 
-        {/* UI Layer: For selection transformer, added in plan 05 */}
-        <Layer ref={uiLayerRef} />
+        {/* UI Layer: For selection transformer */}
+        <Layer ref={uiLayerRef}>
+          {activeTool === 'select' && <SelectTool stageRef={stageRef} />}
+        </Layer>
       </Stage>
+
+      {/* Text editing overlay (HTML textarea positioned over canvas) */}
+      <TextTool
+        editingTextId={editingTextId}
+        editingText={editingText}
+        editingPosition={editingPosition}
+        onTextChange={setEditingText}
+        onFinishEditing={finishTextEditing}
+      />
     </div>
   );
 });
