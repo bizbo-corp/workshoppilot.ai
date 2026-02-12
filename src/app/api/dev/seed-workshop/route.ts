@@ -160,9 +160,15 @@ export async function GET(request: Request) {
       if (!fixture) continue;
 
       // Merge _canvas into artifact JSONB if canvas data exists
-      const artifactData = fixture.canvas
-        ? { ...fixture.artifact, _canvas: { postIts: fixture.canvas } }
-        : fixture.artifact;
+      let artifactData = fixture.artifact;
+
+      if (fixture.canvasData) {
+        // New format: full canvas state with all types
+        artifactData = { ...fixture.artifact, _canvas: fixture.canvasData };
+      } else if (fixture.canvas) {
+        // Legacy format: PostIt[] only
+        artifactData = { ...fixture.artifact, _canvas: { postIts: fixture.canvas } };
+      }
 
       artifactRows.push({
         id: createPrefixedId('art'),
