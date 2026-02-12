@@ -3,6 +3,7 @@ import { temporal } from 'zundo';
 import type { Quadrant } from '@/lib/canvas/quadrant-detection';
 import type { GridConfig } from '@/lib/canvas/grid-layout';
 import { getCellBounds } from '@/lib/canvas/grid-layout';
+import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 
 export type PostItColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange';
 
@@ -42,6 +43,7 @@ export type PostIt = {
 export type CanvasState = {
   postIts: PostIt[];
   drawingNodes: DrawingNode[];
+  crazy8sSlots: Crazy8sSlot[];
   isDirty: boolean;
   gridColumns: GridColumn[]; // Dynamic columns, initialized from step config
   highlightedCell: { row: number; col: number } | null;
@@ -62,6 +64,8 @@ export type CanvasActions = {
   updateDrawingNode: (id: string, updates: Partial<DrawingNode>) => void;
   deleteDrawingNode: (id: string) => void;
   setDrawingNodes: (nodes: DrawingNode[]) => void;
+  updateCrazy8sSlot: (slotId: string, updates: Partial<Crazy8sSlot>) => void;
+  setCrazy8sSlots: (slots: Crazy8sSlot[]) => void;
   setGridColumns: (gridColumns: GridColumn[]) => void;
   addGridColumn: (label: string) => void;
   updateGridColumn: (id: string, updates: Partial<GridColumn>) => void;
@@ -76,10 +80,11 @@ export type CanvasActions = {
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[] }) => {
+export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[] }) => {
   const DEFAULT_STATE: CanvasState = {
     postIts: initState?.postIts || [],
     drawingNodes: initState?.drawingNodes || [],
+    crazy8sSlots: initState?.crazy8sSlots || [],
     gridColumns: initState?.gridColumns || [],
     isDirty: false,
     highlightedCell: null,
@@ -247,6 +252,20 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
             // NOTE: Does NOT set isDirty — this is for loading from DB
           })),
 
+        updateCrazy8sSlot: (slotId, updates) =>
+          set((state) => ({
+            crazy8sSlots: state.crazy8sSlots.map((slot) =>
+              slot.slotId === slotId ? { ...slot, ...updates } : slot
+            ),
+            isDirty: true,
+          })),
+
+        setCrazy8sSlots: (slots) =>
+          set(() => ({
+            crazy8sSlots: slots,
+            // NOTE: Does NOT set isDirty — this is for loading from DB
+          })),
+
         setGridColumns: (gridColumns) =>
           set(() => ({
             gridColumns,
@@ -374,6 +393,7 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
           postIts: state.postIts,
           drawingNodes: state.drawingNodes,
           gridColumns: state.gridColumns,
+          crazy8sSlots: state.crazy8sSlots,
         }),
         limit: 50,
         equality: (pastState, currentState) =>
