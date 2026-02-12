@@ -161,10 +161,11 @@ Plans:
 3. AI references canvas items naturally when bridging between chat and whiteboard interactions
 4. All 10 steps exhibit consistent personality and tone across Orient → Gather → Synthesize → Refine → Validate → Complete phases
 
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 33-01: TBD during planning
+- [ ] 33-01-PLAN.md -- Soul.md personality definition, chat-config.ts personality injection + message brevity + canvas bridging, arc-phases.ts personality consistency
+- [ ] 33-02-PLAN.md -- Step-prompts.ts personality updates for all 10 steps + 3 sub-steps
 
 #### Phase 34: Seed Data
 
