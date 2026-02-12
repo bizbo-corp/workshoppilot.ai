@@ -44,6 +44,8 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
   const addElement = useDrawingStore((s) => s.addElement);
   const updateElement = useDrawingStore((s) => s.updateElement);
   const deleteElement = useDrawingStore((s) => s.deleteElement);
+  const deleteElementGroup = useDrawingStore((s) => s.deleteElementGroup);
+  const moveElementGroup = useDrawingStore((s) => s.moveElementGroup);
   const selectElement = useDrawingStore((s) => s.selectElement);
   const strokeColor = useDrawingStore((s) => s.strokeColor);
   const fontSize = useDrawingStore((s) => s.fontSize);
@@ -216,20 +218,49 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
 
           {/* Render completed elements */}
           {elements.map((element) => {
+            const isGrouped = !!element.groupId;
+            const isGroupRepresentative = isGrouped &&
+              elements.find((el) => el.groupId === element.groupId)?.id === element.id;
+
             const isInteractive = activeTool === 'select' || activeTool === 'eraser';
-            const isDraggable = activeTool === 'select';
+            const isDraggable = activeTool === 'select' && (!isGrouped || isGroupRepresentative);
+
             const commonProps = {
               id: element.id,
               listening: isInteractive,
               draggable: isDraggable,
               onClick: (e: Konva.KonvaEventObject<MouseEvent>) => {
                 e.cancelBubble = true;
-                if (activeTool === 'select') selectElement(element.id);
-                else if (activeTool === 'eraser') deleteElement(element.id);
+                if (activeTool === 'select') {
+                  // For grouped elements, select the representative
+                  if (element.groupId) {
+                    const rep = elements.find((el) => el.groupId === element.groupId);
+                    if (rep) selectElement(rep.id);
+                  } else {
+                    selectElement(element.id);
+                  }
+                } else if (activeTool === 'eraser') {
+                  // Delete entire group
+                  if (element.groupId) {
+                    deleteElementGroup(element.groupId);
+                  } else {
+                    deleteElement(element.id);
+                  }
+                }
               },
               onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
                 if (activeTool === 'select') {
-                  updateElement(element.id, { x: e.target.x(), y: e.target.y() });
+                  if (isGroupRepresentative && element.groupId) {
+                    // Calculate delta from original position
+                    const deltaX = e.target.x() - element.x;
+                    const deltaY = e.target.y() - element.y;
+                    // Move entire group
+                    moveElementGroup(element.groupId, deltaX, deltaY);
+                    // Reset Konva node position (store is source of truth)
+                    e.target.position({ x: element.x + deltaX, y: element.y + deltaY });
+                  } else if (!isGrouped) {
+                    updateElement(element.id, { x: e.target.x(), y: e.target.y() });
+                  }
                 }
               },
             };
