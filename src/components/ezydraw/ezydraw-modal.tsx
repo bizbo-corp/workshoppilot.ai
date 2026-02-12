@@ -22,6 +22,7 @@ export interface EzyDrawModalProps {
   onSave: (result: { pngDataUrl: string; elements: DrawingElement[] }) => void | Promise<void>;
   initialElements?: DrawingElement[];
   drawingId?: string;  // If set, we're re-editing an existing drawing
+  canvasSize?: { width: number; height: number };  // Optional canvas dimensions (defaults to fullscreen)
 }
 
 /**
@@ -32,10 +33,12 @@ function EzyDrawContent({
   stageRef,
   onSave,
   onCancel,
+  canvasSize,
 }: {
   stageRef: React.RefObject<EzyDrawStageHandle | null>;
   onSave: (result: { pngDataUrl: string; elements: DrawingElement[] }) => void | Promise<void>;
   onCancel: () => void;
+  canvasSize?: { width: number; height: number };
 }) {
   const getSnapshot = useDrawingStore((s) => s.getSnapshot);
   const addElements = useDrawingStore((s) => s.addElements);
@@ -99,7 +102,7 @@ function EzyDrawContent({
         {/* Main canvas area */}
         <div className="flex-1 flex flex-col">
           <EzyDrawToolbar onSave={handleSave} onCancel={onCancel} />
-          <DroppableCanvas>
+          <DroppableCanvas canvasSize={canvasSize}>
             <EzyDrawStage ref={stageRef} />
           </DroppableCanvas>
         </div>
@@ -123,6 +126,7 @@ export function EzyDrawModal({
   onSave,
   initialElements,
   drawingId,
+  canvasSize,
 }: EzyDrawModalProps) {
   const stageRef = useRef<EzyDrawStageHandle>(null);
 
@@ -154,6 +158,7 @@ export function EzyDrawModal({
             stageRef={stageRef}
             onSave={handleSaveComplete}
             onCancel={handleCancel}
+            canvasSize={canvasSize}
           />
         </DrawingStoreProvider>
       </DialogContent>
