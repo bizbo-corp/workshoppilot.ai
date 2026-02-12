@@ -410,7 +410,7 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
         </Layer>
 
         {/* UI Layer: For selection transformer */}
-        <Layer ref={uiLayerRef}>
+        <Layer ref={uiLayerRef} name="ui-layer">
           {activeTool === 'select' && <SelectTool stageRef={stageRef} />}
         </Layer>
       </Stage>

@@ -10,6 +10,7 @@ import { DrawingStoreProvider } from '@/providers/drawing-store-provider';
 import { EzyDrawToolbar } from './toolbar';
 import { EzyDrawStage, type EzyDrawStageHandle } from './ezydraw-stage';
 import type { DrawingElement } from '@/lib/drawing/types';
+import { exportToPNG } from '@/lib/drawing/export';
 
 export interface EzyDrawModalProps {
   isOpen: boolean;
@@ -27,11 +28,12 @@ export function EzyDrawModal({
   const stageRef = useRef<EzyDrawStageHandle>(null);
 
   const handleSave = () => {
-    const dataURL = stageRef.current?.toDataURL({ pixelRatio: 2 });
-    if (dataURL) {
-      onSave(dataURL);
-      onClose();
-    }
+    const stage = stageRef.current?.getStage();
+    if (!stage) return;
+
+    const dataURL = exportToPNG(stage, { pixelRatio: 2 });
+    onSave(dataURL);
+    onClose();
   };
 
   const handleCancel = () => {
