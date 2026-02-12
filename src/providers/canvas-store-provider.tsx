@@ -9,6 +9,7 @@ import {
   type GridColumn,
   type DrawingNode,
 } from '@/stores/canvas-store';
+import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 
 type CanvasStoreApi = ReturnType<typeof createCanvasStore>;
 
@@ -19,6 +20,7 @@ export interface CanvasStoreProviderProps {
   initialPostIts?: PostIt[];
   initialGridColumns?: GridColumn[];
   initialDrawingNodes?: DrawingNode[];
+  initialConceptCards?: ConceptCardData[];
 }
 
 export function CanvasStoreProvider({
@@ -26,10 +28,16 @@ export function CanvasStoreProvider({
   initialPostIts,
   initialGridColumns,
   initialDrawingNodes,
+  initialConceptCards,
 }: CanvasStoreProviderProps) {
   // Create store ONCE per mount — ensures per-request isolation in SSR
   const [store] = useState(() =>
-    createCanvasStore({ postIts: initialPostIts || [], gridColumns: initialGridColumns || [], drawingNodes: initialDrawingNodes || [] })
+    createCanvasStore({
+      postIts: initialPostIts || [],
+      gridColumns: initialGridColumns || [],
+      drawingNodes: initialDrawingNodes || [],
+      conceptCards: initialConceptCards || [],
+    })
   );
 
   return (
