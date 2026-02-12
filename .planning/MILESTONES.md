@@ -1,5 +1,31 @@
 # Project Milestones: WorkshopPilot.ai
 
+## v1.2 Canvas Whiteboard (Shipped: 2026-02-12)
+
+**Delivered:** Structured whiteboard with grid/swimlane layouts for journey mapping, AI suggest-then-confirm placement, dynamic columns, and canvas-first rendering for Steps 2 (concentric rings) & 4 (empathy map zones) with lazy migration from existing artifacts.
+
+**Phases completed:** 21-24 (9 plans total)
+
+**Key accomplishments:**
+- Grid coordinate system with 7-row swimlane layout for Step 6 Journey Map, viewport-aware overlay, snap-to-cell, and cell highlighting
+- Dynamic user-controlled columns: add/remove/rename journey stages with live editable headers
+- AI suggest-then-confirm placement: [GRID_ITEM] markup, preview nodes with accept/reject, yellow pulse cell highlights, canvas state as AI context
+- Concentric ring layout for Step 2 Stakeholder Mapping (3 rings by importance scoring)
+- 6-zone empathy map for Step 4 Sense Making (Says/Thinks/Feels/Does + Pains/Gains)
+- Canvas-only layout for Steps 2 & 4 (output panel replaced), lazy artifact-to-canvas migration
+
+**Stats:**
+- 59 files created/modified
+- ~18,166 lines of TypeScript (total codebase)
+- 4 phases, 9 plans
+- 2 days from v1.1 to v1.2 ship (2026-02-11 → 2026-02-12)
+
+**Git range:** `feat(21-01)` → `feat(24-03)`
+
+**What's next:** MMP (Visual & Collaborative) — canvas for remaining steps, Build Pack export, collaboration features
+
+---
+
 ## v1.1 Canvas Foundation (Shipped: 2026-02-11)
 
 **Delivered:** Split-screen layout with interactive post-it canvas for Steps 2 (Stakeholder Mapping) and 4 (Research Sense Making), featuring bidirectional AI-canvas integration, quadrant layouts, and mobile-optimized touch handling.

@@ -2,7 +2,7 @@
 
 ## What This Is
 
-An AI-powered digital facilitator that guides anyone from a vague idea through a structured 10-step design thinking process, producing validated product specs. The AI isn't a sidebar assistant; it's the principal guide — leading users through conversational prompts, questioning, synthesizing, and generating structured outputs at each stage. Features a split-screen layout with interactive post-it canvas for visual clustering alongside AI facilitation on Steps 2 (Stakeholder Mapping) and 4 (Research Sense Making).
+An AI-powered digital facilitator that guides anyone from a vague idea through a structured 10-step design thinking process, producing validated product specs. The AI isn't a sidebar assistant; it's the principal guide — leading users through conversational prompts, questioning, synthesizing, and generating structured outputs at each stage. Features a split-screen layout with interactive canvas: structured whiteboards for stakeholder rings (Step 2), empathy map zones (Step 4), and journey map swimlanes (Step 6), with AI suggest-then-confirm placement.
 
 ## Core Value
 
@@ -34,6 +34,15 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - ✓ Rate limit handling (exponential backoff, user feedback) — v1.0
 - ✓ Cold start prevention (Vercel cron warming) — v1.0
 - ✓ Streaming error recovery (retry button) — v1.0
+- ✓ Split-screen canvas layout with ReactFlow post-it nodes — v1.1
+- ✓ Step-specific canvas quadrants (Power x Interest, Empathy Map) — v1.1
+- ✓ AI-canvas bidirectional integration ([CANVAS_ITEM] markup, Tier 4 context) — v1.1
+- ✓ Mobile canvas support (tab switching, touch handling, <300KB bundle) — v1.1
+- ✓ Grid/swimlane canvas for Step 6 Journey Map with dynamic columns — v1.2
+- ✓ AI suggest-then-confirm placement with preview nodes — v1.2
+- ✓ Concentric ring layout for Step 2 Stakeholder Mapping — v1.2
+- ✓ Empathy map zone layout for Step 4 Sense Making — v1.2
+- ✓ Canvas-only layout for Steps 2 & 4 with lazy artifact migration — v1.2
 
 ### Active
 
@@ -46,17 +55,13 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - [x] Canvas → AI: AI reads canvas state silently as Tier 4 context
 - [x] Mobile: tab-based switching, iOS Safari touch handling, bundle under 300KB
 
-## Current Milestone: v1.2 Canvas Whiteboard
-
-**Goal:** Evolve the canvas from a post-it board into a structured whiteboard with grid/swimlane layouts and AI-driven placement, starting with Journey Map (Step 6) and retrofitting Steps 2 & 4 to render structured outputs on canvas.
-
-**Target features:**
-- Step 6 Journey Map grid canvas with fixed swimlane rows and user-addable stage columns
-- AI suggest-then-confirm placement — AI proposes content in specific cells, user confirms/adjusts
-- Snap-to-cell behavior for canvas items within grid structures
-- Steps 2 & 4 retrofit — structured output data renders as organized canvas nodes (replaces output panel content)
-- User can add/remove/reorder cards within canvas sections
-- Output panel remains but canvas becomes the primary structured record
+#### v1.2 — Canvas Whiteboard (SHIPPED)
+- [x] Step 6 Journey Map: 7-row swimlane grid with dynamic user-controlled stage columns
+- [x] AI suggest-then-confirm: preview nodes with accept/reject, yellow pulse cell highlights
+- [x] Step 2 concentric ring layout (3 rings by stakeholder importance)
+- [x] Step 4 empathy map zones (Says/Thinks/Feels/Does + Pains/Gains)
+- [x] Canvas-only layout for Steps 2 & 4 (output panel replaced)
+- [x] Lazy artifact-to-canvas migration for existing workshops
 
 #### Future — MMP (Visual & Collaborative)
 - [ ] Canvas for Steps 8 Ideation and 9 Concepts
@@ -128,7 +133,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - **Entry Friction**: Must be near-zero — user types idea and starts immediately
 - **Desktop-First**: MVP targets desktop browsers; mobile deferred to MMP/FFP
 - **Single Player First**: v0.5 and v1.0 are single-user; collaboration starts at MMP
-- **Existing Codebase**: 12,131 lines TypeScript, 15 phases shipped, production at workshoppilot.ai
+- **Existing Codebase**: 18,166 lines TypeScript, 24 phases shipped, production at workshoppilot.ai
 
 ## Key Decisions
 
@@ -149,22 +154,29 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | AI SDK 6 with DefaultChatTransport | Latest API with streaming and message persistence | ✓ Good |
 | Vercel Analytics + Speed Insights | Free performance monitoring from day one | ✓ Good |
 | ReactFlow for canvas (not Tldraw/Excalidraw) | Graph-first data model (nodes+edges), MIT free, ~200KB, structured relationships queryable for AI context. Tldraw $6K/yr, Excalidraw drawing-first with manual relationship parsing | ✓ Good — 110KB gzipped, quadrant layouts, AI-canvas integration |
+| Semantic IDs for grid columns/rows | String IDs survive reordering operations, array indices break on add/remove | ✓ Good — clean column management |
+| Custom snap logic (not ReactFlow built-in) | ReactFlow snapGrid has multi-select bug (#1579) | ✓ Good — custom cell-boundary snap works reliably |
+| Preview nodes with isPreview flag | Suggest-then-confirm UX without complex state machine | ✓ Good — clean accept/reject flow |
+| Concentric rings for stakeholder mapping | More meaningful than 4-quadrant grid; importance tiers map naturally to ring distance | ✓ Good — intuitive visualization |
+| Lazy migration (client-side seeding) | No DB writes until user interacts; existing data migrates silently | ✓ Good — zero-migration deployment |
+| Canvas-only layout for Steps 2 & 4 | Canvas is sole source of truth; output panel was redundant | ✓ Good — cleaner UX |
 
 ## Current State
 
-**Shipped:** v1.1 Canvas Foundation (2026-02-11)
+**Shipped:** v1.2 Canvas Whiteboard (2026-02-12)
 **Live at:** https://workshoppilot.ai
-**Codebase:** ~14,400 lines of TypeScript across ~290 files
+**Codebase:** ~18,166 lines of TypeScript across ~310 files
 **Tech stack:** Clerk + Neon + Gemini + Drizzle + AI SDK 6 + ReactFlow + Zustand + Vercel — all validated in production
-**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) = 5 days total
+**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) + v1.2 (whiteboard, 2 days) = 6 days total
 
 **Known issues / tech debt:**
 - Workshops table needs deletedAt column for soft delete
 - Next.js middleware → proxy convention migration (non-blocking)
 - Step 10 Validate produces synthesis summary only (no Build Pack export yet)
 - CRON_SECRET needs to be configured in Vercel dashboard for production cron warming
+- Mobile grid optimization deferred (may need tablet-first approach)
 
-**Next milestone:** v1.2 Canvas Whiteboard — structured grid/swimlane canvas, AI-driven placement, output → canvas migration
+**Next milestone:** MMP Visual & Collaborative — canvas for remaining steps, Build Pack export, collaboration features
 
 ---
-*Last updated: 2026-02-11 after v1.2 milestone started*
+*Last updated: 2026-02-12 after v1.2 milestone complete*
