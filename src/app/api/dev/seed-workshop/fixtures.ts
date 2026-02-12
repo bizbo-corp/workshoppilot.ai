@@ -435,28 +435,29 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
           ],
         },
       ],
-      brainWrittenIdeas: [
-        { originalTitle: 'Morning Routine Autopilot', evolutionDescription: 'Round 1: Added voice assistant integration for hands-free morning routines. Round 2: Combined with calendar sync so it pre-adjusts the night before. Round 3: Added pet mood tracking via smart collar data.', finalVersion: 'Voice-activated morning care autopilot that pre-adjusts the night before based on tomorrow\'s calendar and live pet activity data', source: 'brain-writing' as const },
-        { originalTitle: 'Glanceable Widget', evolutionDescription: 'Round 1: Added color-coding by urgency. Round 2: Combined with Biscuit/Mochi photos for emotional engagement. Round 3: Added predictive "tomorrow\'s needs" section.', finalVersion: 'Emotionally engaging home screen widget with pet photos, color-coded urgency, today\'s tasks, and a tomorrow preview', source: 'brain-writing' as const },
+      mindMapThemes: [
+        { theme: 'Smart Routine Engine', color: '#3b82f6' },
+        { theme: 'Unified Pet Dashboard', color: '#10b981' },
+        { theme: 'Care Delegation', color: '#f59e0b' },
       ],
       crazyEightsIdeas: [
-        { title: 'Pet Care Pomodoro', description: 'Break pet care into 5-minute focused sessions throughout the day', source: 'crazy-eights' as const },
-        { title: 'Guilt-Free Guarantee', description: 'Daily "everything is handled" push notification at 9 PM', source: 'crazy-eights' as const },
-        { title: 'Neighborhood Pet Network', description: 'Connect with nearby pet owners for emergency care swaps', source: 'crazy-eights' as const },
-        { title: 'Smart Bowl Integration', description: 'Track feeding automatically via smart pet bowls', source: 'crazy-eights' as const },
-        { title: 'Vet Video Triage', description: 'Quick video check-in with vet for "is this urgent?" moments', source: 'crazy-eights' as const },
-        { title: 'Pet Personality Profiles', description: 'AI-generated pet personality insights based on care patterns', source: 'crazy-eights' as const },
-        { title: 'Care Streaks & Badges', description: 'Gamification: maintain care streaks with shareable badges', source: 'crazy-eights' as const },
-        { title: 'Auto-Reorder Supplies', description: 'Predict when food/medicine runs low and auto-reorder', source: 'crazy-eights' as const },
+        { title: 'Pet Care Pomodoro', description: '5-minute focused pet care sessions sketched throughout the day' },
+        { title: 'Guilt-Free Guarantee', description: 'Dashboard showing daily "everything is handled" status' },
+        { title: 'Neighborhood Pet Network', description: 'Sketch of community map for emergency care swaps' },
+        { title: 'Smart Bowl Integration', description: 'Visual of automatic feeding tracking via smart bowls' },
+        { title: 'Vet Video Triage', description: 'Quick video interface for urgent health questions' },
+        { title: 'Pet Personality Profiles', description: 'AI-generated personality cards based on care patterns' },
+        { title: 'Care Streaks & Badges', description: 'Gamification visual with shareable achievement badges' },
+        { title: 'Auto-Reorder Supplies', description: 'Predictive inventory sketch with auto-ordering' },
       ],
-      selectedIdeaTitles: [
-        'Morning Routine Autopilot',
-        'Glanceable Widget',
-        'Sitter Share Link',
+      selectedSketchSlotIds: [
+        'slot-1',
+        'slot-4',
+        'slot-7',
       ],
     },
     summary:
-      '- 3 idea clusters: Smart Routine Engine, Unified Pet Dashboard, Care Delegation\n- Brain writing evolved top ideas with voice integration and emotional engagement\n- 8 Crazy 8s rapid-fire ideas including gamification and smart device integration\n- 3 selected for concept development: Morning Routine Autopilot, Glanceable Widget, Sitter Share Link',
+      '- 3 mind map themes: Smart Routine Engine, Unified Pet Dashboard, Care Delegation\n- 8 Crazy 8s visual sketches exploring different approaches\n- 3 sketches selected for concept development (slots 1, 4, 7)',
   },
 
   // =========================================================================

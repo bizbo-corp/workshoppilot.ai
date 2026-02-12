@@ -187,8 +187,8 @@ How might we [reframed problem] for [specific persona] when [specific context] s
     id: 'ideation',
     slug: 'ideation',
     name: 'Ideation',
-    description: 'Generate ideas using Mind Mapping, Crazy 8s, Brain Writing, and Billboard Hero',
-    greeting: "Time to get creative! We'll use multiple ideation techniques -- Mind Mapping, Crazy 8s, Brain Writing, and Billboard Hero -- to generate a wide range of solutions.",
+    description: 'Generate ideas using Mind Mapping and Crazy 8s sketching, then select top ideas',
+    greeting: "Time to get creative! We'll use Mind Mapping to explore themes, then Crazy 8s to sketch 8 rapid ideas. Finally, you'll select your best concepts to develop further.",
     mockOutputType: 'Mind Map & Idea Cards',
     mockOutputContent: `Mind Map:
 [Central HMW Statement]

@@ -257,19 +257,14 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
         checkPrompt: 'Does the Crazy 8s sub-step (8b) produce 8 rapid-fire ideas? Are these ideas rough and quick (embracing speed over polish)?'
       },
       {
-        name: 'Brain Writing Coherence',
-        description: 'Brain Writing sub-step evolved 5-8 ideas through 3 rounds',
-        checkPrompt: 'Does the Brain Writing sub-step (8c) evolve 5-8 favorite ideas through 3 rounds of "Yes, and..." building? Did each enhancement add value without feature bloat? Is each enhanced idea still coherent and focused?'
-      },
-      {
         name: 'Sub-Step Order',
-        description: 'Sub-steps executed in correct order: Mind Mapping -> Crazy 8s -> Brain Writing',
-        checkPrompt: 'Were the sub-steps executed in the correct order: Mind Mapping (8a) first, then Crazy 8s (8b), then Brain Writing (8c)? Did Brain Writing reference ideas from the previous sub-steps?'
+        description: 'Sub-steps executed in correct order: Mind Mapping → Crazy 8s → Idea Selection',
+        checkPrompt: 'Were the sub-steps executed in the correct order: Mind Mapping (8a) first, then Crazy 8s (8b), then Idea Selection (8c)? Did Idea Selection reference sketches from Crazy 8s?'
       },
       {
-        name: 'Idea Volume',
-        description: 'Sufficient quantity of distinct ideas generated across all sub-steps',
-        checkPrompt: 'Are there at least 15+ distinct ideas across all sub-steps (Mind Mapping clusters + user ideas + Crazy 8s + Brain Writing)? Do the ideas span different categories and approaches?'
+        name: 'Visual Ideation',
+        description: 'Mind Map and Crazy 8s use visual canvases (not text-only)',
+        checkPrompt: 'Does the ideation use visual canvases for Mind Map and Crazy 8s? Are ideas represented visually through sketches and diagrams rather than text lists?'
       },
       {
         name: 'HMW Alignment',

@@ -18,15 +18,14 @@ interface Idea {
   isWildCard?: boolean;
 }
 
-interface BrainWrittenIdea {
-  originalTitle: string;
-  evolutionDescription: string;
-  finalVersion: string;
-}
-
 interface CrazyEightsIdea {
   title: string;
   description: string;
+}
+
+interface MindMapTheme {
+  theme: string;
+  color: string;
 }
 
 /**
@@ -46,18 +45,18 @@ function getClusterColor(index: number): string {
 
 /**
  * IdeationClusterView component
- * Renders Step 8 ideation artifact with themed clusters, wild cards, user ideas, brain writing, and Crazy 8s
+ * Renders Step 8 ideation artifact with themed clusters, wild cards, mind map themes, and Crazy 8s
  */
 export function IdeationClusterView({ artifact }: IdeationClusterViewProps) {
   const reframedHmw = artifact.reframedHmw as string | undefined;
   const clusters = (artifact.clusters as Cluster[]) || [];
   const userIdeas = (artifact.userIdeas as Idea[]) || [];
-  const brainWrittenIdeas = (artifact.brainWrittenIdeas as BrainWrittenIdea[]) || [];
+  const mindMapThemes = (artifact.mindMapThemes as MindMapTheme[]) || [];
   const crazyEightsIdeas = (artifact.crazyEightsIdeas as CrazyEightsIdea[]) || [];
-  const selectedIdeaTitles = (artifact.selectedIdeaTitles as string[]) || [];
+  const selectedSketchSlotIds = (artifact.selectedSketchSlotIds as string[]) || [];
 
   // Empty state
-  if (clusters.length === 0 && userIdeas.length === 0 && brainWrittenIdeas.length === 0 && crazyEightsIdeas.length === 0) {
+  if (clusters.length === 0 && mindMapThemes.length === 0 && crazyEightsIdeas.length === 0) {
     return (
       <div className="flex items-center justify-center rounded-lg border bg-card p-12">
         <p className="text-sm text-muted-foreground">
@@ -125,84 +124,22 @@ export function IdeationClusterView({ artifact }: IdeationClusterViewProps) {
         </div>
       )}
 
-      {/* User Ideas Section */}
-      {userIdeas.length > 0 && (
+      {/* Mind Map Themes Section */}
+      {mindMapThemes.length > 0 && (
         <div className="space-y-3">
-          <h3 className="font-semibold text-lg flex items-center gap-2">
-            <span>Your Ideas</span>
-            <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400">
-              You
-            </span>
-          </h3>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {userIdeas.map((idea, idx) => (
+          <h3 className="font-semibold text-lg">Mind Map Themes</h3>
+          <div className="flex flex-wrap gap-3">
+            {mindMapThemes.map((theme, idx) => (
               <div
                 key={idx}
-                className="rounded-lg border border-blue-500/30 bg-blue-50/30 p-4 dark:bg-blue-950/20"
+                className="rounded-lg px-4 py-2 text-sm font-medium"
+                style={{
+                  backgroundColor: `${theme.color}20`,
+                  color: theme.color,
+                  borderLeft: `4px solid ${theme.color}`,
+                }}
               >
-                <h5 className="mb-2 font-semibold text-sm">{idea.title}</h5>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {idea.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Brain Writing Section */}
-      {brainWrittenIdeas.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="font-semibold text-lg">Brain Writing Evolution</h3>
-          <div className="space-y-3">
-            {brainWrittenIdeas.map((idea, idx) => (
-              <div
-                key={idx}
-                className="rounded-lg border bg-card p-4"
-              >
-                <div className="flex items-start gap-3">
-                  {/* Original */}
-                  <div className="flex-1">
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Original
-                    </p>
-                    <p className="text-sm">{idea.originalTitle}</p>
-                  </div>
-
-                  {/* Arrow */}
-                  <div className="flex items-center pt-4">
-                    <svg
-                      className="h-5 w-5 text-muted-foreground"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 7l5 5m0 0l-5 5m5-5H6"
-                      />
-                    </svg>
-                  </div>
-
-                  {/* Evolved */}
-                  <div className="flex-1">
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Evolved
-                    </p>
-                    <p className="text-sm font-medium">{idea.finalVersion}</p>
-                  </div>
-                </div>
-
-                {/* Evolution description */}
-                {idea.evolutionDescription && (
-                  <div className="mt-3 rounded bg-muted/30 p-2">
-                    <p className="text-xs text-muted-foreground">
-                      {idea.evolutionDescription}
-                    </p>
-                  </div>
-                )}
+                {theme.theme}
               </div>
             ))}
           </div>
@@ -234,8 +171,8 @@ export function IdeationClusterView({ artifact }: IdeationClusterViewProps) {
         </div>
       )}
 
-      {/* Selected Ideas Footer */}
-      {selectedIdeaTitles.length > 0 && (
+      {/* Selected Sketches Footer */}
+      {selectedSketchSlotIds.length > 0 && (
         <div className="rounded-lg border border-green-500/50 bg-green-50/50 p-4 dark:bg-green-950/20">
           <div className="flex items-center gap-2 mb-2">
             <svg
@@ -256,14 +193,17 @@ export function IdeationClusterView({ artifact }: IdeationClusterViewProps) {
             </h4>
           </div>
           <div className="flex flex-wrap gap-2">
-            {selectedIdeaTitles.map((title, idx) => (
-              <span
-                key={idx}
-                className="rounded-md bg-green-500/20 px-3 py-1 text-sm font-medium text-green-800 dark:text-green-200"
-              >
-                {title}
-              </span>
-            ))}
+            {selectedSketchSlotIds.map((slotId, idx) => {
+              const slotNumber = slotId.replace('slot-', '');
+              return (
+                <span
+                  key={idx}
+                  className="rounded-md bg-green-500/20 px-3 py-1 text-sm font-medium text-green-800 dark:text-green-200"
+                >
+                  Sketch {slotNumber}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}

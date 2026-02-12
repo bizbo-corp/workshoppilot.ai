@@ -313,7 +313,7 @@ export type ReframeArtifact = z.infer<typeof reframeArtifactSchema>;
 
 /**
  * Step 8: Ideation
- * Multi-round ideation with clusters, brain writing, and Crazy 8s
+ * Visual ideation with Mind Map and Crazy 8s canvases, then idea selection
  */
 export const ideationArtifactSchema = z.object({
   reframedHmw: z
@@ -333,10 +333,6 @@ export const ideationArtifactSchema = z.object({
                 .optional()
                 .default(false)
                 .describe('Whether this is a deliberately provocative wild card idea'),
-              source: z
-                .literal('mind-mapping')
-                .optional()
-                .describe('Sub-step that generated this idea'),
             })
           )
           .min(2)
@@ -345,47 +341,29 @@ export const ideationArtifactSchema = z.object({
     )
     .min(2)
     .describe('3-4 themed idea clusters generated from the HMW statement'),
-  userIdeas: z
+  mindMapThemes: z
     .array(
       z.object({
-        title: z.string().describe('User-contributed idea title'),
-        description: z.string().describe('Description of the user-contributed idea'),
+        theme: z.string().describe('Theme name from mind map'),
+        color: z.string().describe('Theme color for visual grouping'),
       })
     )
     .optional()
-    .describe('Ideas contributed by the user during the input round'),
-  brainWrittenIdeas: z
-    .array(
-      z.object({
-        originalTitle: z.string().describe('Title of the original idea that was built upon'),
-        evolutionDescription: z.string().describe('How the idea evolved through 3 rounds of "Yes, and..." building'),
-        finalVersion: z.string().describe('The idea after 3 rounds of brain writing enhancement'),
-        source: z
-          .literal('brain-writing')
-          .optional()
-          .describe('Sub-step that generated this idea'),
-      })
-    )
-    .optional()
-    .describe('Ideas evolved through 3 rounds of brain writing using "Yes, and..." technique'),
+    .describe('Theme branches from mind map (level-1 nodes)'),
   crazyEightsIdeas: z
     .array(
       z.object({
         title: z.string().describe('Quick rapid-fire idea title'),
         description: z.string().describe('Brief description from the Crazy 8s round'),
-        source: z
-          .literal('crazy-eights')
-          .optional()
-          .describe('Sub-step that generated this idea'),
       })
     )
     .optional()
-    .describe('8 rapid-fire ideas from the Crazy 8s round'),
-  selectedIdeaTitles: z
+    .describe('8 rapid-fire ideas from the Crazy 8s round (now backed by sketches)'),
+  selectedSketchSlotIds: z
     .array(z.string())
     .min(1)
     .max(4)
-    .describe('Titles of the 1-4 ideas selected for concept development in Step 9 (hard limit: max 3-4)'),
+    .describe('Slot IDs of Crazy 8s sketches selected for Step 9 concept development (e.g., ["slot-1", "slot-3"])'),
 });
 
 export type IdeationArtifact = z.infer<typeof ideationArtifactSchema>;
