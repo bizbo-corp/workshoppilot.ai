@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db/client';
 import { workshops, sessions, workshopSteps, chatMessages, stepArtifacts, stepSummaries } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull, inArray } from 'drizzle-orm';
 import { createPrefixedId } from '@/lib/ids';
 import { STEPS, getStepById } from '@/lib/workshop/step-metadata';
 import { invalidateDownstreamSteps } from '@/lib/navigation/cascade-invalidation';
@@ -98,6 +98,38 @@ export async function renameWorkshop(workshopId: string, newName: string): Promi
     console.error('Failed to rename workshop:', error);
     throw error;
   }
+}
+
+/**
+ * Soft-deletes one or more workshops by setting deletedAt timestamp
+ * Validates ownership: only workshops belonging to the current user are deleted
+ */
+export async function deleteWorkshops(workshopIds: string[]): Promise<{ deleted: number }> {
+  const { userId } = await auth();
+  if (!userId) {
+    throw new Error('Authentication required');
+  }
+
+  if (workshopIds.length === 0) {
+    return { deleted: 0 };
+  }
+
+  // Soft delete only workshops owned by this user (defense in depth)
+  const result = await db
+    .update(workshops)
+    .set({ deletedAt: new Date() })
+    .where(
+      and(
+        inArray(workshops.id, workshopIds),
+        eq(workshops.clerkUserId, userId),
+        isNull(workshops.deletedAt)
+      )
+    )
+    .returning({ id: workshops.id });
+
+  revalidatePath('/dashboard');
+
+  return { deleted: result.length };
 }
 
 /**

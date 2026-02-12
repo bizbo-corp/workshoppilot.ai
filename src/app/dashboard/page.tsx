@@ -4,12 +4,12 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { db } from '@/db/client';
 import { users, workshops } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, isNull, and } from 'drizzle-orm';
 import { MigrationCheck } from '@/components/auth/migration-check';
 import { WorkshopCard } from '@/components/dashboard/workshop-card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { createWorkshopSession, renameWorkshop } from '@/actions/workshop-actions';
+import { createWorkshopSession, renameWorkshop, deleteWorkshops } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 
 export default async function DashboardPage() {
@@ -58,7 +58,10 @@ export default async function DashboardPage() {
 
   // Query user's workshops with sessions and steps
   const userWorkshops = await db.query.workshops.findMany({
-    where: eq(workshops.clerkUserId, userId),
+    where: and(
+      eq(workshops.clerkUserId, userId),
+      isNull(workshops.deletedAt)
+    ),
     orderBy: [desc(workshops.updatedAt)],
     with: {
       sessions: {
