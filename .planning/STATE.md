@@ -6,15 +6,14 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
 
-**Current focus:** Planning next milestone (MMP Visual & Collaborative)
+**Current focus:** v1.3 EzyDraw & Visual Ideation
 
 ## Current Position
 
-Phase: All complete (24 phases across 4 milestones)
-Status: v1.2 milestone archived, ready for next milestone
-Last activity: 2026-02-12 — Archived v1.2 Canvas Whiteboard milestone
-
-Progress: [████████████████████████] 100% (68/68 plans across all milestones)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-12 — Milestone v1.3 started
 
 ## Completed Milestones
 
@@ -63,12 +62,12 @@ None — clean slate for next milestone.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: v1.2 milestone archived
+Stopped at: Milestone v1.3 started, defining requirements
 Resume file: N/A
 
 **Next steps:**
-1. Run `/gsd:new-milestone` to plan MMP Visual & Collaborative
-2. Or run `/gsd:verify-work` for manual UAT of shipped features
+1. Complete research and requirements definition
+2. Create roadmap with phase structure
 
 ---
-*Last updated: 2026-02-12 after v1.2 milestone archived*
+*Last updated: 2026-02-12 after v1.3 milestone started*

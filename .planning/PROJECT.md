@@ -46,42 +46,43 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 
 ### Active
 
-#### v1.1 — Canvas Foundation (SHIPPED)
-- [x] Split-screen layout for all 10 steps (chat left, canvas+output right)
-- [x] ReactFlow canvas with custom post-it nodes (create, edit, move, color-code, group/ungroup, undo/redo)
-- [x] Step 2 Stakeholder Mapping canvas — Power x Interest quadrant grid with auto-detection
-- [x] Step 4 Research Sense Making canvas — Empathy Map quadrants (Said/Thought/Felt/Experienced)
-- [x] AI → Canvas: [CANVAS_ITEM] markup with "Add to canvas" action buttons
-- [x] Canvas → AI: AI reads canvas state silently as Tier 4 context
-- [x] Mobile: tab-based switching, iOS Safari touch handling, bundle under 300KB
+## Current Milestone: v1.3 EzyDraw & Visual Ideation
 
-#### v1.2 — Canvas Whiteboard (SHIPPED)
-- [x] Step 6 Journey Map: 7-row swimlane grid with dynamic user-controlled stage columns
-- [x] AI suggest-then-confirm: preview nodes with accept/reject, yellow pulse cell highlights
-- [x] Step 2 concentric ring layout (3 rings by stakeholder importance)
-- [x] Step 4 empathy map zones (Says/Thinks/Feels/Does + Pains/Gains)
-- [x] Canvas-only layout for Steps 2 & 4 (output panel replaced)
-- [x] Lazy artifact-to-canvas migration for existing workshops
+**Goal:** Transform Steps 8 and 9 from text-only to visual-first with a reusable in-app drawing tool.
+
+**Target features:**
+- EzyDraw — reusable drawing modal (pencil, shapes, UI kit, icons/emoji, text, speech bubbles, eraser, select/move/resize, layers, export PNG)
+- Step 8a Mind Map — visual node canvas (HMW center, theme branches, idea connections)
+- Step 8b Crazy 8s — 8-slot sketch grid with EzyDraw integration
+- Step 8 flow simplification — Mind Mapping → Crazy 8s → Idea Selection (skip Brain Writing)
+- Step 9 Visual Concept Cards — rich canvas cards with sketch, pitch, SWOT, feasibility
+
+#### v1.3 — EzyDraw & Visual Ideation
+- [ ] EzyDraw component: reusable drawing modal with pencil, shapes, UI kit, icons/emoji, text, speech bubbles, eraser, layers
+- [ ] EzyDraw select/move/resize and export PNG
+- [ ] Step 8a Mind Map canvas: visual node graph with HMW center, theme branches, interactive add/connect
+- [ ] Step 8b Crazy 8s canvas: 8 blank sketch slots, tap → EzyDraw → image on card
+- [ ] Step 8 streamlined flow: Mind Mapping → Crazy 8s → Idea Selection (Brain Writing removed)
+- [ ] Step 9 visual concept cards on canvas: sketch, elevator pitch, SWOT quadrants, feasibility scores
 
 #### Future — MMP (Visual & Collaborative)
-- [ ] Canvas for Steps 8 Ideation and 9 Concepts
 - [ ] Visual stakeholder radar chart
 - [ ] Guided persona builder with per-field regeneration
-- [ ] Billboard Hero exercise (text-based pitch test)
+- [ ] Billboard Hero exercise (text-based pitch test + EzyDraw visuals)
 - [ ] Billboard template layouts
-- [ ] Visual concept cards
 - [ ] Dot voting for idea selection
 - [ ] Timer function for time-boxed exercises
 - [ ] Basic multi-user collaboration
+- [ ] Brain Writing with real collaboration (multi-user)
 - [ ] Responsive tablet support
 - [ ] OAuth (Google)
 - [ ] Video explanations per step
 - [ ] Build Pack export (PRDs, user stories, tech specs for AI coders)
 
 #### Future — FFP (Full Platform)
+- [ ] EzyDraw AI Enhance (rough sketch → clean wireframe)
 - [ ] AI + canvas working side-by-side (auto-suggest, auto-complete nodes)
 - [ ] Real-time multiplayer (WebSockets)
-- [ ] EzyDraw component (in-app sketching, sketch enhancement)
 - [ ] Voice input
 - [ ] Canvas-first mode for visual steps
 - [ ] AI pattern analysis and gap detection
@@ -116,7 +117,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 5. Persona Development — create research-grounded user persona
 6. Journey Mapping — map current experience, find the "dip"
 7. Reframing Challenge — craft focused "How Might We" statement
-8. Ideation — Mind Mapping, Crazy 8s, Brain Writing (3 sub-steps)
+8. Ideation — Mind Mapping, Crazy 8s (v1.3: visual canvas with EzyDraw sketching)
 9. Concept Development — concept sheets with SWOT, feasibility, elevator pitch
 10. Validate — synthesis summary recapping the full 10-step journey
 
@@ -160,6 +161,9 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | Concentric rings for stakeholder mapping | More meaningful than 4-quadrant grid; importance tiers map naturally to ring distance | ✓ Good — intuitive visualization |
 | Lazy migration (client-side seeding) | No DB writes until user interacts; existing data migrates silently | ✓ Good — zero-migration deployment |
 | Canvas-only layout for Steps 2 & 4 | Canvas is sole source of truth; output panel was redundant | ✓ Good — cleaner UX |
+| EzyDraw as standalone modal (not ReactFlow extension) | Drawing needs different tools than graph editing; modal outputs image to canvas node. Clean separation of concerns | — Pending |
+| Pull EzyDraw from FFP to v1.3 | Sketching is fundamental to Ideation exercises (Crazy 8s). Text descriptions miss the essence of design thinking. | — Pending |
+| Skip Brain Writing in v1.3 | Brain Writing needs real multi-user collaboration to deliver value; AI simulation insufficient for visual mode | — Pending |
 
 ## Current State
 
@@ -176,7 +180,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - CRON_SECRET needs to be configured in Vercel dashboard for production cron warming
 - Mobile grid optimization deferred (may need tablet-first approach)
 
-**Next milestone:** MMP Visual & Collaborative — canvas for remaining steps, Build Pack export, collaboration features
+**Current milestone:** v1.3 EzyDraw & Visual Ideation — in-app drawing tool, visual mind map, Crazy 8s sketch grid, visual concept cards
 
 ---
-*Last updated: 2026-02-12 after v1.2 milestone complete*
+*Last updated: 2026-02-12 after v1.3 milestone started*
