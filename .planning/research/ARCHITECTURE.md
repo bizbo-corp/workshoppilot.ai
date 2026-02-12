@@ -1,1298 +1,981 @@
-# Architecture Research: Canvas Integration for WorkshopPilot.ai
+# Architecture Research: EzyDraw Integration & Visual Ideation Canvases
 
-**Domain:** Canvas component integration into existing Next.js AI-powered workshop application
-**Researched:** 2026-02-10
+**Domain:** Drawing tool integration with ReactFlow canvas for design thinking Steps 8 and 9
+**Researched:** 2026-02-12
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Adding a canvas component to an existing Next.js chat-based application requires careful integration at four levels: (1) Layout modification for split-screen, (2) State management for bidirectional AI-canvas sync, (3) Data persistence for canvas items, and (4) Component architecture for reusability across steps.
+Adding EzyDraw (standalone drawing modal) and visual canvas layouts for Steps 8 (Mind Map, Crazy 8s) and 9 (Visual Concept Cards) to an existing ReactFlow-based design thinking application requires careful data modeling to support both editable drawing state AND rendered images as ReactFlow nodes.
 
-**Critical insight:** The canvas is NOT a separate feature—it's a projection of structured outputs controlled by the AI conversation. AI suggests → user confirms → canvas updates. Canvas changes → AI reads silently via context. The conversation remains the source of truth.
+**Critical architectural question:** How to store drawing data that supports both re-editing AND display as image nodes on canvas?
 
-**Recommended approach:** Use react-resizable-panels (already in dependencies) for split-screen, Zustand for canvas state (consistent with existing stores), extend stepArtifacts table for persistence, and build step-specific canvas components that share common infrastructure.
+**Recommended approach:** Use tldraw SDK for the drawing modal (proven, feature-rich, React-native), store drawing state as JSON in `stepArtifacts.drawings` array, render exported PNG images as custom ReactFlow nodes with `data-drawing-id` linking back to editable state. New Mind Map uses ReactFlow with dagre layout (consistent with existing canvas architecture), Crazy 8s uses CSS Grid overlay with 8 fixed slots, Concept Cards are rich custom ReactFlow nodes with embedded images.
+
+**Key integration patterns:**
+1. **EzyDraw Modal → Drawing State → PNG Export → ReactFlow Node** (full cycle with re-edit capability)
+2. **Mind Map:** ReactFlow nodes + edges with dagre auto-layout (new node type: `mind-node`)
+3. **Crazy 8s:** ReactFlow with 8-slot grid overlay (similar to existing Journey Map grid)
+4. **Concept Cards:** Custom ReactFlow node with sections for image, text, SWOT grid, feasibility scores
 
 ## System Overview
 
-### Current Architecture (v1.0)
+### Current Architecture (v1.2 — Post-it Canvas)
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                     WORKSHOP LAYOUT (RSC)                        │
-├──────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────────────────────────────────┐   │
-│  │  Sidebar    │  │        Main Area (Full Width)           │   │
-│  │  (Steps)    │  │                                         │   │
-│  │             │  │  ┌────────────────────────────────────┐ │   │
-│  │  Step 1 ○   │  │  │      StepContainer (Client)        │ │   │
-│  │  Step 2 ○   │  │  │                                    │ │   │
-│  │  Step 3 ○   │  │  │  ┌──────────┐  ┌──────────────┐   │ │   │
-│  │    ...      │  │  │  │  Chat    │  │  Output      │   │ │   │
-│  │  Step 10 ○  │  │  │  │  Panel   │  │  Panel       │   │ │   │
-│  │             │  │  │  └──────────┘  └──────────────┘   │ │   │
-│  │             │  │  │  (Resizable Panels - Horizontal)  │ │   │
-│  └─────────────┘  │  └────────────────────────────────────┘ │   │
-│                   └─────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### Target Architecture (v1.1 Canvas Foundation)
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                     WORKSHOP LAYOUT (RSC)                        │
+│                     WORKSHOP LAYOUT                              │
 ├──────────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────────────────────────────────┐   │
 │  │  Sidebar    │  │      Main Area (Split Screen)           │   │
-│  │  (Steps)    │  │                                         │   │
-│  │             │  │  ┌────────────────────────────────────┐ │   │
-│  │  Step 1 ○   │  │  │      StepContainer (Client)        │ │   │
-│  │  Step 2 ●   │  │  │                                    │ │   │
-│  │  Step 3 ○   │  │  │  ┌──────────┐  ┌──────────────┐   │ │   │
-│  │  Step 4 ●   │  │  │  │  Chat    │  │  Canvas or   │   │ │   │
-│  │    ...      │  │  │  │  Panel   │  │  Output      │   │ │   │
-│  │  Step 10 ○  │  │  │  │          │  │  Panel       │   │ │   │
+│  │             │  │                                         │   │
+│  │  Step 1 ○   │  │  ┌────────────────────────────────────┐ │   │
+│  │  Step 2 ●   │  │  │      StepContainer (Client)        │ │   │
+│  │  Step 4 ●   │  │  │                                    │ │   │
+│  │  Step 6 ●   │  │  │  ┌──────────┐  ┌──────────────┐   │ │   │
+│  │  Step 8 ○   │  │  │  │  Chat    │  │  ReactFlow   │   │ │   │
+│  │  Step 9 ○   │  │  │  │  Panel   │  │  Canvas      │   │ │   │
+│  │    ...      │  │  │  │          │  │  Panel       │   │ │   │
 │  │             │  │  │  └──────────┘  └──────────────┘   │ │   │
-│  │             │  │  │  (Resizable Panels - Horizontal)  │ │   │
 │  └─────────────┘  │  └────────────────────────────────────┘ │   │
 │                   └─────────────────────────────────────────┘   │
 └──────────────────────────────────────────────────────────────────┘
 
-● = Canvas-enabled step (Steps 2, 4)
-○ = Standard output panel (Steps 1, 3, 5-10)
+Current ReactFlow Canvas Features:
+● = Canvas-enabled step (Steps 2, 4, 6)
+  - postit-node (text post-its with colors, drag/drop)
+  - Overlays: rings, empathy zones, journey map grid
+  - Zustand store: postIts[], gridColumns[]
+  - Auto-save to stepArtifacts.artifact._canvas
 ```
 
-### Canvas Component Architecture
+### Target Architecture (v1.3 — EzyDraw + Visual Canvases)
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                     CANVAS INFRASTRUCTURE                        │
+│                     WORKSHOP LAYOUT                              │
+├──────────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────────────────────────────────┐   │
+│  │  Sidebar    │  │      Main Area (Split Screen)           │   │
+│  │             │  │                                         │   │
+│  │  Step 8a ◉  │  │  ┌────────────────────────────────────┐ │   │
+│  │  Step 8b ◉  │  │  │      StepContainer (Client)        │ │   │
+│  │  Step 9  ◉  │  │  │                                    │ │   │
+│  │             │  │  │  ┌──────────┐  ┌──────────────┐   │ │   │
+│  │             │  │  │  │  Chat    │  │  ReactFlow   │   │ │   │
+│  │             │  │  │  │  Panel   │  │  Canvas +    │   │ │   │
+│  │             │  │  │  │          │  │  EzyDraw     │   │ │   │
+│  │             │  │  │  └──────────┘  └──────────────┘   │ │   │
+│  └─────────────┘  │  └────────────────────────────────────┘ │   │
+│                   └─────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
+                                ↑
+                    [EzyDraw Modal Overlay]
+                    (Fullscreen, tldraw SDK)
+```
+
+**New Features:**
+- ◉ = Steps with EzyDraw integration (8a, 8b, 9)
+- **EzyDraw Modal:** Fullscreen drawing interface (tldraw SDK)
+- **Drawing-Image Nodes:** Custom ReactFlow nodes displaying PNG exports with re-edit capability
+- **Mind Map Nodes:** Connected graph nodes (ReactFlow + dagre layout)
+- **Crazy 8s Grid:** 8-slot grid overlay on ReactFlow canvas
+- **Concept Card Nodes:** Rich multi-section custom nodes
+
+## Component Architecture
+
+### EzyDraw Integration Layer
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                  EZYDRAW ARCHITECTURE                            │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │                  canvasStore (Zustand)                   │   │
-│  │  - items: CanvasItem[]                                   │   │
-│  │  - addItem(), updateItem(), removeItem()                 │   │
-│  │  - sync with stepArtifacts                               │   │
+│  │            EzyDrawModal (Fullscreen Dialog)              │   │
+│  │  ┌────────────────────────────────────────────────────┐  │   │
+│  │  │         <Tldraw /> Component (tldraw SDK)          │  │   │
+│  │  │  - Drawing tools, shapes, UI kit elements         │  │   │
+│  │  │  - State: TLDrawStore (internal to tldraw)        │  │   │
+│  │  └────────────────────────────────────────────────────┘  │   │
+│  │                                                          │   │
+│  │  [Save] → Export JSON + PNG                             │   │
 │  └──────────────────────────────────────────────────────────┘   │
-│                           ↑ ↓                                    │
+│                         ↓                                        │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │              BaseCanvas (Shared Component)               │   │
-│  │  - Drag/drop infrastructure                              │   │
-│  │  - Zoom/pan controls (future)                            │   │
-│  │  - Item selection/editing                                │   │
+│  │            drawingStore (Zustand)                        │   │
+│  │  - drawings: DrawingData[]                               │   │
+│  │  - saveDrawing(json, png) → stepArtifacts.drawings      │   │
+│  │  - loadDrawing(id) → opens EzyDrawModal with state      │   │
 │  └──────────────────────────────────────────────────────────┘   │
-│                           ↑ ↓                                    │
-│  ┌─────────────────────┐     ┌─────────────────────────────┐   │
-│  │  StakeholderCanvas  │     │  ResearchThemeCanvas        │   │
-│  │  (Step 2)           │     │  (Step 4)                   │   │
-│  │  - Bullseye rings   │     │  - Empathy map quadrants    │   │
-│  │  - Post-it items    │     │  - Theme clustering         │   │
-│  └─────────────────────┘     └─────────────────────────────┘   │
+│                         ↓                                        │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │         canvasStore (Existing Zustand)                   │   │
+│  │  - postIts: PostIt[] (existing)                          │   │
+│  │  - NEW: addDrawingNode(drawingId, pngUrl, position)     │   │
+│  │    → Creates image-node referencing drawing             │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                         ↓                                        │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │              ReactFlow Canvas                            │   │
+│  │  - Renders drawing-image-node (custom node type)        │   │
+│  │  - Double-click → reopens EzyDrawModal for re-edit      │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Visual Canvas Layouts (Steps 8 & 9)
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                   VISUAL CANVAS TYPES                            │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. MIND MAP (Step 8a)                                           │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  ReactFlow + dagre layout                                │   │
+│  │  - Node type: mind-node (text + optional image)          │   │
+│  │  - Edges: smooth connections                             │   │
+│  │  - Layout: auto-positioned via dagre algorithm           │   │
+│  │  - User actions: add child, edit text, delete            │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  2. CRAZY 8s (Step 8b)                                           │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  ReactFlow + 8-slot grid overlay                         │   │
+│  │  - Grid: 2 rows × 4 cols (fixed layout)                  │   │
+│  │  - Cell content: DrawingImageNode + title text           │   │
+│  │  - Actions: "Draw in Slot 1-8" → opens EzyDraw modal     │   │
+│  │  - Cell overlay: slot number, timer countdown (8 min)    │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  3. CONCEPT CARDS (Step 9)                                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  ReactFlow with custom concept-card-node                 │   │
+│  │  - Node sections:                                        │   │
+│  │    1. Image area (from Step 8 drawing)                   │   │
+│  │    2. Name + Elevator Pitch (text)                       │   │
+│  │    3. USP (text)                                         │   │
+│  │    4. SWOT grid (2×2 mini-grid with bullets)             │   │
+│  │    5. Feasibility scores (5 horizontal bars)             │   │
+│  │  - Card size: 400px × 600px (large custom node)          │   │
+│  │  - Editing: inline text edit + AI auto-fill             │   │
+│  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
 ## Component Responsibilities
 
-| Component | Responsibility | Integration Point |
-|-----------|----------------|-------------------|
-| **StepContainer** | Conditionally render CanvasPanel vs OutputPanel based on step | Modified (add canvas detection logic) |
-| **CanvasPanel** | Wrapper for step-specific canvas components | NEW |
-| **BaseCanvas** | Shared drag/drop, item management, state sync | NEW |
-| **StakeholderCanvas** | Step 2: Bullseye radar chart with stakeholder post-its | NEW |
-| **ResearchThemeCanvas** | Step 4: Empathy map quadrants with theme clusters | NEW |
-| **canvasStore** | Zustand store for canvas state (items, positions) | NEW |
-| **OutputPanel** | Existing component for text-based artifact display | UNCHANGED |
-| **ChatPanel** | Existing component for AI conversation | UNCHANGED (new patterns in prompts) |
+| Component | Responsibility | Implementation Strategy |
+|-----------|----------------|------------------------|
+| **EzyDrawModal** | Fullscreen drawing interface, save/cancel controls | Dialog with `<Tldraw />` component, export JSON + PNG on save |
+| **drawingStore** | Manage drawing state (create, save, load, delete) | NEW Zustand store, persists to `stepArtifacts.drawings[]` |
+| **DrawingImageNode** | Custom ReactFlow node displaying PNG with re-edit button | Custom node type, double-click or button → reopens EzyDrawModal |
+| **MindMapCanvas** | Step 8a: Interactive node graph with dagre layout | ReactFlow + `mind-node` type + dagre layout hook |
+| **Crazy8sCanvas** | Step 8b: 8-slot grid with drawing slots | ReactFlow + CSS Grid overlay (similar to Journey Map) |
+| **ConceptCardNode** | Step 9: Rich multi-section card node | Custom ReactFlow node with complex layout (image + text sections + SWOT grid) |
+| **canvasStore** | MODIFIED: Add drawing node support alongside post-its | Add `addDrawingNode()`, extend PostIt type to support `drawingId` reference |
 
-## Canvas Integration Architecture
+## Data Models
 
-### 1. Layout Modification
+### Drawing Data Structure
 
-**Current:** StepContainer uses react-resizable-panels to split Chat (left) and Output (right).
-
-**Target:** StepContainer conditionally renders Canvas Panel for Steps 2 and 4, OutputPanel for all others.
-
-**Implementation:**
 ```typescript
-// src/components/workshop/step-container.tsx (MODIFIED)
-
-// Existing resizable panel structure stays, but right panel changes
-const renderRightPanel = () => {
-  // Step-specific canvas detection
-  const canvasSteps = [2, 4];
-
-  if (canvasSteps.includes(stepOrder)) {
-    return (
-      <CanvasPanel
-        stepOrder={stepOrder}
-        sessionId={sessionId}
-        workshopId={workshopId}
-        artifact={artifact}
-        onArtifactChange={handleArtifactChange}
-      />
-    );
-  }
-
-  // Default: existing OutputPanel
-  return (
-    <OutputPanel
-      stepOrder={stepOrder}
-      artifact={artifact}
-      isExtracting={isExtracting}
-      extractionError={extractionError}
-      onRetry={extractArtifact}
-    />
-  );
-};
-
-// Desktop: resizable panels (EXISTING PATTERN)
-return (
-  <div className="flex h-full flex-col">
-    <div className="min-h-0 flex-1 overflow-hidden">
-      <Group orientation="horizontal" className="h-full">
-        <Panel defaultSize={50} minSize={30}>
-          {renderContent()} {/* ChatPanel - unchanged */}
-        </Panel>
-        <Separator />
-        <Panel defaultSize={50} minSize={25}>
-          {renderRightPanel()} {/* NEW: conditional rendering */}
-        </Panel>
-      </Group>
-    </div>
-    <StepNavigation {...navProps} />
-  </div>
-);
-```
-
-**Trade-offs:**
-- PRO: Minimal disruption to existing layout logic
-- PRO: Reuses react-resizable-panels (already in dependencies)
-- CON: Canvas components need to handle panel resize events for responsive rendering
-
----
-
-### 2. State Management Strategy
-
-**Principle:** Canvas state lives in a Zustand store (canvasStore), separate from chatStore but parallel to existing workshop state architecture.
-
-**Why Zustand:**
-- Already used in project (consistency)
-- Lightweight and performant for canvas interactions (re-renders only affected items)
-- Domain-scoped stores (canvasStore for canvas, chatStore for chat) prevent coupling
-- Works seamlessly with React 19 and Next.js App Router
-
-**Store Structure:**
-```typescript
-// src/stores/canvas.store.ts (NEW)
-
-import { create } from 'zustand';
-
-export interface CanvasItem {
-  id: string;                    // Unique item ID
-  type: 'stakeholder' | 'theme'; // Item type (step-specific)
-  content: string;               // Display text
-  position: { x: number; y: number }; // Canvas coordinates
-  metadata: Record<string, unknown>;  // Step-specific data (e.g., priority, ring)
+// NEW: Drawing data model
+export interface DrawingData {
+  id: string;                    // Unique drawing ID
+  stepId: string;                // Which step owns this drawing
   createdAt: Date;
   updatedAt: Date;
-}
 
-interface CanvasState {
-  // State
-  items: CanvasItem[];
-  selectedItemId: string | null;
-
-  // Actions
-  addItem: (item: Omit<CanvasItem, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateItem: (id: string, updates: Partial<CanvasItem>) => void;
-  removeItem: (id: string) => void;
-  selectItem: (id: string | null) => void;
-  clearItems: () => void;
-
-  // Persistence
-  loadItems: (items: CanvasItem[]) => void;
-  syncToServer: (workshopId: string, stepId: string) => Promise<void>;
-}
-
-export const useCanvasStore = create<CanvasState>((set, get) => ({
-  items: [],
-  selectedItemId: null,
-
-  addItem: (itemData) => set((state) => ({
-    items: [...state.items, {
-      ...itemData,
-      id: crypto.randomUUID(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }],
-  })),
-
-  updateItem: (id, updates) => set((state) => ({
-    items: state.items.map((item) =>
-      item.id === id
-        ? { ...item, ...updates, updatedAt: new Date() }
-        : item
-    ),
-  })),
-
-  removeItem: (id) => set((state) => ({
-    items: state.items.filter((item) => item.id !== id),
-  })),
-
-  selectItem: (id) => set({ selectedItemId: id }),
-
-  clearItems: () => set({ items: [], selectedItemId: null }),
-
-  loadItems: (items) => set({ items, selectedItemId: null }),
-
-  syncToServer: async (workshopId, stepId) => {
-    const { items } = get();
-    await fetch('/api/canvas/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workshopId, stepId, items }),
-    });
-  },
-}));
-```
-
-**Alternative Considered: Component-level useState**
-- REJECTED: Canvas state needs to survive component unmounts (user navigates away and returns)
-- REJECTED: No cross-component sharing (e.g., ChatPanel can't read canvas state for context)
-- REJECTED: Difficult to implement auto-save and server sync
-
-**Alternative Considered: Extend workshopStore**
-- REJECTED: Canvas state is domain-specific, not workshop-wide
-- REJECTED: Canvas items don't need to be in global workshop context
-- REJECTED: Separation of concerns (chat state, workshop state, canvas state are independent)
-
----
-
-### 3. Bidirectional AI-Canvas Sync
-
-**Pattern:** AI conversation drives canvas updates; canvas state flows back to AI as read-only context.
-
-**Flow 1: AI → Canvas (Suggestions)**
-```
-1. User chats with AI in ChatPanel
-2. AI generates suggestions with structured output:
-   [SUGGESTIONS]
-   - Stakeholder: Department Head (Priority: High)
-   - Stakeholder: Logistics Manager (Priority: Medium)
-   [/SUGGESTIONS]
-3. User clicks suggestion pill
-4. Suggestion auto-populates input → User sends
-5. AI confirms: "Added 'Department Head' to stakeholders"
-6. AI triggers structured output extraction
-7. Extracted artifact updates stepArtifacts table
-8. Canvas loads from artifact and renders items
-```
-
-**Flow 2: Canvas → AI (Silent Context)**
-```
-1. User drags stakeholder post-it from outer ring → inner ring
-2. canvasStore.updateItem() updates item.metadata.ring
-3. useAutoSave hook debounces and syncs to stepArtifacts
-4. Next AI message request includes updated artifact in context:
-   "Current stakeholders on canvas:
-    - Inner ring: Department Head, CEO
-    - Middle ring: Logistics Manager
-    - Outer ring: Regulatory Bodies"
-5. AI uses canvas state to make context-aware suggestions
-```
-
-**Implementation: Auto-save hook**
-```typescript
-// src/hooks/use-canvas-autosave.ts (NEW)
-
-import { useEffect } from 'react';
-import { useCanvasStore } from '@/stores/canvas.store';
-import { useDebouncedCallback } from 'use-debounce';
-
-export function useCanvasAutoSave(
-  workshopId: string,
-  stepId: string,
-  enabled: boolean = true
-) {
-  const { items, syncToServer } = useCanvasStore();
-
-  // Debounce sync to avoid excessive writes (2s debounce, 10s max wait)
-  const debouncedSync = useDebouncedCallback(
-    () => {
-      if (enabled) {
-        syncToServer(workshopId, stepId).catch((error) => {
-          console.error('Canvas auto-save failed:', error);
-        });
-      }
-    },
-    2000,
-    { maxWait: 10000 }
-  );
-
-  useEffect(() => {
-    if (items.length > 0) {
-      debouncedSync();
-    }
-  }, [items, debouncedSync]);
-
-  return { isSyncing: debouncedSync.isPending() };
-}
-```
-
-**Implementation: Canvas context injection**
-```typescript
-// src/lib/ai/context-assembly.ts (MODIFIED)
-
-export async function assembleStepContext(
-  workshopId: string,
-  stepId: string,
-  stepOrder: number
-) {
-  // Existing context assembly...
-  const priorStepOutputs = await loadPriorStepOutputs(workshopId, stepOrder);
-
-  // NEW: Include canvas state for canvas-enabled steps
-  let canvasContext = null;
-  if ([2, 4].includes(stepOrder)) {
-    const artifact = await loadStepArtifact(workshopId, stepId);
-    if (artifact?.canvasItems) {
-      canvasContext = formatCanvasForAI(artifact.canvasItems, stepOrder);
-    }
-  }
-
-  return {
-    priorStepOutputs,
-    canvasContext, // NEW field in context object
-    conversationSummary,
-    recentMessages,
-  };
-}
-
-function formatCanvasForAI(items: CanvasItem[], stepOrder: number) {
-  if (stepOrder === 2) {
-    // Stakeholder canvas: group by ring
-    const byRing = groupBy(items, (item) => item.metadata.ring);
-    return {
-      innerRing: byRing['inner']?.map(i => i.content) || [],
-      middleRing: byRing['middle']?.map(i => i.content) || [],
-      outerRing: byRing['outer']?.map(i => i.content) || [],
-    };
-  }
-
-  if (stepOrder === 4) {
-    // Research canvas: group by quadrant
-    const byQuadrant = groupBy(items, (item) => item.metadata.quadrant);
-    return {
-      said: byQuadrant['said']?.map(i => i.content) || [],
-      thought: byQuadrant['thought']?.map(i => i.content) || [],
-      felt: byQuadrant['felt']?.map(i => i.content) || [],
-      experienced: byQuadrant['experienced']?.map(i => i.content) || [],
-    };
-  }
-
-  return null;
-}
-```
-
-**Trade-offs:**
-- PRO: Maintains "conversation is source of truth" principle
-- PRO: Canvas changes are non-blocking (auto-save in background)
-- PRO: AI has full visibility into canvas state for context-aware responses
-- CON: Canvas state lags slightly (2-10s debounce) before visible to AI
-- CON: User might expect instant AI reaction to canvas changes (needs UX clarity)
-
----
-
-### 4. Data Persistence
-
-**Strategy:** Extend existing stepArtifacts table to store canvas items alongside structured outputs.
-
-**Schema (No Migration Required):**
-```typescript
-// src/db/schema/step-artifacts.ts (EXISTING)
-
-export const stepArtifacts = pgTable('step_artifacts', {
-  id: text('id').primaryKey(),
-  workshopStepId: text('workshop_step_id').references(() => workshopSteps.id),
-  stepId: text('step_id').notNull(),
-  artifact: jsonb('artifact').$type<Record<string, unknown>>(), // EXISTING
-  // ↑ Canvas items go in artifact.canvasItems array
-  schemaVersion: text('schema_version').default('1.0'),
-  extractedAt: timestamp('extracted_at').defaultNow(),
-  version: integer('version').default(1), // Optimistic locking
-});
-```
-
-**Artifact Structure for Canvas Steps:**
-```typescript
-// Step 2 (Stakeholder Mapping) artifact schema
-interface Step2Artifact {
-  stakeholders: Array<{
-    id: string;
-    name: string;
-    role: string;
-    priority: 'high' | 'medium' | 'low';
-    ring: 'inner' | 'middle' | 'outer';
-  }>;
-  canvasItems: Array<CanvasItem>; // NEW: Canvas representation
-  completedAt: string;
-}
-
-// Step 4 (Research Sense Making) artifact schema
-interface Step4Artifact {
-  themes: Array<{
-    id: string;
-    name: string;
-    observations: string[];
-    insight: string;
-    type: 'pain' | 'gain';
-  }>;
-  topPains: string[];   // Top 5 pains
-  topGains: string[];   // Top 5 gains
-  canvasItems: Array<CanvasItem>; // NEW: Canvas representation
-  completedAt: string;
-}
-```
-
-**Persistence API Routes:**
-```typescript
-// src/app/api/canvas/sync/route.ts (NEW)
-
-import { db } from '@/db/client';
-import { stepArtifacts } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-import { auth } from '@clerk/nextjs/server';
-
-export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { workshopId, stepId, items } = await request.json();
-
-  // Verify ownership
-  const workshop = await db.query.workshops.findFirst({
-    where: (workshops, { eq }) => eq(workshops.id, workshopId),
-  });
-
-  if (!workshop || workshop.userId !== userId) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  // Get workshop step record
-  const workshopStep = await db.query.workshopSteps.findFirst({
-    where: (steps, { and, eq }) =>
-      and(eq(steps.workshopId, workshopId), eq(steps.stepId, stepId)),
-  });
-
-  if (!workshopStep) {
-    return Response.json({ error: 'Step not found' }, { status: 404 });
-  }
-
-  // Update or insert artifact with canvas items
-  const existingArtifact = await db.query.stepArtifacts.findFirst({
-    where: eq(stepArtifacts.workshopStepId, workshopStep.id),
-  });
-
-  if (existingArtifact) {
-    // Update existing artifact
-    await db.update(stepArtifacts)
-      .set({
-        artifact: {
-          ...existingArtifact.artifact,
-          canvasItems: items, // Merge canvas items into artifact
-        },
-        version: existingArtifact.version + 1, // Optimistic locking
-      })
-      .where(eq(stepArtifacts.id, existingArtifact.id));
-  } else {
-    // Create new artifact
-    await db.insert(stepArtifacts).values({
-      workshopStepId: workshopStep.id,
-      stepId: stepId,
-      artifact: { canvasItems: items },
-    });
-  }
-
-  return Response.json({ success: true });
-}
-```
-
-**Alternative Considered: Separate canvasItems table**
-- REJECTED: Canvas items are tightly coupled to step outputs (not independent entities)
-- REJECTED: Adds query complexity (join canvasItems with stepArtifacts for context)
-- REJECTED: jsonb already handles arrays efficiently in Postgres
-
-**Alternative Considered: Real-time sync (WebSockets)**
-- DEFERRED to FFP: Not needed for single-user MVP/MMP
-- Multiplayer canvas requires conflict resolution (CRDT or Operational Transform)
-- Auto-save with debounce is sufficient for v1.1
-
----
-
-### 5. Canvas Component Library
-
-**Recommendation:** Build custom canvas components using HTML/CSS positioning (NOT react-konva or tldraw for v1.1).
-
-**Rationale:**
-- Step 2 and 4 canvases are SIMPLE: fixed layout (rings/quadrants), drag-and-drop post-its
-- react-konva adds 200KB+ bundle size for features we don't need (freehand drawing, complex shapes)
-- tldraw is overkill (infinite canvas, collaboration, undo/redo) for constrained layouts
-- HTML drag-and-drop API + CSS Grid/Flexbox is sufficient and performant
-
-**Canvas Library Decision Matrix:**
-
-| Library | Bundle Size | Complexity | Fit for v1.1 |
-|---------|-------------|------------|--------------|
-| **HTML/CSS (native)** | 0 KB | Low | RECOMMENDED |
-| **dnd-kit** | ~20 KB | Medium | Considered for R2 |
-| **react-konva** | 200 KB+ | High | Overkill |
-| **tldraw** | 500 KB+ | Very High | FFP only |
-
-**Implementation: BaseCanvas (Shared Infrastructure)**
-```typescript
-// src/components/canvas/base-canvas.tsx (NEW)
-
-'use client';
-
-import * as React from 'react';
-import { useCanvasStore } from '@/stores/canvas.store';
-import { cn } from '@/lib/utils';
-
-interface BaseCanvasProps {
-  children: React.ReactNode;
-  className?: string;
-  onItemDrop?: (itemId: string, position: { x: number; y: number }) => void;
-}
-
-export function BaseCanvas({ children, className, onItemDrop }: BaseCanvasProps) {
-  const canvasRef = React.useRef<HTMLDivElement>(null);
-  const [draggedItemId, setDraggedItemId] = React.useState<string | null>(null);
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+  // Editable drawing state (tldraw JSON format)
+  tldrawState: {
+    document: any;               // Shapes, pages, layers
+    session: any;                // Camera position, zoom
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (!draggedItemId || !canvasRef.current) return;
+  // Rendered output for display
+  pngUrl: string;                // Data URL or uploaded image URL
+  thumbnailUrl?: string;         // Smaller preview (100×100)
 
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    onItemDrop?.(draggedItemId, { x, y });
-    setDraggedItemId(null);
-  };
-
-  return (
-    <div
-      ref={canvasRef}
-      className={cn(
-        'relative h-full w-full overflow-hidden bg-background',
-        className
-      )}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
-      {React.Children.map(children, (child) => {
-        if (React.isValidElement(child)) {
-          return React.cloneElement(child, {
-            // Inject drag handlers to children
-            onDragStart: (id: string) => setDraggedItemId(id),
-          } as any);
-        }
-        return child;
-      })}
-    </div>
-  );
+  // Metadata
+  title?: string;                // Optional title (Crazy 8s slot label)
+  slotNumber?: number;           // For Crazy 8s (1-8)
+  parentNodeId?: string;         // For Mind Map (which node spawned this drawing)
 }
+```
 
-// Shared CanvasItem component (post-it note)
-interface CanvasItemProps {
+### Extended Canvas Store Types
+
+```typescript
+// MODIFIED: Extend existing PostIt type
+export type PostIt = {
   id: string;
-  content: string;
+  text: string;
   position: { x: number; y: number };
-  color?: string;
-  onDragStart?: (id: string) => void;
-  onClick?: () => void;
-}
+  width: number;
+  height: number;
+  color?: PostItColor;
+  parentId?: string;
+  type?: 'postIt' | 'group' | 'drawing-image' | 'mind-node' | 'concept-card'; // NEW types
 
-export function CanvasItemPostIt({
-  id,
-  content,
-  position,
-  color = 'yellow',
-  onDragStart,
-  onClick,
-}: CanvasItemProps) {
-  return (
-    <div
-      draggable
-      onDragStart={() => onDragStart?.(id)}
-      onClick={onClick}
-      className={cn(
-        'absolute cursor-move rounded-sm p-3 shadow-md',
-        'hover:shadow-lg transition-shadow',
-        'text-sm font-medium',
-        color === 'yellow' && 'bg-yellow-100 dark:bg-yellow-900',
-        color === 'blue' && 'bg-blue-100 dark:bg-blue-900',
-        color === 'green' && 'bg-green-100 dark:bg-green-900',
-        color === 'red' && 'bg-red-100 dark:bg-red-900',
-      )}
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        minWidth: '120px',
-        maxWidth: '200px',
-      }}
-    >
-      {content}
-    </div>
-  );
-}
-```
+  // Existing metadata
+  quadrant?: Quadrant;
+  cellAssignment?: { row: string; col: string };
+  isPreview?: boolean;
+  previewReason?: string;
 
-**Implementation: StakeholderCanvas (Step 2)**
-```typescript
-// src/components/canvas/stakeholder-canvas.tsx (NEW)
+  // NEW: Drawing-specific metadata
+  drawingId?: string;            // Links to DrawingData.id (for re-editing)
+  imageUrl?: string;             // Direct image URL (for drawing-image nodes)
 
-'use client';
-
-import * as React from 'react';
-import { useCanvasStore } from '@/stores/canvas.store';
-import { BaseCanvas, CanvasItemPostIt } from './base-canvas';
-
-export function StakeholderCanvas() {
-  const { items, updateItem } = useCanvasStore();
-
-  const handleItemDrop = (itemId: string, position: { x: number; y: number }) => {
-    // Determine which ring based on distance from center
-    const centerX = 400; // Assuming 800px canvas
-    const centerY = 400;
-    const distance = Math.sqrt(
-      Math.pow(position.x - centerX, 2) + Math.pow(position.y - centerY, 2)
-    );
-
-    let ring: 'inner' | 'middle' | 'outer';
-    if (distance < 150) ring = 'inner';
-    else if (distance < 250) ring = 'middle';
-    else ring = 'outer';
-
-    updateItem(itemId, {
-      position,
-      metadata: { ...items.find(i => i.id === itemId)?.metadata, ring },
-    });
+  // NEW: Mind Map-specific metadata
+  mindMapData?: {
+    isRoot: boolean;
+    depth: number;               // Distance from root (for styling)
+    children: string[];          // Child node IDs
   };
 
-  return (
-    <BaseCanvas onItemDrop={handleItemDrop}>
-      {/* Bullseye background */}
-      <svg className="absolute inset-0 pointer-events-none">
-        <circle cx="400" cy="400" r="150" fill="none" stroke="currentColor" strokeWidth="2" />
-        <circle cx="400" cy="400" r="250" fill="none" stroke="currentColor" strokeWidth="2" />
-        <circle cx="400" cy="400" r="350" fill="none" stroke="currentColor" strokeWidth="2" />
-        <text x="400" y="50" textAnchor="middle" className="text-sm font-medium">
-          Stakeholder Map
-        </text>
-        <text x="400" y="420" textAnchor="middle" className="text-xs text-muted-foreground">
-          Inner: Core
-        </text>
-        <text x="400" y="320" textAnchor="middle" className="text-xs text-muted-foreground">
-          Middle: Direct
-        </text>
-        <text x="400" y="220" textAnchor="middle" className="text-xs text-muted-foreground">
-          Outer: Indirect
-        </text>
-      </svg>
-
-      {/* Render stakeholder post-its */}
-      {items.map((item) => (
-        <CanvasItemPostIt
-          key={item.id}
-          id={item.id}
-          content={item.content}
-          position={item.position}
-          color={
-            item.metadata.ring === 'inner' ? 'red' :
-            item.metadata.ring === 'middle' ? 'yellow' :
-            'blue'
-          }
-        />
-      ))}
-    </BaseCanvas>
-  );
-}
-```
-
-**Implementation: ResearchThemeCanvas (Step 4)**
-```typescript
-// src/components/canvas/research-theme-canvas.tsx (NEW)
-
-'use client';
-
-import * as React from 'react';
-import { useCanvasStore } from '@/stores/canvas.store';
-import { BaseCanvas, CanvasItemPostIt } from './base-canvas';
-
-const QUADRANTS = {
-  said: { x: 0, y: 0, width: 400, height: 400, label: 'What They Said' },
-  thought: { x: 400, y: 0, width: 400, height: 400, label: 'What They Thought' },
-  felt: { x: 0, y: 400, width: 400, height: 400, label: 'What They Felt' },
-  experienced: { x: 400, y: 400, width: 400, height: 400, label: 'What They Experienced' },
+  // NEW: Concept Card-specific metadata
+  conceptData?: {
+    name: string;
+    elevatorPitch: string;
+    usp: string;
+    swot: {
+      strengths: string[];
+      weaknesses: string[];
+      opportunities: string[];
+      risks: string[];
+    };
+    feasibility: {
+      technical: number;         // 1-5 score
+      operational: number;
+      marketPotential: number;
+      valueAdd: number;
+      attractiveness: number;
+    };
+  };
 };
+```
 
-export function ResearchThemeCanvas() {
-  const { items, updateItem } = useCanvasStore();
+### Step Artifacts Schema Extension
 
-  const handleItemDrop = (itemId: string, position: { x: number; y: number }) => {
-    // Determine quadrant based on position
-    let quadrant: keyof typeof QUADRANTS;
-    if (position.x < 400 && position.y < 400) quadrant = 'said';
-    else if (position.x >= 400 && position.y < 400) quadrant = 'thought';
-    else if (position.x < 400 && position.y >= 400) quadrant = 'felt';
-    else quadrant = 'experienced';
-
-    updateItem(itemId, {
-      position,
-      metadata: { ...items.find(i => i.id === itemId)?.metadata, quadrant },
-    });
+```typescript
+// MODIFIED: stepArtifacts.artifact structure
+interface StepArtifact {
+  // Existing fields (unchanged)
+  _canvas: {
+    postIts: PostIt[];
+    gridColumns: GridColumn[];
   };
 
-  return (
-    <BaseCanvas onItemDrop={handleItemDrop}>
-      {/* Empathy map quadrants */}
-      <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-px bg-border">
-        {Object.entries(QUADRANTS).map(([key, { label }]) => (
-          <div
-            key={key}
-            className="bg-background p-4 flex items-start justify-center"
-          >
-            <span className="text-sm font-medium text-muted-foreground">{label}</span>
-          </div>
-        ))}
-      </div>
+  // NEW: Drawing storage
+  drawings: DrawingData[];       // All drawings created in this step
 
-      {/* Render theme post-its */}
-      {items.map((item) => (
-        <CanvasItemPostIt
-          key={item.id}
-          id={item.id}
-          content={item.content}
-          position={item.position}
-          color={item.metadata.type === 'pain' ? 'red' : 'green'}
-        />
-      ))}
-    </BaseCanvas>
-  );
+  // Step-specific data (unchanged)
+  [key: string]: any;
+}
+
+// Example: Step 8b (Crazy 8s) artifact
+interface Step8bArtifact {
+  _canvas: {
+    postIts: PostIt[];           // 8 drawing-image nodes in grid
+    gridColumns: [];             // Not used for Crazy 8s
+  };
+  drawings: DrawingData[];       // 8 drawings (one per slot)
+  selectedIdeas: string[];       // IDs of drawings selected for Step 9
+  completedAt?: string;
+}
+
+// Example: Step 9 (Concept Development) artifact
+interface Step9Artifact {
+  _canvas: {
+    postIts: PostIt[];           // concept-card nodes
+    gridColumns: [];
+  };
+  drawings: DrawingData[];       // Inherited from Step 8 + new sketches
+  concepts: {
+    id: string;
+    sourceDrawingId: string;     // Links to Step 8 drawing
+    ...conceptData               // From PostIt.conceptData
+  }[];
+  completedAt?: string;
 }
 ```
 
-**Trade-offs:**
-- PRO: Zero bundle bloat, full control over rendering
-- PRO: Performant (native browser drag-and-drop)
-- PRO: Easier to style with Tailwind (consistent with app)
-- CON: Manual implementation of drag constraints and snap-to-grid
-- CON: No built-in undo/redo (defer to future)
-- CON: Touch interactions need custom implementation
+## Data Flow: EzyDraw → Canvas → Persistence
 
----
+### Flow 1: Create Drawing from Scratch
+
+```
+1. User clicks "Draw Idea" in Crazy 8s slot 1
+   ↓
+2. Open EzyDrawModal (fullscreen)
+   - <Tldraw /> component initialized with blank canvas
+   - User draws wireframe, adds shapes, text
+   ↓
+3. User clicks "Save" in modal
+   ↓
+4. Export tldraw state + PNG:
+   - const snapshot = editor.getSnapshot()
+   - const png = await editor.getSvg()?.toDataURL() // or toBlob
+   ↓
+5. drawingStore.saveDrawing(snapshot, png, metadata)
+   - Generates drawing ID
+   - Uploads PNG to storage (or saves as data URL)
+   - Persists to stepArtifacts.drawings[]
+   ↓
+6. canvasStore.addDrawingNode(drawingId, pngUrl, slotPosition)
+   - Creates PostIt with type: 'drawing-image'
+   - Position calculated from slot number (Crazy 8s grid)
+   - drawingId links to DrawingData for re-editing
+   ↓
+7. ReactFlow canvas re-renders
+   - DrawingImageNode displays PNG
+   - Shows slot label and timer
+   ↓
+8. Auto-save triggers
+   - Updates stepArtifacts.artifact._canvas.postIts[]
+   - Updates stepArtifacts.artifact.drawings[]
+```
+
+### Flow 2: Re-Edit Existing Drawing
+
+```
+1. User double-clicks DrawingImageNode on canvas
+   ↓
+2. canvasStore finds PostIt.drawingId
+   ↓
+3. drawingStore.loadDrawing(drawingId)
+   - Retrieves DrawingData from stepArtifacts.drawings[]
+   - Extracts tldrawState (JSON snapshot)
+   ↓
+4. Open EzyDrawModal with existing state
+   - editor.loadSnapshot(tldrawState)
+   - User sees previous drawing, can edit
+   ↓
+5. User clicks "Save" after changes
+   ↓
+6. Export NEW snapshot + PNG
+   ↓
+7. drawingStore.updateDrawing(drawingId, newSnapshot, newPng)
+   - Updates DrawingData.tldrawState
+   - Updates DrawingData.pngUrl
+   - Increments updatedAt timestamp
+   ↓
+8. canvasStore.updatePostIt(postItId, { imageUrl: newPngUrl })
+   - ReactFlow node updates to show new image
+   ↓
+9. Auto-save persists changes
+```
+
+### Flow 3: Mind Map Node Creation
+
+```
+1. User clicks "Add Child Node" on Mind Map root
+   ↓
+2. canvasStore.addPostIt({ type: 'mind-node', parentId: rootId, ... })
+   - Creates new node with empty text
+   - mindMapData: { isRoot: false, depth: 1, children: [] }
+   ↓
+3. dagre layout recalculates positions
+   - useLayoutNodes hook runs
+   - Updates all node positions to maintain tree structure
+   ↓
+4. canvasStore.updatePostIt() applies new positions
+   ↓
+5. ReactFlow edge created automatically
+   - Edge connects parent → child
+   - Smooth curve styling
+   ↓
+6. User edits node text inline
+   - Direct text editing (like post-it-node)
+   ↓
+7. Auto-save persists mind map structure
+```
+
+### Flow 4: Concept Card Auto-Generation (Step 9)
+
+```
+1. User selects 1-3 drawings from Crazy 8s
+   ↓
+2. AI generates concept sheet per drawing
+   - Context: drawing image (vision API), persona, HMW statement
+   - Output: name, elevator pitch, USP, SWOT, feasibility scores
+   ↓
+3. canvasStore.addPostIt({ type: 'concept-card', conceptData: {...}, drawingId })
+   - Large node (400×600px)
+   - Position: dealing-cards offset
+   ↓
+4. ConceptCardNode renders sections:
+   - Top: Image from drawing (embedded <img>)
+   - Middle: Text sections (editable contentEditable)
+   - Bottom-left: SWOT 2×2 mini-grid
+   - Bottom-right: Feasibility score bars
+   ↓
+5. User edits inline or clicks "Improve Pitch" → AI assists
+   ↓
+6. Auto-save persists concept data to stepArtifacts.artifact.concepts[]
+```
 
 ## Recommended Project Structure
 
 ```
 src/
 ├── components/
-│   ├── canvas/                    # NEW: Canvas infrastructure
-│   │   ├── base-canvas.tsx        # Shared drag/drop, item rendering
-│   │   ├── canvas-panel.tsx       # Wrapper for step-specific canvases
-│   │   ├── stakeholder-canvas.tsx # Step 2: Bullseye chart
-│   │   └── research-theme-canvas.tsx # Step 4: Empathy map
+│   ├── canvas/                        # EXISTING canvas infrastructure
+│   │   ├── react-flow-canvas.tsx     # MODIFIED: Add new node types
+│   │   ├── post-it-node.tsx          # EXISTING
+│   │   ├── drawing-image-node.tsx    # NEW: PNG display with re-edit
+│   │   ├── mind-node.tsx             # NEW: Mind map node type
+│   │   ├── concept-card-node.tsx     # NEW: Rich concept card
+│   │   ├── crazy8s-overlay.tsx       # NEW: 8-slot grid overlay
+│   │   └── canvas-toolbar.tsx        # MODIFIED: Add "Draw" button
+│   ├── ezydraw/                       # NEW: Drawing components
+│   │   ├── ezydraw-modal.tsx         # Fullscreen tldraw dialog
+│   │   ├── ezydraw-toolbar.tsx       # Custom toolbar for tldraw
+│   │   └── drawing-thumbnail.tsx     # Preview component
 │   └── workshop/
-│       ├── step-container.tsx     # MODIFIED: Conditional canvas rendering
-│       ├── chat-panel.tsx         # UNCHANGED
-│       └── output-panel.tsx       # UNCHANGED
+│       ├── step-container.tsx        # EXISTING
+│       ├── chat-panel.tsx            # EXISTING
+│       └── output-panel.tsx          # EXISTING
 ├── stores/
-│   ├── canvas.store.ts            # NEW: Canvas state management
-│   ├── workshop.store.ts          # EXISTING (workshop-level state)
-│   └── chat.store.ts              # EXISTING (if using client-side chat state)
+│   ├── canvas-store.ts               # MODIFIED: Add drawing node support
+│   ├── drawing-store.ts              # NEW: Drawing state management
+│   └── workshop-store.ts             # EXISTING
 ├── hooks/
-│   ├── use-canvas-autosave.ts     # NEW: Debounced canvas persistence
-│   ├── use-auto-save.ts           # EXISTING (message auto-save)
-│   └── use-local-storage.ts       # EXISTING
+│   ├── use-canvas-autosave.ts        # EXISTING
+│   ├── use-layout-nodes.ts           # NEW: dagre layout hook for Mind Map
+│   └── use-drawing.ts                # NEW: Drawing create/edit/save hook
 ├── lib/
+│   ├── canvas/
+│   │   ├── step-canvas-config.ts     # MODIFIED: Add Step 8a, 8b, 9 configs
+│   │   ├── grid-layout.ts            # EXISTING (reuse for Crazy 8s)
+│   │   └── mind-map-layout.ts        # NEW: dagre integration
+│   ├── drawing/
+│   │   ├── tldraw-export.ts          # NEW: Export PNG/JSON helpers
+│   │   └── image-upload.ts           # NEW: Upload PNG to storage
 │   └── ai/
-│       └── context-assembly.ts    # MODIFIED: Include canvas context
+│       └── context-assembly.ts       # MODIFIED: Include drawings in context
 ├── app/
 │   └── api/
-│       └── canvas/
-│           └── sync/
-│               └── route.ts       # NEW: Canvas persistence API
+│       ├── canvas/
+│       │   └── sync/route.ts         # EXISTING
+│       └── drawings/                  # NEW: Drawing persistence
+│           ├── save/route.ts         # Save drawing JSON + PNG
+│           └── [id]/route.ts         # Load drawing by ID
 └── db/
     └── schema/
-        └── step-artifacts.ts      # EXISTING (no schema change needed)
+        └── step-artifacts.ts          # EXISTING (no schema change needed)
 ```
 
 ### Structure Rationale
 
-- **components/canvas/:** Isolated canvas components, no coupling to workshop logic
-- **stores/canvas.store.ts:** Separate domain (canvas) from workshop/chat stores (separation of concerns)
-- **hooks/use-canvas-autosave.ts:** Reusable hook pattern (consistent with use-auto-save.ts)
-- **api/canvas/sync/:** Dedicated API route for canvas persistence (RESTful pattern)
-
----
+- **components/ezydraw/:** Isolated drawing UI components, no coupling to canvas logic
+- **stores/drawing-store.ts:** Separate domain (drawing lifecycle) from canvas state
+- **lib/drawing/:** Drawing-specific utilities (export, upload) separate from canvas
+- **api/drawings/:** Dedicated API routes for drawing persistence (separate from canvas sync)
+- **Mind Map layout logic:** New `lib/canvas/mind-map-layout.ts` for dagre integration
 
 ## Architectural Patterns
 
-### Pattern 1: Conditional Rendering Based on Step Metadata
+### Pattern 1: Drawing as Dual-State (JSON + PNG)
 
-**What:** StepContainer dynamically renders CanvasPanel or OutputPanel based on step configuration.
+**What:** Store both editable drawing state (tldraw JSON) AND rendered output (PNG) for each drawing.
 
-**When to use:** Features that apply only to specific steps (e.g., canvas for Steps 2 and 4, not 1, 3, 5-10).
+**When to use:** Applications where users need to re-edit drawings (not just view them).
 
 **Trade-offs:**
-- PRO: Single StepContainer handles all steps (no code duplication)
-- PRO: Easy to add canvas to new steps (add step number to canvasSteps array)
-- CON: StepContainer grows more complex (consider extracting to hook: useStepFeatures)
+- PRO: Re-editable drawings (click to open in EzyDraw modal, modify, save)
+- PRO: Fast rendering on canvas (display PNG, don't re-render tldraw)
+- PRO: Fallback if tldraw schema changes (PNG is stable)
+- CON: Storage overhead (~50-200KB JSON + 20-100KB PNG per drawing)
+- CON: Must keep JSON and PNG in sync (update both on save)
 
 **Example:**
 ```typescript
-// src/hooks/use-step-features.ts (FUTURE REFACTOR)
+// Save drawing with both states
+async function saveDrawing(editor: Editor, metadata: Partial<DrawingData>) {
+  const snapshot = editor.getSnapshot(); // Editable JSON state
+  const svg = await editor.getSvg();
+  const png = await svgToDataURL(svg);   // Rendered PNG
 
-export function useStepFeatures(stepOrder: number) {
-  const CANVAS_STEPS = [2, 4];
-  const SUBSTEP_STEPS = [8]; // Ideation has sub-steps
-
-  return {
-    hasCanvas: CANVAS_STEPS.includes(stepOrder),
-    hasSubSteps: SUBSTEP_STEPS.includes(stepOrder),
-    hasCustomNavigation: stepOrder === 10, // Summary has custom nav
+  const drawing: DrawingData = {
+    id: crypto.randomUUID(),
+    tldrawState: snapshot,               // For re-editing
+    pngUrl: png,                          // For display
+    ...metadata,
   };
+
+  await fetch('/api/drawings/save', {
+    method: 'POST',
+    body: JSON.stringify(drawing),
+  });
 }
 ```
 
----
+### Pattern 2: ReactFlow Node as Proxy to Drawing State
 
-### Pattern 2: Zustand Store Per Domain
+**What:** ReactFlow nodes store only `drawingId` reference, not full drawing data. Full data lives in `stepArtifacts.drawings[]`.
 
-**What:** Separate Zustand stores for independent domains (canvas, chat, workshop).
-
-**When to use:** State that doesn't need to be globally accessible and has distinct lifecycles.
+**When to use:** Large embedded objects (drawings, images) that shouldn't duplicate in canvas node array.
 
 **Trade-offs:**
-- PRO: Prevents coupling (canvas changes don't trigger chat re-renders)
-- PRO: Easier to test (mock individual stores)
-- PRO: Performance (selective subscriptions with selectors)
-- CON: More boilerplate (multiple store files)
+- PRO: Smaller canvas state (PostIt array doesn't bloat with drawing data)
+- PRO: Single source of truth for drawing state
+- PRO: Easy to sync drawing updates (update drawings[], canvas nodes re-render)
+- CON: Requires lookup to render (node → drawingId → drawings[])
+- CON: Slightly more complex data loading on canvas mount
 
 **Example:**
 ```typescript
-// Component subscribes only to needed state
-const items = useCanvasStore((state) => state.items); // Re-renders on items change only
-const addItem = useCanvasStore((state) => state.addItem); // Stable reference
+// Drawing-image node stores only ID and URL
+const drawingImageNode: PostIt = {
+  id: 'node-123',
+  type: 'drawing-image',
+  drawingId: 'drawing-456',              // Reference to DrawingData
+  imageUrl: drawingData.pngUrl,          // Cached for fast render
+  position: { x: 100, y: 100 },
+  width: 200,
+  height: 200,
+};
+
+// To re-edit: lookup full state
+function handleEditDrawing(nodeId: string) {
+  const node = canvasStore.postIts.find(p => p.id === nodeId);
+  const drawing = artifact.drawings.find(d => d.id === node.drawingId);
+  openEzyDrawModal(drawing.tldrawState);
+}
 ```
 
----
+### Pattern 3: Modal-Based Drawing Editor (Not Inline)
 
-### Pattern 3: Debounced Auto-Save with Max Wait
+**What:** Drawing happens in fullscreen modal overlay, not embedded in canvas panel.
 
-**What:** Auto-save canvas changes after 2s of inactivity, but force save after 10s even if user is actively editing.
-
-**When to use:** High-frequency state changes (drag interactions) that need persistence but shouldn't overwhelm server.
+**When to use:** Complex editing interfaces (drawing tools) that need full screen real estate.
 
 **Trade-offs:**
-- PRO: Reduces server load (batches writes)
-- PRO: Better UX (no blocking saves)
-- PRO: Data safety (maxWait ensures writes even during long sessions)
-- CON: Slight lag before AI sees canvas changes (2-10s)
+- PRO: Dedicated focus (no distractions from chat panel, canvas clutter)
+- PRO: Larger canvas for detailed drawing
+- PRO: Clear save/cancel workflow (modal controls)
+- CON: Context switching (user leaves canvas view temporarily)
+- CON: Mobile UX challenge (fullscreen modals on small screens)
 
 **Example:**
 ```typescript
-// use-debounce library (already in dependencies)
-const debouncedSync = useDebouncedCallback(syncToServer, 2000, { maxWait: 10000 });
+// EzyDrawModal is a Dialog component
+<Dialog open={isDrawing} onOpenChange={setIsDrawing} modal>
+  <DialogContent className="max-w-[100vw] max-h-[100vh] p-0">
+    <Tldraw
+      persistenceKey={`drawing-${drawingId}`}
+      onMount={(editor) => {
+        if (existingDrawing) {
+          editor.loadSnapshot(existingDrawing.tldrawState);
+        }
+      }}
+    />
+    <DialogFooter>
+      <Button onClick={handleSave}>Save</Button>
+      <Button onClick={handleCancel}>Cancel</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
 ```
 
----
+### Pattern 4: Auto-Layout with dagre for Mind Maps
 
-### Pattern 4: Canvas State as Projection of Artifacts
+**What:** Use dagre algorithm to automatically position mind map nodes in tree structure.
 
-**What:** Canvas items are derived from stepArtifacts.artifact.canvasItems, not independent state.
-
-**When to use:** UI components that visualize structured data (canvas, charts, diagrams).
+**When to use:** Node graphs with hierarchical parent-child relationships (mind maps, org charts).
 
 **Trade-offs:**
-- PRO: Single source of truth (stepArtifacts table)
-- PRO: Canvas state survives component unmounts
-- PRO: AI and canvas stay in sync (both read from artifacts)
-- CON: Requires server round-trip to load canvas on step entry
+- PRO: Automatic spacing and alignment (no manual positioning)
+- PRO: Scales to large graphs (dagre handles 100+ nodes)
+- PRO: Maintains tree structure on add/delete
+- CON: Limited control over exact placement (algorithm decides)
+- CON: Animations can be jarring if many nodes re-position
 
 **Example:**
 ```typescript
-// On step load
-useEffect(() => {
-  if (artifact?.canvasItems) {
-    canvasStore.loadItems(artifact.canvasItems);
-  }
-}, [artifact]);
+// useLayoutNodes hook (auto-run on node/edge changes)
+import dagre from '@dagrejs/dagre';
+
+function useLayoutNodes(nodes: Node[], edges: Edge[]) {
+  return useMemo(() => {
+    const g = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+    g.setGraph({ rankdir: 'TB' }); // Top-to-bottom
+
+    nodes.forEach(node => g.setNode(node.id, { width: 150, height: 50 }));
+    edges.forEach(edge => g.setEdge(edge.source, edge.target));
+
+    dagre.layout(g);
+
+    return nodes.map(node => {
+      const { x, y } = g.node(node.id);
+      return { ...node, position: { x: x - 75, y: y - 25 } };
+    });
+  }, [nodes, edges]);
+}
 ```
 
----
+### Pattern 5: Grid Overlay for Fixed Layouts (Crazy 8s)
 
-## Data Flow
+**What:** Render CSS Grid overlay on ReactFlow canvas with fixed cells, constrain nodes to cells.
 
-### Request Flow: User Adds Canvas Item
+**When to use:** Fixed-slot layouts (Crazy 8s, Bingo grids, calendar views).
 
-```
-1. User clicks AI suggestion "Add stakeholder: Department Head"
-2. ChatPanel sends message to AI API
-3. AI responds: "Added Department Head to stakeholders"
-4. AI triggers structured output extraction (POST /api/extract)
-5. Extractor adds to artifact.canvasItems with default position
-6. Database updates stepArtifacts table
-7. React Query refetches artifact (or optimistic update)
-8. canvasStore.loadItems(artifact.canvasItems)
-9. StakeholderCanvas re-renders with new item
-```
+**Trade-offs:**
+- PRO: Familiar pattern (already used in Journey Map)
+- PRO: Visual guidance for users (clear slot boundaries)
+- PRO: Snap-to-cell positioning
+- CON: Not truly freeform canvas (locked to grid)
+- CON: Responsive challenges (grid resizing on small screens)
 
-### State Flow: User Drags Canvas Item
+**Example:**
+```typescript
+// Crazy8sCanvas with 8-slot grid overlay
+const CRAZY8S_GRID = {
+  rows: [
+    { id: 'row-1', label: 'Row 1', height: 300 },
+    { id: 'row-2', label: 'Row 2', height: 300 },
+  ],
+  columns: [
+    { id: 'col-1', label: 'Slot 1', width: 300 },
+    { id: 'col-2', label: 'Slot 2', width: 300 },
+    { id: 'col-3', label: 'Slot 3', width: 300 },
+    { id: 'col-4', label: 'Slot 4', width: 300 },
+  ],
+};
 
-```
-1. User drags "Department Head" from outer ring to inner ring
-2. BaseCanvas.onDrop calculates new position and ring
-3. canvasStore.updateItem(itemId, { position, metadata: { ring: 'inner' } })
-4. useCanvasAutoSave hook detects change, starts 2s debounce
-5. After 2s (or 10s maxWait), POST /api/canvas/sync
-6. Server updates stepArtifacts.artifact.canvasItems
-7. Next AI request includes updated canvas in context:
-   "Current canvas state: Department Head moved to inner ring (Core)"
-8. AI uses context for next suggestion
-```
-
-### Bidirectional Sync Flow
-
-```
-AI Conversation State                Canvas State                 Database State
-─────────────────────               ─────────────────            ─────────────────
-
-User: "Add CEO"
-     ↓
-AI: "Added CEO"
-     ↓
-Extraction triggered
-     ↓                              ↓                            ↓
-artifact.canvasItems += CEO  →  loadItems([..., CEO])  →  stepArtifacts.artifact
-     ↓                              ↓
-                                Canvas renders CEO
-                                     ↓
-                          User drags CEO to inner ring
-                                     ↓
-                          canvasStore.updateItem(CEO)
-                                     ↓                            ↓
-                          Auto-save (debounced)         →  stepArtifacts.artifact
-                                                                  ↓
-User: "What's on the canvas?"
-     ↓                                                            ↓
-AI context includes canvas  ←  Context assembly reads artifact
-     ↓
-AI: "CEO is in inner ring"
+// Overlay component (similar to GridOverlay)
+<ReactFlow nodes={nodes} edges={[]}>
+  <Crazy8sGridOverlay config={CRAZY8S_GRID} />
+</ReactFlow>
 ```
 
----
+## Integration Points
 
-## Build Order (Dependency Graph)
+### New vs Modified Components
 
-### Phase 1: Foundation (Canvas Infrastructure)
+| Component | Status | Changes |
+|-----------|--------|---------|
+| **react-flow-canvas.tsx** | MODIFIED | Add node types: `drawing-image`, `mind-node`, `concept-card` |
+| **canvas-store.ts** | MODIFIED | Extend PostIt type, add `addDrawingNode()` method |
+| **step-canvas-config.ts** | MODIFIED | Add configs for Steps 8a (mind map), 8b (Crazy 8s), 9 (concept cards) |
+| **canvas-toolbar.tsx** | MODIFIED | Add "Draw" button (opens EzyDrawModal) |
+| **context-assembly.ts** | MODIFIED | Include drawings in AI context (vision API for concept analysis) |
+| **EzyDrawModal** | NEW | Fullscreen tldraw dialog |
+| **drawingStore** | NEW | Zustand store for drawing lifecycle |
+| **DrawingImageNode** | NEW | Custom ReactFlow node for PNG display |
+| **MindNode** | NEW | Custom ReactFlow node for mind map |
+| **ConceptCardNode** | NEW | Custom ReactFlow node for concept sheets |
+| **Crazy8sGridOverlay** | NEW | CSS Grid overlay for 8 slots |
+| **useLayoutNodes** | NEW | Hook for dagre auto-layout |
+| **/api/drawings/save** | NEW | Persist drawing JSON + PNG |
 
-**Goal:** Build shared canvas components and state management before step-specific implementations.
+### External Dependencies
 
-```
-1. canvasStore (Zustand)
-   └─> Canvas state management (items, add/update/remove)
-   └─> Persistence actions (syncToServer)
+| Dependency | Purpose | Integration Notes |
+|------------|---------|-------------------|
+| **tldraw SDK** | Drawing canvas, tools, export | Install `tldraw` package (~500KB bundle), use `<Tldraw />` component |
+| **@dagrejs/dagre** | Mind map layout algorithm | Install `@dagrejs/dagre`, integrate with ReactFlow layout hook |
+| **ReactFlow** | EXISTING | Add new custom node types (no version change needed) |
+| **Zustand** | EXISTING | Add drawingStore (same pattern as canvasStore) |
+| **shadcn/ui Dialog** | EXISTING | Use for EzyDrawModal wrapper |
 
-2. BaseCanvas component
-   └─> Drag-and-drop infrastructure
-   └─> CanvasItemPostIt (shared post-it component)
-
-3. CanvasPanel wrapper
-   └─> Conditionally renders step-specific canvas
-   └─> Connects to canvasStore
-
-4. API route: /api/canvas/sync
-   └─> Persist canvas items to stepArtifacts
-   └─> Authentication and ownership checks
-
-5. useCanvasAutoSave hook
-   └─> Debounced persistence
-   └─> Depends on canvasStore and API route
-```
-
-**Dependencies:** canvasStore → BaseCanvas → CanvasPanel → API route → useCanvasAutoSave
-
-**Estimated effort:** 2-3 plans
-
----
-
-### Phase 2: Step Container Integration
-
-**Goal:** Modify existing StepContainer to conditionally render canvas.
+### Build Order (Dependency Graph)
 
 ```
-6. StepContainer modification
-   └─> Add renderRightPanel() logic
-   └─> Detect canvas-enabled steps
-   └─> Conditional rendering: CanvasPanel vs OutputPanel
-   └─> Load initial canvas items from artifact
+Phase 1: EzyDraw Foundation
+1. Install tldraw SDK
+2. drawingStore (Zustand)
+   └─> Drawing lifecycle (create, save, load, update, delete)
+3. EzyDrawModal component
+   └─> Fullscreen Dialog + <Tldraw /> integration
+4. /api/drawings/save API route
+   └─> Persist drawing JSON + PNG to stepArtifacts.drawings[]
 
-7. Context assembly modification
-   └─> Include canvas state in AI context
-   └─> Format canvas items for AI readability
-   └─> Add to assembleStepContext function
+Phase 2: Drawing → Canvas Integration
+5. DrawingImageNode (custom ReactFlow node)
+   └─> Display PNG, double-click to re-edit
+6. canvasStore modifications
+   └─> addDrawingNode(), extend PostIt type
+7. canvas-toolbar.tsx modification
+   └─> Add "Draw" button
+8. End-to-end test: Draw → Save → Display → Re-edit
+
+Phase 3: Mind Map Canvas (Step 8a)
+9. Install @dagrejs/dagre
+10. MindNode (custom ReactFlow node)
+    └─> Text node with parent/child metadata
+11. useLayoutNodes hook
+    └─> dagre integration for auto-positioning
+12. step-canvas-config.ts: Add Step 8a config
+13. Mind map interactions: add child, edit text, delete node
+
+Phase 4: Crazy 8s Canvas (Step 8b)
+14. Crazy8sGridOverlay component
+    └─> 2×4 grid with slot labels
+15. step-canvas-config.ts: Add Step 8b config
+16. "Draw in Slot X" workflow
+    └─> Opens EzyDrawModal with slot metadata
+17. Timer integration (8 minutes countdown)
+
+Phase 5: Concept Cards (Step 9)
+18. ConceptCardNode (custom ReactFlow node)
+    └─> Complex multi-section layout
+19. SWOT mini-grid component
+20. Feasibility score bars component
+21. AI auto-generation integration
+    └─> Generate concept data from drawing + context
+22. Inline editing for concept fields
 ```
 
-**Dependencies:** CanvasPanel must exist before StepContainer integration.
+**Total estimated effort:** 15-20 plans across 5 phases
 
-**Estimated effort:** 1 plan
-
----
-
-### Phase 3: Step-Specific Canvas Implementations
-
-**Goal:** Build Step 2 (Stakeholder) and Step 4 (Research) canvas components.
-
-```
-8. StakeholderCanvas (Step 2)
-   └─> Bullseye ring layout (SVG circles)
-   └─> Ring detection on drop
-   └─> Metadata: { ring: 'inner' | 'middle' | 'outer' }
-
-9. ResearchThemeCanvas (Step 4)
-   └─> Empathy map quadrants (CSS Grid)
-   └─> Quadrant detection on drop
-   └─> Metadata: { quadrant: 'said' | 'thought' | 'felt' | 'experienced' }
-
-10. Step-specific artifact schemas
-    └─> Update Zod schemas for Step 2 and 4
-    └─> Add canvasItems to extraction logic
-    └─> Validate canvas data structure
-```
-
-**Dependencies:** Phase 1 and 2 must be complete. Steps 8 and 9 can be built in parallel.
-
-**Estimated effort:** 2-3 plans (1 per step + schema updates)
-
----
-
-### Phase 4: AI Integration & Testing
-
-**Goal:** Ensure AI suggestions populate canvas and canvas state flows to AI context.
-
-```
-11. Step 2 AI prompts
-    └─> Generate stakeholder suggestions with ring assignment
-    └─> Reference canvas state in responses
-    └─> Test extraction with canvasItems
-
-12. Step 4 AI prompts
-    └─> Generate theme suggestions with quadrant assignment
-    └─> Reference canvas state in responses
-    └─> Test extraction with canvasItems
-
-13. End-to-end testing
-    └─> Add stakeholder via chat → appears on canvas
-    └─> Drag stakeholder → AI reads new position
-    └─> Navigate away and return → canvas persists
-```
-
-**Dependencies:** All prior phases complete.
-
-**Estimated effort:** 2-3 plans (testing and refinement)
-
----
-
-### Total Estimated Effort: 8-12 plans across 4 phases
-
-**Critical path:** Foundation → Integration → Implementation → Testing (sequential)
+**Critical path:** Phase 1 → Phase 2 (drawing foundation must exist before canvas integration)
 
 **Parallel work opportunities:**
-- StakeholderCanvas and ResearchThemeCanvas can be built simultaneously (Phase 3)
-- AI prompt updates can start during Phase 3 (while canvas components are being built)
+- Phase 3, 4, 5 can overlap once Phase 2 complete (different canvas types)
 
----
+## Data Flow Diagrams
+
+### Drawing Creation Flow
+
+```
+User Action                Drawing State              Canvas State              Database
+───────────                ──────────────             ────────────              ────────
+
+"Draw Idea"
+    ↓
+Open EzyDrawModal
+    ↓
+Draw wireframe
+    ↓
+Click "Save"
+    ↓
+Export JSON + PNG
+    ↓                           ↓
+                    drawingStore.saveDrawing()
+                                ↓                         ↓
+                    POST /api/drawings/save    →  stepArtifacts.drawings[]
+                                ↓
+                    return drawingId
+                                ↓                         ↓
+                    canvasStore.addDrawingNode()  →  stepArtifacts._canvas.postIts[]
+                                                          ↓
+Canvas renders
+DrawingImageNode
+```
+
+### Re-Edit Flow
+
+```
+Double-click node
+    ↓
+Get node.drawingId
+    ↓                           ↓
+                    drawingStore.loadDrawing(id)
+                                ↓                                     ↓
+                    Read stepArtifacts.drawings[id]  ←────  Database query
+                                ↓
+                    Load tldrawState
+                                ↓
+Open EzyDrawModal
+with existing state
+    ↓
+Edit drawing
+    ↓
+Click "Save"
+    ↓
+Export NEW JSON + PNG
+    ↓                           ↓
+                    drawingStore.updateDrawing(id)
+                                ↓                                     ↓
+                    Update stepArtifacts.drawings[id]  ─→  Database update
+                                ↓                         ↓
+                    canvasStore.updatePostIt(nodeId)  →  Update imageUrl
+                                                          ↓
+Canvas re-renders
+with new image
+```
+
+### Mind Map Node Addition
+
+```
+Click "Add Child"
+on root node
+    ↓
+canvasStore.addPostIt()
+    ↓
+New mind-node created
+    ↓
+useLayoutNodes() runs
+    ↓
+dagre calculates positions
+    ↓
+canvasStore.updatePostIt()
+for ALL nodes (new positions)
+    ↓
+ReactFlow updates nodes + edges
+    ↓
+Auto-save triggers
+    ↓                                                                 ↓
+stepArtifacts._canvas.postIts[]  ─────────────────────→  Database update
+```
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| **0-100 users (v1.1 MVP)** | Current architecture is sufficient. HTML drag-and-drop, debounced auto-save, jsonb storage. |
-| **100-1k users (MMP)** | Consider dnd-kit for better touch support and accessibility. Add canvas state caching (React Query) to reduce DB reads. |
-| **1k-10k users (FFP)** | Real-time collaboration (WebSockets + Yjs CRDT). Separate canvasItems table for query performance. Canvas state compression (store deltas, not full snapshots). |
+| **0-100 users (v1.3 MVP)** | Current architecture sufficient. tldraw in-memory, PNG as data URLs, dagre client-side. |
+| **100-1k users (MMP)** | Upload PNGs to object storage (S3/Cloudflare R2) instead of data URLs. Add image optimization (resize, compress). Consider drawing state compression (gzip JSON before storing). |
+| **1k-10k users (FFP)** | Separate drawings table (not in stepArtifacts JSONB). Add versioning (keep drawing history). Implement lazy loading (load drawings on-demand, not all at once). Consider serverless image processing. |
 
 ### Scaling Priorities
 
-1. **First bottleneck: Canvas auto-save frequency**
-   - **Symptom:** Too many DB writes on active drag sessions
-   - **Fix:** Increase debounce to 5s, implement client-side dirty flag, only sync on actual changes
+1. **First bottleneck: PNG data URL size in artifacts**
+   - **Symptom:** stepArtifacts exceeds reasonable JSONB size (> 1MB)
+   - **Fix:** Upload PNG to object storage, store URL instead of data URL
 
-2. **Second bottleneck: Canvas rendering performance**
-   - **Symptom:** Lag when dragging items with 50+ post-its
-   - **Fix:** Virtualize off-screen items (render-as-you-scroll), use CSS transforms for drag (GPU acceleration)
+2. **Second bottleneck: tldraw bundle size (500KB)**
+   - **Symptom:** Slow page load on Steps 8 & 9
+   - **Fix:** Dynamic import EzyDrawModal only when needed, code split tldraw SDK
 
-3. **Third bottleneck: Real-time sync latency**
-   - **Symptom:** Multiplayer users see stale canvas state
-   - **Fix:** Migrate to WebSocket-based sync (Pusher/Ably), implement Yjs CRDT for conflict-free merging
-
----
+3. **Third bottleneck: dagre layout performance with 100+ nodes**
+   - **Symptom:** Lag when adding/removing mind map nodes
+   - **Fix:** Debounce layout recalculation, use web worker for dagre computation
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Canvas as Independent Data Source
+### Anti-Pattern 1: Embedding tldraw Directly in ReactFlow Node
 
-**What people do:** Store canvas state only in Zustand, sync to separate canvasItems table, treat as distinct from conversation artifacts.
-
-**Why it's wrong:**
-- Canvas state becomes orphaned from AI context (loses "conversation is source of truth" principle)
-- Difficult to regenerate canvas from conversation history
-- Creates two sources of truth (canvasItems vs stepArtifacts)
-
-**Do this instead:** Store canvas items IN stepArtifacts.artifact.canvasItems as part of structured output. Canvas is a projection of artifacts, not independent state.
-
----
-
-### Anti-Pattern 2: Real-Time Canvas Sync in MVP
-
-**What people do:** Implement WebSockets or polling for instant canvas updates before multiplayer is needed.
+**What people do:** Render `<Tldraw />` component inside a custom ReactFlow node for inline editing.
 
 **Why it's wrong:**
-- Premature complexity (v1.1 is single-user)
-- Debounced auto-save is sufficient for single-user experience
-- WebSockets require infrastructure (connection management, reconnection, heartbeats)
+- tldraw requires significant screen space (not practical in 200×200px node)
+- Multiple tldraw instances = memory bloat (each has its own editor state)
+- Coordinate system conflicts (ReactFlow zoom vs tldraw zoom)
 
-**Do this instead:** Use debounced auto-save (2-10s). User navigates away → canvas syncs. Returns → loads from DB. No real-time sync until FFP (multiplayer).
+**Do this instead:** Use modal overlay for drawing (fullscreen), display PNG in ReactFlow node.
 
----
+### Anti-Pattern 2: Storing Only PNG (No Editable State)
 
-### Anti-Pattern 3: Complex Canvas Library for Simple Layouts
-
-**What people do:** Import react-konva or tldraw for fixed-layout canvases (bullseye, quadrants).
+**What people do:** Export drawing to PNG, discard tldraw JSON, save only image.
 
 **Why it's wrong:**
-- Bullseye and empathy map are FIXED layouts (not infinite canvas)
-- 200-500KB bundle bloat for features we don't use
-- Harder to style (canvas-based rendering vs HTML/CSS)
+- Loses re-edit capability (can't modify drawing after creation)
+- Forces users to redraw from scratch if changes needed
+- Misses key product value (iterative design)
 
-**Do this instead:** HTML/CSS with native drag-and-drop API. Sufficient for v1.1. Consider dnd-kit for R2 (accessibility + touch).
+**Do this instead:** Store BOTH tldraw JSON (for re-editing) AND PNG (for display). Accept storage overhead.
 
----
+### Anti-Pattern 3: Real-Time Mind Map Collaboration in MVP
 
-### Anti-Pattern 4: Immediate AI Reaction to Canvas Changes
-
-**What people do:** Trigger AI message on every canvas drag event.
+**What people do:** Implement WebSocket sync for mind map node updates before multiplayer needed.
 
 **Why it's wrong:**
-- Excessive AI API calls (every drag = 1 request)
-- Conversation polluted with "CEO moved to inner ring" messages
-- Degrades UX (AI responds to every micro-action)
+- MVP is single-user (no concurrent editing)
+- Adds complexity (conflict resolution, presence indicators)
+- dagre layout conflicts (two users moving same nodes)
 
-**Do this instead:** Canvas changes are SILENT (auto-save to DB). AI reads canvas state from context in NEXT user message. Canvas is read-only context for AI, not trigger.
+**Do this instead:** Use debounced auto-save (same as post-it canvas). Defer real-time to FFP.
 
----
+### Anti-Pattern 4: Complex Custom Drawing Tools
 
-## Integration Points
+**What people do:** Build custom drawing tools from scratch instead of using tldraw SDK.
 
-### External Services
+**Why it's wrong:**
+- Months of dev time (drawing tools are complex: undo/redo, layers, selection, transforms)
+- Missing features (tldraw has 100+ tools, shapes, keyboard shortcuts)
+- Maintenance burden (every new feature = custom implementation)
 
-| Service | Integration Pattern | Canvas-Specific Notes |
-|---------|---------------------|----------------------|
-| **Neon Postgres** | stepArtifacts.artifact JSONB | Canvas items stored as artifact.canvasItems array. No schema migration needed. |
-| **Gemini API** | Context assembly includes canvas state | Formatted canvas items injected into AI context (see formatCanvasForAI function). |
-| **Clerk Auth** | Ownership verification on canvas sync | /api/canvas/sync checks userId matches workshop.userId before persisting. |
+**Do this instead:** Use tldraw SDK. It's production-ready, well-maintained, and extensible.
 
-### Internal Boundaries
+### Anti-Pattern 5: Forcing Nodes into Crazy 8s Grid
 
-| Boundary | Communication | Canvas-Specific Notes |
-|----------|---------------|----------------------|
-| **ChatPanel ↔ CanvasPanel** | Indirect via stepArtifacts | Chat extracts artifact → DB → Canvas loads from artifact. No direct component communication. |
-| **StepContainer ↔ CanvasPanel** | Props (artifact, workshopId, stepId) | StepContainer passes initial data, CanvasPanel manages own state via canvasStore. |
-| **canvasStore ↔ Database** | API route /api/canvas/sync | Auto-save hook calls syncToServer, which POSTs to API route. |
-| **AI Context Assembly ↔ canvasStore** | Read-only via stepArtifacts | Context assembly reads artifact.canvasItems from DB, not from Zustand store (server-side). |
+**What people do:** Prevent users from placing nodes outside grid cells (strict cell locking).
 
----
+**Why it's wrong:**
+- Removes flexibility (what if user wants annotation outside grid?)
+- Frustrating UX (drag gets blocked at cell boundary)
+- Breaks freeform ideation spirit
+
+**Do this instead:** Grid is visual guide, not hard constraint. Snap to cell on drop, but allow override.
 
 ## Responsive Considerations
 
-### Mobile Layout (< 768px)
+### Mobile Layout Challenges
 
-**Current:** StepContainer stacks Chat and Output vertically (no resizable panels).
+| Feature | Desktop | Mobile (< 768px) |
+|---------|---------|------------------|
+| **EzyDrawModal** | Fullscreen (1920×1080) | Fullscreen (390×844), larger touch targets |
+| **Drawing Tools** | Mouse/trackpad | Touch gestures (pinch-zoom, two-finger pan) |
+| **Mind Map** | Dagre layout optimized for wide view | Vertical orientation (rankdir: 'TB' → 'LR') |
+| **Crazy 8s Grid** | 2 rows × 4 cols | Stack to 4 rows × 2 cols (portrait) |
+| **Concept Cards** | 400×600px nodes | 300×450px nodes (smaller, scrollable) |
 
-**Target:** Stack Chat and Canvas vertically, with Canvas panel scrollable.
+### Mobile-Specific Adjustments
 
-**Implementation:**
 ```typescript
-// Mobile: stacked layout (EXISTING PATTERN in step-container.tsx)
-if (isMobile) {
-  return (
-    <div className="flex h-full flex-col">
-      <div className="min-h-0 flex-1 border-b">{renderContent()}</div>
-      <div className="min-h-0 flex-1">{renderRightPanel()}</div>
-      <StepNavigation {...navProps} />
-    </div>
-  );
-}
+// EzyDrawModal: Increase touch target size
+const isMobile = useMediaQuery('(max-width: 768px)');
+
+<Tldraw
+  components={{
+    Toolbar: isMobile ? MobileToolbar : DesktopToolbar,
+  }}
+  options={{
+    // Increase minimum touch target size
+    minimumNodeSize: isMobile ? 48 : 24,
+  }}
+/>
+
+// Crazy 8s: Responsive grid
+const crazy8sConfig = useMemo(() => ({
+  rows: isMobile
+    ? [{ id: 'r1', height: 200 }, { id: 'r2', height: 200 }, ...]  // 4 rows
+    : [{ id: 'r1', height: 300 }, { id: 'r2', height: 300 }],      // 2 rows
+  columns: isMobile
+    ? [{ id: 'c1', width: 180 }, { id: 'c2', width: 180 }]         // 2 cols
+    : [{ id: 'c1', width: 300 }, ..., { id: 'c4', width: 300 }],  // 4 cols
+}), [isMobile]);
 ```
-
-**Canvas-specific mobile adjustments:**
-- Disable drag-and-drop on touch (use tap-to-move or picker UI)
-- Larger post-it touch targets (48px minimum)
-- Simplify bullseye rings (2 rings instead of 3 on small screens)
-
----
 
 ## Sources
 
-### Canvas Libraries & Patterns (HIGH confidence)
-- [Top 5 Drag-and-Drop Libraries for React in 2026](https://puckeditor.com/blog/top-5-drag-and-drop-libraries-for-react)
+### Drawing Libraries (HIGH confidence)
 - [tldraw: Infinite Canvas SDK for React](https://tldraw.dev/)
-- [GitHub: tldraw/nextjs-template](https://github.com/tldraw/nextjs-template)
-- [React-Konva Free Drawing Documentation](https://konvajs.org/docs/react/Free_Drawing.html)
-- [react-resizable-panels Documentation](https://react-resizable-panels.vercel.app/)
+- [tldraw Persistence Documentation](https://tldraw.dev/docs/persistence)
+- [tldraw Save and Load Snapshots](https://tldraw.dev/examples/snapshots)
+- [Embedding Excalidraw in ReactFlow Node Discussion](https://github.com/xyflow/xyflow/discussions/4778)
+- [Top 5 JavaScript Whiteboard & Canvas Libraries](https://byby.dev/js-whiteboard-libs)
+- [Excalidraw vs tldraw Comparison](https://slashdot.org/software/comparison/Excalidraw-vs-tldraw/)
 
-### State Management & Sync (HIGH confidence)
-- [Top 5 React State Management Tools Developers Actually Use in 2026](https://www.syncfusion.com/blogs/post/react-state-management-libraries)
-- [Sync State Across Tabs: Using Broadcast Channel in a React App](https://bits2bytes.hashnode.dev/sync-state-across-multiple-tabs-easily-build-a-fun-canvas-drawing-app-in-react)
-- [State Management in 2026: Redux, Context API, and Modern Patterns](https://www.nucamp.co/blog/state-management-in-2026-redux-context-api-and-modern-patterns)
+### ReactFlow Integration (HIGH confidence)
+- [ReactFlow Custom Nodes Documentation](https://reactflow.dev/learn/customization/custom-nodes)
+- [ReactFlow Mind Map Tutorial](https://reactflow.dev/learn/tutorials/mind-map-app-with-react-flow)
+- [ReactFlow Dagre Layout Example](https://reactflow.dev/examples/layout/dagre)
+- [Drawing on ReactFlow Canvas Discussion](https://github.com/xyflow/xyflow/discussions/1492)
 
-### Next.js Architecture (HIGH confidence)
-- [React & Next.js in 2025 - Modern Best Practices](https://strapi.io/blog/react-and-nextjs-in-2025-modern-best-practices)
-- [Next.js Best Practices in 2025: Performance & Architecture](https://www.raftlabs.com/blog/building-with-next-js-best-practices-and-benefits-for-performance-first-teams/)
+### Layout Algorithms (HIGH confidence)
+- [dagre.js Graph Layout Library](https://github.com/dagrejs/dagre)
+- [ReactFlow Auto Layout Examples](https://reactflow.dev/examples/layout/auto-layout)
+- [Building Complex Diagrams with ReactFlow and dagre](https://dtoyoda10.medium.com/building-complex-graph-diagrams-with-react-flow-elk-js-and-dagre-js-8832f6a461c5)
 
-### Database Persistence (MEDIUM confidence)
-- [PostgreSQL JSON Tutorial](https://neon.com/postgresql/postgresql-tutorial/postgresql-json)
-- [Everything You Need to Know About the Postgres JSONB Data Type](https://www.dbvis.com/thetable/everything-you-need-to-know-about-the-postgres-jsonb-data-type/)
+### State Management & Persistence (MEDIUM confidence)
+- [Konva Save and Load Best Practices](https://konvajs.org/docs/data_and_serialization/Best_Practices.html)
+- [Canvas Export with react-konva](https://konvajs.org/docs/react/Canvas_Export.html)
+- [React Canvas State Persistence Guide](https://www.dhiwise.com/post/designing-stunning-artwork-with-react-canvas-draw)
 
----
-
-## Implementation Readiness
-
-**Ready to implement:**
-- Canvas state management (Zustand store pattern is proven)
-- Layout modification (react-resizable-panels already in use)
-- Data persistence (stepArtifacts table supports JSONB)
-- BaseCanvas component (HTML drag-and-drop API is well-documented)
-
-**Needs experimentation:**
-- Mobile drag-and-drop UX (may need fallback to tap-to-select)
-- Canvas item density thresholds (how many post-its before performance degrades)
-- Optimal auto-save timing (2s debounce may feel laggy for some interactions)
-
-**Defer to post-v1.1:**
-- Real-time multiplayer sync (requires WebSockets + CRDT)
-- Advanced canvas features (zoom, pan, undo/redo)
-- Canvas export (PNG download, PDF generation)
+### Design Patterns (MEDIUM confidence)
+- [SWOT Analysis Grid Templates 2026](https://www.superside.com/blog/swot-analysis-templates)
+- [Crazy 8s Ideation Technique](https://miro.com/templates/crazy-eights/)
+- [React Modal Dialog Best Practices](https://www.developerway.com/posts/hard-react-questions-and-modal-dialog)
 
 ---
 
-**Last updated:** 2026-02-10
-**Confidence:** HIGH overall, MEDIUM on mobile touch interactions
+**Last updated:** 2026-02-12
+**Confidence:** HIGH on drawing integration architecture, HIGH on ReactFlow patterns, MEDIUM on mobile touch optimization

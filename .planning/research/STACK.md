@@ -1,1067 +1,1093 @@
-# Stack Research: Grid/Swimlane Canvas Features (v1.2)
+# Stack Research: EzyDraw Drawing Component & Visual Canvas Extensions
 
-**Domain:** Structured grid canvas with swimlane layouts and AI-driven placement for Journey Map step
-**Researched:** 2026-02-11
+**Domain:** In-app drawing tool (EzyDraw) and visual ideation canvases for design thinking workshop app
+**Researched:** 2026-02-12
 **Confidence:** HIGH
 
 ## Context: What This Research Covers
 
-This stack research focuses ONLY on **new additions/changes for v1.2 grid/swimlane canvas features**. The base stack was validated for v1.0 and canvas features were added in v1.1.
+This stack research focuses on NEW capabilities for the v1.3 (MMP) milestone: EzyDraw drawing modal and visual canvas layouts for Steps 8 (Ideation) and 9 (Concept Development).
 
 **Existing validated stack (DO NOT re-research):**
 - Next.js 16.1.1 + React 19 + Tailwind 4 + shadcn/ui
-- **ReactFlow 12.10.0** (already integrated for canvas in v1.1)
-- Zustand for state management (with zundo for undo/redo)
-- @xyflow/react for canvas nodes and interactions
-- Gemini API via Vercel AI SDK 6 for AI
+- ReactFlow 12.10.0 (already integrated for canvas in v1.1, extended for grids in v1.2)
+- Zustand for state management
 - Neon Postgres + Drizzle ORM
+- Deployed on Vercel (~18K lines TypeScript, current canvas 110KB gzipped)
 
-**v1.2 adds:**
-1. **Step 6 Journey Map:** Grid canvas with fixed swimlane rows + user-addable stage columns
-2. **Snap-to-cell behavior:** Items snap to specific grid cells (not just grid dots)
-3. **AI-driven placement suggestions:** AI proposes content in specific cells, user confirms/adjusts
-4. **Steps 2 & 4 retrofit:** Structured output data renders as organized canvas nodes
+**v1.3 adds:**
+1. **EzyDraw** — Standalone drawing modal (freehand pencil, shapes, UI kit drag-drop, icons/emoji, text, layers, export PNG)
+2. **Visual mind map** — Interactive HMW-centered node graph (click-to-add themes, drag-to-connect)
+3. **Crazy 8s canvas** — 8-slot sketch grid where each slot opens EzyDraw, outputs image thumbnail
+4. **Visual concept cards** — Rich ReactFlow nodes with embedded images, text fields, SWOT grids, feasibility scores
 
-**Key finding:** NO new libraries needed. ReactFlow 12.10.0 already supports everything required for grid layouts and AI-driven placement through native APIs.
+**Key architectural constraint:** EzyDraw is NOT an extension of ReactFlow. It's a separate drawing surface in a modal. User clicks button → modal opens → draws → saves → image becomes a node on ReactFlow canvas.
 
 ---
 
-## TL;DR — What to Add for v1.2 Grid/Swimlane Canvas
+## TL;DR — Recommended Stack for EzyDraw + Visual Canvases
 
-| Category | Recommended | Action | Bundle Impact |
-|----------|-------------|--------|---------------|
-| **Canvas Library** | ReactFlow 12.10.0 (existing) | Use existing ReactFlow with custom grid overlay | 0 KB (existing) |
-| **Grid Layout** | Custom grid logic | Math functions for cell coordinates, no library needed | 0 KB |
-| **Snap-to-Cell** | Custom snap logic | Calculate nearest cell center, override ReactFlow snap | 0 KB |
-| **AI Placement** | Gemini API (existing) | AI returns cell coordinates `{row: string, col: number}` | 0 KB (existing) |
-| **Swimlane Overlay** | Custom SVG component | Similar to existing QuadrantOverlay pattern | 0 KB |
+| Category | Recommended | Version | Bundle Impact | Why |
+|----------|-------------|---------|---------------|-----|
+| **Drawing Engine** | Konva.js + react-konva | 9.3.17 (konva) | +55 KB (konva) + 43 KB (react-konva) = **98 KB** | TypeScript-first, layer system built-in, performant for shapes + freehand, React integration proven |
+| **Freehand Tool** | perfect-freehand | 1.2.3 | +1.2 KB | Lightweight pressure-sensitive strokes, used by tldraw, minimal API |
+| **UI Kit Drag-Drop** | dnd-kit | 8.1.0 | +20 KB | Modern, accessible, touch-friendly, already planned for canvas R2 |
+| **Icon Library** | lucide-react (existing) | 0.546.0 | 0 KB (already installed) | Consistent with app, 1400+ icons, tree-shakeable |
+| **Emoji Picker** | @emoji-mart/react | 1.2.0 | +45 KB | Industry standard, native emoji support, search/categories |
+| **Image Export** | Native canvas.toBlob() | Browser API | 0 KB | No library needed, efficient for Vercel Blob upload |
+| **Mind Map Nodes** | ReactFlow custom nodes (existing) | 12.10.0 (existing) | 0 KB | Already have ReactFlow, custom nodes handle rich content |
+| **Rich Cards** | ReactFlow custom nodes + Tailwind | 12.10.0 (existing) | 0 KB | HTML/CSS in custom nodes, no additional library |
 
-**Total new bundle size: 0 KB** — All features use existing ReactFlow APIs and custom logic.
+**Total NEW bundle size: ~164 KB gzipped**
+
+**Rejected alternatives:**
+- **Fabric.js** (96 KB) — Rejected: Heavier than Konva, less performant for large object counts
+- **tldraw** (~400+ KB) — Rejected: Full whiteboard SDK is overkill, want granular control
+- **Excalidraw** (~2.3 MB bundle) — Rejected: Massive bundle, hand-drawn style doesn't fit design system
+- **html2canvas** for export — Rejected: Native toBlob() is faster and smaller
 
 ---
 
 ## Recommended Stack
 
-### Core Technologies (No Changes from v1.1)
+### Core Drawing Technology
 
-All technologies from v1.1 remain unchanged. This milestone extends existing canvas capabilities.
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| **konva** | 9.3.17 | HTML5 Canvas drawing engine | TypeScript-native, layer system, dirty region rendering (performant for 100+ shapes), 55 KB gzipped (41% smaller than Fabric.js) |
+| **react-konva** | 18.2.13 | React bindings for Konva | Declarative API (`<Stage>`, `<Layer>`, `<Rect>`), React 19 compatible, used by 500+ projects |
+| **perfect-freehand** | 1.2.3 | Pressure-sensitive freehand strokes | Generates smooth stroke outlines (1.2 KB), used by tldraw, renders as Konva Line or SVG path |
 
-| Technology | Version | v1.2 Usage |
-|------------|---------|------------|
-| **@xyflow/react** | 12.10.0 (existing) | NEW: Grid overlay, cell-based snap, programmatic node placement |
-| **Zustand** | (existing) | NEW: Grid configuration state (row definitions, column list) |
-| **Tailwind CSS** | 4 (existing) | NEW: Swimlane styling, grid cell backgrounds |
-| **Gemini API** | (existing) | NEW: Return structured cell coordinates for placement |
+**Why Konva over Fabric.js:**
+- **Performance:** Dirty region detection only repaints changed areas (critical for EzyDraw's layer system)
+- **TypeScript-first:** Written in TypeScript, better DX and type safety
+- **Smaller bundle:** 55 KB vs 96 KB (Fabric.js), saves 41 KB
+- **Layer primitives:** Built-in Stage → Layer → Shape hierarchy matches EzyDraw requirements
+- **React integration:** react-konva is actively maintained (last update Jan 2026)
 
----
+**Why NOT tldraw or Excalidraw:**
+- **tldraw:** Full SDK with infinite canvas, collaboration, undo/redo (~400+ KB). EzyDraw needs constrained modal canvas.
+- **Excalidraw:** Hand-drawn sketch style doesn't match clean UI design system. Bundle is 2.3 MB (14x larger than Konva).
 
-## NEW Patterns for v1.2 (No New Packages)
-
-### Pattern 1: Grid/Swimlane Canvas Structure
-
-**Architecture:** Fixed-row, dynamic-column grid using ReactFlow coordinate system.
-
-**Journey Map grid structure:**
-```
-Swimlane Rows (FIXED):
-- Row 0: Actions
-- Row 1: Thoughts
-- Row 2: Feelings
-- Row 3: Pain Points
-- Row 4: Opportunities
-
-Stage Columns (USER-ADDABLE):
-- Col 0: Research Stage
-- Col 1: Planning Stage
-- Col 2: Execution Stage
-- ... (user adds more)
-```
-
-**Implementation using ReactFlow coordinate space:**
-
-```typescript
-// src/lib/canvas/grid-config.ts
-export interface GridConfig {
-  type: 'swimlane';
-  cellWidth: number;
-  cellHeight: number;
-  rows: GridRow[];
-  columns: GridColumn[];
-}
-
-export interface GridRow {
-  id: string;
-  label: string;
-  yStart: number;  // ReactFlow Y coordinate
-  height: number;
-}
-
-export interface GridColumn {
-  id: string;
-  label: string;
-  xStart: number;  // ReactFlow X coordinate
-  width: number;
-}
-
-// Journey Map configuration
-export const JOURNEY_MAP_GRID: GridConfig = {
-  type: 'swimlane',
-  cellWidth: 240,   // Wide cells for content
-  cellHeight: 160,  // Tall cells for text
-  rows: [
-    { id: 'actions', label: 'Actions', yStart: 0, height: 160 },
-    { id: 'thoughts', label: 'Thoughts', yStart: 160, height: 160 },
-    { id: 'feelings', label: 'Feelings', yStart: 320, height: 160 },
-    { id: 'pain-points', label: 'Pain Points', yStart: 480, height: 160 },
-    { id: 'opportunities', label: 'Opportunities', yStart: 640, height: 160 },
-  ],
-  columns: [
-    // Dynamically populated as user adds stages
-  ],
-};
-```
-
-**Why this approach:**
-- **Uses ReactFlow coordinate system:** No coordinate translation needed
-- **Fixed rows:** Swimlane structure is stable (Actions, Thoughts, etc.)
-- **Dynamic columns:** User can add/remove stages during workshop
-- **Cell-based addressing:** Each cell has unique `{rowId, columnId}` address
-
-**Source:** [ReactFlow Coordinate System](https://reactflow.dev/api-reference/types/xy-position), [Grid Layout Patterns](https://github.com/liang-faan/reactflow-swimlane)
+**Sources:**
+- [Konva.js vs Fabric.js Technical Comparison](https://medium.com/@www.blog4j.com/konva-js-vs-fabric-js-in-depth-technical-comparison-and-use-case-analysis-9c247968dd0f) — Performance benchmarks
+- [Bundle size comparison: Konva 54.9 KB, Fabric 95.7 KB, React Konva 98.4 KB](https://bestofjs.org/projects/konva) — BestofJS metrics
+- [perfect-freehand 1.2 KB gzipped](https://github.com/steveruizok/perfect-freehand/discussions/6) — Creator confirmation
 
 ---
 
-### Pattern 2: Snap-to-Cell Behavior
+### Supporting Libraries
 
-**Challenge:** ReactFlow's native `snapToGrid` only snaps to evenly-spaced dots, not custom cell centers.
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| **@emoji-mart/react** | 1.2.0 | Emoji picker component | EzyDraw emoji library feature, native emoji support, 1800+ emojis |
+| **dnd-kit** | 8.1.0 | Drag-and-drop for UI kit | EzyDraw's drag-and-drop UI component palette (buttons, inputs, cards) |
+| **lucide-react** | 0.546.0 (existing) | Icon library | EzyDraw icon palette, already in project (0 KB added) |
+| **html-to-image** | 1.11.11 | Canvas snapshot to PNG | Export EzyDraw drawings and Crazy 8s slots as images |
+| **zustand** | (existing) | EzyDraw state management | Manage drawing state (layers, selected tool, history) |
 
-**Solution:** Override ReactFlow's snap behavior with custom cell-center calculation.
+**Why emoji-mart:**
+- Industry standard (Discord, Slack use it)
+- Native emoji support (no image sprites)
+- Search, categories, skin tone variants
+- 45 KB gzipped (acceptable for feature richness)
 
-```typescript
-// src/lib/canvas/grid-snap.ts
-/**
- * Calculate nearest cell center for a given position
- * @param position - Current node position {x, y}
- * @param gridConfig - Grid configuration
- * @returns Snapped position at cell center
- */
-export function snapToCell(
-  position: { x: number; y: number },
-  gridConfig: GridConfig
-): { x: number; y: number; cell: { rowId: string; columnId: string } } {
-  // Find nearest column
-  const column = gridConfig.columns.reduce((nearest, col) => {
-    const colCenter = col.xStart + col.width / 2;
-    const nearestCenter = nearest.xStart + nearest.width / 2;
-    const distToCurrent = Math.abs(position.x - colCenter);
-    const distToNearest = Math.abs(position.x - nearestCenter);
-    return distToCurrent < distToNearest ? col : nearest;
-  }, gridConfig.columns[0]);
+**Why dnd-kit (not react-dnd or hello-pangea/dnd):**
+- **Modern:** Built for React hooks, no legacy class components
+- **Accessible:** WCAG 2.0 compliant, keyboard navigation
+- **Touch-friendly:** Mobile/tablet support (critical for design thinking workshops)
+- **Performant:** Headless architecture, 20 KB gzipped
+- **Consistent with roadmap:** Already planned for canvas R2
 
-  // Find nearest row
-  const row = gridConfig.rows.reduce((nearest, r) => {
-    const rowCenter = r.yStart + r.height / 2;
-    const nearestCenter = nearest.yStart + nearest.height / 2;
-    const distToCurrent = Math.abs(position.y - rowCenter);
-    const distToNearest = Math.abs(position.y - nearestCenter);
-    return distToCurrent < distToNearest ? r : nearest;
-  }, gridConfig.rows[0]);
+**Why html-to-image (not html2canvas):**
+- **Smaller:** 11 KB vs 50+ KB (html2canvas)
+- **Modern API:** Promise-based, better for async/await
+- **SVG support:** Can export as SVG or PNG
+- **ReactFlow compatibility:** Recommended by ReactFlow docs
 
-  return {
-    x: column.xStart + column.width / 2,   // Cell center X
-    y: row.yStart + row.height / 2,         // Cell center Y
-    cell: { rowId: row.id, columnId: column.id },
-  };
-}
-```
-
-**Integration with ReactFlow:**
-
-```typescript
-// src/components/canvas/react-flow-canvas.tsx (MODIFIED)
-const handleNodesChange = useCallback(
-  (changes: NodeChange[]) => {
-    changes.forEach((change) => {
-      if (
-        change.type === 'position' &&
-        change.dragging === false &&
-        change.position
-      ) {
-        // Check if this step uses grid layout
-        const gridConfig = getStepGridConfig(stepId);
-
-        if (gridConfig) {
-          // Snap to cell center (not dot grid)
-          const snapped = snapToCell(change.position, gridConfig);
-          updatePostIt(change.id, {
-            position: snapped,
-            cell: snapped.cell,  // Store cell address
-          });
-        } else {
-          // Existing quadrant steps use dot-based snap
-          const snappedPosition = snapToGrid(change.position);
-          updatePostIt(change.id, { position: snappedPosition });
-        }
-      }
-    });
-  },
-  [nodes, stepId, updatePostIt]
-);
-```
-
-**Key features:**
-- **Cell-center snapping:** Items snap to center of grid cells, not corners
-- **Cell addressing:** Each item knows which cell it occupies `{rowId, columnId}`
-- **Override ReactFlow snap:** Custom snap replaces native dot-grid snap
-- **Backward compatible:** Non-grid steps still use existing dot-grid snap
-
-**Source:** [ReactFlow Node Positioning](https://reactflow.dev/api-reference/types/node), [Custom Snap Logic Discussion](https://github.com/xyflow/xyflow/discussions/3640)
+**Sources:**
+- [Top 5 Drag-and-Drop Libraries for React in 2026](https://puckeditor.com/blog/top-5-drag-and-drop-libraries-for-react) — dnd-kit analysis
+- [@emoji-mart/react npm](https://www.npmjs.com/package/@emoji-mart/react) — Package info
+- [ReactFlow Download Image Example](https://reactflow.dev/examples/misc/download-image) — html-to-image usage
 
 ---
 
-### Pattern 3: Grid Overlay with Swimlane Labels
+## EzyDraw Component Architecture
 
-**Similar to existing QuadrantOverlay pattern from v1.1 (Steps 2 & 4).**
+### Layer System Implementation
 
 ```typescript
-// src/components/canvas/grid-overlay.tsx (NEW FILE)
-'use client';
+// src/components/ezydraw/ezydraw-stage.tsx
+import { Stage, Layer } from 'react-konva';
+import { useEzyDrawStore } from '@/stores/ezydraw-store';
 
-import { useStore as useReactFlowStore, type ReactFlowState } from '@xyflow/react';
-import type { GridConfig } from '@/lib/canvas/grid-config';
-
-const viewportSelector = (state: ReactFlowState) => ({
-  x: state.transform[0],
-  y: state.transform[1],
-  zoom: state.transform[2],
-});
-
-interface GridOverlayProps {
-  config: GridConfig;
-}
-
-/**
- * GridOverlay renders swimlane grid lines and row/column labels
- * Lines and labels transform with viewport pan/zoom
- */
-export function GridOverlay({ config }: GridOverlayProps) {
-  const { x, y, zoom } = useReactFlowStore(viewportSelector);
+export function EzyDrawStage() {
+  const { layers, selectedLayerId } = useEzyDrawStore();
 
   return (
-    <svg className="absolute inset-0 pointer-events-none z-10" width="100%" height="100%">
-      {/* Horizontal swimlane lines */}
-      {config.rows.map((row, idx) => (
-        <line
-          key={`row-${idx}`}
-          x1={0}
-          y1={row.yStart * zoom + y}
-          x2="100%"
-          y2={row.yStart * zoom + y}
-          stroke="#d1d5db"
-          strokeWidth={2}
-          strokeDasharray="8 4"
-        />
+    <Stage width={800} height={600}>
+      {layers.map((layer) => (
+        <Layer key={layer.id} visible={layer.visible} opacity={layer.opacity}>
+          {layer.shapes.map((shape) => (
+            <ShapeRenderer key={shape.id} shape={shape} />
+          ))}
+        </Layer>
       ))}
-
-      {/* Vertical stage lines */}
-      {config.columns.map((col, idx) => (
-        <line
-          key={`col-${idx}`}
-          x1={col.xStart * zoom + x}
-          y1={0}
-          x2={col.xStart * zoom + x}
-          y2="100%"
-          stroke="#d1d5db"
-          strokeWidth={1.5}
-          strokeDasharray="4 2"
-        />
-      ))}
-
-      {/* Row labels (left side, sticky) */}
-      {config.rows.map((row, idx) => (
-        <text
-          key={`row-label-${idx}`}
-          x={20}
-          y={(row.yStart + row.height / 2) * zoom + y}
-          fontSize={14}
-          fontWeight={600}
-          fill="#6b7280"
-          dominantBaseline="middle"
-        >
-          {row.label}
-        </text>
-      ))}
-
-      {/* Column labels (top, sticky) */}
-      {config.columns.map((col, idx) => (
-        <text
-          key={`col-label-${idx}`}
-          x={(col.xStart + col.width / 2) * zoom + x}
-          y={20}
-          fontSize={14}
-          fontWeight={600}
-          fill="#6b7280"
-          textAnchor="middle"
-        >
-          {col.label}
-        </text>
-      ))}
-
-      {/* Cell backgrounds (optional, for visual clarity) */}
-      {config.rows.flatMap((row) =>
-        config.columns.map((col) => (
-          <rect
-            key={`cell-${row.id}-${col.id}`}
-            x={col.xStart * zoom + x}
-            y={row.yStart * zoom + y}
-            width={col.width * zoom}
-            height={row.height * zoom}
-            fill="transparent"
-            stroke="#e5e7eb"
-            strokeWidth={0.5}
-          />
-        ))
-      )}
-    </svg>
+    </Stage>
   );
 }
 ```
 
-**Why this pattern:**
-- **Reuses QuadrantOverlay approach:** Proven pattern from Steps 2 & 4
-- **Viewport-aware:** Lines and labels transform with pan/zoom
-- **SVG overlay:** Non-interactive, sits above canvas background
-- **Dynamic columns:** Grid updates as user adds stage columns
+**Layer structure:**
+```typescript
+interface EzyDrawLayer {
+  id: string;
+  name: string;
+  visible: boolean;
+  opacity: number;
+  locked: boolean;
+  shapes: EzyDrawShape[];
+}
 
-**Source:** Existing `QuadrantOverlay` implementation, [ReactFlow Viewport State](https://reactflow.dev/api-reference/types/viewport)
+type EzyDrawShape =
+  | { type: 'freehand'; points: number[]; color: string; strokeWidth: number }
+  | { type: 'rect'; x: number; y: number; width: number; height: number; fill: string }
+  | { type: 'circle'; x: number; y: number; radius: number; fill: string }
+  | { type: 'arrow'; points: number[]; stroke: string }
+  | { type: 'text'; x: number; y: number; text: string; fontSize: number }
+  | { type: 'uiComponent'; componentType: 'button' | 'input' | 'card'; x: number; y: number }
+  | { type: 'icon'; iconName: string; x: number; y: number; size: number }
+  | { type: 'emoji'; emoji: string; x: number; y: number; size: number };
+```
+
+**Why this structure:**
+- **Konva's native hierarchy:** Stage → Layer → Shape matches EzyDraw's layer panel
+- **Selective rendering:** Only redraw changed layers (performance)
+- **Layer operations:** Show/hide, lock, reorder, opacity — all built into Konva API
 
 ---
 
-### Pattern 4: AI-Driven Placement Suggestions
-
-**Challenge:** AI suggests content, user confirms, item appears in correct cell.
-
-**Data flow:**
-
-```
-1. AI analyzes prior output (e.g., empathy map data)
-2. AI suggests journey map stage: "Research Stage: User searches for info"
-3. AI returns structured output with cell coordinates
-4. System renders "ghost" node in proposed cell
-5. User confirms → node becomes permanent
-6. User adjusts → drags to different cell (snap-to-cell applies)
-```
-
-**AI output schema:**
+### Freehand Drawing with perfect-freehand
 
 ```typescript
-// src/lib/ai/schemas/journey-map-schema.ts
-import { z } from 'zod';
+// src/components/ezydraw/tools/freehand-tool.tsx
+import { Line } from 'react-konva';
+import getStroke from 'perfect-freehand';
 
-export const JourneyMapCellItemSchema = z.object({
-  cell: z.object({
-    rowId: z.enum(['actions', 'thoughts', 'feelings', 'pain-points', 'opportunities']),
-    columnIndex: z.number(), // Which stage column (0-indexed)
-  }),
-  content: z.string(),
-  reasoning: z.string().optional(), // Why AI placed it here
-});
+export function FreehandTool() {
+  const [currentStroke, setCurrentStroke] = useState<number[]>([]);
+  const { addShape, selectedColor, strokeWidth } = useEzyDrawStore();
 
-export const JourneyMapSuggestionSchema = z.object({
-  stage: z.object({
-    name: z.string(),        // "Research Stage"
-    columnIndex: z.number(), // 0 (first column)
-  }),
-  items: z.array(JourneyMapCellItemSchema),
-});
-```
+  const handleMouseMove = (e: KonvaEventObject<MouseEvent>) => {
+    if (!isDrawing) return;
 
-**System prompt for AI placement:**
-
-```typescript
-// src/lib/ai/prompts/journey-map-prompt.ts
-export const JOURNEY_MAP_PLACEMENT_PROMPT = `
-You are helping map a user journey with these swimlane rows:
-- actions: Physical or digital actions the user takes
-- thoughts: What the user is thinking (cognitive process)
-- feelings: Emotional state (frustration, joy, confusion, etc.)
-- pain-points: Specific problems or friction encountered
-- opportunities: Potential improvements or innovations
-
-For each stage of the journey, suggest:
-1. Stage name (e.g., "Research Stage", "Purchase Stage")
-2. Column index (0 for first stage, 1 for second, etc.)
-3. Items for each row with cell coordinates
-
-CRITICAL: Return cell coordinates as:
-{
-  "cell": { "rowId": "actions", "columnIndex": 0 },
-  "content": "User searches Google for product reviews",
-  "reasoning": "Research stage typically starts with search behavior"
-}
-
-Base suggestions on the empathy map data:
-${empathyMapData}
-`;
-```
-
-**Programmatic node placement:**
-
-```typescript
-// src/lib/canvas/ai-placement.ts
-import type { GridConfig, GridColumn } from './grid-config';
-import type { PostIt } from '@/stores/canvas-store';
-
-/**
- * Convert AI cell address to ReactFlow coordinates
- */
-export function cellToPosition(
-  cell: { rowId: string; columnIndex: number },
-  gridConfig: GridConfig
-): { x: number; y: number } {
-  const row = gridConfig.rows.find((r) => r.id === cell.rowId);
-  const column = gridConfig.columns[cell.columnIndex];
-
-  if (!row || !column) {
-    throw new Error(`Invalid cell address: ${JSON.stringify(cell)}`);
-  }
-
-  return {
-    x: column.xStart + column.width / 2,   // Center of cell
-    y: row.yStart + row.height / 2,
+    const stage = e.target.getStage();
+    const point = stage.getPointerPosition();
+    setCurrentStroke((prev) => [...prev, point.x, point.y]);
   };
-}
 
-/**
- * Create post-it from AI suggestion
- */
-export function createPostItFromSuggestion(
-  suggestion: JourneyMapCellItem,
-  gridConfig: GridConfig
-): Omit<PostIt, 'id'> {
-  const position = cellToPosition(suggestion.cell, gridConfig);
+  const handleMouseUp = () => {
+    // Convert raw points to smooth stroke with perfect-freehand
+    const strokePoints = getStroke(currentStroke, {
+      size: strokeWidth,
+      smoothing: 0.5,
+      thinning: 0.5,
+      streamline: 0.5,
+    });
 
-  return {
-    text: suggestion.content,
-    position,
-    width: 220,  // Slightly smaller than cell width (240) for padding
-    height: 140, // Slightly smaller than cell height (160)
-    color: 'yellow',
-    cell: suggestion.cell, // Store cell address
-    metadata: {
-      aiSuggested: true,
-      reasoning: suggestion.reasoning,
-    },
+    // Convert perfect-freehand outline to Konva Line points
+    const points = strokePoints.flat();
+
+    addShape({
+      type: 'freehand',
+      points,
+      color: selectedColor,
+      strokeWidth,
+    });
+
+    setCurrentStroke([]);
   };
-}
-```
 
-**UI for AI suggestions (ghost nodes):**
-
-```typescript
-// src/components/canvas/ai-suggestion-node.tsx
-interface AISuggestionNodeProps {
-  suggestion: JourneyMapCellItem;
-  onAccept: () => void;
-  onReject: () => void;
-}
-
-export function AISuggestionNode({ suggestion, onAccept, onReject }: AISuggestionNodeProps) {
   return (
-    <div className="relative w-[220px] h-[140px] p-3 rounded shadow-md border-2 border-dashed border-purple-400 bg-purple-50/50">
-      {/* AI suggestion indicator */}
-      <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs px-2 py-0.5 rounded-full">
-        AI Suggested
-      </div>
+    <Line
+      points={currentStroke}
+      stroke={selectedColor}
+      strokeWidth={strokeWidth}
+      tension={0.5}
+      lineCap="round"
+      lineJoin="round"
+    />
+  );
+}
+```
 
-      {/* Content preview */}
-      <p className="text-sm text-gray-700 mb-2">{suggestion.content}</p>
+**Why perfect-freehand + Konva Line:**
+- **Pressure sensitivity:** perfect-freehand simulates pen pressure (thinning/thickening)
+- **Smooth strokes:** Removes jitter from mouse/touch input
+- **Konva rendering:** Line component handles GPU-accelerated rendering
+- **Minimal bundle:** 1.2 KB for professional-quality freehand
 
-      {/* Accept/Reject buttons */}
-      <div className="absolute bottom-2 left-2 right-2 flex gap-2">
-        <button
-          onClick={onAccept}
-          className="flex-1 bg-green-600 text-white text-xs px-2 py-1 rounded hover:bg-green-700"
-        >
-          Add
-        </button>
-        <button
-          onClick={onReject}
-          className="flex-1 bg-gray-300 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-400"
-        >
-          Skip
-        </button>
-      </div>
+**Source:** [Konva Free Drawing Tutorial](https://konvajs.org/docs/react/Free_Drawing.html)
+
+---
+
+### UI Kit Drag-and-Drop
+
+```typescript
+// src/components/ezydraw/ui-kit-palette.tsx
+import { useDraggable } from '@dnd-kit/core';
+
+const UI_COMPONENTS = [
+  { id: 'button', label: 'Button', icon: 'square' },
+  { id: 'input', label: 'Input', icon: 'minus' },
+  { id: 'card', label: 'Card', icon: 'layout-grid' },
+  { id: 'navbar', label: 'Navbar', icon: 'menu' },
+];
+
+export function UIKitPalette() {
+  return (
+    <div className="grid grid-cols-2 gap-2 p-4">
+      {UI_COMPONENTS.map((component) => (
+        <DraggableUIComponent key={component.id} component={component} />
+      ))}
+    </div>
+  );
+}
+
+function DraggableUIComponent({ component }) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: component.id,
+    data: { type: 'uiComponent', componentType: component.id },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className="flex flex-col items-center gap-1 p-2 border rounded cursor-move hover:bg-accent"
+    >
+      <Icon name={component.icon} size={24} />
+      <span className="text-xs">{component.label}</span>
     </div>
   );
 }
 ```
 
-**Key features:**
-- **Cell-based addressing:** AI returns `{rowId, columnIndex}`, not pixel coordinates
-- **Ghost node preview:** Suggested items appear as dashed-border nodes
-- **User confirmation:** Accept → permanent node, Reject → disappears
-- **Reasoning display:** Optional tooltip shows why AI placed item there
-- **Programmatic placement:** Uses ReactFlow's `setNodes()` API
-
-**Source:** [ReactFlow Programmatic Node Positioning](https://reactflow.dev/api-reference/types/node), [Canvas3D AI Placement Research](https://arxiv.org/html/2508.07135v1)
-
----
-
-### Pattern 5: Dynamic Column Management
-
-**Challenge:** User needs to add/remove stage columns during workshop.
+**Drop zone on Konva Stage:**
 
 ```typescript
-// src/lib/canvas/grid-columns.ts
-/**
- * Add a new stage column to the grid
- */
-export function addGridColumn(
-  gridConfig: GridConfig,
-  stageName: string
-): GridConfig {
-  const lastColumn = gridConfig.columns[gridConfig.columns.length - 1];
-  const newXStart = lastColumn
-    ? lastColumn.xStart + lastColumn.width
-    : 0;
+// src/components/ezydraw/ezydraw-stage.tsx (extended)
+import { useDroppable } from '@dnd-kit/core';
 
-  const newColumn: GridColumn = {
-    id: crypto.randomUUID(),
-    label: stageName,
-    xStart: newXStart,
-    width: gridConfig.cellWidth,
-  };
+export function EzyDrawStage() {
+  const { setNodeRef } = useDroppable({ id: 'ezydraw-stage' });
+  const { addShape } = useEzyDrawStore();
 
-  return {
-    ...gridConfig,
-    columns: [...gridConfig.columns, newColumn],
-  };
-}
+  const handleDrop = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-/**
- * Remove a stage column (and reassign items in that column)
- */
-export function removeGridColumn(
-  gridConfig: GridConfig,
-  columnId: string,
-  onItemsReassign: (items: PostIt[], targetColumnIndex: number) => void
-): GridConfig {
-  const columnIndex = gridConfig.columns.findIndex((c) => c.id === columnId);
-  if (columnIndex === -1) return gridConfig;
+    if (over?.id === 'ezydraw-stage') {
+      const { componentType } = active.data.current;
+      const dropPosition = getDropPosition(event); // Get x, y from event
 
-  // Get items in this column (to reassign)
-  const itemsInColumn = useCanvasStore.getState().postIts.filter(
-    (p) => p.cell?.columnIndex === columnIndex
-  );
-
-  // Reassign to previous column (or next if first column)
-  const targetIndex = columnIndex > 0 ? columnIndex - 1 : 1;
-  onItemsReassign(itemsInColumn, targetIndex);
-
-  // Remove column and reindex remaining columns
-  const newColumns = gridConfig.columns
-    .filter((c) => c.id !== columnId)
-    .map((col, idx) => ({
-      ...col,
-      xStart: idx * gridConfig.cellWidth,
-    }));
-
-  return {
-    ...gridConfig,
-    columns: newColumns,
-  };
-}
-```
-
-**UI for column management:**
-
-```typescript
-// Toolbar button to add stage
-<button onClick={() => {
-  const stageName = prompt('Enter stage name:');
-  if (stageName) {
-    const newConfig = addGridColumn(gridConfig, stageName);
-    updateGridConfig(newConfig);
-  }
-}}>
-  + Add Stage
-</button>
-
-// Context menu on column header to delete
-<ContextMenu>
-  <ContextMenuItem onClick={() => {
-    const confirmed = confirm('Delete this stage? Items will move to adjacent stage.');
-    if (confirmed) {
-      const newConfig = removeGridColumn(gridConfig, columnId, (items, targetIdx) => {
-        items.forEach((item) => {
-          updatePostIt(item.id, {
-            cell: { ...item.cell, columnIndex: targetIdx },
-          });
-        });
+      addShape({
+        type: 'uiComponent',
+        componentType,
+        x: dropPosition.x,
+        y: dropPosition.y,
       });
-      updateGridConfig(newConfig);
     }
-  }}>
-    Delete Stage
-  </ContextMenuItem>
-</ContextMenu>
-```
-
-**Source:** [Dynamic Layouting in ReactFlow](https://reactflow.dev/examples/layout/dynamic-layouting)
-
----
-
-## Steps 2 & 4 Retrofit: Organized Canvas Layout
-
-**v1.1 Challenge:** Steps 2 (Stakeholder Mapping) and 4 (Empathy Map) currently use freeform post-its. AI generates structured output, but rendering is unorganized.
-
-**v1.2 Solution:** AI-driven initial placement using quadrant coordinates.
-
-### Step 2: Stakeholder Mapping (Power x Interest)
-
-**AI output retrofit:**
-
-```typescript
-// BEFORE (v1.1): AI suggests, user places manually
-{
-  "stakeholders": [
-    { "name": "CEO", "power": "high", "interest": "high" },
-    { "name": "End Users", "power": "low", "interest": "high" }
-  ]
-}
-
-// AFTER (v1.2): AI suggests WITH quadrant-based placement
-{
-  "stakeholders": [
-    {
-      "name": "CEO",
-      "power": "high",
-      "interest": "high",
-      "suggestedPosition": { "x": 300, "y": -300 }, // Top-right quadrant (Manage Closely)
-    },
-    {
-      "name": "End Users",
-      "power": "low",
-      "interest": "high",
-      "suggestedPosition": { "x": 300, "y": 300 }, // Bottom-right quadrant (Keep Informed)
-    }
-  ]
-}
-```
-
-**AI placement logic:**
-
-```typescript
-// src/lib/canvas/stakeholder-placement.ts
-export function calculateStakeholderPosition(
-  power: 'high' | 'low',
-  interest: 'high' | 'low'
-): { x: number; y: number } {
-  // Quadrant centers (avoid center line overlap)
-  const OFFSET = 150; // Distance from center line
-
-  return {
-    x: interest === 'high' ? OFFSET : -OFFSET,
-    y: power === 'high' ? -OFFSET : OFFSET,
-  };
-}
-```
-
-**Benefits:**
-- **Organized initial layout:** Stakeholders appear in correct quadrants
-- **User adjustable:** Can still drag to fine-tune position
-- **Avoids clumping:** Multiple items in same quadrant get slight offset
-
-### Step 4: Empathy Map (Said/Thought/Felt/Experienced)
-
-**Similar approach:**
-
-```typescript
-// AI places empathy map items in correct quadrants
-export function calculateEmpathyPosition(
-  quadrant: 'said' | 'thought' | 'felt' | 'experienced'
-): { x: number; y: number } {
-  const OFFSET = 150;
-
-  const positions = {
-    said: { x: -OFFSET, y: OFFSET },       // Bottom-left
-    thought: { x: -OFFSET, y: -OFFSET },   // Top-left
-    felt: { x: OFFSET, y: -OFFSET },       // Top-right
-    experienced: { x: OFFSET, y: OFFSET }, // Bottom-right
   };
 
-  return positions[quadrant];
+  return (
+    <div ref={setNodeRef}>
+      <Stage width={800} height={600}>
+        {/* Layers and shapes */}
+      </Stage>
+    </div>
+  );
 }
 ```
 
-**Source:** Existing `detectQuadrant()` function, [ReactFlow Programmatic Positioning](https://reactflow.dev/api-reference/types/node)
+**Why dnd-kit with Konva:**
+- **Separate concerns:** dnd-kit handles palette drag, Konva handles canvas rendering
+- **Touch support:** dnd-kit's sensors work on mobile (critical for workshops)
+- **Accessibility:** Keyboard navigation for UI component selection
+- **No Konva conflict:** dnd-kit operates on React DOM, Konva uses canvas element
+
+**Source:** [dnd-kit Documentation](https://docs.dndkit.com/)
 
 ---
 
-## What NOT to Add
-
-| Package | Why You Might Consider | Why NOT Needed | Use Instead |
-|---------|------------------------|----------------|-------------|
-| **elkjs / dagre / d3-hierarchy** | Auto-layout algorithms for node graphs | Journey Map grid is FIXED structure (5 rows), not algorithmic layout. Columns are user-defined order. No need for force-directed or tree layouts. | Custom grid math (cell width × column index) |
-| **react-grid-layout** | Grid-based drag-and-drop | Designed for dashboard layouts (responsive breakpoints, resize handles). Journey Map is non-responsive canvas with fixed cell sizes. | ReactFlow + custom snap-to-cell logic |
-| **@liangfaan/reactflow-swimlane** | Swimlane library for ReactFlow | Unmaintained (last update 2021), designed for flowcharts with cross-lane edges. Journey Map doesn't connect items. | Custom GridOverlay component |
-| **yFiles Layout Algorithms** | Commercial layout algorithms | $$$, requires license for production. Journey Map layout is simple grid math. | Custom cell-to-position calculation |
-
----
-
-## Configuration Updates
-
-### Step Canvas Config Extension
+### Export to PNG with Vercel Blob
 
 ```typescript
-// src/lib/canvas/step-canvas-config.ts (EXTENDED from v1.1)
-export type StepCanvasConfig = {
-  hasQuadrants?: boolean;
-  quadrantType?: QuadrantType;
-  quadrantConfig?: QuadrantConfig;
+// src/components/ezydraw/export-button.tsx
+import { toPng } from 'html-to-image';
+import { put } from '@vercel/blob';
 
-  // NEW for v1.2
-  hasGrid?: boolean;
-  gridType?: 'swimlane';
-  gridConfig?: GridConfig;
-};
+export function ExportButton() {
+  const stageRef = useRef<Stage>(null);
 
-export const STEP_CANVAS_CONFIGS: Record<string, StepCanvasConfig> = {
-  // Existing from v1.1
-  'stakeholder-mapping': {
-    hasQuadrants: true,
-    quadrantType: 'power-interest',
-    // ... quadrant config
-  },
+  const handleExport = async () => {
+    if (!stageRef.current) return;
 
-  'sense-making': {
-    hasQuadrants: true,
-    quadrantType: 'empathy-map',
-    // ... quadrant config
-  },
+    // Get Konva Stage container
+    const stageContainer = stageRef.current.container();
 
-  // NEW for v1.2
-  'journey-mapping': {
-    hasGrid: true,
-    gridType: 'swimlane',
-    gridConfig: {
-      type: 'swimlane',
-      cellWidth: 240,
-      cellHeight: 160,
-      rows: [
-        { id: 'actions', label: 'Actions', yStart: 0, height: 160 },
-        { id: 'thoughts', label: 'Thoughts', yStart: 160, height: 160 },
-        { id: 'feelings', label: 'Feelings', yStart: 320, height: 160 },
-        { id: 'pain-points', label: 'Pain Points', yStart: 480, height: 160 },
-        { id: 'opportunities', label: 'Opportunities', yStart: 640, height: 160 },
-      ],
-      columns: [], // Populated dynamically as user adds stages
-    },
-  },
+    // Convert Stage to PNG blob
+    const blob = await toPng(stageContainer, {
+      cacheBust: true,
+      backgroundColor: '#ffffff',
+    });
+
+    // Upload to Vercel Blob
+    const { url } = await put(`drawings/${Date.now()}.png`, blob, {
+      access: 'public',
+      contentType: 'image/png',
+    });
+
+    // Store URL in database
+    await saveDrawingToDatabase(url);
+
+    return url;
+  };
+
+  return (
+    <button onClick={handleExport} className="btn-primary">
+      Save Drawing
+    </button>
+  );
+}
+```
+
+**Alternative: Native canvas.toBlob() for Konva:**
+
+```typescript
+// More efficient for Konva stages
+const handleExportNative = async () => {
+  const stage = stageRef.current;
+  const dataURL = stage.toDataURL({ pixelRatio: 2 }); // High DPI
+
+  // Convert data URL to blob
+  const blob = await (await fetch(dataURL)).blob();
+
+  // Upload to Vercel Blob
+  const { url } = await put(`drawings/${Date.now()}.png`, blob, {
+    access: 'public',
+    contentType: 'image/png',
+  });
+
+  return url;
 };
 ```
 
+**Why Vercel Blob (not base64 in DB):**
+- **Database efficiency:** Don't bloat stepArtifacts JSONB with base64 images
+- **Performance:** Vercel Blob is CDN-backed (fast loads for image thumbnails)
+- **Cost-effective:** First 100 GB free, then $0.15/GB
+- **Scalability:** No database row size limits
+
+**Why NOT base64 in database:**
+- **33% larger:** Base64 encoding adds 33% overhead
+- **Query slowdown:** Large JSONB columns slow down PostgreSQL queries
+- **Memory usage:** Loading full workshop state loads all images into memory
+
+**Sources:**
+- [Vercel Blob Documentation](https://vercel.com/docs/vercel-blob)
+- [Canvas toBlob() best practices](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob)
+- [ReactFlow Download Image Example](https://reactflow.dev/examples/misc/download-image)
+
 ---
 
-## Database Schema Changes
+## Visual Canvas Extensions (ReactFlow Custom Nodes)
 
-**No new tables needed.** Existing `canvas_state` table (from v1.1) supports grid data.
+### Mind Map with Custom Nodes
 
-**Grid data stored as:**
+**Architecture:** ReactFlow already handles node graph. Custom nodes render rich HMW cards with theme branches.
 
-```json
-{
-  "postIts": [
-    {
-      "id": "post-123",
-      "text": "User searches Google",
-      "position": { "x": 120, "y": 80 },
-      "cell": { "rowId": "actions", "columnIndex": 0 },
-      "color": "yellow"
-    }
-  ],
-  "gridConfig": {
-    "type": "swimlane",
-    "columns": [
-      { "id": "col-0", "label": "Research Stage", "xStart": 0, "width": 240 }
-    ]
-  }
+```typescript
+// src/components/canvas/mind-map-node.tsx
+import { Handle, Position } from '@xyflow/react';
+
+interface MindMapNodeData {
+  label: string;
+  type: 'hmw' | 'theme' | 'idea';
+  color?: string;
+  description?: string;
+}
+
+export function MindMapNode({ data }: { data: MindMapNodeData }) {
+  const isHMW = data.type === 'hmw';
+
+  return (
+    <div
+      className={cn(
+        'px-4 py-3 rounded-lg shadow-md border-2',
+        isHMW ? 'bg-purple-100 border-purple-500 min-w-[200px]' : 'bg-white border-gray-300',
+      )}
+    >
+      <Handle type="target" position={Position.Left} />
+
+      <div className="flex flex-col gap-1">
+        <div className="font-semibold text-sm">{data.label}</div>
+        {data.description && (
+          <div className="text-xs text-muted-foreground">{data.description}</div>
+        )}
+      </div>
+
+      <Handle type="source" position={Position.Right} />
+    </div>
+  );
 }
 ```
 
-**Key additions:**
-- `cell` property on post-its (stores cell address)
-- `gridConfig.columns` array (tracks user-added stages)
+**Click-to-add interaction:**
+
+```typescript
+// src/components/canvas/mind-map-canvas.tsx
+import { useReactFlow } from '@xyflow/react';
+
+export function MindMapCanvas() {
+  const { addNodes, addEdges } = useReactFlow();
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  const handleAddTheme = (parentNodeId: string) => {
+    const newNode = {
+      id: `theme-${Date.now()}`,
+      type: 'mindMap',
+      position: { x: 300, y: 100 }, // Calculate position relative to parent
+      data: { label: 'New Theme', type: 'theme' },
+    };
+
+    const newEdge = {
+      id: `edge-${Date.now()}`,
+      source: parentNodeId,
+      target: newNode.id,
+      type: 'smoothstep',
+    };
+
+    addNodes([newNode]);
+    addEdges([newEdge]);
+  };
+
+  return (
+    <div className="relative h-full">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={{ mindMap: MindMapNode }}
+        fitView
+      >
+        <Background />
+        <Controls />
+      </ReactFlow>
+
+      {selectedNodeId && (
+        <ContextMenu onAddTheme={() => handleAddTheme(selectedNodeId)} />
+      )}
+    </div>
+  );
+}
+```
+
+**Why ReactFlow custom nodes (not separate graph library):**
+- **Already integrated:** ReactFlow 12.10.0 in project (0 KB added)
+- **Custom node API:** Full control over node rendering (HTML/CSS/Tailwind)
+- **Interactive:** Built-in drag, zoom, pan, edge connections
+- **Extensible:** Add images, forms, charts inside nodes
+
+**Alternative considered: react-d3-graph** — REJECTED: 150 KB, less flexible node customization, force-directed layout not needed (mind maps are hierarchical)
+
+**Source:** [ReactFlow Mind Map Tutorial](https://reactflow.dev/learn/tutorials/mind-map-app-with-react-flow)
+
+---
+
+### Crazy 8s Grid with EzyDraw Integration
+
+```typescript
+// src/components/canvas/crazy-8s-canvas.tsx
+export function Crazy8sCanvas() {
+  const [slots, setSlots] = useState<Array<{ id: string; imageUrl: string | null }>>(
+    Array.from({ length: 8 }, (_, i) => ({ id: `slot-${i}`, imageUrl: null }))
+  );
+  const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
+
+  const handleOpenDrawing = (slotId: string) => {
+    setActiveSlotId(slotId);
+  };
+
+  const handleSaveDrawing = async (imageUrl: string) => {
+    setSlots((prev) =>
+      prev.map((slot) => (slot.id === activeSlotId ? { ...slot, imageUrl } : slot))
+    );
+    setActiveSlotId(null);
+  };
+
+  return (
+    <div className="grid grid-cols-4 grid-rows-2 gap-4 h-full p-4">
+      {slots.map((slot) => (
+        <div
+          key={slot.id}
+          className="border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-purple-500 transition-colors"
+          onClick={() => handleOpenDrawing(slot.id)}
+        >
+          {slot.imageUrl ? (
+            <img src={slot.imageUrl} alt={`Sketch ${slot.id}`} className="w-full h-full object-contain" />
+          ) : (
+            <div className="text-center text-muted-foreground">
+              <Icon name="pencil" size={32} />
+              <p className="text-xs mt-2">Click to sketch</p>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {activeSlotId && (
+        <EzyDrawModal
+          onSave={handleSaveDrawing}
+          onCancel={() => setActiveSlotId(null)}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+**EzyDraw Modal:**
+
+```typescript
+// src/components/ezydraw/ezydraw-modal.tsx
+export function EzyDrawModal({ onSave, onCancel }) {
+  const stageRef = useRef<Stage>(null);
+
+  const handleSave = async () => {
+    const stage = stageRef.current;
+    const dataURL = stage.toDataURL({ pixelRatio: 2 });
+    const blob = await (await fetch(dataURL)).blob();
+
+    // Upload to Vercel Blob
+    const { url } = await put(`crazy8s/${Date.now()}.png`, blob, {
+      access: 'public',
+      contentType: 'image/png',
+    });
+
+    onSave(url);
+  };
+
+  return (
+    <Dialog open onOpenChange={onCancel}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Draw Your Idea</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex gap-4">
+          {/* Left: Toolbox */}
+          <div className="w-64 space-y-4">
+            <ToolPalette />
+            <UIKitPalette />
+            <IconPalette />
+            <EmojiPicker />
+          </div>
+
+          {/* Center: Canvas */}
+          <div className="flex-1">
+            <EzyDrawStage ref={stageRef} />
+          </div>
+
+          {/* Right: Layers */}
+          <div className="w-48">
+            <LayerPanel />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button onClick={handleSave}>Save Drawing</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+**Why modal-based (not inline canvas):**
+- **Focus mode:** Full-screen drawing experience without canvas distractions
+- **Isolated state:** EzyDraw state doesn't pollute main canvas store
+- **Reusable:** Same modal for Crazy 8s, concept sketches, annotations
+
+---
+
+### Visual Concept Cards with Embedded Images
+
+```typescript
+// src/components/canvas/concept-card-node.tsx
+interface ConceptCardData {
+  title: string;
+  description: string;
+  imageUrl: string | null;
+  swot: { strengths: string[]; weaknesses: string[]; opportunities: string[]; threats: string[] };
+  feasibilityScore: number; // 1-10
+}
+
+export function ConceptCardNode({ data }: { data: ConceptCardData }) {
+  return (
+    <div className="w-80 bg-white rounded-lg shadow-lg border border-gray-200">
+      <Handle type="target" position={Position.Top} />
+
+      {/* Image thumbnail */}
+      {data.imageUrl && (
+        <div className="h-40 overflow-hidden rounded-t-lg">
+          <img src={data.imageUrl} alt={data.title} className="w-full h-full object-cover" />
+        </div>
+      )}
+
+      {/* Title and description */}
+      <div className="p-4 space-y-2">
+        <h3 className="font-semibold text-base">{data.title}</h3>
+        <p className="text-sm text-muted-foreground">{data.description}</p>
+      </div>
+
+      {/* SWOT Grid */}
+      <div className="px-4 pb-4">
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="p-2 bg-green-50 rounded">
+            <div className="font-semibold text-green-800">Strengths</div>
+            <ul className="mt-1 space-y-0.5">
+              {data.swot.strengths.map((s, i) => (
+                <li key={i} className="text-green-700">• {s}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="p-2 bg-red-50 rounded">
+            <div className="font-semibold text-red-800">Weaknesses</div>
+            <ul className="mt-1 space-y-0.5">
+              {data.swot.weaknesses.map((w, i) => (
+                <li key={i} className="text-red-700">• {w}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="p-2 bg-blue-50 rounded">
+            <div className="font-semibold text-blue-800">Opportunities</div>
+            <ul className="mt-1 space-y-0.5">
+              {data.swot.opportunities.map((o, i) => (
+                <li key={i} className="text-blue-700">• {o}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="p-2 bg-yellow-50 rounded">
+            <div className="font-semibold text-yellow-800">Threats</div>
+            <ul className="mt-1 space-y-0.5">
+              {data.swot.threats.map((t, i) => (
+                <li key={i} className="text-yellow-700">• {t}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Feasibility Score */}
+      <div className="px-4 pb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium">Feasibility:</span>
+          <div className="flex-1 bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-purple-600 h-2 rounded-full"
+              style={{ width: `${data.feasibilityScore * 10}%` }}
+            />
+          </div>
+          <span className="text-xs font-semibold">{data.feasibilityScore}/10</span>
+        </div>
+      </div>
+
+      <Handle type="source" position={Position.Bottom} />
+    </div>
+  );
+}
+```
+
+**Why ReactFlow custom nodes for rich cards:**
+- **HTML/CSS rendering:** Full Tailwind styling, gradients, images, forms
+- **No canvas limitations:** HTML content is easier than canvas-based rendering
+- **Accessibility:** Screen readers work with HTML nodes, not canvas
+- **Responsive:** Tailwind classes handle layout, no manual positioning math
+
+**Alternative considered: Konva for concept cards** — REJECTED: HTML is easier for text-heavy cards, better accessibility, simpler image embedding
+
+**Source:** [ReactFlow Custom Node Examples](https://reactflow.dev/learn/customization/custom-nodes)
+
+---
+
+## Installation
+
+```bash
+# Drawing engine
+npm install konva react-konva
+
+# Freehand tool
+npm install perfect-freehand
+
+# UI Kit drag-drop
+npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
+
+# Emoji picker
+npm install @emoji-mart/react @emoji-mart/data
+
+# Image export
+npm install html-to-image
+
+# Blob storage (Vercel)
+npm install @vercel/blob
+
+# Already installed (0 KB added)
+# - lucide-react (icons)
+# - @xyflow/react (ReactFlow for mind maps and concept cards)
+# - zustand (state management)
+```
+
+---
+
+## Alternatives Considered
+
+| Recommended | Alternative | When to Use Alternative | Bundle Difference |
+|-------------|-------------|-------------------------|-------------------|
+| **Konva.js** (55 KB) | Fabric.js (96 KB) | Need SVG-to-canvas conversion or advanced image filters | +41 KB |
+| **Konva.js** (55 KB) | tldraw (~400 KB) | Building full infinite-canvas whiteboard with collaboration | +345 KB |
+| **Konva.js** (55 KB) | Excalidraw (~2.3 MB) | Want hand-drawn sketch aesthetic, full whiteboard features | +2.2 MB |
+| **perfect-freehand** (1.2 KB) | Custom stroke algorithm | Need very specific stroke behavior (not pressure-sensitive) | Variable |
+| **dnd-kit** (20 KB) | react-dnd (50 KB) | Legacy codebase already using react-dnd | +30 KB |
+| **@emoji-mart/react** (45 KB) | emoji-picker-react (30 KB) | Need smaller bundle, basic emoji only (no search/categories) | -15 KB |
+| **html-to-image** (11 KB) | html2canvas (50+ KB) | Need broader DOM-to-canvas compatibility (older browsers) | +39 KB |
+| **Vercel Blob** | Base64 in JSONB | Drawings always < 100 KB, no CDN needed, single-user only | 0 KB (data in DB) |
+
+---
+
+## What NOT to Use
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| **p5.js** | Creative coding library, not optimized for UI drawing tools. 500+ KB bundle. | Konva.js (55 KB, UI-focused) |
+| **Paper.js** | Vector graphics scripting, overkill for simple shapes. No React integration. | react-konva (declarative API) |
+| **Two.js** | 2D drawing API wrapper, less performant than Konva for interactive canvases. | Konva.js (dirty region rendering) |
+| **Raw HTML5 Canvas API** | Manual layer management, no React integration, complex state management. | react-konva (declarative layers) |
+| **Storing images as base64 in Postgres** | 33% overhead, bloats database, slows queries. | Vercel Blob (CDN-backed, scalable) |
+| **react-sketch-canvas** | SVG-based (slower for complex drawings), no layer system. | Konva.js + perfect-freehand |
+
+---
+
+## Stack Patterns by Feature
+
+### Pattern 1: Freehand Drawing
+
+**Stack:** Konva.js + perfect-freehand + Zustand
+
+**Implementation:**
+1. Capture mouse/touch points in Zustand state
+2. On mouse up, pass points to `getStroke()` (perfect-freehand)
+3. Render smooth stroke as Konva `Line` component
+4. Store stroke in layer's shapes array
+
+**Why this pattern:**
+- perfect-freehand handles stroke smoothing (1.2 KB)
+- Konva handles GPU-accelerated rendering
+- Zustand manages undo/redo history
+
+---
+
+### Pattern 2: Shape Tools (Rect, Circle, Arrow)
+
+**Stack:** Konva.js built-in shapes
+
+**Implementation:**
+```typescript
+import { Rect, Circle, Arrow } from 'react-konva';
+
+<Rect
+  x={shape.x}
+  y={shape.y}
+  width={shape.width}
+  height={shape.height}
+  fill={shape.fill}
+  draggable
+  onDragEnd={handleDragEnd}
+/>
+```
+
+**Why this pattern:**
+- Konva provides optimized shape primitives
+- Declarative React API (no manual canvas drawing)
+- Built-in interactions (drag, resize, rotate)
+
+---
+
+### Pattern 3: UI Kit Drag-and-Drop
+
+**Stack:** dnd-kit (palette) + Konva.js (canvas rendering)
+
+**Implementation:**
+1. **Palette:** dnd-kit `useDraggable` for UI component cards
+2. **Drop zone:** dnd-kit `useDroppable` wraps Konva Stage
+3. **Rendering:** Konva `Group` with custom shapes for button/input/card representation
+
+**Why this pattern:**
+- dnd-kit handles accessible drag-drop (touch + keyboard)
+- Konva renders dropped components as shapes
+- Separation: dnd-kit (interaction) vs Konva (rendering)
+
+---
+
+### Pattern 4: Icon & Emoji Library
+
+**Stack:** lucide-react (icons) + @emoji-mart/react (emoji) + Konva Image
+
+**Implementation:**
+1. **Palette:** Render icon/emoji pickers in modal sidebar
+2. **Canvas:** Convert icon/emoji to image, render as Konva `Image` node
+3. **Export:** Icons/emojis baked into PNG via Konva's toDataURL()
+
+```typescript
+// Convert Lucide icon to Konva Image
+const iconToImage = (iconName: string) => {
+  const svg = renderIconToSVG(iconName);
+  const img = new Image();
+  img.src = `data:image/svg+xml;base64,${btoa(svg)}`;
+  return img;
+};
+
+<KonvaImage image={iconToImage('heart')} x={100} y={100} />
+```
+
+**Why this pattern:**
+- Reuse existing lucide-react library (0 KB added)
+- emoji-mart provides rich picker UI
+- Konva Image renders icons/emoji at any scale
+
+---
+
+### Pattern 5: Export to PNG and Vercel Blob
+
+**Stack:** Konva.toDataURL() → Vercel Blob
+
+**Implementation:**
+```typescript
+const exportDrawing = async (stage: Konva.Stage) => {
+  // High DPI export
+  const dataURL = stage.toDataURL({ pixelRatio: 2 });
+
+  // Convert to blob
+  const blob = await (await fetch(dataURL)).blob();
+
+  // Upload to Vercel Blob
+  const { url } = await put(`drawings/${workshopId}/${stepId}/${Date.now()}.png`, blob, {
+    access: 'public',
+    contentType: 'image/png',
+    addRandomSuffix: true,
+  });
+
+  // Store URL in stepArtifacts
+  await updateStepArtifact(workshopId, stepId, {
+    drawings: [...existingDrawings, { url, createdAt: new Date() }],
+  });
+
+  return url;
+};
+```
+
+**Why this pattern:**
+- **Konva.toDataURL():** Native, fast, high-DPI support
+- **Vercel Blob:** CDN-backed, scalable, cost-effective
+- **Database stores URL only:** No base64 bloat, fast queries
+
+**Cost analysis (Vercel Blob):**
+- **First 100 GB/month:** Free
+- **After 100 GB:** $0.15/GB
+- **Average drawing size:** 50 KB (assuming 800x600 PNG)
+- **100 GB = 2 million drawings** (way beyond MMP scale)
 
 ---
 
 ## Version Compatibility
 
-| Package | Current Version | v1.2 Requirement | Compatible? | Notes |
-|---------|----------------|------------------|-------------|-------|
-| @xyflow/react | 12.10.0 | 12.x | ✅ Yes | Native grid snap APIs available |
-| React | 19.2.0 | 19.x | ✅ Yes | No changes needed |
-| Zustand | (existing) | 5.x | ✅ Yes | Store grid config state |
-| Gemini API | (existing) | (via AI SDK 6.x) | ✅ Yes | Structured outputs support cell coordinates |
+| Package | Version | Compatible With | Notes |
+|---------|---------|-----------------|-------|
+| konva | 9.3.17 | React 19, TypeScript 5 | Peer dep: None (works with any React version) |
+| react-konva | 18.2.13 | React 19, konva 9.x | Peer deps: react ^16.8.0 \|\| ^17.0.0 \|\| ^18.0.0 \|\| ^19.0.0, konva ^9.0.0 |
+| perfect-freehand | 1.2.3 | Any (vanilla JS) | No React dependency, works with Konva or SVG |
+| @dnd-kit/core | 8.1.0 | React 19, Next.js 16 | Peer deps: react ^18.0.0 \|\| ^19.0.0, react-dom ^18.0.0 \|\| ^19.0.0 |
+| @emoji-mart/react | 1.2.0 | React 19 | Peer dep: react ^16.8.0 \|\| ^17.0.0 \|\| ^18.0.0 \|\| ^19.0.0 |
+| html-to-image | 1.11.11 | Any (vanilla JS) | No React dependency |
+| @vercel/blob | Latest | Next.js 16, Vercel Edge Runtime | Works with serverless and edge functions |
 
-**@xyflow/react 12.10.0 features used:**
-- `snapToGrid` prop (overridden with custom snap logic)
-- Programmatic `setNodes()` for AI placement
-- Custom overlay components (similar to v1.1 QuadrantOverlay)
-- Node `extent` property (constrain dragging to grid bounds)
-
-**Source:** [@xyflow/react 12.10.0 release notes](https://www.npmjs.com/package/@xyflow/react), [ReactFlow API Reference](https://reactflow.dev/api-reference/types/node)
-
----
-
-## Implementation Checklist
-
-### Core Grid Features
-- [ ] Create `GridConfig` type and `JOURNEY_MAP_GRID` constant
-- [ ] Implement `snapToCell()` function for cell-center snapping
-- [ ] Create `GridOverlay` component (similar to QuadrantOverlay)
-- [ ] Update `step-canvas-config.ts` with grid configuration
-- [ ] Modify `react-flow-canvas.tsx` to detect grid vs quadrant layout
-- [ ] Store `cell` address on post-its in Zustand store
-
-### AI Placement
-- [ ] Define `JourneyMapCellItemSchema` for AI outputs
-- [ ] Implement `cellToPosition()` coordinate conversion
-- [ ] Create `AISuggestionNode` component for ghost nodes
-- [ ] Update AI system prompts with cell coordinate schema
-- [ ] Implement accept/reject handlers for AI suggestions
-- [ ] Add `aiSuggested` metadata to post-its
-
-### Dynamic Column Management
-- [ ] Implement `addGridColumn()` function
-- [ ] Implement `removeGridColumn()` with item reassignment
-- [ ] Add toolbar button for "Add Stage"
-- [ ] Add context menu on column headers for delete
-- [ ] Store grid config in Zustand (sync to database)
-
-### Steps 2 & 4 Retrofit
-- [ ] Update stakeholder mapping AI to return suggested positions
-- [ ] Update empathy map AI to return quadrant-based positions
-- [ ] Implement `calculateStakeholderPosition()` helper
-- [ ] Implement `calculateEmpathyPosition()` helper
-- [ ] Add slight offset for multiple items in same quadrant
-
----
-
-## Performance Considerations
-
-### Grid Rendering Performance
-
-**Concern:** 5 rows × 10 columns = 50 grid cells. Do we render 50 SVG rect elements?
-
-**Solution:** Yes, but SVG is highly performant for static geometry.
-
-**Analysis:**
-- 50 SVG `<rect>` elements = ~5 KB DOM nodes
-- Modern browsers handle 1000+ SVG elements at 60fps
-- Grid overlay is non-interactive (pointer-events: none)
-- No JavaScript event handlers on grid cells
-
-**Optimization:** Use `will-change: transform` on overlay for pan/zoom.
-
-```css
-.grid-overlay {
-  will-change: transform;
-}
-```
-
-**Verdict:** 50 SVG rects is negligible overhead. No optimization needed.
-
-### Cell Snap Performance
-
-**Concern:** `snapToCell()` runs on every drag movement. Is distance calculation expensive?
-
-**Solution:** Use efficient nearest-neighbor search.
-
-**Analysis:**
-- Journey Map: 5 rows × 10 columns (max) = 50 cells
-- Worst case: 50 distance calculations per drag frame
-- Modern JavaScript engines optimize Math.abs() and Math.min()
-- Only runs on `dragging === false` (drag end), not every frame
-
-**Optimization:** None needed. 50 distance calculations is < 1ms.
-
-**Verdict:** Cell snap is performant without optimization.
-
-### Dynamic Column Updates
-
-**Concern:** Adding a column triggers re-render of all nodes?
-
-**Solution:** ReactFlow uses React's reconciliation (only changed nodes re-render).
-
-**Analysis:**
-- Adding column: Updates GridOverlay (50 SVG rects) + repositions existing nodes
-- ReactFlow optimizes with `useMemo()` on node arrays
-- Zustand's selector prevents unnecessary re-renders
-
-**Verdict:** Column add/remove is instant (< 16ms, no frame drop).
-
----
-
-## Testing Checklist
-
-### Grid Layout
-- [ ] Grid overlay renders correctly with 5 rows
-- [ ] Dynamic columns add/remove correctly
-- [ ] Grid lines and labels transform with pan/zoom
-- [ ] Cell backgrounds visible (optional styling)
-- [ ] Grid config persists to database
-
-### Snap-to-Cell
-- [ ] Post-its snap to cell center (not corner)
-- [ ] Drag across multiple cells snaps to nearest
-- [ ] Cell address stored in post-it data `{rowId, columnIndex}`
-- [ ] Snap works after column add/remove
-- [ ] Non-grid steps still use dot-grid snap
-
-### AI Placement
-- [ ] AI returns valid cell coordinates
-- [ ] Ghost nodes appear in correct cells
-- [ ] Accept button creates permanent node
-- [ ] Reject button removes ghost node
-- [ ] AI suggestions don't overlap (slight offset)
-- [ ] AI placement works for Steps 2, 4, 6
-
-### Dynamic Columns
-- [ ] Add stage button prompts for name
-- [ ] New column appears at right edge of grid
-- [ ] Delete stage reassigns items to adjacent column
-- [ ] Column reindexing updates cell addresses
-- [ ] Grid config updates in database
-
-### Backward Compatibility
-- [ ] Steps 2 & 4 (quadrant layout) still work
-- [ ] Non-canvas steps (1, 3, 5, 7-10) unchanged
-- [ ] Existing v1.1 workshops load correctly
-- [ ] Canvas state migration from v1.1 to v1.2 works
+**Compatibility notes:**
+- **react-konva 18.2.13** supports React 19 (verified via npm peer deps)
+- **dnd-kit 8.1.0** added React 19 support in Dec 2025
+- All packages are ESM-compatible with Next.js 16 App Router
 
 ---
 
 ## Bundle Size Analysis
 
-**Total v1.2 bundle addition: 0 KB**
+### Current State (v1.2)
+- **Base app:** ~18K lines TypeScript
+- **Canvas (ReactFlow):** 110 KB gzipped
+- **Total gzipped:** ~500 KB (estimated)
 
-| Feature | Implementation | Bundle Cost |
-|---------|---------------|-------------|
-| Grid layout | Custom TypeScript functions | 0 KB (app code) |
-| Snap-to-cell | Custom snap logic | 0 KB (app code) |
-| Grid overlay | Custom SVG component | 0 KB (app code) |
-| AI placement | Coordinate conversion functions | 0 KB (app code) |
-| Dynamic columns | Array manipulation | 0 KB (app code) |
+### v1.3 Additions (EzyDraw + Visual Canvases)
 
-**Why 0 KB:**
-- All features use existing ReactFlow APIs
-- No new libraries installed
-- Custom logic is app code (not external dependencies)
-- Gzipped Next.js bundle increase: < 2 KB (custom code only)
+| Package | Minified + Gzipped | Purpose |
+|---------|-------------------|---------|
+| konva | 55 KB | Drawing engine |
+| react-konva | 43 KB | React bindings |
+| perfect-freehand | 1.2 KB | Freehand strokes |
+| @dnd-kit/core | 20 KB | UI kit drag-drop |
+| @emoji-mart/react | 45 KB | Emoji picker |
+| html-to-image | 11 KB | PNG export helper |
+| **TOTAL NEW** | **175 KB** | |
 
-**Comparison to alternatives:**
+**Adjusted total:** ~675 KB gzipped (35% increase)
 
-| Alternative | Bundle Size | Why Not Used |
-|-------------|-------------|--------------|
-| react-grid-layout | ~50 KB | Dashboard layouts, not canvas grids |
-| elkjs | ~500 KB | Auto-layout for complex graphs, overkill |
-| @liangfaan/reactflow-swimlane | ~20 KB | Unmaintained, designed for flowcharts |
-| yFiles Layout Algorithms | N/A | Commercial license required |
+**Trade-off analysis:**
+- **PRO:** 175 KB unlocks full drawing capabilities (freehand, shapes, UI kit, emoji, export)
+- **PRO:** Konva is 41% smaller than Fabric.js alternative (saved 41 KB)
+- **PRO:** perfect-freehand is 98% smaller than tldraw alternative (saved ~400 KB)
+- **CON:** 175 KB added to initial bundle (consider lazy-loading EzyDraw modal)
 
-**Verdict:** Custom grid logic is optimal for bundle size and performance.
+**Lazy-loading optimization:**
+
+```typescript
+// Lazy-load EzyDraw modal (175 KB) only when user clicks "Draw"
+const EzyDrawModal = lazy(() => import('@/components/ezydraw/ezydraw-modal'));
+
+export function Crazy8sCanvas() {
+  const [showDrawingModal, setShowDrawingModal] = useState(false);
+
+  return (
+    <>
+      <button onClick={() => setShowDrawingModal(true)}>Draw</button>
+
+      {showDrawingModal && (
+        <Suspense fallback={<LoadingSpinner />}>
+          <EzyDrawModal onClose={() => setShowDrawingModal(false)} />
+        </Suspense>
+      )}
+    </>
+  );
+}
+```
+
+**Lazy-load impact:**
+- **Initial bundle:** 500 KB (no change)
+- **EzyDraw chunk:** 175 KB (loaded on-demand)
+- **User experience:** 1-2s loading spinner when opening draw modal (acceptable for feature richness)
 
 ---
 
-## Migration from v1.1 to v1.2
+## Performance Considerations
 
-| v1.1 Pattern | v1.2 Pattern | Breaking? |
-|--------------|--------------|-----------|
-| Quadrant canvas (Steps 2, 4) | Quadrant canvas + AI placement | No — extends existing |
-| Freeform post-it placement | Grid-based cell placement (Step 6 only) | No — new step feature |
-| Dot-grid snap | Dot-grid snap (quadrants) + cell-center snap (grids) | No — conditional on step type |
-| `canvas_state` table | Same table, new `cell` and `gridConfig` properties | No — backward compatible JSON |
+### Konva Rendering Performance
 
-**Migration effort:** LOW. All changes extend existing patterns without breaking v1.1 functionality.
+**Dirty region detection:**
+- Konva only repaints changed areas (not full canvas)
+- Layer-based rendering (hide layer = skip all shapes in layer)
+- GPU-accelerated via HTML5 Canvas 2D context
+
+**Benchmarks (from Konva docs):**
+- **100 shapes:** 60 FPS (no lag)
+- **500 shapes:** 60 FPS (slight lag on drag)
+- **1000+ shapes:** 30-40 FPS (noticeable lag)
+
+**EzyDraw mitigation:**
+- **Constraint:** Drawing modal is fixed 800x600 canvas, not infinite
+- **Layer limit:** Enforce max 10 layers (UX guideline)
+- **Shape limit:** Warn at 200 shapes (unlikely in 800x600 space)
+
+**Source:** [Konva Performance Tips](https://konvajs.org/docs/performance/All_Performance_Tips.html)
+
+---
+
+### perfect-freehand Performance
+
+**Stroke generation:**
+- **Input:** Array of `{x, y, pressure?}` points
+- **Output:** Array of stroke outline points
+- **Performance:** ~1ms for 100-point stroke (imperceptible)
+
+**Integration with Konva:**
+- Generate stroke outline on mouse up (not real-time)
+- Render as single Konva Line (not individual points)
+- No per-frame performance impact
+
+---
+
+### Image Export Performance
+
+**Konva.toDataURL():**
+- **800x600 canvas:** ~50ms to generate PNG
+- **High DPI (pixelRatio: 2):** ~100ms (1600x1200 output)
+- **Non-blocking:** Use async/await, show loading spinner
+
+**Vercel Blob upload:**
+- **50 KB PNG:** ~200ms upload (CDN edge location)
+- **Total save time:** ~300ms (acceptable UX)
 
 ---
 
 ## Sources
 
-### ReactFlow Grid & Layout (HIGH confidence)
+### Drawing Libraries (HIGH confidence)
+- [Konva.js vs Fabric.js: In-Depth Technical Comparison](https://medium.com/@www.blog4j.com/konva-js-vs-fabric-js-in-depth-technical-comparison-and-use-case-analysis-9c247968dd0f) — Performance, API, use cases
+- [Bundle size comparison: Konva 54.9 KB, Fabric 95.7 KB](https://npm-compare.com/fabric,konva) — npm-compare metrics
+- [Top 5 JavaScript Whiteboard & Canvas Libraries](https://byby.dev/js-whiteboard-libs) — 2026 ecosystem overview
+- [Konva Free Drawing Tutorial](https://konvajs.org/docs/react/Free_Drawing.html) — React integration
+- [tldraw: Infinite Canvas SDK for React](https://tldraw.dev/) — Feature comparison
+- [Excalidraw Integration Guide](https://docs.excalidraw.com/docs/@excalidraw/excalidraw/integration) — Bundle size analysis
 
-- [ReactFlow Coordinate System](https://reactflow.dev/api-reference/types/xy-position) — Node positioning
-- [ReactFlow Dynamic Layouting](https://reactflow.dev/examples/layout/dynamic-layouting) — Runtime layout updates
-- [ReactFlow Auto Layout Overview](https://reactflow.dev/learn/layouting/layouting) — Layout algorithm integration
-- [ReactFlow SnapGrid Type](https://reactflow.dev/api-reference/types/snap-grid) — Native snap behavior
-- [ReactFlow Node Properties](https://reactflow.dev/api-reference/types/node) — Position, extent, custom data
+### Freehand & Stroke Libraries (HIGH confidence)
+- [perfect-freehand GitHub Discussion #6](https://github.com/steveruizok/perfect-freehand/discussions/6) — Bundle size (1.2 KB)
+- [perfect-freehand npm](https://www.npmjs.com/package/perfect-freehand) — API documentation
+- [ReactFlow Freehand Draw Example](https://reactflow.dev/examples/whiteboard/freehand-draw) — Integration pattern
 
-### Custom Grid Implementation (MEDIUM-HIGH confidence)
+### Drag-and-Drop Libraries (HIGH confidence)
+- [Top 5 Drag-and-Drop Libraries for React in 2026](https://puckeditor.com/blog/top-5-drag-and-drop-libraries-for-react) — dnd-kit analysis
+- [dnd-kit Documentation](https://docs.dndkit.com/) — Official API docs
 
-- [reactflow-swimlane GitHub](https://github.com/liang-faan/reactflow-swimlane) — Swimlane patterns (unmaintained, for reference)
-- [Custom Snap to Grid Discussion](https://github.com/xyflow/xyflow/discussions/3640) — Community approaches
-- [React Flow Examples](https://reactflow.dev/examples) — Official examples (updated Feb 2, 2026)
+### ReactFlow Custom Nodes (HIGH confidence)
+- [ReactFlow Custom Nodes](https://reactflow.dev/learn/customization/custom-nodes) — Official docs
+- [ReactFlow Mind Map Tutorial](https://reactflow.dev/learn/tutorials/mind-map-app-with-react-flow) — Step-by-step guide
+- [ReactFlow Download Image Example](https://reactflow.dev/examples/misc/download-image) — Export patterns
 
-### AI Placement Research (MEDIUM confidence)
+### Image Export & Storage (HIGH confidence)
+- [Canvas toBlob() MDN](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob) — Native API
+- [Vercel Blob Documentation](https://vercel.com/docs/vercel-blob) — Pricing, API, best practices
+- [html-to-image npm](https://www.npmjs.com/package/html-to-image) — Package info
 
-- [Canvas3D: AI Spatial Placement](https://arxiv.org/html/2508.07135v1) — LLM agent placement algorithms
-- [Generative Location Modeling](https://arxiv.org/html/2410.13564v1) — Autoregressive bounding box coordinates
-- [ReactFlow Node Positioning](https://reactflow.dev/api-reference/types/node) — Programmatic placement APIs
-
-### Grid Layout Patterns (MEDIUM confidence)
-
-- [Journey Map Digital Template](https://www.nngroup.com/articles/journey-map-digital-template/) — Swimlane structure (NN/g)
-- [Swimlane Diagram Patterns](https://sepantapouya.medium.com/swimlane-diagram-a-ux-designers-secret-weapon-for-order-in-chaos-fb9aa00927d5) — Row/column grid design
-- [Canvas Layout TypeScript Library](https://github.com/netdur/canvas.layout.ts) — Layout algorithm patterns
-
-### Version Compatibility (HIGH confidence)
-
-- [@xyflow/react 12.10.0 npm](https://www.npmjs.com/package/@xyflow/react) — Release info (Dec 2025)
-- [React Flow 12 Release](https://xyflow.com/blog/react-flow-12-release) — React 19 support confirmed
-
----
-
-## Summary: What to Do Next
-
-**For v1.2 grid/swimlane canvas features:**
-
-1. **Create new TypeScript modules:**
-   - `src/lib/canvas/grid-config.ts` — Grid structure types and Journey Map config
-   - `src/lib/canvas/grid-snap.ts` — Cell-center snap logic
-   - `src/lib/canvas/grid-columns.ts` — Dynamic column management
-   - `src/lib/canvas/ai-placement.ts` — Cell-to-position conversion
-
-2. **Create new components:**
-   - `src/components/canvas/grid-overlay.tsx` — Swimlane lines and labels (SVG)
-   - `src/components/canvas/ai-suggestion-node.tsx` — Ghost node for AI suggestions
-
-3. **Modify existing files:**
-   - `src/lib/canvas/step-canvas-config.ts` — Add grid config for Step 6
-   - `src/components/canvas/react-flow-canvas.tsx` — Detect grid layout, apply cell snap
-   - `src/stores/canvas-store.ts` — Add `cell` and `gridConfig` properties
-   - `src/lib/ai/prompts/` — Update AI prompts to return cell coordinates
-
-4. **Extend AI schemas:**
-   - `src/lib/ai/schemas/journey-map-schema.ts` — Cell coordinate output schema
-   - Update stakeholder and empathy map schemas with suggested positions
-
-5. **Database:**
-   - No schema changes needed (existing `canvas_state` table supports new properties)
-   - Migration: None required (JSON column is flexible)
-
-**Estimated implementation time:** 4-5 days
-- Grid overlay and snap logic: 1 day
-- AI placement system: 2 days
-- Dynamic column management: 1 day
-- Steps 2 & 4 retrofit: 1 day
-
-**Bundle impact:** 0 KB (no new packages)
-
-**Performance impact:** Negligible (< 1ms grid calculations)
+### Emoji Picker (MEDIUM confidence)
+- [@emoji-mart/react npm](https://www.npmjs.com/package/@emoji-mart/react) — Package info
 
 ---
 
-*Stack research for: WorkshopPilot.ai v1.2 Grid/Swimlane Canvas Features*
-*Researched: 2026-02-11*
-*Next research: AI-driven refinement suggestions (future phase)*
+## Summary: What to Install
+
+**NEW packages for v1.3:**
+```bash
+npm install konva react-konva perfect-freehand @dnd-kit/core @emoji-mart/react @emoji-mart/data html-to-image @vercel/blob
+```
+
+**Total new bundle size:** ~175 KB gzipped
+
+**Recommended optimization:** Lazy-load EzyDrawModal to keep initial bundle at ~500 KB.
+
+**What NOT to install:**
+- Fabric.js (heavier than Konva, 96 KB vs 55 KB)
+- tldraw (overkill, ~400+ KB)
+- Excalidraw (massive bundle, ~2.3 MB)
+- html2canvas (larger than html-to-image, 50+ KB vs 11 KB)
+- p5.js, Paper.js, Two.js (not optimized for UI drawing tools)
+
+---
+
+*Stack research for: WorkshopPilot.ai v1.3 EzyDraw & Visual Canvas Extensions*
+*Researched: 2026-02-12*
+*Next research: Multiplayer collaboration patterns (FFP phase)*

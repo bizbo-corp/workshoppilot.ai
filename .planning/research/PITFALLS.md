@@ -1,1069 +1,1148 @@
-# Pitfalls Research: Grid/Swimlane Canvas with AI Placement
+# Pitfalls Research: Adding Drawing Capabilities to ReactFlow Canvas
 
-**Domain:** Adding grid/swimlane layouts, snap-to-cell, and AI-driven placement to existing ReactFlow canvas
-**Researched:** 2026-02-11
+**Domain:** Adding in-app drawing tool (EzyDraw modal), visual mind maps, sketch grids, and composite cards to existing ReactFlow canvas
+**Researched:** 2026-02-12
 **Confidence:** MEDIUM-HIGH
 
-**Context:** This research focuses on pitfalls when ADDING structured grid/swimlane canvas features to the EXISTING WorkshopPilot.ai v1.1 Canvas Foundation (ReactFlow post-it canvas with free-form positioning, quadrant layouts, Zustand state, auto-save, bidirectional AI integration). Specifically addresses retrofitting Steps 2 & 4 with structured outputs on canvas and implementing Journey Map (Step 6) with fixed swimlane rows and user-addable stage columns.
+**Context:** This research focuses on pitfalls when ADDING drawing capabilities to WorkshopPilot.ai's existing ReactFlow canvas system (v1.2 Canvas Whiteboard with post-its, grids, rings, empathy zones). Specifically addresses adding EzyDraw-style modal drawing tool, mind map layouts with force-directed nodes, Crazy 8s sketch grid, and visual concept cards for Steps 8 (Ideation) and 9 (Concept Development). Current system: ReactFlow + Zustand, 110KB gzipped bundle, mobile-responsive, auto-save to Postgres JSONB, undo/redo via Zustand temporal.
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Grid Coordinate System Confusion (Free-Form vs Cell-Based)
+### Pitfall 1: Two-Canvas Architecture Event Handling Conflicts
 
 **What goes wrong:**
-Existing canvas uses ReactFlow's free-form coordinate system where post-its have absolute pixel positions (x: 245, y: 387). Add Journey Map grid with swimlane cells, and coordinate systems clash. User drags post-it from free-form Step 2 canvas to Journey Map Step 6 - position data doesn't translate. Post-it at (400, 300) renders in wrong cell or off-grid entirely. Grid snapping breaks multi-select drag - selecting 3 cards in same cell and dragging together causes them to "snap out" of grid alignment (known ReactFlow issue #1579). At certain zoom levels, snap-to-grid precision degrades - cards snap to wrong cells because coordinate rounding errors accumulate. Retrofitting Steps 2 & 4 quadrant canvases with cell constraints breaks existing saved workshops - old post-it positions (pixel coordinates) don't map to new cell coordinates, stakeholder maps scrambled on load.
+Adding EzyDraw modal with HTML5 Canvas for drawing alongside existing ReactFlow canvas creates event handling conflicts. User opens drawing modal, draws with mouse/stylus, but panning gestures intended for drawing tool trigger ReactFlow pan underneath. Touch events on iPad fire on both canvases - drawing stroke on EzyDraw modal simultaneously pans ReactFlow viewport. User tries to select drawn sketch on canvas, but ReactFlow's selection mode activates instead of sketch selection. Escape key to close drawing modal also triggers ReactFlow deselection. Two undo/redo systems conflict - Cmd+Z while drawing modal is open undoes ReactFlow canvas action instead of drawing stroke. Z-index layering breaks - ReactFlow controls render on top of drawing modal, blocking interaction.
 
 **Why it happens:**
-ReactFlow uses continuous 2D coordinate space where any (x, y) position is valid. Grid/swimlane layouts impose discrete coordinate constraints where only specific positions (cell centers or corners) are valid. Two fundamentally different positioning models coexist in same application - continuous for free-form steps, discrete for grid steps. Coordinate transformation between systems is non-trivial: pixel (400, 300) could map to cell [2, 3] but reverse transformation depends on cell size, padding, grid offset. Multi-select drag compounds the problem - ReactFlow's snap-to-grid (built-in `snapGrid` prop) snaps each node's individual position, not the selection group's anchor point, causing misalignment. GitHub issue #1579 documents this: "Selecting multiple nodes (with shift + click + drag) and then moving them across the pane breaks out of the grid." Zoom affects snap precision because viewport transformation introduces floating-point errors - at 250% zoom, a 10px grid becomes effectively 25px in screen space, but coordinate calculations still reference 10px, causing off-by-one-cell snapping. ReactFlow's snap grid anchors to (0, 0) - if grid cells don't align with (0, 0), dragging from position 545 calculates snap relative to origin not current position, throwing off alignment.
+ReactFlow uses global event listeners for pan (mousedown/mousemove on document), zoom (wheel events), and keyboard shortcuts. Drawing modal also needs global listeners for drawing (pointer events) and tool shortcuts. Both layers compete for same events. Event bubbling means events on modal canvas propagate to ReactFlow unless explicitly stopped. Touch events fire both touch and mouse events - preventDefault() on wrong event type fails to prevent ReactFlow from reacting. iOS Safari has complex touch handling - preventDefault() on touchmove can disable page scroll but also breaks nested scrollable areas. Two canvas systems = two coordinate spaces - ReactFlow uses flow coordinates (zoom/pan transformed), drawing canvas uses pixel coordinates (0,0 = top-left of modal). Converting between them for "place drawing on canvas" feature becomes error-prone. React's event system (synthetic events) vs native browser events causes timing issues - synthetic events batch in React 19, native events fire immediately, creating race conditions. Modal z-index must be higher than ReactFlow but lower than toasts/notifications - managing global z-index scale becomes fragile. Keyboard shortcuts overlap - ReactFlow uses Space for pan tool, drawing tools might use Space for eraser or stamp tool. Global listeners don't automatically cleanup when modal unmounts in React StrictMode (double mounting) - leads to duplicate event handlers.
 
 **How to avoid:**
-Implement coordinate translation layer that converts between pixel and cell coordinates:
+Disable ReactFlow interactions while drawing modal is open:
 
 ```typescript
-// Coordinate translation utilities
-interface CellPosition {
-  row: number;
-  col: number;
-}
-
-interface PixelPosition {
-  x: number;
-  y: number;
-}
-
-const CELL_WIDTH = 200;
-const CELL_HEIGHT = 120;
-const GRID_OFFSET_X = 50; // Header column width
-const GRID_OFFSET_Y = 80; // Header row height
-
-const pixelToCell = (pixel: PixelPosition): CellPosition => ({
-  row: Math.floor((pixel.y - GRID_OFFSET_Y) / CELL_HEIGHT),
-  col: Math.floor((pixel.x - GRID_OFFSET_X) / CELL_WIDTH)
-});
-
-const cellToPixel = (cell: CellPosition): PixelPosition => ({
-  x: cell.col * CELL_WIDTH + GRID_OFFSET_X + CELL_WIDTH / 2, // Center of cell
-  y: cell.row * CELL_HEIGHT + GRID_OFFSET_Y + CELL_HEIGHT / 2
-});
-```
-
-Use different positioning strategies per step type - store cell coordinates for grid steps, pixel coordinates for free-form steps:
-
-```typescript
-interface CanvasItem {
-  id: string;
-  stepId: number;
-  // Grid-based steps
-  cellPosition?: CellPosition;
-  // Free-form steps
-  pixelPosition?: PixelPosition;
-}
-
-const getItemPosition = (item: CanvasItem, stepType: 'grid' | 'freeform'): PixelPosition => {
-  if (stepType === 'grid' && item.cellPosition) {
-    return cellToPixel(item.cellPosition);
-  }
-  return item.pixelPosition!;
-};
-```
-
-Implement custom snap behavior for grid steps that constrains to cell centers:
-
-```typescript
-const handleNodeDragStop = (event: NodeDragEvent, node: Node) => {
-  const cellPos = pixelToCell({ x: node.position.x, y: node.position.y });
-  const snappedPixelPos = cellToPixel(cellPos);
-
-  updateNodePosition(node.id, {
-    pixelPosition: snappedPixelPos,
-    cellPosition: cellPos
-  });
-};
-```
-
-For multi-select drag, implement group-aware snapping that maintains relative positions:
-
-```typescript
-const handleMultiNodeDrag = (selectedNodes: Node[]) => {
-  // Calculate selection bounding box anchor
-  const anchor = selectedNodes[0];
-  const anchorCell = pixelToCell(anchor.position);
-  const snappedAnchor = cellToPixel(anchorCell);
-
-  // Apply same delta to all selected nodes
-  const deltaX = snappedAnchor.x - anchor.position.x;
-  const deltaY = snappedAnchor.y - anchor.position.y;
-
-  selectedNodes.forEach(node => {
-    updateNodePosition(node.id, {
-      x: node.position.x + deltaX,
-      y: node.position.y + deltaY
-    });
-  });
-};
-```
-
-Disable ReactFlow's built-in `snapGrid` for grid steps - implement custom snap logic instead to avoid the multi-select bug. Use zoom-independent coordinate calculations - always compute cell positions in logical coordinates, not screen pixels. Test at multiple zoom levels (50%, 100%, 150%, 250%) to verify snap precision.
-
-**Warning signs:**
-- Cards snapping to wrong cells after drag
-- Multi-select drag causing cards to scatter outside grid
-- Snap behavior inconsistent at different zoom levels
-- Existing workshops loading with scrambled positions after grid retrofit
-- Cards positioned between cells instead of centered
-- Horizontal/vertical alignment breaking when dragging multiple cards
-
-**Phase to address:**
-Phase 1 (Journey Map Grid Foundation) - Coordinate system architecture must be established upfront. Phase 2 (Steps 2 & 4 Retrofit) - Migration strategy for existing pixel coordinates to cell-constrained coordinates with fallback for invalid positions.
-
----
-
-### Pitfall 2: Dynamic Column Addition Breaking Layout and State
-
-**What goes wrong:**
-Journey Map has fixed rows (Thinking, Feeling, Doing, Pain Points, Opportunities) but user-addable stage columns. User adds "Research" stage column - canvas re-renders, all cards shift positions unexpectedly. Card that was in [row: 2, col: 3] is now visually in wrong swimlane because column insertion shifted indices. Delete middle column, cards in columns after it don't reflow - they reference deleted column index, rendering off-canvas. Undo/redo breaks after column operations - undoing "delete column" restores column but not the cards that were in it. Database stores card positions as `{ row: 2, col: 3 }` but when columns are dynamically added/removed, these indices become stale references. AI suggests adding card to "Purchase" stage - but that stage was just deleted by user, causing placement error.
-
-**Why it happens:**
-Array-indexed columns create fragile position references - `col: 3` means "fourth column" but that's positional not semantic. When columns reorder or delete, indices shift: deleting column 1 makes old column 2 become new column 1, invalidating all stored positions. ReactFlow nodes have absolute x,y positions - adding column inserts space, requiring recalculation of all subsequent column x-offsets. If recalculation is synchronous, all cards flicker during re-layout. If asynchronous, cards briefly appear in wrong positions (flash of misaligned content). Undo/redo systems that store index-based positions break on structural changes - undoing "delete column 3" restores column but cards that referenced col:4 are now at col:3 (off by one). Database persistence compounds the issue: cards saved with `col: 3` referring to "Purchase" column load after column deleted, `col: 3` now refers to different stage. AI context includes column structure at request time - by response time (2-5s later), user may have deleted/reordered columns, making AI's suggested positions invalid.
-
-**How to avoid:**
-Use semantic IDs for columns instead of array indices:
-
-```typescript
-interface GridColumn {
-  id: string; // UUID, not index
-  label: string;
-  order: number; // For display ordering
-  createdAt: number;
-}
-
-interface CardPosition {
-  row: string; // Row ID, not index
-  col: string; // Column ID, not index
-}
-
-const columns = [
-  { id: 'col-awareness', label: 'Awareness', order: 0 },
-  { id: 'col-research', label: 'Research', order: 1 },
-  { id: 'col-purchase', label: 'Purchase', order: 2 }
-];
-```
-
-Store positions using stable IDs that survive reordering:
-
-```typescript
-const card = {
-  id: 'card-123',
-  rowId: 'row-feeling',
-  colId: 'col-purchase' // Semantic ID, not index
-};
-
-// Position remains valid even if columns reorder
-```
-
-Implement layout calculation that derives pixel positions from ordered columns:
-
-```typescript
-const getCardPixelPosition = (card: Card, columns: GridColumn[]) => {
-  const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
-  const colIndex = sortedColumns.findIndex(c => c.id === card.colId);
-  const rowIndex = ROWS.findIndex(r => r.id === card.rowId);
-
-  return cellToPixel({ row: rowIndex, col: colIndex });
-};
-```
-
-Handle column deletion with card migration strategy:
-
-```typescript
-const deleteColumn = (columnId: string) => {
-  // Find cards in deleted column
-  const affectedCards = cards.filter(c => c.colId === columnId);
-
-  // Option 1: Move to adjacent column
-  const adjacentColumn = getAdjacentColumn(columnId, 'left');
-  affectedCards.forEach(card => {
-    updateCard(card.id, { colId: adjacentColumn.id });
-  });
-
-  // Option 2: Move to "parking lot" off-canvas area
-  affectedCards.forEach(card => {
-    updateCard(card.id, { colId: null, archived: true });
-  });
-
-  // Then delete column
-  removeColumn(columnId);
-};
-```
-
-Implement undo/redo that captures structural changes:
-
-```typescript
-interface HistoryEntry {
-  type: 'card-move' | 'column-add' | 'column-delete' | 'column-reorder';
-  before: GridState;
-  after: GridState;
-  affectedCards: Card[]; // For column operations
-}
-
-const undo = (entry: HistoryEntry) => {
-  if (entry.type === 'column-delete') {
-    // Restore column AND affected cards
-    addColumn(entry.before.deletedColumn);
-    entry.affectedCards.forEach(card => {
-      updateCard(card.id, { colId: entry.before.deletedColumn.id });
-    });
-  }
-};
-```
-
-AI placement should use semantic identifiers with fallback:
-
-```typescript
-const aiPlaceCard = (suggestion: { rowLabel: string, colLabel: string, text: string }) => {
-  const column = columns.find(c => c.label === suggestion.colLabel);
-
-  if (!column) {
-    // Column deleted/renamed since AI request started
-    // Fallback: place in first column, show warning
-    placeCard({
-      colId: columns[0].id,
-      _aiWarning: `"${suggestion.colLabel}" stage not found`
-    });
-  } else {
-    placeCard({ colId: column.id });
-  }
-};
-```
-
-Use immutable column operations with reactive layout updates:
-
-```typescript
-const addColumn = (label: string, afterColumnId?: string) => {
-  const newColumn = {
-    id: `col-${nanoid()}`,
-    label,
-    order: calculateOrder(afterColumnId),
-    createdAt: Date.now()
-  };
-
-  // Zustand update triggers re-render with new layout
-  setColumns(prev => [...prev, newColumn]);
-
-  // ReactFlow nodes re-calculate positions reactively
-  recalculateAllNodePositions();
-};
-```
-
-**Warning signs:**
-- Cards shifting to wrong swimlanes after column add/delete
-- Undo/redo not restoring card positions correctly
-- Cards disappearing after column operations
-- AI placing cards in non-existent columns
-- Column reordering breaking existing card positions
-- Database queries returning cards with invalid column references
-
-**Phase to address:**
-Phase 1 (Journey Map Grid Foundation) - Semantic ID architecture from start. Phase 3 (AI Suggest-Then-Confirm) - AI placement validation against current column structure. Column operations must be atomic - structural change + affected card migration in single transaction.
-
----
-
-### Pitfall 3: Snap-to-Cell Constraint Conflicts with Free-Form Editing
-
-**What goes wrong:**
-User tries to fine-tune card position within Journey Map cell - they want card in top-left corner of cell, not center. But snap-to-cell always forces center alignment. User attempts to resize card to fit more text - resize handle snaps to grid, making cards only resizable in grid-increment chunks (can't be 150px wide, only 100px or 200px). Multi-line text overflows cell boundaries, overlapping adjacent cells. User drags card quickly across grid - drag lags, cursor gets ahead of card position because snap recalculation is expensive. On touch devices, snap-to-cell makes dragging feel "sticky" - finger moves but card jumps discretely, not smoothly. User expects undo after snap-to-cell correction but undo stack doesn't register snap as separate action - undoing card move goes back to original position before drag started, not to pre-snap position.
-
-**Why it happens:**
-Snap-to-cell enforces discrete positioning but users expect continuous control. Grid constraints limit expressiveness - cards become uniform positioned blocks instead of spatially nuanced arrangements. ReactFlow's onNodeDrag fires on every pixel movement during drag - if snap calculation runs on each event (checking cell boundaries, calculating snap position), it becomes performance bottleneck. At 60fps, that's snap calculation every 16ms. Heavy calculations (distance to cell center, collision detection, multi-select group adjustments) cause frame drops. Touch drag events fire at higher frequency than mouse events (120+ events per second on iPad Pro) - snap calculation can't keep up, causing lag. Snap-to-cell is binary decision (snap or don't snap) but users want hybrid - constrained to cells but with sub-cell positioning freedom. Undo/redo systems designed for free-form canvas record final position after drag - snap adjustment happens during drag, not as separate action, so undo has no snap-specific state to restore.
-
-**How to avoid:**
-Implement "loose" snap with sub-cell positioning allowed:
-
-```typescript
-interface CardPosition {
-  cellId: string; // Which cell card belongs to
-  offsetX: number; // Offset within cell (-50 to +50 pixels)
-  offsetY: number; // Allows fine-tuning position
-}
-
-const getCardPixelPosition = (card: CardPosition) => {
-  const cellCenter = cellToPixel(getCellCoords(card.cellId));
-  return {
-    x: cellCenter.x + card.offsetX,
-    y: cellCenter.y + card.offsetY
-  };
-};
-```
-
-Use snap threshold with dead zone - only snap if close to cell boundary:
-
-```typescript
-const SNAP_THRESHOLD = 20; // pixels
-
-const handleNodeDrag = (node: Node) => {
-  const currentCell = pixelToCell(node.position);
-  const cellCenter = cellToPixel(currentCell);
-
-  const distanceToCenter = Math.hypot(
-    node.position.x - cellCenter.x,
-    node.position.y - cellCenter.y
-  );
-
-  if (distanceToCenter < SNAP_THRESHOLD) {
-    // Snap to center
-    return cellCenter;
-  } else {
-    // Allow free positioning within cell
-    return node.position;
-  }
-};
-```
-
-Debounce snap calculations during drag to improve performance:
-
-```typescript
-const useDebouncedSnap = () => {
-  const [position, setPosition] = useState<Position>();
-  const debouncedSnap = useMemo(
-    () => debounce((pos: Position) => {
-      const snapped = snapToCell(pos);
-      setPosition(snapped);
-    }, 50), // Only snap every 50ms, not every frame
-    []
-  );
-
-  return debouncedSnap;
-};
-```
-
-Implement visual snap indicators instead of forced snapping:
-
-```typescript
-// Show ghost outline of where card will snap
-const [snapPreview, setSnapPreview] = useState<CellPosition | null>(null);
-
-const handleNodeDrag = (node: Node) => {
-  const targetCell = pixelToCell(node.position);
-  setSnapPreview(targetCell); // Show visual indicator
-  // Don't force position - let user decide to release in cell or not
-};
-
-const handleNodeDragEnd = (node: Node) => {
-  if (snapPreview) {
-    // Snap on drag end, not during drag
-    const snappedPosition = cellToPixel(snapPreview);
-    updateNode(node.id, snappedPosition);
-  }
-  setSnapPreview(null);
-};
-```
-
-Use cell-based constraints for placement, pixel-based for adjustments:
-
-```typescript
-// Initial AI placement: snap to cell
-const placeCard = (rowId: string, colId: string) => {
-  const cellCenter = getCellCenter(rowId, colId);
-  addCard({ position: cellCenter, cellId: `${rowId}-${colId}` });
-};
-
-// User adjustment: allow pixel-level tweaking
-const adjustCard = (cardId: string, deltaX: number, deltaY: number) => {
-  updateCard(cardId, (card) => ({
-    ...card,
-    position: {
-      x: card.position.x + deltaX,
-      y: card.position.y + deltaY
-    }
-  }));
-  // No snap enforcement - user has control
-};
-```
-
-Implement smart resize that respects content, not just grid:
-
-```typescript
-const handleCardResize = (cardId: string, newWidth: number) => {
-  // Allow any width, but warn if exceeding cell boundaries
-  const card = getCard(cardId);
-  const cellWidth = CELL_WIDTH;
-
-  if (newWidth > cellWidth * 0.9) {
-    showWarning("Card content may overlap adjacent cells");
-  }
-
-  updateCard(cardId, { width: newWidth }); // No forced snap
-};
-```
-
-**Warning signs:**
-- Users complaining about inability to fine-tune positions
-- Dragging feels laggy or "sticky" especially on touch devices
-- Cards snapping when user doesn't want them to
-- Frame rate drops during multi-card drag operations
-- Text overflow breaking grid visual alignment
-- Undo/redo not respecting user's intended positions
-
-**Phase to address:**
-Phase 1 (Journey Map Grid Foundation) - Snap behavior architecture with performance considerations. Phase 4 (User Refinement) - Gather user feedback on snap behavior, tune threshold and debouncing based on real usage patterns. Balance between structured grid and user control is subjective - requires iteration.
-
----
-
-### Pitfall 4: Output Panel → Canvas Migration State Inconsistency
-
-**What goes wrong:**
-Steps 2 & 4 currently show structured output in right panel (stakeholder list, empathy themes). Retrofit adds canvas rendering of same data. Now two representations of same data exist - output panel AND canvas. User edits stakeholder name in output panel form - canvas doesn't update. User drags stakeholder post-it on canvas - output panel still shows old position. Delete stakeholder from canvas - it reappears on canvas reload because database still has structured output record. AI generates new stakeholder in output format (JSON) - doesn't appear on canvas because canvas expects different data structure. Canvas uses cellPosition, output uses flat array index - no mapping layer. Undo/redo becomes ambiguous - does it undo canvas action OR output panel edit? They're the same data but different operations.
-
-**Why it happens:**
-Two UI representations of single data entity without clear ownership creates split-brain problem. Output panel designed for v1.0 schema: `stakeholders: [{ id, name, power, interest }]`. Canvas designed for v1.1 schema: `canvasItems: [{ id, x, y, content }]`. Retrofit attempts to bridge them but requires bidirectional sync. Changes in output panel must propagate to canvas (name edit updates post-it text). Changes in canvas must propagate to output panel (drag updates stakeholder in list). Sync is non-trivial when schemas differ - canvas has position data output doesn't need, output has form fields canvas doesn't render. React state updates are asynchronous - updating output panel triggers re-render that updates canvas, but during render, canvas state is stale for one frame, causing flicker. Database persistence exacerbates issue - if output panel saves to `stepArtifacts.stakeholders` and canvas saves to `stepArtifacts.canvasState`, they can diverge (one save succeeds, other fails).
-
-**How to avoid:**
-Establish single source of truth in database, treat both UIs as projections:
-
-```typescript
-// Database schema: Unified model
-interface StakeholderEntity {
-  id: string;
-  name: string;
-  power: number;
-  interest: number;
-  // Canvas-specific fields (nullable for backward compat)
-  canvasPosition?: {
-    x: number;
-    y: number;
-    cellId?: string; // For grid steps
-  };
-  createdAt: number;
-  updatedAt: number;
-}
-```
-
-Use Zustand store as runtime single source of truth:
-
-```typescript
-interface WorkshopStore {
-  stakeholders: StakeholderEntity[]; // Single array
-
-  // UI projections derive from this
-  getOutputPanelData: () => StakeholderOutputFormat;
-  getCanvasNodes: () => ReactFlowNode[];
-
-  // Mutations update single source
-  updateStakeholder: (id: string, updates: Partial<StakeholderEntity>) => void;
-  deleteStakeholder: (id: string) => void;
-}
-```
-
-Derive UI representations from single source:
-
-```typescript
-// Output panel projection
-const OutputPanel = () => {
-  const stakeholders = useWorkshopStore(state => state.stakeholders);
-
-  return (
-    <div>
-      {stakeholders.map(s => (
-        <StakeholderForm
-          key={s.id}
-          stakeholder={s}
-          onChange={(updates) => updateStakeholder(s.id, updates)}
-        />
-      ))}
-    </div>
-  );
-};
-
-// Canvas projection
-const StakeholderCanvas = () => {
-  const nodes = useWorkshopStore(state => state.getCanvasNodes());
-
-  return (
-    <ReactFlow
-      nodes={nodes}
-      onNodeDrag={(_, node) => {
-        updateStakeholder(node.id, {
-          canvasPosition: { x: node.position.x, y: node.position.y }
-        });
-      }}
-    />
-  );
-};
-```
-
-Implement migration strategy for existing workshops:
-
-```typescript
-const migrateStep2ToCanvasSchema = async (workshopId: string) => {
-  const workshop = await db.query.workshops.findFirst({
-    where: eq(workshops.id, workshopId)
-  });
-
-  const artifacts = workshop.stepArtifacts as any;
-
-  if (artifacts.stakeholders && !artifacts.stakeholders[0]?.canvasPosition) {
-    // Old format: Add default canvas positions
-    const migrated = artifacts.stakeholders.map((s, idx) => ({
-      ...s,
-      canvasPosition: {
-        x: 100 + (idx % 3) * 200, // Spread in grid
-        y: 100 + Math.floor(idx / 3) * 150
-      }
-    }));
-
-    await db.update(workshops)
-      .set({
-        stepArtifacts: { ...artifacts, stakeholders: migrated }
-      })
-      .where(eq(workshops.id, workshopId));
-  }
-};
-```
-
-Handle partial state during migration with feature flags:
-
-```typescript
-const useCanvasEnabled = (stepId: number) => {
-  const workshop = useWorkshopStore(state => state.workshop);
-
-  // Only enable canvas if data has been migrated
-  const stakeholders = workshop.stepArtifacts?.stakeholders || [];
-  const hasCanvasData = stakeholders.every(s => s.canvasPosition);
-
-  return stepId === 2 && hasCanvasData;
-};
-
-// UI renders appropriate view
-const Step2 = () => {
-  const canvasEnabled = useCanvasEnabled(2);
-
-  if (canvasEnabled) {
-    return <SplitView output={<OutputPanel />} canvas={<StakeholderCanvas />} />;
-  } else {
-    return <OutputPanelOnly />; // Fallback for unmigrated workshops
-  }
-};
-```
-
-Unified undo/redo that works across both UIs:
-
-```typescript
-interface HistoryEntry {
-  type: 'stakeholder-update' | 'stakeholder-add' | 'stakeholder-delete';
-  entityId: string;
-  before: StakeholderEntity;
-  after: StakeholderEntity;
-  // Source doesn't matter - operation is same
-  source: 'output-panel' | 'canvas';
-}
-
-const undo = (entry: HistoryEntry) => {
-  // Restore entity in store - both UIs react
-  updateStakeholder(entry.entityId, entry.before);
-};
-```
-
-**Warning signs:**
-- Output panel and canvas showing different data
-- Edits in one view not reflected in other
-- Database saving conflicting versions of same data
-- Undo/redo working in one view but not the other
-- Migration errors when loading old workshops
-- Users confused about which view is "real"
-
-**Phase to address:**
-Phase 2 (Steps 2 & 4 Retrofit) - Schema unification and migration strategy MUST be designed before implementing canvas rendering. Single source of truth architecture is foundational, cannot be retrofitted after building dual representations. Phase includes migration script for production workshops + feature flag rollout.
-
----
-
-### Pitfall 5: AI Placement Suggestions Becoming Stale During User Editing
-
-**What goes wrong:**
-User asks AI "Map the customer journey for buying a car". AI analyzes (2-3 seconds), streams response suggesting 5 stages: Awareness, Research, Test Drive, Purchase, Ownership. While AI is streaming, user preemptively adds "Financing" column to Journey Map grid. AI placement completes, suggests cards like "Compare insurance" in "Research" stage (col: 1). But user's grid now has "Financing" inserted at col: 1, shifting "Research" to col: 2. Card appears in wrong column. Or worse: AI suggests 8 cards across 4 stages, starts streaming. User sees first 2 suggestions, immediately starts dragging them to different cells. AI's subsequent suggestions reference grid state from request time (before user's drags), creating visual chaos with cards overlapping or in illogical positions. User deletes "Test Drive" stage during AI response - AI still suggests cards for that stage, placement fails with errors.
-
-**Why it happens:**
-AI placement is suggest-then-confirm but suggestion phase takes 2-5 seconds (LLM generation + streaming). During that window, user can modify canvas structure (add/remove/reorder columns, drag existing cards). AI's suggested placements become stale - they reference grid snapshot from request time, not current state. React's concurrent rendering (React 19) allows user interactions during async AI streaming without blocking UI. Grid mutations (add column) complete instantly while AI stream is in-flight. By the time AI placement arrives, grid structure has changed. AI context includes current grid structure in system prompt: "Grid has columns: Awareness, Research, Purchase". But user adds column after request starts, AI doesn't know. Column insertion shifts indices - `col: 1` meant "Research" at request time, means "Financing" at response time. Optimistic updates compound problem - user drags card optimistically during AI stream, AI's response overwrites with original position.
-
-**How to avoid:**
-Implement grid structure versioning with validation:
-
-```typescript
-interface GridSnapshot {
-  version: number;
-  columns: GridColumn[];
-  rows: GridRow[];
-  timestamp: number;
-}
-
-const requestAIPlacement = async (prompt: string) => {
-  // Capture grid structure at request time
-  const gridSnapshot: GridSnapshot = {
-    version: currentGridVersion,
-    columns: [...columns],
-    rows: [...rows],
-    timestamp: Date.now()
-  };
-
-  const suggestions = await aiClient.suggestPlacements(prompt, gridSnapshot);
-
-  // Validate suggestions against CURRENT grid
-  const validatedSuggestions = validatePlacements(suggestions, getCurrentGrid());
-
-  return validatedSuggestions;
-};
-```
-
-Validate AI placement suggestions against current grid state:
-
-```typescript
-const validatePlacements = (
-  suggestions: AISuggestion[],
-  currentGrid: GridSnapshot
-): ValidatedSuggestion[] => {
-  return suggestions.map(suggestion => {
-    // Check if referenced column still exists
-    const columnExists = currentGrid.columns.some(
-      c => c.id === suggestion.colId
-    );
-
-    if (!columnExists) {
-      // Fallback: Find column by label match
-      const matchByLabel = currentGrid.columns.find(
-        c => c.label.toLowerCase() === suggestion.colLabel.toLowerCase()
-      );
-
-      if (matchByLabel) {
-        return { ...suggestion, colId: matchByLabel.id, _fallback: true };
-      } else {
-        // Column deleted - place in first column with warning
-        return {
-          ...suggestion,
-          colId: currentGrid.columns[0].id,
-          _warning: `"${suggestion.colLabel}" stage not found, placed in first stage`
-        };
-      }
-    }
-
-    return suggestion;
-  });
-};
-```
-
-Lock grid structure during AI streaming to prevent mutations:
-
-```typescript
-const [isAIPlacing, setIsAIPlacing] = useState(false);
-
-const requestAIPlacement = async (prompt: string) => {
-  setIsAIPlacing(true);
-  try {
-    const suggestions = await aiClient.suggestPlacements(prompt);
-    return suggestions;
-  } finally {
-    setIsAIPlacing(false);
-  }
-};
-
-// Disable column add/remove during AI stream
-<Button
-  onClick={addColumn}
-  disabled={isAIPlacing}
-  title={isAIPlacing ? "Wait for AI to finish placing cards" : "Add stage"}
+const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false);
+
+// ReactFlow component
+<ReactFlow
+  panOnDrag={!isDrawingModalOpen} // Disable pan during drawing
+  zoomOnScroll={!isDrawingModalOpen}
+  zoomOnPinch={!isDrawingModalOpen}
+  selectionKeyCode={isDrawingModalOpen ? null : "Shift"}
+  deleteKeyCode={isDrawingModalOpen ? null : ["Backspace", "Delete"]}
+  // Disable all interactions when modal open
 >
-  Add Stage
-</Button>
 ```
 
-Use semantic column references in AI suggestions, not indices:
+Use proper event capture and stopPropagation in drawing modal:
 
 ```typescript
-// Bad: AI suggests with column index
-{
-  card: "Compare insurance",
-  row: 0,
-  col: 1 // Fragile - breaks if columns reorder
-}
+const DrawingModal = ({ onClose, onSave }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-// Good: AI suggests with column label
-{
-  card: "Compare insurance",
-  rowLabel: "Thinking",
-  colLabel: "Research" // Resilient to reordering
-}
-```
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-Implement progressive validation during streaming:
+    const handlePointerDown = (e: PointerEvent) => {
+      e.stopPropagation(); // Prevent ReactFlow from seeing event
+      e.preventDefault(); // Prevent default browser behavior
+      startDrawing(e);
+    };
 
-```typescript
-const handleAIStream = async (stream: ReadableStream) => {
-  const reader = stream.getReader();
+    // Use capture phase to intercept before React synthetic events
+    canvas.addEventListener('pointerdown', handlePointerDown, { capture: true });
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const suggestion = parseStreamChunk(value);
-
-    // Validate each suggestion as it arrives
-    const validated = validatePlacements([suggestion], getCurrentGrid());
-
-    if (validated[0]._warning) {
-      // Show warning to user in real-time
-      showToast(`AI suggestion adjusted: ${validated[0]._warning}`);
-    }
-
-    // Apply validated suggestion
-    addCard(validated[0]);
-  }
-};
-```
-
-Snapshot-based conflict resolution for concurrent edits:
-
-```typescript
-interface PlacementConflict {
-  cardId: string;
-  aiSuggestion: CardPosition;
-  userEdit: CardPosition;
-  timestamp: number;
-}
-
-const resolveConflict = (conflict: PlacementConflict): CardPosition => {
-  // Last write wins - user edit during AI stream takes precedence
-  if (conflict.userEdit.timestamp > conflict.aiSuggestion.timestamp) {
-    return conflict.userEdit;
-  }
-  // Or show merge UI: "AI suggested different position. Keep yours or use AI's?"
-  return conflict.aiSuggestion;
-};
-```
-
-Defer AI placement until user explicitly confirms:
-
-```typescript
-// AI generates suggestions but doesn't auto-place
-const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
-
-const handleAIResponse = (suggestions: AISuggestion[]) => {
-  setAiSuggestions(suggestions);
-  // Show preview UI: "AI suggests 8 cards. Review and place?"
-};
-
-const confirmAIPlacement = () => {
-  const validated = validatePlacements(aiSuggestions, getCurrentGrid());
-  validated.forEach(s => addCard(s));
-  setAiSuggestions([]);
-};
-
-// User has opportunity to adjust grid BEFORE placement
-```
-
-**Warning signs:**
-- AI placing cards in wrong columns/stages
-- Card placement errors when user modified grid during AI response
-- Visual chaos with overlapping cards after AI suggestions
-- Users reporting "AI doesn't understand my grid structure"
-- Grid modifications during AI stream causing placement failures
-- Warnings about non-existent columns/stages in AI suggestions
-
-**Phase to address:**
-Phase 3 (AI Suggest-Then-Confirm) - Grid versioning and validation logic must be built into AI placement system from start. Phase 4 (Conflict Resolution) - Handle edge cases with user-facing merge UI. Grid locking during AI stream is optional (reduces flexibility) vs validation (maintains flexibility but requires conflict handling).
-
----
-
-### Pitfall 6: Swimlane Row Height Rigidity Breaking Content Adaptability
-
-**What goes wrong:**
-Journey Map has fixed row heights (120px per swimlane: Thinking, Feeling, Doing, Pain Points, Opportunities). User adds card with long text in "Pain Points" row - text overflows, truncated with ellipsis or overlaps row below. User tries to resize row to fit content - rows are fixed height, can't adjust. Add 5 cards to "Thinking" row - they crowd horizontally, become illegible. Cards in same cell overlap because cell can only hold 1-2 cards before running out of space. Mobile viewport makes 120px rows too tall - 5 rows consume entire screen, no vertical scrolling shows stages (columns). User wants to collapse empty rows to save space - row structure is fixed, can't hide. Different content types (short phrases vs paragraphs) don't fit uniform row heights well.
-
-**Why it happens:**
-Swimlane diagrams traditionally use fixed row heights for visual consistency and alignment. In static diagrams (PowerPoint, Miro templates), fixed rows work because content is pre-sized. In dynamic canvas with user-generated content, fixed rows become constraint. Text length varies - "Happy" vs "Frustrated by lack of transparency and unclear communication from sales team" need different vertical space. ReactFlow nodes have intrinsic sizing based on content, but swimlane rows impose extrinsic constraint. CSS overflow: hidden truncates, overflow: visible causes overlap, neither ideal. Multiple cards in same cell require stacking (vertical layout within cell) but fixed cell height limits stack capacity. Mobile portrait orientation has limited vertical space - 5 rows × 120px = 600px, plus headers = 700px, exceeds typical 667px iPhone viewport. Horizontal scrolling (for stages) combined with vertical constraint (fixed rows) creates awkward UX - user can scroll horizontally to see more stages but can't adjust vertical space per row.
-
-**How to avoid:**
-Implement flexible row heights with min/max constraints:
-
-```typescript
-interface GridRow {
-  id: string;
-  label: string;
-  minHeight: number; // 80px minimum
-  maxHeight: number; // 300px maximum
-  currentHeight: number; // Calculated from content or user-set
-}
-
-const calculateRowHeight = (rowId: string, cards: Card[]): number => {
-  const cardsInRow = cards.filter(c => c.rowId === rowId);
-
-  if (cardsInRow.length === 0) {
-    return ROW_MIN_HEIGHT; // Collapse empty rows
-  }
-
-  // Calculate required height based on cards in row
-  const contentHeight = Math.max(
-    ...cardsInRow.map(card => card.contentHeight + CARD_PADDING)
-  );
-
-  return clamp(contentHeight, ROW_MIN_HEIGHT, ROW_MAX_HEIGHT);
-};
-```
-
-Use responsive row sizing for mobile:
-
-```typescript
-const useResponsiveRowHeight = () => {
-  const isMobile = useMediaQuery('(max-width: 768px)');
-
-  return {
-    rowMinHeight: isMobile ? 60 : 80,
-    rowMaxHeight: isMobile ? 200 : 300,
-    rowDefaultHeight: isMobile ? 80 : 120
-  };
-};
-```
-
-Implement cell stacking when multiple cards in same cell:
-
-```typescript
-const getCellCardLayout = (cellId: string, cards: Card[]): CardLayout[] => {
-  const cardsInCell = cards.filter(c =>
-    c.cellId === cellId
-  );
-
-  if (cardsInCell.length <= 1) {
-    // Single card: center in cell
-    return [{ cardId: cardsInCell[0]?.id, x: 0, y: 0 }];
-  } else {
-    // Multiple cards: stack vertically
-    return cardsInCell.map((card, idx) => ({
-      cardId: card.id,
-      x: 0,
-      y: idx * (CARD_HEIGHT + CARD_GAP), // Stack with gap
-      zIndex: idx
-    }));
-  }
-};
-```
-
-Allow manual row height adjustment:
-
-```typescript
-const RowResizeHandle = ({ rowId }: { rowId: string }) => {
-  const handleResize = (deltaY: number) => {
-    updateRowHeight(rowId, (current) =>
-      clamp(current + deltaY, ROW_MIN_HEIGHT, ROW_MAX_HEIGHT)
-    );
-  };
+    return () => {
+      canvas.removeEventListener('pointerdown', handlePointerDown, { capture: true });
+    };
+  }, []);
 
   return (
     <div
-      className="row-resize-handle"
-      onMouseDown={(e) => {
-        const startY = e.clientY;
-        const handleMouseMove = (e: MouseEvent) => {
-          handleResize(e.clientY - startY);
-        };
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', () => {
-          document.removeEventListener('mousemove', handleMouseMove);
-        }, { once: true });
-      }}
-    />
-  );
-};
-```
-
-Implement row collapse for empty rows:
-
-```typescript
-const getVisibleRows = (rows: GridRow[], cards: Card[]): GridRow[] => {
-  return rows.filter(row => {
-    const hasCards = cards.some(c => c.rowId === row.id);
-    const isExpanded = row.collapsed === false;
-
-    return hasCards || isExpanded;
-  });
-};
-```
-
-Use content-aware card sizing:
-
-```typescript
-const CardNode = ({ data }: { data: CardData }) => {
-  const [contentHeight, setContentHeight] = useState(0);
-  const textRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (textRef.current) {
-      const height = textRef.current.scrollHeight;
-      setContentHeight(height);
-      updateCard(data.id, { contentHeight: height });
-    }
-  }, [data.text]);
-
-  return (
-    <div style={{ minHeight: contentHeight }}>
-      <div ref={textRef}>{data.text}</div>
+      className="fixed inset-0 z-[100]" // Higher than ReactFlow's z-50
+      onClick={(e) => e.stopPropagation()} // Block click events from reaching ReactFlow
+    >
+      <canvas ref={canvasRef} />
     </div>
   );
 };
 ```
 
-**Warning signs:**
-- Text truncated with ellipsis in cards
-- Cards overlapping vertically within same cell
-- Multiple cards in cell becoming illegible
-- Mobile users complaining about inability to see full grid
-- Empty rows taking up unnecessary space
-- Users asking for row resize functionality
-
-**Phase to address:**
-Phase 1 (Journey Map Grid Foundation) - Decide between fixed vs flexible row architecture upfront. Phase 5 (Content Refinement) - Add manual resize handles and auto-calculation based on user feedback. Starting with fixed rows is simpler but creates UX debt that compounds as content variety increases.
-
----
-
-### Pitfall 7: Cross-Step Canvas State Contamination
-
-**What goes wrong:**
-User completes Step 2 Stakeholder Mapping with quadrant canvas. Moves to Step 6 Journey Map with grid canvas. Returns to Step 2 - stakeholder post-its now have cellPosition properties they shouldn't have. Grid snapping behavior from Step 6 bleeds into Step 2 free-form canvas. Zustand store accumulates canvas state from all steps - loading Step 2 canvas also loads Step 6 grid columns, causing memory bloat. Undo/redo across step navigation breaks - undoing Step 6 action while on Step 2 canvas causes errors. Canvas performance degrades as user progresses through steps because store never clears old step data. AI context includes canvas state from wrong step - Step 6 AI receives Step 2 stakeholder positions, confusing placement logic.
-
-**Why it happens:**
-Single Zustand store holding all workshop state creates namespace collisions between steps. Canvas state for different steps has different schemas: Step 2 uses quadrants (free-form x,y), Step 4 uses quadrants (free-form x,y), Step 6 uses grid (cellId, rowId, colId). Storing all in flat structure causes schema conflicts. React components may not properly scope selectors - a canvas component designed for Step 2 accidentally reads Step 6 grid data from store. Navigation between steps doesn't clear previous step's canvas state from memory - user visits 5 steps, store accumulates 5 sets of canvas nodes. Undo/redo history is global - actions from Step 2 remain in history when user navigates to Step 6, causing confusion ("undo what?"). AI system reads canvas state from store without step filtering - if multiple steps have canvas data, AI might receive merged state from all steps.
-
-**How to avoid:**
-Use step-scoped state structure in Zustand:
+Implement separate undo/redo stacks with context awareness:
 
 ```typescript
-interface WorkshopStore {
-  stepData: {
-    [stepId: number]: {
-      canvasItems: CanvasItem[];
-      gridStructure?: GridStructure; // Only for grid steps
-      quadrants?: QuadrantConfig; // Only for quadrant steps
-      undoHistory: HistoryEntry[];
-      redoHistory: HistoryEntry[];
-    }
-  };
-  currentStepId: number;
-}
+const useContextAwareUndo = () => {
+  const isDrawingModalOpen = useDrawingStore(s => s.isOpen);
+  const undoDrawing = useDrawingStore(s => s.undo);
+  const undoCanvas = useCanvasStore(s => s.temporal.getState().undo);
 
-const useCurrentStepCanvas = () => {
-  return useWorkshopStore(
-    state => state.stepData[state.currentStepId]?.canvasItems || []
+  const handleUndo = useCallback(() => {
+    if (isDrawingModalOpen) {
+      undoDrawing(); // Drawing tool undo
+    } else {
+      undoCanvas(); // ReactFlow canvas undo
+    }
+  }, [isDrawingModalOpen, undoDrawing, undoCanvas]);
+
+  useHotkeys('mod+z', handleUndo, { enableOnFormTags: false });
+};
+```
+
+Use portal rendering for modal to avoid z-index conflicts:
+
+```typescript
+import { createPortal } from 'react-dom';
+
+const DrawingModal = ({ children }) => {
+  return createPortal(
+    <div className="fixed inset-0 z-[100]">
+      {children}
+    </div>,
+    document.body // Render at body level, outside ReactFlow container
   );
 };
 ```
 
-Implement step navigation cleanup:
+Clean up global event listeners properly:
 
 ```typescript
-const navigateToStep = (targetStepId: number) => {
-  // Save current step state to database
-  await saveStepCanvas(currentStepId);
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      closeModal();
+    }
+  };
 
-  // Clear current step from store (keep in DB, remove from memory)
-  clearStepFromStore(currentStepId);
+  // Only add listener when modal is open
+  if (isOpen) {
+    document.addEventListener('keydown', handleKeyDown);
+  }
 
-  // Load target step canvas
-  const targetStepData = await loadStepCanvas(targetStepId);
-  setStepData(targetStepId, targetStepData);
-
-  setCurrentStepId(targetStepId);
-};
+  return () => {
+    document.removeEventListener('keydown', handleKeyDown);
+  };
+}, [isOpen]); // Re-run when isOpen changes
 ```
 
-Use step-specific undo/redo stacks:
+**Warning signs:**
+- Drawing gestures triggering ReactFlow pan/zoom simultaneously
+- Keyboard shortcuts working on both canvases at once
+- Modal controls blocked by ReactFlow overlay elements
+- Undo/redo applying to wrong canvas
+- Touch events causing unexpected behaviors on mobile
+- Event handlers not cleaning up, leading to duplicate actions
+
+**Phase to address:**
+Phase 1 (EzyDraw Modal Foundation) - Event isolation architecture must be established upfront. Test event handling conflicts before implementing drawing features. Document z-index scale and keyboard shortcut registry to prevent conflicts.
+
+---
+
+### Pitfall 2: Canvas Context Memory Leaks on Modal Unmount
+
+**What goes wrong:**
+User opens EzyDraw modal, draws sketch, closes modal. Repeat 10 times - browser memory usage climbs from 150MB to 400MB. Chrome DevTools heap snapshot shows 10 detached CanvasRenderingContext2D objects still in memory. On iOS Safari, after 15 modal opens/closes, app crashes with "Too many active WebGL contexts" error (if using WebGL-accelerated canvas). Drawing modal uses requestAnimationFrame for smooth strokes - after unmount, animation loop continues running, consuming CPU. Canvas blob URLs created for export (`canvas.toDataURL()`) never revoked, leaking memory. Event listeners attached to canvas for drawing remain active after modal unmounts. Offscreen canvas workers (if used for performance) never terminate.
+
+**Why it happens:**
+HTML5 Canvas 2D context holds significant memory (ImageData buffer for pixel data). Creating context with `canvas.getContext('2d')` allocates memory, but there's no explicit dispose() method. React component unmount doesn't automatically release canvas context - browser garbage collection only reclaims memory if no references remain. Common memory leak: storing canvas ref or context in Zustand store beyond component lifecycle - store keeps reference alive even after unmount. requestAnimationFrame callbacks capture closure over canvas context - animation loop holds reference, preventing GC. Blob URLs created with `canvas.toBlob()` or `canvas.toDataURL()` allocate memory outside JS heap - must manually call `URL.revokeObjectURL()` to free. Event listeners on canvas element or document (for drawing) hold closure over canvas/context, preventing GC. WebGL contexts (if using WebGL-accelerated canvas libraries) have hard browser limits (typically 16 contexts per tab) - exceeding limit loses oldest context, corrupting rendering. Offscreen canvas workers (Web Workers) run in separate threads - postMessage holds references, and workers must be explicitly terminated. React StrictMode in development causes double mounting - canvas initialized twice but only cleaned up once, leaking on every mount. Third-party drawing libraries (Fabric.js, Konva) maintain internal state - calling library init without calling dispose() on unmount leaks their internal structures.
+
+**How to avoid:**
+Properly cleanup canvas context on unmount:
 
 ```typescript
-const useStepUndo = (stepId: number) => {
-  const undo = useWorkshopStore(state => {
-    const stepHistory = state.stepData[stepId]?.undoHistory || [];
-    if (stepHistory.length === 0) return;
-
-    const entry = stepHistory[stepHistory.length - 1];
-    applyHistoryEntry(entry, 'undo');
-
-    // Move from undo to redo stack
-    moveHistoryEntry(stepId, 'undo-to-redo');
-  });
-
-  return undo;
-};
-```
-
-Filter AI context to current step only:
-
-```typescript
-const getAICanvasContext = (stepId: number): string => {
-  const stepData = store.getState().stepData[stepId];
-
-  if (!stepData) return '';
-
-  // Only include current step's canvas state
-  return JSON.stringify({
-    canvasItems: stepData.canvasItems,
-    gridStructure: stepData.gridStructure, // May be undefined for non-grid steps
-    // Exclude other steps' data
-  });
-};
-```
-
-Implement lazy loading for step canvas:
-
-```typescript
-const StepCanvas = ({ stepId }: { stepId: number }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const canvasItems = useCurrentStepCanvas();
+const DrawingCanvas = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const contextRef = useRef<CanvasRenderingContext2D | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // Only load canvas data when component mounts
-    loadStepCanvas(stepId).then(() => setIsLoaded(true));
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Initialize context
+    contextRef.current = canvas.getContext('2d');
 
     return () => {
-      // Cleanup: save and unload when unmounting
-      saveStepCanvas(stepId);
-      unloadStepCanvas(stepId);
+      // Cancel animation loop
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+
+      // Clear canvas pixels (helps GC)
+      if (contextRef.current) {
+        contextRef.current.clearRect(0, 0, canvas.width, canvas.height);
+        contextRef.current = null;
+      }
+
+      // Nullify canvas size to release ImageData buffer
+      canvas.width = 0;
+      canvas.height = 0;
     };
-  }, [stepId]);
-
-  if (!isLoaded) return <CanvasSkeleton />;
-
-  return <ReactFlow nodes={canvasItems} />;
+  }, []);
 };
 ```
 
-Use TypeScript discriminated unions for step-specific schemas:
+Revoke blob URLs after use:
 
 ```typescript
-type StepCanvasData =
-  | { stepType: 'quadrant'; items: QuadrantCanvasItem[] }
-  | { stepType: 'grid'; items: GridCanvasItem[]; structure: GridStructure }
-  | { stepType: 'freeform'; items: FreeformCanvasItem[] };
+const exportDrawing = async () => {
+  const canvas = canvasRef.current;
+  if (!canvas) return;
 
-const getCanvasData = (stepId: number): StepCanvasData => {
-  switch (stepId) {
-    case 2:
-    case 4:
-      return { stepType: 'quadrant', items: [...] };
-    case 6:
-      return { stepType: 'grid', items: [...], structure: {...} };
-    default:
-      return { stepType: 'freeform', items: [...] };
+  const blob = await new Promise<Blob>((resolve) => {
+    canvas.toBlob((blob) => resolve(blob!), 'image/png');
+  });
+
+  const url = URL.createObjectURL(blob);
+
+  // Use URL for download or storage
+  await uploadDrawing(url);
+
+  // CRITICAL: Revoke URL to free memory
+  URL.revokeObjectURL(url);
+};
+```
+
+Clean up event listeners with AbortController:
+
+```typescript
+useEffect(() => {
+  const canvas = canvasRef.current;
+  if (!canvas) return;
+
+  const abortController = new AbortController();
+  const { signal } = abortController;
+
+  canvas.addEventListener('pointerdown', handlePointerDown, { signal });
+  canvas.addEventListener('pointermove', handlePointerMove, { signal });
+  canvas.addEventListener('pointerup', handlePointerUp, { signal });
+
+  return () => {
+    // Single cleanup - removes all listeners
+    abortController.abort();
+  };
+}, []);
+```
+
+Terminate offscreen canvas workers:
+
+```typescript
+const useOffscreenCanvas = () => {
+  const workerRef = useRef<Worker | null>(null);
+
+  useEffect(() => {
+    // Create worker
+    workerRef.current = new Worker('/drawing-worker.js');
+
+    return () => {
+      // Terminate worker on unmount
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    };
+  }, []);
+};
+```
+
+Avoid storing canvas refs in global state:
+
+```typescript
+// BAD: Storing canvas ref in Zustand leaks memory
+interface DrawingStore {
+  canvasRef: HTMLCanvasElement | null; // DON'T DO THIS
+}
+
+// GOOD: Only store serializable data
+interface DrawingStore {
+  strokes: Stroke[]; // Serializable drawing data
+  // Canvas refs stay in component scope
+}
+```
+
+Dispose third-party library instances:
+
+```typescript
+const useFabricCanvas = () => {
+  const fabricRef = useRef<fabric.Canvas | null>(null);
+
+  useEffect(() => {
+    const canvas = new fabric.Canvas('canvas');
+    fabricRef.current = canvas;
+
+    return () => {
+      // CRITICAL: Dispose fabric instance
+      canvas.dispose();
+      fabricRef.current = null;
+    };
+  }, []);
+};
+```
+
+**Warning signs:**
+- Memory usage climbing on repeated modal open/close cycles
+- Browser console warning "Too many active WebGL contexts"
+- DevTools heap snapshot showing detached canvas elements
+- Animation loops consuming CPU after modal closed
+- iOS Safari crashes after multiple drawing sessions
+- React DevTools showing component unmounted but memory not released
+
+**Phase to address:**
+Phase 1 (EzyDraw Modal Foundation) - Implement proper cleanup architecture from start. Test memory leaks with Chrome DevTools Memory Profiler after 20+ modal open/close cycles. Monitor iOS Safari WebGL context limits.
+
+---
+
+### Pitfall 3: Drawing Data Storage Bloat in JSONB
+
+**What goes wrong:**
+User draws simple sketch in modal, closes it. Database stepArtifacts JSONB column grows from 15KB to 500KB for one sketch. After adding 3 sketches across 3 ideation cards, single workshop row exceeds 1MB. Postgres query performance degrades - loading workshop takes 3 seconds instead of 300ms. Auto-save with 2-second debounce triggers TOAST compression on every save, causing 200ms save latency spikes. User on mobile 4G network experiences 5-second delays loading canvas because 1.2MB JSONB downloads slowly. Neon Postgres serverless database bills spike - 1MB writes consume 10x more write units than 100KB. Vercel function timeout errors (10-second limit) when saving workshop with 8 high-resolution drawings. Database backup size explodes - 100 workshops with drawings = 500MB backup instead of 5MB.
+
+**Why it happens:**
+Base64 encoding image data adds 33% overhead - 500KB PNG becomes 666KB base64 string. Storing base64 in JSONB adds JSON escaping overhead (quotes, backslashes) - another 10-15% bloat. Canvas.toDataURL() defaults to PNG at full resolution - 800x600 canvas with simple line drawing still produces 200KB+ PNG because every transparent pixel is encoded. Drawing strokes stored as raw coordinate arrays - smooth freehand stroke captures 500+ points at 60fps, each point has {x, y, pressure, timestamp} = 32 bytes, 500 points = 16KB for one stroke. Multiple layers in drawing (background, strokes, annotations) each stored separately - redundant pixel data. Postgres JSONB has 2KB TOAST threshold - data over 2KB gets compressed with PGLZ algorithm (25-35% CPU overhead) and moved to out-of-line storage. PGLZ compression degrades significantly under parallel queries - with 8 concurrent users, compressed JSONB read performance worse than uncompressed. Neon serverless Postgres charges for data transfer - large JSONB writes/reads consume more billable units. Vercel Edge Functions have 1MB request/response limit - workshops exceeding this fail to save/load. Auto-save triggering on every stroke means saving 500KB every 2 seconds = 250KB/sec write rate, overwhelming database connection pool.
+
+**How to avoid:**
+Store vector stroke data instead of rasterized images:
+
+```typescript
+interface Stroke {
+  id: string;
+  points: { x: number; y: number; pressure?: number }[];
+  color: string;
+  width: number;
+  tool: 'pen' | 'marker' | 'eraser';
+}
+
+interface DrawingData {
+  version: 1;
+  strokes: Stroke[];
+  canvasSize: { width: number; height: number };
+  // Much smaller than base64 image
+}
+
+// Serialize to JSONB - typically 5-20KB instead of 500KB
+const serializeDrawing = (strokes: Stroke[]): DrawingData => ({
+  version: 1,
+  strokes: strokes.map(s => ({
+    id: s.id,
+    points: s.points,
+    color: s.color,
+    width: s.width,
+    tool: s.tool
+  })),
+  canvasSize: { width: 800, height: 600 }
+});
+```
+
+Simplify stroke paths with Douglas-Peucker algorithm:
+
+```typescript
+// Reduce 500 points to 50-100 points with negligible visual difference
+const simplifyStroke = (points: Point[], tolerance: number = 2): Point[] => {
+  // Douglas-Peucker line simplification
+  if (points.length <= 2) return points;
+
+  let dmax = 0;
+  let index = 0;
+  const end = points.length - 1;
+
+  for (let i = 1; i < end; i++) {
+    const d = perpendicularDistance(points[i], points[0], points[end]);
+    if (d > dmax) {
+      index = i;
+      dmax = d;
+    }
+  }
+
+  if (dmax > tolerance) {
+    const left = simplifyStroke(points.slice(0, index + 1), tolerance);
+    const right = simplifyStroke(points.slice(index), tolerance);
+    return [...left.slice(0, -1), ...right];
+  } else {
+    return [points[0], points[end]];
+  }
+};
+
+// Usage: 500 points → 80 points, 16KB → 2.5KB
+const optimizedStrokes = strokes.map(s => ({
+  ...s,
+  points: simplifyStroke(s.points, 2)
+}));
+```
+
+Store rasterized images in object storage, not JSONB:
+
+```typescript
+// For final rendered drawings, use S3/R2/Vercel Blob
+const saveDrawing = async (canvas: HTMLCanvasElement, workshopId: string) => {
+  // Compress to WebP (50% smaller than PNG)
+  const blob = await new Promise<Blob>((resolve) => {
+    canvas.toBlob(
+      (blob) => resolve(blob!),
+      'image/webp',
+      0.85 // 85% quality - good balance
+    );
+  });
+
+  // Upload to Vercel Blob Storage
+  const { url } = await upload(`drawings/${workshopId}/${nanoid()}.webp`, blob, {
+    access: 'public',
+    addRandomSuffix: false,
+  });
+
+  // Store only URL in JSONB (50 bytes instead of 500KB)
+  return { drawingUrl: url };
+};
+```
+
+Compress vector data before storing in JSONB:
+
+```typescript
+import pako from 'pako';
+
+const compressDrawingData = (data: DrawingData): string => {
+  const json = JSON.stringify(data);
+  const compressed = pako.deflate(json);
+  // Base64 encode compressed binary
+  return btoa(String.fromCharCode(...compressed));
+};
+
+const decompressDrawingData = (compressed: string): DrawingData => {
+  const binary = atob(compressed);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const decompressed = pako.inflate(bytes, { to: 'string' });
+  return JSON.parse(decompressed);
+};
+
+// Typical compression: 20KB JSON → 5KB compressed
+```
+
+Implement drawing data pagination for large canvases:
+
+```typescript
+// Split drawing into chunks to stay under JSONB limits
+interface DrawingChunk {
+  chunkId: string;
+  strokes: Stroke[];
+  bounds: { x: number; y: number; width: number; height: number };
+}
+
+const chunkDrawing = (strokes: Stroke[], chunkSize: number = 50): DrawingChunk[] => {
+  const chunks: DrawingChunk[] = [];
+
+  for (let i = 0; i < strokes.length; i += chunkSize) {
+    const chunkStrokes = strokes.slice(i, i + chunkSize);
+    chunks.push({
+      chunkId: nanoid(),
+      strokes: chunkStrokes,
+      bounds: calculateBounds(chunkStrokes)
+    });
+  }
+
+  return chunks;
+};
+
+// Store metadata in stepArtifacts, chunks in separate table
+```
+
+Use LZ4 compression instead of PGLZ for JSONB columns:
+
+```typescript
+// Set column storage to use LZ4 (better parallel query performance)
+// In migration:
+ALTER TABLE workshops
+ALTER COLUMN step_artifacts
+SET STORAGE EXTERNAL; -- Disable PGLZ compression
+
+-- Let application handle compression with LZ4
+```
+
+**Warning signs:**
+- Database queries slowing down as users add drawings
+- Postgres TOAST compression causing save latency spikes
+- Mobile users reporting slow canvas loading
+- Database backup sizes growing rapidly
+- Neon Postgres billing increasing unexpectedly
+- Vercel function timeouts on workshops with multiple drawings
+- Auto-save debounce triggering but save still taking >500ms
+
+**Phase to address:**
+Phase 1 (EzyDraw Modal Foundation) - Design storage architecture upfront: vector vs raster, JSONB vs object storage. Implement stroke simplification and compression before beta testing. Phase 2 (Mind Maps & Sketches) - Monitor database performance with real user data, optimize if queries exceed 500ms.
+
+---
+
+### Pitfall 4: Touch/Stylus Input Divergence from Mouse Input
+
+**What goes wrong:**
+Drawing tool works perfectly with mouse on desktop - smooth strokes, accurate positioning. User switches to iPad with Apple Pencil - strokes lag 500ms behind stylus, pressure sensitivity doesn't register. On Android tablet with S Pen, drawing triggers page scroll instead of creating strokes. Palm rejection fails - user's palm resting on iPad screen creates unwanted marks while drawing. Two-finger pinch to zoom ReactFlow canvas conflicts with drawing tool's two-finger undo gesture. Drawing with finger on iPhone works but strokes appear 40px offset from touch point. Eraser tool (inverted Apple Pencil) detected as regular pen, doesn't erase. Rotation on Surface Pro with dial creates strokes instead of rotating canvas.
+
+**Why it happens:**
+Touch, mouse, and stylus events have different APIs: `touchstart`/`touchmove`/`touchend` vs `mousedown`/`mousemove`/`mouseup` vs `pointerdown`/`pointermove`/`pointerup`. Pointer Events API unifies them but requires handling pointerType ('mouse' | 'pen' | 'touch') differently. Touch events provide touches array (multi-touch) while mouse provides single cursor - drawing code written for mouse breaks with multi-touch. Pressure sensitivity only available with Pointer Events API (`pointerEvent.pressure` 0-1 range) - touch events have no pressure, mouse events always pressure=0.5. Apple Pencil tilt/azimuth available via `pointerEvent.tiltX`, `tiltY`, `azimuthAngle` - requires checking for undefined. Palm rejection requires checking touch contact area (`pointerEvent.width`, `height`) - large contact = palm, small = finger/stylus. iOS Safari has complex preventDefault() rules: calling preventDefault() on touchstart prevents scrolling but also disables form inputs; calling on touchmove too late causes scroll to have started. Android Chrome requires `touch-action: none` CSS to prevent scroll, but this disables browser zoom which breaks accessibility. Coordinate offsets differ: mouse uses `clientX/clientY`, touch uses `touches[0].clientX`, pointer uses both - getBoundingClientRect() calculations must account for page scroll offsets. Stylus eraser (inverted Apple Pencil) triggers `pointerType: 'pen'` with `button: 5` (eraser button) - must check button codes. Surface Pro dial emits wheel events, not pointer events - separate handling required.
+
+**How to avoid:**
+Use Pointer Events API exclusively with type branching:
+
+```typescript
+const DrawingCanvas = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDrawingRef = useRef(false);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    // Ignore palm touches (large contact area)
+    if (e.width > 30 || e.height > 30) {
+      return; // Likely palm
+    }
+
+    // Check for stylus eraser
+    if (e.pointerType === 'pen' && e.button === 5) {
+      startErasing(e);
+      return;
+    }
+
+    // Normal drawing
+    isDrawingRef.current = true;
+    startDrawing(e);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawingRef.current) return;
+
+    // Get pressure (0-1 range, defaults to 0.5 for mouse)
+    const pressure = e.pressure || 0.5;
+
+    // Get tilt for pen (undefined for mouse/touch)
+    const tiltX = e.tiltX || 0;
+    const tiltY = e.tiltY || 0;
+
+    addStrokePoint({
+      x: e.clientX - canvas.offsetLeft,
+      y: e.clientY - canvas.offsetTop,
+      pressure,
+      tiltX,
+      tiltY,
+      timestamp: e.timeStamp
+    });
+  };
+
+  return (
+    <canvas
+      ref={canvasRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={() => isDrawingRef.current = false}
+      // Prevent touch scrolling
+      style={{ touchAction: 'none' }}
+    />
+  );
+};
+```
+
+Implement proper palm rejection:
+
+```typescript
+const isPalmTouch = (e: PointerEvent): boolean => {
+  // Large contact area = palm
+  const area = (e.width || 0) * (e.height || 0);
+  if (area > 900) return true; // 30x30 threshold
+
+  // Multiple simultaneous touches = hand resting
+  const activeTouches = getActivePointers().length;
+  if (activeTouches > 2) return true;
+
+  return false;
+};
+
+const handlePointerDown = (e: PointerEvent) => {
+  if (isPalmTouch(e)) {
+    e.preventDefault(); // Don't draw
+    return;
+  }
+
+  startDrawing(e);
+};
+```
+
+Handle iOS Safari preventDefault correctly:
+
+```typescript
+useEffect(() => {
+  const canvas = canvasRef.current;
+  if (!canvas) return;
+
+  const handleTouchStart = (e: TouchEvent) => {
+    // Must preventDefault on touchstart to prevent scroll
+    // But only for canvas, not for form inputs
+    if (e.target === canvas) {
+      e.preventDefault();
+    }
+  };
+
+  // Use passive: false to allow preventDefault
+  canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+  return () => {
+    canvas.removeEventListener('touchstart', handleTouchStart);
+  };
+}, []);
+```
+
+Accurate coordinate calculation with scroll offsets:
+
+```typescript
+const getCanvasCoordinates = (
+  e: PointerEvent,
+  canvas: HTMLCanvasElement
+): { x: number; y: number } => {
+  const rect = canvas.getBoundingClientRect();
+
+  return {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  };
+};
+
+// Account for CSS transforms (zoom, rotate)
+const getTransformedCoordinates = (
+  e: PointerEvent,
+  canvas: HTMLCanvasElement
+): { x: number; y: number } => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
+  };
+};
+```
+
+Separate gesture handling for ReactFlow vs drawing:
+
+```typescript
+const DrawingModal = () => {
+  const [gestureMode, setGestureMode] = useState<'draw' | 'pan'>('draw');
+
+  const handlePointerDown = (e: PointerEvent) => {
+    // Two-finger = pan gesture (for ReactFlow below modal)
+    if (e.pointerType === 'touch' && getActiveTouches().length === 2) {
+      setGestureMode('pan');
+      return;
+    }
+
+    // Single pointer = draw
+    setGestureMode('draw');
+    startDrawing(e);
+  };
+
+  // Block ReactFlow pan when in draw mode
+  useEffect(() => {
+    if (gestureMode === 'draw') {
+      disableReactFlowPan();
+    } else {
+      enableReactFlowPan();
+    }
+  }, [gestureMode]);
+};
+```
+
+**Warning signs:**
+- Drawing works on desktop but not on tablets
+- Pressure sensitivity not registering with Apple Pencil
+- Palm touches creating unwanted marks
+- Touch scrolling interfering with drawing
+- Coordinate offsets on mobile devices
+- Eraser mode not working with inverted stylus
+- Two-finger gestures triggering unintended actions
+
+**Phase to address:**
+Phase 1 (EzyDraw Modal Foundation) - Implement Pointer Events API from start, not mouse events. Test on real devices: iPad Pro with Apple Pencil, Android tablet with S Pen, Surface Pro. Phase 2 (Polish & Accessibility) - Tune palm rejection thresholds based on user feedback.
+
+---
+
+### Pitfall 5: Drawing Library Bundle Size Explosion
+
+**What goes wrong:**
+Add Fabric.js for drawing features - bundle size jumps from 110KB gzipped to 280KB (+155%). Initial page load on 3G mobile increases from 1.2s to 3.5s. Add Excalidraw components - another 200KB gzipped, now 480KB total. Lighthouse performance score drops from 95 to 68. Time to Interactive (TTI) increases from 2.1s to 5.8s on mobile. Users on slow connections see white screen for 6+ seconds. Vercel Edge Function cold starts increase from 200ms to 800ms due to larger bundle. Code splitting doesn't help - drawing modal is critical path (users access it within first 10 seconds), so lazy loading saves nothing. Tree shaking fails - importing one Fabric.js method pulls entire library. Dependencies cascade - Fabric.js depends on `jsdom-global` (50KB), `canvas` (native module, 15MB in node_modules). Three different canvas libraries overlap: react-konva for mind maps (80KB), Excalidraw for drawing (200KB), Fabric.js for advanced features (120KB) - 400KB total with shared dependencies.
+
+**Why it happens:**
+Drawing libraries are feature-rich, not modular. Fabric.js provides 100+ shape types, filters, serialization - but you only need free-draw brush and eraser, rest is dead code. Excalidraw is full whiteboard app (200KB minified) - importing `@excalidraw/excalidraw` component pulls entire app even if you only want drawing canvas. React-Konva wraps Konva.js (150KB) which provides comprehensive 2D canvas framework - overkill for simple mind map nodes. Libraries bundle multiple rendering backends: Canvas 2D + WebGL + SVG renderers, even if you only use one. Dependencies aren't tree-shakeable - CommonJS modules, not ES modules, prevent webpack from removing unused code. Polyfills bloat - drawing libraries polyfill browser APIs for Node.js compatibility (jsdom), adding 50-100KB. Perfect-Freehand (pressure-sensitive strokes) is small (15KB) but requires additional physics simulation library for realistic curves. Multiple color manipulation libraries - Fabric.js uses `color`, Excalidraw uses `tinycolor2`, react-konva uses `chroma-js` - all do same thing (hex to RGB), 60KB overlap. Font rendering engines for text tools - each library bundles font metrics, glyph rendering, ligatures - 40-80KB each.
+
+**How to avoid:**
+Build custom lightweight drawing canvas instead of using Excalidraw:
+
+```typescript
+// Instead of: import { Excalidraw } from '@excalidraw/excalidraw'; // +200KB
+
+// Custom canvas with perfect-freehand (15KB)
+import { getStroke } from 'perfect-freehand';
+
+const DrawingCanvas = () => {
+  const [strokes, setStrokes] = useState<Stroke[]>([]);
+
+  const renderStroke = (points: Point[], color: string) => {
+    const stroke = getStroke(points, {
+      size: 4,
+      thinning: 0.5,
+      smoothing: 0.5,
+      streamline: 0.5
+    });
+
+    return (
+      <path
+        d={getSvgPathFromStroke(stroke)}
+        fill={color}
+      />
+    );
+  };
+
+  return (
+    <svg>
+      {strokes.map(s => renderStroke(s.points, s.color))}
+    </svg>
+  );
+};
+
+// Bundle impact: 15KB instead of 200KB
+```
+
+Use SVG for vector graphics instead of Konva for mind maps:
+
+```typescript
+// Instead of: import { Stage, Layer, Circle, Line } from 'react-konva'; // +80KB
+
+// Native SVG with D3 force layout
+const MindMapCanvas = () => {
+  return (
+    <svg width={800} height={600}>
+      {nodes.map(node => (
+        <g key={node.id}>
+          <circle cx={node.x} cy={node.y} r={20} fill={node.color} />
+          <text x={node.x} y={node.y}>{node.label}</text>
+        </g>
+      ))}
+      {links.map(link => (
+        <line
+          key={link.id}
+          x1={link.source.x}
+          y1={link.source.y}
+          x2={link.target.x}
+          y2={link.target.y}
+          stroke="#999"
+        />
+      ))}
+    </svg>
+  );
+};
+
+// Bundle impact: 0KB (native SVG) + 25KB (d3-force) = 25KB instead of 80KB
+```
+
+Import only needed D3 modules, not entire library:
+
+```typescript
+// BAD: import * as d3 from 'd3'; // +280KB
+
+// GOOD: Import specific modules
+import { forceSimulation, forceLink, forceManyBody, forceCenter } from 'd3-force';
+import { zoom } from 'd3-zoom';
+import { drag } from 'd3-drag';
+
+// Bundle impact: 35KB instead of 280KB
+```
+
+Lazy load drawing modal to defer bundle:
+
+```typescript
+// Only load drawing library when modal opens
+const DrawingModal = lazy(() => import('./drawing-modal'));
+
+const IdeationCanvas = () => {
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  return (
+    <>
+      <button onClick={() => setIsDrawing(true)}>Draw</button>
+
+      {isDrawing && (
+        <Suspense fallback={<div>Loading drawing tools...</div>}>
+          <DrawingModal onClose={() => setIsDrawing(false)} />
+        </Suspense>
+      )}
+    </>
+  );
+};
+
+// Drawing library only downloaded when user clicks "Draw"
+```
+
+Use lightweight alternatives for specific features:
+
+```typescript
+// Color manipulation: use 1KB tinycolor2 instead of 15KB color
+import tinycolor from 'tinycolor2';
+
+// Stroke simplification: use 3KB simplify-js instead of Fabric.js
+import simplify from 'simplify-js';
+
+// Path generation: use 15KB perfect-freehand instead of Fabric.js brush
+import { getStroke } from 'perfect-freehand';
+
+// Total: 19KB instead of 120KB Fabric.js
+```
+
+Measure bundle impact with webpack-bundle-analyzer:
+
+```bash
+npm install --save-dev webpack-bundle-analyzer
+
+# In next.config.ts
+import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
+
+export default {
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.plugins.push(
+        new BundleAnalyzerPlugin({
+          analyzerMode: 'static',
+          reportFilename: './bundle-report.html',
+          openAnalyzer: false
+        })
+      );
+    }
+    return config;
+  }
+};
+
+# Run: npm run build
+# Open: .next/bundle-report.html
+```
+
+**Warning signs:**
+- Bundle size exceeding 150KB gzipped (current 110KB baseline)
+- Lighthouse performance score dropping below 85
+- Time to Interactive >3 seconds on 3G mobile
+- Multiple canvas/drawing libraries in bundle
+- Overlap in dependencies (color libraries, math utilities)
+- Lazy loading not working due to critical path
+
+**Phase to address:**
+Phase 1 (EzyDraw Modal Foundation) - Choose lightweight libraries upfront, measure bundle impact before committing. Target: <30KB addition for drawing features. Phase 2 (Mind Maps) - Use native SVG + minimal D3, avoid react-konva. Continuous monitoring with bundle-analyzer on every PR.
+
+---
+
+### Pitfall 6: Mind Map Layout Algorithm Performance Degradation
+
+**What goes wrong:**
+Mind map with 5 nodes renders smoothly - layout calculates in 16ms, 60fps. Add 20 nodes - layout calculation takes 180ms, causing visible lag when dragging nodes. Add 50 nodes - force simulation takes 2+ seconds to stabilize, UI frozen. User drags central node - all connected nodes re-calculate positions, triggering 50 React re-renders, UI stutters. Zoom/pan while simulation running causes jarring position jumps - nodes "snap" to new positions mid-animation. On mobile, 30-node mind map causes browser to throttle requestAnimationFrame, reducing to 30fps. D3 force simulation runs indefinitely - alpha never reaches stopping threshold, consuming CPU even when layout stable. Multiple mind maps on canvas (nested sub-maps) each run separate simulations, compounding performance issues.
+
+**Why it happens:**
+Force-directed layout algorithms are O(n²) complexity - every node checks distance to every other node. D3's forceManyBody (repulsion) calculates n×n forces every tick. At 60fps, that's 3600 calculations/sec for 10 nodes, 90,000 calculations/sec for 50 nodes. Force simulation runs iteratively - d3.forceSimulation() uses requestAnimationFrame loop, recalculating positions every frame until alpha (energy) decays below threshold (default 0.001). Default alpha decay is 0.0228 per tick - with complex graphs, can take 300+ ticks (5 seconds at 60fps) to stabilize. React's reconciliation overhead - each simulation tick updates node positions, triggering React re-render. With 50 nodes, that's 50 component updates per frame. D3 force simulation mutates node objects directly - `node.x = newX` - but React expects immutable updates. Bridging mutable D3 with immutable React causes unnecessary re-renders. Collision detection (to prevent node overlap) adds O(n²) calculations on top of force calculations. Link force (edges between nodes) adds O(edges) calculations - dense graphs (many connections) compound performance issues. Running simulation while user interacts (drag, zoom) causes coordinate space conflicts - simulation uses one coordinate system, user interaction uses another, positions desync. Mobile devices have slower CPUs (2-4x slower than desktop) and aggressive battery optimizations - requestAnimationFrame throttled to 30fps, doubling simulation time.
+
+**How to avoid:**
+Pre-calculate layout server-side for static mind maps:
+
+```typescript
+// Server-side (Node.js API route)
+import * as d3 from 'd3-force';
+
+export async function POST(req: Request) {
+  const { nodes, links } = await req.json();
+
+  const simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id))
+    .force('charge', d3.forceManyBody().strength(-100))
+    .force('center', d3.forceCenter(400, 300));
+
+  // Run simulation to completion (not in browser)
+  for (let i = 0; i < 300; ++i) simulation.tick();
+
+  return Response.json({ nodes, links });
+}
+
+// Client-side: Use pre-calculated positions
+const MindMap = ({ initialNodes, initialLinks }) => {
+  const [nodes] = useState(initialNodes); // Positions already calculated
+  return <svg>{/* Render static layout */}</svg>;
+};
+```
+
+Use progressive enhancement with animation budget:
+
+```typescript
+const useMindMapLayout = (nodes: Node[], links: Link[]) => {
+  const [positions, setPositions] = useState<Map<string, Position>>(new Map());
+  const simulationRef = useRef<d3.Simulation<Node, Link> | null>(null);
+
+  useEffect(() => {
+    const simulation = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links))
+      .force('charge', d3.forceManyBody())
+      .alphaDecay(0.05) // Faster convergence
+      .stop();
+
+    // Run simulation in chunks to avoid blocking
+    const ticksPerFrame = 5; // Tune based on performance
+    let ticksRemaining = 100; // Budget: max 100 ticks
+
+    const animate = () => {
+      for (let i = 0; i < ticksPerFrame; i++) {
+        simulation.tick();
+        ticksRemaining--;
+      }
+
+      // Update React state (batched)
+      setPositions(new Map(nodes.map(n => [n.id, { x: n.x!, y: n.y! }])));
+
+      if (simulation.alpha() > 0.01 && ticksRemaining > 0) {
+        requestAnimationFrame(animate);
+      } else {
+        simulation.stop(); // Force stop after budget
+      }
+    };
+
+    animate();
+
+    return () => simulation.stop();
+  }, [nodes, links]);
+
+  return positions;
+};
+```
+
+Optimize React rendering with memoization:
+
+```typescript
+const MindMapNode = memo(({ node }: { node: Node }) => {
+  return (
+    <g transform={`translate(${node.x}, ${node.y})`}>
+      <circle r={20} fill={node.color} />
+      <text>{node.label}</text>
+    </g>
+  );
+}, (prev, next) => {
+  // Only re-render if position changed significantly
+  return (
+    Math.abs(prev.node.x - next.node.x) < 1 &&
+    Math.abs(prev.node.y - next.node.y) < 1 &&
+    prev.node.label === next.node.label
+  );
+});
+
+const MindMap = ({ nodes }) => (
+  <svg>
+    {nodes.map(node => (
+      <MindMapNode key={node.id} node={node} />
+    ))}
+  </svg>
+);
+```
+
+Use WebGL for large mind maps instead of SVG:
+
+```typescript
+// For 50+ nodes, switch to WebGL-accelerated rendering
+import { Canvas, useFrame } from '@react-three/fiber';
+
+const MindMapWebGL = ({ nodes, links }) => {
+  return (
+    <Canvas>
+      {nodes.map(node => (
+        <mesh key={node.id} position={[node.x, node.y, 0]}>
+          <circleGeometry args={[20, 32]} />
+          <meshBasicMaterial color={node.color} />
+        </mesh>
+      ))}
+    </Canvas>
+  );
+};
+
+// WebGL handles 1000+ nodes smoothly vs SVG's ~50 node limit
+```
+
+Pause simulation during user interaction:
+
+```typescript
+const [isDragging, setIsDragging] = useState(false);
+
+useEffect(() => {
+  if (isDragging) {
+    simulation.stop(); // Pause layout while dragging
+  } else {
+    simulation.restart(); // Resume after drag
+  }
+}, [isDragging, simulation]);
+```
+
+**Warning signs:**
+- Visible lag when dragging mind map nodes
+- UI freezing when adding nodes to mind map
+- Force simulation taking >1 second to stabilize
+- Frame rate dropping below 30fps
+- CPU usage spiking during mind map interactions
+- Mobile devices becoming unresponsive with 20+ nodes
+
+**Phase to address:**
+Phase 2 (Mind Map Layout) - Implement performance budget (max 100ms for layout) and progressive enhancement from start. Test with 50-node mind map before shipping. Phase 3 (Performance Optimization) - Switch to WebGL if SVG proves insufficient.
+
+---
+
+### Pitfall 7: Undo/Redo State Conflicts Between Drawing Tool and Canvas
+
+**What goes wrong:**
+User adds 3 post-its to ReactFlow canvas, then opens drawing modal and creates sketch. Presses Cmd+Z expecting to undo last drawing stroke - instead, last post-it deletion is undone. User draws 5 strokes in modal, closes modal, adds stroke to canvas. Presses Cmd+Shift+Z to redo - drawing modal stroke redone instead of canvas action. Undo history becomes corrupted - alternating between canvas actions and drawing actions makes undo sequence nonsensical. User makes 10 drawing strokes, then 10 canvas actions. Tries to undo all canvas actions - but drawing actions interleaved, so undo jumps between canvases unpredictably. Temporal store's undo stack has 50 entries from both canvas and drawing - hitting undo limit (50 actions) causes old drawing actions to be forgotten while canvas actions remain. Drawing modal implements its own undo stack (separate from Zustand temporal), creating two undo systems with same keyboard shortcut. User expects "undo everything since opening modal" but undo operates per-action across both systems.
+
+**Why it happens:**
+Single global undo/redo stack shared between ReactFlow canvas (Zustand temporal) and drawing modal (custom undo system). Both systems register Cmd+Z keyboard handlers - last registered handler wins, but both execute, causing double undo. Zustand temporal middleware tracks ALL state changes - when drawing modal updates its state (add stroke), temporal middleware adds entry to global undo stack. Drawing strokes and canvas actions semantically different (stroke has {points, color} vs canvas action has {nodeId, position}), but temporal store treats them identically. Undo history is flat array - no concept of "context" (modal open vs canvas focused). When modal opens, canvas actions shouldn't be undoable, but temporal store still exposes them. Modal closes, drawing undo stack cleared (component unmounts), but those actions remain in temporal store - desync. Keyboard shortcuts don't check focus context - Cmd+Z fires regardless of whether modal is open or canvas is focused. React's event bubbling causes keyboard event to reach both modal and canvas components - both execute undo handlers. Multiple useHotkeys() registrations don't coordinate - each component independently registers Cmd+Z, creating race condition for which fires first.
+
+**How to avoid:**
+Implement context-aware undo system with separate stacks:
+
+```typescript
+interface UndoContext {
+  type: 'canvas' | 'drawing';
+  stackId: string;
+}
+
+interface UndoEntry {
+  context: UndoContext;
+  action: any;
+  timestamp: number;
+}
+
+const useContextualUndo = () => {
+  const [activeContext, setActiveContext] = useState<UndoContext | null>(null);
+  const [undoStacks, setUndoStacks] = useState<Map<string, UndoEntry[]>>(new Map());
+
+  const undo = useCallback(() => {
+    if (!activeContext) return;
+
+    const stack = undoStacks.get(activeContext.stackId);
+    if (!stack || stack.length === 0) return;
+
+    const entry = stack[stack.length - 1];
+    // Execute undo for active context only
+    executeUndo(entry);
+
+    // Update stack
+    setUndoStacks(prev => {
+      const newStack = stack.slice(0, -1);
+      return new Map(prev).set(activeContext.stackId, newStack);
+    });
+  }, [activeContext, undoStacks]);
+
+  return { undo, setActiveContext };
+};
+```
+
+Disable canvas undo when modal is open:
+
+```typescript
+const App = () => {
+  const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false);
+  const canvasUndo = useCanvasStore(s => s.temporal.getState().undo);
+
+  // Only register canvas undo when modal closed
+  useHotkeys('mod+z', () => {
+    if (!isDrawingModalOpen) {
+      canvasUndo();
+    }
+  }, [isDrawingModalOpen], { enableOnFormTags: false });
+
+  return (
+    <>
+      <ReactFlowCanvas />
+      {isDrawingModalOpen && (
+        <DrawingModal
+          onClose={() => setIsDrawingModalOpen(false)}
+        />
+      )}
+    </>
+  );
+};
+```
+
+Drawing modal manages its own isolated undo stack:
+
+```typescript
+const DrawingModal = ({ onClose }) => {
+  const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [undoStack, setUndoStack] = useState<Stroke[][]>([]);
+  const [redoStack, setRedoStack] = useState<Stroke[][]>([]);
+
+  const undo = () => {
+    if (undoStack.length === 0) return;
+
+    const prevState = undoStack[undoStack.length - 1];
+    setRedoStack([...redoStack, strokes]);
+    setStrokes(prevState);
+    setUndoStack(undoStack.slice(0, -1));
+  };
+
+  // Modal's undo only active while modal open
+  useHotkeys('mod+z', undo, [], {
+    enableOnFormTags: false,
+    preventDefault: true // Don't let event bubble to canvas
+  });
+
+  return <div>{/* Drawing UI */}</div>;
+};
+```
+
+Batch modal actions into single canvas undo entry:
+
+```typescript
+const saveDrawing = async (strokes: Stroke[]) => {
+  // Convert drawing to canvas node
+  const drawingNode = await renderStrokesToImage(strokes);
+
+  // Add to canvas as single undo-able action
+  addPostIt({
+    text: '',
+    type: 'drawing',
+    drawingData: strokes,
+    imageUrl: drawingNode.imageUrl,
+    position: { x: 100, y: 100 }
+  });
+
+  // Now undo in canvas removes entire drawing, not individual strokes
+};
+```
+
+Use hierarchical undo with sub-actions:
+
+```typescript
+interface HierarchicalUndoEntry {
+  id: string;
+  type: 'canvas' | 'modal';
+  action: any;
+  subActions?: HierarchicalUndoEntry[]; // Drawing modal's actions nested
+}
+
+const undo = () => {
+  const entry = undoStack[undoStack.length - 1];
+
+  if (entry.type === 'modal' && entry.subActions) {
+    // Undo entire modal session (all strokes) as one action
+    entry.subActions.forEach(subAction => executeUndo(subAction));
+  } else {
+    executeUndo(entry);
   }
 };
 ```
 
 **Warning signs:**
-- Canvas behavior changing unexpectedly when returning to previous steps
-- Memory usage increasing as user progresses through steps
-- Undo/redo referencing actions from different steps
-- Canvas nodes from one step appearing in another step
-- AI making placement suggestions for wrong step's canvas structure
-- Database queries returning mixed canvas data from multiple steps
+- Undo applying to wrong context (modal vs canvas)
+- Keyboard shortcuts triggering multiple undo actions
+- Undo history becoming nonsensical with mixed actions
+- Users confused about what undo will undo
+- Undo stack filling up with drawing actions, pushing out canvas actions
+- Modal undo not working when canvas undo is active
 
 **Phase to address:**
-Phase 1 (Journey Map Grid Foundation) - Step-scoped state architecture must be established before adding multiple canvas step types. Phase 2 (Steps 2 & 4 Retrofit) - Ensure existing quadrant canvas and new grid canvas don't contaminate each other. Cannot retrofit step scoping after building monolithic canvas state - requires store restructure and component refactoring.
+Phase 1 (EzyDraw Modal Foundation) - Design isolated undo architecture from start. Document undo scoping in implementation guide. Phase 2 (Integration Testing) - Test undo/redo across all contexts: canvas-only, modal-only, switching between them.
 
 ---
 
@@ -1073,35 +1152,35 @@ Shortcuts that seem reasonable but create long-term problems.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Using array indices for column/row IDs | Simpler code, no ID generation | Column reordering breaks all card positions, undo/redo fails | Never - always use stable semantic IDs |
-| Fixed pixel-based grid cell sizing | Works on your laptop viewport | Breaks on mobile, different screen sizes, zoom levels | Only for desktop-only prototype with fixed viewport |
-| Storing cell positions as array indices `[row, col]` | Easy to serialize | Fragile to structural changes, can't validate existence | Never - use semantic IDs with validation |
-| Implementing snap-to-cell on every drag event | Feels "reactive" | Performance bottleneck, laggy drag, frame drops | Never - debounce or snap on drag end only |
-| Reusing free-form canvas component for grid canvas | Less code duplication | Coordinate system confusion, behavior conflicts | Only if grid is purely visual overlay with no constraints |
-| Migrating output→canvas by adding canvas alongside output | Backward compatible, no breaking changes | Dual source of truth, sync bugs, divergent state | Only for gradual rollout with feature flag, migrate fully ASAP |
-| Locking grid structure during AI placement | Prevents stale reference bugs | Poor UX, user can't adjust while waiting for AI | Acceptable for MVP, remove lock + add validation later |
-| Global undo/redo across all steps | Simpler implementation | Cross-step confusion, memory bloat | Never - scope undo/redo per step |
-| Fixed swimlane row heights | Consistent visual alignment | Content overflow, mobile viewport issues | Only for static demo content, not user-generated |
-| Treating canvas as separate module from output panel | Cleaner separation of concerns | Data duplication, sync complexity | Never - unified data model with dual projections |
+| Storing drawing as base64 in JSONB | Simple, no external storage setup | Database bloat, slow queries, high costs | Only for MVP demo with <5 drawings total |
+| Using Excalidraw full library | Feature-complete whiteboard instantly | 200KB bundle size, performance issues | Never - build custom lightweight canvas |
+| Mouse-only event handlers (no touch/stylus) | Simpler code, works on desktop | Unusable on tablets, no pressure sensitivity | Only for desktop-only internal tool |
+| Single global undo stack | Easier to implement | Undo conflicts between canvas and modal | Never - always scope undo per context |
+| Synchronous D3 force simulation | Smooth animation on small graphs | UI freezes with >30 nodes | Only if mind maps guaranteed <20 nodes |
+| Storing full-resolution drawings | Preserves quality | 500KB+ per drawing, slow loading | Never - compress to WebP 85% quality |
+| No canvas cleanup on unmount | Works in development | Memory leaks in production | Never - always cleanup contexts |
+| Disabling ReactFlow during drawing | Prevents event conflicts | Poor UX, can't pan canvas while drawing | Acceptable for MVP, add gesture isolation later |
+| Using preventDefault() globally on touch | Prevents scroll conflicts | Breaks form inputs, accessibility issues | Never - scope preventDefault to canvas only |
+| Importing entire D3 library | All features available | 280KB bundle increase | Never - import specific modules only |
 
 ---
 
 ## Integration Gotchas
 
-Common mistakes when integrating grid/swimlane to existing WorkshopPilot.ai canvas system.
+Common mistakes when integrating drawing to existing WorkshopPilot.ai ReactFlow canvas.
 
 | Integration Point | Common Mistake | Correct Approach |
 |-------------------|----------------|------------------|
-| ReactFlow Snap Grid | Using built-in `snapGrid={[20, 20]}` for cells | Implement custom snap logic - built-in has multi-select bug #1579 |
-| Zustand State | Adding separate grid state store | Extend existing workshop store with step-scoped canvas data |
-| Coordinate System | Mixing pixel and cell coordinates without translation | Implement bidirectional coordinate conversion layer |
-| Column Management | Using array indices as column identifiers | Use UUIDs or nanoid for stable, semantic column IDs |
-| Output Panel Sync | Maintaining separate state for output and canvas | Single source of truth with derived UI projections |
-| AI Placement | Assuming grid structure unchanged during AI stream | Validate placements against current grid, not request-time snapshot |
-| Step Navigation | Keeping all steps' canvas data in memory | Lazy load on mount, persist on unmount, step-scoped state |
-| Undo/Redo | Global history across all canvas operations | Per-step history stacks with step-scoped actions |
-| Mobile Viewport | Fixed cell sizes in pixels | Responsive cell sizing with min/max constraints, viewport-relative units |
-| Database Schema | Storing grid structure separately from canvas items | Unified schema with grid metadata + positioned items in single document |
+| Event Handling | Both canvases listen to same events | Disable ReactFlow interactions when modal open |
+| Undo/Redo | Single global undo stack | Context-aware undo with separate stacks per canvas |
+| Data Storage | Storing base64 images in JSONB | Store vector data in JSONB, raster images in object storage |
+| Bundle Size | Importing full Excalidraw/Fabric.js | Build custom canvas with perfect-freehand (15KB) |
+| Touch Input | Using mouse events only | Use Pointer Events API with pointerType branching |
+| Mind Map Layout | Running D3 simulation synchronously | Progressive enhancement with animation budget |
+| Memory Management | No canvas cleanup on unmount | Cleanup contexts, revoke blob URLs, cancel animations |
+| Coordinate Systems | Mixing ReactFlow and drawing coordinates | Separate coordinate spaces, transform on integration |
+| Mobile Performance | Desktop-optimized only | Test on real devices, optimize for 3G network |
+| Drawing Data | Storing raw stroke arrays | Simplify strokes with Douglas-Peucker, compress with LZ4 |
 
 ---
 
@@ -1111,14 +1190,14 @@ Patterns that work at small scale but fail as usage grows.
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Snap calculation on every drag event | Smooth with 3 cards, laggy with 20 | Debounce snap calculation (50ms) or snap on drag end only | >15 cards being dragged simultaneously |
-| Recalculating all node positions on column add | Fast with 5 cards, freezes with 50 | Only recalculate affected column's cards, use requestAnimationFrame | >30 cards total, adding/removing columns frequently |
-| Storing full grid structure in every undo history entry | Works during session, bloats DB on save | Store deltas (what changed) not full snapshots | >100 undo operations or >20 column operations |
-| Loading all steps' canvas data on workshop load | Fine with 1-2 canvas steps, slow with 5+ | Lazy load per step, only current step in memory | Workshop with >3 canvas-enabled steps |
-| Re-rendering entire grid on single card drag | Smooth with 10 cards, janky with 40 | Use React.memo on grid cells, Zustand selectors for specific cards | >25 cards in grid |
-| Validating AI placements synchronously in main thread | Fast for 3 suggestions, blocks for 20 | Use Web Worker for validation or async batching | AI suggesting >10 cards at once |
-| Fixed row heights with content overflow | Looks fine with short text, breaks with paragraphs | Implement flexible row heights based on content | First card with >100 chars of text |
-| Global canvas store without step scoping | Works for 1 step, memory leak with 10 | Step-scoped state with lazy load/unload | User visits >5 canvas steps in session |
+| Base64 images in JSONB | Fast saves initially, slow queries later | Use object storage, store only URLs in JSONB | >5 drawings per workshop |
+| D3 force simulation for all mind maps | Smooth with 10 nodes, frozen with 50 | Pre-calculate layout server-side, use animation budget | >30 nodes in mind map |
+| No stroke simplification | Small drawing data initially, bloated later | Apply Douglas-Peucker simplification (tolerance=2) | Strokes with >200 points |
+| Synchronous rendering on pointer move | Smooth drawing initially, laggy with complex scenes | Debounce or use requestAnimationFrame | >100 strokes on canvas |
+| SVG for large mind maps | Works for 20 nodes, slow for 100 | Switch to WebGL-accelerated rendering at 50+ nodes | >50 nodes |
+| Global event listeners without cleanup | No issues in dev, memory leaks in prod | Use AbortController, cleanup in useEffect return | After 10+ modal open/close cycles |
+| Full-resolution canvas export | Fine for 1-2 exports, slow for batch | Reduce resolution for previews, full-res on demand | Exporting >5 drawings at once |
+| No compression for vector data | Small JSONB initially, exceeds TOAST limit later | Compress with pako before storing | Drawings with >100 strokes |
 
 ---
 
@@ -1128,33 +1207,33 @@ Domain-specific security issues beyond general web security.
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Trusting client-sent grid structure without validation | User can inject invalid column IDs, breaking placement logic | Validate grid structure server-side, verify column/row IDs exist in DB |
-| No rate limiting on column add/delete endpoints | Attacker spams column operations, exhausts DB writes | Rate limit per userId: 20 column operations/minute |
-| Allowing unlimited grid complexity | User creates 1000-column grid, DOS other users loading same workshop | Limit max columns (50) and max cards per cell (20) server-side |
-| No validation of card cellId references | User can reference non-existent cells, corrupt canvas state | Validate cellId matches existing grid structure before DB save |
-| Exposing semantic column IDs in predictable format | Attacker can guess column IDs (col-1, col-2), manipulate other workshops | Use UUIDs or nanoid for unpredictable column identifiers |
-| No CSRF protection on grid mutation endpoints | Cross-site request can add/delete columns | Verify Clerk session token in all grid mutation API routes |
-| Allowing arbitrary card positioning in grid | User can position cards outside grid boundaries, corrupt layout | Clamp card positions to valid cell boundaries server-side |
-| No ownership verification for grid operations | User A can modify User B's workshop grid structure | Verify workshop ownership via Clerk userId before allowing mutations |
+| No size limits on drawing data | User uploads 10MB drawing, DOS database | Limit strokes to 500, points per stroke to 1000, max canvas size 2000x2000 |
+| Storing user-generated SVG without sanitization | XSS via malicious SVG paths | Sanitize SVG with DOMPurify before rendering or storage |
+| No rate limiting on drawing saves | Attacker spams save endpoint, exhausts DB writes | Rate limit per userId: 20 drawing saves/minute |
+| Allowing external image URLs in drawings | SSRF attacks, loading malicious content | Only allow data URLs or signed object storage URLs |
+| No validation of canvas dimensions | User creates 10000x10000 canvas, consumes memory | Limit max canvas size server-side: 2000x2000px |
+| Exposing blob URLs publicly | Anyone with URL can access private drawings | Use signed URLs with expiration (1 hour) |
+| No CORS validation on image exports | Cross-origin images taint canvas, export fails | Validate image origins, use crossorigin="anonymous" |
+| Storing drawing data without compression | Leaks information about stroke count, complexity | Always compress before storage to obfuscate structure |
 
 ---
 
 ## UX Pitfalls
 
-Common user experience mistakes in grid/swimlane canvas integration.
+Common user experience mistakes when adding drawing capabilities.
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| No visual feedback during grid snap | User unsure if card will snap or where it will land | Show ghost outline of target cell during drag |
-| AI placing cards without animation | Cards appear instantly, jarring, user misses them | Animate card appearance with fade-in + position transition |
-| Unclear which stage column is which | Labels truncated or not visible during scroll | Sticky header row with stage labels, always visible |
-| No indication when grid is locked during AI | User tries to add column, button doesn't respond, confusion | Show "AI is placing cards..." banner, disable with tooltip explanation |
-| Cards overlapping in same cell with no indication | User doesn't know there are 3 cards stacked in one cell | Show badge count on cell: "3 cards" + expand/collapse affordance |
-| Column delete with no confirmation | User accidentally deletes stage with 10 cards, lost work | Confirmation dialog: "Delete 'Research' stage? 10 cards will move to 'Awareness'" |
-| No undo for AI placement | AI places 8 cards, user wants to undo all at once | "Undo AI placement" button that removes all AI-placed cards in batch |
-| Grid scrolls but user doesn't realize | Journey Map has 8 stages, only 4 visible, user thinks there are only 4 | Show horizontal scroll indicator: "← Swipe to see more stages →" |
-| Row resize handle too small on touch | Desktop users can grab resize handle, mobile users can't | Larger touch target (44px min) with haptic feedback on mobile |
-| No empty state when Journey Map initialized | Blank grid with no guidance, user unsure what to do | Show empty state: "Add stages to map your customer journey" + hint cards |
+| Too many drawing tools overwhelming non-technical users | Cognitive overload, users give up | Progressive disclosure: Start with pen + eraser, hide advanced tools |
+| No visual feedback during drawing save | User unsure if drawing saved, clicks multiple times | Show "Saving drawing..." toast with progress indicator |
+| Drawing modal blocks entire canvas | User can't reference canvas while drawing | Semi-transparent modal or side-panel drawer |
+| No way to edit drawing after saving | User must redraw from scratch for small changes | Store vector data, enable "edit drawing" to reopen modal |
+| Pen tool selected by default on touch devices | Users accidentally draw when trying to pan | Default to pan tool on touch, require explicit tool selection |
+| No indication of pressure sensitivity support | Users expect pressure but device doesn't support it | Show "Pressure sensitivity detected" or "Use stylus for pressure" |
+| Drawing lost if user closes modal accidentally | Frustration, lost work | Auto-save draft in localStorage, restore on reopen |
+| No undo affordance in drawing modal | Users don't know Cmd+Z works | Show undo/redo buttons with keyboard shortcuts in UI |
+| Mind map nodes overlap, illegible text | Users can't read labels | Implement collision detection, auto-adjust positions |
+| Crazy 8s grid doesn't explain time limit | Users confused about purpose | Show timer: "8 ideas in 8 minutes - go!" |
 
 ---
 
@@ -1162,18 +1241,18 @@ Common user experience mistakes in grid/swimlane canvas integration.
 
 Things that appear complete but are missing critical pieces.
 
-- [ ] **Grid Coordinate Translation:** Often missing bidirectional pixel↔cell conversion — verify cards snap to correct cells at all zoom levels (50%, 100%, 250%)
-- [ ] **Semantic Column IDs:** Often missing stable identifiers — verify column add/delete/reorder doesn't break card positions
-- [ ] **Multi-Select Snap:** Often missing group-aware snap logic — verify dragging 3 cards maintains alignment, no scatter
-- [ ] **Output↔Canvas Sync:** Often missing single source of truth — verify editing in output panel updates canvas and vice versa
-- [ ] **AI Placement Validation:** Often missing grid structure validation — verify AI placement works if user modifies grid during AI stream
-- [ ] **Step-Scoped State:** Often missing lazy load/unload — verify navigating between steps doesn't leak memory or cause cross-contamination
-- [ ] **Dynamic Row Heights:** Often missing content-based sizing — verify long text cards don't overflow row boundaries
-- [ ] **Column Operation Undo:** Often missing structural undo — verify undoing column delete restores column AND cards that were in it
-- [ ] **Grid Structure Locking:** Often missing concurrent modification prevention — verify simultaneous user + AI grid changes don't corrupt state
-- [ ] **Mobile Grid Sizing:** Often missing responsive cell dimensions — verify grid usable on 375px mobile viewport, not just desktop
-- [ ] **Cross-Step Schema:** Often missing type safety — verify quadrant canvas (Step 2) and grid canvas (Step 6) don't share incompatible state
-- [ ] **Snap Performance:** Often missing debouncing — verify dragging 20+ cards doesn't drop frames or lag
+- [ ] **Canvas Context Cleanup:** Often missing disposal on unmount — verify memory doesn't leak after 20+ modal open/close cycles (Chrome DevTools heap snapshot)
+- [ ] **Touch Event Handling:** Often missing Pointer Events API — verify drawing works on iPad Pro, Android tablet, Surface Pro with stylus
+- [ ] **Undo/Redo Context:** Often missing scope isolation — verify undo in modal doesn't affect canvas, and vice versa
+- [ ] **Drawing Data Compression:** Often missing stroke simplification — verify 500-point stroke simplifies to <100 points with negligible visual difference
+- [ ] **Bundle Size Monitoring:** Often missing webpack-bundle-analyzer — verify drawing features add <30KB gzipped to bundle
+- [ ] **Object Storage Integration:** Often missing for images — verify drawings stored in Vercel Blob, not base64 in JSONB
+- [ ] **Mind Map Performance:** Often missing animation budget — verify 50-node mind map calculates layout in <100ms
+- [ ] **Event Isolation:** Often missing ReactFlow disabling — verify drawing gestures don't trigger ReactFlow pan/zoom
+- [ ] **Blob URL Cleanup:** Often missing revokeObjectURL — verify blob URLs revoked after drawing export
+- [ ] **Mobile Performance:** Often missing real device testing — verify drawing responsive on iPhone, iPad, Android on 3G network
+- [ ] **Pressure Sensitivity:** Often missing Pointer Events pressure — verify Apple Pencil pressure affects stroke width
+- [ ] **Palm Rejection:** Often missing contact area detection — verify palm resting on iPad doesn't create unwanted marks
 
 ---
 
@@ -1183,16 +1262,16 @@ When pitfalls occur despite prevention, how to recover.
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Grid Coordinate Confusion | MEDIUM | Implement coordinate translation layer, migrate existing workshops to add cellPosition, test at multiple zoom levels (1-2 days) |
-| Dynamic Column Breaks | MEDIUM | Refactor to semantic IDs, write migration script for existing workshops, update all column references (1-2 days) |
-| Snap-to-Cell Conflicts | LOW | Add snap debouncing, implement snap threshold with dead zone, tune based on user feedback (4-6 hours) |
-| Output→Canvas Inconsistency | HIGH | Unify schemas, establish single source of truth, migrate existing workshops, refactor both UIs (3-4 days) |
-| Stale AI Placements | MEDIUM | Add grid versioning, implement validation layer, add fallback logic for missing columns (1 day) |
-| Row Height Rigidity | MEDIUM | Implement flexible row heights, add manual resize handles, migrate existing fixed-height data (1-2 days) |
-| Cross-Step Contamination | HIGH | Restructure Zustand store to step-scoped, implement lazy load/unload, refactor all canvas components (2-3 days) |
-| Multi-Select Snap Bug | MEDIUM | Disable built-in snapGrid, implement custom group-aware snap logic, test extensively (1 day) |
-| Column Delete Data Loss | LOW | Add confirmation dialogs, implement card migration strategy, improve undo for structural changes (4-6 hours) |
-| Mobile Grid Unusable | MEDIUM | Implement responsive cell sizing, adjust row heights for viewport, test on real devices (1-2 days) |
+| Event Handling Conflicts | LOW | Add isDrawingModalOpen flag to disable ReactFlow interactions (2-4 hours) |
+| Canvas Memory Leaks | LOW | Implement cleanup in useEffect return, use AbortController for listeners (4-6 hours) |
+| JSONB Storage Bloat | MEDIUM | Migrate to object storage, implement stroke simplification, backfill existing drawings (1-2 days) |
+| Touch Input Issues | MEDIUM | Refactor to Pointer Events API, add palm rejection, test on real devices (1-2 days) |
+| Bundle Size Explosion | HIGH | Replace Excalidraw with custom canvas, use perfect-freehand, tree-shake D3 (2-3 days) |
+| Mind Map Performance | MEDIUM | Pre-calculate layout server-side, add animation budget, switch to WebGL if needed (1-2 days) |
+| Undo/Redo Conflicts | MEDIUM | Implement context-aware undo with separate stacks, add hierarchical actions (1 day) |
+| Drawing Tool Complexity | LOW | Progressive disclosure, hide advanced tools by default, add onboarding (4-6 hours) |
+| No Edit After Save | MEDIUM | Store vector data alongside rendered image, implement "edit drawing" flow (1 day) |
+| Mobile Drawing Lag | MEDIUM | Optimize pointer event handling, reduce stroke point density, test on real devices (1-2 days) |
 
 ---
 
@@ -1202,69 +1281,98 @@ How roadmap phases should address these pitfalls.
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Grid Coordinate Confusion | Phase 1: Journey Map Grid Foundation | Pixel↔cell conversion works correctly, multi-select snap maintains alignment |
-| Dynamic Column Breaks | Phase 1: Journey Map Grid Foundation | Column add/delete/reorder preserves card positions, undo works correctly |
-| Snap-to-Cell Conflicts | Phase 1: Journey Map Grid Foundation | Drag performance >30fps with 20+ cards, snap feels responsive not laggy |
-| Output→Canvas Inconsistency | Phase 2: Steps 2 & 4 Retrofit | Editing in either view updates both, no sync bugs, migration script tested |
-| Stale AI Placements | Phase 3: AI Suggest-Then-Confirm | AI placement validation passes, grid changes during stream handled gracefully |
-| Row Height Rigidity | Phase 4: Content Refinement | Long text cards fit within rows, mobile viewport doesn't overflow |
-| Cross-Step Contamination | Phase 1: Journey Map Grid Foundation | Step navigation doesn't leak state, memory usage stable across steps |
-| Multi-Select Snap Bug | Phase 1: Journey Map Grid Foundation | Multi-select drag works without scatter, custom snap logic tested |
-| Column Delete Data Loss | Phase 1: Journey Map Grid Foundation | Confirmation dialogs prevent accidents, undo restores deleted columns + cards |
-| Mobile Grid Unusable | Phase 5: Mobile Optimization | Grid usable on 375px viewport, responsive row/cell sizing works |
+| Event Handling Conflicts | Phase 1: EzyDraw Modal | Drawing and ReactFlow interactions isolated, no event conflicts |
+| Canvas Memory Leaks | Phase 1: EzyDraw Modal | Memory stable after 20 modal cycles, no detached contexts |
+| JSONB Storage Bloat | Phase 1: EzyDraw Modal | Drawings <20KB in JSONB, images in object storage |
+| Touch Input Issues | Phase 1: EzyDraw Modal | Drawing works on iPad Pro, Android, Surface Pro |
+| Bundle Size Explosion | Phase 1: EzyDraw Modal | Bundle increase <30KB gzipped, Lighthouse score >85 |
+| Mind Map Performance | Phase 2: Mind Maps | 50-node layout calculates in <100ms, 60fps rendering |
+| Undo/Redo Conflicts | Phase 1: EzyDraw Modal | Undo scoped per context, no cross-context conflicts |
+| Drawing Tool Complexity | Phase 3: UX Polish | Non-technical users complete drawing in <2 minutes |
+| No Edit After Save | Phase 2: Integration | Users can edit saved drawings, vector data preserved |
+| Mobile Drawing Lag | Phase 3: Mobile Optimization | Drawing responsive on 3G network, smooth on iPhone |
 
 ---
 
 ## Sources
 
-**ReactFlow Grid/Snap:**
-- [ReactFlow SnapGrid Documentation](https://reactflow.dev/api-reference/types/snap-grid)
-- [GitHub Issue #1579: MultiSelection-Drag breaks Snap-To-Grid](https://github.com/wbkd/react-flow/issues/1579)
-- [GitHub Issue #2440: Toggle between old snapGrid and new one](https://github.com/wbkd/react-flow/issues/2440)
-- [ReactFlow Helper Lines Example](https://reactflow.dev/examples/interaction/helper-lines)
+**Drawing Libraries & Bundle Size:**
+- [GitHub: konvajs/react-konva](https://github.com/konvajs/react-konva)
+- [Konva Docs: Getting started with React and Canvas via Konva](https://konvajs.org/docs/react/index.html)
+- [LogRocket: Best React chart libraries (2025 update)](https://blog.logrocket.com/best-react-chart-libraries-2025/)
+- [Medium: React Component Libraries in 2026](https://yakhil25.medium.com/react-component-libraries-in-2026-the-definitive-guide-to-choosing-your-stack-fa7ae0368077)
+- [GitHub: excalidraw/excalidraw](https://github.com/excalidraw/excalidraw)
+- [GitHub: vinothpandian/react-sketch-canvas](https://github.com/vinothpandian/react-sketch-canvas)
+- [Top 5 JavaScript Whiteboard & Canvas Libraries](https://byby.dev/js-whiteboard-libs)
 
-**ReactFlow Layout & Structure:**
-- [ReactFlow Auto Layout](https://reactflow.dev/examples/layout/auto-layout)
-- [ReactFlow Dynamic Layouting](https://reactflow.dev/examples/layout/dynamic-layouting)
-- [ReactFlow Sub Flows](https://reactflow.dev/learn/layouting/sub-flows)
-- [ReactFlow Node Extent Parent Boundaries](https://reactflow.dev/api-reference/types/node)
+**ReactFlow Integration:**
+- [GitHub Discussion #1492: How do I implement drawing on the react-flow canvas?](https://github.com/xyflow/xyflow/discussions/1492)
+- [GitHub Issue #4003: Excalidraw's canvas not usable with ReactFlow component](https://github.com/xyflow/xyflow/issues/4003)
+- [GitHub Discussion #4997: Drawing using mouse in reactflow canvas](https://github.com/xyflow/xyflow/discussions/4997)
+- [ReactFlow: Undo and Redo Example](https://reactflow.dev/examples/interaction/undo-redo)
 
-**ReactFlow State Management:**
-- [ReactFlow Using State Management Library](https://reactflow.dev/learn/advanced-use/state-management)
-- [ReactFlow Common Errors](https://reactflow.dev/learn/troubleshooting/common-errors)
-- [GitHub Discussion #3861: useReactFlow within zustand actions](https://github.com/xyflow/xyflow/discussions/3861)
+**Touch & Stylus Input:**
+- [Blog: Using React Native Skia to Build a 60 FPS Free-hand Drawing App](https://blog.notesnook.com/drawing-app-with-react-native-skia/)
+- [GitHub Discussion #2735: Determine touch input type, finger vs stylus](https://github.com/software-mansion/react-native-gesture-handler/discussions/2735)
+- [GitHub Issue #91: Issues with drawing on iOS devices](https://github.com/embiem/react-canvas-draw/issues/91)
+- [Apple Developer: Handling Events - Safari Web Content Guide](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/HandlingEvents/HandlingEvents.html)
+- [GitHub Issue #3756: Free drawing on IOS disables page scrolling](https://github.com/fabricjs/fabric.js/issues/3756)
+- [Medium: Fixing the Double-Tap and Hover State Issue in iOS Safari](https://medium.com/@kristiantolleshaugmrch/fixing-the-double-tap-issue-in-ios-safari-with-javascript-4e72a18a1feb)
 
-**ReactFlow Performance:**
-- [ReactFlow Performance Guide](https://reactflow.dev/learn/advanced-use/performance)
-- [GitHub Discussion #4975: Improve performance with large number of nodes](https://github.com/xyflow/xyflow/discussions/4975)
-- [GitHub Issue #4711: Performance issues with custom nodes](https://github.com/xyflow/xyflow/issues/4711)
+**Memory & Performance:**
+- [GitHub Issue #514: Leaking WebGLRenderer when unmounting](https://github.com/pmndrs/react-three-fiber/issues/514)
+- [Medium: Understanding Memory Leaks in React](https://medium.com/@90mandalchandan/understanding-and-managing-memory-leaks-in-react-applications-bcfcc353e7a5)
+- [Blog: How to fix the React memory leak warning](https://jexperton.dev/en/blog/how-to-fix-react-memory-leak-warning/)
+- [Medium: The React Native Memory Leak You Don't See Until Production](https://medium.com/@silverskytechnology/the-react-native-memory-leak-you-dont-see-until-production-8d62a18d840a)
+- [GitHub Issue #1475: Mount/unmount Canvas causes memory leak](https://github.com/Shopify/react-native-skia/issues/1475)
 
-**Swimlane Diagrams:**
-- [GitHub Discussion #2359: Implementing swim lanes in free version](https://github.com/xyflow/xyflow/discussions/2359)
-- [reactflow-swimlane Package](https://www.npmjs.com/package/@liangfaan/reactflow-swimlane)
-- [Medium: Swimlane Diagram UX Designer's Secret Weapon](https://sepantapouya.medium.com/swimlane-diagram-a-ux-designers-secret-weapon-for-order-in-chaos-fb9aa00927d5)
+**Database Storage:**
+- [pganalyze: Postgres performance cliffs with large JSONB values and TOAST](https://pganalyze.com/blog/5mins-postgres-jsonb-toast)
+- [Credativ: TOASTed JSONB data in PostgreSQL - compression algorithms](https://www.credativ.de/en/blog/postgresql-en/toasted-jsonb-data-in-postgresql-performance-tests-of-different-compression-algorithms/)
+- [PostgreSQL: Store base64 in database - bytea or text?](https://www.postgresql.org/message-id/AANLkTim=wp+o_PkBpa1EAP+1W_DJgV-v+C7mNZA94rwT@mail.gmail.com)
+- [Heap: When To Avoid JSONB In A PostgreSQL Schema](https://www.heap.io/blog/when-to-avoid-jsonb-in-a-postgresql-schema)
 
-**Canvas Coordinates & Snapping:**
-- [HTML Canvas Coordinates - W3Schools](https://www.w3schools.com/graphics/canvas_coordinates.asp)
-- [Konva Objects Snapping](https://konvajs.org/docs/sandbox/Objects_Snapping.html)
-- [Medium: Snap to grid with KonvaJS](https://medium.com/@pierrebleroux/snap-to-grid-with-konvajs-c41eae97c13f)
-- [ReactFlow Coordinate System Discussion #4311](https://github.com/xyflow/xyflow/discussions/4311)
+**Mind Map Layouts:**
+- [ReactFlow: Force Layout Example](https://reactflow.dev/examples/layout/force-layout)
+- [Medium: Data Visualization in Mind-map using D3.js](https://medium.com/globant/data-visualisation-in-mind-map-using-d3-js-59023aac004f)
+- [Blog: Force Directed Layout for Mind Map Interfaces](https://peoplesfeelings.com/force-directed-layout-for-mind-map-interfaces/)
+- [GitHub: d3/d3-force](https://github.com/d3/d3-force)
+- [Observable: ES module that uses D3 Force to make a mind map](https://talk.observablehq.com/t/es-module-that-uses-d3-force-to-make-a-mind-map/5185)
 
-**Data Migration:**
-- [Miro: Data Migration Process Flow Diagrams](https://miro.com/diagramming/data-migration-process-flow-diagram/)
-- [dbt Canvas: Analyst-driven data transformation](https://www.getdbt.com/blog/dbt-canvas-is-ga)
-- [What is Data Transformation - Estuary](https://estuary.dev/blog/what-is-data-transformation/)
+**Image Optimization:**
+- [Request Metrics: How to Optimize Website Images (2026 Guide)](https://requestmetrics.com/web-performance/high-performance-images/)
+- [VectoSolve: SVG Optimization Techniques Every Developer Should Know in 2026](https://vectosolve.com/blog/svg-optimization-techniques-developers-2026)
+- [The CSS Agency: JPG Vs. PNG Vs. WEBP Vs. AVIF - Best Web Image Format for 2026](https://www.thecssagency.com/blog/best-web-image-format)
 
-**Journey Mapping:**
-- [What is a Swimlane Diagram - Miro](https://miro.com/diagramming/what-is-a-swimlane-diagram/)
-- [Interaction Design Foundation: Journey Mapping](https://www.interaction-design.org/literature/article/top-things-to-learn-from-ixdf-journey-mapping-course)
+**Two-Canvas Architecture:**
+- [Litten: Using Multiple HTML5 Canvases as Layers](https://html5.litten.com/using-multiple-html5-canvases-as-layers/)
+- [MDN: Optimizing canvas](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas)
+- [Dustin Pfister: Canvas layers the basics and more](https://dustinpfister.github.io/2019/07/01/canvas-layer/)
+- [DeepWiki: Excalidraw Rendering System](https://deepwiki.com/excalidraw/excalidraw/5-rendering-and-export)
+
+**UX Design Patterns:**
+- [Eleken: 12 Bad UX Examples](https://www.eleken.co/blog-posts/bad-ux-examples)
+- [NN/g: Design Patterns For Complex Apps and Workflows](https://www.nngroup.com/videos/complex-apps-workflows/)
+- [NN/g: UX Strategies for Complex-Application Design](https://www.nngroup.com/articles/strategies-complex-application-design/)
+- [Full Clarity: Reducing cognitive overload in UX design](https://fullclarity.co.uk/insights/cognitive-overload-in-ux-design/)
+- [Design Sprint Kit: Crazy 8's](https://designsprintkit.withgoogle.com/methodology/phase3-sketch/crazy-8s)
+- [Miro: FREE Crazy Eights Template](https://miro.com/templates/crazy-eights/)
+- [Codecademy: UI and UX Design - Crazy Eights](https://www.codecademy.com/resources/docs/uiux/crazy-eights)
+
+**Undo/Redo State Management:**
+- [Medium: Undo/Redo Functionality in React](https://medium.com/@conboys111/undo-redo-functionality-in-react-a-step-by-step-guide-ae8e78d712ed)
+- [Konva: How to implement undo/redo on canvas with React?](https://konvajs.org/docs/react/Undo-Redo.html)
+- [CSS Script: Framework-Agnostic Undo/Redo History Management - Reddo.js](https://www.cssscript.com/undo-redo-history-management/)
+- [Redux: Implementing Undo History](https://redux.js.org/usage/implementing-undo-history)
+- [Kapwing: How to Implement Undo in a React + Redux Application](https://www.kapwing.com/blog/how-to-implement-undo-in-a-react-redux-application/)
 
 **Existing WorkshopPilot Research:**
-- .planning/research/PITFALLS.md (Canvas/Post-It Integration v1.1)
+- .planning/research/PITFALLS.md (Grid/Swimlane Canvas - previous pitfalls research)
 - .planning/codebase/ARCHITECTURE.md (Current system architecture)
+- .planning/codebase/STACK.md (Current technology stack)
 
 ---
 
-*Pitfalls research for: Grid/Swimlane Canvas with AI Placement (WorkshopPilot.ai v1.2)*
-*Researched: 2026-02-11*
-*Confidence: MEDIUM-HIGH — Based on ReactFlow official documentation, GitHub issues, community discussions, and existing v1.1 Canvas Foundation learnings. Grid-specific patterns extrapolated from general ReactFlow best practices.*
+*Pitfalls research for: Adding Drawing Capabilities to ReactFlow Canvas (WorkshopPilot.ai Steps 8 & 9)*
+*Researched: 2026-02-12*
+*Confidence: MEDIUM-HIGH — Based on official documentation, GitHub issues, community experiences, and existing v1.2 Canvas Whiteboard learnings. Drawing-specific patterns verified through Excalidraw, react-sketch-canvas, and canvas memory management research.*
