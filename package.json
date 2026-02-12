@@ -13,6 +13,7 @@
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
     "db:seed": "dotenv -e .env.local -- tsx scripts/seed-steps.ts",
     "db:seed:sql": "dotenv -e .env.local -- bash -c 'psql $DATABASE_URL -f drizzle/seed/step-definitions.sql'",
+    "db:seed:workshop": "dotenv -e .env.local -- tsx scripts/seed-workshop.ts",
     "vercel-build": "tsx scripts/verify-env.ts && drizzle-kit migrate && next build"
   },
   "dependencies": {
