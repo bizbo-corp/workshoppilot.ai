@@ -202,10 +202,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 29-01: Build ConceptCardNode custom ReactFlow node with multi-section layout
-- [ ] 29-02: Implement sketch thumbnail display from Crazy 8s selected ideas
-- [ ] 29-03: Add SWOT analysis grid and feasibility rating UI components
-- [ ] 29-04: Integrate AI-assisted concept card generation using sketch + workshop context
+- [ ] 29-01-PLAN.md — ConceptCardNode component + ConceptCardData type + canvas store concept card slice
+- [ ] 29-02-PLAN.md — Register conceptCard node type, dealing-cards layout, autosave + persistence
+- [ ] 29-03-PLAN.md — AI concept generation API endpoint with workshop context
+- [ ] 29-04-PLAN.md — Step 9 canvas container wiring, concept generation overlay, data flow
 
 ## Progress
 
