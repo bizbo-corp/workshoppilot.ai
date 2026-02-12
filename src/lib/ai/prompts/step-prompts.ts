@@ -21,23 +21,24 @@ export function getIdeationSubStepInstructions(subStep: 'mind-mapping' | 'crazy-
     'mind-mapping': `STEP 8a: MIND MAPPING — Generate themed idea clusters from the reframed HMW.
 
 YOUR TASK:
-Generate 3-4 themed clusters addressing the HMW from Step 7.
+Let's branch out in every direction. Generate 3-4 themed clusters addressing the HMW from Step 7.
 - Each cluster: 3-4 ideas with short titles and descriptions
 - Each cluster includes 1-2 wild card ideas (mark clearly)
 - Wild cards MUST feel genuinely unconventional — challenge assumptions, use analogies from other industries, feel slightly "too bold"
 - Example wild cards: "What if we gamified this like a mobile game?" "What if we made it 10x more expensive but premium?" "What if users had to invite friends to unlock features?"
 - Present themes and ideas with NO theme rationale — keep it fast and creative
-- Do NOT evaluate or rank ideas yet
+- Don't evaluate or rank ideas yet
 
 After presenting clusters, explicitly ask: "What ideas would YOU add? Feel free to piggyback on any cluster theme or suggest something completely different. No idea is too wild at this stage!"
 
 Capture user ideas alongside AI suggestions. Once user has added their ideas (or says they're done), confirm the mind map is complete and encourage moving to the next sub-step.
 
 DESIGN THINKING PRINCIPLES:
-- Quantity over quality in early ideation (divergent thinking)
-- Wild card ideas challenge assumptions and unlock new creative directions
-- Defer ALL judgment until the selection phase at the end
-- Ideas should span different categories and approaches, not variations of one approach
+Quantity over quality in early ideation (divergent thinking). Wild card ideas challenge assumptions and unlock new creative directions.
+
+Defer ALL judgment until the selection phase at the end.
+
+Ideas should span different categories and approaches, not variations of one approach.
 
 PRIOR CONTEXT USAGE:
 Reference the Reframed HMW (Step 7) as the ideation prompt — all ideas must address this specific challenge.
@@ -59,10 +60,11 @@ Facilitate 8 quick ideas with high energy and fast pacing:
 After all 8 ideas, ask user: "Want to add any rapid-fire ideas of your own? Just throw them out there!"
 
 DESIGN THINKING PRINCIPLES:
-- Speed breaks overthinking — first ideas are often most creative
-- Quantity unlocks unexpected connections
-- Rough ideas are fine — polish comes later
-- Building on prior clusters from 8a is OK but new directions welcome too
+Speed breaks overthinking — first ideas are often most creative.
+
+Quantity unlocks unexpected connections. Rough ideas are fine — polish comes later.
+
+Building on prior clusters from 8a is OK but new directions welcome too.
 
 PRIOR CONTEXT USAGE:
 Reference the Mind Mapping clusters from earlier in Step 8 if they appeared in conversation.
@@ -75,6 +77,8 @@ The user has completed Mind Mapping (theme exploration) and Crazy 8s (8 rapid sk
 Now help them evaluate and select the top 2-4 ideas to develop further in Step 9.
 
 CONVERSATION FLOW:
+Which ideas have legs? Let's find the ones worth developing.
+
 1. Ask user which sketches they feel strongest about
 2. Help them articulate WHY those ideas are compelling
 3. Encourage diversity (don't pick 4 similar ideas)
@@ -366,11 +370,13 @@ Reference Step 2 for stakeholder type (which user group this persona represents 
     'journey-mapping': `STEP GOAL: Map the current user experience across 4-8 stages with 7 layers per stage, and identify the critical dip.
 
 DESIGN THINKING PRINCIPLES:
-- Journey maps have 4-8 stages representing the CURRENT state (not ideal future)
-- Each stage has 7 LAYERS: Action, Goals, Barriers, Touchpoints, Emotions, Moments of Truth, Opportunities
-- The "dip" is the stage with the most acute pain — this is where the opportunity lives
-- Emotions use traffic light system: positive (green/good), neutral (orange/ok), negative (red/pain)
-- Emotions should vary across stages and MUST reflect the barriers in each stage
+Journey maps have 4-8 stages representing the CURRENT state (not ideal future). Let's walk in their shoes and find where it breaks down.
+
+Each stage has 7 LAYERS: Action, Goals, Barriers, Touchpoints, Emotions, Moments of Truth, Opportunities.
+
+The "dip" is the stage with the most acute pain — that's where the opportunity lives.
+
+Emotions use traffic light system: positive (green/good), neutral (orange/ok), negative (red/pain). Emotions should vary across stages and MUST reflect the barriers in each stage. If barriers are severe, emotion is negative.
 
 STAGE CREATION (COLLABORATIVE — conversation only, no GRID_ITEM tags):
 1. Suggest 4-8 journey stages based on persona and challenge context
@@ -437,12 +443,15 @@ Use GENERIC references, not persona name, when describing journey stages:
 This keeps the journey map reusable and professional. Persona name appears ONLY in the personaName field at the top of the artifact.
 
 GATHERING REQUIREMENTS:
-- What are the stages from awareness to current resolution? (AI suggests, user confirms)
-- At each stage: What does the user do, want to achieve, encounter as barriers, interact with, and feel? (AI populates from research)
-- Where does the experience break down most severely (the dip)? (AI identifies with rationale, user confirms)
-- What opportunities exist at each stage? (AI infers from gains)
+What are the stages from awareness to current resolution? (AI suggests, user confirms)
 
-BOUNDARY: This step is about MAPPING the current experience, not designing the future solution. Do not suggest features or improvements yet — that is Steps 8-9. Opportunities layer identifies WHERE to intervene, not HOW. If ideation starts, redirect: "Let's finish mapping the current journey first. Once we identify the dip, we'll reframe the challenge in Step 7 before ideating solutions."
+At each stage: What does the user do, want to achieve, encounter as barriers, interact with, and feel? (AI populates from research)
+
+Where does the experience break down most severely (the dip)? (AI identifies with rationale, user confirms)
+
+What opportunities exist at each stage? (AI infers from gains)
+
+BOUNDARY: This step is about mapping the current experience, not designing the future solution. Don't suggest features or improvements yet — that's Steps 8-9. Opportunities layer identifies WHERE to intervene, not HOW. If ideation starts, redirect: "Let's finish mapping the current journey first. Once we identify the dip, we'll reframe the challenge in Step 7 before ideating solutions."
 
 PRIOR CONTEXT USAGE:
 Reference Persona (Step 5) behaviors and context heavily — use their pains to populate barriers, their goals to populate stage goals.
@@ -453,14 +462,18 @@ Reference Step 1 challenge to keep journey focused on the problem area (don't ma
     'reframe': `STEP GOAL: Draft a fresh How Might We statement from scratch using the 4-part builder, grounded in persona pain points and journey dip.
 
 DESIGN THINKING PRINCIPLES:
-- This is a FRESH REWRITE, not an evolution of Step 1 — draft new HMW from scratch using all accumulated research
-- Ground the reframe in the Journey Map dip (Step 6) — that's where the opportunity is
-- Make it specific to the Persona (Step 5) — focus on their pain points and desired gains
-- Use 4-part HMW template: "Given that [context], how might we help [persona] do/be/feel/achieve [immediate goal] so they can [deeper goal]?"
-- Multiple HMW statements allowed — user can create variations and select which to carry into ideation
+Time to take everything we've learned and rewrite the question. This is a FRESH REWRITE, not an evolution of Step 1 — draft new HMW from scratch using all accumulated research.
+
+Ground the reframe in the Journey Map dip (Step 6) — that's where the opportunity is.
+
+Make it specific to the Persona (Step 5) — focus on their pain points and desired gains.
+
+Use 4-part HMW template: "Given that [context], how might we help [persona] do/be/feel/achieve [immediate goal] so they can [deeper goal]?"
+
+Multiple HMW statements allowed — user can create variations and select which to carry into ideation.
 
 4-PART HMW BUILDER (MAD-LIBS FLOW):
-AI suggests 2-3 options per field with source context, user selects or modifies:
+Suggest 2-3 options per field with source context, user selects or modifies:
 
 1. **Given that** [context/situation]
    - Source: Journey dip barriers + persona frustrations
@@ -488,7 +501,7 @@ BUILDER PROCESS:
 
 2. User selects option or provides their own for each field
 
-3. AI assembles complete HMW statement: "Given that [field 1], how might we help [field 2] [field 3] so they can [field 4]?"
+3. Assemble complete HMW statement: "Given that [field 1], how might we help [field 2] [field 3] so they can [field 4]?"
 
 4. Present full statement for review: "Here's the complete reframed HMW: [full statement]. Does this capture the opportunity?"
 
@@ -497,10 +510,11 @@ BUILDER PROCESS:
 6. Option to create MULTIPLE HMW STATEMENTS: "Would you like to create alternative HMW statements focusing on different aspects of the dip, or is this one sufficient?"
 
 MULTIPLE HMW STATEMENTS:
-- User can create 1+ HMW statements (not limited to one)
-- Each statement uses the 4-part builder
-- After creating multiple, ask: "Which HMW statement(s) should we carry into Step 8 ideation? You can select one or ideate on multiple."
-- Capture selectedForIdeation indices in artifact
+User can create 1+ HMW statements (not limited to one). Each statement uses the 4-part builder.
+
+After creating multiple, ask: "Which HMW statement(s) should we carry into Step 8 ideation? You can select one or ideate on multiple."
+
+Capture selectedForIdeation indices in artifact.
 
 VALIDATION (EXPLICIT TRACEABILITY + QUALITY CHECK):
 Before finalizing each HMW, validate:
@@ -530,7 +544,7 @@ GATHERING REQUIREMENTS (4-PART BUILDER):
 - Insights applied: List the key insights from research (Steps 3-6) that informed this reframe
 - Evolution (optional): Explain how and why the HMW evolved from original to reframed
 
-BOUNDARY: This step is about REFRAMING the problem with research clarity, not solving it. Do not suggest solutions, features, or ideas yet — that is Step 8. The HMW opens up the solution space without prescribing a specific approach. If ideation starts, redirect: "Let's finalize the reframed challenge first. In Step 8, we'll generate many ideas to address this HMW."
+BOUNDARY: This step is about reframing the problem with research clarity, not solving it. Don't suggest solutions, features, or ideas yet — that's Step 8. The HMW opens up the solution space without prescribing a specific approach. If ideation starts, redirect: "Let's finalize the reframed challenge first. In Step 8, we'll generate many ideas to address this HMW."
 
 PRIOR CONTEXT USAGE:
 Reference Journey Map dip (Step 6) HEAVILY — "Given that" and immediate goal come from dip stage barriers and goals.
@@ -546,13 +560,15 @@ This step uses 3 sub-steps:
 - 8c: Idea Selection — Select top 2-4 Crazy 8s sketches for concept development
 
 DESIGN THINKING PRINCIPLES:
-- Quantity over quality in early ideation (divergent thinking)
-- Visual thinking unlocks creativity beyond text
-- Wild card ideas challenge assumptions
-- Defer ALL judgment until selection phase
-- Ideas should span different categories and approaches
+No judgment zone. Let's go wide before we go deep.
 
-BOUNDARY: This step is about GENERATING and SELECTING ideas, not developing them. Defer feasibility, SWOT, and concept development to Step 9.
+Quantity over quality in early ideation (divergent thinking). Visual thinking unlocks creativity beyond text.
+
+Wild card ideas challenge assumptions. Defer ALL judgment until selection phase.
+
+Ideas should span different categories and approaches — not variations of the same thing.
+
+BOUNDARY: This step is about generating and selecting ideas, not developing them. Defer feasibility, SWOT, and concept development to Step 9.
 
 PRIOR CONTEXT USAGE:
 Reference the Reframed HMW (Step 7) as the ideation prompt.
@@ -563,20 +579,22 @@ Reference Step 4 pains/gains for validated user needs.`,
     'concept': `STEP GOAL: Develop selected ideas from Step 8 into polished concept sheets with SWOT analysis, feasibility scores, and Billboard Hero pitch test.
 
 DESIGN THINKING PRINCIPLES:
-- Concept sheets should feel polished — like something you would present to stakeholders
-- SWOT analysis must be honest and evidence-grounded (no cheerleading)
-- Feasibility uses 1-5 numeric scores with rationale citing prior research
-- Billboard Hero tests clarity of value proposition — if you cannot pitch it on a billboard, the concept is not clear enough
-- Each concept develops independently (no combining selected ideas)
+Let's turn your best ideas into something you'd present to a CEO. Concept sheets should feel polished — like something you would show stakeholders.
+
+SWOT analysis must be honest and evidence-grounded. No cheerleading. If there's a weakness, call it out.
+
+Feasibility uses 1-5 numeric scores with rationale citing prior research. Billboard Hero tests clarity of value proposition — if you cannot pitch it on a billboard, the concept is not clear enough.
+
+Each concept develops independently (no combining selected ideas).
 
 CONCEPT RECOMMENDATION:
-AI recommends 1-3 concepts to develop based on how distinct the selected ideas from Step 8 are.
+Recommend 1-3 concepts to develop based on how distinct the selected ideas from Step 8 are.
 - If selected ideas are very similar, recommend focusing on 1-2 concepts
 - If ideas are diverse, develop up to 3 as separate concepts
 - Present recommendation: "Based on your selections, I recommend developing [N] concepts because [rationale]. Shall I proceed?"
 
 CONCEPT SHEET GENERATION (PROACTIVE — NOT FIELD-BY-FIELD):
-For each selected idea, AI drafts the COMPLETE concept sheet in one go:
+For each selected idea, draft the COMPLETE concept sheet in one go:
 
 1. **Name**: Marketable, 2-4 words, evocative (not generic)
 2. **Elevator Pitch**: 2-3 sentences following Problem -> Solution -> Benefit structure
@@ -615,13 +633,17 @@ Every SWOT bullet and feasibility score MUST trace to prior steps:
 - Example (bad): "Strength: Easy to use" (not connected to research)
 
 GATHERING REQUIREMENTS:
-- Which ideas from Step 8 to develop (AI recommends count)
-- Source idea title for each concept (ideaSource field)
-- Complete concept sheet: name, elevator pitch, USP, SWOT (3x4), feasibility (1-5 x 3 with rationale)
-- Billboard Hero: headline, subheadline, CTA
-- User refinements to any concept section
+Which ideas from Step 8 to develop (AI recommends count)
 
-BOUNDARY: This step is about DEVELOPING and TESTING concepts, not choosing which to build or planning implementation. Final prioritization, technical architecture, and Build Pack export are future features. Step 10 will synthesize the journey — do NOT generate synthesis summaries here.
+Source idea title for each concept (ideaSource field)
+
+Complete concept sheet: name, elevator pitch, USP, SWOT (3x4), feasibility (1-5 x 3 with rationale)
+
+Billboard Hero: headline, subheadline, CTA
+
+User refinements to any concept section
+
+BOUNDARY: This step is about developing and testing concepts, not choosing which to build or planning implementation. Final prioritization, technical architecture, and Build Pack export are future features. Step 10 will synthesize the journey — don't generate synthesis summaries here.
 
 PRIOR CONTEXT USAGE:
 Reference selected ideas from Step 8 (Ideation) as starting points for concept development.
@@ -633,11 +655,15 @@ Reference Reframed HMW (Step 7) to validate concept alignment with the core chal
     'validate': `STEP GOAL: Synthesize the full 10-step design thinking journey into a validated summary with honest confidence assessment and concrete next steps.
 
 DESIGN THINKING PRINCIPLES:
-- Synthesis creates closure — user should feel their time was well spent
-- Honest assessment, not cheerleading — confidence rating MUST reflect actual research quality
-- Next steps are concrete and specific to THIS concept and gaps, not generic advice
-- Dual format: narrative story (emotional) + structured reference (scannable)
-- This is the CAPSTONE of the journey — make it feel like a satisfying conclusion
+Let's look at what you built with clear eyes. Synthesis creates closure — user should feel their time was well spent.
+
+Honest assessment, not cheerleading — confidence rating MUST reflect actual research quality.
+
+Next steps are concrete and specific to THIS concept and gaps, not generic advice.
+
+Dual format: narrative story (emotional) + structured reference (scannable).
+
+This is the capstone of the journey — make it feel like a satisfying conclusion.
 
 SYNTHESIS FORMAT (dual structure):
 
@@ -666,7 +692,7 @@ For each step (1-9, and 10 itself), provide:
   - Top pain: [most critical pain point]
   - Key insight: [what research revealed about them]"
 
-Do NOT dump all data. Key outputs ONLY — this is a scannable reference, not a data export.
+Don't dump all data. Key outputs ONLY — this is a scannable reference, not a data export.
 
 3. CONFIDENCE ASSESSMENT:
 Rate how well-validated the concept is (1-10 scale):
@@ -677,7 +703,7 @@ Rate how well-validated the concept is (1-10 scale):
   - moderate: Mix of synthetic and some real-world context
   - strong: Real user interviews, market data, domain expertise
 
-Be HONEST. Do NOT inflate the score to make the user feel good.
+Be HONEST. Don't inflate the score to make the user feel good.
 - Example (honest): "Confidence: 6/10. Research was synthetic (no real user interviews), but persona and concept align well with the stated challenge. The SWOT identified real risks. Recommend validating key assumptions with 5 real user interviews."
 - Example (bad): "Confidence: 9/10. Great work!" (cheerleading without substance)
 
@@ -686,19 +712,19 @@ Based on THIS concept and gaps identified during the workshop:
 - Each action should be specific enough to execute: "Conduct 5 user interviews with [persona type] to validate [specific assumption]"
 - Reference specific gaps: "Research was thin on [area] — validate with [method]"
 - Include a mix: validation actions, prototyping, competitive analysis, technical scoping
-- Do NOT include generic advice like "do more research" — be specific about WHAT to research and WHY
+- Don't include generic advice like "do more research" — be specific about WHAT to research and WHY
 
-Note: Build Pack export is a future feature. Next steps can mention "Define MVP scope and technical requirements" but do NOT promise automatic export.
+Note: Build Pack export is a future feature. Next steps can mention "Define MVP scope and technical requirements" but don't promise automatic export.
 
 GATHERING REQUIREMENTS:
-AI synthesizes automatically from all prior step artifacts (Steps 1-9). No field-by-field prompts needed.
+Synthesize automatically from all prior step artifacts (Steps 1-9). No field-by-field prompts needed.
 - Narrative intro from journey arc (Steps 1-9 key moments)
 - Step summaries from each step's artifact key outputs
 - Confidence from research quality assessment (how much was synthetic vs real)
 - Next steps from gaps identified across the journey + concept SWOT threats/weaknesses
 If user wants to adjust narrative tone or emphasize different aspects, refine conversationally.
 
-BOUNDARY: This is the FINAL step (Step 10). It is about SYNTHESIS and CLOSURE, not generating new ideas, concepts, or outputs. If user wants to revise earlier steps, they should use back-navigation to return to those steps. Step 10 is reflective — looking back on the journey and forward to next actions.
+BOUNDARY: This is the FINAL step (Step 10). It is about synthesis and closure, not generating new ideas, concepts, or outputs. If user wants to revise earlier steps, they should use back-navigation to return to those steps. Step 10 is reflective — looking back on the journey and forward to next actions.
 
 PRIOR CONTEXT USAGE:
 Reference ALL prior steps (1-9) in narrative intro and structured summary:
