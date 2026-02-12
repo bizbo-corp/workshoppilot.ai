@@ -111,13 +111,61 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| — | — | — |
+| DRAW-01 | Phase 25 | Not started |
+| DRAW-02 | Phase 25 | Not started |
+| DRAW-03 | Phase 25 | Not started |
+| DRAW-07 | Phase 25 | Not started |
+| DRAW-08 | Phase 25 | Not started |
+| DRAW-09 | Phase 25 | Not started |
+| DRAW-10 | Phase 25 | Not started |
+| DRAW-11 | Phase 25 | Not started |
+| DRAW-12 | Phase 25 | Not started |
+| INTEG-01 | Phase 26 | Not started |
+| INTEG-02 | Phase 26 | Not started |
+| INTEG-03 | Phase 26 | Not started |
+| INTEG-04 | Phase 26 | Not started |
+| INTEG-05 | Phase 26 | Not started |
+| DRAW-04 | Phase 27 | Not started |
+| DRAW-05 | Phase 27 | Not started |
+| DRAW-06 | Phase 27 | Not started |
+| MIND-01 | Phase 28 | Not started |
+| MIND-02 | Phase 28 | Not started |
+| MIND-03 | Phase 28 | Not started |
+| MIND-04 | Phase 28 | Not started |
+| MIND-05 | Phase 28 | Not started |
+| MIND-06 | Phase 28 | Not started |
+| MIND-07 | Phase 28 | Not started |
+| CRAZY-01 | Phase 28 | Not started |
+| CRAZY-02 | Phase 28 | Not started |
+| CRAZY-03 | Phase 28 | Not started |
+| CRAZY-04 | Phase 28 | Not started |
+| CRAZY-05 | Phase 28 | Not started |
+| CRAZY-06 | Phase 28 | Not started |
+| FLOW-01 | Phase 28 | Not started |
+| FLOW-02 | Phase 28 | Not started |
+| FLOW-03 | Phase 28 | Not started |
+| CONCEPT-01 | Phase 29 | Not started |
+| CONCEPT-02 | Phase 29 | Not started |
+| CONCEPT-03 | Phase 29 | Not started |
+| CONCEPT-04 | Phase 29 | Not started |
+| CONCEPT-05 | Phase 29 | Not started |
+| CONCEPT-06 | Phase 29 | Not started |
+| CONCEPT-07 | Phase 29 | Not started |
 
 **Coverage:**
 - v1 requirements: 33 total
-- Mapped to phases: 0
-- Unmapped: 33
+- Mapped to phases: 33
+- Unmapped: 0
+
+**Coverage validation:** ✓ All 33 v1 requirements mapped to exactly one phase
+
+**Phase coverage:**
+- Phase 25: 9 requirements (DRAW-01, DRAW-02, DRAW-03, DRAW-07, DRAW-08, DRAW-09, DRAW-10, DRAW-11, DRAW-12)
+- Phase 26: 5 requirements (INTEG-01, INTEG-02, INTEG-03, INTEG-04, INTEG-05)
+- Phase 27: 3 requirements (DRAW-04, DRAW-05, DRAW-06)
+- Phase 28: 15 requirements (MIND-01 through MIND-07, CRAZY-01 through CRAZY-06, FLOW-01 through FLOW-03)
+- Phase 29: 7 requirements (CONCEPT-01 through CONCEPT-07)
 
 ---
 *Requirements defined: 2026-02-12*
-*Last updated: 2026-02-12 after initial definition*
+*Last updated: 2026-02-12 after roadmap creation*

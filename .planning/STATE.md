@@ -6,14 +6,16 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
 
-**Current focus:** v1.3 EzyDraw & Visual Ideation
+**Current focus:** v1.3 EzyDraw & Visual Ideation — Phase 25: EzyDraw Foundation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-12 — Milestone v1.3 started
+Phase: 25 of 29 (EzyDraw Foundation)
+Plan: 0 of 6 in current phase
+Status: Ready to plan
+Last activity: 2026-02-12 — v1.3 milestone roadmap created, ready to plan Phase 25
+
+Progress: [████████████████████████████████████░░░░] 74% (68/91 plans complete across project)
 
 ## Completed Milestones
 
@@ -48,6 +50,13 @@ Last activity: 2026-02-12 — Milestone v1.3 started
 - Grid/swimlane: semantic IDs, custom snap logic, foreignObject SVG overlays
 - AI placement: GRID_ITEM tags for journey-mapping, CANVAS_ITEM for other steps
 
+### Recent Decisions (v1.3)
+
+- **EzyDraw stack**: Konva.js + react-konva + perfect-freehand (~98KB) instead of tldraw SDK (~500KB) to avoid bundle bloat
+- **Drawing architecture**: Standalone modal (not ReactFlow extension), dual-state storage (vector JSON + PNG), Vercel Blob for images
+- **Step 8 flow**: Skip Brain Writing (needs real multi-user), new flow: Mind Mapping → Crazy 8s → Idea Selection
+- **Reuse patterns**: Canvas-only layout with lazy migration (v1.2), semantic IDs and custom snap logic for grids
+
 ### Known Tech Debt
 
 - Workshops table needs deletedAt column for soft delete
@@ -57,17 +66,27 @@ Last activity: 2026-02-12 — Milestone v1.3 started
 
 ### Blockers/Concerns
 
-None — clean slate for next milestone.
+**Phase 25 (EzyDraw Foundation):**
+- Event isolation architecture must be correct from start (can't retrofit later)
+- Touch/stylus Pointer Events API must work on real iPads/Surface devices (test early)
+- Canvas memory cleanup critical (HTML5 canvas contexts don't auto-release)
+
+**Phase 28 (Mind Map & Crazy 8s):**
+- Mind map performance with dagre auto-layout unknown at scale (may need animation budget)
+- Crazy 8s grid reuses Journey Map pattern (proven), but integration with EzyDraw modal is new
+
+**Phase 29 (Visual Concept Cards):**
+- AI Vision API for sketch analysis may need deeper research (Gemini vision capabilities unclear)
+- Defer research decision until Phase 28 complete
 
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Milestone v1.3 started, defining requirements
-Resume file: N/A
+Stopped at: v1.3 milestone roadmap created
+Resume file: None
 
-**Next steps:**
-1. Complete research and requirements definition
-2. Create roadmap with phase structure
+**Next action:** Run `/gsd:plan-phase 25` to create Phase 25: EzyDraw Foundation execution plan
 
 ---
-*Last updated: 2026-02-12 after v1.3 milestone started*
+
+*Last updated: 2026-02-12 after v1.3 roadmap creation*
