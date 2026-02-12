@@ -36,6 +36,7 @@ export const workshops = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at', { mode: 'date', precision: 3 }),
   },
   (table) => ({
     clerkUserIdIdx: index('workshops_clerk_user_id_idx').on(table.clerkUserId),
