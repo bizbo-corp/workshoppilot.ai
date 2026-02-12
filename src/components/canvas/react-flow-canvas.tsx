@@ -156,10 +156,14 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     initialElements?: DrawingElement[];
   } | null>(null);
 
+  // Track whether initial gridColumns were provided (from saved state)
+  const hadInitialGridColumns = useRef(gridColumns.length > 0);
+
   // Initialize gridColumns from stepConfig on mount (when store has empty gridColumns but step has gridConfig)
   useEffect(() => {
-    if (stepConfig.hasGrid && stepConfig.gridConfig && gridColumns.length === 0) {
-      // Seed dynamic columns from static step config (first load only)
+    if (stepConfig.hasGrid && stepConfig.gridConfig && !hadInitialGridColumns.current && gridColumns.length === 0) {
+      // Seed dynamic columns from static step config (first visit only)
+      // Only runs if store was initialized with empty gridColumns (no saved state)
       const initialColumns: GridColumn[] = stepConfig.gridConfig.columns.map(col => ({
         id: col.id,
         label: col.label,
