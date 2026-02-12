@@ -106,7 +106,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
   const selectedPostItIds = useCanvasStore((state) => state.selectedPostItIds);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const hasAutoStarted = React.useRef(false);
+  const hasScrolledOnMount = React.useRef(false);
   const countdownRef = React.useRef<NodeJS.Timeout | null>(null);
   const [inputValue, setInputValue] = React.useState('');
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
@@ -325,10 +327,31 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
   }, [messages.length, status, sendMessage]);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Helper: check if user is near bottom of scroll container
+  const isNearBottom = React.useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return true;
+    const threshold = 150; // px from bottom
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+  }, []);
+
+  // Scroll to bottom on initial mount (after DOM paint)
   React.useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!hasScrolledOnMount.current && messages.length > 0) {
+      // Use requestAnimationFrame to ensure DOM is painted before scrolling
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+      });
+      hasScrolledOnMount.current = true;
+    }
+  }, [messages.length]);
+
+  // Auto-scroll on new messages (skip if user has scrolled up)
+  React.useEffect(() => {
+    if (messages.length > 0 && isNearBottom()) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isNearBottom]);
 
   // Handle message send
   const handleSend = async (e: React.FormEvent) => {
@@ -367,7 +390,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   return (
     <div className="flex h-full flex-col">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
           // Loading indicator while AI auto-starts
           <div className="flex items-start gap-3">
