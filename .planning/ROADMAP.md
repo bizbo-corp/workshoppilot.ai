@@ -121,10 +121,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 26-01: Create drawingStore (Zustand) for managing drawing lifecycle
-- [ ] 26-02: Build DrawingImageNode custom ReactFlow node with re-edit capability
-- [ ] 26-03: Implement dual-state storage (Konva JSON + PNG URL in Vercel Blob)
-- [ ] 26-04: Build API routes for saving/loading drawings with Douglas-Peucker simplification
+- [ ] 26-01-PLAN.md — Install deps, vector simplification, server actions for save/load/update drawings
+- [ ] 26-02-PLAN.md — DrawingImageNode component, canvas-store drawing actions, nodeTypes registration
+- [ ] 26-03-PLAN.md — Wire save flow (EzyDraw → Blob → DB → canvas) and re-edit flow with autosave
+- [ ] 26-04-PLAN.md — Draw button in toolbar + human verification of end-to-end integration
 
 #### Phase 27: UI Kit & Advanced Tools
 
