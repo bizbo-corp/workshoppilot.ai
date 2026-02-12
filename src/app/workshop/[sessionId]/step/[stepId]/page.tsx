@@ -8,6 +8,7 @@ import { StepContainer } from "@/components/workshop/step-container";
 import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
 import { loadCanvasState } from "@/actions/canvas-actions";
 import type { PostIt, GridColumn, DrawingNode } from "@/stores/canvas-store";
+import type { ConceptCardData } from "@/lib/canvas/concept-card-types";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
 
 interface StepPageProps {
@@ -131,6 +132,7 @@ export default async function StepPage({ params }: StepPageProps) {
   let initialCanvasPostIts: PostIt[] = canvasData?.postIts || [];
   const initialGridColumns: GridColumn[] = canvasData?.gridColumns || [];
   const initialDrawingNodes: DrawingNode[] = canvasData?.drawingNodes || [];
+  const initialConceptCards: ConceptCardData[] = canvasData?.conceptCards || [];
 
   // Lazy migration: if artifact exists but no canvas state, derive initial positions
   if (initialCanvasPostIts.length === 0 && initialArtifact && step) {
@@ -153,9 +155,44 @@ export default async function StepPage({ params }: StepPageProps) {
     }
   }
 
+  // Load Step 8 data for Step 9 (concept)
+  let step8SelectedSlotIds: string[] | undefined;
+  let step8Crazy8sSlots: Array<{ slotId: string; title: string; imageUrl?: string }> | undefined;
+
+  if (step.id === 'concept') {
+    // Load Step 8 artifact for selectedSketchSlotIds
+    const ideationStep = session.workshop.steps.find((s) => s.stepId === 'ideation');
+    if (ideationStep) {
+      const ideationArtifacts = await db
+        .select({ artifact: stepArtifacts.artifact })
+        .from(stepArtifacts)
+        .where(eq(stepArtifacts.workshopStepId, ideationStep.id))
+        .limit(1);
+      if (ideationArtifacts.length > 0) {
+        const artifact = ideationArtifacts[0].artifact as Record<string, unknown>;
+        step8SelectedSlotIds = artifact?.selectedSketchSlotIds as string[] | undefined;
+      }
+    }
+
+    // Load Step 8 canvas state for crazy8sSlots
+    const step8Canvas = await loadCanvasState(session.workshop.id, 'ideation');
+    if (step8Canvas?.crazy8sSlots) {
+      step8Crazy8sSlots = step8Canvas.crazy8sSlots.map((s) => ({
+        slotId: s.slotId,
+        title: s.title,
+        imageUrl: s.imageUrl,
+      }));
+    }
+  }
+
   return (
     <div className="h-full">
-      <CanvasStoreProvider initialPostIts={initialCanvasPostIts} initialGridColumns={initialGridColumns} initialDrawingNodes={initialDrawingNodes}>
+      <CanvasStoreProvider
+        initialPostIts={initialCanvasPostIts}
+        initialGridColumns={initialGridColumns}
+        initialDrawingNodes={initialDrawingNodes}
+        initialConceptCards={initialConceptCards}
+      >
         <StepContainer
           stepOrder={stepNumber}
           sessionId={sessionId}
@@ -164,6 +201,8 @@ export default async function StepPage({ params }: StepPageProps) {
           initialArtifact={initialArtifact}
           stepStatus={stepRecord?.status}
           hmwStatement={hmwStatement}
+          step8SelectedSlotIds={step8SelectedSlotIds}
+          step8Crazy8sSlots={step8Crazy8sSlots}
         />
       </CanvasStoreProvider>
     </div>

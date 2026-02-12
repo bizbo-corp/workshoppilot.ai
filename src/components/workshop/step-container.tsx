@@ -17,9 +17,10 @@ import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { cn } from '@/lib/utils';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
+import { ConceptCanvasOverlay } from './concept-canvas-overlay';
 
-const CANVAS_ENABLED_STEPS = ['stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping'];
-const CANVAS_ONLY_STEPS = ['stakeholder-mapping', 'sense-making'];
+const CANVAS_ENABLED_STEPS = ['stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping', 'concept'];
+const CANVAS_ONLY_STEPS = ['stakeholder-mapping', 'sense-making', 'concept'];
 
 interface StepContainerProps {
   stepOrder: number;
@@ -29,6 +30,8 @@ interface StepContainerProps {
   initialArtifact?: Record<string, unknown> | null;
   stepStatus?: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
   hmwStatement?: string;
+  step8SelectedSlotIds?: string[];
+  step8Crazy8sSlots?: Array<{ slotId: string; title: string; imageUrl?: string }>;
 }
 
 export function StepContainer({
@@ -39,6 +42,8 @@ export function StepContainer({
   initialArtifact,
   stepStatus,
   hmwStatement,
+  step8SelectedSlotIds,
+  step8Crazy8sSlots,
 }: StepContainerProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
@@ -65,7 +70,8 @@ export function StepContainer({
   const step = getStepByOrder(stepOrder);
   const isCanvasStep = step ? CANVAS_ENABLED_STEPS.includes(step.id) : false;
   const postIts = useCanvasStore((s) => s.postIts);
-  const canvasHasContent = postIts.length > 0;
+  const conceptCards = useCanvasStore((s) => s.conceptCards);
+  const canvasHasContent = postIts.length > 0 || conceptCards.length > 0;
 
   // For canvas steps, activity is "confirmed" when post-its exist (no extraction needed)
   const effectiveConfirmed = isCanvasStep ? canvasHasContent : artifactConfirmed;
@@ -284,11 +290,21 @@ export function StepContainer({
           </div>
           <div className={cn('h-full', mobileTab !== 'canvas' && 'hidden')}>
             {step && CANVAS_ONLY_STEPS.includes(step.id) ? (
-              <CanvasWrapper
-                sessionId={sessionId}
-                stepId={step.id}
-                workshopId={workshopId}
-              />
+              <div className="h-full relative">
+                <CanvasWrapper
+                  sessionId={sessionId}
+                  stepId={step.id}
+                  workshopId={workshopId}
+                />
+                {step.id === 'concept' && (
+                  <ConceptCanvasOverlay
+                    workshopId={workshopId}
+                    stepId={step.id}
+                    selectedSketchSlotIds={step8SelectedSlotIds}
+                    crazy8sSlots={step8Crazy8sSlots}
+                  />
+                )}
+              </div>
             ) : (
               <RightPanel
                 stepOrder={stepOrder}
@@ -384,6 +400,14 @@ export function StepContainer({
                         stepId={step.id}
                         workshopId={workshopId}
                       />
+                      {step.id === 'concept' && (
+                        <ConceptCanvasOverlay
+                          workshopId={workshopId}
+                          stepId={step.id}
+                          selectedSketchSlotIds={step8SelectedSlotIds}
+                          crazy8sSlots={step8Crazy8sSlots}
+                        />
+                      )}
                     </div>
                   ) : (
                     <RightPanel
@@ -425,6 +449,14 @@ export function StepContainer({
                     stepId={step.id}
                     workshopId={workshopId}
                   />
+                  {step.id === 'concept' && (
+                    <ConceptCanvasOverlay
+                      workshopId={workshopId}
+                      stepId={step.id}
+                      selectedSketchSlotIds={step8SelectedSlotIds}
+                      crazy8sSlots={step8Crazy8sSlots}
+                    />
+                  )}
                 </div>
               ) : (
                 <RightPanel
