@@ -121,10 +121,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 26-01-PLAN.md — Install deps, vector simplification, server actions for save/load/update drawings
-- [ ] 26-02-PLAN.md — DrawingImageNode component, canvas-store drawing actions, nodeTypes registration
-- [ ] 26-03-PLAN.md — Wire save flow (EzyDraw → Blob → DB → canvas) and re-edit flow with autosave
-- [ ] 26-04-PLAN.md — Draw button in toolbar + human verification of end-to-end integration
+- [x] 26-01-PLAN.md — Install deps, vector simplification, server actions for save/load/update drawings
+- [x] 26-02-PLAN.md — DrawingImageNode component, canvas-store drawing actions, nodeTypes registration
+- [x] 26-03-PLAN.md — Wire save flow (EzyDraw → Blob → DB → canvas) and re-edit flow with autosave
+- [x] 26-04-PLAN.md — Draw button in toolbar + human verification of end-to-end integration
 
 #### Phase 27: UI Kit & Advanced Tools
 
@@ -216,7 +216,7 @@ Plans:
 | 15-20 | v1.1 | 15/15 | Complete | 2026-02-11 |
 | 21-24 | v1.2 | 9/9 | Complete | 2026-02-12 |
 | 25. EzyDraw Foundation | v1.3 | 6/6 | Complete | 2026-02-12 |
-| 26. Drawing-Canvas Integration | v1.3 | 0/4 | Not started | - |
+| 26. Drawing-Canvas Integration | v1.3 | 4/4 | Complete | 2026-02-12 |
 | 27. UI Kit & Advanced Tools | v1.3 | 0/3 | Not started | - |
 | 28. Mind Map & Crazy 8s Canvases | v1.3 | 0/6 | Not started | - |
 | 29. Visual Concept Cards | v1.3 | 0/4 | Not started | - |
