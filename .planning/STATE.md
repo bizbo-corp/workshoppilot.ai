@@ -6,7 +6,7 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
 
-**Current focus:** v1.3 EzyDraw & Visual Ideation — Phase 28 complete, ready for Phase 29
+**Current focus:** All milestones complete (v0.5 → v1.3). Planning next milestone.
 
 ## Current Position
 
@@ -121,10 +121,10 @@ Progress: [███████████████████████
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 29-04-PLAN.md (Phase 29 complete)
+Stopped at: v1.3 milestone complete and archived
 Resume file: None
 
-**Next action:** Phase 29 complete. v1.3 EzyDraw & Visual Ideation milestone shipped. All planned phases complete.
+**Next action:** `/gsd:new-milestone` to start next milestone (questioning → research → requirements → roadmap)
 
 ## Performance Metrics
 

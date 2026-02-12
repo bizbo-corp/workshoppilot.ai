@@ -2,7 +2,7 @@
 
 ## What This Is
 
-An AI-powered digital facilitator that guides anyone from a vague idea through a structured 10-step design thinking process, producing validated product specs. The AI isn't a sidebar assistant; it's the principal guide — leading users through conversational prompts, questioning, synthesizing, and generating structured outputs at each stage. Features a split-screen layout with interactive canvas: structured whiteboards for stakeholder rings (Step 2), empathy map zones (Step 4), and journey map swimlanes (Step 6), with AI suggest-then-confirm placement.
+An AI-powered digital facilitator that guides anyone from a vague idea through a structured 10-step design thinking process, producing validated product specs. The AI isn't a sidebar assistant; it's the principal guide — leading users through conversational prompts, questioning, synthesizing, and generating structured outputs at each stage. Features a split-screen layout with interactive canvas: structured whiteboards for stakeholder rings (Step 2), empathy map zones (Step 4), and journey map swimlanes (Step 6), with AI suggest-then-confirm placement. Includes EzyDraw — an in-app drawing tool with pencil, shapes, UI kit, speech bubbles, and emoji — powering visual mind maps (Step 8a), Crazy 8s sketch grids (Step 8b), and AI-generated concept cards with SWOT analysis and feasibility ratings (Step 9).
 
 ## Core Value
 
@@ -43,27 +43,14 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - ✓ Concentric ring layout for Step 2 Stakeholder Mapping — v1.2
 - ✓ Empathy map zone layout for Step 4 Sense Making — v1.2
 - ✓ Canvas-only layout for Steps 2 & 4 with lazy artifact migration — v1.2
+- ✓ EzyDraw drawing tool: pencil, shapes, UI kit, speech bubbles, emoji, text, eraser, select/move/resize, undo/redo, PNG export — v1.3
+- ✓ Drawing-canvas integration: save as image nodes, re-edit via double-click, dual storage (vector JSON + PNG in Vercel Blob) — v1.3
+- ✓ Step 8a Mind Map canvas: visual node graph with HMW center, theme branches, dagre auto-layout, AI-suggested themes — v1.3
+- ✓ Step 8b Crazy 8s canvas: 8 sketch slots, tap → EzyDraw → image on card, AI sketch prompts, idea selection — v1.3
+- ✓ Step 8 streamlined flow: Mind Mapping → Crazy 8s → Idea Selection (Brain Writing removed) — v1.3
+- ✓ Step 9 visual concept cards: AI-generated cards with sketch, elevator pitch, SWOT, feasibility ratings, billboard hero — v1.3
 
 ### Active
-
-## Current Milestone: v1.3 EzyDraw & Visual Ideation
-
-**Goal:** Transform Steps 8 and 9 from text-only to visual-first with a reusable in-app drawing tool.
-
-**Target features:**
-- EzyDraw — reusable drawing modal (pencil, shapes, UI kit, icons/emoji, text, speech bubbles, eraser, select/move/resize, layers, export PNG)
-- Step 8a Mind Map — visual node canvas (HMW center, theme branches, idea connections)
-- Step 8b Crazy 8s — 8-slot sketch grid with EzyDraw integration
-- Step 8 flow simplification — Mind Mapping → Crazy 8s → Idea Selection (skip Brain Writing)
-- Step 9 Visual Concept Cards — rich canvas cards with sketch, pitch, SWOT, feasibility
-
-#### v1.3 — EzyDraw & Visual Ideation
-- [ ] EzyDraw component: reusable drawing modal with pencil, shapes, UI kit, icons/emoji, text, speech bubbles, eraser, layers
-- [ ] EzyDraw select/move/resize and export PNG
-- [ ] Step 8a Mind Map canvas: visual node graph with HMW center, theme branches, interactive add/connect
-- [ ] Step 8b Crazy 8s canvas: 8 blank sketch slots, tap → EzyDraw → image on card
-- [ ] Step 8 streamlined flow: Mind Mapping → Crazy 8s → Idea Selection (Brain Writing removed)
-- [ ] Step 9 visual concept cards on canvas: sketch, elevator pitch, SWOT quadrants, feasibility scores
 
 #### Future — MMP (Visual & Collaborative)
 - [ ] Visual stakeholder radar chart
@@ -84,7 +71,6 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - [ ] AI + canvas working side-by-side (auto-suggest, auto-complete nodes)
 - [ ] Real-time multiplayer (WebSockets)
 - [ ] Voice input
-- [ ] Canvas-first mode for visual steps
 - [ ] AI pattern analysis and gap detection
 - [ ] Concept comparison (side-by-side evaluation)
 - [ ] A/B billboard variant generation
@@ -111,14 +97,14 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 
 **The 10 Design Thinking Steps:**
 1. Challenge — extract the core problem, draft HMW statement
-2. Stakeholder Mapping — identify and prioritize people/groups involved
+2. Stakeholder Mapping — identify and prioritize people/groups (concentric ring canvas)
 3. User Research — gather insights (synthetic interviews for digital version)
-4. Research Sense Making — synthesize into themes, pains (5), gains (5)
+4. Research Sense Making — synthesize into themes, pains/gains (empathy map canvas)
 5. Persona Development — create research-grounded user persona
-6. Journey Mapping — map current experience, find the "dip"
+6. Journey Mapping — map current experience, find the "dip" (swimlane grid canvas)
 7. Reframing Challenge — craft focused "How Might We" statement
-8. Ideation — Mind Mapping, Crazy 8s (v1.3: visual canvas with EzyDraw sketching)
-9. Concept Development — concept sheets with SWOT, feasibility, elevator pitch
+8. Ideation — Mind Map canvas → Crazy 8s sketch grid with EzyDraw → Idea Selection
+9. Concept Development — AI-generated concept cards with sketch, SWOT, feasibility on canvas
 10. Validate — synthesis summary recapping the full 10-step journey
 
 **AI facilitation model:** The AI follows a conversational arc per step: Orient → Gather → Synthesize → Refine → Validate → Complete. Context flows forward — each step's structured output becomes input for subsequent steps via hierarchical compression (short-term verbatim, long-term summaries, persistent JSON artifacts).
@@ -133,8 +119,8 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - **AI Provider**: Google Gemini API (gemini-2.0-flash) — chosen for cost/capability balance
 - **Entry Friction**: Must be near-zero — user types idea and starts immediately
 - **Desktop-First**: MVP targets desktop browsers; mobile deferred to MMP/FFP
-- **Single Player First**: v0.5 and v1.0 are single-user; collaboration starts at MMP
-- **Existing Codebase**: 18,166 lines TypeScript, 24 phases shipped, production at workshoppilot.ai
+- **Single Player First**: v0.5-v1.3 are single-user; collaboration starts at MMP
+- **Existing Codebase**: ~25,400 lines TypeScript across ~352 files, 29 phases shipped, production at workshoppilot.ai
 
 ## Key Decisions
 
@@ -154,24 +140,28 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | neon-http driver over WebSocket | Serverless-optimized, avoids connection pooling complexity | ✓ Good |
 | AI SDK 6 with DefaultChatTransport | Latest API with streaming and message persistence | ✓ Good |
 | Vercel Analytics + Speed Insights | Free performance monitoring from day one | ✓ Good |
-| ReactFlow for canvas (not Tldraw/Excalidraw) | Graph-first data model (nodes+edges), MIT free, ~200KB, structured relationships queryable for AI context. Tldraw $6K/yr, Excalidraw drawing-first with manual relationship parsing | ✓ Good — 110KB gzipped, quadrant layouts, AI-canvas integration |
+| ReactFlow for canvas (not Tldraw/Excalidraw) | Graph-first data model (nodes+edges), MIT free, ~200KB, structured relationships queryable for AI context | ✓ Good — 110KB gzipped, quadrant layouts, AI-canvas integration |
 | Semantic IDs for grid columns/rows | String IDs survive reordering operations, array indices break on add/remove | ✓ Good — clean column management |
 | Custom snap logic (not ReactFlow built-in) | ReactFlow snapGrid has multi-select bug (#1579) | ✓ Good — custom cell-boundary snap works reliably |
 | Preview nodes with isPreview flag | Suggest-then-confirm UX without complex state machine | ✓ Good — clean accept/reject flow |
 | Concentric rings for stakeholder mapping | More meaningful than 4-quadrant grid; importance tiers map naturally to ring distance | ✓ Good — intuitive visualization |
 | Lazy migration (client-side seeding) | No DB writes until user interacts; existing data migrates silently | ✓ Good — zero-migration deployment |
 | Canvas-only layout for Steps 2 & 4 | Canvas is sole source of truth; output panel was redundant | ✓ Good — cleaner UX |
-| EzyDraw as standalone modal (not ReactFlow extension) | Drawing needs different tools than graph editing; modal outputs image to canvas node. Clean separation of concerns | — Pending |
-| Pull EzyDraw from FFP to v1.3 | Sketching is fundamental to Ideation exercises (Crazy 8s). Text descriptions miss the essence of design thinking. | — Pending |
-| Skip Brain Writing in v1.3 | Brain Writing needs real multi-user collaboration to deliver value; AI simulation insufficient for visual mode | — Pending |
+| EzyDraw as standalone modal (not ReactFlow extension) | Drawing needs different tools than graph editing; modal outputs image to canvas node | ✓ Good — clean separation, dual storage works well |
+| Konva.js for EzyDraw (not tldraw SDK) | ~98KB vs ~500KB for tldraw; Konva gives fine-grained control for custom tools | ✓ Good — bundle budget preserved |
+| Pull EzyDraw from FFP to v1.3 | Sketching is fundamental to Ideation exercises (Crazy 8s). Text descriptions miss the essence of design thinking | ✓ Good — visual ideation transforms Step 8/9 experience |
+| Skip Brain Writing in v1.3 | Brain Writing needs real multi-user collaboration to deliver value; AI simulation insufficient for visual mode | ✓ Good — deferred to MMP |
+| Dual storage for drawings (vector JSON + PNG) | Vector JSON enables re-editing, PNG enables fast display and canvas integration | ✓ Good — no Konva imports for display |
+| Dagre for mind map auto-layout | Tree layout algorithm prevents node overlap without manual positioning | ✓ Good — handles 3 levels cleanly |
+| AI concept generation from workshop context | Queries 4 prior steps for evidence-based SWOT/feasibility, not generic output | ✓ Good — grounded in actual workshop data |
 
 ## Current State
 
-**Shipped:** v1.2 Canvas Whiteboard (2026-02-12)
+**Shipped:** v1.3 EzyDraw & Visual Ideation (2026-02-12)
 **Live at:** https://workshoppilot.ai
-**Codebase:** ~18,166 lines of TypeScript across ~310 files
-**Tech stack:** Clerk + Neon + Gemini + Drizzle + AI SDK 6 + ReactFlow + Zustand + Vercel — all validated in production
-**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) + v1.2 (whiteboard, 2 days) = 6 days total
+**Codebase:** ~25,400 lines of TypeScript across ~352 files
+**Tech stack:** Clerk + Neon + Gemini + Drizzle + AI SDK 6 + ReactFlow + Konva.js + Zustand + Vercel — all validated in production
+**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) + v1.2 (whiteboard, 2 days) + v1.3 (visual ideation, 1 day) = 6 days total
 
 **Known issues / tech debt:**
 - Workshops table needs deletedAt column for soft delete
@@ -180,7 +170,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - CRON_SECRET needs to be configured in Vercel dashboard for production cron warming
 - Mobile grid optimization deferred (may need tablet-first approach)
 
-**Current milestone:** v1.3 EzyDraw & Visual Ideation — in-app drawing tool, visual mind map, Crazy 8s sketch grid, visual concept cards
+**Next milestone:** TBD — potential directions: Build Pack export, collaboration features, Step 10 validation canvas, or production polish
 
 ---
-*Last updated: 2026-02-12 after v1.3 milestone started*
+*Last updated: 2026-02-12 after v1.3 milestone*

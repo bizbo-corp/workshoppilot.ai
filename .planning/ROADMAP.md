@@ -67,145 +67,18 @@ See `milestones/v1.2-ROADMAP.md` for full details.
 
 </details>
 
-### ✅ v1.3 EzyDraw & Visual Ideation (SHIPPED 2026-02-12)
+<details>
+<summary>✅ v1.3 EzyDraw & Visual Ideation (Phases 25-29) - SHIPPED 2026-02-12</summary>
 
-**Milestone Goal:** Transform Steps 8 and 9 from text-only to visual-first with a reusable in-app drawing tool.
+- [x] Phase 25: EzyDraw Foundation (6/6 plans)
+- [x] Phase 26: Drawing-Canvas Integration (4/4 plans)
+- [x] Phase 27: UI Kit & Advanced Tools (3/3 plans)
+- [x] Phase 28: Mind Map & Crazy 8s Canvases (6/6 plans)
+- [x] Phase 29: Visual Concept Cards (4/4 plans)
 
-#### Phase 25: EzyDraw Foundation
+See `milestones/v1.3-ROADMAP.md` for full details.
 
-**Goal**: Users can draw freehand sketches in a modal canvas
-
-**Depends on**: Phase 24 (v1.2 complete)
-
-**Requirements**: DRAW-01, DRAW-02, DRAW-03, DRAW-07, DRAW-08, DRAW-09, DRAW-10, DRAW-11, DRAW-12
-
-**Success Criteria** (what must be TRUE):
-1. User can open EzyDraw modal from any visual ideation context
-2. User can draw freehand strokes with velocity-based width using pencil tool
-3. User can place basic shapes (rectangle, circle, arrow, line, diamond) on drawing canvas
-4. User can add text labels to drawings
-5. User can erase individual elements from drawings
-6. User can select, move, and resize drawing elements
-7. User can undo and redo drawing actions (Cmd+Z / Cmd+Shift+Z)
-8. User can export drawing as PNG image on save
-9. User can clear entire drawing canvas with confirmation dialog
-10. EzyDraw modal lazy-loads to keep initial page bundle under 600KB
-11. Drawing works correctly on touch devices (iPad, Android tablets)
-
-**Plans**: 6 plans
-
-Plans:
-- [x] 25-01-PLAN.md — Install deps, TypeScript types, Zustand drawing store, history manager
-- [x] 25-02-PLAN.md — Fullscreen modal, Konva Stage, toolbar, lazy-load wrapper
-- [x] 25-03-PLAN.md — Freehand pencil tool with perfect-freehand velocity strokes
-- [x] 25-04-PLAN.md — Shapes tool (rectangle, circle, arrow, line, diamond) via click-drag
-- [x] 25-05-PLAN.md — Select/move/resize, text labels, eraser tools
-- [x] 25-06-PLAN.md — PNG export, undo/redo wiring, clear canvas, human verification
-
-#### Phase 26: Drawing-Canvas Integration
-
-**Goal**: Saved drawings appear as image nodes on ReactFlow canvas and can be re-edited
-
-**Depends on**: Phase 25
-
-**Requirements**: INTEG-01, INTEG-02, INTEG-03, INTEG-04, INTEG-05
-
-**Success Criteria** (what must be TRUE):
-1. User can save a drawing from EzyDraw modal and see it appear as image node on canvas
-2. User can double-click a saved drawing node to re-edit it in EzyDraw modal
-3. Drawing vector state (Konva JSON) persists in database alongside PNG for re-editing
-4. Drawing PNG images are stored in Vercel Blob (not base64 in database)
-5. Drawings are stored in separate stepArtifacts.drawings array (not mixed with canvas nodes)
-6. Drawing storage does not cause database performance degradation
-
-**Plans**: 4 plans
-
-Plans:
-- [x] 26-01-PLAN.md — Install deps, vector simplification, server actions for save/load/update drawings
-- [x] 26-02-PLAN.md — DrawingImageNode component, canvas-store drawing actions, nodeTypes registration
-- [x] 26-03-PLAN.md — Wire save flow (EzyDraw → Blob → DB → canvas) and re-edit flow with autosave
-- [x] 26-04-PLAN.md — Draw button in toolbar + human verification of end-to-end integration
-
-#### Phase 27: UI Kit & Advanced Tools
-
-**Goal**: Users can build product UI sketches with pre-built components and visual annotations
-
-**Depends on**: Phase 26
-
-**Requirements**: DRAW-04, DRAW-05, DRAW-06
-
-**Success Criteria** (what must be TRUE):
-1. User can drag-and-drop UI kit components (button, input, card, navbar, modal, dropdown, tab, icon placeholder, image placeholder, list item) onto drawing canvas
-2. User can place speech bubbles with adjustable tail on drawing canvas
-3. User can stamp icons and emoji onto drawings via picker
-4. UI kit palette is visually organized and easy to browse
-5. Bundle size increase from UI kit features stays under 100KB gzipped
-
-**Plans**: 3 plans
-
-Plans:
-- [x] 27-01-PLAN.md — Install deps, extend types (groupId, SpeechBubbleElement, EmojiElement), create 10 UI kit factories and palette sidebar
-- [x] 27-02-PLAN.md — Wire dnd-kit drag-drop from palette to canvas, add group operations to store, group-aware stage rendering
-- [x] 27-03-PLAN.md — Speech bubble tool with adjustable tail, lazy-loaded emoji picker, toolbar and stage integration
-
-#### Phase 28: Mind Map & Crazy 8s Canvases
-
-**Goal**: Step 8 Ideation uses visual mind maps and sketch grids instead of text lists
-
-**Depends on**: Phase 27
-
-**Requirements**: MIND-01, MIND-02, MIND-03, MIND-04, MIND-05, MIND-06, MIND-07, CRAZY-01, CRAZY-02, CRAZY-03, CRAZY-04, CRAZY-05, CRAZY-06, FLOW-01, FLOW-02, FLOW-03
-
-**Success Criteria** (what must be TRUE):
-1. Step 8a displays a visual mind map with HMW statement as central node
-2. User can add child nodes to build theme branches (max 3 levels deep)
-3. Mind map nodes auto-layout using dagre tree algorithm
-4. User can edit node text inline and delete nodes (with cascade confirmation)
-5. AI suggests theme branches based on earlier workshop steps
-6. Mind map nodes are color-coded by theme branch
-7. Step 8b displays 8 blank sketch slots in a 2x4 grid layout
-8. User can tap an empty slot to open EzyDraw modal for that slot
-9. Completed sketch saves to slot as image and user can re-edit by tapping filled slot
-10. User can add a title to each sketch slot
-11. AI suggests sketch prompts to overcome blank-canvas paralysis
-12. Step 8 sub-step flow is: Mind Mapping → Crazy 8s → Idea Selection (Brain Writing removed)
-13. User can select top ideas from Crazy 8s to carry forward to Step 9
-
-**Plans**: 6 plans
-
-Plans:
-- [x] 28-01-PLAN.md — MindMapNode, MindMapEdge components, theme color system, Step 8 canvas config
-- [x] 28-02-PLAN.md — dagre auto-layout, MindMapCanvas with CRUD, canvas store mind map state
-- [x] 28-03-PLAN.md — AI theme suggestion API endpoint and Suggest Themes button in mind map
-- [x] 28-04-PLAN.md — Crazy 8s types, 2x4 grid component, canvas store Crazy 8s slot state
-- [x] 28-05-PLAN.md — Crazy8sCanvas with EzyDraw integration, AI sketch prompts, autosave
-- [x] 28-06-PLAN.md — Update Step 8 flow (remove Brain Writing, integrate visual canvases + Idea Selection)
-
-#### Phase 29: Visual Concept Cards
-
-**Goal**: Step 9 displays rich concept cards with sketches, pitch, SWOT, and feasibility ratings
-
-**Depends on**: Phase 28
-
-**Requirements**: CONCEPT-01, CONCEPT-02, CONCEPT-03, CONCEPT-04, CONCEPT-05, CONCEPT-06, CONCEPT-07
-
-**Success Criteria** (what must be TRUE):
-1. Step 9 displays visual concept cards on ReactFlow canvas
-2. Each concept card shows sketch thumbnail from selected Crazy 8s ideas
-3. Each concept card has editable elevator pitch field
-4. Each concept card has SWOT analysis grid (Strengths, Weaknesses, Opportunities, Threats)
-5. Each concept card has feasibility rating (1-5 scale across multiple dimensions)
-6. User can edit all concept card fields inline
-7. AI pre-fills concept card fields based on sketch and workshop context
-8. Concept cards use dealing-cards layout pattern for visual organization
-
-**Plans**: 4 plans
-
-Plans:
-- [x] 29-01-PLAN.md — ConceptCardNode component + ConceptCardData type + canvas store concept card slice
-- [x] 29-02-PLAN.md — Register conceptCard node type, dealing-cards layout, autosave + persistence
-- [x] 29-03-PLAN.md — AI concept generation API endpoint with workshop context
-- [x] 29-04-PLAN.md — Step 9 canvas container wiring, concept generation overlay, data flow
+</details>
 
 ## Progress
 

@@ -1,5 +1,31 @@
 # Project Milestones: WorkshopPilot.ai
 
+## v1.3 EzyDraw & Visual Ideation (Shipped: 2026-02-12)
+
+**Delivered:** Transformed Steps 8 and 9 from text-only to visual-first with EzyDraw in-app drawing tool, mind map canvases, Crazy 8s sketch grids, and AI-generated concept cards with SWOT analysis and feasibility ratings.
+
+**Phases completed:** 25-29 (23 plans total)
+
+**Key accomplishments:**
+- EzyDraw in-app drawing tool — freehand velocity strokes, shapes (rect/circle/arrow/line/diamond), text labels, select/move/resize, eraser, undo/redo, PNG export via Konva.js (~98KB)
+- Drawing-canvas integration — saved drawings as ReactFlow image nodes, re-editable via double-click, dual storage (vector JSON + PNG in Vercel Blob)
+- UI kit with 10 drag-and-drop wireframe components, speech bubbles with adjustable tails, emoji stamps via lazy-loaded picker
+- Visual mind mapping for Step 8a — auto-layout with dagre, color-coded theme branches (6 colors), AI-suggested themes from workshop context
+- Crazy 8s sketch grid for Step 8b — 2x4 slots with EzyDraw integration, AI sketch prompt suggestions, idea selection flow to Step 9
+- Visual concept cards for Step 9 — AI-generated cards with SWOT grid, feasibility dot ratings, billboard hero, evidence-based from 4 prior workshop steps
+
+**Stats:**
+- 108 files created/modified
+- ~25,400 lines of TypeScript (total codebase)
+- 5 phases, 23 plans, 41 feat commits
+- 1 day (2026-02-12)
+
+**Git range:** `feat(25-01)` → `feat(29-04)`
+
+**What's next:** Next milestone TBD — potential directions: Build Pack export, collaboration features, Step 10 validation canvas, or production polish.
+
+---
+
 ## v1.2 Canvas Whiteboard (Shipped: 2026-02-12)
 
 **Delivered:** Structured whiteboard with grid/swimlane layouts for journey mapping, AI suggest-then-confirm placement, dynamic columns, and canvas-first rendering for Steps 2 (concentric rings) & 4 (empathy map zones) with lazy migration from existing artifacts.
