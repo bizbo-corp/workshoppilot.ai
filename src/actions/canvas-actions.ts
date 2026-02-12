@@ -5,6 +5,7 @@ import { stepArtifacts, workshopSteps } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import type { PostIt, GridColumn, DrawingNode, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 
 /**
  * Save canvas state to stepArtifacts JSONB column under the `_canvas` key.
@@ -25,6 +26,7 @@ export async function saveCanvasState(
     mindMapNodes?: MindMapNodeState[];
     mindMapEdges?: MindMapEdgeState[];
     crazy8sSlots?: Crazy8sSlot[];
+    conceptCards?: ConceptCardData[];
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -121,6 +123,7 @@ export async function loadCanvasState(
   mindMapNodes?: MindMapNodeState[];
   mindMapEdges?: MindMapEdgeState[];
   crazy8sSlots?: Crazy8sSlot[];
+  conceptCards?: ConceptCardData[];
 } | null> {
   try {
     // Find the workshopStep record
@@ -167,6 +170,7 @@ export async function loadCanvasState(
         mindMapNodes?: MindMapNodeState[];
         mindMapEdges?: MindMapEdgeState[];
         crazy8sSlots?: Crazy8sSlot[];
+        conceptCards?: ConceptCardData[];
       };
       if (canvas?.postIts) {
         return {
@@ -176,6 +180,7 @@ export async function loadCanvasState(
           ...(canvas.mindMapNodes ? { mindMapNodes: canvas.mindMapNodes } : {}),
           ...(canvas.mindMapEdges ? { mindMapEdges: canvas.mindMapEdges } : {}),
           ...(canvas.crazy8sSlots ? { crazy8sSlots: canvas.crazy8sSlots } : {}),
+          ...(canvas.conceptCards ? { conceptCards: canvas.conceptCards } : {}),
         };
       }
     }
