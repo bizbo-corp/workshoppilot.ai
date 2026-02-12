@@ -13,6 +13,24 @@ export type GridColumn = {
   width: number;
 };
 
+export type MindMapNodeState = {
+  id: string;
+  label: string;
+  themeColorId: string;
+  themeColor: string;
+  themeBgColor: string;
+  isRoot: boolean;
+  level: number;          // 0 = root, 1 = theme branch, 2+ = sub-ideas
+  parentId?: string;      // ID of parent node (undefined for root)
+};
+
+export type MindMapEdgeState = {
+  id: string;
+  source: string;
+  target: string;
+  themeColor: string;
+};
+
 export type DrawingNode = {
   id: string;
   drawingId: string;   // ID in stepArtifacts.drawings array
@@ -44,6 +62,8 @@ export type CanvasState = {
   postIts: PostIt[];
   drawingNodes: DrawingNode[];
   crazy8sSlots: Crazy8sSlot[];
+  mindMapNodes: MindMapNodeState[];
+  mindMapEdges: MindMapEdgeState[];
   isDirty: boolean;
   gridColumns: GridColumn[]; // Dynamic columns, initialized from step config
   highlightedCell: { row: number; col: number } | null;
@@ -66,6 +86,10 @@ export type CanvasActions = {
   setDrawingNodes: (nodes: DrawingNode[]) => void;
   updateCrazy8sSlot: (slotId: string, updates: Partial<Crazy8sSlot>) => void;
   setCrazy8sSlots: (slots: Crazy8sSlot[]) => void;
+  addMindMapNode: (node: MindMapNodeState, edge?: MindMapEdgeState) => void;
+  updateMindMapNode: (id: string, updates: Partial<MindMapNodeState>) => void;
+  deleteMindMapNode: (id: string) => void;
+  setMindMapState: (nodes: MindMapNodeState[], edges: MindMapEdgeState[]) => void;
   setGridColumns: (gridColumns: GridColumn[]) => void;
   addGridColumn: (label: string) => void;
   updateGridColumn: (id: string, updates: Partial<GridColumn>) => void;
@@ -80,11 +104,13 @@ export type CanvasActions = {
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[] }) => {
+export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[] }) => {
   const DEFAULT_STATE: CanvasState = {
     postIts: initState?.postIts || [],
     drawingNodes: initState?.drawingNodes || [],
     crazy8sSlots: initState?.crazy8sSlots || [],
+    mindMapNodes: initState?.mindMapNodes || [],
+    mindMapEdges: initState?.mindMapEdges || [],
     gridColumns: initState?.gridColumns || [],
     isDirty: false,
     highlightedCell: null,
@@ -383,6 +409,59 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
             selectedPostItIds: ids,
           })),
 
+        addMindMapNode: (node, edge) =>
+          set((state) => ({
+            mindMapNodes: [...state.mindMapNodes, node],
+            mindMapEdges: edge ? [...state.mindMapEdges, edge] : state.mindMapEdges,
+            isDirty: true,
+          })),
+
+        updateMindMapNode: (id, updates) =>
+          set((state) => ({
+            mindMapNodes: state.mindMapNodes.map((node) =>
+              node.id === id ? { ...node, ...updates } : node
+            ),
+            isDirty: true,
+          })),
+
+        deleteMindMapNode: (id) =>
+          set((state) => {
+            // Collect all descendant IDs via BFS
+            const removalSet = new Set<string>([id]);
+            const queue = [id];
+
+            while (queue.length > 0) {
+              const currentId = queue.shift()!;
+              // Find all edges where current node is the source
+              const childEdges = state.mindMapEdges.filter(
+                (edge) => edge.source === currentId
+              );
+              // Add child targets to removal set and queue
+              childEdges.forEach((edge) => {
+                removalSet.add(edge.target);
+                queue.push(edge.target);
+              });
+            }
+
+            // Filter out all nodes and edges in removal set
+            return {
+              mindMapNodes: state.mindMapNodes.filter(
+                (node) => !removalSet.has(node.id)
+              ),
+              mindMapEdges: state.mindMapEdges.filter(
+                (edge) => !removalSet.has(edge.source) && !removalSet.has(edge.target)
+              ),
+              isDirty: true,
+            };
+          }),
+
+        setMindMapState: (nodes, edges) =>
+          set(() => ({
+            mindMapNodes: nodes,
+            mindMapEdges: edges,
+            // NOTE: Does NOT set isDirty — this is for loading from DB
+          })),
+
         markClean: () =>
           set(() => ({
             isDirty: false,
@@ -394,6 +473,8 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
           drawingNodes: state.drawingNodes,
           gridColumns: state.gridColumns,
           crazy8sSlots: state.crazy8sSlots,
+          mindMapNodes: state.mindMapNodes,
+          mindMapEdges: state.mindMapEdges,
         }),
         limit: 50,
         equality: (pastState, currentState) =>
