@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 ## Current Position
 
 Phase: 33 of 35 (AI Personality)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-13 — Completed 33-01-PLAN.md (AI Personality Foundation)
+Plan: 2 of 2 in current phase
+Status: Completed
+Last activity: 2026-02-13 — Completed 33-02-PLAN.md (Step-Specific Prompt Updates)
 
-Progress: [███████████████████████░] 91% (32 of 35 phases complete)
+Progress: [███████████████████████░] 94% (33 of 35 phases complete)
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [███████████████████████
 | 32-workshop-management P01 | 169 | 2 | 3 |
 | 32-workshop-management P02 | 111 | 2 | 5 |
 | 33-ai-personality P01 | 165 | 2 | 3 |
+| Phase 33 P02 | 478 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,8 @@ Recent decisions affecting current work:
 - Phase 33: Message brevity enforced (max 3-4 paragraphs) to prevent wall-of-text responses
 - Phase 33: Canvas references use whiteboard metaphor ("I see you've got X in Y...")
 - Phase 33: Arc phases use active, conversational language ("Dig deep", "Lead with the goods", etc.)
+- [Phase 33]: Steps 1-5 updated with sharp consultant personality tone (direct language, friendly redirects, natural bridging)
+- [Phase 33]: Steps 6-10 and sub-steps updated with consistent consultant voice (practitioner tone across all steps)
 
 ### Pending Todos
 
