@@ -38,6 +38,7 @@ export interface CanvasToolbarProps {
   canRedo: boolean;
   activeTool: 'pointer' | 'hand';
   onToolChange: (tool: 'pointer' | 'hand') => void;
+  onOpenDraw?: () => void;
 }
 
 function IconButton({
@@ -80,6 +81,7 @@ export function CanvasToolbar({
   canRedo,
   activeTool,
   onToolChange,
+  onOpenDraw,
 }: CanvasToolbarProps) {
   return (
     <>
@@ -112,6 +114,24 @@ export function CanvasToolbar({
           <Plus className="w-4 h-4" />
           <span>Post-it</span>
         </button>
+
+        {/* Draw button (only if onOpenDraw provided) */}
+        {onOpenDraw && (
+          <>
+            <div className="w-px h-5 bg-gray-200 mx-0.5" />
+            <button
+              onClick={onOpenDraw}
+              title="Draw"
+              aria-label="Open drawing canvas"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11.5 1.5l3 3-9 9H2.5v-3l9-9z" />
+              </svg>
+              <span>Draw</span>
+            </button>
+          </>
+        )}
 
         {/* Emoji post-it dropdown */}
         <DropdownMenu>

@@ -1047,6 +1047,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         canRedo={canRedo}
         activeTool={activeTool}
         onToolChange={setActiveTool}
+        onOpenDraw={() => setEzyDrawState({ isOpen: true })}
       />
 
       {/* Context menu: ungroup for groups, color picker for post-its */}
