@@ -105,9 +105,9 @@ See `milestones/v1.3-ROADMAP.md` for full details.
 **Plans:** 3 plans
 
 Plans:
-- [ ] 30-01-PLAN.md -- Canvas visual polish (drag feedback, hover cursor, dot grid background)
-- [ ] 30-02-PLAN.md -- Panel borders and grip handles
-- [ ] 30-03-PLAN.md -- Chat auto-scroll fix and Journey Map duplicate card bug
+- [x] 30-01-PLAN.md -- Canvas visual polish (drag feedback, hover cursor, dot grid background)
+- [x] 30-02-PLAN.md -- Panel borders and grip handles
+- [x] 30-03-PLAN.md -- Chat auto-scroll fix and Journey Map duplicate card bug
 
 #### Phase 31: Output Panel Retirement
 
@@ -216,7 +216,7 @@ Plans:
 | 27. UI Kit & Advanced Tools | v1.3 | 3/3 | Complete | 2026-02-12 |
 | 28. Mind Map & Crazy 8s Canvases | v1.3 | 6/6 | Complete | 2026-02-12 |
 | 29. Visual Concept Cards | v1.3 | 4/4 | Complete | 2026-02-12 |
-| 30. UX Polish | v1.4 | 0/3 | Planning complete | - |
+| 30. UX Polish | v1.4 | 3/3 | Complete | 2026-02-13 |
 | 31. Output Panel Retirement | v1.4 | 0/TBD | Not started | - |
 | 32. Workshop Management | v1.4 | 0/TBD | Not started | - |
 | 33. AI Personality | v1.4 | 0/TBD | Not started | - |
