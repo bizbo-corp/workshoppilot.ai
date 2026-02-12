@@ -19,11 +19,12 @@ import { cn } from '@/lib/utils';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { PostItNode, type PostItNodeData } from './post-it-node';
 import { GroupNode } from './group-node';
+import { DrawingImageNode } from './drawing-image-node';
 import { CanvasToolbar } from './canvas-toolbar';
 import { ColorPicker } from './color-picker';
 import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
 import { usePreventScrollOnCanvas } from '@/hooks/use-prevent-scroll-on-canvas';
-import type { PostItColor, GridColumn } from '@/stores/canvas-store';
+import type { PostItColor, GridColumn, DrawingNode } from '@/stores/canvas-store';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { QuadrantOverlay } from './quadrant-overlay';
 import { detectQuadrant } from '@/lib/canvas/quadrant-detection';
@@ -40,6 +41,7 @@ import { getZoneForPosition } from '@/lib/canvas/empathy-zones';
 const nodeTypes = {
   postIt: PostItNode,
   group: GroupNode,
+  drawingImage: DrawingImageNode,
 };
 
 export interface ReactFlowCanvasProps {
@@ -56,6 +58,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const deletePostIt = useCanvasStore((s) => s.deletePostIt);
   const batchDeletePostIts = useCanvasStore((s) => s.batchDeletePostIts);
   const ungroupPostIts = useCanvasStore((s) => s.ungroupPostIts);
+  const drawingNodes = useCanvasStore((s) => s.drawingNodes);
+  const updateDrawingNode = useCanvasStore((s) => s.updateDrawingNode);
+  const deleteDrawingNode = useCanvasStore((s) => s.deleteDrawingNode);
   const gridColumns = useCanvasStore((s) => s.gridColumns);
   const setGridColumns = useCanvasStore((s) => s.setGridColumns);
   const removeGridColumn = useCanvasStore((s) => s.removeGridColumn);
@@ -254,7 +259,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       return 0;
     });
 
-    return sorted.map((postIt) => {
+    const postItReactFlowNodes: Node[] = sorted.map((postIt) => {
       const isPreview = postIt.isPreview === true;
 
       return {
@@ -285,7 +290,31 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           : { width: postIt.width, height: 'auto' },
       };
     });
-  }, [postIts, editingNodeId, draggingNodeId, selectedNodeIds, handleTextChange, handleEditComplete, handleConfirmPreview, handleRejectPreview]);
+
+    // Add drawing nodes
+    const drawingReactFlowNodes: Node[] = drawingNodes.map((dn) => {
+      const displayWidth = Math.min(dn.width, 400);
+      const displayHeight = displayWidth * (dn.height / dn.width);
+
+      return {
+        id: dn.id,
+        type: 'drawingImage' as const,
+        position: dn.position,
+        draggable: true,
+        selectable: true,
+        selected: selectedNodeIds.includes(dn.id),
+        data: {
+          imageUrl: dn.imageUrl,
+          drawingId: dn.drawingId,
+          width: dn.width,
+          height: dn.height,
+        },
+        style: { width: displayWidth, height: displayHeight },
+      };
+    });
+
+    return [...postItReactFlowNodes, ...drawingReactFlowNodes];
+  }, [postIts, drawingNodes, editingNodeId, draggingNodeId, selectedNodeIds, handleTextChange, handleEditComplete, handleConfirmPreview, handleRejectPreview]);
 
   // Create post-it at position and set as editing
   const createPostItAtPosition = useCallback(
@@ -521,10 +550,12 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     const selectedNodes = nodes.filter(n => n.selected);
     // Ungroup any selected groups first
     selectedNodes.filter(n => n.type === 'group').forEach(n => ungroupPostIts(n.id));
-    // Delete non-group selected
-    const nonGroupIds = selectedNodes.filter(n => n.type !== 'group').map(n => n.id);
-    if (nonGroupIds.length > 0) batchDeletePostIts(nonGroupIds);
-  }, [nodes, ungroupPostIts, batchDeletePostIts]);
+    // Delete selected drawing nodes
+    selectedNodes.filter(n => n.type === 'drawingImage').forEach(n => deleteDrawingNode(n.id));
+    // Delete non-group, non-drawing postIt nodes
+    const postItIds = selectedNodes.filter(n => n.type !== 'group' && n.type !== 'drawingImage').map(n => n.id);
+    if (postItIds.length > 0) batchDeletePostIts(postItIds);
+  }, [nodes, ungroupPostIts, batchDeletePostIts, deleteDrawingNode]);
 
   // Handle node drag start
   const handleNodeDragStart = useCallback(
@@ -556,13 +587,17 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         const removedIds = removeChanges.map(c => c.id);
         removedIds.forEach(id => {
           const node = nodes.find(n => n.id === id);
-          if (node?.type === 'group') ungroupPostIts(id);
+          if (node?.type === 'group') {
+            ungroupPostIts(id);
+          } else if (node?.type === 'drawingImage') {
+            deleteDrawingNode(id);
+          }
         });
-        const nonGroupIds = removedIds.filter(id => {
+        const postItIds = removedIds.filter(id => {
           const node = nodes.find(n => n.id === id);
-          return node?.type !== 'group';
+          return node?.type !== 'group' && node?.type !== 'drawingImage';
         });
-        if (nonGroupIds.length > 0) batchDeletePostIts(nonGroupIds);
+        if (postItIds.length > 0) batchDeletePostIts(postItIds);
         return;
       }
 
@@ -575,6 +610,16 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         ) {
           // Clear dragging state
           setDraggingNodeId(null);
+
+          // Check if this is a drawing node
+          const drawingNode = drawingNodes.find((dn) => dn.id === change.id);
+          if (drawingNode) {
+            // Handle drawing node position update with snap-to-grid
+            const snappedPosition = snapToGrid(change.position);
+            updateDrawingNode(change.id, { position: snappedPosition });
+            return;
+          }
+
           // Ring-based snap and assignment for ring steps
           if (stepConfig.hasRings && stepConfig.ringConfig) {
             const snappedPosition = snapToGrid(change.position);
@@ -633,7 +678,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         }
       });
     },
-    [nodes, snapToGrid, updatePostIt, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts]
+    [nodes, drawingNodes, snapToGrid, updatePostIt, updateDrawingNode, deleteDrawingNode, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts]
   );
 
   // Handle node drag (real-time cell highlighting)
@@ -654,17 +699,20 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         if (node.type === 'group') {
           // Ungroup children first, then remove group
           ungroupPostIts(node.id);
+        } else if (node.type === 'drawingImage') {
+          // Delete drawing node
+          deleteDrawingNode(node.id);
         }
       });
-      // Delete non-group nodes
-      const nonGroupIds = deleted
-        .filter(n => n.type !== 'group')
+      // Delete non-group, non-drawing postIt nodes
+      const postItIds = deleted
+        .filter(n => n.type !== 'group' && n.type !== 'drawingImage')
         .map(n => n.id);
-      if (nonGroupIds.length > 0) {
-        batchDeletePostIts(nonGroupIds);
+      if (postItIds.length > 0) {
+        batchDeletePostIts(postItIds);
       }
     },
-    [ungroupPostIts, batchDeletePostIts]
+    [ungroupPostIts, batchDeletePostIts, deleteDrawingNode]
   );
 
 
@@ -778,8 +826,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       if (container) {
         const rect = container.getBoundingClientRect();
         instance.setViewport({
-          x: rect.width / 2 + 210, // Center horizontally on the zone layout
-          y: rect.height / 2 + 200, // Center vertically
+          x: rect.width / 2 - 80, // Center horizontally on the wider zone layout
+          y: rect.height / 2 + 216, // Center vertically on zone layout
           zoom: 0.6, // Zoomed out enough to see all 6 zones
         });
       }

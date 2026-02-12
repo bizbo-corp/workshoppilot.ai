@@ -12,6 +12,15 @@ export type GridColumn = {
   width: number;
 };
 
+export type DrawingNode = {
+  id: string;
+  drawingId: string;   // ID in stepArtifacts.drawings array
+  imageUrl: string;    // Vercel Blob CDN URL
+  position: { x: number; y: number };
+  width: number;
+  height: number;
+};
+
 export type PostIt = {
   id: string;
   text: string;
@@ -32,6 +41,7 @@ export type PostIt = {
 
 export type CanvasState = {
   postIts: PostIt[];
+  drawingNodes: DrawingNode[];
   isDirty: boolean;
   gridColumns: GridColumn[]; // Dynamic columns, initialized from step config
   highlightedCell: { row: number; col: number } | null;
@@ -48,6 +58,10 @@ export type CanvasActions = {
   groupPostIts: (postItIds: string[]) => void;
   ungroupPostIts: (groupId: string) => void;
   setPostIts: (postIts: PostIt[]) => void;
+  addDrawingNode: (node: Omit<DrawingNode, 'id'>) => void;
+  updateDrawingNode: (id: string, updates: Partial<DrawingNode>) => void;
+  deleteDrawingNode: (id: string) => void;
+  setDrawingNodes: (nodes: DrawingNode[]) => void;
   setGridColumns: (gridColumns: GridColumn[]) => void;
   addGridColumn: (label: string) => void;
   updateGridColumn: (id: string, updates: Partial<GridColumn>) => void;
@@ -62,9 +76,10 @@ export type CanvasActions = {
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[] }) => {
+export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[] }) => {
   const DEFAULT_STATE: CanvasState = {
     postIts: initState?.postIts || [],
+    drawingNodes: initState?.drawingNodes || [],
     gridColumns: initState?.gridColumns || [],
     isDirty: false,
     highlightedCell: null,
@@ -200,6 +215,38 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
             // NOTE: Does NOT set isDirty — this is for loading from DB
           })),
 
+        addDrawingNode: (node) =>
+          set((state) => ({
+            drawingNodes: [
+              ...state.drawingNodes,
+              {
+                ...node,
+                id: crypto.randomUUID(),
+              },
+            ],
+            isDirty: true,
+          })),
+
+        updateDrawingNode: (id, updates) =>
+          set((state) => ({
+            drawingNodes: state.drawingNodes.map((node) =>
+              node.id === id ? { ...node, ...updates } : node
+            ),
+            isDirty: true,
+          })),
+
+        deleteDrawingNode: (id) =>
+          set((state) => ({
+            drawingNodes: state.drawingNodes.filter((node) => node.id !== id),
+            isDirty: true,
+          })),
+
+        setDrawingNodes: (nodes) =>
+          set(() => ({
+            drawingNodes: nodes,
+            // NOTE: Does NOT set isDirty — this is for loading from DB
+          })),
+
         setGridColumns: (gridColumns) =>
           set(() => ({
             gridColumns,
@@ -325,6 +372,7 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
       {
         partialize: (state) => ({
           postIts: state.postIts,
+          drawingNodes: state.drawingNodes,
           gridColumns: state.gridColumns,
         }),
         limit: 50,
