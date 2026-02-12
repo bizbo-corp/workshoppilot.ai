@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 26 of 29 (Drawing-Canvas Integration) — IN PROGRESS
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: Active
-Last activity: 2026-02-12 — Completed 26-02: DrawingImageNode & Canvas Integration
+Last activity: 2026-02-12 — Completed 26-03: Drawing Edit Flow
 
-Progress: [██████████████████████████████████████░░] 84% (76/91 plans complete across project)
+Progress: [██████████████████████████████████████░░] 85% (77/91 plans complete across project)
 
 ## Completed Milestones
 
@@ -68,6 +68,7 @@ Progress: [███████████████████████
 - **Drawing persistence (Phase 26)**: Use simplify-js for Douglas-Peucker algorithm instead of custom implementation
 - **Drawing storage (Phase 26)**: Store drawings as JSONB array in stepArtifacts (not separate table) for atomic workshop data
 - **DrawingImageNode display (Phase 26)**: CSS background-image for PNG display (no Konva imports) preserves 600KB bundle budget
+- **Drawing integration (Phase 26)**: Inner component pattern for store access, dual storage (content in drawings[], positions in _canvas.drawingNodes[]), async double-click handler for type-based edit routing
 
 ### Known Tech Debt
 
@@ -94,10 +95,10 @@ Progress: [███████████████████████
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 26-02: DrawingImageNode & Canvas Integration
+Stopped at: Completed 26-03: Drawing Edit Flow
 Resume file: None
 
-**Next action:** Execute plan 26-03 (Drawing Edit Flow)
+**Next action:** Execute plan 26-04 (Drawing Launch Integration)
 
 ## Performance Metrics
 
@@ -111,8 +112,9 @@ Resume file: None
 | 25 | 06 | ~1800s | 2 | 1 created, 6 modified | 2026-02-12 |
 | 26 | 01 | 143s | 2 | 3 created | 2026-02-12 |
 | 26 | 02 | 180s | 2 | 1 created, 2 modified | 2026-02-12 |
+| 26 | 03 | 205s | 2 | 1 created, 5 modified | 2026-02-12 |
 
 ---
 
-*Last updated: 2026-02-12 after completing plan 26-02 (DrawingImageNode & Canvas Integration)*
+*Last updated: 2026-02-12 after completing plan 26-03 (Drawing Edit Flow)*
 
