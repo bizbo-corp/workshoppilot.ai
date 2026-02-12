@@ -6,10 +6,10 @@ import { db } from '@/db/client';
 import { users, workshops } from '@/db/schema';
 import { eq, desc, isNull, and } from 'drizzle-orm';
 import { MigrationCheck } from '@/components/auth/migration-check';
-import { WorkshopCard } from '@/components/dashboard/workshop-card';
+import { WorkshopGrid } from '@/components/dashboard/workshop-grid';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { createWorkshopSession, renameWorkshop, deleteWorkshops } from '@/actions/workshop-actions';
+import { createWorkshopSession, renameWorkshop } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 
 export default async function DashboardPage() {
@@ -170,23 +170,17 @@ export default async function DashboardPage() {
           </div>
 
           {/* Workshop grid */}
-          <div className="mb-6">
-            <h2 className="mb-4 text-xl font-semibold text-foreground">All Workshops</h2>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {workshopsWithProgress.map((workshop) => (
-                <WorkshopCard
-                  key={workshop.id}
-                  workshopId={workshop.id}
-                  sessionId={workshop.sessionId}
-                  title={workshop.title}
-                  currentStep={workshop.currentStep}
-                  currentStepName={workshop.currentStepName}
-                  updatedAt={workshop.updatedAt}
-                  onRename={renameWorkshop}
-                />
-              ))}
-            </div>
-          </div>
+          <WorkshopGrid
+            workshops={workshopsWithProgress.map((w) => ({
+              id: w.id,
+              sessionId: w.sessionId,
+              title: w.title,
+              currentStep: w.currentStep,
+              currentStepName: w.currentStepName,
+              updatedAt: w.updatedAt,
+            }))}
+            onRename={renameWorkshop}
+          />
         </>
       )}
     </>
