@@ -17,7 +17,9 @@ export type DrawingTool =
   | 'diamond'
   | 'text'
   | 'select'
-  | 'eraser';
+  | 'eraser'
+  | 'speechBubble'
+  | 'emoji';
 
 /**
  * Base properties shared by all drawing elements
@@ -30,6 +32,7 @@ export type BaseElement = {
   scaleX: number;
   scaleY: number;
   opacity: number;
+  groupId?: string; // Links multiple elements that form a single UI kit component
 };
 
 /**
@@ -114,6 +117,32 @@ export type TextElement = BaseElement & {
 };
 
 /**
+ * Speech bubble element with customizable tail
+ */
+export type SpeechBubbleElement = BaseElement & {
+  type: 'speechBubble';
+  width: number;
+  height: number;
+  tailX: number;  // Tail tip x offset relative to bubble origin
+  tailY: number;  // Tail tip y offset relative to bubble origin
+  text: string;
+  fontSize: number;
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+  cornerRadius: number;
+};
+
+/**
+ * Emoji element (stamp-style, renders as large text)
+ */
+export type EmojiElement = BaseElement & {
+  type: 'emoji';
+  emoji: string;    // Native emoji character (e.g., "⭐")
+  fontSize: number; // Display size (default 48)
+};
+
+/**
  * Discriminated union of all drawing elements
  */
 export type DrawingElement =
@@ -123,7 +152,9 @@ export type DrawingElement =
   | ArrowElement
   | LineElement
   | DiamondElement
-  | TextElement;
+  | TextElement
+  | SpeechBubbleElement
+  | EmojiElement;
 
 /**
  * Complete drawing state
@@ -144,3 +175,8 @@ export type DrawingState = {
 export function createElementId(): string {
   return crypto.randomUUID();
 }
+
+/**
+ * Element that belongs to a compound UI kit component
+ */
+export type UIKitGroupElement = DrawingElement & { groupId: string };
