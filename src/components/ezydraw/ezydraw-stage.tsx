@@ -1,16 +1,18 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { Stage, Layer, Line, Rect, Ellipse, Arrow, Text } from 'react-konva';
+import { Stage, Layer, Line, Rect, Ellipse, Arrow, Text, Path } from 'react-konva';
 import type Konva from 'konva';
 import { useDrawingStore } from '@/providers/drawing-store-provider';
 import { usePencilTool, PencilToolPreview } from '@/components/ezydraw/tools/pencil-tool';
 import type { PointerData } from '@/components/ezydraw/tools/pencil-tool';
 import { useShapesTool, ShapesToolPreview } from '@/components/ezydraw/tools/shapes-tool';
+import { useSpeechBubbleTool, SpeechBubblePreview, SpeechBubbleTailHandle } from '@/components/ezydraw/tools/speech-bubble-tool';
 import { SelectTool } from '@/components/ezydraw/tools/select-tool';
 import { TextTool } from '@/components/ezydraw/tools/text-tool';
 import { eraserCursor } from '@/components/ezydraw/tools/eraser-tool';
-import type { DrawingElement } from '@/lib/drawing/types';
+import { generateSpeechBubblePath } from '@/lib/drawing/speech-bubble-path';
+import type { DrawingElement, SpeechBubbleElement } from '@/lib/drawing/types';
 import { createElementId } from '@/lib/drawing/types';
 
 export interface EzyDrawStageHandle {
@@ -41,6 +43,7 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
   // Store selectors
   const elements = useDrawingStore((s) => s.elements);
   const activeTool = useDrawingStore((s) => s.activeTool);
+  const selectedElementId = useDrawingStore((s) => s.selectedElementId);
   const addElement = useDrawingStore((s) => s.addElement);
   const updateElement = useDrawingStore((s) => s.updateElement);
   const deleteElement = useDrawingStore((s) => s.deleteElement);
@@ -53,6 +56,7 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
   // Tool hooks
   const pencilHandlers = usePencilTool();
   const shapeHandlers = useShapesTool();
+  const speechBubbleHandlers = useSpeechBubbleTool();
 
   // Refs for latest values (avoids stale closures in native event listeners)
   const activeToolRef = useRef(activeTool);
@@ -61,6 +65,8 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
   pencilRef.current = pencilHandlers;
   const shapeRef = useRef(shapeHandlers);
   shapeRef.current = shapeHandlers;
+  const speechBubbleRef = useRef(speechBubbleHandlers);
+  speechBubbleRef.current = speechBubbleHandlers;
 
   useImperativeHandle(ref, () => ({
     getStage: () => stageRef.current,
@@ -110,6 +116,9 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
     } else if (SHAPE_TOOLS.includes(tool)) {
       shapeRef.current.handleDown(pos);
       e.preventDefault();
+    } else if (tool === 'speechBubble') {
+      speechBubbleRef.current.handleDown(pos);
+      e.preventDefault();
     }
   }, [getPointerPos]);
 
@@ -121,6 +130,8 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
       pencilRef.current.handleMove(pos);
     } else if (SHAPE_TOOLS.includes(tool)) {
       shapeRef.current.handleMove(pos);
+    } else if (tool === 'speechBubble') {
+      speechBubbleRef.current.handleMove(pos);
     }
   }, [getPointerPos]);
 
@@ -130,6 +141,8 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
       pencilRef.current.handleUp();
     } else if (SHAPE_TOOLS.includes(tool)) {
       shapeRef.current.handleUp();
+    } else if (tool === 'speechBubble') {
+      speechBubbleRef.current.handleUp();
     }
   }, []);
 
@@ -173,7 +186,7 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
   const getCursorStyle = () => {
     switch (activeTool) {
       case 'pencil': case 'rectangle': case 'circle':
-      case 'diamond': case 'arrow': case 'line':
+      case 'diamond': case 'arrow': case 'line': case 'speechBubble':
         return 'crosshair';
       case 'text': return 'text';
       case 'eraser': return eraserCursor;
@@ -334,6 +347,67 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
                   }} />
               );
             }
+            if (element.type === 'speechBubble') {
+              const pathData = generateSpeechBubblePath(
+                0, 0, // Path relative to element position
+                element.width,
+                element.height,
+                element.tailX,
+                element.tailY,
+                element.cornerRadius
+              );
+              return (
+                <React.Fragment key={element.id}>
+                  <Path
+                    {...commonProps}
+                    x={element.x}
+                    y={element.y}
+                    data={pathData}
+                    fill={element.fill}
+                    stroke={element.stroke}
+                    strokeWidth={element.strokeWidth}
+                    rotation={element.rotation}
+                    scaleX={element.scaleX}
+                    scaleY={element.scaleY}
+                    opacity={element.opacity}
+                    onDblClick={(e) => {
+                      e.cancelBubble = true;
+                      const node = e.target;
+                      const absPos = node.getAbsolutePosition();
+                      startTextEditing(element.id, absPos.x + 12, absPos.y + 12, element.width - 24, element.fontSize, element.text);
+                    }}
+                  />
+                  <Text
+                    id={`${element.id}-label`}
+                    x={element.x + 12}
+                    y={element.y + 12}
+                    width={element.width - 24}
+                    text={element.text}
+                    fontSize={element.fontSize}
+                    fill="#000000"
+                    fontFamily="sans-serif"
+                    listening={false}
+                  />
+                </React.Fragment>
+              );
+            }
+            if (element.type === 'emoji') {
+              return (
+                <Text
+                  key={element.id}
+                  {...commonProps}
+                  x={element.x}
+                  y={element.y}
+                  text={element.emoji}
+                  fontSize={element.fontSize}
+                  fontFamily="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif"
+                  rotation={element.rotation}
+                  scaleX={element.scaleX}
+                  scaleY={element.scaleY}
+                  opacity={element.opacity}
+                />
+              );
+            }
             return null;
           })}
 
@@ -349,10 +423,27 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
             fillColor={shapeHandlers.fillColor}
             strokeWidth={shapeHandlers.strokeWidth}
           />
+          <SpeechBubblePreview previewBubble={speechBubbleHandlers.previewBubble} />
         </Layer>
 
         <Layer ref={uiLayerRef} name="ui-layer">
           {activeTool === 'select' && <SelectTool stageRef={stageRef} />}
+          {/* Speech bubble tail handle - only visible when speech bubble is selected */}
+          {activeTool === 'select' && selectedElementId && (() => {
+            const selectedBubble = elements.find(
+              (el) => el.id === selectedElementId && el.type === 'speechBubble'
+            ) as SpeechBubbleElement | undefined;
+
+            if (selectedBubble) {
+              return (
+                <SpeechBubbleTailHandle
+                  bubble={selectedBubble}
+                  updateElement={updateElement}
+                />
+              );
+            }
+            return null;
+          })()}
         </Layer>
       </Stage>
 

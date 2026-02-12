@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useDrawingStore } from '@/providers/drawing-store-provider';
 import {
@@ -17,9 +18,13 @@ import {
   Trash2,
   Save,
   X,
+  MessageCircle,
+  Smile,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { EmojiPickerTool } from '@/components/ezydraw/tools/emoji-picker-tool';
+import type { DrawingElement } from '@/lib/drawing/types';
 
 interface EzyDrawToolbarProps {
   onSave: () => void;
@@ -35,6 +40,7 @@ const TOOL_BUTTONS = [
   { tool: 'arrow', icon: ArrowRight, label: 'Arrow (A)', hotkey: 'a' },
   { tool: 'line', icon: Minus, label: 'Line (L)', hotkey: 'l' },
   { tool: 'text', icon: Type, label: 'Text (T)', hotkey: 't' },
+  { tool: 'speechBubble', icon: MessageCircle, label: 'Speech Bubble (B)', hotkey: 'b' },
   { tool: 'eraser', icon: Eraser, label: 'Eraser (E)', hotkey: 'e' },
 ] as const;
 
@@ -58,6 +64,9 @@ export function EzyDrawToolbar({ onSave, onCancel }: EzyDrawToolbarProps) {
   const undo = useDrawingStore((state) => state.undo);
   const redo = useDrawingStore((state) => state.redo);
   const clearAll = useDrawingStore((state) => state.clearAll);
+  const addElement = useDrawingStore((state) => state.addElement);
+
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
   // Keyboard shortcuts
   useHotkeys('mod+z', () => undo(), { enabled: canUndo });
@@ -71,6 +80,20 @@ export function EzyDrawToolbar({ onSave, onCancel }: EzyDrawToolbarProps) {
     if (window.confirm('Clear entire drawing? This cannot be undone.')) {
       clearAll();
     }
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    addElement({
+      type: 'emoji',
+      x: 400, // Center of typical viewport
+      y: 300,
+      emoji,
+      fontSize: 48,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 1,
+    } as Omit<DrawingElement, 'id'>);
   };
 
   return (
@@ -93,6 +116,25 @@ export function EzyDrawToolbar({ onSave, onCancel }: EzyDrawToolbarProps) {
             <Icon className="h-4 w-4" />
           </Button>
         ))}
+      </div>
+
+      {/* Divider */}
+      <div className="mx-1 h-6 w-px bg-gray-300" />
+
+      {/* Emoji button */}
+      <div className="flex items-center gap-0.5">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            'h-8 w-8',
+            emojiPickerOpen && 'bg-blue-100 text-blue-700 ring-1 ring-blue-300 hover:bg-blue-100'
+          )}
+          onClick={() => setEmojiPickerOpen(!emojiPickerOpen)}
+          title="Emoji"
+        >
+          <Smile className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Divider */}
@@ -226,6 +268,13 @@ export function EzyDrawToolbar({ onSave, onCancel }: EzyDrawToolbarProps) {
           Save
         </Button>
       </div>
+
+      {/* Emoji picker popup */}
+      <EmojiPickerTool
+        isOpen={emojiPickerOpen}
+        onEmojiSelect={handleEmojiSelect}
+        onClose={() => setEmojiPickerOpen(false)}
+      />
     </div>
   );
 }
