@@ -39,31 +39,30 @@ export async function saveDrawing(params: {
   try {
     const { workshopId, stepId, pngBase64, vectorJson, width, height } = params;
 
-    // Guard: Check for Vercel Blob token
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      return {
-        success: false,
-        error:
-          'BLOB_READ_WRITE_TOKEN not configured. Set this in Vercel Dashboard → Storage → Blob.',
-      };
-    }
+    // Upload PNG to Vercel Blob (or fall back to data URL for local dev)
+    let url: string;
 
-    // Convert base64 data URL to Buffer
-    const base64Data = pngBase64.split(',')[1];
-    if (!base64Data) {
-      return { success: false, error: 'Invalid base64 data URL format' };
-    }
-    const buffer = Buffer.from(base64Data, 'base64');
-
-    // Upload PNG to Vercel Blob
-    const { url } = await put(
-      `drawings/${workshopId}/${Date.now()}.png`,
-      buffer,
-      {
-        access: 'public',
-        addRandomSuffix: true,
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const base64Data = pngBase64.split(',')[1];
+      if (!base64Data) {
+        return { success: false, error: 'Invalid base64 data URL format' };
       }
-    );
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      const blob = await put(
+        `drawings/${workshopId}/${Date.now()}.png`,
+        buffer,
+        {
+          access: 'public',
+          addRandomSuffix: true,
+        }
+      );
+      url = blob.url;
+    } else {
+      // Fallback: store data URL directly (works for dev, not recommended for production)
+      console.warn('BLOB_READ_WRITE_TOKEN not set — storing drawing as data URL. Set token in .env.local for Vercel Blob storage.');
+      url = pngBase64;
+    }
 
     // Find workshopStep record
     const workshopStepRecords = await db
@@ -171,7 +170,6 @@ export async function loadDrawing(params: {
   drawingId: string;
 }): Promise<{
   vectorJson: string;
-  pngUrl: string;
   width: number;
   height: number;
 } | null> {
@@ -193,6 +191,7 @@ export async function loadDrawing(params: {
       .limit(1);
 
     if (workshopStepRecords.length === 0) {
+      console.warn('loadDrawing: workshop step not found', { workshopId, stepId });
       return null;
     }
 
@@ -208,6 +207,7 @@ export async function loadDrawing(params: {
       .limit(1);
 
     if (artifactRecords.length === 0) {
+      console.warn('loadDrawing: no artifact found for step', { workshopStepId });
       return null;
     }
 
@@ -218,12 +218,13 @@ export async function loadDrawing(params: {
     const drawing = drawings.find((d) => d.id === drawingId);
 
     if (!drawing) {
+      console.warn('loadDrawing: drawing not found in artifact', { drawingId, availableIds: drawings.map(d => d.id) });
       return null;
     }
 
+    // Only return vectorJson (not pngUrl) to avoid large data URL in server action response
     return {
       vectorJson: drawing.vectorJson,
-      pngUrl: drawing.pngUrl,
       width: drawing.width,
       height: drawing.height,
     };
@@ -261,31 +262,29 @@ export async function updateDrawing(params: {
       height,
     } = params;
 
-    // Guard: Check for Vercel Blob token
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      return {
-        success: false,
-        error:
-          'BLOB_READ_WRITE_TOKEN not configured. Set this in Vercel Dashboard → Storage → Blob.',
-      };
-    }
+    // Upload PNG to Vercel Blob (or fall back to data URL for local dev)
+    let url: string;
 
-    // Convert base64 data URL to Buffer
-    const base64Data = pngBase64.split(',')[1];
-    if (!base64Data) {
-      return { success: false, error: 'Invalid base64 data URL format' };
-    }
-    const buffer = Buffer.from(base64Data, 'base64');
-
-    // Upload new PNG to Vercel Blob (old one auto-expires based on Blob store config)
-    const { url } = await put(
-      `drawings/${workshopId}/${Date.now()}.png`,
-      buffer,
-      {
-        access: 'public',
-        addRandomSuffix: true,
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const base64Data = pngBase64.split(',')[1];
+      if (!base64Data) {
+        return { success: false, error: 'Invalid base64 data URL format' };
       }
-    );
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      const blob = await put(
+        `drawings/${workshopId}/${Date.now()}.png`,
+        buffer,
+        {
+          access: 'public',
+          addRandomSuffix: true,
+        }
+      );
+      url = blob.url;
+    } else {
+      console.warn('BLOB_READ_WRITE_TOKEN not set — storing drawing as data URL.');
+      url = pngBase64;
+    }
 
     // Find workshopStep record
     const workshopStepRecords = await db

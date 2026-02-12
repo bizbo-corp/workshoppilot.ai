@@ -15,7 +15,7 @@ import { exportToPNG } from '@/lib/drawing/export';
 export interface EzyDrawModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (result: { pngDataUrl: string; elements: DrawingElement[] }) => void;
+  onSave: (result: { pngDataUrl: string; elements: DrawingElement[] }) => void | Promise<void>;
   initialElements?: DrawingElement[];
   drawingId?: string;  // If set, we're re-editing an existing drawing
 }
@@ -30,7 +30,7 @@ function EzyDrawContent({
   onCancel,
 }: {
   stageRef: React.RefObject<EzyDrawStageHandle | null>;
-  onSave: (result: { pngDataUrl: string; elements: DrawingElement[] }) => void;
+  onSave: (result: { pngDataUrl: string; elements: DrawingElement[] }) => void | Promise<void>;
   onCancel: () => void;
 }) {
   const getSnapshot = useDrawingStore((s) => s.getSnapshot);
@@ -65,8 +65,8 @@ export function EzyDrawModal({
     onClose();
   };
 
-  const handleSaveComplete = (result: { pngDataUrl: string; elements: DrawingElement[] }) => {
-    onSave(result);
+  const handleSaveComplete = async (result: { pngDataUrl: string; elements: DrawingElement[] }) => {
+    await onSave(result);
     onClose();
   };
 

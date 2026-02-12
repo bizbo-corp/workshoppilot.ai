@@ -779,7 +779,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           height,
         });
         if (response.success && response.pngUrl) {
-          updateDrawingNode(ezyDrawState.drawingId, { imageUrl: response.pngUrl });
+          // Find the canvas store node by drawingId (not the same as the store node id)
+          const storeNode = drawingNodes.find(dn => dn.drawingId === ezyDrawState.drawingId);
+          if (storeNode) {
+            updateDrawingNode(storeNode.id, { imageUrl: response.pngUrl });
+          }
+        } else if (!response.success) {
+          console.error('Failed to update drawing:', response.error);
         }
       } else {
         // New drawing: save and add to canvas
@@ -804,10 +810,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
             width,
             height,
           });
+        } else if (!response.success) {
+          console.error('Failed to save drawing:', response.error);
         }
       }
-
-      setEzyDrawState(null); // Close modal
     },
     [ezyDrawState, workshopId, stepId, screenToFlowPosition, addDrawingNode, updateDrawingNode]
   );
@@ -850,19 +856,25 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       // Check if this is a drawing node
       const drawingNode = drawingNodes.find(dn => dn.id === node.id);
       if (drawingNode) {
-        // Load vector JSON from server
-        const drawing = await loadDrawing({
-          workshopId,
-          stepId,
-          drawingId: drawingNode.drawingId,
-        });
-        if (drawing) {
-          const elements: DrawingElement[] = JSON.parse(drawing.vectorJson);
-          setEzyDrawState({
-            isOpen: true,
+        try {
+          // Load vector JSON from server
+          const drawing = await loadDrawing({
+            workshopId,
+            stepId,
             drawingId: drawingNode.drawingId,
-            initialElements: elements,
           });
+          if (drawing) {
+            const elements: DrawingElement[] = JSON.parse(drawing.vectorJson);
+            setEzyDrawState({
+              isOpen: true,
+              drawingId: drawingNode.drawingId,
+              initialElements: elements,
+            });
+          } else {
+            console.error('Drawing not found in database:', drawingNode.drawingId);
+          }
+        } catch (error) {
+          console.error('Failed to load drawing for re-edit:', error);
         }
         return; // Don't enter postIt edit mode
       }
