@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
 
-**Current focus:** Phase 31 - Output Panel Retirement
+**Current focus:** Phase 32 - Workshop Management
 
 ## Current Position
 
-Phase: 31 of 35 (Output Panel Retirement)
-Plan: 1 of TBD in current phase
-Status: In progress
-Last activity: 2026-02-13 — Completed Phase 31 Plan 01
+Phase: 32 of 35 (Workshop Management)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-02-13 — Completed Phase 31 (Output Panel Retirement)
 
-Progress: [█████████████████████░░░] 86% (30 of 35 phases complete)
+Progress: [██████████████████████░░] 89% (31 of 35 phases complete)
 
 ## Performance Metrics
 
@@ -38,9 +38,10 @@ Progress: [█████████████████████░░
 **Recent Trend:**
 - v1.3 milestone: 23 plans in 1 day (fastest execution)
 - Phase 30: 3 plans in ~4 min parallel (all Wave 1)
+- Phase 31: 1 plan in ~3 min
 - Trend: Accelerating (increased familiarity with codebase and patterns)
 
-*Updated after Phase 31 Plan 01 completion*
+*Updated after Phase 31 completion*
 
 | Phase | Duration (s) | Tasks | Files |
 |-------|--------------|-------|-------|
@@ -56,17 +57,12 @@ Progress: [█████████████████████░░
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Phase 30: Ghost trail effect uses dual box-shadows for depth perception on post-it drag
-- Phase 30: Canvas background uses #fafafa for subtle depth without compromising dot visibility
-- Phase 30: Always-visible 1px borders (w-px bg-border) for panel separators
-- Phase 30: Grip handles (GripVertical/GripHorizontal) on hover with fade-in transition
-- Phase 30: Chat auto-scroll split into mount-time (instant) and ongoing (smooth with near-bottom detection)
-- Phase 30: Journey Map gridColumns init guarded with hadInitialGridColumns ref
 - Phase 31: Output panel as localhost-only dev tool (canvas is user-facing view)
 - Phase 31: useDevOutput hook with SSR-safe hydration pattern (init false, hydrate in useEffect)
 - Phase 31: Bug icon toggle in footer for dev output panel control
 - Phase 31: Amber highlight for active dev mode (not red, avoiding alarm association)
 - Upcoming: Sharp consultant + charismatic AI personality (direct, efficient, "you got this!" energy)
+- Upcoming: Workshops table needs deletedAt column for soft delete (Phase 32)
 
 ### Pending Todos
 
@@ -87,7 +83,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed Phase 31 Plan 01 (Output Panel Retirement)
+Stopped at: Completed Phase 31 (Output Panel Retirement) — 1 plan, verified 6/6 must-haves
 Resume file: None
 
-**Next action:** Continue with next plan in Phase 31 or advance to Phase 32
+**Next action:** `/gsd:plan-phase 32` to begin Phase 32 Workshop Management planning

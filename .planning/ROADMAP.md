@@ -125,7 +125,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 31-01-PLAN.md -- Dev output hook, gate output panel visibility, add localhost toggle to footer
+- [x] 31-01-PLAN.md -- Dev output hook, gate output panel visibility, add localhost toggle to footer
 
 #### Phase 32: Workshop Management
 
@@ -217,7 +217,7 @@ Plans:
 | 28. Mind Map & Crazy 8s Canvases | v1.3 | 6/6 | Complete | 2026-02-12 |
 | 29. Visual Concept Cards | v1.3 | 4/4 | Complete | 2026-02-12 |
 | 30. UX Polish | v1.4 | 3/3 | Complete | 2026-02-13 |
-| 31. Output Panel Retirement | v1.4 | 0/1 | Not started | - |
+| 31. Output Panel Retirement | v1.4 | 1/1 | Complete | 2026-02-13 |
 | 32. Workshop Management | v1.4 | 0/TBD | Not started | - |
 | 33. AI Personality | v1.4 | 0/TBD | Not started | - |
 | 34. Seed Data | v1.4 | 0/TBD | Not started | - |
