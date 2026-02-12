@@ -95,12 +95,12 @@ See `milestones/v1.2-ROADMAP.md` for full details.
 **Plans**: 6 plans
 
 Plans:
-- [ ] 25-01: Install Konva.js + react-konva + perfect-freehand and configure lazy-loading
-- [ ] 25-02: Build EzyDrawModal component with fullscreen overlay and basic controls
-- [ ] 25-03: Implement freehand pencil tool with perfect-freehand velocity strokes
-- [ ] 25-04: Add basic shapes tool (rectangle, circle, arrow, line, diamond)
-- [ ] 25-05: Implement select/move/resize, text labels, eraser, and clear canvas
-- [ ] 25-06: Build undo/redo stack and PNG export functionality
+- [ ] 25-01-PLAN.md — Install deps, TypeScript types, Zustand drawing store, history manager
+- [ ] 25-02-PLAN.md — Fullscreen modal, Konva Stage, toolbar, lazy-load wrapper
+- [ ] 25-03-PLAN.md — Freehand pencil tool with perfect-freehand velocity strokes
+- [ ] 25-04-PLAN.md — Shapes tool (rectangle, circle, arrow, line, diamond) via click-drag
+- [ ] 25-05-PLAN.md — Select/move/resize, text labels, eraser tools
+- [ ] 25-06-PLAN.md — PNG export, undo/redo wiring, clear canvas, human verification
 
 #### Phase 26: Drawing-Canvas Integration
 
