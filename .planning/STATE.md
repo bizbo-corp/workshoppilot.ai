@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
 
-**Current focus:** v1.3 EzyDraw & Visual Ideation — Phase 28 in progress (plan 1 of 6 complete)
+**Current focus:** v1.3 EzyDraw & Visual Ideation — Phase 28 in progress (plan 2 of 6 complete)
 
 ## Current Position
 
 Phase: 28 of 29 (Mind Map & Crazy 8s Canvases)
-Plan: 1 of 6 in current phase
+Plan: 2 of 6 in current phase
 Status: In Progress
-Last activity: 2026-02-12 — Completed 28-01: Mind Map Components
+Last activity: 2026-02-12 — Completed 28-02: Mind Map Layout & Canvas Integration
 
-Progress: [████████████████████████████████████████░] 90% (82/91 plans complete across project)
+Progress: [████████████████████████████████████████░] 91% (83/91 plans complete across project)
 
 ## Completed Milestones
 
@@ -27,8 +27,8 @@ Progress: [███████████████████████
 | v1.2 Canvas Whiteboard | 21-24 | 9 | 2026-02-12 |
 
 **Cumulative stats:**
-- 82 plans completed (27 phases complete + Phase 28 in progress)
-- ~21,100+ lines of TypeScript across ~333 files
+- 83 plans completed (27 phases complete + Phase 28 in progress)
+- ~21,350+ lines of TypeScript across ~335 files
 - 6 days total (2026-02-07 → 2026-02-12)
 
 **Velocity:**
@@ -36,7 +36,7 @@ Progress: [███████████████████████
 - v1.0: 3 days, 8 phases, 25 plans (~25 min/plan)
 - v1.1: 2 days, 6 phases, 15 plans (~25 min/plan)
 - v1.2: 2 days, 4 phases, 9 plans (~3 min/plan average)
-- v1.3: Phase 27 complete (3/3 plans), Phase 28 in progress (1/6 plans, ~3 min/plan)
+- v1.3: Phase 27 complete (3/3 plans), Phase 28 in progress (2/6 plans, ~3 min/plan)
 
 ## Accumulated Context
 
@@ -53,6 +53,9 @@ Progress: [███████████████████████
 
 ### Recent Decisions (v1.3)
 
+- **Dagre layout configuration** (Phase 28-02): 120px ranksep, 100px nodesep prevents overlap at depth 3+ nesting
+- **Layout recalculation strategy** (Phase 28-02): Only on structural changes (add/delete) not label edits to prevent thrashing
+- **BFS cascading delete** (Phase 28-02): deleteMindMapNode uses breadth-first search to collect descendants atomically
 - **6-color theme palette for mind map branches** (Phase 28-01): Auto-assigns to level-1 nodes by sibling index, children inherit parent color for clear branch visualization
 - **Max 3 levels for mind map depth** (Phase 28-01): Prevents visual clutter and maintains usability per research findings
 - **SVG path with bezier curves for speech bubble tail** (Phase 27-03): Smooth, scalable rendering integrates cleanly with Konva Path element
@@ -106,10 +109,10 @@ Progress: [███████████████████████
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 28-01-PLAN.md
+Stopped at: Completed 28-02-PLAN.md
 Resume file: None
 
-**Next action:** `/gsd:execute-plan 28 02` to continue Phase 28
+**Next action:** `/gsd:execute-plan 28 03` to continue Phase 28
 
 ## Performance Metrics
 
@@ -132,8 +135,9 @@ Resume file: None
 | 27 | 02 | 150s | 2 | 1 created, 3 modified | 2026-02-12 |
 | 27 | 03 | 319s | 2 | 3 created, 3 modified | 2026-02-12 |
 | 28 | 01 | 188s | 2 | 3 created, 1 modified | 2026-02-12 |
+| 28 | 02 | 216s | 2 | 2 created, 1 modified | 2026-02-12 |
 
 ---
 
-*Last updated: 2026-02-12 after completing 28-01 (Mind Map Components)*
+*Last updated: 2026-02-12 after completing 28-02 (Mind Map Layout & Canvas Integration)*
 

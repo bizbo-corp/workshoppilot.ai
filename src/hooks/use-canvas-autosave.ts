@@ -25,6 +25,9 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
   const postIts = useCanvasStore((s) => s.postIts);
   const gridColumns = useCanvasStore((s) => s.gridColumns);
   const drawingNodes = useCanvasStore((s) => s.drawingNodes);
+  const mindMapNodes = useCanvasStore((s) => s.mindMapNodes);
+  const mindMapEdges = useCanvasStore((s) => s.mindMapEdges);
+  const crazy8sSlots = useCanvasStore((s) => s.crazy8sSlots);
   const isDirty = useCanvasStore((s) => s.isDirty);
   const markClean = useCanvasStore((s) => s.markClean);
 
@@ -42,6 +45,9 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
         postIts,
         ...(gridColumns.length > 0 ? { gridColumns } : {}),
         ...(drawingNodes.length > 0 ? { drawingNodes } : {}),
+        ...(mindMapNodes.length > 0 ? { mindMapNodes } : {}),
+        ...(mindMapEdges.length > 0 ? { mindMapEdges } : {}),
+        ...(crazy8sSlots.length > 0 ? { crazy8sSlots } : {}),
       });
 
       if (result.success) {
@@ -76,12 +82,12 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
     { maxWait: 10000 } // Force save after 10 seconds max
   );
 
-  // Trigger save when postIts, gridColumns, or drawingNodes change and isDirty
+  // Trigger save when postIts, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, or crazy8sSlots change and isDirty
   useEffect(() => {
     if (isDirty) {
       debouncedSave();
     }
-  }, [postIts, gridColumns, drawingNodes, isDirty, debouncedSave]);
+  }, [postIts, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, isDirty, debouncedSave]);
 
   // Force-save on component unmount
   useEffect(() => {

@@ -3,7 +3,8 @@
 import { db } from '@/db/client';
 import { stepArtifacts, workshopSteps } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import type { PostIt, GridColumn, DrawingNode } from '@/stores/canvas-store';
+import type { PostIt, GridColumn, DrawingNode, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
+import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 
 /**
  * Save canvas state to stepArtifacts JSONB column under the `_canvas` key.
@@ -11,13 +12,20 @@ import type { PostIt, GridColumn, DrawingNode } from '@/stores/canvas-store';
  *
  * @param workshopId - The workshop ID (wks_xxx)
  * @param stepId - The semantic step ID ('challenge', 'stakeholder-mapping', etc.)
- * @param canvasState - The canvas state ({ postIts: PostIt[], gridColumns?: GridColumn[], drawingNodes?: DrawingNode[] })
+ * @param canvasState - The canvas state
  * @returns Promise with success flag and optional error message
  */
 export async function saveCanvasState(
   workshopId: string,
   stepId: string,
-  canvasState: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[] }
+  canvasState: {
+    postIts: PostIt[];
+    gridColumns?: GridColumn[];
+    drawingNodes?: DrawingNode[];
+    mindMapNodes?: MindMapNodeState[];
+    mindMapEdges?: MindMapEdgeState[];
+    crazy8sSlots?: Crazy8sSlot[];
+  }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Find the workshopStep record
@@ -106,7 +114,14 @@ export async function saveCanvasState(
 export async function loadCanvasState(
   workshopId: string,
   stepId: string
-): Promise<{ postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[] } | null> {
+): Promise<{
+  postIts: PostIt[];
+  gridColumns?: GridColumn[];
+  drawingNodes?: DrawingNode[];
+  mindMapNodes?: MindMapNodeState[];
+  mindMapEdges?: MindMapEdgeState[];
+  crazy8sSlots?: Crazy8sSlot[];
+} | null> {
   try {
     // Find the workshopStep record
     const workshopStepRecords = await db
@@ -145,12 +160,22 @@ export async function loadCanvasState(
 
     // Read canvas data from the _canvas key (new format)
     if (artifact && typeof artifact === 'object' && '_canvas' in artifact) {
-      const canvas = artifact._canvas as { postIts?: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[] };
+      const canvas = artifact._canvas as {
+        postIts?: PostIt[];
+        gridColumns?: GridColumn[];
+        drawingNodes?: DrawingNode[];
+        mindMapNodes?: MindMapNodeState[];
+        mindMapEdges?: MindMapEdgeState[];
+        crazy8sSlots?: Crazy8sSlot[];
+      };
       if (canvas?.postIts) {
         return {
           postIts: canvas.postIts,
           ...(canvas.gridColumns ? { gridColumns: canvas.gridColumns } : {}),
           ...(canvas.drawingNodes ? { drawingNodes: canvas.drawingNodes } : {}),
+          ...(canvas.mindMapNodes ? { mindMapNodes: canvas.mindMapNodes } : {}),
+          ...(canvas.mindMapEdges ? { mindMapEdges: canvas.mindMapEdges } : {}),
+          ...(canvas.crazy8sSlots ? { crazy8sSlots: canvas.crazy8sSlots } : {}),
         };
       }
     }

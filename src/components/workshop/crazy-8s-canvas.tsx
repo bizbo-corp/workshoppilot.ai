@@ -14,6 +14,8 @@ import { simplifyDrawingElements } from '@/lib/drawing/simplify';
 import { EMPTY_CRAZY_8S_SLOTS, CRAZY_8S_CANVAS_SIZE } from '@/lib/canvas/crazy-8s-types';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import type { DrawingElement } from '@/lib/drawing/types';
+import { Button } from '@/components/ui/button';
+import { Sparkles } from 'lucide-react';
 
 interface Crazy8sCanvasProps {
   workshopId: string;
@@ -40,8 +42,9 @@ export function Crazy8sCanvas({ workshopId, stepId }: Crazy8sCanvasProps) {
   // EzyDraw modal state
   const [ezyDrawState, setEzyDrawState] = useState<EzyDrawState | null>(null);
 
-  // AI prompts state (feature hook for Task 2)
+  // AI prompts state
   const [aiPrompts, setAiPrompts] = useState<string[]>([]);
+  const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
 
   // Initialize empty slots on mount if not already set
   useEffect(() => {
@@ -165,8 +168,52 @@ export function Crazy8sCanvas({ workshopId, stepId }: Crazy8sCanvasProps) {
     updateCrazy8sSlot(slotId, { title });
   };
 
+  /**
+   * Fetch AI-suggested sketch prompts
+   * Only show button when all slots are empty
+   */
+  const handleSuggestPrompts = async () => {
+    setIsLoadingPrompts(true);
+    try {
+      const response = await fetch('/api/ai/suggest-sketch-prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workshopId }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAiPrompts(data.prompts || []);
+      } else {
+        console.error('Failed to fetch sketch prompts:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching sketch prompts:', error);
+    } finally {
+      setIsLoadingPrompts(false);
+    }
+  };
+
+  // Check if all slots are empty (no images)
+  const allSlotsEmpty = crazy8sSlots.every((slot) => !slot.imageUrl);
+
   return (
     <div className="h-full overflow-auto p-6">
+      {/* AI Suggest Prompts button - only show when all slots empty */}
+      {allSlotsEmpty && crazy8sSlots.length > 0 && (
+        <div className="flex justify-end mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSuggestPrompts}
+            disabled={isLoadingPrompts}
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            {isLoadingPrompts ? 'Generating ideas...' : 'Suggest Prompts'}
+          </Button>
+        </div>
+      )}
+
       <Crazy8sGrid
         slots={crazy8sSlots}
         onSlotClick={handleSlotClick}
