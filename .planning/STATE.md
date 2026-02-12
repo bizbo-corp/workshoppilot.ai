@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 25 of 29 (EzyDraw Foundation)
-Plan: 1 of 6 in current phase
+Plan: 2 of 6 in current phase
 Status: In progress
-Last activity: 2026-02-12 — Completed plan 25-01: Drawing Data Layer Foundation
+Last activity: 2026-02-12 — Completed plan 25-02: EzyDraw UI Shell
 
-Progress: [████████████████████████████████████░░░░] 75% (69/91 plans complete across project)
+Progress: [████████████████████████████████████░░░░] 76% (70/91 plans complete across project)
 
 ## Completed Milestones
 
@@ -27,8 +27,8 @@ Progress: [███████████████████████
 | v1.2 Canvas Whiteboard | 21-24 | 9 | 2026-02-12 |
 
 **Cumulative stats:**
-- 69 plans completed (24 phases + 1 partial across 4 milestones)
-- ~18,500+ lines of TypeScript across ~315 files
+- 70 plans completed (24 phases + 2 partial across 4 milestones)
+- ~18,800+ lines of TypeScript across ~319 files
 - 6 days total (2026-02-07 → 2026-02-12)
 
 **Velocity:**
@@ -58,6 +58,8 @@ Progress: [███████████████████████
 - **Reuse patterns**: Canvas-only layout with lazy migration (v1.2), semantic IDs and custom snap logic for grids
 - **Drawing history**: Custom DrawingHistory class with structuredClone (50-step limit) instead of zundo for tighter control
 - **Store pattern**: Factory-based createDrawingStore() matching canvas-store.ts for consistency
+- **Fullscreen modal**: EzyDraw uses max-w-[100vw] h-screen override on shadcn Dialog for truly fullscreen canvas
+- **Stage ref pattern**: forwardRef + useImperativeHandle exposes getStage() and toDataURL() for PNG export
 
 ### Known Tech Debt
 
@@ -84,17 +86,19 @@ Progress: [███████████████████████
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed plan 25-01 (Drawing Data Layer Foundation)
+Stopped at: Completed plan 25-02 (EzyDraw UI Shell)
 Resume file: None
 
-**Next action:** Continue with plan 25-02
+**Next action:** Continue with plan 25-03
 
 ## Performance Metrics
 
 | Phase | Plan | Duration | Tasks | Files | Completed |
 |-------|------|----------|-------|-------|-----------|
 | 25 | 01 | 214s | 2 | 4 created, 1 modified | 2026-02-12 |
+| 25 | 02 | 112s | 2 | 4 created | 2026-02-12 |
 
 ---
 
-*Last updated: 2026-02-12 after completing plan 25-01*
+*Last updated: 2026-02-12 after completing plan 25-02*
+
