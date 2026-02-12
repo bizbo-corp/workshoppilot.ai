@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 25 of 29 (EzyDraw Foundation)
-Plan: 2 of 6 in current phase
+Plan: 3 of 6 in current phase
 Status: In progress
-Last activity: 2026-02-12 — Completed plan 25-02: EzyDraw UI Shell
+Last activity: 2026-02-12 — Completed plan 25-03: Pencil Tool with perfect-freehand
 
-Progress: [████████████████████████████████████░░░░] 76% (70/91 plans complete across project)
+Progress: [████████████████████████████████████░░░░] 77% (71/91 plans complete across project)
 
 ## Completed Milestones
 
@@ -27,8 +27,8 @@ Progress: [███████████████████████
 | v1.2 Canvas Whiteboard | 21-24 | 9 | 2026-02-12 |
 
 **Cumulative stats:**
-- 70 plans completed (24 phases + 2 partial across 4 milestones)
-- ~18,800+ lines of TypeScript across ~319 files
+- 71 plans completed (24 phases + 3 partial across 4 milestones)
+- ~19,000+ lines of TypeScript across ~320 files
 - 6 days total (2026-02-07 → 2026-02-12)
 
 **Velocity:**
@@ -60,6 +60,8 @@ Progress: [███████████████████████
 - **Store pattern**: Factory-based createDrawingStore() matching canvas-store.ts for consistency
 - **Fullscreen modal**: EzyDraw uses max-w-[100vw] h-screen override on shadcn Dialog for truly fullscreen canvas
 - **Stage ref pattern**: forwardRef + useImperativeHandle exposes getStage() and toDataURL() for PNG export
+- **Ref-based drawing state**: Use refs (not useState) for 60fps drawing to avoid re-render lag
+- **perfect-freehand strokes**: Filled closed Lines with velocity-based outlines (size=strokeWidth*4, thinning/smoothing/streamline=0.5)
 
 ### Known Tech Debt
 
@@ -86,10 +88,10 @@ Progress: [███████████████████████
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed plan 25-02 (EzyDraw UI Shell)
+Stopped at: Completed plan 25-03 (Pencil Tool with perfect-freehand)
 Resume file: None
 
-**Next action:** Continue with plan 25-03
+**Next action:** Continue with plan 25-04
 
 ## Performance Metrics
 
@@ -97,8 +99,9 @@ Resume file: None
 |-------|------|----------|-------|-------|-----------|
 | 25 | 01 | 214s | 2 | 4 created, 1 modified | 2026-02-12 |
 | 25 | 02 | 112s | 2 | 4 created | 2026-02-12 |
+| 25 | 03 | 157s | 2 | 1 created, 1 modified | 2026-02-12 |
 
 ---
 
-*Last updated: 2026-02-12 after completing plan 25-02*
+*Last updated: 2026-02-12 after completing plan 25-03*
 
