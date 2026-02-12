@@ -844,12 +844,33 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     setContextMenu(null);
   }, []);
 
-  // Handle node double-click (enter edit mode)
+  // Handle node double-click (enter edit mode for postIts, or re-edit for drawings)
   const handleNodeDoubleClick = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
+    async (_event: React.MouseEvent, node: Node) => {
+      // Check if this is a drawing node
+      const drawingNode = drawingNodes.find(dn => dn.id === node.id);
+      if (drawingNode) {
+        // Load vector JSON from server
+        const drawing = await loadDrawing({
+          workshopId,
+          stepId,
+          drawingId: drawingNode.drawingId,
+        });
+        if (drawing) {
+          const elements: DrawingElement[] = JSON.parse(drawing.vectorJson);
+          setEzyDrawState({
+            isOpen: true,
+            drawingId: drawingNode.drawingId,
+            initialElements: elements,
+          });
+        }
+        return; // Don't enter postIt edit mode
+      }
+
+      // Existing postIt edit behavior
       setEditingNodeId(node.id);
     },
-    []
+    [drawingNodes, workshopId, stepId]
   );
 
   // Handle pane click (double-click detection + deselect)

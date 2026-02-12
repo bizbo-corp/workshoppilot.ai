@@ -3,7 +3,7 @@
 import { db } from '@/db/client';
 import { stepArtifacts, workshopSteps } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import type { PostIt, GridColumn } from '@/stores/canvas-store';
+import type { PostIt, GridColumn, DrawingNode } from '@/stores/canvas-store';
 
 /**
  * Save canvas state to stepArtifacts JSONB column under the `_canvas` key.
@@ -11,13 +11,13 @@ import type { PostIt, GridColumn } from '@/stores/canvas-store';
  *
  * @param workshopId - The workshop ID (wks_xxx)
  * @param stepId - The semantic step ID ('challenge', 'stakeholder-mapping', etc.)
- * @param canvasState - The canvas state ({ postIts: PostIt[], gridColumns?: GridColumn[] })
+ * @param canvasState - The canvas state ({ postIts: PostIt[], gridColumns?: GridColumn[], drawingNodes?: DrawingNode[] })
  * @returns Promise with success flag and optional error message
  */
 export async function saveCanvasState(
   workshopId: string,
   stepId: string,
-  canvasState: { postIts: PostIt[]; gridColumns?: GridColumn[] }
+  canvasState: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[] }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Find the workshopStep record
@@ -106,7 +106,7 @@ export async function saveCanvasState(
 export async function loadCanvasState(
   workshopId: string,
   stepId: string
-): Promise<{ postIts: PostIt[]; gridColumns?: GridColumn[] } | null> {
+): Promise<{ postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[] } | null> {
   try {
     // Find the workshopStep record
     const workshopStepRecords = await db
@@ -145,11 +145,12 @@ export async function loadCanvasState(
 
     // Read canvas data from the _canvas key (new format)
     if (artifact && typeof artifact === 'object' && '_canvas' in artifact) {
-      const canvas = artifact._canvas as { postIts?: PostIt[]; gridColumns?: GridColumn[] };
+      const canvas = artifact._canvas as { postIts?: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[] };
       if (canvas?.postIts) {
         return {
           postIts: canvas.postIts,
           ...(canvas.gridColumns ? { gridColumns: canvas.gridColumns } : {}),
+          ...(canvas.drawingNodes ? { drawingNodes: canvas.drawingNodes } : {}),
         };
       }
     }
