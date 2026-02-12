@@ -141,10 +141,11 @@ Plans:
 3. Deleted workshops are soft deleted (hidden from UI but recoverable in database)
 4. Dashboard updates immediately after deletion without page refresh
 
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 32-01: TBD during planning
+- [ ] 32-01-PLAN.md -- Soft delete schema (deletedAt column), deleteWorkshops server action, dashboard query filter
+- [ ] 32-02-PLAN.md -- Dashboard selection UI (checkboxes, select all, delete button, confirmation dialog)
 
 #### Phase 33: AI Personality
 
@@ -218,7 +219,7 @@ Plans:
 | 29. Visual Concept Cards | v1.3 | 4/4 | Complete | 2026-02-12 |
 | 30. UX Polish | v1.4 | 3/3 | Complete | 2026-02-13 |
 | 31. Output Panel Retirement | v1.4 | 1/1 | Complete | 2026-02-13 |
-| 32. Workshop Management | v1.4 | 0/TBD | Not started | - |
+| 32. Workshop Management | v1.4 | 0/2 | Planned | - |
 | 33. AI Personality | v1.4 | 0/TBD | Not started | - |
 | 34. Seed Data | v1.4 | 0/TBD | Not started | - |
 | 35. E2E Testing | v1.4 | 0/TBD | Not started | - |
