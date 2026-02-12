@@ -7,6 +7,7 @@
 - ✅ **v1.1 Canvas Foundation** - Phases 15-20 (shipped 2026-02-11)
 - ✅ **v1.2 Canvas Whiteboard** - Phases 21-24 (shipped 2026-02-12)
 - ✅ **v1.3 EzyDraw & Visual Ideation** - Phases 25-29 (shipped 2026-02-12)
+- 🚧 **v1.4 Personal Workshop Polish** - Phases 30-35 (in progress)
 
 ## Phases
 
@@ -80,6 +81,126 @@ See `milestones/v1.3-ROADMAP.md` for full details.
 
 </details>
 
+### 🚧 v1.4 Personal Workshop Polish (In Progress)
+
+**Milestone Goal:** Polish the personal workshop experience with UX refinements, AI personality, comprehensive testing, and seed data for demonstration. Focus on quality and completeness before collaboration features.
+
+#### Phase 30: UX Polish
+
+**Goal**: Fix visual and interaction bugs affecting user experience with post-its, canvas, and chat.
+
+**Depends on**: Phase 29
+
+**Requirements**: UX-01, UX-02, UX-03, UX-04, UX-05, UX-06, UX-07
+
+**Success Criteria** (what must be TRUE):
+1. Post-it nodes show visible drag feedback (ghost trail or faint copy) while dragging
+2. Post-it hover state shows pointer cursor, not grab hand
+3. Canvas panels have visible borders separating them from surrounding UI
+4. Resizable panels show grip handle on hover for discoverability
+5. Canvas whiteboard displays faint grey background with dot grid pattern
+6. Chat panel auto-scrolls to bottom when new messages arrive and on page load
+7. Journey Map page does not create duplicate cards on load
+
+**Plans**: TBD
+
+Plans:
+- [ ] 30-01: TBD during planning
+
+#### Phase 31: Output Panel Retirement
+
+**Goal**: Hide output panel from production users while preserving developer access for debugging.
+
+**Depends on**: Phase 30
+
+**Requirements**: PANEL-01, PANEL-02
+
+**Success Criteria** (what must be TRUE):
+1. Output panel is hidden by default for all users in production
+2. Localhost developers can toggle output panel visibility via footer button
+3. Output panel toggle state persists across page navigation in dev mode
+
+**Plans**: TBD
+
+Plans:
+- [ ] 31-01: TBD during planning
+
+#### Phase 32: Workshop Management
+
+**Goal**: Users can manage their workshop list by selecting and deleting workshops with soft delete protection.
+
+**Depends on**: Phase 31
+
+**Requirements**: MGMT-01, MGMT-02, MGMT-03
+
+**Success Criteria** (what must be TRUE):
+1. User can select one or more workshops on dashboard via checkbox
+2. User can delete selected workshops via delete button with confirmation dialog
+3. Deleted workshops are soft deleted (hidden from UI but recoverable in database)
+4. Dashboard updates immediately after deletion without page refresh
+
+**Plans**: TBD
+
+Plans:
+- [ ] 32-01: TBD during planning
+
+#### Phase 33: AI Personality
+
+**Goal**: AI facilitator exhibits consistent sharp consultant personality with charismatic energy, natural conversational flow, and canvas-aware bridging.
+
+**Depends on**: Phase 32
+
+**Requirements**: AI-01, AI-02, AI-03, AI-04
+
+**Success Criteria** (what must be TRUE):
+1. AI facilitator personality is documented in soul.md (sharp consultant with "you got this!" charisma)
+2. AI messages are split into shorter natural conversational turns instead of wall-of-text responses
+3. AI references canvas items naturally when bridging between chat and whiteboard interactions
+4. All 10 steps exhibit consistent personality and tone across Orient → Gather → Synthesize → Refine → Validate → Complete phases
+
+**Plans**: TBD
+
+Plans:
+- [ ] 33-01: TBD during planning
+
+#### Phase 34: Seed Data
+
+**Goal**: Developers can seed a complete PawPal workshop demonstrating all 10 steps with realistic canvas state.
+
+**Depends on**: Phase 33
+
+**Requirements**: SEED-01, SEED-02, SEED-03
+
+**Success Criteria** (what must be TRUE):
+1. CLI seed command creates full PawPal workshop with structured artifacts across all 10 steps
+2. Seeded workshop includes canvas state (post-its in Step 2/4, grid items in Step 6, mind map in Step 8a, Crazy 8s sketches in Step 8b, concept cards in Step 9)
+3. Seeded workshop appears on dashboard and is fully navigable through all steps
+4. Seeded data demonstrates realistic design thinking workshop progression
+
+**Plans**: TBD
+
+Plans:
+- [ ] 34-01: TBD during planning
+
+#### Phase 35: E2E Testing
+
+**Goal**: Complete end-to-end testing pass validates all 10 steps work correctly with proper context flow, state persistence, and AI facilitation.
+
+**Depends on**: Phase 34
+
+**Requirements**: E2E-01, E2E-02, E2E-03
+
+**Success Criteria** (what must be TRUE):
+1. All 10 steps are walkable end-to-end with smooth transitions, correct AI prompts, and proper structured output extraction
+2. Canvas state persists correctly when navigating backward/forward between steps
+3. AI context compression maintains quality through all 10 steps without degradation or missing context
+4. Back-revise navigation correctly invalidates downstream steps when upstream data changes
+
+**Plans**: TBD
+
+Plans:
+- [ ] 35-01: TBD during planning
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -93,9 +214,15 @@ See `milestones/v1.3-ROADMAP.md` for full details.
 | 27. UI Kit & Advanced Tools | v1.3 | 3/3 | Complete | 2026-02-12 |
 | 28. Mind Map & Crazy 8s Canvases | v1.3 | 6/6 | Complete | 2026-02-12 |
 | 29. Visual Concept Cards | v1.3 | 4/4 | Complete | 2026-02-12 |
+| 30. UX Polish | v1.4 | 0/TBD | Not started | - |
+| 31. Output Panel Retirement | v1.4 | 0/TBD | Not started | - |
+| 32. Workshop Management | v1.4 | 0/TBD | Not started | - |
+| 33. AI Personality | v1.4 | 0/TBD | Not started | - |
+| 34. Seed Data | v1.4 | 0/TBD | Not started | - |
+| 35. E2E Testing | v1.4 | 0/TBD | Not started | - |
 
 **Total v1.3:** 23 plans across 5 phases
 **Total project:** 91 plans across 29 phases, 5 milestones
 
 ---
-*Last updated: 2026-02-12 after Phase 29 completion — v1.3 milestone shipped*
+*Last updated: 2026-02-13 after v1.4 milestone roadmap creation*
