@@ -4,6 +4,7 @@ import type { Quadrant } from '@/lib/canvas/quadrant-detection';
 import type { GridConfig } from '@/lib/canvas/grid-layout';
 import { getCellBounds } from '@/lib/canvas/grid-layout';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 
 export type PostItColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange';
 
@@ -64,6 +65,7 @@ export type CanvasState = {
   crazy8sSlots: Crazy8sSlot[];
   mindMapNodes: MindMapNodeState[];
   mindMapEdges: MindMapEdgeState[];
+  conceptCards: ConceptCardData[];
   isDirty: boolean;
   gridColumns: GridColumn[]; // Dynamic columns, initialized from step config
   highlightedCell: { row: number; col: number } | null;
@@ -99,18 +101,23 @@ export type CanvasActions = {
   setHighlightedCell: (cell: { row: number; col: number } | null) => void;
   setPendingFitView: (pending: boolean) => void;
   setSelectedPostItIds: (ids: string[]) => void;
+  addConceptCard: (card: Omit<ConceptCardData, 'id'>) => void;
+  updateConceptCard: (id: string, updates: Partial<ConceptCardData>) => void;
+  deleteConceptCard: (id: string) => void;
+  setConceptCards: (cards: ConceptCardData[]) => void;
   markClean: () => void;
 };
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[] }) => {
+export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[] }) => {
   const DEFAULT_STATE: CanvasState = {
     postIts: initState?.postIts || [],
     drawingNodes: initState?.drawingNodes || [],
     crazy8sSlots: initState?.crazy8sSlots || [],
     mindMapNodes: initState?.mindMapNodes || [],
     mindMapEdges: initState?.mindMapEdges || [],
+    conceptCards: initState?.conceptCards || [],
     gridColumns: initState?.gridColumns || [],
     isDirty: false,
     highlightedCell: null,
@@ -462,6 +469,38 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
             // NOTE: Does NOT set isDirty — this is for loading from DB
           })),
 
+        addConceptCard: (card) =>
+          set((state) => ({
+            conceptCards: [
+              ...state.conceptCards,
+              {
+                ...card,
+                id: crypto.randomUUID(),
+              },
+            ],
+            isDirty: true,
+          })),
+
+        updateConceptCard: (id, updates) =>
+          set((state) => ({
+            conceptCards: state.conceptCards.map((card) =>
+              card.id === id ? { ...card, ...updates } : card
+            ),
+            isDirty: true,
+          })),
+
+        deleteConceptCard: (id) =>
+          set((state) => ({
+            conceptCards: state.conceptCards.filter((card) => card.id !== id),
+            isDirty: true,
+          })),
+
+        setConceptCards: (cards) =>
+          set(() => ({
+            conceptCards: cards,
+            // NOTE: Does NOT set isDirty — this is for loading from DB
+          })),
+
         markClean: () =>
           set(() => ({
             isDirty: false,
@@ -475,6 +514,7 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
           crazy8sSlots: state.crazy8sSlots,
           mindMapNodes: state.mindMapNodes,
           mindMapEdges: state.mindMapEdges,
+          conceptCards: state.conceptCards,
         }),
         limit: 50,
         equality: (pastState, currentState) =>
