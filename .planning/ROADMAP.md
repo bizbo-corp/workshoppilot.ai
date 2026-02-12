@@ -174,12 +174,12 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
-- [ ] 28-01: Build MindMapCanvas using ReactFlow with custom mind-node type
-- [ ] 28-02: Implement dagre auto-layout algorithm for mind map tree structure
-- [ ] 28-03: Add AI theme suggestion integration using workshop context
-- [ ] 28-04: Build Crazy8sCanvas with 8-slot grid overlay (similar to Journey Map pattern)
-- [ ] 28-05: Integrate EzyDraw modal with Crazy 8s slots (tap → draw → save to slot)
-- [ ] 28-06: Update Step 8 flow (remove Brain Writing, add Idea Selection from Crazy 8s)
+- [ ] 28-01-PLAN.md — MindMapNode, MindMapEdge components, theme color system, Step 8 canvas config
+- [ ] 28-02-PLAN.md — dagre auto-layout, MindMapCanvas with CRUD, canvas store mind map state
+- [ ] 28-03-PLAN.md — AI theme suggestion API endpoint and Suggest Themes button in mind map
+- [ ] 28-04-PLAN.md — Crazy 8s types, 2x4 grid component, canvas store Crazy 8s slot state
+- [ ] 28-05-PLAN.md — Crazy8sCanvas with EzyDraw integration, AI sketch prompts, autosave
+- [ ] 28-06-PLAN.md — Update Step 8 flow (remove Brain Writing, integrate visual canvases + Idea Selection)
 
 #### Phase 29: Visual Concept Cards
 
