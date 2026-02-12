@@ -11,16 +11,16 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 ## Current Position
 
 Phase: 32 of 35 (Workshop Management)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-13 — Completed Phase 31 (Output Panel Retirement)
+Plan: 1 of 2 in current phase
+Status: Executing plans
+Last activity: 2026-02-12 — Completed 32-01 (Soft Delete Infrastructure)
 
 Progress: [██████████████████████░░] 89% (31 of 35 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 95
+- Total plans completed: 96
 - Average duration: ~24 min per plan (estimated from milestones)
 - Total execution time: ~38 hours across 5 milestones
 
@@ -33,7 +33,7 @@ Progress: [██████████████████████░
 | v1.1 | 6 | 15 | 2 days |
 | v1.2 | 4 | 9 | 2 days |
 | v1.3 | 5 | 23 | 1 day |
-| v1.4 (in progress) | 2 | 4 | ongoing |
+| v1.4 (in progress) | 2 | 5 | ongoing |
 
 **Recent Trend:**
 - v1.3 milestone: 23 plans in 1 day (fastest execution)
@@ -49,6 +49,7 @@ Progress: [██████████████████████░
 | 30-ux-polish P02 | 132 | 2 | 3 |
 | 30-ux-polish P03 | 237 | 2 | 2 |
 | 31-output-panel-retirement P01 | 175 | 2 | 5 |
+| 32-workshop-management P01 | 169 | 2 | 3 |
 
 ## Accumulated Context
 
@@ -61,8 +62,10 @@ Recent decisions affecting current work:
 - Phase 31: useDevOutput hook with SSR-safe hydration pattern (init false, hydrate in useEffect)
 - Phase 31: Bug icon toggle in footer for dev output panel control
 - Phase 31: Amber highlight for active dev mode (not red, avoiding alarm association)
+- Phase 32: Nullable deletedAt column with no default (NULL = not deleted)
+- Phase 32: deleteWorkshops validates ownership with defense-in-depth (inArray + eq + isNull)
+- Phase 32: No index on deletedAt (uses existing clerkUserId index + isNull filter)
 - Upcoming: Sharp consultant + charismatic AI personality (direct, efficient, "you got this!" energy)
-- Upcoming: Workshops table needs deletedAt column for soft delete (Phase 32)
 
 ### Pending Todos
 
@@ -71,7 +74,6 @@ None yet.
 ### Blockers/Concerns
 
 **From v1.4 Planning:**
-- Workshops table needs deletedAt column for soft delete (Phase 32)
 - AI personality requires updating prompts across all 10 steps (Phase 33)
 - Seed data requires understanding existing schemas for all steps (Phase 34)
 
@@ -82,8 +84,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-13
-Stopped at: Completed Phase 31 (Output Panel Retirement) — 1 plan, verified 6/6 must-haves
+Last session: 2026-02-12
+Stopped at: Completed 32-01-PLAN.md (Soft Delete Infrastructure) — 2 tasks, 3 files modified
 Resume file: None
 
-**Next action:** `/gsd:plan-phase 32` to begin Phase 32 Workshop Management planning
+**Next action:** `/gsd:execute-plan 32 02` to execute next plan in Phase 32
