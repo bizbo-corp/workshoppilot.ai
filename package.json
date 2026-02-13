@@ -14,6 +14,9 @@
     "db:seed": "dotenv -e .env.local -- tsx scripts/seed-steps.ts",
     "db:seed:sql": "dotenv -e .env.local -- bash -c 'psql $DATABASE_URL -f drizzle/seed/step-definitions.sql'",
     "db:seed:workshop": "dotenv -e .env.local -- tsx scripts/seed-workshop.ts",
+    "test:e2e": "BYPASS_AUTH=true playwright test",
+    "test:e2e:headed": "BYPASS_AUTH=true playwright test --headed",
+    "test:e2e:debug": "BYPASS_AUTH=true playwright test --debug",
     "vercel-build": "tsx scripts/verify-env.ts && drizzle-kit migrate && next build"
   },
   "dependencies": {
@@ -63,6 +66,7 @@
     "zundo": "^2.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
