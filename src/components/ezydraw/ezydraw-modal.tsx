@@ -1,20 +1,20 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import { DrawingStoreProvider, useDrawingStore } from '@/providers/drawing-store-provider';
 import { EzyDrawToolbar } from './toolbar';
 import { EzyDrawStage, type EzyDrawStageHandle } from './ezydraw-stage';
-import { UIKitPalette } from './palette/ui-kit-palette';
-import { DroppableCanvas } from './palette/droppable-canvas';
-import { UI_KIT_COMPONENTS, UI_KIT_LABELS, type UIKitComponentType } from '@/lib/drawing/ui-kit-components';
 import type { DrawingElement } from '@/lib/drawing/types';
 import { exportToPNG } from '@/lib/drawing/export';
+
+/** Default canvas aspect ratio: 6:4 (3:2) */
+const DEFAULT_CANVAS_WIDTH = 1200;
+const DEFAULT_CANVAS_HEIGHT = 800;
 
 export interface EzyDrawModalProps {
   isOpen: boolean;
@@ -22,28 +22,22 @@ export interface EzyDrawModalProps {
   onSave: (result: { pngDataUrl: string; elements: DrawingElement[] }) => void | Promise<void>;
   initialElements?: DrawingElement[];
   drawingId?: string;  // If set, we're re-editing an existing drawing
-  canvasSize?: { width: number; height: number };  // Optional canvas dimensions (defaults to fullscreen)
+  canvasSize?: { width: number; height: number };  // Optional canvas dimensions (defaults to 6:4)
 }
 
 /**
  * Inner content component that has access to the drawing store
- * This allows us to get elements from the store when saving
  */
 function EzyDrawContent({
   stageRef,
   onSave,
   onCancel,
-  canvasSize,
 }: {
   stageRef: React.RefObject<EzyDrawStageHandle | null>;
   onSave: (result: { pngDataUrl: string; elements: DrawingElement[] }) => void | Promise<void>;
   onCancel: () => void;
-  canvasSize?: { width: number; height: number };
 }) {
   const getSnapshot = useDrawingStore((s) => s.getSnapshot);
-  const addElements = useDrawingStore((s) => s.addElements);
-
-  const [activeId, setActiveId] = useState<string | null>(null);
 
   const handleSave = () => {
     const stage = stageRef.current?.getStage();
@@ -54,69 +48,11 @@ function EzyDrawContent({
     onSave({ pngDataUrl, elements });
   };
 
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-
-    // Only handle drop on canvas
-    if (!over || over.id !== 'ezydraw-canvas') {
-      return;
-    }
-
-    // Extract component type from drag data
-    const componentType = active.data.current?.componentType as UIKitComponentType | undefined;
-    if (!componentType) {
-      return;
-    }
-
-    // Get the stage and container for coordinate mapping
-    const stage = stageRef.current?.getStage();
-    if (!stage) return;
-
-    const container = stage.container();
-    const containerRect = container.getBoundingClientRect();
-
-    // Calculate drop position relative to canvas
-    // Use the active element's final position from the drag event
-    const dropX = (active.rect.current.translated?.left ?? 0) - containerRect.left;
-    const dropY = (active.rect.current.translated?.top ?? 0) - containerRect.top;
-
-    // Create the UI kit component at the drop position
-    const factory = UI_KIT_COMPONENTS[componentType];
-    const elements = factory(dropX, dropY);
-
-    // Batch-add all elements in the component
-    addElements(elements);
-  };
-
   return (
-    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex h-full">
-        {/* UI Kit Palette Sidebar */}
-        <UIKitPalette />
-
-        {/* Main canvas area */}
-        <div className="flex-1 flex flex-col">
-          <EzyDrawToolbar onSave={handleSave} onCancel={onCancel} />
-          <DroppableCanvas canvasSize={canvasSize}>
-            <EzyDrawStage ref={stageRef} />
-          </DroppableCanvas>
-        </div>
-      </div>
-
-      {/* Drag overlay shows ghost of dragged item */}
-      <DragOverlay>
-        {activeId ? (
-          <div className="bg-blue-100 border border-blue-400 rounded px-3 py-2 text-sm font-medium text-blue-900 shadow-lg">
-            {UI_KIT_LABELS[activeId.replace('palette-', '') as UIKitComponentType] || 'Component'}
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+    <div className="flex flex-col h-full">
+      <EzyDrawToolbar onSave={handleSave} onCancel={onCancel} />
+      <EzyDrawStage ref={stageRef} />
+    </div>
   );
 }
 
@@ -130,6 +66,9 @@ export function EzyDrawModal({
 }: EzyDrawModalProps) {
   const stageRef = useRef<EzyDrawStageHandle>(null);
 
+  const width = canvasSize?.width ?? DEFAULT_CANVAS_WIDTH;
+  const height = canvasSize?.height ?? DEFAULT_CANVAS_HEIGHT;
+
   const handleCancel = () => {
     onClose();
   };
@@ -142,7 +81,13 @@ export function EzyDrawModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="max-w-[100vw] sm:max-w-[100vw] max-h-[100vh] w-screen h-screen p-0 rounded-none border-0 gap-0 translate-x-[-50%] translate-y-[-50%]"
+        className="p-0 rounded-xl border gap-0 translate-x-[-50%] translate-y-[-50%] overflow-hidden"
+        style={{
+          width: `min(${width}px, 95vw)`,
+          maxWidth: `min(${width}px, 95vw)`,
+          height: 'auto',
+          maxHeight: '95vh',
+        }}
         showCloseButton={false}
       >
         <DialogTitle className="sr-only">
@@ -154,12 +99,19 @@ export function EzyDrawModal({
             initialElements ? { elements: initialElements } : undefined
           }
         >
-          <EzyDrawContent
-            stageRef={stageRef}
-            onSave={handleSaveComplete}
-            onCancel={handleCancel}
-            canvasSize={canvasSize}
-          />
+          <div
+            style={{
+              width: '100%',
+              aspectRatio: `${width} / ${height}`,
+              maxHeight: 'calc(95vh - 48px)', // 48px for toolbar
+            }}
+          >
+            <EzyDrawContent
+              stageRef={stageRef}
+              onSave={handleSaveComplete}
+              onCancel={handleCancel}
+            />
+          </div>
         </DrawingStoreProvider>
       </DialogContent>
     </Dialog>

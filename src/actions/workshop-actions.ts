@@ -5,11 +5,12 @@ import { revalidatePath } from 'next/cache';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db/client';
 import { workshops, sessions, workshopSteps, chatMessages, stepArtifacts, stepSummaries } from '@/db/schema';
-import { eq, and, isNull, inArray } from 'drizzle-orm';
+import { eq, and, isNull, inArray, sql } from 'drizzle-orm';
 import { createPrefixedId } from '@/lib/ids';
 import { STEPS, getStepById } from '@/lib/workshop/step-metadata';
 import { invalidateDownstreamSteps } from '@/lib/navigation/cascade-invalidation';
 import { generateStepSummary } from '@/lib/context/generate-summary';
+import { getNextWorkshopColor, WORKSHOP_COLORS } from '@/lib/workshop/workshop-appearance';
 
 /**
  * Creates a new workshop session and redirects to step 1
@@ -26,6 +27,13 @@ export async function createWorkshopSession() {
     // Per user decision: "Before AI naming, workshop appears as 'New Workshop'"
     const clerkUserId = userId || 'anonymous';
 
+    // Count existing workshops to cycle color assignment
+    const existingWorkshops = await db
+      .select({ id: workshops.id })
+      .from(workshops)
+      .where(and(eq(workshops.clerkUserId, clerkUserId), isNull(workshops.deletedAt)));
+    const color = getNextWorkshopColor(existingWorkshops.length);
+
     // 1. Create workshop record
     const [workshop] = await db
       .insert(workshops)
@@ -35,6 +43,7 @@ export async function createWorkshopSession() {
         title: 'New Workshop',
         originalIdea: '', // Will be populated when AI processes first message
         status: 'active',
+        color,
       })
       .returning();
 
@@ -319,4 +328,52 @@ export async function resetStep(
     console.error('Failed to reset step:', error);
     throw error;
   }
+}
+
+/**
+ * Updates a workshop's visual appearance (color accent and/or emoji)
+ * Validates color against palette; accepts any emoji string from emoji-mart
+ */
+export async function updateWorkshopAppearance(
+  workshopId: string,
+  updates: { color?: string; emoji?: string | null }
+): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) {
+    throw new Error('Authentication required');
+  }
+
+  // Build the set object with only provided fields
+  const setValues: { color?: string; emoji?: string | null } = {};
+
+  if (updates.color !== undefined) {
+    // Validate color against palette
+    const validColorIds = WORKSHOP_COLORS.map((c) => c.id);
+    if (!validColorIds.includes(updates.color)) {
+      throw new Error(`Invalid color: ${updates.color}`);
+    }
+    setValues.color = updates.color;
+  }
+
+  if (updates.emoji !== undefined) {
+    setValues.emoji = updates.emoji;
+  }
+
+  if (Object.keys(setValues).length === 0) {
+    return;
+  }
+
+  // Ownership check: only update workshops belonging to this user
+  // Preserve updatedAt so cosmetic changes don't reorder the dashboard
+  await db
+    .update(workshops)
+    .set({ ...setValues, updatedAt: sql`updated_at` })
+    .where(
+      and(
+        eq(workshops.id, workshopId),
+        eq(workshops.clerkUserId, userId)
+      )
+    );
+
+  revalidatePath('/dashboard');
 }

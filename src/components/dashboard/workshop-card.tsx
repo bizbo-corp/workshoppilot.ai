@@ -21,6 +21,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { getWorkshopColor } from '@/lib/workshop/workshop-appearance';
+import { WorkshopAppearancePicker } from '@/components/dashboard/workshop-appearance-picker';
 
 interface WorkshopCardProps {
   workshopId: string;
@@ -29,7 +31,10 @@ interface WorkshopCardProps {
   currentStep: number;
   currentStepName: string;
   updatedAt: Date;
+  color: string | null;
+  emoji: string | null;
   onRename: (workshopId: string, newName: string) => Promise<void>;
+  onUpdateAppearance: (workshopId: string, updates: { color?: string; emoji?: string | null }) => Promise<void>;
   selected?: boolean;
   onSelect?: () => void;
 }
@@ -41,10 +46,14 @@ export function WorkshopCard({
   currentStep,
   currentStepName,
   updatedAt,
+  color,
+  emoji,
   onRename,
+  onUpdateAppearance,
   selected = false,
   onSelect,
 }: WorkshopCardProps) {
+  const workshopColor = getWorkshopColor(color);
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(title);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,10 +88,12 @@ export function WorkshopCard({
   };
 
   return (
-    <Card className={cn(
-      "group relative overflow-hidden border border-border transition-all hover:shadow-md dark:hover:border-gray-700",
-      selected && "ring-2 ring-primary border-primary"
-    )}>
+    <Card
+      className={cn(
+        "group relative overflow-hidden border border-border transition-all hover:shadow-md dark:hover:border-gray-700",
+        selected && "ring-2 ring-primary border-primary"
+      )}
+    >
       {onSelect && (
         <div
           className="absolute right-3 top-3 z-10"
@@ -99,10 +110,15 @@ export function WorkshopCard({
           />
         </div>
       )}
-      <Link href={`/workshop/${sessionId}/step/${currentStep}`}>
-        <CardContent className="p-6">
+
+      {/* Colored header band */}
+      <div
+        className="px-6 pt-5 pb-4"
+        style={{ backgroundColor: workshopColor.bgHex }}
+      >
+        <Link href={`/workshop/${sessionId}/step/${currentStep}`}>
           {/* Workshop name with inline edit */}
-          <div className="mb-4">
+          <div className="mb-2">
             {isEditing ? (
               <Input
                 value={editedTitle}
@@ -124,11 +140,24 @@ export function WorkshopCard({
                   setIsEditing(true);
                 }}
               >
+                {emoji && <span className="mr-1.5 text-xl">{emoji}</span>}
                 {title}
               </h3>
             )}
           </div>
+        </Link>
 
+        {/* Appearance picker (color + emoji) — outside Link to avoid navigation */}
+        <WorkshopAppearancePicker
+          workshopId={workshopId}
+          color={color}
+          emoji={emoji}
+          onUpdate={onUpdateAppearance}
+        />
+      </div>
+
+      <Link href={`/workshop/${sessionId}/step/${currentStep}`}>
+        <CardContent className="px-6 pt-4 pb-6">
           {/* Current step indicator */}
           <div className="mb-3">
             <p className="text-sm text-muted-foreground">

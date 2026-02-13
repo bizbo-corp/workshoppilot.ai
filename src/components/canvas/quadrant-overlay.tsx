@@ -53,7 +53,7 @@ export function QuadrantOverlay({ config }: QuadrantOverlayProps) {
         y1={0}
         x2={screenCenterX}
         y2="100%"
-        stroke="#9ca3af"
+        stroke="var(--canvas-crosshair)"
         strokeWidth={1.5}
         strokeDasharray="8 4"
       />
@@ -64,7 +64,7 @@ export function QuadrantOverlay({ config }: QuadrantOverlayProps) {
         y1={screenCenterY}
         x2="100%"
         y2={screenCenterY}
-        stroke="#9ca3af"
+        stroke="var(--canvas-crosshair)"
         strokeWidth={1.5}
         strokeDasharray="8 4"
       />
@@ -76,7 +76,7 @@ export function QuadrantOverlay({ config }: QuadrantOverlayProps) {
         y={screenCenterY - labelOffset}
         fontSize={14}
         fontWeight={500}
-        fill="#6b7280"
+        fill="var(--canvas-label-muted)"
         textAnchor="end"
         dominantBaseline="auto"
       >
@@ -89,7 +89,7 @@ export function QuadrantOverlay({ config }: QuadrantOverlayProps) {
         y={screenCenterY - labelOffset}
         fontSize={14}
         fontWeight={500}
-        fill="#6b7280"
+        fill="var(--canvas-label-muted)"
         textAnchor="start"
         dominantBaseline="auto"
       >
@@ -102,7 +102,7 @@ export function QuadrantOverlay({ config }: QuadrantOverlayProps) {
         y={screenCenterY + labelOffset}
         fontSize={14}
         fontWeight={500}
-        fill="#6b7280"
+        fill="var(--canvas-label-muted)"
         textAnchor="end"
         dominantBaseline="hanging"
       >
@@ -115,7 +115,7 @@ export function QuadrantOverlay({ config }: QuadrantOverlayProps) {
         y={screenCenterY + labelOffset}
         fontSize={14}
         fontWeight={500}
-        fill="#6b7280"
+        fill="var(--canvas-label-muted)"
         textAnchor="start"
         dominantBaseline="hanging"
       >
@@ -130,7 +130,7 @@ export function QuadrantOverlay({ config }: QuadrantOverlayProps) {
             x={screenCenterX - axisLabelOffset}
             y={screenCenterY - 10}
             fontSize={12}
-            fill="#9ca3af"
+            fill="var(--canvas-label-subtle)"
             textAnchor="end"
             dominantBaseline="auto"
           >
@@ -140,7 +140,7 @@ export function QuadrantOverlay({ config }: QuadrantOverlayProps) {
             x={screenCenterX + axisLabelOffset}
             y={screenCenterY - 10}
             fontSize={12}
-            fill="#9ca3af"
+            fill="var(--canvas-label-subtle)"
             textAnchor="start"
             dominantBaseline="auto"
           >
@@ -152,7 +152,7 @@ export function QuadrantOverlay({ config }: QuadrantOverlayProps) {
             x={screenCenterX + 10}
             y={screenCenterY - axisLabelOffset}
             fontSize={12}
-            fill="#9ca3af"
+            fill="var(--canvas-label-subtle)"
             textAnchor="start"
             dominantBaseline="middle"
           >
@@ -162,7 +162,7 @@ export function QuadrantOverlay({ config }: QuadrantOverlayProps) {
             x={screenCenterX + 10}
             y={screenCenterY + axisLabelOffset}
             fontSize={12}
-            fill="#9ca3af"
+            fill="var(--canvas-label-subtle)"
             textAnchor="start"
             dominantBaseline="middle"
           >

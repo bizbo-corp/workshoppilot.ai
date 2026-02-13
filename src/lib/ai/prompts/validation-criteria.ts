@@ -27,28 +27,23 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
     'challenge': [
       {
         name: 'Specificity',
-        description: 'HMW statement is neither too broad nor too narrow',
-        checkPrompt: 'Does this HMW avoid being a vague vision statement (too broad like "fix poverty") or a specific feature request (too narrow like "add blue buttons")?'
+        description: 'Challenge statement is actionable — not too vague, not too narrow',
+        checkPrompt: 'Does the challenge statement avoid being a vague vision statement (too broad like "fix poverty") or a specific feature request (too narrow like "add blue buttons")?'
       },
       {
         name: 'Target User Identified',
-        description: 'HMW clearly identifies who it is for',
-        checkPrompt: 'Does this HMW explicitly name or describe the target user or stakeholder group?'
+        description: 'Challenge statement clearly identifies who it is for',
+        checkPrompt: 'Does the challenge statement explicitly name or describe the target user or stakeholder group?'
       },
       {
-        name: 'Measurable Outcome',
-        description: 'HMW implies a measurable outcome or benefit',
-        checkPrompt: 'Does this HMW suggest a concrete outcome that could be validated or measured (even if metrics aren\'t specified yet)?'
+        name: 'Aspirational Outcome',
+        description: 'Challenge statement has a lofty, emotionally resonant "so that" goal',
+        checkPrompt: 'Does the challenge statement include an aspirational outcome that feels exciting and emotionally resonant (not generic like "achieve their desired outcomes")?'
       },
       {
         name: 'Avoids Solution Bias',
-        description: 'HMW focuses on the problem, not a predetermined solution',
-        checkPrompt: 'Is this HMW framed as a problem to solve rather than disguising a solution ("we need an app" is a solution, not a problem)?'
-      },
-      {
-        name: 'Altitude Check',
-        description: 'HMW is at balanced altitude -- not a feature request and not a vision statement',
-        checkPrompt: 'Has the HMW been assessed for altitude? It should not describe a specific feature or technology (too narrow) nor be an unsolvable vision statement (too broad). Did the user see multiple altitude options?'
+        description: 'Challenge statement focuses on the problem, not a predetermined solution',
+        checkPrompt: 'Is the challenge statement framed as a problem to solve rather than disguising a solution ("we need an app" is a solution, not a problem)?'
       }
     ],
 

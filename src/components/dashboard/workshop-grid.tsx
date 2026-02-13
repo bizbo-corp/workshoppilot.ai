@@ -25,14 +25,17 @@ interface WorkshopData {
   currentStep: number;
   currentStepName: string;
   updatedAt: Date;
+  color: string | null;
+  emoji: string | null;
 }
 
 interface WorkshopGridProps {
   workshops: WorkshopData[];
   onRename: (workshopId: string, newName: string) => Promise<void>;
+  onUpdateAppearance: (workshopId: string, updates: { color?: string; emoji?: string | null }) => Promise<void>;
 }
 
-export function WorkshopGrid({ workshops, onRename }: WorkshopGridProps) {
+export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: WorkshopGridProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -135,7 +138,10 @@ export function WorkshopGrid({ workshops, onRename }: WorkshopGridProps) {
             currentStep={workshop.currentStep}
             currentStepName={workshop.currentStepName}
             updatedAt={workshop.updatedAt}
+            color={workshop.color}
+            emoji={workshop.emoji}
             onRename={onRename}
+            onUpdateAppearance={onUpdateAppearance}
             selected={selectedIds.has(workshop.id)}
             onSelect={() => toggleSelect(workshop.id)}
           />

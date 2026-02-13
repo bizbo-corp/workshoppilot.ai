@@ -46,6 +46,19 @@
 
 :root {
   --radius: 0.625rem;
+  /* Canvas */
+  --canvas-bg: #fafafa;
+  --canvas-dots: #d1d5db;
+  --canvas-grid-line: #d1d5db;
+  --canvas-grid-line-light: #e5e7eb;
+  --canvas-crosshair: #9ca3af;
+  --canvas-label-text: #374151;
+  --canvas-label-muted: #6b7280;
+  --canvas-label-subtle: #9ca3af;
+  --canvas-label-bg: #f9fafb;
+  --canvas-highlight-fill: #fef3c7;
+  --canvas-tint-opacity: 0.06;
+  --canvas-zone-opacity: 0.08;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -80,6 +93,19 @@
 }
 
 .dark {
+  /* Canvas */
+  --canvas-bg: #18181b;
+  --canvas-dots: #3f3f46;
+  --canvas-grid-line: #3f3f46;
+  --canvas-grid-line-light: #27272a;
+  --canvas-crosshair: #52525b;
+  --canvas-label-text: #d1d5db;
+  --canvas-label-muted: #a1a1aa;
+  --canvas-label-subtle: #71717a;
+  --canvas-label-bg: #27272a;
+  --canvas-highlight-fill: #78350f4d;
+  --canvas-tint-opacity: 0.12;
+  --canvas-zone-opacity: 0.15;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -168,7 +194,7 @@
   box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.15), -8px 8px 0 rgba(0, 0, 0, 0.04);
 }
 
-/* Canvas background with faint grey tint */
+/* Canvas background — adapts to light/dark mode via CSS variable */
 .react-flow__renderer {
-  background-color: #fafafa !important;
+  background-color: var(--canvas-bg) !important;
 }

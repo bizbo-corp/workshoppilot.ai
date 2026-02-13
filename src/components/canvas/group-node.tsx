@@ -14,7 +14,7 @@ export const GroupNode = memo(({ selected }: NodeProps<GroupNode>) => {
   return (
     <div
       className={cn(
-        'bg-gray-100/70 border-2 border-dashed border-gray-300 rounded-lg',
+        'bg-gray-100/70 dark:bg-zinc-800/70 border-2 border-dashed border-gray-300 dark:border-zinc-600 rounded-lg',
         'min-w-[160px] min-h-[160px] w-full h-full',
         selected && 'border-blue-400'
       )}

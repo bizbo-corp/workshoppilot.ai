@@ -52,7 +52,7 @@ export async function saveMessages(
     };
   });
 
-  await db.insert(chatMessages).values(rows);
+  await db.insert(chatMessages).values(rows).onConflictDoNothing();
 }
 
 /**
@@ -74,7 +74,16 @@ export async function loadMessages(
     )
     .orderBy(asc(chatMessages.createdAt));
 
-  return rows.map((row) => ({
+  // Deduplicate by messageId — race between onFinish and useAutoSave can
+  // insert the same message twice (no unique constraint on message_id)
+  const seen = new Set<string>();
+  const deduped = rows.filter((row) => {
+    if (seen.has(row.messageId)) return false;
+    seen.add(row.messageId);
+    return true;
+  });
+
+  return deduped.map((row) => ({
     id: row.messageId,
     role: row.role as 'user' | 'assistant' | 'system',
     parts: [{ type: 'text' as const, text: row.content }],

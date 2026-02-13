@@ -47,6 +47,11 @@ export type StepCanvasConfig = {
  * Keys MUST match step IDs from src/lib/workshop/step-metadata.ts
  */
 export const STEP_CANVAS_CONFIGS: Record<string, StepCanvasConfig> = {
+  // Step 1: Challenge - Simple freeform canvas for the challenge statement
+  'challenge': {
+    hasQuadrants: false,
+  },
+
   // Step 2: Stakeholder Mapping - Concentric rings by importance
   'stakeholder-mapping': {
     hasQuadrants: false,

@@ -134,6 +134,8 @@ async function seedWorkshop() {
       originalIdea:
         'A mobile app that helps busy urban pet owners manage their pets\' health, nutrition, and daily care needs without it feeling like a second job.',
       status: seedUpToOrder >= 10 ? 'completed' : 'active',
+      color: 'green',
+      emoji: '\uD83D\uDC3E',
     });
     console.log(`✓ Workshop created: ${workshopId}\n`);
 

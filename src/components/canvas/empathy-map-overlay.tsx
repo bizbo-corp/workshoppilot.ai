@@ -59,7 +59,7 @@ export function EmpathyMapOverlay({ config }: EmpathyMapOverlayProps) {
               width={zone.bounds.width * zoom}
               height={zone.bounds.height * zoom}
               fill={zone.color}
-              opacity={0.08}
+              style={{ opacity: 'var(--canvas-zone-opacity)' }}
               rx={8}
             />
             {/* Boundary line - thicker for pains/gains strips */}
@@ -69,7 +69,7 @@ export function EmpathyMapOverlay({ config }: EmpathyMapOverlayProps) {
               width={zone.bounds.width * zoom}
               height={zone.bounds.height * zoom}
               fill="none"
-              stroke="#e5e7eb"
+              stroke="var(--canvas-grid-line-light)"
               strokeWidth={isImportantStrip ? 1.5 : 1}
               strokeDasharray="4 4"
               rx={8}
@@ -85,9 +85,9 @@ export function EmpathyMapOverlay({ config }: EmpathyMapOverlayProps) {
         const isGains = zoneKey === 'gains';
 
         // Determine text color based on zone type
-        let textColorClass = 'text-gray-600';
-        if (isPains) textColorClass = 'text-red-600';
-        if (isGains) textColorClass = 'text-emerald-600';
+        let textColorClass = 'text-gray-600 dark:text-gray-400';
+        if (isPains) textColorClass = 'text-red-600 dark:text-red-400';
+        if (isGains) textColorClass = 'text-emerald-600 dark:text-emerald-400';
 
         return (
           <foreignObject

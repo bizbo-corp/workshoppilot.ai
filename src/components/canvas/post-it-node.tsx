@@ -7,11 +7,11 @@ import { cn } from '@/lib/utils';
 import type { PostItColor } from '@/stores/canvas-store';
 
 export const COLOR_CLASSES: Record<PostItColor, string> = {
-  yellow: 'bg-amber-100',
-  pink: 'bg-pink-100',
-  blue: 'bg-blue-100',
-  green: 'bg-green-100',
-  orange: 'bg-orange-100',
+  yellow: 'bg-amber-100 dark:bg-amber-200',
+  pink: 'bg-pink-100 dark:bg-pink-200',
+  blue: 'bg-blue-100 dark:bg-blue-200',
+  green: 'bg-green-100 dark:bg-green-200',
+  orange: 'bg-orange-100 dark:bg-orange-200',
 };
 
 export type PostItNodeData = {
@@ -45,7 +45,7 @@ export const PostItNode = memo(({ data, selected, id }: NodeProps<PostItNode>) =
         className={cn(
           bgColor,
           'shadow-md rounded-sm p-3',
-          'font-sans text-sm text-gray-800',
+          'font-sans text-sm text-gray-800 dark:text-gray-900',
           'opacity-60',
           'ring-2 ring-blue-400 ring-offset-1',
         )}
@@ -78,7 +78,7 @@ export const PostItNode = memo(({ data, selected, id }: NodeProps<PostItNode>) =
               e.stopPropagation();
               data.onReject?.(id);
             }}
-            className="nodrag nopan flex-1 px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+            className="nodrag nopan flex-1 px-2 py-1 text-xs bg-gray-200 dark:bg-gray-300 text-gray-700 dark:text-gray-800 rounded hover:bg-gray-300 dark:hover:bg-gray-400 transition-colors"
           >
             Skip
           </button>
@@ -94,7 +94,7 @@ export const PostItNode = memo(({ data, selected, id }: NodeProps<PostItNode>) =
       className={cn(
         bgColor,
         'shadow-md rounded-sm p-3',
-        'font-sans text-sm text-gray-800',
+        'font-sans text-sm text-gray-800 dark:text-gray-900',
         'hover:shadow-lg hover:-translate-y-0.5 transition-all duration-150',
         'cursor-pointer',
         selected && 'ring-2 ring-blue-500 ring-offset-1',

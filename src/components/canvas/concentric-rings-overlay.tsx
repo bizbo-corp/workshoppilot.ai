@@ -55,7 +55,7 @@ export function ConcentricRingsOverlay({ config }: ConcentricRingsOverlayProps) 
             cy={centerScreen.y}
             r={ring.radius * zoom}
             fill={ring.color}
-            opacity={0.06}
+            style={{ opacity: 'var(--canvas-tint-opacity)' }}
           />
           {/* Boundary line */}
           <circle
@@ -63,7 +63,7 @@ export function ConcentricRingsOverlay({ config }: ConcentricRingsOverlayProps) 
             cy={centerScreen.y}
             r={ring.radius * zoom}
             fill="none"
-            stroke="#d1d5db"
+            stroke="var(--canvas-grid-line)"
             strokeWidth={1}
             strokeDasharray={ring.id === 'inner' ? 'none' : '6 3'}
           />
@@ -78,7 +78,7 @@ export function ConcentricRingsOverlay({ config }: ConcentricRingsOverlayProps) 
         height={32}
       >
         <div className="flex items-center justify-center h-full">
-          <span className="text-xs font-semibold text-gray-500 bg-white/80 px-2 py-0.5 rounded">
+          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 bg-white/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded">
             Most Important
           </span>
         </div>

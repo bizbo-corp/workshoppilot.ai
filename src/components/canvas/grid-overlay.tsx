@@ -97,7 +97,7 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
               y={topLeft.y}
               width={bounds.width * zoom}
               height={bounds.height * zoom}
-              fill="#fef3c7"
+              fill="var(--canvas-highlight-fill)"
               opacity={0.3}
             />
             <rect
@@ -131,7 +131,7 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
               y={topLeft.y}
               width={labelAreaWidth * zoom}
               height={rowHeight * zoom}
-              fill="#f9fafb"
+              fill="var(--canvas-label-bg)"
               opacity={0.8}
             />
             {/* Label text */}
@@ -140,7 +140,7 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
               y={midLeft.y}
               fontSize={13}
               fontWeight={600}
-              fill="#374151"
+              fill="var(--canvas-label-text)"
               textAnchor="middle"
               dominantBaseline="middle"
             >
@@ -161,7 +161,7 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
             y1={leftEdge.y}
             x2={rightEdge.x}
             y2={rightEdge.y}
-            stroke="#d1d5db"
+            stroke="var(--canvas-grid-line)"
             strokeWidth={1}
             strokeDasharray="6 3"
           />
@@ -202,7 +202,7 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
               {effectiveColumns.length > 1 && (
                 <button
                   onClick={() => onDeleteColumn?.(col.id, col.label, cardsInColumn, migrationTarget)}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-red-100 rounded transition-opacity"
+                  className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-opacity"
                   title="Delete column"
                 >
                   <X className="h-3 w-3 text-red-500" />
@@ -233,7 +233,7 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
                 }
               }}
               disabled={effectiveColumns.length >= MAX_COLUMNS}
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100/80 rounded px-2 py-1 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-zinc-700/80 rounded px-2 py-1 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               title={effectiveColumns.length >= MAX_COLUMNS ? 'Maximum 12 stages' : 'Add a new stage column'}
             >
               <PlusCircle className="h-3.5 w-3.5" />
@@ -254,7 +254,7 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
             y1={topEdge.y}
             x2={bottomEdge.x}
             y2={bottomEdge.y}
-            stroke="#e5e7eb"
+            stroke="var(--canvas-grid-line-light)"
             strokeWidth={1}
             strokeDasharray="4 4"
           />

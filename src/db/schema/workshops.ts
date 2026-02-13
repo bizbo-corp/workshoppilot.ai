@@ -29,6 +29,8 @@ export const workshops = pgTable(
       .default('private')
       .$type<'private' | 'shared'>(),
     shareToken: text('share_token'),
+    color: text('color'),
+    emoji: text('emoji'),
     createdAt: timestamp('created_at', { mode: 'date', precision: 3 })
       .notNull()
       .defaultNow(),

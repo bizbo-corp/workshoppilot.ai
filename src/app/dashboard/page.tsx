@@ -9,7 +9,7 @@ import { MigrationCheck } from '@/components/auth/migration-check';
 import { WorkshopGrid } from '@/components/dashboard/workshop-grid';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { createWorkshopSession, renameWorkshop } from '@/actions/workshop-actions';
+import { createWorkshopSession, renameWorkshop, updateWorkshopAppearance } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 
 export default async function DashboardPage() {
@@ -178,8 +178,11 @@ export default async function DashboardPage() {
               currentStep: w.currentStep,
               currentStepName: w.currentStepName,
               updatedAt: w.updatedAt,
+              color: w.color,
+              emoji: w.emoji,
             }))}
             onRename={renameWorkshop}
+            onUpdateAppearance={updateWorkshopAppearance}
           />
         </>
       )}

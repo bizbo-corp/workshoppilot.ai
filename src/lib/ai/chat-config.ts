@@ -151,6 +151,16 @@ Format:
 Rules: Each suggestion must be under 15 words, written from the user's perspective, and offer distinct options.`;
   }
 
+  // Challenge step canvas: output the challenge statement as a canvas item
+  const challengeCanvasPhases = ['gather', 'synthesize', 'refine'];
+  if (stepId === 'challenge' && challengeCanvasPhases.includes(arcPhase)) {
+    prompt += `\n\nCANVAS ACTIONS:
+When you draft or revise the challenge statement, output it as a canvas item so it appears on the whiteboard.
+Format: [CANVAS_ITEM]The full challenge statement text[/CANVAS_ITEM]
+Output ONE canvas item per draft/revision — the latest version of the challenge statement. Do not output multiple canvas items per message.
+Items are auto-added to the canvas. Do not ask the user to click to add.`;
+  }
+
   // Canvas action markup instructions for canvas-enabled steps
   // Include refine phase so items can still be added when user adjusts/iterates
   const canvasPhases = ['gather', 'synthesize', 'refine'];

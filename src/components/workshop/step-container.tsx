@@ -19,8 +19,9 @@ import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { ConceptCanvasOverlay } from './concept-canvas-overlay';
 import { useDevOutput } from '@/hooks/use-dev-output';
+import { usePanelLayout } from '@/hooks/use-panel-layout';
 
-const CANVAS_ENABLED_STEPS = ['stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping', 'concept'];
+const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping', 'concept'];
 const CANVAS_ONLY_STEPS = ['stakeholder-mapping', 'sense-making', 'concept'];
 
 interface StepContainerProps {
@@ -49,8 +50,7 @@ export function StepContainer({
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
   const [mobileTab, setMobileTab] = React.useState<'chat' | 'canvas'>('chat');
-  const [chatCollapsed, setChatCollapsed] = React.useState(false);
-  const [canvasCollapsed, setCanvasCollapsed] = React.useState(false);
+  const { chatCollapsed, canvasCollapsed, setChatCollapsed, setCanvasCollapsed } = usePanelLayout();
   const { devOutputEnabled } = useDevOutput();
 
   // Extraction state

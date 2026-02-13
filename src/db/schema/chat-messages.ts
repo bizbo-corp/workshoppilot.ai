@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { createPrefixedId } from '@/lib/ids';
 import { sessions } from './sessions';
 
@@ -34,6 +34,10 @@ export const chatMessages = pgTable(
       table.sessionId,
       table.stepId
     ),
-    messageIdIdx: index('chat_messages_message_id_idx').on(table.messageId),
+    messageIdUniq: uniqueIndex('chat_messages_session_step_message_uniq').on(
+      table.sessionId,
+      table.stepId,
+      table.messageId
+    ),
   })
 );

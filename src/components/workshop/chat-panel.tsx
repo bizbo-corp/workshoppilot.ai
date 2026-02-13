@@ -15,7 +15,7 @@ import { computeCanvasPosition, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, 
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 
 /** Steps that support canvas item auto-add */
-const CANVAS_ENABLED_STEPS = ['stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping'];
+const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping'];
 
 /**
  * Parse [SUGGESTIONS]...[/SUGGESTIONS] block from AI content.

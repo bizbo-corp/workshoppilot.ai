@@ -12,14 +12,13 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
-import { LogOut, PenTool } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ExitWorkshopDialog } from "@/components/dialogs/exit-workshop-dialog";
 import { getStepByOrder } from "@/lib/workshop/step-metadata";
 import { SignInModal } from "@/components/auth/sign-in-modal";
 import { renameWorkshop } from "@/actions/workshop-actions";
-import { EzyDrawLoader } from "@/components/ezydraw/ezydraw-loader";
 
 interface WorkshopHeaderProps {
   sessionId: string;
@@ -35,7 +34,6 @@ export function WorkshopHeader({
   const pathname = usePathname();
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
-  const [ezyDrawOpen, setEzyDrawOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState(workshopName);
   const [editValue, setEditValue] = useState(workshopName);
@@ -128,17 +126,6 @@ export function WorkshopHeader({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setEzyDrawOpen(true)}
-            className="gap-2"
-            title="Open EzyDraw (test)"
-          >
-            <PenTool className="h-4 w-4" />
-            <span className="hidden sm:inline">EzyDraw</span>
-          </Button>
-
           <ThemeToggle />
 
           <Button
@@ -168,19 +155,6 @@ export function WorkshopHeader({
         open={exitDialogOpen}
         onOpenChange={setExitDialogOpen}
       />
-
-      {/* EzyDraw test modal */}
-      {ezyDrawOpen && (
-        <EzyDrawLoader
-          isOpen={ezyDrawOpen}
-          onClose={() => setEzyDrawOpen(false)}
-          onSave={(result) => {
-            console.log('EzyDraw saved PNG:', result.pngDataUrl.substring(0, 100) + '...');
-            console.log('EzyDraw saved elements:', result.elements.length, 'elements');
-            setEzyDrawOpen(false);
-          }}
-        />
-      )}
 
       {/* Sign-in modal for signed-out users */}
       <SignInModal

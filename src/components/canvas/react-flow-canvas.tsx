@@ -350,6 +350,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         position: postIt.position,
         parentId: postIt.parentId,
         extent: postIt.parentId ? ('parent' as const) : undefined,
+        zIndex: 20,
         draggable: !isPreview,
         selectable: !isPreview,
         selected: selectedNodeIds.includes(postIt.id),
@@ -382,6 +383,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         id: dn.id,
         type: 'drawingImage' as const,
         position: dn.position,
+        zIndex: 20,
         draggable: true,
         selectable: true,
         selected: selectedNodeIds.includes(dn.id),
@@ -400,6 +402,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       id: card.id,
       type: 'conceptCard' as const,
       position: card.position,
+      zIndex: 20,
       draggable: true,
       selectable: true,
       selected: selectedNodeIds.includes(card.id),
@@ -865,9 +868,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       const simplifiedElements = simplifyDrawingElements(result.elements);
       const vectorJson = JSON.stringify(simplifiedElements);
 
-      // Default stage dimensions (EzyDraw canvas size)
-      const width = 1920;
-      const height = 1080;
+      // Default stage dimensions (EzyDraw 6:4 canvas)
+      const width = 1200;
+      const height = 800;
 
       if (ezyDrawState?.drawingId) {
         // Re-edit: update existing drawing
@@ -1127,7 +1130,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           variant={BackgroundVariant.Dots}
           gap={20}
           size={1.5}
-          color="#d1d5db"
+          color="var(--canvas-dots)"
         />
         <Controls
           showInteractive={false}
@@ -1167,12 +1170,12 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       {/* Context menu: ungroup for groups, color picker for post-its */}
       {contextMenu && contextMenu.nodeType === 'group' ? (
         <div
-          className="fixed z-50 bg-white rounded-lg shadow-lg border border-gray-200 p-1"
+          className="fixed z-50 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700 p-1"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
           <button
-            className="relative z-50 px-3 py-1.5 text-sm hover:bg-gray-100 rounded w-full text-left"
+            className="relative z-50 px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-zinc-700 rounded w-full text-left"
             onClick={() => {
               ungroupPostIts(contextMenu.nodeId);
               setContextMenu(null);
@@ -1218,7 +1221,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       {/* Empty state hint */}
       {postIts.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <p className="text-gray-400 text-lg">Double-click to add a post-it</p>
+          <p className="text-gray-400 dark:text-gray-600 text-lg">Double-click to add a post-it</p>
         </div>
       )}
 

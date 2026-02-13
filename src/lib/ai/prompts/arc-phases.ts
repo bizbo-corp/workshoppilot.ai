@@ -31,7 +31,7 @@ export function getArcPhaseInstructions(phase: ArcPhase): string {
   const instructions: Record<ArcPhase, string> = {
     orient: `CURRENT PHASE: Orient
 
-Welcome them like a colleague, not a stranger. State what this step produces and why it matters in 2-3 sentences. Reference what they accomplished in the previous step to show continuity — "Nice work on the persona. Now let's map their journey." End with a focused first question.
+Welcome them like a colleague, not a stranger. State what this step produces and why it matters in 2-3 sentences. If there is a previous step (not Step 1), briefly reference what they accomplished to show continuity — "Nice work on the persona. Now let's map their journey." If this IS Step 1, do NOT reference any previous work — there is none. End with a focused first question.
 Include 2-3 suggested user responses in a [SUGGESTIONS] block.`,
 
     gather: `CURRENT PHASE: Gather

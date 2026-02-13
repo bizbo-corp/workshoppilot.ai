@@ -56,7 +56,7 @@ export async function autoSaveMessages(
       };
     });
 
-    await db.insert(chatMessages).values(rows);
+    await db.insert(chatMessages).values(rows).onConflictDoNothing();
   } catch (error) {
     // Auto-save failures should be silent to avoid disrupting user experience
     console.error('Auto-save failed:', error);
