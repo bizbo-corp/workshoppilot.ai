@@ -49,16 +49,14 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - ✓ Step 8b Crazy 8s canvas: 8 sketch slots, tap → EzyDraw → image on card, AI sketch prompts, idea selection — v1.3
 - ✓ Step 8 streamlined flow: Mind Mapping → Crazy 8s → Idea Selection (Brain Writing removed) — v1.3
 - ✓ Step 9 visual concept cards: AI-generated cards with sketch, elevator pitch, SWOT, feasibility ratings, billboard hero — v1.3
+- ✓ UX polish: post-it drag feedback, cursor states, panel borders/grips, canvas dot grid, chat auto-scroll, journey map dedup fix — v1.4
+- ✓ Output panel retirement: hidden for users, localhost-only dev toggle in footer — v1.4
+- ✓ AI personality (soul.md): sharp consultant + charismatic tone, message brevity, canvas bridging across all 10 steps — v1.4
+- ✓ PawPal seed data: complete 10-step workshop fixture with canvas state, CLI seed script — v1.4
+- ✓ Workshop management: multi-select delete on dashboard with soft delete protection — v1.4
+- ✓ E2E testing: Playwright test walks all 10 steps with real Gemini AI, 5 bugs fixed — v1.4
 
 ### Active
-
-#### Current — v1.4 Personal Workshop Polish
-- [ ] UX bug fixes: post-it drag feedback, cursor states, panel borders/grips, canvas dot BG, chat auto-scroll, journey map duplicate card bug
-- [ ] Output panel retirement: hide for users, localhost-only dev toggle in footer
-- [ ] AI personality (soul.md): sharp consultant + charismatic tone, message cadence/splitting, canvas bridging
-- [ ] Comprehensive PawPal seed data across all 10 steps including canvas state (CLI-only)
-- [ ] Workshop deletion: select + delete on dashboard with soft delete
-- [ ] End-to-end workshop testing pass across all 10 steps
 
 #### Future — MMP (Visual & Solo Polish)
 - [ ] Visual stakeholder radar chart
@@ -128,7 +126,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - **Entry Friction**: Must be near-zero — user types idea and starts immediately
 - **Desktop-First**: MVP targets desktop browsers; mobile deferred to MMP/FFP
 - **Single Player First**: v0.5-v1.4 are single-user; collaboration deferred to FFP
-- **Existing Codebase**: ~25,400 lines TypeScript across ~352 files, 29 phases shipped, production at workshoppilot.ai
+- **Existing Codebase**: ~27,000 lines TypeScript across ~400 files, 35 phases shipped, production at workshoppilot.ai
 
 ## Key Decisions
 
@@ -160,28 +158,32 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | Pull EzyDraw from FFP to v1.3 | Sketching is fundamental to Ideation exercises (Crazy 8s). Text descriptions miss the essence of design thinking | ✓ Good — visual ideation transforms Step 8/9 experience |
 | Skip Brain Writing in v1.3 | Brain Writing needs real multi-user collaboration to deliver value; AI simulation insufficient for visual mode | ✓ Good — deferred to FFP |
 | Defer all collaboration to FFP | Solo workshop experience must be polished first; multi-user adds complexity without validating core value | ✓ Good — focus on personal tool quality |
-| Sharp consultant + charismatic AI personality | Direct, efficient facilitation with "you got this!" energy; matches founder's facilitation style | — Pending |
-| Output panel as localhost-only dev tool | Canvas is the user-facing view; output panel is debug info for developer only | — Pending |
+| Sharp consultant + charismatic AI personality | Direct, efficient facilitation with "you got this!" energy; matches founder's facilitation style | ✓ Good — consistent across all 10 steps |
+| Output panel as localhost-only dev tool | Canvas is the user-facing view; output panel is debug info for developer only | ✓ Good — bug icon toggle in footer |
+| Soft delete for workshops | deletedAt column, NULL = active, ownership validation prevents cross-user deletion | ✓ Good — simple, recoverable |
+| BYPASS_AUTH for E2E testing | Always use clerkMiddleware, just skip route protection; auth() returns {userId: null} | ✓ Good — clean test isolation |
+| Server action redirect for step navigation | redirect() from server action instead of router.push; revalidatePath interferes with client nav | ✓ Good — idiomatic Next.js pattern |
+| Single long E2E test pattern | Single test maintains page state across all 10 steps; serial tests had state boundary issues | ✓ Good — reliable, 1.6 min |
 | Dual storage for drawings (vector JSON + PNG) | Vector JSON enables re-editing, PNG enables fast display and canvas integration | ✓ Good — no Konva imports for display |
 | Dagre for mind map auto-layout | Tree layout algorithm prevents node overlap without manual positioning | ✓ Good — handles 3 levels cleanly |
 | AI concept generation from workshop context | Queries 4 prior steps for evidence-based SWOT/feasibility, not generic output | ✓ Good — grounded in actual workshop data |
 
 ## Current State
 
-**Shipped:** v1.3 EzyDraw & Visual Ideation (2026-02-12)
+**Shipped:** v1.4 Personal Workshop Polish (2026-02-13)
 **Live at:** https://workshoppilot.ai
-**Codebase:** ~25,400 lines of TypeScript across ~352 files
-**Tech stack:** Clerk + Neon + Gemini + Drizzle + AI SDK 6 + ReactFlow + Konva.js + Zustand + Vercel — all validated in production
-**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) + v1.2 (whiteboard, 2 days) + v1.3 (visual ideation, 1 day) = 6 days total
+**Codebase:** ~27,000 lines of TypeScript across ~400 files
+**Tech stack:** Clerk + Neon + Gemini + Drizzle + AI SDK 6 + ReactFlow + Konva.js + Zustand + Playwright + Vercel — all validated in production
+**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) + v1.2 (whiteboard, 2 days) + v1.3 (visual ideation, 1 day) + v1.4 (polish, 1 day) = 7 days total
 
 **Known issues / tech debt:**
-- Workshops table needs deletedAt column for soft delete
 - Next.js middleware → proxy convention migration (non-blocking)
 - Step 10 Validate produces synthesis summary only (no Build Pack export yet)
 - CRON_SECRET needs to be configured in Vercel dashboard for production cron warming
 - Mobile grid optimization deferred (may need tablet-first approach)
+- E2E back-navigation testing deferred (forward-only tested)
 
-**Current milestone:** v1.4 Personal Workshop Polish — UX fixes, AI personality, output panel retirement, seed data, workshop management, E2E testing
+**Current milestone:** None — ready for next milestone planning
 
 ---
-*Last updated: 2026-02-13 after v1.4 milestone start*
+*Last updated: 2026-02-13 after v1.4 milestone completion*

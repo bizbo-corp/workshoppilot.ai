@@ -1,5 +1,31 @@
 # Project Milestones: WorkshopPilot.ai
 
+## v1.4 Personal Workshop Polish (Shipped: 2026-02-13)
+
+**Delivered:** Polished the personal workshop experience with UX refinements, AI personality injection, workshop management, developer seed data, and comprehensive E2E testing — discovering and fixing 5 production bugs along the way.
+
+**Phases completed:** 30-35 (13 plans total)
+
+**Key accomplishments:**
+- UX polish: post-it drag feedback with ghost trail, pointer cursors, panel borders/grip handles, dot grid canvas background, chat auto-scroll, journey map dedup fix
+- Output panel retired to localhost-only dev tool with bug icon toggle in footer
+- Workshop management: multi-select delete on dashboard with soft delete protection and confirmation dialog
+- Sharp consultant AI personality defined in soul.md and injected across all 10 steps + 3 sub-steps with message brevity and canvas bridging
+- PawPal seed data: complete 10-step workshop fixture with canvas state (rings, empathy map, swimlanes, mind map, Crazy 8s, concept cards), CLI seed script
+- Playwright E2E test walks all 10 steps with real Gemini AI (1.6 min), fixing auth bypass, recursive getUserId, server action redirect, React Flow watermark, and Step 8 multi-textarea bugs
+
+**Stats:**
+- 109 files created/modified
+- ~27,000 lines of TypeScript (total codebase)
+- 6 phases, 13 plans, 53 commits
+- 1 day (2026-02-13)
+
+**Git range:** `docs(30)` → `docs(35)`
+
+**What's next:** Next milestone TBD — potential directions: Build Pack export, responsive tablet support, visual enhancements, or OAuth/Google sign-in.
+
+---
+
 ## v1.3 EzyDraw & Visual Ideation (Shipped: 2026-02-12)
 
 **Delivered:** Transformed Steps 8 and 9 from text-only to visual-first with EzyDraw in-app drawing tool, mind map canvases, Crazy 8s sketch grids, and AI-generated concept cards with SWOT analysis and feasibility ratings.
@@ -21,8 +47,6 @@
 - 1 day (2026-02-12)
 
 **Git range:** `feat(25-01)` → `feat(29-04)`
-
-**What's next:** Next milestone TBD — potential directions: Build Pack export, collaboration features, Step 10 validation canvas, or production polish.
 
 ---
 
@@ -48,8 +72,6 @@
 
 **Git range:** `feat(21-01)` → `feat(24-03)`
 
-**What's next:** MMP (Visual & Collaborative) — canvas for remaining steps, Build Pack export, collaboration features
-
 ---
 
 ## v1.1 Canvas Foundation (Shipped: 2026-02-11)
@@ -73,8 +95,6 @@
 - 2 days from v1.0 to v1.1 ship (2026-02-10 → 2026-02-11)
 
 **Git range:** `feat(15-01)` → `feat(20-02)`
-
-**What's next:** MMP (Visual & Collaborative) — canvas for remaining steps, visual components, Build Pack export, basic collaboration
 
 ---
 
@@ -101,8 +121,6 @@
 
 **Git range:** `feat(07-01)` → `feat(14-02)`
 
-**What's next:** MMP (Visual & Collaborative) — canvas tools, split-screen mode, visual components, multi-user collaboration
-
 ---
 
 ## v0.5 Application Shell (Shipped: 2026-02-08)
@@ -126,7 +144,5 @@
 - 2 days from start to ship (2026-02-07 → 2026-02-08)
 
 **Git range:** `feat(01-01)` → `feat(06-01)`
-
-**What's next:** MVP 1.0 — Working AI facilitation with step-specific prompts, context flowing between steps, and Build Pack export.
 
 ---
