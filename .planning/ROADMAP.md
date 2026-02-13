@@ -181,10 +181,11 @@ Plans:
 3. Seeded workshop appears on dashboard and is fully navigable through all steps
 4. Seeded data demonstrates realistic design thinking workshop progression
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 34-01: TBD during planning
+- [x] 34-01-PLAN.md -- Expand seed fixtures with canvas data for all 10 steps (mind map, Crazy 8s, concept cards)
+- [x] 34-02-PLAN.md -- CLI seed script for PawPal workshop (direct DB access, Zod validation, npm command)
 
 #### Phase 35: E2E Testing
 
@@ -222,11 +223,11 @@ Plans:
 | 31. Output Panel Retirement | v1.4 | 1/1 | Complete | 2026-02-13 |
 | 32. Workshop Management | v1.4 | 2/2 | Complete | 2026-02-13 |
 | 33. AI Personality | v1.4 | 2/2 | Complete | 2026-02-13 |
-| 34. Seed Data | v1.4 | 0/TBD | Not started | - |
+| 34. Seed Data | v1.4 | 2/2 | Complete | 2026-02-13 |
 | 35. E2E Testing | v1.4 | 0/TBD | Not started | - |
 
 **Total v1.3:** 23 plans across 5 phases
-**Total project:** 101 plans across 33 phases, 6 milestones
+**Total project:** 103 plans across 34 phases, 6 milestones
 
 ---
-*Last updated: 2026-02-13 after Phase 33 execution*
+*Last updated: 2026-02-13 after Phase 34 execution*
