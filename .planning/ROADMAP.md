@@ -7,7 +7,7 @@
 - ✅ **v1.1 Canvas Foundation** - Phases 15-20 (shipped 2026-02-11)
 - ✅ **v1.2 Canvas Whiteboard** - Phases 21-24 (shipped 2026-02-12)
 - ✅ **v1.3 EzyDraw & Visual Ideation** - Phases 25-29 (shipped 2026-02-12)
-- 🚧 **v1.4 Personal Workshop Polish** - Phases 30-35 (in progress)
+- ✅ **v1.4 Personal Workshop Polish** - Phases 30-35 (shipped 2026-02-13)
 
 ## Phases
 
@@ -81,7 +81,7 @@ See `milestones/v1.3-ROADMAP.md` for full details.
 
 </details>
 
-### 🚧 v1.4 Personal Workshop Polish (In Progress)
+### ✅ v1.4 Personal Workshop Polish (Shipped 2026-02-13)
 
 **Milestone Goal:** Polish the personal workshop experience with UX refinements, AI personality, comprehensive testing, and seed data for demonstration. Focus on quality and completeness before collaboration features.
 
@@ -203,9 +203,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 35-01-PLAN.md -- Playwright setup, auth bypass, workshop factory helpers
-- [ ] 35-02-PLAN.md -- Full 10-step workshop walkthrough E2E test with bug fixes
-- [ ] 35-03-PLAN.md -- Final test report (results, fixes, deferrals, demo readiness)
+- [x] 35-01-PLAN.md -- Playwright setup, auth bypass, workshop factory helpers
+- [x] 35-02-PLAN.md -- Full 10-step workshop walkthrough E2E test with bug fixes
+- [x] 35-03-PLAN.md -- Final test report (results, fixes, deferrals, demo readiness)
 
 ## Progress
 
@@ -225,10 +225,10 @@ Plans:
 | 32. Workshop Management | v1.4 | 2/2 | Complete | 2026-02-13 |
 | 33. AI Personality | v1.4 | 2/2 | Complete | 2026-02-13 |
 | 34. Seed Data | v1.4 | 2/2 | Complete | 2026-02-13 |
-| 35. E2E Testing | v1.4 | 0/TBD | Not started | - |
+| 35. E2E Testing | v1.4 | 3/3 | Complete | 2026-02-13 |
 
-**Total v1.3:** 23 plans across 5 phases
-**Total project:** 103 plans across 34 phases, 6 milestones
+**Total v1.4:** 13 plans across 6 phases
+**Total project:** 106 plans across 35 phases, 6 milestones
 
 ---
-*Last updated: 2026-02-13 after Phase 34 execution*
+*Last updated: 2026-02-13 after Phase 35 execution — v1.4 milestone shipped*
