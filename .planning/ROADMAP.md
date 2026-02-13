@@ -197,9 +197,8 @@ Plans:
 
 **Success Criteria** (what must be TRUE):
 1. All 10 steps are walkable end-to-end with smooth transitions, correct AI prompts, and proper structured output extraction
-2. Canvas state persists correctly when navigating backward/forward between steps
+2. Canvas state persists correctly when navigating forward between steps
 3. AI context compression maintains quality through all 10 steps without degradation or missing context
-4. Back-revise navigation correctly invalidates downstream steps when upstream data changes
 
 **Plans**: 3 plans
 
