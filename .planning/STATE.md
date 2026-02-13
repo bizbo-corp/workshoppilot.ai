@@ -6,21 +6,21 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
 
-**Current focus:** Phase 34 - Seed Data
+**Current focus:** Phase 35 - E2E Testing
 
 ## Current Position
 
-Phase: 34 of 35 (Seed Data)
-Plan: 2 of 2 in current phase
-Status: Complete
-Last activity: 2026-02-13 — Completed 34-02-PLAN.md (CLI Seed Script for PawPal Workshop)
+Phase: 35 of 35 (E2E Testing)
+Plan: 1 of 3 in current phase
+Status: In Progress
+Last activity: 2026-02-13 — Completed 35-01-PLAN.md (Playwright Setup & Auth Bypass)
 
 Progress: [████████████████████████] 97% (34 of 35 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 102
+- Total plans completed: 103
 - Average duration: ~24 min per plan (estimated from milestones)
 - Total execution time: ~38 hours across 5 milestones
 
@@ -55,6 +55,7 @@ Progress: [███████████████████████
 | Phase 33 P02 | 478 | 2 tasks | 1 files |
 | 34-seed-data P01 | 276 | 2 | 2 |
 | 34-seed-data P02 | 241 | 2 | 2 |
+| Phase 35 P01 | 223 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,10 @@ Recent decisions affecting current work:
 - Phase 34: CLI seed script bypasses HTTP/Clerk for CI/testing scenarios with direct database access
 - Phase 34: Default clerk-user-id is user_seed_pawpal for quick development ergonomics
 - Phase 34: Fixture validation runs before any DB inserts to fail fast on bad data
+- [Phase 35]: Desktop-only Chromium for E2E testing (multi-browser deferred)
+- [Phase 35]: Sequential test execution (no fullyParallel) due to shared database
+- [Phase 35]: BYPASS_AUTH env var for E2E auth bypass (no Clerk keys needed)
+- [Phase 35]: 2-minute test timeout for AI-powered flows with real Gemini
 
 ### Pending Todos
 
@@ -105,7 +110,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 34-02-PLAN.md (CLI Seed Script for PawPal Workshop) — 2 tasks, 1 commit + 1 checkpoint verified
+Stopped at: Completed 35-01-PLAN.md (Playwright Setup & Auth Bypass) — 2 tasks, 2 commits
 Resume file: None
 
-**Next action:** Phase 34 complete. Ready for Phase 35 or next milestone work.
+**Next action:** Phase 35 in progress. Continue with 35-02-PLAN.md (E2E test files).
