@@ -13,6 +13,26 @@ import { generateStepSummary } from '@/lib/context/generate-summary';
 import { getNextWorkshopColor, WORKSHOP_COLORS } from '@/lib/workshop/workshop-appearance';
 
 /**
+ * Get user ID with BYPASS_AUTH support for E2E testing
+ * When BYPASS_AUTH=true, Clerk middleware is skipped and auth() throws an error.
+ * In this case, return null to allow anonymous access.
+ */
+async function getUserId(): Promise<string | null> {
+  if (process.env.BYPASS_AUTH === 'true') {
+    return null;
+  }
+
+  try {
+    const userId = await getUserId();
+    return userId;
+  } catch (error) {
+    // If auth() fails (e.g., when middleware is bypassed), return null
+    console.warn('auth() call failed, returning null userId:', error);
+    return null;
+  }
+}
+
+/**
  * Creates a new workshop session and redirects to step 1
  * Works for both authenticated and anonymous users
  */
@@ -20,8 +40,8 @@ export async function createWorkshopSession() {
   let sessionId: string;
 
   try {
-    // Get current user (or null for anonymous)
-    const { userId } = await auth();
+    // Get current user (or null for anonymous/BYPASS_AUTH)
+    const userId = await getUserId();
 
     // For anonymous users, use 'anonymous' placeholder
     // Per user decision: "Before AI naming, workshop appears as 'New Workshop'"
@@ -114,7 +134,7 @@ export async function renameWorkshop(workshopId: string, newName: string): Promi
  * Validates ownership: only workshops belonging to the current user are deleted
  */
 export async function deleteWorkshops(workshopIds: string[]): Promise<{ deleted: number }> {
-  const { userId } = await auth();
+  const userId = await getUserId();
   if (!userId) {
     throw new Error('Authentication required');
   }
@@ -338,7 +358,7 @@ export async function updateWorkshopAppearance(
   workshopId: string,
   updates: { color?: string; emoji?: string | null }
 ): Promise<void> {
-  const { userId } = await auth();
+  const userId = await getUserId();
   if (!userId) {
     throw new Error('Authentication required');
   }

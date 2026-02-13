@@ -49,7 +49,7 @@ export default defineConfig({
 
   // Start dev server before running tests
   webServer: {
-    command: 'npm run dev',
+    command: 'BYPASS_AUTH=true npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000, // 2 minutes to start server

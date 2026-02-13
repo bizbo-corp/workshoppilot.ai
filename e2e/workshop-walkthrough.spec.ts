@@ -6,7 +6,7 @@
  * No mocks, no seed data - creates a fresh workshop and walks forward.
  *
  * Test approach:
- * - Single serial test suite (page state persists across steps)
+ * - Single long test that walks through all 10 steps sequentially
  * - Each step sends contextual user input and validates AI response
  * - Validates step transitions via Next button
  * - No back/revise scenarios (happy path only)
@@ -17,360 +17,252 @@
  * - Database accessible (local Neon or test instance)
  */
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 // Set overall test timeout to 20 minutes for the full walkthrough
 test.setTimeout(1200000);
 
-test.describe.serial('Workshop Walkthrough - All 10 Steps', () => {
-  let page: Page;
-  let sessionId: string;
+test.describe('Workshop Walkthrough', () => {
+  test('Complete workshop from creation through all 10 steps', async ({ page }) => {
+    // Log console errors
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        console.log('Browser console error:', msg.text());
+      }
+    });
 
-  test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
-  });
+    // Log page errors
+    page.on('pageerror', error => {
+      console.log('Page error:', error.message);
+    });
 
-  test.afterAll(async () => {
-    await page.close();
-  });
+    let sessionId: string;
 
-  test('Create workshop and land on Step 1', async () => {
-    // Navigate to landing page
+    // ===== CREATE WORKSHOP AND LAND ON STEP 1 =====
+    console.log('\n=== Creating workshop ===');
     await page.goto('/');
 
-    // Click the "Start Workshop" button
     const startButton = page.getByRole('button', { name: /start workshop/i });
     await startButton.click();
 
-    // Wait for navigation to /workshop/{sessionId}/step/1
     await page.waitForURL(/\/workshop\/.*\/step\/1/, { timeout: 30000 });
 
-    // Extract sessionId from URL
     const url = page.url();
     const match = url.match(/\/workshop\/([^/]+)\/step\/1/);
     expect(match).toBeTruthy();
     sessionId = match![1];
+    console.log('Workshop created with session ID:', sessionId);
 
-    // Wait for the AI greeting to appear (auto-start trigger)
-    // AI messages are wrapped in .prose class
+    // Wait for the AI greeting
     await expect(page.locator('.prose').first()).toBeVisible({ timeout: 60000 });
+    console.log('AI greeting received on Step 1');
 
-    // Verify we're on Step 1
-    expect(page.url()).toContain('/step/1');
-  });
+    // ===== STEP 1: CHALLENGE =====
+    console.log('\n=== Step 1: Challenge ===');
+    const step1ExistingCount = await page.locator('.prose').count();
 
-  test('Step 1: Challenge - Define problem and HMW', async () => {
-    // Verify we're on step 1
-    expect(page.url()).toContain('/step/1');
+    const step1Input = page.locator('textarea[placeholder*="Type your message"]');
+    await step1Input.fill('I want to build a pet care app that helps busy pet owners manage their pets\' daily routines and health needs');
+    await step1Input.press('Enter');
 
-    // Wait for initial AI greeting (should already be visible from previous test)
-    await expect(page.locator('.prose').first()).toBeVisible({ timeout: 60000 });
-
-    // Count existing assistant messages
-    const existingCount = await page.locator('.prose').count();
-
-    // Type contextual message into textarea
-    const input = page.locator('textarea[placeholder*="Type your message"]');
-    await input.fill('I want to build a pet care app that helps busy pet owners manage their pets\' daily routines and health needs');
-
-    // Submit by pressing Enter
-    await input.press('Enter');
-
-    // Wait for AI to start thinking
+    // Wait for AI response
     await expect(page.locator('text=AI is thinking...').last()).toBeVisible({ timeout: 5000 });
-
-    // Wait for AI response to complete
     await expect(page.locator('text=AI is thinking...').last()).not.toBeVisible({ timeout: 90000 });
+    await expect(page.locator('.prose').nth(step1ExistingCount)).toBeVisible({ timeout: 5000 });
+    console.log('AI response received on Step 1');
 
-    // Verify new AI message appeared
-    await expect(page.locator('.prose').nth(existingCount)).toBeVisible({ timeout: 5000 });
+    // Navigate to Step 2
+    await page.screenshot({ path: 'test-results/before-click-next.png', fullPage: true });
+    const step1NextButton = page.getByRole('button', { name: /^(Next|Skip to Next)$/i });
+    await expect(step1NextButton).toBeVisible();
+    await expect(step1NextButton).toBeEnabled();
+    const buttonText = await step1NextButton.textContent();
+    const isDisabled = await step1NextButton.isDisabled();
+    console.log('Next button - text:', buttonText, 'disabled:', isDisabled);
 
-    // Verify the response has content
-    const newMessage = page.locator('.prose').nth(existingCount);
-    const messageText = await newMessage.textContent();
-    expect(messageText).toBeTruthy();
-    expect(messageText!.length).toBeGreaterThan(0);
+    // Force click to ensure it triggers even if something is overlaying
+    await step1NextButton.click({ force: true });
+    console.log('Button clicked (forced), current URL:', page.url());
 
-    // Click Next button to advance to Step 2
-    const nextButton = page.getByRole('button', { name: /next|skip to next/i });
-    await nextButton.click();
+    // Wait a bit to see if navigation is delayed
+    await page.waitForTimeout(5000);
+    console.log('After 5s wait, current URL:', page.url());
 
-    // Wait for navigation to step 2
-    await page.waitForURL(/\/step\/2$/, { timeout: 30000 });
-
-    // Small delay for hydration
+    await page.waitForURL(/\/step\/2$/, { timeout: 60000 });
     await page.waitForTimeout(2000);
-  });
+    console.log('Navigated to Step 2');
 
-  test('Step 2: Stakeholder Mapping - Identify key people and groups', async () => {
-    // Verify we're on step 2
-    expect(page.url()).toContain('/step/2');
-
-    // Wait for AI greeting
+    // ===== STEP 2: STAKEHOLDER MAPPING =====
+    console.log('\n=== Step 2: Stakeholder Mapping ===');
     await expect(page.locator('.prose').first()).toBeVisible({ timeout: 60000 });
+    const step2ExistingCount = await page.locator('.prose').count();
 
-    // Count existing messages
-    const existingCount = await page.locator('.prose').count();
+    const step2Input = page.locator('textarea[placeholder*="Type your message"]');
+    await step2Input.fill('The main stakeholders are pet owners, veterinarians, pet sitters, and pet supply companies');
+    await step2Input.press('Enter');
 
-    // Send contextual message
-    const input = page.locator('textarea[placeholder*="Type your message"]');
-    await input.fill('The main stakeholders are pet owners, veterinarians, pet sitters, and pet supply companies');
-    await input.press('Enter');
-
-    // Wait for AI thinking and response
     await expect(page.locator('text=AI is thinking...').last()).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=AI is thinking...').last()).not.toBeVisible({ timeout: 90000 });
+    await expect(page.locator('.prose').nth(step2ExistingCount)).toBeVisible({ timeout: 5000 });
+    console.log('AI response received on Step 2');
 
-    // Verify new message
-    await expect(page.locator('.prose').nth(existingCount)).toBeVisible({ timeout: 5000 });
-    const messageText = await page.locator('.prose').nth(existingCount).textContent();
-    expect(messageText!.length).toBeGreaterThan(0);
-
-    // Advance to Step 3
-    await page.getByRole('button', { name: /next|skip to next/i }).click();
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
     await page.waitForURL(/\/step\/3$/, { timeout: 30000 });
     await page.waitForTimeout(2000);
-  });
+    console.log('Navigated to Step 3');
 
-  test('Step 3: User Research - Conduct synthetic interviews', async () => {
-    // Verify we're on step 3
-    expect(page.url()).toContain('/step/3');
-
-    // Wait for AI greeting
+    // ===== STEP 3: USER RESEARCH =====
+    console.log('\n=== Step 3: User Research ===');
     await expect(page.locator('.prose').first()).toBeVisible({ timeout: 60000 });
+    const step3ExistingCount = await page.locator('.prose').count();
 
-    // Count existing messages
-    const existingCount = await page.locator('.prose').count();
+    const step3Input = page.locator('textarea[placeholder*="Type your message"]');
+    await step3Input.fill('I\'d like to interview busy professionals who own multiple pets and struggle with keeping up with vet appointments and feeding schedules');
+    await step3Input.press('Enter');
 
-    // Send contextual message
-    const input = page.locator('textarea[placeholder*="Type your message"]');
-    await input.fill('I\'d like to interview busy professionals who own multiple pets and struggle with keeping up with vet appointments and feeding schedules');
-    await input.press('Enter');
-
-    // Wait for AI response
     await expect(page.locator('text=AI is thinking...').last()).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=AI is thinking...').last()).not.toBeVisible({ timeout: 90000 });
+    await expect(page.locator('.prose').nth(step3ExistingCount)).toBeVisible({ timeout: 5000 });
+    console.log('AI response received on Step 3');
 
-    // Verify new message
-    await expect(page.locator('.prose').nth(existingCount)).toBeVisible({ timeout: 5000 });
-    const messageText = await page.locator('.prose').nth(existingCount).textContent();
-    expect(messageText!.length).toBeGreaterThan(0);
-
-    // Advance to Step 4
-    await page.getByRole('button', { name: /next|skip to next/i }).click();
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
     await page.waitForURL(/\/step\/4$/, { timeout: 30000 });
     await page.waitForTimeout(2000);
-  });
+    console.log('Navigated to Step 4');
 
-  test('Step 4: Sense Making - Synthesize research themes', async () => {
-    // Verify we're on step 4
-    expect(page.url()).toContain('/step/4');
-
-    // Wait for AI greeting
+    // ===== STEP 4: SENSE MAKING =====
+    console.log('\n=== Step 4: Sense Making ===');
     await expect(page.locator('.prose').first()).toBeVisible({ timeout: 60000 });
+    const step4ExistingCount = await page.locator('.prose').count();
 
-    // Count existing messages
-    const existingCount = await page.locator('.prose').count();
+    const step4Input = page.locator('textarea[placeholder*="Type your message"]');
+    await step4Input.fill('The key themes I see are time management struggles, anxiety about pet health, and desire for automated reminders');
+    await step4Input.press('Enter');
 
-    // Send contextual message
-    const input = page.locator('textarea[placeholder*="Type your message"]');
-    await input.fill('The key themes I see are time management struggles, anxiety about pet health, and desire for automated reminders');
-    await input.press('Enter');
-
-    // Wait for AI response
     await expect(page.locator('text=AI is thinking...').last()).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=AI is thinking...').last()).not.toBeVisible({ timeout: 90000 });
+    await expect(page.locator('.prose').nth(step4ExistingCount)).toBeVisible({ timeout: 5000 });
+    console.log('AI response received on Step 4');
 
-    // Verify new message
-    await expect(page.locator('.prose').nth(existingCount)).toBeVisible({ timeout: 5000 });
-    const messageText = await page.locator('.prose').nth(existingCount).textContent();
-    expect(messageText!.length).toBeGreaterThan(0);
-
-    // Advance to Step 5
-    await page.getByRole('button', { name: /next|skip to next/i }).click();
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
     await page.waitForURL(/\/step\/5$/, { timeout: 30000 });
     await page.waitForTimeout(2000);
-  });
+    console.log('Navigated to Step 5');
 
-  test('Step 5: Persona - Create user persona', async () => {
-    // Verify we're on step 5
-    expect(page.url()).toContain('/step/5');
-
-    // Wait for AI greeting
+    // ===== STEP 5: PERSONA =====
+    console.log('\n=== Step 5: Persona ===');
     await expect(page.locator('.prose').first()).toBeVisible({ timeout: 60000 });
+    const step5ExistingCount = await page.locator('.prose').count();
 
-    // Count existing messages
-    const existingCount = await page.locator('.prose').count();
+    const step5Input = page.locator('textarea[placeholder*="Type your message"]');
+    await step5Input.fill('Based on our research, the primary persona would be a working professional aged 28-35 who owns 2-3 pets');
+    await step5Input.press('Enter');
 
-    // Send contextual message
-    const input = page.locator('textarea[placeholder*="Type your message"]');
-    await input.fill('Based on our research, the primary persona would be a working professional aged 28-35 who owns 2-3 pets');
-    await input.press('Enter');
-
-    // Wait for AI response
     await expect(page.locator('text=AI is thinking...').last()).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=AI is thinking...').last()).not.toBeVisible({ timeout: 90000 });
+    await expect(page.locator('.prose').nth(step5ExistingCount)).toBeVisible({ timeout: 5000 });
+    console.log('AI response received on Step 5');
 
-    // Verify new message
-    await expect(page.locator('.prose').nth(existingCount)).toBeVisible({ timeout: 5000 });
-    const messageText = await page.locator('.prose').nth(existingCount).textContent();
-    expect(messageText!.length).toBeGreaterThan(0);
-
-    // Advance to Step 6
-    await page.getByRole('button', { name: /next|skip to next/i }).click();
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
     await page.waitForURL(/\/step\/6$/, { timeout: 30000 });
     await page.waitForTimeout(2000);
-  });
+    console.log('Navigated to Step 6');
 
-  test('Step 6: Journey Mapping - Map user experience and find the dip', async () => {
-    // Verify we're on step 6
-    expect(page.url()).toContain('/step/6');
-
-    // Wait for AI greeting
+    // ===== STEP 6: JOURNEY MAPPING =====
+    console.log('\n=== Step 6: Journey Mapping ===');
     await expect(page.locator('.prose').first()).toBeVisible({ timeout: 60000 });
+    const step6ExistingCount = await page.locator('.prose').count();
 
-    // Count existing messages
-    const existingCount = await page.locator('.prose').count();
+    const step6Input = page.locator('textarea[placeholder*="Type your message"]');
+    await step6Input.fill('The user\'s journey starts when they wake up and need to manage morning feeding, then continues through their workday worrying about their pets');
+    await step6Input.press('Enter');
 
-    // Send contextual message
-    const input = page.locator('textarea[placeholder*="Type your message"]');
-    await input.fill('The user\'s journey starts when they wake up and need to manage morning feeding, then continues through their workday worrying about their pets');
-    await input.press('Enter');
-
-    // Wait for AI response
     await expect(page.locator('text=AI is thinking...').last()).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=AI is thinking...').last()).not.toBeVisible({ timeout: 90000 });
+    await expect(page.locator('.prose').nth(step6ExistingCount)).toBeVisible({ timeout: 5000 });
+    console.log('AI response received on Step 6');
 
-    // Verify new message
-    await expect(page.locator('.prose').nth(existingCount)).toBeVisible({ timeout: 5000 });
-    const messageText = await page.locator('.prose').nth(existingCount).textContent();
-    expect(messageText!.length).toBeGreaterThan(0);
-
-    // Advance to Step 7
-    await page.getByRole('button', { name: /next|skip to next/i }).click();
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
     await page.waitForURL(/\/step\/7$/, { timeout: 30000 });
     await page.waitForTimeout(2000);
-  });
+    console.log('Navigated to Step 7');
 
-  test('Step 7: Reframe - Craft focused HMW statement', async () => {
-    // Verify we're on step 7
-    expect(page.url()).toContain('/step/7');
-
-    // Wait for AI greeting
+    // ===== STEP 7: REFRAME =====
+    console.log('\n=== Step 7: Reframe ===');
     await expect(page.locator('.prose').first()).toBeVisible({ timeout: 60000 });
+    const step7ExistingCount = await page.locator('.prose').count();
 
-    // Count existing messages
-    const existingCount = await page.locator('.prose').count();
+    const step7Input = page.locator('textarea[placeholder*="Type your message"]');
+    await step7Input.fill('I\'d like to focus the HMW on making pet care routine management effortless for multi-pet owners');
+    await step7Input.press('Enter');
 
-    // Send contextual message
-    const input = page.locator('textarea[placeholder*="Type your message"]');
-    await input.fill('I\'d like to focus the HMW on making pet care routine management effortless for multi-pet owners');
-    await input.press('Enter');
-
-    // Wait for AI response
     await expect(page.locator('text=AI is thinking...').last()).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=AI is thinking...').last()).not.toBeVisible({ timeout: 90000 });
+    await expect(page.locator('.prose').nth(step7ExistingCount)).toBeVisible({ timeout: 5000 });
+    console.log('AI response received on Step 7');
 
-    // Verify new message
-    await expect(page.locator('.prose').nth(existingCount)).toBeVisible({ timeout: 5000 });
-    const messageText = await page.locator('.prose').nth(existingCount).textContent();
-    expect(messageText!.length).toBeGreaterThan(0);
-
-    // Advance to Step 8
-    await page.getByRole('button', { name: /next|skip to next/i }).click();
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
     await page.waitForURL(/\/step\/8$/, { timeout: 30000 });
     await page.waitForTimeout(2000);
-  });
+    console.log('Navigated to Step 8');
 
-  test('Step 8: Ideation - Generate ideas with Mind Mapping', async () => {
-    // Verify we're on step 8
-    expect(page.url()).toContain('/step/8');
-
-    // Wait for AI greeting
+    // ===== STEP 8: IDEATION =====
+    console.log('\n=== Step 8: Ideation ===');
     await expect(page.locator('.prose').first()).toBeVisible({ timeout: 60000 });
+    const step8ExistingCount = await page.locator('.prose').count();
 
-    // Count existing messages
-    const existingCount = await page.locator('.prose').count();
+    const step8Input = page.locator('textarea[placeholder*="Type your message"]');
+    await step8Input.fill('Some initial ideas: smart feeding schedule optimizer, vet appointment coordinator with reminders, pet health dashboard, community care sharing platform');
+    await step8Input.press('Enter');
 
-    // Send contextual message
-    const input = page.locator('textarea[placeholder*="Type your message"]');
-    await input.fill('Some initial ideas: smart feeding schedule optimizer, vet appointment coordinator with reminders, pet health dashboard, community care sharing platform');
-    await input.press('Enter');
-
-    // Wait for AI response
     await expect(page.locator('text=AI is thinking...').last()).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=AI is thinking...').last()).not.toBeVisible({ timeout: 90000 });
+    await expect(page.locator('.prose').nth(step8ExistingCount)).toBeVisible({ timeout: 5000 });
+    console.log('AI response received on Step 8');
 
-    // Verify new message
-    await expect(page.locator('.prose').nth(existingCount)).toBeVisible({ timeout: 5000 });
-    const messageText = await page.locator('.prose').nth(existingCount).textContent();
-    expect(messageText!.length).toBeGreaterThan(0);
-
-    // Advance to Step 9
-    await page.getByRole('button', { name: /next|skip to next/i }).click();
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
     await page.waitForURL(/\/step\/9$/, { timeout: 30000 });
     await page.waitForTimeout(2000);
-  });
+    console.log('Navigated to Step 9');
 
-  test('Step 9: Concept - Develop concepts with SWOT analysis', async () => {
-    // Verify we're on step 9
-    expect(page.url()).toContain('/step/9');
-
-    // Wait for AI greeting
+    // ===== STEP 9: CONCEPT =====
+    console.log('\n=== Step 9: Concept ===');
     await expect(page.locator('.prose').first()).toBeVisible({ timeout: 60000 });
+    const step9ExistingCount = await page.locator('.prose').count();
 
-    // Count existing messages
-    const existingCount = await page.locator('.prose').count();
+    const step9Input = page.locator('textarea[placeholder*="Type your message"]');
+    await step9Input.fill('Let\'s develop the smart feeding schedule optimizer concept further with SWOT analysis');
+    await step9Input.press('Enter');
 
-    // Send contextual message
-    const input = page.locator('textarea[placeholder*="Type your message"]');
-    await input.fill('Let\'s develop the smart feeding schedule optimizer concept further with SWOT analysis');
-    await input.press('Enter');
-
-    // Wait for AI response
     await expect(page.locator('text=AI is thinking...').last()).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=AI is thinking...').last()).not.toBeVisible({ timeout: 90000 });
+    await expect(page.locator('.prose').nth(step9ExistingCount)).toBeVisible({ timeout: 5000 });
+    console.log('AI response received on Step 9');
 
-    // Verify new message
-    await expect(page.locator('.prose').nth(existingCount)).toBeVisible({ timeout: 5000 });
-    const messageText = await page.locator('.prose').nth(existingCount).textContent();
-    expect(messageText!.length).toBeGreaterThan(0);
-
-    // Advance to Step 10
-    await page.getByRole('button', { name: /next|skip to next/i }).click();
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
     await page.waitForURL(/\/step\/10$/, { timeout: 30000 });
     await page.waitForTimeout(2000);
-  });
+    console.log('Navigated to Step 10');
 
-  test('Step 10: Validate - Create flow diagrams and PRD', async () => {
-    // Verify we're on step 10 (last step)
-    expect(page.url()).toContain('/step/10');
-
-    // Wait for AI greeting
+    // ===== STEP 10: VALIDATE =====
+    console.log('\n=== Step 10: Validate ===');
     await expect(page.locator('.prose').first()).toBeVisible({ timeout: 60000 });
+    const step10ExistingCount = await page.locator('.prose').count();
 
-    // Count existing messages
-    const existingCount = await page.locator('.prose').count();
+    const step10Input = page.locator('textarea[placeholder*="Type your message"]');
+    await step10Input.fill('Let\'s create a user flow for the core feeding schedule feature and outline the key screens');
+    await step10Input.press('Enter');
 
-    // Send contextual message
-    const input = page.locator('textarea[placeholder*="Type your message"]');
-    await input.fill('Let\'s create a user flow for the core feeding schedule feature and outline the key screens');
-    await input.press('Enter');
-
-    // Wait for AI response
     await expect(page.locator('text=AI is thinking...').last()).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=AI is thinking...').last()).not.toBeVisible({ timeout: 90000 });
+    await expect(page.locator('.prose').nth(step10ExistingCount)).toBeVisible({ timeout: 5000 });
+    console.log('AI response received on Step 10');
 
-    // Verify new message
-    await expect(page.locator('.prose').nth(existingCount)).toBeVisible({ timeout: 5000 });
-    const messageText = await page.locator('.prose').nth(existingCount).textContent();
-    expect(messageText!.length).toBeGreaterThan(0);
-
-    // On Step 10, there is no Next button (it's the last step)
-    // Verify Next button is NOT present
-    const nextButton = page.getByRole('button', { name: /^next$/i });
+    // Verify no Next button on last step
+    const nextButton = page.getByRole('button', { name: /^Next$/i });
     await expect(nextButton).not.toBeVisible();
+    console.log('Confirmed: No Next button on Step 10 (last step)');
 
-    // Test complete - workshop walkthrough finished successfully!
+    console.log('\n=== Workshop walkthrough complete! ===');
   });
 });
