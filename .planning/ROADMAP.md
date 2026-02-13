@@ -201,10 +201,12 @@ Plans:
 3. AI context compression maintains quality through all 10 steps without degradation or missing context
 4. Back-revise navigation correctly invalidates downstream steps when upstream data changes
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 35-01: TBD during planning
+- [ ] 35-01-PLAN.md -- Playwright setup, auth bypass, workshop factory helpers
+- [ ] 35-02-PLAN.md -- Full 10-step workshop walkthrough E2E test with bug fixes
+- [ ] 35-03-PLAN.md -- Final test report (results, fixes, deferrals, demo readiness)
 
 ## Progress
 
