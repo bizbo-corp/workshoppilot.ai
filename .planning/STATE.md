@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 ## Current Position
 
 Phase: 35 of 35 (E2E Testing)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In Progress
-Last activity: 2026-02-13 — Completed 35-01-PLAN.md (Playwright Setup & Auth Bypass)
+Last activity: 2026-02-13 — Completed 35-02-PLAN.md (Workshop Walkthrough E2E Test - Partial)
 
 Progress: [████████████████████████] 97% (34 of 35 phases complete)
 
@@ -56,6 +56,7 @@ Progress: [███████████████████████
 | 34-seed-data P01 | 276 | 2 | 2 |
 | 34-seed-data P02 | 241 | 2 | 2 |
 | Phase 35 P01 | 223 | 2 tasks | 6 files |
+| Phase 35 P02 | 1230 | 1 task (partial) | 3 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,8 @@ Recent decisions affecting current work:
 - [Phase 35]: Sequential test execution (no fullyParallel) due to shared database
 - [Phase 35]: BYPASS_AUTH env var for E2E auth bypass (no Clerk keys needed)
 - [Phase 35]: 2-minute test timeout for AI-powered flows with real Gemini
+- [Phase 35]: Single long test pattern instead of serial tests for better state management
+- [Phase 35]: getUserId() helper in workshop-actions.ts to check BYPASS_AUTH before calling auth()
 
 ### Pending Todos
 
@@ -98,9 +101,12 @@ None yet.
 
 ### Blockers/Concerns
 
+**Current (Phase 35):**
+- BYPASS_AUTH incompatibility with Clerk's auth() - When middleware is bypassed, auth() throws errors in server components and API routes during Next.js compilation/SSR. Partial fix applied (getUserId helper in workshop-actions.ts), but additional auth() calls in dashboard/admin/API routes need fixing.
+
 **From v1.4 Planning:**
-- AI personality requires updating prompts across all 10 steps (Phase 33)
-- Seed data requires understanding existing schemas for all steps (Phase 34)
+- AI personality requires updating prompts across all 10 steps (Phase 33) ✅ RESOLVED
+- Seed data requires understanding existing schemas for all steps (Phase 34) ✅ RESOLVED
 
 **Known Technical Debt:**
 - Next.js middleware → proxy convention migration (non-blocking)
@@ -110,7 +116,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 35-01-PLAN.md (Playwright Setup & Auth Bypass) — 2 tasks, 2 commits
+Stopped at: Completed 35-02-PLAN.md (Workshop Walkthrough E2E Test - Partial) — 1 task completed, 1 task deferred, 2 commits
 Resume file: None
 
-**Next action:** Phase 35 in progress. Continue with 35-02-PLAN.md (E2E test files).
+**Next action:** Phase 35 in progress. Continue with fixing BYPASS_AUTH issue before resuming 35-02 Task 2 or moving to 35-03-PLAN.md.
