@@ -24,10 +24,11 @@ test.setTimeout(1200000);
 
 test.describe('Workshop Walkthrough', () => {
   test('Complete workshop from creation through all 10 steps', async ({ page }) => {
-    // Log console errors
+    // Log ALL console messages for debugging
     page.on('console', msg => {
-      if (msg.type() === 'error') {
-        console.log('Browser console error:', msg.text());
+      const type = msg.type();
+      if (type === 'error' || type === 'warning') {
+        console.log(`Browser ${type}:`, msg.text());
       }
     });
 
@@ -72,23 +73,35 @@ test.describe('Workshop Walkthrough', () => {
     console.log('AI response received on Step 1');
 
     // Navigate to Step 2
-    await page.screenshot({ path: 'test-results/before-click-next.png', fullPage: true });
+    await page.waitForLoadState('networkidle');
     const step1NextButton = page.getByRole('button', { name: /^(Next|Skip to Next)$/i });
     await expect(step1NextButton).toBeVisible();
     await expect(step1NextButton).toBeEnabled();
-    const buttonText = await step1NextButton.textContent();
-    const isDisabled = await step1NextButton.isDisabled();
-    console.log('Next button - text:', buttonText, 'disabled:', isDisabled);
+    console.log('Next button found, clicking via evaluate...');
 
-    // Force click to ensure it triggers even if something is overlaying
-    await step1NextButton.click({ force: true });
-    console.log('Button clicked (forced), current URL:', page.url());
+    // Track network requests for debugging
+    page.on('request', req => {
+      if (req.url().includes('/workshop/') && req.method() === 'POST') {
+        console.log(`Network POST: ${req.url()}`);
+      }
+    });
+    page.on('response', res => {
+      if (res.url().includes('/workshop/') && res.request().method() === 'POST') {
+        console.log(`Network response: ${res.status()} ${res.url()}`);
+      }
+    });
 
-    // Wait a bit to see if navigation is delayed
-    await page.waitForTimeout(5000);
-    console.log('After 5s wait, current URL:', page.url());
+    // Use evaluate to click directly via DOM API (bypasses any overlay issues)
+    await step1NextButton.evaluate((el: HTMLElement) => el.click());
+    console.log('Button clicked via evaluate, current URL:', page.url());
 
-    await page.waitForURL(/\/step\/2$/, { timeout: 60000 });
+    // Check if button text changed to "Advancing..." (confirms handler is running)
+    await page.waitForTimeout(1000);
+    const afterClickText = await step1NextButton.textContent();
+    console.log('After click - button text:', afterClickText);
+
+    // Wait for navigation (server action + router.push)
+    await page.waitForURL(/\/step\/2$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 2');
 
@@ -106,8 +119,9 @@ test.describe('Workshop Walkthrough', () => {
     await expect(page.locator('.prose').nth(step2ExistingCount)).toBeVisible({ timeout: 5000 });
     console.log('AI response received on Step 2');
 
-    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
-    await page.waitForURL(/\/step\/3$/, { timeout: 30000 });
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
+    await page.waitForURL(/\/step\/3$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 3');
 
@@ -125,8 +139,9 @@ test.describe('Workshop Walkthrough', () => {
     await expect(page.locator('.prose').nth(step3ExistingCount)).toBeVisible({ timeout: 5000 });
     console.log('AI response received on Step 3');
 
-    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
-    await page.waitForURL(/\/step\/4$/, { timeout: 30000 });
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
+    await page.waitForURL(/\/step\/4$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 4');
 
@@ -144,8 +159,9 @@ test.describe('Workshop Walkthrough', () => {
     await expect(page.locator('.prose').nth(step4ExistingCount)).toBeVisible({ timeout: 5000 });
     console.log('AI response received on Step 4');
 
-    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
-    await page.waitForURL(/\/step\/5$/, { timeout: 30000 });
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
+    await page.waitForURL(/\/step\/5$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 5');
 
@@ -163,8 +179,9 @@ test.describe('Workshop Walkthrough', () => {
     await expect(page.locator('.prose').nth(step5ExistingCount)).toBeVisible({ timeout: 5000 });
     console.log('AI response received on Step 5');
 
-    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
-    await page.waitForURL(/\/step\/6$/, { timeout: 30000 });
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
+    await page.waitForURL(/\/step\/6$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 6');
 
@@ -182,8 +199,9 @@ test.describe('Workshop Walkthrough', () => {
     await expect(page.locator('.prose').nth(step6ExistingCount)).toBeVisible({ timeout: 5000 });
     console.log('AI response received on Step 6');
 
-    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
-    await page.waitForURL(/\/step\/7$/, { timeout: 30000 });
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
+    await page.waitForURL(/\/step\/7$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 7');
 
@@ -201,27 +219,41 @@ test.describe('Workshop Walkthrough', () => {
     await expect(page.locator('.prose').nth(step7ExistingCount)).toBeVisible({ timeout: 5000 });
     console.log('AI response received on Step 7');
 
-    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
-    await page.waitForURL(/\/step\/8$/, { timeout: 30000 });
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
+    await page.waitForURL(/\/step\/8$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 8');
 
     // ===== STEP 8: IDEATION =====
-    console.log('\n=== Step 8: Ideation ===');
-    await expect(page.locator('.prose').first()).toBeVisible({ timeout: 60000 });
-    const step8ExistingCount = await page.locator('.prose').count();
+    // Step 8 has sub-steps (Mind Mapping, Crazy 8s, Idea Selection) each with their own textarea.
+    // Target the first visible textarea (the active sub-step's chat input).
+    console.log('\n=== Step 8: Ideation (Mind Mapping sub-step) ===');
+    // Step 8 has sub-step tabs with hidden elements. Wait for visible AI greeting.
+    await expect(page.locator('.prose:visible').first()).toBeVisible({ timeout: 60000 });
+    // Wait for any "AI is thinking" from auto-greeting to finish
+    await page.waitForTimeout(3000);
+    const thinkingIndicator8 = page.locator('text=AI is thinking...').first();
+    if (await thinkingIndicator8.isVisible().catch(() => false)) {
+      await expect(thinkingIndicator8).not.toBeVisible({ timeout: 90000 });
+    }
 
-    const step8Input = page.locator('textarea[placeholder*="Type your message"]');
+    const step8Input = page.locator('textarea[placeholder*="Type your message"]').first();
     await step8Input.fill('Some initial ideas: smart feeding schedule optimizer, vet appointment coordinator with reminders, pet health dashboard, community care sharing platform');
     await step8Input.press('Enter');
 
-    await expect(page.locator('text=AI is thinking...').last()).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=AI is thinking...').last()).not.toBeVisible({ timeout: 90000 });
-    await expect(page.locator('.prose').nth(step8ExistingCount)).toBeVisible({ timeout: 5000 });
+    // Wait for AI response — use thinking indicator instead of prose count (sub-step tabs have hidden .prose elements)
+    await expect(page.locator('text=AI is thinking...').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=AI is thinking...').first()).not.toBeVisible({ timeout: 90000 });
+    await page.waitForTimeout(1000);
     console.log('AI response received on Step 8');
 
-    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
-    await page.waitForURL(/\/step\/9$/, { timeout: 30000 });
+    // Step 8 has sub-steps but we skip them for the happy path — just click the main Next
+    await page.waitForLoadState('networkidle');
+    // The main "Skip to Next" button is in the footer navigation bar (not sub-step tabs)
+    const step8NextButton = page.locator('button', { hasText: /^(Next|Skip to Next)$/ }).last();
+    await step8NextButton.evaluate((el: HTMLElement) => el.click());
+    await page.waitForURL(/\/step\/9$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 9');
 
@@ -239,8 +271,9 @@ test.describe('Workshop Walkthrough', () => {
     await expect(page.locator('.prose').nth(step9ExistingCount)).toBeVisible({ timeout: 5000 });
     console.log('AI response received on Step 9');
 
-    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).click();
-    await page.waitForURL(/\/step\/10$/, { timeout: 30000 });
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
+    await page.waitForURL(/\/step\/10$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 10');
 

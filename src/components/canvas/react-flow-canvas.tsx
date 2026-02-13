@@ -1125,6 +1125,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         panOnDrag={activeTool === 'hand'}
         zoomOnScroll={true}
         zoomOnPinch={true}
+        proOptions={{ hideAttribution: true }}
       >
         <Background
           variant={BackgroundVariant.Dots}

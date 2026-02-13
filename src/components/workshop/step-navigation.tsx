@@ -63,18 +63,22 @@ export function StepNavigation({
         return;
       }
 
-      // Atomically mark current complete and next in_progress
+      // Atomically mark current complete, next in_progress, then redirect.
+      // advanceToNextStep calls redirect() internally — the idiomatic Next.js
+      // pattern for server action navigation (router.push doesn't work after
+      // server actions with revalidatePath).
       await advanceToNextStep(
         workshopId,
         currentStep.id,
         nextStep.id,
         sessionId
       );
-
-      // Navigate to next step
-      router.push(`/workshop/${sessionId}/step/${currentStepOrder + 1}`);
     } catch (error) {
-      console.error('Failed to advance to next step:', error);
+      // redirect() throws NEXT_REDIRECT which is caught here — this is normal.
+      // Only log real errors.
+      if (error instanceof Error && !error.message.includes('NEXT_REDIRECT')) {
+        console.error('Failed to advance to next step:', error);
+      }
     } finally {
       setIsNavigating(false);
     }

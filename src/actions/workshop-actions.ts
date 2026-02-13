@@ -13,23 +13,13 @@ import { generateStepSummary } from '@/lib/context/generate-summary';
 import { getNextWorkshopColor, WORKSHOP_COLORS } from '@/lib/workshop/workshop-appearance';
 
 /**
- * Get user ID with BYPASS_AUTH support for E2E testing
- * When BYPASS_AUTH=true, Clerk middleware is skipped and auth() throws an error.
- * In this case, return null to allow anonymous access.
+ * Get user ID from Clerk auth.
+ * Returns null for unauthenticated users (including E2E test mode where
+ * BYPASS_AUTH=true keeps middleware running but no Clerk session exists).
  */
 async function getUserId(): Promise<string | null> {
-  if (process.env.BYPASS_AUTH === 'true') {
-    return null;
-  }
-
-  try {
-    const userId = await getUserId();
-    return userId;
-  } catch (error) {
-    // If auth() fails (e.g., when middleware is bypassed), return null
-    console.warn('auth() call failed, returning null userId:', error);
-    return null;
-  }
+  const { userId } = await auth();
+  return userId;
 }
 
 /**
@@ -217,6 +207,8 @@ export async function advanceToNextStep(
   nextStepId: string,
   sessionId: string
 ): Promise<{ nextStepOrder: number }> {
+  let nextStepOrder: number;
+
   try {
     // Mark current step complete
     await updateStepStatus(workshopId, currentStepId, 'complete', sessionId);
@@ -262,11 +254,17 @@ export async function advanceToNextStep(
       throw new Error(`Step ${nextStepId} not found in STEPS array`);
     }
 
-    return { nextStepOrder: nextStep.order };
+    nextStepOrder = nextStep.order;
   } catch (error) {
     console.error('Failed to advance to next step:', error);
     throw error;
   }
+
+  // redirect() must be called outside try/catch (it throws NEXT_REDIRECT internally)
+  // This is the idiomatic Next.js pattern for server action navigation.
+  // Using router.push() after a server action with revalidatePath doesn't work
+  // because the revalidation interferes with client-side navigation.
+  redirect(`/workshop/${sessionId}/step/${nextStepOrder}`);
 }
 
 /**
