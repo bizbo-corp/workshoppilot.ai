@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/db/client";
-import { sessions, stepArtifacts } from "@/db/schema";
+import { sessions, stepArtifacts, chatMessages } from "@/db/schema";
 import { getStepByOrder, STEPS } from "@/lib/workshop/step-metadata";
 import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
@@ -68,7 +68,36 @@ export default async function StepPage({ params }: StepPageProps) {
   }
 
   // Load chat messages for this session and step
-  const initialMessages = await loadMessages(sessionId, step.id);
+  let initialMessages = await loadMessages(sessionId, step.id);
+
+  // Clean up duplicate intro messages for the head step (furthest in_progress step).
+  // If the user hasn't sent any real messages yet (only __step_start__ triggers + AI intros),
+  // wipe the messages so auto-start generates a single fresh intro on mount.
+  if (
+    stepRecord?.status === "in_progress" &&
+    initialMessages.length > 0
+  ) {
+    const hasRealUserMessage = initialMessages.some(
+      (m) =>
+        m.role === "user" &&
+        !m.parts?.every(
+          (p) => p.type === "text" && p.text === "__step_start__"
+        )
+    );
+
+    if (!hasRealUserMessage) {
+      // No real user interaction — clear stale/duplicate intro messages
+      await db
+        .delete(chatMessages)
+        .where(
+          and(
+            eq(chatMessages.sessionId, sessionId),
+            eq(chatMessages.stepId, step.id)
+          )
+        );
+      initialMessages = [];
+    }
+  }
 
   // Query existing artifact for completed or needs_regeneration steps
   let initialArtifact: Record<string, unknown> | null = null;

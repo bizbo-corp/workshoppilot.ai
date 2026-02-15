@@ -316,16 +316,18 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     };
   }, []);
 
-  // Auto-start: send trigger message when entering a step with no messages
+  // Auto-start: send trigger message when entering a step with no prior messages
+  const shouldAutoStart = !initialMessages || initialMessages.length === 0;
+
   React.useEffect(() => {
-    if (messages.length === 0 && status === 'ready' && !hasAutoStarted.current) {
+    if (shouldAutoStart && messages.length === 0 && status === 'ready' && !hasAutoStarted.current) {
       hasAutoStarted.current = true;
       sendMessage({
         role: 'user',
         parts: [{ type: 'text', text: '__step_start__' }],
       });
     }
-  }, [messages.length, status, sendMessage]);
+  }, [shouldAutoStart, messages.length, status, sendMessage]);
 
   // Helper: check if user is near bottom of scroll container
   const isNearBottom = React.useCallback(() => {
