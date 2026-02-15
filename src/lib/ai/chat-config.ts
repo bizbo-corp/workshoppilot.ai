@@ -1,25 +1,25 @@
-import { google } from '@ai-sdk/google';
-import { getStepSpecificInstructions } from './prompts/step-prompts';
-import { getArcPhaseInstructions, type ArcPhase } from './prompts/arc-phases';
-import { getValidationCriteria } from './prompts/validation-criteria';
+import { google } from "@ai-sdk/google";
+import { getStepSpecificInstructions } from "./prompts/step-prompts";
+import { getArcPhaseInstructions, type ArcPhase } from "./prompts/arc-phases";
+import { getValidationCriteria } from "./prompts/validation-criteria";
 
 /**
  * Gemini model configuration for chat
  * Using gemini-2.0-flash for fast, cost-effective MVP responses
  */
-export const chatModel = google('gemini-2.0-flash');
+export const chatModel = google("gemini-2.0-flash");
 
 /**
  * Generic system prompt for design thinking facilitation
  * Used as fallback when context-aware prompt is not available
  */
 export const GENERIC_SYSTEM_PROMPT =
-  'You are a helpful design thinking facilitator. Guide the user through the current step of the design thinking process. Be encouraging, ask probing questions, and help them think deeply about their ideas. Keep responses concise and actionable.';
+  "You are a helpful design thinking facilitator. Guide the user through the current step of the design thinking process. Be encouraging, ask probing questions, and help them think deeply about their ideas. Keep responses concise and actionable.";
 
 /**
  * Re-export ArcPhase type for convenience
  */
-export type { ArcPhase } from './prompts/arc-phases';
+export type { ArcPhase } from "./prompts/arc-phases";
 
 /**
  * Build context-aware system prompt with three-tier memory
@@ -50,13 +50,13 @@ export function buildStepSystemPrompt(
   persistentContext: string,
   summaries: string,
   canvasContext: string,
-  instructionsOverride?: string
+  instructionsOverride?: string,
 ): string {
-  // Base role: AI facilitator for this step
-  let prompt = `You are an AI design thinking facilitator guiding the user through Step: ${stepName}.`;
+  // Base role for this step (step instructions may override personality)
+  let prompt = `You are guiding the user through Step: ${stepName}.`;
 
   // During Orient phase, include step purpose explanation (AIE-03 requirement)
-  if (arcPhase === 'orient' && stepDescription) {
+  if (arcPhase === "orient" && stepDescription) {
     prompt += `\nThis step's purpose: ${stepDescription}. Explain this purpose to the user in your opening message so they understand what they'll accomplish and why it matters in the design thinking process.`;
   }
 
@@ -66,15 +66,35 @@ export function buildStepSystemPrompt(
     prompt += `\n\n${arcPhaseInstructions}`;
   }
 
-  // Add step-specific instructions
-  const stepInstructions = instructionsOverride || getStepSpecificInstructions(stepId);
+  // General defaults — step instructions below override these when specified
+  prompt += `\n\nGENERAL DEFAULTS:
+PERSONALITY: You're a thoughtful collaborator with warm, encouraging "can-do" energy. Professional but never corporate. You think with the person, not at them. Genuinely enthusiastic about their ideas — celebrate specificity, get excited when things click.
+
+PACING: Ask one question at a time. Build depth through follow-ups, not by dumping everything at once.
+
+MESSAGE LENGTH: Keep responses focused and concise. Avoid walls of text.
+
+EMOJI USAGE:
+Use emojis to punctuate genuine reactions, not to decorate.
+When to use: Reacting with enthusiasm ("That's solid 💪" / "Oh I love that 🔥"), showing empathy ("Yeah, that's frustrating 😤"), celebrating a milestone ("This hits 🎯"), or opening with energy ("Let's do this! 💡").
+When NOT to use: Don't put one on every sentence — that feels manic. Don't use them in formal outputs (challenge statements, personas, etc.). Max 2-3 per message.
+GOOD: "Ooh, storytelling for professionals — I'm into this 🔥 Here's a first draft..."
+BAD: "Great! 😊 Let's define the challenge! 🎯 What problem are we solving? 🤔 Who feels it? 👥" (emoji overload, no personality)
+BAD: "Understood. I will now draft a challenge statement based on your input." (robot voice)
+
+AVOID: Generic encouragement padding, repeating what the user just said, textbook definitions, passive voice or hedging.`;
+
+  // Step-specific instructions — these are the authority for personality, tone,
+  // format, and interaction style. They override GENERAL DEFAULTS above.
+  const stepInstructions =
+    instructionsOverride || getStepSpecificInstructions(stepId);
   if (stepInstructions) {
-    prompt += `\n\nSTEP INSTRUCTIONS:
+    prompt += `\n\nSTEP INSTRUCTIONS (override any defaults above):
 ${stepInstructions}`;
   }
 
   // During Validate phase, inject validation criteria
-  if (arcPhase === 'validate') {
+  if (arcPhase === "validate") {
     const validationCriteria = getValidationCriteria(stepId);
     if (validationCriteria.length > 0) {
       prompt += `\n\nVALIDATION CRITERIA:
@@ -114,32 +134,18 @@ Reference canvas items like a consultant reviewing a whiteboard with a client. B
 
     // Add canvas-specific rule if canvas context exists
     if (canvasContext) {
-      const itemType = stepId === 'stakeholder-mapping' ? 'stakeholders' : stepId === 'sense-making' ? 'insights' : 'items';
+      const itemType =
+        stepId === "stakeholder-mapping"
+          ? "stakeholders"
+          : stepId === "sense-making"
+            ? "insights"
+            : "items";
       prompt += `\n- When discussing ${itemType}, connect to what's already on the whiteboard — "Looking at your ${itemType}..." or "Building on what you've mapped..."`;
     }
   }
 
-  // Add general behavioral guidance
-  prompt += `\n\nGENERAL GUIDANCE:
-PERSONALITY: You are a sharp consultant who's run 100+ design thinking workshops. Direct, efficient, zero fluff. Charismatic "you got this!" energy — encouraging without being saccharine. Conversational, not corporate. Confident without being arrogant. You're an experienced mentor, not a textbook.
-
-MESSAGE LENGTH: Keep responses SHORT. Max 3-4 short paragraphs. If you have multiple topics, prioritize the most important one. Never write a wall of text.
-
-CONVERSATIONAL TURNS: Write like you're having a conversation, not writing an essay. Lead with your insight or question. Skip the preamble. Get to the point fast.
-
-PACING: Ask ONE question at a time. Don't front-load lengthy explanations before your question. Build depth through follow-ups, not by dumping everything at once.
-
-FORMAT: Use **bold** for key terms. Short paragraphs (2-3 sentences max). Prefer bullets over prose. 1-2 emojis max per response (sparingly, purposefully).
-
-AVOID:
-- Generic encouragement padding ("That's a great question!", "Great point!")
-- Repeating what the user just said back to them
-- Textbook definitions — explain through examples and analogies
-- Passive voice or hedging ("It might be helpful to consider...")
-- Wall-of-text responses — keep it tight and focused`;
-
   // During Orient and Gather phases, instruct AI to provide suggested responses
-  if (arcPhase === 'orient' || arcPhase === 'gather') {
+  if (arcPhase === "orient" || arcPhase === "gather") {
     prompt += `\n\nSUGGESTED RESPONSES:
 After your message, append a [SUGGESTIONS] block with 2-3 suggested user responses.
 Format:
@@ -152,8 +158,8 @@ Rules: Each suggestion must be under 15 words, written from the user's perspecti
   }
 
   // Challenge step canvas: output the challenge statement as a canvas item
-  const challengeCanvasPhases = ['gather', 'synthesize', 'refine'];
-  if (stepId === 'challenge' && challengeCanvasPhases.includes(arcPhase)) {
+  const challengeCanvasPhases = ["gather", "synthesize", "refine"];
+  if (stepId === "challenge" && challengeCanvasPhases.includes(arcPhase)) {
     prompt += `\n\nCANVAS ACTIONS:
 When you draft or revise the challenge statement, output it as a canvas item so it appears on the whiteboard.
 Format: [CANVAS_ITEM]The full challenge statement text[/CANVAS_ITEM]
@@ -163,33 +169,38 @@ Items are auto-added to the canvas. Do not ask the user to click to add.`;
 
   // Canvas action markup instructions for canvas-enabled steps
   // Include refine phase so items can still be added when user adjusts/iterates
-  const canvasPhases = ['gather', 'synthesize', 'refine'];
-  if (['stakeholder-mapping', 'sense-making', 'persona'].includes(stepId) &&
-      canvasPhases.includes(arcPhase)) {
-    const itemType = stepId === 'stakeholder-mapping' ? 'stakeholders'
-      : stepId === 'sense-making' ? 'insights or observations'
-      : 'persona traits';
+  const canvasPhases = ["gather", "synthesize", "refine"];
+  if (
+    ["stakeholder-mapping", "sense-making", "persona"].includes(stepId) &&
+    canvasPhases.includes(arcPhase)
+  ) {
+    const itemType =
+      stepId === "stakeholder-mapping"
+        ? "stakeholders"
+        : stepId === "sense-making"
+          ? "insights or observations"
+          : "persona traits";
 
     prompt += `\n\nCANVAS ACTIONS:
 When suggesting ${itemType} the user should add to their canvas, wrap each item in [CANVAS_ITEM]...[/CANVAS_ITEM] tags.
 Items are auto-added to the canvas. Do not ask the user to click to add.`;
 
     // Step-specific attribute instructions
-    if (stepId === 'stakeholder-mapping') {
+    if (stepId === "stakeholder-mapping") {
       prompt += `
 
 Format: [CANVAS_ITEM quadrant="<quadrant>"]Brief item text (max 80 characters)[/CANVAS_ITEM]
 Valid quadrants: high-power-high-interest, high-power-low-interest, low-power-high-interest, low-power-low-interest
 
 Example: "Here are key stakeholders: [CANVAS_ITEM quadrant="high-power-high-interest"]Product Manager - high influence[/CANVAS_ITEM] and [CANVAS_ITEM quadrant="low-power-high-interest"]End Users - primary beneficiaries[/CANVAS_ITEM]"`;
-    } else if (stepId === 'sense-making') {
+    } else if (stepId === "sense-making") {
       prompt += `
 
 Format: [CANVAS_ITEM quadrant="<quadrant>"]Brief item text (max 80 characters)[/CANVAS_ITEM]
 Valid quadrants: said, thought, felt, experienced
 
 Example: "From the interviews: [CANVAS_ITEM quadrant="said"]Nothing is in one place[/CANVAS_ITEM] and [CANVAS_ITEM quadrant="felt"]Guilt when tasks are missed[/CANVAS_ITEM]"`;
-    } else if (stepId === 'persona') {
+    } else if (stepId === "persona") {
       prompt += `
 
 Format: [CANVAS_ITEM category="<category>"]Brief item text (max 80 characters)[/CANVAS_ITEM]
@@ -212,7 +223,7 @@ Guidelines:
 
   // Journey-mapping GRID_ITEM instructions — always injected regardless of arc phase
   // (Journey maps need 30-50+ items populated across the full conversation lifecycle)
-  if (stepId === 'journey-mapping') {
+  if (stepId === "journey-mapping") {
     prompt += `\n\nCANVAS ACTIONS (Journey Map Grid):
 When populating journey map cells, wrap each item in [GRID_ITEM]...[/GRID_ITEM] tags.
 Items are added directly to the canvas. Do not ask the user to click to add.
