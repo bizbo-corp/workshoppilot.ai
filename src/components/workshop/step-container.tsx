@@ -10,15 +10,13 @@ import { MobileTabBar } from './mobile-tab-bar';
 import { StepNavigation } from './step-navigation';
 import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
 import { IdeationSubStepContainer } from './ideation-sub-step-container';
-import { Button } from '@/components/ui/button';
-import { Sparkles, MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical } from 'lucide-react';
+import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical } from 'lucide-react';
 import { reviseStep, resetStep } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { cn } from '@/lib/utils';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { ConceptCanvasOverlay } from './concept-canvas-overlay';
-import { useDevOutput } from '@/hooks/use-dev-output';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
 
 const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping', 'concept'];
@@ -51,15 +49,6 @@ export function StepContainer({
   const [isMobile, setIsMobile] = React.useState(false);
   const [mobileTab, setMobileTab] = React.useState<'chat' | 'canvas'>('chat');
   const { chatCollapsed, canvasCollapsed, setChatCollapsed, setCanvasCollapsed } = usePanelLayout();
-  const { devOutputEnabled } = useDevOutput();
-
-  // Extraction state
-  // Pre-populate artifact if viewing completed/needs_regeneration step
-  const [artifact, setArtifact] = React.useState<Record<string, unknown> | null>(
-    initialArtifact || null
-  );
-  const [isExtracting, setIsExtracting] = React.useState(false);
-  const [extractionError, setExtractionError] = React.useState<string | null>(null);
 
   // Artifact confirmation state
   // For complete steps: pre-set confirmed (artifact was already confirmed)
@@ -77,10 +66,6 @@ export function StepContainer({
 
   // For canvas steps, activity is "confirmed" when post-its exist (no extraction needed)
   const effectiveConfirmed = isCanvasStep ? canvasHasContent : artifactConfirmed;
-
-  // Live message count for "Extract Output" button visibility
-  const [liveMessageCount, setLiveMessageCount] = React.useState(initialMessages?.length || 0);
-  const hasEnoughMessages = liveMessageCount >= 4; // At least 2 exchanges
 
   // Reset dialog state
   const [showResetDialog, setShowResetDialog] = React.useState(false);
@@ -103,68 +88,6 @@ export function StepContainer({
   React.useEffect(() => {
     setMobileTab('chat');
   }, [stepOrder]);
-
-  // Extract artifact from conversation
-  const extractArtifact = React.useCallback(async () => {
-    setIsExtracting(true);
-    setExtractionError(null);
-
-    try {
-      // Get current step ID from step-metadata
-      const { getStepByOrder } = await import('@/lib/workshop/step-metadata');
-      const step = getStepByOrder(stepOrder);
-
-      if (!step) {
-        setExtractionError('Step not found');
-        return;
-      }
-
-      const response = await fetch('/api/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workshopId,
-          stepId: step.id,
-          sessionId,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setArtifact(data.artifact);
-        setExtractionError(null);
-      } else if (response.status === 422) {
-        // Extraction failed (validation error)
-        setExtractionError(data.message || 'Failed to extract artifact');
-      } else if (response.status === 400) {
-        // Insufficient conversation
-        setExtractionError(data.message || 'Not enough conversation to extract');
-      } else if (response.status === 404) {
-        // Session/workshop not found
-        setExtractionError('Session not found');
-      } else {
-        // Unknown error
-        setExtractionError('An unexpected error occurred');
-      }
-    } catch (error) {
-      console.error('Extraction error:', error);
-      setExtractionError('Network error - please try again');
-    } finally {
-      setIsExtracting(false);
-    }
-  }, [workshopId, sessionId, stepOrder]);
-
-  // Handle confirmation
-  const handleConfirm = React.useCallback(() => {
-    setArtifactConfirmed(true);
-  }, []);
-
-  // Handle edit (clear artifact and confirmation)
-  const handleEdit = React.useCallback(() => {
-    setArtifactConfirmed(false);
-    setArtifact(null);
-  }, []);
 
   // Handle revision (cascade invalidation)
   const handleRevise = React.useCallback(async () => {
@@ -200,9 +123,7 @@ export function StepContainer({
       await resetStep(workshopId, step.id, sessionId);
       setShowResetDialog(false);
       // Reset local state
-      setArtifact(null);
       setArtifactConfirmed(false);
-      setExtractionError(null);
       // Force re-mount of ChatPanel/IdeationSubStepContainer to clear useChat state
       setResetKey(prev => prev + 1);
       // Refresh page to reload with cleared server state
@@ -261,21 +182,8 @@ export function StepContainer({
           sessionId={sessionId}
           workshopId={workshopId}
           initialMessages={initialMessages}
-          onMessageCountChange={setLiveMessageCount}
         />
       </div>
-      {devOutputEnabled && !isCanvasStep && hasEnoughMessages && !artifact && !isExtracting && (
-        <div className="flex shrink-0 justify-center border-t bg-background p-4">
-          <Button
-            onClick={extractArtifact}
-            variant="outline"
-            size="sm"
-          >
-            <Sparkles className="mr-2 h-4 w-4" />
-            Extract Output
-          </Button>
-        </div>
-      )}
     </div>
   );
 
@@ -312,13 +220,6 @@ export function StepContainer({
                 stepOrder={stepOrder}
                 sessionId={sessionId}
                 workshopId={workshopId}
-                artifact={artifact}
-                isExtracting={isExtracting}
-                extractionError={extractionError}
-                onRetry={extractArtifact}
-                artifactConfirmed={effectiveConfirmed}
-                onConfirm={handleConfirm}
-                onEdit={handleEdit}
               />
             )}
           </div>
@@ -418,13 +319,6 @@ export function StepContainer({
                       stepOrder={stepOrder}
                       sessionId={sessionId}
                       workshopId={workshopId}
-                      artifact={artifact}
-                      isExtracting={isExtracting}
-                      extractionError={extractionError}
-                      onRetry={extractArtifact}
-                      artifactConfirmed={effectiveConfirmed}
-                      onConfirm={handleConfirm}
-                      onEdit={handleEdit}
                       onCollapse={() => setCanvasCollapsed(true)}
                     />
                   )}
@@ -467,13 +361,6 @@ export function StepContainer({
                   stepOrder={stepOrder}
                   sessionId={sessionId}
                   workshopId={workshopId}
-                  artifact={artifact}
-                  isExtracting={isExtracting}
-                  extractionError={extractionError}
-                  onRetry={extractArtifact}
-                  artifactConfirmed={effectiveConfirmed}
-                  onConfirm={handleConfirm}
-                  onEdit={handleEdit}
                   onCollapse={() => setCanvasCollapsed(true)}
                 />
               )}

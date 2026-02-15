@@ -1,12 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import type { UIMessage } from 'ai';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChatPanel } from './chat-panel';
-import { OutputPanel } from './output-panel';
 import { ArtifactConfirmation } from './artifact-confirmation';
 import { StepNavigation } from './step-navigation';
 import { IdeaSelection } from './idea-selection';
@@ -14,9 +12,8 @@ import { MindMapCanvas } from './mind-map-canvas';
 import { Crazy8sCanvas } from './crazy-8s-canvas';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Lightbulb, Zap, CheckCircle2, Check, Sparkles, ArrowRight, GripVertical, MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose } from 'lucide-react';
+import { Lightbulb, Zap, CheckCircle2, Check, ArrowRight, GripVertical, MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose } from 'lucide-react';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
-import { useDevOutput } from '@/hooks/use-dev-output';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
 
 type IdeationSubStep = 'mind-mapping' | 'crazy-eights' | 'idea-selection';
@@ -54,8 +51,6 @@ export function IdeationSubStepContainer({
   onReset,
   hmwStatement,
 }: IdeationSubStepContainerProps) {
-  const router = useRouter();
-  const { devOutputEnabled } = useDevOutput();
   const { chatCollapsed, canvasCollapsed, setChatCollapsed, setCanvasCollapsed } = usePanelLayout();
 
   // State management
@@ -66,10 +61,6 @@ export function IdeationSubStepContainer({
   );
   const [liveMessageCount, setLiveMessageCount] = React.useState(0);
   const [mobileView, setMobileView] = React.useState<'chat' | 'canvas'>('chat');
-
-  // Extraction state
-  const [isExtracting, setIsExtracting] = React.useState(false);
-  const [extractionError, setExtractionError] = React.useState<string | null>(null);
 
   // Artifact confirmation state
   const [artifactConfirmed, setArtifactConfirmed] = React.useState(
@@ -103,43 +94,6 @@ export function IdeationSubStepContainer({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  // Extract artifact callback
-  const extractArtifact = React.useCallback(async () => {
-    setIsExtracting(true);
-    setExtractionError(null);
-    try {
-      const { getStepByOrder } = await import('@/lib/workshop/step-metadata');
-      const step = getStepByOrder(8);
-      if (!step) {
-        setExtractionError('Step not found');
-        return;
-      }
-      const response = await fetch('/api/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workshopId, stepId: step.id, sessionId }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setArtifact(data.artifact);
-        setExtractionError(null);
-      } else if (response.status === 422) {
-        setExtractionError(data.message || 'Failed to extract artifact');
-      } else if (response.status === 400) {
-        setExtractionError(data.message || 'Not enough conversation to extract');
-      } else if (response.status === 404) {
-        setExtractionError('Session not found');
-      } else {
-        setExtractionError('An unexpected error occurred');
-      }
-    } catch (error) {
-      console.error('Extraction error:', error);
-      setExtractionError('Network error - please try again');
-    } finally {
-      setIsExtracting(false);
-    }
-  }, [workshopId, sessionId]);
 
   // ArtifactConfirmation handlers with selection merge
   const handleConfirm = React.useCallback(() => {
@@ -234,17 +188,6 @@ export function IdeationSubStepContainer({
             </div>
           );
         }
-        // Last sub-step: show Extract Output (only if dev output enabled)
-        if (devOutputEnabled && !artifact && !isExtracting) {
-          return (
-            <div className="flex shrink-0 justify-center border-t bg-background p-4">
-              <Button onClick={extractArtifact} variant="outline" size="sm">
-                <Sparkles className="mr-2 h-4 w-4" />
-                Extract Output
-              </Button>
-            </div>
-          );
-        }
         return null;
       })()}
     </div>
@@ -252,11 +195,6 @@ export function IdeationSubStepContainer({
 
   // Render output panel with IdeaSelection and ArtifactConfirmation (for idea-selection tab only)
   const renderOutputPanel = (subStep: IdeationSubStep) => {
-    // When dev output is disabled, return empty div to maintain layout
-    if (!devOutputEnabled) {
-      return <div className="h-full" />;
-    }
-
     return (
       <div className="flex h-full flex-col">
         <div className="flex-1 overflow-y-auto">

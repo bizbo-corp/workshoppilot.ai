@@ -22,16 +22,25 @@ const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'sense-making'
  * Returns clean content (block removed) and extracted suggestion strings.
  */
 function parseSuggestions(content: string): { cleanContent: string; suggestions: string[] } {
+  // Complete block: extract suggestions and strip
   const match = content.match(/\[SUGGESTIONS\]([\s\S]*?)\[\/SUGGESTIONS\]/);
-  if (!match) return { cleanContent: content, suggestions: [] };
+  if (match) {
+    const cleanContent = content.replace(/\[SUGGESTIONS\][\s\S]*?\[\/SUGGESTIONS\]/, '').trim();
+    const suggestions = match[1]
+      .split('\n')
+      .map((line) => line.replace(/^[-*•]\s*/, '').trim())
+      .filter((line) => line.length > 0);
+    return { cleanContent, suggestions };
+  }
 
-  const cleanContent = content.replace(/\[SUGGESTIONS\][\s\S]*?\[\/SUGGESTIONS\]/, '').trim();
-  const suggestions = match[1]
-    .split('\n')
-    .map((line) => line.replace(/^[-*•]\s*/, '').trim())
-    .filter((line) => line.length > 0);
+  // Incomplete block (mid-stream): strip from [SUGGESTIONS] to end of string
+  // Prevents raw suggestion text from flickering in the chat bubble during streaming
+  if (content.includes('[SUGGESTIONS]')) {
+    const cleanContent = content.replace(/\[SUGGESTIONS\][\s\S]*$/, '').trim();
+    return { cleanContent, suggestions: [] };
+  }
 
-  return { cleanContent, suggestions };
+  return { cleanContent: content, suggestions: [] };
 }
 
 /**
@@ -400,7 +409,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               AI
             </div>
             <div className="flex-1">
-              <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground">
                 AI is thinking...
               </div>
             </div>
@@ -446,7 +455,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                     AI
                   </div>
                   <div className="flex-1">
-                    <div className="rounded-lg bg-muted p-3 text-sm prose prose-sm dark:prose-invert max-w-none">
+                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
                       <ReactMarkdown>{finalContent}</ReactMarkdown>
                     </div>
                     {isCanvasStep && canvasItems.length > 0 && (
@@ -490,13 +499,13 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
             })}
 
             {/* Typing indicator */}
-            {isLoading && (
+            {status === 'submitted' && (
               <div className="flex items-start gap-3">
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
                   AI
                 </div>
                 <div className="flex-1">
-                  <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+                  <div className="text-sm text-muted-foreground">
                     AI is thinking...
                   </div>
                 </div>

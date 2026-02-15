@@ -1,4 +1,4 @@
-import { convertToModelMessages } from 'ai';
+import { convertToModelMessages, smoothStream } from 'ai';
 import { chatModel, buildStepSystemPrompt } from '@/lib/ai/chat-config';
 import { saveMessages } from '@/lib/ai/message-persistence';
 import { assembleStepContext } from '@/lib/context/assemble-context';
@@ -99,6 +99,7 @@ export async function POST(req: Request) {
       model: chatModel,
       system: systemPrompt,
       messages: modelMessages,
+      experimental_transform: smoothStream({ chunking: 'word' }),
     });
 
     // Consume stream server-side to ensure onFinish fires even if client disconnects

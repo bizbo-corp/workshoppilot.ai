@@ -1,8 +1,4 @@
-I want to implement streaming responses for my AI chat interface. Please update the backend to use Server-Sent Events (SSE) so the model's output is sent in chunks. On the frontend, ensure the UI updates reactively as each chunk arrives to create a natural 'typewriter' feel.
-
-
-
-
+~~I want to implement streaming responses for my AI chat interface. Please update the backend to use Server-Sent Events (SSE) so the model's output is sent in chunks. On the frontend, ensure the UI updates reactively as each chunk arrives to create a natural 'typewriter' feel.~~
 
 Chat window always scrolls to the bottom
 
