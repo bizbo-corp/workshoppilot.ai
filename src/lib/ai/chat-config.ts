@@ -40,6 +40,8 @@ export type { ArcPhase } from "./prompts/arc-phases";
  * @param persistentContext - Tier 1: Structured artifacts from completed steps
  * @param summaries - Tier 2: AI summaries from previous steps
  * @param canvasContext - Tier 4: Canvas state formatted for AI prompt
+ * @param instructionsOverride - Optional override for step instructions
+ * @param workshopName - The user-given workshop name (for personalizing introductions)
  * @returns Complete system prompt with injected context
  */
 export function buildStepSystemPrompt(
@@ -51,13 +53,16 @@ export function buildStepSystemPrompt(
   summaries: string,
   canvasContext: string,
   instructionsOverride?: string,
+  workshopName?: string | null,
 ): string {
   // Base role for this step (step instructions may override personality)
   let prompt = `You are guiding the user through Step: ${stepName}.`;
 
-  // During Orient phase, include step purpose explanation (AIE-03 requirement)
-  if (arcPhase === "orient" && stepDescription) {
-    prompt += `\nThis step's purpose: ${stepDescription}. Explain this purpose to the user in your opening message so they understand what they'll accomplish and why it matters in the design thinking process.`;
+  // Inject workshop name so the AI can personalize its introduction
+  const hasCustomName = workshopName && workshopName !== 'New Workshop';
+  if (hasCustomName) {
+    prompt += `\n\nWORKSHOP NAME: "${workshopName}"
+This is the name the user chose for their workshop. Use it naturally in your introduction to show you're paying attention — e.g., reference the topic/domain it suggests. Don't just repeat the name mechanically.`;
   }
 
   // Add arc phase behavioral instructions

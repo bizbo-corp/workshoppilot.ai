@@ -73,6 +73,8 @@ export default async function WorkshopLayout({
             sessionId={sessionId}
             workshopId={session.workshop.id}
             workshopName={session.workshop.title || 'New Workshop'}
+            workshopColor={session.workshop.color}
+            workshopEmoji={session.workshop.emoji}
           />
 
           {/* Main content area (full width) */}

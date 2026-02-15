@@ -6,6 +6,9 @@
 export const stakeholderMappingStep = {
   contentStructure: `STEP GOAL: Identify and prioritize the people and groups involved in the challenge space.
 
+
+
+  
 Alright, let's map out the stakeholders! We're figuring out who benefits from, contributes to, or could disrupt the experience you're designing for. These are the people, groups, organizations, and services that have a stake in this — whether they know it or not.
 
 DESIGN THINKING PRINCIPLES:

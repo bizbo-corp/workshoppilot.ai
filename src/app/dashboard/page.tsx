@@ -9,7 +9,8 @@ import { MigrationCheck } from '@/components/auth/migration-check';
 import { WorkshopGrid } from '@/components/dashboard/workshop-grid';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { createWorkshopSession, renameWorkshop, updateWorkshopAppearance } from '@/actions/workshop-actions';
+import { renameWorkshop, updateWorkshopAppearance } from '@/actions/workshop-actions';
+import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 
 export default async function DashboardPage() {
@@ -128,12 +129,10 @@ export default async function DashboardPage() {
             Get started by creating your first workshop.
           </p>
           <div className="mt-6">
-            <form action={createWorkshopSession}>
-              <Button type="submit" size="lg">
-                <PlusCircle className="mr-2 h-5 w-5" />
-                Start Workshop
-              </Button>
-            </form>
+            <NewWorkshopButton size="lg">
+              <PlusCircle className="mr-2 h-5 w-5" />
+              Start Workshop
+            </NewWorkshopButton>
           </div>
         </div>
       ) : (
@@ -157,12 +156,10 @@ export default async function DashboardPage() {
                         Continue {mostRecentWorkshop.title}
                       </a>
                     </Button>
-                    <form action={createWorkshopSession}>
-                      <Button type="submit" variant="outline" size="lg">
-                        <PlusCircle className="mr-2 h-5 w-5" />
-                        Start New Workshop
-                      </Button>
-                    </form>
+                    <NewWorkshopButton variant="outline" size="lg">
+                      <PlusCircle className="mr-2 h-5 w-5" />
+                      Start New Workshop
+                    </NewWorkshopButton>
                   </div>
                 </div>
               )}

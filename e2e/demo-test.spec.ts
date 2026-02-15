@@ -1,0 +1,37 @@
+import { test, expect } from '@playwright/test';
+
+test('test', async ({ page }) => {
+  await page.goto('http://localhost:3000/');
+  await page.getByRole('button', { name: 'Start Workshop' }).click();
+  await page.getByRole('textbox', { name: 'Type your message...' }).click();
+  await page.getByRole('textbox', { name: 'Type your message...' }).fill('I want to solve');
+  await page.getByRole('textbox', { name: 'Type your message...' }).click();
+  await page.getByRole('textbox', { name: 'Type your message...' }).press('ControlOrMeta+a');
+  await page.getByRole('textbox', { name: 'Type your message...' }).fill('I want to giv people the framework to articulate their ideas through effective storytelling');
+  await page.getByRole('textbox', { name: 'Type your message...' }).click();
+  await page.getByRole('textbox', { name: 'Type your message...' }).fill('Hitting goals and career progression');
+  await page.getByRole('button', { name: 'Send message' }).click();
+  await page.locator('span').filter({ hasText: 'How might we equip people' }).click();
+  await page.getByRole('button', { name: 'Add to Whiteboard' }).click();
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await page.goto('http://localhost:3000/workshop/ses_ht39el9rhv9rz6rrdo9cd8z6/step/2');
+  await page.getByRole('button', { name: 'People who struggle to' }).click();
+  await page.getByRole('button', { name: 'Give me a prompting question.' }).click();
+  await page.getByRole('button', { name: 'I\'m still stuck. Give me an' }).click();
+  await page.getByRole('button', { name: 'Add to Whiteboard' }).click();
+  await page.getByRole('button', { name: 'Let\'s think about the' }).click();
+  await page.getByRole('button', { name: 'Learning and Development' }).click();
+  await page.getByRole('button', { name: 'Add to Whiteboard' }).click();
+  await page.getByRole('button', { name: 'Zoom Out' }).click();
+  await page.getByRole('button', { name: 'Zoom Out' }).click();
+  await page.getByRole('button', { name: 'Zoom Out' }).click();
+  await page.getByRole('button', { name: 'Zoom Out' }).click();
+  await page.getByRole('button', { name: 'Zoom Out' }).click();
+  await page.getByTestId('rf__node-b2a6e518-4e2b-42a5-996b-bba83e4f25a9').locator('div').filter({ hasText: /^Learning & Development$/ }).click();
+  await page.getByRole('button', { name: 'The IT department.' }).click();
+  await page.getByRole('button', { name: 'Add to Whiteboard' }).click();
+  await page.getByRole('button', { name: 'I think we\'ve covered the' }).click();
+  await page.getByRole('button', { name: 'Looks good for now.' }).click();
+  await page.getByRole('button', { name: '"People who struggle..." (' }).click();
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+});

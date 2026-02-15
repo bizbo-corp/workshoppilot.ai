@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ExitWorkshopDialog } from "@/components/dialogs/exit-workshop-dialog";
 import { getStepByOrder } from "@/lib/workshop/step-metadata";
+import { getWorkshopColor } from "@/lib/workshop/workshop-appearance";
 import { SignInModal } from "@/components/auth/sign-in-modal";
 import { renameWorkshop } from "@/actions/workshop-actions";
 
@@ -24,12 +25,16 @@ interface WorkshopHeaderProps {
   sessionId: string;
   workshopId: string;
   workshopName?: string;
+  workshopColor?: string | null;
+  workshopEmoji?: string | null;
 }
 
 export function WorkshopHeader({
   sessionId,
   workshopId,
   workshopName = "New Workshop",
+  workshopColor,
+  workshopEmoji,
 }: WorkshopHeaderProps) {
   const pathname = usePathname();
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
@@ -89,6 +94,14 @@ export function WorkshopHeader({
         {/* Left section: Logo + workshop name + step indicator */}
         <div className="flex items-center">
           <div className="hidden md:flex md:items-center md:gap-2">
+            {workshopEmoji && (
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full text-xs leading-none"
+                style={{ backgroundColor: getWorkshopColor(workshopColor).bgHex }}
+              >
+                {workshopEmoji}
+              </span>
+            )}
             {isEditing ? (
               <input
                 ref={inputRef}

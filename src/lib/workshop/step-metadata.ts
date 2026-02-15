@@ -13,7 +13,6 @@ export interface StepDefinition {
   slug: string; // URL-friendly (same as id): 'challenge', 'stakeholder-mapping', etc.
   name: string; // Display name: 'Challenge', 'Stakeholder Mapping', etc.
   description: string; // Brief description of what this step does
-  greeting: string; // Legacy: AI now auto-starts via __step_start__ trigger. Kept as fallback.
   mockOutputType: string; // Type label for output panel
   mockOutputContent: string; // Structured placeholder content for the output panel
 }
@@ -26,8 +25,6 @@ export const STEPS: StepDefinition[] = [
     name: "Challenge",
     description:
       "Clarify and sharpen your idea into an actionable challenge statement",
-    greeting:
-      "Hey, I'm Bizzy 🦀 your friendly Workshop Facilitator! What's the problem, opportunity, or idea that's been rattling around in your head?",
     mockOutputType: "Challenge Statement",
     mockOutputContent: `Challenge Statement:
 [A clear sentence framing the problem worth solving]
@@ -45,8 +42,6 @@ Key Assumptions:
     slug: "stakeholder-mapping",
     name: "Stakeholder Mapping",
     description: "Identify and prioritize the people and groups involved",
-    greeting:
-      "Now let's map out who's involved. Who are the key people and groups that will be affected by or influence your solution?",
     mockOutputType: "Stakeholder Grid",
     mockOutputContent: `Stakeholder Grid (Power vs Interest):
 
@@ -69,8 +64,6 @@ Low Power, Low Interest:
     slug: "user-research",
     name: "User Research",
     description: "Gather insights through synthetic interviews and research",
-    greeting:
-      "Time to understand your users deeply. I'll help you conduct synthetic user interviews to uncover needs, behaviors, and pain points.",
     mockOutputType: "Interview Questions & Synthesis",
     mockOutputContent: `Interview Questions:
 1. [Question about user context]
@@ -89,8 +82,6 @@ Synthesis Notes:
     slug: "sense-making",
     name: "Research Sense Making",
     description: "Synthesize research into themes, pains, and gains",
-    greeting:
-      "Let's make sense of what we've learned. I'll help you organize your research findings into clear themes, pain points, and gains.",
     mockOutputType: "Affinity Map & Pains/Gains",
     mockOutputContent: `Themes:
 1. [Theme 1]: [Supporting evidence]
@@ -117,8 +108,6 @@ Top 5 Gains:
     slug: "persona",
     name: "Persona Development",
     description: "Create a research-grounded user persona",
-    greeting:
-      "Time to bring your users to life! Based on our research, I'll help you create a detailed persona that represents your target user.",
     mockOutputType: "User Persona Card",
     mockOutputContent: `Name: [Persona Name]
 Age: [Age]
@@ -149,8 +138,6 @@ Quote:
     slug: "journey-mapping",
     name: "Journey Mapping",
     description: "Map the current user experience and find the critical dip",
-    greeting:
-      "Let's walk through your user's current experience step by step. We'll map their journey and find where things break down -- the critical 'dip'.",
     mockOutputType: "Journey Map",
     mockOutputContent: `Journey Map: [Persona Name]'s Experience
 
@@ -180,8 +167,6 @@ Stage 4: [Resolution]
     slug: "reframe",
     name: "Reframing Challenge",
     description: "Craft a focused How Might We statement based on insights",
-    greeting:
-      "With all our research insights, let's reframe the challenge. We'll craft a focused 'How Might We' statement that captures the real opportunity.",
     mockOutputType: "Refined HMW Statement",
     mockOutputContent: `Original HMW:
 How might we [initial problem framing]?
@@ -201,8 +186,6 @@ How might we [reframed problem] for [specific persona] when [specific context] s
     name: "Ideation",
     description:
       "Generate ideas using Mind Mapping and Crazy 8s sketching, then select top ideas",
-    greeting:
-      "Time to get creative! We'll use Mind Mapping to explore themes, then Crazy 8s to sketch 8 rapid ideas. Finally, you'll select your best concepts to develop further.",
     mockOutputType: "Mind Map & Idea Cards",
     mockOutputContent: `Mind Map:
 [Central HMW Statement]
@@ -228,8 +211,6 @@ Top Ideas:
     name: "Concept Development",
     description:
       "Develop concept sheets with SWOT analysis, feasibility, and elevator pitch",
-    greeting:
-      "Let's develop your best ideas into solid concepts. For each one, we'll create a concept sheet with SWOT analysis, feasibility assessment, and elevator pitch.",
     mockOutputType: "Concept Sheet",
     mockOutputContent: `Concept: [Concept Name]
 
@@ -262,8 +243,6 @@ Next Steps:
     name: "Validate",
     description:
       "Create flow diagrams, prototyping, PRD generation, and Build Pack export",
-    greeting:
-      "Final step! Let's validate your concept with flow diagrams, a prototype outline, and generate your PRD. This becomes your Build Pack -- everything a developer needs to start building.",
     mockOutputType: "Flow Diagram & PRD Outline",
     mockOutputContent: `User Flow:
 [Start] → [Step 1] → [Decision Point]

@@ -25,8 +25,9 @@ async function getUserId(): Promise<string | null> {
 /**
  * Creates a new workshop session and redirects to step 1
  * Works for both authenticated and anonymous users
+ * Accepts optional FormData with title, color, and emoji fields
  */
-export async function createWorkshopSession() {
+export async function createWorkshopSession(formData?: FormData) {
   let sessionId: string;
 
   try {
@@ -34,15 +35,29 @@ export async function createWorkshopSession() {
     const userId = await getUserId();
 
     // For anonymous users, use 'anonymous' placeholder
-    // Per user decision: "Before AI naming, workshop appears as 'New Workshop'"
     const clerkUserId = userId || 'anonymous';
 
-    // Count existing workshops to cycle color assignment
-    const existingWorkshops = await db
-      .select({ id: workshops.id })
-      .from(workshops)
-      .where(and(eq(workshops.clerkUserId, clerkUserId), isNull(workshops.deletedAt)));
-    const color = getNextWorkshopColor(existingWorkshops.length);
+    // Extract title from FormData (trim, fallback, cap at 100 chars)
+    const rawTitle = formData?.get('title') as string | null;
+    const title = rawTitle?.trim().slice(0, 100) || 'New Workshop';
+
+    // Extract color from FormData, validate against palette, fallback to cycling
+    const rawColor = formData?.get('color') as string | null;
+    const validColorIds = WORKSHOP_COLORS.map((c) => c.id);
+    let color: string;
+    if (rawColor && validColorIds.includes(rawColor)) {
+      color = rawColor;
+    } else {
+      const existingWorkshops = await db
+        .select({ id: workshops.id })
+        .from(workshops)
+        .where(and(eq(workshops.clerkUserId, clerkUserId), isNull(workshops.deletedAt)));
+      color = getNextWorkshopColor(existingWorkshops.length);
+    }
+
+    // Extract emoji from FormData (use if provided, otherwise null)
+    const rawEmoji = formData?.get('emoji') as string | null;
+    const emoji = rawEmoji || null;
 
     // 1. Create workshop record
     const [workshop] = await db
@@ -50,10 +65,11 @@ export async function createWorkshopSession() {
       .values({
         id: createPrefixedId('ws'),
         clerkUserId,
-        title: 'New Workshop',
+        title,
         originalIdea: '', // Will be populated when AI processes first message
         status: 'active',
         color,
+        emoji,
       })
       .returning();
 

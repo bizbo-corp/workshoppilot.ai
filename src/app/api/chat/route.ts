@@ -3,6 +3,9 @@ import { chatModel, buildStepSystemPrompt } from '@/lib/ai/chat-config';
 import { saveMessages } from '@/lib/ai/message-persistence';
 import { assembleStepContext } from '@/lib/context/assemble-context';
 import { getStepById, STEPS } from '@/lib/workshop/step-metadata';
+import { db } from '@/db/client';
+import { workshops } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import { getCurrentArcPhase } from '@/lib/ai/conversation-state';
 import { streamTextWithRetry, isGeminiRateLimitError } from '@/lib/ai/gemini-retry';
 import { loadCanvasState } from '@/actions/canvas-actions';
@@ -61,6 +64,13 @@ export async function POST(req: Request) {
     const stepName = step?.name || stepId;
     const stepDescription = step?.description ?? '';
 
+    // Fetch workshop title for personalizing the AI introduction
+    const workshop = await db.query.workshops.findFirst({
+      where: eq(workshops.id, workshopId),
+      columns: { title: true },
+    });
+    const workshopTitle = workshop?.title || null;
+
     // Sub-step prompt override for Step 8 Ideation
     let instructionsOverride: string | undefined;
     if (stepId === 'ideation' && subStep) {
@@ -76,8 +86,9 @@ export async function POST(req: Request) {
       stepDescription,
       stepContext.persistentContext,
       stepContext.summaries,
-      stepContext.canvasContext, // NEW: Tier 4 canvas context
-      instructionsOverride
+      stepContext.canvasContext,
+      instructionsOverride,
+      workshopTitle,
     );
 
     // Convert messages to model format

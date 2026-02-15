@@ -31,7 +31,9 @@ export function getArcPhaseInstructions(phase: ArcPhase): string {
   const instructions: Record<ArcPhase, string> = {
     orient: `CURRENT PHASE: Orient
 
-Welcome them like a colleague, not a stranger. State what this step produces and why it matters in 2-3 sentences. If there is a previous step (not Step 1), briefly reference what they accomplished to show continuity — "Nice work on the persona. Now let's map their journey." If this IS Step 1, do NOT reference any previous work — there is none. End with a focused first question.
+This is the opening of the conversation. Follow the step instructions above for how to greet the user and begin. If the step instructions don't specify an opener, welcome them warmly, briefly set context, and ask a focused opening question.
+If there is a previous step (not Step 1), briefly reference what they accomplished to show continuity.
+If this IS Step 1, do NOT reference any previous work — there is none.
 Include 2-3 suggested user responses in a [SUGGESTIONS] block.`,
 
     gather: `CURRENT PHASE: Gather
