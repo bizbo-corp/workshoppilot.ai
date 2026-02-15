@@ -54,7 +54,7 @@ export default async function WorkshopLayout({
   }));
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <div className="flex h-screen w-full">
         {/* Desktop: Sidebar */}
         <div className="hidden md:block">

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Group, Panel, Separator } from 'react-resizable-panels';
+
 import type { UIMessage } from 'ai';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChatPanel } from './chat-panel';
@@ -12,7 +12,8 @@ import { MindMapCanvas } from './mind-map-canvas';
 import { Crazy8sCanvas } from './crazy-8s-canvas';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Lightbulb, Zap, CheckCircle2, Check, ArrowRight, GripVertical, MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose } from 'lucide-react';
+import { Lightbulb, Zap, CheckCircle2, Check, ArrowRight, MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical } from 'lucide-react';
+import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
 
@@ -230,7 +231,7 @@ export function IdeationSubStepContainer({
     <div className="flex h-full flex-col">
       {/* Sub-step progress header */}
       <div className="border-b bg-muted/30 px-6 py-3">
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-base">
           <span className="font-medium">Step 8: Ideation</span>
           <span className="text-muted-foreground">--</span>
           <span className="text-muted-foreground">
@@ -327,19 +328,11 @@ export function IdeationSubStepContainer({
               ) : canvasCollapsed ? (
                 <div className="flex-1">{renderChatPanel('mind-mapping')}</div>
               ) : (
-                <Group orientation="horizontal" className="flex-1" id="workshop-panels">
-                  <Panel defaultSize={25} minSize={15}>
+                <>
+                  <div className="w-[400px] shrink-0 border-r">
                     {renderChatPanel('mind-mapping')}
-                  </Panel>
-                  <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
-                    <div className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize" />
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100 transition-opacity">
-                      <div className="flex h-6 w-4 items-center justify-center rounded-sm bg-border">
-                        <GripVertical className="h-3 w-3 text-muted-foreground" />
-                      </div>
-                    </div>
-                  </Separator>
-                  <Panel defaultSize={75} minSize={40}>
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <div className="h-full relative">
                       <div className="absolute top-2 right-2 z-10">
                         <button
@@ -358,8 +351,8 @@ export function IdeationSubStepContainer({
                         />
                       )}
                     </div>
-                  </Panel>
-                </Group>
+                  </div>
+                </>
               )}
               {chatCollapsed && !canvasCollapsed && (
                 <div className="flex-1 relative">
@@ -455,19 +448,11 @@ export function IdeationSubStepContainer({
               ) : canvasCollapsed ? (
                 <div className="flex-1">{renderChatPanel('crazy-eights')}</div>
               ) : (
-                <Group orientation="horizontal" className="flex-1" id="workshop-panels">
-                  <Panel defaultSize={25} minSize={15}>
+                <>
+                  <div className="w-[400px] shrink-0 border-r">
                     {renderChatPanel('crazy-eights')}
-                  </Panel>
-                  <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
-                    <div className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize" />
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100 transition-opacity">
-                      <div className="flex h-6 w-4 items-center justify-center rounded-sm bg-border">
-                        <GripVertical className="h-3 w-3 text-muted-foreground" />
-                      </div>
-                    </div>
-                  </Separator>
-                  <Panel defaultSize={75} minSize={40}>
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <div className="h-full relative">
                       <div className="absolute top-2 right-2 z-10">
                         <button
@@ -485,8 +470,8 @@ export function IdeationSubStepContainer({
                         />
                       )}
                     </div>
-                  </Panel>
-                </Group>
+                  </div>
+                </>
               )}
               {chatCollapsed && !canvasCollapsed && (
                 <div className="flex-1 relative">
@@ -544,7 +529,7 @@ export function IdeationSubStepContainer({
           ) : (
             /* Desktop: resizable panels with chat collapse */
             <div className="flex h-full">
-              {chatCollapsed ? (
+              {chatCollapsed && (
                 <div className="flex w-10 flex-col items-center border-r bg-muted/30 py-4">
                   <button
                     onClick={() => setChatCollapsed(false)}
@@ -554,28 +539,25 @@ export function IdeationSubStepContainer({
                     <MessageSquare className="h-5 w-5" />
                   </button>
                 </div>
-              ) : null}
+              )}
               {chatCollapsed ? (
                 <div className="flex-1">
                   {renderOutputPanel('idea-selection')}
                 </div>
               ) : (
-                <Group orientation="horizontal" className="flex-1" id="workshop-panels">
-                  <Panel defaultSize={25} minSize={15}>
+                <PanelGroup orientation="horizontal" className="flex-1">
+                  <Panel defaultSize={480} minSize={280} maxSize="60%">
                     {renderChatPanel('idea-selection')}
                   </Panel>
-                  <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
-                    <div className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize" />
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100 transition-opacity">
-                      <div className="flex h-6 w-4 items-center justify-center rounded-sm bg-border">
-                        <GripVertical className="h-3 w-3 text-muted-foreground" />
-                      </div>
+                  <PanelResizeHandle className="group relative flex w-2 items-center justify-center bg-border/40 transition-colors hover:bg-border data-[active]:bg-primary/20">
+                    <div className="z-10 flex h-8 w-3.5 items-center justify-center rounded-sm border bg-border">
+                      <GripVertical className="h-3 w-3 text-muted-foreground" />
                     </div>
-                  </Separator>
-                  <Panel defaultSize={75} minSize={40}>
+                  </PanelResizeHandle>
+                  <Panel minSize="30%">
                     {renderOutputPanel('idea-selection')}
                   </Panel>
-                </Group>
+                </PanelGroup>
               )}
             </div>
           )}

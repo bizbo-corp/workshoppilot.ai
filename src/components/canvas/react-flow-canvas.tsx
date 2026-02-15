@@ -7,7 +7,6 @@ import {
   useReactFlow,
   Background,
   BackgroundVariant,
-  Controls,
   SelectionMode,
   type Node,
   type NodeChange,
@@ -15,6 +14,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { Plus, Minus, Maximize } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { PostItNode, type PostItNodeData } from './post-it-node';
@@ -108,7 +108,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const [activeTool, setActiveTool] = useState<'pointer' | 'hand'>('pointer');
 
   // ReactFlow hooks
-  const { screenToFlowPosition, fitView } = useReactFlow();
+  const { screenToFlowPosition, fitView, zoomIn, zoomOut } = useReactFlow();
 
   // Track if we've done initial fitView
   const hasFitView = useRef(false);
@@ -1133,10 +1133,30 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           size={1.5}
           color="var(--canvas-dots)"
         />
-        <Controls
-          showInteractive={false}
-          className="!shadow-md"
-        />
+        {/* Zoom controls — styled to match canvas toolbar */}
+        <div className="absolute bottom-4 right-4 z-10 flex flex-col items-center bg-white dark:bg-zinc-800 rounded-xl shadow-md border border-gray-200 dark:border-zinc-700 p-1 gap-0.5">
+          <button
+            onClick={() => zoomIn({ duration: 200 })}
+            title="Zoom in"
+            className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => zoomOut({ duration: 200 })}
+            title="Zoom out"
+            className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => fitView({ padding: 0.2, duration: 300 })}
+            title="Fit view"
+            className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+          >
+            <Maximize className="w-4 h-4" />
+          </button>
+        </div>
         {stepConfig.hasQuadrants && stepConfig.quadrantConfig && (
           <QuadrantOverlay config={stepConfig.quadrantConfig} />
         )}

@@ -2,10 +2,10 @@
  * Workshop Sidebar
  * Collapsible sidebar with step list
  * Features:
- * - Toggle button + Cmd+B keyboard shortcut
- * - Persists collapse state in localStorage
+ * - Collapsed by default, expands on hover temporarily
+ * - Click toggle or Cmd+B to pin/unpin expanded state
+ * - First visit: auto-expands then collapses to teach discoverability
  * - Shows step number + name with status indicators
- * - Flat list of all 10 steps
  */
 
 'use client';
@@ -13,11 +13,11 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { Check, ChevronRight } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
@@ -41,20 +41,72 @@ interface WorkshopSidebarProps {
 
 export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarProps) {
   const pathname = usePathname();
-  const { state, toggleSidebar } = useSidebar();
-  const [_, __, isLoading] = useLocalStorage(
-    'workshoppilot-sidebar-collapsed',
-    false
-  );
+  const { state, setOpen } = useSidebar();
+  const [isPinned, setIsPinned, isPinnedLoading] = useLocalStorage('workshoppilot-sidebar-pinned', false);
+  const [hasSeenIntro, setHasSeenIntro, isIntroLoading] = useLocalStorage('workshoppilot-sidebar-intro', false);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Cmd+B keyboard shortcut
+  const isLoading = isPinnedLoading || isIntroLoading;
+
+  // Restore sidebar state immediately on hydration (before paint)
+  useLayoutEffect(() => {
+    if (!isLoading) {
+      if (!hasSeenIntro) {
+        setOpen(true); // Intro animation: start expanded
+      } else if (isPinned) {
+        setOpen(true); // Restore pinned state
+      }
+    }
+  }, [isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Intro animation: collapse after delay on first visit
+  useEffect(() => {
+    if (!isLoading && !hasSeenIntro) {
+      const timer = setTimeout(() => {
+        setOpen(false);
+        setHasSeenIntro(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, hasSeenIntro]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Hover: temporarily expand when not pinned
+  const handleMouseEnter = useCallback(() => {
+    if (!isPinned) {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
+      setOpen(true);
+    }
+  }, [isPinned, setOpen]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (!isPinned) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        setOpen(false);
+      }, 300);
+    }
+  }, [isPinned, setOpen]);
+
+  // Toggle pin state
+  const handleTogglePin = useCallback(() => {
+    if (isPinned) {
+      setIsPinned(false);
+      setOpen(false);
+    } else {
+      setIsPinned(true);
+      setOpen(true);
+    }
+  }, [isPinned, setIsPinned, setOpen]);
+
+  // Cmd+B keyboard shortcut toggles pin
   useHotkeys('mod+b', (e) => {
     e.preventDefault();
-    toggleSidebar();
+    handleTogglePin();
   });
 
   // Extract current step from pathname
-  // Pathname format: /workshop/[sessionId]/step/[stepNumber]
   const stepMatch = pathname.match(/\/workshop\/[^/]+\/step\/(\d+)/);
   const currentStepNumber = stepMatch ? parseInt(stepMatch[1], 10) : null;
 
@@ -80,7 +132,12 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
   }
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar
+      collapsible="icon"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {/* Logo */}
       <SidebarHeader className="flex h-16 items-center justify-center border-b px-4">
         {state === 'collapsed' ? (
           <LogoIcon size="md" />
@@ -89,12 +146,39 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
         )}
       </SidebarHeader>
 
+      {/* Toggle row between logo and steps */}
+      <div className="border-b px-2 py-2">
+        {state === 'expanded' ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleTogglePin}
+            className="w-full justify-start"
+            title={isPinned ? 'Collapse sidebar (⌘B)' : 'Pin sidebar open (⌘B)'}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="ml-2 text-sm text-muted-foreground">
+              {isPinned ? 'Collapse' : 'Pin open'} (⌘B)
+            </span>
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleTogglePin}
+            className="mx-auto flex h-8 w-8"
+            title="Expand sidebar (⌘B)"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
       <SidebarContent className="p-2">
         <SidebarMenu>
           {STEPS.map((step) => {
             const status = statusLookup.get(step.id) || 'not_started';
             const isComplete = status === 'complete';
-            const needsRegen = status === 'needs_regeneration';
             const isCurrent = step.order === currentStepNumber;
             const isAccessible = status !== 'not_started';
 
@@ -103,17 +187,14 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
                 {/* Step indicator */}
                 <div
                   className={cn(
-                    'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-medium',
+                    'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-medium',
                     isComplete &&
                       'bg-primary text-primary-foreground',
-                    needsRegen &&
-                      'border-2 border-amber-500 bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400',
                     isCurrent &&
-                      !needsRegen &&
+                      !isComplete &&
                       'border-2 border-primary bg-background text-primary',
                     !isComplete &&
                       !isCurrent &&
-                      !needsRegen &&
                       'border bg-background text-muted-foreground'
                   )}
                 >
@@ -128,10 +209,9 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
                 {state === 'expanded' && (
                   <span
                     className={cn(
-                      'flex-1 truncate text-sm',
+                      'flex-1 truncate text-base',
                       isCurrent && 'font-semibold text-primary',
-                      needsRegen && 'text-amber-600 dark:text-amber-400',
-                      !isCurrent && !needsRegen && 'text-foreground'
+                      !isCurrent && 'text-foreground'
                     )}
                   >
                     {step.name}
@@ -163,27 +243,6 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
           })}
         </SidebarMenu>
       </SidebarContent>
-
-      <SidebarFooter className="border-t p-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleSidebar}
-          className="w-full justify-start"
-        >
-          <ChevronRight
-            className={cn(
-              'h-4 w-4 transition-transform',
-              state === 'expanded' && 'rotate-180'
-            )}
-          />
-          {state === 'expanded' && (
-            <span className="ml-2 text-xs text-muted-foreground">
-              Collapse (⌘B)
-            </span>
-          )}
-        </Button>
-      </SidebarFooter>
     </Sidebar>
   );
 }

@@ -402,21 +402,25 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     <div className="flex h-full flex-col">
       {/* Messages area */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4">
+        {/* Centered AI avatar at top - scrolls off screen */}
+        <div className="flex justify-center mb-6">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
+            AI
+          </div>
+        </div>
+
         {messages.length === 0 ? (
           // Loading indicator while AI auto-starts
-          <div className="flex items-start gap-3">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              AI
-            </div>
+          <div className="flex items-start">
             <div className="flex-1">
-              <div className="text-sm text-muted-foreground">
+              <div className="text-base text-muted-foreground">
                 AI is thinking...
               </div>
             </div>
           </div>
         ) : (
           // Render conversation messages (filter out __step_start__ trigger)
-          <div className="space-y-4">
+          <div className="space-y-6">
             {messages.filter((m) => {
               if (m.role !== 'user') return true;
               const text = m.parts?.filter((p) => p.type === 'text').map((p) => p.text).join('') || '';
@@ -427,9 +431,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
               if (message.role === 'user') {
                 return (
-                  <div key={`${message.id}-${index}`} className="group flex items-start gap-3 justify-end">
-                    <div className="flex-1 max-w-[80%]">
-                      <div className="relative rounded-lg bg-primary p-3 text-sm text-primary-foreground">
+                  <div key={`${message.id}-${index}`} className="group flex items-start justify-end">
+                    <div className="max-w-[80%]">
+                      <div className="relative rounded-2xl bg-muted p-3 px-4 text-base text-foreground">
                         {content}
                         {isCanvasStep && (
                           <button
@@ -450,12 +454,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               const { cleanContent: noSuggestions } = parseSuggestions(content);
               const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noSuggestions);
               return (
-                <div key={`${message.id}-${index}`} className="flex items-start gap-3">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    AI
-                  </div>
+                <div key={`${message.id}-${index}`} className="flex items-start">
                   <div className="flex-1">
-                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                    <div className="text-base prose prose-base dark:prose-invert max-w-none">
                       <ReactMarkdown>{finalContent}</ReactMarkdown>
                     </div>
                     {isCanvasStep && canvasItems.length > 0 && (
@@ -467,7 +468,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                               <span
                                 key={i}
                                 className={cn(
-                                  'inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium',
+                                  'inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-sm font-medium',
                                   isAdded
                                     ? 'border-green-500/30 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400'
                                     : 'border-blue-500/30 bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400'
@@ -500,12 +501,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
             {/* Typing indicator */}
             {status === 'submitted' && (
-              <div className="flex items-start gap-3">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  AI
-                </div>
+              <div className="flex items-start">
                 <div className="flex-1">
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-base text-muted-foreground">
                     AI is thinking...
                   </div>
                 </div>
@@ -514,12 +512,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
             {/* Stream error recovery */}
             {streamError && !isLoading && (
-              <div className="flex items-start gap-3">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  AI
-                </div>
+              <div className="flex items-start">
                 <div className="flex-1">
-                  <div className="rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20 p-3 text-sm">
+                  <div className="rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20 p-3 text-base">
                     <p className="text-yellow-800 dark:text-yellow-200">Response was interrupted.</p>
                     <Button
                       onClick={() => {
@@ -550,40 +545,40 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               </div>
             )}
 
+            {/* Suggestion pills — inline after last AI response */}
+            {suggestions.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {suggestions.map((suggestion, i) => (
+                  <button
+                    key={i}
+                    disabled={isLoading}
+                    onClick={() => {
+                      setSuggestions([]);
+                      sendMessage({
+                        role: 'user',
+                        parts: [{ type: 'text', text: suggestion }],
+                      });
+                    }}
+                    className={cn(
+                      'rounded-full border border-input bg-background px-3 py-1.5 text-sm text-foreground hover:bg-accent hover:text-accent-foreground transition-colors',
+                      'disabled:cursor-not-allowed disabled:opacity-50'
+                    )}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Auto-scroll target */}
             <div ref={messagesEndRef} />
           </div>
         )}
       </div>
 
-      {/* Suggestion pills — instant-send on click */}
-      {suggestions.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-4 pb-2">
-          {suggestions.map((suggestion, i) => (
-            <button
-              key={i}
-              disabled={isLoading}
-              onClick={() => {
-                setSuggestions([]);
-                sendMessage({
-                  role: 'user',
-                  parts: [{ type: 'text', text: suggestion }],
-                });
-              }}
-              className={cn(
-                'rounded-full border border-input bg-background px-3 py-1.5 text-xs text-foreground hover:bg-accent hover:text-accent-foreground transition-colors',
-                'disabled:cursor-not-allowed disabled:opacity-50'
-              )}
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Rate limit banner */}
       {rateLimitInfo && (
-        <div className="mx-4 mb-2 flex items-center gap-2 rounded-md border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20 px-3 py-2 text-sm text-yellow-800 dark:text-yellow-200">
+        <div className="mx-4 mb-2 flex items-center gap-2 rounded-md border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20 px-3 py-2 text-base text-yellow-800 dark:text-yellow-200">
           <Loader2 className="h-4 w-4 animate-spin shrink-0" />
           <span>AI is busy. Try again in {rateLimitInfo.retryAfter}s...</span>
         </div>
@@ -601,7 +596,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
             placeholder={rateLimitInfo ? 'Waiting for AI to become available...' : 'Type your message...'}
             disabled={isLoading || !!rateLimitInfo}
             className={cn(
-              'flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow]',
+              'flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs outline-none transition-[color,box-shadow]',
               'placeholder:text-muted-foreground',
               'disabled:cursor-not-allowed disabled:opacity-50',
               'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'

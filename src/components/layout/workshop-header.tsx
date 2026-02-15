@@ -96,7 +96,7 @@ export function WorkshopHeader({
           <div className="hidden md:flex md:items-center md:gap-2">
             {workshopEmoji && (
               <span
-                className="flex h-5 w-5 items-center justify-center rounded-full text-xs leading-none"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-sm leading-none"
                 style={{ backgroundColor: getWorkshopColor(workshopColor).bgHex }}
               >
                 {workshopEmoji}
@@ -110,12 +110,12 @@ export function WorkshopHeader({
                 onBlur={handleSave}
                 onKeyDown={handleKeyDown}
                 maxLength={100}
-                className="text-xs font-medium text-muted-foreground bg-transparent border-b border-primary outline-none px-0 py-0"
+                className="text-base font-medium text-muted-foreground bg-transparent border-b border-primary outline-none px-0 py-0"
               />
             ) : (
               <button
                 onClick={handleStartEdit}
-                className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 title="Click to rename workshop"
               >
                 {displayName}
@@ -123,12 +123,12 @@ export function WorkshopHeader({
             )}
             {currentStep && (
               <>
-                <span className="text-xs text-muted-foreground">/</span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-base text-muted-foreground">/</span>
+                <span className="text-base text-muted-foreground">
                   Step {currentStep.order}
                 </span>
-                <span className="text-xs text-muted-foreground">/</span>
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-base text-muted-foreground">/</span>
+                <span className="text-base font-medium text-foreground">
                   {currentStep.name}
                 </span>
               </>

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { Group, Panel, Separator } from 'react-resizable-panels';
+
 import type { UIMessage } from 'ai';
 import { ChatPanel } from './chat-panel';
 import { RightPanel } from './right-panel';
@@ -11,6 +11,7 @@ import { StepNavigation } from './step-navigation';
 import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
 import { IdeationSubStepContainer } from './ideation-sub-step-container';
 import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical } from 'lucide-react';
+import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { reviseStep, resetStep } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { cn } from '@/lib/utils';
@@ -254,8 +255,8 @@ export function StepContainer({
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className="flex h-full">
-          {/* Chat panel or collapsed strip */}
-          {chatCollapsed ? (
+          {/* Chat collapsed strip */}
+          {chatCollapsed && (
             <div className="flex w-10 flex-col items-center border-r bg-muted/30 py-4">
               <button
                 onClick={() => setChatCollapsed(false)}
@@ -265,74 +266,67 @@ export function StepContainer({
                 <MessageSquare className="h-5 w-5" />
               </button>
             </div>
-          ) : canvasCollapsed ? (
-            // Chat takes full width when canvas is collapsed
-            <div className="flex-1">{renderContent()}</div>
-          ) : (
-            // Both panels open: use resizable Group
-            <>
-              <Group orientation="horizontal" className="flex-1" id="workshop-panels">
-                <Panel defaultSize={25} minSize={15}>
-                  {renderContent()}
-                </Panel>
-
-                <Separator className="group relative w-px bg-border hover:bg-ring data-[resize-handle-state=drag]:bg-ring">
-                  <div className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize" />
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-data-[resize-handle-state=drag]:opacity-100 transition-opacity">
-                    <div className="flex h-6 w-4 items-center justify-center rounded-sm bg-border">
-                      <GripVertical className="h-3 w-3 text-muted-foreground" />
-                    </div>
-                  </div>
-                </Separator>
-
-                <Panel defaultSize={75} minSize={40}>
-                  {step && CANVAS_ONLY_STEPS.includes(step.id) ? (
-                    <div className="h-full relative">
-                      {/* Collapse button */}
-                      {!canvasCollapsed && (
-                        <div className="absolute top-2 right-2 z-10">
-                          <button
-                            onClick={() => setCanvasCollapsed(true)}
-                            className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
-                            title="Collapse canvas"
-                          >
-                            <PanelRightClose className="h-4 w-4" />
-                          </button>
-                        </div>
-                      )}
-                      <CanvasWrapper
-                        sessionId={sessionId}
-                        stepId={step.id}
-                        workshopId={workshopId}
-                      />
-                      {step.id === 'concept' && (
-                        <ConceptCanvasOverlay
-                          workshopId={workshopId}
-                          stepId={step.id}
-                          selectedSketchSlotIds={step8SelectedSlotIds}
-                          crazy8sSlots={step8Crazy8sSlots}
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    <RightPanel
-                      stepOrder={stepOrder}
-                      sessionId={sessionId}
-                      workshopId={workshopId}
-                      onCollapse={() => setCanvasCollapsed(true)}
-                    />
-                  )}
-                </Panel>
-              </Group>
-            </>
           )}
 
-          {/* Canvas panel or collapsed strip (when chat is collapsed but canvas is not) */}
+          {/* Resizable panel group (chat + canvas) */}
+          {!chatCollapsed && !canvasCollapsed && (
+            <PanelGroup orientation="horizontal" className="flex-1">
+              <Panel defaultSize={480} minSize={280} maxSize="60%">
+                {renderContent()}
+              </Panel>
+              <PanelResizeHandle className="group relative flex w-2 items-center justify-center bg-border/40 transition-colors hover:bg-border data-[active]:bg-primary/20">
+                <div className="z-10 flex h-8 w-3.5 items-center justify-center rounded-sm border bg-border">
+                  <GripVertical className="h-3 w-3 text-muted-foreground" />
+                </div>
+              </PanelResizeHandle>
+              <Panel minSize="30%">
+                {step && CANVAS_ONLY_STEPS.includes(step.id) ? (
+                  <div className="h-full relative">
+                    <div className="absolute top-2 right-2 z-10">
+                      <button
+                        onClick={() => setCanvasCollapsed(true)}
+                        className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
+                        title="Collapse canvas"
+                      >
+                        <PanelRightClose className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <CanvasWrapper
+                      sessionId={sessionId}
+                      stepId={step.id}
+                      workshopId={workshopId}
+                    />
+                    {step.id === 'concept' && (
+                      <ConceptCanvasOverlay
+                        workshopId={workshopId}
+                        stepId={step.id}
+                        selectedSketchSlotIds={step8SelectedSlotIds}
+                        crazy8sSlots={step8Crazy8sSlots}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <RightPanel
+                    stepOrder={stepOrder}
+                    sessionId={sessionId}
+                    workshopId={workshopId}
+                    onCollapse={() => setCanvasCollapsed(true)}
+                  />
+                )}
+              </Panel>
+            </PanelGroup>
+          )}
+
+          {/* Chat takes full width when canvas is collapsed */}
+          {!chatCollapsed && canvasCollapsed && (
+            <div className="flex-1">{renderContent()}</div>
+          )}
+
+          {/* Canvas takes full width when chat is collapsed */}
           {chatCollapsed && !canvasCollapsed && (
             <div className="flex-1">
               {step && CANVAS_ONLY_STEPS.includes(step.id) ? (
                 <div className="h-full relative">
-                  {/* Collapse button */}
                   <div className="absolute top-2 right-2 z-10">
                     <button
                       onClick={() => setCanvasCollapsed(true)}

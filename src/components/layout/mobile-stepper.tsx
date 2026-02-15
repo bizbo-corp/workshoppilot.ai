@@ -45,10 +45,10 @@ export function MobileStepper({ sessionId, workshopSteps }: MobileStepperProps) 
       <SheetTrigger asChild>
         <button suppressHydrationWarning className="flex w-full items-center justify-between border-b bg-background px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">
+            <span className="text-base font-medium">
               Step {currentStep} of {STEPS.length}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-sm text-muted-foreground">
               {STEPS[currentStep - 1]?.name}
             </span>
           </div>
@@ -65,7 +65,6 @@ export function MobileStepper({ sessionId, workshopSteps }: MobileStepperProps) 
           {STEPS.map((step) => {
             const status = statusLookup.get(step.id) || 'not_started';
             const isComplete = status === 'complete';
-            const needsRegen = status === 'needs_regeneration';
             const isCurrent = step.order === currentStep;
             const isAccessible = status !== 'not_started';
 
@@ -74,17 +73,14 @@ export function MobileStepper({ sessionId, workshopSteps }: MobileStepperProps) 
                 {/* Step indicator */}
                 <div
                   className={cn(
-                    'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-medium',
+                    'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-medium',
                     isComplete &&
                       'bg-primary text-primary-foreground',
-                    needsRegen &&
-                      'border-2 border-amber-500 bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400',
                     isCurrent &&
-                      !needsRegen &&
+                      !isComplete &&
                       'border-2 border-primary bg-background text-primary',
                     !isComplete &&
                       !isCurrent &&
-                      !needsRegen &&
                       'border bg-background text-muted-foreground'
                   )}
                 >
@@ -101,13 +97,12 @@ export function MobileStepper({ sessionId, workshopSteps }: MobileStepperProps) 
                     className={cn(
                       'font-medium',
                       isCurrent && 'text-primary',
-                      needsRegen && 'text-amber-600 dark:text-amber-400',
-                      !isCurrent && !needsRegen && 'text-foreground'
+                      !isCurrent && 'text-foreground'
                     )}
                   >
                     {step.name}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-sm text-muted-foreground">
                     {step.description}
                   </div>
                 </div>
