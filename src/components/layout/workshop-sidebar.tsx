@@ -138,11 +138,11 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
       onMouseLeave={handleMouseLeave}
     >
       {/* Logo */}
-      <SidebarHeader className="flex h-16 items-center justify-center border-b px-4">
+      <SidebarHeader className={cn("flex h-16 flex-row items-center border-b px-4", state === 'collapsed' ? 'justify-center' : 'justify-start')}>
         {state === 'collapsed' ? (
-          <LogoIcon size="md" />
+          <LogoIcon size="lg" />
         ) : (
-          <Logo size="sm" />
+          <Logo size="md" />
         )}
       </SidebarHeader>
 
