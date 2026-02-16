@@ -5,16 +5,16 @@
  * This file re-exports everything so existing import sites stay valid.
  */
 
-import { challengeStep } from './steps/challenge';
-import { stakeholderMappingStep } from './steps/stakeholder-mapping';
-import { userResearchStep } from './steps/user-research';
-import { senseMakingStep } from './steps/sense-making';
-import { personaStep } from './steps/persona';
-import { journeyMappingStep } from './steps/journey-mapping';
-import { reframeStep } from './steps/reframe';
-import { ideationStep } from './steps/ideation';
-import { conceptStep } from './steps/concept';
-import { validateStep } from './steps/validate';
+import { challengeStep } from './steps/01_challenge';
+import { stakeholderMappingStep } from './steps/02_stakeholder_mapping';
+import { userResearchStep } from './steps/03_user_research';
+import { senseMakingStep } from './steps/04_sense_making';
+import { personaStep } from './steps/05_persona';
+import { journeyMappingStep } from './steps/06_journey_mapping';
+import { reframeStep } from './steps/07_reframe';
+import { ideationStep } from './steps/08_ideation';
+import { conceptStep } from './steps/09_concept';
+import { validateStep } from './steps/10_validate';
 
 const steps: Record<string, { contentStructure: string; interactionLogic: string }> = {
   'challenge': challengeStep,
@@ -38,5 +38,5 @@ export function getStepSpecificInstructions(stepId: string): string {
   return `${step.contentStructure}\n\n${step.interactionLogic}`;
 }
 
-export { getIdeationSubStepInstructions } from './steps/ideation';
-export { CONCEPT_GENERATION_PROMPT } from './steps/concept';
+export { getIdeationSubStepInstructions } from './steps/08_ideation';
+export { CONCEPT_GENERATION_PROMPT } from './steps/09_concept';
