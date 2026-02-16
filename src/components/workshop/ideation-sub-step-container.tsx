@@ -37,7 +37,7 @@ interface IdeationSubStepContainerProps {
   initialMessages?: UIMessage[];
   initialArtifact?: Record<string, unknown> | null;
   stepStatus?: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
-  onRevise?: () => void;
+  isAdmin?: boolean;
   onReset?: () => void;
   hmwStatement?: string;
 }
@@ -48,7 +48,7 @@ export function IdeationSubStepContainer({
   initialMessages,
   initialArtifact,
   stepStatus,
-  onRevise,
+  isAdmin,
   onReset,
   hmwStatement,
 }: IdeationSubStepContainerProps) {
@@ -571,7 +571,7 @@ export function IdeationSubStepContainer({
         currentStepOrder={8}
         artifactConfirmed={artifactConfirmed}
         stepStatus={stepStatus}
-        onRevise={onRevise}
+        isAdmin={isAdmin}
         onReset={onReset}
       />
     </div>

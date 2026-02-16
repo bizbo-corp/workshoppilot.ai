@@ -37,7 +37,7 @@ export function ResetStepDialog({
         <DialogHeader>
           <DialogTitle>Reset {stepName}?</DialogTitle>
           <DialogDescription>
-            This will clear your conversation, extracted output, and summary for this step. Downstream steps will be marked as needing regeneration. This cannot be undone.
+            This will permanently delete all data for this step and every step after it — conversations, canvas boards, outputs, and summaries. All downstream steps will be reset to not started. This cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { eq, and } from "drizzle-orm";
+import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db/client";
 import { sessions, stepArtifacts, chatMessages } from "@/db/schema";
 import { getStepByOrder, STEPS } from "@/lib/workshop/step-metadata";
@@ -51,6 +52,12 @@ export default async function StepPage({ params }: StepPageProps) {
   if (!session) {
     redirect("/dashboard");
   }
+
+  // Compute admin status: check user email against ADMIN_EMAIL env var
+  const user = await currentUser();
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const userEmail = user?.emailAddresses?.[0]?.emailAddress;
+  const userIsAdmin = !!(adminEmail && userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase());
 
   // Sequential enforcement: redirect if trying to access not_started step
   const stepRecord = session.workshop.steps.find((s) => s.stepId === step.id);
@@ -232,6 +239,7 @@ export default async function StepPage({ params }: StepPageProps) {
           hmwStatement={hmwStatement}
           step8SelectedSlotIds={step8SelectedSlotIds}
           step8Crazy8sSlots={step8Crazy8sSlots}
+          isAdmin={userIsAdmin}
         />
       </CanvasStoreProvider>
     </div>

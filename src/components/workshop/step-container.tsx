@@ -12,7 +12,7 @@ import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
 import { IdeationSubStepContainer } from './ideation-sub-step-container';
 import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical } from 'lucide-react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
-import { reviseStep, resetStep } from '@/actions/workshop-actions';
+import { resetStep } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { cn } from '@/lib/utils';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
@@ -33,6 +33,7 @@ interface StepContainerProps {
   hmwStatement?: string;
   step8SelectedSlotIds?: string[];
   step8Crazy8sSlots?: Array<{ slotId: string; title: string; imageUrl?: string }>;
+  isAdmin?: boolean;
 }
 
 export function StepContainer({
@@ -45,6 +46,7 @@ export function StepContainer({
   hmwStatement,
   step8SelectedSlotIds,
   step8Crazy8sSlots,
+  isAdmin,
 }: StepContainerProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
@@ -68,6 +70,14 @@ export function StepContainer({
   // For canvas steps, activity is "confirmed" when post-its exist (no extraction needed)
   const effectiveConfirmed = isCanvasStep ? canvasHasContent : artifactConfirmed;
 
+  // Local messages state — allows clearing before ChatPanel re-mounts on reset
+  const [localMessages, setLocalMessages] = React.useState(initialMessages);
+
+  // Sync from server when navigating between steps
+  React.useEffect(() => {
+    setLocalMessages(initialMessages);
+  }, [stepOrder]);
+
   // Reset dialog state
   const [showResetDialog, setShowResetDialog] = React.useState(false);
   const [isResetting, setIsResetting] = React.useState(false);
@@ -90,29 +100,7 @@ export function StepContainer({
     setMobileTab('chat');
   }, [stepOrder]);
 
-  // Handle revision (cascade invalidation)
-  const handleRevise = React.useCallback(async () => {
-    try {
-      // Get current step ID from step-metadata
-      const { getStepByOrder } = await import('@/lib/workshop/step-metadata');
-      const step = getStepByOrder(stepOrder);
-
-      if (!step) {
-        console.error('Step not found for revision');
-        return;
-      }
-
-      // Trigger cascade invalidation server action
-      await reviseStep(workshopId, step.id, sessionId);
-
-      // Refresh the page to reload with updated status
-      router.refresh();
-    } catch (error) {
-      console.error('Failed to revise step:', error);
-    }
-  }, [workshopId, stepOrder, sessionId, router]);
-
-  // Handle reset (clear data and cascade invalidation)
+  // Handle reset (clear data and full forward wipe)
   const handleReset = React.useCallback(async () => {
     try {
       setIsResetting(true);
@@ -125,6 +113,7 @@ export function StepContainer({
       setShowResetDialog(false);
       // Reset local state
       setArtifactConfirmed(false);
+      setLocalMessages([]);
       // Force re-mount of ChatPanel/IdeationSubStepContainer to clear useChat state
       setResetKey(prev => prev + 1);
       // Refresh page to reload with cleared server state
@@ -144,10 +133,10 @@ export function StepContainer({
           key={resetKey}
           sessionId={sessionId}
           workshopId={workshopId}
-          initialMessages={initialMessages}
+          initialMessages={localMessages}
           initialArtifact={initialArtifact}
           stepStatus={stepStatus}
-          onRevise={handleRevise}
+          isAdmin={isAdmin}
           onReset={() => setShowResetDialog(true)}
           hmwStatement={hmwStatement}
         />
@@ -182,7 +171,7 @@ export function StepContainer({
           stepOrder={stepOrder}
           sessionId={sessionId}
           workshopId={workshopId}
-          initialMessages={initialMessages}
+          initialMessages={localMessages}
         />
       </div>
     </div>
@@ -236,7 +225,7 @@ export function StepContainer({
           currentStepOrder={stepOrder}
           artifactConfirmed={effectiveConfirmed}
           stepStatus={stepStatus}
-          onRevise={handleRevise}
+          isAdmin={isAdmin}
           onReset={() => setShowResetDialog(true)}
         />
         <ResetStepDialog
@@ -381,7 +370,7 @@ export function StepContainer({
         currentStepOrder={stepOrder}
         artifactConfirmed={effectiveConfirmed}
         stepStatus={stepStatus}
-        onRevise={handleRevise}
+        isAdmin={isAdmin}
         onReset={() => setShowResetDialog(true)}
       />
       <ResetStepDialog

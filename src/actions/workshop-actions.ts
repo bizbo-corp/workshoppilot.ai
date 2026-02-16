@@ -8,7 +8,6 @@ import { workshops, sessions, workshopSteps, chatMessages, stepArtifacts, stepSu
 import { eq, and, isNull, inArray, sql } from 'drizzle-orm';
 import { createPrefixedId } from '@/lib/ids';
 import { STEPS, getStepById } from '@/lib/workshop/step-metadata';
-import { invalidateDownstreamSteps } from '@/lib/navigation/cascade-invalidation';
 import { generateStepSummary } from '@/lib/context/generate-summary';
 import { getNextWorkshopColor, WORKSHOP_COLORS } from '@/lib/workshop/workshop-appearance';
 
@@ -284,30 +283,9 @@ export async function advanceToNextStep(
 }
 
 /**
- * Revises a step by resetting it to in_progress and marking downstream steps as needs_regeneration
- * Triggered when user clicks "Revise This Step" on a completed step
- */
-export async function reviseStep(
-  workshopId: string,
-  stepId: string,
-  sessionId: string
-): Promise<void> {
-  try {
-    // Invalidate downstream steps (also resets the revised step itself)
-    await invalidateDownstreamSteps(workshopId, stepId);
-
-    // Revalidate workshop layout to refresh sidebar and step status
-    revalidatePath(`/workshop/${sessionId}`);
-  } catch (error) {
-    console.error('Failed to revise step:', error);
-    throw error;
-  }
-}
-
-/**
- * Resets a step by clearing conversation, artifact, and summary data
- * Triggered when user clicks "Reset Step" on an in-progress or needs_regeneration step
- * More destructive than reviseStep - clears all data for a fresh start
+ * Resets a step and all downstream steps — full destructive forward wipe.
+ * Admin-only. Deletes conversations, artifacts, and summaries for current step
+ * and all later steps. Resets current step to in_progress, downstream to not_started.
  */
 export async function resetStep(
   workshopId: string,
@@ -315,46 +293,92 @@ export async function resetStep(
   sessionId: string
 ): Promise<void> {
   try {
-    // Find the workshop step record
-    const workshopStepResult = await db
-      .select({ id: workshopSteps.id })
+    // Find the current step definition to determine order
+    const currentStepDef = getStepById(stepId);
+    if (!currentStepDef) {
+      throw new Error(`Step definition not found: ${stepId}`);
+    }
+
+    // Get all step IDs from current step forward (inclusive)
+    const forwardStepDefs = STEPS.filter(s => s.order >= currentStepDef.order);
+    const forwardStepIds = forwardStepDefs.map(s => s.id);
+
+    // Find all workshop step records for forward steps
+    const workshopStepRecords = await db
+      .select({ id: workshopSteps.id, stepId: workshopSteps.stepId })
       .from(workshopSteps)
+      .where(
+        and(
+          eq(workshopSteps.workshopId, workshopId),
+          inArray(workshopSteps.stepId, forwardStepIds)
+        )
+      );
+
+    if (workshopStepRecords.length === 0) {
+      throw new Error(`No workshop steps found for reset`);
+    }
+
+    const workshopStepIds = workshopStepRecords.map(r => r.id);
+
+    // Delete chat messages for all forward steps
+    for (const fwdStepId of forwardStepIds) {
+      await db
+        .delete(chatMessages)
+        .where(
+          and(
+            eq(chatMessages.sessionId, sessionId),
+            eq(chatMessages.stepId, fwdStepId)
+          )
+        );
+    }
+
+    // Batch-delete step artifacts for all forward steps
+    await db
+      .delete(stepArtifacts)
+      .where(inArray(stepArtifacts.workshopStepId, workshopStepIds));
+
+    // Batch-delete step summaries for all forward steps
+    await db
+      .delete(stepSummaries)
+      .where(inArray(stepSummaries.workshopStepId, workshopStepIds));
+
+    // Reset current step to in_progress
+    await db
+      .update(workshopSteps)
+      .set({
+        status: 'in_progress',
+        arcPhase: 'orient',
+        startedAt: new Date(),
+        completedAt: null,
+      })
       .where(
         and(
           eq(workshopSteps.workshopId, workshopId),
           eq(workshopSteps.stepId, stepId)
         )
-      )
-      .limit(1);
-
-    if (workshopStepResult.length === 0) {
-      throw new Error(`Workshop step not found: ${stepId}`);
-    }
-
-    const workshopStepRecord = workshopStepResult[0];
-
-    // Delete chat messages for this step
-    await db
-      .delete(chatMessages)
-      .where(
-        and(
-          eq(chatMessages.sessionId, sessionId),
-          eq(chatMessages.stepId, stepId)
-        )
       );
 
-    // Delete step artifact
-    await db
-      .delete(stepArtifacts)
-      .where(eq(stepArtifacts.workshopStepId, workshopStepRecord.id));
+    // Reset all downstream steps (after current) to not_started
+    const downstreamStepIds = forwardStepDefs
+      .filter(s => s.order > currentStepDef.order)
+      .map(s => s.id);
 
-    // Delete step summary
-    await db
-      .delete(stepSummaries)
-      .where(eq(stepSummaries.workshopStepId, workshopStepRecord.id));
-
-    // Invalidate downstream steps (also resets current step to in_progress with arcPhase: orient)
-    await invalidateDownstreamSteps(workshopId, stepId);
+    if (downstreamStepIds.length > 0) {
+      await db
+        .update(workshopSteps)
+        .set({
+          status: 'not_started',
+          arcPhase: 'orient',
+          startedAt: null,
+          completedAt: null,
+        })
+        .where(
+          and(
+            eq(workshopSteps.workshopId, workshopId),
+            inArray(workshopSteps.stepId, downstreamStepIds)
+          )
+        );
+    }
 
     // Revalidate workshop layout to refresh sidebar and step status
     revalidatePath(`/workshop/${sessionId}`);
