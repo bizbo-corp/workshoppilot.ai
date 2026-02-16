@@ -17,7 +17,7 @@
     "test:e2e": "BYPASS_AUTH=true playwright test",
     "test:e2e:headed": "BYPASS_AUTH=true playwright test --headed",
     "test:e2e:debug": "BYPASS_AUTH=true playwright test --debug",
-    "vercel-build": "tsx scripts/verify-env.ts && drizzle-kit migrate && next build"
+    "vercel-build": "tsx scripts/verify-env.ts && next build"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.22",
