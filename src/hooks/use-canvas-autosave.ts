@@ -13,6 +13,10 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
  * Silent retry for first 2 failures, shows error after 3 consecutive failures
  * Force-saves on component unmount and beforeunload
  *
+ * Uses a dirty version counter to prevent a race condition where markClean()
+ * from a completing save clears isDirty even though new changes arrived during
+ * the async save, causing those changes to never be saved.
+ *
  * @param workshopId - The workshop ID (wks_xxx)
  * @param stepId - The semantic step ID ('challenge', 'stakeholder-mapping', etc.)
  * @returns Object with saveStatus for UI indicator
@@ -20,6 +24,10 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export function useCanvasAutosave(workshopId: string, stepId: string) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const failureCountRef = useRef(0);
+
+  // Dirty version counter — incremented each time state changes while dirty.
+  // Prevents markClean() from clobbering changes that arrived during an async save.
+  const dirtyVersionRef = useRef(0);
 
   // Store access
   const postIts = useCanvasStore((s) => s.postIts);
@@ -40,6 +48,9 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
         return;
       }
 
+      // Snapshot the dirty version at save start
+      const versionAtSaveStart = dirtyVersionRef.current;
+
       setSaveStatus('saving');
 
       const result = await saveCanvasState(workshopId, stepId, {
@@ -53,15 +64,23 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
       });
 
       if (result.success) {
-        // Success: mark clean and show saved indicator
-        markClean();
-        setSaveStatus('saved');
         failureCountRef.current = 0;
 
-        // Auto-clear "Saved" indicator after 2s
-        setTimeout(() => {
+        // Only mark clean if no new changes arrived during the async save.
+        // If the version changed, another save will be triggered by the effect.
+        if (dirtyVersionRef.current === versionAtSaveStart) {
+          markClean();
+          setSaveStatus('saved');
+
+          // Auto-clear "Saved" indicator after 2s
+          setTimeout(() => {
+            setSaveStatus('idle');
+          }, 2000);
+        } else {
+          // New changes arrived during save — skip markClean so the
+          // effect triggers another save with the latest data.
           setSaveStatus('idle');
-        }, 2000);
+        }
       } else {
         // Failure: increment failure count
         failureCountRef.current += 1;
@@ -84,9 +103,10 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
     { maxWait: 10000 } // Force save after 10 seconds max
   );
 
-  // Trigger save when postIts, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, or conceptCards change and isDirty
+  // Trigger save when state changes and isDirty
   useEffect(() => {
     if (isDirty) {
+      dirtyVersionRef.current++;
       debouncedSave();
     }
   }, [postIts, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, isDirty, debouncedSave]);

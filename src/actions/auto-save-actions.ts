@@ -41,20 +41,22 @@ export async function autoSaveMessages(
       return; // Nothing to insert
     }
 
-    // Insert new messages
-    const rows = newMessages.map((msg) => {
-      // Extract text content from parts
-      const textParts = msg.parts?.filter((part) => part.type === 'text') || [];
-      const content = textParts.map((part) => part.text).join('\n');
+    // Insert new messages, skipping any with empty content (e.g. mid-stream snapshots)
+    const rows = newMessages
+      .map((msg) => {
+        // Extract text content from parts
+        const textParts = msg.parts?.filter((part) => part.type === 'text') || [];
+        const content = textParts.map((part) => part.text).join('\n');
 
-      return {
-        sessionId,
-        stepId,
-        messageId: msg.id,
-        role: msg.role as 'user' | 'assistant' | 'system',
-        content,
-      };
-    });
+        return {
+          sessionId,
+          stepId,
+          messageId: msg.id,
+          role: msg.role as 'user' | 'assistant' | 'system',
+          content,
+        };
+      })
+      .filter((row) => row.content.trim().length > 0);
 
     await db.insert(chatMessages).values(rows).onConflictDoNothing();
   } catch (error) {

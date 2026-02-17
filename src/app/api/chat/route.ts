@@ -11,9 +11,10 @@ import { streamTextWithRetry, isGeminiRateLimitError } from '@/lib/ai/gemini-ret
 import { loadCanvasState } from '@/actions/canvas-actions';
 
 /**
- * Increase Vercel serverless timeout for AI responses
+ * Increase Vercel serverless timeout for AI responses.
+ * Complex stakeholder mapping responses with canvas items can take 40-50s.
  */
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 /**
  * POST /api/chat
@@ -91,8 +92,16 @@ export async function POST(req: Request) {
       workshopTitle,
     );
 
+    // Filter out messages with empty content before conversion.
+    // Interrupted streams can leave assistant messages with empty parts in history,
+    // which Gemini rejects with 400 ("must include at least one parts field").
+    const validMessages = messages.filter((msg: { parts?: Array<{ type: string; text?: string }> }) => {
+      const textParts = msg.parts?.filter((p: { type: string; text?: string }) => p.type === 'text' && p.text?.trim()) || [];
+      return textParts.length > 0;
+    });
+
     // Convert messages to model format
-    const modelMessages = await convertToModelMessages(messages);
+    const modelMessages = await convertToModelMessages(validMessages);
 
     // Stream Gemini response with context-aware prompt and rate limit retry
     const result = await streamTextWithRetry({

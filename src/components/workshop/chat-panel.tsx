@@ -398,8 +398,10 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
   }, [status, messages]);
 
-  // Initialize addedMessageIds from history — messages that have canvas items AND canvas already has post-its
-  // This ensures reloaded pages show green badges, not "Add to Whiteboard" buttons
+  // Initialize addedMessageIds from history — mark ALL historical assistant messages as processed
+  // when canvas already has post-its (restored from DB). The saved canvas state is the source
+  // of truth — we must NOT re-process historical [CANVAS_ITEM], [CLUSTER], or [THEME_SORT]
+  // markers, as that would overwrite user-arranged positions with recalculated layouts.
   const hasInitializedAddedIds = React.useRef(false);
   React.useEffect(() => {
     if (hasInitializedAddedIds.current || !isCanvasStep || postIts.length === 0) return;
@@ -411,7 +413,11 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       const textParts = msg.parts?.filter((p) => p.type === 'text') || [];
       const content = textParts.map((p) => p.text).join('\n');
       const { canvasItems } = parseCanvasItems(content);
-      if (canvasItems.length > 0) {
+      const { clusters } = parseClusterSuggestions(content);
+      const { shouldSort } = parseThemeSortTrigger(content);
+      const { deleteTexts } = parseCanvasDeletes(content);
+      // Mark any message that contains canvas-modifying markup as already processed
+      if (canvasItems.length > 0 || clusters.length > 0 || shouldSort || deleteTexts.length > 0) {
         ids.add(msg.id);
       }
     }
@@ -431,9 +437,16 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       ? { ...baseGridConfig, columns: gridColumns }
       : baseGridConfig;
 
-    // Add each item to canvas with computed position
+    // Add each item to canvas with computed position, skipping duplicates
     let currentPostIts = [...postIts];
     for (const item of canvasItems) {
+      // Duplicate guard: skip if an item with the same text (case-insensitive) already exists
+      const normalizedText = item.text.trim().toLowerCase();
+      const alreadyExists = currentPostIts.some(
+        (p) => (!p.type || p.type === 'postIt') && p.text.trim().toLowerCase() === normalizedText
+      );
+      if (alreadyExists) continue;
+
       const { position, quadrant, cellAssignment } = computeCanvasPosition(
         step.id,
         { quadrant: item.quadrant, ring: item.ring, row: item.row, col: item.col, category: item.category, cluster: item.cluster },
@@ -478,6 +491,11 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   // Auto-add canvas items when AI finishes streaming (no manual click needed)
   React.useEffect(() => {
     if (status !== 'ready' || !isCanvasStep || messages.length === 0) return;
+    // Wait for historical message initialization to complete before processing.
+    // Without this guard, on the same render cycle where postIts load from DB,
+    // this effect could fire before addedMessageIds is populated, causing
+    // historical messages to be re-processed and overwriting saved positions.
+    if (postIts.length > 0 && !hasInitializedAddedIds.current) return;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.role !== 'assistant') return;
     if (addedMessageIds.has(lastMsg.id)) return;
@@ -586,14 +604,23 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
   }, [status]);
 
-  // Stream timeout detection
+  // Stream timeout detection — resets on actual content progress, not just message count.
+  // Tracks the last message's text length so the timer resets as tokens stream in.
+  const streamingContentLength = React.useMemo(() => {
+    if (status !== 'streaming' || messages.length === 0) return 0;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role !== 'assistant') return 0;
+    const textParts = lastMsg.parts?.filter((p) => p.type === 'text') || [];
+    return textParts.reduce((sum, p) => sum + p.text.length, 0);
+  }, [status, messages]);
+
   React.useEffect(() => {
     if (status !== 'streaming') return;
     const timeout = setTimeout(() => {
       setStreamError(true);
-    }, 30000);
+    }, 45000); // 45s silence timeout (server maxDuration is 60s)
     return () => clearTimeout(timeout);
-  }, [status, messages.length]);
+  }, [status, streamingContentLength]);
 
   // Cleanup countdown on unmount
   React.useEffect(() => {

@@ -97,6 +97,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const setSelectedPostItIds = useCanvasStore((s) => s.setSelectedPostItIds);
   const setCluster = useCanvasStore((s) => s.setCluster);
   const clearCluster = useCanvasStore((s) => s.clearCluster);
+  const renameCluster = useCanvasStore((s) => s.renameCluster);
+  const removeFromCluster = useCanvasStore((s) => s.removeFromCluster);
 
   // Store API for temporal undo/redo access
   const storeApi = useCanvasStoreApi();
@@ -777,6 +779,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     memberIds.forEach(id => bringToFront(id));
   }, [bringToFront]);
 
+  // Handle renaming a cluster via hull label inline edit
+  const handleRenameCluster = useCallback((oldName: string, newName: string) => {
+    if (newName.trim() && newName !== oldName) {
+      renameCluster(oldName, newName.trim());
+    }
+  }, [renameCluster]);
+
   // Rearrange a cluster's children in 3-wide rows centered below parent
   const rearrangeCluster = useCallback((clusterName: string, parentPostIt: import('@/stores/canvas-store').PostIt | undefined, childPostIts: import('@/stores/canvas-store').PostIt[]) => {
     if (!parentPostIt || childPostIts.length === 0) return;
@@ -821,7 +830,24 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       );
     }
 
-    // Exclude the parent from getting the cluster field
+    // If no parent exists, create one above the topmost selected item
+    if (!parentPostIt) {
+      const topY = Math.min(...selectedPostIts.map(p => p.position.y));
+      const avgX = selectedPostIts.reduce((sum, p) => sum + p.position.x, 0) / selectedPostIts.length;
+      const parentId = crypto.randomUUID();
+      const newParent: import('@/stores/canvas-store').PostIt = {
+        id: parentId,
+        text: clusterName,
+        position: { x: Math.round(avgX), y: Math.round(topY - 120 - 15) }, // above children with gap
+        width: 160,
+        height: 100,
+        color: 'yellow',
+      };
+      addPostIt(newParent);
+      parentPostIt = newParent;
+    }
+
+    // All selected items become children (exclude any that match the parent text)
     const childIds = selectedPostIts
       .filter(p => p.text.toLowerCase() !== lowerName)
       .map(p => p.id);
@@ -833,7 +859,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       const childPostIts = selectedPostIts.filter(p => p.text.toLowerCase() !== lowerName);
       rearrangeCluster(clusterName, parentPostIt, childPostIts);
     }
-  }, [postIts, selectedNodeIds, setCluster, rearrangeCluster]);
+  }, [postIts, selectedNodeIds, setCluster, rearrangeCluster, addPostIt]);
 
   // Handle dedup from toolbar
   const handleDeduplicate = useCallback(() => {
@@ -1038,11 +1064,84 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
             updatePostIt(change.id, { position: snappedPosition, quadrant });
           }
+
+          // --- Cluster membership detection on drag-end ---
+          const draggedPostIt = postIts.find((p) => p.id === change.id);
+          if (
+            draggedPostIt &&
+            (!draggedPostIt.type || draggedPostIt.type === 'postIt') &&
+            !draggedPostIt.isPreview &&
+            change.position
+          ) {
+            if (draggedPostIt.cluster) {
+              // --- Drag-out detection for cluster children ---
+              // Use ALL members (including the dragged node at its pre-drag position
+              // from `postIts`) so the bbox represents the full cluster extent.
+              // This prevents false detaches when rearranging within the cluster.
+              const clusterName = draggedPostIt.cluster.toLowerCase();
+              const allMembers = postIts.filter((p) => {
+                if (p.cluster?.toLowerCase() === clusterName) return true;
+                if (!p.cluster && p.text.toLowerCase() === clusterName && (!p.type || p.type === 'postIt')) return true;
+                return false;
+              });
+              if (allMembers.length >= 2) {
+                const DETACH_MARGIN = 320;
+                const minX = Math.min(...allMembers.map((m) => m.position.x)) - DETACH_MARGIN;
+                const minY = Math.min(...allMembers.map((m) => m.position.y)) - DETACH_MARGIN;
+                const maxX = Math.max(...allMembers.map((m) => m.position.x + m.width)) + DETACH_MARGIN;
+                const maxY = Math.max(...allMembers.map((m) => m.position.y + m.height)) + DETACH_MARGIN;
+                const cx = change.position.x + (draggedPostIt.width / 2);
+                const cy = change.position.y + (draggedPostIt.height / 2);
+                if (cx < minX || cx > maxX || cy < minY || cy > maxY) {
+                  removeFromCluster(change.id);
+                }
+              }
+            } else {
+              // --- Drag-into detection for unclustered nodes ---
+              // If the node landed inside an existing cluster's hull, join it.
+              const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+              const clusterGroups = new Map<string, { displayName: string; children: typeof items; parent: (typeof items)[0] | undefined }>();
+              for (const item of items) {
+                if (!item.cluster) continue;
+                const key = item.cluster.toLowerCase();
+                if (!clusterGroups.has(key)) {
+                  const parent = items.find(p => p.text.toLowerCase() === key && !p.cluster && p.id !== change.id);
+                  clusterGroups.set(key, { displayName: item.cluster, children: [], parent });
+                }
+                clusterGroups.get(key)!.children.push(item);
+              }
+
+              const HULL_PADDING = 24; // matches visual hull padding in cluster-hulls-overlay
+              const cx = change.position.x + (draggedPostIt.width / 2);
+              const cy = change.position.y + (draggedPostIt.height / 2);
+
+              for (const [key, { displayName, children, parent }] of clusterGroups) {
+                // Don't add if this node IS the parent (text matches cluster name)
+                if (draggedPostIt.text.toLowerCase() === key) continue;
+                const members = parent ? [parent, ...children] : children;
+                if (members.length < 2) continue;
+
+                const minX = Math.min(...members.map(m => m.position.x)) - HULL_PADDING;
+                const minY = Math.min(...members.map(m => m.position.y)) - HULL_PADDING;
+                const maxX = Math.max(...members.map(m => m.position.x + m.width)) + HULL_PADDING;
+                const maxY = Math.max(...members.map(m => m.position.y + m.height)) + HULL_PADDING;
+
+                if (cx >= minX && cx <= maxX && cy >= minY && cy <= maxY) {
+                  setCluster([change.id], displayName);
+                  // Auto-rearrange children (including new member) around parent
+                  if (parent) {
+                    rearrangeCluster(displayName, parent, [...children, draggedPostIt]);
+                  }
+                  break;
+                }
+              }
+            }
+          }
         }
       });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
-    [nodes, drawingNodes, conceptCards, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, deleteDrawingNode, deleteConceptCard, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts, bringToFront]
+    [nodes, postIts, drawingNodes, conceptCards, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, deleteDrawingNode, deleteConceptCard, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts, bringToFront, removeFromCluster, setCluster, rearrangeCluster]
   );
 
   // Handle node drag (real-time cell highlighting)
@@ -1272,10 +1371,12 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       const container = document.querySelector('.react-flow');
       if (container) {
         const rect = container.getBoundingClientRect();
+        // Fit outer ring (1080px radius = 2160px diameter) in viewport with padding
+        const fitZoom = Math.min(rect.width, rect.height) / (2160 + 100);
         instance.setViewport({
           x: rect.width / 2,
           y: rect.height / 2,
-          zoom: 0.7, // Slightly zoomed out so all 3 rings visible
+          zoom: Math.max(0.3, Math.min(fitZoom, 0.7)),
         });
       }
     } else if (stepConfig.hasEmpathyZones && postIts.length === 0) {
@@ -1431,7 +1532,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
       {/* Cluster hull overlay — HTML divs with absolute positioning, rendered outside ReactFlow */}
       {stepConfig.hasRings && (
-        <ClusterHullsOverlay onSelectCluster={handleSelectCluster} />
+        <ClusterHullsOverlay onSelectCluster={handleSelectCluster} onRenameCluster={handleRenameCluster} />
       )}
 
       {/* Toolbar */}

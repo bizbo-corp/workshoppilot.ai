@@ -83,10 +83,13 @@ export async function loadMessages(
     return true;
   });
 
-  return deduped.map((row) => ({
-    id: row.messageId,
-    role: row.role as 'user' | 'assistant' | 'system',
-    parts: [{ type: 'text' as const, text: row.content }],
-    createdAt: row.createdAt,
-  }));
+  return deduped
+    // Filter out messages with empty content (e.g. interrupted streams saved mid-flight)
+    .filter((row) => row.content.trim().length > 0)
+    .map((row) => ({
+      id: row.messageId,
+      role: row.role as 'user' | 'assistant' | 'system',
+      parts: [{ type: 'text' as const, text: row.content }],
+      createdAt: row.createdAt,
+    }));
 }

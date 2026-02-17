@@ -58,9 +58,9 @@ export const STEP_CANVAS_CONFIGS: Record<string, StepCanvasConfig> = {
     hasRings: true,
     ringConfig: {
       rings: [
-        { id: 'inner', label: 'Most Important', radius: 320, color: '#6b7f4e' }, // sage-dark
-        { id: 'middle', radius: 520, color: '#8a9a5b' }, // olive
-        { id: 'outer', radius: 720, color: '#a3b18a' }, // sage-light
+        { id: 'inner', label: 'Most Important', radius: 480, color: '#6b7f4e' }, // sage-dark
+        { id: 'middle', radius: 780, color: '#8a9a5b' }, // olive
+        { id: 'outer', radius: 1080, color: '#a3b18a' }, // sage-light
       ],
       center: { x: 0, y: 0 },
     },

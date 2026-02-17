@@ -1,80 +1,30 @@
----
-
-- 
-
-## Card Context
-
-Ensure the AI can understand the context before proceeding. 
-
-- Work on whiteboard first (Stakeholders)
-    - Chat prompts user to add post-it first
-- User Research
-    - Ask the user which stakeholders they would like to interview. We're convened one to three. Ask them to confirm Via checkbox 
-
- show the overall workshop challenge on all pages 
-
-Allow the user to put their suggestions on before offering some canned ideas. When offering canned ideas, make sure it bypasses the chat and just gets directly added to the board. 
-
-After giving the user some time to add their post-its, show a button saying.
-
-Give some proactive feedback
-
-The greeting is very verbose. Can you make it more consice and add the context cleverly. Use emojis
+Find out who's the best to interview based on the stakeholders. 
 
 
 
+If there are three or four groups but only one main important stakeholder, then just focus on that stakeholder and their sub-categories. 
 
 
 
+For instance when we say parents we mean mums and nannies. When we say customers, we might be referring to new customers, returning customers, or tire kickers. 
 
----
+The parent in its sub-category could be the best candidates for interviews. 
 
 
 
-Now the hull is at z-30 (above nodes at z-20). But there's a problem: the hull rect
+A.I. should ask the user whether they have the correct interviewees. Allow them to choose up to four, with at least two using a check box in the chat 
 
-   covers the entire bounding box including where nodes are, so clicking a node  
 
-  inside the hull would hit the hull SVG rect first. I need to make the SVG layer
 
-  pass through clicks to nodes except on the hull rects themselves.
+Once this is confirmed by the user, switch to interview mode. Let the user know that you are the character and they are the interviewer. Offer them three canned questions or a fourth option, which is something else, and then they can type that question directly to the interviewee i.e your synthetic persona. 
 
-  The issue is that the SVG is a separate DOM element from ReactFlow's node layer.
+After each response, paste it on the board, the whiteboard, as a post-it note. Add a label to the post-it note of the interviewee. e.g Mum, Returning customer, Legal executive.
 
-  With z-30, the SVG sits above ReactFlow's entire node container. Clicks on the SVG 
+Continue more questions per interviewee. Make it a maximum of four. 
 
-  will never reach nodes below it — even with pointer-events: none on the SVG      
+Once the first interviewee is finished, switch to the next interviewee, which is a different stakeholder group or sub-category. Continue the steps by giving canned responses and an alternative suggested question up to four times for the new interviewee. 
 
-  element, the hull rects with pointer-events: auto cover the node areas too.
+Tell the user that there's some really good stuff in there. Are you happy to proceed or do you want to keep asking something? 
 
-  The solution: render the hull as a frame (border only) instead of a filled rect
+Decide based on the response and enable the user to click next. 
 
-  that covers everything. I'll use an SVG <path> or just use pointer-events: stroke
-
-  so only the border area is clickable, not the interior. But stroke pointer-events
-
-  means only the border line — too narrow.
-
-  Better approach: render the hull as an HTML div overlay outside ReactFlow
-
-  (alongside the selection toolbar), with a higher z-index. The div acts as a grab
-
-  handle on the border/padding area only. The interior is transparent to clicks via a
-
-   CSS technique.
-
-  Actually, the simplest approach: keep the SVG at z-30 but only enable pointer
-
-  events on the hull border padding area, not the center. I can do this with a
-
-  clip-path or by using pointer-events: visiblePainted with a transparent fill and
-
-  only filling the padding region via a path.
-
-  Let me use a cleaner approach: render the hull overlay as positioned HTML divs
-
-  outside of <ReactFlow> (in the same container), use border for the visual, and make
-
-   the interior pointer-events: none while the border area is pointer-events: auto.
-
-  This way nodes inside the hull remain fully clickable.

@@ -104,6 +104,8 @@ export type CanvasActions = {
   batchUpdatePositions: (updates: Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }>) => void;
   setCluster: (ids: string[], clusterName: string) => void;
   clearCluster: (clusterName: string) => void;
+  renameCluster: (oldName: string, newName: string) => void;
+  removeFromCluster: (id: string) => void;
   setSelectedPostItIds: (ids: string[]) => void;
   addConceptCard: (card: Omit<ConceptCardData, 'id'>) => void;
   updateConceptCard: (id: string, updates: Partial<ConceptCardData>) => void;
@@ -455,6 +457,46 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
               isDirty: true,
             };
           }),
+
+        renameCluster: (oldName, newName) =>
+          set((state) => {
+            const oldLower = oldName.toLowerCase();
+            const newLower = newName.toLowerCase();
+            // Check if a child node's text matches the new name (for parent swap)
+            const promotee = state.postIts.find(
+              (p) => p.cluster?.toLowerCase() === oldLower && p.text.toLowerCase() === newLower
+            );
+            return {
+              postIts: state.postIts.map((postIt) => {
+                // Child of old cluster whose text matches new name → promote to parent
+                if (promotee && postIt.id === promotee.id) {
+                  return { ...postIt, cluster: undefined };
+                }
+                // Other children of old cluster → update cluster name
+                if (postIt.cluster?.toLowerCase() === oldLower) {
+                  return { ...postIt, cluster: newName };
+                }
+                // Old parent (text matches old name, no cluster) → demote to child
+                if (
+                  !postIt.cluster &&
+                  postIt.text.toLowerCase() === oldLower &&
+                  (!postIt.type || postIt.type === 'postIt')
+                ) {
+                  return { ...postIt, cluster: newName };
+                }
+                return postIt;
+              }),
+              isDirty: true,
+            };
+          }),
+
+        removeFromCluster: (id) =>
+          set((state) => ({
+            postIts: state.postIts.map((postIt) =>
+              postIt.id === id ? { ...postIt, cluster: undefined } : postIt
+            ),
+            isDirty: true,
+          })),
 
         setSelectedPostItIds: (ids) =>
           set(() => ({

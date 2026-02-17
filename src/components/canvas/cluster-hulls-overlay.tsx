@@ -4,11 +4,9 @@
  * ClusterHullsOverlay Component
  *
  * Renders draggable cluster hull boxes as HTML divs OUTSIDE ReactFlow.
- * Uses an "inset mask" trick: each hull is a positioned div with a thick transparent
- * border (the grab zone) and pointer-events:none interior, so nodes inside remain
- * fully clickable while the border area is draggable.
- *
- * Visual: the background tint is rendered via an inner div with pointer-events:none.
+ * Each hull has a colored header bar (the primary drag handle) with a grip icon
+ * and the cluster name, plus a tinted content area with a dashed border.
+ * Nodes inside remain fully clickable via pointer-events:none on the content area.
  */
 
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
@@ -23,12 +21,12 @@ const viewportSelector = (state: ReactFlowState) => ({
 });
 
 const HULL_COLORS = [
-  { fill: 'rgba(99, 102, 241, 0.08)', border: 'rgba(99, 102, 241, 0.35)', text: '#6366f1', activeFill: 'rgba(99, 102, 241, 0.15)' },
-  { fill: 'rgba(16, 185, 129, 0.08)', border: 'rgba(16, 185, 129, 0.35)', text: '#10b981', activeFill: 'rgba(16, 185, 129, 0.15)' },
-  { fill: 'rgba(245, 158, 11, 0.08)', border: 'rgba(245, 158, 11, 0.35)', text: '#f59e0b', activeFill: 'rgba(245, 158, 11, 0.15)' },
-  { fill: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.35)', text: '#ef4444', activeFill: 'rgba(239, 68, 68, 0.15)' },
-  { fill: 'rgba(168, 85, 247, 0.08)', border: 'rgba(168, 85, 247, 0.35)', text: '#a855f7', activeFill: 'rgba(168, 85, 247, 0.15)' },
-  { fill: 'rgba(14, 165, 233, 0.08)', border: 'rgba(14, 165, 233, 0.35)', text: '#0ea5e9', activeFill: 'rgba(14, 165, 233, 0.15)' },
+  { fill: 'rgba(99, 102, 241, 0.08)', border: 'rgba(99, 102, 241, 0.30)', text: '#6366f1', activeFill: 'rgba(99, 102, 241, 0.15)', headerBg: 'rgba(99, 102, 241, 0.65)' },
+  { fill: 'rgba(16, 185, 129, 0.08)', border: 'rgba(16, 185, 129, 0.30)', text: '#10b981', activeFill: 'rgba(16, 185, 129, 0.15)', headerBg: 'rgba(16, 185, 129, 0.65)' },
+  { fill: 'rgba(245, 158, 11, 0.08)', border: 'rgba(245, 158, 11, 0.30)', text: '#f59e0b', activeFill: 'rgba(245, 158, 11, 0.15)', headerBg: 'rgba(245, 158, 11, 0.65)' },
+  { fill: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.30)', text: '#ef4444', activeFill: 'rgba(239, 68, 68, 0.15)', headerBg: 'rgba(239, 68, 68, 0.65)' },
+  { fill: 'rgba(168, 85, 247, 0.08)', border: 'rgba(168, 85, 247, 0.30)', text: '#a855f7', activeFill: 'rgba(168, 85, 247, 0.15)', headerBg: 'rgba(168, 85, 247, 0.65)' },
+  { fill: 'rgba(14, 165, 233, 0.08)', border: 'rgba(14, 165, 233, 0.30)', text: '#0ea5e9', activeFill: 'rgba(14, 165, 233, 0.15)', headerBg: 'rgba(14, 165, 233, 0.65)' },
 ];
 
 export type ClusterHullData = {
@@ -46,14 +44,17 @@ type DragState = {
   memberIds: string[];
 };
 
-/** Grab zone width in screen pixels — the border area that responds to pointer events */
-const GRAB_ZONE = 28;
+/** Height of the header bar in screen pixels */
+const HEADER_H = 28;
+/** Width of edge grab zones (sides + bottom) in screen pixels */
+const EDGE_GRAB = 12;
 
 interface ClusterHullsOverlayProps {
   onSelectCluster?: (memberIds: string[]) => void;
+  onRenameCluster?: (oldName: string, newName: string) => void;
 }
 
-export function ClusterHullsOverlay({ onSelectCluster }: ClusterHullsOverlayProps) {
+export function ClusterHullsOverlay({ onSelectCluster, onRenameCluster }: ClusterHullsOverlayProps) {
   const postIts = useCanvasStore((s) => s.postIts);
   const batchUpdatePositions = useCanvasStore((s) => s.batchUpdatePositions);
   const { x, y, zoom } = useReactFlowStore(viewportSelector);
@@ -65,6 +66,10 @@ export function ClusterHullsOverlay({ onSelectCluster }: ClusterHullsOverlayProp
   postItsRef.current = postIts;
 
   const [isDragging, setIsDragging] = useState(false);
+
+  // Inline rename state
+  const [editingHullName, setEditingHullName] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
 
   const hulls = useMemo<ClusterHullData[]>(() => {
     const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
@@ -172,85 +177,106 @@ export function ClusterHullsOverlay({ onSelectCluster }: ClusterHullsOverlayProp
         const sw = hull.bounds.width * zoom;
         const sh = hull.bounds.height * zoom;
 
+        // Full hull rectangle including header
+        const fullTop = sy - HEADER_H;
+        const fullHeight = sh + HEADER_H;
+        const isEditing = editingHullName === hull.name;
+
         return (
           <div key={hull.name}>
-            {/* Background tint — below everything, not interactive */}
+            {/* Background fill + dashed border — single div, properly aligned */}
             <div
-              className="absolute rounded-lg"
+              className="absolute"
               style={{
                 left: sx,
-                top: sy,
+                top: fullTop,
                 width: sw,
-                height: sh,
+                height: fullHeight,
                 background: hull.color.fill,
+                border: `1.5px dashed ${hull.color.border}`,
+                borderRadius: 10,
                 pointerEvents: 'none',
                 zIndex: 1,
+                boxSizing: 'border-box',
               }}
             />
 
-            {/* Grab frame — the border zone that captures mouse events.
-                Uses a thick transparent border that IS the grab zone,
-                and an inner area that passes clicks through to nodes. */}
+            {/* Header bar — primary drag handle with grip icon + cluster name */}
             <div
-              className="absolute rounded-lg transition-shadow duration-150"
+              className="absolute flex items-center gap-1.5 select-none"
               style={{
-                left: sx - GRAB_ZONE / 2,
-                top: sy - GRAB_ZONE / 2,
-                width: sw + GRAB_ZONE,
-                height: sh + GRAB_ZONE,
-                // The border IS the interactive area
-                border: `${GRAB_ZONE / 2}px solid transparent`,
-                borderRadius: 12,
-                // Visual dashed border rendered via outline (inside the grab zone)
-                outline: `1.5px dashed ${hull.color.border}`,
-                outlineOffset: -GRAB_ZONE / 2,
+                left: sx,
+                top: fullTop,
+                width: sw,
+                height: HEADER_H,
+                background: hull.color.headerBg,
+                borderRadius: '10px 10px 0 0',
                 cursor: isDragging ? 'grabbing' : 'grab',
-                zIndex: 35,
-                // The box-sizing ensures the border is OUTSIDE the content area
-                boxSizing: 'content-box',
-                // Pointer events only on the border, NOT the content interior
-                pointerEvents: 'none',
+                zIndex: isEditing ? 50 : 36,
+                paddingLeft: 8,
+                paddingRight: 8,
+                boxSizing: 'border-box',
               }}
+              onMouseDown={(e) => startDrag(e, hull)}
             >
-              {/* Inner transparent div — blocks the grab zone over the interior */}
+              {/* Grip dots — visual drag affordance */}
+              <svg width="6" height="10" viewBox="0 0 6 10" fill="white" opacity={0.5} className="flex-shrink-0">
+                <circle cx="1" cy="1" r="1" />
+                <circle cx="5" cy="1" r="1" />
+                <circle cx="1" cy="5" r="1" />
+                <circle cx="5" cy="5" r="1" />
+                <circle cx="1" cy="9" r="1" />
+                <circle cx="5" cy="9" r="1" />
+              </svg>
+
+              {/* Cluster name — double-click to rename */}
+              {isEditing ? (
+                <input
+                  className="text-[11px] font-semibold bg-white/20 text-white placeholder-white/50 px-1 py-0 rounded outline-none flex-1 min-w-0"
+                  value={editValue}
+                  autoFocus
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    } else if (e.key === 'Escape') {
+                      setEditingHullName(null);
+                    }
+                  }}
+                  onBlur={() => {
+                    const trimmed = editValue.trim();
+                    if (trimmed && trimmed !== hull.name) {
+                      onRenameCluster?.(hull.name, trimmed);
+                    }
+                    setEditingHullName(null);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <span
+                  className="text-[11px] font-semibold text-white whitespace-nowrap overflow-hidden text-ellipsis cursor-text"
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setEditingHullName(hull.name);
+                    setEditValue(hull.name);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  {hull.name}
+                </span>
+              )}
             </div>
 
-            {/* Four edge grab zones — positioned on each side of the hull.
-                This avoids covering the interior where nodes live. */}
-            {/* Top edge */}
-            <div
-              style={{
-                position: 'absolute',
-                left: sx - GRAB_ZONE / 2,
-                top: sy - GRAB_ZONE / 2,
-                width: sw + GRAB_ZONE,
-                height: GRAB_ZONE,
-                cursor: isDragging ? 'grabbing' : 'grab',
-                zIndex: 35,
-              }}
-              onMouseDown={(e) => startDrag(e, hull)}
-            />
-            {/* Bottom edge */}
-            <div
-              style={{
-                position: 'absolute',
-                left: sx - GRAB_ZONE / 2,
-                top: sy + sh - GRAB_ZONE / 2,
-                width: sw + GRAB_ZONE,
-                height: GRAB_ZONE,
-                cursor: isDragging ? 'grabbing' : 'grab',
-                zIndex: 35,
-              }}
-              onMouseDown={(e) => startDrag(e, hull)}
-            />
+            {/* Edge grab zones — sides and bottom for secondary drag access */}
             {/* Left edge */}
             <div
               style={{
                 position: 'absolute',
-                left: sx - GRAB_ZONE / 2,
-                top: sy + GRAB_ZONE / 2,
-                width: GRAB_ZONE,
-                height: sh - GRAB_ZONE,
+                left: sx - EDGE_GRAB / 2,
+                top: sy,
+                width: EDGE_GRAB,
+                height: sh,
                 cursor: isDragging ? 'grabbing' : 'grab',
                 zIndex: 35,
               }}
@@ -260,33 +286,28 @@ export function ClusterHullsOverlay({ onSelectCluster }: ClusterHullsOverlayProp
             <div
               style={{
                 position: 'absolute',
-                left: sx + sw - GRAB_ZONE / 2,
-                top: sy + GRAB_ZONE / 2,
-                width: GRAB_ZONE,
-                height: sh - GRAB_ZONE,
+                left: sx + sw - EDGE_GRAB / 2,
+                top: sy,
+                width: EDGE_GRAB,
+                height: sh,
                 cursor: isDragging ? 'grabbing' : 'grab',
                 zIndex: 35,
               }}
               onMouseDown={(e) => startDrag(e, hull)}
             />
-
-            {/* Label pill */}
+            {/* Bottom edge */}
             <div
-              className="absolute"
               style={{
-                left: sx + 6,
-                top: sy + 4,
-                zIndex: 36,
-                pointerEvents: 'none',
+                position: 'absolute',
+                left: sx - EDGE_GRAB / 2,
+                top: sy + sh - EDGE_GRAB / 2,
+                width: sw + EDGE_GRAB,
+                height: EDGE_GRAB,
+                cursor: isDragging ? 'grabbing' : 'grab',
+                zIndex: 35,
               }}
-            >
-              <span
-                className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white/90 dark:bg-zinc-800/90 shadow-sm whitespace-nowrap"
-                style={{ color: hull.color.text }}
-              >
-                {hull.name}
-              </span>
-            </div>
+              onMouseDown={(e) => startDrag(e, hull)}
+            />
           </div>
         );
       })}
