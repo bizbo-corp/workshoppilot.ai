@@ -4,4 +4,8 @@ Now I need a feature to create an image of the person to make it feel real. Can 
 
 Characteristics to create a good caricature might be
 
-Super mum, busy, stressed
+Super mum, busy, stressed. Phones, Swamped by kids stuff. 
+
+
+
+How might we be able to eatract some goog details to pass onto an image generator and make this with the gemini api

@@ -14,4 +14,5 @@ export type PersonaTemplateData = {
   empathyGains?: string;    // Pre-filled from Step 4
   narrative?: string;       // AI-generated backstory
   quote?: string;           // From Step 3 or AI-generated
+  avatarUrl?: string;       // AI-generated portrait image URL
 };

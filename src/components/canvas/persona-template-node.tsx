@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useRef, useEffect } from 'react';
+import { memo, useRef, useEffect, useState, useCallback } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import {
   MessageSquare,
@@ -13,12 +13,15 @@ import {
   Briefcase,
   Quote,
   BookOpen,
+  Sparkles,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 
 export type PersonaTemplateNodeRendererData = PersonaTemplateData & {
   onFieldChange?: (id: string, field: string, value: string) => void;
+  onGenerateAvatar?: (id: string) => Promise<string | null>;
 };
 
 export type PersonaTemplateNodeType = Node<PersonaTemplateNodeRendererData, 'personaTemplate'>;
@@ -46,19 +49,129 @@ const EMPATHY_ZONES = [
 ] as const;
 
 /**
- * Initials avatar — renders first letter(s) in a sage-tinted circle
+ * Extracts initials from a name string
  */
-function InitialsAvatar({ name }: { name?: string }) {
-  const initials = name
+function getInitials(name?: string): string {
+  return name
     ? name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
     : '?';
+}
 
+/**
+ * PersonaAvatar — handles three states:
+ * - No image: initials circle with sparkle hover overlay
+ * - Loading: shimmer/pulse animation
+ * - Has image: 48px thumbnail (used in identity row when portrait section is showing)
+ */
+function PersonaAvatar({
+  name,
+  avatarUrl,
+  isGenerating,
+  onGenerate,
+  size = 'large',
+}: {
+  name?: string;
+  avatarUrl?: string;
+  isGenerating: boolean;
+  onGenerate?: () => void;
+  size?: 'large' | 'small';
+}) {
+  const initials = getInitials(name);
+  const sizeClass = size === 'large' ? 'h-24 w-24 text-2xl' : 'h-12 w-12 text-sm';
+
+  // Loading state
+  if (isGenerating) {
+    return (
+      <div
+        className={cn(
+          'flex shrink-0 items-center justify-center rounded-full animate-pulse',
+          sizeClass
+        )}
+        style={{ backgroundColor: SAGE.avatarBg, color: SAGE.avatarText }}
+      >
+        <Sparkles className={size === 'large' ? 'h-8 w-8 animate-spin' : 'h-4 w-4 animate-spin'} style={{ animationDuration: '3s' }} />
+      </div>
+    );
+  }
+
+  // Has image — show as thumbnail
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name || 'Persona'}
+        className={cn('shrink-0 rounded-full object-cover', sizeClass)}
+      />
+    );
+  }
+
+  // No image — initials circle with sparkle hover
+  return (
+    <button
+      type="button"
+      onClick={onGenerate}
+      className={cn(
+        'nodrag nopan group relative flex shrink-0 items-center justify-center rounded-full font-bold tracking-tight cursor-pointer transition-all',
+        sizeClass
+      )}
+      style={{ backgroundColor: SAGE.avatarBg, color: SAGE.avatarText }}
+      title="Generate portrait"
+    >
+      <span className="transition-opacity group-hover:opacity-30">{initials}</span>
+      <div className="absolute inset-0 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+        <Sparkles className={size === 'large' ? 'h-8 w-8' : 'h-4 w-4'} />
+      </div>
+    </button>
+  );
+}
+
+/**
+ * Large portrait section — shown between header and identity row when avatarUrl exists
+ */
+function PortraitSection({
+  avatarUrl,
+  name,
+  isGenerating,
+  onRegenerate,
+}: {
+  avatarUrl: string;
+  name?: string;
+  isGenerating: boolean;
+  onRegenerate?: () => void;
+}) {
   return (
     <div
-      className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full text-2xl font-bold tracking-tight"
-      style={{ backgroundColor: SAGE.avatarBg, color: SAGE.avatarText }}
+      className="relative w-full flex items-center justify-center overflow-hidden"
+      style={{
+        height: 280,
+        backgroundColor: '#f9faf5',
+        borderBottom: `1px solid ${SAGE.sectionBorder}`,
+      }}
     >
-      {initials}
+      {isGenerating ? (
+        <div className="flex items-center justify-center w-full h-full animate-pulse">
+          <Sparkles className="h-12 w-12 animate-spin" style={{ color: SAGE.avatarBg, animationDuration: '3s' }} />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onRegenerate}
+          className="nodrag nopan group relative w-full h-full cursor-pointer"
+          title="Regenerate portrait"
+        >
+          <img
+            src={avatarUrl}
+            alt={name || 'Persona portrait'}
+            className="w-full h-full object-contain"
+          />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
+            <div className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
+              <RefreshCw className="h-4 w-4 text-[#4a5a32]" />
+              <span className="text-sm font-medium text-[#4a5a32]">Regenerate</span>
+            </div>
+          </div>
+        </button>
+      )}
     </div>
   );
 }
@@ -180,6 +293,20 @@ export const PersonaTemplateNode = memo(
       z => data[z.key as keyof PersonaTemplateData]
     );
 
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const handleGenerateAvatar = useCallback(async () => {
+      if (!data.onGenerateAvatar || isGenerating) return;
+      setIsGenerating(true);
+      try {
+        await data.onGenerateAvatar(id);
+      } finally {
+        setIsGenerating(false);
+      }
+    }, [data.onGenerateAvatar, id, isGenerating]);
+
+    const hasPortrait = !!data.avatarUrl;
+
     return (
       <div
         className="w-[680px] rounded-2xl shadow-xl overflow-hidden"
@@ -215,12 +342,28 @@ export const PersonaTemplateNode = memo(
           />
         </div>
 
+        {/* ── Portrait section (shown when avatarUrl exists) ── */}
+        {hasPortrait && (
+          <PortraitSection
+            avatarUrl={data.avatarUrl!}
+            name={data.name}
+            isGenerating={isGenerating}
+            onRegenerate={handleGenerateAvatar}
+          />
+        )}
+
         {/* ── Identity row ── */}
         <div
           className="flex items-center gap-5 px-6 py-5"
           style={{ borderBottom: `1px solid ${SAGE.sectionBorder}` }}
         >
-          <InitialsAvatar name={data.name} />
+          <PersonaAvatar
+            name={data.name}
+            avatarUrl={data.avatarUrl}
+            isGenerating={isGenerating}
+            onGenerate={handleGenerateAvatar}
+            size={hasPortrait ? 'small' : 'large'}
+          />
           <div className="flex-1 space-y-1.5">
             <div className="flex items-baseline gap-2">
               <User className="h-4 w-4 shrink-0 translate-y-[1px]" style={{ color: SAGE.avatarBg }} />

@@ -442,6 +442,47 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     [updatePersonaTemplate]
   );
 
+  // Handle persona avatar generation
+  const handleGenerateAvatar = useCallback(
+    async (templateId: string): Promise<string | null> => {
+      const persona = personaTemplates.find((t) => t.id === templateId);
+      if (!persona) return null;
+
+      try {
+        const res = await fetch('/api/ai/generate-persona-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workshopId,
+            templateId,
+            name: persona.name,
+            age: persona.age,
+            job: persona.job,
+            archetype: persona.archetype,
+            archetypeRole: persona.archetypeRole,
+            empathyPains: persona.empathyPains,
+            empathyGains: persona.empathyGains,
+            narrative: persona.narrative,
+            quote: persona.quote,
+          }),
+        });
+
+        if (!res.ok) {
+          console.error('Failed to generate persona image:', await res.text());
+          return null;
+        }
+
+        const { imageUrl } = await res.json();
+        updatePersonaTemplate(templateId, { avatarUrl: imageUrl });
+        return imageUrl;
+      } catch (error) {
+        console.error('Error generating persona avatar:', error);
+        return null;
+      }
+    },
+    [personaTemplates, workshopId, updatePersonaTemplate]
+  );
+
   const handleConceptFeasibilityChange = useCallback(
     (id: string, dimension: string, score?: number, rationale?: string) => {
       const card = conceptCards.find((c) => c.id === id);
@@ -582,6 +623,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       data: {
         ...template,
         onFieldChange: handlePersonaFieldChange,
+        onGenerateAvatar: handleGenerateAvatar,
       },
       style: { width: 680 },
     }));
@@ -590,7 +632,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
   // read inside the memo body as a safety net; they must NOT be deps or every
   // mouse-move during drag would recompute and cause flickering.
-  }, [postIts, drawingNodes, conceptCards, personaTemplates, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange, handlePersonaFieldChange]);
+  }, [postIts, drawingNodes, conceptCards, personaTemplates, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange, handlePersonaFieldChange, handleGenerateAvatar]);
 
   // Create post-it at position and set as editing
   const createPostItAtPosition = useCallback(
