@@ -37,6 +37,7 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
   const mindMapEdges = useCanvasStore((s) => s.mindMapEdges);
   const crazy8sSlots = useCanvasStore((s) => s.crazy8sSlots);
   const conceptCards = useCanvasStore((s) => s.conceptCards);
+  const personaTemplates = useCanvasStore((s) => s.personaTemplates);
   const isDirty = useCanvasStore((s) => s.isDirty);
   const markClean = useCanvasStore((s) => s.markClean);
 
@@ -61,6 +62,7 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
         ...(mindMapEdges.length > 0 ? { mindMapEdges } : {}),
         ...(crazy8sSlots.length > 0 ? { crazy8sSlots } : {}),
         ...(conceptCards.length > 0 ? { conceptCards } : {}),
+        ...(personaTemplates.length > 0 ? { personaTemplates } : {}),
       });
 
       if (result.success) {
@@ -109,7 +111,7 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
       dirtyVersionRef.current++;
       debouncedSave();
     }
-  }, [postIts, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, isDirty, debouncedSave]);
+  }, [postIts, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, personaTemplates, isDirty, debouncedSave]);
 
   // Force-save on component unmount
   useEffect(() => {

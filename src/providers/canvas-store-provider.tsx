@@ -10,6 +10,7 @@ import {
   type DrawingNode,
 } from '@/stores/canvas-store';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
+import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 
 type CanvasStoreApi = ReturnType<typeof createCanvasStore>;
 
@@ -21,6 +22,7 @@ export interface CanvasStoreProviderProps {
   initialGridColumns?: GridColumn[];
   initialDrawingNodes?: DrawingNode[];
   initialConceptCards?: ConceptCardData[];
+  initialPersonaTemplates?: PersonaTemplateData[];
 }
 
 export function CanvasStoreProvider({
@@ -29,6 +31,7 @@ export function CanvasStoreProvider({
   initialGridColumns,
   initialDrawingNodes,
   initialConceptCards,
+  initialPersonaTemplates,
 }: CanvasStoreProviderProps) {
   // Create store ONCE per mount — ensures per-request isolation in SSR
   const [store] = useState(() =>
@@ -37,6 +40,7 @@ export function CanvasStoreProvider({
       gridColumns: initialGridColumns || [],
       drawingNodes: initialDrawingNodes || [],
       conceptCards: initialConceptCards || [],
+      personaTemplates: initialPersonaTemplates || [],
     })
   );
 

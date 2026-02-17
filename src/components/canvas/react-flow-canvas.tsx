@@ -22,8 +22,10 @@ import { PostItNode, type PostItNodeData } from './post-it-node';
 import { GroupNode } from './group-node';
 import { DrawingImageNode } from './drawing-image-node';
 import { ConceptCardNode } from './concept-card-node';
+import { PersonaTemplateNode } from './persona-template-node';
 import { CanvasToolbar } from './canvas-toolbar';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
+import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import { ColorPicker } from './color-picker';
 import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
 import { usePreventScrollOnCanvas } from '@/hooks/use-prevent-scroll-on-canvas';
@@ -56,6 +58,7 @@ const nodeTypes = {
   group: GroupNode,
   drawingImage: DrawingImageNode,
   conceptCard: ConceptCardNode,
+  personaTemplate: PersonaTemplateNode,
 };
 
 // Define edge types OUTSIDE component for stable reference
@@ -84,6 +87,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const conceptCards = useCanvasStore((s) => s.conceptCards);
   const updateConceptCard = useCanvasStore((s) => s.updateConceptCard);
   const deleteConceptCard = useCanvasStore((s) => s.deleteConceptCard);
+  const personaTemplates = useCanvasStore((s) => s.personaTemplates);
+  const updatePersonaTemplate = useCanvasStore((s) => s.updatePersonaTemplate);
+  const deletePersonaTemplate = useCanvasStore((s) => s.deletePersonaTemplate);
   const batchUpdatePositions = useCanvasStore((s) => s.batchUpdatePositions);
   const gridColumns = useCanvasStore((s) => s.gridColumns);
   const setGridColumns = useCanvasStore((s) => s.setGridColumns);
@@ -423,6 +429,19 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     [conceptCards, updateConceptCard]
   );
 
+  // Handle persona template field changes
+  const handlePersonaFieldChange = useCallback(
+    (id: string, field: string, value: string) => {
+      if (field === 'age') {
+        const parsed = parseInt(value, 10);
+        updatePersonaTemplate(id, { age: isNaN(parsed) ? undefined : parsed });
+      } else {
+        updatePersonaTemplate(id, { [field]: value });
+      }
+    },
+    [updatePersonaTemplate]
+  );
+
   const handleConceptFeasibilityChange = useCallback(
     (id: string, dimension: string, score?: number, rationale?: string) => {
       const card = conceptCards.find((c) => c.id === id);
@@ -551,11 +570,27 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       style: { width: 400 },
     }));
 
-    return [...postItReactFlowNodes, ...drawingReactFlowNodes, ...conceptCardReactFlowNodes];
+    // Add persona template nodes
+    const personaTemplateReactFlowNodes: Node[] = personaTemplates.map((template) => ({
+      id: template.id,
+      type: 'personaTemplate' as const,
+      position: livePositions.current[template.id] || template.position,
+      zIndex: nodeZIndices[template.id] || 20,
+      draggable: true,
+      selectable: true,
+      selected: selectedNodeIds.includes(template.id),
+      data: {
+        ...template,
+        onFieldChange: handlePersonaFieldChange,
+      },
+      style: { width: 680 },
+    }));
+
+    return [...postItReactFlowNodes, ...drawingReactFlowNodes, ...conceptCardReactFlowNodes, ...personaTemplateReactFlowNodes];
   // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
   // read inside the memo body as a safety net; they must NOT be deps or every
   // mouse-move during drag would recompute and cause flickering.
-  }, [postIts, drawingNodes, conceptCards, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange]);
+  }, [postIts, drawingNodes, conceptCards, personaTemplates, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange, handlePersonaFieldChange]);
 
   // Create post-it at position and set as editing
   const createPostItAtPosition = useCallback(
@@ -905,10 +940,12 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     selectedNodes.filter(n => n.type === 'drawingImage').forEach(n => deleteDrawingNode(n.id));
     // Delete selected concept cards
     selectedNodes.filter(n => n.type === 'conceptCard').forEach(n => deleteConceptCard(n.id));
-    // Delete non-group, non-drawing, non-conceptCard postIt nodes
-    const postItIds = selectedNodes.filter(n => n.type !== 'group' && n.type !== 'drawingImage' && n.type !== 'conceptCard').map(n => n.id);
+    // Delete selected persona templates
+    selectedNodes.filter(n => n.type === 'personaTemplate').forEach(n => deletePersonaTemplate(n.id));
+    // Delete non-group, non-drawing, non-conceptCard, non-personaTemplate postIt nodes
+    const postItIds = selectedNodes.filter(n => n.type !== 'group' && n.type !== 'drawingImage' && n.type !== 'conceptCard' && n.type !== 'personaTemplate').map(n => n.id);
     if (postItIds.length > 0) batchDeletePostIts(postItIds);
-  }, [nodes, ungroupPostIts, batchDeletePostIts, deleteDrawingNode, deleteConceptCard]);
+  }, [nodes, ungroupPostIts, batchDeletePostIts, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate]);
 
   // Handle node drag start — bring dragged node to top of stack
   const handleNodeDragStart = useCallback(
@@ -967,11 +1004,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
             deleteDrawingNode(id);
           } else if (node?.type === 'conceptCard') {
             deleteConceptCard(id);
+          } else if (node?.type === 'personaTemplate') {
+            deletePersonaTemplate(id);
           }
         });
         const postItIds = removedIds.filter(id => {
           const node = nodes.find(n => n.id === id);
-          return node?.type !== 'group' && node?.type !== 'drawingImage' && node?.type !== 'conceptCard';
+          return node?.type !== 'group' && node?.type !== 'drawingImage' && node?.type !== 'conceptCard' && node?.type !== 'personaTemplate';
         });
         if (postItIds.length > 0) batchDeletePostIts(postItIds);
         return;
@@ -1006,6 +1045,14 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           if (conceptCard) {
             const snappedPosition = snapToGrid(change.position);
             updateConceptCard(change.id, { position: snappedPosition });
+            return;
+          }
+
+          // Check if this is a persona template node
+          const personaTemplate = personaTemplates.find((pt) => pt.id === change.id);
+          if (personaTemplate) {
+            const snappedPosition = snapToGrid(change.position);
+            updatePersonaTemplate(change.id, { position: snappedPosition });
             return;
           }
 
@@ -1141,7 +1188,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
-    [nodes, postIts, drawingNodes, conceptCards, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, deleteDrawingNode, deleteConceptCard, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts, bringToFront, removeFromCluster, setCluster, rearrangeCluster]
+    [nodes, postIts, drawingNodes, conceptCards, personaTemplates, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, updatePersonaTemplate, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts, bringToFront, removeFromCluster, setCluster, rearrangeCluster]
   );
 
   // Handle node drag (real-time cell highlighting)
@@ -1168,17 +1215,20 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         } else if (node.type === 'conceptCard') {
           // Delete concept card
           deleteConceptCard(node.id);
+        } else if (node.type === 'personaTemplate') {
+          // Delete persona template
+          deletePersonaTemplate(node.id);
         }
       });
-      // Delete non-group, non-drawing, non-conceptCard postIt nodes
+      // Delete non-group, non-drawing, non-conceptCard, non-personaTemplate postIt nodes
       const postItIds = deleted
-        .filter(n => n.type !== 'group' && n.type !== 'drawingImage' && n.type !== 'conceptCard')
+        .filter(n => n.type !== 'group' && n.type !== 'drawingImage' && n.type !== 'conceptCard' && n.type !== 'personaTemplate')
         .map(n => n.id);
       if (postItIds.length > 0) {
         batchDeletePostIts(postItIds);
       }
     },
-    [ungroupPostIts, batchDeletePostIts, deleteDrawingNode, deleteConceptCard]
+    [ungroupPostIts, batchDeletePostIts, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate]
   );
 
 
@@ -1413,13 +1463,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
   // Auto-fit view on mount if nodes exist
   useEffect(() => {
-    if (postIts.length > 0 && !hasFitView.current) {
+    if ((postIts.length > 0 || personaTemplates.length > 0) && !hasFitView.current) {
       setTimeout(() => {
         fitView({ padding: 0.2, duration: 300 });
         hasFitView.current = true;
       }, 100);
     }
-  }, [postIts.length, fitView]);
+  }, [postIts.length, personaTemplates.length, fitView]);
 
   // Animate viewport when items are added from chat panel
   useEffect(() => {
@@ -1461,7 +1511,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
         onInit={handleInit}
         snapToGrid={false}
-        fitView={postIts.length > 0}
+        fitView={postIts.length > 0 || personaTemplates.length > 0}
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.3}
         maxZoom={2}
@@ -1671,7 +1721,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       )}
 
       {/* Empty state hint */}
-      {postIts.length === 0 && (
+      {postIts.length === 0 && personaTemplates.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <p className="text-gray-400 dark:text-gray-600 text-lg">Double-click to add a post-it</p>
         </div>

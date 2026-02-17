@@ -3,7 +3,7 @@ import { stepArtifacts, stepSummaries, chatMessages, workshopSteps } from '@/db/
 import { eq, and, ne, asc } from 'drizzle-orm';
 import { getStepById } from '@/lib/workshop/step-metadata';
 import { loadCanvasState } from '@/actions/canvas-actions';
-import { assembleCanvasContextForStep } from '@/lib/workshop/context/canvas-context';
+import { assembleCanvasContextForStep, assembleEmpathyMapCanvasContext } from '@/lib/workshop/context/canvas-context';
 import type { StepContext } from './types';
 
 /**
@@ -98,11 +98,25 @@ export async function assembleStepContext(
 
   // Tier 4: Query canvas state for this step
   const canvasState = await loadCanvasState(workshopId, currentStepId);
-  const canvasContext = canvasState
-    ? assembleCanvasContextForStep(currentStepId, canvasState.postIts || [], canvasState.gridColumns)
+  let canvasContext = canvasState
+    ? assembleCanvasContextForStep(currentStepId, canvasState.postIts || [], canvasState.gridColumns, canvasState.personaTemplates)
     : (currentStepId === 'journey-mapping'
       ? assembleCanvasContextForStep(currentStepId, [])
       : '');
+
+  // For persona step, inject Step 4's empathy map canvas data so the AI
+  // can populate the empathy fields with real insights from the research
+  if (currentStepId === 'persona') {
+    const step4Canvas = await loadCanvasState(workshopId, 'sense-making');
+    if (step4Canvas?.postIts && step4Canvas.postIts.length > 0) {
+      const empathyContext = assembleEmpathyMapCanvasContext(step4Canvas.postIts);
+      if (empathyContext) {
+        canvasContext = canvasContext
+          ? `${canvasContext}\n\nStep 4 Empathy Map (use these insights to populate empathy fields):\n${empathyContext}`
+          : `Step 4 Empathy Map (use these insights to populate empathy fields):\n${empathyContext}`;
+      }
+    }
+  }
 
   return {
     persistentContext,

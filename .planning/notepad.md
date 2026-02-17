@@ -1,7 +1,7 @@
-We need to do something to streamline the user research and research sense-making steps dialog and whiteboard filling process. I want to bring over all the answers from the previous step (User research) and add them to the empathy map. I want the AI to synthesize these into correct areas and show themes that are appearing. 
+Now I need a feature to create an image of the person to make it feel real. Can we use the chacteristics of the persona Age, Name, Job, Pains, Gains, Quotes as a way to generate a perosona that will be good for the profile image.
 
-Give the user the opportunity to add anything else they wish to add to the board. 
 
-In the second step of the dialogue we will make pains and gains from the overall synthesis and analysis of the responses.  
 
-Once they are happy, we can move on to the next step (Persona Development)
+Characteristics to create a good caricature might be
+
+Super mum, busy, stressed

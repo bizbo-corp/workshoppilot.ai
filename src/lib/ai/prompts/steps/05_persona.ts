@@ -21,23 +21,37 @@ Avoid "Frankenstein Personas" — don't mash together conflicting traits from di
 A good persona includes name, age, role, location, bio, quote, goals, pains, gains, motivations, frustrations, day-in-the-life, and behaviors. But the magic isn't in the fields — it's in making each one feel specific and human.
 
 ADDING TO THE WHITEBOARD:
-When you draft persona traits, add each one directly to the whiteboard using [CANVAS_ITEM] markup. Items are auto-added — the user does NOT need to click anything.
+The canvas has a blank persona template card — a single large card with labeled sections for identity, empathy insights, narrative, and quote. ALL sections start empty. Your job is to fill in EVERYTHING at once when you draft the persona — identity, empathy insights from Step 4, narrative, and quote all appear together.
 
-Use the shorthand format: [CANVAS_ITEM: trait text here]
+When you draft a persona, output a [PERSONA_TEMPLATE] block containing a JSON object. The template card on the canvas will update automatically — the user does NOT need to click anything.
 
-Place traits into the appropriate persona category:
-- "goals" — what the persona wants to achieve
-- "pains" — current frustrations, barriers, broken processes
-- "gains" — desired outcomes and aspirations
-- "motivations" — what drives their behavior
-- "frustrations" — specific things that annoy or block them
-- "behaviors" — observable habits and patterns
+Format:
+[PERSONA_TEMPLATE]
+{
+  "archetype": "The Dreamer",
+  "archetypeRole": "Aspiring Entrepreneur",
+  "name": "Sarah Chen",
+  "age": 32,
+  "job": "Product Manager at a mid-size SaaS company",
+  "empathySays": "I just want something that works without a 30-page manual; Why can't this be simpler?",
+  "empathyThinks": "There must be a better way to do this; I wonder if anyone else struggles with this",
+  "empathyFeels": "Frustrated by complexity; Excited about possibilities but overwhelmed by options",
+  "empathyDoes": "Researches alternatives obsessively; Asks peers for recommendations",
+  "empathyPains": "Wasted time on tools that overpromise; Decision fatigue from too many options",
+  "empathyGains": "Confidence when a tool just works; Relief when complexity disappears",
+  "narrative": "Sarah has spent the last 8 years climbing the product ladder, but lately she's been sketching business ideas on napkins at lunch...",
+  "quote": "I know exactly what I'd build — I just don't know how to start."
+}
+[/PERSONA_TEMPLATE]
 
-You can specify the category: [CANVAS_ITEM: Uses 4 different apps to track tasks, Quad: behaviors]
-
-Add persona traits to the board as you present them during the draft — do not wait until the end. When walking through the persona, drop each goal, pain, gain, motivation, frustration, and behavior onto the board as you discuss it. This populates the whiteboard with the persona's key attributes in real time.
-
-Do NOT ask permission before adding items. Just add them. The user can adjust or delete during review.
+IMPORTANT RULES:
+- There is ONE persona template card on the canvas. Your output fills it in. You are updating a single card, not creating new ones.
+- Output the FULL [PERSONA_TEMPLATE] block each time — on initial draft AND on refinement. Include ALL fields, not just changed ones.
+- ALWAYS include the 6 empathy fields (empathySays, empathyThinks, empathyFeels, empathyDoes, empathyPains, empathyGains). Pull these directly from Step 4's empathy map research — use the actual insights, not generic summaries. Join multiple insights with semicolons.
+- When refining after user feedback, output the [PERSONA_TEMPLATE] block again with the updated values. The system always updates the existing card.
+- Output only ONE [PERSONA_TEMPLATE] block per message. Never output multiple blocks.
+- NEVER use [CANVAS_ITEM] markup in this step. The template card replaces individual post-its entirely. Any [CANVAS_ITEM] tags will be ignored.
+- Do NOT ask permission before adding the template. Just add it. The user can edit fields directly on the card.
 
 BOUNDARY: This step is about synthesizing research into a persona, not jumping to solutions. Don't suggest features or ideas yet — that's Steps 8-9. If ideation starts, redirect: "Let's finish developing the persona first. Solutions come after we map their journey in Step 6."
 

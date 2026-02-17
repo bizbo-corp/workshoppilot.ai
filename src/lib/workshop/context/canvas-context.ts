@@ -7,6 +7,7 @@
  */
 
 import type { PostIt, GridColumn } from '@/stores/canvas-store';
+import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 
 /** Ring display order and labels */
 const RING_ORDER = ['inner', 'middle', 'outer'] as const;
@@ -287,13 +288,84 @@ export function assembleEmpathyMapCanvasContext(postIts: PostIt[]): string {
 }
 
 /**
+ * Assemble persona template canvas context for Step 5 (Persona)
+ * Formats the persona template card data as structured text the AI can reference
+ */
+export function assemblePersonaCanvasContext(personaTemplates: PersonaTemplateData[]): string {
+  if (personaTemplates.length === 0) return '';
+
+  const sections: string[] = [];
+
+  for (const template of personaTemplates) {
+    const lines: string[] = ['**Persona Template Card** (single card on canvas):'];
+
+    // Identity section
+    if (template.archetype || template.archetypeRole) {
+      lines.push(`Archetype: ${template.archetype || '(empty)'} — ${template.archetypeRole || '(empty)'}`);
+    }
+    if (template.name || template.age || template.job) {
+      const parts = [
+        template.name || '(no name)',
+        template.age ? `age ${template.age}` : null,
+        template.job || null,
+      ].filter(Boolean);
+      lines.push(`Identity: ${parts.join(', ')}`);
+    }
+
+    // Empathy map insights
+    const empathyFields = [
+      { key: 'empathySays', label: 'Says' },
+      { key: 'empathyThinks', label: 'Thinks' },
+      { key: 'empathyFeels', label: 'Feels' },
+      { key: 'empathyDoes', label: 'Does' },
+      { key: 'empathyPains', label: 'Pains' },
+      { key: 'empathyGains', label: 'Gains' },
+    ];
+    const hasEmpathy = empathyFields.some(f => template[f.key as keyof PersonaTemplateData]);
+    if (hasEmpathy) {
+      lines.push('Empathy Map Insights:');
+      for (const { key, label } of empathyFields) {
+        const value = template[key as keyof PersonaTemplateData] as string | undefined;
+        if (value) {
+          lines.push(`  ${label}: ${value}`);
+        }
+      }
+    } else {
+      lines.push('Empathy Map Insights: (all empty — you should populate these from Step 4 research)');
+    }
+
+    // AI-filled sections
+    if (template.narrative) {
+      lines.push(`Narrative: ${template.narrative}`);
+    } else {
+      lines.push('Narrative: (not yet drafted — you should draft this)');
+    }
+
+    if (template.quote) {
+      lines.push(`Quote: "${template.quote}"`);
+    } else {
+      lines.push('Quote: (not yet drafted — you should draft this)');
+    }
+
+    sections.push(lines.join('\n'));
+  }
+
+  return sections.join('\n\n');
+}
+
+/**
  * Assemble canvas context for a specific step
  * Routes to step-specific assembly function based on stepId
  */
-export function assembleCanvasContextForStep(stepId: string, postIts: PostIt[], gridColumns?: GridColumn[]): string {
+export function assembleCanvasContextForStep(stepId: string, postIts: PostIt[], gridColumns?: GridColumn[], personaTemplates?: PersonaTemplateData[]): string {
   // For journey-mapping, always return context (even if no items) so AI sees column structure
   if (stepId === 'journey-mapping') {
     return assembleJourneyMapCanvasContext(postIts, gridColumns);
+  }
+
+  // Persona step uses template cards, not post-its — check before filtering
+  if (stepId === 'persona' && personaTemplates && personaTemplates.length > 0) {
+    return assemblePersonaCanvasContext(personaTemplates);
   }
 
   // Filter out group nodes and preview nodes first

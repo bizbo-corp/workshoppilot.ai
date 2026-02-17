@@ -10,6 +10,7 @@ import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
 import { loadCanvasState } from "@/actions/canvas-actions";
 import type { PostIt, GridColumn, DrawingNode } from "@/stores/canvas-store";
 import type { ConceptCardData } from "@/lib/canvas/concept-card-types";
+import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
 
 interface StepPageProps {
@@ -169,6 +170,7 @@ export default async function StepPage({ params }: StepPageProps) {
   const initialGridColumns: GridColumn[] = canvasData?.gridColumns || [];
   const initialDrawingNodes: DrawingNode[] = canvasData?.drawingNodes || [];
   const initialConceptCards: ConceptCardData[] = canvasData?.conceptCards || [];
+  let initialPersonaTemplates: PersonaTemplateData[] = canvasData?.personaTemplates || [];
 
   // Lazy migration: if artifact exists but no canvas state, derive initial positions
   if (initialCanvasPostIts.length === 0 && initialArtifact && step) {
@@ -189,6 +191,15 @@ export default async function StepPage({ params }: StepPageProps) {
         type: postIt.type || 'postIt',
       }));
     }
+  }
+
+  // Lazy migration: Create blank persona template card (AI fills all fields at once)
+  if (step.id === 'persona' && initialCanvasPostIts.length === 0 && initialPersonaTemplates.length === 0) {
+    const template: PersonaTemplateData = {
+      id: crypto.randomUUID(),
+      position: { x: 0, y: 0 },
+    };
+    initialPersonaTemplates = [template];
   }
 
   // Load Step 8 data for Step 9 (concept)
@@ -228,6 +239,7 @@ export default async function StepPage({ params }: StepPageProps) {
         initialGridColumns={initialGridColumns}
         initialDrawingNodes={initialDrawingNodes}
         initialConceptCards={initialConceptCards}
+        initialPersonaTemplates={initialPersonaTemplates}
       >
         <StepContainer
           stepOrder={stepNumber}

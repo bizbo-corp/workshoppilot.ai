@@ -5,6 +5,7 @@ import type { GridConfig } from '@/lib/canvas/grid-layout';
 import { getCellBounds } from '@/lib/canvas/grid-layout';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
+import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 
 export type PostItColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange';
 
@@ -67,6 +68,7 @@ export type CanvasState = {
   mindMapNodes: MindMapNodeState[];
   mindMapEdges: MindMapEdgeState[];
   conceptCards: ConceptCardData[];
+  personaTemplates: PersonaTemplateData[];
   isDirty: boolean;
   gridColumns: GridColumn[]; // Dynamic columns, initialized from step config
   highlightedCell: { row: number; col: number } | null;
@@ -111,12 +113,16 @@ export type CanvasActions = {
   updateConceptCard: (id: string, updates: Partial<ConceptCardData>) => void;
   deleteConceptCard: (id: string) => void;
   setConceptCards: (cards: ConceptCardData[]) => void;
+  addPersonaTemplate: (template: Omit<PersonaTemplateData, 'id'>) => void;
+  updatePersonaTemplate: (id: string, updates: Partial<PersonaTemplateData>) => void;
+  deletePersonaTemplate: (id: string) => void;
+  setPersonaTemplates: (templates: PersonaTemplateData[]) => void;
   markClean: () => void;
 };
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[] }) => {
+export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[] }) => {
   const DEFAULT_STATE: CanvasState = {
     postIts: initState?.postIts || [],
     drawingNodes: initState?.drawingNodes || [],
@@ -124,6 +130,7 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
     mindMapNodes: initState?.mindMapNodes || [],
     mindMapEdges: initState?.mindMapEdges || [],
     conceptCards: initState?.conceptCards || [],
+    personaTemplates: initState?.personaTemplates || [],
     gridColumns: initState?.gridColumns || [],
     isDirty: false,
     highlightedCell: null,
@@ -588,6 +595,38 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
             // NOTE: Does NOT set isDirty — this is for loading from DB
           })),
 
+        addPersonaTemplate: (template) =>
+          set((state) => ({
+            personaTemplates: [
+              ...state.personaTemplates,
+              {
+                ...template,
+                id: crypto.randomUUID(),
+              },
+            ],
+            isDirty: true,
+          })),
+
+        updatePersonaTemplate: (id, updates) =>
+          set((state) => ({
+            personaTemplates: state.personaTemplates.map((t) =>
+              t.id === id ? { ...t, ...updates } : t
+            ),
+            isDirty: true,
+          })),
+
+        deletePersonaTemplate: (id) =>
+          set((state) => ({
+            personaTemplates: state.personaTemplates.filter((t) => t.id !== id),
+            isDirty: true,
+          })),
+
+        setPersonaTemplates: (templates) =>
+          set(() => ({
+            personaTemplates: templates,
+            // NOTE: Does NOT set isDirty — this is for loading from DB
+          })),
+
         markClean: () =>
           set(() => ({
             isDirty: false,
@@ -602,6 +641,7 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
           mindMapNodes: state.mindMapNodes,
           mindMapEdges: state.mindMapEdges,
           conceptCards: state.conceptCards,
+          personaTemplates: state.personaTemplates,
         }),
         limit: 50,
         equality: (pastState, currentState) =>

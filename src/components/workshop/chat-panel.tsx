@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { computeCanvasPosition, computeThemeSortPositions, computeClusterChildPositions, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, ZONE_COLORS } from '@/lib/canvas/canvas-position';
+import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { saveCanvasState } from '@/actions/canvas-actions';
 
@@ -256,6 +257,35 @@ function parseClusterSuggestions(content: string): { cleanContent: string; clust
   return { cleanContent, clusters };
 }
 
+/**
+ * Parse [PERSONA_TEMPLATE]{...JSON...}[/PERSONA_TEMPLATE] blocks from AI content.
+ * Returns clean content (markup removed) and extracted persona template data.
+ */
+function parsePersonaTemplates(content: string): { cleanContent: string; templates: Partial<PersonaTemplateData>[] } {
+  const templates: Partial<PersonaTemplateData>[] = [];
+  const regex = /\[PERSONA_TEMPLATE\]([\s\S]*?)\[\/PERSONA_TEMPLATE\]/g;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1].trim());
+      templates.push(parsed);
+    } catch {
+      // Skip malformed JSON
+    }
+  }
+
+  let cleanContent = content
+    .replace(/\s*\[PERSONA_TEMPLATE\][\s\S]*?\[\/PERSONA_TEMPLATE\]\s*/g, ' ')
+    .trim();
+
+  // Strip incomplete blocks mid-stream
+  if (cleanContent.includes('[PERSONA_TEMPLATE]')) {
+    cleanContent = cleanContent.replace(/\[PERSONA_TEMPLATE\][\s\S]*$/, '').trim();
+  }
+
+  return { cleanContent, templates };
+}
+
 interface ChatPanelProps {
   stepOrder: number;
   sessionId: string;
@@ -279,6 +309,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
   const crazy8sSlots = useCanvasStore((state) => state.crazy8sSlots);
   const conceptCards = useCanvasStore((state) => state.conceptCards);
+  const personaTemplates = useCanvasStore((state) => state.personaTemplates);
+  const addPersonaTemplate = useCanvasStore((state) => state.addPersonaTemplate);
+  const updatePersonaTemplate = useCanvasStore((state) => state.updatePersonaTemplate);
   const isDirty = useCanvasStore((state) => state.isDirty);
   const markClean = useCanvasStore((state) => state.markClean);
   const setHighlightedCell = useCanvasStore((state) => state.setHighlightedCell);
@@ -317,9 +350,10 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       ...(mindMapEdges.length > 0 ? { mindMapEdges } : {}),
       ...(crazy8sSlots.length > 0 ? { crazy8sSlots } : {}),
       ...(conceptCards.length > 0 ? { conceptCards } : {}),
+      ...(personaTemplates.length > 0 ? { personaTemplates } : {}),
     });
     markClean();
-  }, [isCanvasStep, isDirty, workshopId, step.id, postIts, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, markClean]);
+  }, [isCanvasStep, isDirty, workshopId, step.id, postIts, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, personaTemplates, markClean]);
 
   const transport = React.useMemo(
     () =>
@@ -417,7 +451,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   // markers, as that would overwrite user-arranged positions with recalculated layouts.
   const hasInitializedAddedIds = React.useRef(false);
   React.useEffect(() => {
-    if (hasInitializedAddedIds.current || !isCanvasStep || postIts.length === 0) return;
+    if (hasInitializedAddedIds.current || !isCanvasStep || (postIts.length === 0 && personaTemplates.length === 0)) return;
     hasInitializedAddedIds.current = true;
 
     const ids = new Set<string>();
@@ -429,15 +463,16 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       const { clusters } = parseClusterSuggestions(content);
       const { shouldSort } = parseThemeSortTrigger(content);
       const { deleteTexts } = parseCanvasDeletes(content);
+      const { templates: personaTemplateParsed } = parsePersonaTemplates(content);
       // Mark any message that contains canvas-modifying markup as already processed
-      if (canvasItems.length > 0 || clusters.length > 0 || shouldSort || deleteTexts.length > 0) {
+      if (canvasItems.length > 0 || clusters.length > 0 || shouldSort || deleteTexts.length > 0 || personaTemplateParsed.length > 0) {
         ids.add(msg.id);
       }
     }
     if (ids.size > 0) {
       setAddedMessageIds(ids);
     }
-  }, [messages, isCanvasStep, postIts.length]);
+  }, [messages, isCanvasStep, postIts.length, personaTemplates.length]);
 
   // Handle adding AI-suggested canvas items to the whiteboard
   const handleAddToWhiteboard = React.useCallback((messageId: string, canvasItems: CanvasItemParsed[]) => {
@@ -508,7 +543,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     // Without this guard, on the same render cycle where postIts load from DB,
     // this effect could fire before addedMessageIds is populated, causing
     // historical messages to be re-processed and overwriting saved positions.
-    if (postIts.length > 0 && !hasInitializedAddedIds.current) return;
+    if ((postIts.length > 0 || personaTemplates.length > 0) && !hasInitializedAddedIds.current) return;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.role !== 'assistant') return;
     if (addedMessageIds.has(lastMsg.id)) return;
@@ -519,9 +554,33 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     const { shouldSort } = parseThemeSortTrigger(content);
     const { deleteTexts } = parseCanvasDeletes(content);
     const { clusters } = parseClusterSuggestions(content);
+    const { templates: personaTemplateParsed } = parsePersonaTemplates(content);
 
-    if (canvasItems.length > 0) {
+    // Persona step uses [PERSONA_TEMPLATE] blocks only — skip post-it creation
+    if (canvasItems.length > 0 && step.id !== 'persona') {
       handleAddToWhiteboard(lastMsg.id, canvasItems);
+    }
+
+    // Process persona template blocks — always update the existing template
+    if (personaTemplateParsed.length > 0) {
+      const latestTemplates = storeApi.getState().personaTemplates;
+      // Merge all parsed blocks into a single update (AI may split across blocks)
+      const merged = personaTemplateParsed.reduce<Partial<PersonaTemplateData>>(
+        (acc, t) => ({ ...acc, ...t }),
+        {}
+      );
+
+      if (latestTemplates.length > 0) {
+        // Always update the first template — it was pre-populated from Step 4
+        updatePersonaTemplate(latestTemplates[0].id, merged);
+      } else {
+        // Fallback: create one if none exists (shouldn't happen with lazy migration)
+        addPersonaTemplate({
+          position: { x: 0, y: 0 },
+          ...merged,
+        });
+      }
+      setPendingFitView(true);
     }
 
     // Process AI-requested deletions
@@ -592,7 +651,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
 
     // Mark as processed if we did any work (avoid re-processing)
-    if (canvasItems.length === 0 && (deleteTexts.length > 0 || clusters.length > 0)) {
+    if (canvasItems.length === 0 && (deleteTexts.length > 0 || clusters.length > 0 || personaTemplateParsed.length > 0)) {
       setAddedMessageIds(prev => new Set(prev).add(lastMsg.id));
     }
 
@@ -607,7 +666,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         }
       }, 300); // Short delay to ensure new items are in store
     }
-  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, batchUpdatePositions, storeApi, step.id, setPendingFitView, deletePostIt, setCluster]);
+  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, batchUpdatePositions, storeApi, step.id, setPendingFitView, deletePostIt, setCluster, addPersonaTemplate, updatePersonaTemplate]);
 
   // Clear stream error on successful completion
   React.useEffect(() => {
@@ -775,7 +834,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               const { cleanContent: noThemeSort } = parseThemeSortTrigger(noSuggestions);
               const { cleanContent: noDeletes } = parseCanvasDeletes(noThemeSort);
               const { cleanContent: noClusters } = parseClusterSuggestions(noDeletes);
-              const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noClusters);
+              const { cleanContent: noPersonaTemplates } = parsePersonaTemplates(noClusters);
+              const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noPersonaTemplates);
               return (
                 <div key={`${message.id}-${index}`} className="flex items-start">
                   <div className="flex-1">
