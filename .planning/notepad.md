@@ -19,27 +19,62 @@ After giving the user some time to add their post-its, show a button saying.
 
 Give some proactive feedback
 
-
-
-
-
 The greeting is very verbose. Can you make it more consice and add the context cleverly. Use emojis
 
-Old
-
-That is a fascinating challenge. Now that we have the core of Mummy Scheduler defined, we need to map out the human landscape around it. I'm thinking about who actually lives in this problem space — the people who are affected, the ones who make the big decisions, and even those behind the scenes who might block progress without us realizing it.
-
-I've already dropped a post-it for the most obvious group onto our map to get us started: . I'd love for you to just brain dump everyone else who comes to mind. Who are the users, the influencers, or the silent stakeholders involved in solving the challenge: "How might we give busy mums more time back by streamlining the process of managing all their kids activities?" Just throw them all out there and I'll get them straight onto the whiteboard for you.
 
 
 
-New
-
-What a great challenge we're solving for busy mums! 👩⏱️ Now that we have the core of Mummy Scheduler defined, let's brainstorm all the people, organisations and decision makers that impact or could help/hinder [promblem to be solved e.g streamlining the process of managing all their kids activities.]
-
-Remember you can add sub categories for items such as Mums could also have "First time mum" "Kindy mum" "Nanny"
-
-I've already dropped a post-it for the most obvious group onto our map to get us started: Now, Get to work! 💪 
 
 
 
+---
+
+
+
+Now the hull is at z-30 (above nodes at z-20). But there's a problem: the hull rect
+
+   covers the entire bounding box including where nodes are, so clicking a node  
+
+  inside the hull would hit the hull SVG rect first. I need to make the SVG layer
+
+  pass through clicks to nodes except on the hull rects themselves.
+
+  The issue is that the SVG is a separate DOM element from ReactFlow's node layer.
+
+  With z-30, the SVG sits above ReactFlow's entire node container. Clicks on the SVG 
+
+  will never reach nodes below it — even with pointer-events: none on the SVG      
+
+  element, the hull rects with pointer-events: auto cover the node areas too.
+
+  The solution: render the hull as a frame (border only) instead of a filled rect
+
+  that covers everything. I'll use an SVG <path> or just use pointer-events: stroke
+
+  so only the border area is clickable, not the interior. But stroke pointer-events
+
+  means only the border line — too narrow.
+
+  Better approach: render the hull as an HTML div overlay outside ReactFlow
+
+  (alongside the selection toolbar), with a higher z-index. The div acts as a grab
+
+  handle on the border/padding area only. The interior is transparent to clicks via a
+
+   CSS technique.
+
+  Actually, the simplest approach: keep the SVG at z-30 but only enable pointer
+
+  events on the hull border padding area, not the center. I can do this with a
+
+  clip-path or by using pointer-events: visiblePainted with a transparent fill and
+
+  only filling the padding region via a path.
+
+  Let me use a cleaner approach: render the hull overlay as positioned HTML divs
+
+  outside of <ReactFlow> (in the same container), use border for the visual, and make
+
+   the interior pointer-events: none while the border area is pointer-events: auto.
+
+  This way nodes inside the hull remain fully clickable.

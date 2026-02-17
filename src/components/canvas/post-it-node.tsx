@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useRef, useEffect } from 'react';
 import { Handle, Position, type NodeProps, type Node, NodeResizer } from '@xyflow/react';
+import { Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PostItColor } from '@/stores/canvas-store';
 
@@ -19,6 +20,8 @@ export type PostItNodeData = {
   isEditing: boolean;
   isPreview?: boolean;
   previewReason?: string;
+  clusterLabel?: string;
+  clusterChildCount?: number;
   onConfirm?: (id: string) => void;
   onReject?: (id: string) => void;
   onTextChange?: (id: string, text: string) => void;
@@ -155,7 +158,15 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
           placeholder="Type here..."
         />
       ) : (
-        <p className="break-words whitespace-pre-wrap overflow-hidden flex-1">{data.text || ''}</p>
+        <>
+          <p className="break-words whitespace-pre-wrap overflow-hidden flex-1">{data.text || ''}</p>
+          {data.clusterLabel && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-500 dark:text-gray-600 mt-1">
+              <Layers className="w-2.5 h-2.5" />
+              {data.clusterLabel} ({data.clusterChildCount ?? 0})
+            </span>
+          )}
+        </>
       )}
 
       <Handle

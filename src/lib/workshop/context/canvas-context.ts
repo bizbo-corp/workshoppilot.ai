@@ -1,7 +1,7 @@
 /**
  * Canvas Context Assembly Module
  * Assembles AI-readable context strings from canvas post-its, with step-specific grouping
- * Step 2 (Stakeholder Mapping): Groups by Power-Interest quadrant
+ * Step 2 (Stakeholder Mapping): Groups by ring + cluster hierarchy
  * Step 4 (Sense Making): Groups by Empathy Map quadrant
  * Other steps: Flat list of post-it text
  */
@@ -10,55 +10,103 @@ import type { PostIt, GridColumn } from '@/stores/canvas-store';
 import type { Quadrant } from '@/lib/canvas/quadrant-detection';
 import { getQuadrantLabel } from '@/lib/canvas/quadrant-detection';
 
+/** Ring display order and labels */
+const RING_ORDER = ['inner', 'middle', 'outer'] as const;
+const RING_LABELS: Record<string, string> = {
+  inner: 'Inner Ring',
+  middle: 'Middle Ring',
+  outer: 'Outer Ring',
+};
+
 /**
  * Assemble stakeholder canvas context for Step 2 (Stakeholder Mapping)
- * Groups post-its by Power-Interest quadrant
+ * Groups post-its by ring (cellAssignment.row) with cluster hierarchy
  */
 export function assembleStakeholderCanvasContext(postIts: PostIt[]): string {
-  // Filter out group nodes
-  const items = postIts.filter(p => !p.type || p.type === 'postIt');
+  // Filter out group nodes and preview nodes
+  const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
 
   if (items.length === 0) return '';
 
-  // Define quadrant order
-  const quadrantOrder: Array<Quadrant> = [
-    'high-power-high-interest',
-    'high-power-low-interest',
-    'low-power-high-interest',
-    'low-power-low-interest',
-  ];
+  // Build cluster lookup: clusterName → children
+  const clusterChildren = new Map<string, PostIt[]>();
+  const clusterParentTexts = new Set<string>();
 
-  // Group by quadrant
-  const grouped = new Map<Quadrant | 'unassigned', PostIt[]>();
-  items.forEach(item => {
-    const key = item.quadrant || 'unassigned';
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key)!.push(item);
-  });
+  for (const item of items) {
+    if (item.cluster) {
+      const key = item.cluster.toLowerCase();
+      if (!clusterChildren.has(key)) clusterChildren.set(key, []);
+      clusterChildren.get(key)!.push(item);
+      clusterParentTexts.add(key);
+    }
+  }
+
+  // Group items by ring
+  const ringGroups = new Map<string, PostIt[]>();
+  for (const item of items) {
+    const ring = item.cellAssignment?.row || 'unassigned';
+    if (!ringGroups.has(ring)) ringGroups.set(ring, []);
+    ringGroups.get(ring)!.push(item);
+  }
 
   // Build sections
   const sections: string[] = [];
 
-  // Add sections in order
-  quadrantOrder.forEach(quadrant => {
-    const quadrantItems = grouped.get(quadrant);
-    if (quadrantItems && quadrantItems.length > 0) {
-      const label = getQuadrantLabel(quadrant);
-      const count = quadrantItems.length;
-      const itemList = quadrantItems
-        .map(p => `- ${p.text}`)
-        .join('\n');
-      sections.push(`**${label}** (${count} stakeholder${count > 1 ? 's' : ''}):\n${itemList}`);
-    }
-  });
+  const renderRingSection = (ringId: string, ringItems: PostIt[]) => {
+    const label = RING_LABELS[ringId] || ringId;
+    const lines: string[] = [];
 
-  // Add unassigned section if any
-  const unassigned = grouped.get('unassigned');
+    // Separate into: cluster parents, cluster children, standalone
+    const childIds = new Set<string>();
+    for (const children of clusterChildren.values()) {
+      for (const child of children) childIds.add(child.id);
+    }
+
+    const parents: PostIt[] = [];
+    const standalone: PostIt[] = [];
+
+    for (const item of ringItems) {
+      if (childIds.has(item.id)) continue; // rendered under parent
+      if (clusterParentTexts.has(item.text.toLowerCase())) {
+        parents.push(item);
+      } else {
+        standalone.push(item);
+      }
+    }
+
+    // Render parents with indented children
+    for (const parent of parents) {
+      const children = clusterChildren.get(parent.text.toLowerCase()) || [];
+      lines.push(`- ${parent.text}`);
+      for (const child of children) {
+        lines.push(`  - ${child.text} [cluster: ${parent.text}]`);
+      }
+    }
+
+    // Render standalone items
+    for (const item of standalone) {
+      lines.push(`- ${item.text}`);
+    }
+
+    if (lines.length > 0) {
+      const count = ringItems.length;
+      sections.push(`**${label}** (${count} stakeholder${count > 1 ? 's' : ''}):\n${lines.join('\n')}`);
+    }
+  };
+
+  // Render rings in order
+  for (const ringId of RING_ORDER) {
+    const ringItems = ringGroups.get(ringId);
+    if (ringItems && ringItems.length > 0) {
+      renderRingSection(ringId, ringItems);
+    }
+  }
+
+  // Render unassigned
+  const unassigned = ringGroups.get('unassigned');
   if (unassigned && unassigned.length > 0) {
-    const itemList = unassigned
-      .map(p => `- ${p.text}`)
-      .join('\n');
-    sections.push(`**Unassigned**:\n${itemList}`);
+    const lines = unassigned.map(p => `- ${p.text}`);
+    sections.push(`**Unassigned**:\n${lines.join('\n')}`);
   }
 
   return sections.join('\n\n');

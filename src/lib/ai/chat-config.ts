@@ -223,6 +223,16 @@ Example — user says "customers":
 
 THEME SORT: After your final blindspot check (when user says "I'm done"), output [THEME_SORT] on its own line. This triggers the board to reorganize into neat clusters. Only use this ONCE, after the final check.
 
+CLEANING UP DUPLICATES:
+If you notice duplicate stakeholders on the board, remove them using:
+[CANVAS_DELETE: exact text of duplicate]
+This deletes the matching item from the canvas. Use this proactively when you spot duplicates, or when the user asks to clean up.
+
+SUGGESTING CLUSTERS:
+When the user asks you to organize or group their stakeholders, or during the blindspot check when you see natural groupings, suggest cluster assignments using:
+[CLUSTER: Parent Label | child1 text | child2 text | child3 text]
+The first value is the cluster parent name. All subsequent pipe-separated values are existing items on the board that should be grouped under that parent. Only reference items that already exist on the canvas.
+
 Keep item text brief (max 80 characters — fits on a post-it note).`;
     } else if (stepId === "sense-making") {
       prompt += `

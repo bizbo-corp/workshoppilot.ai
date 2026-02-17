@@ -9,6 +9,7 @@ import {
   BackgroundVariant,
   SelectionMode,
   type Node,
+  type Edge,
   type NodeChange,
   type ReactFlowInstance,
 } from '@xyflow/react';
@@ -28,7 +29,7 @@ import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
 import { usePreventScrollOnCanvas } from '@/hooks/use-prevent-scroll-on-canvas';
 import type { PostItColor, GridColumn, DrawingNode } from '@/stores/canvas-store';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
-import { computeThemeSortPositions } from '@/lib/canvas/canvas-position';
+import { computeThemeSortPositions, computeClusterChildPositions } from '@/lib/canvas/canvas-position';
 import { QuadrantOverlay } from './quadrant-overlay';
 import { detectQuadrant } from '@/lib/canvas/quadrant-detection';
 import { GridOverlay } from './grid-overlay';
@@ -43,6 +44,11 @@ import { EzyDrawLoader } from '@/components/ezydraw/ezydraw-loader';
 import { simplifyDrawingElements } from '@/lib/drawing/simplify';
 import { saveDrawing, updateDrawing, loadDrawing } from '@/actions/drawing-actions';
 import type { DrawingElement } from '@/lib/drawing/types';
+import { ClusterEdge } from './cluster-edge';
+import { ClusterHullsOverlay } from './cluster-hulls-overlay';
+import { SelectionToolbar } from './selection-toolbar';
+import { ClusterDialog } from '@/components/dialogs/cluster-dialog';
+import { DedupDialog } from '@/components/dialogs/dedup-dialog';
 
 // Define node types OUTSIDE component for stable reference
 const nodeTypes = {
@@ -50,6 +56,11 @@ const nodeTypes = {
   group: GroupNode,
   drawingImage: DrawingImageNode,
   conceptCard: ConceptCardNode,
+};
+
+// Define edge types OUTSIDE component for stable reference
+const edgeTypes = {
+  cluster: ClusterEdge,
 };
 
 export interface ReactFlowCanvasProps {
@@ -84,6 +95,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const pendingFitView = useCanvasStore((s) => s.pendingFitView);
   const setPendingFitView = useCanvasStore((s) => s.setPendingFitView);
   const setSelectedPostItIds = useCanvasStore((s) => s.setSelectedPostItIds);
+  const setCluster = useCanvasStore((s) => s.setCluster);
+  const clearCluster = useCanvasStore((s) => s.clearCluster);
 
   // Store API for temporal undo/redo access
   const storeApi = useCanvasStoreApi();
@@ -170,13 +183,15 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
-  // Context menu state for color picker
+  // Context menu state for color picker / uncluster
   const [contextMenu, setContextMenu] = useState<{
     nodeId: string;
     x: number;
     y: number;
     currentColor: PostItColor;
     nodeType: string;
+    isClusterParent?: boolean;
+    postItText?: string;
   } | null>(null);
 
   // Track selected nodes for controlled selection state
@@ -197,6 +212,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     drawingId?: string;           // undefined = new drawing, string = re-editing
     initialElements?: DrawingElement[];
   } | null>(null);
+
+  // Cluster dialog state
+  const [clusterDialogOpen, setClusterDialogOpen] = useState(false);
+
+  // Dedup dialog state
+  const [dedupDialogOpen, setDedupDialogOpen] = useState(false);
+  const [dedupGroups, setDedupGroups] = useState<Array<{ text: string; count: number; ids: string[] }>>([]);
 
   // Track whether initial gridColumns were provided (from saved state)
   const hadInitialGridColumns = useRef(gridColumns.length > 0);
@@ -223,6 +245,55 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       columns: gridColumns,
     };
   }, [stepConfig, gridColumns]);
+
+  // Derive cluster edges from post-its
+  const clusterEdges = useMemo<Edge[]>(() => {
+    if (!stepConfig.hasRings) return [];
+    const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+    // Build text-to-id map for parent matching
+    const textToId = new Map<string, string>();
+    for (const item of items) {
+      textToId.set(item.text.toLowerCase(), item.id);
+    }
+    const edges: Edge[] = [];
+    for (const item of items) {
+      if (!item.cluster) continue;
+      const parentId = textToId.get(item.cluster.toLowerCase());
+      if (!parentId || parentId === item.id) continue;
+      edges.push({
+        id: `cluster-${parentId}-${item.id}`,
+        source: parentId,
+        target: item.id,
+        type: 'cluster',
+      });
+    }
+    return edges;
+  }, [postIts, stepConfig.hasRings]);
+
+  // Compute existing cluster names and parent metadata for node data
+  const { existingClusters, clusterParentMap } = useMemo(() => {
+    const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+    const clusterSet = new Map<string, { displayName: string; count: number }>();
+    for (const item of items) {
+      if (!item.cluster) continue;
+      const key = item.cluster.toLowerCase();
+      const existing = clusterSet.get(key);
+      if (existing) {
+        existing.count++;
+      } else {
+        clusterSet.set(key, { displayName: item.cluster, count: 1 });
+      }
+    }
+    // Build parentMap: postIt text lowercase → { label, count } for items that are cluster parents
+    const parentMap = new Map<string, { label: string; count: number }>();
+    for (const [key, { displayName, count }] of clusterSet) {
+      parentMap.set(key, { label: displayName, count });
+    }
+    return {
+      existingClusters: Array.from(clusterSet.values()).map(v => v.displayName),
+      clusterParentMap: parentMap,
+    };
+  }, [postIts]);
 
   // Snap position to grid
   const snapToGrid = useCallback(
@@ -398,6 +469,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       const livePos = livePositions.current[postIt.id];
       const liveDims = liveDimensions.current[postIt.id];
 
+      // Cluster parent badge data
+      const clusterInfo = clusterParentMap.get(postIt.text.toLowerCase());
+
       return {
         id: postIt.id,
         type: postIt.type || 'postIt',
@@ -416,6 +490,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           onEditComplete: handleEditComplete,
           onResize: handleResize,
           onResizeEnd: handleResizeEnd,
+          ...(clusterInfo && !postIt.cluster ? {
+            clusterLabel: clusterInfo.label,
+            clusterChildCount: clusterInfo.count,
+          } : {}),
           ...(isPreview ? {
             isPreview: true,
             previewReason: postIt.previewReason,
@@ -475,7 +553,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
   // read inside the memo body as a safety net; they must NOT be deps or every
   // mouse-move during drag would recompute and cause flickering.
-  }, [postIts, drawingNodes, conceptCards, editingNodeId, selectedNodeIds, nodeZIndices, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange]);
+  }, [postIts, drawingNodes, conceptCards, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange]);
 
   // Create post-it at position and set as editing
   const createPostItAtPosition = useCallback(
@@ -686,6 +764,111 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       setTimeout(() => fitView({ padding: 0.2, duration: 400 }), 150);
     }
   }, [postIts, stepId, batchUpdatePositions, fitView]);
+
+  // Handle opening cluster dialog from selection toolbar
+  const handleOpenClusterDialog = useCallback(() => {
+    setClusterDialogOpen(true);
+  }, []);
+
+  // Handle clicking a cluster hull — select all members so they can be dragged together
+  const handleSelectCluster = useCallback((memberIds: string[]) => {
+    setSelectedNodeIds(memberIds);
+    // Bring all members to front
+    memberIds.forEach(id => bringToFront(id));
+  }, [bringToFront]);
+
+  // Rearrange a cluster's children in 3-wide rows centered below parent
+  const rearrangeCluster = useCallback((clusterName: string, parentPostIt: import('@/stores/canvas-store').PostIt | undefined, childPostIts: import('@/stores/canvas-store').PostIt[]) => {
+    if (!parentPostIt || childPostIts.length === 0) return;
+
+    const childPositions = computeClusterChildPositions(
+      parentPostIt.position,
+      parentPostIt.width,
+      parentPostIt.height,
+      childPostIts.length,
+      childPostIts[0]?.width || 120,
+      childPostIts[0]?.height || 120,
+    );
+
+    const updates = childPostIts.map((child, j) => ({
+      id: child.id,
+      position: childPositions[j],
+      // Inherit parent's ring assignment if available
+      ...(parentPostIt.cellAssignment ? { cellAssignment: parentPostIt.cellAssignment } : {}),
+    }));
+
+    if (updates.length > 0) {
+      batchUpdatePositions(updates);
+      setPendingFitView(true);
+    }
+  }, [batchUpdatePositions, setPendingFitView]);
+
+  // Handle cluster dialog confirm
+  const handleClusterConfirm = useCallback((clusterName: string) => {
+    // Find the selected post-it IDs (only non-group postIts)
+    const selectedPostIts = postIts.filter(p =>
+      selectedNodeIds.includes(p.id) && (!p.type || p.type === 'postIt')
+    );
+    if (selectedPostIts.length === 0) return;
+
+    const lowerName = clusterName.toLowerCase();
+
+    // Identify parent: either a selected item whose text matches, or an existing one on the canvas
+    let parentPostIt = selectedPostIts.find(p => p.text.toLowerCase() === lowerName);
+    if (!parentPostIt) {
+      parentPostIt = postIts.find(p =>
+        p.text.toLowerCase() === lowerName && (!p.type || p.type === 'postIt')
+      );
+    }
+
+    // Exclude the parent from getting the cluster field
+    const childIds = selectedPostIts
+      .filter(p => p.text.toLowerCase() !== lowerName)
+      .map(p => p.id);
+
+    if (childIds.length > 0) {
+      setCluster(childIds, clusterName);
+
+      // Rearrange children around parent
+      const childPostIts = selectedPostIts.filter(p => p.text.toLowerCase() !== lowerName);
+      rearrangeCluster(clusterName, parentPostIt, childPostIts);
+    }
+  }, [postIts, selectedNodeIds, setCluster, rearrangeCluster]);
+
+  // Handle dedup from toolbar
+  const handleDeduplicate = useCallback(() => {
+    const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+    // Group by normalized text
+    const groups = new Map<string, { text: string; ids: string[] }>();
+    for (const item of items) {
+      const key = item.text.trim().toLowerCase().replace(/\s+/g, ' ');
+      if (!key) continue;
+      if (!groups.has(key)) groups.set(key, { text: item.text, ids: [] });
+      groups.get(key)!.ids.push(item.id);
+    }
+    // Filter to groups with duplicates
+    const dupes = Array.from(groups.values())
+      .filter(g => g.ids.length > 1)
+      .map(g => ({ text: g.text, count: g.ids.length, ids: g.ids }));
+
+    if (dupes.length === 0) return;
+    setDedupGroups(dupes);
+    setDedupDialogOpen(true);
+  }, [postIts]);
+
+  // Handle dedup confirm
+  const handleDedupConfirm = useCallback(() => {
+    // Keep first of each group, delete rest
+    const idsToDelete: string[] = [];
+    for (const group of dedupGroups) {
+      idsToDelete.push(...group.ids.slice(1));
+    }
+    if (idsToDelete.length > 0) {
+      batchDeletePostIts(idsToDelete);
+    }
+    setDedupDialogOpen(false);
+    setDedupGroups([]);
+  }, [dedupGroups, batchDeletePostIts]);
 
   // Handle delete selected nodes from toolbar
   const handleDeleteSelected = useCallback(() => {
@@ -990,20 +1173,23 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     [ezyDrawState, workshopId, stepId, screenToFlowPosition, addDrawingNode, updateDrawingNode]
   );
 
-  // Handle right-click on nodes (color picker or ungroup)
+  // Handle right-click on nodes (color picker, ungroup, or uncluster)
   const handleNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.preventDefault();
       const postIt = postIts.find(p => p.id === node.id);
+      const isClusterParent = postIt ? clusterParentMap.has(postIt.text.toLowerCase()) : false;
       setContextMenu({
         nodeId: node.id,
         x: event.clientX,
         y: event.clientY,
         currentColor: postIt?.color || 'yellow',
         nodeType: node.type || 'postIt',
+        isClusterParent,
+        postItText: postIt?.text,
       });
     },
-    [postIts]
+    [postIts, clusterParentMap]
   );
 
   // Handle color selection from picker
@@ -1161,8 +1347,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
               : 'cursor-pointer-tool',
         )}
         nodes={nodes}
-        edges={[]}
+        edges={clusterEdges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={handleNodesChange}
         onNodeDrag={handleNodeDrag}
         onNodeDragStart={handleNodeDragStart}
@@ -1242,6 +1429,11 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         )}
       </ReactFlow>
 
+      {/* Cluster hull overlay — HTML divs with absolute positioning, rendered outside ReactFlow */}
+      {stepConfig.hasRings && (
+        <ClusterHullsOverlay onSelectCluster={handleSelectCluster} />
+      )}
+
       {/* Toolbar */}
       <CanvasToolbar
         onAddPostIt={handleToolbarAdd}
@@ -1255,9 +1447,39 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         onOpenDraw={() => setEzyDrawState({ isOpen: true })}
         onThemeSort={handleThemeSort}
         showThemeSort={stepConfig.hasRings}
+        onDeduplicate={handleDeduplicate}
+        showDedup={stepConfig.hasRings}
       />
 
-      {/* Context menu: ungroup for groups, color picker for post-its */}
+      {/* Selection toolbar — shown when 2+ post-its are selected */}
+      {selectedNodeIds.length >= 2 && stepConfig.hasRings && (() => {
+        // Compute bounding box center of selected nodes in screen coords
+        const selectedPostIts = postIts.filter(p => selectedNodeIds.includes(p.id));
+        if (selectedPostIts.length < 2) return null;
+        const canvasRef = canvasContainerRef.current;
+        if (!canvasRef) return null;
+        const rect = canvasRef.getBoundingClientRect();
+        // Get viewport from ReactFlow store
+        const minX = Math.min(...selectedPostIts.map(p => p.position.x));
+        const maxX = Math.max(...selectedPostIts.map(p => p.position.x + p.width));
+        const minY = Math.min(...selectedPostIts.map(p => p.position.y));
+        // Center X of bounding box in screen space
+        const centerCanvasX = (minX + maxX) / 2;
+        // Use screenToFlowPosition inverse: screen = canvas * zoom + offset
+        // We need to reverse this, but we don't have direct viewport access here.
+        // Instead, use the nodes array which has screen-relative positions after ReactFlow transforms.
+        // Simpler approach: use the first selected node's position as reference
+        return (
+          <SelectionToolbar
+            count={selectedNodeIds.length}
+            position={{ x: rect.left + rect.width / 2, y: rect.top + 60 }}
+            onCluster={handleOpenClusterDialog}
+            onDelete={handleDeleteSelected}
+          />
+        );
+      })()}
+
+      {/* Context menu: ungroup for groups, uncluster for parents, color picker for post-its */}
       {contextMenu && contextMenu.nodeType === 'group' ? (
         <div
           className="fixed z-50 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700 p-1"
@@ -1275,13 +1497,52 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           </button>
         </div>
       ) : contextMenu ? (
-        <ColorPicker
-          position={{ x: contextMenu.x, y: contextMenu.y }}
-          currentColor={contextMenu.currentColor}
-          onColorSelect={handleColorSelect}
-          onClose={() => setContextMenu(null)}
-        />
+        <div className="contents">
+          <ColorPicker
+            position={{ x: contextMenu.x, y: contextMenu.y }}
+            currentColor={contextMenu.currentColor}
+            onColorSelect={handleColorSelect}
+            onClose={() => setContextMenu(null)}
+          />
+          {contextMenu.isClusterParent && contextMenu.postItText && (
+            <div
+              className="fixed z-[60] bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700 p-1"
+              style={{ left: contextMenu.x, top: contextMenu.y + 50 }}
+            >
+              <button
+                className="px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-zinc-700 rounded w-full text-left"
+                onClick={() => {
+                  clearCluster(contextMenu.postItText!);
+                  setContextMenu(null);
+                }}
+              >
+                Uncluster
+              </button>
+            </div>
+          )}
+        </div>
       ) : null}
+
+      {/* Cluster dialog */}
+      <ClusterDialog
+        open={clusterDialogOpen}
+        onOpenChange={setClusterDialogOpen}
+        defaultName={
+          selectedNodeIds.length > 0
+            ? postIts.find(p => p.id === selectedNodeIds[0])?.text || ''
+            : ''
+        }
+        existingClusters={existingClusters}
+        onConfirm={handleClusterConfirm}
+      />
+
+      {/* Dedup dialog */}
+      <DedupDialog
+        open={dedupDialogOpen}
+        onOpenChange={setDedupDialogOpen}
+        groups={dedupGroups}
+        onConfirm={handleDedupConfirm}
+      />
 
       {/* Delete column dialog */}
       {deleteColumnDialog && (

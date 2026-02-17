@@ -102,6 +102,8 @@ export type CanvasActions = {
   setHighlightedCell: (cell: { row: number; col: number } | null) => void;
   setPendingFitView: (pending: boolean) => void;
   batchUpdatePositions: (updates: Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }>) => void;
+  setCluster: (ids: string[], clusterName: string) => void;
+  clearCluster: (clusterName: string) => void;
   setSelectedPostItIds: (ids: string[]) => void;
   addConceptCard: (card: Omit<ConceptCardData, 'id'>) => void;
   updateConceptCard: (id: string, updates: Partial<ConceptCardData>) => void;
@@ -426,6 +428,30 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
                   ...(update.cellAssignment !== undefined ? { cellAssignment: update.cellAssignment } : {}),
                 };
               }),
+              isDirty: true,
+            };
+          }),
+
+        setCluster: (ids, clusterName) =>
+          set((state) => {
+            const idSet = new Set(ids);
+            return {
+              postIts: state.postIts.map((postIt) =>
+                idSet.has(postIt.id) ? { ...postIt, cluster: clusterName } : postIt
+              ),
+              isDirty: true,
+            };
+          }),
+
+        clearCluster: (clusterName) =>
+          set((state) => {
+            const lower = clusterName.toLowerCase();
+            return {
+              postIts: state.postIts.map((postIt) =>
+                postIt.cluster && postIt.cluster.toLowerCase() === lower
+                  ? { ...postIt, cluster: undefined }
+                  : postIt
+              ),
               isDirty: true,
             };
           }),

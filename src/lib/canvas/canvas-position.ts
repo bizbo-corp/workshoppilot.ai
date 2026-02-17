@@ -14,6 +14,61 @@ import { distributeCardsInZone, type EmpathyZoneConfig, type EmpathyZone } from 
 export const POST_IT_WIDTH = 160;
 export const POST_IT_HEIGHT = 100;
 
+/** Columns per row in cluster layout */
+const CLUSTER_COLS = 3;
+/** Gap between items in cluster layout */
+const CLUSTER_GAP = 15;
+
+/**
+ * Compute child positions for a cluster layout: parent centered above,
+ * children in rows of 3 below.
+ *
+ * @param parentPos - Top-left position of the parent post-it
+ * @param parentWidth - Width of the parent post-it
+ * @param parentHeight - Height of the parent post-it
+ * @param childCount - Number of children to lay out
+ * @param childWidth - Width of each child (defaults to POST_IT_WIDTH)
+ * @param childHeight - Height of each child (defaults to POST_IT_HEIGHT)
+ * @returns Array of { x, y } positions for each child (index-aligned)
+ */
+export function computeClusterChildPositions(
+  parentPos: { x: number; y: number },
+  parentWidth: number,
+  parentHeight: number,
+  childCount: number,
+  childWidth = POST_IT_WIDTH,
+  childHeight = POST_IT_HEIGHT,
+): Array<{ x: number; y: number }> {
+  const positions: Array<{ x: number; y: number }> = [];
+
+  // Children row starts below parent
+  const childRowY = parentPos.y + parentHeight + CLUSTER_GAP;
+
+  // Parent center X
+  const parentCenterX = parentPos.x + parentWidth / 2;
+
+  for (let j = 0; j < childCount; j++) {
+    const col = j % CLUSTER_COLS;
+    const row = Math.floor(j / CLUSTER_COLS);
+
+    // How many items in this row?
+    const itemsInRow = Math.min(CLUSTER_COLS, childCount - row * CLUSTER_COLS);
+
+    // Total width of this row
+    const rowWidth = itemsInRow * childWidth + (itemsInRow - 1) * CLUSTER_GAP;
+
+    // Center this row under the parent
+    const rowStartX = parentCenterX - rowWidth / 2;
+
+    positions.push({
+      x: rowStartX + col * (childWidth + CLUSTER_GAP),
+      y: childRowY + row * (childHeight + CLUSTER_GAP),
+    });
+  }
+
+  return positions;
+}
+
 /**
  * Base offsets per quadrant — matches fixtures.ts positioning.
  * Canvas origin (0,0) is the center dividing line.
@@ -380,31 +435,42 @@ export function computeThemeSortPositions(
       const anchorX = ringConfig.center.x + ring.radius * Math.cos(angle);
       const anchorY = ringConfig.center.y + ring.radius * Math.sin(angle);
 
-      // Place parent at anchor
+      // Compute cluster block width to center parent
+      const childCount = cluster.children.length;
+      const itemsInFirstRow = Math.min(CLUSTER_COLS, childCount);
+      const blockWidth = childCount > 0
+        ? itemsInFirstRow * POST_IT_WIDTH + (itemsInFirstRow - 1) * CLUSTER_GAP
+        : POST_IT_WIDTH;
+
+      // Center parent above the children block
+      const parentX = anchorX - POST_IT_WIDTH / 2;
+      const parentY = anchorY - POST_IT_HEIGHT / 2;
+
       if (cluster.parent) {
+        // Center parent horizontally over the children block
+        const childBlockCenterX = parentX + POST_IT_WIDTH / 2;
+        const centeredParentX = childBlockCenterX - POST_IT_WIDTH / 2;
+
         results.push({
           id: cluster.parent.id,
-          position: {
-            x: anchorX - POST_IT_WIDTH / 2,
-            y: anchorY - POST_IT_HEIGHT / 2,
-          },
+          position: { x: centeredParentX, y: parentY },
           cellAssignment: { row: ringId, col: '' },
         });
       }
 
-      // Place children in 2-col grid below anchor
-      for (let j = 0; j < cluster.children.length; j++) {
-        const child = cluster.children[j];
-        const col = j % 2;
-        const row = Math.floor(j / 2);
-        results.push({
-          id: child.id,
-          position: {
-            x: anchorX - POST_IT_WIDTH / 2 + col * (POST_IT_WIDTH + 15),
-            y: anchorY + POST_IT_HEIGHT / 2 + 15 + row * (POST_IT_HEIGHT + 15),
-          },
-          cellAssignment: { row: ringId, col: '' },
-        });
+      // Place children in 3-col rows below parent, centered
+      if (childCount > 0) {
+        const parentPos = { x: parentX, y: parentY };
+        const childPositions = computeClusterChildPositions(
+          parentPos, POST_IT_WIDTH, POST_IT_HEIGHT, childCount
+        );
+        for (let j = 0; j < childCount; j++) {
+          results.push({
+            id: cluster.children[j].id,
+            position: childPositions[j],
+            cellAssignment: { row: ringId, col: '' },
+          });
+        }
       }
     }
   }

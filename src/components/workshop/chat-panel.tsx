@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
-import { computeCanvasPosition, computeThemeSortPositions, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, ZONE_COLORS } from '@/lib/canvas/canvas-position';
+import { computeCanvasPosition, computeThemeSortPositions, computeClusterChildPositions, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, ZONE_COLORS } from '@/lib/canvas/canvas-position';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { saveCanvasState } from '@/actions/canvas-actions';
 
@@ -209,6 +209,40 @@ function parseCanvasItems(content: string): { cleanContent: string; canvasItems:
   return { cleanContent, canvasItems: items };
 }
 
+/**
+ * Parse [CANVAS_DELETE: text] markup from AI content.
+ * Returns clean content and texts to delete.
+ */
+function parseCanvasDeletes(content: string): { cleanContent: string; deleteTexts: string[] } {
+  const deleteTexts: string[] = [];
+  const regex = /\[CANVAS_DELETE:\s*([^\]]+)\]/g;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    const text = match[1].trim();
+    if (text.length > 0) deleteTexts.push(text);
+  }
+  const cleanContent = content.replace(/\s*\[CANVAS_DELETE:\s*[^\]]+\]\s*/g, ' ').trim();
+  return { cleanContent, deleteTexts };
+}
+
+/**
+ * Parse [CLUSTER: Parent | child1 | child2 | child3] markup from AI content.
+ * Returns clean content and cluster suggestions.
+ */
+function parseClusterSuggestions(content: string): { cleanContent: string; clusters: Array<{ parent: string; children: string[] }> } {
+  const clusters: Array<{ parent: string; children: string[] }> = [];
+  const regex = /\[CLUSTER:\s*([^\]]+)\]/g;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    const parts = match[1].split('|').map(s => s.trim()).filter(s => s.length > 0);
+    if (parts.length >= 2) {
+      clusters.push({ parent: parts[0], children: parts.slice(1) });
+    }
+  }
+  const cleanContent = content.replace(/\s*\[CLUSTER:\s*[^\]]+\]\s*/g, ' ').trim();
+  return { cleanContent, clusters };
+}
+
 interface ChatPanelProps {
   stepOrder: number;
   sessionId: string;
@@ -222,6 +256,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const step = getStepByOrder(stepOrder);
   const storeApi = useCanvasStoreApi();
   const addPostIt = useCanvasStore((state) => state.addPostIt);
+  const deletePostIt = useCanvasStore((state) => state.deletePostIt);
+  const setCluster = useCanvasStore((state) => state.setCluster);
   const batchUpdatePositions = useCanvasStore((state) => state.batchUpdatePositions);
   const postIts = useCanvasStore((state) => state.postIts);
   const gridColumns = useCanvasStore((state) => state.gridColumns);
@@ -450,9 +486,83 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     const content = textParts.map((p) => p.text).join('\n');
     const { canvasItems } = parseCanvasItems(content);
     const { shouldSort } = parseThemeSortTrigger(content);
+    const { deleteTexts } = parseCanvasDeletes(content);
+    const { clusters } = parseClusterSuggestions(content);
 
     if (canvasItems.length > 0) {
       handleAddToWhiteboard(lastMsg.id, canvasItems);
+    }
+
+    // Process AI-requested deletions
+    if (deleteTexts.length > 0) {
+      const latestPostIts = storeApi.getState().postIts;
+      for (const delText of deleteTexts) {
+        const lower = delText.toLowerCase();
+        const match = latestPostIts.find(p =>
+          p.text.toLowerCase() === lower && (!p.type || p.type === 'postIt')
+        );
+        if (match) deletePostIt(match.id);
+      }
+    }
+
+    // Process AI-suggested clusters
+    if (clusters.length > 0) {
+      const latestPostIts = storeApi.getState().postIts;
+      const clusterUpdates: Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }> = [];
+
+      for (const cluster of clusters) {
+        const parentLower = cluster.parent.toLowerCase();
+        const parentPostIt = latestPostIts.find(p =>
+          p.text.toLowerCase() === parentLower && (!p.type || p.type === 'postIt')
+        );
+        const childIds: string[] = [];
+        const childPostIts: typeof latestPostIts = [];
+        for (const childText of cluster.children) {
+          const childLower = childText.toLowerCase();
+          const match = latestPostIts.find(p =>
+            p.text.toLowerCase() === childLower && (!p.type || p.type === 'postIt')
+          );
+          if (match) {
+            childIds.push(match.id);
+            childPostIts.push(match);
+          }
+        }
+        if (childIds.length > 0) {
+          setCluster(childIds, cluster.parent);
+
+          // Rearrange children in 3-wide rows centered below parent
+          if (parentPostIt) {
+            const childPositions = computeClusterChildPositions(
+              parentPostIt.position,
+              parentPostIt.width,
+              parentPostIt.height,
+              childPostIts.length,
+              childPostIts[0]?.width || POST_IT_WIDTH,
+              childPostIts[0]?.height || POST_IT_HEIGHT,
+            );
+            for (let j = 0; j < childPostIts.length; j++) {
+              clusterUpdates.push({
+                id: childPostIts[j].id,
+                position: childPositions[j],
+                ...(parentPostIt.cellAssignment ? { cellAssignment: parentPostIt.cellAssignment } : {}),
+              });
+            }
+          }
+        }
+      }
+
+      if (clusterUpdates.length > 0) {
+        // Slight delay so setCluster state updates first
+        setTimeout(() => {
+          batchUpdatePositions(clusterUpdates);
+          setPendingFitView(true);
+        }, 100);
+      }
+    }
+
+    // Mark as processed if we did any work (avoid re-processing)
+    if (canvasItems.length === 0 && (deleteTexts.length > 0 || clusters.length > 0)) {
+      setAddedMessageIds(prev => new Set(prev).add(lastMsg.id));
     }
 
     // If AI triggered [THEME_SORT], reorganize after items are added
@@ -466,7 +576,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         }
       }, 300); // Short delay to ensure new items are in store
     }
-  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, batchUpdatePositions, storeApi, step.id, setPendingFitView]);
+  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, batchUpdatePositions, storeApi, step.id, setPendingFitView, deletePostIt, setCluster]);
 
   // Clear stream error on successful completion
   React.useEffect(() => {
@@ -620,10 +730,12 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                 );
               }
 
-              // Assistant message — strip [SUGGESTIONS], [THEME_SORT], and [CANVAS_ITEM] markup
+              // Assistant message — strip all markup
               const { cleanContent: noSuggestions } = parseSuggestions(content);
               const { cleanContent: noThemeSort } = parseThemeSortTrigger(noSuggestions);
-              const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noThemeSort);
+              const { cleanContent: noDeletes } = parseCanvasDeletes(noThemeSort);
+              const { cleanContent: noClusters } = parseClusterSuggestions(noDeletes);
+              const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noClusters);
               return (
                 <div key={`${message.id}-${index}`} className="flex items-start">
                   <div className="flex-1">
