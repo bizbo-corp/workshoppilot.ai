@@ -28,6 +28,7 @@ import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
 import { usePreventScrollOnCanvas } from '@/hooks/use-prevent-scroll-on-canvas';
 import type { PostItColor, GridColumn, DrawingNode } from '@/stores/canvas-store';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
+import { computeThemeSortPositions } from '@/lib/canvas/canvas-position';
 import { QuadrantOverlay } from './quadrant-overlay';
 import { detectQuadrant } from '@/lib/canvas/quadrant-detection';
 import { GridOverlay } from './grid-overlay';
@@ -72,6 +73,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const conceptCards = useCanvasStore((s) => s.conceptCards);
   const updateConceptCard = useCanvasStore((s) => s.updateConceptCard);
   const deleteConceptCard = useCanvasStore((s) => s.deleteConceptCard);
+  const batchUpdatePositions = useCanvasStore((s) => s.batchUpdatePositions);
   const gridColumns = useCanvasStore((s) => s.gridColumns);
   const setGridColumns = useCanvasStore((s) => s.setGridColumns);
   const removeGridColumn = useCanvasStore((s) => s.removeGridColumn);
@@ -104,6 +106,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   // Dragging state - track which node is being dragged for visual feedback
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
 
+  // Z-index management - bring selected/dragged/new nodes to front
+  const [nodeZIndices, setNodeZIndices] = useState<Record<string, number>>({});
+  const zIndexCounter = useRef(100);
+
   // Pointer/Hand tool state
   const [activeTool, setActiveTool] = useState<'pointer' | 'hand'>('pointer');
 
@@ -117,9 +123,45 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const lastPaneClickTime = useRef(0);
   const DOUBLE_CLICK_THRESHOLD = 300; // ms
 
-  // Track when we want to edit the most recently created post-it
-  const shouldEditLatest = useRef(false);
+  // Track previous post-it count for fitView logic
   const previousPostItCount = useRef(postIts.length);
+
+  // Bring a node to the top of the z-index stack
+  const bringToFront = useCallback((nodeId: string) => {
+    zIndexCounter.current += 1;
+    setNodeZIndices(prev => ({ ...prev, [nodeId]: zIndexCounter.current }));
+  }, []);
+
+  // Live positions during drag — REFS to avoid re-renders during manipulation.
+  // ReactFlow manages drag visuals internally; these refs are a safety net so
+  // that when useMemo DOES recompute (from unrelated state changes), it uses
+  // current values instead of stale store positions.
+  const livePositions = useRef<Record<string, { x: number; y: number }>>({});
+
+  // Live dimensions during resize — same ref strategy as positions.
+  const liveDimensions = useRef<Record<string, { width: number; height: number }>>({});
+
+  // Continuous resize handler — updates ref only, no re-renders
+  const handleResize = useCallback(
+    (id: string, width: number, height: number) => {
+      liveDimensions.current[id] = { width, height };
+    },
+    []
+  );
+
+  // Resize end — clear ref and persist final values to store.
+  // Position is included because resizing from top/left edges moves the node.
+  const handleResizeEnd = useCallback(
+    (id: string, width: number, height: number, x: number, y: number) => {
+      delete liveDimensions.current[id];
+      updatePostIt(id, {
+        width: Math.round(width),
+        height: Math.round(height),
+        position: { x: Math.round(x), y: Math.round(y) },
+      });
+    },
+    [updatePostIt]
+  );
 
   // Grid snap size (matches dot grid)
   const GRID_SIZE = 20;
@@ -237,16 +279,23 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     return unsubscribe;
   }, [storeApi]);
 
-  // Handle editing the most recently created post-it
+  // Helper: create a post-it with pre-generated ID so editing + z-index
+  // are set synchronously BEFORE the store update. This eliminates the
+  // one-frame delay that caused broken auto-focus and z-index on creation.
+  const createAndEditPostIt = useCallback(
+    (postIt: Omit<import('@/stores/canvas-store').PostIt, 'id'>) => {
+      const newId = crypto.randomUUID();
+      bringToFront(newId);
+      setEditingNodeId(newId);
+      addPostIt({ ...postIt, id: newId });
+    },
+    [bringToFront, addPostIt]
+  );
+
+  // Keep previousPostItCount in sync for fitView logic
   useEffect(() => {
-    if (shouldEditLatest.current && postIts.length > previousPostItCount.current) {
-      // A new post-it was added - edit it
-      const latestPostIt = postIts[postIts.length - 1];
-      setEditingNodeId(latestPostIt.id);
-      shouldEditLatest.current = false;
-    }
     previousPostItCount.current = postIts.length;
-  }, [postIts]);
+  }, [postIts.length]);
 
   // Handle text change from PostItNode textarea
   const handleTextChange = useCallback(
@@ -343,14 +392,19 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
     const postItReactFlowNodes: Node[] = sorted.map((postIt) => {
       const isPreview = postIt.isPreview === true;
+      // Use live ref values during drag/resize — safety net so that IF useMemo
+      // recomputes mid-manipulation (from unrelated state changes), it reads
+      // current values instead of stale store positions/dimensions.
+      const livePos = livePositions.current[postIt.id];
+      const liveDims = liveDimensions.current[postIt.id];
 
       return {
         id: postIt.id,
         type: postIt.type || 'postIt',
-        position: postIt.position,
+        position: livePos || postIt.position,
         parentId: postIt.parentId,
         extent: postIt.parentId ? ('parent' as const) : undefined,
-        zIndex: 20,
+        zIndex: nodeZIndices[postIt.id] || 20,
         draggable: !isPreview,
         selectable: !isPreview,
         selected: selectedNodeIds.includes(postIt.id),
@@ -358,9 +412,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           text: postIt.text,
           color: postIt.color || 'yellow',
           isEditing: isPreview ? false : editingNodeId === postIt.id,
-          dragging: draggingNodeId === postIt.id,
           onTextChange: handleTextChange,
           onEditComplete: handleEditComplete,
+          onResize: handleResize,
+          onResizeEnd: handleResizeEnd,
           ...(isPreview ? {
             isPreview: true,
             previewReason: postIt.previewReason,
@@ -368,9 +423,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
             onReject: handleRejectPreview,
           } : {}),
         } as PostItNodeData,
-        style: postIt.type === 'group'
-          ? { width: postIt.width, height: postIt.height }
-          : { width: postIt.width, height: 'auto' },
+        style: {
+          width: liveDims?.width ?? postIt.width,
+          height: liveDims?.height ?? postIt.height,
+        },
       };
     });
 
@@ -382,8 +438,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       return {
         id: dn.id,
         type: 'drawingImage' as const,
-        position: dn.position,
-        zIndex: 20,
+        position: livePositions.current[dn.id] || dn.position,
+        zIndex: nodeZIndices[dn.id] || 20,
         draggable: true,
         selectable: true,
         selected: selectedNodeIds.includes(dn.id),
@@ -401,8 +457,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     const conceptCardReactFlowNodes: Node[] = conceptCards.map((card) => ({
       id: card.id,
       type: 'conceptCard' as const,
-      position: card.position,
-      zIndex: 20,
+      position: livePositions.current[card.id] || card.position,
+      zIndex: nodeZIndices[card.id] || 20,
       draggable: true,
       selectable: true,
       selected: selectedNodeIds.includes(card.id),
@@ -416,7 +472,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     }));
 
     return [...postItReactFlowNodes, ...drawingReactFlowNodes, ...conceptCardReactFlowNodes];
-  }, [postIts, drawingNodes, conceptCards, editingNodeId, draggingNodeId, selectedNodeIds, handleTextChange, handleEditComplete, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
+  // read inside the memo body as a safety net; they must NOT be deps or every
+  // mouse-move during drag would recompute and cause flickering.
+  }, [postIts, drawingNodes, conceptCards, editingNodeId, selectedNodeIds, nodeZIndices, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange]);
 
   // Create post-it at position and set as editing
   const createPostItAtPosition = useCallback(
@@ -427,12 +486,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       if (stepConfig.hasRings && stepConfig.ringConfig) {
         const snappedPosition = snapToGrid(flowPosition);
         const ringId = detectRing(
-          { x: snappedPosition.x + 60, y: snappedPosition.y + 50 }, // card center
+          { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
           stepConfig.ringConfig
         );
-
-        shouldEditLatest.current = true;
-        addPostIt({
+        createAndEditPostIt({
           text: '',
           position: snappedPosition,
           width: 120,
@@ -444,12 +501,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       else if (stepConfig.hasEmpathyZones && stepConfig.empathyZoneConfig) {
         const snappedPosition = snapToGrid(flowPosition);
         const zone = getZoneForPosition(
-          { x: snappedPosition.x + 60, y: snappedPosition.y + 50 }, // card center
+          { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
           stepConfig.empathyZoneConfig
         );
-
-        shouldEditLatest.current = true;
-        addPostIt({
+        createAndEditPostIt({
           text: '',
           position: snappedPosition,
           width: 120,
@@ -461,16 +516,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       else if (stepConfig.hasGrid && dynamicGridConfig) {
         const snappedPosition = snapToCell(flowPosition, dynamicGridConfig);
         const cell = positionToCell(snappedPosition, dynamicGridConfig);
-
         const cellAssignment = cell
           ? {
               row: dynamicGridConfig.rows[cell.row].id,
               col: dynamicGridConfig.columns[cell.col].id,
             }
           : undefined;
-
-        shouldEditLatest.current = true;
-        addPostIt({
+        createAndEditPostIt({
           text: '',
           position: snappedPosition,
           width: 120,
@@ -480,14 +532,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       } else {
         // Quadrant-based snap and detection for quadrant/standard steps
         const snappedPosition = snapToGrid(flowPosition);
-
-        // Detect initial quadrant
         const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
           ? detectQuadrant(snappedPosition, 120, 120, stepConfig.quadrantType)
           : undefined;
-
-        shouldEditLatest.current = true;
-        addPostIt({
+        createAndEditPostIt({
           text: '',
           position: snappedPosition,
           width: 120,
@@ -496,7 +544,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         });
       }
     },
-    [screenToFlowPosition, snapToGrid, addPostIt, stepConfig, dynamicGridConfig]
+    [screenToFlowPosition, snapToGrid, createAndEditPostIt, stepConfig, dynamicGridConfig]
   );
 
   // Handle toolbar "+" creation (dealing-cards offset)
@@ -526,9 +574,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
         stepConfig.ringConfig
       );
-
-      shouldEditLatest.current = true;
-      addPostIt({
+      createAndEditPostIt({
         text: '',
         position: snappedPosition,
         width: 120,
@@ -543,9 +589,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
         stepConfig.empathyZoneConfig
       );
-
-      shouldEditLatest.current = true;
-      addPostIt({
+      createAndEditPostIt({
         text: '',
         position: snappedPosition,
         width: 120,
@@ -557,16 +601,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     else if (stepConfig.hasGrid && dynamicGridConfig) {
       const snappedPosition = snapToCell(position, dynamicGridConfig);
       const cell = positionToCell(snappedPosition, dynamicGridConfig);
-
       const cellAssignment = cell
         ? {
             row: dynamicGridConfig.rows[cell.row].id,
             col: dynamicGridConfig.columns[cell.col].id,
           }
         : undefined;
-
-      shouldEditLatest.current = true;
-      addPostIt({
+      createAndEditPostIt({
         text: '',
         position: snappedPosition,
         width: 120,
@@ -576,14 +617,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     } else {
       // Quadrant-based snap and detection for quadrant/standard steps
       const snappedPosition = snapToGrid(position);
-
-      // Detect initial quadrant
       const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
         ? detectQuadrant(snappedPosition, 120, 120, stepConfig.quadrantType)
         : undefined;
-
-      shouldEditLatest.current = true;
-      addPostIt({
+      createAndEditPostIt({
         text: '',
         position: snappedPosition,
         width: 120,
@@ -591,7 +628,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         quadrant,
       });
     }
-  }, [postIts, screenToFlowPosition, snapToGrid, addPostIt, stepConfig, dynamicGridConfig]);
+  }, [postIts, screenToFlowPosition, snapToGrid, createAndEditPostIt, stepConfig, dynamicGridConfig]);
 
   // Handle toolbar emotion post-it creation (with emoji + color preset)
   const handleEmotionAdd = useCallback((emoji: string, color: PostItColor) => {
@@ -617,35 +654,38 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
         stepConfig.ringConfig
       );
-      shouldEditLatest.current = true;
-      addPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment: { row: ringId, col: '' } });
+      createAndEditPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment: { row: ringId, col: '' } });
     } else if (stepConfig.hasEmpathyZones && stepConfig.empathyZoneConfig) {
       const snappedPosition = snapToGrid(position);
       const zone = getZoneForPosition(
         { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
         stepConfig.empathyZoneConfig
       );
-      shouldEditLatest.current = true;
-      addPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment: zone ? { row: zone, col: '' } : undefined });
+      createAndEditPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment: zone ? { row: zone, col: '' } : undefined });
     } else if (stepConfig.hasGrid && dynamicGridConfig) {
       const snappedPosition = snapToCell(position, dynamicGridConfig);
       const cell = positionToCell(snappedPosition, dynamicGridConfig);
       const cellAssignment = cell
         ? { row: dynamicGridConfig.rows[cell.row].id, col: dynamicGridConfig.columns[cell.col].id }
         : undefined;
-
-      shouldEditLatest.current = true;
-      addPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment });
+      createAndEditPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment });
     } else {
       const snappedPosition = snapToGrid(position);
       const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
         ? detectQuadrant(snappedPosition, 120, 120, stepConfig.quadrantType)
         : undefined;
-
-      shouldEditLatest.current = true;
-      addPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, quadrant });
+      createAndEditPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, quadrant });
     }
-  }, [postIts, screenToFlowPosition, snapToGrid, addPostIt, stepConfig, dynamicGridConfig]);
+  }, [postIts, screenToFlowPosition, snapToGrid, createAndEditPostIt, stepConfig, dynamicGridConfig]);
+
+  // Handle theme sort — reorganize post-its by cluster on rings
+  const handleThemeSort = useCallback(() => {
+    const updates = computeThemeSortPositions(postIts, stepId);
+    if (updates.length > 0) {
+      batchUpdatePositions(updates);
+      setTimeout(() => fitView({ padding: 0.2, duration: 400 }), 150);
+    }
+  }, [postIts, stepId, batchUpdatePositions, fitView]);
 
   // Handle delete selected nodes from toolbar
   const handleDeleteSelected = useCallback(() => {
@@ -661,20 +701,38 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     if (postItIds.length > 0) batchDeletePostIts(postItIds);
   }, [nodes, ungroupPostIts, batchDeletePostIts, deleteDrawingNode, deleteConceptCard]);
 
-  // Handle node drag start
+  // Handle node drag start — bring dragged node to top of stack
   const handleNodeDragStart = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       setDraggingNodeId(node.id);
+      bringToFront(node.id);
     },
-    []
+    [bringToFront]
   );
 
   // Handle all node changes (selection, position, removal)
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      // ── Track live positions during drag (ref — no re-renders) ──
+      // ReactFlow handles drag visuals internally. The ref is a safety net so
+      // that IF useMemo recomputes mid-drag (from unrelated state changes), it
+      // reads current positions instead of stale store values.
+      for (const c of changes) {
+        if (c.type === 'position') {
+          const posChange = c as NodeChange & { id: string; position?: { x: number; y: number }; dragging?: boolean };
+          if (posChange.dragging && posChange.position) {
+            livePositions.current[posChange.id] = posChange.position;
+          } else if (posChange.dragging === false) {
+            delete livePositions.current[posChange.id];
+          }
+        }
+      }
+
       // Handle selection changes — must persist so nodes stay selected across renders
       const selectChanges = changes.filter((c): c is NodeChange & { type: 'select'; id: string; selected: boolean } => c.type === 'select');
       if (selectChanges.length > 0) {
+        const newlySelected = selectChanges.filter(c => c.selected).map(c => c.id);
+
         setSelectedNodeIds(prev => {
           const next = new Set(prev);
           selectChanges.forEach(c => {
@@ -683,6 +741,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           });
           return Array.from(next);
         });
+
+        // Bring newly selected nodes to top of z-index stack
+        newlySelected.forEach(id => bringToFront(id));
       }
 
       // Handle remove changes (Delete/Backspace key)
@@ -714,6 +775,11 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           change.dragging === false &&
           change.position
         ) {
+          // Skip position updates for nodes being actively resized — NodeResizer
+          // dispatches position changes when resizing from top/left edges and
+          // processing them mid-resize would snap the position causing jitter.
+          if (liveDimensions.current[change.id]) return;
+
           // Clear dragging state
           setDraggingNodeId(null);
 
@@ -792,7 +858,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         }
       });
     },
-    [nodes, drawingNodes, conceptCards, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, deleteDrawingNode, deleteConceptCard, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
+    [nodes, drawingNodes, conceptCards, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, deleteDrawingNode, deleteConceptCard, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts, bringToFront]
   );
 
   // Handle node drag (real-time cell highlighting)
@@ -1105,8 +1172,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         onMoveStart={handleMoveStart}
 
         onInit={handleInit}
-        snapToGrid={true}
-        snapGrid={[GRID_SIZE, GRID_SIZE]}
+        snapToGrid={false}
         fitView={postIts.length > 0}
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.3}
@@ -1125,6 +1191,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         panOnDrag={activeTool === 'hand'}
         zoomOnScroll={true}
         zoomOnPinch={true}
+        elevateNodesOnSelect={false}
         proOptions={{ hideAttribution: true }}
       >
         <Background
@@ -1186,6 +1253,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         activeTool={activeTool}
         onToolChange={setActiveTool}
         onOpenDraw={() => setEzyDrawState({ isOpen: true })}
+        onThemeSort={handleThemeSort}
+        showThemeSort={stepConfig.hasRings}
       />
 
       {/* Context menu: ungroup for groups, color picker for post-its */}

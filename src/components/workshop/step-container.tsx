@@ -65,6 +65,12 @@ export function StepContainer({
   const isCanvasStep = step ? CANVAS_ENABLED_STEPS.includes(step.id) : false;
   const postIts = useCanvasStore((s) => s.postIts);
   const conceptCards = useCanvasStore((s) => s.conceptCards);
+  const setPostIts = useCanvasStore((s) => s.setPostIts);
+  const setDrawingNodes = useCanvasStore((s) => s.setDrawingNodes);
+  const setCrazy8sSlots = useCanvasStore((s) => s.setCrazy8sSlots);
+  const setMindMapState = useCanvasStore((s) => s.setMindMapState);
+  const setConceptCards = useCanvasStore((s) => s.setConceptCards);
+  const setGridColumns = useCanvasStore((s) => s.setGridColumns);
   const canvasHasContent = postIts.length > 0 || conceptCards.length > 0;
 
   // For canvas steps, activity is "confirmed" when post-its exist (no extraction needed)
@@ -114,6 +120,13 @@ export function StepContainer({
       // Reset local state
       setArtifactConfirmed(false);
       setLocalMessages([]);
+      // Clear canvas/whiteboard state
+      setPostIts([]);
+      setDrawingNodes([]);
+      setCrazy8sSlots([]);
+      setMindMapState([], []);
+      setConceptCards([]);
+      setGridColumns([]);
       // Force re-mount of ChatPanel/IdeationSubStepContainer to clear useChat state
       setResetKey(prev => prev + 1);
       // Refresh page to reload with cleared server state
@@ -123,7 +136,7 @@ export function StepContainer({
     } finally {
       setIsResetting(false);
     }
-  }, [workshopId, stepOrder, sessionId, router]);
+  }, [workshopId, stepOrder, sessionId, router, setPostIts, setDrawingNodes, setCrazy8sSlots, setMindMapState, setConceptCards, setGridColumns]);
 
   // Step 8 uses specialized sub-step container
   if (stepOrder === 8) {

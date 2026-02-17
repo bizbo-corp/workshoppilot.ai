@@ -55,6 +55,7 @@ export type PostIt = {
     row: string; // Row ID from GridConfig (e.g., 'actions', 'goals')
     col: string; // Column ID from GridConfig (e.g., 'awareness', 'consideration')
   };
+  cluster?: string; // Parent label for hierarchical clustering (stakeholder mapping)
   isPreview?: boolean; // When true, indicates AI-suggested preview node awaiting confirmation
   previewReason?: string; // Optional AI explanation for why this placement was suggested
 };
@@ -74,7 +75,7 @@ export type CanvasState = {
 };
 
 export type CanvasActions = {
-  addPostIt: (postIt: Omit<PostIt, 'id'>) => void;
+  addPostIt: (postIt: Omit<PostIt, 'id'> & { id?: string }) => void;
   updatePostIt: (id: string, updates: Partial<PostIt>) => void;
   updatePostItColor: (id: string, color: PostItColor) => void;
   deletePostIt: (id: string) => void;
@@ -100,6 +101,7 @@ export type CanvasActions = {
   rejectPreview: (id: string) => void;
   setHighlightedCell: (cell: { row: number; col: number } | null) => void;
   setPendingFitView: (pending: boolean) => void;
+  batchUpdatePositions: (updates: Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }>) => void;
   setSelectedPostItIds: (ids: string[]) => void;
   addConceptCard: (card: Omit<ConceptCardData, 'id'>) => void;
   updateConceptCard: (id: string, updates: Partial<ConceptCardData>) => void;
@@ -136,7 +138,7 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
               ...state.postIts,
               {
                 ...postIt,
-                id: crypto.randomUUID(),
+                id: postIt.id || crypto.randomUUID(),
                 color: postIt.color || 'yellow',
                 type: postIt.type || 'postIt',
               },
@@ -410,6 +412,23 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
           set(() => ({
             pendingFitView: pending,
           })),
+
+        batchUpdatePositions: (updates) =>
+          set((state) => {
+            const updateMap = new Map(updates.map((u) => [u.id, u]));
+            return {
+              postIts: state.postIts.map((postIt) => {
+                const update = updateMap.get(postIt.id);
+                if (!update) return postIt;
+                return {
+                  ...postIt,
+                  position: update.position,
+                  ...(update.cellAssignment !== undefined ? { cellAssignment: update.cellAssignment } : {}),
+                };
+              }),
+              isDirty: true,
+            };
+          }),
 
         setSelectedPostItIds: (ids) =>
           set(() => ({

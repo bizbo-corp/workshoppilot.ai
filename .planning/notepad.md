@@ -1,21 +1,45 @@
-~~I want to implement streaming responses for my AI chat interface. Please update the backend to use Server-Sent Events (SSE) so the model's output is sent in chunks. On the frontend, ensure the UI updates reactively as each chunk arrives to create a natural 'typewriter' feel.~~
+---
 
-~~Chat window always scrolls to the bottom~~
+- 
 
-~~Remove duplicate intro when reloading the step.~~ 
+## Card Context
 
-~~What does the revise step do? Can it be used to eliminate the chat record all the way back to the start of the current step (and anything forward)? ~~
+Ensure the AI can understand the context before proceeding. 
 
-~~Is the bug icon still rellevant? Does it just show/hide the output panel for some steps (not all of)~~
+- Work on whiteboard first (Stakeholders)
+    - Chat prompts user to add post-it first
+- User Research
+    - Ask the user which stakeholders they would like to interview. We're convened one to three. Ask them to confirm Via checkbox 
 
-Add to whiteboard finessing.
+ show the overall workshop challenge on all pages 
 
-Work on whiteboard first (Stakeholders)
+Allow the user to put their suggestions on before offering some canned ideas. When offering canned ideas, make sure it bypasses the chat and just gets directly added to the board. 
 
-~~Chat window is 320px (adjustable), whiteboard takes the remaining space. ~~
+After giving the user some time to add their post-its, show a button saying.
+
+Give some proactive feedback
 
 
 
-Next:
 
-Research format and flow. 
+
+The greeting is very verbose. Can you make it more consice and add the context cleverly. Use emojis
+
+Old
+
+That is a fascinating challenge. Now that we have the core of Mummy Scheduler defined, we need to map out the human landscape around it. I'm thinking about who actually lives in this problem space — the people who are affected, the ones who make the big decisions, and even those behind the scenes who might block progress without us realizing it.
+
+I've already dropped a post-it for the most obvious group onto our map to get us started: . I'd love for you to just brain dump everyone else who comes to mind. Who are the users, the influencers, or the silent stakeholders involved in solving the challenge: "How might we give busy mums more time back by streamlining the process of managing all their kids activities?" Just throw them all out there and I'll get them straight onto the whiteboard for you.
+
+
+
+New
+
+What a great challenge we're solving for busy mums! 👩⏱️ Now that we have the core of Mummy Scheduler defined, let's brainstorm all the people, organisations and decision makers that impact or could help/hinder [promblem to be solved e.g streamlining the process of managing all their kids activities.]
+
+Remember you can add sub categories for items such as Mums could also have "First time mum" "Kindy mum" "Nanny"
+
+I've already dropped a post-it for the most obvious group onto our map to get us started: Now, Get to work! 💪 
+
+
+

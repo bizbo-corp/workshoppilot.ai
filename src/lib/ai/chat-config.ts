@@ -127,7 +127,9 @@ ${summaries}`;
     prompt += `\n\nCANVAS STATE (Visual workspace for this step):
 ${canvasContext}
 
-Reference canvas items like a consultant reviewing a whiteboard with a client. Be specific: "I see you've got [X] in [location]..." not "The canvas contains the following items:". Don't re-suggest items already on the canvas.`;
+Reference canvas items like a consultant reviewing a whiteboard with a client. Be specific: "I see you've got [X] in [location]..." not "The canvas contains the following items:".
+
+CRITICAL: Do NOT add items that already exist on the canvas. Before outputting any [CANVAS_ITEM], check the canvas state above. If an item with the same or very similar name is already listed, skip it. Duplicates confuse the user.`;
   }
 
   // Add context usage instructions (only if we have context to use)
@@ -194,27 +196,64 @@ Items are auto-added to the canvas. Do not ask the user to click to add.`;
     if (stepId === "stakeholder-mapping") {
       prompt += `
 
-Format: [CANVAS_ITEM quadrant="<quadrant>"]Brief item text (max 80 characters)[/CANVAS_ITEM]
-Valid quadrants: high-power-high-interest, high-power-low-interest, low-power-high-interest, low-power-low-interest
+You can use either format to add stakeholders to the board:
 
-Example: "Here are key stakeholders: [CANVAS_ITEM quadrant="high-power-high-interest"]Product Manager - high influence[/CANVAS_ITEM] and [CANVAS_ITEM quadrant="low-power-high-interest"]End Users - primary beneficiaries[/CANVAS_ITEM]"`;
+Shorthand: [CANVAS_ITEM: Brief item text]
+With ring: [CANVAS_ITEM: Brief item text, Ring: inner]
+With cluster: [CANVAS_ITEM: Sub-group name, Cluster: Parent Label]
+Both: [CANVAS_ITEM: Sub-group name, Ring: inner, Cluster: Parent Label]
+
+Or the full tag format:
+[CANVAS_ITEM ring="<ring>" cluster="<parent>"]Brief item text[/CANVAS_ITEM]
+
+Valid rings: inner (most important/influential stakeholders), middle (moderate importance), outer (least important/peripheral)
+
+Ring placement guide — silently assess each stakeholder's importance:
+- inner: Key decision-makers, primary users, core team members
+- middle: Influencers, secondary users, support roles
+- outer: Peripheral stakeholders, regulators, indirect beneficiaries
+
+Clustering: When cracking a broad label into sub-groups, output the parent label FIRST with a Ring, then children with Cluster: pointing to the parent. Children inherit their parent's ring automatically.
+
+Example — user says "customers":
+[CANVAS_ITEM: Customers, Ring: inner]
+[CANVAS_ITEM: First-time Buyers, Cluster: Customers]
+[CANVAS_ITEM: Power Users, Cluster: Customers]
+[CANVAS_ITEM: Enterprise Clients, Cluster: Customers]
+
+THEME SORT: After your final blindspot check (when user says "I'm done"), output [THEME_SORT] on its own line. This triggers the board to reorganize into neat clusters. Only use this ONCE, after the final check.
+
+Keep item text brief (max 80 characters — fits on a post-it note).`;
     } else if (stepId === "sense-making") {
       prompt += `
 
-Format: [CANVAS_ITEM quadrant="<quadrant>"]Brief item text (max 80 characters)[/CANVAS_ITEM]
+You can use either format to add insights to the board:
+
+Shorthand: [CANVAS_ITEM: Brief insight text]
+With quadrant: [CANVAS_ITEM: Brief insight text, Quad: felt]
+
+Or the full tag format:
+[CANVAS_ITEM quadrant="<quadrant>"]Brief insight text[/CANVAS_ITEM]
+
 Valid quadrants: said, thought, felt, experienced
 
-Example: "From the interviews: [CANVAS_ITEM quadrant="said"]Nothing is in one place[/CANVAS_ITEM] and [CANVAS_ITEM quadrant="felt"]Guilt when tasks are missed[/CANVAS_ITEM]"`;
+Keep item text brief (max 80 characters — fits on a post-it note).`;
     } else if (stepId === "persona") {
       prompt += `
 
-Format: [CANVAS_ITEM category="<category>"]Brief item text (max 80 characters)[/CANVAS_ITEM]
+You can use either format to add persona traits to the board:
+
+Shorthand: [CANVAS_ITEM: Brief trait text]
+With category: [CANVAS_ITEM: Brief trait text, Quad: goals]
+
+Or the full tag format:
+[CANVAS_ITEM category="<category>"]Brief trait text[/CANVAS_ITEM]
 
 Valid categories: goals, pains, gains, motivations, frustrations, behaviors
 
 When drafting or discussing persona traits, output each goal, pain, gain, motivation, frustration, or behavior as a canvas item. This populates the whiteboard with the persona's key attributes.
 
-Example: "Based on the research, Sarah's key traits include: [CANVAS_ITEM category="goals"]Never miss a vet appointment[/CANVAS_ITEM] [CANVAS_ITEM category="pains"]Uses 4 disconnected apps[/CANVAS_ITEM] [CANVAS_ITEM category="gains"]Single dashboard for all pets[/CANVAS_ITEM]"`;
+Keep item text brief (max 80 characters — fits on a post-it note).`;
     }
 
     prompt += `

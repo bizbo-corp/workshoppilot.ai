@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, ChevronDown, Undo2, Redo2, MousePointer2, Hand } from 'lucide-react';
+import { Plus, ChevronDown, Undo2, Redo2, MousePointer2, Hand, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PostItColor } from '@/stores/canvas-store';
 import {
@@ -39,6 +39,8 @@ export interface CanvasToolbarProps {
   activeTool: 'pointer' | 'hand';
   onToolChange: (tool: 'pointer' | 'hand') => void;
   onOpenDraw?: () => void;
+  onThemeSort?: () => void;
+  showThemeSort?: boolean;
 }
 
 function IconButton({
@@ -82,6 +84,8 @@ export function CanvasToolbar({
   activeTool,
   onToolChange,
   onOpenDraw,
+  onThemeSort,
+  showThemeSort,
 }: CanvasToolbarProps) {
   return (
     <>
@@ -129,6 +133,22 @@ export function CanvasToolbar({
                 <path d="M11.5 1.5l3 3-9 9H2.5v-3l9-9z" />
               </svg>
               <span>Draw</span>
+            </button>
+          </>
+        )}
+
+        {/* Organize button (ring-based steps only) */}
+        {showThemeSort && onThemeSort && (
+          <>
+            <div className="w-px h-5 bg-gray-200 dark:bg-zinc-600 mx-0.5" />
+            <button
+              onClick={onThemeSort}
+              title="Organize post-its by cluster"
+              aria-label="Organize post-its by cluster"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span>Organize</span>
             </button>
           </>
         )}

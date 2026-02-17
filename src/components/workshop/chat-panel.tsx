@@ -5,14 +5,15 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import TextareaAutosize from 'react-textarea-autosize';
 import ReactMarkdown from 'react-markdown';
-import { Send, Loader2, Plus, Check, LayoutGrid } from 'lucide-react';
+import { Send, Loader2, Plus, Check } from 'lucide-react';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/hooks/use-auto-save';
-import { useCanvasStore } from '@/providers/canvas-store-provider';
-import { computeCanvasPosition, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, ZONE_COLORS } from '@/lib/canvas/canvas-position';
+import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
+import { computeCanvasPosition, computeThemeSortPositions, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, ZONE_COLORS } from '@/lib/canvas/canvas-position';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
+import { saveCanvasState } from '@/actions/canvas-actions';
 
 /** Steps that support canvas item auto-add */
 const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping'];
@@ -44,29 +45,87 @@ function parseSuggestions(content: string): { cleanContent: string; suggestions:
 }
 
 /**
+ * Detect and strip [THEME_SORT] markup from AI content.
+ * Returns whether the trigger was found and the content with the trigger removed.
+ */
+function parseThemeSortTrigger(content: string): { cleanContent: string; shouldSort: boolean } {
+  const shouldSort = content.includes('[THEME_SORT]');
+  const cleanContent = content.replace(/\s*\[THEME_SORT\]\s*/g, ' ').trim();
+  return { cleanContent, shouldSort };
+}
+
+/**
  * Parsed canvas item with optional position metadata
  */
 type CanvasItemParsed = {
   text: string;
   quadrant?: string;
+  ring?: string;     // Ring ID for concentric ring layout (inner/middle/outer)
   row?: string;
   col?: string;
   category?: string;
+  cluster?: string;  // Parent label for hierarchical clustering (stakeholder mapping)
   isGridItem?: boolean;
 };
 
+/** Known quadrant/category values that can appear in shorthand Quad: syntax */
+const SENSE_MAKING_QUADRANTS = new Set(['said', 'thought', 'felt', 'experienced']);
+const PERSONA_CATEGORIES = new Set(['goals', 'pains', 'gains', 'motivations', 'frustrations', 'behaviors']);
+const RING_IDS = new Set(['inner', 'middle', 'outer']);
+
 /**
- * Parse [CANVAS_ITEM]...[/CANVAS_ITEM] markup from AI content.
- * Supports optional attributes: quadrant="...", row="...", col="..."
+ * Parse a shorthand "Quad:" value into a quadrant, category, or ring.
+ * Returns { quadrant, category, ring } — one or neither will be set.
+ *
+ * Handles:
+ * - Ring IDs: "inner" → ring: "inner"
+ * - Stakeholder quadrants: "High Power/High Interest" → quadrant: "high-power-high-interest"
+ * - Sense-making quadrants: "felt" → quadrant: "felt"
+ * - Persona categories: "goals" → category: "goals"
+ */
+function parseQuadLabel(label: string): { quadrant?: string; category?: string; ring?: string } {
+  const lower = label.toLowerCase().trim();
+
+  // Ring IDs (inner/middle/outer) for concentric ring layout
+  if (RING_IDS.has(lower)) return { ring: lower };
+
+  // Sense-making quadrants (said/thought/felt/experienced)
+  if (SENSE_MAKING_QUADRANTS.has(lower)) return { quadrant: lower };
+
+  // Persona categories (goals/pains/gains/motivations/frustrations/behaviors)
+  if (PERSONA_CATEGORIES.has(lower)) return { category: lower };
+
+  // Stakeholder power/interest quadrants — natural language
+  const stripped = lower.replace(/[^a-z]/g, '');
+  if (stripped.includes('highpower') && stripped.includes('highinterest')) return { quadrant: 'high-power-high-interest' };
+  if (stripped.includes('highpower') && stripped.includes('lowinterest')) return { quadrant: 'high-power-low-interest' };
+  if (stripped.includes('lowpower') && stripped.includes('highinterest')) return { quadrant: 'low-power-high-interest' };
+  if (stripped.includes('lowpower') && stripped.includes('lowinterest')) return { quadrant: 'low-power-low-interest' };
+
+  // Already in kebab-case stakeholder format
+  if (label.startsWith('high-') || label.startsWith('low-')) return { quadrant: label };
+
+  return {};
+}
+
+/**
+ * Parse canvas item markup from AI content.
+ *
+ * Supports two formats:
+ * 1. Tag format:      [CANVAS_ITEM quadrant="..."]Text[/CANVAS_ITEM]
+ * 2. Shorthand format: [CANVAS_ITEM: Text] or [CANVAS_ITEM: Text, Quad: ...]
+ *
  * Returns clean content (markup removed) and extracted canvas items with metadata.
  */
 function parseCanvasItems(content: string): { cleanContent: string; canvasItems: CanvasItemParsed[] } {
   const items: CanvasItemParsed[] = [];
-  const regex = /\[(CANVAS_ITEM|GRID_ITEM)(?:\s+([^\]]*))?\](.*?)\[\/(CANVAS_ITEM|GRID_ITEM)\]/g;
+
+  // --- Format 1: Tag pairs  [CANVAS_ITEM ...]...[/CANVAS_ITEM] ---
+  const tagRegex = /\[(CANVAS_ITEM|GRID_ITEM)(?:\s+([^\]]*))?\](.*?)\[\/(CANVAS_ITEM|GRID_ITEM)\]/g;
   let match;
 
-  while ((match = regex.exec(content)) !== null) {
-    const tagType = match[1]; // CANVAS_ITEM or GRID_ITEM
+  while ((match = tagRegex.exec(content)) !== null) {
+    const tagType = match[1];
     const attrString = match[2] || '';
     const text = match[3].trim();
     if (text.length === 0) continue;
@@ -82,16 +141,69 @@ function parseCanvasItems(content: string): { cleanContent: string; canvasItems:
     items.push({
       text,
       quadrant: attrs.quadrant,
+      ring: attrs.ring,
       row: attrs.row,
       col: attrs.col,
       category: attrs.category,
+      cluster: attrs.cluster,
       isGridItem: tagType === 'GRID_ITEM',
     });
   }
 
-  // Remove markup from content for clean markdown rendering
-  const cleanContent = content
+  // --- Format 2: Shorthand  [CANVAS_ITEM: Text] or [CANVAS_ITEM: Text, Quad: ...] ---
+  // Run on content with tag-format already stripped to avoid double-parsing
+  const contentWithoutTags = content.replace(/\[(CANVAS_ITEM|GRID_ITEM)(?:\s+[^\]]*?)?\].*?\[\/(CANVAS_ITEM|GRID_ITEM)\]/g, '');
+  const shorthandRegex = /\[CANVAS_ITEM:\s*([^\]]+)\]/g;
+
+  while ((match = shorthandRegex.exec(contentWithoutTags)) !== null) {
+    const inner = match[1].trim();
+    if (inner.length === 0) continue;
+
+    // Parse comma-separated attributes: "Text, Ring: value, Quad: value, Cluster: value"
+    // Extract known attributes from the end, remainder is the text
+    let remaining = inner;
+    let quadrant: string | undefined;
+    let ring: string | undefined;
+    let category: string | undefined;
+    let cluster: string | undefined;
+
+    // Extract "Cluster: ..." (must check before Ring/Quad since both use comma separation)
+    const clusterMatch = remaining.match(/,\s*Cluster:\s*([^,]+)$/i);
+    if (clusterMatch) {
+      cluster = clusterMatch[1].trim();
+      remaining = remaining.slice(0, clusterMatch.index).trim();
+    }
+
+    // Extract "Ring: ..." (before Quad extraction)
+    const ringMatch = remaining.match(/,\s*Ring:\s*([^,]+)$/i);
+    if (ringMatch) {
+      ring = ringMatch[1].trim().toLowerCase();
+      remaining = remaining.slice(0, ringMatch.index).trim();
+    }
+
+    // Extract "Quad: ..."
+    const quadMatch = remaining.match(/,\s*Quad:\s*(.+)$/i);
+    if (quadMatch) {
+      const parsed = parseQuadLabel(quadMatch[1].trim());
+      quadrant = parsed.quadrant;
+      category = parsed.category;
+      // parseQuadLabel may return ring if Quad value is a ring ID
+      if (parsed.ring) ring = parsed.ring;
+      remaining = remaining.slice(0, quadMatch.index).trim();
+    }
+
+    const text = remaining.trim();
+    if (text.length > 0) {
+      items.push({ text, quadrant, ring, category, cluster });
+    }
+  }
+
+  // Remove both markup formats from content for clean markdown rendering
+  let cleanContent = content
+    // Tag format
     .replace(/\s*\[(CANVAS_ITEM|GRID_ITEM)(?:\s+[^\]]*?)?\].*?\[\/(CANVAS_ITEM|GRID_ITEM)\]\s*/g, ' ')
+    // Shorthand format
+    .replace(/\s*\[CANVAS_ITEM:\s*[^\]]+\]\s*/g, ' ')
     .trim();
 
   return { cleanContent, canvasItems: items };
@@ -108,9 +220,18 @@ interface ChatPanelProps {
 
 export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
+  const storeApi = useCanvasStoreApi();
   const addPostIt = useCanvasStore((state) => state.addPostIt);
+  const batchUpdatePositions = useCanvasStore((state) => state.batchUpdatePositions);
   const postIts = useCanvasStore((state) => state.postIts);
   const gridColumns = useCanvasStore((state) => state.gridColumns);
+  const drawingNodes = useCanvasStore((state) => state.drawingNodes);
+  const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
+  const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
+  const crazy8sSlots = useCanvasStore((state) => state.crazy8sSlots);
+  const conceptCards = useCanvasStore((state) => state.conceptCards);
+  const isDirty = useCanvasStore((state) => state.isDirty);
+  const markClean = useCanvasStore((state) => state.markClean);
   const setHighlightedCell = useCanvasStore((state) => state.setHighlightedCell);
   const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
   const selectedPostItIds = useCanvasStore((state) => state.selectedPostItIds);
@@ -134,6 +255,22 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   }
 
   const isCanvasStep = CANVAS_ENABLED_STEPS.includes(step.id);
+
+  // Force-flush canvas state to DB before sending a chat message
+  // Ensures the AI sees the latest board state (not stale DB from before debounced auto-save)
+  const flushCanvasToDb = React.useCallback(async () => {
+    if (!isCanvasStep || !isDirty) return;
+    await saveCanvasState(workshopId, step.id, {
+      postIts,
+      ...(gridColumns.length > 0 ? { gridColumns } : {}),
+      ...(drawingNodes.length > 0 ? { drawingNodes } : {}),
+      ...(mindMapNodes.length > 0 ? { mindMapNodes } : {}),
+      ...(mindMapEdges.length > 0 ? { mindMapEdges } : {}),
+      ...(crazy8sSlots.length > 0 ? { crazy8sSlots } : {}),
+      ...(conceptCards.length > 0 ? { conceptCards } : {}),
+    });
+    markClean();
+  }, [isCanvasStep, isDirty, workshopId, step.id, postIts, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, markClean]);
 
   const transport = React.useMemo(
     () =>
@@ -263,7 +400,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     for (const item of canvasItems) {
       const { position, quadrant, cellAssignment } = computeCanvasPosition(
         step.id,
-        { quadrant: item.quadrant, row: item.row, col: item.col, category: item.category },
+        { quadrant: item.quadrant, ring: item.ring, row: item.row, col: item.col, category: item.category, cluster: item.cluster },
         currentPostIts,
         dynamicGridConfig,
       );
@@ -281,6 +418,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         color,
         quadrant,
         cellAssignment,
+        cluster: item.cluster,
       };
 
       addPostIt(newPostIt);
@@ -300,6 +438,35 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     setAddedMessageIds(prev => new Set(prev).add(messageId));
     setPendingFitView(true);
   }, [addedMessageIds, step.id, gridColumns, postIts, addPostIt, setHighlightedCell, setPendingFitView]);
+
+  // Auto-add canvas items when AI finishes streaming (no manual click needed)
+  React.useEffect(() => {
+    if (status !== 'ready' || !isCanvasStep || messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role !== 'assistant') return;
+    if (addedMessageIds.has(lastMsg.id)) return;
+
+    const textParts = lastMsg.parts?.filter((p) => p.type === 'text') || [];
+    const content = textParts.map((p) => p.text).join('\n');
+    const { canvasItems } = parseCanvasItems(content);
+    const { shouldSort } = parseThemeSortTrigger(content);
+
+    if (canvasItems.length > 0) {
+      handleAddToWhiteboard(lastMsg.id, canvasItems);
+    }
+
+    // If AI triggered [THEME_SORT], reorganize after items are added
+    if (shouldSort) {
+      setTimeout(() => {
+        const latestPostIts = storeApi.getState().postIts;
+        const updates = computeThemeSortPositions(latestPostIts, step.id);
+        if (updates.length > 0) {
+          batchUpdatePositions(updates);
+          setPendingFitView(true);
+        }
+      }, 300); // Short delay to ensure new items are in store
+    }
+  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, batchUpdatePositions, storeApi, step.id, setPendingFitView]);
 
   // Clear stream error on successful completion
   React.useEffect(() => {
@@ -368,6 +535,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
+
+    // Flush canvas to DB so the AI sees the latest board state
+    await flushCanvasToDb();
 
     await sendMessage({
       role: 'user',
@@ -450,48 +620,29 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                 );
               }
 
-              // Assistant message — strip [SUGGESTIONS] and [CANVAS_ITEM] markup
+              // Assistant message — strip [SUGGESTIONS], [THEME_SORT], and [CANVAS_ITEM] markup
               const { cleanContent: noSuggestions } = parseSuggestions(content);
-              const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noSuggestions);
+              const { cleanContent: noThemeSort } = parseThemeSortTrigger(noSuggestions);
+              const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noThemeSort);
               return (
                 <div key={`${message.id}-${index}`} className="flex items-start">
                   <div className="flex-1">
                     <div className="text-base prose prose-base dark:prose-invert max-w-none">
                       <ReactMarkdown>{finalContent}</ReactMarkdown>
                     </div>
-                    {isCanvasStep && canvasItems.length > 0 && (
+                    {isCanvasStep && canvasItems.length > 0 && addedMessageIds.has(message.id) && (
                       <div className="mt-2">
                         <div className="flex flex-wrap gap-2">
-                          {canvasItems.map((item, i) => {
-                            const isAdded = addedMessageIds.has(message.id);
-                            return (
+                          {canvasItems.map((item, i) => (
                               <span
                                 key={i}
-                                className={cn(
-                                  'inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-sm font-medium',
-                                  isAdded
-                                    ? 'border-green-500/30 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400'
-                                    : 'border-blue-500/30 bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400'
-                                )}
+                                className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-sm font-medium border-green-500/30 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400"
                               >
-                                {isAdded && <Check className="h-3 w-3" />}
+                                <Check className="h-3 w-3" />
                                 {item.text}
                               </span>
-                            );
-                          })}
+                          ))}
                         </div>
-                        {!addedMessageIds.has(message.id) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mt-2"
-                            disabled={isLoading}
-                            onClick={() => handleAddToWhiteboard(message.id, canvasItems)}
-                          >
-                            <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
-                            Add to Whiteboard
-                          </Button>
-                        )}
                       </div>
                     )}
                   </div>
@@ -552,8 +703,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                   <button
                     key={i}
                     disabled={isLoading}
-                    onClick={() => {
+                    onClick={async () => {
                       setSuggestions([]);
+                      await flushCanvasToDb();
                       sendMessage({
                         role: 'user',
                         parts: [{ type: 'text', text: suggestion }],

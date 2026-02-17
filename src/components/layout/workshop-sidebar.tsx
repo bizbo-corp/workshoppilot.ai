@@ -70,19 +70,30 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
     }
   }, [isLoading, hasSeenIntro]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Hover: temporarily expand when not pinned
+  // Hover: temporarily expand when not pinned (with intent delay to ignore accidental pass-throughs)
+  const hoverEnterTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleMouseEnter = useCallback(() => {
     if (!isPinned) {
+      // Cancel any pending collapse
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
         hoverTimeoutRef.current = null;
       }
-      setOpen(true);
+      // Delay expand to filter out accidental mouse-overs
+      hoverEnterTimeoutRef.current = setTimeout(() => {
+        setOpen(true);
+      }, 300);
     }
   }, [isPinned, setOpen]);
 
   const handleMouseLeave = useCallback(() => {
     if (!isPinned) {
+      // Cancel any pending expand (mouse left before intent threshold)
+      if (hoverEnterTimeoutRef.current) {
+        clearTimeout(hoverEnterTimeoutRef.current);
+        hoverEnterTimeoutRef.current = null;
+      }
       hoverTimeoutRef.current = setTimeout(() => {
         setOpen(false);
       }, 300);
