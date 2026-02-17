@@ -237,15 +237,11 @@ Keep item text brief (max 80 characters — fits on a post-it note).`;
     } else if (stepId === "sense-making") {
       prompt += `
 
-You can use either format to add insights to the board:
+Use the shorthand format to add insights to the empathy map zones:
 
-Shorthand: [CANVAS_ITEM: Brief insight text]
-With quadrant: [CANVAS_ITEM: Brief insight text, Quad: felt]
+[CANVAS_ITEM: Brief insight text, Quad: says]
 
-Or the full tag format:
-[CANVAS_ITEM quadrant="<quadrant>"]Brief insight text[/CANVAS_ITEM]
-
-Valid quadrants: said, thought, felt, experienced
+Valid zones: says, thinks, feels, does, pains, gains
 
 Keep item text brief (max 80 characters — fits on a post-it note).`;
     } else if (stepId === "persona") {

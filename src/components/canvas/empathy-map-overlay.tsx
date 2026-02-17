@@ -3,10 +3,11 @@
 /**
  * EmpathyMapOverlay Component
  * Renders viewport-aware SVG overlay with 6 color-coded empathy zones
- * Used for Step 4 (Sense Making) - classic empathy map layout
+ * Used for Step 4 (Sense Making) - classic empathy map layout with sage palette
  */
 
 import { useStore as useReactFlowStore, type ReactFlowState } from '@xyflow/react';
+import { MessageSquare, Brain, Heart, Activity, AlertTriangle, TrendingUp } from 'lucide-react';
 import type { EmpathyZoneConfig } from '@/lib/canvas/empathy-zones';
 
 /**
@@ -19,12 +20,22 @@ const viewportSelector = (state: ReactFlowState) => ({
   zoom: state.transform[2],
 });
 
+/** Zone icon mapping — lucide-react icons for each empathy zone */
+const ZONE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  says: MessageSquare,
+  thinks: Brain,
+  feels: Heart,
+  does: Activity,
+  pains: AlertTriangle,
+  gains: TrendingUp,
+};
+
 interface EmpathyMapOverlayProps {
   config: EmpathyZoneConfig;
 }
 
 /**
- * EmpathyMapOverlay renders 6 rectangular zones with backgrounds and header labels
+ * EmpathyMapOverlay renders 6 rectangular zones with backgrounds, header labels, and icons
  * Zones transform with viewport pan/zoom
  */
 export function EmpathyMapOverlay({ config }: EmpathyMapOverlayProps) {
@@ -46,9 +57,6 @@ export function EmpathyMapOverlay({ config }: EmpathyMapOverlayProps) {
       {/* Zone backgrounds and boundaries */}
       {Object.entries(config.zones).map(([zoneKey, zone]) => {
         const screenPos = toScreen(zone.bounds.x, zone.bounds.y);
-        const isPains = zoneKey === 'pains';
-        const isGains = zoneKey === 'gains';
-        const isImportantStrip = isPains || isGains;
 
         return (
           <g key={zoneKey}>
@@ -60,45 +68,47 @@ export function EmpathyMapOverlay({ config }: EmpathyMapOverlayProps) {
               height={zone.bounds.height * zoom}
               fill={zone.color}
               style={{ opacity: 'var(--canvas-zone-opacity)' }}
-              rx={8}
+              rx={10}
             />
-            {/* Boundary line - thicker for pains/gains strips */}
+            {/* Boundary line */}
             <rect
               x={screenPos.x}
               y={screenPos.y}
               width={zone.bounds.width * zoom}
               height={zone.bounds.height * zoom}
               fill="none"
-              stroke="var(--canvas-grid-line-light)"
-              strokeWidth={isImportantStrip ? 1.5 : 1}
-              strokeDasharray="4 4"
-              rx={8}
+              stroke={zone.color}
+              strokeWidth={1}
+              strokeOpacity={0.3}
+              rx={10}
             />
           </g>
         );
       })}
 
-      {/* Zone header labels */}
+      {/* Zone header labels with icons */}
       {Object.entries(config.zones).map(([zoneKey, zone]) => {
         const screenPos = toScreen(zone.bounds.x, zone.bounds.y);
         const isPains = zoneKey === 'pains';
         const isGains = zoneKey === 'gains';
+        const Icon = ZONE_ICONS[zoneKey];
 
-        // Determine text color based on zone type
-        let textColorClass = 'text-gray-600 dark:text-gray-400';
-        if (isPains) textColorClass = 'text-red-600 dark:text-red-400';
-        if (isGains) textColorClass = 'text-emerald-600 dark:text-emerald-400';
+        // Sage-palette text colors — darker for readability
+        let textColorClass = 'text-[#4a5a32]'; // dark sage for main zones
+        if (isPains) textColorClass = 'text-[#8b4f3b]'; // dark terracotta
+        if (isGains) textColorClass = 'text-[#3d6b4f]'; // dark sage-teal
 
         return (
           <foreignObject
             key={`label-${zoneKey}`}
             x={screenPos.x + 12}
-            y={screenPos.y + 12}
+            y={screenPos.y + 10}
             width={zone.bounds.width * zoom - 24}
-            height={28}
+            height={32}
           >
-            <div className="flex items-center h-full">
-              <span className={`text-sm font-semibold ${textColorClass}`}>
+            <div className={`flex items-center gap-1.5 h-full ${textColorClass}`}>
+              {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+              <span className="text-sm font-semibold">
                 {zone.label}
               </span>
             </div>

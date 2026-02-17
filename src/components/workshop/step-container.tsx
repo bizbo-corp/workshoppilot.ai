@@ -20,7 +20,7 @@ import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { ConceptCanvasOverlay } from './concept-canvas-overlay';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
 
-const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping', 'concept'];
+const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'concept'];
 const CANVAS_ONLY_STEPS = ['stakeholder-mapping', 'sense-making', 'concept'];
 
 interface StepContainerProps {

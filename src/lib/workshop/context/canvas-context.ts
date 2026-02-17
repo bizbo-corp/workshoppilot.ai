@@ -7,8 +7,6 @@
  */
 
 import type { PostIt, GridColumn } from '@/stores/canvas-store';
-import type { Quadrant } from '@/lib/canvas/quadrant-detection';
-import { getQuadrantLabel } from '@/lib/canvas/quadrant-detection';
 
 /** Ring display order and labels */
 const RING_ORDER = ['inner', 'middle', 'outer'] as const;
@@ -224,8 +222,25 @@ export function assembleJourneyMapCanvasContext(postIts: PostIt[], gridColumns?:
 }
 
 /**
+ * Empathy zone display labels
+ */
+const EMPATHY_ZONE_LABELS: Record<string, string> = {
+  says: 'Says',
+  thinks: 'Thinks',
+  feels: 'Feels',
+  does: 'Does',
+  pains: 'Pains',
+  gains: 'Gains',
+  // Legacy names
+  said: 'Says',
+  thought: 'Thinks',
+  felt: 'Feels',
+  experienced: 'Does',
+};
+
+/**
  * Assemble empathy map canvas context for Step 4 (Sense Making)
- * Groups post-its by Empathy Map quadrant
+ * Groups post-its by empathy zone (stored in cellAssignment.row)
  */
 export function assembleEmpathyMapCanvasContext(postIts: PostIt[]): string {
   // Filter out group nodes
@@ -233,18 +248,13 @@ export function assembleEmpathyMapCanvasContext(postIts: PostIt[]): string {
 
   if (items.length === 0) return '';
 
-  // Define quadrant order
-  const quadrantOrder: Array<Quadrant> = [
-    'said',
-    'thought',
-    'felt',
-    'experienced',
-  ];
+  // Define zone order: 4 empathy quadrants + pains/gains
+  const zoneOrder = ['says', 'thinks', 'feels', 'does', 'pains', 'gains'];
 
-  // Group by quadrant
-  const grouped = new Map<Quadrant | 'unassigned', PostIt[]>();
+  // Group by zone — empathy zone items use cellAssignment.row, legacy items use quadrant
+  const grouped = new Map<string, PostIt[]>();
   items.forEach(item => {
-    const key = item.quadrant || 'unassigned';
+    const key = item.cellAssignment?.row || item.quadrant || 'unassigned';
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(item);
   });
@@ -253,11 +263,11 @@ export function assembleEmpathyMapCanvasContext(postIts: PostIt[]): string {
   const sections: string[] = [];
 
   // Add sections in order
-  quadrantOrder.forEach(quadrant => {
-    const quadrantItems = grouped.get(quadrant);
-    if (quadrantItems && quadrantItems.length > 0) {
-      const label = getQuadrantLabel(quadrant);
-      const itemList = quadrantItems
+  zoneOrder.forEach(zone => {
+    const zoneItems = grouped.get(zone);
+    if (zoneItems && zoneItems.length > 0) {
+      const label = EMPATHY_ZONE_LABELS[zone] || zone;
+      const itemList = zoneItems
         .map(p => `- ${p.text}`)
         .join('\n');
       sections.push(`**${label}**:\n${itemList}`);

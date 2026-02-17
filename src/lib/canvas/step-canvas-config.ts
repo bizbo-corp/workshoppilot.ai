@@ -66,7 +66,12 @@ export const STEP_CANVAS_CONFIGS: Record<string, StepCanvasConfig> = {
     },
   },
 
-  // Step 4: Sense Making - 6-zone empathy map
+  // Step 3: User Research - Freeform canvas for synthetic interview insights
+  'user-research': {
+    hasQuadrants: false,
+  },
+
+  // Step 4: Sense Making - 6-zone empathy map (sage palette)
   'sense-making': {
     hasQuadrants: false,
     hasEmpathyZones: true,
@@ -74,36 +79,36 @@ export const STEP_CANVAS_CONFIGS: Record<string, StepCanvasConfig> = {
       zones: {
         // Top row: 2x2 quadrant grid
         says: {
-          bounds: { x: -420, y: -700, width: 400, height: 330 },
+          bounds: { x: -560, y: -860, width: 520, height: 420 },
           label: 'Says',
-          color: '#94a3b8', // slate
+          color: '#8a9a5b', // olive
         },
         thinks: {
-          bounds: { x: 20, y: -700, width: 400, height: 330 },
+          bounds: { x: -20, y: -860, width: 520, height: 420 },
           label: 'Thinks',
-          color: '#a1a1aa', // zinc
+          color: '#a3b18a', // sage-light
         },
-        // Second row: 2x2 quadrant grid
+        // Bottom row: 2x2 quadrant grid
         feels: {
-          bounds: { x: -420, y: -350, width: 400, height: 330 },
+          bounds: { x: -560, y: -420, width: 520, height: 420 },
           label: 'Feels',
-          color: '#a3a3a3', // neutral
+          color: '#6b7f4e', // sage-dark
         },
         does: {
-          bounds: { x: 20, y: -350, width: 400, height: 330 },
+          bounds: { x: -20, y: -420, width: 520, height: 420 },
           label: 'Does',
-          color: '#9ca3af', // gray
+          color: '#95a873', // medium sage
         },
         // Right-side vertical strips: pains and gains
         pains: {
-          bounds: { x: 440, y: -700, width: 250, height: 330 },
+          bounds: { x: 520, y: -860, width: 340, height: 420 },
           label: 'Pains',
-          color: '#f87171', // warm red
+          color: '#c4856b', // warm terracotta-sage
         },
         gains: {
-          bounds: { x: 440, y: -350, width: 250, height: 330 },
+          bounds: { x: 520, y: -420, width: 340, height: 420 },
           label: 'Gains',
-          color: '#34d399', // cool green
+          color: '#6b9a7a', // cool sage-teal
         },
       },
     },

@@ -16,7 +16,7 @@ import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { saveCanvasState } from '@/actions/canvas-actions';
 
 /** Steps that support canvas item auto-add */
-const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'sense-making', 'persona', 'journey-mapping'];
+const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping'];
 
 /**
  * Parse [SUGGESTIONS]...[/SUGGESTIONS] block from AI content.
@@ -69,18 +69,21 @@ type CanvasItemParsed = {
 };
 
 /** Known quadrant/category values that can appear in shorthand Quad: syntax */
+const EMPATHY_ZONE_IDS = new Set(['says', 'thinks', 'feels', 'does', 'pains', 'gains']);
 const SENSE_MAKING_QUADRANTS = new Set(['said', 'thought', 'felt', 'experienced']);
-const PERSONA_CATEGORIES = new Set(['goals', 'pains', 'gains', 'motivations', 'frustrations', 'behaviors']);
+const PERSONA_CATEGORIES = new Set(['goals', 'motivations', 'frustrations', 'behaviors']);
 const RING_IDS = new Set(['inner', 'middle', 'outer']);
 
 /**
  * Parse a shorthand "Quad:" value into a quadrant, category, or ring.
- * Returns { quadrant, category, ring } — one or neither will be set.
+ * Returns { quadrant, category, ring } — one or more may be set.
  *
  * Handles:
  * - Ring IDs: "inner" → ring: "inner"
  * - Stakeholder quadrants: "High Power/High Interest" → quadrant: "high-power-high-interest"
- * - Sense-making quadrants: "felt" → quadrant: "felt"
+ * - Empathy zone IDs: "says" → quadrant: "says"
+ * - Sense-making quadrants (legacy): "felt" → quadrant: "felt"
+ * - Pains/gains: returns BOTH quadrant + category (used by empathy zones AND persona step)
  * - Persona categories: "goals" → category: "goals"
  */
 function parseQuadLabel(label: string): { quadrant?: string; category?: string; ring?: string } {
@@ -89,10 +92,20 @@ function parseQuadLabel(label: string): { quadrant?: string; category?: string; 
   // Ring IDs (inner/middle/outer) for concentric ring layout
   if (RING_IDS.has(lower)) return { ring: lower };
 
-  // Sense-making quadrants (said/thought/felt/experienced)
+  // Empathy zone IDs (says/thinks/feels/does/pains/gains) — canonical zone names
+  // Pains/gains return both quadrant AND category so they work for
+  // empathy zone placement (via quadrant) and persona placement (via category)
+  if (EMPATHY_ZONE_IDS.has(lower)) {
+    if (lower === 'pains' || lower === 'gains') {
+      return { quadrant: lower, category: lower };
+    }
+    return { quadrant: lower };
+  }
+
+  // Legacy sense-making quadrants (said/thought/felt/experienced)
   if (SENSE_MAKING_QUADRANTS.has(lower)) return { quadrant: lower };
 
-  // Persona categories (goals/pains/gains/motivations/frustrations/behaviors)
+  // Persona categories (goals/motivations/frustrations/behaviors)
   if (PERSONA_CATEGORIES.has(lower)) return { category: lower };
 
   // Stakeholder power/interest quadrants — natural language
@@ -394,7 +407,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
     // Clear suggestions while AI is responding
     if (status === 'streaming' || status === 'submitted') {
-      setSuggestions([]);
+      setSuggestions(prev => prev.length > 0 ? [] : prev);
     }
   }, [status, messages]);
 
@@ -837,27 +850,30 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
             {/* Suggestion pills — inline after last AI response */}
             {suggestions.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {suggestions.map((suggestion, i) => (
-                  <button
-                    key={i}
-                    disabled={isLoading}
-                    onClick={async () => {
-                      setSuggestions([]);
-                      await flushCanvasToDb();
-                      sendMessage({
-                        role: 'user',
-                        parts: [{ type: 'text', text: suggestion }],
-                      });
-                    }}
-                    className={cn(
-                      'rounded-full border border-input bg-background px-3 py-1.5 text-sm text-foreground hover:bg-accent hover:text-accent-foreground transition-colors',
-                      'disabled:cursor-not-allowed disabled:opacity-50'
-                    )}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.map((suggestion, i) => (
+                    <button
+                      key={i}
+                      disabled={isLoading}
+                      onClick={async () => {
+                        setSuggestions([]);
+                        await flushCanvasToDb();
+                        sendMessage({
+                          role: 'user',
+                          parts: [{ type: 'text', text: suggestion }],
+                        });
+                      }}
+                      className={cn(
+                        'rounded-full border border-input bg-background px-3 py-1.5 text-sm text-foreground hover:bg-accent hover:text-accent-foreground transition-colors',
+                        'disabled:cursor-not-allowed disabled:opacity-50'
+                      )}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground pl-1">Use the suggested questions above or type your own below.</p>
               </div>
             )}
 
