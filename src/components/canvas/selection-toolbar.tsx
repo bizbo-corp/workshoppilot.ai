@@ -23,7 +23,7 @@ interface SelectionToolbarProps {
 export function SelectionToolbar({ count, position, onCluster, onDelete }: SelectionToolbarProps) {
   return (
     <div
-      className="fixed z-50 flex items-center bg-white dark:bg-zinc-800 rounded-xl shadow-lg border border-gray-200 dark:border-zinc-700 px-1 py-1 gap-0.5"
+      className="fixed z-50 flex items-center bg-card rounded-xl shadow-lg border border-border px-1 py-1 gap-0.5"
       style={{
         left: position.x,
         top: position.y,
@@ -35,30 +35,30 @@ export function SelectionToolbar({ count, position, onCluster, onDelete }: Selec
         title="Cluster selected items"
         className={cn(
           'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors',
-          'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200',
+          'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
         )}
       >
         <Layers className="w-4 h-4" />
         <span>Cluster</span>
       </button>
 
-      <div className="w-px h-5 bg-gray-200 dark:bg-zinc-600 mx-0.5" />
+      <div className="w-px h-5 bg-border mx-0.5" />
 
       <button
         onClick={onDelete}
         title="Delete selected items"
         className={cn(
           'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors',
-          'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-red-600 dark:hover:text-red-400',
+          'text-muted-foreground hover:bg-accent hover:text-red-600 dark:hover:text-red-400',
         )}
       >
         <Trash2 className="w-4 h-4" />
         <span>Delete</span>
       </button>
 
-      <div className="w-px h-5 bg-gray-200 dark:bg-zinc-600 mx-0.5" />
+      <div className="w-px h-5 bg-border mx-0.5" />
 
-      <span className="px-2 py-1 text-xs font-medium text-gray-400 dark:text-gray-500">
+      <span className="px-2 py-1 text-xs font-medium text-muted-foreground">
         {count}
       </span>
     </div>

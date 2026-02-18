@@ -41,11 +41,11 @@ export function SignUpModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={handleBackdropClick}
     >
-      <div className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <div className="relative w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
         {/* Close button */}
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           aria-label="Close"
         >
           <svg
@@ -82,11 +82,11 @@ export function SignUpModal({
 
         {/* Switch to sign-in link */}
         {onSwitchToSignIn && (
-          <div className="mt-4 text-center text-sm text-gray-600">
+          <div className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
             <button
               onClick={onSwitchToSignIn}
-              className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:underline"
+              className="font-medium text-primary hover:text-primary/80 focus:outline-none focus:underline"
             >
               Sign in
             </button>

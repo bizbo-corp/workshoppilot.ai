@@ -67,9 +67,9 @@ function IconButton({
       className={cn(
         'p-2 rounded-lg transition-colors',
         disabled
-          ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-600'
-          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200',
-        active && 'bg-gray-100 dark:bg-zinc-700 text-gray-800 dark:text-gray-200'
+          ? 'opacity-40 cursor-not-allowed text-muted-foreground'
+          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+        active && 'bg-accent text-accent-foreground'
       )}
     >
       {children}
@@ -95,7 +95,7 @@ export function CanvasToolbar({
   return (
     <>
       {/* Bottom-center dock */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center bg-white dark:bg-zinc-800 rounded-xl shadow-md border border-gray-200 dark:border-zinc-700 px-1 py-1 gap-0.5">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center bg-card rounded-xl shadow-md border border-border px-1 py-1 gap-0.5">
         {/* Pointer / Hand tools */}
         <IconButton
           onClick={() => onToolChange('pointer')}
@@ -112,13 +112,13 @@ export function CanvasToolbar({
           <Hand className="w-4 h-4" />
         </IconButton>
 
-        <div className="w-px h-5 bg-gray-200 dark:bg-zinc-600 mx-0.5" />
+        <div className="w-px h-5 bg-border mx-0.5" />
 
         {/* Add post-it */}
         <button
           onClick={onAddPostIt}
           title="Add post-it"
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
         >
           <Plus className="w-4 h-4" />
           <span>Post-it</span>
@@ -127,12 +127,12 @@ export function CanvasToolbar({
         {/* Draw button (only if onOpenDraw provided) */}
         {onOpenDraw && (
           <>
-            <div className="w-px h-5 bg-gray-200 dark:bg-zinc-600 mx-0.5" />
+            <div className="w-px h-5 bg-border mx-0.5" />
             <button
               onClick={onOpenDraw}
               title="Draw"
               aria-label="Open drawing canvas"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M11.5 1.5l3 3-9 9H2.5v-3l9-9z" />
@@ -145,12 +145,12 @@ export function CanvasToolbar({
         {/* Organize button (ring-based steps only) */}
         {showThemeSort && onThemeSort && (
           <>
-            <div className="w-px h-5 bg-gray-200 dark:bg-zinc-600 mx-0.5" />
+            <div className="w-px h-5 bg-border mx-0.5" />
             <button
               onClick={onThemeSort}
               title="Organize post-its by cluster"
               aria-label="Organize post-its by cluster"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <LayoutGrid className="w-4 h-4" />
               <span>Organize</span>
@@ -161,12 +161,12 @@ export function CanvasToolbar({
         {/* Deduplicate button (ring-based steps only) */}
         {showDedup && onDeduplicate && (
           <>
-            <div className="w-px h-5 bg-gray-200 dark:bg-zinc-600 mx-0.5" />
+            <div className="w-px h-5 bg-border mx-0.5" />
             <button
               onClick={onDeduplicate}
               title="Remove duplicate post-its"
               aria-label="Remove duplicate post-its"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <Copy className="w-4 h-4" />
               <span>Dedup</span>
@@ -179,7 +179,7 @@ export function CanvasToolbar({
           <DropdownMenuTrigger asChild>
             <button
               title="Add emotion post-it"
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <span className="text-base leading-none">{'\u{1F60A}'}</span>
               <span>Emoji</span>
@@ -187,7 +187,7 @@ export function CanvasToolbar({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" side="top" className="w-48">
-            <DropdownMenuLabel className="text-xs text-gray-500">Emotion Post-its</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Emotion Post-its</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {EMOTION_PRESETS.map((preset) => (
               <DropdownMenuItem
@@ -203,7 +203,7 @@ export function CanvasToolbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="w-px h-5 bg-gray-200 dark:bg-zinc-600 mx-0.5" />
+        <div className="w-px h-5 bg-border mx-0.5" />
 
         {/* Undo / Redo */}
         <IconButton onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)">

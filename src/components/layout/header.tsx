@@ -23,7 +23,7 @@ export function Header() {
 
   return (
     <>
-      <header className="fixed top-0 z-40 h-16 w-full border-b bg-white shadow-sm">
+      <header className="fixed top-0 z-40 h-16 w-full border-b bg-card shadow-sm">
         <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Left: Logo */}
           <Link href="/" className="flex items-center">
@@ -35,7 +35,7 @@ export function Header() {
             <SignedOut>
               <button
                 onClick={() => setSignInOpen(true)}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               >
                 Sign in
               </button>

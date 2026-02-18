@@ -1674,25 +1674,25 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           color="var(--canvas-dots)"
         />
         {/* Zoom controls — styled to match canvas toolbar */}
-        <div className="absolute bottom-4 right-4 z-10 flex flex-col items-center bg-white dark:bg-zinc-800 rounded-xl shadow-md border border-gray-200 dark:border-zinc-700 p-1 gap-0.5">
+        <div className="absolute bottom-4 right-4 z-10 flex flex-col items-center bg-card rounded-xl shadow-md border border-border p-1 gap-0.5">
           <button
             onClick={() => zoomIn({ duration: 200 })}
             title="Zoom in"
-            className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+            className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           >
             <Plus className="w-4 h-4" />
           </button>
           <button
             onClick={() => zoomOut({ duration: 200 })}
             title="Zoom out"
-            className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+            className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           >
             <Minus className="w-4 h-4" />
           </button>
           <button
             onClick={() => fitView({ padding: 0.2, duration: 300 })}
             title="Fit view"
-            className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-700 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+            className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           >
             <Maximize className="w-4 h-4" />
           </button>
@@ -1768,12 +1768,12 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       {/* Context menu: ungroup for groups, uncluster for parents, color picker for post-its */}
       {contextMenu && contextMenu.nodeType === 'group' ? (
         <div
-          className="fixed z-50 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700 p-1"
+          className="fixed z-50 bg-popover rounded-lg shadow-lg border border-border p-1"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
           <button
-            className="relative z-50 px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-zinc-700 rounded w-full text-left"
+            className="relative z-50 px-3 py-1.5 text-sm hover:bg-accent rounded w-full text-left"
             onClick={() => {
               ungroupPostIts(contextMenu.nodeId);
               setContextMenu(null);
@@ -1792,11 +1792,11 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           />
           {contextMenu.isClusterParent && contextMenu.postItText && (
             <div
-              className="fixed z-[60] bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700 p-1"
+              className="fixed z-[60] bg-popover rounded-lg shadow-lg border border-border p-1"
               style={{ left: contextMenu.x, top: contextMenu.y + 50 }}
             >
               <button
-                className="px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-zinc-700 rounded w-full text-left"
+                className="px-3 py-1.5 text-sm hover:bg-accent rounded w-full text-left"
                 onClick={() => {
                   clearCluster(contextMenu.postItText!);
                   setContextMenu(null);
@@ -1859,7 +1859,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       {/* Empty state hint (grid steps use skeleton placeholders in GridOverlay instead) */}
       {postIts.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0 && !stepConfig.hasGrid && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <p className="text-gray-400 dark:text-gray-600 text-lg">Double-click to add a post-it</p>
+          <p className="text-muted-foreground text-lg">Double-click to add a post-it</p>
         </div>
       )}
 

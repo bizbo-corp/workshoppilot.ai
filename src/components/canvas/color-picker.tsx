@@ -30,7 +30,7 @@ export const ColorPicker = memo(function ColorPicker({
 
       {/* Color picker menu */}
       <div
-        className="fixed z-50 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700 p-2 flex gap-1.5"
+        className="fixed z-50 bg-popover rounded-lg shadow-lg border border-border p-2 flex gap-1.5"
         style={{ left: position.x, top: position.y }}
       >
         {COLORS.map(({ value, label }) => (
@@ -42,8 +42,8 @@ export const ColorPicker = memo(function ColorPicker({
               'w-7 h-7 rounded-full border-2 transition-transform hover:scale-110',
               COLOR_CLASSES[value],
               currentColor === value
-                ? 'border-gray-800 dark:border-white ring-2 ring-offset-1 ring-gray-400 dark:ring-gray-500'
-                : 'border-gray-300 dark:border-zinc-600'
+                ? 'border-foreground ring-2 ring-offset-1 ring-ring'
+                : 'border-border'
             )}
           />
         ))}
