@@ -232,7 +232,7 @@ export function ClusterHullsOverlay({ onSelectCluster, onRenameCluster }: Cluste
               {/* Cluster name — double-click to rename */}
               {isEditing ? (
                 <input
-                  className="text-[11px] font-semibold bg-white/20 text-white placeholder-white/50 px-1 py-0 rounded outline-none flex-1 min-w-0"
+                  className="text-[11px] font-semibold bg-neutral-olive-50/20 text-white placeholder-white/50 px-1 py-0 rounded outline-none flex-1 min-w-0"
                   value={editValue}
                   autoFocus
                   onFocus={(e) => e.target.select()}

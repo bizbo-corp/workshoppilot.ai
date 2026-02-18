@@ -137,7 +137,7 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
         {/* Add Child / +Branch button */}
         <button
           onClick={handleAddChild}
-          className="nodrag nopan text-xs px-2 py-0.5 rounded hover:bg-white/50 transition-colors"
+          className="nodrag nopan text-xs px-2 py-0.5 rounded hover:bg-neutral-olive-100/50 transition-colors"
           style={{ color: data.themeColor }}
         >
           {isRoot ? '+Branch' : '+Child'}
