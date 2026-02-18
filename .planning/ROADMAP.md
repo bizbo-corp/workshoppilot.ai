@@ -8,7 +8,7 @@
 - ✅ **v1.2 Canvas Whiteboard** - Phases 21-24 (shipped 2026-02-12)
 - ✅ **v1.3 EzyDraw & Visual Ideation** - Phases 25-29 (shipped 2026-02-12)
 - ✅ **v1.4 Personal Workshop Polish** - Phases 30-35 (shipped 2026-02-13)
-- 🚧 **v1.5 Launch Ready** - Phases 36-39 (in progress)
+- ✅ **v1.5 Launch Ready** - Phases 36-39 (shipped 2026-02-19)
 
 ## Phases
 
@@ -133,20 +133,16 @@ Plans:
 Plans:
 - [x] 38-01-PLAN.md — Pricing page route with three-tier layout, public route access, olive theme
 
-#### Phase 39: Step 10 Outputs Shell
+#### Phase 39: Step 10 Outputs Shell ✓
 
 **Goal:** Users who complete a workshop see a tangible preview of what they'll be able to export — without any false promises of functionality that doesn't exist yet.
 **Depends on:** Phase 36 (theme established)
 **Requirements:** OUT-01, OUT-02, OUT-03, OUT-04
-**Success Criteria** (what must be TRUE):
-  1. Step 10 shows deliverable cards for PRD, Stakeholder PPT, User Stories, and Tech Specs alongside the existing synthesis summary
-  2. Each card displays the deliverable name, a description of what it contains, and a visibly disabled download button labeled "Coming Soon"
-  3. The existing AI synthesis summary from Step 10 remains visible and is not displaced by the new cards
-  4. The card layout is clearly structured for extension — adding real generation later requires adding functionality to existing cards, not restructuring the layout
-**Plans:** 1 plan
+**Completed:** 2026-02-19
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 39-01-PLAN.md — DeliverableCard component + SynthesisSummaryView integration with 4 Build Pack preview cards
+- [x] 39-01-PLAN.md — DeliverableCard component + SynthesisSummaryView integration with 4 Build Pack preview cards
 
 ## Progress
 
@@ -161,9 +157,9 @@ Plans:
 | 36. Olive Theme Rollout | v1.5 | 4/4 | Complete | 2026-02-18 |
 | 37. Landing Page | v1.5 | 2/2 | Complete | 2026-02-19 |
 | 38. Pricing Page | v1.5 | Complete    | 2026-02-18 | 2026-02-19 |
-| 39. Step 10 Outputs Shell | v1.5 | 0/TBD | Not started | - |
+| 39. Step 10 Outputs Shell | v1.5 | 1/1 | Complete | 2026-02-19 |
 
-**Total project (pre-v1.5):** 106 plans across 35 phases, 6 milestones shipped
+**Total project:** 107 plans across 39 phases, 7 milestones shipped
 
 ---
-*Last updated: 2026-02-19 — Phase 38 complete*
+*Last updated: 2026-02-19 — Phase 39 complete, v1.5 milestone shipped*

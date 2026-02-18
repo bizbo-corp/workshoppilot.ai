@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.5 Launch Ready — Phase 38: Pricing Page
+**Current focus:** v1.5 Launch Ready — Phase 39: Step 10 Outputs Shell
 
 ## Current Position
 
-Phase: 38 of 39 (Pricing Page)
+Phase: 39 of 39 (Step 10 Outputs Shell)
 Plan: 1 of 1 complete
 Status: Phase complete — ready for verification
-Last activity: 2026-02-19 — Phase 38 Plan 01 complete (pricing page created, public route added)
+Last activity: 2026-02-19 — Phase 39 Plan 01 complete (DeliverableCard component + Build Pack preview grid in Step 10)
 
-Progress: [████████████░░░░░░░░] ~59% (38/39 phases complete)
+Progress: [████████████████████] ~100% (39/39 phases complete)
 
 ## Performance Metrics
 
@@ -32,6 +32,7 @@ Progress: [████████████░░░░░░░░] ~59% (3
 | Phase 37-landing-page P01 | 3 | 2 tasks | 4 files |
 | Phase 37-landing-page P02 | 20 | 3 tasks | 3 files |
 | Phase 38-pricing-page P01 | 3 | 2 tasks | 2 files |
+| Phase 39-step-10-outputs-shell P01 | 7 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,9 @@ Recent v1.5 decisions:
 - [Phase 37-landing-page]: Typed data arrays (VALUE_PROPS, TESTIMONIALS) at module level for clean content/presentation separation in server components
 - [Phase 37-landing-page]: Alternating section backgrounds (bg-card/bg-background/bg-card) create visual rhythm without borders or dividers
 - [Phase 37-landing-page]: Olive initial circles replace avatar images for testimonial attribution — consistent with design system, zero external assets
+- [Phase 39-step-10-outputs-shell]: Build Pack deliverable cards always disabled by default — enabling requires only disabled=false + onDownload wire-up, no layout restructuring
+- [Phase 39-step-10-outputs-shell]: DELIVERABLE_ICONS map defined at usage site (synthesis-summary-view) not exported from deliverable-card — keeps JSX instantiation local
+- [Phase 39-step-10-outputs-shell]: Deliverable cards render unconditionally inside non-empty branch — always shown when synthesis content exists
 
 ### Pending Todos
 
@@ -76,11 +80,12 @@ None.
 - CRON_SECRET needs configuration in Vercel dashboard for production cron warming
 - E2E back-navigation testing deferred (forward-only tested)
 - Mobile grid optimization deferred
+- /api/dev/seed-workshop build error (pre-existing, TypeError on width property — investigate before next production deploy)
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Phase 38-01 complete — pricing page created, public route added
+Stopped at: Phase 39-01 complete — DeliverableCard component created, Build Pack preview grid added to Step 10 synthesis view
 Resume file: None
 
-**Next action:** Verify /pricing renders correctly in browser, then proceed to Phase 39
+**Next action:** All 39 phases complete. Verify Step 10 deliverable cards render correctly in browser.
