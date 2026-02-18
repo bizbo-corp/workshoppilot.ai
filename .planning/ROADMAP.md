@@ -128,7 +128,7 @@ Plans:
 **Depends on:** Phase 36 (theme established)
 **Requirements:** PRICE-01, PRICE-02, PRICE-03, PRICE-04
 **Completed:** 2026-02-19
-**Plans:** 1/1 complete
+**Plans:** 1/1 plans complete
 
 Plans:
 - [x] 38-01-PLAN.md — Pricing page route with three-tier layout, public route access, olive theme
@@ -160,7 +160,7 @@ Plans:
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
 | 36. Olive Theme Rollout | v1.5 | 4/4 | Complete | 2026-02-18 |
 | 37. Landing Page | v1.5 | 2/2 | Complete | 2026-02-19 |
-| 38. Pricing Page | v1.5 | 1/1 | Complete | 2026-02-19 |
+| 38. Pricing Page | v1.5 | Complete    | 2026-02-18 | 2026-02-19 |
 | 39. Step 10 Outputs Shell | v1.5 | 0/TBD | Not started | - |
 
 **Total project (pre-v1.5):** 106 plans across 35 phases, 6 milestones shipped

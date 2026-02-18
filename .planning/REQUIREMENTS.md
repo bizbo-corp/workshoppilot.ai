@@ -23,10 +23,10 @@ Requirements for v1.5 Launch Ready milestone. Each maps to roadmap phases.
 
 ### Pricing
 
-- [ ] **PRICE-01**: Pricing page exists with three tiers: Single Use, Facilitator, Annual Subscription
-- [ ] **PRICE-02**: Each tier shows name, price, feature list, and CTA button
-- [ ] **PRICE-03**: Pricing page is hidden from main navigation (accessible via direct URL only)
-- [ ] **PRICE-04**: Pricing content uses real suggested pricing and feature differentiation
+- [x] **PRICE-01**: Pricing page exists with three tiers: Single Use, Facilitator, Annual Subscription
+- [x] **PRICE-02**: Each tier shows name, price, feature list, and CTA button
+- [x] **PRICE-03**: Pricing page is hidden from main navigation (accessible via direct URL only)
+- [x] **PRICE-04**: Pricing content uses real suggested pricing and feature differentiation
 
 ### Outputs (Step 10)
 
@@ -97,10 +97,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LAND-03 | Phase 37 | Pending |
 | LAND-04 | Phase 37 | Pending |
 | LAND-05 | Phase 37 | Pending |
-| PRICE-01 | Phase 38 | Pending |
-| PRICE-02 | Phase 38 | Pending |
-| PRICE-03 | Phase 38 | Pending |
-| PRICE-04 | Phase 38 | Pending |
+| PRICE-01 | Phase 38 | Complete |
+| PRICE-02 | Phase 38 | Complete |
+| PRICE-03 | Phase 38 | Complete |
+| PRICE-04 | Phase 38 | Complete |
 | OUT-01 | Phase 39 | Pending |
 | OUT-02 | Phase 39 | Pending |
 | OUT-03 | Phase 39 | Pending |
