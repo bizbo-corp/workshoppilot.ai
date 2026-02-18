@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 36 of 39 (Olive Theme Rollout)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-18 — v1.5 roadmap created, phases 36-39 defined
+Plan: 01 complete
+Status: In progress
+Last activity: 2026-02-18 — 36-01 complete: app shell surfaces themed (header, auth modals, dashboard, workshop card, admin)
 
 Progress: [██████████░░░░░░░░░░] ~50% (35/39 phases complete)
 
@@ -40,6 +40,9 @@ Recent v1.5 decisions:
 - Theme rollout is about applying the EXISTING olive palette (tailwind config/global.css) — not designing a new one
 - Pricing page is informational only, no payment processing; hidden from nav
 - Step 10 outputs shell keeps existing synthesis summary, adds disabled download cards
+- bg-card (not bg-background) for modal/card containers — resolves to neutral-olive-50/900, gives visual lift over page background
+- olive-* scale (not neutral-olive-*) for accent cards needing a green tint (dashboard continue card)
+- Token substitution pattern: bg-white→bg-card, bg-gray-50→bg-background, text-gray-900→text-foreground, text-gray-600→text-muted-foreground, text-blue-600→text-primary
 
 ### Pending Todos
 
@@ -55,7 +58,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: v1.5 roadmap created (phases 36-39), requirements mapped
+Stopped at: Phase 36 Plan 01 complete — app shell surfaces themed with olive tokens
 Resume file: None
 
-**Next action:** `/gsd:plan-phase 36` — Olive Theme Rollout
+**Next action:** Execute Phase 36 Plan 02 — canvas and workshop surface theming
