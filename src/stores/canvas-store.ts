@@ -31,6 +31,7 @@ export type MindMapNodeState = {
   isRoot: boolean;
   level: number;          // 0 = root, 1 = theme branch, 2+ = sub-ideas
   parentId?: string;      // ID of parent node (undefined for root)
+  position?: { x: number; y: number }; // Free-form canvas position (persisted)
 };
 
 export type MindMapEdgeState = {
@@ -103,6 +104,7 @@ export type CanvasActions = {
   addMindMapNode: (node: MindMapNodeState, edge?: MindMapEdgeState) => void;
   updateMindMapNode: (id: string, updates: Partial<MindMapNodeState>) => void;
   deleteMindMapNode: (id: string) => void;
+  updateMindMapNodePosition: (id: string, position: { x: number; y: number }) => void;
   setMindMapState: (nodes: MindMapNodeState[], edges: MindMapEdgeState[]) => void;
   setGridColumns: (gridColumns: GridColumn[]) => void;
   replaceGridColumns: (gridColumns: GridColumn[]) => void;
@@ -549,6 +551,14 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
           set((state) => ({
             mindMapNodes: state.mindMapNodes.map((node) =>
               node.id === id ? { ...node, ...updates } : node
+            ),
+            isDirty: true,
+          })),
+
+        updateMindMapNodePosition: (id, position) =>
+          set((state) => ({
+            mindMapNodes: state.mindMapNodes.map((node) =>
+              node.id === id ? { ...node, position } : node
             ),
             isDirty: true,
           })),

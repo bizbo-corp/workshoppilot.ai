@@ -22,7 +22,6 @@ export const EMPTY_CRAZY_8S_SLOTS: Crazy8sSlot[] = Array.from({ length: 8 }, (_,
 
 /**
  * Canvas size for Crazy 8s sketches
- * Square format to avoid aspect ratio distortion issues
- * (Research pitfall #5: maintain 1:1 ratio)
+ * 4:3 landscape format — fits well in 800×720 dialog (600 canvas + 48 toolbar + 48 footer)
  */
-export const CRAZY_8S_CANVAS_SIZE = { width: 800, height: 800 };
+export const CRAZY_8S_CANVAS_SIZE = { width: 800, height: 600 };

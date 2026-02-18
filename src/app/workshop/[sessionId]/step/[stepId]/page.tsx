@@ -8,11 +8,12 @@ import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
 import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
 import { loadCanvasState } from "@/actions/canvas-actions";
-import type { PostIt, GridColumn, DrawingNode } from "@/stores/canvas-store";
+import type { PostIt, GridColumn, DrawingNode, MindMapNodeState, MindMapEdgeState } from "@/stores/canvas-store";
 import type { ConceptCardData } from "@/lib/canvas/concept-card-types";
 import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
+import { computeRadialPositions } from "@/lib/canvas/mind-map-layout";
 
 interface StepPageProps {
   params: Promise<{
@@ -141,10 +142,24 @@ export default async function StepPage({ params }: StepPageProps) {
 
       if (reframeArtifactRecord.length > 0) {
         const reframeArtifact = reframeArtifactRecord[0].artifact as Record<string, unknown>;
+
+        // Try 1: Top-level extracted artifact (from /api/extract)
         const hmwStatements = reframeArtifact.hmwStatements as Array<{ fullStatement: string }> | undefined;
         const selectedIndices = reframeArtifact.selectedForIdeation as number[] | undefined;
         const selectedIdx = selectedIndices?.[0] ?? 0;
         hmwStatement = hmwStatements?.[selectedIdx]?.fullStatement;
+
+        // Try 2: Canvas-stored HMW cards (always saved by auto-save)
+        if (!hmwStatement) {
+          const canvasData = reframeArtifact._canvas as { hmwCards?: Array<{ fullStatement?: string; cardIndex?: number }> } | undefined;
+          if (canvasData?.hmwCards && canvasData.hmwCards.length > 0) {
+            // Prefer the card with the lowest cardIndex that has a fullStatement
+            const sortedCards = [...canvasData.hmwCards]
+              .sort((a, b) => (a.cardIndex ?? 0) - (b.cardIndex ?? 0));
+            const filledCard = sortedCards.find((c) => c.fullStatement);
+            hmwStatement = filledCard?.fullStatement;
+          }
+        }
       }
     }
     // Fallback: try Step 1 challenge artifact
@@ -173,6 +188,13 @@ export default async function StepPage({ params }: StepPageProps) {
   const initialConceptCards: ConceptCardData[] = canvasData?.conceptCards || [];
   let initialPersonaTemplates: PersonaTemplateData[] = canvasData?.personaTemplates || [];
   let initialHmwCards: HmwCardData[] = canvasData?.hmwCards || [];
+  let initialMindMapNodes: MindMapNodeState[] = (canvasData?.mindMapNodes as MindMapNodeState[]) || [];
+  const initialMindMapEdges: MindMapEdgeState[] = (canvasData?.mindMapEdges as MindMapEdgeState[]) || [];
+
+  // Migration: if mind map nodes exist but lack positions, compute radial layout
+  if (initialMindMapNodes.length > 0 && !initialMindMapNodes.some((n) => n.position)) {
+    initialMindMapNodes = computeRadialPositions([...initialMindMapNodes], initialMindMapEdges);
+  }
 
   // Lazy migration: if artifact exists but no canvas state, derive initial positions
   if (initialCanvasPostIts.length === 0 && initialArtifact && step) {
@@ -251,6 +273,8 @@ export default async function StepPage({ params }: StepPageProps) {
         initialPostIts={initialCanvasPostIts}
         initialGridColumns={initialGridColumns}
         initialDrawingNodes={initialDrawingNodes}
+        initialMindMapNodes={initialMindMapNodes}
+        initialMindMapEdges={initialMindMapEdges}
         initialConceptCards={initialConceptCards}
         initialPersonaTemplates={initialPersonaTemplates}
         initialHmwCards={initialHmwCards}

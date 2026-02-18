@@ -61,8 +61,8 @@ export const THEME_COLORS: readonly ThemeColor[] = [
 export const ROOT_COLOR: ThemeColor = {
   id: 'root',
   label: 'Root',
-  color: '#6b7280',
-  bgColor: '#f3f4f6',
+  color: '#374151',  // gray-700 for better prominence
+  bgColor: '#f9fafb', // gray-50
 };
 
 /**

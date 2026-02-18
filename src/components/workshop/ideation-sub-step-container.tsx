@@ -3,33 +3,18 @@
 import * as React from 'react';
 
 import type { UIMessage } from 'ai';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChatPanel } from './chat-panel';
 import { ArtifactConfirmation } from './artifact-confirmation';
 import { StepNavigation } from './step-navigation';
-import { IdeaSelection } from './idea-selection';
 import { MindMapCanvas } from './mind-map-canvas';
 import { Crazy8sCanvas } from './crazy-8s-canvas';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Lightbulb, Zap, CheckCircle2, Check, ArrowRight, MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical } from 'lucide-react';
-import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
+import { ArrowRight, MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, Zap } from 'lucide-react';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
 
-type IdeationSubStep = 'mind-mapping' | 'crazy-eights' | 'idea-selection';
-
-const SUB_STEP_ORDER: IdeationSubStep[] = ['mind-mapping', 'crazy-eights', 'idea-selection'];
-const SUB_STEP_LABELS: Record<IdeationSubStep, string> = {
-  'mind-mapping': 'Mind Mapping',
-  'crazy-eights': 'Crazy 8s',
-  'idea-selection': 'Idea Selection',
-};
-
-function getNextSubStep(current: IdeationSubStep): IdeationSubStep | null {
-  const idx = SUB_STEP_ORDER.indexOf(current);
-  return idx < SUB_STEP_ORDER.length - 1 ? SUB_STEP_ORDER[idx + 1] : null;
-}
+type IdeationPhase = 'mind-mapping' | 'crazy-eights';
 
 interface IdeationSubStepContainerProps {
   sessionId: string;
@@ -54,8 +39,9 @@ export function IdeationSubStepContainer({
 }: IdeationSubStepContainerProps) {
   const { chatCollapsed, canvasCollapsed, setChatCollapsed, setCanvasCollapsed } = usePanelLayout();
 
-  // State management
-  const [currentSubStep, setCurrentSubStep] = React.useState<IdeationSubStep>('mind-mapping');
+  // Phase management: mind-mapping → crazy-eights
+  const [currentPhase, setCurrentPhase] = React.useState<IdeationPhase>('mind-mapping');
+  const [showCrazy8s, setShowCrazy8s] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
   const [artifact, setArtifact] = React.useState<Record<string, unknown> | null>(
     initialArtifact || null
@@ -68,78 +54,64 @@ export function IdeationSubStepContainer({
     stepStatus === 'complete' && initialArtifact !== null
   );
 
-  // Selection state (slot IDs instead of idea titles)
-  const [selectedSlotIds, setSelectedSlotIds] = React.useState<string[]>([]);
+  // Canvas state
+  const mindMapNodes = useCanvasStore(state => state.mindMapNodes);
+  const crazy8sSlots = useCanvasStore(state => state.crazy8sSlots);
 
-  // Sub-step progress tracking
-  const [mindMappingEngaged, setMindMappingEngaged] = React.useState(false);
-  const [crazyEightsEngaged, setCrazyEightsEngaged] = React.useState(false);
-  const [ideaSelectionEngaged, setIdeaSelectionEngaged] = React.useState(false);
+  // Mind map has content when there are level-1 theme nodes
+  const mindMapHasThemes = React.useMemo(
+    () => mindMapNodes.filter(node => node.level === 1).length > 0,
+    [mindMapNodes]
+  );
 
-  // Track engagement when user has enough messages in a sub-step
+  // Auto-show crazy 8s if slots already have content (resuming session)
   React.useEffect(() => {
-    if (liveMessageCount > 2) {
-      if (currentSubStep === 'mind-mapping') setMindMappingEngaged(true);
-      if (currentSubStep === 'crazy-eights') setCrazyEightsEngaged(true);
-      if (currentSubStep === 'idea-selection') setIdeaSelectionEngaged(true);
+    if (crazy8sSlots.some(slot => slot.imageUrl)) {
+      setShowCrazy8s(true);
+      setCurrentPhase('crazy-eights');
     }
-  }, [liveMessageCount, currentSubStep]);
+  }, []);
 
   // Check for mobile on mount and resize
   React.useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // ArtifactConfirmation handlers with selection merge
+  // Refs for scrolling to crazy 8s section
+  const crazy8sRef = React.useRef<HTMLDivElement>(null);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Transition to crazy 8s phase
+  const handleStartCrazy8s = React.useCallback(() => {
+    setShowCrazy8s(true);
+    setCurrentPhase('crazy-eights');
+    // Scroll horizontally to crazy 8s section after render
+    setTimeout(() => {
+      if (scrollContainerRef.current && crazy8sRef.current) {
+        scrollContainerRef.current.scrollTo({
+          left: crazy8sRef.current.offsetLeft,
+          behavior: 'smooth',
+        });
+      }
+    }, 100);
+  }, []);
+
+  // ArtifactConfirmation handlers
   const handleConfirm = React.useCallback(() => {
-    if (artifact) {
-      const updatedArtifact = {
-        ...artifact,
-        selectedSketchSlotIds: selectedSlotIds,
-      };
-      setArtifact(updatedArtifact);
-    }
     setArtifactConfirmed(true);
-  }, [artifact, selectedSlotIds]);
+  }, []);
 
   const handleEdit = React.useCallback(() => {
     setArtifactConfirmed(false);
     setArtifact(null);
   }, []);
 
-  // Complete a sub-step and auto-advance to next
-  const handleSubStepComplete = React.useCallback((subStep: IdeationSubStep) => {
-    if (subStep === 'mind-mapping') setMindMappingEngaged(true);
-    if (subStep === 'crazy-eights') setCrazyEightsEngaged(true);
-    if (subStep === 'idea-selection') setIdeaSelectionEngaged(true);
-
-    const next = getNextSubStep(subStep);
-    if (next) setCurrentSubStep(next);
-  }, []);
-
   const hasEnoughMessages = liveMessageCount >= 4;
-
-  // Get canvas state for mind map and crazy 8s
-  const crazy8sSlots = useCanvasStore(state => state.crazy8sSlots);
-  const mindMapNodes = useCanvasStore(state => state.mindMapNodes);
-
-  // Extract mind map themes (level 1 nodes)
-  const mindMapThemes = React.useMemo(() => {
-    return mindMapNodes.filter(node => node.level === 1);
-  }, [mindMapNodes]);
-
-  // Pre-populate selectedSlotIds from artifact
-  React.useEffect(() => {
-    if (artifact && (artifact.selectedSketchSlotIds as string[])?.length > 0) {
-      setSelectedSlotIds((artifact.selectedSketchSlotIds as string[]) || []);
-    }
-  }, [artifact]);
 
   // Get stepId for canvases
   const [stepId, setStepId] = React.useState<string>('');
@@ -152,8 +124,8 @@ export function IdeationSubStepContainer({
     getStep();
   }, []);
 
-  // Render chat panel with Extract Output button
-  const renderChatPanel = (subStep: IdeationSubStep) => (
+  // Render chat panel
+  const renderChatPanel = () => (
     <div className="flex h-full min-h-0 flex-col">
       {!isMobile && (
         <div className="flex justify-end px-2 pt-2">
@@ -173,398 +145,172 @@ export function IdeationSubStepContainer({
           workshopId={workshopId}
           initialMessages={initialMessages}
           onMessageCountChange={setLiveMessageCount}
-          subStep={subStep}
+          subStep={currentPhase}
         />
       </div>
-      {/* Sub-step action: Continue to next OR Extract Output on last sub-step */}
-      {currentSubStep === subStep && hasEnoughMessages && (() => {
-        const next = getNextSubStep(subStep);
-        if (next) {
-          return (
-            <div className="flex shrink-0 justify-center border-t bg-background p-4">
-              <Button onClick={() => handleSubStepComplete(subStep)} size="sm">
-                <ArrowRight className="mr-2 h-4 w-4" />
-                Continue to {SUB_STEP_LABELS[next]}
-              </Button>
-            </div>
-          );
-        }
-        return null;
-      })()}
+      {/* Transition button: Continue to Crazy 8s */}
+      {currentPhase === 'mind-mapping' && !showCrazy8s && hasEnoughMessages && mindMapHasThemes && (
+        <div className="flex shrink-0 justify-center border-t bg-background p-4">
+          <Button onClick={handleStartCrazy8s} size="sm">
+            <Zap className="mr-2 h-4 w-4" />
+            Continue to Crazy 8s
+          </Button>
+        </div>
+      )}
     </div>
   );
 
-  // Render output panel with IdeaSelection and ArtifactConfirmation (for idea-selection tab only)
-  const renderOutputPanel = (subStep: IdeationSubStep) => {
-    return (
-      <div className="flex h-full flex-col">
-        <div className="flex-1 overflow-y-auto">
-          {/* IdeaSelection -- shown in idea-selection tab when artifact exists */}
-          {currentSubStep === subStep && subStep === 'idea-selection' && (
-            <div className="p-4">
-              <IdeaSelection
-                crazy8sSlots={crazy8sSlots}
-                mindMapThemes={mindMapThemes}
-                selectedSlotIds={selectedSlotIds}
-                onSelectionChange={setSelectedSlotIds}
-                maxSelection={4}
-              />
-            </div>
+  // Render the canvas area with mind map + crazy 8s side by side horizontally
+  const renderCanvas = () => (
+    <div className="relative h-full">
+      {/* Collapse button — pinned top-right, outside scroll container */}
+      {!isMobile && (
+        <div className="absolute top-2 right-2 z-20">
+          <button
+            onClick={() => setCanvasCollapsed(true)}
+            className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
+            title="Collapse canvas"
+          >
+            <PanelRightClose className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Horizontal scroll container */}
+      <div ref={scrollContainerRef} className="flex h-full overflow-x-auto">
+        {/* Mind Map section */}
+        <div
+          className={cn(
+            'h-full shrink-0',
+            !showCrazy8s && 'w-full',
+          )}
+          style={showCrazy8s && !isMobile ? { aspectRatio: '3 / 2' } : undefined}
+        >
+          {stepId && (
+            <MindMapCanvas
+              workshopId={workshopId}
+              stepId={stepId}
+              hmwStatement={hmwStatement || artifact?.reframedHmw as string || ''}
+            />
           )}
         </div>
-        {/* ArtifactConfirmation below */}
-        {currentSubStep === subStep && artifact && (
-          <div className="border-t bg-background p-4">
-            <ArtifactConfirmation
-              onConfirm={handleConfirm}
-              onEdit={handleEdit}
-              isConfirming={false}
-              isConfirmed={artifactConfirmed}
-            />
+
+        {/* Crazy 8s section — appears to the right of mind map */}
+        {showCrazy8s && (
+          <div ref={crazy8sRef} className="flex h-full shrink-0 flex-col border-l" style={{ minWidth: '800px' }}>
+            <div className="flex items-center gap-2 border-b bg-muted/30 px-4 py-2">
+              <Zap className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">Crazy 8s</span>
+            </div>
+            <div className="min-h-0 flex-1">
+              {stepId && (
+                <Crazy8sCanvas
+                  workshopId={workshopId}
+                  stepId={stepId}
+                />
+              )}
+            </div>
           </div>
         )}
       </div>
-    );
-  };
+    </div>
+  );
 
   return (
     <div className="flex h-full flex-col">
-      {/* Sub-step progress header */}
+      {/* Step header */}
       <div className="border-b bg-muted/30 px-6 py-3">
         <div className="flex items-center gap-2 text-base">
           <span className="font-medium">Step 8: Ideation</span>
-          <span className="text-muted-foreground">--</span>
-          <span className="text-muted-foreground">
-            {currentSubStep === 'mind-mapping' && '8a: Mind Mapping'}
-            {currentSubStep === 'crazy-eights' && '8b: Crazy 8s'}
-            {currentSubStep === 'idea-selection' && '8c: Idea Selection'}
-          </span>
         </div>
       </div>
 
-      {/* Tabs navigation */}
-      <Tabs
-        value={currentSubStep}
-        onValueChange={(v) => setCurrentSubStep(v as IdeationSubStep)}
-        className="flex flex-1 flex-col min-h-0"
-      >
-        <div className="border-b px-6">
-          <TabsList className="h-10">
-            <TabsTrigger value="mind-mapping" className="gap-2">
-              <Lightbulb className="h-3.5 w-3.5" />
-              Mind Mapping
-              {mindMappingEngaged && <Check className="h-3 w-3 text-green-600" />}
-            </TabsTrigger>
-            <TabsTrigger value="crazy-eights" className="gap-2">
-              <Zap className="h-3.5 w-3.5" />
-              Crazy 8s
-              {crazyEightsEngaged && <Check className="h-3 w-3 text-green-600" />}
-            </TabsTrigger>
-            <TabsTrigger value="idea-selection" className="gap-2">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Idea Selection
-              {ideaSelectionEngaged && <Check className="h-3 w-3 text-green-600" />}
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
-        {/* Mind Mapping tab: chat + canvas layout */}
-        <TabsContent
-          value="mind-mapping"
-          forceMount
-          className={cn(
-            'flex-1 min-h-0 mt-0',
-            currentSubStep !== 'mind-mapping' && 'hidden'
-          )}
-        >
-          {isMobile ? (
-            <div className="flex h-full flex-col">
-              <div className="flex border-b px-4">
-                <button
-                  onClick={() => setMobileView('chat')}
-                  className={cn(
-                    'px-3 py-2 text-sm font-medium',
-                    mobileView === 'chat' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
-                  )}
-                >
-                  Chat
-                </button>
-                <button
-                  onClick={() => setMobileView('canvas')}
-                  className={cn(
-                    'px-3 py-2 text-sm font-medium',
-                    mobileView === 'canvas' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
-                  )}
-                >
-                  Mind Map
-                </button>
-              </div>
-              <div className="min-h-0 flex-1">
-                {mobileView === 'chat' ? (
-                  renderChatPanel('mind-mapping')
-                ) : (
-                  stepId && (
-                    <MindMapCanvas
-                      workshopId={workshopId}
-                      stepId={stepId}
-                      hmwStatement={hmwStatement || artifact?.reframedHmw as string || ''}
-                    />
-                  )
+      {/* Main content area */}
+      <div className="flex-1 min-h-0">
+        {isMobile ? (
+          /* Mobile: toggle between chat and canvas */
+          <div className="flex h-full flex-col">
+            <div className="flex border-b px-4">
+              <button
+                onClick={() => setMobileView('chat')}
+                className={cn(
+                  'px-3 py-2 text-sm font-medium',
+                  mobileView === 'chat' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
                 )}
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-full">
-              {chatCollapsed ? (
-                <div className="flex w-10 flex-col items-center border-r bg-muted/30 py-4">
-                  <button
-                    onClick={() => setChatCollapsed(false)}
-                    className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                    title="Expand chat"
-                  >
-                    <MessageSquare className="h-5 w-5" />
-                  </button>
-                </div>
-              ) : canvasCollapsed ? (
-                <div className="flex-1">{renderChatPanel('mind-mapping')}</div>
-              ) : (
-                <>
-                  <div className="w-[400px] shrink-0 border-r">
-                    {renderChatPanel('mind-mapping')}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="h-full relative">
-                      <div className="absolute top-2 right-2 z-10">
-                        <button
-                          onClick={() => setCanvasCollapsed(true)}
-                          className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
-                          title="Collapse canvas"
-                        >
-                          <PanelRightClose className="h-4 w-4" />
-                        </button>
-                      </div>
-                      {stepId && (
-                        <MindMapCanvas
-                          workshopId={workshopId}
-                          stepId={stepId}
-                          hmwStatement={hmwStatement || artifact?.reframedHmw as string || ''}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-              {chatCollapsed && !canvasCollapsed && (
-                <div className="flex-1 relative">
-                  <div className="absolute top-2 right-2 z-10">
-                    <button
-                      onClick={() => setCanvasCollapsed(true)}
-                      className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
-                      title="Collapse canvas"
-                    >
-                      <PanelRightClose className="h-4 w-4" />
-                    </button>
-                  </div>
-                  {stepId && (
-                    <MindMapCanvas
-                      workshopId={workshopId}
-                      stepId={stepId}
-                      hmwStatement={hmwStatement || artifact?.reframedHmw as string || ''}
-                    />
-                  )}
-                </div>
-              )}
-              {canvasCollapsed && (
-                <div className="flex w-10 flex-col items-center border-l bg-muted/30 py-4">
-                  <button
-                    onClick={() => setCanvasCollapsed(false)}
-                    className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                    title="Expand canvas"
-                  >
-                    <LayoutGrid className="h-5 w-5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Crazy 8s tab: chat + canvas layout */}
-        <TabsContent
-          value="crazy-eights"
-          forceMount
-          className={cn(
-            'flex-1 min-h-0 mt-0',
-            currentSubStep !== 'crazy-eights' && 'hidden'
-          )}
-        >
-          {isMobile ? (
-            <div className="flex h-full flex-col">
-              <div className="flex border-b px-4">
-                <button
-                  onClick={() => setMobileView('chat')}
-                  className={cn(
-                    'px-3 py-2 text-sm font-medium',
-                    mobileView === 'chat' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
-                  )}
-                >
-                  Chat
-                </button>
-                <button
-                  onClick={() => setMobileView('canvas')}
-                  className={cn(
-                    'px-3 py-2 text-sm font-medium',
-                    mobileView === 'canvas' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
-                  )}
-                >
-                  Crazy 8s
-                </button>
-              </div>
-              <div className="min-h-0 flex-1">
-                {mobileView === 'chat' ? (
-                  renderChatPanel('crazy-eights')
-                ) : (
-                  stepId && (
-                    <Crazy8sCanvas
-                      workshopId={workshopId}
-                      stepId={stepId}
-                    />
-                  )
+              >
+                Chat
+              </button>
+              <button
+                onClick={() => setMobileView('canvas')}
+                className={cn(
+                  'px-3 py-2 text-sm font-medium',
+                  mobileView === 'canvas' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
                 )}
+              >
+                Canvas
+              </button>
+            </div>
+            <div className="min-h-0 flex-1">
+              {mobileView === 'chat' ? renderChatPanel() : renderCanvas()}
+            </div>
+          </div>
+        ) : (
+          /* Desktop: chat + canvas side by side */
+          <div className="flex h-full">
+            {/* Chat collapsed strip */}
+            {chatCollapsed && (
+              <div className="flex w-10 flex-col items-center border-r bg-muted/30 py-4">
+                <button
+                  onClick={() => setChatCollapsed(false)}
+                  className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  title="Expand chat"
+                >
+                  <MessageSquare className="h-5 w-5" />
+                </button>
               </div>
-            </div>
-          ) : (
-            <div className="flex h-full">
-              {chatCollapsed ? (
-                <div className="flex w-10 flex-col items-center border-r bg-muted/30 py-4">
-                  <button
-                    onClick={() => setChatCollapsed(false)}
-                    className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                    title="Expand chat"
-                  >
-                    <MessageSquare className="h-5 w-5" />
-                  </button>
-                </div>
-              ) : canvasCollapsed ? (
-                <div className="flex-1">{renderChatPanel('crazy-eights')}</div>
-              ) : (
-                <>
-                  <div className="w-[400px] shrink-0 border-r">
-                    {renderChatPanel('crazy-eights')}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="h-full relative">
-                      <div className="absolute top-2 right-2 z-10">
-                        <button
-                          onClick={() => setCanvasCollapsed(true)}
-                          className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
-                          title="Collapse canvas"
-                        >
-                          <PanelRightClose className="h-4 w-4" />
-                        </button>
-                      </div>
-                      {stepId && (
-                        <Crazy8sCanvas
-                          workshopId={workshopId}
-                          stepId={stepId}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-              {chatCollapsed && !canvasCollapsed && (
-                <div className="flex-1 relative">
-                  <div className="absolute top-2 right-2 z-10">
-                    <button
-                      onClick={() => setCanvasCollapsed(true)}
-                      className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
-                      title="Collapse canvas"
-                    >
-                      <PanelRightClose className="h-4 w-4" />
-                    </button>
-                  </div>
-                  {stepId && (
-                    <Crazy8sCanvas
-                      workshopId={workshopId}
-                      stepId={stepId}
-                    />
-                  )}
-                </div>
-              )}
-              {canvasCollapsed && (
-                <div className="flex w-10 flex-col items-center border-l bg-muted/30 py-4">
-                  <button
-                    onClick={() => setCanvasCollapsed(false)}
-                    className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                    title="Expand canvas"
-                  >
-                    <LayoutGrid className="h-5 w-5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </TabsContent>
+            )}
 
-        {/* Idea Selection tab: chat + output panel */}
-        <TabsContent
-          value="idea-selection"
-          forceMount
-          className={cn(
-            'flex-1 min-h-0 mt-0',
-            currentSubStep !== 'idea-selection' && 'hidden'
-          )}
-        >
-          {isMobile ? (
-            /* Mobile: stacked layout */
-            <div className="flex h-full flex-col">
-              <div className="min-h-0 flex-1 border-b">
-                {renderChatPanel('idea-selection')}
-              </div>
-              <div className="min-h-0 flex-1">
-                {renderOutputPanel('idea-selection')}
-              </div>
-            </div>
-          ) : (
-            /* Desktop: resizable panels with chat collapse */
-            <div className="flex h-full">
-              {chatCollapsed && (
-                <div className="flex w-10 flex-col items-center border-r bg-muted/30 py-4">
-                  <button
-                    onClick={() => setChatCollapsed(false)}
-                    className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                    title="Expand chat"
-                  >
-                    <MessageSquare className="h-5 w-5" />
-                  </button>
-                </div>
-              )}
-              {chatCollapsed ? (
-                <div className="flex-1">
-                  {renderOutputPanel('idea-selection')}
-                </div>
-              ) : (
-                <PanelGroup orientation="horizontal" className="flex-1">
-                  <Panel defaultSize={480} minSize={280} maxSize="60%">
-                    {renderChatPanel('idea-selection')}
-                  </Panel>
-                  <PanelResizeHandle className="group relative flex w-2 items-center justify-center bg-border/40 transition-colors hover:bg-border data-[active]:bg-primary/20">
-                    <div className="z-10 flex h-8 w-3.5 items-center justify-center rounded-sm border bg-border">
-                      <GripVertical className="h-3 w-3 text-muted-foreground" />
-                    </div>
-                  </PanelResizeHandle>
-                  <Panel minSize="30%">
-                    {renderOutputPanel('idea-selection')}
-                  </Panel>
-                </PanelGroup>
-              )}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            {/* Chat takes full width when canvas collapsed */}
+            {!chatCollapsed && canvasCollapsed && (
+              <div className="flex-1">{renderChatPanel()}</div>
+            )}
 
-      {/* Step navigation (shared across all sub-steps) */}
+            {/* Both panels visible */}
+            {!chatCollapsed && !canvasCollapsed && (
+              <>
+                <div className="w-[400px] shrink-0 border-r">
+                  {renderChatPanel()}
+                </div>
+                <div className="flex-1 min-w-0 relative">
+                  {renderCanvas()}
+                </div>
+              </>
+            )}
+
+            {/* Canvas takes full width when chat collapsed */}
+            {chatCollapsed && !canvasCollapsed && (
+              <div className="flex-1 relative">
+                {renderCanvas()}
+              </div>
+            )}
+
+            {/* Canvas collapsed strip */}
+            {canvasCollapsed && (
+              <div className="flex w-10 flex-col items-center border-l bg-muted/30 py-4">
+                <button
+                  onClick={() => setCanvasCollapsed(false)}
+                  className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  title="Expand canvas"
+                >
+                  <LayoutGrid className="h-5 w-5" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Step navigation */}
       <StepNavigation
         sessionId={sessionId}
         workshopId={workshopId}

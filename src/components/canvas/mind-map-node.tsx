@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +21,7 @@ export type MindMapNode = Node<MindMapNodeData, 'mindMapNode'>;
 export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editLabel, setEditLabel] = useState(data.label);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleLabelClick = useCallback(() => {
     setIsEditing(true);
@@ -35,8 +36,8 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
   }, [id, editLabel, data]);
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSave();
       } else if (e.key === 'Escape') {
@@ -47,6 +48,15 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
     },
     [data.label, handleSave]
   );
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+      textareaRef.current.focus();
+    }
+  }, [isEditing, editLabel]);
 
   const handleAddChild = useCallback(
     (e: React.MouseEvent) => {
@@ -64,81 +74,85 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
     [id, data]
   );
 
+  const isRoot = data.isRoot;
+
+  // Handle style: hidden by default, visible on hover
+  const handleClass = '!w-2 !h-2 !bg-current !opacity-0 group-hover:!opacity-100 !transition-opacity';
+
   return (
     <div
       className={cn(
-        'w-[200px] px-4 py-3 rounded-lg border-2 shadow-sm group',
-        'transition-all duration-150 hover:shadow-md'
+        'px-4 py-3 rounded-lg border-2 shadow-sm group',
+        'transition-all duration-150 hover:shadow-md',
+        isRoot
+          ? 'min-w-[280px] max-w-[400px]'
+          : 'min-w-[140px] max-w-[280px]'
       )}
       style={{
         borderColor: data.themeColor,
         backgroundColor: data.themeBgColor,
       }}
     >
-      {/* Target handle (left side) - hidden for root node */}
-      {!data.isRoot && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          className="!w-2 !h-2 !bg-current"
-          style={{ color: data.themeColor }}
-        />
-      )}
+      {/* Handles on all 4 sides — both source and target */}
+      <Handle type="target" position={Position.Top} id="target-top" className={handleClass} style={{ color: data.themeColor }} />
+      <Handle type="target" position={Position.Bottom} id="target-bottom" className={handleClass} style={{ color: data.themeColor }} />
+      <Handle type="target" position={Position.Left} id="target-left" className={handleClass} style={{ color: data.themeColor }} />
+      <Handle type="target" position={Position.Right} id="target-right" className={handleClass} style={{ color: data.themeColor }} />
+
+      <Handle type="source" position={Position.Top} id="source-top" className={handleClass} style={{ color: data.themeColor }} />
+      <Handle type="source" position={Position.Bottom} id="source-bottom" className={handleClass} style={{ color: data.themeColor }} />
+      <Handle type="source" position={Position.Left} id="source-left" className={handleClass} style={{ color: data.themeColor }} />
+      <Handle type="source" position={Position.Right} id="source-right" className={handleClass} style={{ color: data.themeColor }} />
 
       {/* Label with inline editing */}
       {isEditing ? (
-        <input
-          autoFocus
-          type="text"
+        <textarea
+          ref={textareaRef}
           value={editLabel}
           onChange={(e) => setEditLabel(e.target.value)}
           onBlur={handleSave}
           onKeyDown={handleKeyDown}
-          className="nodrag nopan w-full bg-transparent outline-none text-sm font-medium border-b-2"
+          className={cn(
+            'nodrag nopan w-full bg-transparent outline-none font-medium border-b-2 resize-none overflow-hidden',
+            isRoot ? 'text-base' : 'text-sm'
+          )}
           style={{ borderColor: data.themeColor, color: data.themeColor }}
-          maxLength={100}
+          rows={1}
         />
       ) : (
         <div
           onClick={handleLabelClick}
-          className="cursor-text truncate font-medium text-sm"
+          className={cn(
+            'cursor-text break-words font-medium',
+            isRoot ? 'text-base' : 'text-sm'
+          )}
           style={{ color: data.themeColor }}
         >
           {data.label || 'Click to edit'}
         </div>
       )}
 
-      {/* Action buttons (hover) - hidden for root node */}
-      {!data.isRoot && (
-        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          {/* Add Child button - only if level < 3 */}
-          {data.level < 3 && (
-            <button
-              onClick={handleAddChild}
-              className="nodrag nopan text-xs px-2 py-0.5 rounded hover:bg-white/50 transition-colors"
-              style={{ color: data.themeColor }}
-            >
-              +Child
-            </button>
-          )}
+      {/* Action buttons (hover) */}
+      <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Add Child / +Branch button */}
+        <button
+          onClick={handleAddChild}
+          className="nodrag nopan text-xs px-2 py-0.5 rounded hover:bg-white/50 transition-colors"
+          style={{ color: data.themeColor }}
+        >
+          {isRoot ? '+Branch' : '+Child'}
+        </button>
 
-          {/* Delete button */}
+        {/* Delete button — hidden for root */}
+        {!isRoot && (
           <button
             onClick={handleDelete}
             className="nodrag nopan text-xs px-2 py-0.5 rounded hover:bg-red-100 text-red-600 transition-colors"
           >
             Delete
           </button>
-        </div>
-      )}
-
-      {/* Source handle (right side) */}
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="!w-2 !h-2 !bg-current"
-        style={{ color: data.themeColor }}
-      />
+        )}
+      </div>
     </div>
   );
 });

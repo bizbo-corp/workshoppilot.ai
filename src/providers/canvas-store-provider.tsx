@@ -8,6 +8,8 @@ import {
   type PostIt,
   type GridColumn,
   type DrawingNode,
+  type MindMapNodeState,
+  type MindMapEdgeState,
 } from '@/stores/canvas-store';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
@@ -22,6 +24,8 @@ export interface CanvasStoreProviderProps {
   initialPostIts?: PostIt[];
   initialGridColumns?: GridColumn[];
   initialDrawingNodes?: DrawingNode[];
+  initialMindMapNodes?: MindMapNodeState[];
+  initialMindMapEdges?: MindMapEdgeState[];
   initialConceptCards?: ConceptCardData[];
   initialPersonaTemplates?: PersonaTemplateData[];
   initialHmwCards?: HmwCardData[];
@@ -32,6 +36,8 @@ export function CanvasStoreProvider({
   initialPostIts,
   initialGridColumns,
   initialDrawingNodes,
+  initialMindMapNodes,
+  initialMindMapEdges,
   initialConceptCards,
   initialPersonaTemplates,
   initialHmwCards,
@@ -42,6 +48,8 @@ export function CanvasStoreProvider({
       postIts: initialPostIts || [],
       gridColumns: initialGridColumns || [],
       drawingNodes: initialDrawingNodes || [],
+      mindMapNodes: initialMindMapNodes || [],
+      mindMapEdges: initialMindMapEdges || [],
       conceptCards: initialConceptCards || [],
       personaTemplates: initialPersonaTemplates || [],
       hmwCards: initialHmwCards || [],

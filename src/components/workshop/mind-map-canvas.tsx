@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect, useCallback, useState } from 'react';
+import { useMemo, useEffect, useCallback, useState, useRef } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -9,20 +9,20 @@ import {
   MiniMap,
   Panel,
   useReactFlow,
+  applyNodeChanges,
   type Node,
   type Edge,
+  type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Sparkles, Loader2, Plus, Undo2, Redo2 } from 'lucide-react';
 
 import { MindMapNode } from '@/components/canvas/mind-map-node';
 import { MindMapEdge } from '@/components/canvas/mind-map-edge';
-import { getLayoutedElements } from '@/lib/canvas/mind-map-layout';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import {
   THEME_COLORS,
   ROOT_COLOR,
-  getThemeColorForNode,
   type ThemeColor,
 } from '@/lib/canvas/mind-map-theme-colors';
 import type {
@@ -34,6 +34,12 @@ import { Button } from '@/components/ui/button';
 // Define node and edge types outside component to prevent re-renders
 const nodeTypes = { mindMapNode: MindMapNode };
 const edgeTypes = { mindMapEdge: MindMapEdge };
+
+// Snap grid size for drag-end positions
+const SNAP_GRID = 20;
+function snapToGrid(val: number): number {
+  return Math.round(val / SNAP_GRID) * SNAP_GRID;
+}
 
 export type MindMapCanvasProps = {
   workshopId: string;
@@ -58,6 +64,7 @@ function MindMapCanvasInner({
   const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
   const addMindMapNode = useCanvasStore((state) => state.addMindMapNode);
   const updateMindMapNode = useCanvasStore((state) => state.updateMindMapNode);
+  const updateMindMapNodePosition = useCanvasStore((state) => state.updateMindMapNodePosition);
   const deleteMindMapNode = useCanvasStore((state) => state.deleteMindMapNode);
   const setMindMapState = useCanvasStore((state) => state.setMindMapState);
 
@@ -71,7 +78,10 @@ function MindMapCanvasInner({
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
-  // Initialize with root node if empty (always create, fallback label)
+  // Live positions ref — prevents flicker during drag (same pattern as react-flow-canvas.tsx)
+  const livePositions = useRef<Record<string, { x: number; y: number }>>({});
+
+  // Initialize with root node if empty
   useEffect(() => {
     if (mindMapNodes.length === 0) {
       const rootNode: MindMapNodeState = {
@@ -82,6 +92,7 @@ function MindMapCanvasInner({
         themeBgColor: ROOT_COLOR.bgColor,
         isRoot: true,
         level: 0,
+        position: { x: 0, y: 0 },
       };
       setMindMapState([rootNode], []);
     }
@@ -97,7 +108,7 @@ function MindMapCanvasInner({
     }
   }, [hmwStatement, mindMapNodes, updateMindMapNode]);
 
-  // Callback: Update node label (no layout recalculation)
+  // Callback: Update node label
   const handleLabelChange = useCallback(
     (nodeId: string, newLabel: string) => {
       updateMindMapNode(nodeId, { label: newLabel });
@@ -105,7 +116,7 @@ function MindMapCanvasInner({
     [updateMindMapNode]
   );
 
-  // Callback: Add child node
+  // Callback: Add child node with radial offset from parent
   const handleAddChild = useCallback(
     (parentId: string) => {
       const parentNode = mindMapNodes.find((n) => n.id === parentId);
@@ -113,30 +124,48 @@ function MindMapCanvasInner({
 
       const childLevel = parentNode.level + 1;
 
-      // Soft warning if level >= 3 (but still allow)
-      if (childLevel >= 3) {
-        const shouldContinue = window.confirm(
-          'Adding nodes at depth 3+ may make the mind map harder to read. Continue?'
-        );
-        if (!shouldContinue) return;
-      }
-
       // Determine theme color
       let themeColor: ThemeColor;
       if (parentNode.isRoot) {
-        // Level-1 node: auto-assign from THEME_COLORS based on sibling count
         const existingLevel1Nodes = mindMapNodes.filter((n) => n.level === 1);
         const colorIndex = existingLevel1Nodes.length % THEME_COLORS.length;
         themeColor = THEME_COLORS[colorIndex];
       } else {
-        // Deeper node: inherit parent's themeColorId
         const inheritedColor = THEME_COLORS.find(
           (c) => c.id === parentNode.themeColorId
         );
         themeColor = inheritedColor || ROOT_COLOR;
       }
 
-      // Create new node
+      // Compute radial offset from parent
+      const parentPos = livePositions.current[parentId] || parentNode.position || { x: 0, y: 0 };
+      const siblingCount = mindMapEdges.filter((e) => e.source === parentId).length;
+      const CHILD_DISTANCE = 250;
+      const angle = (2 * Math.PI * siblingCount) / Math.max(siblingCount + 1, 3) - Math.PI / 2;
+
+      // If parent is root, spread around evenly; otherwise, fan out from parent's direction
+      let childX: number;
+      let childY: number;
+
+      if (parentNode.isRoot) {
+        const totalChildren = siblingCount + 1;
+        const childAngle = (2 * Math.PI * siblingCount) / totalChildren - Math.PI / 2;
+        childX = snapToGrid(parentPos.x + CHILD_DISTANCE * Math.cos(childAngle));
+        childY = snapToGrid(parentPos.y + CHILD_DISTANCE * Math.sin(childAngle));
+      } else {
+        // Direction from root to parent
+        const rootNode = mindMapNodes.find((n) => n.isRoot);
+        const rootPos = rootNode?.position || { x: 0, y: 0 };
+        const dirAngle = Math.atan2(parentPos.y - rootPos.y, parentPos.x - rootPos.x);
+        // Fan children around that direction
+        const spread = Math.PI / 3;
+        const startAngle = dirAngle - spread / 2;
+        const angleStep = siblingCount > 0 ? spread / siblingCount : 0;
+        const childAngle = siblingCount === 0 ? dirAngle : startAngle + angleStep * siblingCount;
+        childX = snapToGrid(parentPos.x + CHILD_DISTANCE * Math.cos(childAngle));
+        childY = snapToGrid(parentPos.y + CHILD_DISTANCE * Math.sin(childAngle));
+      }
+
       const newNodeId = crypto.randomUUID();
       const newNode: MindMapNodeState = {
         id: newNodeId,
@@ -147,9 +176,9 @@ function MindMapCanvasInner({
         isRoot: false,
         level: childLevel,
         parentId,
+        position: { x: childX, y: childY },
       };
 
-      // Create new edge
       const newEdge: MindMapEdgeState = {
         id: `${parentId}-${newNodeId}`,
         source: parentId,
@@ -159,21 +188,15 @@ function MindMapCanvasInner({
 
       addMindMapNode(newNode, newEdge);
     },
-    [mindMapNodes, addMindMapNode]
+    [mindMapNodes, mindMapEdges, addMindMapNode]
   );
 
   // Callback: Delete node with cascade confirmation
   const handleDelete = useCallback(
     (nodeId: string) => {
       const nodeToDelete = mindMapNodes.find((n) => n.id === nodeId);
-      if (!nodeToDelete) return;
+      if (!nodeToDelete || nodeToDelete.isRoot) return;
 
-      // Cannot delete root
-      if (nodeToDelete.isRoot) {
-        return;
-      }
-
-      // Count descendants via BFS
       const descendants = new Set<string>();
       const queue = [nodeId];
       while (queue.length > 0) {
@@ -185,7 +208,6 @@ function MindMapCanvasInner({
         });
       }
 
-      // Confirm if has descendants
       if (descendants.size > 0) {
         const shouldDelete = window.confirm(
           `Delete this node and ${descendants.size} child node(s)?`
@@ -198,12 +220,13 @@ function MindMapCanvasInner({
     [mindMapNodes, mindMapEdges, deleteMindMapNode]
   );
 
-  // Convert store state to ReactFlow nodes
+  // Convert store state to ReactFlow nodes — uses stored positions directly
   const rfNodes: Node[] = useMemo(() => {
     return mindMapNodes.map((nodeState) => ({
       id: nodeState.id,
       type: 'mindMapNode',
-      position: { x: 0, y: 0 }, // dagre will recalculate
+      position: livePositions.current[nodeState.id] || nodeState.position || { x: 0, y: 0 },
+      draggable: true,
       data: {
         label: nodeState.label,
         themeColorId: nodeState.themeColorId,
@@ -216,6 +239,7 @@ function MindMapCanvasInner({
         onDelete: handleDelete,
       },
     }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions is a ref
   }, [mindMapNodes, handleLabelChange, handleAddChild, handleDelete]);
 
   // Convert store state to ReactFlow edges
@@ -231,12 +255,42 @@ function MindMapCanvasInner({
     }));
   }, [mindMapEdges]);
 
-  // Calculate dagre layout
-  const layoutedNodes = useMemo(() => {
-    if (rfNodes.length === 0) return [];
-    const { nodes } = getLayoutedElements(rfNodes, rfEdges, { direction: 'LR' });
-    return nodes;
-  }, [rfNodes, rfEdges]);
+  // Controlled nodes state for ReactFlow (allows drag to work)
+  const [nodes, setNodes] = useState<Node[]>(rfNodes);
+
+  // Sync controlled nodes when store changes (not during drag)
+  useEffect(() => {
+    setNodes(rfNodes);
+  }, [rfNodes]);
+
+  // Handle node changes (drag, selection)
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      // Update live positions ref during drag for flicker-free rendering
+      for (const c of changes) {
+        if (c.type === 'position') {
+          const posChange = c as NodeChange & { id: string; position?: { x: number; y: number }; dragging?: boolean };
+          if (posChange.dragging && posChange.position) {
+            livePositions.current[posChange.id] = posChange.position;
+          } else if (posChange.dragging === false) {
+            // Drag ended — snap to grid and persist to store
+            const finalPos = posChange.position || livePositions.current[posChange.id];
+            if (finalPos) {
+              const snapped = {
+                x: snapToGrid(finalPos.x),
+                y: snapToGrid(finalPos.y),
+              };
+              updateMindMapNodePosition(posChange.id, snapped);
+            }
+            delete livePositions.current[posChange.id];
+          }
+        }
+      }
+
+      setNodes((nds) => applyNodeChanges(changes, nds));
+    },
+    [updateMindMapNodePosition]
+  );
 
   // Callback: AI theme suggestion
   const handleSuggestThemes = useCallback(async () => {
@@ -244,20 +298,17 @@ function MindMapCanvasInner({
     setSuggestionError(null);
 
     try {
-      // Get root node HMW statement
       const rootNode = mindMapNodes.find((n) => n.isRoot);
       if (!rootNode) {
         setSuggestionError('No root node found');
         return;
       }
 
-      // Collect existing theme labels from level-1 nodes
       const existingThemes = mindMapNodes
         .filter((n) => n.level === 1)
         .map((n) => n.label)
         .filter(Boolean);
 
-      // Call AI suggestion endpoint
       const response = await fetch('/api/ai/suggest-themes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -280,15 +331,19 @@ function MindMapCanvasInner({
         return;
       }
 
-      // Add each theme as a level-1 child of root
+      // Place themes radially around root at 350px radius
+      const rootPos = rootNode.position || { x: 0, y: 0 };
       const existingLevel1Count = mindMapNodes.filter((n) => n.level === 1).length;
+      const totalAfter = existingLevel1Count + themes.length;
 
       themes.forEach((themeLabel, index) => {
-        // Determine theme color based on existing + new count
         const colorIndex = (existingLevel1Count + index) % THEME_COLORS.length;
         const themeColor = THEME_COLORS[colorIndex];
 
-        // Create new node
+        // Spread all themes (existing + new) evenly; place new ones at the end
+        const angle = (2 * Math.PI * (existingLevel1Count + index)) / totalAfter - Math.PI / 2;
+        const RADIUS = 350;
+
         const newNodeId = crypto.randomUUID();
         const newNode: MindMapNodeState = {
           id: newNodeId,
@@ -299,9 +354,12 @@ function MindMapCanvasInner({
           isRoot: false,
           level: 1,
           parentId: 'root',
+          position: {
+            x: snapToGrid(rootPos.x + RADIUS * Math.cos(angle)),
+            y: snapToGrid(rootPos.y + RADIUS * Math.sin(angle)),
+          },
         };
 
-        // Create new edge
         const newEdge: MindMapEdgeState = {
           id: `root-${newNodeId}`,
           source: 'root',
@@ -312,7 +370,6 @@ function MindMapCanvasInner({
         addMindMapNode(newNode, newEdge);
       });
 
-      // Fit view to show all nodes after adding themes
       setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
     } catch (error) {
       console.error('Theme suggestion error:', error);
@@ -349,11 +406,17 @@ function MindMapCanvasInner({
     return unsubscribe;
   }, [storeApi]);
 
-  // Add a disconnected node (level 1 child of root)
+  // Add a node (level 1 child of root) with radial placement
   const handleAddNode = useCallback(() => {
     const existingLevel1Nodes = mindMapNodes.filter((n) => n.level === 1);
     const colorIndex = existingLevel1Nodes.length % THEME_COLORS.length;
     const themeColor = THEME_COLORS[colorIndex];
+
+    const rootNode = mindMapNodes.find((n) => n.isRoot);
+    const rootPos = rootNode?.position || { x: 0, y: 0 };
+    const totalChildren = existingLevel1Nodes.length + 1;
+    const angle = (2 * Math.PI * existingLevel1Nodes.length) / totalChildren - Math.PI / 2;
+    const RADIUS = 350;
 
     const newNodeId = crypto.randomUUID();
     const newNode: MindMapNodeState = {
@@ -365,6 +428,10 @@ function MindMapCanvasInner({
       isRoot: false,
       level: 1,
       parentId: 'root',
+      position: {
+        x: snapToGrid(rootPos.x + RADIUS * Math.cos(angle)),
+        y: snapToGrid(rootPos.y + RADIUS * Math.sin(angle)),
+      },
     };
 
     const newEdge: MindMapEdgeState = {
@@ -385,8 +452,9 @@ function MindMapCanvasInner({
   return (
     <div className="h-full w-full">
       <ReactFlow
-        nodes={layoutedNodes}
+        nodes={nodes}
         edges={rfEdges}
+        onNodesChange={handleNodesChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
@@ -394,10 +462,12 @@ function MindMapCanvasInner({
         minZoom={0.2}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
-        nodesDraggable={false}  // dagre controls positions
-        nodesConnectable={false}  // no manual edge creation
+        nodesDraggable={true}
+        nodesConnectable={false}
         edgesFocusable={false}
         selectNodesOnDrag={false}
+        snapToGrid={true}
+        snapGrid={[SNAP_GRID, SNAP_GRID]}
       >
         <Background color="#e5e7eb" gap={20} />
         <Controls showInteractive={false} />

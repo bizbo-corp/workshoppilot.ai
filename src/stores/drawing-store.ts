@@ -51,7 +51,7 @@ const DEFAULT_STATE: DrawingState = {
   activeTool: 'pencil',
   strokeColor: '#000000',
   fillColor: 'transparent',
-  strokeWidth: 2,
+  strokeWidth: 4,
   fontSize: 16,
   canUndo: false,
   canRedo: false,

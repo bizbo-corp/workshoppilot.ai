@@ -12,14 +12,15 @@ import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { computeCanvasPosition, computeThemeSortPositions, computeClusterChildPositions, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, ZONE_COLORS } from '@/lib/canvas/canvas-position';
-import type { PostItColor } from '@/stores/canvas-store';
+import type { PostItColor, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
+import { THEME_COLORS, ROOT_COLOR } from '@/lib/canvas/mind-map-theme-colors';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { saveCanvasState } from '@/actions/canvas-actions';
 
 /** Steps that support canvas item auto-add */
-const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe'];
+const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe', 'ideation'];
 
 /** Fixed initial greetings shown instantly while AI generates first response */
 const STEP_INITIAL_GREETINGS: Record<string, string> = {
@@ -384,13 +385,82 @@ function parseHmwCards(content: string): { cleanContent: string; cards: Partial<
   return { cleanContent, cards };
 }
 
+type MindMapNodeParsed = {
+  label: string;
+  theme?: string;    // Parent theme label (omitted for theme-level nodes)
+  isWildCard?: boolean;
+};
+
+/**
+ * Parse [MIND_MAP_NODE: Label] and [MIND_MAP_NODE: Label, Theme: Parent] markup.
+ * Also supports tag format: [MIND_MAP_NODE theme="Parent" wildcard]Label[/MIND_MAP_NODE]
+ * Returns clean content and extracted mind map node data.
+ */
+function parseMindMapNodes(content: string): { cleanContent: string; nodes: MindMapNodeParsed[] } {
+  const nodes: MindMapNodeParsed[] = [];
+
+  // Format 1: Tag pairs [MIND_MAP_NODE theme="..." wildcard?]Label[/MIND_MAP_NODE]
+  const tagRegex = /\[MIND_MAP_NODE(?:\s+([^\]]*))?\](.*?)\[\/MIND_MAP_NODE\]/g;
+  let match;
+  while ((match = tagRegex.exec(content)) !== null) {
+    const attrs = match[1] || '';
+    const label = match[2].trim();
+    if (!label) continue;
+
+    const themeMatch = attrs.match(/theme\s*=\s*"([^"]+)"/i);
+    const isWildCard = /wildcard/i.test(attrs);
+
+    nodes.push({
+      label,
+      theme: themeMatch?.[1],
+      isWildCard,
+    });
+  }
+
+  // Format 2: Shorthand [MIND_MAP_NODE: Label] or [MIND_MAP_NODE: Label, Theme: Parent]
+  const contentWithoutTags = content.replace(/\[MIND_MAP_NODE(?:\s+[^\]]*?)?\].*?\[\/MIND_MAP_NODE\]/g, '');
+  const shorthandRegex = /\[MIND_MAP_NODE:\s*([^\]]+)\]/g;
+  while ((match = shorthandRegex.exec(contentWithoutTags)) !== null) {
+    const inner = match[1].trim();
+    // Parse comma-separated attributes
+    const parts = inner.split(',').map(s => s.trim());
+    const label = parts[0];
+    if (!label) continue;
+
+    let theme: string | undefined;
+    let isWildCard = false;
+
+    for (let i = 1; i < parts.length; i++) {
+      const part = parts[i];
+      const themeMatch = part.match(/^Theme:\s*(.+)/i);
+      if (themeMatch) theme = themeMatch[1].trim();
+      if (/wild\s*card/i.test(part)) isWildCard = true;
+    }
+
+    nodes.push({ label, theme, isWildCard });
+  }
+
+  // Clean markup from content
+  let cleanContent = content
+    .replace(/\s*\[MIND_MAP_NODE(?:\s+[^\]]*?)?\].*?\[\/MIND_MAP_NODE\]\s*/g, ' ')
+    .replace(/\s*\[MIND_MAP_NODE:\s*[^\]]+\]\s*/g, ' ')
+    .trim();
+
+  // Strip incomplete tags mid-stream
+  if (cleanContent.includes('[MIND_MAP_NODE')) {
+    cleanContent = cleanContent.replace(/\[MIND_MAP_NODE[^\]]*$/, '').trim();
+  }
+
+  return { cleanContent, nodes };
+}
+
 interface ChatPanelProps {
   stepOrder: number;
   sessionId: string;
   workshopId: string;
   initialMessages?: UIMessage[];
   onMessageCountChange?: (count: number) => void;
-  subStep?: 'mind-mapping' | 'crazy-eights' | 'idea-selection';
+  subStep?: 'mind-mapping' | 'crazy-eights';
 }
 
 export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep }: ChatPanelProps) {
@@ -406,6 +476,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const drawingNodes = useCanvasStore((state) => state.drawingNodes);
   const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
+  const addMindMapNode = useCanvasStore((state) => state.addMindMapNode);
   const crazy8sSlots = useCanvasStore((state) => state.crazy8sSlots);
   const conceptCards = useCanvasStore((state) => state.conceptCards);
   const personaTemplates = useCanvasStore((state) => state.personaTemplates);
@@ -557,7 +628,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   // markers, as that would overwrite user-arranged positions with recalculated layouts.
   const hasInitializedAddedIds = React.useRef(false);
   React.useEffect(() => {
-    if (hasInitializedAddedIds.current || !isCanvasStep || (postIts.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0)) return;
+    if (hasInitializedAddedIds.current || !isCanvasStep || (postIts.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0 && mindMapNodes.length === 0)) return;
     hasInitializedAddedIds.current = true;
 
     const ids = new Set<string>();
@@ -572,15 +643,16 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       const { templates: personaTemplateParsed } = parsePersonaTemplates(content);
       const { stages: journeyStages } = parseJourneyStages(content);
       const { cards: hmwCardParsed } = parseHmwCards(content);
+      const { nodes: mindMapNodesParsed } = parseMindMapNodes(content);
       // Mark any message that contains canvas-modifying markup as already processed
-      if (canvasItems.length > 0 || clusters.length > 0 || shouldSort || deleteTexts.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0) {
+      if (canvasItems.length > 0 || clusters.length > 0 || shouldSort || deleteTexts.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || mindMapNodesParsed.length > 0) {
         ids.add(msg.id);
       }
     }
     if (ids.size > 0) {
       setAddedMessageIds(ids);
     }
-  }, [messages, isCanvasStep, postIts.length, personaTemplates.length, hmwCards.length]);
+  }, [messages, isCanvasStep, postIts.length, personaTemplates.length, hmwCards.length, mindMapNodes.length]);
 
   // Handle adding AI-suggested canvas items to the whiteboard
   const handleAddToWhiteboard = React.useCallback((messageId: string, canvasItems: CanvasItemParsed[]) => {
@@ -659,7 +731,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     // Without this guard, on the same render cycle where postIts load from DB,
     // this effect could fire before addedMessageIds is populated, causing
     // historical messages to be re-processed and overwriting saved positions.
-    if ((postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0) && !hasInitializedAddedIds.current) return;
+    if ((postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0 || mindMapNodes.length > 0) && !hasInitializedAddedIds.current) return;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.role !== 'assistant') return;
     if (addedMessageIds.has(lastMsg.id)) return;
@@ -673,6 +745,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     const { templates: personaTemplateParsed } = parsePersonaTemplates(content);
     const { stages: journeyStages } = parseJourneyStages(content);
     const { cards: hmwCardParsed } = parseHmwCards(content);
+    const { nodes: mindMapNodesParsed } = parseMindMapNodes(content);
 
     // Process journey stage replacements — update grid columns to match template
     if (journeyStages.length >= 3 && step.id === 'journey-mapping') {
@@ -823,8 +896,112 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       }
     }
 
+    // Process mind map nodes — add themes and ideas to mind map canvas
+    if (mindMapNodesParsed.length > 0 && step.id === 'ideation') {
+      const latestNodes = storeApi.getState().mindMapNodes;
+      const latestEdges = storeApi.getState().mindMapEdges;
+      const rootNode = latestNodes.find((n) => n.isRoot);
+      const rootPos = rootNode?.position || { x: 0, y: 0 };
+
+      // Build a label→node map for theme matching
+      const nodeLabelMap = new Map<string, MindMapNodeState>();
+      for (const n of latestNodes) {
+        nodeLabelMap.set(n.label.toLowerCase(), n);
+      }
+
+      const SNAP = 20;
+      const snap = (v: number) => Math.round(v / SNAP) * SNAP;
+
+      for (const parsed of mindMapNodesParsed) {
+        // Skip duplicate labels
+        if (nodeLabelMap.has(parsed.label.toLowerCase())) continue;
+
+        if (parsed.theme) {
+          // This is a child idea under a theme
+          const parentNode = nodeLabelMap.get(parsed.theme.toLowerCase());
+          if (!parentNode) continue; // Theme doesn't exist yet, skip
+
+          const parentPos = parentNode.position || { x: 0, y: 0 };
+          const siblingCount = latestEdges.filter((e) => e.source === parentNode.id).length;
+
+          // Fan children around parent's direction from root
+          const dirAngle = Math.atan2(parentPos.y - rootPos.y, parentPos.x - rootPos.x);
+          const spread = Math.PI / 3;
+          const startAngle = dirAngle - spread / 2;
+          const angleStep = siblingCount > 0 ? spread / siblingCount : 0;
+          const childAngle = siblingCount === 0 ? dirAngle : startAngle + angleStep * siblingCount;
+          const CHILD_DIST = 220;
+
+          const newId = crypto.randomUUID();
+          const newNode: MindMapNodeState = {
+            id: newId,
+            label: parsed.label,
+            themeColorId: parentNode.themeColorId,
+            themeColor: parentNode.themeColor,
+            themeBgColor: parentNode.themeBgColor,
+            isRoot: false,
+            level: parentNode.level + 1,
+            parentId: parentNode.id,
+            position: {
+              x: snap(parentPos.x + CHILD_DIST * Math.cos(childAngle)),
+              y: snap(parentPos.y + CHILD_DIST * Math.sin(childAngle)),
+            },
+          };
+          const newEdge: MindMapEdgeState = {
+            id: `${parentNode.id}-${newId}`,
+            source: parentNode.id,
+            target: newId,
+            themeColor: parentNode.themeColor,
+          };
+
+          addMindMapNode(newNode, newEdge);
+          nodeLabelMap.set(parsed.label.toLowerCase(), newNode);
+          // Update latestEdges for sibling count accuracy
+          latestEdges.push(newEdge);
+        } else {
+          // This is a theme-level node (level 1, child of root)
+          const existingLevel1 = latestNodes.filter((n) => n.level === 1).length +
+            [...nodeLabelMap.values()].filter((n) => n.level === 1 && !latestNodes.includes(n)).length;
+          const colorIndex = existingLevel1 % THEME_COLORS.length;
+          const themeColor = THEME_COLORS[colorIndex];
+
+          // Place radially around root
+          const totalThemes = existingLevel1 + 1;
+          const angle = (2 * Math.PI * existingLevel1) / totalThemes - Math.PI / 2;
+          const RADIUS = 350;
+
+          const newId = crypto.randomUUID();
+          const newNode: MindMapNodeState = {
+            id: newId,
+            label: parsed.label,
+            themeColorId: themeColor.id,
+            themeColor: themeColor.color,
+            themeBgColor: themeColor.bgColor,
+            isRoot: false,
+            level: 1,
+            parentId: 'root',
+            position: {
+              x: snap(rootPos.x + RADIUS * Math.cos(angle)),
+              y: snap(rootPos.y + RADIUS * Math.sin(angle)),
+            },
+          };
+          const newEdge: MindMapEdgeState = {
+            id: `root-${newId}`,
+            source: 'root',
+            target: newId,
+            themeColor: themeColor.color,
+          };
+
+          addMindMapNode(newNode, newEdge);
+          nodeLabelMap.set(parsed.label.toLowerCase(), newNode);
+          latestEdges.push(newEdge);
+        }
+      }
+      setPendingFitView(true);
+    }
+
     // Mark as processed if we did any work (avoid re-processing)
-    if (canvasItems.length === 0 && (deleteTexts.length > 0 || clusters.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0)) {
+    if (canvasItems.length === 0 && (deleteTexts.length > 0 || clusters.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || mindMapNodesParsed.length > 0)) {
       setAddedMessageIds(prev => new Set(prev).add(lastMsg.id));
     }
 
@@ -839,7 +1016,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         }
       }, 300); // Short delay to ensure new items are in store
     }
-  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, batchUpdatePositions, storeApi, step.id, setPendingFitView, deletePostIt, setCluster, addPersonaTemplate, updatePersonaTemplate, replaceGridColumns, addHmwCard, updateHmwCard]);
+  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, batchUpdatePositions, storeApi, step.id, setPendingFitView, deletePostIt, setCluster, addPersonaTemplate, updatePersonaTemplate, replaceGridColumns, addHmwCard, updateHmwCard, addMindMapNode]);
 
   // Clear stream error on successful completion
   React.useEffect(() => {
@@ -1072,7 +1249,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               const { cleanContent: noPersonaTemplates } = parsePersonaTemplates(noClusters);
               const { cleanContent: noJourneyStages } = parseJourneyStages(noPersonaTemplates);
               const { cleanContent: noHmwCards } = parseHmwCards(noJourneyStages);
-              const { cleanContent: noLeakedTags } = stripLeakedTags(noHmwCards);
+              const { cleanContent: noMindMapNodes } = parseMindMapNodes(noHmwCards);
+              const { cleanContent: noLeakedTags } = stripLeakedTags(noMindMapNodes);
               const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noLeakedTags);
               return (
                 <div key={`${message.id}-${index}`} className="flex items-start">

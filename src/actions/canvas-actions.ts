@@ -180,7 +180,7 @@ export async function loadCanvasState(
         personaTemplates?: PersonaTemplateData[];
         hmwCards?: HmwCardData[];
       };
-      if (canvas?.postIts || canvas?.personaTemplates || canvas?.hmwCards) {
+      if (canvas?.postIts || canvas?.personaTemplates || canvas?.hmwCards || canvas?.mindMapNodes || canvas?.crazy8sSlots || canvas?.conceptCards) {
         return {
           postIts: canvas.postIts || [],
           ...(canvas.gridColumns ? { gridColumns: canvas.gridColumns } : {}),
