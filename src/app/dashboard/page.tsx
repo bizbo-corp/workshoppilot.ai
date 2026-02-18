@@ -49,7 +49,7 @@ export default async function DashboardPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+          <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
           <p className="text-lg text-muted-foreground">Setting up your account...</p>
           <p className="mt-2 text-sm text-muted-foreground">This will only take a moment.</p>
         </div>
@@ -141,7 +141,7 @@ export default async function DashboardPage() {
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex-1">
               {mostRecentWorkshop && (
-                <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 dark:border-blue-900 dark:bg-blue-950">
+                <div className="rounded-lg border border-olive-200 bg-olive-50 p-6 dark:border-olive-900 dark:bg-olive-950">
                   <h2 className="mb-2 text-lg font-semibold text-foreground">
                     Continue where you left off
                   </h2>

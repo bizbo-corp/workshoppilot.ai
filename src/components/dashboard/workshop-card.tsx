@@ -90,7 +90,7 @@ export function WorkshopCard({
   return (
     <Card
       className={cn(
-        "group relative overflow-hidden border border-border transition-all hover:shadow-md dark:hover:border-gray-700",
+        "group relative overflow-hidden border border-border transition-all hover:shadow-md dark:hover:border-neutral-olive-700",
         selected && "ring-2 ring-primary border-primary"
       )}
     >
@@ -133,7 +133,7 @@ export function WorkshopCard({
               />
             ) : (
               <h3
-                className="cursor-pointer text-lg font-semibold text-foreground transition-colors hover:text-blue-600"
+                className="cursor-pointer text-lg font-semibold text-foreground transition-colors hover:text-olive-600"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
