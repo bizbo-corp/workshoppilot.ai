@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import { FileText, Presentation, Users, Code } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DeliverableCard, DELIVERABLES } from './deliverable-card';
 
 interface SynthesisSummaryViewProps {
   artifact: Record<string, unknown>;
@@ -18,6 +20,13 @@ interface ConfidenceAssessment {
   researchQuality: 'thin' | 'moderate' | 'strong';
   rationale: string;
 }
+
+const DELIVERABLE_ICONS: Record<string, React.ReactNode> = {
+  FileText: <FileText className="h-5 w-5" />,
+  Presentation: <Presentation className="h-5 w-5" />,
+  Users: <Users className="h-5 w-5" />,
+  Code: <Code className="h-5 w-5" />,
+};
 
 /**
  * Get color class for confidence score
@@ -196,6 +205,25 @@ export function SynthesisSummaryView({ artifact }: SynthesisSummaryViewProps) {
           </div>
         </div>
       )}
+
+      {/* Build Pack Deliverables */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Build Pack Deliverables</h3>
+        <p className="text-sm text-muted-foreground">
+          Export-ready documents generated from your workshop. Available soon.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {DELIVERABLES.map((d) => (
+            <DeliverableCard
+              key={d.id}
+              title={d.title}
+              description={d.description}
+              icon={DELIVERABLE_ICONS[d.iconName]}
+              disabled={true}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
