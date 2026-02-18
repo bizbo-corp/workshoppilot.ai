@@ -30,10 +30,10 @@ Requirements for v1.5 Launch Ready milestone. Each maps to roadmap phases.
 
 ### Outputs (Step 10)
 
-- [ ] **OUT-01**: Step 10 displays deliverable cards (PRD, Stakeholder PPT, User Stories, Tech Specs)
-- [ ] **OUT-02**: Each card shows deliverable name, description, and disabled download button with "Coming Soon" label
-- [ ] **OUT-03**: Step 10 retains existing synthesis summary alongside the deliverable cards
-- [ ] **OUT-04**: Deliverable card layout is extensible for future generation functionality
+- [x] **OUT-01**: Step 10 displays deliverable cards (PRD, Stakeholder PPT, User Stories, Tech Specs)
+- [x] **OUT-02**: Each card shows deliverable name, description, and disabled download button with "Coming Soon" label
+- [x] **OUT-03**: Step 10 retains existing synthesis summary alongside the deliverable cards
+- [x] **OUT-04**: Deliverable card layout is extensible for future generation functionality
 
 ## Future Requirements
 
@@ -101,10 +101,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRICE-02 | Phase 38 | Complete |
 | PRICE-03 | Phase 38 | Complete |
 | PRICE-04 | Phase 38 | Complete |
-| OUT-01 | Phase 39 | Pending |
-| OUT-02 | Phase 39 | Pending |
-| OUT-03 | Phase 39 | Pending |
-| OUT-04 | Phase 39 | Pending |
+| OUT-01 | Phase 39 | Complete |
+| OUT-02 | Phase 39 | Complete |
+| OUT-03 | Phase 39 | Complete |
+| OUT-04 | Phase 39 | Complete |
 
 **Coverage:**
 - v1.5 requirements: 15 total

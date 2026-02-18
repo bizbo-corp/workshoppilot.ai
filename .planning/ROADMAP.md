@@ -157,7 +157,7 @@ Plans:
 | 36. Olive Theme Rollout | v1.5 | 4/4 | Complete | 2026-02-18 |
 | 37. Landing Page | v1.5 | 2/2 | Complete | 2026-02-19 |
 | 38. Pricing Page | v1.5 | Complete    | 2026-02-18 | 2026-02-19 |
-| 39. Step 10 Outputs Shell | v1.5 | 1/1 | Complete | 2026-02-19 |
+| 39. Step 10 Outputs Shell | v1.5 | Complete    | 2026-02-18 | 2026-02-19 |
 
 **Total project:** 107 plans across 39 phases, 7 milestones shipped
 
