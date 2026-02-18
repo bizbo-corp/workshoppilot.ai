@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 39 of 39 (Step 10 Outputs Shell)
-Plan: 1 of 1 complete
-Status: Phase complete — ready for verification
-Last activity: 2026-02-19 — Phase 39 Plan 01 complete (DeliverableCard component + Build Pack preview grid in Step 10)
+Plan: 2 of 2 complete
+Status: Phase complete — all plans executed
+Last activity: 2026-02-19 — Phase 39 Plan 02 complete (SynthesisSummaryView wired into StepContainer render tree for Step 10)
 
 Progress: [████████████████████] ~100% (39/39 phases complete)
 
@@ -33,6 +33,7 @@ Progress: [████████████████████] ~100% (
 | Phase 37-landing-page P02 | 20 | 3 tasks | 3 files |
 | Phase 38-pricing-page P01 | 3 | 2 tasks | 2 files |
 | Phase 39-step-10-outputs-shell P01 | 7 | 2 tasks | 2 files |
+| Phase 39-step-10-outputs-shell P02 | 2 | 1 task | 1 file |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Recent v1.5 decisions:
 - [Phase 39-step-10-outputs-shell]: Build Pack deliverable cards always disabled by default — enabling requires only disabled=false + onDownload wire-up, no layout restructuring
 - [Phase 39-step-10-outputs-shell]: DELIVERABLE_ICONS map defined at usage site (synthesis-summary-view) not exported from deliverable-card — keeps JSX instantiation local
 - [Phase 39-step-10-outputs-shell]: Deliverable cards render unconditionally inside non-empty branch — always shown when synthesis content exists
+- [Phase 39-step-10-outputs-shell P02]: Direct import of SynthesisSummaryView into StepContainer bypasses orphaned OutputAccordion/OutputPanel chain — avoids touching retired code
+- [Phase 39-step-10-outputs-shell P02]: renderStep10Content helper defined inline in StepContainer to de-duplicate JSX across 3 render locations (closes over initialArtifact)
 
 ### Pending Todos
 
@@ -85,7 +88,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Phase 39-01 complete — DeliverableCard component created, Build Pack preview grid added to Step 10 synthesis view
+Stopped at: Phase 39-02 complete — SynthesisSummaryView wired into StepContainer for Step 10 (all 3 layout locations)
 Resume file: None
 
-**Next action:** All 39 phases complete. Verify Step 10 deliverable cards render correctly in browser.
+**Next action:** All 39 phases complete. Phase 39 (both plans) done. Step 10 render path is live — verify in browser.
