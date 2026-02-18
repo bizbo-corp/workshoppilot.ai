@@ -96,7 +96,7 @@ See `milestones/v1.4-ROADMAP.md` for full details.
 
 </details>
 
-### 🚧 v1.5 Launch Ready (In Progress)
+### v1.5 Launch Ready
 
 **Milestone Goal:** Make WorkshopPilot.ai presentable to the public — cohesive visual identity, a landing page that converts, a pricing page that sets expectations, and a Step 10 output shell that teases the Build Pack without promising it.
 
@@ -133,16 +133,16 @@ Plans:
 Plans:
 - [x] 38-01-PLAN.md — Pricing page route with three-tier layout, public route access, olive theme
 
-#### Phase 39: Step 10 Outputs Shell ✓
+#### Phase 39: Step 10 Outputs Shell
 
 **Goal:** Users who complete a workshop see a tangible preview of what they'll be able to export — without any false promises of functionality that doesn't exist yet.
 **Depends on:** Phase 36 (theme established)
 **Requirements:** OUT-01, OUT-02, OUT-03, OUT-04
-**Completed:** 2026-02-19
-**Plans:** 1/1 plans complete
+**Plans:** 2 plans (1 complete, 1 gap closure)
 
 Plans:
 - [x] 39-01-PLAN.md — DeliverableCard component + SynthesisSummaryView integration with 4 Build Pack preview cards
+- [ ] 39-02-PLAN.md — Gap closure: wire SynthesisSummaryView into active render tree for Step 10
 
 ## Progress
 
@@ -156,10 +156,10 @@ Plans:
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
 | 36. Olive Theme Rollout | v1.5 | 4/4 | Complete | 2026-02-18 |
 | 37. Landing Page | v1.5 | 2/2 | Complete | 2026-02-19 |
-| 38. Pricing Page | v1.5 | Complete    | 2026-02-18 | 2026-02-19 |
-| 39. Step 10 Outputs Shell | v1.5 | Complete    | 2026-02-18 | 2026-02-19 |
+| 38. Pricing Page | v1.5 | 1/1 | Complete | 2026-02-19 |
+| 39. Step 10 Outputs Shell | v1.5 | 1/2 | Gap closure | — |
 
-**Total project:** 107 plans across 39 phases, 7 milestones shipped
+**Total project:** 108 plans across 39 phases
 
 ---
-*Last updated: 2026-02-19 — Phase 39 complete, v1.5 milestone shipped*
+*Last updated: 2026-02-19 — Phase 39 gap closure plan created (render path fix)*
