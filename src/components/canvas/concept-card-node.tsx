@@ -208,7 +208,7 @@ export const ConceptCardNode = memo(
                 {data.swot.strengths.map((item, idx) => (
                   <textarea
                     key={idx}
-                    className="nodrag nopan w-full resize-none rounded border border-green-500/30 bg-white px-2 py-1 text-xs text-green-800 outline-none focus:border-green-500 dark:bg-green-950/40 dark:text-green-200"
+                    className="nodrag nopan w-full resize-none rounded border border-green-500/30 bg-card px-2 py-1 text-xs text-green-800 outline-none focus:border-green-500 dark:bg-green-950/40 dark:text-green-200"
                     rows={2}
                     placeholder={`Strength ${idx + 1}`}
                     defaultValue={item}
@@ -230,7 +230,7 @@ export const ConceptCardNode = memo(
                 {data.swot.weaknesses.map((item, idx) => (
                   <textarea
                     key={idx}
-                    className="nodrag nopan w-full resize-none rounded border border-red-500/30 bg-white px-2 py-1 text-xs text-red-800 outline-none focus:border-red-500 dark:bg-red-950/40 dark:text-red-200"
+                    className="nodrag nopan w-full resize-none rounded border border-red-500/30 bg-card px-2 py-1 text-xs text-red-800 outline-none focus:border-red-500 dark:bg-red-950/40 dark:text-red-200"
                     rows={2}
                     placeholder={`Weakness ${idx + 1}`}
                     defaultValue={item}
@@ -274,7 +274,7 @@ export const ConceptCardNode = memo(
                 {data.swot.threats.map((item, idx) => (
                   <textarea
                     key={idx}
-                    className="nodrag nopan w-full resize-none rounded border border-amber-500/30 bg-white px-2 py-1 text-xs text-amber-800 outline-none focus:border-amber-500 dark:bg-amber-950/40 dark:text-amber-200"
+                    className="nodrag nopan w-full resize-none rounded border border-amber-500/30 bg-card px-2 py-1 text-xs text-amber-800 outline-none focus:border-amber-500 dark:bg-amber-950/40 dark:text-amber-200"
                     rows={2}
                     placeholder={`Threat ${idx + 1}`}
                     defaultValue={item}
