@@ -54,6 +54,7 @@ export type MindMapCanvasProps = {
   stepId: string;
   hmwStatement?: string;
   showCrazy8s?: boolean;
+  onSaveCrazy8s?: () => Promise<void>;
 };
 
 export function MindMapCanvas(props: MindMapCanvasProps) {
@@ -69,6 +70,7 @@ function MindMapCanvasInner({
   stepId,
   hmwStatement,
   showCrazy8s,
+  onSaveCrazy8s,
 }: MindMapCanvasProps) {
   const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
@@ -261,9 +263,9 @@ function MindMapCanvasInner({
       draggable: false,
       connectable: false,
       focusable: false,
-      data: { workshopId, stepId },
+      data: { workshopId, stepId, onSave: onSaveCrazy8s },
     };
-  }, [showCrazy8s, workshopId, stepId]);
+  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s]);
 
   // Combined nodes array: mind map + optional crazy 8s
   const rfNodes = useMemo(() => {

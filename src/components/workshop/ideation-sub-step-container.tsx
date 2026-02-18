@@ -10,8 +10,9 @@ import { MindMapCanvas } from './mind-map-canvas';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, Zap } from 'lucide-react';
-import { useCanvasStore } from '@/providers/canvas-store-provider';
+import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
+import { saveCanvasState } from '@/actions/canvas-actions';
 
 type IdeationPhase = 'mind-mapping' | 'crazy-eights';
 
@@ -56,6 +57,18 @@ export function IdeationSubStepContainer({
   // Canvas state
   const mindMapNodes = useCanvasStore(state => state.mindMapNodes);
   const crazy8sSlots = useCanvasStore(state => state.crazy8sSlots);
+  const canvasStoreApi = useCanvasStoreApi();
+
+  // Get stepId for canvases
+  const [stepId, setStepId] = React.useState<string>('');
+  React.useEffect(() => {
+    const getStep = async () => {
+      const { getStepByOrder } = await import('@/lib/workshop/step-metadata');
+      const step = getStepByOrder(8);
+      if (step) setStepId(step.id);
+    };
+    getStep();
+  }, []);
 
   // Mind map has content when there are level-1 theme nodes
   const mindMapHasThemes = React.useMemo(
@@ -65,11 +78,13 @@ export function IdeationSubStepContainer({
 
   // Auto-show crazy 8s if slots already have content (resuming session)
   React.useEffect(() => {
-    if (crazy8sSlots.some(slot => slot.imageUrl)) {
+    const slots = canvasStoreApi.getState().crazy8sSlots;
+    if (slots.some(slot => slot.imageUrl)) {
       setShowCrazy8s(true);
       setCurrentPhase('crazy-eights');
+      setArtifactConfirmed(true);
     }
-  }, []);
+  }, [canvasStoreApi]);
 
   // Check for mobile on mount and resize
   React.useEffect(() => {
@@ -97,18 +112,26 @@ export function IdeationSubStepContainer({
     setArtifact(null);
   }, []);
 
-  const hasEnoughMessages = liveMessageCount >= 4;
+  // Save Crazy 8s: flush full canvas state to DB and activate Next button
+  const handleSaveCrazy8s = React.useCallback(async () => {
+    if (!stepId) return;
+    const state = canvasStoreApi.getState();
+    await saveCanvasState(workshopId, stepId, {
+      postIts: state.postIts,
+      ...(state.gridColumns.length > 0 ? { gridColumns: state.gridColumns } : {}),
+      ...(state.drawingNodes.length > 0 ? { drawingNodes: state.drawingNodes } : {}),
+      ...(state.mindMapNodes.length > 0 ? { mindMapNodes: state.mindMapNodes } : {}),
+      ...(state.mindMapEdges.length > 0 ? { mindMapEdges: state.mindMapEdges } : {}),
+      ...(state.crazy8sSlots.length > 0 ? { crazy8sSlots: state.crazy8sSlots } : {}),
+      ...(state.conceptCards.length > 0 ? { conceptCards: state.conceptCards } : {}),
+      ...(state.personaTemplates.length > 0 ? { personaTemplates: state.personaTemplates } : {}),
+      ...(state.hmwCards.length > 0 ? { hmwCards: state.hmwCards } : {}),
+    });
+    state.markClean();
+    setArtifactConfirmed(true);
+  }, [workshopId, stepId, canvasStoreApi]);
 
-  // Get stepId for canvases
-  const [stepId, setStepId] = React.useState<string>('');
-  React.useEffect(() => {
-    const getStep = async () => {
-      const { getStepByOrder } = await import('@/lib/workshop/step-metadata');
-      const step = getStepByOrder(8);
-      if (step) setStepId(step.id);
-    };
-    getStep();
-  }, []);
+  const hasEnoughMessages = liveMessageCount >= 4;
 
   // Render chat panel
   const renderChatPanel = () => (
@@ -168,6 +191,7 @@ export function IdeationSubStepContainer({
           stepId={stepId}
           hmwStatement={hmwStatement || artifact?.reframedHmw as string || ''}
           showCrazy8s={showCrazy8s}
+          onSaveCrazy8s={handleSaveCrazy8s}
         />
       )}
     </div>

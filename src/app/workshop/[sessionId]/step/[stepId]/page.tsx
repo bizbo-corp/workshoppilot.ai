@@ -12,6 +12,7 @@ import type { PostIt, GridColumn, DrawingNode, MindMapNodeState, MindMapEdgeStat
 import type { ConceptCardData } from "@/lib/canvas/concept-card-types";
 import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
+import type { Crazy8sSlot } from "@/lib/canvas/crazy-8s-types";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
 import { computeRadialPositions } from "@/lib/canvas/mind-map-layout";
 
@@ -185,6 +186,7 @@ export default async function StepPage({ params }: StepPageProps) {
   let initialCanvasPostIts: PostIt[] = canvasData?.postIts || [];
   const initialGridColumns: GridColumn[] = canvasData?.gridColumns || [];
   const initialDrawingNodes: DrawingNode[] = canvasData?.drawingNodes || [];
+  const initialCrazy8sSlots: Crazy8sSlot[] = canvasData?.crazy8sSlots || [];
   const initialConceptCards: ConceptCardData[] = canvasData?.conceptCards || [];
   let initialPersonaTemplates: PersonaTemplateData[] = canvasData?.personaTemplates || [];
   let initialHmwCards: HmwCardData[] = canvasData?.hmwCards || [];
@@ -275,6 +277,7 @@ export default async function StepPage({ params }: StepPageProps) {
         initialDrawingNodes={initialDrawingNodes}
         initialMindMapNodes={initialMindMapNodes}
         initialMindMapEdges={initialMindMapEdges}
+        initialCrazy8sSlots={initialCrazy8sSlots}
         initialConceptCards={initialConceptCards}
         initialPersonaTemplates={initialPersonaTemplates}
         initialHmwCards={initialHmwCards}

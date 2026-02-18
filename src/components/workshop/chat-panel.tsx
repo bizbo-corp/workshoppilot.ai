@@ -1040,7 +1040,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     if (status !== 'streaming') return;
     const timeout = setTimeout(() => {
       setStreamError(true);
-    }, 45000); // 45s silence timeout (server maxDuration is 60s)
+    }, 90000); // 90s silence timeout (server maxDuration is 60s; ideation prompts need extra headroom)
     return () => clearTimeout(timeout);
   }, [status, streamingContentLength]);
 
@@ -1139,10 +1139,18 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     // Flush canvas to DB so the AI sees the latest board state
     await flushCanvasToDb();
 
-    await sendMessage({
-      role: 'user',
-      parts: [{ type: 'text', text: inputValue }],
-    });
+    try {
+      await sendMessage({
+        role: 'user',
+        parts: [{ type: 'text', text: inputValue }],
+      });
+    } catch (err) {
+      // sendMessage can throw if useChat internal state is temporarily undefined
+      // (e.g. during transport recreation when subStep changes). Log and continue —
+      // the message was already shown in the UI via optimistic update.
+      console.error('sendMessage error (transport may be reinitializing):', err);
+      setStreamError(true);
+    }
     setInputValue('');
     setSuggestions([]);
   };

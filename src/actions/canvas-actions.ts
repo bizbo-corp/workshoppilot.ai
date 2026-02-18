@@ -66,29 +66,52 @@ export async function saveCanvasState(
       .limit(1);
 
     if (existingArtifacts.length > 0) {
-      // Merge canvas state into existing artifact, preserving extraction data
-      const existing = existingArtifacts[0];
-      const currentVersion = existing.version;
-      const newVersion = currentVersion + 1;
-      const existingArtifact = (existing.artifact || {}) as Record<string, unknown>;
+      // Merge canvas state into existing artifact, preserving extraction data.
+      // Retry up to 3 times on version conflicts (auto-save and flush-before-send can race).
+      const MAX_RETRIES = 3;
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        // Re-read on retry to get fresh version
+        const record = attempt === 0
+          ? existingArtifacts[0]
+          : (await db
+              .select({ id: stepArtifacts.id, version: stepArtifacts.version, artifact: stepArtifacts.artifact })
+              .from(stepArtifacts)
+              .where(eq(stepArtifacts.workshopStepId, workshopStepId))
+              .limit(1))[0];
 
-      const mergedArtifact = {
-        ...existingArtifact,
-        _canvas: canvasState,
-      };
+        if (!record) return { success: false, error: 'Artifact disappeared during save' };
 
-      await db
-        .update(stepArtifacts)
-        .set({
-          artifact: mergedArtifact,
-          version: newVersion,
-        })
-        .where(
-          and(
-            eq(stepArtifacts.id, existing.id),
-            eq(stepArtifacts.version, currentVersion)
+        const currentVersion = record.version;
+        const newVersion = currentVersion + 1;
+        const existingArtifact = (record.artifact || {}) as Record<string, unknown>;
+
+        const mergedArtifact = {
+          ...existingArtifact,
+          _canvas: canvasState,
+        };
+
+        const updateResult = await db
+          .update(stepArtifacts)
+          .set({
+            artifact: mergedArtifact,
+            version: newVersion,
+          })
+          .where(
+            and(
+              eq(stepArtifacts.id, record.id),
+              eq(stepArtifacts.version, currentVersion)
+            )
           )
-        );
+          .returning({ id: stepArtifacts.id });
+
+        if (updateResult.length > 0) break; // Success
+
+        // Version conflict — retry with fresh read
+        if (attempt === MAX_RETRIES - 1) {
+          console.warn('saveCanvasState: version conflict after max retries');
+          return { success: false, error: 'version_conflict' };
+        }
+      }
     } else {
       // Insert new artifact with canvas under _canvas key
       await db.insert(stepArtifacts).values({

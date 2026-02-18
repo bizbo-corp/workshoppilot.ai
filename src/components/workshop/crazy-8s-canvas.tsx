@@ -12,7 +12,7 @@ import { EzyDrawLoader } from '@/components/ezydraw/ezydraw-loader';
 import { saveDrawing, loadDrawing, updateDrawing } from '@/actions/drawing-actions';
 import { simplifyDrawingElements } from '@/lib/drawing/simplify';
 import { EMPTY_CRAZY_8S_SLOTS, CRAZY_8S_CANVAS_SIZE } from '@/lib/canvas/crazy-8s-types';
-import { useCanvasStore } from '@/providers/canvas-store-provider';
+import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import type { DrawingElement } from '@/lib/drawing/types';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
@@ -38,6 +38,7 @@ export function Crazy8sCanvas({ workshopId, stepId }: Crazy8sCanvasProps) {
   const crazy8sSlots = useCanvasStore((s) => s.crazy8sSlots);
   const updateCrazy8sSlot = useCanvasStore((s) => s.updateCrazy8sSlot);
   const setCrazy8sSlots = useCanvasStore((s) => s.setCrazy8sSlots);
+  const storeApi = useCanvasStoreApi();
 
   // EzyDraw modal state
   const [ezyDrawState, setEzyDrawState] = useState<EzyDrawState | null>(null);
@@ -46,9 +47,10 @@ export function Crazy8sCanvas({ workshopId, stepId }: Crazy8sCanvasProps) {
   const [aiPrompts, setAiPrompts] = useState<string[]>([]);
   const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
 
-  // Initialize empty slots on mount if not already set
+  // Initialize empty slots on mount only if store has no slots (fresh session)
   useEffect(() => {
-    if (crazy8sSlots.length === 0) {
+    const currentSlots = storeApi.getState().crazy8sSlots;
+    if (currentSlots.length === 0) {
       setCrazy8sSlots(EMPTY_CRAZY_8S_SLOTS);
     }
   }, []); // Only run on mount

@@ -14,6 +14,7 @@ import {
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
+import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 
 type CanvasStoreApi = ReturnType<typeof createCanvasStore>;
 
@@ -26,6 +27,7 @@ export interface CanvasStoreProviderProps {
   initialDrawingNodes?: DrawingNode[];
   initialMindMapNodes?: MindMapNodeState[];
   initialMindMapEdges?: MindMapEdgeState[];
+  initialCrazy8sSlots?: Crazy8sSlot[];
   initialConceptCards?: ConceptCardData[];
   initialPersonaTemplates?: PersonaTemplateData[];
   initialHmwCards?: HmwCardData[];
@@ -38,6 +40,7 @@ export function CanvasStoreProvider({
   initialDrawingNodes,
   initialMindMapNodes,
   initialMindMapEdges,
+  initialCrazy8sSlots,
   initialConceptCards,
   initialPersonaTemplates,
   initialHmwCards,
@@ -50,6 +53,7 @@ export function CanvasStoreProvider({
       drawingNodes: initialDrawingNodes || [],
       mindMapNodes: initialMindMapNodes || [],
       mindMapEdges: initialMindMapEdges || [],
+      crazy8sSlots: initialCrazy8sSlots || [],
       conceptCards: initialConceptCards || [],
       personaTemplates: initialPersonaTemplates || [],
       hmwCards: initialHmwCards || [],
