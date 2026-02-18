@@ -2,18 +2,18 @@
 
 ## Milestones
 
-- ✅ **v0.5 Application Shell** - Phases 1-6 (shipped 2026-02-08)
-- ✅ **v1.0 Working AI Facilitation** - Phases 7-14 (shipped 2026-02-10)
-- ✅ **v1.1 Canvas Foundation** - Phases 15-20 (shipped 2026-02-11)
-- ✅ **v1.2 Canvas Whiteboard** - Phases 21-24 (shipped 2026-02-12)
-- ✅ **v1.3 EzyDraw & Visual Ideation** - Phases 25-29 (shipped 2026-02-12)
-- ✅ **v1.4 Personal Workshop Polish** - Phases 30-35 (shipped 2026-02-13)
-- ✅ **v1.5 Launch Ready** - Phases 36-39 (shipped 2026-02-19)
+- ✅ **v0.5 Application Shell** — Phases 1-6 (shipped 2026-02-08)
+- ✅ **v1.0 Working AI Facilitation** — Phases 7-14 (shipped 2026-02-10)
+- ✅ **v1.1 Canvas Foundation** — Phases 15-20 (shipped 2026-02-11)
+- ✅ **v1.2 Canvas Whiteboard** — Phases 21-24 (shipped 2026-02-12)
+- ✅ **v1.3 EzyDraw & Visual Ideation** — Phases 25-29 (shipped 2026-02-12)
+- ✅ **v1.4 Personal Workshop Polish** — Phases 30-35 (shipped 2026-02-13)
+- ✅ **v1.5 Launch Ready** — Phases 36-39 (shipped 2026-02-19)
 
 ## Phases
 
 <details>
-<summary>✅ v0.5 Application Shell (Phases 1-6) - SHIPPED 2026-02-08</summary>
+<summary>✅ v0.5 Application Shell (Phases 1-6) — SHIPPED 2026-02-08</summary>
 
 - [x] Phase 1: Foundation & Environment (3/3 plans)
 - [x] Phase 2: Authentication & Authorization (3/3 plans)
@@ -27,7 +27,7 @@ See `milestones/v0.5-ROADMAP.md` for full details.
 </details>
 
 <details>
-<summary>✅ v1.0 Working AI Facilitation (Phases 7-14) - SHIPPED 2026-02-10</summary>
+<summary>✅ v1.0 Working AI Facilitation (Phases 7-14) — SHIPPED 2026-02-10</summary>
 
 - [x] Phase 7: Context Architecture (3/3 plans)
 - [x] Phase 8: AI Facilitation Engine (3/3 plans)
@@ -44,7 +44,7 @@ See `milestones/v1.0-ROADMAP.md` for full details.
 </details>
 
 <details>
-<summary>✅ v1.1 Canvas Foundation (Phases 15-20) - SHIPPED 2026-02-11</summary>
+<summary>✅ v1.1 Canvas Foundation (Phases 15-20) — SHIPPED 2026-02-11</summary>
 
 - [x] Phase 15: Canvas Infrastructure & SSR Safety (3/3 plans)
 - [x] Phase 16: Split-Screen Layout & Step Container Integration (3/3 plans)
@@ -58,7 +58,7 @@ See `milestones/v1.1-ROADMAP.md` for full details.
 </details>
 
 <details>
-<summary>✅ v1.2 Canvas Whiteboard (Phases 21-24) - SHIPPED 2026-02-12</summary>
+<summary>✅ v1.2 Canvas Whiteboard (Phases 21-24) — SHIPPED 2026-02-12</summary>
 
 - [x] Phase 21: Grid Foundation & Coordinate System (2/2 plans)
 - [x] Phase 22: Dynamic Grid Structure - Column Management (2/2 plans)
@@ -70,7 +70,7 @@ See `milestones/v1.2-ROADMAP.md` for full details.
 </details>
 
 <details>
-<summary>✅ v1.3 EzyDraw & Visual Ideation (Phases 25-29) - SHIPPED 2026-02-12</summary>
+<summary>✅ v1.3 EzyDraw & Visual Ideation (Phases 25-29) — SHIPPED 2026-02-12</summary>
 
 - [x] Phase 25: EzyDraw Foundation (6/6 plans)
 - [x] Phase 26: Drawing-Canvas Integration (4/4 plans)
@@ -83,7 +83,7 @@ See `milestones/v1.3-ROADMAP.md` for full details.
 </details>
 
 <details>
-<summary>✅ v1.4 Personal Workshop Polish (Phases 30-35) - SHIPPED 2026-02-13</summary>
+<summary>✅ v1.4 Personal Workshop Polish (Phases 30-35) — SHIPPED 2026-02-13</summary>
 
 - [x] Phase 30: UX Polish (3/3 plans)
 - [x] Phase 31: Output Panel Retirement (1/1 plan)
@@ -96,53 +96,17 @@ See `milestones/v1.4-ROADMAP.md` for full details.
 
 </details>
 
-### v1.5 Launch Ready
+<details>
+<summary>✅ v1.5 Launch Ready (Phases 36-39) — SHIPPED 2026-02-19</summary>
 
-**Milestone Goal:** Make WorkshopPilot.ai presentable to the public — cohesive visual identity, a landing page that converts, a pricing page that sets expectations, and a Step 10 output shell that teases the Build Pack without promising it.
+- [x] Phase 36: Olive Theme Rollout (4/4 plans)
+- [x] Phase 37: Landing Page (2/2 plans)
+- [x] Phase 38: Pricing Page (1/1 plan)
+- [x] Phase 39: Step 10 Outputs Shell (2/2 plans)
 
-#### Phase 36: Olive Theme Rollout ✓
+See `milestones/v1.5-ROADMAP.md` for full details.
 
-**Goal:** Every surface of the app reads as a single coherent product with the "consultant authority" aesthetic the olive palette was designed for.
-**Completed:** 2026-02-18
-**Plans:** 4/4 complete
-
-Plans:
-- [x] 36-01-PLAN.md — App surfaces: header, auth modals, dashboard, admin page, workshop card
-- [x] 36-02-PLAN.md — Canvas surfaces: toolbars, post-it nodes, overlays, context menus, concept cards
-- [x] 36-03-PLAN.md — EzyDraw theming, workshop features (idea selection, concept sheet, HMW), remaining canvas nodes
-- [x] 36-04-PLAN.md — Gap closure: replace bg-white/N alpha variants in 4 canvas node files
-
-#### Phase 37: Landing Page ✓
-
-**Goal:** A visitor arriving at workshoppilot.ai understands what it does, why it matters, and has a clear path to sign in and start a workshop.
-**Completed:** 2026-02-19
-**Plans:** 2/2 complete
-
-Plans:
-- [x] 37-01-PLAN.md — Page scaffold, enhanced hero section, sticky navigation, footer
-- [x] 37-02-PLAN.md — Value propositions section, testimonials section, responsive polish, visual verification
-
-#### Phase 38: Pricing Page ✓
-
-**Goal:** Real pricing information is accessible via direct URL for anyone who needs it, without cluttering the main navigation or implying payment processing exists.
-**Depends on:** Phase 36 (theme established)
-**Requirements:** PRICE-01, PRICE-02, PRICE-03, PRICE-04
-**Completed:** 2026-02-19
-**Plans:** 1/1 plans complete
-
-Plans:
-- [x] 38-01-PLAN.md — Pricing page route with three-tier layout, public route access, olive theme
-
-#### Phase 39: Step 10 Outputs Shell
-
-**Goal:** Users who complete a workshop see a tangible preview of what they'll be able to export — without any false promises of functionality that doesn't exist yet.
-**Depends on:** Phase 36 (theme established)
-**Requirements:** OUT-01, OUT-02, OUT-03, OUT-04
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 39-01-PLAN.md — DeliverableCard component + SynthesisSummaryView integration with 4 Build Pack preview cards
-- [x] 39-02-PLAN.md — Gap closure: wire SynthesisSummaryView into active render tree for Step 10
+</details>
 
 ## Progress
 
@@ -154,12 +118,9 @@ Plans:
 | 21-24 | v1.2 | 9/9 | Complete | 2026-02-12 |
 | 25-29 | v1.3 | 23/23 | Complete | 2026-02-12 |
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
-| 36. Olive Theme Rollout | v1.5 | 4/4 | Complete | 2026-02-18 |
-| 37. Landing Page | v1.5 | 2/2 | Complete | 2026-02-19 |
-| 38. Pricing Page | v1.5 | 1/1 | Complete | 2026-02-19 |
-| 39. Step 10 Outputs Shell | v1.5 | Complete    | 2026-02-18 | 2026-02-19 |
+| 36-39 | v1.5 | 9/9 | Complete | 2026-02-19 |
 
-**Total project:** 109 plans across 39 phases
+**Total project:** 113 plans across 39 phases, 7 milestones shipped
 
 ---
-*Last updated: 2026-02-19 — Phase 39 complete (all 2 plans done; Step 10 render path wired)*
+*Last updated: 2026-02-19 — v1.5 Launch Ready milestone complete*

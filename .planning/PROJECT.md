@@ -55,14 +55,12 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - ✓ PawPal seed data: complete 10-step workshop fixture with canvas state, CLI seed script — v1.4
 - ✓ Workshop management: multi-select delete on dashboard with soft delete protection — v1.4
 - ✓ E2E testing: Playwright test walks all 10 steps with real Gemini AI, 5 bugs fixed — v1.4
+- ✓ Full olive theme (light + dark mode) across all app surfaces — zero hardcoded gray/blue/white remaining — v1.5
+- ✓ Landing page with hero section, value propositions, testimonials, sticky header, and sign-in CTA — v1.5
+- ✓ Pricing page with three tiers (Single Use $9, Facilitator $29/mo, Annual $249/yr) — hidden from nav — v1.5
+- ✓ Step 10 outputs shell with Build Pack deliverable cards (PRD, Stakeholder PPT, User Stories, Tech Specs) and "Coming Soon" labels — v1.5
 
 ### Active
-
-#### Current Milestone — v1.5 Launch Ready
-- [ ] Full olive theme (light + dark mode) across all app surfaces — backgrounds, buttons, sidebar, header, chat, canvas, post-its, forms
-- [ ] Landing page with hero section, reasons to use WorkshopPilot, testimonials, dashboard/sign-in CTA
-- [ ] Pricing page with real tiers (single use, facilitator, annual subscription) — hidden from nav initially
-- [ ] Outputs shell (Step 10) — deliverable cards (PRD, Stakeholder PPT, User Stories, Tech Specs) with disabled download buttons and "Coming Soon" labels
 
 #### Future — MMP (Visual & Solo Polish)
 - [ ] Visual stakeholder radar chart
@@ -132,7 +130,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - **Entry Friction**: Must be near-zero — user types idea and starts immediately
 - **Desktop-First**: MVP targets desktop browsers; mobile deferred to MMP/FFP
 - **Single Player First**: v0.5-v1.4 are single-user; collaboration deferred to FFP
-- **Existing Codebase**: ~27,000 lines TypeScript across ~400 files, 35 phases shipped, production at workshoppilot.ai
+- **Existing Codebase**: ~32,800 lines TypeScript across ~450 files, 39 phases shipped, production at workshoppilot.ai
 
 ## Key Decisions
 
@@ -173,23 +171,31 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | Dual storage for drawings (vector JSON + PNG) | Vector JSON enables re-editing, PNG enables fast display and canvas integration | ✓ Good — no Konva imports for display |
 | Dagre for mind map auto-layout | Tree layout algorithm prevents node overlap without manual positioning | ✓ Good — handles 3 levels cleanly |
 | AI concept generation from workshop context | Queries 4 prior steps for evidence-based SWOT/feasibility, not generic output | ✓ Good — grounded in actual workshop data |
+| Olive theme token substitution pattern | bg-white→bg-card, bg-gray→bg-background, text-gray→text-foreground; consistent across 30+ components | ✓ Good — zero hardcoded colors remaining |
+| Landing page as server components | Standalone sections composed in page.tsx; keeps client surface minimal | ✓ Good — fast initial load |
+| Pricing page hidden from nav | Accessible via direct URL only; informational with no payment processing | ✓ Good — sets expectations without cluttering UX |
+| Step 10 deliverable cards always disabled | Enabling requires only disabled=false + onDownload; no layout restructuring | ✓ Good — extensible for future Build Pack export |
+| Direct SynthesisSummaryView import in StepContainer | Bypasses orphaned OutputAccordion/OutputPanel chain from Phase 31 retirement | ✓ Good — clean render path fix |
 
 ## Current State
 
-**Shipped:** v1.4 Personal Workshop Polish (2026-02-13)
+**Shipped:** v1.5 Launch Ready (2026-02-19)
 **Live at:** https://workshoppilot.ai
-**Codebase:** ~27,000 lines of TypeScript across ~400 files
+**Codebase:** ~32,800 lines of TypeScript across ~450 files
 **Tech stack:** Clerk + Neon + Gemini + Drizzle + AI SDK 6 + ReactFlow + Konva.js + Zustand + Playwright + Vercel — all validated in production
-**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) + v1.2 (whiteboard, 2 days) + v1.3 (visual ideation, 1 day) + v1.4 (polish, 1 day) = 7 days total
+**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) + v1.2 (whiteboard, 2 days) + v1.3 (visual ideation, 1 day) + v1.4 (polish, 1 day) + v1.5 (launch ready, 2 days) = 13 days total
 
 **Known issues / tech debt:**
 - Next.js middleware → proxy convention migration (non-blocking)
-- Step 10 Validate produces synthesis summary only (no Build Pack export yet)
+- Step 10 Build Pack deliverable cards are shell only (no actual document generation yet)
 - CRON_SECRET needs to be configured in Vercel dashboard for production cron warming
 - Mobile grid optimization deferred (may need tablet-first approach)
 - E2E back-navigation testing deferred (forward-only tested)
+- /api/dev/seed-workshop build error (pre-existing, TypeError on width property)
+- isPublicRoute in proxy.ts defined but unused (pricing works via default-allow)
+- Semantic status colors (green/amber/red) in synthesis-summary-view outside olive token system
 
-**Current milestone:** v1.5 Launch Ready
+**Current milestone:** Planning next milestone
 
 ---
-*Last updated: 2026-02-18 after v1.5 milestone started*
+*Last updated: 2026-02-19 after v1.5 milestone complete*

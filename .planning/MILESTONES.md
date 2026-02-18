@@ -1,5 +1,29 @@
 # Project Milestones: WorkshopPilot.ai
 
+## v1.5 Launch Ready (Shipped: 2026-02-19)
+
+**Delivered:** Made WorkshopPilot.ai presentable to the public — cohesive olive visual identity across all surfaces, a landing page that converts, a pricing page with real tiers, and Step 10 Build Pack preview cards.
+
+**Phases completed:** 36-39 (9 plans total)
+
+**Key accomplishments:**
+- Olive theme rollout across 30+ UI components (header, auth modals, canvas, workshop, EzyDraw) — zero hardcoded gray/blue/white classes remaining
+- Landing page with responsive hero section, 4 value propositions, testimonials, and sticky frosted-glass header
+- Pricing page with three differentiated tiers (Single Use $9, Facilitator $29/mo, Annual $249/yr), accessible via direct URL only
+- Step 10 outputs shell with DeliverableCard component displaying 4 Build Pack downloads (PRD, Stakeholder PPT, User Stories, Tech Specs) wired into active render tree
+
+**Stats:**
+- 47 source files modified (901 insertions, 278 deletions)
+- ~32,779 lines of TypeScript (total codebase)
+- 4 phases, 9 plans, 16 feat commits
+- 2 days (2026-02-18 → 2026-02-19)
+
+**Git range:** `feat(36-01)` → `feat(39-02)`
+
+**What's next:** Next milestone TBD — potential directions: Build Pack export, responsive tablet support, visual enhancements, OAuth/Google sign-in, or multiplayer collaboration.
+
+---
+
 ## v1.4 Personal Workshop Polish (Shipped: 2026-02-13)
 
 **Delivered:** Polished the personal workshop experience with UX refinements, AI personality injection, workshop management, developer seed data, and comprehensive E2E testing — discovering and fixing 5 production bugs along the way.
@@ -21,8 +45,6 @@
 - 1 day (2026-02-13)
 
 **Git range:** `docs(30)` → `docs(35)`
-
-**What's next:** Next milestone TBD — potential directions: Build Pack export, responsive tablet support, visual enhancements, or OAuth/Google sign-in.
 
 ---
 
