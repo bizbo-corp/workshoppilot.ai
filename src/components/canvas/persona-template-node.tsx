@@ -165,7 +165,7 @@ function PortraitSection({
             className="w-full h-full object-contain"
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
-            <div className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
+            <div className="flex items-center gap-2 rounded-full bg-card/90 px-4 py-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
               <RefreshCw className="h-4 w-4 text-[#4a5a32]" />
               <span className="text-sm font-medium text-[#4a5a32]">Regenerate</span>
             </div>
@@ -232,7 +232,7 @@ function EditableField({
         className={cn(
           'nodrag nopan w-full resize-none bg-transparent outline-none transition-colors',
           'placeholder:text-[#8a9a5b]/40',
-          'focus:bg-white/60 focus:rounded-md focus:px-2 focus:py-1',
+          'focus:bg-card/60 focus:rounded-md focus:px-2 focus:py-1',
           className
         )}
         rows={rows ?? 3}
@@ -258,7 +258,7 @@ function EditableField({
           className={cn(
             'nodrag nopan bg-transparent outline-none transition-colors',
             'placeholder:text-[#8a9a5b]/40',
-            'focus:bg-white/60 focus:rounded-md focus:px-2 focus:py-1',
+            'focus:bg-card/60 focus:rounded-md focus:px-2 focus:py-1',
             className
           )}
           placeholder={placeholder}
@@ -277,7 +277,7 @@ function EditableField({
       className={cn(
         'nodrag nopan w-full bg-transparent outline-none transition-colors',
         'placeholder:text-[#8a9a5b]/40',
-        'focus:bg-white/60 focus:rounded-md focus:px-2 focus:py-1',
+        'focus:bg-card/60 focus:rounded-md focus:px-2 focus:py-1',
         className
       )}
       placeholder={placeholder}
@@ -332,13 +332,13 @@ export const PersonaTemplateNode = memo(
             value={data.archetype}
             placeholder="Archetype Title"
             onBlur={(v) => data.onFieldChange?.(id, 'archetype', v)}
-            className="text-2xl font-bold text-white placeholder:text-white/40 focus:bg-white/15"
+            className="text-2xl font-bold text-white placeholder:text-white/40 focus:bg-neutral-olive-100/15"
           />
           <EditableField
             value={data.archetypeRole}
             placeholder="Role / Tagline"
             onBlur={(v) => data.onFieldChange?.(id, 'archetypeRole', v)}
-            className="text-sm font-medium text-white/75 placeholder:text-white/30 focus:bg-white/15"
+            className="text-sm font-medium text-white/75 placeholder:text-white/30 focus:bg-neutral-olive-100/15"
           />
         </div>
 

@@ -71,7 +71,7 @@ function EditableField({
       className={cn(
         'nodrag nopan w-full bg-transparent outline-none transition-colors',
         'placeholder:text-[#8a9a5b]/40',
-        'focus:bg-white/60 focus:rounded-md focus:px-2 focus:py-1',
+        'focus:bg-card/60 focus:rounded-md focus:px-2 focus:py-1',
         disabled && 'pointer-events-none',
         className
       )}
