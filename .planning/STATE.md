@@ -5,17 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-
-**Current focus:** v1.5 Launch Ready — olive theme, landing page, pricing, outputs shell
+**Current focus:** v1.5 Launch Ready — Phase 36: Olive Theme Rollout
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-18 — Milestone v1.5 started
+Phase: 36 of 39 (Olive Theme Rollout)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-02-18 — v1.5 roadmap created, phases 36-39 defined
 
-Progress: 6 milestones shipped (v0.5 → v1.4), 106 plans across 35 phases
+Progress: [██████████░░░░░░░░░░] ~50% (35/39 phases complete)
 
 ## Performance Metrics
 
@@ -35,7 +34,12 @@ Progress: 6 milestones shipped (v0.5 → v1.4), 106 plans across 35 phases
 
 ### Decisions
 
-All v1.4 decisions archived. See PROJECT.md Key Decisions table for full history.
+All prior decisions archived. See PROJECT.md Key Decisions table for full history.
+
+Recent v1.5 decisions:
+- Theme rollout is about applying the EXISTING olive palette (tailwind config/global.css) — not designing a new one
+- Pricing page is informational only, no payment processing; hidden from nav
+- Step 10 outputs shell keeps existing synthesis summary, adds disabled download cards
 
 ### Pending Todos
 
@@ -45,14 +49,13 @@ None.
 
 - Next.js middleware → proxy convention migration (non-blocking)
 - CRON_SECRET needs configuration in Vercel dashboard for production cron warming
-- Step 10 Validate produces synthesis summary only (outputs shell in v1.5, actual generation deferred to MMP)
 - E2E back-navigation testing deferred (forward-only tested)
 - Mobile grid optimization deferred
 
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Defining v1.5 requirements
+Stopped at: v1.5 roadmap created (phases 36-39), requirements mapped
 Resume file: None
 
-**Next action:** Define requirements → create roadmap
+**Next action:** `/gsd:plan-phase 36` — Olive Theme Rollout

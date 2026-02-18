@@ -89,28 +89,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| THEME-01 | — | Pending |
-| THEME-02 | — | Pending |
-| THEME-03 | — | Pending |
-| LAND-01 | — | Pending |
-| LAND-02 | — | Pending |
-| LAND-03 | — | Pending |
-| LAND-04 | — | Pending |
-| LAND-05 | — | Pending |
-| PRICE-01 | — | Pending |
-| PRICE-02 | — | Pending |
-| PRICE-03 | — | Pending |
-| PRICE-04 | — | Pending |
-| OUT-01 | — | Pending |
-| OUT-02 | — | Pending |
-| OUT-03 | — | Pending |
-| OUT-04 | — | Pending |
+| THEME-01 | Phase 36 | Pending |
+| THEME-02 | Phase 36 | Pending |
+| THEME-03 | Phase 36 | Pending |
+| LAND-01 | Phase 37 | Pending |
+| LAND-02 | Phase 37 | Pending |
+| LAND-03 | Phase 37 | Pending |
+| LAND-04 | Phase 37 | Pending |
+| LAND-05 | Phase 37 | Pending |
+| PRICE-01 | Phase 38 | Pending |
+| PRICE-02 | Phase 38 | Pending |
+| PRICE-03 | Phase 38 | Pending |
+| PRICE-04 | Phase 38 | Pending |
+| OUT-01 | Phase 39 | Pending |
+| OUT-02 | Phase 39 | Pending |
+| OUT-03 | Phase 39 | Pending |
+| OUT-04 | Phase 39 | Pending |
 
 **Coverage:**
 - v1.5 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15 ⚠️
+- Mapped to phases: 15
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-18*
-*Last updated: 2026-02-18 after initial definition*
+*Last updated: 2026-02-18 after v1.5 roadmap creation — all 15 requirements mapped*

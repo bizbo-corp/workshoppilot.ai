@@ -8,6 +8,7 @@
 - ✅ **v1.2 Canvas Whiteboard** - Phases 21-24 (shipped 2026-02-12)
 - ✅ **v1.3 EzyDraw & Visual Ideation** - Phases 25-29 (shipped 2026-02-12)
 - ✅ **v1.4 Personal Workshop Polish** - Phases 30-35 (shipped 2026-02-13)
+- 🚧 **v1.5 Launch Ready** - Phases 36-39 (in progress)
 
 ## Phases
 
@@ -95,6 +96,75 @@ See `milestones/v1.4-ROADMAP.md` for full details.
 
 </details>
 
+### 🚧 v1.5 Launch Ready (In Progress)
+
+**Milestone Goal:** Make WorkshopPilot.ai presentable to the public — cohesive visual identity, a landing page that converts, a pricing page that sets expectations, and a Step 10 output shell that teases the Build Pack without promising it.
+
+#### Phase 36: Olive Theme Rollout
+
+**Goal:** Every surface of the app reads as a single coherent product with the "consultant authority" aesthetic the olive palette was designed for.
+**Depends on:** Phases 1-35 (existing codebase)
+**Requirements:** THEME-01, THEME-02, THEME-03
+**Success Criteria** (what must be TRUE):
+  1. Sidebar, header, chat panel, forms, and dialogs all use the olive palette — no default Tailwind grays or blue accents visible
+  2. Canvas backgrounds and post-it node colors match the olive-tinted palette in both light and dark modes
+  3. All shadcn/ui components (buttons, inputs, cards, dialogs) render in olive theme — primary actions use olive, not the default slate/zinc
+  4. Switching between light and dark mode shows consistent olive tones with no surface reverting to default theme colors
+**Plans:** TBD
+
+Plans:
+- [ ] 36-01: App surfaces — sidebar, header, chat panel, forms, dialogs
+- [ ] 36-02: Canvas surfaces — whiteboard backgrounds, post-it nodes, light + dark modes
+- [ ] 36-03: shadcn/ui component re-theming — buttons, inputs, cards, dialogs
+
+#### Phase 37: Landing Page
+
+**Goal:** A visitor arriving at workshoppilot.ai understands what it does, why it matters, and has a clear path to sign in and start a workshop.
+**Depends on:** Phase 36 (theme established — landing page inherits olive palette)
+**Requirements:** LAND-01, LAND-02, LAND-03, LAND-04, LAND-05
+**Success Criteria** (what must be TRUE):
+  1. A first-time visitor sees a hero with headline, subheadline, and a primary CTA button that routes to sign-in or the dashboard
+  2. The landing page explains the product's value with 3-4 distinct reasons to use WorkshopPilot
+  3. The testimonials section exists and shows social proof content
+  4. The navigation includes a visible sign-in or dashboard link that persists across all landing page sections
+  5. The landing page renders correctly on desktop, tablet, and mobile without layout breakage
+**Plans:** TBD
+
+Plans:
+- [ ] 37-01: Page scaffold, hero section, navigation with sign-in CTA
+- [ ] 37-02: Reasons to use section and testimonials section
+- [ ] 37-03: Responsive polish — tablet and mobile layouts
+
+#### Phase 38: Pricing Page
+
+**Goal:** Real pricing information is accessible via direct URL for anyone who needs it, without cluttering the main navigation or implying payment processing exists.
+**Depends on:** Phase 36 (theme established)
+**Requirements:** PRICE-01, PRICE-02, PRICE-03, PRICE-04
+**Success Criteria** (what must be TRUE):
+  1. Visiting /pricing shows three tiers: Single Use, Facilitator, and Annual Subscription
+  2. Each tier displays name, price point, feature list, and a CTA button
+  3. The pricing page does not appear in the main navigation or sidebar — it is only reachable via direct URL or explicit link
+  4. Pricing content reflects real differentiated tiers with specific feature differences between plans
+**Plans:** TBD
+
+Plans:
+- [ ] 38-01: Pricing page route, three-tier layout, tier content and CTAs
+
+#### Phase 39: Step 10 Outputs Shell
+
+**Goal:** Users who complete a workshop see a tangible preview of what they'll be able to export — without any false promises of functionality that doesn't exist yet.
+**Depends on:** Phase 36 (theme established)
+**Requirements:** OUT-01, OUT-02, OUT-03, OUT-04
+**Success Criteria** (what must be TRUE):
+  1. Step 10 shows deliverable cards for PRD, Stakeholder PPT, User Stories, and Tech Specs alongside the existing synthesis summary
+  2. Each card displays the deliverable name, a description of what it contains, and a visibly disabled download button labeled "Coming Soon"
+  3. The existing AI synthesis summary from Step 10 remains visible and is not displaced by the new cards
+  4. The card layout is clearly structured for extension — adding real generation later requires adding functionality to existing cards, not restructuring the layout
+**Plans:** TBD
+
+Plans:
+- [ ] 39-01: Deliverable card components and Step 10 integration
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -105,8 +175,12 @@ See `milestones/v1.4-ROADMAP.md` for full details.
 | 21-24 | v1.2 | 9/9 | Complete | 2026-02-12 |
 | 25-29 | v1.3 | 23/23 | Complete | 2026-02-12 |
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
+| 36. Olive Theme Rollout | v1.5 | 0/TBD | Not started | - |
+| 37. Landing Page | v1.5 | 0/TBD | Not started | - |
+| 38. Pricing Page | v1.5 | 0/TBD | Not started | - |
+| 39. Step 10 Outputs Shell | v1.5 | 0/TBD | Not started | - |
 
-**Total project:** 106 plans across 35 phases, 6 milestones shipped
+**Total project (pre-v1.5):** 106 plans across 35 phases, 6 milestones shipped
 
 ---
-*Last updated: 2026-02-13 after v1.4 milestone completion*
+*Last updated: 2026-02-18 after v1.5 roadmap creation*
