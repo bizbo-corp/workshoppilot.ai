@@ -19,6 +19,11 @@ import { Sparkles, Loader2, Plus, Undo2, Redo2 } from 'lucide-react';
 
 import { MindMapNode } from '@/components/canvas/mind-map-node';
 import { MindMapEdge } from '@/components/canvas/mind-map-edge';
+import {
+  Crazy8sGroupNode,
+  CRAZY_8S_NODE_ID,
+  CRAZY_8S_NODE_HEIGHT,
+} from '@/components/canvas/crazy-8s-group-node';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import {
   THEME_COLORS,
@@ -32,7 +37,10 @@ import type {
 import { Button } from '@/components/ui/button';
 
 // Define node and edge types outside component to prevent re-renders
-const nodeTypes = { mindMapNode: MindMapNode };
+const nodeTypes = {
+  mindMapNode: MindMapNode,
+  crazy8sGroupNode: Crazy8sGroupNode,
+};
 const edgeTypes = { mindMapEdge: MindMapEdge };
 
 // Snap grid size for drag-end positions
@@ -45,6 +53,7 @@ export type MindMapCanvasProps = {
   workshopId: string;
   stepId: string;
   hmwStatement?: string;
+  showCrazy8s?: boolean;
 };
 
 export function MindMapCanvas(props: MindMapCanvasProps) {
@@ -59,6 +68,7 @@ function MindMapCanvasInner({
   workshopId,
   stepId,
   hmwStatement,
+  showCrazy8s,
 }: MindMapCanvasProps) {
   const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
@@ -141,7 +151,6 @@ function MindMapCanvasInner({
       const parentPos = livePositions.current[parentId] || parentNode.position || { x: 0, y: 0 };
       const siblingCount = mindMapEdges.filter((e) => e.source === parentId).length;
       const CHILD_DISTANCE = 250;
-      const angle = (2 * Math.PI * siblingCount) / Math.max(siblingCount + 1, 3) - Math.PI / 2;
 
       // If parent is root, spread around evenly; otherwise, fan out from parent's direction
       let childX: number;
@@ -220,8 +229,8 @@ function MindMapCanvasInner({
     [mindMapNodes, mindMapEdges, deleteMindMapNode]
   );
 
-  // Convert store state to ReactFlow nodes — uses stored positions directly
-  const rfNodes: Node[] = useMemo(() => {
+  // Convert store state to ReactFlow mind map nodes
+  const rfMindMapNodes: Node[] = useMemo(() => {
     return mindMapNodes.map((nodeState) => ({
       id: nodeState.id,
       type: 'mindMapNode',
@@ -241,6 +250,25 @@ function MindMapCanvasInner({
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions is a ref
   }, [mindMapNodes, handleLabelChange, handleAddChild, handleDelete]);
+
+  // Crazy 8s group node — positioned to the right of the mind map
+  const crazy8sNode = useMemo<Node | null>(() => {
+    if (!showCrazy8s) return null;
+    return {
+      id: CRAZY_8S_NODE_ID,
+      type: 'crazy8sGroupNode',
+      position: { x: 900, y: -(CRAZY_8S_NODE_HEIGHT / 2) },
+      draggable: false,
+      connectable: false,
+      focusable: false,
+      data: { workshopId, stepId },
+    };
+  }, [showCrazy8s, workshopId, stepId]);
+
+  // Combined nodes array: mind map + optional crazy 8s
+  const rfNodes = useMemo(() => {
+    return crazy8sNode ? [...rfMindMapNodes, crazy8sNode] : rfMindMapNodes;
+  }, [rfMindMapNodes, crazy8sNode]);
 
   // Convert store state to ReactFlow edges
   const rfEdges: Edge[] = useMemo(() => {
@@ -263,6 +291,15 @@ function MindMapCanvasInner({
     setNodes(rfNodes);
   }, [rfNodes]);
 
+  // Fit view when crazy 8s appears
+  const prevShowCrazy8s = useRef(showCrazy8s);
+  useEffect(() => {
+    if (showCrazy8s && !prevShowCrazy8s.current) {
+      setTimeout(() => fitView({ padding: 0.15, duration: 400 }), 200);
+    }
+    prevShowCrazy8s.current = showCrazy8s;
+  }, [showCrazy8s, fitView]);
+
   // Handle node changes (drag, selection)
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -270,6 +307,8 @@ function MindMapCanvasInner({
       for (const c of changes) {
         if (c.type === 'position') {
           const posChange = c as NodeChange & { id: string; position?: { x: number; y: number }; dragging?: boolean };
+          // Skip the crazy 8s group node
+          if (posChange.id === CRAZY_8S_NODE_ID) continue;
           if (posChange.dragging && posChange.position) {
             livePositions.current[posChange.id] = posChange.position;
           } else if (posChange.dragging === false) {
@@ -459,7 +498,7 @@ function MindMapCanvasInner({
         edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.3 }}
-        minZoom={0.2}
+        minZoom={0.1}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
         nodesDraggable={true}
@@ -473,10 +512,12 @@ function MindMapCanvasInner({
         <Controls showInteractive={false} />
         <MiniMap
           nodeStrokeColor={(n) => {
+            if (n.id === CRAZY_8S_NODE_ID) return '#f59e0b';
             const color = n.data?.themeColor;
             return typeof color === 'string' ? color : '#6b7280';
           }}
           nodeColor={(n) => {
+            if (n.id === CRAZY_8S_NODE_ID) return '#fef3c7';
             const bgColor = n.data?.themeBgColor;
             return typeof bgColor === 'string' ? bgColor : '#f3f4f6';
           }}

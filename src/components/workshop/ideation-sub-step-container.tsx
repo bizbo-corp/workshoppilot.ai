@@ -7,10 +7,9 @@ import { ChatPanel } from './chat-panel';
 import { ArtifactConfirmation } from './artifact-confirmation';
 import { StepNavigation } from './step-navigation';
 import { MindMapCanvas } from './mind-map-canvas';
-import { Crazy8sCanvas } from './crazy-8s-canvas';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { ArrowRight, MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, Zap } from 'lucide-react';
+import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, Zap } from 'lucide-react';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
 
@@ -82,23 +81,10 @@ export function IdeationSubStepContainer({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Refs for scrolling to crazy 8s section
-  const crazy8sRef = React.useRef<HTMLDivElement>(null);
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
-
   // Transition to crazy 8s phase
   const handleStartCrazy8s = React.useCallback(() => {
     setShowCrazy8s(true);
     setCurrentPhase('crazy-eights');
-    // Scroll horizontally to crazy 8s section after render
-    setTimeout(() => {
-      if (scrollContainerRef.current && crazy8sRef.current) {
-        scrollContainerRef.current.scrollTo({
-          left: crazy8sRef.current.offsetLeft,
-          behavior: 'smooth',
-        });
-      }
-    }, 100);
   }, []);
 
   // ArtifactConfirmation handlers
@@ -160,10 +146,10 @@ export function IdeationSubStepContainer({
     </div>
   );
 
-  // Render the canvas area with mind map + crazy 8s side by side horizontally
+  // Render the combined ReactFlow canvas (mind map + crazy 8s side by side)
   const renderCanvas = () => (
     <div className="relative h-full">
-      {/* Collapse button — pinned top-right, outside scroll container */}
+      {/* Collapse button */}
       {!isMobile && (
         <div className="absolute top-2 right-2 z-20">
           <button
@@ -176,43 +162,14 @@ export function IdeationSubStepContainer({
         </div>
       )}
 
-      {/* Horizontal scroll container */}
-      <div ref={scrollContainerRef} className="flex h-full overflow-x-auto">
-        {/* Mind Map section */}
-        <div
-          className={cn(
-            'h-full shrink-0',
-            !showCrazy8s && 'w-full',
-          )}
-          style={showCrazy8s && !isMobile ? { aspectRatio: '3 / 2' } : undefined}
-        >
-          {stepId && (
-            <MindMapCanvas
-              workshopId={workshopId}
-              stepId={stepId}
-              hmwStatement={hmwStatement || artifact?.reframedHmw as string || ''}
-            />
-          )}
-        </div>
-
-        {/* Crazy 8s section — appears to the right of mind map */}
-        {showCrazy8s && (
-          <div ref={crazy8sRef} className="flex h-full shrink-0 flex-col border-l" style={{ minWidth: '800px' }}>
-            <div className="flex items-center gap-2 border-b bg-muted/30 px-4 py-2">
-              <Zap className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">Crazy 8s</span>
-            </div>
-            <div className="min-h-0 flex-1">
-              {stepId && (
-                <Crazy8sCanvas
-                  workshopId={workshopId}
-                  stepId={stepId}
-                />
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+      {stepId && (
+        <MindMapCanvas
+          workshopId={workshopId}
+          stepId={stepId}
+          hmwStatement={hmwStatement || artifact?.reframedHmw as string || ''}
+          showCrazy8s={showCrazy8s}
+        />
+      )}
     </div>
   );
 
