@@ -2,18 +2,18 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-13)
+See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
 
-**Current focus:** Between milestones — ready for next milestone planning
+**Current focus:** v1.5 Launch Ready — olive theme, landing page, pricing, outputs shell
 
 ## Current Position
 
-Phase: None active (v1.4 complete)
-Plan: None active
-Status: Milestone boundary
-Last activity: 2026-02-13 — v1.4 Personal Workshop Polish archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-18 — Milestone v1.5 started
 
 Progress: 6 milestones shipped (v0.5 → v1.4), 106 plans across 35 phases
 
@@ -45,14 +45,14 @@ None.
 
 - Next.js middleware → proxy convention migration (non-blocking)
 - CRON_SECRET needs configuration in Vercel dashboard for production cron warming
-- Step 10 Validate produces synthesis summary only (no Build Pack export yet - deferred to MMP)
+- Step 10 Validate produces synthesis summary only (outputs shell in v1.5, actual generation deferred to MMP)
 - E2E back-navigation testing deferred (forward-only tested)
 - Mobile grid optimization deferred
 
 ## Session Continuity
 
-Last session: 2026-02-13
-Stopped at: v1.4 milestone archived
+Last session: 2026-02-18
+Stopped at: Defining v1.5 requirements
 Resume file: None
 
-**Next action:** `/gsd:new-milestone` to plan next version
+**Next action:** Define requirements → create roadmap

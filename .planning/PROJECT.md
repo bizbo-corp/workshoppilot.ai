@@ -58,6 +58,12 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 
 ### Active
 
+#### Current Milestone — v1.5 Launch Ready
+- [ ] Full olive theme (light + dark mode) across all app surfaces — backgrounds, buttons, sidebar, header, chat, canvas, post-its, forms
+- [ ] Landing page with hero section, reasons to use WorkshopPilot, testimonials, dashboard/sign-in CTA
+- [ ] Pricing page with real tiers (single use, facilitator, annual subscription) — hidden from nav initially
+- [ ] Outputs shell (Step 10) — deliverable cards (PRD, Stakeholder PPT, User Stories, Tech Specs) with disabled download buttons and "Coming Soon" labels
+
 #### Future — MMP (Visual & Solo Polish)
 - [ ] Visual stakeholder radar chart
 - [ ] Guided persona builder with per-field regeneration
@@ -67,7 +73,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - [ ] Responsive tablet support
 - [ ] OAuth (Google)
 - [ ] Video explanations per step
-- [ ] Build Pack export (PRDs, user stories, tech specs for AI coders)
+- [ ] Build Pack export (PRDs, user stories, tech specs for AI coders) — actual generation for Step 10 deliverables
 
 #### Future — FFP (Full Platform)
 - [ ] Dot voting for idea selection
@@ -93,7 +99,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Video conferencing integration — rely on external tools (Zoom, etc.)
 - Multi-language support — English first, internationalize later
 - Custom branding per organization — FFP at earliest
-- Pricing/billing system — free during validation phase
+- Pricing/billing integration — pricing page is informational only; no payment processing in v1.5
 
 ## Context
 
@@ -183,7 +189,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Mobile grid optimization deferred (may need tablet-first approach)
 - E2E back-navigation testing deferred (forward-only tested)
 
-**Current milestone:** None — ready for next milestone planning
+**Current milestone:** v1.5 Launch Ready
 
 ---
-*Last updated: 2026-02-13 after v1.4 milestone completion*
+*Last updated: 2026-02-18 after v1.5 milestone started*
