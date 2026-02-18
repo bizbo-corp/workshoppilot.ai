@@ -36,10 +36,11 @@ export function WorkshopAppearancePicker({
   onUpdate,
 }: WorkshopAppearancePickerProps) {
   const currentColor = getWorkshopColor(color);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [emojiData, setEmojiData] = useState<any>(null);
   const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
-  const emojiBtnRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   // Lazy-load emoji data when picker opens
   useEffect(() => {
@@ -49,14 +50,16 @@ export function WorkshopAppearancePicker({
   }, [emojiPickerOpen, emojiData]);
 
   const openEmojiPicker = useCallback(() => {
-    if (emojiBtnRef.current) {
-      const rect = emojiBtnRef.current.getBoundingClientRect();
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
       setPickerPos({
         top: rect.bottom + 4,
         left: rect.left,
       });
     }
-    setEmojiPickerOpen(true);
+    setDropdownOpen(false);
+    // Small delay to let dropdown close before opening emoji picker
+    setTimeout(() => setEmojiPickerOpen(true), 100);
   }, []);
 
   const handleColorSelect = (newColor: WorkshopColor) => {
@@ -69,22 +72,21 @@ export function WorkshopAppearancePicker({
   };
 
   return (
-    <div
-      className="flex items-center gap-1.5"
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-    >
-      {/* Color picker */}
-      <DropdownMenu>
+    <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+      <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <DropdownMenuTrigger asChild>
           <button
-            className="flex h-6 w-6 items-center justify-center rounded-full transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Change workshop color"
+            ref={triggerRef}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            style={{ backgroundColor: currentColor.hex + '33' }}
+            aria-label="Change workshop appearance"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
           >
-            <span
-              className="h-4 w-4 rounded-full border border-black/10 dark:border-white/20"
-              style={{ backgroundColor: currentColor.hex }}
-            />
+            {emoji ? (
+              <span className="text-base leading-none">{emoji}</span>
+            ) : (
+              <Smile className="h-4 w-4 text-muted-foreground" />
+            )}
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -92,6 +94,7 @@ export function WorkshopAppearancePicker({
           className="p-2"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
         >
+          {/* Color grid */}
           <div className="grid grid-cols-4 gap-1.5">
             {WORKSHOP_COLORS.map((c) => (
               <button
@@ -116,30 +119,22 @@ export function WorkshopAppearancePicker({
               </button>
             ))}
           </div>
+          {/* Emoji change button */}
+          <div className="mt-2 border-t pt-2">
+            <button
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openEmojiPicker();
+              }}
+            >
+              <Smile className="h-3.5 w-3.5" />
+              Change emoji
+            </button>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
-
-      {/* Emoji picker */}
-      <button
-        ref={emojiBtnRef}
-        className="flex h-6 w-6 items-center justify-center rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label="Choose emoji"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (emojiPickerOpen) {
-            setEmojiPickerOpen(false);
-          } else {
-            openEmojiPicker();
-          }
-        }}
-      >
-        {emoji ? (
-          <span className="text-sm leading-none">{emoji}</span>
-        ) : (
-          <Smile className="h-3.5 w-3.5 text-muted-foreground" />
-        )}
-      </button>
 
       {/* Emoji picker portal — rendered at document.body to avoid overflow clipping and Link navigation */}
       {emojiPickerOpen && typeof document !== 'undefined' && createPortal(

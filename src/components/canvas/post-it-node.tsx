@@ -7,12 +7,12 @@ import { cn } from '@/lib/utils';
 import type { PostItColor } from '@/stores/canvas-store';
 
 export const COLOR_CLASSES: Record<PostItColor, string> = {
-  yellow: 'bg-amber-100 dark:bg-amber-200',
-  pink: 'bg-pink-100 dark:bg-pink-200',
-  blue: 'bg-blue-100 dark:bg-blue-200',
-  green: 'bg-green-100 dark:bg-green-200',
-  orange: 'bg-orange-100 dark:bg-orange-200',
-  red: 'bg-red-100 dark:bg-red-200',
+  yellow: 'bg-[var(--postit-yellow)]',
+  pink: 'bg-[var(--postit-pink)]',
+  blue: 'bg-[var(--postit-blue)]',
+  green: 'bg-[var(--postit-green)]',
+  orange: 'bg-[var(--postit-orange)]',
+  red: 'bg-[var(--postit-red)]',
 };
 
 export type PostItNodeData = {
@@ -66,7 +66,7 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
         className={cn(
           bgColor,
           'shadow-md rounded-sm p-3',
-          'font-sans text-sm text-neutral-olive-800 dark:text-neutral-olive-900',
+          'font-sans text-sm text-neutral-olive-800 dark:text-neutral-olive-200',
           'opacity-60',
           'ring-2 ring-olive-500 ring-offset-1',
           'w-full h-full flex flex-col',
@@ -112,7 +112,7 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
       className={cn(
         bgColor,
         'shadow-md rounded-sm p-3',
-        'font-sans text-sm text-neutral-olive-800 dark:text-neutral-olive-900',
+        'font-sans text-sm text-neutral-olive-800 dark:text-neutral-olive-200',
         // Transitions only when not actively dragging — instant feedback during manipulation
         !dragging && 'transition-[box-shadow,transform,opacity] duration-150',
         !dragging && !selected && 'hover:shadow-lg hover:-translate-y-0.5',

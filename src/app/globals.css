@@ -117,6 +117,28 @@
   --canvas-highlight-fill: #fef3c7;
   --canvas-tint-opacity: 0.06;
   --canvas-zone-opacity: 0.08;
+  /* Post-it note colors — muted, olive-complementary */
+  --postit-yellow: #e8d898;
+  --postit-pink: #ddb8be;
+  --postit-blue: #a8c0d0;
+  --postit-green: #a8c8a0;
+  --postit-orange: #ddc498;
+  --postit-red: #d4a8a8;
+  /* Mind map branch colors — desaturated, earthy */
+  --mm-blue: #5a7ea0;
+  --mm-blue-bg: #dce3ea;
+  --mm-green: #5a9060;
+  --mm-green-bg: #d6e4d0;
+  --mm-purple: #7a6a98;
+  --mm-purple-bg: #ddd6e6;
+  --mm-orange: #a07848;
+  --mm-orange-bg: #e4d9c8;
+  --mm-pink: #986a78;
+  --mm-pink-bg: #e2d2d6;
+  --mm-yellow: #908238;
+  --mm-yellow-bg: #e0dcc4;
+  --mm-root: #5a6050;
+  --mm-root-bg: #e0e2da;
   --background: var(--neutral-olive-100);
   --foreground: var(--neutral-olive-800);
   --card: var(--neutral-olive-50);
@@ -166,6 +188,28 @@
   --canvas-highlight-fill: #78350f4d;
   --canvas-tint-opacity: 0.12;
   --canvas-zone-opacity: 0.15;
+  /* Post-it note colors — dark mode (higher contrast) */
+  --postit-yellow: #7a6b2e;
+  --postit-pink: #7a4550;
+  --postit-blue: #3a5878;
+  --postit-green: #3a7840;
+  --postit-orange: #7a5828;
+  --postit-red: #783838;
+  /* Mind map branch colors — dark mode (higher contrast) */
+  --mm-blue: #7ba0c0;
+  --mm-blue-bg: #2e3d50;
+  --mm-green: #7ab080;
+  --mm-green-bg: #2c4830;
+  --mm-purple: #9a8ab8;
+  --mm-purple-bg: #3a3050;
+  --mm-orange: #c09868;
+  --mm-orange-bg: #483828;
+  --mm-pink: #b88a98;
+  --mm-pink-bg: #483038;
+  --mm-yellow: #b0a258;
+  --mm-yellow-bg: #484028;
+  --mm-root: #8a9080;
+  --mm-root-bg: #354030;
   --background: var(--neutral-olive-950);
   --foreground: var(--neutral-olive-200);
   --card: var(--neutral-olive-900);

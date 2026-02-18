@@ -90,7 +90,7 @@ export function WorkshopCard({
   return (
     <Card
       className={cn(
-        "group relative overflow-hidden border border-border transition-all hover:shadow-md dark:hover:border-neutral-olive-700",
+        "group relative overflow-hidden border border-border transition-all hover:shadow-md dark:hover:border-neutral-olive-700 pt-0 pb-0 gap-0",
         selected && "ring-2 ring-primary border-primary"
       )}
     >
@@ -116,44 +116,45 @@ export function WorkshopCard({
         className="px-6 pt-5 pb-4"
         style={{ backgroundColor: workshopColor.bgHex }}
       >
-        <Link href={`/workshop/${sessionId}/step/${currentStep}`}>
-          {/* Workshop name with inline edit */}
-          <div className="mb-2">
-            {isEditing ? (
-              <Input
-                value={editedTitle}
-                onChange={(e) => setEditedTitle(e.target.value)}
-                onBlur={handleRename}
-                onKeyDown={handleKeyDown}
-                disabled={isSubmitting}
-                autoFocus
-                className="text-lg font-semibold"
-                maxLength={100}
-                onClick={(e) => e.preventDefault()}
-              />
-            ) : (
-              <h3
-                className="cursor-pointer text-lg font-semibold text-foreground transition-colors hover:text-olive-600"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setIsEditing(true);
-                }}
-              >
-                {emoji && <span className="mr-1.5 text-xl">{emoji}</span>}
-                {title}
-              </h3>
-            )}
-          </div>
-        </Link>
+        <div className="flex items-start gap-2.5">
+          {/* Emoji circle — opens appearance picker (outside Link to avoid navigation) */}
+          <WorkshopAppearancePicker
+            workshopId={workshopId}
+            color={color}
+            emoji={emoji}
+            onUpdate={onUpdateAppearance}
+          />
 
-        {/* Appearance picker (color + emoji) — outside Link to avoid navigation */}
-        <WorkshopAppearancePicker
-          workshopId={workshopId}
-          color={color}
-          emoji={emoji}
-          onUpdate={onUpdateAppearance}
-        />
+          {/* Workshop name with inline edit */}
+          <div className="flex-1 min-w-0 pt-0.5">
+            <Link href={`/workshop/${sessionId}/step/${currentStep}`}>
+              {isEditing ? (
+                <Input
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  onBlur={handleRename}
+                  onKeyDown={handleKeyDown}
+                  disabled={isSubmitting}
+                  autoFocus
+                  className="text-lg font-semibold"
+                  maxLength={100}
+                  onClick={(e) => e.preventDefault()}
+                />
+              ) : (
+                <h3
+                  className="cursor-pointer text-lg font-semibold text-foreground transition-colors hover:text-olive-600"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsEditing(true);
+                  }}
+                >
+                  {title}
+                </h3>
+              )}
+            </Link>
+          </div>
+        </div>
       </div>
 
       <Link href={`/workshop/${sessionId}/step/${currentStep}`}>

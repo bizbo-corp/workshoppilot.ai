@@ -15,54 +15,55 @@ export type ThemeColor = {
 
 /**
  * 6-color theme palette for mind map branches
+ * Uses CSS variables defined in globals.css for light/dark mode adaptation
  */
 export const THEME_COLORS: readonly ThemeColor[] = [
   {
     id: 'blue',
     label: 'Blue',
-    color: '#3b82f6',
-    bgColor: '#dbeafe',
+    color: 'var(--mm-blue)',
+    bgColor: 'var(--mm-blue-bg)',
   },
   {
     id: 'green',
     label: 'Green',
-    color: '#10b981',
-    bgColor: '#d1fae5',
+    color: 'var(--mm-green)',
+    bgColor: 'var(--mm-green-bg)',
   },
   {
     id: 'purple',
     label: 'Purple',
-    color: '#8b5cf6',
-    bgColor: '#ede9fe',
+    color: 'var(--mm-purple)',
+    bgColor: 'var(--mm-purple-bg)',
   },
   {
     id: 'orange',
     label: 'Orange',
-    color: '#f97316',
-    bgColor: '#ffedd5',
+    color: 'var(--mm-orange)',
+    bgColor: 'var(--mm-orange-bg)',
   },
   {
     id: 'pink',
     label: 'Pink',
-    color: '#ec4899',
-    bgColor: '#fce7f3',
+    color: 'var(--mm-pink)',
+    bgColor: 'var(--mm-pink-bg)',
   },
   {
     id: 'yellow',
     label: 'Yellow',
-    color: '#eab308',
-    bgColor: '#fef9c3',
+    color: 'var(--mm-yellow)',
+    bgColor: 'var(--mm-yellow-bg)',
   },
 ] as const;
 
 /**
- * Root node color (neutral gray for central HMW node)
+ * Root node color (olive-neutral for central HMW node)
  */
 export const ROOT_COLOR: ThemeColor = {
   id: 'root',
   label: 'Root',
-  color: '#374151',  // gray-700 for better prominence
-  bgColor: '#f9fafb', // gray-50
+  color: 'var(--mm-root)',
+  bgColor: 'var(--mm-root-bg)',
 };
 
 /**
