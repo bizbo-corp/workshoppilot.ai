@@ -11,14 +11,14 @@ import { SignInModal } from '@/components/auth/sign-in-modal';
  * Landing page header
  * Separate from workshop header (per user decision)
  * Shows sign-in for unauthenticated users, UserButton + Dashboard link for authenticated
- * Not sticky/fixed - scrolls away with content
+ * Sticky with backdrop blur — persists as users scroll through landing page sections
  */
 export function LandingHeader() {
   const [showSignIn, setShowSignIn] = useState(false);
 
   return (
     <>
-      <header className="w-full border-b border-border bg-background">
+      <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           {/* Left: Logo */}
           <Link href="/" className="flex items-center">
