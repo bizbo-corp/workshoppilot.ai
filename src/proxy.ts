@@ -12,6 +12,7 @@ const BYPASS_AUTH = process.env.BYPASS_AUTH === 'true';
 // Route matchers
 const isPublicRoute = createRouteMatcher([
   '/',
+  '/pricing',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/webhooks(.*)',
