@@ -112,22 +112,15 @@ Plans:
 - [x] 36-03-PLAN.md — EzyDraw theming, workshop features (idea selection, concept sheet, HMW), remaining canvas nodes
 - [x] 36-04-PLAN.md — Gap closure: replace bg-white/N alpha variants in 4 canvas node files
 
-#### Phase 37: Landing Page
+#### Phase 37: Landing Page ✓
 
 **Goal:** A visitor arriving at workshoppilot.ai understands what it does, why it matters, and has a clear path to sign in and start a workshop.
-**Depends on:** Phase 36 (theme established — landing page inherits olive palette)
-**Requirements:** LAND-01, LAND-02, LAND-03, LAND-04, LAND-05
-**Success Criteria** (what must be TRUE):
-  1. A first-time visitor sees a hero with headline, subheadline, and a primary CTA button that routes to sign-in or the dashboard
-  2. The landing page explains the product's value with 3-4 distinct reasons to use WorkshopPilot
-  3. The testimonials section exists and shows social proof content
-  4. The navigation includes a visible sign-in or dashboard link that persists across all landing page sections
-  5. The landing page renders correctly on desktop, tablet, and mobile without layout breakage
-**Plans:** 2 plans
+**Completed:** 2026-02-19
+**Plans:** 2/2 complete
 
 Plans:
-- [ ] 37-01-PLAN.md — Page scaffold, enhanced hero section, sticky navigation, footer
-- [ ] 37-02-PLAN.md — Value propositions section, testimonials section, responsive polish, visual verification
+- [x] 37-01-PLAN.md — Page scaffold, enhanced hero section, sticky navigation, footer
+- [x] 37-02-PLAN.md — Value propositions section, testimonials section, responsive polish, visual verification
 
 #### Phase 38: Pricing Page
 
@@ -170,11 +163,11 @@ Plans:
 | 25-29 | v1.3 | 23/23 | Complete | 2026-02-12 |
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
 | 36. Olive Theme Rollout | v1.5 | 4/4 | Complete | 2026-02-18 |
-| 37. Landing Page | v1.5 | 0/2 | Planned | - |
+| 37. Landing Page | v1.5 | 2/2 | Complete | 2026-02-19 |
 | 38. Pricing Page | v1.5 | 0/TBD | Not started | - |
 | 39. Step 10 Outputs Shell | v1.5 | 0/TBD | Not started | - |
 
 **Total project (pre-v1.5):** 106 plans across 35 phases, 6 milestones shipped
 
 ---
-*Last updated: 2026-02-18 — Phase 37 planned*
+*Last updated: 2026-02-19 — Phase 37 complete*
