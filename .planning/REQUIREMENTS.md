@@ -1,0 +1,116 @@
+# Requirements: WorkshopPilot.ai
+
+**Defined:** 2026-02-18
+**Core Value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
+
+## v1.5 Requirements
+
+Requirements for v1.5 Launch Ready milestone. Each maps to roadmap phases.
+
+### Theme & Design System
+
+- [ ] **THEME-01**: All app surfaces (sidebar, header, chat panel, forms, dialogs) use existing olive palette from tailwind config/global.css consistently — "consultant authority" aesthetic
+- [ ] **THEME-02**: Canvas/whiteboard backgrounds and post-it node colors follow the same olive-tinted palette in both light and dark modes
+- [ ] **THEME-03**: All shadcn/ui components (buttons, inputs, cards, dialogs) are re-themed to match olive palette
+
+### Landing Page
+
+- [ ] **LAND-01**: Landing page has a hero section with headline, subheadline, and primary CTA (sign in / get started)
+- [ ] **LAND-02**: Landing page has a "reasons to use" section with 3-4 value propositions
+- [ ] **LAND-03**: Landing page has a testimonials section
+- [ ] **LAND-04**: Landing page has a clear dashboard link / sign-in CTA in navigation
+- [ ] **LAND-05**: Landing page is responsive (desktop + tablet + mobile)
+
+### Pricing
+
+- [ ] **PRICE-01**: Pricing page exists with three tiers: Single Use, Facilitator, Annual Subscription
+- [ ] **PRICE-02**: Each tier shows name, price, feature list, and CTA button
+- [ ] **PRICE-03**: Pricing page is hidden from main navigation (accessible via direct URL only)
+- [ ] **PRICE-04**: Pricing content uses real suggested pricing and feature differentiation
+
+### Outputs (Step 10)
+
+- [ ] **OUT-01**: Step 10 displays deliverable cards (PRD, Stakeholder PPT, User Stories, Tech Specs)
+- [ ] **OUT-02**: Each card shows deliverable name, description, and disabled download button with "Coming Soon" label
+- [ ] **OUT-03**: Step 10 retains existing synthesis summary alongside the deliverable cards
+- [ ] **OUT-04**: Deliverable card layout is extensible for future generation functionality
+
+## Future Requirements
+
+Deferred to future milestones. Tracked but not in current roadmap.
+
+### Visual & Solo Polish (MMP)
+
+- **VIS-01**: Visual stakeholder radar chart
+- **VIS-02**: Guided persona builder with per-field regeneration
+- **VIS-03**: Billboard Hero exercise (text-based pitch test + EzyDraw visuals)
+- **VIS-04**: Billboard template layouts
+- **VIS-05**: Timer function for time-boxed exercises
+- **VIS-06**: Responsive tablet support
+- **VIS-07**: OAuth (Google)
+- **VIS-08**: Video explanations per step
+- **VIS-09**: Build Pack export — actual PRD/user story/tech spec generation for Step 10 deliverables
+
+### Full Platform (FFP)
+
+- **PLAT-01**: Dot voting for idea selection
+- **PLAT-02**: Basic multi-user collaboration
+- **PLAT-03**: Brain Writing with real collaboration (multi-user)
+- **PLAT-04**: Real-time multiplayer (WebSockets)
+- **PLAT-05**: EzyDraw AI Enhance (rough sketch → clean wireframe)
+- **PLAT-06**: AI + canvas working side-by-side (auto-suggest, auto-complete nodes)
+- **PLAT-07**: Voice input
+- **PLAT-08**: AI pattern analysis and gap detection
+- **PLAT-09**: Concept comparison (side-by-side evaluation)
+- **PLAT-10**: A/B billboard variant generation
+- **PLAT-11**: Advanced stakeholder management collateral (PowerPoint, reports)
+- **PLAT-12**: Mobile participant mode
+- **PLAT-13**: SSO/2FA authentication
+- **PLAT-14**: Workshop marketplace / multiple templates
+
+## Out of Scope
+
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| Native mobile apps | Web-first, assess demand later |
+| Offline mode | Significant architecture changes for minimal value |
+| White-label solution | Premature before product-market fit |
+| Video conferencing integration | Rely on external tools (Zoom, etc.) |
+| Multi-language support | English first, internationalize later |
+| Custom branding per organization | FFP at earliest |
+| Pricing/billing integration | Pricing page is informational only; no payment processing in v1.5 |
+| Step 10 actual file generation | Shell only in v1.5; generation deferred to MMP |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| THEME-01 | — | Pending |
+| THEME-02 | — | Pending |
+| THEME-03 | — | Pending |
+| LAND-01 | — | Pending |
+| LAND-02 | — | Pending |
+| LAND-03 | — | Pending |
+| LAND-04 | — | Pending |
+| LAND-05 | — | Pending |
+| PRICE-01 | — | Pending |
+| PRICE-02 | — | Pending |
+| PRICE-03 | — | Pending |
+| PRICE-04 | — | Pending |
+| OUT-01 | — | Pending |
+| OUT-02 | — | Pending |
+| OUT-03 | — | Pending |
+| OUT-04 | — | Pending |
+
+**Coverage:**
+- v1.5 requirements: 15 total
+- Mapped to phases: 0
+- Unmapped: 15 ⚠️
+
+---
+*Requirements defined: 2026-02-18*
+*Last updated: 2026-02-18 after initial definition*
