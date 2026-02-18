@@ -110,12 +110,13 @@ See `milestones/v1.4-ROADMAP.md` for full details.
   2. Canvas backgrounds and post-it node colors match the olive-tinted palette in both light and dark modes
   3. All shadcn/ui components (buttons, inputs, cards, dialogs) render in olive theme — primary actions use olive, not the default slate/zinc
   4. Switching between light and dark mode shows consistent olive tones with no surface reverting to default theme colors
-**Plans:** 3 plans
+**Plans:** 4 plans
 
 Plans:
 - [ ] 36-01-PLAN.md — App surfaces: header, auth modals, dashboard, admin page, workshop card
 - [ ] 36-02-PLAN.md — Canvas surfaces: toolbars, post-it nodes, overlays, context menus, concept cards
 - [ ] 36-03-PLAN.md — EzyDraw theming, workshop features (idea selection, concept sheet, HMW), remaining canvas nodes
+- [ ] 36-04-PLAN.md — Gap closure: replace bg-white/N alpha variants in 4 canvas node files
 
 #### Phase 37: Landing Page
 
@@ -175,7 +176,7 @@ Plans:
 | 21-24 | v1.2 | 9/9 | Complete | 2026-02-12 |
 | 25-29 | v1.3 | 23/23 | Complete | 2026-02-12 |
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
-| 36. Olive Theme Rollout | v1.5 | 0/3 | Planned | - |
+| 36. Olive Theme Rollout | v1.5 | 3/4 | Gap closure | - |
 | 37. Landing Page | v1.5 | 0/TBD | Not started | - |
 | 38. Pricing Page | v1.5 | 0/TBD | Not started | - |
 | 39. Step 10 Outputs Shell | v1.5 | 0/TBD | Not started | - |
@@ -183,4 +184,4 @@ Plans:
 **Total project (pre-v1.5):** 106 plans across 35 phases, 6 milestones shipped
 
 ---
-*Last updated: 2026-02-18 after v1.5 roadmap creation*
+*Last updated: 2026-02-18 after gap closure plan 36-04 created*
