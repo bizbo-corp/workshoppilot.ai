@@ -78,7 +78,7 @@ export function ConcentricRingsOverlay({ config }: ConcentricRingsOverlayProps) 
         height={32}
       >
         <div className="flex items-center justify-center h-full">
-          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 bg-white/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded">
+          <span className="text-xs font-semibold text-neutral-olive-500 dark:text-neutral-olive-400 bg-neutral-olive-50/80 dark:bg-neutral-olive-900/80 px-2 py-0.5 rounded">
             Most Important
           </span>
         </div>
@@ -95,7 +95,7 @@ export function ConcentricRingsOverlay({ config }: ConcentricRingsOverlayProps) 
             height={32}
           >
             <div className="flex items-center justify-center h-full">
-              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 bg-white/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded">
+              <span className="text-xs font-semibold text-neutral-olive-500 dark:text-neutral-olive-400 bg-neutral-olive-50/80 dark:bg-neutral-olive-900/80 px-2 py-0.5 rounded">
                 Least Important
               </span>
             </div>

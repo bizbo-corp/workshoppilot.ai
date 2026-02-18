@@ -14,16 +14,16 @@ export const GroupNode = memo(({ selected }: NodeProps<GroupNode>) => {
   return (
     <div
       className={cn(
-        'bg-gray-100/70 dark:bg-zinc-800/70 border-2 border-dashed border-gray-300 dark:border-zinc-600 rounded-lg',
+        'bg-neutral-olive-100/70 dark:bg-neutral-olive-800/70 border-2 border-dashed border-neutral-olive-300 dark:border-neutral-olive-600 rounded-lg',
         'min-w-[160px] min-h-[160px] w-full h-full',
-        selected && 'border-blue-400'
+        selected && 'border-olive-500'
       )}
     >
       <NodeResizer
         isVisible={selected}
         minWidth={160}
         minHeight={160}
-        handleClassName="!w-2 !h-2 !bg-blue-500 !border-blue-500"
+        handleClassName="!w-2 !h-2 !bg-olive-600 !border-olive-600"
       />
     </div>
   );

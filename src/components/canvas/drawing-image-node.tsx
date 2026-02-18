@@ -19,7 +19,7 @@ export const DrawingImageNode = memo(({ data, selected, id }: NodeProps<DrawingI
 
   return (
     <div
-      className="group relative bg-white dark:bg-zinc-800 rounded-lg shadow-md hover:shadow-lg hover:ring-2 hover:ring-blue-400 transition-all duration-150 cursor-pointer"
+      className="group relative bg-card rounded-lg shadow-md hover:shadow-lg hover:ring-2 hover:ring-olive-500 transition-all duration-150 cursor-pointer"
       style={{
         width: displayWidth,
         height: displayHeight,
@@ -28,7 +28,7 @@ export const DrawingImageNode = memo(({ data, selected, id }: NodeProps<DrawingI
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center',
         ...(selected ? {
-          boxShadow: '0 0 0 2px rgb(59 130 246)',
+          boxShadow: '0 0 0 2px rgb(118 131 100)',
           outline: '1px solid transparent',
         } : {}),
       }}
@@ -48,7 +48,7 @@ export const DrawingImageNode = memo(({ data, selected, id }: NodeProps<DrawingI
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="text-gray-600 dark:text-gray-400"
+          className="text-muted-foreground"
         >
           <path
             d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25a1.75 1.75 0 0 1 .445-.758l8.61-8.61Zm.176 4.823L9.75 4.81l-6.286 6.287a.253.253 0 0 0-.064.108l-.558 1.953 1.953-.558a.253.253 0 0 0 .108-.064l6.286-6.286Z"

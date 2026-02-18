@@ -179,7 +179,7 @@ export function HMWBuilder({ artifact, onFieldEdit }: HMWBuilderProps) {
                   handleFieldEdit(idx, 'givenThat', newValue)
                 }
                 isEditable={isEditable}
-                colorClass="bg-blue-50 dark:bg-blue-950/20"
+                colorClass="bg-olive-50 dark:bg-olive-950/20"
               />
 
               <EditableField

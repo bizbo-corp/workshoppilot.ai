@@ -45,7 +45,7 @@ export function IdeaSelection({
         className={cn(
           'relative rounded-lg border p-2 transition-all',
           isSelected
-            ? 'border-blue-500 ring-2 ring-blue-500/20'
+            ? 'border-olive-600 ring-2 ring-olive-600/20'
             : 'hover:border-primary/50',
           isDisabled && 'opacity-50 cursor-not-allowed'
         )}
@@ -68,7 +68,7 @@ export function IdeaSelection({
 
         {/* Checkbox overlay */}
         {isSelected && (
-          <div className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-md">
+          <div className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-olive-600 text-white shadow-md">
             <Check className="h-4 w-4" />
           </div>
         )}
@@ -122,8 +122,8 @@ export function IdeaSelection({
 
       {/* Selection summary */}
       {selectedSlotIds.length > 0 && (
-        <div className="rounded-lg border border-blue-500/50 bg-blue-50/50 p-3 dark:bg-blue-950/20">
-          <p className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-1">
+        <div className="rounded-lg border border-olive-500/50 bg-olive-50/50 p-3 dark:bg-olive-950/20">
+          <p className="text-xs font-semibold text-olive-800 dark:text-olive-200 mb-1">
             Selected {selectedSlotIds.length} sketch{selectedSlotIds.length !== 1 ? 'es' : ''} for Step 9
           </p>
         </div>

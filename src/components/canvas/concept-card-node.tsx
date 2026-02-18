@@ -242,17 +242,17 @@ export const ConceptCardNode = memo(
               </div>
 
               {/* Opportunities */}
-              <div className="space-y-1 rounded-lg border border-blue-500/30 bg-blue-50 p-3 dark:bg-blue-950/20">
+              <div className="space-y-1 rounded-lg border border-olive-500/30 bg-olive-50 p-3 dark:bg-olive-950/20">
                 <div className="mb-2 flex items-center gap-2">
-                  <div className="h-3 w-3 rounded bg-blue-500" />
-                  <h5 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                  <div className="h-3 w-3 rounded bg-olive-600" />
+                  <h5 className="text-sm font-semibold text-olive-900 dark:text-olive-100">
                     Opportunities
                   </h5>
                 </div>
                 {data.swot.opportunities.map((item, idx) => (
                   <textarea
                     key={idx}
-                    className="nodrag nopan w-full resize-none rounded border border-blue-500/30 bg-white px-2 py-1 text-xs text-blue-800 outline-none focus:border-blue-500 dark:bg-blue-950/40 dark:text-blue-200"
+                    className="nodrag nopan w-full resize-none rounded border border-olive-500/30 bg-card px-2 py-1 text-xs text-olive-800 outline-none focus:border-olive-600 dark:bg-olive-950/40 dark:text-olive-200"
                     rows={2}
                     placeholder={`Opportunity ${idx + 1}`}
                     defaultValue={item}

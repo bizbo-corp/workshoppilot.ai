@@ -66,9 +66,9 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
         className={cn(
           bgColor,
           'shadow-md rounded-sm p-3',
-          'font-sans text-sm text-gray-800 dark:text-gray-900',
+          'font-sans text-sm text-neutral-olive-800 dark:text-neutral-olive-900',
           'opacity-60',
-          'ring-2 ring-blue-400 ring-offset-1',
+          'ring-2 ring-olive-500 ring-offset-1',
           'w-full h-full flex flex-col',
         )}
         style={{ touchAction: 'none' }}
@@ -78,7 +78,7 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
         <p className="break-words whitespace-pre-wrap mb-2 text-xs flex-1">{data.text || ''}</p>
 
         {data.previewReason && (
-          <p className="text-[10px] text-gray-500 italic mb-2 leading-tight">{data.previewReason}</p>
+          <p className="text-[10px] text-neutral-olive-500 italic mb-2 leading-tight">{data.previewReason}</p>
         )}
 
         <div className="flex gap-1.5 pt-1">
@@ -87,7 +87,7 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
               e.stopPropagation();
               data.onConfirm?.(id);
             }}
-            className="nodrag nopan flex-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors font-medium"
+            className="nodrag nopan flex-1 px-2 py-1 text-xs bg-olive-600 text-white rounded hover:bg-olive-700 transition-colors font-medium"
           >
             Add
           </button>
@@ -96,7 +96,7 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
               e.stopPropagation();
               data.onReject?.(id);
             }}
-            className="nodrag nopan flex-1 px-2 py-1 text-xs bg-gray-200 dark:bg-gray-300 text-gray-700 dark:text-gray-800 rounded hover:bg-gray-300 dark:hover:bg-gray-400 transition-colors"
+            className="nodrag nopan flex-1 px-2 py-1 text-xs bg-neutral-olive-200 dark:bg-neutral-olive-300 text-neutral-olive-700 dark:text-neutral-olive-800 rounded hover:bg-neutral-olive-300 dark:hover:bg-neutral-olive-400 transition-colors"
           >
             Skip
           </button>
@@ -112,16 +112,16 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
       className={cn(
         bgColor,
         'shadow-md rounded-sm p-3',
-        'font-sans text-sm text-gray-800 dark:text-gray-900',
+        'font-sans text-sm text-neutral-olive-800 dark:text-neutral-olive-900',
         // Transitions only when not actively dragging — instant feedback during manipulation
         !dragging && 'transition-[box-shadow,transform,opacity] duration-150',
         !dragging && !selected && 'hover:shadow-lg hover:-translate-y-0.5',
         'cursor-pointer',
         'w-full h-full flex flex-col overflow-hidden',
-        selected && !dragging && 'ring-2 ring-blue-500 ring-offset-1',
-        data.isEditing && 'ring-2 ring-blue-400 ring-offset-1',
+        selected && !dragging && 'ring-2 ring-olive-600 ring-offset-1',
+        data.isEditing && 'ring-2 ring-olive-500 ring-offset-1',
         // Miro-like drag: clean shadow lift, subtle scale, no rotation or opacity change
-        dragging && 'shadow-2xl scale-[1.02] ring-2 ring-blue-400/40'
+        dragging && 'shadow-2xl scale-[1.02] ring-2 ring-olive-500/40'
       )}
       style={{ touchAction: 'none' }}
     >
@@ -136,8 +136,8 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
         onResizeEnd={(_, { x, y, width, height }) => {
           data.onResizeEnd?.(id, width, height, x, y);
         }}
-        handleClassName="!w-2.5 !h-2.5 !bg-blue-500 !border-blue-500 !rounded-full"
-        lineClassName="!border-blue-400/50"
+        handleClassName="!w-2.5 !h-2.5 !bg-olive-600 !border-olive-600 !rounded-full"
+        lineClassName="!border-olive-500/50"
       />
 
       {/* Hidden handles for future edge connections */}
@@ -162,7 +162,7 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
         <>
           <p className="break-words whitespace-pre-wrap overflow-hidden flex-1">{data.text || ''}</p>
           {data.clusterLabel && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-500 dark:text-gray-600 mt-1">
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-neutral-olive-500 dark:text-neutral-olive-600 mt-1">
               <Layers className="w-2.5 h-2.5" />
               {data.clusterLabel} ({data.clusterChildCount ?? 0})
             </span>

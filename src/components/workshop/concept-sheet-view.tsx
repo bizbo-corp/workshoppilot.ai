@@ -114,7 +114,7 @@ export function ConceptSheetView({ artifact }: ConceptSheetViewProps) {
           </div>
 
           {/* USP */}
-          <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-950/20">
+          <div className="rounded-lg bg-olive-50 p-4 dark:bg-olive-950/20">
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               What makes this different
             </p>
@@ -162,16 +162,16 @@ export function ConceptSheetView({ artifact }: ConceptSheetViewProps) {
               </div>
 
               {/* Opportunities */}
-              <div className="rounded-lg border border-blue-500/30 bg-blue-50 p-4 dark:bg-blue-950/20">
+              <div className="rounded-lg border border-olive-500/30 bg-olive-50 p-4 dark:bg-olive-950/20">
                 <div className="mb-2 flex items-center gap-2">
-                  <div className="h-3 w-3 rounded bg-blue-500" />
-                  <h5 className="font-semibold text-sm text-blue-900 dark:text-blue-100">
+                  <div className="h-3 w-3 rounded bg-olive-600" />
+                  <h5 className="font-semibold text-sm text-olive-900 dark:text-olive-100">
                     Opportunities
                   </h5>
                 </div>
                 <ol className="space-y-1">
                   {concept.swot.opportunities.map((item, idx) => (
-                    <li key={idx} className="text-sm text-blue-800 dark:text-blue-200">
+                    <li key={idx} className="text-sm text-olive-800 dark:text-olive-200">
                       {idx + 1}. {item}
                     </li>
                   ))}
