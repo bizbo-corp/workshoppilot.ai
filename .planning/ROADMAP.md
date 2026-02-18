@@ -138,7 +138,7 @@ Plans:
 **Goal:** Users who complete a workshop see a tangible preview of what they'll be able to export — without any false promises of functionality that doesn't exist yet.
 **Depends on:** Phase 36 (theme established)
 **Requirements:** OUT-01, OUT-02, OUT-03, OUT-04
-**Plans:** 2 plans (1 complete, 1 gap closure)
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 39-01-PLAN.md — DeliverableCard component + SynthesisSummaryView integration with 4 Build Pack preview cards
@@ -157,7 +157,7 @@ Plans:
 | 36. Olive Theme Rollout | v1.5 | 4/4 | Complete | 2026-02-18 |
 | 37. Landing Page | v1.5 | 2/2 | Complete | 2026-02-19 |
 | 38. Pricing Page | v1.5 | 1/1 | Complete | 2026-02-19 |
-| 39. Step 10 Outputs Shell | v1.5 | 2/2 | Complete | 2026-02-19 |
+| 39. Step 10 Outputs Shell | v1.5 | Complete    | 2026-02-18 | 2026-02-19 |
 
 **Total project:** 109 plans across 39 phases
 
