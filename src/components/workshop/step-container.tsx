@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { UIMessage } from 'ai';
 import { ChatPanel } from './chat-panel';
 import { RightPanel } from './right-panel';
+import { SynthesisSummaryView } from './synthesis-summary-view';
 import { MobileTabBar } from './mobile-tab-bar';
 import { StepNavigation } from './step-navigation';
 import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
@@ -141,6 +142,21 @@ export function StepContainer({
     }
   }, [workshopId, stepOrder, sessionId, router, setPostIts, setDrawingNodes, setCrazy8sSlots, setMindMapState, setConceptCards, setGridColumns]);
 
+  // Step 10: render synthesis summary + Build Pack deliverable cards
+  const renderStep10Content = () => (
+    <div className="flex h-full flex-col overflow-y-auto p-6">
+      {initialArtifact ? (
+        <SynthesisSummaryView artifact={initialArtifact} />
+      ) : (
+        <div className="flex h-full items-center justify-center rounded-lg border bg-card p-12">
+          <p className="text-sm text-muted-foreground">
+            Your synthesis summary and Build Pack deliverables will appear here after AI completes the review
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
   // Step 8 uses specialized sub-step container
   if (stepOrder === 8) {
     return (
@@ -221,6 +237,8 @@ export function StepContainer({
                   />
                 )}
               </div>
+            ) : stepOrder === 10 ? (
+              renderStep10Content()
             ) : (
               <RightPanel
                 stepOrder={stepOrder}
@@ -310,6 +328,19 @@ export function StepContainer({
                       />
                     )}
                   </div>
+                ) : stepOrder === 10 ? (
+                  <div className="h-full relative">
+                    <div className="absolute top-2 right-2 z-10">
+                      <button
+                        onClick={() => setCanvasCollapsed(true)}
+                        className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
+                        title="Collapse panel"
+                      >
+                        <PanelRightClose className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {renderStep10Content()}
+                  </div>
                 ) : (
                   <RightPanel
                     stepOrder={stepOrder}
@@ -354,6 +385,19 @@ export function StepContainer({
                       crazy8sSlots={step8Crazy8sSlots}
                     />
                   )}
+                </div>
+              ) : stepOrder === 10 ? (
+                <div className="h-full relative">
+                  <div className="absolute top-2 right-2 z-10">
+                    <button
+                      onClick={() => setCanvasCollapsed(true)}
+                      className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
+                      title="Collapse panel"
+                    >
+                      <PanelRightClose className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {renderStep10Content()}
                 </div>
               ) : (
                 <RightPanel
