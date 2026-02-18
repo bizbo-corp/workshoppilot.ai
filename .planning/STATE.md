@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 36 of 39 (Olive Theme Rollout)
-Plan: 03 complete
+Plan: 04 complete
 Status: In progress
-Last activity: 2026-02-18 — 36-03 complete: EzyDraw, workshop, canvas, dashboard fully olive-themed; project-wide sweep clean
+Last activity: 2026-02-18 — 36-04 complete: gap closure — zero bg-white/N alpha variants across all canvas node files; project-wide sweep clean
 
 Progress: [██████████░░░░░░░░░░] ~50% (35/39 phases complete)
 
@@ -49,6 +49,10 @@ Recent v1.5 decisions:
 - Post-it node text: text-neutral-olive-800/900 for readable dark text on light post-it backgrounds
 - Post-it selection/drag rings: ring-olive-600 (selected), ring-olive-500 (editing), ring-olive-500/40 (dragging)
 - SWOT textareas bg-white → bg-card applies to all 4 quadrants for consistency
+- bg-card/60 (not bg-neutral-olive-50/60) for focus highlights on body fields — bg-card resolves to neutral-olive-50/900 giving correct dark mode behavior
+- bg-neutral-olive-100/15 for focus on SAGE.headerBg fields — lighter olive tint on dark green (#6b7f4e) header surface
+- bg-neutral-olive-50/20 for cluster hull rename inputs — 20% alpha blends into any HULL_COLORS header; text-white on colored headers always intentional
+- Gap closure grep pattern: use `bg-white/` (with slash) to catch alpha variants that plain `bg-white` grep misses
 
 ### Pending Todos
 
@@ -64,7 +68,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Phase 36 Plan 03 complete — full olive theme rollout done, project-wide sweep clean
+Stopped at: Phase 36 Plan 04 complete — gap closure done, zero bg-white/N in canvas nodes, project-wide sweep clean
 Resume file: None
 
-**Next action:** Execute Phase 36 Plan 04 if it exists, or move to Phase 37
+**Next action:** Move to Phase 37
