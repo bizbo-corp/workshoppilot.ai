@@ -1,11 +1,16 @@
-Now I need a feature to create an image of the person to make it feel real. Can we use the chacteristics of the persona Age, Name, Job, Pains, Gains, Quotes as a way to generate a perosona that will be good for the profile image.
+
+
+## Ideas
+
+Deleting a cell will delete all the post-its inside it. 
+
+Provide the ability to drag a column left or right including the post-its inside it 
+
+## Visual updates
 
 
 
-Characteristics to create a good caricature might be
-
-Super mum, busy, stressed. Phones, Swamped by kids stuff. 
 
 
+## Prompt Updates
 
-How might we be able to eatract some goog details to pass onto an image generator and make this with the gemini api

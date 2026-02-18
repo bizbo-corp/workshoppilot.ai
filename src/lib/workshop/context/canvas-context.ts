@@ -8,6 +8,7 @@
 
 import type { PostIt, GridColumn } from '@/stores/canvas-store';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
+import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 
 /** Ring display order and labels */
 const RING_ORDER = ['inner', 'middle', 'outer'] as const;
@@ -354,13 +355,56 @@ export function assemblePersonaCanvasContext(personaTemplates: PersonaTemplateDa
 }
 
 /**
+ * Assemble HMW card canvas context for Step 7 (Reframe)
+ * Formats HMW card data showing current field values and card state
+ */
+export function assembleHmwCardCanvasContext(hmwCards: HmwCardData[]): string {
+  if (hmwCards.length === 0) return '';
+
+  const sections: string[] = [];
+
+  for (const card of hmwCards) {
+    const lines: string[] = [`**HMW Card${card.cardIndex !== undefined && card.cardIndex > 0 ? ` #${card.cardIndex + 1} (Alternative)` : ''}** (state: ${card.cardState}):`];
+
+    const fields = [
+      { key: 'givenThat', label: 'Given that' },
+      { key: 'persona', label: 'How might we help' },
+      { key: 'immediateGoal', label: 'Do/be/feel/achieve' },
+      { key: 'deeperGoal', label: 'So they can' },
+    ];
+
+    for (const { key, label } of fields) {
+      const value = card[key as keyof HmwCardData] as string | undefined;
+      if (value) {
+        lines.push(`  ${label}: ${value}`);
+      } else {
+        lines.push(`  ${label}: (empty)`);
+      }
+    }
+
+    if (card.fullStatement) {
+      lines.push(`Complete statement: "${card.fullStatement}"`);
+    }
+
+    sections.push(lines.join('\n'));
+  }
+
+  return sections.join('\n\n');
+}
+
+/**
  * Assemble canvas context for a specific step
  * Routes to step-specific assembly function based on stepId
  */
-export function assembleCanvasContextForStep(stepId: string, postIts: PostIt[], gridColumns?: GridColumn[], personaTemplates?: PersonaTemplateData[]): string {
+export function assembleCanvasContextForStep(stepId: string, postIts: PostIt[], gridColumns?: GridColumn[], personaTemplates?: PersonaTemplateData[], hmwCards?: HmwCardData[]): string {
   // For journey-mapping, always return context (even if no items) so AI sees column structure
   if (stepId === 'journey-mapping') {
     return assembleJourneyMapCanvasContext(postIts, gridColumns);
+  }
+
+  // Reframe step uses HMW cards
+  if (stepId === 'reframe' && hmwCards && hmwCards.length > 0) {
+    return assembleHmwCardCanvasContext(hmwCards);
   }
 
   // Persona step uses template cards, not post-its — check before filtering

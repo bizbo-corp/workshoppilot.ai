@@ -243,8 +243,8 @@ export function computeCanvasPosition(
           (p) => p.cellAssignment?.row === metadata.row && p.cellAssignment?.col === metadata.col,
         );
         // Stagger within cell: offset by existing item count
-        const staggerX = sameCell.length * 15;
-        const staggerY = sameCell.length * 10;
+        const staggerX = sameCell.length * 20;
+        const staggerY = sameCell.length * 15;
 
         return {
           position: {

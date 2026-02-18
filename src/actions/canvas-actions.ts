@@ -7,6 +7,7 @@ import type { PostIt, GridColumn, DrawingNode, MindMapNodeState, MindMapEdgeStat
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
+import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 
 /**
  * Save canvas state to stepArtifacts JSONB column under the `_canvas` key.
@@ -29,6 +30,7 @@ export async function saveCanvasState(
     crazy8sSlots?: Crazy8sSlot[];
     conceptCards?: ConceptCardData[];
     personaTemplates?: PersonaTemplateData[];
+    hmwCards?: HmwCardData[];
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -127,6 +129,7 @@ export async function loadCanvasState(
   crazy8sSlots?: Crazy8sSlot[];
   conceptCards?: ConceptCardData[];
   personaTemplates?: PersonaTemplateData[];
+  hmwCards?: HmwCardData[];
 } | null> {
   try {
     // Find the workshopStep record
@@ -175,8 +178,9 @@ export async function loadCanvasState(
         crazy8sSlots?: Crazy8sSlot[];
         conceptCards?: ConceptCardData[];
         personaTemplates?: PersonaTemplateData[];
+        hmwCards?: HmwCardData[];
       };
-      if (canvas?.postIts || canvas?.personaTemplates) {
+      if (canvas?.postIts || canvas?.personaTemplates || canvas?.hmwCards) {
         return {
           postIts: canvas.postIts || [],
           ...(canvas.gridColumns ? { gridColumns: canvas.gridColumns } : {}),
@@ -186,6 +190,7 @@ export async function loadCanvasState(
           ...(canvas.crazy8sSlots ? { crazy8sSlots: canvas.crazy8sSlots } : {}),
           ...(canvas.conceptCards ? { conceptCards: canvas.conceptCards } : {}),
           ...(canvas.personaTemplates ? { personaTemplates: canvas.personaTemplates } : {}),
+          ...(canvas.hmwCards ? { hmwCards: canvas.hmwCards } : {}),
         };
       }
     }

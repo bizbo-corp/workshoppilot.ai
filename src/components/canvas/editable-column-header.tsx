@@ -68,7 +68,7 @@ export function EditableColumnHeader({ label, onSave, className = '' }: Editable
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className={`px-2 py-0.5 text-xs font-semibold cursor-pointer hover:bg-gray-100/80 dark:hover:bg-zinc-700/80 hover:rounded transition-colors text-gray-500 dark:text-gray-400 truncate max-w-[140px] ${className}`}
+      className={`px-2 py-0.5 text-xs font-semibold cursor-pointer hover:bg-[#8a9a5b]/10 dark:hover:bg-zinc-700/80 hover:rounded transition-colors text-[#4a5a32] dark:text-neutral-olive-200 truncate max-w-[140px] ${className}`}
     >
       {label}
     </div>

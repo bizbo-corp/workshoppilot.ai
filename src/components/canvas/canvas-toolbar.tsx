@@ -27,6 +27,7 @@ const COLOR_DOTS: Record<PostItColor, string> = {
   blue: 'bg-blue-300',
   green: 'bg-green-300',
   orange: 'bg-orange-300',
+  red: 'bg-red-300',
 };
 
 export interface CanvasToolbarProps {

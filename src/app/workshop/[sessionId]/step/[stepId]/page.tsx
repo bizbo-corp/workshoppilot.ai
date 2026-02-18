@@ -11,6 +11,7 @@ import { loadCanvasState } from "@/actions/canvas-actions";
 import type { PostIt, GridColumn, DrawingNode } from "@/stores/canvas-store";
 import type { ConceptCardData } from "@/lib/canvas/concept-card-types";
 import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
+import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
 
 interface StepPageProps {
@@ -171,6 +172,7 @@ export default async function StepPage({ params }: StepPageProps) {
   const initialDrawingNodes: DrawingNode[] = canvasData?.drawingNodes || [];
   const initialConceptCards: ConceptCardData[] = canvasData?.conceptCards || [];
   let initialPersonaTemplates: PersonaTemplateData[] = canvasData?.personaTemplates || [];
+  let initialHmwCards: HmwCardData[] = canvasData?.hmwCards || [];
 
   // Lazy migration: if artifact exists but no canvas state, derive initial positions
   if (initialCanvasPostIts.length === 0 && initialArtifact && step) {
@@ -200,6 +202,17 @@ export default async function StepPage({ params }: StepPageProps) {
       position: { x: 0, y: 0 },
     };
     initialPersonaTemplates = [template];
+  }
+
+  // Lazy migration: Create skeleton HMW card for reframe step
+  if (step.id === 'reframe' && initialHmwCards.length === 0) {
+    const skeletonCard: HmwCardData = {
+      id: crypto.randomUUID(),
+      position: { x: 0, y: 0 },
+      cardState: 'skeleton',
+      cardIndex: 0,
+    };
+    initialHmwCards = [skeletonCard];
   }
 
   // Load Step 8 data for Step 9 (concept)
@@ -240,6 +253,7 @@ export default async function StepPage({ params }: StepPageProps) {
         initialDrawingNodes={initialDrawingNodes}
         initialConceptCards={initialConceptCards}
         initialPersonaTemplates={initialPersonaTemplates}
+        initialHmwCards={initialHmwCards}
       >
         <StepContainer
           stepOrder={stepNumber}

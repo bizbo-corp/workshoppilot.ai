@@ -12,6 +12,7 @@ export const COLOR_CLASSES: Record<PostItColor, string> = {
   blue: 'bg-blue-100 dark:bg-blue-200',
   green: 'bg-green-100 dark:bg-green-200',
   orange: 'bg-orange-100 dark:bg-orange-200',
+  red: 'bg-red-100 dark:bg-red-200',
 };
 
 export type PostItNodeData = {

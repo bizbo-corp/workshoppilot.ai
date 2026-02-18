@@ -11,7 +11,18 @@ import type { GridConfig, CellCoordinate } from '@/lib/canvas/grid-layout';
 import { getCellBounds } from '@/lib/canvas/grid-layout';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { EditableColumnHeader } from './editable-column-header';
-import { PlusCircle, X } from 'lucide-react';
+import { PlusCircle, X, Footprints, Target, Construction, Pointer, Smile, Zap, Lightbulb, type LucideIcon } from 'lucide-react';
+
+/** Row icon mapping for journey map swimlanes */
+const ROW_ICONS: Record<string, LucideIcon> = {
+  actions: Footprints,
+  goals: Target,
+  barriers: Construction,
+  touchpoints: Pointer,
+  emotions: Smile,
+  moments: Zap,
+  opportunities: Lightbulb,
+};
 
 /**
  * Selector for viewport transformation
@@ -113,46 +124,104 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
         );
       })()}
 
-      {/* Row label backgrounds and labels */}
+      {/* Alternating row tints — extends across label area + grid cells */}
+      {config.rows.map((row, index) => {
+        if (index % 2 !== 1) return null;
+        const rowTop = rowYPositions[index];
+        const rowHeight = rowYPositions[index + 1] - rowTop;
+        const topLeft = toScreen(labelAreaX, rowTop);
+        const fullWidth = colXPositions[colXPositions.length - 1] - labelAreaX;
+        return (
+          <rect
+            key={`row-tint-${row.id}`}
+            x={topLeft.x}
+            y={topLeft.y}
+            width={fullWidth * zoom}
+            height={rowHeight * zoom}
+            fill="#8a9a5b"
+            opacity={0.04}
+          />
+        );
+      })}
+
+      {/* Skeleton post-it placeholders in empty cells — disappear when real post-its arrive */}
+      {config.rows.map((row, rowIdx) =>
+        effectiveColumns.map((col, colIdx) => {
+          const hasContent = postIts.some(
+            p => p.cellAssignment?.row === row.id && p.cellAssignment?.col === col.id
+          );
+          if (hasContent) return null;
+
+          const bounds = getCellBounds(
+            { row: rowIdx, col: colIdx },
+            { ...config, columns: effectiveColumns }
+          );
+          const pad = config.cellPadding + 4;
+          const topLeft = toScreen(bounds.x + pad, bounds.y + pad);
+          const isEmotionRow = row.id === 'emotions';
+
+          if (isEmotionRow) {
+            return (
+              <circle
+                key={`skel-${row.id}-${col.id}`}
+                cx={topLeft.x + 18 * zoom}
+                cy={topLeft.y + 18 * zoom}
+                r={18 * zoom}
+                fill="#a8aaa3"
+                opacity={0.12}
+              />
+            );
+          }
+
+          return (
+            <rect
+              key={`skel-${row.id}-${col.id}`}
+              x={topLeft.x}
+              y={topLeft.y}
+              width={Math.min(120, bounds.width - pad * 2) * zoom}
+              height={Math.min(72, bounds.height - pad * 2) * zoom}
+              rx={8 * zoom}
+              ry={8 * zoom}
+              fill="#a8aaa3"
+              opacity={0.12}
+            />
+          );
+        })
+      )}
+
+      {/* Row labels with icons */}
       {config.rows.map((row, index) => {
         const rowTop = rowYPositions[index];
         const rowBottom = rowYPositions[index + 1];
         const rowHeight = rowBottom - rowTop;
         const rowMidpoint = rowTop + rowHeight / 2;
 
-        const topLeft = toScreen(labelAreaX, rowTop);
         const midLeft = toScreen(labelAreaX + labelAreaWidth / 2, rowMidpoint);
+        const labelWidth = labelAreaWidth * zoom;
+        const Icon = ROW_ICONS[row.id];
 
         return (
-          <g key={row.id}>
-            {/* Label background */}
-            <rect
-              x={topLeft.x}
-              y={topLeft.y}
-              width={labelAreaWidth * zoom}
-              height={rowHeight * zoom}
-              fill="var(--canvas-label-bg)"
-              opacity={0.8}
-            />
-            {/* Label text */}
-            <text
-              x={midLeft.x}
-              y={midLeft.y}
-              fontSize={13}
-              fontWeight={600}
-              fill="var(--canvas-label-text)"
-              textAnchor="middle"
-              dominantBaseline="middle"
-            >
-              {row.label}
-            </text>
-          </g>
+          <foreignObject
+            key={row.id}
+            x={midLeft.x - labelWidth / 2}
+            y={midLeft.y - 20}
+            width={labelWidth}
+            height={40}
+            className="pointer-events-none"
+          >
+            <div className="flex flex-col items-center justify-center h-full gap-0.5">
+              {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground" />}
+              <span className="text-[11px] font-semibold text-foreground leading-tight text-center">
+                {row.label}
+              </span>
+            </div>
+          </foreignObject>
         );
       })}
 
-      {/* Horizontal row separator lines */}
+      {/* Horizontal row separator lines — solid, spanning label area + grid */}
       {rowYPositions.map((rowY, index) => {
-        const leftEdge = toScreen(config.origin.x, rowY);
+        const leftEdge = toScreen(labelAreaX, rowY);
         const rightEdge = toScreen(colXPositions[colXPositions.length - 1], rowY);
         return (
           <line
@@ -161,9 +230,9 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
             y1={leftEdge.y}
             x2={rightEdge.x}
             y2={rightEdge.y}
-            stroke="var(--canvas-grid-line)"
-            strokeWidth={1}
-            strokeDasharray="6 3"
+            stroke="#a8aaa3"
+            strokeWidth={0.5}
+            strokeOpacity={0.5}
           />
         );
       })}
@@ -189,9 +258,9 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
           <foreignObject
             key={col.id}
             x={headerPos.x - headerWidth / 2}
-            y={headerPos.y - 12}
+            y={headerPos.y - 14}
             width={headerWidth}
-            height={28}
+            height={32}
             className="pointer-events-auto overflow-visible"
           >
             <div className="flex items-center justify-center gap-0.5 group">
@@ -213,6 +282,23 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
         );
       })}
 
+      {/* Column header bottom border — spans full width including label area */}
+      {(() => {
+        const leftEdge = toScreen(labelAreaX, config.origin.y);
+        const rightEdge = toScreen(colXPositions[colXPositions.length - 1], config.origin.y);
+        return (
+          <line
+            x1={leftEdge.x}
+            y1={leftEdge.y}
+            x2={rightEdge.x}
+            y2={rightEdge.y}
+            stroke="#a8aaa3"
+            strokeWidth={0.5}
+            strokeOpacity={0.5}
+          />
+        );
+      })()}
+
       {/* +Add Stage button after last column */}
       {(() => {
         const lastColRight = colXPositions[colXPositions.length - 1];
@@ -233,7 +319,7 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
                 }
               }}
               disabled={effectiveColumns.length >= MAX_COLUMNS}
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-zinc-700/80 rounded px-2 py-1 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 text-xs text-[#a8aaa3] hover:text-[#4a5a32] hover:bg-[#8a9a5b]/10 dark:hover:bg-zinc-700/80 rounded px-2 py-1 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               title={effectiveColumns.length >= MAX_COLUMNS ? 'Maximum 12 stages' : 'Add a new stage column'}
             >
               <PlusCircle className="h-3.5 w-3.5" />
@@ -243,8 +329,8 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
         );
       })()}
 
-      {/* Vertical column separator lines */}
-      {colXPositions.map((colX, index) => {
+      {/* Vertical column separator lines — solid thin lines */}
+      {colXPositions.slice(0, -1).map((colX, index) => {
         const topEdge = toScreen(colX, config.origin.y);
         const bottomEdge = toScreen(colX, rowYPositions[rowYPositions.length - 1]);
         return (
@@ -254,9 +340,9 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
             y1={topEdge.y}
             x2={bottomEdge.x}
             y2={bottomEdge.y}
-            stroke="var(--canvas-grid-line-light)"
-            strokeWidth={1}
-            strokeDasharray="4 4"
+            stroke="#a8aaa3"
+            strokeWidth={0.5}
+            strokeOpacity={0.5}
           />
         );
       })}

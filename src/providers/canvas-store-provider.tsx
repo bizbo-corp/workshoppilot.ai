@@ -11,6 +11,7 @@ import {
 } from '@/stores/canvas-store';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
+import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 
 type CanvasStoreApi = ReturnType<typeof createCanvasStore>;
 
@@ -23,6 +24,7 @@ export interface CanvasStoreProviderProps {
   initialDrawingNodes?: DrawingNode[];
   initialConceptCards?: ConceptCardData[];
   initialPersonaTemplates?: PersonaTemplateData[];
+  initialHmwCards?: HmwCardData[];
 }
 
 export function CanvasStoreProvider({
@@ -32,6 +34,7 @@ export function CanvasStoreProvider({
   initialDrawingNodes,
   initialConceptCards,
   initialPersonaTemplates,
+  initialHmwCards,
 }: CanvasStoreProviderProps) {
   // Create store ONCE per mount — ensures per-request isolation in SSR
   const [store] = useState(() =>
@@ -41,6 +44,7 @@ export function CanvasStoreProvider({
       drawingNodes: initialDrawingNodes || [],
       conceptCards: initialConceptCards || [],
       personaTemplates: initialPersonaTemplates || [],
+      hmwCards: initialHmwCards || [],
     })
   );
 

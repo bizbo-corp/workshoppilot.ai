@@ -120,24 +120,29 @@ export const STEP_CANVAS_CONFIGS: Record<string, StepCanvasConfig> = {
     hasGrid: true,
     gridConfig: {
       rows: [
-        { id: 'actions', label: 'Actions', height: 150 },
-        { id: 'goals', label: 'Goals', height: 150 },
-        { id: 'barriers', label: 'Barriers', height: 150 },
-        { id: 'touchpoints', label: 'Touchpoints', height: 150 },
-        { id: 'emotions', label: 'Emotions', height: 120 },
-        { id: 'moments', label: 'Moments of Truth', height: 150 },
-        { id: 'opportunities', label: 'Opportunities', height: 150 },
+        { id: 'actions', label: 'Actions', height: 170 },
+        { id: 'goals', label: 'Goals', height: 170 },
+        { id: 'barriers', label: 'Barriers', height: 170 },
+        { id: 'touchpoints', label: 'Touchpoints', height: 170 },
+        { id: 'emotions', label: 'Emotions', height: 140 },
+        { id: 'moments', label: 'Moments of Truth', height: 170 },
+        { id: 'opportunities', label: 'Opportunities', height: 170 },
       ],
       columns: [
-        { id: 'awareness', label: 'Awareness', width: 240 },
-        { id: 'consideration', label: 'Consideration', width: 240 },
-        { id: 'decision', label: 'Decision', width: 240 },
-        { id: 'purchase', label: 'Purchase', width: 240 },
-        { id: 'onboarding', label: 'Onboarding', width: 240 },
+        { id: 'stage-1', label: 'Stage 1', width: 240 },
+        { id: 'stage-2', label: 'Stage 2', width: 240 },
+        { id: 'stage-3', label: 'Stage 3', width: 240 },
+        { id: 'stage-4', label: 'Stage 4', width: 240 },
+        { id: 'stage-5', label: 'Stage 5', width: 240 },
       ],
-      origin: { x: 140, y: 60 }, // 140px for row labels, 60px for column headers
-      cellPadding: 15,
+      origin: { x: 160, y: 60 }, // 160px for row labels, 60px for column headers
+      cellPadding: 12,
     },
+  },
+
+  // Step 7: Reframe — HMW card canvas (no grid/quadrant/ring overlays)
+  'reframe': {
+    hasQuadrants: false,
   },
 
   // Step 8: Ideation - Mind Map and Crazy 8s canvases
