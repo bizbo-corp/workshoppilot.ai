@@ -123,12 +123,11 @@ Plans:
   3. The testimonials section exists and shows social proof content
   4. The navigation includes a visible sign-in or dashboard link that persists across all landing page sections
   5. The landing page renders correctly on desktop, tablet, and mobile without layout breakage
-**Plans:** TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 37-01: Page scaffold, hero section, navigation with sign-in CTA
-- [ ] 37-02: Reasons to use section and testimonials section
-- [ ] 37-03: Responsive polish — tablet and mobile layouts
+- [ ] 37-01-PLAN.md — Page scaffold, enhanced hero section, sticky navigation, footer
+- [ ] 37-02-PLAN.md — Value propositions section, testimonials section, responsive polish, visual verification
 
 #### Phase 38: Pricing Page
 
@@ -171,11 +170,11 @@ Plans:
 | 25-29 | v1.3 | 23/23 | Complete | 2026-02-12 |
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
 | 36. Olive Theme Rollout | v1.5 | 4/4 | Complete | 2026-02-18 |
-| 37. Landing Page | v1.5 | 0/TBD | Not started | - |
+| 37. Landing Page | v1.5 | 0/2 | Planned | - |
 | 38. Pricing Page | v1.5 | 0/TBD | Not started | - |
 | 39. Step 10 Outputs Shell | v1.5 | 0/TBD | Not started | - |
 
 **Total project (pre-v1.5):** 106 plans across 35 phases, 6 milestones shipped
 
 ---
-*Last updated: 2026-02-18 — Phase 36 complete*
+*Last updated: 2026-02-18 — Phase 37 planned*
