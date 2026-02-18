@@ -132,10 +132,10 @@ Plans:
   2. Each tier displays name, price point, feature list, and a CTA button
   3. The pricing page does not appear in the main navigation or sidebar — it is only reachable via direct URL or explicit link
   4. Pricing content reflects real differentiated tiers with specific feature differences between plans
-**Plans:** TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 38-01: Pricing page route, three-tier layout, tier content and CTAs
+- [ ] 38-01-PLAN.md — Pricing page route with three-tier layout, public route access, olive theme
 
 #### Phase 39: Step 10 Outputs Shell
 
