@@ -143,10 +143,10 @@ Plans:
   2. Each card displays the deliverable name, a description of what it contains, and a visibly disabled download button labeled "Coming Soon"
   3. The existing AI synthesis summary from Step 10 remains visible and is not displaced by the new cards
   4. The card layout is clearly structured for extension — adding real generation later requires adding functionality to existing cards, not restructuring the layout
-**Plans:** TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 39-01: Deliverable card components and Step 10 integration
+- [ ] 39-01-PLAN.md — DeliverableCard component + SynthesisSummaryView integration with 4 Build Pack preview cards
 
 ## Progress
 
