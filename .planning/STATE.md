@@ -46,6 +46,9 @@ Recent v1.5 decisions:
 - Active tool state (EzyDraw + future): bg-olive-100 text-olive-700 ring-olive-300 replaces blue-100/blue-700/blue-300
 - Inline edit field pattern: border-olive-600 bg-card/90 replaces border-blue-500 bg-white/90
 - SWOT Opportunities quadrant color: olive (not blue) across all concept views for semantic consistency
+- Post-it node text: text-neutral-olive-800/900 for readable dark text on light post-it backgrounds
+- Post-it selection/drag rings: ring-olive-600 (selected), ring-olive-500 (editing), ring-olive-500/40 (dragging)
+- SWOT textareas bg-white → bg-card applies to all 4 quadrants for consistency
 
 ### Pending Todos
 
