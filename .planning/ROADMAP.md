@@ -122,20 +122,16 @@ Plans:
 - [x] 37-01-PLAN.md — Page scaffold, enhanced hero section, sticky navigation, footer
 - [x] 37-02-PLAN.md — Value propositions section, testimonials section, responsive polish, visual verification
 
-#### Phase 38: Pricing Page
+#### Phase 38: Pricing Page ✓
 
 **Goal:** Real pricing information is accessible via direct URL for anyone who needs it, without cluttering the main navigation or implying payment processing exists.
 **Depends on:** Phase 36 (theme established)
 **Requirements:** PRICE-01, PRICE-02, PRICE-03, PRICE-04
-**Success Criteria** (what must be TRUE):
-  1. Visiting /pricing shows three tiers: Single Use, Facilitator, and Annual Subscription
-  2. Each tier displays name, price point, feature list, and a CTA button
-  3. The pricing page does not appear in the main navigation or sidebar — it is only reachable via direct URL or explicit link
-  4. Pricing content reflects real differentiated tiers with specific feature differences between plans
-**Plans:** 1 plan
+**Completed:** 2026-02-19
+**Plans:** 1/1 complete
 
 Plans:
-- [ ] 38-01-PLAN.md — Pricing page route with three-tier layout, public route access, olive theme
+- [x] 38-01-PLAN.md — Pricing page route with three-tier layout, public route access, olive theme
 
 #### Phase 39: Step 10 Outputs Shell
 
@@ -164,10 +160,10 @@ Plans:
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
 | 36. Olive Theme Rollout | v1.5 | 4/4 | Complete | 2026-02-18 |
 | 37. Landing Page | v1.5 | 2/2 | Complete | 2026-02-19 |
-| 38. Pricing Page | v1.5 | 0/TBD | Not started | - |
+| 38. Pricing Page | v1.5 | 1/1 | Complete | 2026-02-19 |
 | 39. Step 10 Outputs Shell | v1.5 | 0/TBD | Not started | - |
 
 **Total project (pre-v1.5):** 106 plans across 35 phases, 6 milestones shipped
 
 ---
-*Last updated: 2026-02-19 — Phase 37 complete*
+*Last updated: 2026-02-19 — Phase 38 complete*
