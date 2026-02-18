@@ -20,7 +20,7 @@ import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { ConceptCanvasOverlay } from './concept-canvas-overlay';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
 
-const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'concept'];
+const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe', 'concept'];
 const CANVAS_ONLY_STEPS = ['stakeholder-mapping', 'sense-making', 'concept'];
 
 interface StepContainerProps {
@@ -65,13 +65,16 @@ export function StepContainer({
   const isCanvasStep = step ? CANVAS_ENABLED_STEPS.includes(step.id) : false;
   const postIts = useCanvasStore((s) => s.postIts);
   const conceptCards = useCanvasStore((s) => s.conceptCards);
+  const hmwCards = useCanvasStore((s) => s.hmwCards);
   const setPostIts = useCanvasStore((s) => s.setPostIts);
   const setDrawingNodes = useCanvasStore((s) => s.setDrawingNodes);
   const setCrazy8sSlots = useCanvasStore((s) => s.setCrazy8sSlots);
   const setMindMapState = useCanvasStore((s) => s.setMindMapState);
   const setConceptCards = useCanvasStore((s) => s.setConceptCards);
   const setGridColumns = useCanvasStore((s) => s.setGridColumns);
-  const canvasHasContent = postIts.length > 0 || conceptCards.length > 0;
+  // HMW card counts as "content" only when all 4 fields are filled (card is 'filled')
+  const hmwCardComplete = hmwCards.some((c) => c.cardState === 'filled');
+  const canvasHasContent = postIts.length > 0 || conceptCards.length > 0 || hmwCardComplete;
 
   // For canvas steps, activity is "confirmed" when post-its exist (no extraction needed)
   const effectiveConfirmed = isCanvasStep ? canvasHasContent : artifactConfirmed;

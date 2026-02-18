@@ -59,7 +59,7 @@ export function buildStepSystemPrompt(
   let prompt = `You are guiding the user through Step: ${stepName}.`;
 
   // Inject workshop name so the AI can personalize its introduction
-  const hasCustomName = workshopName && workshopName !== 'New Workshop';
+  const hasCustomName = workshopName && workshopName !== "New Workshop";
   if (hasCustomName) {
     prompt += `\n\nWORKSHOP NAME: "${workshopName}"
 This is the name the user chose for their workshop. Use it naturally in your introduction to show you're paying attention — e.g., reference the topic/domain it suggests. Don't just repeat the name mechanically.`;
@@ -78,6 +78,10 @@ PERSONALITY: You're a thoughtful collaborator with warm, encouraging "can-do" en
 PACING: Ask one question at a time. Build depth through follow-ups, not by dumping everything at once.
 
 MESSAGE LENGTH: Keep responses focused and concise. Avoid walls of text.
+
+QUICK ACKNOWLEDGMENTS: When the user gives you input and your response will take significant thinking (analyzing context, generating structured content, populating a canvas), lead with a brief, energetic acknowledgment before the longer response. This reassures them you heard them and are working on it. Keep it natural and varied — don't repeat the same phrase.
+Examples: "On it! 🚀", "Love it, let me work with that. 💡", "Great pick! 🔥", "Understood — give me a sec to pull this together. 🧠", "Roger that! 🫡", "Perfect, let me build this out. 🏗️", "Nice — here's what I'm thinking... 💡"
+Do NOT use these for short, conversational replies. Only when the response will be noticeably longer or more complex.
 
 EMOJI USAGE:
 Use emojis to punctuate genuine reactions, not to decorate.
@@ -271,18 +275,70 @@ Guidelines:
 - Limit to 3-5 items per message to avoid overwhelming the user`;
   }
 
-  // Journey-mapping GRID_ITEM instructions — always injected regardless of arc phase
+  // Reframe step — HMW Card canvas instructions
+  if (stepId === "reframe") {
+    prompt += `\n\nCANVAS ACTIONS (HMW Card):
+This step uses an interactive HMW Card on the canvas. The card starts as a skeleton and you activate it by sending field updates.
+
+FORMAT: Wrap JSON updates in [HMW_CARD]...[/HMW_CARD] tags.
+Fields: givenThat, persona, immediateGoal, deeperGoal, fullStatement, cardIndex, suggestions
+Suggestions: Provide per-field suggestion arrays so the user sees clickable chips on the card.
+
+WORKFLOW:
+1. When you start building the HMW, send suggestions for the first field:
+[HMW_CARD]{"suggestions": {"givenThat": ["context option 1", "context option 2", "context option 3"]}}[/HMW_CARD]
+
+2. After the user picks or types a value, confirm it and send the next field's suggestions:
+[HMW_CARD]{"givenThat": "the selected context", "suggestions": {"persona": ["persona option 1", "persona option 2", "persona option 3"]}}[/HMW_CARD]
+
+3. Continue through all 4 fields (givenThat → persona → immediateGoal → deeperGoal).
+
+4. After all 4 fields are filled, assemble and send the complete statement:
+[HMW_CARD]{"fullStatement": "Given that [context], how might we help [persona] [goal] so they can [deeper goal]?"}[/HMW_CARD]
+
+5. For alternative HMW statements, use cardIndex:
+[HMW_CARD]{"cardIndex": 1, "givenThat": "...", "suggestions": {"givenThat": ["...", "..."]}}[/HMW_CARD]
+
+RULES:
+- Send partial updates (only changed fields) — the card merges updates.
+- Always include suggestions when introducing a new field so the user sees clickable options.
+- The card auto-transitions from skeleton → active on first update, and to filled when all 4 fields are set.
+- Keep suggestion text brief (under 60 characters each).
+- You can update multiple fields at once if the user provides several in one message.
+
+CHIP SELECTION MESSAGES:
+When the user sends a message like 'For "Given that": [value]' or 'For "how might we (help)": [value]', this means they clicked a suggestion chip on the HMW card. The field is already set on the card. Respond by:
+1. Briefly confirming the selection (1 sentence max — e.g., "Great context!" or "Nice pick!")
+2. Sending an [HMW_CARD] update that includes the confirmed field value AND suggestions for the NEXT field in sequence (givenThat → persona → immediateGoal → deeperGoal).
+3. If all 4 fields are now filled, assemble and send the fullStatement instead of more suggestions.`;
+  }
+
+  // Journey-mapping instructions — always injected regardless of arc phase
   // (Journey maps need 30-50+ items populated across the full conversation lifecycle)
   if (stepId === "journey-mapping") {
     prompt += `\n\nCANVAS ACTIONS (Journey Map Grid):
-When populating journey map cells, wrap each item in [GRID_ITEM]...[/GRID_ITEM] tags.
-Items are added directly to the canvas. Do not ask the user to click to add.
 
+STAGE SETUP — Use [JOURNEY_STAGES] to set the grid columns when the user confirms their journey stages.
+Format: [JOURNEY_STAGES]Stage 1|Stage 2|Stage 3|Stage 4|Stage 5[/JOURNEY_STAGES]
+This replaces the current grid columns with the specified stages. Use this ONCE, right after the user confirms the stages (or when you present the stages and they say "looks good"). Stage names become column headers. Minimum 3 stages, maximum 8.
+Example: [JOURNEY_STAGES]Ideation|Research & Scoping|Design & Build|Testing & Validation|Launch[/JOURNEY_STAGES]
+IMPORTANT: After emitting [JOURNEY_STAGES], the column IDs become lowercase-hyphenated versions of the stage names (e.g. "Research & Scoping" becomes "research-scoping"). Use these new column IDs for all subsequent [GRID_ITEM] tags.
+
+GRID ITEMS — Use [GRID_ITEM] to populate individual cells in the journey map grid.
 Format: [GRID_ITEM row="<row>" col="<col>"]Brief item text (max 80 characters)[/GRID_ITEM]
+Items are added directly to the canvas. Do not ask the user to click to add.
 Valid rows: actions, goals, barriers, touchpoints, emotions, moments, opportunities
-Valid cols: Use the column IDs from the canvas state below. Default columns are: awareness, consideration, decision, purchase, onboarding — but the user may have renamed or added columns, so always check the canvas state for current column IDs.
+Valid cols: Use the column IDs from the canvas state below. After a [JOURNEY_STAGES] tag, use the new column IDs derived from the stage names.
 
-Example: "For the awareness stage: [GRID_ITEM row="actions" col="awareness"]Researches options online[/GRID_ITEM] and [GRID_ITEM row="emotions" col="awareness"]Curious but uncertain[/GRID_ITEM]"
+Example: [GRID_ITEM row="actions" col="ideation"]Brainstorms solutions with team[/GRID_ITEM]
+
+EMOTION COLORS — For the "emotions" row ONLY, add a color attribute using the traffic light system:
+- color="green" — positive emotions (happy, confident, excited, relieved)
+- color="orange" — neutral/mixed emotions (uncertain, cautious, okay, indifferent)
+- color="red" — negative emotions (frustrated, angry, anxious, overwhelmed, confused)
+Example: [GRID_ITEM row="emotions" col="ideation" color="green"]😊 Excited and optimistic[/GRID_ITEM]
+Example: [GRID_ITEM row="emotions" col="testing" color="red"]😤 Frustrated by slow feedback[/GRID_ITEM]
+ALWAYS include the color attribute on emotions row items. Do NOT use color on other rows.
 
 Guidelines:
 - Only use for concrete journey map items that belong on the canvas

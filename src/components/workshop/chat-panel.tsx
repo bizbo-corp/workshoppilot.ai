@@ -12,12 +12,36 @@ import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { computeCanvasPosition, computeThemeSortPositions, computeClusterChildPositions, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, ZONE_COLORS } from '@/lib/canvas/canvas-position';
+import type { PostItColor } from '@/stores/canvas-store';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
+import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { saveCanvasState } from '@/actions/canvas-actions';
 
 /** Steps that support canvas item auto-add */
-const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping'];
+const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe'];
+
+/** Fixed initial greetings shown instantly while AI generates first response */
+const STEP_INITIAL_GREETINGS: Record<string, string> = {
+  'journey-mapping': "Time to map the journey! 🗺️ We're going to walk in your persona's shoes and trace their current experience — every action, emotion, and friction point. I'm pulling together what we've learned so far to recommend the best journey template...",
+};
+
+/** Client-side quick acknowledgments shown instantly while AI thinks (before streaming begins) */
+const QUICK_ACKS = [
+  "On it! 🚀",
+  "Love it, let me work with that. 💡",
+  "Great pick! 🔥",
+  "Give me a sec to pull this together. 🧠",
+  "Roger that! 🫡",
+  "Perfect, let me build this out. 🏗️",
+  "Nice — working on it... 💡",
+  "Got it — let me think about this. 🧠",
+  "Ooh, good one. Let me dig in. 🔍",
+];
+
+function getRandomAck() {
+  return QUICK_ACKS[Math.floor(Math.random() * QUICK_ACKS.length)];
+}
 
 /**
  * Parse [SUGGESTIONS]...[/SUGGESTIONS] block from AI content.
@@ -46,6 +70,24 @@ function parseSuggestions(content: string): { cleanContent: string; suggestions:
 }
 
 /**
+ * Strip hallucinated system/tool tags from AI content.
+ * Gemini sometimes leaks internal markers (`tool_code`, `artifact`, etc.)
+ * that are not part of our markup format.
+ */
+function stripLeakedTags(content: string): { cleanContent: string } {
+  const cleanContent = content
+    // [artifact ...] or [/artifact] tags
+    .replace(/\s*\[artifact[^\]]*\]\s*/gi, ' ')
+    .replace(/\s*\[\/artifact\]\s*/gi, ' ')
+    // `tool_code` backtick-wrapped markers (Gemini internal leak)
+    .replace(/`tool_code`/gi, '')
+    // ```tool_code fenced blocks
+    .replace(/```tool_code[\s\S]*?```/gi, '')
+    .trim();
+  return { cleanContent };
+}
+
+/**
  * Detect and strip [THEME_SORT] markup from AI content.
  * Returns whether the trigger was found and the content with the trigger removed.
  */
@@ -67,6 +109,7 @@ type CanvasItemParsed = {
   category?: string;
   cluster?: string;  // Parent label for hierarchical clustering (stakeholder mapping)
   isGridItem?: boolean;
+  color?: string;    // Explicit color override (e.g. emotion traffic light: red/green/orange)
 };
 
 /** Known quadrant/category values that can appear in shorthand Quad: syntax */
@@ -161,6 +204,7 @@ function parseCanvasItems(content: string): { cleanContent: string; canvasItems:
       category: attrs.category,
       cluster: attrs.cluster,
       isGridItem: tagType === 'GRID_ITEM',
+      color: attrs.color,
     });
   }
 
@@ -286,6 +330,60 @@ function parsePersonaTemplates(content: string): { cleanContent: string; templat
   return { cleanContent, templates };
 }
 
+/**
+ * Parse [JOURNEY_STAGES]stage1|stage2|stage3[/JOURNEY_STAGES] markup from AI content.
+ * Returns clean content and an array of stage labels to replace the grid columns.
+ */
+function parseJourneyStages(content: string): { cleanContent: string; stages: string[] } {
+  const stages: string[] = [];
+  const regex = /\[JOURNEY_STAGES\]([\s\S]*?)\[\/JOURNEY_STAGES\]/g;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    const inner = match[1].trim();
+    const parsed = inner.split('|').map(s => s.trim()).filter(s => s.length > 0);
+    if (parsed.length >= 3) {
+      stages.push(...parsed);
+    }
+  }
+  let cleanContent = content
+    .replace(/\s*\[JOURNEY_STAGES\][\s\S]*?\[\/JOURNEY_STAGES\]\s*/g, ' ')
+    .trim();
+  // Strip incomplete blocks mid-stream
+  if (cleanContent.includes('[JOURNEY_STAGES]')) {
+    cleanContent = cleanContent.replace(/\[JOURNEY_STAGES\][\s\S]*$/, '').trim();
+  }
+  return { cleanContent, stages };
+}
+
+/**
+ * Parse [HMW_CARD]{...JSON...}[/HMW_CARD] blocks from AI content.
+ * Returns clean content (markup removed) and extracted HMW card data.
+ */
+function parseHmwCards(content: string): { cleanContent: string; cards: Partial<HmwCardData>[] } {
+  const cards: Partial<HmwCardData>[] = [];
+  const regex = /\[HMW_CARD\]([\s\S]*?)\[\/HMW_CARD\]/g;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1].trim());
+      cards.push(parsed);
+    } catch {
+      // Skip malformed JSON
+    }
+  }
+
+  let cleanContent = content
+    .replace(/\s*\[HMW_CARD\][\s\S]*?\[\/HMW_CARD\]\s*/g, ' ')
+    .trim();
+
+  // Strip incomplete blocks mid-stream
+  if (cleanContent.includes('[HMW_CARD]')) {
+    cleanContent = cleanContent.replace(/\[HMW_CARD\][\s\S]*$/, '').trim();
+  }
+
+  return { cleanContent, cards };
+}
+
 interface ChatPanelProps {
   stepOrder: number;
   sessionId: string;
@@ -304,6 +402,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const batchUpdatePositions = useCanvasStore((state) => state.batchUpdatePositions);
   const postIts = useCanvasStore((state) => state.postIts);
   const gridColumns = useCanvasStore((state) => state.gridColumns);
+  const replaceGridColumns = useCanvasStore((state) => state.replaceGridColumns);
   const drawingNodes = useCanvasStore((state) => state.drawingNodes);
   const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
@@ -312,10 +411,15 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const personaTemplates = useCanvasStore((state) => state.personaTemplates);
   const addPersonaTemplate = useCanvasStore((state) => state.addPersonaTemplate);
   const updatePersonaTemplate = useCanvasStore((state) => state.updatePersonaTemplate);
+  const hmwCards = useCanvasStore((state) => state.hmwCards);
+  const addHmwCard = useCanvasStore((state) => state.addHmwCard);
+  const updateHmwCard = useCanvasStore((state) => state.updateHmwCard);
   const isDirty = useCanvasStore((state) => state.isDirty);
   const markClean = useCanvasStore((state) => state.markClean);
   const setHighlightedCell = useCanvasStore((state) => state.setHighlightedCell);
   const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
+  const pendingHmwChipSelection = useCanvasStore((state) => state.pendingHmwChipSelection);
+  const setPendingHmwChipSelection = useCanvasStore((state) => state.setPendingHmwChipSelection);
   const selectedPostItIds = useCanvasStore((state) => state.selectedPostItIds);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -326,6 +430,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
   const [rateLimitInfo, setRateLimitInfo] = React.useState<{ retryAfter: number } | null>(null);
   const [streamError, setStreamError] = React.useState(false);
+  const [quickAck, setQuickAck] = React.useState<string | null>(null);
   const [addedMessageIds, setAddedMessageIds] = React.useState<Set<string>>(() => new Set());
 
   if (!step) {
@@ -351,9 +456,10 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       ...(crazy8sSlots.length > 0 ? { crazy8sSlots } : {}),
       ...(conceptCards.length > 0 ? { conceptCards } : {}),
       ...(personaTemplates.length > 0 ? { personaTemplates } : {}),
+      ...(hmwCards.length > 0 ? { hmwCards } : {}),
     });
     markClean();
-  }, [isCanvasStep, isDirty, workshopId, step.id, postIts, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, personaTemplates, markClean]);
+  }, [isCanvasStep, isDirty, workshopId, step.id, postIts, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, personaTemplates, hmwCards, markClean]);
 
   const transport = React.useMemo(
     () =>
@@ -451,7 +557,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   // markers, as that would overwrite user-arranged positions with recalculated layouts.
   const hasInitializedAddedIds = React.useRef(false);
   React.useEffect(() => {
-    if (hasInitializedAddedIds.current || !isCanvasStep || (postIts.length === 0 && personaTemplates.length === 0)) return;
+    if (hasInitializedAddedIds.current || !isCanvasStep || (postIts.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0)) return;
     hasInitializedAddedIds.current = true;
 
     const ids = new Set<string>();
@@ -464,29 +570,37 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       const { shouldSort } = parseThemeSortTrigger(content);
       const { deleteTexts } = parseCanvasDeletes(content);
       const { templates: personaTemplateParsed } = parsePersonaTemplates(content);
+      const { stages: journeyStages } = parseJourneyStages(content);
+      const { cards: hmwCardParsed } = parseHmwCards(content);
       // Mark any message that contains canvas-modifying markup as already processed
-      if (canvasItems.length > 0 || clusters.length > 0 || shouldSort || deleteTexts.length > 0 || personaTemplateParsed.length > 0) {
+      if (canvasItems.length > 0 || clusters.length > 0 || shouldSort || deleteTexts.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0) {
         ids.add(msg.id);
       }
     }
     if (ids.size > 0) {
       setAddedMessageIds(ids);
     }
-  }, [messages, isCanvasStep, postIts.length, personaTemplates.length]);
+  }, [messages, isCanvasStep, postIts.length, personaTemplates.length, hmwCards.length]);
 
   // Handle adding AI-suggested canvas items to the whiteboard
   const handleAddToWhiteboard = React.useCallback((messageId: string, canvasItems: CanvasItemParsed[]) => {
     if (addedMessageIds.has(messageId)) return; // Guard against double-click
 
+    // Read latest state directly from Zustand store (not stale React closure).
+    // Critical when replaceGridColumns() runs in the same effect cycle as this
+    // callback — the React hook value would be stale, but Zustand set() is synchronous.
+    const latestGridColumns = storeApi.getState().gridColumns;
+    const latestPostIts = storeApi.getState().postIts;
+
     // Build dynamic gridConfig from store columns for journey-mapping
     const stepConfig = getStepCanvasConfig(step.id);
     const baseGridConfig = stepConfig.gridConfig;
-    const dynamicGridConfig = baseGridConfig && gridColumns.length > 0
-      ? { ...baseGridConfig, columns: gridColumns }
+    const dynamicGridConfig = baseGridConfig && latestGridColumns.length > 0
+      ? { ...baseGridConfig, columns: latestGridColumns }
       : baseGridConfig;
 
     // Add each item to canvas with computed position, skipping duplicates
-    let currentPostIts = [...postIts];
+    let currentPostIts = [...latestPostIts];
     for (const item of canvasItems) {
       // Duplicate guard: skip if an item with the same text (case-insensitive) already exists
       const normalizedText = item.text.trim().toLowerCase();
@@ -502,10 +616,12 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         dynamicGridConfig,
       );
 
-      // Color priority: category-specific > zone-specific > default yellow
-      const color = (item.category && CATEGORY_COLORS[item.category])
+      // Color priority: explicit color attr > category-specific > zone-specific > grid green > default yellow
+      const VALID_COLORS = new Set(['yellow', 'pink', 'blue', 'green', 'orange', 'red']);
+      const color = (item.color && VALID_COLORS.has(item.color) ? item.color as PostItColor : null)
+        || (item.category && CATEGORY_COLORS[item.category])
         || (item.quadrant && ZONE_COLORS[item.quadrant])
-        || 'yellow';
+        || (item.isGridItem ? 'green' : 'yellow');
 
       const newPostIt = {
         text: item.text,
@@ -534,7 +650,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
     setAddedMessageIds(prev => new Set(prev).add(messageId));
     setPendingFitView(true);
-  }, [addedMessageIds, step.id, gridColumns, postIts, addPostIt, setHighlightedCell, setPendingFitView]);
+  }, [addedMessageIds, step.id, storeApi, addPostIt, setHighlightedCell, setPendingFitView]);
 
   // Auto-add canvas items when AI finishes streaming (no manual click needed)
   React.useEffect(() => {
@@ -543,7 +659,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     // Without this guard, on the same render cycle where postIts load from DB,
     // this effect could fire before addedMessageIds is populated, causing
     // historical messages to be re-processed and overwriting saved positions.
-    if ((postIts.length > 0 || personaTemplates.length > 0) && !hasInitializedAddedIds.current) return;
+    if ((postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0) && !hasInitializedAddedIds.current) return;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.role !== 'assistant') return;
     if (addedMessageIds.has(lastMsg.id)) return;
@@ -555,6 +671,18 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     const { deleteTexts } = parseCanvasDeletes(content);
     const { clusters } = parseClusterSuggestions(content);
     const { templates: personaTemplateParsed } = parsePersonaTemplates(content);
+    const { stages: journeyStages } = parseJourneyStages(content);
+    const { cards: hmwCardParsed } = parseHmwCards(content);
+
+    // Process journey stage replacements — update grid columns to match template
+    if (journeyStages.length >= 3 && step.id === 'journey-mapping') {
+      const newColumns = journeyStages.map((label) => ({
+        id: label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+        label,
+        width: 240,
+      }));
+      replaceGridColumns(newColumns);
+    }
 
     // Persona step uses [PERSONA_TEMPLATE] blocks only — skip post-it creation
     if (canvasItems.length > 0 && step.id !== 'persona') {
@@ -579,6 +707,51 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
           position: { x: 0, y: 0 },
           ...merged,
         });
+      }
+      setPendingFitView(true);
+    }
+
+    // Process HMW card blocks — update existing cards or transition from skeleton
+    if (hmwCardParsed.length > 0) {
+      const latestHmwCards = storeApi.getState().hmwCards;
+      // Field value keys the AI must NOT overwrite during progressive (active) mode.
+      // The user owns field values via chip selections; AI only sends suggestions.
+      const HMW_FIELD_VALUE_KEYS = ['givenThat', 'persona', 'immediateGoal', 'deeperGoal'];
+
+      for (const parsed of hmwCardParsed) {
+        const targetIndex = parsed.cardIndex ?? 0;
+        const existing = latestHmwCards.find(c => (c.cardIndex ?? 0) === targetIndex);
+
+        if (existing) {
+          const updates: Partial<HmwCardData> = { ...parsed };
+
+          // During progressive mode (card is 'active'), strip field value overrides.
+          // AI can send suggestions and fullStatement, but cannot set field values —
+          // only chip selections set those. Once card reaches 'filled', allow full edits.
+          if (existing.cardState === 'active') {
+            for (const key of HMW_FIELD_VALUE_KEYS) {
+              delete (updates as Record<string, unknown>)[key];
+            }
+          }
+
+          if (existing.cardState === 'skeleton') {
+            updates.cardState = 'active';
+          }
+          // Auto-detect 'filled' state (existing fields + any new updates)
+          const merged = { ...existing, ...updates };
+          if (merged.givenThat && merged.persona && merged.immediateGoal && merged.deeperGoal) {
+            updates.cardState = 'filled';
+          }
+          updateHmwCard(existing.id, updates);
+        } else {
+          // Create a new card (for alternative HMW statements)
+          addHmwCard({
+            position: { x: (targetIndex || 0) * 780, y: 0 },
+            cardState: 'active',
+            cardIndex: targetIndex,
+            ...parsed,
+          });
+        }
       }
       setPendingFitView(true);
     }
@@ -651,7 +824,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
 
     // Mark as processed if we did any work (avoid re-processing)
-    if (canvasItems.length === 0 && (deleteTexts.length > 0 || clusters.length > 0 || personaTemplateParsed.length > 0)) {
+    if (canvasItems.length === 0 && (deleteTexts.length > 0 || clusters.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0)) {
       setAddedMessageIds(prev => new Set(prev).add(lastMsg.id));
     }
 
@@ -666,7 +839,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         }
       }, 300); // Short delay to ensure new items are in store
     }
-  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, batchUpdatePositions, storeApi, step.id, setPendingFitView, deletePostIt, setCluster, addPersonaTemplate, updatePersonaTemplate]);
+  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, batchUpdatePositions, storeApi, step.id, setPendingFitView, deletePostIt, setCluster, addPersonaTemplate, updatePersonaTemplate, replaceGridColumns, addHmwCard, updateHmwCard]);
 
   // Clear stream error on successful completion
   React.useEffect(() => {
@@ -694,6 +867,39 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     return () => clearTimeout(timeout);
   }, [status, streamingContentLength]);
 
+  // HMW chip selection → send message to AI
+  // Wait until AI is idle before sending — prevents TypeError from calling sendMessage mid-stream.
+  // If isLoading, the effect returns early without consuming. When status becomes 'ready',
+  // isLoading flips false, the effect re-runs, and the pending selection is sent.
+  React.useEffect(() => {
+    if (!pendingHmwChipSelection || isLoading) return;
+    const { field, value } = pendingHmwChipSelection;
+    // Consume now that we can actually send
+    setPendingHmwChipSelection(null);
+
+    const fieldLabels: Record<string, string> = {
+      givenThat: 'Given that',
+      persona: 'how might we (help)',
+      immediateGoal: 'do/be/feel/achieve',
+      deeperGoal: 'So they can',
+    };
+    const fieldLabel = fieldLabels[field] || field;
+
+    setQuickAck(getRandomAck());
+
+    (async () => {
+      try {
+        await flushCanvasToDb();
+        sendMessage({
+          role: 'user',
+          parts: [{ type: 'text', text: `For "${fieldLabel}": ${value}` }],
+        });
+      } catch (err) {
+        console.error('Failed to send HMW chip selection:', err);
+      }
+    })();
+  }, [pendingHmwChipSelection, isLoading, setPendingHmwChipSelection, flushCanvasToDb, sendMessage]);
+
   // Cleanup countdown on unmount
   React.useEffect(() => {
     return () => {
@@ -703,6 +909,11 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
   // Auto-start: send trigger message when entering a step with no prior messages
   const shouldAutoStart = !initialMessages || initialMessages.length === 0;
+
+  // Fixed greeting shown instantly while AI generates first response
+  const stepGreeting = STEP_INITIAL_GREETINGS[step.id];
+  const hasAssistantMessage = messages.some(m => m.role === 'assistant');
+  const showGreeting = shouldAutoStart && !!stepGreeting && !hasAssistantMessage;
 
   React.useEffect(() => {
     if (shouldAutoStart && messages.length === 0 && status === 'ready' && !hasAutoStarted.current) {
@@ -744,6 +955,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
+
+    // Show instant acknowledgment while AI thinks
+    setQuickAck(getRandomAck());
 
     // Flush canvas to DB so the AI sees the latest board state
     await flushCanvasToDb();
@@ -789,17 +1003,38 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         </div>
 
         {messages.length === 0 ? (
-          // Loading indicator while AI auto-starts
-          <div className="flex items-start">
-            <div className="flex-1">
-              <div className="text-base text-muted-foreground">
-                AI is thinking...
+          // Show greeting + loading indicator while AI auto-starts
+          <div className="space-y-6">
+            {showGreeting && (
+              <div className="flex items-start">
+                <div className="flex-1">
+                  <div className="text-base prose prose-base dark:prose-invert max-w-none">
+                    <ReactMarkdown>{stepGreeting!}</ReactMarkdown>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="flex items-start">
+              <div className="flex-1">
+                <div className="text-base text-muted-foreground">
+                  AI is thinking...
+                </div>
               </div>
             </div>
           </div>
         ) : (
           // Render conversation messages (filter out __step_start__ trigger)
           <div className="space-y-6">
+            {/* Fixed initial greeting while AI generates first response */}
+            {showGreeting && (
+              <div className="flex items-start">
+                <div className="flex-1">
+                  <div className="text-base prose prose-base dark:prose-invert max-w-none">
+                    <ReactMarkdown>{stepGreeting!}</ReactMarkdown>
+                  </div>
+                </div>
+              </div>
+            )}
             {messages.filter((m) => {
               if (m.role !== 'user') return true;
               const text = m.parts?.filter((p) => p.type === 'text').map((p) => p.text).join('') || '';
@@ -835,7 +1070,10 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               const { cleanContent: noDeletes } = parseCanvasDeletes(noThemeSort);
               const { cleanContent: noClusters } = parseClusterSuggestions(noDeletes);
               const { cleanContent: noPersonaTemplates } = parsePersonaTemplates(noClusters);
-              const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noPersonaTemplates);
+              const { cleanContent: noJourneyStages } = parseJourneyStages(noPersonaTemplates);
+              const { cleanContent: noHmwCards } = parseHmwCards(noJourneyStages);
+              const { cleanContent: noLeakedTags } = stripLeakedTags(noHmwCards);
+              const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noLeakedTags);
               return (
                 <div key={`${message.id}-${index}`} className="flex items-start">
                   <div className="flex-1">
@@ -862,15 +1100,26 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               );
             })}
 
-            {/* Typing indicator */}
+            {/* Typing indicator — quick ack + thinking status */}
             {status === 'submitted' && (
-              <div className="flex items-start">
-                <div className="flex-1">
-                  <div className="text-base text-muted-foreground">
-                    AI is thinking...
+              <>
+                {quickAck && (
+                  <div className="flex items-start">
+                    <div className="flex-1">
+                      <div className="text-base">
+                        {quickAck}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-start">
+                  <div className="flex-1">
+                    <div className="text-base text-muted-foreground">
+                      AI is thinking...
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             )}
 
             {/* Stream error recovery */}
@@ -891,6 +1140,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                             setMessages(messages.slice(0, -1));
                           }
                           // Resend last user message
+                          setQuickAck(getRandomAck());
                           sendMessage({
                             role: 'user',
                             parts: lastUserMsg.parts || [],
@@ -918,6 +1168,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                       disabled={isLoading}
                       onClick={async () => {
                         setSuggestions([]);
+                        setQuickAck(getRandomAck());
                         await flushCanvasToDb();
                         sendMessage({
                           role: 'user',

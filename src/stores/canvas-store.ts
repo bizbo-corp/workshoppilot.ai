@@ -6,8 +6,15 @@ import { getCellBounds } from '@/lib/canvas/grid-layout';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
+import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 
-export type PostItColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange';
+export type PendingHmwChipSelection = {
+  cardId: string;
+  field: string;
+  value: string;
+} | null;
+
+export type PostItColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange' | 'red';
 
 export type GridColumn = {
   id: string;
@@ -69,10 +76,12 @@ export type CanvasState = {
   mindMapEdges: MindMapEdgeState[];
   conceptCards: ConceptCardData[];
   personaTemplates: PersonaTemplateData[];
+  hmwCards: HmwCardData[];
   isDirty: boolean;
   gridColumns: GridColumn[]; // Dynamic columns, initialized from step config
   highlightedCell: { row: number; col: number } | null;
   pendingFitView: boolean;
+  pendingHmwChipSelection: PendingHmwChipSelection;
   selectedPostItIds: string[];
 };
 
@@ -96,6 +105,7 @@ export type CanvasActions = {
   deleteMindMapNode: (id: string) => void;
   setMindMapState: (nodes: MindMapNodeState[], edges: MindMapEdgeState[]) => void;
   setGridColumns: (gridColumns: GridColumn[]) => void;
+  replaceGridColumns: (gridColumns: GridColumn[]) => void;
   addGridColumn: (label: string) => void;
   updateGridColumn: (id: string, updates: Partial<GridColumn>) => void;
   removeGridColumn: (id: string, gridConfig: GridConfig) => void;
@@ -103,6 +113,7 @@ export type CanvasActions = {
   rejectPreview: (id: string) => void;
   setHighlightedCell: (cell: { row: number; col: number } | null) => void;
   setPendingFitView: (pending: boolean) => void;
+  setPendingHmwChipSelection: (selection: PendingHmwChipSelection) => void;
   batchUpdatePositions: (updates: Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }>) => void;
   setCluster: (ids: string[], clusterName: string) => void;
   clearCluster: (clusterName: string) => void;
@@ -117,12 +128,16 @@ export type CanvasActions = {
   updatePersonaTemplate: (id: string, updates: Partial<PersonaTemplateData>) => void;
   deletePersonaTemplate: (id: string) => void;
   setPersonaTemplates: (templates: PersonaTemplateData[]) => void;
+  addHmwCard: (card: Omit<HmwCardData, 'id'> & { id?: string }) => void;
+  updateHmwCard: (id: string, updates: Partial<HmwCardData>) => void;
+  deleteHmwCard: (id: string) => void;
+  setHmwCards: (cards: HmwCardData[]) => void;
   markClean: () => void;
 };
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[] }) => {
+export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[] }) => {
   const DEFAULT_STATE: CanvasState = {
     postIts: initState?.postIts || [],
     drawingNodes: initState?.drawingNodes || [],
@@ -131,10 +146,12 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
     mindMapEdges: initState?.mindMapEdges || [],
     conceptCards: initState?.conceptCards || [],
     personaTemplates: initState?.personaTemplates || [],
+    hmwCards: initState?.hmwCards || [],
     gridColumns: initState?.gridColumns || [],
     isDirty: false,
     highlightedCell: null,
     pendingFitView: false,
+    pendingHmwChipSelection: null,
     selectedPostItIds: [],
   };
 
@@ -318,6 +335,12 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
             // NOTE: Does NOT set isDirty — this is for loading from DB
           })),
 
+        replaceGridColumns: (gridColumns) =>
+          set(() => ({
+            gridColumns,
+            isDirty: true,
+          })),
+
         addGridColumn: (label) =>
           set((state) => ({
             gridColumns: [
@@ -422,6 +445,11 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
         setPendingFitView: (pending) =>
           set(() => ({
             pendingFitView: pending,
+          })),
+
+        setPendingHmwChipSelection: (selection) =>
+          set(() => ({
+            pendingHmwChipSelection: selection,
           })),
 
         batchUpdatePositions: (updates) =>
@@ -627,6 +655,38 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
             // NOTE: Does NOT set isDirty — this is for loading from DB
           })),
 
+        addHmwCard: (card) =>
+          set((state) => ({
+            hmwCards: [
+              ...state.hmwCards,
+              {
+                ...card,
+                id: card.id || crypto.randomUUID(),
+              },
+            ],
+            isDirty: true,
+          })),
+
+        updateHmwCard: (id, updates) =>
+          set((state) => ({
+            hmwCards: state.hmwCards.map((c) =>
+              c.id === id ? { ...c, ...updates } : c
+            ),
+            isDirty: true,
+          })),
+
+        deleteHmwCard: (id) =>
+          set((state) => ({
+            hmwCards: state.hmwCards.filter((c) => c.id !== id),
+            isDirty: true,
+          })),
+
+        setHmwCards: (cards) =>
+          set(() => ({
+            hmwCards: cards,
+            // NOTE: Does NOT set isDirty — this is for loading from DB
+          })),
+
         markClean: () =>
           set(() => ({
             isDirty: false,
@@ -642,6 +702,7 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
           mindMapEdges: state.mindMapEdges,
           conceptCards: state.conceptCards,
           personaTemplates: state.personaTemplates,
+          hmwCards: state.hmwCards,
         }),
         limit: 50,
         equality: (pastState, currentState) =>

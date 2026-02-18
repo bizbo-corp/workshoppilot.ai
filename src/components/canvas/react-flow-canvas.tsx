@@ -23,9 +23,11 @@ import { GroupNode } from './group-node';
 import { DrawingImageNode } from './drawing-image-node';
 import { ConceptCardNode } from './concept-card-node';
 import { PersonaTemplateNode } from './persona-template-node';
+import { HmwCardNode } from './hmw-card-node';
 import { CanvasToolbar } from './canvas-toolbar';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
+import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import { ColorPicker } from './color-picker';
 import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
 import { usePreventScrollOnCanvas } from '@/hooks/use-prevent-scroll-on-canvas';
@@ -51,6 +53,7 @@ import { ClusterHullsOverlay } from './cluster-hulls-overlay';
 import { SelectionToolbar } from './selection-toolbar';
 import { ClusterDialog } from '@/components/dialogs/cluster-dialog';
 import { DedupDialog } from '@/components/dialogs/dedup-dialog';
+// JourneyMapSkeleton removed — skeleton placeholders are now integrated into GridOverlay
 
 // Define node types OUTSIDE component for stable reference
 const nodeTypes = {
@@ -59,6 +62,7 @@ const nodeTypes = {
   drawingImage: DrawingImageNode,
   conceptCard: ConceptCardNode,
   personaTemplate: PersonaTemplateNode,
+  hmwCard: HmwCardNode,
 };
 
 // Define edge types OUTSIDE component for stable reference
@@ -90,6 +94,9 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const personaTemplates = useCanvasStore((s) => s.personaTemplates);
   const updatePersonaTemplate = useCanvasStore((s) => s.updatePersonaTemplate);
   const deletePersonaTemplate = useCanvasStore((s) => s.deletePersonaTemplate);
+  const hmwCards = useCanvasStore((s) => s.hmwCards);
+  const updateHmwCard = useCanvasStore((s) => s.updateHmwCard);
+  const deleteHmwCard = useCanvasStore((s) => s.deleteHmwCard);
   const batchUpdatePositions = useCanvasStore((s) => s.batchUpdatePositions);
   const gridColumns = useCanvasStore((s) => s.gridColumns);
   const setGridColumns = useCanvasStore((s) => s.setGridColumns);
@@ -100,6 +107,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const setHighlightedCell = useCanvasStore((s) => s.setHighlightedCell);
   const pendingFitView = useCanvasStore((s) => s.pendingFitView);
   const setPendingFitView = useCanvasStore((s) => s.setPendingFitView);
+  const setPendingHmwChipSelection = useCanvasStore((s) => s.setPendingHmwChipSelection);
   const setSelectedPostItIds = useCanvasStore((s) => s.setSelectedPostItIds);
   const setCluster = useCanvasStore((s) => s.setCluster);
   const clearCluster = useCanvasStore((s) => s.clearCluster);
@@ -135,7 +143,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const [activeTool, setActiveTool] = useState<'pointer' | 'hand'>('pointer');
 
   // ReactFlow hooks
-  const { screenToFlowPosition, fitView, zoomIn, zoomOut } = useReactFlow();
+  const { screenToFlowPosition, fitView, zoomIn, zoomOut, setViewport } = useReactFlow();
 
   // Track if we've done initial fitView
   const hasFitView = useRef(false);
@@ -442,6 +450,32 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     [updatePersonaTemplate]
   );
 
+  // Handle HMW card field changes (manual text edits — silent, no chat message)
+  const handleHmwFieldChange = useCallback(
+    (id: string, field: string, value: string) => {
+      updateHmwCard(id, { [field]: value });
+    },
+    [updateHmwCard]
+  );
+
+  // Handle HMW card chip selection — sets field value, clears that field's suggestions, and signals chat
+  const handleHmwChipSelect = useCallback(
+    (id: string, field: string, value: string) => {
+      // Set the field value + clear that field's suggestions in one update
+      const card = hmwCards.find((c) => c.id === id);
+      const updatedSuggestions = card?.suggestions
+        ? { ...card.suggestions, [field]: [] }
+        : undefined;
+      updateHmwCard(id, {
+        [field]: value,
+        ...(updatedSuggestions ? { suggestions: updatedSuggestions } : {}),
+      });
+      // Signal chat-panel to send a message
+      setPendingHmwChipSelection({ cardId: id, field, value });
+    },
+    [hmwCards, updateHmwCard, setPendingHmwChipSelection]
+  );
+
   // Handle persona avatar generation
   const handleGenerateAvatar = useCallback(
     async (templateId: string): Promise<string | null> => {
@@ -628,11 +662,28 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       style: { width: 680 },
     }));
 
-    return [...postItReactFlowNodes, ...drawingReactFlowNodes, ...conceptCardReactFlowNodes, ...personaTemplateReactFlowNodes];
+    // Add HMW card nodes
+    const hmwCardReactFlowNodes: Node[] = hmwCards.map((card) => ({
+      id: card.id,
+      type: 'hmwCard' as const,
+      position: livePositions.current[card.id] || card.position,
+      zIndex: nodeZIndices[card.id] || 20,
+      draggable: true,
+      selectable: true,
+      selected: selectedNodeIds.includes(card.id),
+      data: {
+        ...card,
+        onFieldChange: handleHmwFieldChange,
+        onChipSelect: handleHmwChipSelect,
+      },
+      style: { width: 700 },
+    }));
+
+    return [...postItReactFlowNodes, ...drawingReactFlowNodes, ...conceptCardReactFlowNodes, ...personaTemplateReactFlowNodes, ...hmwCardReactFlowNodes];
   // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
   // read inside the memo body as a safety net; they must NOT be deps or every
   // mouse-move during drag would recompute and cause flickering.
-  }, [postIts, drawingNodes, conceptCards, personaTemplates, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange, handlePersonaFieldChange, handleGenerateAvatar]);
+  }, [postIts, drawingNodes, conceptCards, personaTemplates, hmwCards, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange, handlePersonaFieldChange, handleGenerateAvatar, handleHmwFieldChange, handleHmwChipSelect]);
 
   // Create post-it at position and set as editing
   const createPostItAtPosition = useCallback(
@@ -984,10 +1035,12 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     selectedNodes.filter(n => n.type === 'conceptCard').forEach(n => deleteConceptCard(n.id));
     // Delete selected persona templates
     selectedNodes.filter(n => n.type === 'personaTemplate').forEach(n => deletePersonaTemplate(n.id));
-    // Delete non-group, non-drawing, non-conceptCard, non-personaTemplate postIt nodes
-    const postItIds = selectedNodes.filter(n => n.type !== 'group' && n.type !== 'drawingImage' && n.type !== 'conceptCard' && n.type !== 'personaTemplate').map(n => n.id);
+    // Delete selected HMW cards
+    selectedNodes.filter(n => n.type === 'hmwCard').forEach(n => deleteHmwCard(n.id));
+    // Delete non-group, non-drawing, non-conceptCard, non-personaTemplate, non-hmwCard postIt nodes
+    const postItIds = selectedNodes.filter(n => n.type !== 'group' && n.type !== 'drawingImage' && n.type !== 'conceptCard' && n.type !== 'personaTemplate' && n.type !== 'hmwCard').map(n => n.id);
     if (postItIds.length > 0) batchDeletePostIts(postItIds);
-  }, [nodes, ungroupPostIts, batchDeletePostIts, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate]);
+  }, [nodes, ungroupPostIts, batchDeletePostIts, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, deleteHmwCard]);
 
   // Handle node drag start — bring dragged node to top of stack
   const handleNodeDragStart = useCallback(
@@ -1048,11 +1101,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
             deleteConceptCard(id);
           } else if (node?.type === 'personaTemplate') {
             deletePersonaTemplate(id);
+          } else if (node?.type === 'hmwCard') {
+            deleteHmwCard(id);
           }
         });
         const postItIds = removedIds.filter(id => {
           const node = nodes.find(n => n.id === id);
-          return node?.type !== 'group' && node?.type !== 'drawingImage' && node?.type !== 'conceptCard' && node?.type !== 'personaTemplate';
+          return node?.type !== 'group' && node?.type !== 'drawingImage' && node?.type !== 'conceptCard' && node?.type !== 'personaTemplate' && node?.type !== 'hmwCard';
         });
         if (postItIds.length > 0) batchDeletePostIts(postItIds);
         return;
@@ -1095,6 +1150,14 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
           if (personaTemplate) {
             const snappedPosition = snapToGrid(change.position);
             updatePersonaTemplate(change.id, { position: snappedPosition });
+            return;
+          }
+
+          // Check if this is an HMW card node
+          const hmwCard = hmwCards.find((hc) => hc.id === change.id);
+          if (hmwCard) {
+            const snappedPosition = snapToGrid(change.position);
+            updateHmwCard(change.id, { position: snappedPosition });
             return;
           }
 
@@ -1230,7 +1293,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
-    [nodes, postIts, drawingNodes, conceptCards, personaTemplates, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, updatePersonaTemplate, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts, bringToFront, removeFromCluster, setCluster, rearrangeCluster]
+    [nodes, postIts, drawingNodes, conceptCards, personaTemplates, hmwCards, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, updatePersonaTemplate, updateHmwCard, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts, bringToFront, removeFromCluster, setCluster, rearrangeCluster]
   );
 
   // Handle node drag (real-time cell highlighting)
@@ -1260,17 +1323,20 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         } else if (node.type === 'personaTemplate') {
           // Delete persona template
           deletePersonaTemplate(node.id);
+        } else if (node.type === 'hmwCard') {
+          // Delete HMW card
+          deleteHmwCard(node.id);
         }
       });
-      // Delete non-group, non-drawing, non-conceptCard, non-personaTemplate postIt nodes
+      // Delete non-group, non-drawing, non-conceptCard, non-personaTemplate, non-hmwCard postIt nodes
       const postItIds = deleted
-        .filter(n => n.type !== 'group' && n.type !== 'drawingImage' && n.type !== 'conceptCard' && n.type !== 'personaTemplate')
+        .filter(n => n.type !== 'group' && n.type !== 'drawingImage' && n.type !== 'conceptCard' && n.type !== 'personaTemplate' && n.type !== 'hmwCard')
         .map(n => n.id);
       if (postItIds.length > 0) {
         batchDeletePostIts(postItIds);
       }
     },
-    [ungroupPostIts, batchDeletePostIts, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate]
+    [ungroupPostIts, batchDeletePostIts, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, deleteHmwCard]
   );
 
 
@@ -1494,24 +1560,51 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         });
       }
     } else if (stepConfig.hasGrid && dynamicGridConfig && postIts.length === 0) {
-      // Show grid origin area for grid steps
-      instance.setViewport({
-        x: 50,  // Small left margin
-        y: 20,  // Small top margin
-        zoom: 1,
-      });
+      // Fit the full grid in the viewport
+      const container = document.querySelector('.react-flow');
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const gridW = dynamicGridConfig.origin.x + dynamicGridConfig.columns.reduce((s, c) => s + c.width, 0);
+        const gridH = dynamicGridConfig.origin.y + dynamicGridConfig.rows.reduce((s, r) => s + r.height, 0);
+        const pad = 60;
+        const z = Math.min((rect.width - pad) / gridW, (rect.height - pad) / gridH, 1);
+        instance.setViewport({
+          x: (rect.width - gridW * z) / 2,
+          y: (rect.height - gridH * z) / 2,
+          zoom: z,
+        });
+      }
     }
   }, [stepConfig, dynamicGridConfig, postIts.length]);
 
   // Auto-fit view on mount if nodes exist
   useEffect(() => {
-    if ((postIts.length > 0 || personaTemplates.length > 0) && !hasFitView.current) {
+    if ((postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0) && !hasFitView.current) {
       setTimeout(() => {
         fitView({ padding: 0.2, duration: 300 });
         hasFitView.current = true;
       }, 100);
     }
-  }, [postIts.length, personaTemplates.length, fitView]);
+  }, [postIts.length, personaTemplates.length, hmwCards.length, fitView]);
+
+  // Fit grid to viewport when dynamicGridConfig first becomes available (after gridColumns are seeded)
+  const hasSetGridViewport = useRef(false);
+  useEffect(() => {
+    if (!dynamicGridConfig || postIts.length > 0 || hasFitView.current || hasSetGridViewport.current) return;
+    hasSetGridViewport.current = true;
+    const container = document.querySelector('.react-flow');
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const gridW = dynamicGridConfig.origin.x + dynamicGridConfig.columns.reduce((s, c) => s + c.width, 0);
+    const gridH = dynamicGridConfig.origin.y + dynamicGridConfig.rows.reduce((s, r) => s + r.height, 0);
+    const pad = 60;
+    const z = Math.min((rect.width - pad) / gridW, (rect.height - pad) / gridH, 1);
+    setViewport({
+      x: (rect.width - gridW * z) / 2,
+      y: (rect.height - gridH * z) / 2,
+      zoom: z,
+    });
+  }, [dynamicGridConfig, postIts.length, setViewport]);
 
   // Animate viewport when items are added from chat panel
   useEffect(() => {
@@ -1553,7 +1646,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
         onInit={handleInit}
         snapToGrid={false}
-        fitView={postIts.length > 0 || personaTemplates.length > 0}
+        fitView={postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0}
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.3}
         maxZoom={2}
@@ -1763,7 +1856,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       )}
 
       {/* Empty state hint */}
-      {postIts.length === 0 && personaTemplates.length === 0 && (
+      {/* Empty state hint (grid steps use skeleton placeholders in GridOverlay instead) */}
+      {postIts.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0 && !stepConfig.hasGrid && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <p className="text-gray-400 dark:text-gray-600 text-lg">Double-click to add a post-it</p>
         </div>
