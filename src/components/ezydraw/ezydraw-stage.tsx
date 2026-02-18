@@ -201,7 +201,7 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       style={{ touchAction: 'none', cursor: getCursorStyle() }}
-      className="flex-1 overflow-hidden bg-gray-50 relative"
+      className="flex-1 overflow-hidden bg-neutral-olive-50 relative"
     >
       <Stage
         ref={stageRef}

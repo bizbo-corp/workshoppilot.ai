@@ -54,7 +54,7 @@ function EzyDrawContent({
   return (
     <div className="flex h-full flex-col">
       <EzyDrawToolbar />
-      <div className="flex-1 overflow-hidden bg-white">
+      <div className="flex-1 overflow-hidden bg-card">
         <EzyDrawStage ref={stageRef} />
       </div>
       <EzyDrawFooter onSave={handleSave} onCancel={onCancel} />

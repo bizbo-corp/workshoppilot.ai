@@ -107,7 +107,7 @@ export function EzyDrawToolbar() {
   const currentWidthLabel = STROKE_WIDTH_OPTIONS.find((o) => o.value === strokeWidth)?.label ?? 'Thick';
 
   return (
-    <div className="z-10 flex h-12 shrink-0 items-center gap-1 overflow-x-auto border-b bg-white/95 px-3 backdrop-blur dark:bg-zinc-900/95">
+    <div className="z-10 flex h-12 shrink-0 items-center gap-1 overflow-x-auto border-b bg-card/95 px-3 backdrop-blur">
       {/* Tool buttons */}
       <div className="flex items-center gap-0.5">
         {TOOL_BUTTONS.map(({ tool, icon: Icon, label }) => (
@@ -118,7 +118,7 @@ export function EzyDrawToolbar() {
             className={cn(
               'h-8 w-8',
               activeTool === tool &&
-                'bg-blue-100 text-blue-700 ring-1 ring-blue-300 hover:bg-blue-100 dark:bg-blue-900/50 dark:text-blue-300 dark:ring-blue-700 dark:hover:bg-blue-900/50'
+                'bg-olive-100 text-olive-700 ring-1 ring-olive-300 hover:bg-olive-100 dark:bg-olive-900/50 dark:text-olive-300 dark:ring-olive-700 dark:hover:bg-olive-900/50'
             )}
             onClick={() => setActiveTool(tool as any)}
             title={label}
@@ -136,7 +136,7 @@ export function EzyDrawToolbar() {
         size="icon"
         className={cn(
           'h-8 w-8',
-          emojiPickerOpen && 'bg-blue-100 text-blue-700 ring-1 ring-blue-300 hover:bg-blue-100 dark:bg-blue-900/50 dark:text-blue-300 dark:ring-blue-700 dark:hover:bg-blue-900/50'
+          emojiPickerOpen && 'bg-olive-100 text-olive-700 ring-1 ring-olive-300 hover:bg-olive-100 dark:bg-olive-900/50 dark:text-olive-300 dark:ring-olive-700 dark:hover:bg-olive-900/50'
         )}
         onClick={() => setEmojiPickerOpen(!emojiPickerOpen)}
         title="Emoji"
@@ -252,7 +252,7 @@ export function EzyDrawFooter({ onSave, onCancel }: EzyDrawFooterProps) {
   };
 
   return (
-    <div className="z-10 flex h-12 shrink-0 items-center justify-between border-t bg-white/95 px-3 backdrop-blur dark:bg-zinc-900/95">
+    <div className="z-10 flex h-12 shrink-0 items-center justify-between border-t bg-card/95 px-3 backdrop-blur">
       {/* Left: undo / redo / clear */}
       <div className="flex items-center gap-1">
         <Button
