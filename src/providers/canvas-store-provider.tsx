@@ -15,6 +15,7 @@ import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
 
 type CanvasStoreApi = ReturnType<typeof createCanvasStore>;
 
@@ -31,6 +32,8 @@ export interface CanvasStoreProviderProps {
   initialConceptCards?: ConceptCardData[];
   initialPersonaTemplates?: PersonaTemplateData[];
   initialHmwCards?: HmwCardData[];
+  initialSelectedSlotIds?: string[];
+  initialBrainRewritingMatrices?: BrainRewritingMatrix[];
 }
 
 export function CanvasStoreProvider({
@@ -44,6 +47,8 @@ export function CanvasStoreProvider({
   initialConceptCards,
   initialPersonaTemplates,
   initialHmwCards,
+  initialSelectedSlotIds,
+  initialBrainRewritingMatrices,
 }: CanvasStoreProviderProps) {
   // Create store ONCE per mount — ensures per-request isolation in SSR
   const [store] = useState(() =>
@@ -57,6 +62,8 @@ export function CanvasStoreProvider({
       conceptCards: initialConceptCards || [],
       personaTemplates: initialPersonaTemplates || [],
       hmwCards: initialHmwCards || [],
+      selectedSlotIds: initialSelectedSlotIds || [],
+      brainRewritingMatrices: initialBrainRewritingMatrices || [],
     })
   );
 

@@ -460,7 +460,7 @@ interface ChatPanelProps {
   workshopId: string;
   initialMessages?: UIMessage[];
   onMessageCountChange?: (count: number) => void;
-  subStep?: 'mind-mapping' | 'crazy-eights';
+  subStep?: 'mind-mapping' | 'crazy-eights' | 'idea-selection' | 'brain-rewriting';
 }
 
 export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep }: ChatPanelProps) {

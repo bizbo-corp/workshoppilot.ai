@@ -5,6 +5,7 @@ import { stepArtifacts, workshopSteps } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import type { PostIt, GridColumn, DrawingNode, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
@@ -31,6 +32,8 @@ export async function saveCanvasState(
     conceptCards?: ConceptCardData[];
     personaTemplates?: PersonaTemplateData[];
     hmwCards?: HmwCardData[];
+    selectedSlotIds?: string[];
+    brainRewritingMatrices?: BrainRewritingMatrix[];
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -153,6 +156,8 @@ export async function loadCanvasState(
   conceptCards?: ConceptCardData[];
   personaTemplates?: PersonaTemplateData[];
   hmwCards?: HmwCardData[];
+  selectedSlotIds?: string[];
+  brainRewritingMatrices?: BrainRewritingMatrix[];
 } | null> {
   try {
     // Find the workshopStep record
@@ -202,8 +207,10 @@ export async function loadCanvasState(
         conceptCards?: ConceptCardData[];
         personaTemplates?: PersonaTemplateData[];
         hmwCards?: HmwCardData[];
+        selectedSlotIds?: string[];
+        brainRewritingMatrices?: BrainRewritingMatrix[];
       };
-      if (canvas?.postIts || canvas?.personaTemplates || canvas?.hmwCards || canvas?.mindMapNodes || canvas?.crazy8sSlots || canvas?.conceptCards) {
+      if (canvas?.postIts || canvas?.personaTemplates || canvas?.hmwCards || canvas?.mindMapNodes || canvas?.crazy8sSlots || canvas?.conceptCards || canvas?.selectedSlotIds) {
         return {
           postIts: canvas.postIts || [],
           ...(canvas.gridColumns ? { gridColumns: canvas.gridColumns } : {}),
@@ -214,6 +221,8 @@ export async function loadCanvasState(
           ...(canvas.conceptCards ? { conceptCards: canvas.conceptCards } : {}),
           ...(canvas.personaTemplates ? { personaTemplates: canvas.personaTemplates } : {}),
           ...(canvas.hmwCards ? { hmwCards: canvas.hmwCards } : {}),
+          ...(canvas.selectedSlotIds ? { selectedSlotIds: canvas.selectedSlotIds } : {}),
+          ...(canvas.brainRewritingMatrices ? { brainRewritingMatrices: canvas.brainRewritingMatrices } : {}),
         };
       }
     }

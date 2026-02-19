@@ -4,6 +4,7 @@ import type { Quadrant } from '@/lib/canvas/quadrant-detection';
 import type { GridConfig } from '@/lib/canvas/grid-layout';
 import { getCellBounds } from '@/lib/canvas/grid-layout';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import type { BrainRewritingMatrix, BrainRewritingCell } from '@/lib/canvas/brain-rewriting-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
@@ -78,6 +79,8 @@ export type CanvasState = {
   conceptCards: ConceptCardData[];
   personaTemplates: PersonaTemplateData[];
   hmwCards: HmwCardData[];
+  selectedSlotIds: string[];
+  brainRewritingMatrices: BrainRewritingMatrix[];
   isDirty: boolean;
   gridColumns: GridColumn[]; // Dynamic columns, initialized from step config
   highlightedCell: { row: number; col: number } | null;
@@ -134,12 +137,15 @@ export type CanvasActions = {
   updateHmwCard: (id: string, updates: Partial<HmwCardData>) => void;
   deleteHmwCard: (id: string) => void;
   setHmwCards: (cards: HmwCardData[]) => void;
+  setSelectedSlotIds: (ids: string[]) => void;
+  setBrainRewritingMatrices: (matrices: BrainRewritingMatrix[]) => void;
+  updateBrainRewritingCell: (slotId: string, cellId: string, updates: Partial<BrainRewritingCell>) => void;
   markClean: () => void;
 };
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[] }) => {
+export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; brainRewritingMatrices?: BrainRewritingMatrix[] }) => {
   const DEFAULT_STATE: CanvasState = {
     postIts: initState?.postIts || [],
     drawingNodes: initState?.drawingNodes || [],
@@ -149,6 +155,8 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
     conceptCards: initState?.conceptCards || [],
     personaTemplates: initState?.personaTemplates || [],
     hmwCards: initState?.hmwCards || [],
+    selectedSlotIds: initState?.selectedSlotIds || [],
+    brainRewritingMatrices: initState?.brainRewritingMatrices || [],
     gridColumns: initState?.gridColumns || [],
     isDirty: false,
     highlightedCell: null,
@@ -697,6 +705,33 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
             // NOTE: Does NOT set isDirty — this is for loading from DB
           })),
 
+        setSelectedSlotIds: (ids) =>
+          set(() => ({
+            selectedSlotIds: ids,
+            isDirty: true,
+          })),
+
+        setBrainRewritingMatrices: (matrices) =>
+          set(() => ({
+            brainRewritingMatrices: matrices,
+            // NOTE: Does NOT set isDirty — this is for loading from DB
+          })),
+
+        updateBrainRewritingCell: (slotId, cellId, updates) =>
+          set((state) => ({
+            brainRewritingMatrices: state.brainRewritingMatrices.map((matrix) =>
+              matrix.slotId === slotId
+                ? {
+                    ...matrix,
+                    cells: matrix.cells.map((cell) =>
+                      cell.cellId === cellId ? { ...cell, ...updates } : cell
+                    ),
+                  }
+                : matrix
+            ),
+            isDirty: true,
+          })),
+
         markClean: () =>
           set(() => ({
             isDirty: false,
@@ -713,6 +748,8 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
           conceptCards: state.conceptCards,
           personaTemplates: state.personaTemplates,
           hmwCards: state.hmwCards,
+          selectedSlotIds: state.selectedSlotIds,
+          brainRewritingMatrices: state.brainRewritingMatrices,
         }),
         limit: 50,
         equality: (pastState, currentState) =>

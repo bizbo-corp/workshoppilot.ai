@@ -13,6 +13,8 @@ import type { ConceptCardData } from "@/lib/canvas/concept-card-types";
 import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
 import type { Crazy8sSlot } from "@/lib/canvas/crazy-8s-types";
+import type { BrainRewritingMatrix } from "@/lib/canvas/brain-rewriting-types";
+import { BRAIN_REWRITING_CELL_ORDER } from "@/lib/canvas/brain-rewriting-types";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
 import { computeRadialPositions } from "@/lib/canvas/mind-map-layout";
 
@@ -192,6 +194,8 @@ export default async function StepPage({ params }: StepPageProps) {
   let initialHmwCards: HmwCardData[] = canvasData?.hmwCards || [];
   let initialMindMapNodes: MindMapNodeState[] = (canvasData?.mindMapNodes as MindMapNodeState[]) || [];
   const initialMindMapEdges: MindMapEdgeState[] = (canvasData?.mindMapEdges as MindMapEdgeState[]) || [];
+  const initialSelectedSlotIds: string[] = canvasData?.selectedSlotIds || [];
+  const initialBrainRewritingMatrices: BrainRewritingMatrix[] = canvasData?.brainRewritingMatrices || [];
 
   // Migration: if mind map nodes exist but lack positions, compute radial layout
   if (initialMindMapNodes.length > 0 && !initialMindMapNodes.some((n) => n.position)) {
@@ -261,11 +265,36 @@ export default async function StepPage({ params }: StepPageProps) {
     // Load Step 8 canvas state for crazy8sSlots
     const step8Canvas = await loadCanvasState(session.workshop.id, 'ideation');
     if (step8Canvas?.crazy8sSlots) {
-      step8Crazy8sSlots = step8Canvas.crazy8sSlots.map((s) => ({
-        slotId: s.slotId,
-        title: s.title,
-        imageUrl: s.imageUrl,
-      }));
+      // Also check for selectedSlotIds in canvas state (fallback for extraction-based path)
+      if (!step8SelectedSlotIds && step8Canvas.selectedSlotIds && step8Canvas.selectedSlotIds.length > 0) {
+        step8SelectedSlotIds = step8Canvas.selectedSlotIds;
+      }
+
+      const brainMatrices = step8Canvas.brainRewritingMatrices || [];
+
+      // Resolve final sketch image per slot: use last brain rewriting iteration, or fall back to original
+      step8Crazy8sSlots = step8Canvas.crazy8sSlots.map((s) => {
+        let resolvedImageUrl = s.imageUrl;
+
+        // Check if this slot has a brain rewriting matrix with completed cells
+        const matrix = brainMatrices.find((m) => m.slotId === s.slotId);
+        if (matrix) {
+          // Find the last completed cell (has imageUrl) in BRAIN_REWRITING_CELL_ORDER
+          for (let i = BRAIN_REWRITING_CELL_ORDER.length - 1; i >= 0; i--) {
+            const cell = matrix.cells.find((c) => c.cellId === BRAIN_REWRITING_CELL_ORDER[i]);
+            if (cell?.imageUrl) {
+              resolvedImageUrl = cell.imageUrl;
+              break;
+            }
+          }
+        }
+
+        return {
+          slotId: s.slotId,
+          title: s.title,
+          imageUrl: resolvedImageUrl,
+        };
+      });
     }
   }
 
@@ -281,6 +310,8 @@ export default async function StepPage({ params }: StepPageProps) {
         initialConceptCards={initialConceptCards}
         initialPersonaTemplates={initialPersonaTemplates}
         initialHmwCards={initialHmwCards}
+        initialSelectedSlotIds={initialSelectedSlotIds}
+        initialBrainRewritingMatrices={initialBrainRewritingMatrices}
       >
         <StepContainer
           stepOrder={stepNumber}
