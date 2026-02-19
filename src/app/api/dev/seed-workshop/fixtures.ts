@@ -93,13 +93,27 @@ function quadrantPostIt(
  * Position a post-it in the correct grid cell for Step 6 (Journey Mapping).
  * Uses getCellBounds() from grid-layout.ts for exact positioning.
  */
+// Journey fixture grid config — columns match the fixture stage IDs (not the default stage-N placeholders)
+const JOURNEY_FIXTURE_GRID: GridConfig = {
+  rows: STEP_CANVAS_CONFIGS['journey-mapping']?.gridConfig?.rows ?? [],
+  columns: [
+    { id: 'awareness', label: 'Awareness', width: 240 },
+    { id: 'consideration', label: 'Consideration', width: 240 },
+    { id: 'decision', label: 'Decision', width: 240 },
+    { id: 'purchase', label: 'First Use', width: 240 },
+    { id: 'onboarding', label: 'Daily Use', width: 240 },
+  ],
+  origin: STEP_CANVAS_CONFIGS['journey-mapping']?.gridConfig?.origin ?? { x: 160, y: 60 },
+  cellPadding: STEP_CANVAS_CONFIGS['journey-mapping']?.gridConfig?.cellPadding ?? 12,
+};
+
 function journeyPostIt(
   text: string,
   rowId: string,
   colId: string,
   color: PostItColor = 'yellow',
 ): PostIt {
-  const gridConfig = STEP_CANVAS_CONFIGS['journey-mapping']?.gridConfig as GridConfig;
+  const gridConfig = JOURNEY_FIXTURE_GRID;
   const rowIndex = gridConfig.rows.findIndex((r) => r.id === rowId);
   const colIndex = gridConfig.columns.findIndex((c) => c.id === colId);
 
