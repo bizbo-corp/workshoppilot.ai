@@ -68,11 +68,6 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL('/', req.url));
   }
 
-  // Landing page redirect for authenticated users
-  if (pathname === '/' && userId) {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
-  }
-
   return NextResponse.next();
 });
 
