@@ -122,7 +122,7 @@ ${persistentContext}`;
 
   // Add Tier 2: Long-term Memory (conversation summaries)
   if (summaries) {
-    prompt += `\n\nLONG-TERM MEMORY (Summaries of previous step conversations):
+    prompt += `\n\nPRIOR STEP CONTEXT (Key decisions and outputs from earlier steps):
 ${summaries}`;
   }
 

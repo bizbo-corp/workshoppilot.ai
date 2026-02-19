@@ -6,11 +6,10 @@
  */
 
 import { extractStepArtifact, ExtractionError } from '@/lib/extraction';
-import { assembleStepContext } from '@/lib/context/assemble-context';
 import { saveStepArtifact } from '@/lib/context/save-artifact';
 import { db } from '@/db/client';
-import { workshopSteps } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { chatMessages, workshopSteps } from '@/db/schema';
+import { eq, and, asc } from 'drizzle-orm';
 
 /**
  * Increase timeout for extraction (can take longer than chat)
@@ -48,9 +47,25 @@ export async function POST(req: Request) {
       );
     }
 
-    // Assemble conversation history using step context
-    const stepContext = await assembleStepContext(workshopId, stepId, sessionId);
-    const messages = stepContext.messages;
+    // Load conversation messages for extraction
+    const messageRows = await db
+      .select({
+        role: chatMessages.role,
+        content: chatMessages.content,
+      })
+      .from(chatMessages)
+      .where(
+        and(
+          eq(chatMessages.sessionId, sessionId),
+          eq(chatMessages.stepId, stepId)
+        )
+      )
+      .orderBy(asc(chatMessages.createdAt));
+
+    const messages = messageRows.map((row) => ({
+      role: row.role,
+      content: row.content,
+    }));
 
     // Validate we have enough conversation to extract from
     if (!messages || messages.length < 2) {

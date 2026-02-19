@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     }
 
     // Assemble three-tier context for this step
-    const stepContext = await assembleStepContext(workshopId, stepId, sessionId);
+    const stepContext = await assembleStepContext(workshopId, stepId);
 
     // Inject selected canvas items into context if any are selected
     if (Array.isArray(selectedPostItIds) && selectedPostItIds.length > 0) {

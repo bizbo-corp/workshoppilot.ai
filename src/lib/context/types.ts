@@ -37,7 +37,7 @@ export type ContextTier = 'short-term' | 'long-term' | 'persistent';
  * - canvasContext: Canvas state formatted for AI prompt (Tier 4)
  */
 export interface StepContext {
-  persistentContext: string; // Formatted JSON artifacts
+  persistentContext: string; // Always '' — kept for interface compat (artifacts removed in favor of summaries)
   summaries: string; // AI-generated summaries
   canvasContext: string; // Canvas state formatted for AI prompt
   messages: Array<{
