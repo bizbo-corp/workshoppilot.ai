@@ -106,7 +106,7 @@
   --radius: 0.625rem;
   /* Canvas */
   --canvas-bg: var(--neutral-olive-100);
-  --canvas-dots: var(--neutral-olive-300);
+  --canvas-dots: color-mix(in srgb, var(--foreground) 40%, transparent);
   --canvas-grid-line: var(--neutral-olive-300);
   --canvas-grid-line-light: var(--neutral-olive-200);
   --canvas-crosshair: var(--neutral-olive-500);
@@ -177,7 +177,7 @@
 .dark {
   /* Canvas */
   --canvas-bg: var(--neutral-olive-950);
-  --canvas-dots: var(--neutral-olive-800);
+  --canvas-dots: color-mix(in srgb, var(--foreground) 50%, transparent);
   --canvas-grid-line: var(--neutral-olive-800);
   --canvas-grid-line-light: var(--neutral-olive-900);
   --canvas-crosshair: var(--neutral-olive-700);
@@ -300,7 +300,14 @@
   transition: none !important;
 }
 
-/* Canvas background — adapts to light/dark mode via CSS variable */
-.react-flow__renderer {
-  background-color: var(--canvas-bg) !important;
+/* Canvas background — set on .react-flow so the dot grid (z-index -1 → 2)
+   renders above overlays (z-1) but below nodes (z-4 renderer). */
+.react-flow {
+  background-color: var(--canvas-bg);
+}
+
+/* Raise dot grid above overlays so dots are visible through tinted fills */
+.react-flow__background {
+  z-index: 2 !important;
+  background-color: transparent !important;
 }

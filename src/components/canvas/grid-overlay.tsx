@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * GridOverlay Component
@@ -6,12 +6,26 @@
  * Used for Step 6 (Journey Mapping) 7-row swimlane grid
  */
 
-import { useStore as useReactFlowStore, type ReactFlowState } from '@xyflow/react';
-import type { GridConfig, CellCoordinate } from '@/lib/canvas/grid-layout';
-import { getCellBounds } from '@/lib/canvas/grid-layout';
-import { useCanvasStore } from '@/providers/canvas-store-provider';
-import { EditableColumnHeader } from './editable-column-header';
-import { PlusCircle, X, Footprints, Target, Construction, Pointer, Smile, Zap, Lightbulb, type LucideIcon } from 'lucide-react';
+import {
+  useStore as useReactFlowStore,
+  type ReactFlowState,
+} from "@xyflow/react";
+import type { GridConfig, CellCoordinate } from "@/lib/canvas/grid-layout";
+import { getCellBounds } from "@/lib/canvas/grid-layout";
+import { useCanvasStore } from "@/providers/canvas-store-provider";
+import { EditableColumnHeader } from "./editable-column-header";
+import {
+  PlusCircle,
+  X,
+  Footprints,
+  Target,
+  Construction,
+  Pointer,
+  Smile,
+  Zap,
+  Lightbulb,
+  type LucideIcon,
+} from "lucide-react";
 
 /** Row icon mapping for journey map swimlanes */
 const ROW_ICONS: Record<string, LucideIcon> = {
@@ -37,14 +51,23 @@ const viewportSelector = (state: ReactFlowState) => ({
 interface GridOverlayProps {
   config: GridConfig;
   highlightedCell?: CellCoordinate | null;
-  onDeleteColumn?: (columnId: string, columnLabel: string, affectedCardCount: number, migrationTarget: string | null) => void;
+  onDeleteColumn?: (
+    columnId: string,
+    columnLabel: string,
+    affectedCardCount: number,
+    migrationTarget: string | null,
+  ) => void;
 }
 
 /**
  * GridOverlay renders grid lines, row labels, column headers, and cell highlighting
  * All elements transform with viewport pan/zoom
  */
-export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOverlayProps) {
+export function GridOverlay({
+  config,
+  highlightedCell,
+  onDeleteColumn,
+}: GridOverlayProps) {
   // Subscribe to viewport changes reactively
   const { x, y, zoom } = useReactFlowStore(viewportSelector);
 
@@ -55,7 +78,8 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
   const addGridColumn = useCanvasStore((s) => s.addGridColumn);
 
   // Use gridColumns from store if available, otherwise fall back to config.columns
-  const effectiveColumns = gridColumns.length > 0 ? gridColumns : config.columns;
+  const effectiveColumns =
+    gridColumns.length > 0 ? gridColumns : config.columns;
 
   // Helper to transform canvas coordinates to screen coordinates
   const toScreen = (canvasX: number, canvasY: number) => ({
@@ -93,36 +117,40 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
 
   return (
     <svg
-      className="absolute inset-0 pointer-events-none z-10"
+      className="absolute inset-0 pointer-events-none z-[1]"
       width="100%"
       height="100%"
     >
       {/* Cell highlight (render first so it's behind grid lines) */}
-      {highlightedCell && (() => {
-        const bounds = getCellBounds(highlightedCell, { ...config, columns: effectiveColumns });
-        const topLeft = toScreen(bounds.x, bounds.y);
-        return (
-          <g className="animate-pulse">
-            <rect
-              x={topLeft.x}
-              y={topLeft.y}
-              width={bounds.width * zoom}
-              height={bounds.height * zoom}
-              fill="var(--canvas-highlight-fill)"
-              opacity={0.3}
-            />
-            <rect
-              x={topLeft.x}
-              y={topLeft.y}
-              width={bounds.width * zoom}
-              height={bounds.height * zoom}
-              fill="none"
-              stroke="#eab308"
-              strokeWidth={3}
-            />
-          </g>
-        );
-      })()}
+      {highlightedCell &&
+        (() => {
+          const bounds = getCellBounds(highlightedCell, {
+            ...config,
+            columns: effectiveColumns,
+          });
+          const topLeft = toScreen(bounds.x, bounds.y);
+          return (
+            <g className="animate-pulse">
+              <rect
+                x={topLeft.x}
+                y={topLeft.y}
+                width={bounds.width * zoom}
+                height={bounds.height * zoom}
+                fill="var(--canvas-highlight-fill)"
+                opacity={0.9}
+              />
+              <rect
+                x={topLeft.x}
+                y={topLeft.y}
+                width={bounds.width * zoom}
+                height={bounds.height * zoom}
+                fill="none"
+                stroke="#eab308"
+                strokeWidth={3}
+              />
+            </g>
+          );
+        })()}
 
       {/* Alternating row tints — extends across label area + grid cells */}
       {config.rows.map((row, index) => {
@@ -139,7 +167,7 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
             width={fullWidth * zoom}
             height={rowHeight * zoom}
             fill="#8a9a5b"
-            opacity={0.04}
+            opacity={0.4}
           />
         );
       })}
@@ -148,17 +176,19 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
       {config.rows.map((row, rowIdx) =>
         effectiveColumns.map((col, colIdx) => {
           const hasContent = postIts.some(
-            p => p.cellAssignment?.row === row.id && p.cellAssignment?.col === col.id
+            (p) =>
+              p.cellAssignment?.row === row.id &&
+              p.cellAssignment?.col === col.id,
           );
           if (hasContent) return null;
 
           const bounds = getCellBounds(
             { row: rowIdx, col: colIdx },
-            { ...config, columns: effectiveColumns }
+            { ...config, columns: effectiveColumns },
           );
           const pad = config.cellPadding + 4;
           const topLeft = toScreen(bounds.x + pad, bounds.y + pad);
-          const isEmotionRow = row.id === 'emotions';
+          const isEmotionRow = row.id === "emotions";
 
           if (isEmotionRow) {
             return (
@@ -186,7 +216,7 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
               opacity={0.12}
             />
           );
-        })
+        }),
       )}
 
       {/* Row labels with icons */}
@@ -222,7 +252,10 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
       {/* Horizontal row separator lines — solid, spanning label area + grid */}
       {rowYPositions.map((rowY, index) => {
         const leftEdge = toScreen(labelAreaX, rowY);
-        const rightEdge = toScreen(colXPositions[colXPositions.length - 1], rowY);
+        const rightEdge = toScreen(
+          colXPositions[colXPositions.length - 1],
+          rowY,
+        );
         return (
           <line
             key={`row-line-${index}`}
@@ -247,7 +280,9 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
         const headerWidth = Math.max(160, colWidth * zoom);
 
         // Count cards in this column for delete confirmation
-        const cardsInColumn = postIts.filter(p => p.cellAssignment?.col === col.id).length;
+        const cardsInColumn = postIts.filter(
+          (p) => p.cellAssignment?.col === col.id,
+        ).length;
 
         // Find adjacent column for migration target
         const leftAdjacentLabel = effectiveColumns[index - 1]?.label || null;
@@ -266,11 +301,20 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
             <div className="flex items-center justify-center gap-0.5 group">
               <EditableColumnHeader
                 label={col.label}
-                onSave={(newLabel) => updateGridColumn(col.id, { label: newLabel })}
+                onSave={(newLabel) =>
+                  updateGridColumn(col.id, { label: newLabel })
+                }
               />
               {effectiveColumns.length > 1 && (
                 <button
-                  onClick={() => onDeleteColumn?.(col.id, col.label, cardsInColumn, migrationTarget)}
+                  onClick={() =>
+                    onDeleteColumn?.(
+                      col.id,
+                      col.label,
+                      cardsInColumn,
+                      migrationTarget,
+                    )
+                  }
                   className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-opacity"
                   title="Delete column"
                 >
@@ -285,7 +329,10 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
       {/* Column header bottom border — spans full width including label area */}
       {(() => {
         const leftEdge = toScreen(labelAreaX, config.origin.y);
-        const rightEdge = toScreen(colXPositions[colXPositions.length - 1], config.origin.y);
+        const rightEdge = toScreen(
+          colXPositions[colXPositions.length - 1],
+          config.origin.y,
+        );
         return (
           <line
             x1={leftEdge.x}
@@ -320,7 +367,11 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
               }}
               disabled={effectiveColumns.length >= MAX_COLUMNS}
               className="flex items-center gap-1 text-xs text-[#a8aaa3] hover:text-[#4a5a32] hover:bg-[#8a9a5b]/10 dark:hover:bg-neutral-olive-700/80 rounded px-2 py-1 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              title={effectiveColumns.length >= MAX_COLUMNS ? 'Maximum 12 stages' : 'Add a new stage column'}
+              title={
+                effectiveColumns.length >= MAX_COLUMNS
+                  ? "Maximum 12 stages"
+                  : "Add a new stage column"
+              }
             >
               <PlusCircle className="h-3.5 w-3.5" />
               Add Stage
@@ -332,7 +383,10 @@ export function GridOverlay({ config, highlightedCell, onDeleteColumn }: GridOve
       {/* Vertical column separator lines — solid thin lines */}
       {colXPositions.slice(0, -1).map((colX, index) => {
         const topEdge = toScreen(colX, config.origin.y);
-        const bottomEdge = toScreen(colX, rowYPositions[rowYPositions.length - 1]);
+        const bottomEdge = toScreen(
+          colX,
+          rowYPositions[rowYPositions.length - 1],
+        );
         return (
           <line
             key={`col-line-${index}`}

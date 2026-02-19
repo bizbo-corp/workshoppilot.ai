@@ -50,7 +50,7 @@ export function EmpathyMapOverlay({ config }: EmpathyMapOverlayProps) {
 
   return (
     <svg
-      className="absolute inset-0 pointer-events-none z-10"
+      className="absolute inset-0 pointer-events-none z-[1]"
       width="100%"
       height="100%"
     >
