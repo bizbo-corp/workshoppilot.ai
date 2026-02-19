@@ -9,7 +9,7 @@ import { StepContainer } from "@/components/workshop/step-container";
 import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
 import { loadCanvasState } from "@/actions/canvas-actions";
 import type { PostIt, GridColumn, DrawingNode, MindMapNodeState, MindMapEdgeState } from "@/stores/canvas-store";
-import type { ConceptCardData } from "@/lib/canvas/concept-card-types";
+import { type ConceptCardData, createDefaultConceptCard } from "@/lib/canvas/concept-card-types";
 import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
 import type { Crazy8sSlot } from "@/lib/canvas/crazy-8s-types";
@@ -189,7 +189,7 @@ export default async function StepPage({ params }: StepPageProps) {
   const initialGridColumns: GridColumn[] = canvasData?.gridColumns || [];
   const initialDrawingNodes: DrawingNode[] = canvasData?.drawingNodes || [];
   const initialCrazy8sSlots: Crazy8sSlot[] = canvasData?.crazy8sSlots || [];
-  const initialConceptCards: ConceptCardData[] = canvasData?.conceptCards || [];
+  let initialConceptCards: ConceptCardData[] = canvasData?.conceptCards || [];
   let initialPersonaTemplates: PersonaTemplateData[] = canvasData?.personaTemplates || [];
   let initialHmwCards: HmwCardData[] = canvasData?.hmwCards || [];
   let initialMindMapNodes: MindMapNodeState[] = (canvasData?.mindMapNodes as MindMapNodeState[]) || [];
@@ -295,6 +295,25 @@ export default async function StepPage({ params }: StepPageProps) {
           imageUrl: resolvedImageUrl,
         };
       });
+    }
+
+    // Create skeleton concept cards for selected ideas (one per selected slot, max 4)
+    if (initialConceptCards.length === 0 && step8SelectedSlotIds && step8SelectedSlotIds.length > 0 && step8Crazy8sSlots) {
+      const selectedSlots = step8SelectedSlotIds
+        .map((slotId) => step8Crazy8sSlots!.find((s) => s.slotId === slotId))
+        .filter(Boolean)
+        .slice(0, 4);
+
+      initialConceptCards = selectedSlots.map((slot, index) =>
+        createDefaultConceptCard({
+          ideaSource: slot!.title || `Sketch ${slot!.slotId}`,
+          sketchSlotId: slot!.slotId,
+          sketchImageUrl: slot!.imageUrl,
+          cardState: 'skeleton',
+          cardIndex: index,
+          position: { x: index * 720, y: 0 },
+        })
+      );
     }
   }
 

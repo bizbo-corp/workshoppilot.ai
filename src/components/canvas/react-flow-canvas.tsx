@@ -642,7 +642,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         onSWOTChange: handleConceptSWOTChange,
         onFeasibilityChange: handleConceptFeasibilityChange,
       },
-      style: { width: 400 },
+      style: { width: 680 },
     }));
 
     // Add persona template nodes
@@ -1646,7 +1646,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
         onInit={handleInit}
         snapToGrid={false}
-        fitView={postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0}
+        fitView={postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0 || conceptCards.length > 0}
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.3}
         maxZoom={2}

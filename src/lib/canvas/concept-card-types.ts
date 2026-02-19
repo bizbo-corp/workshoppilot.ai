@@ -1,6 +1,8 @@
 export type ConceptCardData = {
   id: string;
   position: { x: number; y: number };
+  cardState?: 'skeleton' | 'active' | 'filled';
+  cardIndex?: number;          // 0-based index for AI targeting
   conceptName: string;
   ideaSource: string;
   sketchSlotId?: string;       // Crazy 8s slot ID for traceability
@@ -18,7 +20,7 @@ export type ConceptCardData = {
     business: { score: number; rationale: string };
     userDesirability: { score: number; rationale: string };
   };
-  billboardHero?: {
+  billboardHero: {
     headline: string;
     subheadline: string;
     cta: string;
@@ -47,10 +49,16 @@ export function createDefaultConceptCard(
       threats: ['', '', ''],
     },
     feasibility: partial?.feasibility || {
-      technical: { score: 3, rationale: '' },
-      business: { score: 3, rationale: '' },
-      userDesirability: { score: 3, rationale: '' },
+      technical: { score: 0, rationale: '' },
+      business: { score: 0, rationale: '' },
+      userDesirability: { score: 0, rationale: '' },
     },
-    billboardHero: partial?.billboardHero,
+    billboardHero: partial?.billboardHero || {
+      headline: '',
+      subheadline: '',
+      cta: '',
+    },
+    cardState: partial?.cardState || 'skeleton',
+    cardIndex: partial?.cardIndex,
   };
 }
