@@ -15,12 +15,13 @@ import { computeCanvasPosition, computeThemeSortPositions, computeClusterChildPo
 import type { PostItColor, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
+import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import { THEME_COLORS, ROOT_COLOR } from '@/lib/canvas/mind-map-theme-colors';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { saveCanvasState } from '@/actions/canvas-actions';
 
 /** Steps that support canvas item auto-add */
-const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe', 'ideation'];
+const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe', 'ideation', 'concept'];
 
 /** Fixed initial greetings shown instantly while AI generates first response */
 const STEP_INITIAL_GREETINGS: Record<string, string> = {
@@ -385,6 +386,35 @@ function parseHmwCards(content: string): { cleanContent: string; cards: Partial<
   return { cleanContent, cards };
 }
 
+/**
+ * Parse [CONCEPT_CARD]{...JSON...}[/CONCEPT_CARD] blocks from AI content.
+ * Returns clean content (markup removed) and extracted concept card data.
+ */
+function parseConceptCards(content: string): { cleanContent: string; cards: (Partial<ConceptCardData> & { cardIndex?: number })[] } {
+  const cards: (Partial<ConceptCardData> & { cardIndex?: number })[] = [];
+  const regex = /\[CONCEPT_CARD\]([\s\S]*?)\[\/CONCEPT_CARD\]/g;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1].trim());
+      cards.push(parsed);
+    } catch {
+      // Skip malformed JSON
+    }
+  }
+
+  let cleanContent = content
+    .replace(/\s*\[CONCEPT_CARD\][\s\S]*?\[\/CONCEPT_CARD\]\s*/g, ' ')
+    .trim();
+
+  // Strip incomplete blocks mid-stream
+  if (cleanContent.includes('[CONCEPT_CARD]')) {
+    cleanContent = cleanContent.replace(/\[CONCEPT_CARD\][\s\S]*$/, '').trim();
+  }
+
+  return { cleanContent, cards };
+}
+
 type MindMapNodeParsed = {
   label: string;
   theme?: string;    // Parent theme label (omitted for theme-level nodes)
@@ -479,6 +509,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const addMindMapNode = useCanvasStore((state) => state.addMindMapNode);
   const crazy8sSlots = useCanvasStore((state) => state.crazy8sSlots);
   const conceptCards = useCanvasStore((state) => state.conceptCards);
+  const updateConceptCard = useCanvasStore((state) => state.updateConceptCard);
   const personaTemplates = useCanvasStore((state) => state.personaTemplates);
   const addPersonaTemplate = useCanvasStore((state) => state.addPersonaTemplate);
   const updatePersonaTemplate = useCanvasStore((state) => state.updatePersonaTemplate);
@@ -531,6 +562,17 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     });
     markClean();
   }, [isCanvasStep, isDirty, workshopId, step.id, postIts, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, personaTemplates, hmwCards, markClean]);
+
+  // One-shot flush: persist skeleton cards to DB immediately on mount
+  // (before user sends any message). Fires once when isDirty first becomes true
+  // after mount — triggered by the skeleton sync in canvas-store-provider.
+  const hasInitialFlushed = React.useRef(false);
+  React.useEffect(() => {
+    if (!hasInitialFlushed.current && isDirty && isCanvasStep) {
+      hasInitialFlushed.current = true;
+      flushCanvasToDb();
+    }
+  }, [isDirty, isCanvasStep, flushCanvasToDb]);
 
   const transport = React.useMemo(
     () =>
@@ -628,7 +670,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   // markers, as that would overwrite user-arranged positions with recalculated layouts.
   const hasInitializedAddedIds = React.useRef(false);
   React.useEffect(() => {
-    if (hasInitializedAddedIds.current || !isCanvasStep || (postIts.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0 && mindMapNodes.length === 0)) return;
+    if (hasInitializedAddedIds.current || !isCanvasStep || (postIts.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0 && mindMapNodes.length === 0 && conceptCards.length === 0)) return;
     hasInitializedAddedIds.current = true;
 
     const ids = new Set<string>();
@@ -644,15 +686,16 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       const { stages: journeyStages } = parseJourneyStages(content);
       const { cards: hmwCardParsed } = parseHmwCards(content);
       const { nodes: mindMapNodesParsed } = parseMindMapNodes(content);
+      const { cards: conceptCardParsed } = parseConceptCards(content);
       // Mark any message that contains canvas-modifying markup as already processed
-      if (canvasItems.length > 0 || clusters.length > 0 || shouldSort || deleteTexts.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || mindMapNodesParsed.length > 0) {
+      if (canvasItems.length > 0 || clusters.length > 0 || shouldSort || deleteTexts.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || mindMapNodesParsed.length > 0 || conceptCardParsed.length > 0) {
         ids.add(msg.id);
       }
     }
     if (ids.size > 0) {
       setAddedMessageIds(ids);
     }
-  }, [messages, isCanvasStep, postIts.length, personaTemplates.length, hmwCards.length, mindMapNodes.length]);
+  }, [messages, isCanvasStep, postIts.length, personaTemplates.length, hmwCards.length, mindMapNodes.length, conceptCards.length]);
 
   // Handle adding AI-suggested canvas items to the whiteboard
   const handleAddToWhiteboard = React.useCallback((messageId: string, canvasItems: CanvasItemParsed[]) => {
@@ -731,7 +774,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     // Without this guard, on the same render cycle where postIts load from DB,
     // this effect could fire before addedMessageIds is populated, causing
     // historical messages to be re-processed and overwriting saved positions.
-    if ((postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0 || mindMapNodes.length > 0) && !hasInitializedAddedIds.current) return;
+    if ((postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0 || mindMapNodes.length > 0 || conceptCards.length > 0) && !hasInitializedAddedIds.current) return;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.role !== 'assistant') return;
     if (addedMessageIds.has(lastMsg.id)) return;
@@ -746,6 +789,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     const { stages: journeyStages } = parseJourneyStages(content);
     const { cards: hmwCardParsed } = parseHmwCards(content);
     const { nodes: mindMapNodesParsed } = parseMindMapNodes(content);
+    const { cards: conceptCardParsed } = parseConceptCards(content);
 
     // Process journey stage replacements — update grid columns to match template
     if (journeyStages.length >= 3 && step.id === 'journey-mapping') {
@@ -758,7 +802,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
 
     // Persona step uses [PERSONA_TEMPLATE] blocks only — skip post-it creation
-    if (canvasItems.length > 0 && step.id !== 'persona') {
+    if (canvasItems.length > 0 && step.id !== 'persona' && step.id !== 'concept') {
       handleAddToWhiteboard(lastMsg.id, canvasItems);
     }
 
@@ -1000,8 +1044,41 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       setPendingFitView(true);
     }
 
+    // Process concept card blocks — merge into existing skeleton cards
+    if (conceptCardParsed.length > 0 && step.id === 'concept') {
+      const latestConceptCards = storeApi.getState().conceptCards;
+
+      for (const parsed of conceptCardParsed) {
+        const targetIndex = parsed.cardIndex ?? 0;
+        const existing = latestConceptCards.find(c => (c.cardIndex ?? 0) === targetIndex);
+
+        if (existing) {
+          const updates: Partial<ConceptCardData> = { ...parsed };
+
+          // Transition skeleton → active on first AI update
+          if (existing.cardState === 'skeleton') {
+            updates.cardState = 'active';
+          }
+
+          // Auto-detect 'filled' state: check if all major sections have content
+          const merged = { ...existing, ...updates };
+          const hasPitch = !!merged.elevatorPitch;
+          const hasUsp = !!merged.usp;
+          const hasSwot = merged.swot?.strengths?.some(s => !!s);
+          const hasFeasibility = merged.feasibility?.technical?.score > 0;
+          const hasBillboard = !!merged.billboardHero?.headline;
+          if (hasPitch && hasUsp && hasSwot && hasFeasibility && hasBillboard) {
+            updates.cardState = 'filled';
+          }
+
+          updateConceptCard(existing.id, updates);
+        }
+      }
+      setPendingFitView(true);
+    }
+
     // Mark as processed if we did any work (avoid re-processing)
-    if (canvasItems.length === 0 && (deleteTexts.length > 0 || clusters.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || mindMapNodesParsed.length > 0)) {
+    if (canvasItems.length === 0 && (deleteTexts.length > 0 || clusters.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || mindMapNodesParsed.length > 0 || conceptCardParsed.length > 0)) {
       setAddedMessageIds(prev => new Set(prev).add(lastMsg.id));
     }
 
@@ -1016,7 +1093,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         }
       }, 300); // Short delay to ensure new items are in store
     }
-  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, batchUpdatePositions, storeApi, step.id, setPendingFitView, deletePostIt, setCluster, addPersonaTemplate, updatePersonaTemplate, replaceGridColumns, addHmwCard, updateHmwCard, addMindMapNode]);
+  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, batchUpdatePositions, storeApi, step.id, setPendingFitView, deletePostIt, setCluster, addPersonaTemplate, updatePersonaTemplate, replaceGridColumns, addHmwCard, updateHmwCard, addMindMapNode, updateConceptCard, conceptCards.length]);
 
   // Clear stream error on successful completion
   React.useEffect(() => {
@@ -1258,7 +1335,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               const { cleanContent: noJourneyStages } = parseJourneyStages(noPersonaTemplates);
               const { cleanContent: noHmwCards } = parseHmwCards(noJourneyStages);
               const { cleanContent: noMindMapNodes } = parseMindMapNodes(noHmwCards);
-              const { cleanContent: noLeakedTags } = stripLeakedTags(noMindMapNodes);
+              const { cleanContent: noConceptCards } = parseConceptCards(noMindMapNodes);
+              const { cleanContent: noLeakedTags } = stripLeakedTags(noConceptCards);
               const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noLeakedTags);
               return (
                 <div key={`${message.id}-${index}`} className="flex items-start">

@@ -141,6 +141,7 @@ export type CanvasActions = {
   setBrainRewritingMatrices: (matrices: BrainRewritingMatrix[]) => void;
   updateBrainRewritingCell: (slotId: string, cellId: string, updates: Partial<BrainRewritingCell>) => void;
   markClean: () => void;
+  markDirty: () => void;
 };
 
 export type CanvasStore = CanvasState & CanvasActions;
@@ -735,6 +736,11 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
         markClean: () =>
           set(() => ({
             isDirty: false,
+          })),
+
+        markDirty: () =>
+          set(() => ({
+            isDirty: true,
           })),
       }),
       {

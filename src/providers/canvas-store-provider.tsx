@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import {
   createCanvasStore,
@@ -66,6 +66,27 @@ export function CanvasStoreProvider({
       brainRewritingMatrices: initialBrainRewritingMatrices || [],
     })
   );
+
+  // Sync skeleton concept cards from server props into the store.
+  // Handles two scenarios:
+  // 1. Post-reset refresh: store was cleared but server sends fresh skeletons
+  // 2. Fresh load: store has skeletons from constructor but isDirty is false
+  useEffect(() => {
+    if (!initialConceptCards || initialConceptCards.length === 0) return;
+    const current = store.getState().conceptCards;
+    if (current.length === 0) {
+      // Store is empty but server has cards (post-reset refresh)
+      store.getState().setConceptCards(initialConceptCards);
+      store.getState().markDirty();
+    } else if (
+      current.length === initialConceptCards.length &&
+      current.every(c => c.cardState === 'skeleton') &&
+      initialConceptCards.every(c => c.cardState === 'skeleton')
+    ) {
+      // Already have matching skeletons from constructor — just mark dirty for persistence
+      store.getState().markDirty();
+    }
+  }, [initialConceptCards, store]);
 
   return (
     <CanvasStoreContext.Provider value={store}>
