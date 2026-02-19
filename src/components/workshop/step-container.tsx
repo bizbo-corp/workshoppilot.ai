@@ -6,14 +6,15 @@ import { useRouter } from 'next/navigation';
 import type { UIMessage } from 'ai';
 import { ChatPanel } from './chat-panel';
 import { RightPanel } from './right-panel';
-import { SynthesisSummaryView } from './synthesis-summary-view';
+import { SynthesisBuildPackSection } from './synthesis-summary-view';
 import { MobileTabBar } from './mobile-tab-bar';
 import { StepNavigation } from './step-navigation';
 import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
+import { PrdViewerDialog } from './prd-viewer-dialog';
 import { IdeationSubStepContainer } from './ideation-sub-step-container';
-import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical } from 'lucide-react';
+import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical, Loader2 } from 'lucide-react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
-import { resetStep } from '@/actions/workshop-actions';
+import { resetStep, updateStepStatus } from '@/actions/workshop-actions';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { cn } from '@/lib/utils';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
@@ -35,6 +36,7 @@ interface StepContainerProps {
   step8SelectedSlotIds?: string[];
   step8Crazy8sSlots?: Array<{ slotId: string; title: string; imageUrl?: string }>;
   isAdmin?: boolean;
+  billboardHero?: { headline: string; subheadline: string; cta: string };
 }
 
 export function StepContainer({
@@ -48,6 +50,7 @@ export function StepContainer({
   step8SelectedSlotIds,
   step8Crazy8sSlots,
   isAdmin,
+  billboardHero,
 }: StepContainerProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
@@ -90,6 +93,84 @@ export function StepContainer({
     setLocalMessages(initialMessages);
   }, [stepOrder]);
 
+  // PRD viewer dialog state
+  const [showPrdDialog, setShowPrdDialog] = React.useState(false);
+
+  // Step 10: client-side extraction state
+  const [step10Artifact, setStep10Artifact] = React.useState<Record<string, unknown> | null>(
+    stepOrder === 10 ? (initialArtifact || null) : null
+  );
+  const [isExtracting, setIsExtracting] = React.useState(false);
+  const [extractionError, setExtractionError] = React.useState<string | null>(null);
+  const [step10MessageCount, setStep10MessageCount] = React.useState(0);
+
+  // Step 10: extraction handler — extracts synthesis artifact and marks step complete
+  const handleStep10Extract = React.useCallback(async () => {
+    if (stepOrder !== 10 || !step || isExtracting || step10Artifact) return;
+
+    setIsExtracting(true);
+    setExtractionError(null);
+
+    try {
+      const res = await fetch('/api/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workshopId,
+          stepId: step.id,
+          sessionId,
+        }),
+      });
+
+      let data: Record<string, unknown> = {};
+      try {
+        data = await res.json();
+      } catch {
+        // Response body wasn't JSON
+      }
+
+      if (!res.ok) {
+        console.warn('Step 10 extract API error:', res.status, data);
+        throw new Error(
+          (data?.message as string) || (data?.error as string) || `Extraction failed (${res.status})`
+        );
+      }
+
+      setStep10Artifact(data.artifact as Record<string, unknown>);
+
+      // Mark step 10 as complete
+      await updateStepStatus(workshopId, step.id, 'complete', sessionId);
+    } catch (error) {
+      console.error('Step 10 extraction failed:', error);
+      setExtractionError(error instanceof Error ? error.message : 'Something went wrong');
+    } finally {
+      setIsExtracting(false);
+    }
+  }, [stepOrder, step, isExtracting, step10Artifact, workshopId, sessionId]);
+
+  // Step 10: auto-extract on mount when conversation already exists
+  const hasAutoExtracted = React.useRef(false);
+  React.useEffect(() => {
+    if (
+      stepOrder === 10 &&
+      !step10Artifact &&
+      !isExtracting &&
+      !hasAutoExtracted.current
+    ) {
+      // Auto-extract if we have initial messages from DB (returning user)
+      // or if enough live messages accumulated (new session)
+      const hasEnoughInitial = (initialMessages?.length ?? 0) >= 4;
+      const hasEnoughLive = step10MessageCount >= 6;
+
+      if (hasEnoughInitial || hasEnoughLive) {
+        hasAutoExtracted.current = true;
+        // Small delay to avoid Gemini rate limits from the preceding chat conversation
+        const timer = setTimeout(() => handleStep10Extract(), 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [stepOrder, step10Artifact, isExtracting, initialMessages?.length, step10MessageCount, handleStep10Extract]);
+
   // Reset dialog state
   const [showResetDialog, setShowResetDialog] = React.useState(false);
   const [isResetting, setIsResetting] = React.useState(false);
@@ -126,6 +207,9 @@ export function StepContainer({
       // Reset local state
       setArtifactConfirmed(false);
       setLocalMessages([]);
+      // Clear Step 10 extraction state
+      setStep10Artifact(null);
+      hasAutoExtracted.current = false;
       // Clear canvas/whiteboard state
       setPostIts([]);
       setDrawingNodes([]);
@@ -146,18 +230,49 @@ export function StepContainer({
     }
   }, [workshopId, stepOrder, sessionId, router, setPostIts, setDrawingNodes, setCrazy8sSlots, setMindMapState, setConceptCards, setGridColumns, setSelectedSlotIds, setBrainRewritingMatrices]);
 
-  // Step 10: render synthesis summary + Build Pack deliverable cards
+  // Step 10: render Build Pack deliverable cards + extraction status
+  // Synthesis summary (narrative, journey, confidence, next steps) lives on the results page
   const renderStep10Content = () => (
     <div className="flex h-full flex-col overflow-y-auto p-6">
-      {initialArtifact ? (
-        <SynthesisSummaryView artifact={initialArtifact} />
-      ) : (
-        <div className="flex h-full items-center justify-center rounded-lg border bg-card p-12">
-          <p className="text-sm text-muted-foreground">
-            Your synthesis summary and Build Pack deliverables will appear here after AI completes the review
-          </p>
-        </div>
-      )}
+      <div className="space-y-8">
+        {/* Extraction status banner — non-blocking */}
+        {isExtracting && (
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              Generating synthesis summary...
+            </p>
+          </div>
+        )}
+        {extractionError && (
+          <div className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+            <p className="text-sm text-muted-foreground">
+              Summary generation failed — you can still generate your Build Pack below.
+            </p>
+            <button
+              onClick={() => {
+                hasAutoExtracted.current = false;
+                setExtractionError(null);
+                handleStep10Extract();
+              }}
+              className="shrink-0 rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Build Pack deliverables — always available */}
+        <SynthesisBuildPackSection
+          workshopId={workshopId}
+          onGeneratePrd={() => setShowPrdDialog(true)}
+        />
+      </div>
+      <PrdViewerDialog
+        open={showPrdDialog}
+        onOpenChange={setShowPrdDialog}
+        workshopId={workshopId}
+      />
     </div>
   );
 
@@ -208,6 +323,7 @@ export function StepContainer({
           sessionId={sessionId}
           workshopId={workshopId}
           initialMessages={localMessages}
+          onMessageCountChange={stepOrder === 10 ? setStep10MessageCount : undefined}
         />
       </div>
     </div>
