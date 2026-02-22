@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -53,6 +53,10 @@ import { ClusterHullsOverlay } from './cluster-hulls-overlay';
 import { SelectionToolbar } from './selection-toolbar';
 import { ClusterDialog } from '@/components/dialogs/cluster-dialog';
 import { DedupDialog } from '@/components/dialogs/dedup-dialog';
+import { CanvasGuide } from './canvas-guide';
+import { GuideNode } from './guide-node';
+import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
+import type { StepCanvasSettingsData } from '@/lib/canvas/step-canvas-settings-types';
 // JourneyMapSkeleton removed — skeleton placeholders are now integrated into GridOverlay
 
 // Define node types OUTSIDE component for stable reference
@@ -63,6 +67,7 @@ const nodeTypes = {
   conceptCard: ConceptCardNode,
   personaTemplate: PersonaTemplateNode,
   hmwCard: HmwCardNode,
+  guideNode: GuideNode,
 };
 
 // Define edge types OUTSIDE component for stable reference
@@ -74,9 +79,17 @@ export interface ReactFlowCanvasProps {
   sessionId: string;
   stepId: string;
   workshopId: string;
+  canvasGuides?: CanvasGuideData[];
+  defaultViewportSettings?: StepCanvasSettingsData | null;
+  isAdmin?: boolean;
+  isAdminEditing?: boolean;
+  onEditGuide?: (guide: CanvasGuideData, position: { x: number; y: number }) => void;
+  onAddGuide?: (position: { x: number; y: number }) => void;
+  onGuidePositionUpdate?: (guideId: string, x: number, y: number) => void;
+  canvasRef?: React.Ref<{ getViewport: () => { x: number; y: number; zoom: number } }>;
 }
 
-function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvasProps) {
+function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: canvasGuidesProp, defaultViewportSettings, isAdmin, isAdminEditing, onEditGuide, onAddGuide, onGuidePositionUpdate, canvasRef }: ReactFlowCanvasProps) {
   // Store access
   const postIts = useCanvasStore((s) => s.postIts);
   const addPostIt = useCanvasStore((s) => s.addPostIt);
@@ -129,11 +142,31 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   // Step-specific canvas configuration
   const stepConfig = getStepCanvasConfig(stepId);
 
+  // Whether canvas has any user content
+  const canvasHasItems = postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0 || conceptCards.length > 0;
+
+  // Canvas guide objects (instructional stickers/hints on the canvas)
+  const stepGuides = canvasGuidesProp || [];
+  const pinnedGuides = useMemo(() => stepGuides.filter(g => g.placementMode !== 'on-canvas'), [stepGuides]);
+  const onCanvasGuides = useMemo(() => stepGuides.filter(g => g.placementMode === 'on-canvas'), [stepGuides]);
+  const [dismissedGuideIds, setDismissedGuideIds] = useState<Set<string>>(new Set());
+  const [exitingGuideIds, setExitingGuideIds] = useState<Set<string>>(new Set());
+
   // Editing state - track which node is being edited
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
 
   // Dragging state - track which node is being dragged for visual feedback
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+
+  // Clear stale guide livePositions when guide data updates (e.g. from edit popover)
+  // so that prop positions take precedence over cached drag positions.
+  useEffect(() => {
+    for (const key of Object.keys(livePositions.current)) {
+      if (key.startsWith('guide-') && draggingNodeId !== key) {
+        delete livePositions.current[key];
+      }
+    }
+  }, [onCanvasGuides, draggingNodeId]);
 
   // Z-index management - bring selected/dragged/new nodes to front
   const [nodeZIndices, setNodeZIndices] = useState<Record<string, number>>({});
@@ -143,7 +176,12 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const [activeTool, setActiveTool] = useState<'pointer' | 'hand'>('pointer');
 
   // ReactFlow hooks
-  const { screenToFlowPosition, fitView, zoomIn, zoomOut, setViewport } = useReactFlow();
+  const { screenToFlowPosition, fitView, zoomIn, zoomOut, setViewport, getViewport } = useReactFlow();
+
+  // Expose getViewport to parent via canvasRef for "Save Default View"
+  useImperativeHandle(canvasRef, () => ({
+    getViewport: () => getViewport(),
+  }), [getViewport]);
 
   // Track if we've done initial fitView
   const hasFitView = useRef(false);
@@ -159,6 +197,36 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   const bringToFront = useCallback((nodeId: string) => {
     zIndexCounter.current += 1;
     setNodeZIndices(prev => ({ ...prev, [nodeId]: zIndexCounter.current }));
+  }, []);
+
+  // Dismiss auto-dismiss guides (called on first canvas interaction)
+  const dismissAutoGuides = useCallback(() => {
+    const autoIds = stepGuides
+      .filter(g => g.dismissBehavior === 'auto-dismiss' && !dismissedGuideIds.has(g.id))
+      .map(g => g.id);
+    if (autoIds.length === 0) return;
+    setExitingGuideIds(prev => new Set([...prev, ...autoIds]));
+    setTimeout(() => {
+      setDismissedGuideIds(prev => new Set([...prev, ...autoIds]));
+      setExitingGuideIds(prev => {
+        const next = new Set(prev);
+        autoIds.forEach(id => next.delete(id));
+        return next;
+      });
+    }, 200);
+  }, [stepGuides, dismissedGuideIds]);
+
+  // Dismiss a single guide (for hover-X)
+  const dismissGuide = useCallback((id: string) => {
+    setExitingGuideIds(prev => new Set([...prev, id]));
+    setTimeout(() => {
+      setDismissedGuideIds(prev => new Set([...prev, id]));
+      setExitingGuideIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 200);
   }, []);
 
   // Live positions during drag — REFS to avoid re-renders during manipulation.
@@ -234,6 +302,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
   // Dedup dialog state
   const [dedupDialogOpen, setDedupDialogOpen] = useState(false);
+
   const [dedupGroups, setDedupGroups] = useState<Array<{ text: string; count: number; ids: string[] }>>([]);
 
   // Track whether initial gridColumns were provided (from saved state)
@@ -679,11 +748,31 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       style: { width: 700 },
     }));
 
-    return [...postItReactFlowNodes, ...drawingReactFlowNodes, ...conceptCardReactFlowNodes, ...personaTemplateReactFlowNodes, ...hmwCardReactFlowNodes];
+    // Add on-canvas guide nodes
+    const guideReactFlowNodes: Node[] = onCanvasGuides
+      .filter(g => !dismissedGuideIds.has(g.id) && (!g.showOnlyWhenEmpty || !canvasHasItems))
+      .map(g => ({
+        id: `guide-${g.id}`,
+        type: 'guideNode' as const,
+        position: livePositions.current[`guide-${g.id}`] || { x: g.canvasX ?? 0, y: g.canvasY ?? 0 },
+        zIndex: g.layer === 'background' ? 2 : 25,
+        draggable: !!isAdmin && !!isAdminEditing,
+        selectable: !!isAdmin && !!isAdminEditing,
+        data: {
+          ...g,
+          isAdmin,
+          isAdminEditing,
+          onDismiss: dismissGuide,
+          onEdit: onEditGuide,
+          isExiting: exitingGuideIds.has(g.id),
+        },
+      }));
+
+    return [...postItReactFlowNodes, ...drawingReactFlowNodes, ...conceptCardReactFlowNodes, ...personaTemplateReactFlowNodes, ...hmwCardReactFlowNodes, ...guideReactFlowNodes];
   // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
   // read inside the memo body as a safety net; they must NOT be deps or every
   // mouse-move during drag would recompute and cause flickering.
-  }, [postIts, drawingNodes, conceptCards, personaTemplates, hmwCards, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange, handlePersonaFieldChange, handleGenerateAvatar, handleHmwFieldChange, handleHmwChipSelect]);
+  }, [postIts, drawingNodes, conceptCards, personaTemplates, hmwCards, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, onCanvasGuides, dismissedGuideIds, exitingGuideIds, canvasHasItems, isAdmin, isAdminEditing, onEditGuide, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange, handlePersonaFieldChange, handleGenerateAvatar, handleHmwFieldChange, handleHmwChipSelect, dismissGuide]);
 
   // Create post-it at position and set as editing
   const createPostItAtPosition = useCallback(
@@ -836,7 +925,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         quadrant,
       });
     }
-  }, [postIts, screenToFlowPosition, snapToGrid, createAndEditPostIt, stepConfig, dynamicGridConfig]);
+    dismissAutoGuides();
+  }, [postIts, screenToFlowPosition, snapToGrid, createAndEditPostIt, stepConfig, dynamicGridConfig, dismissAutoGuides]);
 
   // Handle toolbar emotion post-it creation (with emoji + color preset)
   const handleEmotionAdd = useCallback((emoji: string, color: PostItColor) => {
@@ -884,7 +974,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         : undefined;
       createAndEditPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, quadrant });
     }
-  }, [postIts, screenToFlowPosition, snapToGrid, createAndEditPostIt, stepConfig, dynamicGridConfig]);
+    dismissAutoGuides();
+  }, [postIts, screenToFlowPosition, snapToGrid, createAndEditPostIt, stepConfig, dynamicGridConfig, dismissAutoGuides]);
 
   // Handle theme sort — reorganize post-its by cluster on rings
   const handleThemeSort = useCallback(() => {
@@ -1045,10 +1136,23 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   // Handle node drag start — bring dragged node to top of stack
   const handleNodeDragStart = useCallback(
     (_event: React.MouseEvent, node: Node) => {
+      if (node.id.startsWith('guide-')) {
+        console.log('[Guide DnD] dragStart', { id: node.id, position: node.position, draggable: node.draggable });
+      }
+      // Capture the node's current position in livePositions BEFORE state
+      // updates trigger useMemo recomputation. Without this, guide nodes
+      // (and any node whose position comes from props rather than a store)
+      // snap back to their original position because livePositions isn't
+      // populated until onNodesChange fires — which happens AFTER the
+      // re-render caused by bringToFront/setDraggingNodeId.
+      if (node.position) {
+        livePositions.current[node.id] = node.position;
+      }
       setDraggingNodeId(node.id);
       bringToFront(node.id);
+      dismissAutoGuides();
     },
-    [bringToFront]
+    [bringToFront, dismissAutoGuides]
   );
 
   // Handle all node changes (selection, position, removal)
@@ -1087,8 +1191,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         newlySelected.forEach(id => bringToFront(id));
       }
 
-      // Handle remove changes (Delete/Backspace key)
-      const removeChanges = changes.filter(c => c.type === 'remove');
+      // Handle remove changes (Delete/Backspace key) — skip guide nodes
+      const removeChanges = changes.filter((c): c is NodeChange & { type: 'remove'; id: string } =>
+        c.type === 'remove' && 'id' in c && !String(c.id).startsWith('guide-')
+      );
       if (removeChanges.length > 0) {
         const removedIds = removeChanges.map(c => c.id);
         removedIds.forEach(id => {
@@ -1127,6 +1233,31 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
 
           // Clear dragging state
           setDraggingNodeId(null);
+
+          // Check if this is a guide node (admin drag-to-reposition)
+          if (change.id.startsWith('guide-')) {
+            const guideId = change.id.replace('guide-', '');
+            const snappedPosition = snapToGrid(change.position);
+            console.log('[Guide DnD] dragEnd', { guideId, from: change.position, snapped: snappedPosition, hasCallback: !!onGuidePositionUpdate });
+            // Retain snapped position in livePositions so the node doesn't
+            // snap back to old prop values before parent state updates.
+            livePositions.current[change.id] = snappedPosition;
+            // Update parent state (optimistic) + persist via debounced PATCH
+            if (onGuidePositionUpdate) {
+              onGuidePositionUpdate(guideId, Math.round(snappedPosition.x), Math.round(snappedPosition.y));
+            } else {
+              // Fallback: direct PATCH when no callback provided
+              fetch(`/api/admin/canvas-guides/${guideId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  canvasX: Math.round(snappedPosition.x),
+                  canvasY: Math.round(snappedPosition.y),
+                }),
+              }).catch(console.error);
+            }
+            return;
+          }
 
           // Check if this is a drawing node
           const drawingNode = drawingNodes.find((dn) => dn.id === change.id);
@@ -1293,7 +1424,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
       });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
-    [nodes, postIts, drawingNodes, conceptCards, personaTemplates, hmwCards, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, updatePersonaTemplate, updateHmwCard, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts, bringToFront, removeFromCluster, setCluster, rearrangeCluster]
+    [nodes, postIts, drawingNodes, conceptCards, personaTemplates, hmwCards, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, updatePersonaTemplate, updateHmwCard, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts, bringToFront, removeFromCluster, setCluster, rearrangeCluster, onGuidePositionUpdate]
   );
 
   // Handle node drag (real-time cell highlighting)
@@ -1463,7 +1594,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   // Close context menu on viewport move
   const handleMoveStart = useCallback(() => {
     setContextMenu(null);
-  }, []);
+    dismissAutoGuides();
+  }, [dismissAutoGuides]);
 
   // Handle node double-click (enter edit mode for postIts, or re-edit for drawings)
   const handleNodeDoubleClick = useCallback(
@@ -1505,6 +1637,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     (event: React.MouseEvent) => {
       // Close context menu if open
       setContextMenu(null);
+      dismissAutoGuides();
 
       const now = Date.now();
       const timeSinceLastClick = now - lastPaneClickTime.current;
@@ -1519,11 +1652,33 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         lastPaneClickTime.current = now;
       }
     },
-    [createPostItAtPosition]
+    [createPostItAtPosition, dismissAutoGuides]
   );
 
   // Handle ReactFlow initialization (for empty quadrant/grid canvas centering)
   const handleInit = useCallback((instance: ReactFlowInstance) => {
+    // Admin-configured default viewport takes priority when canvas is empty
+    if (defaultViewportSettings && postIts.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0 && conceptCards.length === 0) {
+      const container = document.querySelector('.react-flow');
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        if (defaultViewportSettings.viewportMode === 'center-offset') {
+          instance.setViewport({
+            x: rect.width / 2 + defaultViewportSettings.defaultX,
+            y: rect.height / 2 + defaultViewportSettings.defaultY,
+            zoom: defaultViewportSettings.defaultZoom,
+          });
+        } else {
+          instance.setViewport({
+            x: defaultViewportSettings.defaultX,
+            y: defaultViewportSettings.defaultY,
+            zoom: defaultViewportSettings.defaultZoom,
+          });
+        }
+        return;
+      }
+    }
+
     if (stepConfig.hasRings && postIts.length === 0) {
       // Center viewport on (0,0) for ring layout
       const container = document.querySelector('.react-flow');
@@ -1575,7 +1730,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         });
       }
     }
-  }, [stepConfig, dynamicGridConfig, postIts.length]);
+  }, [stepConfig, dynamicGridConfig, postIts.length, personaTemplates.length, hmwCards.length, conceptCards.length, defaultViewportSettings]);
 
   // Auto-fit view on mount if nodes exist
   useEffect(() => {
@@ -1622,6 +1777,15 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
     setSelectedPostItIds(selectedNodeIds);
   }, [selectedNodeIds, setSelectedPostItIds]);
 
+  // Canvas guide objects — filter visible pinned guides
+  const visiblePinnedGuides = useMemo(() => {
+    return pinnedGuides.filter(g => {
+      if (dismissedGuideIds.has(g.id)) return false;
+      if (g.showOnlyWhenEmpty && canvasHasItems) return false;
+      return true;
+    });
+  }, [pinnedGuides, dismissedGuideIds, canvasHasItems]);
+
   return (
     <div ref={canvasContainerRef} className="w-full h-full relative">
       <ReactFlow
@@ -1655,8 +1819,14 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         // Multi-select (CANV-06)
         selectionKeyCode="Shift"
         multiSelectionKeyCode={null}
-        selectionOnDrag={activeTool === 'pointer'}
+        // Disable selection-on-drag when admin is editing guides so the Pane's
+        // always-active selection mode doesn't interfere with node dragging.
+        // selectionOnDrag + panOnDrag=false makes isSelecting=true ALWAYS,
+        // which can block d3-drag's mousedown handler on nodes.
+        selectionOnDrag={activeTool === 'pointer' && !isAdminEditing}
         selectionMode={SelectionMode.Partial}
+        // v12 default is 1px — set to 0 to eliminate drag dead-zone
+        nodeDragThreshold={0}
         // Delete (CANV-03)
         deleteKeyCode={editingNodeId ? null : ["Backspace", "Delete"]}
         onNodesDelete={handleNodesDelete}
@@ -1855,11 +2025,19 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
         />
       )}
 
-      {/* Empty state hint */}
-      {/* Empty state hint (grid steps use skeleton placeholders in GridOverlay instead) */}
-      {postIts.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0 && !stepConfig.hasGrid && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <p className="text-muted-foreground text-lg">Double-click to add a post-it</p>
+      {/* Canvas guide objects — pinned guides (viewport-fixed) */}
+      {visiblePinnedGuides.length > 0 && !stepConfig.hasGrid && (
+        <div className="absolute inset-0 pointer-events-none z-[5]">
+          {visiblePinnedGuides.map(guide => (
+            <CanvasGuide
+              key={guide.id}
+              guide={guide}
+              onDismiss={dismissGuide}
+              isExiting={exitingGuideIds.has(guide.id)}
+              isAdminEditing={isAdminEditing}
+              onEdit={onEditGuide}
+            />
+          ))}
         </div>
       )}
 
@@ -1888,10 +2066,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId }: ReactFlowCanvas
   );
 }
 
-export function ReactFlowCanvas({ sessionId, stepId, workshopId }: ReactFlowCanvasProps) {
+export function ReactFlowCanvas({ sessionId, stepId, workshopId, canvasGuides, defaultViewportSettings, isAdmin, isAdminEditing, onEditGuide, onAddGuide, onGuidePositionUpdate, canvasRef }: ReactFlowCanvasProps) {
   return (
     <ReactFlowProvider>
-      <ReactFlowCanvasInner sessionId={sessionId} stepId={stepId} workshopId={workshopId} />
+      <ReactFlowCanvasInner sessionId={sessionId} stepId={stepId} workshopId={workshopId} canvasGuides={canvasGuides} defaultViewportSettings={defaultViewportSettings} isAdmin={isAdmin} isAdminEditing={isAdminEditing} onEditGuide={onEditGuide} onAddGuide={onAddGuide} onGuidePositionUpdate={onGuidePositionUpdate} canvasRef={canvasRef} />
     </ReactFlowProvider>
   );
 }

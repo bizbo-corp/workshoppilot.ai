@@ -8,6 +8,9 @@ import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
 import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
 import { loadCanvasState } from "@/actions/canvas-actions";
+import { loadCanvasGuides } from "@/actions/canvas-guide-actions";
+import { loadStepCanvasSettings } from "@/actions/step-canvas-settings-actions";
+import { getDefaultStepCanvasGuides } from "@/lib/canvas/canvas-guide-config";
 import type { PostIt, GridColumn, DrawingNode, MindMapNodeState, MindMapEdgeState } from "@/stores/canvas-store";
 import { type ConceptCardData, createDefaultConceptCard } from "@/lib/canvas/concept-card-types";
 import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
@@ -243,6 +246,22 @@ export default async function StepPage({ params }: StepPageProps) {
     initialHmwCards = [skeletonCard];
   }
 
+  // Load Step 9 billboard hero data for Step 10 (validate)
+  let billboardHero: { headline: string; subheadline: string; cta: string } | undefined;
+  if (step.id === 'validate') {
+    const conceptCanvas = await loadCanvasState(session.workshop.id, 'concept');
+    if (conceptCanvas?.conceptCards && conceptCanvas.conceptCards.length > 0) {
+      const sortedCards = [...conceptCanvas.conceptCards]
+        .sort((a, b) => (a.cardIndex ?? 0) - (b.cardIndex ?? 0));
+      const filledCard = sortedCards.find(
+        (c) => c.billboardHero?.headline
+      ) as ConceptCardData | undefined;
+      if (filledCard?.billboardHero) {
+        billboardHero = filledCard.billboardHero;
+      }
+    }
+  }
+
   // Load Step 8 data for Step 9 (concept)
   let step8SelectedSlotIds: string[] | undefined;
   let step8Crazy8sSlots: Array<{ slotId: string; title: string; imageUrl?: string }> | undefined;
@@ -317,6 +336,15 @@ export default async function StepPage({ params }: StepPageProps) {
     }
   }
 
+  // Load canvas guides from DB, falling back to hardcoded defaults
+  let canvasGuides = await loadCanvasGuides(step.id);
+  if (canvasGuides.length === 0) {
+    canvasGuides = getDefaultStepCanvasGuides(step.id);
+  }
+
+  // Load admin-configured default viewport settings for this step
+  const canvasSettings = await loadStepCanvasSettings(step.id);
+
   return (
     <div className="h-full">
       <CanvasStoreProvider
@@ -343,6 +371,9 @@ export default async function StepPage({ params }: StepPageProps) {
           step8SelectedSlotIds={step8SelectedSlotIds}
           step8Crazy8sSlots={step8Crazy8sSlots}
           isAdmin={userIsAdmin}
+          billboardHero={billboardHero}
+          canvasGuides={canvasGuides}
+          canvasSettings={canvasSettings}
         />
       </CanvasStoreProvider>
     </div>

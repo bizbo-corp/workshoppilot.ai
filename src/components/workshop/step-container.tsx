@@ -15,12 +15,17 @@ import { IdeationSubStepContainer } from './ideation-sub-step-container';
 import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical, Loader2 } from 'lucide-react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { resetStep, updateStepStatus } from '@/actions/workshop-actions';
-import { getStepByOrder } from '@/lib/workshop/step-metadata';
+import { getStepByOrder, STEP_CONFIRM_LABELS, STEP_CONFIRM_MIN_ITEMS } from '@/lib/workshop/step-metadata';
+import { fireConfetti } from '@/lib/utils/confetti';
 import { cn } from '@/lib/utils';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { ConceptCanvasOverlay } from './concept-canvas-overlay';
+import { GuideEditPopover } from '@/components/canvas/guide-edit-popover';
+import { useAdminGuides } from '@/hooks/use-admin-guides';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
+import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
+import type { StepCanvasSettingsData } from '@/lib/canvas/step-canvas-settings-types';
 
 const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe', 'concept'];
 const CANVAS_ONLY_STEPS = ['stakeholder-mapping', 'sense-making', 'concept'];
@@ -37,6 +42,8 @@ interface StepContainerProps {
   step8Crazy8sSlots?: Array<{ slotId: string; title: string; imageUrl?: string }>;
   isAdmin?: boolean;
   billboardHero?: { headline: string; subheadline: string; cta: string };
+  canvasGuides?: CanvasGuideData[];
+  canvasSettings?: StepCanvasSettingsData | null;
 }
 
 export function StepContainer({
@@ -51,6 +58,8 @@ export function StepContainer({
   step8Crazy8sSlots,
   isAdmin,
   billboardHero,
+  canvasGuides,
+  canvasSettings,
 }: StepContainerProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
@@ -85,6 +94,21 @@ export function StepContainer({
   // For canvas steps, activity is "confirmed" when post-its exist (no extraction needed)
   const effectiveConfirmed = isCanvasStep ? canvasHasContent : artifactConfirmed;
 
+  // In-chat accept button: show when step has a confirm label, canvas has enough content, and user hasn't clicked Accept yet
+  const confirmLabel = step ? STEP_CONFIRM_LABELS[step.id] : undefined;
+  const minItems = step ? (STEP_CONFIRM_MIN_ITEMS[step.id] ?? 1) : 1;
+  const canvasItemCount = postIts.length + conceptCards.length + (hmwCardComplete ? 1 : 0);
+  const showConfirm = !!confirmLabel && !artifactConfirmed && canvasHasContent && canvasItemCount >= minItems;
+
+  // Fire confetti when user clicks Accept (not on auto-confirm from canvas content)
+  const prevConfirmed = React.useRef(artifactConfirmed);
+  React.useEffect(() => {
+    if (artifactConfirmed && !prevConfirmed.current) {
+      fireConfetti();
+    }
+    prevConfirmed.current = artifactConfirmed;
+  }, [artifactConfirmed]);
+
   // Local messages state — allows clearing before ChatPanel re-mounts on reset
   const [localMessages, setLocalMessages] = React.useState(initialMessages);
 
@@ -92,6 +116,95 @@ export function StepContainer({
   React.useEffect(() => {
     setLocalMessages(initialMessages);
   }, [stepOrder]);
+
+  // Admin guide editing state
+  const [isGuideEditing, setIsGuideEditing] = React.useState(false);
+  const [editingPopover, setEditingPopover] = React.useState<{
+    guide: CanvasGuideData;
+    position: { x: number; y: number };
+  } | null>(null);
+
+  // Local guide state — initialized from server prop, synced when editing toggles off.
+  // Without this, toggling guides off reverts to stale server-loaded data.
+  const [localCanvasGuides, setLocalCanvasGuides] = React.useState(canvasGuides);
+
+  // Lift useAdminGuides hook for live preview + popover operations
+  const adminGuides = useAdminGuides(step?.id || '');
+
+  const handleToggleGuideEditor = React.useCallback(() => {
+    setIsGuideEditing(prev => {
+      const next = !prev;
+      if (!next) {
+        // Turning off editing — flush pending API writes and sync local state
+        adminGuides.flushAll();
+        setLocalCanvasGuides(adminGuides.guides);
+        setEditingPopover(null);
+      }
+      return next;
+    });
+  }, [adminGuides]);
+
+  const handleEditGuide = React.useCallback((guide: CanvasGuideData, position: { x: number; y: number }) => {
+    setEditingPopover({ guide, position });
+  }, []);
+
+  const handleAddGuide = React.useCallback(async (position: { x: number; y: number }) => {
+    const created = await adminGuides.createGuide();
+    if (created) {
+      setEditingPopover({ guide: created, position });
+    }
+  }, [adminGuides]);
+
+  const handleUpdateGuide = React.useCallback((guideId: string, updates: Partial<CanvasGuideData>) => {
+    adminGuides.updateGuide(guideId, updates);
+    // Update the popover's guide state for live preview within the popover
+    setEditingPopover(prev =>
+      prev && prev.guide.id === guideId
+        ? { ...prev, guide: { ...prev.guide, ...updates } }
+        : prev
+    );
+  }, [adminGuides]);
+
+  const handleDeleteGuide = React.useCallback(async (guideId: string) => {
+    await adminGuides.deleteGuide(guideId);
+    setEditingPopover(null);
+  }, [adminGuides]);
+
+  // Canvas ref for reading viewport (Save Default View)
+  const canvasRef = React.useRef<{ getViewport: () => { x: number; y: number; zoom: number } }>(null);
+
+  // Handle "Save Default View" — reads current viewport, converts to center-offset, saves via API
+  const handleSaveDefaultView = React.useCallback(async () => {
+    if (!canvasRef.current || !step) return;
+    const vp = canvasRef.current.getViewport();
+    // Convert to center-offset: subtract container center to get offset values
+    const container = document.querySelector('.react-flow');
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const offsetX = Math.round(vp.x - rect.width / 2);
+    const offsetY = Math.round(vp.y - rect.height / 2);
+
+    try {
+      await fetch('/api/admin/canvas-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stepId: step.id,
+          defaultZoom: Math.round(vp.zoom * 100) / 100,
+          defaultX: offsetX,
+          defaultY: offsetY,
+          viewportMode: 'center-offset',
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to save default view:', err);
+    }
+  }, [step]);
+
+  // Handle guide position updates from canvas drag — updates local state + debounced PATCH
+  const handleGuidePositionUpdate = React.useCallback((guideId: string, x: number, y: number) => {
+    adminGuides.updateGuide(guideId, { canvasX: x, canvasY: y });
+  }, [adminGuides]);
 
   // PRD viewer dialog state
   const [showPrdDialog, setShowPrdDialog] = React.useState(false);
@@ -324,6 +437,10 @@ export function StepContainer({
           workshopId={workshopId}
           initialMessages={localMessages}
           onMessageCountChange={stepOrder === 10 ? setStep10MessageCount : undefined}
+          showStepConfirm={showConfirm}
+          onStepConfirm={() => setArtifactConfirmed(true)}
+          onStepRevise={() => setArtifactConfirmed(false)}
+          stepConfirmLabel={confirmLabel}
         />
       </div>
     </div>
@@ -347,6 +464,12 @@ export function StepContainer({
                   sessionId={sessionId}
                   stepId={step.id}
                   workshopId={workshopId}
+                  canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
+                  isAdmin={isAdmin}
+                  isAdminEditing={isGuideEditing}
+                  onEditGuide={handleEditGuide}
+                  onAddGuide={handleAddGuide}
+                  onGuidePositionUpdate={handleGuidePositionUpdate}
                 />
                 {step.id === 'concept' && (
                   <ConceptCanvasOverlay
@@ -364,6 +487,12 @@ export function StepContainer({
                 stepOrder={stepOrder}
                 sessionId={sessionId}
                 workshopId={workshopId}
+                canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
+                isAdmin={isAdmin}
+                isAdminEditing={isGuideEditing}
+                onEditGuide={handleEditGuide}
+                onAddGuide={handleAddGuide}
+                onGuidePositionUpdate={handleGuidePositionUpdate}
               />
             )}
           </div>
@@ -381,6 +510,10 @@ export function StepContainer({
           stepStatus={stepStatus}
           isAdmin={isAdmin}
           onReset={() => setShowResetDialog(true)}
+          onToggleGuideEditor={isCanvasStep ? handleToggleGuideEditor : undefined}
+          isGuideEditing={isGuideEditing}
+          onAddGuide={isGuideEditing ? handleAddGuide : undefined}
+          onSaveDefaultView={isGuideEditing ? handleSaveDefaultView : undefined}
         />
         <ResetStepDialog
           open={showResetDialog}
@@ -389,6 +522,18 @@ export function StepContainer({
           isResetting={isResetting}
           stepName={getStepByOrder(stepOrder)?.name || `Step ${stepOrder}`}
         />
+        {/* Admin guide popover */}
+        {isAdmin && editingPopover && (
+          <GuideEditPopover
+            guide={editingPopover.guide}
+            position={editingPopover.position}
+            onUpdate={handleUpdateGuide}
+            onDelete={handleDeleteGuide}
+            onSave={adminGuides.flushAll}
+            hasPendingChanges={adminGuides.hasPendingChanges}
+            onClose={() => setEditingPopover(null)}
+          />
+        )}
       </div>
     );
   }
@@ -438,6 +583,14 @@ export function StepContainer({
                       sessionId={sessionId}
                       stepId={step.id}
                       workshopId={workshopId}
+                      canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
+                      defaultViewportSettings={canvasSettings}
+                      isAdmin={isAdmin}
+                      isAdminEditing={isGuideEditing}
+                      onEditGuide={handleEditGuide}
+                      onAddGuide={handleAddGuide}
+                      onGuidePositionUpdate={handleGuidePositionUpdate}
+                      canvasRef={canvasRef}
                     />
                     {step.id === 'concept' && (
                       <ConceptCanvasOverlay
@@ -467,6 +620,12 @@ export function StepContainer({
                     sessionId={sessionId}
                     workshopId={workshopId}
                     onCollapse={() => setCanvasCollapsed(true)}
+                    canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
+                    isAdmin={isAdmin}
+                    isAdminEditing={isGuideEditing}
+                    onEditGuide={handleEditGuide}
+                    onAddGuide={handleAddGuide}
+                    onGuidePositionUpdate={handleGuidePositionUpdate}
                   />
                 )}
               </Panel>
@@ -496,6 +655,12 @@ export function StepContainer({
                     sessionId={sessionId}
                     stepId={step.id}
                     workshopId={workshopId}
+                    canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
+                    isAdmin={isAdmin}
+                    isAdminEditing={isGuideEditing}
+                    onEditGuide={handleEditGuide}
+                    onAddGuide={handleAddGuide}
+                    onGuidePositionUpdate={handleGuidePositionUpdate}
                   />
                   {step.id === 'concept' && (
                     <ConceptCanvasOverlay
@@ -525,6 +690,12 @@ export function StepContainer({
                   sessionId={sessionId}
                   workshopId={workshopId}
                   onCollapse={() => setCanvasCollapsed(true)}
+                  canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
+                  isAdmin={isAdmin}
+                  isAdminEditing={isGuideEditing}
+                  onEditGuide={handleEditGuide}
+                  onAddGuide={handleAddGuide}
+                  onGuidePositionUpdate={handleGuidePositionUpdate}
                 />
               )}
             </div>
@@ -552,6 +723,10 @@ export function StepContainer({
         stepStatus={stepStatus}
         isAdmin={isAdmin}
         onReset={() => setShowResetDialog(true)}
+        onToggleGuideEditor={isCanvasStep ? handleToggleGuideEditor : undefined}
+        isGuideEditing={isGuideEditing}
+        onAddGuide={isGuideEditing ? handleAddGuide : undefined}
+        onSaveDefaultView={isGuideEditing ? handleSaveDefaultView : undefined}
       />
       <ResetStepDialog
         open={showResetDialog}
@@ -560,6 +735,18 @@ export function StepContainer({
         isResetting={isResetting}
         stepName={getStepByOrder(stepOrder)?.name || `Step ${stepOrder}`}
       />
+      {/* Admin guide popover */}
+      {isAdmin && editingPopover && (
+        <GuideEditPopover
+          guide={editingPopover.guide}
+          position={editingPopover.position}
+          onUpdate={handleUpdateGuide}
+          onDelete={handleDeleteGuide}
+          onSave={adminGuides.flushAll}
+          hasPendingChanges={adminGuides.hasPendingChanges}
+          onClose={() => setEditingPopover(null)}
+        />
+      )}
     </div>
   );
 }
