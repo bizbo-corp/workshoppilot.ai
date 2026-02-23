@@ -2,6 +2,8 @@
 
 import { useCallback } from 'react';
 import { X, Lightbulb, StickyNote, Pencil } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import { cn } from '@/lib/utils';
 import { darkenColor } from '@/lib/canvas/color-utils';
 import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
@@ -77,7 +79,7 @@ export function CanvasGuide({ guide, onDismiss, isExiting, isAdminEditing, onEdi
           ? 'animate-out fade-out-0 zoom-out-95 duration-200 fill-mode-forwards'
           : 'animate-in fade-in-0 zoom-in-95 duration-300',
         // Shared shape per variant
-        guide.variant === 'sticker' && 'rounded-sm px-4 py-3 shadow-md rotate-[-1deg] border-b-4',
+        guide.variant === 'sticker' && 'rounded-sm px-4 py-3 shadow-md border-b-4',
         guide.variant === 'note' && 'rounded-xl px-4 py-3 border',
         guide.variant === 'hint' && [
           'rounded-lg px-4 py-2.5 backdrop-blur-sm',
@@ -89,8 +91,10 @@ export function CanvasGuide({ guide, onDismiss, isExiting, isAdminEditing, onEdi
       style={(!isHint && !isImage) ? {
         backgroundColor: baseBg,
         color: textColor,
-        borderBottomColor: guide.variant === 'sticker' ? borderBottomColor : undefined,
-        borderColor: guide.variant === 'note' ? borderBottomColor : undefined,
+        borderTopColor: guide.variant === 'note' ? borderBottomColor : undefined,
+        borderRightColor: guide.variant === 'note' ? borderBottomColor : undefined,
+        borderBottomColor: (guide.variant === 'sticker' || guide.variant === 'note') ? borderBottomColor : undefined,
+        borderLeftColor: guide.variant === 'note' ? borderBottomColor : undefined,
       } : undefined}
     >
       {/* Admin edit button — shown when guide editing is active */}
@@ -154,14 +158,12 @@ export function CanvasGuide({ guide, onDismiss, isExiting, isAdminEditing, onEdi
                 {guide.title}
               </p>
             )}
-            <p
-              className={cn(
-                'leading-snug whitespace-pre-line',
-                guide.variant === 'hint' ? 'text-sm' : 'text-xs',
-              )}
-            >
-              {guide.body}
-            </p>
+            <div className={cn(
+              'prose max-w-none [&_p]:m-0 [&_p]:leading-snug [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0',
+              guide.variant === 'hint' ? 'prose-sm dark:prose-invert' : 'prose-xs',
+            )}>
+              <ReactMarkdown rehypePlugins={[rehypeRaw]}>{guide.body}</ReactMarkdown>
+            </div>
           </div>
         </div>
       )}

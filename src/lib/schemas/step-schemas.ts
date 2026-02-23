@@ -486,9 +486,9 @@ export const validateArtifactSchema = z.object({
           .describe('2-3 most important outputs from this step'),
       })
     )
-    .min(9)
+    .min(3)
     .max(10)
-    .describe('Structured summary of key outputs from each step of the journey'),
+    .describe('Structured summary of key outputs from each step of the journey (aim for all 10 steps)'),
   confidenceAssessment: z
     .object({
       score: z

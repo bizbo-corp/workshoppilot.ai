@@ -1,8 +1,10 @@
 'use client';
 
 import { memo, useCallback } from 'react';
-import { type NodeProps } from '@xyflow/react';
+import { type NodeProps, NodeResizer } from '@xyflow/react';
 import { X, Lightbulb, StickyNote, Pencil, GripVertical } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import { cn } from '@/lib/utils';
 import { darkenColor } from '@/lib/canvas/color-utils';
 import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
@@ -60,14 +62,19 @@ export interface GuideNodeData extends CanvasGuideData {
   isAdminEditing?: boolean;
   onDismiss: (id: string) => void;
   onEdit?: (guide: CanvasGuideData, position: { x: number; y: number }) => void;
+  onGuideResize?: (id: string, width: number, height: number) => void;
+  onGuideResizeEnd?: (id: string, width: number, height: number, x: number, y: number) => void;
   isExiting: boolean;
 }
 
-/** Admin drag handle header — shared across all variants in admin mode. */
-function AdminDragHandle({ guide, selected }: { guide: GuideNodeData; selected?: boolean }) {
+/**
+ * Admin drag handle — absolutely positioned overlay so it doesn't affect
+ * content layout. Content renders identically in admin and preview modes.
+ */
+function AdminDragHandle({ guide }: { guide: GuideNodeData }) {
   if (!guide.isAdminEditing) return null;
   return (
-    <div className="guide-drag-handle flex items-center gap-1.5 px-2 py-1.5 bg-blue-500 text-white cursor-grab active:cursor-grabbing select-none">
+    <div className="guide-drag-handle absolute top-0 left-0 right-0 z-10 flex items-center gap-1.5 px-2 py-1.5 rounded-t-sm bg-blue-500/90 text-white cursor-grab active:cursor-grabbing select-none">
       <GripVertical className="h-3.5 w-3.5 shrink-0 opacity-70" />
       <span className="text-xs font-medium truncate flex-1">
         {guide.title || VARIANT_LABELS[guide.variant] || 'Guide'}
@@ -90,8 +97,6 @@ function AdminDragHandle({ guide, selected }: { guide: GuideNodeData; selected?:
 
 // ─── Template Post-it variant ───
 function TemplatePostItContent({ guide }: { guide: GuideNodeData }) {
-  const w = guide.width ?? 160;
-  const h = guide.height ?? 100;
   const colorName = guide.color || 'yellow';
   const bgClass = POSTIT_COLOR_CLASSES[colorName] || POSTIT_COLOR_CLASSES.yellow;
 
@@ -99,18 +104,18 @@ function TemplatePostItContent({ guide }: { guide: GuideNodeData }) {
     <div
       className={cn(
         bgClass,
-        'shadow-md rounded-sm p-3',
-        'font-sans text-sm text-neutral-olive-800 dark:text-neutral-olive-200',
-        'rotate-[-1deg]',
+        'shadow-md rounded-sm p-3 w-full h-full',
+        'font-sans text-sm text-neutral-olive-800',
         !guide.isAdminEditing && 'pointer-events-none',
       )}
-      style={{ width: w, minHeight: h }}
     >
       {guide.title && (
         <p className="text-xs font-semibold leading-tight mb-1">{guide.title}</p>
       )}
       {guide.body && (
-        <p className="text-xs leading-snug whitespace-pre-line">{guide.body}</p>
+        <div className="prose prose-xs max-w-none [&_p]:m-0 [&_p]:leading-snug [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0">
+          <ReactMarkdown rehypePlugins={[rehypeRaw]}>{guide.body}</ReactMarkdown>
+        </div>
       )}
     </div>
   );
@@ -118,20 +123,15 @@ function TemplatePostItContent({ guide }: { guide: GuideNodeData }) {
 
 // ─── Frame variant ───
 function FrameContent({ guide }: { guide: GuideNodeData }) {
-  const w = guide.width ?? 400;
-  const h = guide.height ?? 300;
   const borderColor = guide.color || '#94a3b8';
 
   return (
     <div
       className={cn(
-        'rounded-lg',
-        // Allow clicks to pass through to the canvas beneath
+        'rounded-lg w-full h-full',
         !guide.isAdminEditing && 'pointer-events-none',
       )}
       style={{
-        width: w,
-        height: h,
         border: `2px dashed ${borderColor}`,
         position: 'relative',
       }}
@@ -161,11 +161,10 @@ function ArrowContent({ guide }: { guide: GuideNodeData }) {
   return (
     <div
       className={cn(
+        'w-full h-full',
         !guide.isAdminEditing && 'pointer-events-none',
       )}
       style={{
-        width: w,
-        height: h,
         transform: `rotate(${rotation}deg)`,
         transformOrigin: 'center center',
       }}
@@ -176,6 +175,7 @@ function ArrowContent({ guide }: { guide: GuideNodeData }) {
         viewBox={`0 0 ${w} ${h}`}
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="none"
       >
         <defs>
           <marker
@@ -203,7 +203,18 @@ function ArrowContent({ guide }: { guide: GuideNodeData }) {
   );
 }
 
-function GuideNodeComponent({ data, selected }: NodeProps) {
+// Min constraints per variant for NodeResizer
+const MIN_SIZE_MAP: Record<string, { minWidth: number; minHeight: number }> = {
+  'template-postit': { minWidth: 100, minHeight: 60 },
+  frame: { minWidth: 120, minHeight: 80 },
+  arrow: { minWidth: 60, minHeight: 20 },
+  sticker: { minWidth: 80, minHeight: 40 },
+  note: { minWidth: 80, minHeight: 40 },
+  hint: { minWidth: 100, minHeight: 30 },
+  image: { minWidth: 40, minHeight: 40 },
+};
+
+function GuideNodeComponent({ id, data, selected }: NodeProps) {
   const guide = data as unknown as GuideNodeData;
 
   const handleDismiss = useCallback(() => {
@@ -213,31 +224,42 @@ function GuideNodeComponent({ data, selected }: NodeProps) {
   const isTemplatePostit = guide.variant === 'template-postit';
   const isFrame = guide.variant === 'frame';
   const isArrow = guide.variant === 'arrow';
+  const mins = MIN_SIZE_MAP[guide.variant] || { minWidth: 60, minHeight: 40 };
 
-  // New variants have dedicated renderers
+  // ── Template post-it / frame / arrow ──
   if (isTemplatePostit || isFrame || isArrow) {
     return (
       <div
         className={cn(
-          'group/guide',
+          'group/guide relative w-full h-full',
           guide.isExiting
             ? 'animate-out fade-out-0 zoom-out-95 duration-200 fill-mode-forwards'
             : 'animate-in fade-in-0 zoom-in-95 duration-300',
-          guide.isAdminEditing && 'rounded-lg border border-blue-300 shadow-md overflow-hidden',
+          guide.isAdminEditing && 'ring-1 ring-blue-300',
           guide.isAdmin && selected && 'ring-2 ring-blue-500 ring-offset-1',
         )}
       >
-        <AdminDragHandle guide={guide} selected={selected} />
-        <div className={cn(guide.isAdminEditing && 'p-1')}>
-          {isTemplatePostit && <TemplatePostItContent guide={guide} />}
-          {isFrame && <FrameContent guide={guide} />}
-          {isArrow && <ArrowContent guide={guide} />}
-        </div>
+        <NodeResizer
+          isVisible={!!selected && !!guide.isAdminEditing}
+          minWidth={mins.minWidth}
+          minHeight={mins.minHeight}
+          handleClassName="!bg-blue-500"
+          onResize={(_event, params) => {
+            guide.onGuideResize?.(guide.id, params.width, params.height);
+          }}
+          onResizeEnd={(_event, params) => {
+            guide.onGuideResizeEnd?.(guide.id, params.width, params.height, params.x, params.y);
+          }}
+        />
+        <AdminDragHandle guide={guide} />
+        {isTemplatePostit && <TemplatePostItContent guide={guide} />}
+        {isFrame && <FrameContent guide={guide} />}
+        {isArrow && <ArrowContent guide={guide} />}
       </div>
     );
   }
 
-  // ── Existing variants (sticker, note, hint, image) ──
+  // ── Sticker / note / hint / image ──
   const Icon = VARIANT_ICONS[guide.variant];
   const isHint = guide.variant === 'hint';
   const isImage = guide.variant === 'image';
@@ -249,87 +271,96 @@ function GuideNodeComponent({ data, selected }: NodeProps) {
   return (
     <div
       className={cn(
-        'max-w-xs group/guide',
+        'group/guide relative w-full h-full',
         guide.isExiting
           ? 'animate-out fade-out-0 zoom-out-95 duration-200 fill-mode-forwards'
           : 'animate-in fade-in-0 zoom-in-95 duration-300',
-        // Non-admin-editing: normal variant styling
-        !guide.isAdminEditing && guide.variant === 'sticker' && 'rounded-sm px-6 py-5 shadow-md rotate-[-1deg] border-b-4',
-        !guide.isAdminEditing && guide.variant === 'note' && 'rounded-xl px-4 py-3 border',
-        !guide.isAdminEditing && guide.variant === 'hint' && 'rounded-lg px-4 py-2.5 backdrop-blur-sm bg-black/50 text-white dark:bg-white/10 dark:text-white/90',
-        !guide.isAdminEditing && isImage && 'p-0',
-        // Admin editing mode: card with drag handle
-        guide.isAdminEditing && 'rounded-lg border border-blue-300 shadow-md overflow-hidden',
+        // Variant styling — always applied for visual parity
+        guide.variant === 'sticker' && 'rounded-sm px-6 py-5 shadow-md border-b-4',
+        guide.variant === 'note' && 'rounded-xl px-4 py-3 border',
+        guide.variant === 'hint' && 'rounded-lg px-4 py-2.5 backdrop-blur-sm bg-black/50 text-white dark:bg-white/10 dark:text-white/90',
+        isImage && 'p-0',
+        // Admin selection indicator
+        guide.isAdminEditing && 'ring-1 ring-blue-300',
         guide.isAdmin && selected && 'ring-2 ring-blue-500 ring-offset-1',
       )}
-      style={(!guide.isAdminEditing && !isHint && !isImage) ? {
-        backgroundColor: baseBg,
-        color: textColor,
-        borderBottomColor: guide.variant === 'sticker' ? borderBottomColor : undefined,
-        borderColor: guide.variant === 'note' ? borderBottomColor : undefined,
-      } : undefined}
-    >
-      <AdminDragHandle guide={guide} selected={selected} />
-
-      {/* ── Guide content ── */}
-      <div
-        className={cn(
-          guide.isAdminEditing && 'px-3 py-2',
-          guide.isAdminEditing && isImage && 'p-1',
-        )}
-        style={guide.isAdminEditing && !isHint && !isImage ? {
+      style={{
+        // Always apply variant colors
+        ...(!isHint && !isImage ? {
           backgroundColor: baseBg,
           color: textColor,
-        } : undefined}
-      >
-        {/* Dismiss button — only in non-admin mode */}
-        {!guide.isAdminEditing && guide.dismissBehavior === 'hover-x' && (
-          <button
-            onClick={handleDismiss}
-            className={cn(
-              'nodrag absolute -top-2 -right-2 rounded-full p-0.5',
-              'bg-black/60 text-white hover:bg-black/80',
-              'dark:bg-white/20 dark:hover:bg-white/40',
-              'transition-opacity duration-150',
-              'opacity-0 group-hover/guide:opacity-100',
-              '[@media(hover:none)]:opacity-100',
-            )}
-            aria-label="Dismiss guide"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
+          borderTopColor: guide.variant === 'note' ? borderBottomColor : undefined,
+          borderRightColor: guide.variant === 'note' ? borderBottomColor : undefined,
+          borderBottomColor: (guide.variant === 'sticker' || guide.variant === 'note') ? borderBottomColor : undefined,
+          borderLeftColor: guide.variant === 'note' ? borderBottomColor : undefined,
+        } : {}),
+      }}
+    >
+      <NodeResizer
+        isVisible={!!selected && !!guide.isAdminEditing}
+        minWidth={mins.minWidth}
+        minHeight={mins.minHeight}
+        keepAspectRatio={isImage}
+        handleClassName="!bg-blue-500"
+        onResize={(_event, params) => {
+          guide.onGuideResize?.(guide.id, params.width, params.height);
+        }}
+        onResizeEnd={(_event, params) => {
+          guide.onGuideResizeEnd?.(guide.id, params.width, params.height, params.x, params.y);
+        }}
+      />
+      <AdminDragHandle guide={guide} />
 
-        {isImage ? (
-          guide.imageSvg ? (
-            <div
-              className="[&>svg]:max-w-full [&>svg]:h-auto"
-              dangerouslySetInnerHTML={{ __html: sanitizeSvg(guide.imageSvg) }}
-            />
-          ) : (
-            <p className="text-xs text-muted-foreground italic py-2">No SVG</p>
-          )
+      {/* Dismiss button — only in non-admin mode */}
+      {!guide.isAdminEditing && guide.dismissBehavior === 'hover-x' && (
+        <button
+          onClick={handleDismiss}
+          className={cn(
+            'nodrag absolute -top-2 -right-2 rounded-full p-0.5 z-10',
+            'bg-black/60 text-white hover:bg-black/80',
+            'dark:bg-white/20 dark:hover:bg-white/40',
+            'transition-opacity duration-150',
+            'opacity-0 group-hover/guide:opacity-100',
+            '[@media(hover:none)]:opacity-100',
+          )}
+          aria-label="Dismiss guide"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+
+      {isImage ? (
+        guide.imageSvg ? (
+          <div
+            className="w-full h-full [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"
+            dangerouslySetInnerHTML={{ __html: sanitizeSvg(guide.imageSvg) }}
+          />
         ) : (
-          <div className="flex items-start gap-2">
-            {Icon && (
-              <Icon
-                className="mt-0.5 shrink-0 h-4 w-4"
-                style={!isHint ? { color: iconColor, opacity: 0.7 } : { color: '#fde047' }}
-              />
-            )}
-            <div className="min-w-0">
-              {guide.title && !guide.isAdminEditing && (
-                <p className={cn('text-sm font-semibold leading-tight', guide.variant === 'sticker' && 'mb-1')}>
-                  {guide.title}
-                </p>
-              )}
-              <p className={cn('leading-snug whitespace-pre-line', guide.variant === 'hint' ? 'text-sm' : 'text-xs')}>
-                {guide.body}
+          <p className="text-xs text-muted-foreground italic py-2">No SVG</p>
+        )
+      ) : (
+        <div className="flex items-start gap-2">
+          {Icon && (
+            <Icon
+              className="mt-0.5 shrink-0 h-4 w-4"
+              style={!isHint ? { color: iconColor, opacity: 0.7 } : { color: '#fde047' }}
+            />
+          )}
+          <div className="min-w-0">
+            {guide.title && (
+              <p className={cn('text-sm font-semibold leading-tight', guide.variant === 'sticker' && 'mb-1')}>
+                {guide.title}
               </p>
+            )}
+            <div className={cn(
+              'prose max-w-none [&_p]:m-0 [&_p]:leading-snug [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0',
+              guide.variant === 'hint' ? 'prose-sm dark:prose-invert' : 'prose-xs',
+            )}>
+              <ReactMarkdown rehypePlugins={[rehypeRaw]}>{guide.body}</ReactMarkdown>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

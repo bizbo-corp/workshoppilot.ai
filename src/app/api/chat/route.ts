@@ -90,6 +90,7 @@ export async function POST(req: Request) {
       stepContext.canvasContext,
       instructionsOverride,
       workshopTitle,
+      stepContext.existingItemNames,
     );
 
     // Filter out messages with empty content before conversion.

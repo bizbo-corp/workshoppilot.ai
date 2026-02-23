@@ -278,6 +278,24 @@ export function getStepByOrder(order: number): StepDefinition | undefined {
   return STEPS.find((step) => step.order === order);
 }
 
+/** Labels for the in-chat "Accept" button per step */
+export const STEP_CONFIRM_LABELS: Record<string, string> = {
+  'challenge': 'Accept Challenge Statement',
+  'stakeholder-mapping': 'Confirm Stakeholder Map',
+  'user-research': 'Confirm Research Insights',
+  'sense-making': 'Confirm Sense Making',
+  'persona': 'Confirm Persona',
+  'journey-mapping': 'Confirm Journey Map',
+  'reframe': 'Confirm HMW Statement',
+  'concept': 'Confirm Concept',
+};
+
+/** Minimum canvas items required before the confirm button appears (default: 1) */
+export const STEP_CONFIRM_MIN_ITEMS: Record<string, number> = {
+  'stakeholder-mapping': 8,
+  'user-research': 6,
+};
+
 /**
  * Get step by URL slug (same as ID)
  */

@@ -1,12 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { FileText, Presentation, Users, Code } from 'lucide-react';
+import { FileText, Presentation, Users, Code, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DeliverableCard, DELIVERABLES } from './deliverable-card';
 
 interface SynthesisSummaryViewProps {
   artifact: Record<string, unknown>;
+  workshopId?: string;
+  onGeneratePrd?: () => void;
 }
 
 interface StepSummary {
@@ -64,8 +66,8 @@ function getResearchQualityColor(quality: 'thin' | 'moderate' | 'strong'): strin
  * SynthesisSummaryView component
  * Renders Step 10 validate artifact as a polished journey summary with narrative intro, step summaries, confidence gauge, and next steps
  */
-export function SynthesisSummaryView({ artifact }: SynthesisSummaryViewProps) {
-  const narrative = artifact.narrative as string | undefined;
+export function SynthesisSummaryView({ artifact, workshopId, onGeneratePrd }: SynthesisSummaryViewProps) {
+  const narrative = (artifact.narrativeIntro || artifact.narrative) as string | undefined;
   const stepSummaries = (artifact.stepSummaries as StepSummary[]) || [];
   const confidenceAssessment = artifact.confidenceAssessment as ConfidenceAssessment | undefined;
   const recommendedNextSteps = (artifact.recommendedNextSteps as string[]) || [];
@@ -210,10 +212,30 @@ export function SynthesisSummaryView({ artifact }: SynthesisSummaryViewProps) {
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Build Pack Deliverables</h3>
         <p className="text-sm text-muted-foreground">
-          Export-ready documents generated from your workshop. Available soon.
+          Export-ready documents generated from your workshop.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {DELIVERABLES.map((d) => (
+          {/* PRD / Prototype card — enabled */}
+          <DeliverableCard
+            title="V0 Prototype"
+            description="AI-generated clickable prototype from your workshop — preview in browser or edit in V0."
+            icon={<Zap className="h-5 w-5" />}
+            disabled={!workshopId}
+            buttonLabel={workshopId ? 'Generate Prototype' : 'Coming Soon'}
+            onDownload={onGeneratePrd}
+          />
+          {/* Remaining deliverables */}
+          {DELIVERABLES.filter((d) => d.id !== 'prd').map((d) => (
+            <DeliverableCard
+              key={d.id}
+              title={d.title}
+              description={d.description}
+              icon={DELIVERABLE_ICONS[d.iconName]}
+              disabled={true}
+            />
+          ))}
+          {/* Keep original PRD card (as document version, disabled for now) */}
+          {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => (
             <DeliverableCard
               key={d.id}
               title={d.title}
@@ -223,6 +245,56 @@ export function SynthesisSummaryView({ artifact }: SynthesisSummaryViewProps) {
             />
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Standalone Build Pack deliverables section.
+ * Shown immediately on Step 10 without requiring synthesis extraction.
+ * Uses Steps 1-9 artifacts (via generate-prd API), not the Step 10 artifact.
+ */
+export function SynthesisBuildPackSection({
+  workshopId,
+  onGeneratePrd,
+}: {
+  workshopId?: string;
+  onGeneratePrd?: () => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold">Build Pack Deliverables</h3>
+      <p className="text-sm text-muted-foreground">
+        Export-ready documents generated from your workshop.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <DeliverableCard
+          title="V0 Prototype"
+          description="AI-generated clickable prototype from your workshop — preview in browser or edit in V0."
+          icon={<Zap className="h-5 w-5" />}
+          disabled={!workshopId}
+          buttonLabel={workshopId ? 'Generate Prototype' : 'Coming Soon'}
+          onDownload={onGeneratePrd}
+        />
+        {DELIVERABLES.filter((d) => d.id !== 'prd').map((d) => (
+          <DeliverableCard
+            key={d.id}
+            title={d.title}
+            description={d.description}
+            icon={DELIVERABLE_ICONS[d.iconName]}
+            disabled={true}
+          />
+        ))}
+        {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => (
+          <DeliverableCard
+            key={d.id}
+            title={d.title}
+            description={d.description}
+            icon={DELIVERABLE_ICONS[d.iconName]}
+            disabled={true}
+          />
+        ))}
       </div>
     </div>
   );

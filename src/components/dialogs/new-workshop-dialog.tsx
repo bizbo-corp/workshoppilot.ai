@@ -36,10 +36,11 @@ const Picker = dynamic(
 interface NewWorkshopButtonProps {
   variant?: 'default' | 'outline' | 'ghost' | 'secondary' | 'destructive' | 'link';
   size?: 'default' | 'sm' | 'lg' | 'icon';
+  className?: string;
   children?: ReactNode;
 }
 
-export function NewWorkshopButton({ variant, size, children }: NewWorkshopButtonProps) {
+export function NewWorkshopButton({ variant, size, className, children }: NewWorkshopButtonProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [selectedColor, setSelectedColor] = useState<WorkshopColor>(WORKSHOP_COLORS[0]);
@@ -75,7 +76,7 @@ export function NewWorkshopButton({ variant, size, children }: NewWorkshopButton
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={variant} size={size}>
+        <Button variant={variant} size={size} className={className}>
           {children}
         </Button>
       </DialogTrigger>

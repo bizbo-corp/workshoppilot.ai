@@ -22,7 +22,7 @@ const isPublicRoute = createRouteMatcher([
   '/workshop/:path*/step/3',
 ]);
 
-const isAdminRoute = createRouteMatcher(['/admin(.*)']);
+const isAdminRoute = createRouteMatcher(['/admin(.*)', '/api/admin(.*)']);
 
 const isProtectedRoute = createRouteMatcher([
   '/dashboard(.*)',
@@ -49,8 +49,12 @@ export default clerkMiddleware(async (auth, req) => {
 
   // Admin route protection
   if (isAdminRoute(req)) {
+    const isApiRoute = pathname.startsWith('/api/');
+
     if (!userId) {
-      return NextResponse.redirect(new URL('/', req.url));
+      return isApiRoute
+        ? NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        : NextResponse.redirect(new URL('/', req.url));
     }
 
     const publicMetadata = sessionClaims?.publicMetadata as
@@ -59,7 +63,11 @@ export default clerkMiddleware(async (auth, req) => {
     const roles = (publicMetadata?.roles || []) as string[];
 
     if (!roles.includes('admin')) {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
+      // For API routes, let the handler do fine-grained checks (email-based fallback).
+      // For page routes, redirect non-admin users.
+      if (!isApiRoute) {
+        return NextResponse.redirect(new URL('/dashboard', req.url));
+      }
     }
   }
 

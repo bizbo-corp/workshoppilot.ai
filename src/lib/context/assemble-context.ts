@@ -3,7 +3,7 @@ import { stepSummaries, workshopSteps } from '@/db/schema';
 import { eq, and, ne, asc, inArray } from 'drizzle-orm';
 import { getStepById } from '@/lib/workshop/step-metadata';
 import { loadCanvasState } from '@/actions/canvas-actions';
-import { assembleCanvasContextForStep, assembleEmpathyMapCanvasContext } from '@/lib/workshop/context/canvas-context';
+import { assembleCanvasContextForStep, assembleEmpathyMapCanvasContext, assembleStakeholderCanvasContext } from '@/lib/workshop/context/canvas-context';
 import type { StepContext } from './types';
 
 /**
@@ -108,6 +108,20 @@ export async function assembleStepContext(
       ? assembleCanvasContextForStep(currentStepId, [])
       : '');
 
+  // For user-research step, inject Step 2's stakeholder canvas data so the AI
+  // can generate diverse persona candidates from the full cluster hierarchy
+  if (currentStepId === 'user-research') {
+    const step2Canvas = await loadCanvasState(workshopId, 'stakeholder-mapping');
+    if (step2Canvas?.postIts && step2Canvas.postIts.length > 0) {
+      const stakeholderContext = assembleStakeholderCanvasContext(step2Canvas.postIts);
+      if (stakeholderContext) {
+        canvasContext = canvasContext
+          ? `${canvasContext}\n\nStep 2 Stakeholder Map (use these to generate diverse persona candidates):\n${stakeholderContext}`
+          : `Step 2 Stakeholder Map (use these to generate diverse persona candidates):\n${stakeholderContext}`;
+      }
+    }
+  }
+
   // For persona step, inject Step 4's empathy map canvas data so the AI
   // can populate the empathy fields with real insights from the research
   if (currentStepId === 'persona') {
@@ -122,10 +136,16 @@ export async function assembleStepContext(
     }
   }
 
+  // Extract flat list of post-it names for dedup blocklist
+  const existingItemNames: string[] = canvasState?.postIts
+    ?.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview && p.text.trim())
+    .map(p => p.text.trim()) || [];
+
   return {
     persistentContext: '',
     summaries,
     canvasContext,
+    existingItemNames,
     messages: [],
   };
 }

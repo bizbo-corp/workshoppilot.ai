@@ -5,7 +5,7 @@ import { HeroSection } from '@/components/landing/hero-section';
 import { ValuePropsSection } from '@/components/landing/value-props-section';
 import { TestimonialsSection } from '@/components/landing/testimonials-section';
 import { Footer } from '@/components/landing/footer';
-import { StartWorkshopButton } from '@/components/workshop/start-workshop-button';
+import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
 
 export default function Home() {
   return (
@@ -24,7 +24,9 @@ export default function Home() {
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
             Start a free workshop and walk away with a complete Build Pack — no design thinking experience required.
           </p>
-          <StartWorkshopButton />
+          <NewWorkshopButton size="lg" className="min-w-[200px] text-base">
+            Start Workshop
+          </NewWorkshopButton>
         </div>
       </section>
 

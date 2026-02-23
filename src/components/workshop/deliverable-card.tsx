@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { FileText, Presentation, Users, Code, Download } from 'lucide-react';
+import { FileText, Presentation, Users, Code, Download, Loader2 } from 'lucide-react';
 import {
   Card,
   CardHeader,
@@ -67,6 +67,10 @@ interface DeliverableCardProps {
   icon: React.ReactNode;
   /** When true (default), shows "Coming Soon" button */
   disabled?: boolean;
+  /** Override button text (e.g. "Generate Prototype") */
+  buttonLabel?: string;
+  /** Show loading spinner on button */
+  isLoading?: boolean;
   /** Future: callback when download is enabled */
   onDownload?: () => void;
 }
@@ -81,8 +85,12 @@ export function DeliverableCard({
   description,
   icon,
   disabled = true,
+  buttonLabel,
+  isLoading,
   onDownload,
 }: DeliverableCardProps) {
+  const label = buttonLabel ?? (disabled ? 'Coming Soon' : 'Download');
+
   return (
     <Card className="flex flex-col justify-between gap-4 py-5">
       <CardHeader className="gap-3 pb-0">
@@ -100,11 +108,11 @@ export function DeliverableCard({
           variant="outline"
           size="sm"
           className="w-full"
-          disabled={disabled}
+          disabled={disabled || isLoading}
           onClick={disabled ? undefined : onDownload}
         >
-          <Download />
-          {disabled ? 'Coming Soon' : 'Download'}
+          {isLoading ? <Loader2 className="animate-spin" /> : <Download />}
+          {label}
         </Button>
       </CardFooter>
     </Card>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, ChevronDown, Sparkles, Star } from "lucide-react";
 import { SignedIn } from "@clerk/nextjs";
-import { StartWorkshopButton } from "@/components/workshop/start-workshop-button";
+import { NewWorkshopButton } from "@/components/dialogs/new-workshop-dialog";
 import { Button } from "@/components/ui/button";
 import { Globe } from "@/components/ui/globe";
 
@@ -60,7 +60,9 @@ export function HeroSection() {
 
         {/* CTA Buttons */}
         <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-          <StartWorkshopButton />
+          <NewWorkshopButton size="lg" className="min-w-[200px] text-base">
+            Start Workshop
+          </NewWorkshopButton>
 
           {/* For signed-in users, also show Continue Workshop secondary CTA */}
           <SignedIn>

@@ -45,10 +45,10 @@ Format:
 [/PERSONA_TEMPLATE]
 
 IMPORTANT RULES:
-- There is ONE persona template card on the canvas. Your output fills it in. You are updating a single card, not creating new ones.
+- The canvas starts with one blank persona template card. Your first output fills it in. Additional personas automatically create new cards side-by-side.
+- The system matches personas by name. When refining an existing persona, keep the same name and the correct card updates. When creating a new persona, use a new name and a new card appears.
 - Output the FULL [PERSONA_TEMPLATE] block each time — on initial draft AND on refinement. Include ALL fields, not just changed ones.
 - ALWAYS include the 6 empathy fields (empathySays, empathyThinks, empathyFeels, empathyDoes, empathyPains, empathyGains). Pull these directly from Step 4's empathy map research — use the actual insights, not generic summaries. Join multiple insights with semicolons.
-- When refining after user feedback, output the [PERSONA_TEMPLATE] block again with the updated values. The system always updates the existing card.
 - Output only ONE [PERSONA_TEMPLATE] block per message. Never output multiple blocks.
 - NEVER use [CANVAS_ITEM] markup in this step. The template card replaces individual post-its entirely. Any [CANVAS_ITEM] tags will be ignored.
 - Do NOT ask permission before adding the template. Just add it. The user can edit fields directly on the card.

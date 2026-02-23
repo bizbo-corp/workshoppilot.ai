@@ -16,48 +16,7 @@ Challenge -> mountain
 
 Idea + Audience + problem
 
-## Prompt Updates
-
-Prove the ezydraw component to have phone, stick people, and other objects. 
-
-❯ /gsd:execute-phase 36 
-
-I need to implement these two features together. Ask me any questions to clarify. 
-
-### Idea Selection (Crazy 8s / Ideation) (Step 8b)
-
-I need a simple selection feature for the crazy eight step so that once the drawings and descriptions are made then the user can choose the best ones to make into concepts, making it possible for one, two, or three to go forward to concept development. Each selected idea I need the image saved and passed forward to the concept development section with a new card matrix generated for each 
-
-### Brain rewriting (also in Ideation Canvas whiteboard) (Step 8c)
-
-Required: A matrix template of two by two for an optional 'Brain rewiting' exercise for each chose concept from the previous step. Each cell has an ezydraw object on each cell excluding the top left (which should be the chose concept image). The idea is that we take the chosen concepts or single concept from the previous step and iterate on them one by one. Allow the user to click on the top right quadrant to improve on the concept. Once done they may move onto the next (bottom left, then bottom right). Once happy user can move onto the Concept Card step (same canvas, different exercise). This will be and optional exercise and the user may step forward when ready. 
-
-### Concept development (Step 9)
-
-For each chosen concept we need a card set up on the whiteboard that takes the characteristics of the idea and plots them onto a card, including:
-
-- the image
-- the title
-- Description. 
-- Keep selling points. 
-- what it's trying to solve
-- strong points
-- weak points, etc.
-- Feasibility. 
-
-I will check the step dialog from the system prompt instructions from this step.  
-
-Concept development dialogue flow 
-
-~~Grid dots on canvas. ~~
-
-Dot voting 
-
-Generic Job Post
-
-MSD letter
-
-
+improve the ezydraw component to have phone, stick people, and other objects. 
 
 
 
@@ -70,3 +29,31 @@ MSD letter
 [Suggestion]
 
 Custom: 
+
+Scores for confidence  🟢
+
+Comletness 🟢
+
+Validation 🟠 
+
+## E2E Story Framework
+
+### Visual Fixes
+
+
+
+### General Dialog fixes
+
+
+
+
+
+
+
+
+
+I have a new idea for a way for people to articulate themselves better through a storytelling framework.
+
+Often I've had trouble articulating myself, whether it's a job interview or a business pitch or trying to influence someone to take action. If only I had a framework to articulate my ideas, I might be able to get my point across more effectively. 
+
+How might we empower speakers to communicate their ideas more effectively to persuade, inspire, or drive others to action?
