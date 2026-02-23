@@ -28,6 +28,25 @@ const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research
 /** Distinct colors assigned to persona cards in user-research step (one per persona) */
 const PERSONA_CARD_COLORS: StickyNoteColor[] = ['pink', 'blue', 'green'];
 
+/** Suggestion button color classes per sticky note color */
+const SUGGESTION_BUTTON_STYLES: Record<StickyNoteColor, string> = {
+  yellow: 'border-amber-300 bg-[var(--sticky-note-yellow)] dark:border-amber-600/50 dark:bg-amber-900/30 dark:text-amber-200',
+  red: 'border-red-300 bg-[var(--sticky-note-red)] dark:border-red-600/50 dark:bg-red-900/30 dark:text-red-200',
+  green: 'border-emerald-300 bg-[var(--sticky-note-green)] dark:border-emerald-600/50 dark:bg-emerald-900/30 dark:text-emerald-200',
+  pink: 'border-pink-300 bg-[var(--sticky-note-pink)] dark:border-pink-600/50 dark:bg-pink-900/30 dark:text-pink-200',
+  blue: 'border-blue-300 bg-[var(--sticky-note-blue)] dark:border-blue-600/50 dark:bg-blue-900/30 dark:text-blue-200',
+  orange: 'border-orange-300 bg-[var(--sticky-note-orange)] dark:border-orange-600/50 dark:bg-orange-900/30 dark:text-orange-200',
+};
+
+/** Compute the display color for a canvas suggestion item */
+function getSuggestionItemColor(item: CanvasItemParsed): StickyNoteColor {
+  const VALID_COLORS = new Set(['yellow', 'pink', 'blue', 'green', 'orange', 'red']);
+  return (item.color && VALID_COLORS.has(item.color) ? item.color as StickyNoteColor : null)
+    || (item.category && CATEGORY_COLORS[item.category])
+    || (item.quadrant && ZONE_COLORS[item.quadrant])
+    || 'yellow';
+}
+
 /** Fixed initial greetings shown instantly while AI generates first response */
 const STEP_INITIAL_GREETINGS: Record<string, string> = {
   'journey-mapping': "Time to map the journey! 🗺️ We're going to walk in your persona's shoes and trace their current experience — every action, emotion, and friction point. I'm pulling together what we've learned so far to recommend the best journey template...",
@@ -1763,7 +1782,10 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                               <button
                                 key={i}
                                 onClick={() => handleAddSingleItem(item)}
-                                className="cursor-pointer inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-[var(--sticky-note-yellow)] px-2.5 py-1.5 text-sm font-medium text-neutral-olive-800 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 dark:border-amber-600/50 dark:bg-amber-900/30 dark:text-amber-200"
+                                className={cn(
+                                  "cursor-pointer inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm font-medium text-neutral-olive-800 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
+                                  SUGGESTION_BUTTON_STYLES[getSuggestionItemColor(item)]
+                                )}
                               >
                                 <Plus className="h-3 w-3" />
                                 {item.text}

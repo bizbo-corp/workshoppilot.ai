@@ -117,7 +117,7 @@ const CATEGORY_BASES: Record<string, { x: number; y: number }> = {
  */
 export const CATEGORY_COLORS: Record<string, StickyNoteColor> = {
   goals: 'blue',
-  pains: 'pink',
+  pains: 'red',
   gains: 'green',
   motivations: 'orange',
   frustrations: 'pink',
@@ -128,7 +128,7 @@ export const CATEGORY_COLORS: Record<string, StickyNoteColor> = {
  * Map empathy zones to sticky note colors
  */
 export const ZONE_COLORS: Record<string, StickyNoteColor> = {
-  pains: 'pink',
+  pains: 'red',
   gains: 'green',
   // Other zones use default 'yellow'
 };

@@ -208,8 +208,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
     }
   }, [onCanvasGuides, draggingNodeId]);
 
-  // Z-index management - bring selected/dragged/new nodes to front
-  const [nodeZIndices, setNodeZIndices] = useState<Record<string, number>>({});
+  // Z-index management - bring selected/dragged/new nodes to front.
+  // Stored as a ref (not state) so updates don't trigger useMemo recomputation
+  // during drag, which would reset node positions to stale store values.
+  const nodeZIndicesRef = useRef<Record<string, number>>({});
   const zIndexCounter = useRef(100);
 
   // Pointer/Hand tool state
@@ -233,10 +235,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
   // Track previous sticky note count for fitView logic
   const previousStickyNoteCount = useRef(stickyNotes.length);
 
-  // Bring a node to the top of the z-index stack
+  // Bring a node to the top of the z-index stack.
+  // Mutates ref only — no state update, no useMemo recomputation.
+  // The new zIndex is picked up the next time useMemo runs for other reasons
+  // (e.g. selectedNodeIds change on click, or store update on drag end).
   const bringToFront = useCallback((nodeId: string) => {
     zIndexCounter.current += 1;
-    setNodeZIndices(prev => ({ ...prev, [nodeId]: zIndexCounter.current }));
+    nodeZIndicesRef.current = { ...nodeZIndicesRef.current, [nodeId]: zIndexCounter.current };
   }, []);
 
   // Dismiss auto-dismiss guides (called on first canvas interaction)
@@ -703,7 +708,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         position: livePos || stickyNote.position,
         parentId: stickyNote.parentId,
         extent: stickyNote.parentId ? ('parent' as const) : undefined,
-        zIndex: nodeZIndices[stickyNote.id] || 20,
+        zIndex: nodeZIndicesRef.current[stickyNote.id] || 20,
         draggable: !isPreview,
         selectable: !isPreview,
         selected: selectedNodeIds.includes(stickyNote.id),
@@ -747,7 +752,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         id: dn.id,
         type: 'drawingImage' as const,
         position: livePositions.current[dn.id] || dn.position,
-        zIndex: nodeZIndices[dn.id] || 20,
+        zIndex: nodeZIndicesRef.current[dn.id] || 20,
         draggable: true,
         selectable: true,
         selected: selectedNodeIds.includes(dn.id),
@@ -766,7 +771,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       id: card.id,
       type: 'conceptCard' as const,
       position: livePositions.current[card.id] || card.position,
-      zIndex: nodeZIndices[card.id] || 20,
+      zIndex: nodeZIndicesRef.current[card.id] || 20,
       draggable: true,
       selectable: true,
       selected: selectedNodeIds.includes(card.id),
@@ -784,7 +789,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       id: template.id,
       type: 'personaTemplate' as const,
       position: livePositions.current[template.id] || template.position,
-      zIndex: nodeZIndices[template.id] || 20,
+      zIndex: nodeZIndicesRef.current[template.id] || 20,
       draggable: true,
       selectable: true,
       selected: selectedNodeIds.includes(template.id),
@@ -801,7 +806,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       id: card.id,
       type: 'hmwCard' as const,
       position: livePositions.current[card.id] || card.position,
-      zIndex: nodeZIndices[card.id] || 20,
+      zIndex: nodeZIndicesRef.current[card.id] || 20,
       draggable: true,
       selectable: true,
       selected: selectedNodeIds.includes(card.id),
@@ -862,10 +867,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       });
 
     return [...stickyNoteReactFlowNodes, ...drawingReactFlowNodes, ...conceptCardReactFlowNodes, ...personaTemplateReactFlowNodes, ...hmwCardReactFlowNodes, ...guideReactFlowNodes];
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions/nodeZIndicesRef are refs
   // read inside the memo body as a safety net; they must NOT be deps or every
   // mouse-move during drag would recompute and cause flickering.
-  }, [stickyNotes, drawingNodes, conceptCards, personaTemplates, hmwCards, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, onCanvasGuides, dismissedGuideIds, exitingGuideIds, canvasHasItems, isAdmin, isAdminEditing, onEditGuide, handleGuideResize, handleGuideResizeEnd, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange, handlePersonaFieldChange, handleGenerateAvatar, handleHmwFieldChange, handleHmwChipSelect, dismissGuide]);
+  }, [stickyNotes, drawingNodes, conceptCards, personaTemplates, hmwCards, editingNodeId, selectedNodeIds, clusterParentMap, onCanvasGuides, dismissedGuideIds, exitingGuideIds, canvasHasItems, isAdmin, isAdminEditing, onEditGuide, handleGuideResize, handleGuideResizeEnd, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange, handlePersonaFieldChange, handleGenerateAvatar, handleHmwFieldChange, handleHmwChipSelect, dismissGuide]);
 
   // Create sticky note at position and set as editing
   const createStickyNoteAtPosition = useCallback(
@@ -1236,20 +1241,20 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       if (node.id.startsWith('guide-')) {
         console.log('[Guide DnD] dragStart', { id: node.id, position: node.position, draggable: node.draggable });
       }
-      // Capture the node's current position in livePositions BEFORE state
-      // updates trigger useMemo recomputation. Without this, guide nodes
-      // (and any node whose position comes from props rather than a store)
-      // snap back to their original position because livePositions isn't
-      // populated until onNodesChange fires — which happens AFTER the
-      // re-render caused by bringToFront/setDraggingNodeId.
+      // Capture the node's current position in livePositions as a safety net.
+      // If useMemo recomputes before onNodesChange populates drag positions,
+      // this ensures the node doesn't snap back to a stale store value.
       if (node.position) {
         livePositions.current[node.id] = node.position;
       }
       setDraggingNodeId(node.id);
       bringToFront(node.id);
-      dismissAutoGuides();
+      // Note: dismissAutoGuides() intentionally NOT called here — it updates
+      // dismissedGuideIds/exitingGuideIds state which are useMemo deps, causing
+      // the nodes array to recompute mid-drag with stale store positions.
+      // Guides are already dismissed from pane clicks, double-clicks, and panning.
     },
-    [bringToFront, dismissAutoGuides]
+    [bringToFront]
   );
 
   // Handle all node changes (selection, position, removal)
