@@ -1548,7 +1548,6 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
                   if (cx >= dropMinX && cx <= dropMaxX && cy >= dropMinY && cy <= dropMaxY) {
                     setCluster([change.id], personaName);
                     updatePostIt(change.id, { color: card.color || 'yellow' });
-                    rearrangeCluster(personaName, card, [...children, draggedPostIt]);
                     break;
                   }
                 }
@@ -2079,11 +2078,6 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
               const ids = selPostIts.map(p => p.id);
               setCluster(ids, name);
               ids.forEach(id => updatePostIt(id, { color: card.color || 'yellow' }));
-              // Rearrange: find existing children + newly assigned
-              const existingChildren = postIts.filter(
-                p => p.cluster?.toLowerCase() === name.toLowerCase() && !ids.includes(p.id)
-              );
-              rearrangeCluster(name, card, [...existingChildren, ...selPostIts]);
               setSelectedNodeIds([]);
             } : undefined}
           />
@@ -2159,14 +2153,6 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
                       onClick={() => {
                         setCluster([contextMenu.nodeId], personaName);
                         updatePostIt(contextMenu.nodeId, { color: card.color || 'yellow' });
-                        // Rearrange: find existing children for this persona
-                        const existingChildren = postIts.filter(
-                          p => p.cluster?.toLowerCase() === personaName.toLowerCase() && p.id !== contextMenu.nodeId
-                        );
-                        const draggedPostIt = postIts.find(p => p.id === contextMenu.nodeId);
-                        if (draggedPostIt) {
-                          rearrangeCluster(personaName, card, [...existingChildren, draggedPostIt]);
-                        }
                         setContextMenu(null);
                       }}
                     >
