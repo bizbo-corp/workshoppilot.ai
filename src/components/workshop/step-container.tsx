@@ -15,7 +15,7 @@ import { IdeationSubStepContainer } from './ideation-sub-step-container';
 import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical, Loader2 } from 'lucide-react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { resetStep, updateStepStatus } from '@/actions/workshop-actions';
-import { getStepByOrder, STEP_CONFIRM_LABELS, STEP_CONFIRM_MIN_ITEMS } from '@/lib/workshop/step-metadata';
+import { getStepByOrder, STEP_CONFIRM_LABELS, STEP_CONFIRM_MIN_ITEMS, areAllPersonasInterviewed } from '@/lib/workshop/step-metadata';
 import { fireConfetti } from '@/lib/utils/confetti';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -99,7 +99,11 @@ export function StepContainer({
   const confirmLabel = step ? STEP_CONFIRM_LABELS[step.id] : undefined;
   const minItems = step ? (STEP_CONFIRM_MIN_ITEMS[step.id] ?? 1) : 1;
   const canvasItemCount = postIts.length + conceptCards.length + (hmwCardComplete ? 1 : 0);
-  const showConfirm = !!confirmLabel && !artifactConfirmed && canvasHasContent && canvasItemCount >= minItems;
+  const allPersonasInterviewed = step?.id === 'user-research'
+    ? areAllPersonasInterviewed(postIts)
+    : true;
+  const showConfirm = !!confirmLabel && !artifactConfirmed && canvasHasContent
+    && canvasItemCount >= minItems && allPersonasInterviewed;
 
   // Fire confetti when user clicks Accept (not on auto-confirm from canvas content)
   const prevConfirmed = React.useRef(artifactConfirmed);

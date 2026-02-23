@@ -174,12 +174,12 @@ export function StepNavigation({
       {!isLastStep && !isCompleted ? (
         <Button
           onClick={handleNext}
-          disabled={isNavigating}
+          disabled={isNavigating || !artifactConfirmed}
           variant={artifactConfirmed ? 'default' : 'outline'}
           size={stepExplicitlyConfirmed ? 'lg' : 'default'}
           className={cn(stepExplicitlyConfirmed && !isNavigating && 'btn-shimmer')}
         >
-          {isNavigating ? 'Advancing...' : artifactConfirmed ? 'Next' : 'Skip to Next'}
+          {isNavigating ? 'Advancing...' : 'Next'}
           {!isNavigating && <ChevronRight className="ml-2 h-4 w-4" />}
         </Button>
       ) : isCompleted && !isLastStep ? (

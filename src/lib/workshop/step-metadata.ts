@@ -297,6 +297,24 @@ export const STEP_CONFIRM_MIN_ITEMS: Record<string, number> = {
 };
 
 /**
+ * Check whether all selected personas have been interviewed.
+ * A persona is "interviewed" when at least one insight post-it is clustered under their name.
+ * Persona cards are post-its without a `cluster`; insights have a `cluster` matching the persona name.
+ */
+export function areAllPersonasInterviewed(postIts: { text: string; cluster?: string; type?: string; isPreview?: boolean }[]): boolean {
+  const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+  const personaCards = items.filter(p => !p.cluster);
+  const insightClusters = new Set(
+    items.filter(p => p.cluster).map(p => p.cluster!.toLowerCase())
+  );
+  if (personaCards.length === 0) return false;
+  return personaCards.every(card => {
+    const name = card.text.split(/\s*[—–-]\s*/)[0].trim().toLowerCase();
+    return insightClusters.has(name);
+  });
+}
+
+/**
  * Get step by URL slug (same as ID)
  */
 export function getStepBySlug(slug: string): StepDefinition | undefined {

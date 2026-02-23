@@ -6,6 +6,7 @@ import { DefaultChatTransport, type UIMessage } from 'ai';
 import TextareaAutosize from 'react-textarea-autosize';
 import ReactMarkdown from 'react-markdown';
 import { Send, Loader2, Plus, CheckCircle2, Pencil, Sparkles, UserPlus } from 'lucide-react';
+import { PersonaInterrupt } from './persona-interrupt';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -103,6 +104,16 @@ function parsePersonaSelect(content: string): { cleanContent: string; personaOpt
   }
 
   return { cleanContent: content, personaOptions: [] };
+}
+
+/**
+ * Detect persona introduction messages (🎭 + "I'm [Name]" pattern).
+ * Returns the persona name if found, null otherwise.
+ */
+function detectPersonaIntro(content: string): { personaName: string } | null {
+  if (!content.includes('🎭')) return null;
+  const match = content.match(/🎭[\s\S]*?(?:I'm|Hey,?\s*I'm|I am)\s+([A-Z][a-z]+)/);
+  return match ? { personaName: match[1] } : null;
 }
 
 /**
@@ -601,6 +612,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const [personaOptions, setPersonaOptions] = React.useState<{ name: string; description: string }[]>([]);
   const [personaSelections, setPersonaSelections] = React.useState<Set<string>>(() => new Set());
   const [personaSelectConfirmed, setPersonaSelectConfirmed] = React.useState(false);
+  const [suggestionsExpanded, setSuggestionsExpanded] = React.useState(false);
   const [customPersonaInput, setCustomPersonaInput] = React.useState('');
   const [personaSelectMessageId, setPersonaSelectMessageId] = React.useState<string | null>(null);
 
@@ -727,6 +739,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         const content = textParts.map((p) => p.text).join('\n');
         const { suggestions: parsed } = parseSuggestions(content);
         setSuggestions(parsed);
+        setSuggestionsExpanded(false);
       }
     }
     // Clear suggestions while AI is responding
@@ -1509,6 +1522,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
     setInputValue('');
     setSuggestions([]);
+    setSuggestionsExpanded(false);
   };
 
   // Handle Enter to send (Shift+Enter for newline)
@@ -1627,8 +1641,11 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               const { cleanContent: noLeakedTags } = stripLeakedTags(noConceptCards);
               const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noLeakedTags);
               const isPersonaSelectMessage = message.id === personaSelectMessageId;
+              const personaIntro = detectPersonaIntro(content);
               return (
-                <div key={`${message.id}-${index}`} className="flex items-start">
+                <div key={`${message.id}-${index}`}>
+                  {personaIntro && <PersonaInterrupt personaName={personaIntro.personaName} />}
+                  <div className="flex items-start">
                   <div className="flex-1">
                     <div className="text-base prose prose-base dark:prose-invert max-w-none">
                       <ReactMarkdown>{finalContent}</ReactMarkdown>
@@ -1783,6 +1800,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                     )}
                   </div>
                 </div>
+                </div>
               );
             })}
 
@@ -1845,34 +1863,63 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
             )}
 
             {/* Suggestion pills — inline after last AI response */}
-            {suggestions.length > 0 && (
-              <div className="space-y-1.5 pt-1">
-                <div className="flex flex-wrap gap-2">
-                  {suggestions.map((suggestion, i) => (
-                    <button
-                      key={i}
-                      disabled={isLoading}
-                      onClick={async () => {
-                        setSuggestions([]);
-                        setQuickAck(getRandomAck());
-                        await flushCanvasToDb();
-                        sendMessage({
-                          role: 'user',
-                          parts: [{ type: 'text', text: suggestion }],
-                        });
-                      }}
-                      className={cn(
-                        'cursor-pointer rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors',
-                        'disabled:cursor-not-allowed disabled:opacity-50'
-                      )}
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
+            {suggestions.length > 0 && (() => {
+              const isInterviewMode = step.id === 'user-research' && personaSelectConfirmed;
+              // In interview mode, hide behind a single "Give me a suggestion" pill
+              if (isInterviewMode && !suggestionsExpanded) {
+                return (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        disabled={isLoading}
+                        onClick={() => setSuggestionsExpanded(true)}
+                        className={cn(
+                          'cursor-pointer inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors',
+                          'disabled:cursor-not-allowed disabled:opacity-50'
+                        )}
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Give me a suggestion
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground pl-1">Stuck? Click above for interview question ideas, or type your own.</p>
+                  </div>
+                );
+              }
+              return (
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.map((suggestion, i) => (
+                      <button
+                        key={i}
+                        disabled={isLoading}
+                        onClick={async () => {
+                          setSuggestions([]);
+                          setSuggestionsExpanded(false);
+                          setQuickAck(getRandomAck());
+                          await flushCanvasToDb();
+                          sendMessage({
+                            role: 'user',
+                            parts: [{ type: 'text', text: suggestion }],
+                          });
+                        }}
+                        className={cn(
+                          'cursor-pointer rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors',
+                          'disabled:cursor-not-allowed disabled:opacity-50'
+                        )}
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-1">
+                    {isInterviewMode
+                      ? 'Try one of these questions, or ask your own.'
+                      : 'Use the suggested questions above or type your own below.'}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground pl-1">Use the suggested questions above or type your own below.</p>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Proactive theme sort card — stakeholder mapping, 5+ items, not yet sorted */}
             {step.id === 'stakeholder-mapping' && status === 'ready' && !hasThemeSorted &&
