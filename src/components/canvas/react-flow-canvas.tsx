@@ -51,6 +51,7 @@ import { saveCanvasState } from '@/actions/canvas-actions';
 import type { DrawingElement } from '@/lib/drawing/types';
 import { ClusterEdge } from './cluster-edge';
 import { ClusterHullsOverlay } from './cluster-hulls-overlay';
+import { PersonaFrameOverlay, FRAME_WIDTH, MIN_FRAME_HEIGHT, FRAME_PADDING } from './persona-frame-overlay';
 import { SelectionToolbar } from './selection-toolbar';
 import { ClusterDialog } from '@/components/dialogs/cluster-dialog';
 import { DedupDialog } from '@/components/dialogs/dedup-dialog';
@@ -1490,6 +1491,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
               const cx = change.position.x + (draggedPostIt.width / 2);
               const cy = change.position.y + (draggedPostIt.height / 2);
 
+              let hullMatchFound = false;
               for (const [key, { displayName, children, parent }] of clusterGroups) {
                 // Don't add if this node IS the parent (text matches cluster name)
                 if (draggedPostIt.text.toLowerCase() === key) continue;
@@ -1507,7 +1509,48 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
                   if (parent) {
                     rearrangeCluster(displayName, parent, [...children, draggedPostIt]);
                   }
+                  hullMatchFound = true;
                   break;
+                }
+              }
+
+              // --- Drag-into-persona-frame fallback for user-research step ---
+              // When no hull match found, check if the dropped post-it center is
+              // inside a persona frame's bounds. Frames are visible rectangles
+              // below each persona card.
+              if (!hullMatchFound && stepId === 'user-research') {
+                const personaCards = items.filter(
+                  p => !p.cluster && p.text.includes(' — ') && p.id !== change.id
+                );
+
+                for (const card of personaCards) {
+                  // Compute frame bounds (same logic as PersonaFrameOverlay)
+                  const frameX = card.position.x + card.width / 2 - FRAME_WIDTH / 2;
+                  const frameY = card.position.y + card.height + 10;
+
+                  const personaName = card.text.split(/\s*[—–]\s*/)[0].trim();
+                  const children = items.filter(
+                    p => p.cluster && p.cluster.toLowerCase() === personaName.toLowerCase() && p.id !== card.id
+                  );
+                  let frameHeight = MIN_FRAME_HEIGHT;
+                  if (children.length > 0) {
+                    const childMaxY = Math.max(...children.map(c => c.position.y + c.height));
+                    const neededHeight = childMaxY - frameY + FRAME_PADDING;
+                    frameHeight = Math.max(MIN_FRAME_HEIGHT, neededHeight);
+                  }
+
+                  // Also include the card area itself as a valid drop zone
+                  const dropMinX = frameX;
+                  const dropMinY = card.position.y;
+                  const dropMaxX = frameX + FRAME_WIDTH;
+                  const dropMaxY = frameY + frameHeight;
+
+                  if (cx >= dropMinX && cx <= dropMaxX && cy >= dropMinY && cy <= dropMaxY) {
+                    setCluster([change.id], personaName);
+                    updatePostIt(change.id, { color: card.color || 'yellow' });
+                    rearrangeCluster(personaName, card, [...children, draggedPostIt]);
+                    break;
+                  }
                 }
               }
             }
@@ -1516,7 +1559,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
-    [nodes, postIts, drawingNodes, conceptCards, personaTemplates, hmwCards, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, updatePersonaTemplate, updateHmwCard, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts, bringToFront, removeFromCluster, setCluster, rearrangeCluster, onGuidePositionUpdate]
+    [nodes, postIts, drawingNodes, conceptCards, personaTemplates, hmwCards, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, updatePersonaTemplate, updateHmwCard, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts, bringToFront, removeFromCluster, setCluster, rearrangeCluster, onGuidePositionUpdate, stepId]
   );
 
   // Handle node drag (real-time cell highlighting)
@@ -1978,8 +2021,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       </ReactFlow>
 
       {/* Cluster hull overlay — HTML divs with absolute positioning, rendered outside ReactFlow */}
-      {stepConfig.hasRings && (
+      {stepConfig.hasRings && stepId !== 'user-research' && (
         <ClusterHullsOverlay onSelectCluster={handleSelectCluster} onRenameCluster={handleRenameCluster} />
+      )}
+
+      {/* Persona frame overlay — visible frames for each persona card (user-research step only) */}
+      {stepId === 'user-research' && (
+        <PersonaFrameOverlay />
       )}
 
       {/* Toolbar */}
@@ -2000,29 +2048,44 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       />
 
       {/* Selection toolbar — shown when 2+ post-its are selected */}
-      {selectedNodeIds.length >= 2 && stepConfig.hasRings && (() => {
+      {selectedNodeIds.length >= 2 && (stepConfig.hasRings || stepId === 'user-research') && (() => {
         // Compute bounding box center of selected nodes in screen coords
         const selectedPostIts = postIts.filter(p => selectedNodeIds.includes(p.id));
         if (selectedPostIts.length < 2) return null;
         const canvasRef = canvasContainerRef.current;
         if (!canvasRef) return null;
         const rect = canvasRef.getBoundingClientRect();
-        // Get viewport from ReactFlow store
-        const minX = Math.min(...selectedPostIts.map(p => p.position.x));
-        const maxX = Math.max(...selectedPostIts.map(p => p.position.x + p.width));
-        const minY = Math.min(...selectedPostIts.map(p => p.position.y));
-        // Center X of bounding box in screen space
-        const centerCanvasX = (minX + maxX) / 2;
-        // Use screenToFlowPosition inverse: screen = canvas * zoom + offset
-        // We need to reverse this, but we don't have direct viewport access here.
-        // Instead, use the nodes array which has screen-relative positions after ReactFlow transforms.
-        // Simpler approach: use the first selected node's position as reference
+
+        // Persona options for "Assign to" dropdown (user-research only)
+        const personaCards = stepId === 'user-research'
+          ? postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview && !p.cluster && p.text.includes(' — '))
+          : [];
+        const personaOpts = personaCards.map(c => ({
+          name: c.text.split(/\s*[—–]\s*/)[0].trim(),
+          color: c.color || 'yellow',
+        }));
+
         return (
           <SelectionToolbar
             count={selectedNodeIds.length}
             position={{ x: rect.left + rect.width / 2, y: rect.top + 60 }}
             onCluster={handleOpenClusterDialog}
             onDelete={handleDeleteSelected}
+            personaOptions={stepId === 'user-research' ? personaOpts : undefined}
+            onAssignToPersona={stepId === 'user-research' ? (name) => {
+              const card = personaCards.find(c => c.text.split(/\s*[—–]\s*/)[0].trim() === name);
+              if (!card) return;
+              const selPostIts = postIts.filter(p => selectedNodeIds.includes(p.id) && (!p.type || p.type === 'postIt'));
+              const ids = selPostIts.map(p => p.id);
+              setCluster(ids, name);
+              ids.forEach(id => updatePostIt(id, { color: card.color || 'yellow' }));
+              // Rearrange: find existing children + newly assigned
+              const existingChildren = postIts.filter(
+                p => p.cluster?.toLowerCase() === name.toLowerCase() && !ids.includes(p.id)
+              );
+              rearrangeCluster(name, card, [...existingChildren, ...selPostIts]);
+              setSelectedNodeIds([]);
+            } : undefined}
           />
         );
       })()}
@@ -2068,6 +2131,53 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
               </button>
             </div>
           )}
+          {/* Assign to persona — user-research step only */}
+          {stepId === 'user-research' && (() => {
+            const contextPostIt = postIts.find(p => p.id === contextMenu.nodeId);
+            const isPersonaCard = contextPostIt && !contextPostIt.cluster && contextPostIt.text.includes(' — ');
+            if (isPersonaCard || contextMenu.isClusterParent) return null;
+            const personaCards = postIts.filter(
+              p => (!p.type || p.type === 'postIt') && !p.isPreview && !p.cluster && p.text.includes(' — ')
+            );
+            if (personaCards.length === 0) return null;
+            const COLOR_DOT: Record<string, string> = {
+              pink: 'bg-pink-400', blue: 'bg-blue-400', green: 'bg-green-400',
+              yellow: 'bg-yellow-400', orange: 'bg-orange-400', red: 'bg-red-400',
+            };
+            return (
+              <div
+                className="fixed z-[60] bg-popover rounded-lg shadow-lg border border-border p-1 min-w-[140px]"
+                style={{ left: contextMenu.x, top: contextMenu.y + 50 }}
+              >
+                <p className="text-xs text-muted-foreground px-3 py-1">Assign to:</p>
+                {personaCards.map(card => {
+                  const personaName = card.text.split(/\s*[—–]\s*/)[0].trim();
+                  return (
+                    <button
+                      key={card.id}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent rounded w-full text-left"
+                      onClick={() => {
+                        setCluster([contextMenu.nodeId], personaName);
+                        updatePostIt(contextMenu.nodeId, { color: card.color || 'yellow' });
+                        // Rearrange: find existing children for this persona
+                        const existingChildren = postIts.filter(
+                          p => p.cluster?.toLowerCase() === personaName.toLowerCase() && p.id !== contextMenu.nodeId
+                        );
+                        const draggedPostIt = postIts.find(p => p.id === contextMenu.nodeId);
+                        if (draggedPostIt) {
+                          rearrangeCluster(personaName, card, [...existingChildren, draggedPostIt]);
+                        }
+                        setContextMenu(null);
+                      }}
+                    >
+                      <span className={cn('inline-block h-2.5 w-2.5 rounded-full', COLOR_DOT[card.color || 'yellow'])} />
+                      {personaName}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       ) : null}
 
