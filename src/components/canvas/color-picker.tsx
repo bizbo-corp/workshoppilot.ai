@@ -2,17 +2,17 @@
 
 import { memo } from 'react';
 import { cn } from '@/lib/utils';
-import type { PostItColor } from '@/stores/canvas-store';
-import { COLOR_CLASSES } from './post-it-node';
+import type { StickyNoteColor } from '@/stores/canvas-store';
+import { COLOR_CLASSES } from './sticky-note-node';
 
 interface ColorPickerProps {
   position: { x: number; y: number };
-  currentColor: PostItColor;
-  onColorSelect: (color: PostItColor) => void;
+  currentColor: StickyNoteColor;
+  onColorSelect: (color: StickyNoteColor) => void;
   onClose: () => void;
 }
 
-const COLORS: { value: PostItColor; label: string }[] = [
+const COLORS: { value: StickyNoteColor; label: string }[] = [
   { value: 'yellow', label: 'Yellow' },
   { value: 'pink', label: 'Pink' },
   { value: 'blue', label: 'Blue' },

@@ -1,12 +1,12 @@
 /**
  * Canvas Context Assembly Module
- * Assembles AI-readable context strings from canvas post-its, with step-specific grouping
+ * Assembles AI-readable context strings from canvas sticky notes, with step-specific grouping
  * Step 2 (Stakeholder Mapping): Groups by ring + cluster hierarchy
  * Step 4 (Sense Making): Groups by Empathy Map quadrant
- * Other steps: Flat list of post-it text
+ * Other steps: Flat list of sticky note text
  */
 
-import type { PostIt, GridColumn } from '@/stores/canvas-store';
+import type { StickyNote, GridColumn } from '@/stores/canvas-store';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 
@@ -20,16 +20,16 @@ const RING_LABELS: Record<string, string> = {
 
 /**
  * Assemble stakeholder canvas context for Step 2 (Stakeholder Mapping)
- * Groups post-its by ring (cellAssignment.row) with cluster hierarchy
+ * Groups sticky notes by ring (cellAssignment.row) with cluster hierarchy
  */
-export function assembleStakeholderCanvasContext(postIts: PostIt[]): string {
+export function assembleStakeholderCanvasContext(stickyNotes: StickyNote[]): string {
   // Filter out group nodes and preview nodes
-  const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+  const items = stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview);
 
   if (items.length === 0) return '';
 
   // Build cluster lookup: clusterName → children
-  const clusterChildren = new Map<string, PostIt[]>();
+  const clusterChildren = new Map<string, StickyNote[]>();
   const clusterParentTexts = new Set<string>();
 
   for (const item of items) {
@@ -42,7 +42,7 @@ export function assembleStakeholderCanvasContext(postIts: PostIt[]): string {
   }
 
   // Group items by ring
-  const ringGroups = new Map<string, PostIt[]>();
+  const ringGroups = new Map<string, StickyNote[]>();
   for (const item of items) {
     const ring = item.cellAssignment?.row || 'unassigned';
     if (!ringGroups.has(ring)) ringGroups.set(ring, []);
@@ -52,7 +52,7 @@ export function assembleStakeholderCanvasContext(postIts: PostIt[]): string {
   // Build sections
   const sections: string[] = [];
 
-  const renderRingSection = (ringId: string, ringItems: PostIt[]) => {
+  const renderRingSection = (ringId: string, ringItems: StickyNote[]) => {
     const label = RING_LABELS[ringId] || ringId;
     const lines: string[] = [];
 
@@ -62,8 +62,8 @@ export function assembleStakeholderCanvasContext(postIts: PostIt[]): string {
       for (const child of children) childIds.add(child.id);
     }
 
-    const parents: PostIt[] = [];
-    const standalone: PostIt[] = [];
+    const parents: StickyNote[] = [];
+    const standalone: StickyNote[] = [];
 
     for (const item of ringItems) {
       if (childIds.has(item.id)) continue; // rendered under parent
@@ -114,14 +114,14 @@ export function assembleStakeholderCanvasContext(postIts: PostIt[]): string {
 
 /**
  * Assemble journey map canvas context for Step 6 (Journey Mapping)
- * Groups post-its by grid row (swimlane) and column (journey stage)
+ * Groups sticky notes by grid row (swimlane) and column (journey stage)
  *
- * @param postIts - Canvas post-its
+ * @param stickyNotes - Canvas sticky notes
  * @param gridColumns - Dynamic grid columns (user-editable). Falls back to defaults if empty.
  */
-export function assembleJourneyMapCanvasContext(postIts: PostIt[], gridColumns?: GridColumn[]): string {
+export function assembleJourneyMapCanvasContext(stickyNotes: StickyNote[], gridColumns?: GridColumn[]): string {
   // Filter out group nodes and preview nodes
-  const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+  const items = stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview);
 
   // Determine column order: use dynamic gridColumns if provided, else defaults
   const defaultColumns: Array<{ id: string; label: string }> = [
@@ -142,8 +142,8 @@ export function assembleJourneyMapCanvasContext(postIts: PostIt[], gridColumns?:
   if (items.length === 0) return '';
 
   // Group by row first, then by column
-  const rowGroups = new Map<string, Map<string, PostIt[]>>();
-  const unplaced: PostIt[] = [];
+  const rowGroups = new Map<string, Map<string, StickyNote[]>>();
+  const unplaced: StickyNote[] = [];
 
   items.forEach(item => {
     if (!item.cellAssignment) {
@@ -242,11 +242,11 @@ const EMPATHY_ZONE_LABELS: Record<string, string> = {
 
 /**
  * Assemble empathy map canvas context for Step 4 (Sense Making)
- * Groups post-its by empathy zone (stored in cellAssignment.row)
+ * Groups sticky notes by empathy zone (stored in cellAssignment.row)
  */
-export function assembleEmpathyMapCanvasContext(postIts: PostIt[]): string {
+export function assembleEmpathyMapCanvasContext(stickyNotes: StickyNote[]): string {
   // Filter out group nodes
-  const items = postIts.filter(p => !p.type || p.type === 'postIt');
+  const items = stickyNotes.filter(p => !p.type || p.type === 'stickyNote');
 
   if (items.length === 0) return '';
 
@@ -254,7 +254,7 @@ export function assembleEmpathyMapCanvasContext(postIts: PostIt[]): string {
   const zoneOrder = ['says', 'thinks', 'feels', 'does', 'pains', 'gains'];
 
   // Group by zone — empathy zone items use cellAssignment.row, legacy items use quadrant
-  const grouped = new Map<string, PostIt[]>();
+  const grouped = new Map<string, StickyNote[]>();
   items.forEach(item => {
     const key = item.cellAssignment?.row || item.quadrant || 'unassigned';
     if (!grouped.has(key)) grouped.set(key, []);
@@ -394,17 +394,17 @@ export function assembleHmwCardCanvasContext(hmwCards: HmwCardData[]): string {
 
 /**
  * Assemble user research canvas context for Step 3 (User Research)
- * Groups post-its by cluster (persona name) so the AI sees which insights
+ * Groups sticky notes by cluster (persona name) so the AI sees which insights
  * came from which persona interview
  */
-export function assembleUserResearchCanvasContext(postIts: PostIt[]): string {
-  const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+export function assembleUserResearchCanvasContext(stickyNotes: StickyNote[]): string {
+  const items = stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview);
 
   if (items.length === 0) return '';
 
   // Separate persona cards (no cluster) from interview insights (have cluster)
-  const personaCards: PostIt[] = [];
-  const insightsByPersona = new Map<string, PostIt[]>();
+  const personaCards: StickyNote[] = [];
+  const insightsByPersona = new Map<string, StickyNote[]>();
 
   for (const item of items) {
     if (item.cluster) {
@@ -437,10 +437,10 @@ export function assembleUserResearchCanvasContext(postIts: PostIt[]): string {
  * Assemble canvas context for a specific step
  * Routes to step-specific assembly function based on stepId
  */
-export function assembleCanvasContextForStep(stepId: string, postIts: PostIt[], gridColumns?: GridColumn[], personaTemplates?: PersonaTemplateData[], hmwCards?: HmwCardData[]): string {
+export function assembleCanvasContextForStep(stepId: string, stickyNotes: StickyNote[], gridColumns?: GridColumn[], personaTemplates?: PersonaTemplateData[], hmwCards?: HmwCardData[]): string {
   // For journey-mapping, always return context (even if no items) so AI sees column structure
   if (stepId === 'journey-mapping') {
-    return assembleJourneyMapCanvasContext(postIts, gridColumns);
+    return assembleJourneyMapCanvasContext(stickyNotes, gridColumns);
   }
 
   // Reframe step uses HMW cards
@@ -448,45 +448,45 @@ export function assembleCanvasContextForStep(stepId: string, postIts: PostIt[], 
     return assembleHmwCardCanvasContext(hmwCards);
   }
 
-  // Persona step uses template cards, not post-its — check before filtering
+  // Persona step uses template cards, not sticky notes — check before filtering
   if (stepId === 'persona' && personaTemplates && personaTemplates.length > 0) {
     return assemblePersonaCanvasContext(personaTemplates);
   }
 
   // Challenge step: report template card state so the AI knows which cards are filled
   if (stepId === 'challenge') {
-    const templatePostIts = postIts.filter(p => p.templateKey);
-    if (templatePostIts.length > 0) {
-      const lines = templatePostIts.map(p => {
+    const templateStickyNotes = stickyNotes.filter(p => p.templateKey);
+    if (templateStickyNotes.length > 0) {
+      const lines = templateStickyNotes.map(p => {
         const filled = p.text?.trim().length > 0;
         const status = filled ? 'filled' : 'empty';
         const content = filled ? p.text.trim() : '(not yet filled)';
         return `- [${p.templateLabel || p.templateKey}] (key: ${p.templateKey}, ${status}): ${content}`;
       });
       let result = `Template cards:\n${lines.join('\n')}`;
-      // Also include any non-template post-its (user-added)
-      const regularItems = postIts.filter(p => !p.templateKey && (!p.type || p.type === 'postIt') && !p.isPreview && p.text?.trim());
+      // Also include any non-template sticky notes (user-added)
+      const regularItems = stickyNotes.filter(p => !p.templateKey && (!p.type || p.type === 'stickyNote') && !p.isPreview && p.text?.trim());
       if (regularItems.length > 0) {
         const regularLines = regularItems.map(p => `- ${p.text.trim()}`);
         result += `\n\nAdditional canvas items:\n${regularLines.join('\n')}`;
       }
       return result;
     }
-    // Fall through to default if no template post-its (legacy workshops)
+    // Fall through to default if no template sticky notes (legacy workshops)
   }
 
   // Filter out group nodes and preview nodes first
-  const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+  const items = stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview);
 
   if (items.length === 0) return '';
 
   // Route to step-specific assembly
   if (stepId === 'stakeholder-mapping') {
-    return assembleStakeholderCanvasContext(postIts);
+    return assembleStakeholderCanvasContext(stickyNotes);
   } else if (stepId === 'user-research') {
-    return assembleUserResearchCanvasContext(postIts);
+    return assembleUserResearchCanvasContext(stickyNotes);
   } else if (stepId === 'sense-making') {
-    return assembleEmpathyMapCanvasContext(postIts);
+    return assembleEmpathyMapCanvasContext(stickyNotes);
   } else {
     // Default: flat list for non-quadrant/non-grid steps
     const itemList = items

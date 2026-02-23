@@ -1,6 +1,6 @@
 /**
  * Quadrant Detection Module
- * Detects which quadrant a post-it belongs to based on its center point
+ * Detects which quadrant a sticky note belongs to based on its center point
  * Supports Power-Interest matrix and Empathy Map quadrant layouts
  */
 
@@ -21,14 +21,14 @@ export type Quadrant = PowerInterestQuadrant | EmpathyMapQuadrant;
 export type QuadrantType = 'power-interest' | 'empathy-map';
 
 /**
- * Detect which quadrant a post-it belongs to based on its center point
+ * Detect which quadrant a sticky note belongs to based on its center point
  * Canvas origin (0,0) is the center dividing line
  *
- * @param position - Top-left corner position of the post-it
- * @param width - Width of the post-it
- * @param height - Height of the post-it
+ * @param position - Top-left corner position of the sticky note
+ * @param width - Width of the sticky note
+ * @param height - Height of the sticky note
  * @param type - Type of quadrant layout
- * @returns The quadrant the post-it belongs to
+ * @returns The quadrant the sticky note belongs to
  */
 export function detectQuadrant(
   position: { x: number; y: number },
@@ -36,7 +36,7 @@ export function detectQuadrant(
   height: number,
   type: QuadrantType
 ): Quadrant {
-  // Calculate center point of the post-it
+  // Calculate center point of the sticky note
   const centerX = position.x + width / 2;
   const centerY = position.y + height / 2;
 

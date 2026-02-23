@@ -150,7 +150,7 @@ export function IdeationSubStepContainer({
     if (!stepId) return;
     const state = canvasStoreApi.getState();
     await saveCanvasState(workshopId, stepId, {
-      postIts: state.postIts,
+      stickyNotes: state.stickyNotes,
       ...(state.gridColumns.length > 0 ? { gridColumns: state.gridColumns } : {}),
       ...(state.drawingNodes.length > 0 ? { drawingNodes: state.drawingNodes } : {}),
       ...(state.mindMapNodes.length > 0 ? { mindMapNodes: state.mindMapNodes } : {}),

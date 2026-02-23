@@ -7,7 +7,7 @@ interface JourneyMapSkeletonProps {
   config: GridConfig;
 }
 
-// Deterministic post-it count per cell (rowIdx-colIdx → count).
+// Deterministic sticky note count per cell (rowIdx-colIdx → count).
 // Varies between 1-3 to look natural.
 const CELL_COUNTS: Record<string, number> = {
   '0-0': 2, '0-1': 1, '0-2': 2, '0-3': 1, '0-4': 2,
@@ -105,7 +105,7 @@ export function JourneyMapSkeleton({ config }: JourneyMapSkeletonProps) {
             );
           })}
 
-          {/* Grid cells + skeleton post-its */}
+          {/* Grid cells + skeleton sticky notes */}
           {rows.map((row, rowIdx) => {
             let cellY = origin.y;
             for (let i = 0; i < rowIdx; i++) cellY += rows[i].height;
@@ -137,7 +137,7 @@ export function JourneyMapSkeleton({ config }: JourneyMapSkeletonProps) {
                         style={{ backgroundColor: 'var(--canvas-grid-line-light)' }}
                       />
                     ) : (
-                      /* Regular cells: 1-3 post-it rectangles */
+                      /* Regular cells: 1-3 sticky note rectangles */
                       Array.from({ length: count }).map((_, i) => (
                         <div
                           key={i}

@@ -42,7 +42,7 @@ For EVERY insight you place on the board:
 BOUNDARY: Focus on synthesis and pattern recognition. Don't jump to solutions or ideation — that's Steps 8-9. Don't create personas yet — that's Step 5. Stay at the level of themes, pains, and gains derived from research evidence.
 
 PRIOR CONTEXT USAGE:
-Reference User Research insights (Step 3) heavily — every insight must trace back to specific findings with source attribution. Pull from the canvas post-its (clustered by persona name) and from the structured artifact data.
+Reference User Research insights (Step 3) heavily — every insight must trace back to specific findings with source attribution. Pull from the canvas sticky notes (clustered by persona name) and from the structured artifact data.
 Reference the Challenge (Step 1) to ensure sense-making stays relevant to the core problem.`,
 
   interactionLogic: `CONVERSATION FLOW:

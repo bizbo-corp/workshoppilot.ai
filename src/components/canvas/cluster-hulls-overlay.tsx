@@ -12,7 +12,7 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useStore as useReactFlowStore, type ReactFlowState } from '@xyflow/react';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
-import type { PostIt } from '@/stores/canvas-store';
+import type { StickyNote } from '@/stores/canvas-store';
 
 const viewportSelector = (state: ReactFlowState) => ({
   x: state.transform[0],
@@ -55,15 +55,15 @@ interface ClusterHullsOverlayProps {
 }
 
 export function ClusterHullsOverlay({ onSelectCluster, onRenameCluster }: ClusterHullsOverlayProps) {
-  const postIts = useCanvasStore((s) => s.postIts);
+  const stickyNotes = useCanvasStore((s) => s.stickyNotes);
   const batchUpdatePositions = useCanvasStore((s) => s.batchUpdatePositions);
   const { x, y, zoom } = useReactFlowStore(viewportSelector);
 
   const dragRef = useRef<DragState | null>(null);
   const zoomRef = useRef(zoom);
   zoomRef.current = zoom;
-  const postItsRef = useRef(postIts);
-  postItsRef.current = postIts;
+  const stickyNotesRef = useRef(stickyNotes);
+  stickyNotesRef.current = stickyNotes;
 
   const [isDragging, setIsDragging] = useState(false);
 
@@ -72,9 +72,9 @@ export function ClusterHullsOverlay({ onSelectCluster, onRenameCluster }: Cluste
   const [editValue, setEditValue] = useState('');
 
   const hulls = useMemo<ClusterHullData[]>(() => {
-    const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+    const items = stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview);
 
-    const clusterMap = new Map<string, PostIt[]>();
+    const clusterMap = new Map<string, StickyNote[]>();
     for (const item of items) {
       if (!item.cluster) continue;
       const key = item.cluster.toLowerCase();
@@ -106,7 +106,7 @@ export function ClusterHullsOverlay({ onSelectCluster, onRenameCluster }: Cluste
     }
 
     return result;
-  }, [postIts]);
+  }, [stickyNotes]);
 
   // --- Drag ---
 
@@ -144,7 +144,7 @@ export function ClusterHullsOverlay({ onSelectCluster, onRenameCluster }: Cluste
     e.stopPropagation();
     e.preventDefault();
 
-    const items = postItsRef.current;
+    const items = stickyNotesRef.current;
     const initialPositions = new Map<string, { x: number; y: number }>();
     for (const id of hull.memberIds) {
       const p = items.find(pi => pi.id === id);

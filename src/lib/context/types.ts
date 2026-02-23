@@ -40,7 +40,7 @@ export interface StepContext {
   persistentContext: string; // Always '' — kept for interface compat (artifacts removed in favor of summaries)
   summaries: string; // AI-generated summaries
   canvasContext: string; // Canvas state formatted for AI prompt
-  existingItemNames: string[]; // Flat list of post-it names on the board (for dedup blocklist)
+  existingItemNames: string[]; // Flat list of sticky note names on the board (for dedup blocklist)
   messages: Array<{
     role: string;
     content: string;

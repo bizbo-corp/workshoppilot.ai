@@ -18,7 +18,7 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { Plus, Minus, Maximize } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
-import { PostItNode, type PostItNodeData } from './post-it-node';
+import { StickyNoteNode, type StickyNoteNodeData } from './sticky-note-node';
 import { GroupNode } from './group-node';
 import { DrawingImageNode } from './drawing-image-node';
 import { ConceptCardNode } from './concept-card-node';
@@ -31,7 +31,7 @@ import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import { ColorPicker } from './color-picker';
 import { useCanvasAutosave } from '@/hooks/use-canvas-autosave';
 import { usePreventScrollOnCanvas } from '@/hooks/use-prevent-scroll-on-canvas';
-import type { PostItColor, GridColumn, DrawingNode } from '@/stores/canvas-store';
+import type { StickyNoteColor, GridColumn, DrawingNode } from '@/stores/canvas-store';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { computeThemeSortPositions, computeClusterChildPositions } from '@/lib/canvas/canvas-position';
 import { QuadrantOverlay } from './quadrant-overlay';
@@ -59,12 +59,12 @@ import { CanvasGuide } from './canvas-guide';
 import { GuideNode } from './guide-node';
 import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
 import type { StepCanvasSettingsData } from '@/lib/canvas/step-canvas-settings-types';
-import { getStepTemplatePostIts } from '@/lib/canvas/template-postit-config';
+import { getStepTemplateStickyNotes } from '@/lib/canvas/template-sticky-note-config';
 // JourneyMapSkeleton removed — skeleton placeholders are now integrated into GridOverlay
 
 // Define node types OUTSIDE component for stable reference
 const nodeTypes = {
-  postIt: PostItNode,
+  stickyNote: StickyNoteNode,
   group: GroupNode,
   drawingImage: DrawingImageNode,
   conceptCard: ConceptCardNode,
@@ -95,12 +95,12 @@ export interface ReactFlowCanvasProps {
 
 function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: canvasGuidesProp, defaultViewportSettings, isAdmin, isAdminEditing, onEditGuide, onAddGuide, onGuidePositionUpdate, onGuideSizeUpdate, canvasRef }: ReactFlowCanvasProps) {
   // Store access
-  const postIts = useCanvasStore((s) => s.postIts);
-  const addPostIt = useCanvasStore((s) => s.addPostIt);
-  const updatePostIt = useCanvasStore((s) => s.updatePostIt);
-  const deletePostIt = useCanvasStore((s) => s.deletePostIt);
-  const batchDeletePostIts = useCanvasStore((s) => s.batchDeletePostIts);
-  const ungroupPostIts = useCanvasStore((s) => s.ungroupPostIts);
+  const stickyNotes = useCanvasStore((s) => s.stickyNotes);
+  const addStickyNote = useCanvasStore((s) => s.addStickyNote);
+  const updateStickyNote = useCanvasStore((s) => s.updateStickyNote);
+  const deleteStickyNote = useCanvasStore((s) => s.deleteStickyNote);
+  const batchDeleteStickyNotes = useCanvasStore((s) => s.batchDeleteStickyNotes);
+  const ungroupStickyNotes = useCanvasStore((s) => s.ungroupStickyNotes);
   const drawingNodes = useCanvasStore((s) => s.drawingNodes);
   const addDrawingNode = useCanvasStore((s) => s.addDrawingNode);
   const updateDrawingNode = useCanvasStore((s) => s.updateDrawingNode);
@@ -125,7 +125,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
   const pendingFitView = useCanvasStore((s) => s.pendingFitView);
   const setPendingFitView = useCanvasStore((s) => s.setPendingFitView);
   const setPendingHmwChipSelection = useCanvasStore((s) => s.setPendingHmwChipSelection);
-  const setSelectedPostItIds = useCanvasStore((s) => s.setSelectedPostItIds);
+  const setSelectedStickyNoteIds = useCanvasStore((s) => s.setSelectedStickyNoteIds);
   const setCluster = useCanvasStore((s) => s.setCluster);
   const clearCluster = useCanvasStore((s) => s.clearCluster);
   const renameCluster = useCanvasStore((s) => s.renameCluster);
@@ -143,35 +143,35 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
   // Auto-save integration
   const { saveStatus } = useCanvasAutosave(workshopId, stepId);
 
-  // Client-side template post-it initialization — ensures templates exist even if
+  // Client-side template sticky note initialization — ensures templates exist even if
   // server-side seeding in page.tsx failed or data was lost. Runs once on mount.
   const templateSeededRef = useRef(false);
   useEffect(() => {
     if (templateSeededRef.current) return;
-    const currentPostIts = storeApi.getState().postIts;
-    const hasTemplates = currentPostIts.some(p => p.templateKey);
+    const currentStickyNotes = storeApi.getState().stickyNotes;
+    const hasTemplates = currentStickyNotes.some(p => p.templateKey);
     if (!hasTemplates) {
-      const templateDefs = getStepTemplatePostIts(stepId);
+      const templateDefs = getStepTemplateStickyNotes(stepId);
       if (templateDefs.length > 0) {
         console.log('[canvas] Client-side template seeding:', templateDefs.length, 'templates for step', stepId);
         templateSeededRef.current = true;
         for (const def of templateDefs) {
-          addPostIt({
+          addStickyNote({
             id: crypto.randomUUID(),
             text: '',
             position: def.position,
             width: def.width,
             height: def.height,
             color: def.color,
-            type: 'postIt',
+            type: 'stickyNote',
             templateKey: def.key,
             templateLabel: def.label,
             placeholderText: def.placeholderText,
           });
         }
         // Save to DB immediately so the AI API route can read template state
-        const allPostIts = storeApi.getState().postIts;
-        saveCanvasState(workshopId, stepId, { postIts: allPostIts }).then(result => {
+        const allStickyNotes = storeApi.getState().stickyNotes;
+        saveCanvasState(workshopId, stepId, { stickyNotes: allStickyNotes }).then(result => {
           console.log('[canvas] Client-side template save result:', result);
         });
       }
@@ -182,8 +182,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
   // Step-specific canvas configuration
   const stepConfig = getStepCanvasConfig(stepId);
 
-  // Whether canvas has any user content (unfilled template post-its don't count)
-  const canvasHasItems = postIts.some(p => !p.templateKey || p.text.trim().length > 0) || personaTemplates.length > 0 || hmwCards.length > 0 || conceptCards.length > 0;
+  // Whether canvas has any user content (unfilled template sticky notes don't count)
+  const canvasHasItems = stickyNotes.some(p => !p.templateKey || p.text.trim().length > 0) || personaTemplates.length > 0 || hmwCards.length > 0 || conceptCards.length > 0;
 
   // Canvas guide objects (instructional stickers/hints on the canvas)
   const stepGuides = canvasGuidesProp || [];
@@ -230,8 +230,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
   const lastPaneClickTime = useRef(0);
   const DOUBLE_CLICK_THRESHOLD = 300; // ms
 
-  // Track previous post-it count for fitView logic
-  const previousPostItCount = useRef(postIts.length);
+  // Track previous sticky note count for fitView logic
+  const previousStickyNoteCount = useRef(stickyNotes.length);
 
   // Bring a node to the top of the z-index stack
   const bringToFront = useCallback((nodeId: string) => {
@@ -291,13 +291,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
   const handleResizeEnd = useCallback(
     (id: string, width: number, height: number, x: number, y: number) => {
       delete liveDimensions.current[id];
-      updatePostIt(id, {
+      updateStickyNote(id, {
         width: Math.round(width),
         height: Math.round(height),
         position: { x: Math.round(x), y: Math.round(y) },
       });
     },
-    [updatePostIt]
+    [updateStickyNote]
   );
 
   // Guide resize handler — updates liveDimensions ref (no re-render)
@@ -332,10 +332,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
     nodeId: string;
     x: number;
     y: number;
-    currentColor: PostItColor;
+    currentColor: StickyNoteColor;
     nodeType: string;
     isClusterParent?: boolean;
-    postItText?: string;
+    stickyNoteText?: string;
   } | null>(null);
 
   // Track selected nodes for controlled selection state
@@ -391,10 +391,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
     };
   }, [stepConfig, gridColumns]);
 
-  // Derive cluster edges from post-its
+  // Derive cluster edges from sticky notes
   const clusterEdges = useMemo<Edge[]>(() => {
     if (!stepConfig.hasRings) return [];
-    const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+    const items = stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview);
     // Build text-to-id map for parent matching
     const textToId = new Map<string, string>();
     for (const item of items) {
@@ -413,11 +413,11 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       });
     }
     return edges;
-  }, [postIts, stepConfig.hasRings]);
+  }, [stickyNotes, stepConfig.hasRings]);
 
   // Compute existing cluster names and parent metadata for node data
   const { existingClusters, clusterParentMap } = useMemo(() => {
-    const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+    const items = stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview);
     const clusterSet = new Map<string, { displayName: string; count: number }>();
     for (const item of items) {
       if (!item.cluster) continue;
@@ -429,7 +429,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         clusterSet.set(key, { displayName: item.cluster, count: 1 });
       }
     }
-    // Build parentMap: postIt text lowercase → { label, count } for items that are cluster parents
+    // Build parentMap: stickyNote text lowercase → { label, count } for items that are cluster parents
     const parentMap = new Map<string, { label: string; count: number }>();
     for (const [key, { displayName, count }] of clusterSet) {
       parentMap.set(key, { label: displayName, count });
@@ -438,7 +438,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       existingClusters: Array.from(clusterSet.values()).map(v => v.displayName),
       clusterParentMap: parentMap,
     };
-  }, [postIts]);
+  }, [stickyNotes]);
 
   // Snap position to grid
   const snapToGrid = useCallback(
@@ -495,30 +495,30 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
     return unsubscribe;
   }, [storeApi]);
 
-  // Helper: create a post-it with pre-generated ID so editing + z-index
+  // Helper: create a sticky note with pre-generated ID so editing + z-index
   // are set synchronously BEFORE the store update. This eliminates the
   // one-frame delay that caused broken auto-focus and z-index on creation.
-  const createAndEditPostIt = useCallback(
-    (postIt: Omit<import('@/stores/canvas-store').PostIt, 'id'>) => {
+  const createAndEditStickyNote = useCallback(
+    (stickyNote: Omit<import('@/stores/canvas-store').StickyNote, 'id'>) => {
       const newId = crypto.randomUUID();
       bringToFront(newId);
       setEditingNodeId(newId);
-      addPostIt({ ...postIt, id: newId });
+      addStickyNote({ ...stickyNote, id: newId });
     },
-    [bringToFront, addPostIt]
+    [bringToFront, addStickyNote]
   );
 
-  // Keep previousPostItCount in sync for fitView logic
+  // Keep previousStickyNoteCount in sync for fitView logic
   useEffect(() => {
-    previousPostItCount.current = postIts.length;
-  }, [postIts.length]);
+    previousStickyNoteCount.current = stickyNotes.length;
+  }, [stickyNotes.length]);
 
-  // Handle text change from PostItNode textarea
+  // Handle text change from StickyNoteNode textarea
   const handleTextChange = useCallback(
     (id: string, text: string) => {
-      updatePostIt(id, { text });
+      updateStickyNote(id, { text });
     },
-    [updatePostIt]
+    [updateStickyNote]
   );
 
   // Handle edit complete (textarea blur)
@@ -677,63 +677,63 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
     setHighlightedCell(null);
   }, [rejectPreview]);
 
-  // Convert store post-its to ReactFlow nodes
+  // Convert store sticky notes to ReactFlow nodes
   const nodes = useMemo<Node[]>(() => {
     // Sort: groups first (parents before children for ReactFlow)
-    const sorted = [...postIts].sort((a, b) => {
+    const sorted = [...stickyNotes].sort((a, b) => {
       if (a.type === 'group' && b.type !== 'group') return -1;
       if (a.type !== 'group' && b.type === 'group') return 1;
       return 0;
     });
 
-    const postItReactFlowNodes: Node[] = sorted.map((postIt) => {
-      const isPreview = postIt.isPreview === true;
+    const stickyNoteReactFlowNodes: Node[] = sorted.map((stickyNote) => {
+      const isPreview = stickyNote.isPreview === true;
       // Use live ref values during drag/resize — safety net so that IF useMemo
       // recomputes mid-manipulation (from unrelated state changes), it reads
       // current values instead of stale store positions/dimensions.
-      const livePos = livePositions.current[postIt.id];
-      const liveDims = liveDimensions.current[postIt.id];
+      const livePos = livePositions.current[stickyNote.id];
+      const liveDims = liveDimensions.current[stickyNote.id];
 
       // Cluster parent badge data
-      const clusterInfo = clusterParentMap.get(postIt.text.toLowerCase());
+      const clusterInfo = clusterParentMap.get(stickyNote.text.toLowerCase());
 
       return {
-        id: postIt.id,
-        type: postIt.type || 'postIt',
-        position: livePos || postIt.position,
-        parentId: postIt.parentId,
-        extent: postIt.parentId ? ('parent' as const) : undefined,
-        zIndex: nodeZIndices[postIt.id] || 20,
+        id: stickyNote.id,
+        type: stickyNote.type || 'stickyNote',
+        position: livePos || stickyNote.position,
+        parentId: stickyNote.parentId,
+        extent: stickyNote.parentId ? ('parent' as const) : undefined,
+        zIndex: nodeZIndices[stickyNote.id] || 20,
         draggable: !isPreview,
         selectable: !isPreview,
-        selected: selectedNodeIds.includes(postIt.id),
+        selected: selectedNodeIds.includes(stickyNote.id),
         data: {
-          text: postIt.text,
-          color: postIt.color || 'yellow',
-          isEditing: isPreview ? false : editingNodeId === postIt.id,
+          text: stickyNote.text,
+          color: stickyNote.color || 'yellow',
+          isEditing: isPreview ? false : editingNodeId === stickyNote.id,
           onTextChange: handleTextChange,
           onEditComplete: handleEditComplete,
           onResize: handleResize,
           onResizeEnd: handleResizeEnd,
-          ...(postIt.templateKey ? {
-            templateKey: postIt.templateKey,
-            templateLabel: postIt.templateLabel,
-            placeholderText: postIt.placeholderText,
+          ...(stickyNote.templateKey ? {
+            templateKey: stickyNote.templateKey,
+            templateLabel: stickyNote.templateLabel,
+            placeholderText: stickyNote.placeholderText,
           } : {}),
-          ...(clusterInfo && !postIt.cluster ? {
+          ...(clusterInfo && !stickyNote.cluster ? {
             clusterLabel: clusterInfo.label,
             clusterChildCount: clusterInfo.count,
           } : {}),
           ...(isPreview ? {
             isPreview: true,
-            previewReason: postIt.previewReason,
+            previewReason: stickyNote.previewReason,
             onConfirm: handleConfirmPreview,
             onReject: handleRejectPreview,
           } : {}),
-        } as PostItNodeData,
+        } as StickyNoteNodeData,
         style: {
-          width: liveDims?.width ?? postIt.width,
-          height: liveDims?.height ?? postIt.height,
+          width: liveDims?.width ?? stickyNote.width,
+          height: liveDims?.height ?? stickyNote.height,
         },
       };
     });
@@ -816,7 +816,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
     // Add on-canvas guide nodes
     // Default dimensions per variant — used when guide has no saved width/height
     const guideDefaultDims: Record<string, { w: number; h: number }> = {
-      'template-postit': { w: 160, h: 100 },
+      'template-sticky-note': { w: 160, h: 100 },
       frame: { w: 400, h: 300 },
       arrow: { w: 120, h: 40 },
       sticker: { w: 200, h: 80 },
@@ -825,11 +825,11 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       image: { w: 200, h: 200 },
     };
 
-    // Hide template-postit guide variants when real template post-its are present (they're redundant)
-    const hasTemplatePostIts = postIts.some(p => !!p.templateKey);
+    // Hide template-sticky-note guide variants when real template sticky notes are present (they're redundant)
+    const hasTemplateStickyNotes = stickyNotes.some(p => !!p.templateKey);
 
     const guideReactFlowNodes: Node[] = onCanvasGuides
-      .filter(g => !dismissedGuideIds.has(g.id) && (!g.showOnlyWhenEmpty || !canvasHasItems) && !(g.variant === 'template-postit' && hasTemplatePostIts))
+      .filter(g => !dismissedGuideIds.has(g.id) && (!g.showOnlyWhenEmpty || !canvasHasItems) && !(g.variant === 'template-sticky-note' && hasTemplateStickyNotes))
       .map(g => {
         const nodeId = `guide-${g.id}`;
         const liveDims = liveDimensions.current[nodeId];
@@ -861,14 +861,14 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         };
       });
 
-    return [...postItReactFlowNodes, ...drawingReactFlowNodes, ...conceptCardReactFlowNodes, ...personaTemplateReactFlowNodes, ...hmwCardReactFlowNodes, ...guideReactFlowNodes];
+    return [...stickyNoteReactFlowNodes, ...drawingReactFlowNodes, ...conceptCardReactFlowNodes, ...personaTemplateReactFlowNodes, ...hmwCardReactFlowNodes, ...guideReactFlowNodes];
   // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
   // read inside the memo body as a safety net; they must NOT be deps or every
   // mouse-move during drag would recompute and cause flickering.
-  }, [postIts, drawingNodes, conceptCards, personaTemplates, hmwCards, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, onCanvasGuides, dismissedGuideIds, exitingGuideIds, canvasHasItems, isAdmin, isAdminEditing, onEditGuide, handleGuideResize, handleGuideResizeEnd, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange, handlePersonaFieldChange, handleGenerateAvatar, handleHmwFieldChange, handleHmwChipSelect, dismissGuide]);
+  }, [stickyNotes, drawingNodes, conceptCards, personaTemplates, hmwCards, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, onCanvasGuides, dismissedGuideIds, exitingGuideIds, canvasHasItems, isAdmin, isAdminEditing, onEditGuide, handleGuideResize, handleGuideResizeEnd, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange, handlePersonaFieldChange, handleGenerateAvatar, handleHmwFieldChange, handleHmwChipSelect, dismissGuide]);
 
-  // Create post-it at position and set as editing
-  const createPostItAtPosition = useCallback(
+  // Create sticky note at position and set as editing
+  const createStickyNoteAtPosition = useCallback(
     (clientX: number, clientY: number) => {
       const flowPosition = screenToFlowPosition({ x: clientX, y: clientY });
 
@@ -879,7 +879,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
           { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
           stepConfig.ringConfig
         );
-        createAndEditPostIt({
+        createAndEditStickyNote({
           text: '',
           position: snappedPosition,
           width: 120,
@@ -894,7 +894,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
           { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
           stepConfig.empathyZoneConfig
         );
-        createAndEditPostIt({
+        createAndEditStickyNote({
           text: '',
           position: snappedPosition,
           width: 120,
@@ -912,7 +912,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
               col: dynamicGridConfig.columns[cell.col].id,
             }
           : undefined;
-        createAndEditPostIt({
+        createAndEditStickyNote({
           text: '',
           position: snappedPosition,
           width: 120,
@@ -925,7 +925,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
           ? detectQuadrant(snappedPosition, 120, 120, stepConfig.quadrantType)
           : undefined;
-        createAndEditPostIt({
+        createAndEditStickyNote({
           text: '',
           position: snappedPosition,
           width: 120,
@@ -934,19 +934,19 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         });
       }
     },
-    [screenToFlowPosition, snapToGrid, createAndEditPostIt, stepConfig, dynamicGridConfig]
+    [screenToFlowPosition, snapToGrid, createAndEditStickyNote, stepConfig, dynamicGridConfig]
   );
 
   // Handle toolbar "+" creation (dealing-cards offset)
-  const handleToolbarAdd = useCallback(() => {
+  const handleToolbarAdd = useCallback((color?: StickyNoteColor) => {
     let position: { x: number; y: number };
 
-    if (postIts.length > 0) {
-      // Offset from last post-it (dealing-cards pattern)
-      const lastPostIt = postIts[postIts.length - 1];
+    if (stickyNotes.length > 0) {
+      // Offset from last sticky note (dealing-cards pattern)
+      const lastStickyNote = stickyNotes[stickyNotes.length - 1];
       position = {
-        x: lastPostIt.position.x + 30,
-        y: lastPostIt.position.y + 30,
+        x: lastStickyNote.position.x + 30,
+        y: lastStickyNote.position.y + 30,
       };
     } else {
       // Place at center of viewport
@@ -964,12 +964,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
         stepConfig.ringConfig
       );
-      createAndEditPostIt({
+      createAndEditStickyNote({
         text: '',
         position: snappedPosition,
         width: 120,
         height: 120,
         cellAssignment: { row: ringId, col: '' },
+        ...(color ? { color } : {}),
       });
     }
     // Empathy zone snap and assignment for empathy zone steps
@@ -979,12 +980,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
         stepConfig.empathyZoneConfig
       );
-      createAndEditPostIt({
+      createAndEditStickyNote({
         text: '',
         position: snappedPosition,
         width: 120,
         height: 120,
         cellAssignment: zone ? { row: zone, col: '' } : undefined,
+        ...(color ? { color } : {}),
       });
     }
     // Grid-based snap and cell assignment for grid steps
@@ -997,12 +999,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
             col: dynamicGridConfig.columns[cell.col].id,
           }
         : undefined;
-      createAndEditPostIt({
+      createAndEditStickyNote({
         text: '',
         position: snappedPosition,
         width: 120,
         height: 120,
         cellAssignment,
+        ...(color ? { color } : {}),
       });
     } else {
       // Quadrant-based snap and detection for quadrant/standard steps
@@ -1010,26 +1013,27 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
         ? detectQuadrant(snappedPosition, 120, 120, stepConfig.quadrantType)
         : undefined;
-      createAndEditPostIt({
+      createAndEditStickyNote({
         text: '',
         position: snappedPosition,
         width: 120,
         height: 120,
         quadrant,
+        ...(color ? { color } : {}),
       });
     }
     dismissAutoGuides();
-  }, [postIts, screenToFlowPosition, snapToGrid, createAndEditPostIt, stepConfig, dynamicGridConfig, dismissAutoGuides]);
+  }, [stickyNotes, screenToFlowPosition, snapToGrid, createAndEditStickyNote, stepConfig, dynamicGridConfig, dismissAutoGuides]);
 
-  // Handle toolbar emotion post-it creation (with emoji + color preset)
-  const handleEmotionAdd = useCallback((emoji: string, color: PostItColor) => {
+  // Handle toolbar emotion sticky note creation (with emoji + color preset)
+  const handleEmotionAdd = useCallback((emoji: string, color: StickyNoteColor) => {
     let position: { x: number; y: number };
 
-    if (postIts.length > 0) {
-      const lastPostIt = postIts[postIts.length - 1];
+    if (stickyNotes.length > 0) {
+      const lastStickyNote = stickyNotes[stickyNotes.length - 1];
       position = {
-        x: lastPostIt.position.x + 30,
-        y: lastPostIt.position.y + 30,
+        x: lastStickyNote.position.x + 30,
+        y: lastStickyNote.position.y + 30,
       };
     } else {
       const center = screenToFlowPosition({
@@ -1045,39 +1049,39 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
         stepConfig.ringConfig
       );
-      createAndEditPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment: { row: ringId, col: '' } });
+      createAndEditStickyNote({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment: { row: ringId, col: '' } });
     } else if (stepConfig.hasEmpathyZones && stepConfig.empathyZoneConfig) {
       const snappedPosition = snapToGrid(position);
       const zone = getZoneForPosition(
         { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
         stepConfig.empathyZoneConfig
       );
-      createAndEditPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment: zone ? { row: zone, col: '' } : undefined });
+      createAndEditStickyNote({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment: zone ? { row: zone, col: '' } : undefined });
     } else if (stepConfig.hasGrid && dynamicGridConfig) {
       const snappedPosition = snapToCell(position, dynamicGridConfig);
       const cell = positionToCell(snappedPosition, dynamicGridConfig);
       const cellAssignment = cell
         ? { row: dynamicGridConfig.rows[cell.row].id, col: dynamicGridConfig.columns[cell.col].id }
         : undefined;
-      createAndEditPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment });
+      createAndEditStickyNote({ text: emoji, position: snappedPosition, width: 120, height: 120, color, cellAssignment });
     } else {
       const snappedPosition = snapToGrid(position);
       const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
         ? detectQuadrant(snappedPosition, 120, 120, stepConfig.quadrantType)
         : undefined;
-      createAndEditPostIt({ text: emoji, position: snappedPosition, width: 120, height: 120, color, quadrant });
+      createAndEditStickyNote({ text: emoji, position: snappedPosition, width: 120, height: 120, color, quadrant });
     }
     dismissAutoGuides();
-  }, [postIts, screenToFlowPosition, snapToGrid, createAndEditPostIt, stepConfig, dynamicGridConfig, dismissAutoGuides]);
+  }, [stickyNotes, screenToFlowPosition, snapToGrid, createAndEditStickyNote, stepConfig, dynamicGridConfig, dismissAutoGuides]);
 
-  // Handle theme sort — reorganize post-its by cluster on rings
+  // Handle theme sort — reorganize sticky notes by cluster on rings
   const handleThemeSort = useCallback(() => {
-    const updates = computeThemeSortPositions(postIts, stepId);
+    const updates = computeThemeSortPositions(stickyNotes, stepId);
     if (updates.length > 0) {
       batchUpdatePositions(updates);
       setTimeout(() => fitView({ padding: 0.2, duration: 400 }), 150);
     }
-  }, [postIts, stepId, batchUpdatePositions, fitView]);
+  }, [stickyNotes, stepId, batchUpdatePositions, fitView]);
 
   // Handle opening cluster dialog from selection toolbar
   const handleOpenClusterDialog = useCallback(() => {
@@ -1099,23 +1103,23 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
   }, [renameCluster]);
 
   // Rearrange a cluster's children in 3-wide rows centered below parent
-  const rearrangeCluster = useCallback((clusterName: string, parentPostIt: import('@/stores/canvas-store').PostIt | undefined, childPostIts: import('@/stores/canvas-store').PostIt[]) => {
-    if (!parentPostIt || childPostIts.length === 0) return;
+  const rearrangeCluster = useCallback((clusterName: string, parentStickyNote: import('@/stores/canvas-store').StickyNote | undefined, childStickyNotes: import('@/stores/canvas-store').StickyNote[]) => {
+    if (!parentStickyNote || childStickyNotes.length === 0) return;
 
     const childPositions = computeClusterChildPositions(
-      parentPostIt.position,
-      parentPostIt.width,
-      parentPostIt.height,
-      childPostIts.length,
-      childPostIts[0]?.width || 120,
-      childPostIts[0]?.height || 120,
+      parentStickyNote.position,
+      parentStickyNote.width,
+      parentStickyNote.height,
+      childStickyNotes.length,
+      childStickyNotes[0]?.width || 120,
+      childStickyNotes[0]?.height || 120,
     );
 
-    const updates = childPostIts.map((child, j) => ({
+    const updates = childStickyNotes.map((child, j) => ({
       id: child.id,
       position: childPositions[j],
       // Inherit parent's ring assignment if available
-      ...(parentPostIt.cellAssignment ? { cellAssignment: parentPostIt.cellAssignment } : {}),
+      ...(parentStickyNote.cellAssignment ? { cellAssignment: parentStickyNote.cellAssignment } : {}),
     }));
 
     if (updates.length > 0) {
@@ -1126,28 +1130,28 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
 
   // Handle cluster dialog confirm
   const handleClusterConfirm = useCallback((clusterName: string) => {
-    // Find the selected post-it IDs (only non-group postIts)
-    const selectedPostIts = postIts.filter(p =>
-      selectedNodeIds.includes(p.id) && (!p.type || p.type === 'postIt')
+    // Find the selected sticky note IDs (only non-group stickyNotes)
+    const selectedStickyNotes = stickyNotes.filter(p =>
+      selectedNodeIds.includes(p.id) && (!p.type || p.type === 'stickyNote')
     );
-    if (selectedPostIts.length === 0) return;
+    if (selectedStickyNotes.length === 0) return;
 
     const lowerName = clusterName.toLowerCase();
 
     // Identify parent: either a selected item whose text matches, or an existing one on the canvas
-    let parentPostIt = selectedPostIts.find(p => p.text.toLowerCase() === lowerName);
-    if (!parentPostIt) {
-      parentPostIt = postIts.find(p =>
-        p.text.toLowerCase() === lowerName && (!p.type || p.type === 'postIt')
+    let parentStickyNote = selectedStickyNotes.find(p => p.text.toLowerCase() === lowerName);
+    if (!parentStickyNote) {
+      parentStickyNote = stickyNotes.find(p =>
+        p.text.toLowerCase() === lowerName && (!p.type || p.type === 'stickyNote')
       );
     }
 
     // If no parent exists, create one above the topmost selected item
-    if (!parentPostIt) {
-      const topY = Math.min(...selectedPostIts.map(p => p.position.y));
-      const avgX = selectedPostIts.reduce((sum, p) => sum + p.position.x, 0) / selectedPostIts.length;
+    if (!parentStickyNote) {
+      const topY = Math.min(...selectedStickyNotes.map(p => p.position.y));
+      const avgX = selectedStickyNotes.reduce((sum, p) => sum + p.position.x, 0) / selectedStickyNotes.length;
       const parentId = crypto.randomUUID();
-      const newParent: import('@/stores/canvas-store').PostIt = {
+      const newParent: import('@/stores/canvas-store').StickyNote = {
         id: parentId,
         text: clusterName,
         position: { x: Math.round(avgX), y: Math.round(topY - 120 - 15) }, // above children with gap
@@ -1155,12 +1159,12 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         height: 100,
         color: 'yellow',
       };
-      addPostIt(newParent);
-      parentPostIt = newParent;
+      addStickyNote(newParent);
+      parentStickyNote = newParent;
     }
 
     // All selected items become children (exclude any that match the parent text)
-    const childIds = selectedPostIts
+    const childIds = selectedStickyNotes
       .filter(p => p.text.toLowerCase() !== lowerName)
       .map(p => p.id);
 
@@ -1168,14 +1172,14 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       setCluster(childIds, clusterName);
 
       // Rearrange children around parent
-      const childPostIts = selectedPostIts.filter(p => p.text.toLowerCase() !== lowerName);
-      rearrangeCluster(clusterName, parentPostIt, childPostIts);
+      const childStickyNotes = selectedStickyNotes.filter(p => p.text.toLowerCase() !== lowerName);
+      rearrangeCluster(clusterName, parentStickyNote, childStickyNotes);
     }
-  }, [postIts, selectedNodeIds, setCluster, rearrangeCluster, addPostIt]);
+  }, [stickyNotes, selectedNodeIds, setCluster, rearrangeCluster, addStickyNote]);
 
   // Handle dedup from toolbar
   const handleDeduplicate = useCallback(() => {
-    const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+    const items = stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview);
     // Group by normalized text
     const groups = new Map<string, { text: string; ids: string[] }>();
     for (const item of items) {
@@ -1192,7 +1196,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
     if (dupes.length === 0) return;
     setDedupGroups(dupes);
     setDedupDialogOpen(true);
-  }, [postIts]);
+  }, [stickyNotes]);
 
   // Handle dedup confirm
   const handleDedupConfirm = useCallback(() => {
@@ -1202,17 +1206,17 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       idsToDelete.push(...group.ids.slice(1));
     }
     if (idsToDelete.length > 0) {
-      batchDeletePostIts(idsToDelete);
+      batchDeleteStickyNotes(idsToDelete);
     }
     setDedupDialogOpen(false);
     setDedupGroups([]);
-  }, [dedupGroups, batchDeletePostIts]);
+  }, [dedupGroups, batchDeleteStickyNotes]);
 
   // Handle delete selected nodes from toolbar
   const handleDeleteSelected = useCallback(() => {
     const selectedNodes = nodes.filter(n => n.selected);
     // Ungroup any selected groups first
-    selectedNodes.filter(n => n.type === 'group').forEach(n => ungroupPostIts(n.id));
+    selectedNodes.filter(n => n.type === 'group').forEach(n => ungroupStickyNotes(n.id));
     // Delete selected drawing nodes
     selectedNodes.filter(n => n.type === 'drawingImage').forEach(n => deleteDrawingNode(n.id));
     // Delete selected concept cards
@@ -1221,10 +1225,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
     selectedNodes.filter(n => n.type === 'personaTemplate').forEach(n => deletePersonaTemplate(n.id));
     // Delete selected HMW cards
     selectedNodes.filter(n => n.type === 'hmwCard').forEach(n => deleteHmwCard(n.id));
-    // Delete non-group, non-drawing, non-conceptCard, non-personaTemplate, non-hmwCard postIt nodes
-    const postItIds = selectedNodes.filter(n => n.type !== 'group' && n.type !== 'drawingImage' && n.type !== 'conceptCard' && n.type !== 'personaTemplate' && n.type !== 'hmwCard').map(n => n.id);
-    if (postItIds.length > 0) batchDeletePostIts(postItIds);
-  }, [nodes, ungroupPostIts, batchDeletePostIts, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, deleteHmwCard]);
+    // Delete non-group, non-drawing, non-conceptCard, non-personaTemplate, non-hmwCard stickyNote nodes
+    const stickyNoteIds = selectedNodes.filter(n => n.type !== 'group' && n.type !== 'drawingImage' && n.type !== 'conceptCard' && n.type !== 'personaTemplate' && n.type !== 'hmwCard').map(n => n.id);
+    if (stickyNoteIds.length > 0) batchDeleteStickyNotes(stickyNoteIds);
+  }, [nodes, ungroupStickyNotes, batchDeleteStickyNotes, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, deleteHmwCard]);
 
   // Handle node drag start — bring dragged node to top of stack
   const handleNodeDragStart = useCallback(
@@ -1293,7 +1297,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         removedIds.forEach(id => {
           const node = nodes.find(n => n.id === id);
           if (node?.type === 'group') {
-            ungroupPostIts(id);
+            ungroupStickyNotes(id);
           } else if (node?.type === 'drawingImage') {
             deleteDrawingNode(id);
           } else if (node?.type === 'conceptCard') {
@@ -1304,11 +1308,11 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
             deleteHmwCard(id);
           }
         });
-        const postItIds = removedIds.filter(id => {
+        const stickyNoteIds = removedIds.filter(id => {
           const node = nodes.find(n => n.id === id);
           return node?.type !== 'group' && node?.type !== 'drawingImage' && node?.type !== 'conceptCard' && node?.type !== 'personaTemplate' && node?.type !== 'hmwCard';
         });
-        if (postItIds.length > 0) batchDeletePostIts(postItIds);
+        if (stickyNoteIds.length > 0) batchDeleteStickyNotes(stickyNoteIds);
         return;
       }
 
@@ -1392,7 +1396,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
               { x: snappedPosition.x + 60, y: snappedPosition.y + 50 }, // card center
               stepConfig.ringConfig
             );
-            updatePostIt(change.id, {
+            updateStickyNote(change.id, {
               position: snappedPosition,
               cellAssignment: { row: ringId, col: '' },
             });
@@ -1404,7 +1408,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
               { x: snappedPosition.x + 60, y: snappedPosition.y + 50 }, // card center
               stepConfig.empathyZoneConfig
             );
-            updatePostIt(change.id, {
+            updateStickyNote(change.id, {
               position: snappedPosition,
               cellAssignment: zone ? { row: zone, col: '' } : undefined,
             });
@@ -1422,7 +1426,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
                 }
               : undefined;
 
-            updatePostIt(change.id, { position: snappedPosition, cellAssignment });
+            updateStickyNote(change.id, { position: snappedPosition, cellAssignment });
             setHighlightedCell(null); // Clear highlight on drop
           } else {
             // Quadrant-based snap and detection for quadrant steps
@@ -1432,32 +1436,32 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
             const quadrant = stepConfig.hasQuadrants && stepConfig.quadrantType
               ? detectQuadrant(
                   snappedPosition,
-                  120, // post-it default width
-                  120, // post-it default height
+                  120, // sticky note default width
+                  120, // sticky note default height
                   stepConfig.quadrantType
                 )
               : undefined;
 
-            updatePostIt(change.id, { position: snappedPosition, quadrant });
+            updateStickyNote(change.id, { position: snappedPosition, quadrant });
           }
 
           // --- Cluster membership detection on drag-end ---
-          const draggedPostIt = postIts.find((p) => p.id === change.id);
+          const draggedStickyNote = stickyNotes.find((p) => p.id === change.id);
           if (
-            draggedPostIt &&
-            (!draggedPostIt.type || draggedPostIt.type === 'postIt') &&
-            !draggedPostIt.isPreview &&
+            draggedStickyNote &&
+            (!draggedStickyNote.type || draggedStickyNote.type === 'stickyNote') &&
+            !draggedStickyNote.isPreview &&
             change.position
           ) {
-            if (draggedPostIt.cluster) {
+            if (draggedStickyNote.cluster) {
               // --- Drag-out detection for cluster children ---
               // Use ALL members (including the dragged node at its pre-drag position
-              // from `postIts`) so the bbox represents the full cluster extent.
+              // from `stickyNotes`) so the bbox represents the full cluster extent.
               // This prevents false detaches when rearranging within the cluster.
-              const clusterName = draggedPostIt.cluster.toLowerCase();
-              const allMembers = postIts.filter((p) => {
+              const clusterName = draggedStickyNote.cluster.toLowerCase();
+              const allMembers = stickyNotes.filter((p) => {
                 if (p.cluster?.toLowerCase() === clusterName) return true;
-                if (!p.cluster && p.text.toLowerCase() === clusterName && (!p.type || p.type === 'postIt')) return true;
+                if (!p.cluster && p.text.toLowerCase() === clusterName && (!p.type || p.type === 'stickyNote')) return true;
                 return false;
               });
               if (allMembers.length >= 2) {
@@ -1466,8 +1470,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
                 const minY = Math.min(...allMembers.map((m) => m.position.y)) - DETACH_MARGIN;
                 const maxX = Math.max(...allMembers.map((m) => m.position.x + m.width)) + DETACH_MARGIN;
                 const maxY = Math.max(...allMembers.map((m) => m.position.y + m.height)) + DETACH_MARGIN;
-                const cx = change.position.x + (draggedPostIt.width / 2);
-                const cy = change.position.y + (draggedPostIt.height / 2);
+                const cx = change.position.x + (draggedStickyNote.width / 2);
+                const cy = change.position.y + (draggedStickyNote.height / 2);
                 if (cx < minX || cx > maxX || cy < minY || cy > maxY) {
                   removeFromCluster(change.id);
                 }
@@ -1475,7 +1479,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
             } else {
               // --- Drag-into detection for unclustered nodes ---
               // If the node landed inside an existing cluster's hull, join it.
-              const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+              const items = stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview);
               const clusterGroups = new Map<string, { displayName: string; children: typeof items; parent: (typeof items)[0] | undefined }>();
               for (const item of items) {
                 if (!item.cluster) continue;
@@ -1488,13 +1492,13 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
               }
 
               const HULL_PADDING = 24; // matches visual hull padding in cluster-hulls-overlay
-              const cx = change.position.x + (draggedPostIt.width / 2);
-              const cy = change.position.y + (draggedPostIt.height / 2);
+              const cx = change.position.x + (draggedStickyNote.width / 2);
+              const cy = change.position.y + (draggedStickyNote.height / 2);
 
               let hullMatchFound = false;
               for (const [key, { displayName, children, parent }] of clusterGroups) {
                 // Don't add if this node IS the parent (text matches cluster name)
-                if (draggedPostIt.text.toLowerCase() === key) continue;
+                if (draggedStickyNote.text.toLowerCase() === key) continue;
                 const members = parent ? [parent, ...children] : children;
                 if (members.length < 2) continue;
 
@@ -1507,7 +1511,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
                   setCluster([change.id], displayName);
                   // Auto-rearrange children (including new member) around parent
                   if (parent) {
-                    rearrangeCluster(displayName, parent, [...children, draggedPostIt]);
+                    rearrangeCluster(displayName, parent, [...children, draggedStickyNote]);
                   }
                   hullMatchFound = true;
                   break;
@@ -1515,7 +1519,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
               }
 
               // --- Drag-into-persona-frame fallback for user-research step ---
-              // When no hull match found, check if the dropped post-it center is
+              // When no hull match found, check if the dropped sticky note center is
               // inside a persona frame's bounds. Frames are visible rectangles
               // below each persona card.
               if (!hullMatchFound && stepId === 'user-research') {
@@ -1547,7 +1551,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
 
                   if (cx >= dropMinX && cx <= dropMaxX && cy >= dropMinY && cy <= dropMaxY) {
                     setCluster([change.id], personaName);
-                    updatePostIt(change.id, { color: card.color || 'yellow' });
+                    updateStickyNote(change.id, { color: card.color || 'yellow' });
                     break;
                   }
                 }
@@ -1558,7 +1562,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
-    [nodes, postIts, drawingNodes, conceptCards, personaTemplates, hmwCards, snapToGrid, updatePostIt, updateDrawingNode, updateConceptCard, updatePersonaTemplate, updateHmwCard, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, stepConfig, dynamicGridConfig, ungroupPostIts, batchDeletePostIts, bringToFront, removeFromCluster, setCluster, rearrangeCluster, onGuidePositionUpdate, stepId]
+    [nodes, stickyNotes, drawingNodes, conceptCards, personaTemplates, hmwCards, snapToGrid, updateStickyNote, updateDrawingNode, updateConceptCard, updatePersonaTemplate, updateHmwCard, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, stepConfig, dynamicGridConfig, ungroupStickyNotes, batchDeleteStickyNotes, bringToFront, removeFromCluster, setCluster, rearrangeCluster, onGuidePositionUpdate, stepId]
   );
 
   // Handle node drag (real-time cell highlighting)
@@ -1578,7 +1582,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       deleted.forEach(node => {
         if (node.type === 'group') {
           // Ungroup children first, then remove group
-          ungroupPostIts(node.id);
+          ungroupStickyNotes(node.id);
         } else if (node.type === 'drawingImage') {
           // Delete drawing node
           deleteDrawingNode(node.id);
@@ -1593,15 +1597,15 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
           deleteHmwCard(node.id);
         }
       });
-      // Delete non-group, non-drawing, non-conceptCard, non-personaTemplate, non-hmwCard postIt nodes
-      const postItIds = deleted
+      // Delete non-group, non-drawing, non-conceptCard, non-personaTemplate, non-hmwCard stickyNote nodes
+      const stickyNoteIds = deleted
         .filter(n => n.type !== 'group' && n.type !== 'drawingImage' && n.type !== 'conceptCard' && n.type !== 'personaTemplate' && n.type !== 'hmwCard')
         .map(n => n.id);
-      if (postItIds.length > 0) {
-        batchDeletePostIts(postItIds);
+      if (stickyNoteIds.length > 0) {
+        batchDeleteStickyNotes(stickyNoteIds);
       }
     },
-    [ungroupPostIts, batchDeletePostIts, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, deleteHmwCard]
+    [ungroupStickyNotes, batchDeleteStickyNotes, deleteDrawingNode, deleteConceptCard, deletePersonaTemplate, deleteHmwCard]
   );
 
 
@@ -1699,30 +1703,30 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
   const handleNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.preventDefault();
-      const postIt = postIts.find(p => p.id === node.id);
-      const isClusterParent = postIt ? clusterParentMap.has(postIt.text.toLowerCase()) : false;
+      const stickyNote = stickyNotes.find(p => p.id === node.id);
+      const isClusterParent = stickyNote ? clusterParentMap.has(stickyNote.text.toLowerCase()) : false;
       setContextMenu({
         nodeId: node.id,
         x: event.clientX,
         y: event.clientY,
-        currentColor: postIt?.color || 'yellow',
-        nodeType: node.type || 'postIt',
+        currentColor: stickyNote?.color || 'yellow',
+        nodeType: node.type || 'stickyNote',
         isClusterParent,
-        postItText: postIt?.text,
+        stickyNoteText: stickyNote?.text,
       });
     },
-    [postIts, clusterParentMap]
+    [stickyNotes, clusterParentMap]
   );
 
   // Handle color selection from picker
   const handleColorSelect = useCallback(
-    (color: PostItColor) => {
+    (color: StickyNoteColor) => {
       if (contextMenu) {
-        updatePostIt(contextMenu.nodeId, { color });
+        updateStickyNote(contextMenu.nodeId, { color });
         setContextMenu(null);
       }
     },
-    [contextMenu, updatePostIt]
+    [contextMenu, updateStickyNote]
   );
 
   // Close context menu on viewport move
@@ -1731,7 +1735,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
     dismissAutoGuides();
   }, [dismissAutoGuides]);
 
-  // Handle node double-click (enter edit mode for postIts, or re-edit for drawings)
+  // Handle node double-click (enter edit mode for stickyNotes, or re-edit for drawings)
   const handleNodeDoubleClick = useCallback(
     async (_event: React.MouseEvent, node: Node) => {
       // Check if this is a drawing node
@@ -1757,10 +1761,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         } catch (error) {
           console.error('Failed to load drawing for re-edit:', error);
         }
-        return; // Don't enter postIt edit mode
+        return; // Don't enter stickyNote edit mode
       }
 
-      // Existing postIt edit behavior
+      // Existing stickyNote edit behavior
       setEditingNodeId(node.id);
     },
     [drawingNodes, workshopId, stepId]
@@ -1777,22 +1781,22 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       const timeSinceLastClick = now - lastPaneClickTime.current;
 
       if (timeSinceLastClick < DOUBLE_CLICK_THRESHOLD) {
-        // Double-click detected - create post-it
-        createPostItAtPosition(event.clientX, event.clientY);
-        lastPaneClickTime.current = 0; // Reset to prevent triple-click creating two post-its
+        // Double-click detected - create sticky note
+        createStickyNoteAtPosition(event.clientX, event.clientY);
+        lastPaneClickTime.current = 0; // Reset to prevent triple-click creating two sticky notes
       } else {
         // Single click - deselect/stop editing
         setEditingNodeId(null);
         lastPaneClickTime.current = now;
       }
     },
-    [createPostItAtPosition, dismissAutoGuides]
+    [createStickyNoteAtPosition, dismissAutoGuides]
   );
 
   // Handle ReactFlow initialization (for empty quadrant/grid canvas centering)
   const handleInit = useCallback((instance: ReactFlowInstance) => {
     // Admin-configured default viewport takes priority when canvas is empty
-    if (defaultViewportSettings && postIts.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0 && conceptCards.length === 0) {
+    if (defaultViewportSettings && stickyNotes.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0 && conceptCards.length === 0) {
       const container = document.querySelector('.react-flow');
       if (container) {
         const rect = container.getBoundingClientRect();
@@ -1813,7 +1817,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       }
     }
 
-    if (stepConfig.hasRings && postIts.length === 0) {
+    if (stepConfig.hasRings && stickyNotes.length === 0) {
       // Center viewport on (0,0) for ring layout
       const container = document.querySelector('.react-flow');
       if (container) {
@@ -1826,7 +1830,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
           zoom: Math.max(0.3, Math.min(fitZoom, 0.7)),
         });
       }
-    } else if (stepConfig.hasEmpathyZones && postIts.length === 0) {
+    } else if (stepConfig.hasEmpathyZones && stickyNotes.length === 0) {
       // Center viewport to show full empathy map
       const container = document.querySelector('.react-flow');
       if (container) {
@@ -1837,7 +1841,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
           zoom: 0.6, // Zoomed out enough to see all 6 zones
         });
       }
-    } else if (stepConfig.hasQuadrants && postIts.length === 0) {
+    } else if (stepConfig.hasQuadrants && stickyNotes.length === 0) {
       // Center viewport on (0,0) for quadrant steps
       const container = document.querySelector('.react-flow');
       if (container) {
@@ -1848,7 +1852,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
           zoom: 1,
         });
       }
-    } else if (stepConfig.hasGrid && dynamicGridConfig && postIts.length === 0) {
+    } else if (stepConfig.hasGrid && dynamicGridConfig && stickyNotes.length === 0) {
       // Fit the full grid in the viewport
       const container = document.querySelector('.react-flow');
       if (container) {
@@ -1864,22 +1868,22 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         });
       }
     }
-  }, [stepConfig, dynamicGridConfig, postIts.length, personaTemplates.length, hmwCards.length, conceptCards.length, defaultViewportSettings]);
+  }, [stepConfig, dynamicGridConfig, stickyNotes.length, personaTemplates.length, hmwCards.length, conceptCards.length, defaultViewportSettings]);
 
   // Auto-fit view on mount if nodes exist
   useEffect(() => {
-    if ((postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0) && !hasFitView.current) {
+    if ((stickyNotes.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0) && !hasFitView.current) {
       setTimeout(() => {
         fitView({ padding: 0.2, duration: 300 });
         hasFitView.current = true;
       }, 100);
     }
-  }, [postIts.length, personaTemplates.length, hmwCards.length, fitView]);
+  }, [stickyNotes.length, personaTemplates.length, hmwCards.length, fitView]);
 
   // Fit grid to viewport when dynamicGridConfig first becomes available (after gridColumns are seeded)
   const hasSetGridViewport = useRef(false);
   useEffect(() => {
-    if (!dynamicGridConfig || postIts.length > 0 || hasFitView.current || hasSetGridViewport.current) return;
+    if (!dynamicGridConfig || stickyNotes.length > 0 || hasFitView.current || hasSetGridViewport.current) return;
     hasSetGridViewport.current = true;
     const container = document.querySelector('.react-flow');
     if (!container) return;
@@ -1893,7 +1897,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       y: (rect.height - gridH * z) / 2,
       zoom: z,
     });
-  }, [dynamicGridConfig, postIts.length, setViewport]);
+  }, [dynamicGridConfig, stickyNotes.length, setViewport]);
 
   // Animate viewport when items are added from chat panel
   useEffect(() => {
@@ -1908,8 +1912,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
 
   // Sync local selection to shared store (via effect to avoid setState-during-render)
   useEffect(() => {
-    setSelectedPostItIds(selectedNodeIds);
-  }, [selectedNodeIds, setSelectedPostItIds]);
+    setSelectedStickyNoteIds(selectedNodeIds);
+  }, [selectedNodeIds, setSelectedStickyNoteIds]);
 
   // Canvas guide objects — filter visible pinned guides
   const visiblePinnedGuides = useMemo(() => {
@@ -1944,7 +1948,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
 
         onInit={handleInit}
         snapToGrid={false}
-        fitView={postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0 || conceptCards.length > 0}
+        fitView={stickyNotes.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0 || conceptCards.length > 0}
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.3}
         maxZoom={2}
@@ -2031,8 +2035,8 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
 
       {/* Toolbar */}
       <CanvasToolbar
-        onAddPostIt={handleToolbarAdd}
-        onAddEmotionPostIt={handleEmotionAdd}
+        onAddStickyNote={handleToolbarAdd}
+        onAddEmotionStickyNote={handleEmotionAdd}
         onUndo={handleUndo}
         onRedo={handleRedo}
         canUndo={canUndo}
@@ -2046,18 +2050,18 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         showDedup={stepConfig.hasRings}
       />
 
-      {/* Selection toolbar — shown when 2+ post-its are selected */}
+      {/* Selection toolbar — shown when 2+ sticky notes are selected */}
       {selectedNodeIds.length >= 2 && (stepConfig.hasRings || stepId === 'user-research') && (() => {
         // Compute bounding box center of selected nodes in screen coords
-        const selectedPostIts = postIts.filter(p => selectedNodeIds.includes(p.id));
-        if (selectedPostIts.length < 2) return null;
+        const selectedStickyNotes = stickyNotes.filter(p => selectedNodeIds.includes(p.id));
+        if (selectedStickyNotes.length < 2) return null;
         const canvasRef = canvasContainerRef.current;
         if (!canvasRef) return null;
         const rect = canvasRef.getBoundingClientRect();
 
         // Persona options for "Assign to" dropdown (user-research only)
         const personaCards = stepId === 'user-research'
-          ? postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview && !p.cluster && p.text.includes(' — '))
+          ? stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview && !p.cluster && p.text.includes(' — '))
           : [];
         const personaOpts = personaCards.map(c => ({
           name: c.text.split(/\s*[—–]\s*/)[0].trim(),
@@ -2074,17 +2078,17 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
             onAssignToPersona={stepId === 'user-research' ? (name) => {
               const card = personaCards.find(c => c.text.split(/\s*[—–]\s*/)[0].trim() === name);
               if (!card) return;
-              const selPostIts = postIts.filter(p => selectedNodeIds.includes(p.id) && (!p.type || p.type === 'postIt'));
-              const ids = selPostIts.map(p => p.id);
+              const selStickyNotes = stickyNotes.filter(p => selectedNodeIds.includes(p.id) && (!p.type || p.type === 'stickyNote'));
+              const ids = selStickyNotes.map(p => p.id);
               setCluster(ids, name);
-              ids.forEach(id => updatePostIt(id, { color: card.color || 'yellow' }));
+              ids.forEach(id => updateStickyNote(id, { color: card.color || 'yellow' }));
               setSelectedNodeIds([]);
             } : undefined}
           />
         );
       })()}
 
-      {/* Context menu: ungroup for groups, uncluster for parents, color picker for post-its */}
+      {/* Context menu: ungroup for groups, uncluster for parents, color picker for sticky notes */}
       {contextMenu && contextMenu.nodeType === 'group' ? (
         <div
           className="fixed z-50 bg-popover rounded-lg shadow-lg border border-border p-1"
@@ -2094,7 +2098,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
           <button
             className="relative z-50 px-3 py-1.5 text-sm hover:bg-accent rounded w-full text-left"
             onClick={() => {
-              ungroupPostIts(contextMenu.nodeId);
+              ungroupStickyNotes(contextMenu.nodeId);
               setContextMenu(null);
             }}
           >
@@ -2109,7 +2113,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
             onColorSelect={handleColorSelect}
             onClose={() => setContextMenu(null)}
           />
-          {contextMenu.isClusterParent && contextMenu.postItText && (
+          {contextMenu.isClusterParent && contextMenu.stickyNoteText && (
             <div
               className="fixed z-[60] bg-popover rounded-lg shadow-lg border border-border p-1"
               style={{ left: contextMenu.x, top: contextMenu.y + 50 }}
@@ -2117,7 +2121,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
               <button
                 className="px-3 py-1.5 text-sm hover:bg-accent rounded w-full text-left"
                 onClick={() => {
-                  clearCluster(contextMenu.postItText!);
+                  clearCluster(contextMenu.stickyNoteText!);
                   setContextMenu(null);
                 }}
               >
@@ -2127,11 +2131,11 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
           )}
           {/* Assign to persona — user-research step only */}
           {stepId === 'user-research' && (() => {
-            const contextPostIt = postIts.find(p => p.id === contextMenu.nodeId);
-            const isPersonaCard = contextPostIt && !contextPostIt.cluster && contextPostIt.text.includes(' — ');
+            const contextStickyNote = stickyNotes.find(p => p.id === contextMenu.nodeId);
+            const isPersonaCard = contextStickyNote && !contextStickyNote.cluster && contextStickyNote.text.includes(' — ');
             if (isPersonaCard || contextMenu.isClusterParent) return null;
-            const personaCards = postIts.filter(
-              p => (!p.type || p.type === 'postIt') && !p.isPreview && !p.cluster && p.text.includes(' — ')
+            const personaCards = stickyNotes.filter(
+              p => (!p.type || p.type === 'stickyNote') && !p.isPreview && !p.cluster && p.text.includes(' — ')
             );
             if (personaCards.length === 0) return null;
             const COLOR_DOT: Record<string, string> = {
@@ -2152,7 +2156,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
                       className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent rounded w-full text-left"
                       onClick={() => {
                         setCluster([contextMenu.nodeId], personaName);
-                        updatePostIt(contextMenu.nodeId, { color: card.color || 'yellow' });
+                        updateStickyNote(contextMenu.nodeId, { color: card.color || 'yellow' });
                         setContextMenu(null);
                       }}
                     >
@@ -2173,7 +2177,7 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
         onOpenChange={setClusterDialogOpen}
         defaultName={
           selectedNodeIds.length > 0
-            ? postIts.find(p => p.id === selectedNodeIds[0])?.text || ''
+            ? stickyNotes.find(p => p.id === selectedNodeIds[0])?.text || ''
             : ''
         }
         existingClusters={existingClusters}

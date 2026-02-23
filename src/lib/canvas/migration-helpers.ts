@@ -1,24 +1,24 @@
 /**
  * Migration Helpers Module
- * Converts Step 2 and Step 4 artifact data to canvas post-its
+ * Converts Step 2 and Step 4 artifact data to canvas sticky notes
  * Used during the output-to-canvas retrofit to populate the canvas
  */
 
 import type { StakeholderArtifact, SenseMakingArtifact } from '@/lib/schemas/step-schemas';
-import type { PostIt } from '@/stores/canvas-store';
+import type { StickyNote } from '@/stores/canvas-store';
 import { distributeCardsOnRing } from './ring-layout';
 import { distributeCardsInZone, type EmpathyZone } from './empathy-zones';
 import { STEP_CANVAS_CONFIGS } from './step-canvas-config';
 import { POST_IT_WIDTH, POST_IT_HEIGHT, ZONE_COLORS } from './canvas-position';
 
 /**
- * Migrate Step 2 stakeholders to ring-based canvas post-its
+ * Migrate Step 2 stakeholders to ring-based canvas sticky notes
  * @param artifact - Stakeholder artifact from Step 2
- * @returns Array of post-it objects ready for canvas store
+ * @returns Array of sticky note objects ready for canvas store
  */
 export function migrateStakeholdersToCanvas(
   artifact: Record<string, unknown>,
-): Array<Omit<PostIt, 'id'>> {
+): Array<Omit<StickyNote, 'id'>> {
   const stakeholderArtifact = artifact as StakeholderArtifact;
 
   if (!stakeholderArtifact.stakeholders || stakeholderArtifact.stakeholders.length === 0) {
@@ -59,7 +59,7 @@ export function migrateStakeholdersToCanvas(
     throw new Error('Ring config not found for stakeholder-mapping');
   }
 
-  const postIts: Array<Omit<PostIt, 'id'>> = [];
+  const stickyNotes: Array<Omit<StickyNote, 'id'>> = [];
 
   // Process each ring
   Object.entries(ringAssignments).forEach(([ringId, stakeholders]) => {
@@ -75,13 +75,13 @@ export function migrateStakeholdersToCanvas(
       ringConfig.center,
     );
 
-    // Create post-its
+    // Create sticky notes
     stakeholders.forEach((stakeholder, index) => {
       const text = stakeholder.notes
         ? `${stakeholder.name}\n${stakeholder.notes}`
         : stakeholder.name;
 
-      postIts.push({
+      stickyNotes.push({
         text,
         position: positions[index],
         width: POST_IT_WIDTH,
@@ -92,20 +92,20 @@ export function migrateStakeholdersToCanvas(
     });
   });
 
-  return postIts;
+  return stickyNotes;
 }
 
 /**
- * Migrate Step 4 empathy data to zone-based canvas post-its
+ * Migrate Step 4 empathy data to zone-based canvas sticky notes
  * @param artifact - Sense making artifact from Step 4
- * @returns Array of post-it objects ready for canvas store
+ * @returns Array of sticky note objects ready for canvas store
  */
 export function migrateEmpathyToCanvas(
   artifact: Record<string, unknown>,
-): Array<Omit<PostIt, 'id'>> {
+): Array<Omit<StickyNote, 'id'>> {
   const senseMakingArtifact = artifact as SenseMakingArtifact;
 
-  const postIts: Array<Omit<PostIt, 'id'>> = [];
+  const stickyNotes: Array<Omit<StickyNote, 'id'>> = [];
 
   // Get empathy zone config
   const config = STEP_CANVAS_CONFIGS['sense-making'];
@@ -154,7 +154,7 @@ export function migrateEmpathyToCanvas(
     zoneItems.gains.push(...senseMakingArtifact.gains);
   }
 
-  // Create post-its for each zone
+  // Create sticky notes for each zone
   Object.entries(zoneItems).forEach(([zoneKey, items]) => {
     if (items.length === 0) return;
 
@@ -169,11 +169,11 @@ export function migrateEmpathyToCanvas(
       15, // padding
     );
 
-    // Create post-its
+    // Create sticky notes
     items.forEach((text, index) => {
       const color = ZONE_COLORS[zoneKey] || 'yellow';
 
-      postIts.push({
+      stickyNotes.push({
         text,
         position: positions[index],
         width: POST_IT_WIDTH,
@@ -184,5 +184,5 @@ export function migrateEmpathyToCanvas(
     });
   });
 
-  return postIts;
+  return stickyNotes;
 }

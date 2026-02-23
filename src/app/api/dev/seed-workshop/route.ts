@@ -168,8 +168,8 @@ export async function GET(request: Request) {
         // New format: full canvas state with all types
         artifactData = { ...fixture.artifact, _canvas: fixture.canvasData };
       } else if (fixture.canvas) {
-        // Legacy format: PostIt[] only
-        artifactData = { ...fixture.artifact, _canvas: { postIts: fixture.canvas } };
+        // Legacy format: StickyNote[] only
+        artifactData = { ...fixture.artifact, _canvas: { stickyNotes: fixture.canvas } };
       }
 
       artifactRows.push({

@@ -49,8 +49,8 @@ function sanitizeSvg(svg: string): string {
 }
 
 export function CanvasGuide({ guide, onDismiss, isExiting, isAdminEditing, onEdit }: CanvasGuideProps) {
-  // New variants (template-postit, frame, arrow) are always on-canvas nodes — never pinned
-  if (['template-postit', 'frame', 'arrow'].includes(guide.variant)) {
+  // New variants (template-sticky-note, frame, arrow) are always on-canvas nodes — never pinned
+  if (['template-sticky-note', 'frame', 'arrow'].includes(guide.variant)) {
     return null;
   }
   const handleDismiss = useCallback(() => {

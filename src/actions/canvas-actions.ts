@@ -3,7 +3,7 @@
 import { db } from '@/db/client';
 import { stepArtifacts, workshopSteps } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import type { PostIt, GridColumn, DrawingNode, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
+import type { StickyNote, GridColumn, DrawingNode, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
@@ -23,7 +23,7 @@ export async function saveCanvasState(
   workshopId: string,
   stepId: string,
   canvasState: {
-    postIts: PostIt[];
+    stickyNotes: StickyNote[];
     gridColumns?: GridColumn[];
     drawingNodes?: DrawingNode[];
     mindMapNodes?: MindMapNodeState[];
@@ -147,7 +147,7 @@ export async function loadCanvasState(
   workshopId: string,
   stepId: string
 ): Promise<{
-  postIts: PostIt[];
+  stickyNotes: StickyNote[];
   gridColumns?: GridColumn[];
   drawingNodes?: DrawingNode[];
   mindMapNodes?: MindMapNodeState[];
@@ -198,7 +198,7 @@ export async function loadCanvasState(
     // Read canvas data from the _canvas key (new format)
     if (artifact && typeof artifact === 'object' && '_canvas' in artifact) {
       const canvas = artifact._canvas as {
-        postIts?: PostIt[];
+        stickyNotes?: StickyNote[];
         gridColumns?: GridColumn[];
         drawingNodes?: DrawingNode[];
         mindMapNodes?: MindMapNodeState[];
@@ -210,9 +210,9 @@ export async function loadCanvasState(
         selectedSlotIds?: string[];
         brainRewritingMatrices?: BrainRewritingMatrix[];
       };
-      if (canvas?.postIts || canvas?.personaTemplates || canvas?.hmwCards || canvas?.mindMapNodes || canvas?.crazy8sSlots || canvas?.conceptCards || canvas?.selectedSlotIds) {
+      if (canvas?.stickyNotes || canvas?.personaTemplates || canvas?.hmwCards || canvas?.mindMapNodes || canvas?.crazy8sSlots || canvas?.conceptCards || canvas?.selectedSlotIds) {
         return {
-          postIts: canvas.postIts || [],
+          stickyNotes: canvas.stickyNotes || [],
           ...(canvas.gridColumns ? { gridColumns: canvas.gridColumns } : {}),
           ...(canvas.drawingNodes ? { drawingNodes: canvas.drawingNodes } : {}),
           ...(canvas.mindMapNodes ? { mindMapNodes: canvas.mindMapNodes } : {}),
@@ -227,10 +227,10 @@ export async function loadCanvasState(
       }
     }
 
-    // Backward compat: if postIts is at the top level (old format before fix),
+    // Backward compat: if stickyNotes is at the top level (old format before fix),
     // read it but it won't be written back this way
-    if (artifact && typeof artifact === 'object' && 'postIts' in artifact) {
-      return artifact as { postIts: PostIt[] };
+    if (artifact && typeof artifact === 'object' && 'stickyNotes' in artifact) {
+      return artifact as { stickyNotes: StickyNote[] };
     }
 
     return null;

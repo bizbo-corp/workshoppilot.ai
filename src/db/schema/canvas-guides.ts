@@ -16,11 +16,11 @@ export const canvasGuides = pgTable(
     title: text('title'),
     body: text('body').notNull(),
     variant: text('variant', {
-      enum: ['sticker', 'note', 'hint', 'image', 'template-postit', 'frame', 'arrow'],
+      enum: ['sticker', 'note', 'hint', 'image', 'template-sticky-note', 'frame', 'arrow'],
     })
       .notNull()
       .default('sticker')
-      .$type<'sticker' | 'note' | 'hint' | 'image' | 'template-postit' | 'frame' | 'arrow'>(),
+      .$type<'sticker' | 'note' | 'hint' | 'image' | 'template-sticky-note' | 'frame' | 'arrow'>(),
     color: text('color'),
     layer: text('layer', {
       enum: ['background', 'foreground'],

@@ -45,14 +45,14 @@ export function useAdminGuides(stepId: string) {
   // Create new guide
   const createGuide = useCallback(async (defaults?: Partial<CanvasGuideData>) => {
     const variant = defaults?.variant ?? 'sticker';
-    const canvasOnlyVariants = ['template-postit', 'frame', 'arrow'];
+    const canvasOnlyVariants = ['template-sticky-note', 'frame', 'arrow'];
     const isCanvasOnly = canvasOnlyVariants.includes(variant);
     const noBodyVariants = ['frame', 'arrow'];
     const needsBody = !noBodyVariants.includes(variant);
 
     const newGuide: Partial<CanvasGuideData> = {
       stepId,
-      body: needsBody ? (variant === 'template-postit' ? 'Prompt text' : 'New guide') : '',
+      body: needsBody ? (variant === 'template-sticky-note' ? 'Prompt text' : 'New guide') : '',
       variant,
       layer: variant === 'frame' ? 'background' : 'foreground',
       placementMode: isCanvasOnly ? 'on-canvas' : 'on-canvas',
@@ -61,7 +61,7 @@ export function useAdminGuides(stepId: string) {
       dismissBehavior: isCanvasOnly ? 'persistent' : 'hover-x',
       showOnlyWhenEmpty: false,
       sortOrder: guides.length,
-      ...(variant === 'template-postit' ? { color: 'yellow', width: 160, height: 100 } : {}),
+      ...(variant === 'template-sticky-note' ? { color: 'yellow', width: 160, height: 100 } : {}),
       ...(variant === 'frame' ? { width: 400, height: 300, color: '#94a3b8' } : {}),
       ...(variant === 'arrow' ? { width: 120, height: 40, rotation: 0, color: '#64748b' } : {}),
       ...defaults,

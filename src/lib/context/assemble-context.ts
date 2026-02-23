@@ -103,7 +103,7 @@ export async function assembleStepContext(
   // Tier 4: Query canvas state for this step
   const canvasState = await loadCanvasState(workshopId, currentStepId);
   let canvasContext = canvasState
-    ? assembleCanvasContextForStep(currentStepId, canvasState.postIts || [], canvasState.gridColumns, canvasState.personaTemplates, canvasState.hmwCards)
+    ? assembleCanvasContextForStep(currentStepId, canvasState.stickyNotes || [], canvasState.gridColumns, canvasState.personaTemplates, canvasState.hmwCards)
     : (currentStepId === 'journey-mapping'
       ? assembleCanvasContextForStep(currentStepId, [])
       : '');
@@ -112,8 +112,8 @@ export async function assembleStepContext(
   // can generate diverse persona candidates from the full cluster hierarchy
   if (currentStepId === 'user-research') {
     const step2Canvas = await loadCanvasState(workshopId, 'stakeholder-mapping');
-    if (step2Canvas?.postIts && step2Canvas.postIts.length > 0) {
-      const stakeholderContext = assembleStakeholderCanvasContext(step2Canvas.postIts);
+    if (step2Canvas?.stickyNotes && step2Canvas.stickyNotes.length > 0) {
+      const stakeholderContext = assembleStakeholderCanvasContext(step2Canvas.stickyNotes);
       if (stakeholderContext) {
         canvasContext = canvasContext
           ? `${canvasContext}\n\nStep 2 Stakeholder Map (use these to generate diverse persona candidates):\n${stakeholderContext}`
@@ -126,8 +126,8 @@ export async function assembleStepContext(
   // can populate the empathy fields with real insights from the research
   if (currentStepId === 'persona') {
     const step4Canvas = await loadCanvasState(workshopId, 'sense-making');
-    if (step4Canvas?.postIts && step4Canvas.postIts.length > 0) {
-      const empathyContext = assembleEmpathyMapCanvasContext(step4Canvas.postIts);
+    if (step4Canvas?.stickyNotes && step4Canvas.stickyNotes.length > 0) {
+      const empathyContext = assembleEmpathyMapCanvasContext(step4Canvas.stickyNotes);
       if (empathyContext) {
         canvasContext = canvasContext
           ? `${canvasContext}\n\nStep 4 Empathy Map (use these insights to populate empathy fields):\n${empathyContext}`
@@ -136,9 +136,9 @@ export async function assembleStepContext(
     }
   }
 
-  // Extract flat list of post-it names for dedup blocklist
-  const existingItemNames: string[] = canvasState?.postIts
-    ?.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview && p.text.trim())
+  // Extract flat list of sticky note names for dedup blocklist
+  const existingItemNames: string[] = canvasState?.stickyNotes
+    ?.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview && p.text.trim())
     .map(p => p.text.trim()) || [];
 
   return {

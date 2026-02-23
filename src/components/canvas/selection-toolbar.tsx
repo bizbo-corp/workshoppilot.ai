@@ -2,7 +2,7 @@
 
 /**
  * SelectionToolbar Component
- * Floating action bar shown when 2+ post-its are selected.
+ * Floating action bar shown when 2+ sticky notes are selected.
  * Renders above the bounding box of selected nodes.
  */
 

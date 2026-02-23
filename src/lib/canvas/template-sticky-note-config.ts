@@ -1,24 +1,24 @@
-import type { PostItColor } from '@/stores/canvas-store';
+import type { StickyNoteColor } from '@/stores/canvas-store';
 
 /**
  * Template Post-It Definition
- * Defines a pre-placed post-it card with placeholder text that the AI can target by key.
+ * Defines a pre-placed sticky note card with placeholder text that the AI can target by key.
  */
-export type TemplatePostItDefinition = {
+export type TemplateStickyNoteDefinition = {
   key: string;              // AI targeting key (e.g., 'idea', 'problem')
   label: string;            // Persistent header label (e.g., 'The Idea')
   placeholderText: string;  // Placeholder shown when text is empty
-  color: PostItColor;       // Post-it color
+  color: StickyNoteColor;       // Sticky note color
   position: { x: number; y: number };
   width: number;
   height: number;
 };
 
 /**
- * Step-keyed template post-it configurations.
- * To add template post-its to a new step, add an entry here + corresponding AI prompt instructions.
+ * Step-keyed template sticky note configurations.
+ * To add template sticky notes to a new step, add an entry here + corresponding AI prompt instructions.
  */
-const STEP_TEMPLATE_POSTITS: Record<string, TemplatePostItDefinition[]> = {
+const STEP_TEMPLATE_POSTITS: Record<string, TemplateStickyNoteDefinition[]> = {
   challenge: [
     {
       key: 'idea',
@@ -60,9 +60,9 @@ const STEP_TEMPLATE_POSTITS: Record<string, TemplatePostItDefinition[]> = {
 };
 
 /**
- * Get template post-it definitions for a given step.
+ * Get template sticky note definitions for a given step.
  * Returns empty array for steps without template configurations.
  */
-export function getStepTemplatePostIts(stepId: string): TemplatePostItDefinition[] {
+export function getStepTemplateStickyNotes(stepId: string): TemplateStickyNoteDefinition[] {
   return STEP_TEMPLATE_POSTITS[stepId] || [];
 }

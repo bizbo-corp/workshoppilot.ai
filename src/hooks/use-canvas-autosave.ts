@@ -30,7 +30,7 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
   const dirtyVersionRef = useRef(0);
 
   // Store access
-  const postIts = useCanvasStore((s) => s.postIts);
+  const stickyNotes = useCanvasStore((s) => s.stickyNotes);
   const gridColumns = useCanvasStore((s) => s.gridColumns);
   const drawingNodes = useCanvasStore((s) => s.drawingNodes);
   const mindMapNodes = useCanvasStore((s) => s.mindMapNodes);
@@ -56,7 +56,7 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
       setSaveStatus('saving');
 
       const result = await saveCanvasState(workshopId, stepId, {
-        postIts,
+        stickyNotes,
         ...(gridColumns.length > 0 ? { gridColumns } : {}),
         ...(drawingNodes.length > 0 ? { drawingNodes } : {}),
         ...(mindMapNodes.length > 0 ? { mindMapNodes } : {}),
@@ -113,7 +113,7 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
       dirtyVersionRef.current++;
       debouncedSave();
     }
-  }, [postIts, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, personaTemplates, hmwCards, isDirty, debouncedSave]);
+  }, [stickyNotes, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, personaTemplates, hmwCards, isDirty, debouncedSave]);
 
   // Force-save on component unmount
   useEffect(() => {

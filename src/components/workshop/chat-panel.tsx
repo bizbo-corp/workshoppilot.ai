@@ -13,8 +13,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
-import { computeCanvasPosition, computePostItSize, computeThemeSortPositions, computeClusterChildPositions, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, ZONE_COLORS } from '@/lib/canvas/canvas-position';
-import type { PostItColor, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
+import { computeCanvasPosition, computeStickyNoteSize, computeThemeSortPositions, computeClusterChildPositions, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, ZONE_COLORS } from '@/lib/canvas/canvas-position';
+import type { StickyNoteColor, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
@@ -26,7 +26,7 @@ import { saveCanvasState } from '@/actions/canvas-actions';
 const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe', 'ideation', 'concept'];
 
 /** Distinct colors assigned to persona cards in user-research step (one per persona) */
-const PERSONA_CARD_COLORS: PostItColor[] = ['pink', 'blue', 'green'];
+const PERSONA_CARD_COLORS: StickyNoteColor[] = ['pink', 'blue', 'green'];
 
 /** Fixed initial greetings shown instantly while AI generates first response */
 const STEP_INITIAL_GREETINGS: Record<string, string> = {
@@ -599,12 +599,12 @@ interface ChatPanelProps {
 export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep, showStepConfirm, onStepConfirm, onStepRevise, stepConfirmLabel }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
   const storeApi = useCanvasStoreApi();
-  const addPostIt = useCanvasStore((state) => state.addPostIt);
-  const updatePostIt = useCanvasStore((state) => state.updatePostIt);
-  const deletePostIt = useCanvasStore((state) => state.deletePostIt);
+  const addStickyNote = useCanvasStore((state) => state.addStickyNote);
+  const updateStickyNote = useCanvasStore((state) => state.updateStickyNote);
+  const deleteStickyNote = useCanvasStore((state) => state.deleteStickyNote);
   const setCluster = useCanvasStore((state) => state.setCluster);
   const batchUpdatePositions = useCanvasStore((state) => state.batchUpdatePositions);
-  const postIts = useCanvasStore((state) => state.postIts);
+  const stickyNotes = useCanvasStore((state) => state.stickyNotes);
   const gridColumns = useCanvasStore((state) => state.gridColumns);
   const replaceGridColumns = useCanvasStore((state) => state.replaceGridColumns);
   const drawingNodes = useCanvasStore((state) => state.drawingNodes);
@@ -626,7 +626,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
   const pendingHmwChipSelection = useCanvasStore((state) => state.pendingHmwChipSelection);
   const setPendingHmwChipSelection = useCanvasStore((state) => state.setPendingHmwChipSelection);
-  const selectedPostItIds = useCanvasStore((state) => state.selectedPostItIds);
+  const selectedStickyNoteIds = useCanvasStore((state) => state.selectedStickyNoteIds);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
@@ -671,7 +671,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     const s = storeApi.getState();
     if (!s.isDirty) return;
     await saveCanvasState(workshopId, step.id, {
-      postIts: s.postIts,
+      stickyNotes: s.stickyNotes,
       ...(s.gridColumns.length > 0 ? { gridColumns: s.gridColumns } : {}),
       ...(s.drawingNodes.length > 0 ? { drawingNodes: s.drawingNodes } : {}),
       ...(s.mindMapNodes.length > 0 ? { mindMapNodes: s.mindMapNodes } : {}),
@@ -699,9 +699,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     () =>
       new DefaultChatTransport({
         api: '/api/chat',
-        body: { sessionId, stepId: step.id, workshopId, subStep, selectedPostItIds },
+        body: { sessionId, stepId: step.id, workshopId, subStep, selectedStickyNoteIds },
       }),
-    [sessionId, step.id, workshopId, subStep, selectedPostItIds]
+    [sessionId, step.id, workshopId, subStep, selectedStickyNoteIds]
   );
 
   const { messages, sendMessage, status, setMessages } = useChat({
@@ -851,12 +851,12 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   }, [messages, step.id]);
 
   // Initialize addedMessageIds from history — mark ALL historical assistant messages as processed
-  // when canvas already has post-its (restored from DB). The saved canvas state is the source
+  // when canvas already has sticky notes (restored from DB). The saved canvas state is the source
   // of truth — we must NOT re-process historical [CANVAS_ITEM], [CLUSTER], or [THEME_SORT]
   // markers, as that would overwrite user-arranged positions with recalculated layouts.
   const hasInitializedAddedIds = React.useRef(false);
   React.useEffect(() => {
-    if (hasInitializedAddedIds.current || !isCanvasStep || (postIts.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0 && mindMapNodes.length === 0 && conceptCards.length === 0)) return;
+    if (hasInitializedAddedIds.current || !isCanvasStep || (stickyNotes.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0 && mindMapNodes.length === 0 && conceptCards.length === 0)) return;
     hasInitializedAddedIds.current = true;
 
     const ids = new Set<string>();
@@ -886,15 +886,15 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
     // Pre-populate addedItemTexts from existing board content so historical chips show as green
     const existingTexts = new Set<string>();
-    for (const p of postIts) {
-      if (!p.type || p.type === 'postIt') {
+    for (const p of stickyNotes) {
+      if (!p.type || p.type === 'stickyNote') {
         existingTexts.add(p.text.trim().toLowerCase());
       }
     }
     if (existingTexts.size > 0) {
       setAddedItemTexts(existingTexts);
     }
-  }, [messages, isCanvasStep, postIts.length, personaTemplates.length, hmwCards.length, mindMapNodes.length, conceptCards.length]);
+  }, [messages, isCanvasStep, stickyNotes.length, personaTemplates.length, hmwCards.length, mindMapNodes.length, conceptCards.length]);
 
   // Handle adding AI-suggested canvas items to the whiteboard
   const handleAddToWhiteboard = React.useCallback((messageId: string, canvasItems: CanvasItemParsed[]) => {
@@ -904,7 +904,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     // Critical when replaceGridColumns() runs in the same effect cycle as this
     // callback — the React hook value would be stale, but Zustand set() is synchronous.
     const latestGridColumns = storeApi.getState().gridColumns;
-    const latestPostIts = storeApi.getState().postIts;
+    const latestStickyNotes = storeApi.getState().stickyNotes;
 
     // Build dynamic gridConfig from store columns for journey-mapping
     const stepConfig = getStepCanvasConfig(step.id);
@@ -914,31 +914,31 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       : baseGridConfig;
 
     // Add each item to canvas with computed position, skipping duplicates
-    let currentPostIts = [...latestPostIts];
+    let currentStickyNotes = [...latestStickyNotes];
     for (const item of canvasItems) {
       // Duplicate guard: skip if an item with the same text (case-insensitive) already exists
       const normalizedText = item.text.trim().toLowerCase();
-      const alreadyExists = currentPostIts.some(
-        (p) => (!p.type || p.type === 'postIt') && p.text.trim().toLowerCase() === normalizedText
+      const alreadyExists = currentStickyNotes.some(
+        (p) => (!p.type || p.type === 'stickyNote') && p.text.trim().toLowerCase() === normalizedText
       );
       if (alreadyExists) continue;
 
       const { position, quadrant, cellAssignment } = computeCanvasPosition(
         step.id,
         { quadrant: item.quadrant, ring: item.ring, row: item.row, col: item.col, category: item.category, cluster: item.cluster },
-        currentPostIts,
+        currentStickyNotes,
         dynamicGridConfig,
       );
 
       // Color priority: explicit color attr > category-specific > zone-specific > grid green > default yellow
       const VALID_COLORS = new Set(['yellow', 'pink', 'blue', 'green', 'orange', 'red']);
-      const color = (item.color && VALID_COLORS.has(item.color) ? item.color as PostItColor : null)
+      const color = (item.color && VALID_COLORS.has(item.color) ? item.color as StickyNoteColor : null)
         || (item.category && CATEGORY_COLORS[item.category])
         || (item.quadrant && ZONE_COLORS[item.quadrant])
         || (item.isGridItem ? 'green' : 'yellow');
 
-      const { width: itemWidth, height: itemHeight } = computePostItSize(item.text);
-      const newPostIt = {
+      const { width: itemWidth, height: itemHeight } = computeStickyNoteSize(item.text);
+      const newStickyNote = {
         text: item.text,
         position,
         width: itemWidth,
@@ -949,7 +949,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         cluster: item.cluster,
       };
 
-      addPostIt(newPostIt);
+      addStickyNote(newStickyNote);
 
       // Highlight target cell for grid items
       if (item.isGridItem && cellAssignment && dynamicGridConfig) {
@@ -960,7 +960,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         }
       }
 
-      currentPostIts = [...currentPostIts, { ...newPostIt, id: 'pending' }];
+      currentStickyNotes = [...currentStickyNotes, { ...newStickyNote, id: 'pending' }];
     }
 
     setAddedMessageIds(prev => new Set(prev).add(messageId));
@@ -969,17 +969,17 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     if (!stepConfigForFitView.hasRings) {
       setPendingFitView(true);
     }
-  }, [addedMessageIds, step.id, storeApi, addPostIt, setHighlightedCell, setPendingFitView]);
+  }, [addedMessageIds, step.id, storeApi, addStickyNote, setHighlightedCell, setPendingFitView]);
 
   // Add a single canvas item to the board (click-to-add from chat chip)
   const handleAddSingleItem = React.useCallback((item: CanvasItemParsed) => {
     const normalizedText = item.text.trim().toLowerCase();
     if (addedItemTexts.has(normalizedText)) return;
 
-    const latestPostIts = storeApi.getState().postIts;
+    const latestStickyNotes = storeApi.getState().stickyNotes;
     // Duplicate guard
-    const alreadyExists = latestPostIts.some(
-      (p) => (!p.type || p.type === 'postIt') && p.text.trim().toLowerCase() === normalizedText
+    const alreadyExists = latestStickyNotes.some(
+      (p) => (!p.type || p.type === 'stickyNote') && p.text.trim().toLowerCase() === normalizedText
     );
     if (alreadyExists) {
       setAddedItemTexts(prev => new Set(prev).add(normalizedText));
@@ -996,18 +996,18 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     const { position, quadrant, cellAssignment } = computeCanvasPosition(
       step.id,
       { quadrant: item.quadrant, ring: item.ring, row: item.row, col: item.col, category: item.category, cluster: item.cluster },
-      latestPostIts,
+      latestStickyNotes,
       dynamicGridConfig,
     );
 
     const VALID_COLORS = new Set(['yellow', 'pink', 'blue', 'green', 'orange', 'red']);
-    const color = (item.color && VALID_COLORS.has(item.color) ? item.color as PostItColor : null)
+    const color = (item.color && VALID_COLORS.has(item.color) ? item.color as StickyNoteColor : null)
       || (item.category && CATEGORY_COLORS[item.category])
       || (item.quadrant && ZONE_COLORS[item.quadrant])
       || (item.isGridItem ? 'green' : 'yellow');
 
-    const { width: itemWidth, height: itemHeight } = computePostItSize(item.text);
-    addPostIt({
+    const { width: itemWidth, height: itemHeight } = computeStickyNoteSize(item.text);
+    addStickyNote({
       text: item.text,
       position,
       width: itemWidth,
@@ -1024,12 +1024,12 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     if (!stepConfig.hasRings) {
       setPendingFitView(true);
     }
-  }, [addedItemTexts, step.id, storeApi, addPostIt, setPendingFitView]);
+  }, [addedItemTexts, step.id, storeApi, addStickyNote, setPendingFitView]);
 
   // Manual theme sort triggered by proactive card button
   const handleThemeSort = React.useCallback(() => {
-    const latestPostIts = storeApi.getState().postIts;
-    const updates = computeThemeSortPositions(latestPostIts, step.id);
+    const latestStickyNotes = storeApi.getState().stickyNotes;
+    const updates = computeThemeSortPositions(latestStickyNotes, step.id);
     if (updates.length > 0) {
       batchUpdatePositions(updates);
       setPendingFitView(true);
@@ -1042,10 +1042,10 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   React.useEffect(() => {
     if (status !== 'ready' || !isCanvasStep || messages.length === 0) return;
     // Wait for historical message initialization to complete before processing.
-    // Without this guard, on the same render cycle where postIts load from DB,
+    // Without this guard, on the same render cycle where stickyNotes load from DB,
     // this effect could fire before addedMessageIds is populated, causing
     // historical messages to be re-processed and overwriting saved positions.
-    if ((postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0 || mindMapNodes.length > 0 || conceptCards.length > 0) && !hasInitializedAddedIds.current) return;
+    if ((stickyNotes.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0 || mindMapNodes.length > 0 || conceptCards.length > 0) && !hasInitializedAddedIds.current) return;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.role !== 'assistant') return;
     if (addedMessageIds.has(lastMsg.id)) return;
@@ -1072,25 +1072,25 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       replaceGridColumns(newColumns);
     }
 
-    // Template-targeted items: update existing template post-its by key
+    // Template-targeted items: update existing template sticky notes by key
     const templateItems = canvasItems.filter(item => item.templateKey);
     if (templateItems.length > 0) {
-      const currentPostIts = storeApi.getState().postIts;
-      console.log('[template-target] Found', templateItems.length, 'template items. Store has', currentPostIts.filter(p => p.templateKey).length, 'template post-its');
+      const currentStickyNotes = storeApi.getState().stickyNotes;
+      console.log('[template-target] Found', templateItems.length, 'template items. Store has', currentStickyNotes.filter(p => p.templateKey).length, 'template sticky notes');
       for (const item of templateItems) {
-        const target = currentPostIts.find(p => p.templateKey === item.templateKey);
+        const target = currentStickyNotes.find(p => p.templateKey === item.templateKey);
         if (target) {
           console.log('[template-target] Updating', item.templateKey, '→', item.text.slice(0, 40));
-          updatePostIt(target.id, { text: item.text });
+          updateStickyNote(target.id, { text: item.text });
         } else {
-          console.log('[template-target] Template not found for key:', item.templateKey, '— creating regular post-it');
+          console.log('[template-target] Template not found for key:', item.templateKey, '— creating regular sticky note');
           // Template not found (user deleted it) — fall through to normal add
           handleAddSingleItem(item);
         }
       }
     }
 
-    // Grid items (journey mapping) auto-add immediately; regular post-its use click-to-add
+    // Grid items (journey mapping) auto-add immediately; regular sticky notes use click-to-add
     const nonTemplateCanvasItems = canvasItems.filter(item => !item.templateKey);
     const gridItems = nonTemplateCanvasItems.filter(item => item.isGridItem);
     if (gridItems.length > 0 && step.id !== 'persona' && step.id !== 'concept') {
@@ -1182,56 +1182,56 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
     // Process AI-requested deletions
     if (deleteTexts.length > 0) {
-      const latestPostIts = storeApi.getState().postIts;
+      const latestStickyNotes = storeApi.getState().stickyNotes;
       for (const delText of deleteTexts) {
         const lower = delText.toLowerCase();
-        const match = latestPostIts.find(p =>
-          p.text.toLowerCase() === lower && (!p.type || p.type === 'postIt')
+        const match = latestStickyNotes.find(p =>
+          p.text.toLowerCase() === lower && (!p.type || p.type === 'stickyNote')
         );
-        if (match) deletePostIt(match.id);
+        if (match) deleteStickyNote(match.id);
       }
     }
 
     // Process AI-suggested clusters
     if (clusters.length > 0) {
-      const latestPostIts = storeApi.getState().postIts;
+      const latestStickyNotes = storeApi.getState().stickyNotes;
       const clusterUpdates: Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }> = [];
 
       for (const cluster of clusters) {
         const parentLower = cluster.parent.toLowerCase();
-        const parentPostIt = latestPostIts.find(p =>
-          p.text.toLowerCase() === parentLower && (!p.type || p.type === 'postIt')
+        const parentStickyNote = latestStickyNotes.find(p =>
+          p.text.toLowerCase() === parentLower && (!p.type || p.type === 'stickyNote')
         );
         const childIds: string[] = [];
-        const childPostIts: typeof latestPostIts = [];
+        const childStickyNotes: typeof latestStickyNotes = [];
         for (const childText of cluster.children) {
           const childLower = childText.toLowerCase();
-          const match = latestPostIts.find(p =>
-            p.text.toLowerCase() === childLower && (!p.type || p.type === 'postIt')
+          const match = latestStickyNotes.find(p =>
+            p.text.toLowerCase() === childLower && (!p.type || p.type === 'stickyNote')
           );
           if (match) {
             childIds.push(match.id);
-            childPostIts.push(match);
+            childStickyNotes.push(match);
           }
         }
         if (childIds.length > 0) {
           setCluster(childIds, cluster.parent);
 
           // Rearrange children in 3-wide rows centered below parent
-          if (parentPostIt) {
+          if (parentStickyNote) {
             const childPositions = computeClusterChildPositions(
-              parentPostIt.position,
-              parentPostIt.width,
-              parentPostIt.height,
-              childPostIts.length,
-              childPostIts[0]?.width || POST_IT_WIDTH,
-              childPostIts[0]?.height || POST_IT_HEIGHT,
+              parentStickyNote.position,
+              parentStickyNote.width,
+              parentStickyNote.height,
+              childStickyNotes.length,
+              childStickyNotes[0]?.width || POST_IT_WIDTH,
+              childStickyNotes[0]?.height || POST_IT_HEIGHT,
             );
-            for (let j = 0; j < childPostIts.length; j++) {
+            for (let j = 0; j < childStickyNotes.length; j++) {
               clusterUpdates.push({
-                id: childPostIts[j].id,
+                id: childStickyNotes[j].id,
                 position: childPositions[j],
-                ...(parentPostIt.cellAssignment ? { cellAssignment: parentPostIt.cellAssignment } : {}),
+                ...(parentStickyNote.cellAssignment ? { cellAssignment: parentStickyNote.cellAssignment } : {}),
               });
             }
           }
@@ -1384,10 +1384,10 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       setPendingFitView(true);
     }
 
-    // Mark as processed if we did any work (avoid re-processing non-post-it items)
-    const hasNonPostItWork = deleteTexts.length > 0 || clusters.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || mindMapNodesParsed.length > 0 || conceptCardParsed.length > 0 || gridItems.length > 0 || templateItems.length > 0;
+    // Mark as processed if we did any work (avoid re-processing non-sticky note items)
+    const hasNonStickyNoteWork = deleteTexts.length > 0 || clusters.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || mindMapNodesParsed.length > 0 || conceptCardParsed.length > 0 || gridItems.length > 0 || templateItems.length > 0;
     const hasRegularCanvasItems = nonTemplateCanvasItems.some(item => !item.isGridItem);
-    if (hasNonPostItWork || (hasRegularCanvasItems && !addedMessageIds.has(lastMsg.id))) {
+    if (hasNonStickyNoteWork || (hasRegularCanvasItems && !addedMessageIds.has(lastMsg.id))) {
       setAddedMessageIds(prev => new Set(prev).add(lastMsg.id));
       // Flush to DB so the next API request sees the items just added
       flushCanvasToDb();
@@ -1397,15 +1397,15 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     if (shouldSort) {
       setHasThemeSorted(true);
       setTimeout(() => {
-        const latestPostIts = storeApi.getState().postIts;
-        const updates = computeThemeSortPositions(latestPostIts, step.id);
+        const latestStickyNotes = storeApi.getState().stickyNotes;
+        const updates = computeThemeSortPositions(latestStickyNotes, step.id);
         if (updates.length > 0) {
           batchUpdatePositions(updates);
           setPendingFitView(true);
         }
       }, 300); // Short delay to ensure new items are in store
     }
-  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, handleAddSingleItem, batchUpdatePositions, storeApi, step.id, setPendingFitView, deletePostIt, updatePostIt, setCluster, addPersonaTemplate, updatePersonaTemplate, replaceGridColumns, addHmwCard, updateHmwCard, addMindMapNode, updateConceptCard, conceptCards.length, flushCanvasToDb]);
+  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, handleAddSingleItem, batchUpdatePositions, storeApi, step.id, setPendingFitView, deleteStickyNote, updateStickyNote, setCluster, addPersonaTemplate, updatePersonaTemplate, replaceGridColumns, addHmwCard, updateHmwCard, addMindMapNode, updateConceptCard, conceptCards.length, flushCanvasToDb]);
 
   // Clear stream error on successful completion
   React.useEffect(() => {
@@ -1597,18 +1597,18 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
   };
 
-  // Handle adding user message to canvas as a post-it
+  // Handle adding user message to canvas as a sticky note
   const handleAddUserMessageToCanvas = React.useCallback((text: string) => {
-    const { position } = computeCanvasPosition(step.id, {}, postIts);
-    const { width, height } = computePostItSize(text);
-    addPostIt({
+    const { position } = computeCanvasPosition(step.id, {}, stickyNotes);
+    const { width, height } = computeStickyNoteSize(text);
+    addStickyNote({
       text,
       position,
       width,
       height,
       color: 'yellow',
     });
-  }, [addPostIt, postIts, step.id]);
+  }, [addStickyNote, stickyNotes, step.id]);
 
   return (
     <div className="flex h-full flex-col">
@@ -1753,7 +1753,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                       // Filter out items already on the board — hide duplicates entirely
                       const newItems = nonGridItems.filter(item => {
                         const normalizedText = item.text.trim().toLowerCase();
-                        return !addedItemTexts.has(normalizedText) && !postIts.some(p => (!p.type || p.type === 'postIt') && p.text.trim().toLowerCase() === normalizedText);
+                        return !addedItemTexts.has(normalizedText) && !stickyNotes.some(p => (!p.type || p.type === 'stickyNote') && p.text.trim().toLowerCase() === normalizedText);
                       });
                       if (newItems.length === 0) return null;
                       return (
@@ -1763,7 +1763,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                               <button
                                 key={i}
                                 onClick={() => handleAddSingleItem(item)}
-                                className="cursor-pointer inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-[var(--postit-yellow)] px-2.5 py-1.5 text-sm font-medium text-neutral-olive-800 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 dark:border-amber-600/50 dark:bg-amber-900/30 dark:text-amber-200"
+                                className="cursor-pointer inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-[var(--sticky-note-yellow)] px-2.5 py-1.5 text-sm font-medium text-neutral-olive-800 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 dark:border-amber-600/50 dark:bg-amber-900/30 dark:text-amber-200"
                               >
                                 <Plus className="h-3 w-3" />
                                 {item.text}
@@ -2109,7 +2109,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
             {/* Proactive theme sort card — stakeholder mapping, 5+ items, not yet sorted */}
             {step.id === 'stakeholder-mapping' && status === 'ready' && !hasThemeSorted &&
-             postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview).length >= 5 &&
+             stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview).length >= 5 &&
              messages.some(m => m.role === 'assistant') && (
               <div className="mx-auto max-w-sm rounded-xl border border-olive-200 bg-olive-50/60 p-4 text-center dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30">
                 <p className="text-sm text-muted-foreground mb-3">
@@ -2165,7 +2165,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                     onStepRevise?.();
                     // Clear existing canvas items so the revised version replaces them
                     const state = storeApi.getState();
-                    state.setPostIts([]);
+                    state.setStickyNotes([]);
                     if (state.personaTemplates.length > 0) {
                       state.setPersonaTemplates([]);
                     }
@@ -2173,7 +2173,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                       state.setHmwCards([]);
                     }
                     // Save cleared state directly to DB (bypass stale flushCanvasToDb closure)
-                    await saveCanvasState(workshopId, step.id, { postIts: [] });
+                    await saveCanvasState(workshopId, step.id, { stickyNotes: [] });
                     state.markClean();
                     setQuickAck(getRandomAck());
                     sendMessage({

@@ -15,7 +15,7 @@ const VARIANT_ICONS: Record<string, typeof StickyNote | null> = {
   note: Lightbulb,
   hint: Lightbulb,
   image: null,
-  'template-postit': null,
+  'template-sticky-note': null,
   frame: null,
   arrow: null,
 };
@@ -24,7 +24,7 @@ const VARIANT_DEFAULTS: Record<string, { bg: string }> = {
   sticker: { bg: '#b8c9a3' },
   note: { bg: '#dce8f5' },
   hint: { bg: '' },
-  'template-postit': { bg: '' },
+  'template-sticky-note': { bg: '' },
   frame: { bg: '' },
   arrow: { bg: '' },
 };
@@ -34,19 +34,19 @@ const VARIANT_LABELS: Record<string, string> = {
   note: 'Note',
   hint: 'Hint',
   image: 'Image',
-  'template-postit': 'Template Post-it',
+  'template-sticky-note': 'Template Sticky note',
   frame: 'Frame',
   arrow: 'Arrow',
 };
 
-// PostIt color name → CSS variable class (matches PostItNode COLOR_CLASSES)
+// StickyNote color name → CSS variable class (matches StickyNoteNode COLOR_CLASSES)
 const POSTIT_COLOR_CLASSES: Record<string, string> = {
-  yellow: 'bg-[var(--postit-yellow)]',
-  pink: 'bg-[var(--postit-pink)]',
-  blue: 'bg-[var(--postit-blue)]',
-  green: 'bg-[var(--postit-green)]',
-  orange: 'bg-[var(--postit-orange)]',
-  red: 'bg-[var(--postit-red)]',
+  yellow: 'bg-[var(--sticky-note-yellow)]',
+  pink: 'bg-[var(--sticky-note-pink)]',
+  blue: 'bg-[var(--sticky-note-blue)]',
+  green: 'bg-[var(--sticky-note-green)]',
+  orange: 'bg-[var(--sticky-note-orange)]',
+  red: 'bg-[var(--sticky-note-red)]',
 };
 
 /** Simple SVG sanitizer — strips <script> tags and on* event attributes. */
@@ -95,8 +95,8 @@ function AdminDragHandle({ guide }: { guide: GuideNodeData }) {
   );
 }
 
-// ─── Template Post-it variant ───
-function TemplatePostItContent({ guide }: { guide: GuideNodeData }) {
+// ─── Template Sticky note variant ───
+function TemplateStickyNoteContent({ guide }: { guide: GuideNodeData }) {
   const colorName = guide.color || 'yellow';
   const bgClass = POSTIT_COLOR_CLASSES[colorName] || POSTIT_COLOR_CLASSES.yellow;
 
@@ -205,7 +205,7 @@ function ArrowContent({ guide }: { guide: GuideNodeData }) {
 
 // Min constraints per variant for NodeResizer
 const MIN_SIZE_MAP: Record<string, { minWidth: number; minHeight: number }> = {
-  'template-postit': { minWidth: 100, minHeight: 60 },
+  'template-sticky-note': { minWidth: 100, minHeight: 60 },
   frame: { minWidth: 120, minHeight: 80 },
   arrow: { minWidth: 60, minHeight: 20 },
   sticker: { minWidth: 80, minHeight: 40 },
@@ -221,12 +221,12 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
     guide.onDismiss(guide.id);
   }, [guide]);
 
-  const isTemplatePostit = guide.variant === 'template-postit';
+  const isTemplatePostit = guide.variant === 'template-sticky-note';
   const isFrame = guide.variant === 'frame';
   const isArrow = guide.variant === 'arrow';
   const mins = MIN_SIZE_MAP[guide.variant] || { minWidth: 60, minHeight: 40 };
 
-  // ── Template post-it / frame / arrow ──
+  // ── Template sticky note / frame / arrow ──
   if (isTemplatePostit || isFrame || isArrow) {
     return (
       <div
@@ -252,7 +252,7 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
           }}
         />
         <AdminDragHandle guide={guide} />
-        {isTemplatePostit && <TemplatePostItContent guide={guide} />}
+        {isTemplatePostit && <TemplateStickyNoteContent guide={guide} />}
         {isFrame && <FrameContent guide={guide} />}
         {isArrow && <ArrowContent guide={guide} />}
       </div>

@@ -4,20 +4,20 @@ import { memo, useCallback, useRef, useEffect } from 'react';
 import { Handle, Position, type NodeProps, type Node, NodeResizer } from '@xyflow/react';
 import { Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { PostItColor } from '@/stores/canvas-store';
+import type { StickyNoteColor } from '@/stores/canvas-store';
 
-export const COLOR_CLASSES: Record<PostItColor, string> = {
-  yellow: 'bg-[var(--postit-yellow)]',
-  pink: 'bg-[var(--postit-pink)]',
-  blue: 'bg-[var(--postit-blue)]',
-  green: 'bg-[var(--postit-green)]',
-  orange: 'bg-[var(--postit-orange)]',
-  red: 'bg-[var(--postit-red)]',
+export const COLOR_CLASSES: Record<StickyNoteColor, string> = {
+  yellow: 'bg-[var(--sticky-note-yellow)]',
+  pink: 'bg-[var(--sticky-note-pink)]',
+  blue: 'bg-[var(--sticky-note-blue)]',
+  green: 'bg-[var(--sticky-note-green)]',
+  orange: 'bg-[var(--sticky-note-orange)]',
+  red: 'bg-[var(--sticky-note-red)]',
 };
 
-export type PostItNodeData = {
+export type StickyNoteNodeData = {
   text: string;
-  color: PostItColor;
+  color: StickyNoteColor;
   isEditing: boolean;
   isPreview?: boolean;
   previewReason?: string;
@@ -34,10 +34,10 @@ export type PostItNodeData = {
   onResizeEnd?: (id: string, width: number, height: number, x: number, y: number) => void;
 };
 
-export type PostItNode = Node<PostItNodeData, 'postIt'>;
+export type StickyNoteNode = Node<StickyNoteNodeData, 'stickyNote'>;
 
 // `dragging` comes from ReactFlow's NodeProps — no React state needed for drag feedback
-export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<PostItNode>) => {
+export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<StickyNoteNode>) => {
   const bgColor = COLOR_CLASSES[data.color || 'yellow'];
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -201,4 +201,4 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
   );
 });
 
-PostItNode.displayName = 'PostItNode';
+StickyNoteNode.displayName = 'StickyNoteNode';

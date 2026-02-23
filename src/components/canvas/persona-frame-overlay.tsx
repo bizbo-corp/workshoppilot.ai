@@ -4,7 +4,7 @@
  * PersonaFrameOverlay Component
  *
  * Renders visible rectangular frames for each persona card in the user-research step.
- * Frames appear as soon as persona cards exist (before any post-its are assigned).
+ * Frames appear as soon as persona cards exist (before any sticky notes are assigned).
  * Each frame has a colored header bar (drag handle) and a dashed-border drop zone.
  *
  * Follows the same HTML-overlay-outside-ReactFlow pattern as ClusterHullsOverlay.
@@ -13,7 +13,7 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useStore as useReactFlowStore, type ReactFlowState } from '@xyflow/react';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
-import type { PostIt } from '@/stores/canvas-store';
+import type { StickyNote } from '@/stores/canvas-store';
 
 const viewportSelector = (state: ReactFlowState) => ({
   x: state.transform[0],
@@ -28,7 +28,7 @@ const FRAME_PADDING = 24;
 const HEADER_H = 28;
 const EDGE_GRAB = 12;
 
-/** Color mapping from PostItColor to frame appearance */
+/** Color mapping from StickyNoteColor to frame appearance */
 const FRAME_COLORS: Record<string, { fill: string; border: string; headerBg: string }> = {
   pink:   { fill: 'rgba(236, 72, 153, 0.06)', border: 'rgba(236, 72, 153, 0.25)', headerBg: 'rgba(236, 72, 153, 0.55)' },
   blue:   { fill: 'rgba(59, 130, 246, 0.06)', border: 'rgba(59, 130, 246, 0.25)', headerBg: 'rgba(59, 130, 246, 0.55)' },
@@ -58,22 +58,22 @@ type DragState = {
 };
 
 export function PersonaFrameOverlay() {
-  const postIts = useCanvasStore((s) => s.postIts);
+  const stickyNotes = useCanvasStore((s) => s.stickyNotes);
   const batchUpdatePositions = useCanvasStore((s) => s.batchUpdatePositions);
   const { x, y, zoom } = useReactFlowStore(viewportSelector);
 
   const dragRef = useRef<DragState | null>(null);
   const zoomRef = useRef(zoom);
   zoomRef.current = zoom;
-  const postItsRef = useRef(postIts);
-  postItsRef.current = postIts;
+  const stickyNotesRef = useRef(stickyNotes);
+  stickyNotesRef.current = stickyNotes;
 
   const [isDragging, setIsDragging] = useState(false);
 
   const frames = useMemo<PersonaFrameData[]>(() => {
-    const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+    const items = stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview);
 
-    // Find persona cards: unclustered post-its with em-dash in text
+    // Find persona cards: unclustered sticky notes with em-dash in text
     const personaCards = items.filter(p => !p.cluster && p.text.includes(' — '));
     if (personaCards.length === 0) return [];
 
@@ -109,7 +109,7 @@ export function PersonaFrameOverlay() {
         memberIds,
       };
     });
-  }, [postIts]);
+  }, [stickyNotes]);
 
   // --- Drag ---
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -145,7 +145,7 @@ export function PersonaFrameOverlay() {
     e.stopPropagation();
     e.preventDefault();
 
-    const items = postItsRef.current;
+    const items = stickyNotesRef.current;
     const initialPositions = new Map<string, { x: number; y: number }>();
     for (const id of frame.memberIds) {
       const p = items.find(pi => pi.id === id);
@@ -285,6 +285,6 @@ export function PersonaFrameOverlay() {
 
 /**
  * Exported constants for frame-bounds proximity detection in react-flow-canvas.
- * Used by the drag-end handler to check if a dropped post-it is inside a persona frame.
+ * Used by the drag-end handler to check if a dropped sticky note is inside a persona frame.
  */
 export { FRAME_WIDTH, MIN_FRAME_HEIGHT, FRAME_PADDING };

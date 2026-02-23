@@ -77,10 +77,10 @@ export function StepContainer({
   // Canvas step detection — canvas steps skip extraction
   const step = getStepByOrder(stepOrder);
   const isCanvasStep = step ? CANVAS_ENABLED_STEPS.includes(step.id) : false;
-  const postIts = useCanvasStore((s) => s.postIts);
+  const stickyNotes = useCanvasStore((s) => s.stickyNotes);
   const conceptCards = useCanvasStore((s) => s.conceptCards);
   const hmwCards = useCanvasStore((s) => s.hmwCards);
-  const setPostIts = useCanvasStore((s) => s.setPostIts);
+  const setStickyNotes = useCanvasStore((s) => s.setStickyNotes);
   const setDrawingNodes = useCanvasStore((s) => s.setDrawingNodes);
   const setCrazy8sSlots = useCanvasStore((s) => s.setCrazy8sSlots);
   const setMindMapState = useCanvasStore((s) => s.setMindMapState);
@@ -90,17 +90,17 @@ export function StepContainer({
   const setBrainRewritingMatrices = useCanvasStore((s) => s.setBrainRewritingMatrices);
   // HMW card counts as "content" only when all 4 fields are filled (card is 'filled')
   const hmwCardComplete = hmwCards.some((c) => c.cardState === 'filled');
-  const canvasHasContent = postIts.some(p => !p.templateKey || p.text.trim().length > 0) || conceptCards.length > 0 || hmwCardComplete;
+  const canvasHasContent = stickyNotes.some(p => !p.templateKey || p.text.trim().length > 0) || conceptCards.length > 0 || hmwCardComplete;
 
-  // For canvas steps, activity is "confirmed" when post-its exist (no extraction needed)
-  const effectiveConfirmed = isCanvasStep ? canvasHasContent : artifactConfirmed;
+  // Next button requires explicit confirmation (e.g. "Confirm Research Insights") for all steps
+  const effectiveConfirmed = artifactConfirmed;
 
   // In-chat accept button: show when step has a confirm label, canvas has enough content, and user hasn't clicked Accept yet
   const confirmLabel = step ? STEP_CONFIRM_LABELS[step.id] : undefined;
   const minItems = step ? (STEP_CONFIRM_MIN_ITEMS[step.id] ?? 1) : 1;
-  const canvasItemCount = postIts.length + conceptCards.length + (hmwCardComplete ? 1 : 0);
+  const canvasItemCount = stickyNotes.length + conceptCards.length + (hmwCardComplete ? 1 : 0);
   const allPersonasInterviewed = step?.id === 'user-research'
-    ? areAllPersonasInterviewed(postIts)
+    ? areAllPersonasInterviewed(stickyNotes)
     : true;
   const showConfirm = !!confirmLabel && !artifactConfirmed && canvasHasContent
     && canvasItemCount >= minItems && allPersonasInterviewed;
@@ -340,7 +340,7 @@ export function StepContainer({
       setStep10Artifact(null);
       hasAutoExtracted.current = false;
       // Clear canvas/whiteboard state
-      setPostIts([]);
+      setStickyNotes([]);
       setDrawingNodes([]);
       setCrazy8sSlots([]);
       setMindMapState([], []);
@@ -357,7 +357,7 @@ export function StepContainer({
     } finally {
       setIsResetting(false);
     }
-  }, [workshopId, stepOrder, sessionId, router, setPostIts, setDrawingNodes, setCrazy8sSlots, setMindMapState, setConceptCards, setGridColumns, setSelectedSlotIds, setBrainRewritingMatrices]);
+  }, [workshopId, stepOrder, sessionId, router, setStickyNotes, setDrawingNodes, setCrazy8sSlots, setMindMapState, setConceptCards, setGridColumns, setSelectedSlotIds, setBrainRewritingMatrices]);
 
   // Step 10: render Build Pack deliverable cards + extraction status
   // Synthesis summary (narrative, journey, confidence, next steps) lives on the results page

@@ -198,7 +198,7 @@ For example, if they confirm "Ideation", "Research & Scoping", "Design & Build",
 
 After emitting [JOURNEY_STAGES], the column IDs for [GRID_ITEM] tags become lowercase-hyphenated: ideation, research-scoping, design-build, testing-validation, launch.
 
-Do NOT use [GRID_ITEM] tags during stage confirmation — columns are structural, not post-its.
+Do NOT use [GRID_ITEM] tags during stage confirmation — columns are structural, not sticky notes.
 
 3. POPULATE THE LAYERS:
 After stages are confirmed, populate ONE ROW at a time using [GRID_ITEM] tags. Items appear instantly on the canvas as you generate them.

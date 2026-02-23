@@ -117,13 +117,13 @@
   --canvas-highlight-fill: #fef3c7;
   --canvas-tint-opacity: 0.06;
   --canvas-zone-opacity: 0.08;
-  /* Post-it note colors — vibrant, olive-complementary (shared light/dark) */
-  --postit-yellow: #fdf0a0;
-  --postit-pink: #fcc0d8;
-  --postit-blue: #a0d8f0;
-  --postit-green: #a0e8c0;
-  --postit-orange: #fdd0a0;
-  --postit-red: #f5b0a8;
+  /* Sticky note colors — vibrant, olive-complementary (shared light/dark) */
+  --sticky-note-yellow: #fdf0a0;
+  --sticky-note-pink: #fcc0d8;
+  --sticky-note-blue: #a0d8f0;
+  --sticky-note-green: #a0e8c0;
+  --sticky-note-orange: #fdd0a0;
+  --sticky-note-red: #f5b0a8;
   /* Mind map branch colors — vibrant, olive-complementary */
   --mm-blue: #3088c0;
   --mm-blue-bg: #cce4f5;
@@ -213,13 +213,13 @@
   --canvas-highlight-fill: #78350f4d;
   --canvas-tint-opacity: 0.12;
   --canvas-zone-opacity: 0.15;
-  /* Post-it note colors — same as light mode */
-  --postit-yellow: #fdf0a0;
-  --postit-pink: #fcc0d8;
-  --postit-blue: #a0d8f0;
-  --postit-green: #a0e8c0;
-  --postit-orange: #fdd0a0;
-  --postit-red: #f5b0a8;
+  /* Sticky note colors — same as light mode */
+  --sticky-note-yellow: #fdf0a0;
+  --sticky-note-pink: #fcc0d8;
+  --sticky-note-blue: #a0d8f0;
+  --sticky-note-green: #a0e8c0;
+  --sticky-note-orange: #fdd0a0;
+  --sticky-note-red: #f5b0a8;
   /* Mind map branch colors — dark mode (vibrant, higher contrast) */
   --mm-blue: #68b0e0;
   --mm-blue-bg: #1e3850;

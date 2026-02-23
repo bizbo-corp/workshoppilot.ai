@@ -3,7 +3,7 @@
  * This is the canonical type — replaces CanvasGuideDefinition from canvas-guide-config.ts.
  */
 
-export type CanvasGuideVariant = 'sticker' | 'note' | 'hint' | 'image' | 'template-postit' | 'frame' | 'arrow';
+export type CanvasGuideVariant = 'sticker' | 'note' | 'hint' | 'image' | 'template-sticky-note' | 'frame' | 'arrow';
 export type CanvasGuideDismissBehavior = 'auto-dismiss' | 'hover-x' | 'persistent';
 export type CanvasGuidePlacementMode = 'pinned' | 'on-canvas';
 export type CanvasGuideLayer = 'background' | 'foreground';

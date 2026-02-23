@@ -12,7 +12,7 @@
  * - Selected ideas in Step 8 become concepts in Step 9
  */
 
-import type { PostIt, PostItColor, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
+import type { StickyNote, StickyNoteColor, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
 import type { Quadrant } from '@/lib/canvas/quadrant-detection';
 import { getCellBounds, type GridConfig } from '@/lib/canvas/grid-layout';
 import { STEP_CANVAS_CONFIGS } from '@/lib/canvas/step-canvas-config';
@@ -26,9 +26,9 @@ import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 export type StepFixture = {
   artifact: Record<string, unknown>;
   summary: string;
-  canvas?: PostIt[];
+  canvas?: StickyNote[];
   canvasData?: {
-    postIts?: PostIt[];
+    stickyNotes?: StickyNote[];
     mindMapNodes?: MindMapNodeState[];
     mindMapEdges?: MindMapEdgeState[];
     crazy8sSlots?: Crazy8sSlot[];
@@ -44,17 +44,17 @@ const POST_IT_WIDTH = 160;
 const POST_IT_HEIGHT = 100;
 
 /**
- * Position a post-it in the correct quadrant for Steps 2 & 4.
+ * Position a sticky note in the correct quadrant for Steps 2 & 4.
  * Canvas origin (0,0) is the center dividing line.
  *   Y < 0 = top half, Y >= 0 = bottom half
  *   X < 0 = left half, X >= 0 = right half
  */
-function quadrantPostIt(
+function quadrantStickyNote(
   text: string,
   quadrant: Quadrant,
   offsetIndex: number,
-  color: PostItColor = 'yellow',
-): PostIt {
+  color: StickyNoteColor = 'yellow',
+): StickyNote {
   // Base offsets per quadrant (well within the quadrant so center detection works)
   const bases: Record<string, { x: number; y: number }> = {
     // Power-Interest (Step 2)
@@ -84,13 +84,13 @@ function quadrantPostIt(
     width: POST_IT_WIDTH,
     height: POST_IT_HEIGHT,
     color,
-    type: 'postIt',
+    type: 'stickyNote',
     quadrant,
   };
 }
 
 /**
- * Position a post-it in the correct grid cell for Step 6 (Journey Mapping).
+ * Position a sticky note in the correct grid cell for Step 6 (Journey Mapping).
  * Uses getCellBounds() from grid-layout.ts for exact positioning.
  */
 // Journey fixture grid config — columns match the fixture stage IDs (not the default stage-N placeholders)
@@ -107,12 +107,12 @@ const JOURNEY_FIXTURE_GRID: GridConfig = {
   cellPadding: STEP_CANVAS_CONFIGS['journey-mapping']?.gridConfig?.cellPadding ?? 12,
 };
 
-function journeyPostIt(
+function journeyStickyNote(
   text: string,
   rowId: string,
   colId: string,
-  color: PostItColor = 'yellow',
-): PostIt {
+  color: StickyNoteColor = 'yellow',
+): StickyNote {
   const gridConfig = JOURNEY_FIXTURE_GRID;
   const rowIndex = gridConfig.rows.findIndex((r) => r.id === rowId);
   const colIndex = gridConfig.columns.findIndex((c) => c.id === colId);
@@ -129,7 +129,7 @@ function journeyPostIt(
     width: POST_IT_WIDTH,
     height: POST_IT_HEIGHT - 20, // Slightly shorter to fit cells
     color,
-    type: 'postIt',
+    type: 'stickyNote',
     cellAssignment: { row: rowId, col: colId },
   };
 }
@@ -174,21 +174,21 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
     summary:
       '- 6 stakeholders mapped across power-interest grid\n- Core: Pet owners as primary users with highest power and interest\n- Key partners: Vets (high power/interest), pet food brands (medium power/high interest)\n- Secondary: Pet sitters, insurance companies, local pet stores',
     canvas: [
-      quadrantPostIt('Pet Owners\n(Primary Users)', 'high-power-high-interest', 0, 'yellow'),
-      quadrantPostIt('Veterinarians', 'high-power-high-interest', 1, 'blue'),
-      quadrantPostIt('Pet Insurance\nCompanies', 'high-power-low-interest', 0, 'pink'),
-      quadrantPostIt('Pet Food Brands', 'low-power-high-interest', 0, 'green'),
-      quadrantPostIt('Pet Sitters /\nDog Walkers', 'low-power-high-interest', 1, 'orange'),
-      quadrantPostIt('Local Pet Stores', 'low-power-low-interest', 0, 'yellow'),
+      quadrantStickyNote('Pet Owners\n(Primary Users)', 'high-power-high-interest', 0, 'yellow'),
+      quadrantStickyNote('Veterinarians', 'high-power-high-interest', 1, 'blue'),
+      quadrantStickyNote('Pet Insurance\nCompanies', 'high-power-low-interest', 0, 'pink'),
+      quadrantStickyNote('Pet Food Brands', 'low-power-high-interest', 0, 'green'),
+      quadrantStickyNote('Pet Sitters /\nDog Walkers', 'low-power-high-interest', 1, 'orange'),
+      quadrantStickyNote('Local Pet Stores', 'low-power-low-interest', 0, 'yellow'),
     ],
     canvasData: {
-      postIts: [
-        quadrantPostIt('Pet Owners\n(Primary Users)', 'high-power-high-interest', 0, 'yellow'),
-        quadrantPostIt('Veterinarians', 'high-power-high-interest', 1, 'blue'),
-        quadrantPostIt('Pet Insurance\nCompanies', 'high-power-low-interest', 0, 'pink'),
-        quadrantPostIt('Pet Food Brands', 'low-power-high-interest', 0, 'green'),
-        quadrantPostIt('Pet Sitters /\nDog Walkers', 'low-power-high-interest', 1, 'orange'),
-        quadrantPostIt('Local Pet Stores', 'low-power-low-interest', 0, 'yellow'),
+      stickyNotes: [
+        quadrantStickyNote('Pet Owners\n(Primary Users)', 'high-power-high-interest', 0, 'yellow'),
+        quadrantStickyNote('Veterinarians', 'high-power-high-interest', 1, 'blue'),
+        quadrantStickyNote('Pet Insurance\nCompanies', 'high-power-low-interest', 0, 'pink'),
+        quadrantStickyNote('Pet Food Brands', 'low-power-high-interest', 0, 'green'),
+        quadrantStickyNote('Pet Sitters /\nDog Walkers', 'low-power-high-interest', 1, 'orange'),
+        quadrantStickyNote('Local Pet Stores', 'low-power-low-interest', 0, 'yellow'),
       ],
     },
   },
@@ -247,36 +247,36 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
       '- 3 themes: Tool Fragmentation, Guilt-Driven Care, Routine Fragility\n- Top pain: juggling 3-5 disconnected tools with no single source of truth\n- Top gain: one unified place with proactive reminders for all pet care\n- Emotional insight: guilt is stronger than inconvenience when care is missed',
     canvas: [
       // Said quadrant (bottom-left: X<0, Y>=0)
-      quadrantPostIt('"Nothing is in\none place"', 'said', 0, 'yellow'),
-      quadrantPostIt('"Tell me before\nit\'s overdue"', 'said', 1, 'yellow'),
-      quadrantPostIt('"I feel terrible\nwhen I forget"', 'said', 2, 'yellow'),
+      quadrantStickyNote('"Nothing is in\none place"', 'said', 0, 'yellow'),
+      quadrantStickyNote('"Tell me before\nit\'s overdue"', 'said', 1, 'yellow'),
+      quadrantStickyNote('"I feel terrible\nwhen I forget"', 'said', 2, 'yellow'),
       // Thought quadrant (top-left: X<0, Y<0)
-      quadrantPostIt('Am I a good\npet parent?', 'thought', 0, 'blue'),
-      quadrantPostIt('There must be\na better way', 'thought', 1, 'blue'),
+      quadrantStickyNote('Am I a good\npet parent?', 'thought', 0, 'blue'),
+      quadrantStickyNote('There must be\na better way', 'thought', 1, 'blue'),
       // Felt quadrant (top-right: X>=0, Y<0)
-      quadrantPostIt('Guilt when\ntasks are missed', 'felt', 0, 'pink'),
-      quadrantPostIt('Overwhelmed by\nmulti-pet logistics', 'felt', 1, 'pink'),
+      quadrantStickyNote('Guilt when\ntasks are missed', 'felt', 0, 'pink'),
+      quadrantStickyNote('Overwhelmed by\nmulti-pet logistics', 'felt', 1, 'pink'),
       // Experienced quadrant (bottom-right: X>=0, Y>=0)
-      quadrantPostIt('Missed flea\nmedicine by 3 days', 'experienced', 0, 'green'),
-      quadrantPostIt('Morning routine\ncascade failures', 'experienced', 1, 'green'),
-      quadrantPostIt('Vet portal, calendar,\nnotes app juggle', 'experienced', 2, 'green'),
+      quadrantStickyNote('Missed flea\nmedicine by 3 days', 'experienced', 0, 'green'),
+      quadrantStickyNote('Morning routine\ncascade failures', 'experienced', 1, 'green'),
+      quadrantStickyNote('Vet portal, calendar,\nnotes app juggle', 'experienced', 2, 'green'),
     ],
     canvasData: {
-      postIts: [
+      stickyNotes: [
         // Said quadrant (bottom-left: X<0, Y>=0)
-        quadrantPostIt('"Nothing is in\none place"', 'said', 0, 'yellow'),
-        quadrantPostIt('"Tell me before\nit\'s overdue"', 'said', 1, 'yellow'),
-        quadrantPostIt('"I feel terrible\nwhen I forget"', 'said', 2, 'yellow'),
+        quadrantStickyNote('"Nothing is in\none place"', 'said', 0, 'yellow'),
+        quadrantStickyNote('"Tell me before\nit\'s overdue"', 'said', 1, 'yellow'),
+        quadrantStickyNote('"I feel terrible\nwhen I forget"', 'said', 2, 'yellow'),
         // Thought quadrant (top-left: X<0, Y<0)
-        quadrantPostIt('Am I a good\npet parent?', 'thought', 0, 'blue'),
-        quadrantPostIt('There must be\na better way', 'thought', 1, 'blue'),
+        quadrantStickyNote('Am I a good\npet parent?', 'thought', 0, 'blue'),
+        quadrantStickyNote('There must be\na better way', 'thought', 1, 'blue'),
         // Felt quadrant (top-right: X>=0, Y<0)
-        quadrantPostIt('Guilt when\ntasks are missed', 'felt', 0, 'pink'),
-        quadrantPostIt('Overwhelmed by\nmulti-pet logistics', 'felt', 1, 'pink'),
+        quadrantStickyNote('Guilt when\ntasks are missed', 'felt', 0, 'pink'),
+        quadrantStickyNote('Overwhelmed by\nmulti-pet logistics', 'felt', 1, 'pink'),
         // Experienced quadrant (bottom-right: X>=0, Y>=0)
-        quadrantPostIt('Missed flea\nmedicine by 3 days', 'experienced', 0, 'green'),
-        quadrantPostIt('Morning routine\ncascade failures', 'experienced', 1, 'green'),
-        quadrantPostIt('Vet portal, calendar,\nnotes app juggle', 'experienced', 2, 'green'),
+        quadrantStickyNote('Missed flea\nmedicine by 3 days', 'experienced', 0, 'green'),
+        quadrantStickyNote('Morning routine\ncascade failures', 'experienced', 1, 'green'),
+        quadrantStickyNote('Vet portal, calendar,\nnotes app juggle', 'experienced', 2, 'green'),
       ],
     },
   },
@@ -395,68 +395,68 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
       '- 5-stage journey: Awareness → Consideration → Decision → First Use → Daily Use\n- Critical dip at Daily Use: notification fatigue threatens to make the app "just another thing to check"\n- Key moment of truth: proactive reminders must feel helpful, not spammy\n- Biggest opportunity: smart notification timing and home screen widgets for at-a-glance care status',
     canvas: [
       // Row: actions
-      journeyPostIt('Realizes she\'s struggling\nwith pet care', 'actions', 'awareness', 'yellow'),
-      journeyPostIt('Researches pet\ncare apps', 'actions', 'consideration', 'yellow'),
-      journeyPostIt('Downloads PawPal,\nadds pet profiles', 'actions', 'decision', 'yellow'),
-      journeyPostIt('Sets up routines\nand appointments', 'actions', 'purchase', 'yellow'),
-      journeyPostIt('Daily check-ins\nand task completion', 'actions', 'onboarding', 'yellow'),
+      journeyStickyNote('Realizes she\'s struggling\nwith pet care', 'actions', 'awareness', 'yellow'),
+      journeyStickyNote('Researches pet\ncare apps', 'actions', 'consideration', 'yellow'),
+      journeyStickyNote('Downloads PawPal,\nadds pet profiles', 'actions', 'decision', 'yellow'),
+      journeyStickyNote('Sets up routines\nand appointments', 'actions', 'purchase', 'yellow'),
+      journeyStickyNote('Daily check-ins\nand task completion', 'actions', 'onboarding', 'yellow'),
       // Row: goals
-      journeyPostIt('Acknowledge the\nproblem exists', 'goals', 'awareness', 'blue'),
-      journeyPostIt('Find a unified\npet care solution', 'goals', 'consideration', 'blue'),
-      journeyPostIt('Get set up\nquickly', 'goals', 'decision', 'blue'),
-      journeyPostIt('Experience the\naha moment', 'goals', 'purchase', 'blue'),
-      journeyPostIt('Never miss a\ncare task', 'goals', 'onboarding', 'blue'),
+      journeyStickyNote('Acknowledge the\nproblem exists', 'goals', 'awareness', 'blue'),
+      journeyStickyNote('Find a unified\npet care solution', 'goals', 'consideration', 'blue'),
+      journeyStickyNote('Get set up\nquickly', 'goals', 'decision', 'blue'),
+      journeyStickyNote('Experience the\naha moment', 'goals', 'purchase', 'blue'),
+      journeyStickyNote('Never miss a\ncare task', 'goals', 'onboarding', 'blue'),
       // Row: barriers
-      journeyPostIt('Normalizes the\nstruggle', 'barriers', 'awareness', 'pink'),
-      journeyPostIt('Apps focus on\nsingle features', 'barriers', 'consideration', 'pink'),
-      journeyPostIt('Long onboarding\nforms', 'barriers', 'decision', 'pink'),
-      journeyPostIt('Manual entry\nis tedious', 'barriers', 'purchase', 'pink'),
-      journeyPostIt('Notification\nfatigue', 'barriers', 'onboarding', 'pink'),
+      journeyStickyNote('Normalizes the\nstruggle', 'barriers', 'awareness', 'pink'),
+      journeyStickyNote('Apps focus on\nsingle features', 'barriers', 'consideration', 'pink'),
+      journeyStickyNote('Long onboarding\nforms', 'barriers', 'decision', 'pink'),
+      journeyStickyNote('Manual entry\nis tedious', 'barriers', 'purchase', 'pink'),
+      journeyStickyNote('Notification\nfatigue', 'barriers', 'onboarding', 'pink'),
       // Row: touchpoints
-      journeyPostIt('Pet communities,\ndog park chats', 'touchpoints', 'awareness', 'green'),
-      journeyPostIt('App Store,\nreviews, forums', 'touchpoints', 'consideration', 'green'),
-      journeyPostIt('Onboarding flow,\nprofile setup', 'touchpoints', 'decision', 'green'),
-      journeyPostIt('Routine builder,\ncalendar sync', 'touchpoints', 'purchase', 'green'),
-      journeyPostIt('Push notifications,\ndashboard, widget', 'touchpoints', 'onboarding', 'green'),
+      journeyStickyNote('Pet communities,\ndog park chats', 'touchpoints', 'awareness', 'green'),
+      journeyStickyNote('App Store,\nreviews, forums', 'touchpoints', 'consideration', 'green'),
+      journeyStickyNote('Onboarding flow,\nprofile setup', 'touchpoints', 'decision', 'green'),
+      journeyStickyNote('Routine builder,\ncalendar sync', 'touchpoints', 'purchase', 'green'),
+      journeyStickyNote('Push notifications,\ndashboard, widget', 'touchpoints', 'onboarding', 'green'),
       // Row: emotions
-      journeyPostIt('Neutral\n😐', 'emotions', 'awareness', 'orange'),
-      journeyPostIt('Neutral\n😐', 'emotions', 'consideration', 'orange'),
-      journeyPostIt('Positive\n😊', 'emotions', 'decision', 'orange'),
-      journeyPostIt('Positive\n😊', 'emotions', 'purchase', 'orange'),
-      journeyPostIt('Negative\n😟 (DIP)', 'emotions', 'onboarding', 'pink'),
+      journeyStickyNote('Neutral\n😐', 'emotions', 'awareness', 'orange'),
+      journeyStickyNote('Neutral\n😐', 'emotions', 'consideration', 'orange'),
+      journeyStickyNote('Positive\n😊', 'emotions', 'decision', 'orange'),
+      journeyStickyNote('Positive\n😊', 'emotions', 'purchase', 'orange'),
+      journeyStickyNote('Negative\n😟 (DIP)', 'emotions', 'onboarding', 'pink'),
     ],
     canvasData: {
-      postIts: [
+      stickyNotes: [
         // Row: actions
-        journeyPostIt('Realizes she\'s struggling\nwith pet care', 'actions', 'awareness', 'yellow'),
-        journeyPostIt('Researches pet\ncare apps', 'actions', 'consideration', 'yellow'),
-        journeyPostIt('Downloads PawPal,\nadds pet profiles', 'actions', 'decision', 'yellow'),
-        journeyPostIt('Sets up routines\nand appointments', 'actions', 'purchase', 'yellow'),
-        journeyPostIt('Daily check-ins\nand task completion', 'actions', 'onboarding', 'yellow'),
+        journeyStickyNote('Realizes she\'s struggling\nwith pet care', 'actions', 'awareness', 'yellow'),
+        journeyStickyNote('Researches pet\ncare apps', 'actions', 'consideration', 'yellow'),
+        journeyStickyNote('Downloads PawPal,\nadds pet profiles', 'actions', 'decision', 'yellow'),
+        journeyStickyNote('Sets up routines\nand appointments', 'actions', 'purchase', 'yellow'),
+        journeyStickyNote('Daily check-ins\nand task completion', 'actions', 'onboarding', 'yellow'),
         // Row: goals
-        journeyPostIt('Acknowledge the\nproblem exists', 'goals', 'awareness', 'blue'),
-        journeyPostIt('Find a unified\npet care solution', 'goals', 'consideration', 'blue'),
-        journeyPostIt('Get set up\nquickly', 'goals', 'decision', 'blue'),
-        journeyPostIt('Experience the\naha moment', 'goals', 'purchase', 'blue'),
-        journeyPostIt('Never miss a\ncare task', 'goals', 'onboarding', 'blue'),
+        journeyStickyNote('Acknowledge the\nproblem exists', 'goals', 'awareness', 'blue'),
+        journeyStickyNote('Find a unified\npet care solution', 'goals', 'consideration', 'blue'),
+        journeyStickyNote('Get set up\nquickly', 'goals', 'decision', 'blue'),
+        journeyStickyNote('Experience the\naha moment', 'goals', 'purchase', 'blue'),
+        journeyStickyNote('Never miss a\ncare task', 'goals', 'onboarding', 'blue'),
         // Row: barriers
-        journeyPostIt('Normalizes the\nstruggle', 'barriers', 'awareness', 'pink'),
-        journeyPostIt('Apps focus on\nsingle features', 'barriers', 'consideration', 'pink'),
-        journeyPostIt('Long onboarding\nforms', 'barriers', 'decision', 'pink'),
-        journeyPostIt('Manual entry\nis tedious', 'barriers', 'purchase', 'pink'),
-        journeyPostIt('Notification\nfatigue', 'barriers', 'onboarding', 'pink'),
+        journeyStickyNote('Normalizes the\nstruggle', 'barriers', 'awareness', 'pink'),
+        journeyStickyNote('Apps focus on\nsingle features', 'barriers', 'consideration', 'pink'),
+        journeyStickyNote('Long onboarding\nforms', 'barriers', 'decision', 'pink'),
+        journeyStickyNote('Manual entry\nis tedious', 'barriers', 'purchase', 'pink'),
+        journeyStickyNote('Notification\nfatigue', 'barriers', 'onboarding', 'pink'),
         // Row: touchpoints
-        journeyPostIt('Pet communities,\ndog park chats', 'touchpoints', 'awareness', 'green'),
-        journeyPostIt('App Store,\nreviews, forums', 'touchpoints', 'consideration', 'green'),
-        journeyPostIt('Onboarding flow,\nprofile setup', 'touchpoints', 'decision', 'green'),
-        journeyPostIt('Routine builder,\ncalendar sync', 'touchpoints', 'purchase', 'green'),
-        journeyPostIt('Push notifications,\ndashboard, widget', 'touchpoints', 'onboarding', 'green'),
+        journeyStickyNote('Pet communities,\ndog park chats', 'touchpoints', 'awareness', 'green'),
+        journeyStickyNote('App Store,\nreviews, forums', 'touchpoints', 'consideration', 'green'),
+        journeyStickyNote('Onboarding flow,\nprofile setup', 'touchpoints', 'decision', 'green'),
+        journeyStickyNote('Routine builder,\ncalendar sync', 'touchpoints', 'purchase', 'green'),
+        journeyStickyNote('Push notifications,\ndashboard, widget', 'touchpoints', 'onboarding', 'green'),
         // Row: emotions
-        journeyPostIt('Neutral\n😐', 'emotions', 'awareness', 'orange'),
-        journeyPostIt('Neutral\n😐', 'emotions', 'consideration', 'orange'),
-        journeyPostIt('Positive\n😊', 'emotions', 'decision', 'orange'),
-        journeyPostIt('Positive\n😊', 'emotions', 'purchase', 'orange'),
-        journeyPostIt('Negative\n😟 (DIP)', 'emotions', 'onboarding', 'pink'),
+        journeyStickyNote('Neutral\n😐', 'emotions', 'awareness', 'orange'),
+        journeyStickyNote('Neutral\n😐', 'emotions', 'consideration', 'orange'),
+        journeyStickyNote('Positive\n😊', 'emotions', 'decision', 'orange'),
+        journeyStickyNote('Positive\n😊', 'emotions', 'purchase', 'orange'),
+        journeyStickyNote('Negative\n😟 (DIP)', 'emotions', 'onboarding', 'pink'),
       ],
     },
   },

@@ -15,14 +15,14 @@ const PRESET_COLORS = [
   { label: 'Lavender', value: '#ddd6fe', className: 'bg-[#ddd6fe]' },
 ];
 
-// PostIt color swatches — names match PostItColor type and CSS variables
+// StickyNote color swatches — names match StickyNoteColor type and CSS variables
 const POSTIT_COLORS = [
-  { label: 'Yellow', value: 'yellow', className: 'bg-[var(--postit-yellow)]' },
-  { label: 'Pink', value: 'pink', className: 'bg-[var(--postit-pink)]' },
-  { label: 'Blue', value: 'blue', className: 'bg-[var(--postit-blue)]' },
-  { label: 'Green', value: 'green', className: 'bg-[var(--postit-green)]' },
-  { label: 'Orange', value: 'orange', className: 'bg-[var(--postit-orange)]' },
-  { label: 'Red', value: 'red', className: 'bg-[var(--postit-red)]' },
+  { label: 'Yellow', value: 'yellow', className: 'bg-[var(--sticky-note-yellow)]' },
+  { label: 'Pink', value: 'pink', className: 'bg-[var(--sticky-note-pink)]' },
+  { label: 'Blue', value: 'blue', className: 'bg-[var(--sticky-note-blue)]' },
+  { label: 'Green', value: 'green', className: 'bg-[var(--sticky-note-green)]' },
+  { label: 'Orange', value: 'orange', className: 'bg-[var(--sticky-note-orange)]' },
+  { label: 'Red', value: 'red', className: 'bg-[var(--sticky-note-red)]' },
 ];
 
 // Frame/arrow border colors
@@ -45,7 +45,7 @@ interface GuideColorPickerProps {
 
 export function GuideColorPicker({ value, onChange, variant }: GuideColorPickerProps) {
   // Choose swatch set based on variant
-  const isPostit = variant === 'template-postit';
+  const isPostit = variant === 'template-sticky-note';
   const isBorderVariant = variant === 'frame' || variant === 'arrow';
   const colors = isPostit ? POSTIT_COLORS : isBorderVariant ? BORDER_COLORS : PRESET_COLORS;
 
@@ -66,7 +66,7 @@ export function GuideColorPicker({ value, onChange, variant }: GuideColorPickerP
           )}
         />
       ))}
-      {/* Custom color picker — not shown for postit names */}
+      {/* Custom color picker — not shown for sticky note names */}
       {!isPostit && (
         <input
           type="color"

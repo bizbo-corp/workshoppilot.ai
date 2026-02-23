@@ -1,10 +1,10 @@
 /**
  * Canvas Position Module
- * Computes pixel positions for post-its from AI-suggested metadata (quadrant, row/col).
+ * Computes pixel positions for sticky notes from AI-suggested metadata (quadrant, row/col).
  * Used by chat-panel.tsx to auto-place items when the AI stream completes.
  */
 
-import type { PostIt, PostItColor } from '@/stores/canvas-store';
+import type { StickyNote, StickyNoteColor } from '@/stores/canvas-store';
 import type { Quadrant } from './quadrant-detection';
 import { getCellBounds, type GridConfig } from './grid-layout';
 import { STEP_CANVAS_CONFIGS } from './step-canvas-config';
@@ -15,11 +15,11 @@ export const POST_IT_WIDTH = 160;
 export const POST_IT_HEIGHT = 100;
 
 /**
- * Compute post-it dimensions that fit the text content.
+ * Compute sticky note dimensions that fit the text content.
  * Short text (< 40 chars) gets the default 160x100.
  * Longer text scales up proportionally, capped at 360x240.
  */
-export function computePostItSize(text: string): { width: number; height: number } {
+export function computeStickyNoteSize(text: string): { width: number; height: number } {
   const len = text.length;
   if (len <= 40) return { width: POST_IT_WIDTH, height: POST_IT_HEIGHT };
   if (len <= 80) return { width: 220, height: 120 };
@@ -36,9 +36,9 @@ const CLUSTER_GAP = 15;
  * Compute child positions for a cluster layout: parent centered above,
  * children in rows of 3 below.
  *
- * @param parentPos - Top-left position of the parent post-it
- * @param parentWidth - Width of the parent post-it
- * @param parentHeight - Height of the parent post-it
+ * @param parentPos - Top-left position of the parent sticky note
+ * @param parentWidth - Width of the parent sticky note
+ * @param parentHeight - Height of the parent sticky note
  * @param childCount - Number of children to lay out
  * @param childWidth - Width of each child (defaults to POST_IT_WIDTH)
  * @param childHeight - Height of each child (defaults to POST_IT_HEIGHT)
@@ -113,9 +113,9 @@ const CATEGORY_BASES: Record<string, { x: number; y: number }> = {
 };
 
 /**
- * Map persona categories to post-it colors
+ * Map persona categories to sticky note colors
  */
-export const CATEGORY_COLORS: Record<string, PostItColor> = {
+export const CATEGORY_COLORS: Record<string, StickyNoteColor> = {
   goals: 'blue',
   pains: 'pink',
   gains: 'green',
@@ -125,9 +125,9 @@ export const CATEGORY_COLORS: Record<string, PostItColor> = {
 };
 
 /**
- * Map empathy zones to post-it colors
+ * Map empathy zones to sticky note colors
  */
-export const ZONE_COLORS: Record<string, PostItColor> = {
+export const ZONE_COLORS: Record<string, StickyNoteColor> = {
   pains: 'pink',
   gains: 'green',
   // Other zones use default 'yellow'
@@ -143,7 +143,7 @@ export type CanvasItemMetadata = {
 };
 
 /**
- * Compute pixel position for a new post-it based on step and metadata.
+ * Compute pixel position for a new sticky note based on step and metadata.
  *
  * - Steps 2 & 4: quadrant base offset + stagger per existing items in that quadrant
  * - Step 6: getCellBounds() + padding + stagger per existing items in that cell
@@ -154,7 +154,7 @@ export type CanvasItemMetadata = {
 export function computeCanvasPosition(
   stepId: string,
   metadata: CanvasItemMetadata,
-  existingPostIts: PostIt[],
+  existingStickyNotes: StickyNote[],
   gridConfigOverride?: GridConfig,
 ): {
   position: { x: number; y: number };
@@ -169,11 +169,11 @@ export function computeCanvasPosition(
     const ring = ringConfig.rings.find((r) => r.id === ringId);
 
     if (ring) {
-      // Count existing post-its in the same ring (stored in cellAssignment.row)
-      const sameRingPostIts = existingPostIts.filter(
+      // Count existing sticky notes in the same ring (stored in cellAssignment.row)
+      const sameRingStickyNotes = existingStickyNotes.filter(
         (p) => p.cellAssignment?.row === ringId,
       );
-      const sameRingCount = sameRingPostIts.length;
+      const sameRingCount = sameRingStickyNotes.length;
 
       // Place cards at the midpoint of the ring BAND (between inner and outer boundaries),
       // not on the boundary circle itself.
@@ -205,11 +205,11 @@ export function computeCanvasPosition(
     const zone = empathyZoneConfig.zones[metadata.quadrant as EmpathyZone];
 
     if (zone) {
-      // Count existing post-its in the same zone (stored in cellAssignment.row)
-      const sameZonePostIts = existingPostIts.filter(
+      // Count existing sticky notes in the same zone (stored in cellAssignment.row)
+      const sameZoneStickyNotes = existingStickyNotes.filter(
         (p) => p.cellAssignment?.row === metadata.quadrant,
       );
-      const sameZoneCount = sameZonePostIts.length;
+      const sameZoneCount = sameZoneStickyNotes.length;
 
       // Get positions for all cards in this zone (including the new one)
       const positions = distributeCardsInZone(
@@ -232,7 +232,7 @@ export function computeCanvasPosition(
   // --- Quadrant-based steps (2: stakeholder-mapping, 4: sense-making) ---
   if (metadata.quadrant && QUADRANT_BASES[metadata.quadrant]) {
     const base = QUADRANT_BASES[metadata.quadrant];
-    const sameQuadrant = existingPostIts.filter(
+    const sameQuadrant = existingStickyNotes.filter(
       (p) => p.quadrant === metadata.quadrant,
     );
     const idx = sameQuadrant.length;
@@ -259,7 +259,7 @@ export function computeCanvasPosition(
 
       if (rowIndex !== -1 && colIndex !== -1) {
         const bounds = getCellBounds({ row: rowIndex, col: colIndex }, gridConfig);
-        const sameCell = existingPostIts.filter(
+        const sameCell = existingStickyNotes.filter(
           (p) => p.cellAssignment?.row === metadata.row && p.cellAssignment?.col === metadata.col,
         );
         // Stagger within cell: offset by existing item count
@@ -280,7 +280,7 @@ export function computeCanvasPosition(
   // --- Category-based steps (5: persona) ---
   if (metadata.category && CATEGORY_BASES[metadata.category]) {
     const base = CATEGORY_BASES[metadata.category];
-    const sameCategory = existingPostIts.filter(
+    const sameCategory = existingStickyNotes.filter(
       (p) => p.cellAssignment?.row === metadata.category,
     );
     const idx = sameCategory.length;
@@ -297,10 +297,10 @@ export function computeCanvasPosition(
     };
   }
 
-  // --- Cluster-based positioning: place near parent post-it ---
+  // --- Cluster-based positioning: place near parent sticky note ---
   if (metadata.cluster) {
     const clusterLower = metadata.cluster.toLowerCase();
-    const parent = existingPostIts.find(
+    const parent = existingStickyNotes.find(
       (p) => p.text.toLowerCase() === clusterLower
         || p.text.toLowerCase().startsWith(clusterLower),
     );
@@ -311,7 +311,7 @@ export function computeCanvasPosition(
         const parentRing = ringConfig.rings.find((r) => r.id === parent.cellAssignment?.row);
         if (parentRing) {
           // Count all items already on this ring
-          const sameRingPostIts = existingPostIts.filter(
+          const sameRingStickyNotes = existingStickyNotes.filter(
             (p) => p.cellAssignment?.row === parent.cellAssignment?.row,
           );
           // Place at band midpoint, not on the boundary circle
@@ -319,7 +319,7 @@ export function computeCanvasPosition(
           const innerBound = parentRingIndex > 0 ? ringConfig.rings[parentRingIndex - 1].radius : 0;
           const midRadius = (innerBound + parentRing.radius) / 2;
           const positions = distributeCardsOnRing(
-            sameRingPostIts.length + 1,
+            sameRingStickyNotes.length + 1,
             midRadius,
             ringConfig.center,
           );
@@ -331,7 +331,7 @@ export function computeCanvasPosition(
       }
 
       // Non-ring fallback: count siblings by matching cluster attribute
-      const clusterSiblings = existingPostIts.filter(
+      const clusterSiblings = existingStickyNotes.filter(
         (p) => p.cluster?.toLowerCase() === clusterLower,
       );
       const childIdx = clusterSiblings.length;
@@ -350,8 +350,8 @@ export function computeCanvasPosition(
 
   // --- User Research: horizontal persona card layout ---
   if (stepId === 'user-research' && !metadata.cluster && !metadata.quadrant && !metadata.ring && !metadata.row) {
-    const personaCards = existingPostIts.filter(
-      (p) => !p.cluster && (!p.type || p.type === 'postIt'),
+    const personaCards = existingStickyNotes.filter(
+      (p) => !p.cluster && (!p.type || p.type === 'stickyNote'),
     );
     const idx = personaCards.length;
     const PERSONA_SPACING = 500;
@@ -364,7 +364,7 @@ export function computeCanvasPosition(
   }
 
   // --- Fallback: stagger from (50, 50) ---
-  const idx = existingPostIts.length;
+  const idx = existingStickyNotes.length;
   return {
     position: {
       x: 50 + (idx % 4) * 30,
@@ -374,13 +374,13 @@ export function computeCanvasPosition(
 }
 
 /**
- * Compute reorganized positions for all post-its, grouping by cluster
+ * Compute reorganized positions for all sticky notes, grouping by cluster
  * and distributing clusters evenly around their assigned rings.
  *
  * Used by the "Organize" button and [THEME_SORT] AI trigger.
  */
 export function computeThemeSortPositions(
-  postIts: PostIt[],
+  stickyNotes: StickyNote[],
   stepId: string,
 ): Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }> {
   const stepConfig = STEP_CANVAS_CONFIGS[stepId];
@@ -390,18 +390,18 @@ export function computeThemeSortPositions(
   const results: Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }> = [];
 
   // Build cluster map: clusterName → { parent, children }
-  type ClusterGroup = { parent: PostIt | null; children: PostIt[] };
+  type ClusterGroup = { parent: StickyNote | null; children: StickyNote[] };
   const clusters = new Map<string, ClusterGroup>();
-  const standalone: PostIt[] = [];
+  const standalone: StickyNote[] = [];
 
-  // Index post-its by lowercase text for parent lookup
-  const textIndex = new Map<string, PostIt>();
-  for (const p of postIts) {
+  // Index sticky notes by lowercase text for parent lookup
+  const textIndex = new Map<string, StickyNote>();
+  for (const p of stickyNotes) {
     textIndex.set(p.text.toLowerCase(), p);
   }
 
   // First pass: identify parents and children
-  for (const p of postIts) {
+  for (const p of stickyNotes) {
     if (p.cluster) {
       const clusterKey = p.cluster.toLowerCase();
       if (!clusters.has(clusterKey)) {
@@ -433,7 +433,7 @@ export function computeThemeSortPositions(
   });
 
   // Group clusters by ring assignment
-  type RingGroup = { clusterId: string; parent: PostIt | null; children: PostIt[] }[];
+  type RingGroup = { clusterId: string; parent: StickyNote | null; children: StickyNote[] }[];
   const ringGroups = new Map<string, RingGroup>();
   for (const ringDef of ringConfig.rings) {
     ringGroups.set(ringDef.id, []);

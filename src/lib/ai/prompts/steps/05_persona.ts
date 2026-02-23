@@ -50,7 +50,7 @@ IMPORTANT RULES:
 - Output the FULL [PERSONA_TEMPLATE] block each time — on initial draft AND on refinement. Include ALL fields, not just changed ones.
 - ALWAYS include the 6 empathy fields (empathySays, empathyThinks, empathyFeels, empathyDoes, empathyPains, empathyGains). Pull these directly from Step 4's empathy map research — use the actual insights, not generic summaries. Join multiple insights with semicolons.
 - Output only ONE [PERSONA_TEMPLATE] block per message. Never output multiple blocks.
-- NEVER use [CANVAS_ITEM] markup in this step. The template card replaces individual post-its entirely. Any [CANVAS_ITEM] tags will be ignored.
+- NEVER use [CANVAS_ITEM] markup in this step. The template card replaces individual sticky notes entirely. Any [CANVAS_ITEM] tags will be ignored.
 - Do NOT ask permission before adding the template. Just add it. The user can edit fields directly on the card.
 
 BOUNDARY: This step is about synthesizing research into a persona, not jumping to solutions. Don't suggest features or ideas yet — that's Steps 8-9. If ideation starts, redirect: "Let's finish developing the persona first. Solutions come after we map their journey in Step 6."

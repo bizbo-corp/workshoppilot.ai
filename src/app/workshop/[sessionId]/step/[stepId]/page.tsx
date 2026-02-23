@@ -11,7 +11,7 @@ import { loadCanvasState, saveCanvasState } from "@/actions/canvas-actions";
 import { loadCanvasGuides } from "@/actions/canvas-guide-actions";
 import { loadStepCanvasSettings } from "@/actions/step-canvas-settings-actions";
 import { getDefaultStepCanvasGuides } from "@/lib/canvas/canvas-guide-config";
-import type { PostIt, GridColumn, DrawingNode, MindMapNodeState, MindMapEdgeState } from "@/stores/canvas-store";
+import type { StickyNote, GridColumn, DrawingNode, MindMapNodeState, MindMapEdgeState } from "@/stores/canvas-store";
 import { type ConceptCardData, createDefaultConceptCard } from "@/lib/canvas/concept-card-types";
 import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
@@ -20,7 +20,7 @@ import type { BrainRewritingMatrix } from "@/lib/canvas/brain-rewriting-types";
 import { BRAIN_REWRITING_CELL_ORDER } from "@/lib/canvas/brain-rewriting-types";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
 import { computeRadialPositions } from "@/lib/canvas/mind-map-layout";
-import { getStepTemplatePostIts } from "@/lib/canvas/template-postit-config";
+import { getStepTemplateStickyNotes } from "@/lib/canvas/template-sticky-note-config";
 
 interface StepPageProps {
   params: Promise<{
@@ -189,7 +189,7 @@ export default async function StepPage({ params }: StepPageProps) {
 
   // Load canvas state for this step
   const canvasData = await loadCanvasState(session.workshop.id, step.id);
-  let initialCanvasPostIts: PostIt[] = canvasData?.postIts || [];
+  let initialCanvasStickyNotes: StickyNote[] = canvasData?.stickyNotes || [];
   const initialGridColumns: GridColumn[] = canvasData?.gridColumns || [];
   const initialDrawingNodes: DrawingNode[] = canvasData?.drawingNodes || [];
   const initialCrazy8sSlots: Crazy8sSlot[] = canvasData?.crazy8sSlots || [];
@@ -207,33 +207,33 @@ export default async function StepPage({ params }: StepPageProps) {
   }
 
   // Lazy migration: if artifact exists but no canvas state, derive initial positions
-  if (initialCanvasPostIts.length === 0 && initialArtifact && step) {
+  if (initialCanvasStickyNotes.length === 0 && initialArtifact && step) {
     if (step.id === 'stakeholder-mapping') {
-      const migratedPostIts = migrateStakeholdersToCanvas(initialArtifact);
-      initialCanvasPostIts = migratedPostIts.map(postIt => ({
-        ...postIt,
+      const migratedStickyNotes = migrateStakeholdersToCanvas(initialArtifact);
+      initialCanvasStickyNotes = migratedStickyNotes.map(stickyNote => ({
+        ...stickyNote,
         id: crypto.randomUUID(),
-        color: postIt.color || 'yellow',
-        type: postIt.type || 'postIt',
+        color: stickyNote.color || 'yellow',
+        type: stickyNote.type || 'stickyNote',
       }));
     } else if (step.id === 'sense-making') {
-      const migratedPostIts = migrateEmpathyToCanvas(initialArtifact);
-      initialCanvasPostIts = migratedPostIts.map(postIt => ({
-        ...postIt,
+      const migratedStickyNotes = migrateEmpathyToCanvas(initialArtifact);
+      initialCanvasStickyNotes = migratedStickyNotes.map(stickyNote => ({
+        ...stickyNote,
         id: crypto.randomUUID(),
-        color: postIt.color || 'yellow',
-        type: postIt.type || 'postIt',
+        color: stickyNote.color || 'yellow',
+        type: stickyNote.type || 'stickyNote',
       }));
     }
   }
 
-  // Seed template post-its for steps that define them (e.g., Challenge step)
-  // Check for absence of template post-its specifically — not an empty canvas.
-  // This ensures templates are added even if the AI or user already created regular post-its.
-  const hasTemplatePostIts = initialCanvasPostIts.some(p => p.templateKey);
-  console.log(`[template-seed] step=${step.id}, postIts=${initialCanvasPostIts.length}, hasTemplates=${hasTemplatePostIts}`);
-  if (!hasTemplatePostIts) {
-    const templateDefs = getStepTemplatePostIts(step.id);
+  // Seed template sticky notes for steps that define them (e.g., Challenge step)
+  // Check for absence of template sticky notes specifically — not an empty canvas.
+  // This ensures templates are added even if the AI or user already created regular sticky notes.
+  const hasTemplateStickyNotes = initialCanvasStickyNotes.some(p => p.templateKey);
+  console.log(`[template-seed] step=${step.id}, stickyNotes=${initialCanvasStickyNotes.length}, hasTemplates=${hasTemplateStickyNotes}`);
+  if (!hasTemplateStickyNotes) {
+    const templateDefs = getStepTemplateStickyNotes(step.id);
     console.log(`[template-seed] templateDefs=${templateDefs.length} for step=${step.id}`);
     if (templateDefs.length > 0) {
       const newTemplates = templateDefs.map(def => ({
@@ -243,20 +243,20 @@ export default async function StepPage({ params }: StepPageProps) {
         width: def.width,
         height: def.height,
         color: def.color,
-        type: 'postIt' as const,
+        type: 'stickyNote' as const,
         templateKey: def.key,
         templateLabel: def.label,
         placeholderText: def.placeholderText,
       }));
-      initialCanvasPostIts = [...initialCanvasPostIts, ...newTemplates];
+      initialCanvasStickyNotes = [...initialCanvasStickyNotes, ...newTemplates];
       // Persist to DB immediately so the AI API route can read template state
-      const saveResult = await saveCanvasState(session.workshop.id, step.id, { postIts: initialCanvasPostIts });
-      console.log(`[template-seed] saved ${initialCanvasPostIts.length} postIts (${newTemplates.length} templates), result:`, saveResult);
+      const saveResult = await saveCanvasState(session.workshop.id, step.id, { stickyNotes: initialCanvasStickyNotes });
+      console.log(`[template-seed] saved ${initialCanvasStickyNotes.length} stickyNotes (${newTemplates.length} templates), result:`, saveResult);
     }
   }
 
   // Lazy migration: Create blank persona template card (AI fills all fields at once)
-  if (step.id === 'persona' && initialCanvasPostIts.length === 0 && initialPersonaTemplates.length === 0) {
+  if (step.id === 'persona' && initialCanvasStickyNotes.length === 0 && initialPersonaTemplates.length === 0) {
     const template: PersonaTemplateData = {
       id: crypto.randomUUID(),
       position: { x: 0, y: 0 },
@@ -377,7 +377,7 @@ export default async function StepPage({ params }: StepPageProps) {
   return (
     <div className="h-full">
       <CanvasStoreProvider
-        initialPostIts={initialCanvasPostIts}
+        initialStickyNotes={initialCanvasStickyNotes}
         initialGridColumns={initialGridColumns}
         initialDrawingNodes={initialDrawingNodes}
         initialMindMapNodes={initialMindMapNodes}

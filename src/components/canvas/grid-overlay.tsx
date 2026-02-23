@@ -73,7 +73,7 @@ export function GridOverlay({
 
   // Subscribe to store state for dynamic columns
   const gridColumns = useCanvasStore((s) => s.gridColumns);
-  const postIts = useCanvasStore((s) => s.postIts);
+  const stickyNotes = useCanvasStore((s) => s.stickyNotes);
   const updateGridColumn = useCanvasStore((s) => s.updateGridColumn);
   const addGridColumn = useCanvasStore((s) => s.addGridColumn);
 
@@ -172,10 +172,10 @@ export function GridOverlay({
         );
       })}
 
-      {/* Skeleton post-it placeholders in empty cells — disappear when real post-its arrive */}
+      {/* Skeleton sticky note placeholders in empty cells — disappear when real sticky notes arrive */}
       {config.rows.map((row, rowIdx) =>
         effectiveColumns.map((col, colIdx) => {
-          const hasContent = postIts.some(
+          const hasContent = stickyNotes.some(
             (p) =>
               p.cellAssignment?.row === row.id &&
               p.cellAssignment?.col === col.id,
@@ -280,7 +280,7 @@ export function GridOverlay({
         const headerWidth = Math.max(160, colWidth * zoom);
 
         // Count cards in this column for delete confirmation
-        const cardsInColumn = postIts.filter(
+        const cardsInColumn = stickyNotes.filter(
           (p) => p.cellAssignment?.col === col.id,
         ).length;
 

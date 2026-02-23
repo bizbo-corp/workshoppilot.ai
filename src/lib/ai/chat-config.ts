@@ -29,7 +29,7 @@ export type { ArcPhase } from "./prompts/arc-phases";
  * - Step-Specific Instructions: Methodology and goals for this design thinking step
  * - Persistent Memory: Structured artifacts from completed steps
  * - Long-term Memory: AI summaries from previous step conversations
- * - Canvas State: Current canvas post-its grouped by quadrant (Tier 4)
+ * - Canvas State: Current canvas sticky notes grouped by quadrant (Tier 4)
  * - Context Usage Rules: How to reference prior knowledge
  * - Validation Criteria: Quality checklist during Validate phase
  *
@@ -193,11 +193,11 @@ Format:
 Rules: Each suggestion must be under 15 words, written from the user's perspective, and offer distinct options.`;
   }
 
-  // Challenge step canvas: template post-it cards for key challenge elements
+  // Challenge step canvas: template sticky note cards for key challenge elements
   // Active in ALL phases so the AI can fill cards progressively from the very first exchange
   if (stepId === "challenge") {
     prompt += `\n\nCANVAS ACTIONS:
-The canvas has 4 template post-it cards. As insights emerge from conversation, fill them by targeting each card's key. You MUST use the key attribute — without it, a new unrelated post-it is created instead of filling the template card.
+The canvas has 4 template sticky note cards. As insights emerge from conversation, fill them by targeting each card's key. You MUST use the key attribute — without it, a new unrelated sticky note is created instead of filling the template card.
 
 Template cards and WHEN to fill them:
 - key="idea" — fill in your FIRST response after the user describes their idea or opportunity
@@ -221,7 +221,7 @@ Rules:
 - EVERY time you mention a challenge statement or HMW in your text, also output the canvas tag
 - Each output replaces the previous content for that key — so it's safe to re-fill with refined text
 - Keep card text concise (1-3 sentences max, challenge-statement is a single sentence)
-- Do NOT use [CANVAS_ITEM] without key= — that creates a separate post-it
+- Do NOT use [CANVAS_ITEM] without key= — that creates a separate sticky note
 - Place all [CANVAS_ITEM] tags at the END of your message, after your conversational prose
 - Items are auto-added to the canvas. Do not ask the user to click to add.`;
   }
@@ -287,7 +287,7 @@ When the user asks you to organize or group their stakeholders, or during the bl
 [CLUSTER: Parent Label | child1 text | child2 text | child3 text]
 The first value is the cluster parent name. All subsequent pipe-separated values are existing items on the board that should be grouped under that parent. Only reference items that already exist on the canvas.
 
-Keep item text brief (max 80 characters — fits on a post-it note).`;
+Keep item text brief (max 80 characters — fits on a sticky note note).`;
     } else if (stepId === "user-research") {
       prompt += `
 
@@ -296,7 +296,7 @@ The Cluster value must exactly match the persona's working name (the text before
 Do NOT use [CANVAS_ITEM] for the initial persona selection — use [PERSONA_SELECT] markup instead (see step instructions).
 Keep item text brief (max 80 characters).
 
-During the compile phase (real interviews), you may also use [CLUSTER] markup to organize unclustered user post-its:
+During the compile phase (real interviews), you may also use [CLUSTER] markup to organize unclustered user sticky notes:
 [CLUSTER: Persona Name | insight text 1 | insight text 2]
 This groups the listed items under the persona name on the canvas. Only reference items that already exist on the canvas.`;
     } else if (stepId === "sense-making") {
@@ -308,7 +308,7 @@ Use the shorthand format to add insights to the empathy map zones:
 
 Valid zones: says, thinks, feels, does, pains, gains
 
-Keep item text brief (max 80 characters — fits on a post-it note).`;
+Keep item text brief (max 80 characters — fits on a sticky note note).`;
     } else if (stepId === "persona") {
       prompt += `
 
@@ -324,14 +324,14 @@ Valid categories: goals, pains, gains, motivations, frustrations, behaviors
 
 When drafting or discussing persona traits, output each goal, pain, gain, motivation, frustration, or behavior as a canvas item. This populates the whiteboard with the persona's key attributes.
 
-Keep item text brief (max 80 characters — fits on a post-it note).`;
+Keep item text brief (max 80 characters — fits on a sticky note note).`;
     }
 
     prompt += `
 
 Guidelines:
 - Only use for concrete ${itemType} that belong on the canvas
-- Keep text brief (fits on a post-it note)
+- Keep text brief (fits on a sticky note note)
 - Do not wrap questions, explanations, or general text in these tags
 - Limit to 3-5 items per message to avoid overwhelming the user`;
   }
@@ -403,7 +403,7 @@ ALWAYS include the color attribute on emotions row items. Do NOT use color on ot
 
 Guidelines:
 - Only use for concrete journey map items that belong on the canvas
-- Keep text brief (fits on a post-it note)
+- Keep text brief (fits on a sticky note note)
 - Do not wrap questions, explanations, or general text in these tags
 - Reference the current canvas state to avoid suggesting duplicates`;
   }

@@ -17,7 +17,7 @@ const VARIANT_OPTIONS: { value: CanvasGuideVariant; label: string }[] = [
   { value: 'note', label: 'Note' },
   { value: 'hint', label: 'Hint' },
   { value: 'image', label: 'Image' },
-  { value: 'template-postit', label: 'Template Post-it' },
+  { value: 'template-sticky-note', label: 'Template Sticky note' },
   { value: 'frame', label: 'Frame' },
   { value: 'arrow', label: 'Arrow' },
 ];
@@ -54,7 +54,7 @@ const ARROW_PRESETS = [
 ];
 
 // Variants that are always on-canvas and persistent
-const CANVAS_ONLY_VARIANTS: CanvasGuideVariant[] = ['template-postit', 'frame', 'arrow'];
+const CANVAS_ONLY_VARIANTS: CanvasGuideVariant[] = ['template-sticky-note', 'frame', 'arrow'];
 // Variants that don't show body textarea
 const NO_BODY_VARIANTS: CanvasGuideVariant[] = ['frame', 'arrow', 'image'];
 
@@ -280,14 +280,14 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
           </div>
         )}
 
-        {/* Width/Height — for template-postit, frame, arrow */}
+        {/* Width/Height — for template-sticky-note, frame, arrow */}
         {isCanvasOnly && (
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs font-medium text-muted-foreground">Width</label>
               <input
                 type="number"
-                value={guide.width ?? (guide.variant === 'frame' ? 400 : guide.variant === 'template-postit' ? 160 : 120)}
+                value={guide.width ?? (guide.variant === 'frame' ? 400 : guide.variant === 'template-sticky-note' ? 160 : 120)}
                 onChange={(e) => update({ width: parseInt(e.target.value, 10) || null })}
                 className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs"
                 min={40}
@@ -298,7 +298,7 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
               <label className="text-xs font-medium text-muted-foreground">Height</label>
               <input
                 type="number"
-                value={guide.height ?? (guide.variant === 'frame' ? 300 : guide.variant === 'template-postit' ? 100 : 40)}
+                value={guide.height ?? (guide.variant === 'frame' ? 300 : guide.variant === 'template-sticky-note' ? 100 : 40)}
                 onChange={(e) => update({ height: parseInt(e.target.value, 10) || null })}
                 className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs"
                 min={20}

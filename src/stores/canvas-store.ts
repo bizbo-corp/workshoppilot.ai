@@ -15,7 +15,7 @@ export type PendingHmwChipSelection = {
   value: string;
 } | null;
 
-export type PostItColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange' | 'red';
+export type StickyNoteColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange' | 'red';
 
 export type GridColumn = {
   id: string;
@@ -51,15 +51,15 @@ export type DrawingNode = {
   height: number;
 };
 
-export type PostIt = {
+export type StickyNote = {
   id: string;
   text: string;
   position: { x: number; y: number };
   width: number;
   height: number;
-  color?: PostItColor;
+  color?: StickyNoteColor;
   parentId?: string;
-  type?: 'postIt' | 'group';
+  type?: 'stickyNote' | 'group';
   quadrant?: Quadrant; // Quadrant position for steps with quadrant layout
   cellAssignment?: {
     row: string; // Row ID from GridConfig (e.g., 'actions', 'goals')
@@ -74,7 +74,7 @@ export type PostIt = {
 };
 
 export type CanvasState = {
-  postIts: PostIt[];
+  stickyNotes: StickyNote[];
   drawingNodes: DrawingNode[];
   crazy8sSlots: Crazy8sSlot[];
   mindMapNodes: MindMapNodeState[];
@@ -89,18 +89,18 @@ export type CanvasState = {
   highlightedCell: { row: number; col: number } | null;
   pendingFitView: boolean;
   pendingHmwChipSelection: PendingHmwChipSelection;
-  selectedPostItIds: string[];
+  selectedStickyNoteIds: string[];
 };
 
 export type CanvasActions = {
-  addPostIt: (postIt: Omit<PostIt, 'id'> & { id?: string }) => void;
-  updatePostIt: (id: string, updates: Partial<PostIt>) => void;
-  updatePostItColor: (id: string, color: PostItColor) => void;
-  deletePostIt: (id: string) => void;
-  batchDeletePostIts: (ids: string[]) => void;
-  groupPostIts: (postItIds: string[]) => void;
-  ungroupPostIts: (groupId: string) => void;
-  setPostIts: (postIts: PostIt[]) => void;
+  addStickyNote: (stickyNote: Omit<StickyNote, 'id'> & { id?: string }) => void;
+  updateStickyNote: (id: string, updates: Partial<StickyNote>) => void;
+  updateStickyNoteColor: (id: string, color: StickyNoteColor) => void;
+  deleteStickyNote: (id: string) => void;
+  batchDeleteStickyNotes: (ids: string[]) => void;
+  groupStickyNotes: (stickyNoteIds: string[]) => void;
+  ungroupStickyNotes: (groupId: string) => void;
+  setStickyNotes: (stickyNotes: StickyNote[]) => void;
   addDrawingNode: (node: Omit<DrawingNode, 'id'>) => void;
   updateDrawingNode: (id: string, updates: Partial<DrawingNode>) => void;
   deleteDrawingNode: (id: string) => void;
@@ -127,7 +127,7 @@ export type CanvasActions = {
   clearCluster: (clusterName: string) => void;
   renameCluster: (oldName: string, newName: string) => void;
   removeFromCluster: (id: string) => void;
-  setSelectedPostItIds: (ids: string[]) => void;
+  setSelectedStickyNoteIds: (ids: string[]) => void;
   addConceptCard: (card: Omit<ConceptCardData, 'id'>) => void;
   updateConceptCard: (id: string, updates: Partial<ConceptCardData>) => void;
   deleteConceptCard: (id: string) => void;
@@ -149,9 +149,9 @@ export type CanvasActions = {
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; brainRewritingMatrices?: BrainRewritingMatrix[] }) => {
+export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; brainRewritingMatrices?: BrainRewritingMatrix[] }) => {
   const DEFAULT_STATE: CanvasState = {
-    postIts: initState?.postIts || [],
+    stickyNotes: initState?.stickyNotes || [],
     drawingNodes: initState?.drawingNodes || [],
     crazy8sSlots: initState?.crazy8sSlots || [],
     mindMapNodes: initState?.mindMapNodes || [],
@@ -166,7 +166,7 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
     highlightedCell: null,
     pendingFitView: false,
     pendingHmwChipSelection: null,
-    selectedPostItIds: [],
+    selectedStickyNoteIds: [],
   };
 
   return createStore<CanvasStore>()(
@@ -174,63 +174,63 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
       (set) => ({
         ...DEFAULT_STATE,
 
-        addPostIt: (postIt) =>
+        addStickyNote: (stickyNote) =>
           set((state) => ({
-            postIts: [
-              ...state.postIts,
+            stickyNotes: [
+              ...state.stickyNotes,
               {
-                ...postIt,
-                id: postIt.id || crypto.randomUUID(),
-                color: postIt.color || 'yellow',
-                type: postIt.type || 'postIt',
+                ...stickyNote,
+                id: stickyNote.id || crypto.randomUUID(),
+                color: stickyNote.color || 'yellow',
+                type: stickyNote.type || 'stickyNote',
               },
             ],
             isDirty: true,
           })),
 
-        updatePostIt: (id, updates) =>
+        updateStickyNote: (id, updates) =>
           set((state) => ({
-            postIts: state.postIts.map((postIt) =>
-              postIt.id === id ? { ...postIt, ...updates } : postIt
+            stickyNotes: state.stickyNotes.map((stickyNote) =>
+              stickyNote.id === id ? { ...stickyNote, ...updates } : stickyNote
             ),
             isDirty: true,
           })),
 
-        updatePostItColor: (id, color) =>
+        updateStickyNoteColor: (id, color) =>
           set((state) => ({
-            postIts: state.postIts.map((postIt) =>
-              postIt.id === id ? { ...postIt, color } : postIt
+            stickyNotes: state.stickyNotes.map((stickyNote) =>
+              stickyNote.id === id ? { ...stickyNote, color } : stickyNote
             ),
             isDirty: true,
           })),
 
-        deletePostIt: (id) =>
+        deleteStickyNote: (id) =>
           set((state) => ({
-            postIts: state.postIts.filter((postIt) => postIt.id !== id),
+            stickyNotes: state.stickyNotes.filter((stickyNote) => stickyNote.id !== id),
             isDirty: true,
           })),
 
-        batchDeletePostIts: (ids) =>
+        batchDeleteStickyNotes: (ids) =>
           set((state) => ({
-            postIts: state.postIts.filter((postIt) => !ids.includes(postIt.id)),
+            stickyNotes: state.stickyNotes.filter((stickyNote) => !ids.includes(stickyNote.id)),
             isDirty: true,
           })),
 
-        groupPostIts: (postItIds) =>
+        groupStickyNotes: (stickyNoteIds) =>
           set((state) => {
-            // Find all post-its to be grouped
-            const selectedPostIts = state.postIts.filter((p) => postItIds.includes(p.id));
-            if (selectedPostIts.length < 2) return state; // Need at least 2 to group
+            // Find all sticky notes to be grouped
+            const selectedStickyNotes = state.stickyNotes.filter((p) => stickyNoteIds.includes(p.id));
+            if (selectedStickyNotes.length < 2) return state; // Need at least 2 to group
 
             // Calculate bounding box
-            const minX = Math.min(...selectedPostIts.map((p) => p.position.x));
-            const minY = Math.min(...selectedPostIts.map((p) => p.position.y));
-            const maxX = Math.max(...selectedPostIts.map((p) => p.position.x + p.width));
-            const maxY = Math.max(...selectedPostIts.map((p) => p.position.y + p.height));
+            const minX = Math.min(...selectedStickyNotes.map((p) => p.position.x));
+            const minY = Math.min(...selectedStickyNotes.map((p) => p.position.y));
+            const maxX = Math.max(...selectedStickyNotes.map((p) => p.position.x + p.width));
+            const maxY = Math.max(...selectedStickyNotes.map((p) => p.position.y + p.height));
 
             // Create group node
             const groupId = crypto.randomUUID();
-            const groupNode: PostIt = {
+            const groupNode: StickyNote = {
               id: groupId,
               text: '',
               type: 'group',
@@ -241,33 +241,33 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
             };
 
             // Update children with relative positions and parentId
-            const updatedChildren = selectedPostIts.map((postIt) => ({
-              ...postIt,
+            const updatedChildren = selectedStickyNotes.map((stickyNote) => ({
+              ...stickyNote,
               parentId: groupId,
               position: {
-                x: postIt.position.x - minX + 20, // Relative to group + padding
-                y: postIt.position.y - minY + 20,
+                x: stickyNote.position.x - minX + 20, // Relative to group + padding
+                y: stickyNote.position.y - minY + 20,
               },
             }));
 
             // Build new array: group first, then non-selected, then children
-            const otherPostIts = state.postIts.filter((p) => !postItIds.includes(p.id));
-            const newPostIts = [groupNode, ...otherPostIts, ...updatedChildren];
+            const otherStickyNotes = state.stickyNotes.filter((p) => !stickyNoteIds.includes(p.id));
+            const newStickyNotes = [groupNode, ...otherStickyNotes, ...updatedChildren];
 
             return {
-              postIts: newPostIts,
+              stickyNotes: newStickyNotes,
               isDirty: true,
             };
           }),
 
-        ungroupPostIts: (groupId) =>
+        ungroupStickyNotes: (groupId) =>
           set((state) => {
             // Find the group node
-            const group = state.postIts.find((p) => p.id === groupId);
+            const group = state.stickyNotes.find((p) => p.id === groupId);
             if (!group || group.type !== 'group') return state;
 
             // Find all children
-            const children = state.postIts.filter((p) => p.parentId === groupId);
+            const children = state.stickyNotes.filter((p) => p.parentId === groupId);
 
             // Convert children back to absolute positions
             const absoluteChildren = children.map((child) => ({
@@ -279,21 +279,21 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
               },
             }));
 
-            // Remove group, keep other post-its, add absolute children
-            const newPostIts = [
-              ...state.postIts.filter((p) => p.id !== groupId && p.parentId !== groupId),
+            // Remove group, keep other sticky notes, add absolute children
+            const newStickyNotes = [
+              ...state.stickyNotes.filter((p) => p.id !== groupId && p.parentId !== groupId),
               ...absoluteChildren,
             ];
 
             return {
-              postIts: newPostIts,
+              stickyNotes: newStickyNotes,
               isDirty: true,
             };
           }),
 
-        setPostIts: (postIts) =>
+        setStickyNotes: (stickyNotes) =>
           set(() => ({
-            postIts,
+            stickyNotes,
             // NOTE: Does NOT set isDirty — this is for loading from DB
           })),
 
@@ -389,9 +389,9 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
             // Filter out deleted column
             const filteredColumns = state.gridColumns.filter((col) => col.id !== id);
 
-            // Update post-its that reference deleted column
-            const updatedPostIts = state.postIts.map((postIt) => {
-              const cellAssignment = postIt.cellAssignment;
+            // Update sticky notes that reference deleted column
+            const updatedStickyNotes = state.stickyNotes.map((stickyNote) => {
+              const cellAssignment = stickyNote.cellAssignment;
               if (cellAssignment?.col === id) {
                 if (targetColumn) {
                   // Move to adjacent column
@@ -409,7 +409,7 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
                     );
 
                     return {
-                      ...postIt,
+                      ...stickyNote,
                       cellAssignment: {
                         row: cellAssignment.row,
                         col: targetColumn.id,
@@ -423,15 +423,15 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
                 }
                 // No target column (deleting last column) - clear cellAssignment
                 return {
-                  ...postIt,
+                  ...stickyNote,
                   cellAssignment: undefined,
                 };
               }
-              return postIt;
+              return stickyNote;
             });
 
             return {
-              postIts: updatedPostIts,
+              stickyNotes: updatedStickyNotes,
               gridColumns: filteredColumns,
               isDirty: true,
             };
@@ -439,15 +439,15 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
 
         confirmPreview: (id) =>
           set((state) => ({
-            postIts: state.postIts.map((postIt) =>
-              postIt.id === id ? { ...postIt, isPreview: false, previewReason: undefined } : postIt
+            stickyNotes: state.stickyNotes.map((stickyNote) =>
+              stickyNote.id === id ? { ...stickyNote, isPreview: false, previewReason: undefined } : stickyNote
             ),
             isDirty: true,
           })),
 
         rejectPreview: (id) =>
           set((state) => ({
-            postIts: state.postIts.filter((postIt) => postIt.id !== id),
+            stickyNotes: state.stickyNotes.filter((stickyNote) => stickyNote.id !== id),
             isDirty: true,
           })),
 
@@ -470,11 +470,11 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
           set((state) => {
             const updateMap = new Map(updates.map((u) => [u.id, u]));
             return {
-              postIts: state.postIts.map((postIt) => {
-                const update = updateMap.get(postIt.id);
-                if (!update) return postIt;
+              stickyNotes: state.stickyNotes.map((stickyNote) => {
+                const update = updateMap.get(stickyNote.id);
+                if (!update) return stickyNote;
                 return {
-                  ...postIt,
+                  ...stickyNote,
                   position: update.position,
                   ...(update.cellAssignment !== undefined ? { cellAssignment: update.cellAssignment } : {}),
                 };
@@ -487,8 +487,8 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
           set((state) => {
             const idSet = new Set(ids);
             return {
-              postIts: state.postIts.map((postIt) =>
-                idSet.has(postIt.id) ? { ...postIt, cluster: clusterName } : postIt
+              stickyNotes: state.stickyNotes.map((stickyNote) =>
+                idSet.has(stickyNote.id) ? { ...stickyNote, cluster: clusterName } : stickyNote
               ),
               isDirty: true,
             };
@@ -498,10 +498,10 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
           set((state) => {
             const lower = clusterName.toLowerCase();
             return {
-              postIts: state.postIts.map((postIt) =>
-                postIt.cluster && postIt.cluster.toLowerCase() === lower
-                  ? { ...postIt, cluster: undefined }
-                  : postIt
+              stickyNotes: state.stickyNotes.map((stickyNote) =>
+                stickyNote.cluster && stickyNote.cluster.toLowerCase() === lower
+                  ? { ...stickyNote, cluster: undefined }
+                  : stickyNote
               ),
               isDirty: true,
             };
@@ -512,28 +512,28 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
             const oldLower = oldName.toLowerCase();
             const newLower = newName.toLowerCase();
             // Check if a child node's text matches the new name (for parent swap)
-            const promotee = state.postIts.find(
+            const promotee = state.stickyNotes.find(
               (p) => p.cluster?.toLowerCase() === oldLower && p.text.toLowerCase() === newLower
             );
             return {
-              postIts: state.postIts.map((postIt) => {
+              stickyNotes: state.stickyNotes.map((stickyNote) => {
                 // Child of old cluster whose text matches new name → promote to parent
-                if (promotee && postIt.id === promotee.id) {
-                  return { ...postIt, cluster: undefined };
+                if (promotee && stickyNote.id === promotee.id) {
+                  return { ...stickyNote, cluster: undefined };
                 }
                 // Other children of old cluster → update cluster name
-                if (postIt.cluster?.toLowerCase() === oldLower) {
-                  return { ...postIt, cluster: newName };
+                if (stickyNote.cluster?.toLowerCase() === oldLower) {
+                  return { ...stickyNote, cluster: newName };
                 }
                 // Old parent (text matches old name, no cluster) → demote to child
                 if (
-                  !postIt.cluster &&
-                  postIt.text.toLowerCase() === oldLower &&
-                  (!postIt.type || postIt.type === 'postIt')
+                  !stickyNote.cluster &&
+                  stickyNote.text.toLowerCase() === oldLower &&
+                  (!stickyNote.type || stickyNote.type === 'stickyNote')
                 ) {
-                  return { ...postIt, cluster: newName };
+                  return { ...stickyNote, cluster: newName };
                 }
-                return postIt;
+                return stickyNote;
               }),
               isDirty: true,
             };
@@ -541,15 +541,15 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
 
         removeFromCluster: (id) =>
           set((state) => ({
-            postIts: state.postIts.map((postIt) =>
-              postIt.id === id ? { ...postIt, cluster: undefined } : postIt
+            stickyNotes: state.stickyNotes.map((stickyNote) =>
+              stickyNote.id === id ? { ...stickyNote, cluster: undefined } : stickyNote
             ),
             isDirty: true,
           })),
 
-        setSelectedPostItIds: (ids) =>
+        setSelectedStickyNoteIds: (ids) =>
           set(() => ({
-            selectedPostItIds: ids,
+            selectedStickyNoteIds: ids,
           })),
 
         addMindMapNode: (node, edge) =>
@@ -748,7 +748,7 @@ export const createCanvasStore = (initState?: { postIts: PostIt[]; gridColumns?:
       }),
       {
         partialize: (state) => ({
-          postIts: state.postIts,
+          stickyNotes: state.stickyNotes,
           drawingNodes: state.drawingNodes,
           gridColumns: state.gridColumns,
           crazy8sSlots: state.crazy8sSlots,

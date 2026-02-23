@@ -21,7 +21,7 @@ export const STEP_CANVAS_GUIDES: Record<string, Omit<CanvasGuideData, 'stepId'>[
   'stakeholder-mapping': [
     {
       id: 'stakeholder-hint',
-      body: 'Double-click directly on the board to add a Post-it or by using the Add Post-it button.',
+      body: 'Double-click directly on the board to add a Sticky note or by using the Add Sticky note button.',
       variant: 'hint',
       dismissBehavior: 'hover-x',
       placementMode: 'pinned',
@@ -47,7 +47,7 @@ export const STEP_CANVAS_GUIDES: Record<string, Omit<CanvasGuideData, 'stepId'>[
   'user-research': [
     {
       id: 'user-research-hint',
-      body: 'Double-click on the board to add a post-it',
+      body: 'Double-click on the board to add a sticky note',
       variant: 'hint',
       dismissBehavior: 'auto-dismiss',
       placementMode: 'pinned',
@@ -73,7 +73,7 @@ export const STEP_CANVAS_GUIDES: Record<string, Omit<CanvasGuideData, 'stepId'>[
   'sense-making': [
     {
       id: 'sense-making-hint',
-      body: 'Double-click on the board to add a post-it',
+      body: 'Double-click on the board to add a sticky note',
       variant: 'hint',
       dismissBehavior: 'auto-dismiss',
       placementMode: 'pinned',
@@ -128,7 +128,7 @@ export const STEP_CANVAS_GUIDES: Record<string, Omit<CanvasGuideData, 'stepId'>[
   'ideation': [
     {
       id: 'ideation-hint',
-      body: 'Double-click on the board to add a post-it',
+      body: 'Double-click on the board to add a sticky note',
       variant: 'hint',
       dismissBehavior: 'auto-dismiss',
       placementMode: 'pinned',

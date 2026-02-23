@@ -28,7 +28,7 @@ export const maxDuration = 60;
  */
 export async function POST(req: Request) {
   try {
-    const { messages, sessionId, stepId, workshopId, subStep, selectedPostItIds } = await req.json();
+    const { messages, sessionId, stepId, workshopId, subStep, selectedStickyNoteIds } = await req.json();
 
     // Validate required parameters
     if (!sessionId || !stepId || !workshopId) {
@@ -42,11 +42,11 @@ export async function POST(req: Request) {
     const stepContext = await assembleStepContext(workshopId, stepId);
 
     // Inject selected canvas items into context if any are selected
-    if (Array.isArray(selectedPostItIds) && selectedPostItIds.length > 0) {
+    if (Array.isArray(selectedStickyNoteIds) && selectedStickyNoteIds.length > 0) {
       const canvasState = await loadCanvasState(workshopId, stepId);
       if (canvasState) {
-        const selectedTexts = canvasState.postIts
-          .filter(p => selectedPostItIds.includes(p.id))
+        const selectedTexts = canvasState.stickyNotes
+          .filter(p => selectedStickyNoteIds.includes(p.id))
           .map(p => `- "${p.text}"`)
           .filter(t => t !== '- ""');
 
