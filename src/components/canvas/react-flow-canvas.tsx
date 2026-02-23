@@ -47,6 +47,7 @@ import { getZoneForPosition } from '@/lib/canvas/empathy-zones';
 import { EzyDrawLoader } from '@/components/ezydraw/ezydraw-loader';
 import { simplifyDrawingElements } from '@/lib/drawing/simplify';
 import { saveDrawing, updateDrawing, loadDrawing } from '@/actions/drawing-actions';
+import { saveCanvasState } from '@/actions/canvas-actions';
 import type { DrawingElement } from '@/lib/drawing/types';
 import { ClusterEdge } from './cluster-edge';
 import { ClusterHullsOverlay } from './cluster-hulls-overlay';
@@ -57,6 +58,7 @@ import { CanvasGuide } from './canvas-guide';
 import { GuideNode } from './guide-node';
 import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
 import type { StepCanvasSettingsData } from '@/lib/canvas/step-canvas-settings-types';
+import { getStepTemplatePostIts } from '@/lib/canvas/template-postit-config';
 // JourneyMapSkeleton removed — skeleton placeholders are now integrated into GridOverlay
 
 // Define node types OUTSIDE component for stable reference
@@ -86,10 +88,11 @@ export interface ReactFlowCanvasProps {
   onEditGuide?: (guide: CanvasGuideData, position: { x: number; y: number }) => void;
   onAddGuide?: (position: { x: number; y: number }) => void;
   onGuidePositionUpdate?: (guideId: string, x: number, y: number) => void;
+  onGuideSizeUpdate?: (guideId: string, width: number, height: number, x: number, y: number) => void;
   canvasRef?: React.Ref<{ getViewport: () => { x: number; y: number; zoom: number } }>;
 }
 
-function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: canvasGuidesProp, defaultViewportSettings, isAdmin, isAdminEditing, onEditGuide, onAddGuide, onGuidePositionUpdate, canvasRef }: ReactFlowCanvasProps) {
+function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: canvasGuidesProp, defaultViewportSettings, isAdmin, isAdminEditing, onEditGuide, onAddGuide, onGuidePositionUpdate, onGuideSizeUpdate, canvasRef }: ReactFlowCanvasProps) {
   // Store access
   const postIts = useCanvasStore((s) => s.postIts);
   const addPostIt = useCanvasStore((s) => s.addPostIt);
@@ -139,11 +142,47 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
   // Auto-save integration
   const { saveStatus } = useCanvasAutosave(workshopId, stepId);
 
+  // Client-side template post-it initialization — ensures templates exist even if
+  // server-side seeding in page.tsx failed or data was lost. Runs once on mount.
+  const templateSeededRef = useRef(false);
+  useEffect(() => {
+    if (templateSeededRef.current) return;
+    const currentPostIts = storeApi.getState().postIts;
+    const hasTemplates = currentPostIts.some(p => p.templateKey);
+    if (!hasTemplates) {
+      const templateDefs = getStepTemplatePostIts(stepId);
+      if (templateDefs.length > 0) {
+        console.log('[canvas] Client-side template seeding:', templateDefs.length, 'templates for step', stepId);
+        templateSeededRef.current = true;
+        for (const def of templateDefs) {
+          addPostIt({
+            id: crypto.randomUUID(),
+            text: '',
+            position: def.position,
+            width: def.width,
+            height: def.height,
+            color: def.color,
+            type: 'postIt',
+            templateKey: def.key,
+            templateLabel: def.label,
+            placeholderText: def.placeholderText,
+          });
+        }
+        // Save to DB immediately so the AI API route can read template state
+        const allPostIts = storeApi.getState().postIts;
+        saveCanvasState(workshopId, stepId, { postIts: allPostIts }).then(result => {
+          console.log('[canvas] Client-side template save result:', result);
+        });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Step-specific canvas configuration
   const stepConfig = getStepCanvasConfig(stepId);
 
-  // Whether canvas has any user content
-  const canvasHasItems = postIts.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0 || conceptCards.length > 0;
+  // Whether canvas has any user content (unfilled template post-its don't count)
+  const canvasHasItems = postIts.some(p => !p.templateKey || p.text.trim().length > 0) || personaTemplates.length > 0 || hmwCards.length > 0 || conceptCards.length > 0;
 
   // Canvas guide objects (instructional stickers/hints on the canvas)
   const stepGuides = canvasGuidesProp || [];
@@ -258,6 +297,26 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
       });
     },
     [updatePostIt]
+  );
+
+  // Guide resize handler — updates liveDimensions ref (no re-render)
+  const handleGuideResize = useCallback(
+    (guideId: string, width: number, height: number) => {
+      liveDimensions.current[`guide-${guideId}`] = { width, height };
+    },
+    []
+  );
+
+  // Guide resize end — clear ref, update livePositions, call parent callback
+  const handleGuideResizeEnd = useCallback(
+    (guideId: string, width: number, height: number, x: number, y: number) => {
+      delete liveDimensions.current[`guide-${guideId}`];
+      livePositions.current[`guide-${guideId}`] = { x: Math.round(x), y: Math.round(y) };
+      if (onGuideSizeUpdate) {
+        onGuideSizeUpdate(guideId, Math.round(width), Math.round(height), Math.round(x), Math.round(y));
+      }
+    },
+    [onGuideSizeUpdate]
   );
 
   // Grid snap size (matches dot grid)
@@ -655,6 +714,11 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
           onEditComplete: handleEditComplete,
           onResize: handleResize,
           onResizeEnd: handleResizeEnd,
+          ...(postIt.templateKey ? {
+            templateKey: postIt.templateKey,
+            templateLabel: postIt.templateLabel,
+            placeholderText: postIt.placeholderText,
+          } : {}),
           ...(clusterInfo && !postIt.cluster ? {
             clusterLabel: clusterInfo.label,
             clusterChildCount: clusterInfo.count,
@@ -749,30 +813,58 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
     }));
 
     // Add on-canvas guide nodes
+    // Default dimensions per variant — used when guide has no saved width/height
+    const guideDefaultDims: Record<string, { w: number; h: number }> = {
+      'template-postit': { w: 160, h: 100 },
+      frame: { w: 400, h: 300 },
+      arrow: { w: 120, h: 40 },
+      sticker: { w: 200, h: 80 },
+      note: { w: 200, h: 80 },
+      hint: { w: 220, h: 50 },
+      image: { w: 200, h: 200 },
+    };
+
+    // Hide template-postit guide variants when real template post-its are present (they're redundant)
+    const hasTemplatePostIts = postIts.some(p => !!p.templateKey);
+
     const guideReactFlowNodes: Node[] = onCanvasGuides
-      .filter(g => !dismissedGuideIds.has(g.id) && (!g.showOnlyWhenEmpty || !canvasHasItems))
-      .map(g => ({
-        id: `guide-${g.id}`,
-        type: 'guideNode' as const,
-        position: livePositions.current[`guide-${g.id}`] || { x: g.canvasX ?? 0, y: g.canvasY ?? 0 },
-        zIndex: g.layer === 'background' ? 2 : 25,
-        draggable: !!isAdmin && !!isAdminEditing,
-        selectable: !!isAdmin && !!isAdminEditing,
-        data: {
-          ...g,
-          isAdmin,
-          isAdminEditing,
-          onDismiss: dismissGuide,
-          onEdit: onEditGuide,
-          isExiting: exitingGuideIds.has(g.id),
-        },
-      }));
+      .filter(g => !dismissedGuideIds.has(g.id) && (!g.showOnlyWhenEmpty || !canvasHasItems) && !(g.variant === 'template-postit' && hasTemplatePostIts))
+      .map(g => {
+        const nodeId = `guide-${g.id}`;
+        const liveDims = liveDimensions.current[nodeId];
+        const defaults = guideDefaultDims[g.variant] || { w: 200, h: 80 };
+        const nodeWidth = liveDims?.width ?? g.width ?? defaults.w;
+        const nodeHeight = liveDims?.height ?? g.height ?? defaults.h;
+
+        return {
+          id: nodeId,
+          type: 'guideNode' as const,
+          position: livePositions.current[nodeId] || { x: g.canvasX ?? 0, y: g.canvasY ?? 0 },
+          zIndex: g.layer === 'background' ? 2 : 25,
+          draggable: !!isAdmin && !!isAdminEditing,
+          selectable: !!isAdmin && !!isAdminEditing,
+          selected: selectedNodeIds.includes(nodeId),
+          data: {
+            ...g,
+            isAdmin,
+            isAdminEditing,
+            onDismiss: dismissGuide,
+            onEdit: onEditGuide,
+            onGuideResize: handleGuideResize,
+            onGuideResizeEnd: handleGuideResizeEnd,
+            isExiting: exitingGuideIds.has(g.id),
+          },
+          // Always set explicit dimensions — content uses w-full/h-full to fill.
+          // This ensures admin edit and preview render identically.
+          style: { width: nodeWidth, height: nodeHeight },
+        };
+      });
 
     return [...postItReactFlowNodes, ...drawingReactFlowNodes, ...conceptCardReactFlowNodes, ...personaTemplateReactFlowNodes, ...hmwCardReactFlowNodes, ...guideReactFlowNodes];
   // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions/liveDimensions are refs
   // read inside the memo body as a safety net; they must NOT be deps or every
   // mouse-move during drag would recompute and cause flickering.
-  }, [postIts, drawingNodes, conceptCards, personaTemplates, hmwCards, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, onCanvasGuides, dismissedGuideIds, exitingGuideIds, canvasHasItems, isAdmin, isAdminEditing, onEditGuide, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange, handlePersonaFieldChange, handleGenerateAvatar, handleHmwFieldChange, handleHmwChipSelect, dismissGuide]);
+  }, [postIts, drawingNodes, conceptCards, personaTemplates, hmwCards, editingNodeId, selectedNodeIds, nodeZIndices, clusterParentMap, onCanvasGuides, dismissedGuideIds, exitingGuideIds, canvasHasItems, isAdmin, isAdminEditing, onEditGuide, handleGuideResize, handleGuideResizeEnd, handleTextChange, handleEditComplete, handleResize, handleResizeEnd, handleConfirmPreview, handleRejectPreview, handleConceptFieldChange, handleConceptSWOTChange, handleConceptFeasibilityChange, handlePersonaFieldChange, handleGenerateAvatar, handleHmwFieldChange, handleHmwChipSelect, dismissGuide]);
 
   // Create post-it at position and set as editing
   const createPostItAtPosition = useCallback(
@@ -2066,10 +2158,10 @@ function ReactFlowCanvasInner({ sessionId, stepId, workshopId, canvasGuides: can
   );
 }
 
-export function ReactFlowCanvas({ sessionId, stepId, workshopId, canvasGuides, defaultViewportSettings, isAdmin, isAdminEditing, onEditGuide, onAddGuide, onGuidePositionUpdate, canvasRef }: ReactFlowCanvasProps) {
+export function ReactFlowCanvas({ sessionId, stepId, workshopId, canvasGuides, defaultViewportSettings, isAdmin, isAdminEditing, onEditGuide, onAddGuide, onGuidePositionUpdate, onGuideSizeUpdate, canvasRef }: ReactFlowCanvasProps) {
   return (
     <ReactFlowProvider>
-      <ReactFlowCanvasInner sessionId={sessionId} stepId={stepId} workshopId={workshopId} canvasGuides={canvasGuides} defaultViewportSettings={defaultViewportSettings} isAdmin={isAdmin} isAdminEditing={isAdminEditing} onEditGuide={onEditGuide} onAddGuide={onAddGuide} onGuidePositionUpdate={onGuidePositionUpdate} canvasRef={canvasRef} />
+      <ReactFlowCanvasInner sessionId={sessionId} stepId={stepId} workshopId={workshopId} canvasGuides={canvasGuides} defaultViewportSettings={defaultViewportSettings} isAdmin={isAdmin} isAdminEditing={isAdminEditing} onEditGuide={onEditGuide} onAddGuide={onAddGuide} onGuidePositionUpdate={onGuidePositionUpdate} onGuideSizeUpdate={onGuideSizeUpdate} canvasRef={canvasRef} />
     </ReactFlowProvider>
   );
 }

@@ -68,6 +68,9 @@ export type PostIt = {
   cluster?: string; // Parent label for hierarchical clustering (stakeholder mapping)
   isPreview?: boolean; // When true, indicates AI-suggested preview node awaiting confirmation
   previewReason?: string; // Optional AI explanation for why this placement was suggested
+  templateKey?: string;       // Unique key for AI targeting (e.g., 'idea', 'problem')
+  templateLabel?: string;     // Persistent header label (e.g., 'The Idea')
+  placeholderText?: string;   // Placeholder shown when text is empty
 };
 
 export type CanvasState = {

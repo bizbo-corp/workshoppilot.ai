@@ -7,7 +7,7 @@ import { getStepByOrder, STEPS } from "@/lib/workshop/step-metadata";
 import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
 import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
-import { loadCanvasState } from "@/actions/canvas-actions";
+import { loadCanvasState, saveCanvasState } from "@/actions/canvas-actions";
 import { loadCanvasGuides } from "@/actions/canvas-guide-actions";
 import { loadStepCanvasSettings } from "@/actions/step-canvas-settings-actions";
 import { getDefaultStepCanvasGuides } from "@/lib/canvas/canvas-guide-config";
@@ -20,6 +20,7 @@ import type { BrainRewritingMatrix } from "@/lib/canvas/brain-rewriting-types";
 import { BRAIN_REWRITING_CELL_ORDER } from "@/lib/canvas/brain-rewriting-types";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
 import { computeRadialPositions } from "@/lib/canvas/mind-map-layout";
+import { getStepTemplatePostIts } from "@/lib/canvas/template-postit-config";
 
 interface StepPageProps {
   params: Promise<{
@@ -223,6 +224,34 @@ export default async function StepPage({ params }: StepPageProps) {
         color: postIt.color || 'yellow',
         type: postIt.type || 'postIt',
       }));
+    }
+  }
+
+  // Seed template post-its for steps that define them (e.g., Challenge step)
+  // Check for absence of template post-its specifically — not an empty canvas.
+  // This ensures templates are added even if the AI or user already created regular post-its.
+  const hasTemplatePostIts = initialCanvasPostIts.some(p => p.templateKey);
+  console.log(`[template-seed] step=${step.id}, postIts=${initialCanvasPostIts.length}, hasTemplates=${hasTemplatePostIts}`);
+  if (!hasTemplatePostIts) {
+    const templateDefs = getStepTemplatePostIts(step.id);
+    console.log(`[template-seed] templateDefs=${templateDefs.length} for step=${step.id}`);
+    if (templateDefs.length > 0) {
+      const newTemplates = templateDefs.map(def => ({
+        id: crypto.randomUUID(),
+        text: '',  // Empty — placeholder is metadata
+        position: def.position,
+        width: def.width,
+        height: def.height,
+        color: def.color,
+        type: 'postIt' as const,
+        templateKey: def.key,
+        templateLabel: def.label,
+        placeholderText: def.placeholderText,
+      }));
+      initialCanvasPostIts = [...initialCanvasPostIts, ...newTemplates];
+      // Persist to DB immediately so the AI API route can read template state
+      const saveResult = await saveCanvasState(session.workshop.id, step.id, { postIts: initialCanvasPostIts });
+      console.log(`[template-seed] saved ${initialCanvasPostIts.length} postIts (${newTemplates.length} templates), result:`, saveResult);
     }
   }
 

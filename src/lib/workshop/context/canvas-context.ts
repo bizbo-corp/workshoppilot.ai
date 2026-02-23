@@ -393,6 +393,47 @@ export function assembleHmwCardCanvasContext(hmwCards: HmwCardData[]): string {
 }
 
 /**
+ * Assemble user research canvas context for Step 3 (User Research)
+ * Groups post-its by cluster (persona name) so the AI sees which insights
+ * came from which persona interview
+ */
+export function assembleUserResearchCanvasContext(postIts: PostIt[]): string {
+  const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
+
+  if (items.length === 0) return '';
+
+  // Separate persona cards (no cluster) from interview insights (have cluster)
+  const personaCards: PostIt[] = [];
+  const insightsByPersona = new Map<string, PostIt[]>();
+
+  for (const item of items) {
+    if (item.cluster) {
+      const key = item.cluster;
+      if (!insightsByPersona.has(key)) insightsByPersona.set(key, []);
+      insightsByPersona.get(key)!.push(item);
+    } else {
+      personaCards.push(item);
+    }
+  }
+
+  const sections: string[] = [];
+
+  // List persona cards
+  if (personaCards.length > 0) {
+    const cardList = personaCards.map(p => `- ${p.text}`).join('\n');
+    sections.push(`**Persona Cards** (${personaCards.length}):\n${cardList}`);
+  }
+
+  // Group insights by persona
+  for (const [persona, insights] of insightsByPersona) {
+    const insightList = insights.map(p => `- ${p.text}`).join('\n');
+    sections.push(`**${persona}** (${insights.length} insight${insights.length > 1 ? 's' : ''}):\n${insightList}`);
+  }
+
+  return sections.join('\n\n');
+}
+
+/**
  * Assemble canvas context for a specific step
  * Routes to step-specific assembly function based on stepId
  */
@@ -412,6 +453,28 @@ export function assembleCanvasContextForStep(stepId: string, postIts: PostIt[], 
     return assemblePersonaCanvasContext(personaTemplates);
   }
 
+  // Challenge step: report template card state so the AI knows which cards are filled
+  if (stepId === 'challenge') {
+    const templatePostIts = postIts.filter(p => p.templateKey);
+    if (templatePostIts.length > 0) {
+      const lines = templatePostIts.map(p => {
+        const filled = p.text?.trim().length > 0;
+        const status = filled ? 'filled' : 'empty';
+        const content = filled ? p.text.trim() : '(not yet filled)';
+        return `- [${p.templateLabel || p.templateKey}] (key: ${p.templateKey}, ${status}): ${content}`;
+      });
+      let result = `Template cards:\n${lines.join('\n')}`;
+      // Also include any non-template post-its (user-added)
+      const regularItems = postIts.filter(p => !p.templateKey && (!p.type || p.type === 'postIt') && !p.isPreview && p.text?.trim());
+      if (regularItems.length > 0) {
+        const regularLines = regularItems.map(p => `- ${p.text.trim()}`);
+        result += `\n\nAdditional canvas items:\n${regularLines.join('\n')}`;
+      }
+      return result;
+    }
+    // Fall through to default if no template post-its (legacy workshops)
+  }
+
   // Filter out group nodes and preview nodes first
   const items = postIts.filter(p => (!p.type || p.type === 'postIt') && !p.isPreview);
 
@@ -420,6 +483,8 @@ export function assembleCanvasContextForStep(stepId: string, postIts: PostIt[], 
   // Route to step-specific assembly
   if (stepId === 'stakeholder-mapping') {
     return assembleStakeholderCanvasContext(postIts);
+  } else if (stepId === 'user-research') {
+    return assembleUserResearchCanvasContext(postIts);
   } else if (stepId === 'sense-making') {
     return assembleEmpathyMapCanvasContext(postIts);
   } else {

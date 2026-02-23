@@ -18,6 +18,7 @@ import { resetStep, updateStepStatus } from '@/actions/workshop-actions';
 import { getStepByOrder, STEP_CONFIRM_LABELS, STEP_CONFIRM_MIN_ITEMS } from '@/lib/workshop/step-metadata';
 import { fireConfetti } from '@/lib/utils/confetti';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { ConceptCanvasOverlay } from './concept-canvas-overlay';
@@ -89,7 +90,7 @@ export function StepContainer({
   const setBrainRewritingMatrices = useCanvasStore((s) => s.setBrainRewritingMatrices);
   // HMW card counts as "content" only when all 4 fields are filled (card is 'filled')
   const hmwCardComplete = hmwCards.some((c) => c.cardState === 'filled');
-  const canvasHasContent = postIts.length > 0 || conceptCards.length > 0 || hmwCardComplete;
+  const canvasHasContent = postIts.some(p => !p.templateKey || p.text.trim().length > 0) || conceptCards.length > 0 || hmwCardComplete;
 
   // For canvas steps, activity is "confirmed" when post-its exist (no extraction needed)
   const effectiveConfirmed = isCanvasStep ? canvasHasContent : artifactConfirmed;
@@ -185,7 +186,7 @@ export function StepContainer({
     const offsetY = Math.round(vp.y - rect.height / 2);
 
     try {
-      await fetch('/api/admin/canvas-settings', {
+      const res = await fetch('/api/admin/canvas-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -196,14 +197,25 @@ export function StepContainer({
           viewportMode: 'center-offset',
         }),
       });
+      if (res.ok) {
+        toast.success('Default view saved');
+      } else {
+        toast.error('Failed to save default view');
+      }
     } catch (err) {
       console.error('Failed to save default view:', err);
+      toast.error('Failed to save default view');
     }
   }, [step]);
 
   // Handle guide position updates from canvas drag — updates local state + debounced PATCH
   const handleGuidePositionUpdate = React.useCallback((guideId: string, x: number, y: number) => {
     adminGuides.updateGuide(guideId, { canvasX: x, canvasY: y });
+  }, [adminGuides]);
+
+  // Handle guide size updates from canvas resize — updates local state + debounced PATCH
+  const handleGuideSizeUpdate = React.useCallback((guideId: string, width: number, height: number, x: number, y: number) => {
+    adminGuides.updateGuide(guideId, { width, height, canvasX: x, canvasY: y });
   }, [adminGuides]);
 
   // PRD viewer dialog state
@@ -470,6 +482,7 @@ export function StepContainer({
                   onEditGuide={handleEditGuide}
                   onAddGuide={handleAddGuide}
                   onGuidePositionUpdate={handleGuidePositionUpdate}
+                  onGuideSizeUpdate={handleGuideSizeUpdate}
                 />
                 {step.id === 'concept' && (
                   <ConceptCanvasOverlay
@@ -493,6 +506,7 @@ export function StepContainer({
                 onEditGuide={handleEditGuide}
                 onAddGuide={handleAddGuide}
                 onGuidePositionUpdate={handleGuidePositionUpdate}
+                  onGuideSizeUpdate={handleGuideSizeUpdate}
               />
             )}
           </div>
@@ -590,6 +604,7 @@ export function StepContainer({
                       onEditGuide={handleEditGuide}
                       onAddGuide={handleAddGuide}
                       onGuidePositionUpdate={handleGuidePositionUpdate}
+                  onGuideSizeUpdate={handleGuideSizeUpdate}
                       canvasRef={canvasRef}
                     />
                     {step.id === 'concept' && (
@@ -626,6 +641,7 @@ export function StepContainer({
                     onEditGuide={handleEditGuide}
                     onAddGuide={handleAddGuide}
                     onGuidePositionUpdate={handleGuidePositionUpdate}
+                  onGuideSizeUpdate={handleGuideSizeUpdate}
                   />
                 )}
               </Panel>
@@ -661,6 +677,7 @@ export function StepContainer({
                     onEditGuide={handleEditGuide}
                     onAddGuide={handleAddGuide}
                     onGuidePositionUpdate={handleGuidePositionUpdate}
+                  onGuideSizeUpdate={handleGuideSizeUpdate}
                   />
                   {step.id === 'concept' && (
                     <ConceptCanvasOverlay
@@ -696,6 +713,7 @@ export function StepContainer({
                   onEditGuide={handleEditGuide}
                   onAddGuide={handleAddGuide}
                   onGuidePositionUpdate={handleGuidePositionUpdate}
+                  onGuideSizeUpdate={handleGuideSizeUpdate}
                 />
               )}
             </div>

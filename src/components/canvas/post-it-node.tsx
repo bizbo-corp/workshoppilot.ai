@@ -23,6 +23,9 @@ export type PostItNodeData = {
   previewReason?: string;
   clusterLabel?: string;
   clusterChildCount?: number;
+  templateKey?: string;
+  templateLabel?: string;
+  placeholderText?: string;
   onConfirm?: (id: string) => void;
   onReject?: (id: string) => void;
   onTextChange?: (id: string, text: string) => void;
@@ -66,7 +69,7 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
         className={cn(
           bgColor,
           'shadow-md rounded-sm p-3',
-          'font-sans text-sm text-neutral-olive-800 dark:text-neutral-olive-200',
+          'font-sans text-sm text-neutral-olive-800',
           'opacity-60',
           'ring-2 ring-olive-500 ring-offset-1',
           'w-full h-full flex flex-col',
@@ -96,7 +99,7 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
               e.stopPropagation();
               data.onReject?.(id);
             }}
-            className="nodrag nopan flex-1 px-2 py-1 text-xs bg-neutral-olive-200 dark:bg-neutral-olive-300 text-neutral-olive-700 dark:text-neutral-olive-800 rounded hover:bg-neutral-olive-300 dark:hover:bg-neutral-olive-400 transition-colors"
+            className="nodrag nopan flex-1 px-2 py-1 text-xs bg-neutral-olive-200 text-neutral-olive-700 rounded hover:bg-neutral-olive-300 transition-colors"
           >
             Skip
           </button>
@@ -107,12 +110,17 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
     );
   }
 
+  // Template state derivation
+  const isTemplate = !!data.templateKey;
+  const isEmpty = !data.text?.trim();
+  const isTemplatePlaceholder = isTemplate && isEmpty;
+
   return (
     <div
       className={cn(
         bgColor,
         'shadow-md rounded-sm p-3',
-        'font-sans text-sm text-neutral-olive-800 dark:text-neutral-olive-200',
+        'font-sans text-sm text-neutral-olive-800',
         // Transitions only when not actively dragging — instant feedback during manipulation
         !dragging && 'transition-[box-shadow,transform,opacity] duration-150',
         !dragging && !selected && 'hover:shadow-lg hover:-translate-y-0.5',
@@ -121,7 +129,9 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
         selected && !dragging && 'ring-2 ring-olive-600 ring-offset-1',
         data.isEditing && 'ring-2 ring-olive-500 ring-offset-1',
         // Miro-like drag: clean shadow lift, subtle scale, no rotation or opacity change
-        dragging && 'shadow-2xl scale-[1.02] ring-2 ring-olive-500/40'
+        dragging && 'shadow-2xl scale-[1.02] ring-2 ring-olive-500/40',
+        // Subtle dashed border for unfilled template cards
+        isTemplatePlaceholder && !data.isEditing && 'border border-dashed border-neutral-olive-400/50'
       )}
       style={{ touchAction: 'none' }}
     >
@@ -147,6 +157,13 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
         className="!opacity-0 !w-0 !h-0"
       />
 
+      {/* Persistent header label for template cards */}
+      {data.templateLabel && (
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-neutral-olive-600/70 mb-0.5 block">
+          {data.templateLabel}
+        </span>
+      )}
+
       {data.isEditing ? (
         <textarea
           ref={textareaRef}
@@ -156,13 +173,18 @@ export const PostItNode = memo(({ data, selected, id, dragging }: NodeProps<Post
           onBlur={() => data.onEditComplete?.(id)}
           onChange={(e) => data.onTextChange?.(id, e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type here..."
+          placeholder={data.placeholderText || "Type here..."}
         />
       ) : (
         <>
-          <p className="break-words whitespace-pre-wrap overflow-hidden flex-1">{data.text || ''}</p>
+          <p className={cn(
+            'break-words whitespace-pre-wrap overflow-hidden flex-1',
+            isTemplatePlaceholder && 'text-neutral-olive-500/50 italic text-xs'
+          )}>
+            {data.text || data.placeholderText || ''}
+          </p>
           {data.clusterLabel && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-neutral-olive-500 dark:text-neutral-olive-600 mt-1">
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-neutral-olive-500 mt-1">
               <Layers className="w-2.5 h-2.5" />
               {data.clusterLabel} ({data.clusterChildCount ?? 0})
             </span>
