@@ -26,26 +26,24 @@ export type PersonaTemplateNodeRendererData = PersonaTemplateData & {
 
 export type PersonaTemplateNodeType = Node<PersonaTemplateNodeRendererData, 'personaTemplate'>;
 
-/* ── Sage palette (matches Step 4 empathy map) ── */
+/* ── Persona palette (adapts via CSS custom properties in globals.css) ── */
 const SAGE = {
-  bg: '#f4f7ef',           // very light sage background
-  border: '#c5d1a8',       // soft sage border
-  borderSelected: '#6b7f4e', // dark sage for selected
-  headerBg: '#6b7f4e',     // dark sage header
-  headerText: '#ffffff',
-  sectionBorder: '#dde5cc', // subtle divider
-  avatarBg: '#8a9a5b',     // olive avatar
-  avatarText: '#ffffff',
+  bg: 'var(--persona-bg)',
+  border: 'var(--persona-border)',
+  borderSelected: 'var(--persona-border-selected)',
+  headerBg: 'var(--persona-header-bg)',
+  sectionBorder: 'var(--persona-section-border)',
+  avatarBg: 'var(--persona-avatar-bg)',
 };
 
-/** Empathy zone config: icon, label, color tints keyed to the sage palette */
+/** Empathy zone config: icon, label, CSS variable references for adaptive colors */
 const EMPATHY_ZONES = [
-  { key: 'empathySays',   label: 'Says',   Icon: MessageSquare, bg: 'bg-[#8a9a5b]/10', border: 'border-[#8a9a5b]/25', text: 'text-[#4a5a32]', iconColor: 'text-[#8a9a5b]' },
-  { key: 'empathyThinks', label: 'Thinks', Icon: Brain,          bg: 'bg-[#a3b18a]/10', border: 'border-[#a3b18a]/25', text: 'text-[#4a5a32]', iconColor: 'text-[#a3b18a]' },
-  { key: 'empathyFeels',  label: 'Feels',  Icon: Heart,          bg: 'bg-[#6b7f4e]/10', border: 'border-[#6b7f4e]/25', text: 'text-[#4a5a32]', iconColor: 'text-[#6b7f4e]' },
-  { key: 'empathyDoes',   label: 'Does',   Icon: Activity,       bg: 'bg-[#95a873]/10', border: 'border-[#95a873]/25', text: 'text-[#4a5a32]', iconColor: 'text-[#95a873]' },
-  { key: 'empathyPains',  label: 'Pains',  Icon: AlertTriangle,  bg: 'bg-[#c4856b]/10', border: 'border-[#c4856b]/25', text: 'text-[#8b4f3b]', iconColor: 'text-[#c4856b]' },
-  { key: 'empathyGains',  label: 'Gains',  Icon: TrendingUp,     bg: 'bg-[#6b9a7a]/10', border: 'border-[#6b9a7a]/25', text: 'text-[#3d6b4f]', iconColor: 'text-[#6b9a7a]' },
+  { key: 'empathySays',   label: 'Says',   Icon: MessageSquare, accent: 'var(--persona-empathy-says)',   textColor: 'var(--persona-text-muted)' },
+  { key: 'empathyThinks', label: 'Thinks', Icon: Brain,         accent: 'var(--persona-empathy-thinks)', textColor: 'var(--persona-text-muted)' },
+  { key: 'empathyFeels',  label: 'Feels',  Icon: Heart,         accent: 'var(--persona-empathy-feels)',  textColor: 'var(--persona-text-muted)' },
+  { key: 'empathyDoes',   label: 'Does',   Icon: Activity,      accent: 'var(--persona-empathy-does)',   textColor: 'var(--persona-text-muted)' },
+  { key: 'empathyPains',  label: 'Pains',  Icon: AlertTriangle, accent: 'var(--persona-empathy-pains)',  textColor: 'var(--persona-empathy-pains-text)' },
+  { key: 'empathyGains',  label: 'Gains',  Icon: TrendingUp,    accent: 'var(--persona-empathy-gains)',  textColor: 'var(--persona-empathy-gains-text)' },
 ] as const;
 
 /**
@@ -87,7 +85,7 @@ function PersonaAvatar({
           'flex shrink-0 items-center justify-center rounded-full animate-pulse',
           sizeClass
         )}
-        style={{ backgroundColor: SAGE.avatarBg, color: SAGE.avatarText }}
+        style={{ backgroundColor: SAGE.avatarBg, color: '#ffffff' }}
       >
         <Sparkles className={size === 'large' ? 'h-8 w-8 animate-spin' : 'h-4 w-4 animate-spin'} style={{ animationDuration: '3s' }} />
       </div>
@@ -114,7 +112,7 @@ function PersonaAvatar({
         'nodrag nopan group relative flex shrink-0 items-center justify-center rounded-full font-bold tracking-tight cursor-pointer transition-all',
         sizeClass
       )}
-      style={{ backgroundColor: SAGE.avatarBg, color: SAGE.avatarText }}
+      style={{ backgroundColor: SAGE.avatarBg, color: '#ffffff' }}
       title="Generate portrait"
     >
       <span className="transition-opacity group-hover:opacity-30">{initials}</span>
@@ -144,7 +142,7 @@ function PortraitSection({
       className="relative w-full flex items-center justify-center overflow-hidden"
       style={{
         height: 280,
-        backgroundColor: '#f9faf5',
+        backgroundColor: 'var(--persona-portrait-bg)',
         borderBottom: `1px solid ${SAGE.sectionBorder}`,
       }}
     >
@@ -166,8 +164,8 @@ function PortraitSection({
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
             <div className="flex items-center gap-2 rounded-full bg-card/90 px-4 py-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
-              <RefreshCw className="h-4 w-4 text-[#4a5a32]" />
-              <span className="text-sm font-medium text-[#4a5a32]">Regenerate</span>
+              <RefreshCw className="h-4 w-4 text-card-foreground" />
+              <span className="text-sm font-medium text-card-foreground">Regenerate</span>
             </div>
           </div>
         </button>
@@ -231,7 +229,6 @@ function EditableField({
         ref={ref as React.RefObject<HTMLTextAreaElement>}
         className={cn(
           'nodrag nopan w-full resize-none bg-transparent outline-none transition-colors',
-          'placeholder:text-[#8a9a5b]/40',
           'focus:bg-card/60 focus:rounded-md focus:px-2 focus:py-1',
           className
         )}
@@ -257,7 +254,6 @@ function EditableField({
           type="text"
           className={cn(
             'nodrag nopan bg-transparent outline-none transition-colors',
-            'placeholder:text-[#8a9a5b]/40',
             'focus:bg-card/60 focus:rounded-md focus:px-2 focus:py-1',
             className
           )}
@@ -276,7 +272,6 @@ function EditableField({
       type="text"
       className={cn(
         'nodrag nopan w-full bg-transparent outline-none transition-colors',
-        'placeholder:text-[#8a9a5b]/40',
         'focus:bg-card/60 focus:rounded-md focus:px-2 focus:py-1',
         className
       )}
@@ -309,9 +304,10 @@ export const PersonaTemplateNode = memo(
 
     return (
       <div
-        className="w-[680px] rounded-2xl shadow-xl overflow-hidden"
+        className="persona-card w-[680px] rounded-2xl shadow-xl overflow-hidden"
         style={{
           backgroundColor: SAGE.bg,
+          color: 'var(--persona-text-strong)',
           borderWidth: 2,
           borderStyle: 'solid',
           borderColor: selected ? SAGE.borderSelected : SAGE.border,
@@ -371,27 +367,27 @@ export const PersonaTemplateNode = memo(
                 value={data.name}
                 placeholder="Full Name"
                 onBlur={(v) => data.onFieldChange?.(id, 'name', v)}
-                className="text-lg font-semibold text-[#3a4a2a]"
+                className="text-lg font-semibold"
                 autoWidth
                 minWidth={80}
               />
-              <span className="shrink-0 text-lg font-semibold text-[#3a4a2a]">,</span>
+              <span className="shrink-0 text-lg font-semibold" style={{ color: 'var(--persona-text-strong)' }}>,</span>
               <EditableField
                 value={data.age ? String(data.age) : ''}
                 placeholder="Age"
                 onBlur={(v) => data.onFieldChange?.(id, 'age', v)}
-                className="text-lg font-semibold text-[#3a4a2a]"
+                className="text-lg font-semibold"
                 autoWidth
                 minWidth={28}
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" style={{ color: 'var(--persona-text-medium)' }}>
               <Briefcase className="h-4 w-4 shrink-0" style={{ color: SAGE.avatarBg }} />
               <EditableField
                 value={data.job}
                 placeholder="Job Title"
                 onBlur={(v) => data.onFieldChange?.(id, 'job', v)}
-                className="text-sm text-[#6b7f4e]"
+                className="text-sm"
               />
             </div>
           </div>
@@ -403,26 +399,31 @@ export const PersonaTemplateNode = memo(
           style={{ borderBottom: `1px solid ${SAGE.sectionBorder}` }}
         >
           <div className="mb-3 flex items-center gap-2">
-            <h4 className="text-[11px] font-bold uppercase tracking-widest text-[#6b7f4e]">
+            <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               Empathy Map Insights
             </h4>
             {hasEmpathyData && (
               <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide"
-                style={{ backgroundColor: '#dde5cc', color: '#4a5a32' }}
+                style={{ backgroundColor: 'var(--persona-badge-bg)', color: 'var(--persona-badge-text)' }}
               >
                 From Step 4
               </span>
             )}
           </div>
           <div className="grid grid-cols-3 gap-2.5">
-            {EMPATHY_ZONES.map(({ key, label, Icon, bg, border, text, iconColor }) => (
+            {EMPATHY_ZONES.map(({ key, label, Icon, accent, textColor }) => (
               <div
                 key={key}
-                className={cn('rounded-xl border p-3', bg, border)}
+                className="rounded-xl border p-3"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${accent} 10%, transparent)`,
+                  borderColor: `color-mix(in srgb, ${accent} 25%, transparent)`,
+                  color: textColor,
+                }}
               >
                 <div className="mb-1.5 flex items-center gap-1.5">
-                  <Icon className={cn('h-3.5 w-3.5 shrink-0', iconColor)} />
-                  <span className={cn('text-[11px] font-bold uppercase tracking-wider', text)}>
+                  <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: accent }} />
+                  <span className="text-[11px] font-bold uppercase tracking-wider">
                     {label}
                   </span>
                 </div>
@@ -430,7 +431,7 @@ export const PersonaTemplateNode = memo(
                   value={data[key as keyof PersonaTemplateData] as string | undefined}
                   placeholder="Awaiting insights..."
                   onBlur={(v) => data.onFieldChange?.(id, key, v)}
-                  className={cn('text-xs leading-relaxed', text)}
+                  className="text-xs leading-relaxed"
                   multiline
                   rows={4}
                 />
@@ -442,11 +443,11 @@ export const PersonaTemplateNode = memo(
         {/* ── Narrative ── */}
         <div
           className="px-6 py-5"
-          style={{ borderBottom: `1px solid ${SAGE.sectionBorder}` }}
+          style={{ borderBottom: `1px solid ${SAGE.sectionBorder}`, color: 'var(--persona-text-narrative)' }}
         >
           <div className="mb-2 flex items-center gap-2">
             <BookOpen className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
-            <h4 className="text-[11px] font-bold uppercase tracking-widest text-[#6b7f4e]">
+            <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               Narrative
             </h4>
           </div>
@@ -454,29 +455,29 @@ export const PersonaTemplateNode = memo(
             value={data.narrative}
             placeholder="Awaiting AI draft..."
             onBlur={(v) => data.onFieldChange?.(id, 'narrative', v)}
-            className="text-sm leading-relaxed text-[#3a4a2a]/85"
+            className="text-sm leading-relaxed"
             multiline
             rows={4}
           />
         </div>
 
         {/* ── Quote ── */}
-        <div className="px-6 py-5">
+        <div className="px-6 py-5" style={{ color: 'var(--persona-text-quote)' }}>
           <div className="mb-2 flex items-center gap-2">
             <Quote className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
-            <h4 className="text-[11px] font-bold uppercase tracking-widest text-[#6b7f4e]">
+            <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               In Their Words
             </h4>
           </div>
           <div
             className="rounded-xl py-3 pl-5 pr-4"
-            style={{ backgroundColor: '#e8eddb', borderLeft: `4px solid ${SAGE.avatarBg}` }}
+            style={{ backgroundColor: 'var(--persona-quote-bg)', borderLeft: `4px solid ${SAGE.avatarBg}` }}
           >
             <EditableField
               value={data.quote}
               placeholder="Awaiting AI draft..."
               onBlur={(v) => data.onFieldChange?.(id, 'quote', v)}
-              className="text-sm italic leading-relaxed text-[#3a4a2a]/80"
+              className="text-sm italic leading-relaxed"
               multiline
               rows={2}
             />

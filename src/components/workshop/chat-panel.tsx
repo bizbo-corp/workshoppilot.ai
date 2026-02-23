@@ -25,6 +25,9 @@ import { saveCanvasState } from '@/actions/canvas-actions';
 /** Steps that support canvas item auto-add */
 const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe', 'ideation', 'concept'];
 
+/** Distinct colors assigned to persona cards in user-research step (one per persona) */
+const PERSONA_CARD_COLORS: PostItColor[] = ['pink', 'blue', 'green'];
+
 /** Fixed initial greetings shown instantly while AI generates first response */
 const STEP_INITIAL_GREETINGS: Record<string, string> = {
   'journey-mapping': "Time to map the journey! 🗺️ We're going to walk in your persona's shoes and trace their current experience — every action, emotion, and friction point. I'm pulling together what we've learned so far to recommend the best journey template...",
@@ -104,6 +107,38 @@ function parsePersonaSelect(content: string): { cleanContent: string; personaOpt
   }
 
   return { cleanContent: content, personaOptions: [] };
+}
+
+/**
+ * Parse [INTERVIEW_MODE]...[/INTERVIEW_MODE] block from AI content.
+ * Returns clean content (block removed) and extracted mode options.
+ */
+function parseInterviewMode(content: string): { cleanContent: string; modeOptions: { id: 'synthetic' | 'real'; label: string; description: string }[] } {
+  // Complete block: extract mode options and strip
+  const match = content.match(/\[INTERVIEW_MODE\]([\s\S]*?)\[\/INTERVIEW_MODE\]/);
+  if (match) {
+    const cleanContent = content.replace(/\[INTERVIEW_MODE\][\s\S]*?\[\/INTERVIEW_MODE\]/, '').trim();
+    const modeOptions = match[1]
+      .split('\n')
+      .map((line) => line.replace(/^[-*•\d.]\s*/, '').trim())
+      .filter((line) => line.length > 0)
+      .map((line) => {
+        const dashMatch = line.match(/^(.+?)\s*[—–-]\s*(.+)$/);
+        const label = dashMatch ? dashMatch[1].trim() : line;
+        const description = dashMatch ? dashMatch[2].trim() : '';
+        const id: 'synthetic' | 'real' = /real/i.test(label) ? 'real' : 'synthetic';
+        return { id, label, description };
+      });
+    return { cleanContent, modeOptions };
+  }
+
+  // Incomplete block (mid-stream): strip from [INTERVIEW_MODE] to end
+  if (content.includes('[INTERVIEW_MODE]')) {
+    const cleanContent = content.replace(/\[INTERVIEW_MODE\][\s\S]*$/, '').trim();
+    return { cleanContent, modeOptions: [] };
+  }
+
+  return { cleanContent: content, modeOptions: [] };
 }
 
 /**
@@ -615,6 +650,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const [suggestionsExpanded, setSuggestionsExpanded] = React.useState(false);
   const [customPersonaInput, setCustomPersonaInput] = React.useState('');
   const [personaSelectMessageId, setPersonaSelectMessageId] = React.useState<string | null>(null);
+  const [interviewMode, setInterviewMode] = React.useState<'synthetic' | 'real' | null>(null);
+  const [interviewModeMessageId, setInterviewModeMessageId] = React.useState<string | null>(null);
+  const [readyToCompile, setReadyToCompile] = React.useState(false);
 
   if (!step) {
     return (
@@ -770,7 +808,24 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
   }, [status, messages, step.id, personaSelectConfirmed]);
 
-  // Detect confirmed persona selection from historical messages (persistence across refresh)
+  // Extract interview mode options from last assistant message (Step 3 only, before mode is chosen)
+  React.useEffect(() => {
+    if (step.id !== 'user-research' || interviewMode !== null) return;
+
+    if (status === 'ready' && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.role === 'assistant') {
+        const textParts = lastMsg.parts?.filter((p) => p.type === 'text') || [];
+        const content = textParts.map((p) => p.text).join('\n');
+        const { modeOptions } = parseInterviewMode(content);
+        if (modeOptions.length > 0) {
+          setInterviewModeMessageId(lastMsg.id);
+        }
+      }
+    }
+  }, [status, messages, step.id, interviewMode]);
+
+  // Detect confirmed persona selection + interview mode from historical messages (persistence across refresh)
   const hasCheckedPersonaHistory = React.useRef(false);
   React.useEffect(() => {
     if (hasCheckedPersonaHistory.current || step.id !== 'user-research') return;
@@ -782,7 +837,15 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       const content = textParts.map((p) => p.text).join('');
       if (content.startsWith("I'd like to interview these personas:")) {
         setPersonaSelectConfirmed(true);
-        break;
+      }
+      if (content.includes("I'd like to use AI Interviews")) {
+        setInterviewMode('synthetic');
+      }
+      if (content.includes("I'd like to use Real Interviews")) {
+        setInterviewMode('real');
+      }
+      if (content.includes('[COMPILE_READY]')) {
+        setReadyToCompile(true);
       }
     }
   }, [messages, step.id]);
@@ -1629,7 +1692,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
               // Assistant message — strip all markup
               const { cleanContent: noSuggestions } = parseSuggestions(content);
-              const { cleanContent: noPersonaSelect } = parsePersonaSelect(noSuggestions);
+              const { cleanContent: noInterviewMode } = parseInterviewMode(noSuggestions);
+              const { cleanContent: noPersonaSelect } = parsePersonaSelect(noInterviewMode);
               const { cleanContent: noThemeSort } = parseThemeSortTrigger(noPersonaSelect);
               const { cleanContent: noDeletes } = parseCanvasDeletes(noThemeSort);
               const { cleanContent: noClusters } = parseClusterSuggestions(noDeletes);
@@ -1641,15 +1705,49 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               const { cleanContent: noLeakedTags } = stripLeakedTags(noConceptCards);
               const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noLeakedTags);
               const isPersonaSelectMessage = message.id === personaSelectMessageId;
+              const isInterviewModeMessage = message.id === interviewModeMessageId;
               const personaIntro = detectPersonaIntro(content);
+              // Separate "X down, Y to go" counter from persona answer body
+              const questionCountMatch = finalContent.match(/(?:That's\s+)?\d+\s+down,\s+\d+\s+to\s+go\s+with\s+me\.?/i);
+              const contentAfterCount = questionCountMatch
+                ? finalContent.replace(questionCountMatch[0], '').trim()
+                : finalContent;
+              const questionCountLine = questionCountMatch ? questionCountMatch[0].trim() : null;
+
+              // Split transition messages: content before 🎭 intro vs after
+              // This ensures the PersonaInterrupt banner appears between the outgoing
+              // persona's final answer and the incoming persona's introduction
+              let beforeIntro = contentAfterCount;
+              let afterIntro: string | null = null;
+              if (personaIntro) {
+                const emojiIdx = contentAfterCount.indexOf('🎭');
+                if (emojiIdx > 0) {
+                  beforeIntro = contentAfterCount.slice(0, emojiIdx).trim();
+                  afterIntro = contentAfterCount.slice(emojiIdx).trim();
+                }
+              }
+
               return (
                 <div key={`${message.id}-${index}`}>
-                  {personaIntro && <PersonaInterrupt personaName={personaIntro.personaName} />}
+                  {/* Pure intro message (not a transition) — show banner at top */}
+                  {personaIntro && !afterIntro && <PersonaInterrupt personaName={personaIntro.personaName} />}
                   <div className="flex items-start">
                   <div className="flex-1">
                     <div className="text-base prose prose-base dark:prose-invert max-w-none">
-                      <ReactMarkdown>{finalContent}</ReactMarkdown>
+                      <ReactMarkdown>{beforeIntro}</ReactMarkdown>
                     </div>
+                    {questionCountLine && (
+                      <p className="mt-4 text-sm text-muted-foreground italic">{questionCountLine}</p>
+                    )}
+                    {/* Transition message — banner + new persona intro after the previous answer */}
+                    {personaIntro && afterIntro && (
+                      <>
+                        <PersonaInterrupt personaName={personaIntro.personaName} />
+                        <div className="text-base prose prose-base dark:prose-invert max-w-none">
+                          <ReactMarkdown>{afterIntro}</ReactMarkdown>
+                        </div>
+                      </>
+                    )}
                     {isCanvasStep && (() => {
                       const nonGridItems = canvasItems.filter(item => !item.isGridItem);
                       // Filter out items already on the board — hide duplicates entirely
@@ -1672,6 +1770,36 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                               </button>
                             ))}
                           </div>
+                        </div>
+                      );
+                    })()}
+                    {/* Interview mode selection (Step 3 — before persona select) */}
+                    {isInterviewModeMessage && !interviewMode && (() => {
+                      const { modeOptions } = parseInterviewMode(content);
+                      if (modeOptions.length === 0) return null;
+                      return (
+                        <div className="mt-3 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                          {modeOptions.map((option) => (
+                            <button
+                              key={option.id}
+                              disabled={isLoading}
+                              onClick={async () => {
+                                setInterviewMode(option.id);
+                                setQuickAck(getRandomAck());
+                                await flushCanvasToDb();
+                                sendMessage({
+                                  role: 'user',
+                                  parts: [{ type: 'text', text: `I'd like to use ${option.label}` }],
+                                });
+                              }}
+                              className="cursor-pointer rounded-xl border border-olive-300 bg-card p-4 text-left shadow-sm transition-all hover:border-olive-500 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:border-olive-500"
+                            >
+                              <span className="text-sm font-semibold text-foreground">{option.label}</span>
+                              {option.description && (
+                                <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+                              )}
+                            </button>
+                          ))}
                         </div>
                       );
                     })()}
@@ -1775,13 +1903,14 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                             disabled={personaSelections.size === 0 || isLoading}
                             onClick={async () => {
                               const selectedNames = [...personaSelections];
-                              // Add selected personas as canvas items
-                              for (const name of selectedNames) {
+                              // Add selected personas as canvas items with distinct colors
+                              for (let i = 0; i < selectedNames.length; i++) {
+                                const name = selectedNames[i];
                                 const persona = personaOptions.find(p => p.name === name);
                                 const text = persona?.description
                                   ? `${name} — ${persona.description}`
                                   : name;
-                                handleAddSingleItem({ text });
+                                handleAddSingleItem({ text, color: PERSONA_CARD_COLORS[i % PERSONA_CARD_COLORS.length] });
                               }
                               setPersonaSelectConfirmed(true);
                               setQuickAck(getRandomAck());
@@ -1862,32 +1991,11 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               </div>
             )}
 
-            {/* Suggestion pills — inline after last AI response */}
-            {suggestions.length > 0 && (() => {
-              const isInterviewMode = step.id === 'user-research' && personaSelectConfirmed;
-              // In interview mode, hide behind a single "Give me a suggestion" pill
-              if (isInterviewMode && !suggestionsExpanded) {
-                return (
-                  <div className="space-y-1.5 pt-1">
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        disabled={isLoading}
-                        onClick={() => setSuggestionsExpanded(true)}
-                        className={cn(
-                          'cursor-pointer inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors',
-                          'disabled:cursor-not-allowed disabled:opacity-50'
-                        )}
-                      >
-                        <Sparkles className="h-3.5 w-3.5" />
-                        Give me a suggestion
-                      </button>
-                    </div>
-                    <p className="text-xs text-muted-foreground pl-1">Stuck? Click above for interview question ideas, or type your own.</p>
-                  </div>
-                );
-              }
-              return (
-                <div className="space-y-1.5 pt-1">
+            {/* Synthetic interview mode: always show "your turn" prompt + suggestion button */}
+            {step.id === 'user-research' && personaSelectConfirmed && interviewMode !== 'real' && status === 'ready' && messages.length > 0 && !justConfirmed && (
+              <div className="space-y-2 pt-2">
+                {/* Expanded suggestions (when available and user clicked the button) */}
+                {suggestionsExpanded && suggestions.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {suggestions.map((suggestion, i) => (
                       <button
@@ -1912,14 +2020,92 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                       </button>
                     ))}
                   </div>
-                  <p className="text-xs text-muted-foreground pl-1">
-                    {isInterviewMode
-                      ? 'Try one of these questions, or ask your own.'
-                      : 'Use the suggested questions above or type your own below.'}
-                  </p>
+                )}
+                {/* Always-visible suggestion button — expands instantly if suggestions exist, asks AI if not */}
+                {!suggestionsExpanded && (
+                  <div>
+                    <button
+                      disabled={isLoading}
+                      onClick={async () => {
+                        if (suggestions.length > 0) {
+                          setSuggestionsExpanded(true);
+                        } else {
+                          setQuickAck(getRandomAck());
+                          await flushCanvasToDb();
+                          sendMessage({
+                            role: 'user',
+                            parts: [{ type: 'text', text: '[SUGGEST_QUESTIONS] Give me some question ideas for this persona.' }],
+                          });
+                        }
+                      }}
+                      className={cn(
+                        'cursor-pointer inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors',
+                        'disabled:cursor-not-allowed disabled:opacity-50'
+                      )}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Give me a suggestion
+                    </button>
+                  </div>
+                )}
+                <p className="text-sm font-medium text-foreground pl-1">Your turn — give me your next question.</p>
+              </div>
+            )}
+
+            {/* Suggestion pills — inline after last AI response (non-interview mode) */}
+            {suggestions.length > 0 && !(step.id === 'user-research' && personaSelectConfirmed) && (
+              <div className="space-y-1.5 pt-1">
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.map((suggestion, i) => (
+                    <button
+                      key={i}
+                      disabled={isLoading}
+                      onClick={async () => {
+                        setSuggestions([]);
+                        setQuickAck(getRandomAck());
+                        await flushCanvasToDb();
+                        sendMessage({
+                          role: 'user',
+                          parts: [{ type: 'text', text: suggestion }],
+                        });
+                      }}
+                      className={cn(
+                        'cursor-pointer rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors',
+                        'disabled:cursor-not-allowed disabled:opacity-50'
+                      )}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
                 </div>
-              );
-            })()}
+                <p className="text-xs text-muted-foreground pl-1">Use the suggested questions above or type your own below.</p>
+              </div>
+            )}
+
+            {/* Real interviews: "I'm ready to compile" button */}
+            {step.id === 'user-research' && interviewMode === 'real' && personaSelectConfirmed && !readyToCompile && status === 'ready' && (
+              <div className="mx-auto max-w-sm rounded-xl border border-olive-200 bg-olive-50/60 p-4 text-center dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Added your interview insights and grouped them by persona? Let me compile and organize them.
+                </p>
+                <button
+                  disabled={isLoading}
+                  onClick={async () => {
+                    setReadyToCompile(true);
+                    setQuickAck(getRandomAck());
+                    await flushCanvasToDb();
+                    sendMessage({
+                      role: 'user',
+                      parts: [{ type: 'text', text: "[COMPILE_READY] I'm ready for you to compile my research insights." }],
+                    });
+                  }}
+                  className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-white px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  I&apos;m ready to compile
+                </button>
+              </div>
+            )}
 
             {/* Proactive theme sort card — stakeholder mapping, 5+ items, not yet sorted */}
             {step.id === 'stakeholder-mapping' && status === 'ready' && !hasThemeSorted &&

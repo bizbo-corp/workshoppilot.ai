@@ -294,7 +294,11 @@ Keep item text brief (max 80 characters — fits on a post-it note).`;
 Interview insights (during interviews): [CANVAS_ITEM: insight, Cluster: Persona Name, Color: pink]
 The Cluster value must exactly match the persona's working name (the text before the dash in the persona card).
 Do NOT use [CANVAS_ITEM] for the initial persona selection — use [PERSONA_SELECT] markup instead (see step instructions).
-Keep item text brief (max 80 characters).`;
+Keep item text brief (max 80 characters).
+
+During the compile phase (real interviews), you may also use [CLUSTER] markup to organize unclustered user post-its:
+[CLUSTER: Persona Name | insight text 1 | insight text 2]
+This groups the listed items under the persona name on the canvas. Only reference items that already exist on the canvas.`;
     } else if (stepId === "sense-making") {
       prompt += `
 
