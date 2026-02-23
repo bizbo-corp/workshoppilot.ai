@@ -10,6 +10,7 @@ import { IdeaSelection } from './idea-selection';
 import { BrainRewritingCanvas } from './brain-rewriting-canvas';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { fireConfetti } from '@/lib/utils/confetti';
 import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, Zap, CheckCircle2, SkipForward, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
@@ -68,6 +69,15 @@ export function IdeationSubStepContainer({
   const [artifactConfirmed, setArtifactConfirmed] = React.useState(
     stepStatus === 'complete' && initialArtifact !== null
   );
+
+  // Fire confetti when user explicitly confirms (not on page load for already-complete steps)
+  const prevConfirmed = React.useRef(artifactConfirmed);
+  React.useEffect(() => {
+    if (artifactConfirmed && !prevConfirmed.current) {
+      fireConfetti();
+    }
+    prevConfirmed.current = artifactConfirmed;
+  }, [artifactConfirmed]);
 
   // Canvas state
   const mindMapNodes = useCanvasStore(state => state.mindMapNodes);
@@ -519,6 +529,7 @@ export function IdeationSubStepContainer({
         workshopId={workshopId}
         currentStepOrder={8}
         artifactConfirmed={artifactConfirmed}
+        stepExplicitlyConfirmed={artifactConfirmed}
         stepStatus={stepStatus}
         isAdmin={isAdmin}
         onReset={onReset}

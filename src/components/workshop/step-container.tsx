@@ -521,6 +521,7 @@ export function StepContainer({
           workshopId={workshopId}
           currentStepOrder={stepOrder}
           artifactConfirmed={effectiveConfirmed}
+          stepExplicitlyConfirmed={artifactConfirmed}
           stepStatus={stepStatus}
           isAdmin={isAdmin}
           onReset={() => setShowResetDialog(true)}
@@ -738,6 +739,7 @@ export function StepContainer({
         workshopId={workshopId}
         currentStepOrder={stepOrder}
         artifactConfirmed={effectiveConfirmed}
+        stepExplicitlyConfirmed={artifactConfirmed}
         stepStatus={stepStatus}
         isAdmin={isAdmin}
         onReset={() => setShowResetDialog(true)}

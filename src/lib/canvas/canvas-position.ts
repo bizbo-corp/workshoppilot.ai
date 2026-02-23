@@ -14,6 +14,19 @@ import { distributeCardsInZone, type EmpathyZoneConfig, type EmpathyZone } from 
 export const POST_IT_WIDTH = 160;
 export const POST_IT_HEIGHT = 100;
 
+/**
+ * Compute post-it dimensions that fit the text content.
+ * Short text (< 40 chars) gets the default 160x100.
+ * Longer text scales up proportionally, capped at 360x240.
+ */
+export function computePostItSize(text: string): { width: number; height: number } {
+  const len = text.length;
+  if (len <= 40) return { width: POST_IT_WIDTH, height: POST_IT_HEIGHT };
+  if (len <= 80) return { width: 220, height: 120 };
+  if (len <= 140) return { width: 280, height: 150 };
+  return { width: 360, height: 200 };
+}
+
 /** Columns per row in cluster layout */
 const CLUSTER_COLS = 3;
 /** Gap between items in cluster layout */
@@ -162,10 +175,17 @@ export function computeCanvasPosition(
       );
       const sameRingCount = sameRingPostIts.length;
 
+      // Place cards at the midpoint of the ring BAND (between inner and outer boundaries),
+      // not on the boundary circle itself.
+      const ringIndex = ringConfig.rings.findIndex((r) => r.id === ringId);
+      const innerBoundary = ringIndex > 0 ? ringConfig.rings[ringIndex - 1].radius : 0;
+      const outerBoundary = ring.radius;
+      const bandMidpoint = (innerBoundary + outerBoundary) / 2;
+
       // Get positions for all cards in this ring (including the new one)
       const positions = distributeCardsOnRing(
         sameRingCount + 1,
-        ring.radius,
+        bandMidpoint,
         ringConfig.center,
       );
 
@@ -294,9 +314,13 @@ export function computeCanvasPosition(
           const sameRingPostIts = existingPostIts.filter(
             (p) => p.cellAssignment?.row === parent.cellAssignment?.row,
           );
+          // Place at band midpoint, not on the boundary circle
+          const parentRingIndex = ringConfig.rings.findIndex((r) => r.id === parent.cellAssignment?.row);
+          const innerBound = parentRingIndex > 0 ? ringConfig.rings[parentRingIndex - 1].radius : 0;
+          const midRadius = (innerBound + parentRing.radius) / 2;
           const positions = distributeCardsOnRing(
             sameRingPostIts.length + 1,
-            parentRing.radius,
+            midRadius,
             ringConfig.center,
           );
           return {
@@ -306,13 +330,11 @@ export function computeCanvasPosition(
         }
       }
 
-      // Non-ring fallback: place in 2-col grid below parent
-      const siblings = existingPostIts.filter(
-        (p) => p.id !== parent.id
-          && Math.abs(p.position.x - parent.position.x) < (POST_IT_WIDTH + 20) * 3
-          && Math.abs(p.position.y - parent.position.y) < (POST_IT_HEIGHT + 20) * 3,
+      // Non-ring fallback: count siblings by matching cluster attribute
+      const clusterSiblings = existingPostIts.filter(
+        (p) => p.cluster?.toLowerCase() === clusterLower,
       );
-      const childIdx = siblings.length;
+      const childIdx = clusterSiblings.length;
       const col = childIdx % 2;
       const row = Math.floor(childIdx / 2);
 
@@ -324,6 +346,21 @@ export function computeCanvasPosition(
         quadrant: parent.quadrant,
       };
     }
+  }
+
+  // --- User Research: horizontal persona card layout ---
+  if (stepId === 'user-research' && !metadata.cluster && !metadata.quadrant && !metadata.ring && !metadata.row) {
+    const personaCards = existingPostIts.filter(
+      (p) => !p.cluster && (!p.type || p.type === 'postIt'),
+    );
+    const idx = personaCards.length;
+    const PERSONA_SPACING = 500;
+    return {
+      position: {
+        x: idx * PERSONA_SPACING,
+        y: 0,
+      },
+    };
   }
 
   // --- Fallback: stagger from (50, 50) ---
@@ -431,9 +468,12 @@ export function computeThemeSortPositions(
       const cluster = clusterList[i];
       const angle = startAngle + i * angleStep;
 
-      // Anchor point on ring circumference
-      const anchorX = ringConfig.center.x + ring.radius * Math.cos(angle);
-      const anchorY = ringConfig.center.y + ring.radius * Math.sin(angle);
+      // Anchor point at the midpoint of the ring band (not on the boundary)
+      const ringIdx = ringConfig.rings.findIndex((r) => r.id === ringId);
+      const innerBound = ringIdx > 0 ? ringConfig.rings[ringIdx - 1].radius : 0;
+      const midRadius = (innerBound + ring.radius) / 2;
+      const anchorX = ringConfig.center.x + midRadius * Math.cos(angle);
+      const anchorY = ringConfig.center.y + midRadius * Math.sin(angle);
 
       // Compute cluster block width to center parent
       const childCount = cluster.children.length;

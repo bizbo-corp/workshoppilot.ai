@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, RotateCcw, Plus, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import { advanceToNextStep } from '@/actions/workshop-actions';
 import { STEPS } from '@/lib/workshop/step-metadata';
 
@@ -24,6 +25,8 @@ interface StepNavigationProps {
   workshopId: string;
   currentStepOrder: number;
   artifactConfirmed?: boolean;
+  /** Explicit user confirmation (Accept button click) — controls the shimmer effect */
+  stepExplicitlyConfirmed?: boolean;
   stepStatus?: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
   isAdmin?: boolean;
   onReset?: () => void;
@@ -38,6 +41,7 @@ export function StepNavigation({
   workshopId,
   currentStepOrder,
   artifactConfirmed = false,
+  stepExplicitlyConfirmed = false,
   stepStatus,
   isAdmin,
   onReset,
@@ -172,6 +176,8 @@ export function StepNavigation({
           onClick={handleNext}
           disabled={isNavigating}
           variant={artifactConfirmed ? 'default' : 'outline'}
+          size={stepExplicitlyConfirmed ? 'lg' : 'default'}
+          className={cn(stepExplicitlyConfirmed && !isNavigating && 'btn-shimmer')}
         >
           {isNavigating ? 'Advancing...' : artifactConfirmed ? 'Next' : 'Skip to Next'}
           {!isNavigating && <ChevronRight className="ml-2 h-4 w-4" />}

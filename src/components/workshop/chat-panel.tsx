@@ -310,12 +310,13 @@ function parseCanvasItems(content: string): { cleanContent: string; canvasItems:
     }
   }
 
-  // Remove both markup formats from content for clean markdown rendering
+  // Remove both markup formats from content for clean markdown rendering.
+  // Use '\n\n' as replacement to preserve paragraph breaks when tags sit between paragraphs.
   let cleanContent = content
     // Tag format
-    .replace(/\s*\[(CANVAS_ITEM|GRID_ITEM)(?:\s+[^\]]*?)?\].*?\[\/(CANVAS_ITEM|GRID_ITEM)\]\s*/g, ' ')
+    .replace(/\s*\[(CANVAS_ITEM|GRID_ITEM)(?:\s+[^\]]*?)?\].*?\[\/(CANVAS_ITEM|GRID_ITEM)\]\s*/g, '\n\n')
     // Shorthand format
-    .replace(/\s*\[CANVAS_ITEM:\s*[^\]]+\]\s*/g, ' ')
+    .replace(/\s*\[CANVAS_ITEM:\s*[^\]]+\]\s*/g, '\n\n')
     .trim();
 
   return { cleanContent, canvasItems: items };
@@ -887,7 +888,11 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
 
     setAddedMessageIds(prev => new Set(prev).add(messageId));
-    setPendingFitView(true);
+    // Don't shift viewport for ring-based canvases — preserve admin default viewport
+    const stepConfigForFitView = getStepCanvasConfig(step.id);
+    if (!stepConfigForFitView.hasRings) {
+      setPendingFitView(true);
+    }
   }, [addedMessageIds, step.id, storeApi, addPostIt, setHighlightedCell, setPendingFitView]);
 
   // Add a single canvas item to the board (click-to-add from chat chip)
@@ -938,7 +943,11 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     });
 
     setAddedItemTexts(prev => new Set(prev).add(normalizedText));
-    setPendingFitView(true);
+    // Don't shift viewport for ring-based canvases — items land within the rings
+    // which are already visible in the admin-configured default viewport
+    if (!stepConfig.hasRings) {
+      setPendingFitView(true);
+    }
   }, [addedItemTexts, step.id, storeApi, addPostIt, setPendingFitView]);
 
   // Manual theme sort triggered by proactive card button
@@ -1582,11 +1591,13 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               const content = textParts.map((part) => part.text).join('\n');
 
               if (message.role === 'user') {
+                // Strip internal markup tags from display
+                const displayContent = content.replace(/\[STEP_CONFIRMED\]\s*/g, '').trim();
                 return (
                   <div key={`${message.id}-${index}`} className="group flex items-start justify-end">
                     <div className="max-w-[80%]">
                       <div className="relative rounded-2xl bg-muted p-3 px-4 text-base text-foreground">
-                        {content}
+                        {displayContent}
                         {isCanvasStep && (
                           <button
                             onClick={() => handleAddUserMessageToCanvas(content)}
@@ -1900,6 +1911,11 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                   onClick={() => {
                     setJustConfirmed(true);
                     onStepConfirm?.();
+                    // Trigger AI congratulatory close by sending a hidden confirm message
+                    sendMessage({
+                      role: 'user',
+                      parts: [{ type: 'text', text: '[STEP_CONFIRMED] I\'m happy with this — wrap it up!' }],
+                    });
                   }}
                   className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-olive-50 px-4 py-2 text-sm font-medium text-olive-800 transition-colors hover:bg-olive-100 dark:border-olive-700 dark:bg-olive-950/30 dark:text-olive-300 dark:hover:bg-olive-900/40"
                 >
@@ -1908,9 +1924,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                 </button>
               </div>
             )}
-            {justConfirmed && status === 'ready' && (
-              <div className="flex flex-col items-center gap-2 pt-2 animate-in fade-in duration-500">
-                <p className="text-sm text-muted-foreground">Confirmed! Tap Next to continue.</p>
+            {justConfirmed && (
+              <div className="flex justify-center pt-2 animate-in fade-in duration-500">
                 <button
                   onClick={async () => {
                     setJustConfirmed(false);
