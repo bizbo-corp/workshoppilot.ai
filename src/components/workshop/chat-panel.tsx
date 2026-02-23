@@ -5,7 +5,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import TextareaAutosize from 'react-textarea-autosize';
 import ReactMarkdown from 'react-markdown';
-import { Send, Loader2, Plus, CheckCircle2, Pencil, Sparkles, UserPlus } from 'lucide-react';
+import { Send, Loader2, Plus, CheckCircle2, Pencil, Sparkles, UserPlus, ArrowRight } from 'lucide-react';
 import { PersonaInterrupt } from './persona-interrupt';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { Button } from '@/components/ui/button';
@@ -1202,6 +1202,25 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     const nonTemplateCanvasItems = canvasItems.filter(item => !item.templateKey);
     const gridItems = nonTemplateCanvasItems.filter(item => item.isGridItem);
     if (gridItems.length > 0 && step.id !== 'persona' && step.id !== 'concept') {
+      // Safety net: if grid items have col IDs that don't match current columns,
+      // auto-derive columns from the grid item metadata (handles missing [JOURNEY_STAGES])
+      if (step.id === 'journey-mapping' && gridItems.some(item => item.col)) {
+        const latestGridColumns = storeApi.getState().gridColumns;
+        // Collect unique col IDs in the order they appear (preserves stage order)
+        const itemColIds: string[] = [];
+        for (const item of gridItems) {
+          if (item.col && !itemColIds.includes(item.col)) itemColIds.push(item.col);
+        }
+        const allMatch = itemColIds.every(colId => latestGridColumns.some(c => c.id === colId));
+        if (!allMatch && itemColIds.length >= 3) {
+          const derivedColumns = itemColIds.map(colId => ({
+            id: colId,
+            label: colId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+            width: 240,
+          }));
+          replaceGridColumns(derivedColumns);
+        }
+      }
       handleAddToWhiteboard(lastMsg.id, gridItems);
     }
 
@@ -2171,12 +2190,52 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
             )}
 
             {/* Suggestion pills — inline after last AI response (non-interview mode) */}
-            {suggestions.length > 0 && !(step.id === 'user-research' && personaSelectConfirmed) && (
-              <div className="space-y-1.5 pt-1">
-                <div className="flex flex-wrap gap-2">
-                  {suggestions.map((suggestion, i) => (
+            {suggestions.length > 0 && !(step.id === 'user-research' && personaSelectConfirmed) && (() => {
+              // Separate "Next" suggestion from others for journey mapping
+              const isNextSuggestion = (s: string) => /^next\b/i.test(s.trim());
+              const nextSuggestion = step.id === 'journey-mapping' ? suggestions.find(isNextSuggestion) : undefined;
+              const otherSuggestions = nextSuggestion ? suggestions.filter(s => s !== nextSuggestion) : suggestions;
+
+              // Compute next row label for journey mapping
+              let nextRowLabel = '';
+              if (nextSuggestion && step.id === 'journey-mapping') {
+                const gridConfig = getStepCanvasConfig('journey-mapping').gridConfig;
+                if (gridConfig) {
+                  const filledRows = new Set(stickyNotes.filter(n => n.cellAssignment?.row).map(n => n.cellAssignment!.row));
+                  const nextRow = gridConfig.rows.find(r => !filledRows.has(r.id));
+                  if (nextRow) nextRowLabel = nextRow.label;
+                }
+              }
+
+              return (
+                <div className="space-y-2 pt-1">
+                  {otherSuggestions.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {otherSuggestions.map((suggestion, i) => (
+                        <button
+                          key={i}
+                          disabled={isLoading}
+                          onClick={async () => {
+                            setSuggestions([]);
+                            setQuickAck(getRandomAck());
+                            await flushCanvasToDb();
+                            sendMessage({
+                              role: 'user',
+                              parts: [{ type: 'text', text: suggestion }],
+                            });
+                          }}
+                          className={cn(
+                            'cursor-pointer rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors',
+                            'disabled:cursor-not-allowed disabled:opacity-50'
+                          )}
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {nextSuggestion ? (
                     <button
-                      key={i}
                       disabled={isLoading}
                       onClick={async () => {
                         setSuggestions([]);
@@ -2184,21 +2243,22 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                         await flushCanvasToDb();
                         sendMessage({
                           role: 'user',
-                          parts: [{ type: 'text', text: suggestion }],
+                          parts: [{ type: 'text', text: 'Next' }],
                         });
                       }}
                       className={cn(
-                        'cursor-pointer rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors',
+                        'cursor-pointer inline-flex items-center gap-2 rounded-full border border-olive-500 bg-olive-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-olive-700 dark:bg-olive-700 dark:border-olive-600 dark:hover:bg-olive-600 transition-colors',
                         'disabled:cursor-not-allowed disabled:opacity-50'
                       )}
                     >
-                      {suggestion}
+                      {nextRowLabel ? `Move on to ${nextRowLabel}` : 'Next'}
+                      <ArrowRight className="h-3.5 w-3.5" />
                     </button>
-                  ))}
+                  ) : null}
+                  <p className="text-xs text-muted-foreground pl-1">Use the suggestions above or type your own below.</p>
                 </div>
-                <p className="text-xs text-muted-foreground pl-1">Use the suggested questions above or type your own below.</p>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Persistent "Pains & Gains" action button — sense-making Phase 1 → Phase 2 transition */}
             {step.id === 'sense-making' &&

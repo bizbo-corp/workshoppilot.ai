@@ -16,6 +16,7 @@ import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertica
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { resetStep, updateStepStatus } from '@/actions/workshop-actions';
 import { getStepByOrder, STEP_CONFIRM_LABELS, STEP_CONFIRM_MIN_ITEMS, areAllPersonasInterviewed } from '@/lib/workshop/step-metadata';
+import { STEP_CANVAS_CONFIGS } from '@/lib/canvas/step-canvas-config';
 import { fireConfetti } from '@/lib/utils/confetti';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -85,6 +86,7 @@ export function StepContainer({
   const setCrazy8sSlots = useCanvasStore((s) => s.setCrazy8sSlots);
   const setMindMapState = useCanvasStore((s) => s.setMindMapState);
   const setConceptCards = useCanvasStore((s) => s.setConceptCards);
+  const gridColumns = useCanvasStore((s) => s.gridColumns);
   const setGridColumns = useCanvasStore((s) => s.setGridColumns);
   const setSelectedSlotIds = useCanvasStore((s) => s.setSelectedSlotIds);
   const personaTemplates = useCanvasStore((s) => s.personaTemplates);
@@ -105,8 +107,17 @@ export function StepContainer({
   const allPersonasInterviewed = step?.id === 'user-research'
     ? areAllPersonasInterviewed(stickyNotes)
     : true;
+  // Journey map: require every cell (row × column) to have at least one grid item
+  const allSwimLanesFilled = step?.id === 'journey-mapping'
+    ? gridColumns.length > 0 && (() => {
+        const gridRows = STEP_CANVAS_CONFIGS['journey-mapping']?.gridConfig?.rows ?? [];
+        return gridRows.length > 0 && gridRows.every((row) =>
+          gridColumns.every((col) =>
+            stickyNotes.some((n) => n.cellAssignment?.row === row.id && n.cellAssignment?.col === col.id)));
+      })()
+    : true;
   const showConfirm = !!confirmLabel && !artifactConfirmed && canvasHasContent
-    && canvasItemCount >= minItems && allPersonasInterviewed;
+    && canvasItemCount >= minItems && allPersonasInterviewed && allSwimLanesFilled;
 
   // Fire confetti when user clicks Accept (not on auto-confirm from canvas content)
   const prevConfirmed = React.useRef(artifactConfirmed);
