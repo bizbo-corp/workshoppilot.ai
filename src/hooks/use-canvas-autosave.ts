@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { saveCanvasState } from '@/actions/canvas-actions';
+import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -55,6 +56,15 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
 
       setSaveStatus('saving');
 
+      // Strip data: URLs from persona avatars before sending to server action.
+      // Data URLs can be several MB and would exceed the body size limit.
+      // Only CDN URLs (from Vercel Blob) should be persisted.
+      const sanitizedPersonaTemplates: PersonaTemplateData[] = personaTemplates.map(
+        (t) => t.avatarUrl?.startsWith('data:')
+          ? { ...t, avatarUrl: undefined }
+          : t
+      );
+
       const result = await saveCanvasState(workshopId, stepId, {
         stickyNotes,
         ...(gridColumns.length > 0 ? { gridColumns } : {}),
@@ -63,7 +73,7 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
         ...(mindMapEdges.length > 0 ? { mindMapEdges } : {}),
         ...(crazy8sSlots.length > 0 ? { crazy8sSlots } : {}),
         ...(conceptCards.length > 0 ? { conceptCards } : {}),
-        ...(personaTemplates.length > 0 ? { personaTemplates } : {}),
+        ...(sanitizedPersonaTemplates.length > 0 ? { personaTemplates: sanitizedPersonaTemplates } : {}),
         ...(hmwCards.length > 0 ? { hmwCards } : {}),
       });
 

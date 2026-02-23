@@ -31,7 +31,7 @@ function buildImagePrompt(persona: {
 
   const nameContext = persona.name ? ` named ${persona.name}` : "";
 
-  const basePrompt = `A high-quality, modern profile avatar of a ${characterDescription}${nameContext}. Minimalist aesthetic, centered composition, soft cinematic studio lighting. Solid pastel background. High-end digital photography style, sharp focus, 8k resolution, clean lines, professional atmosphere. No text, no words, no letters, no watermarks, no logos, no graphics, no overlays, no UI elements — portrait only.`;
+  const basePrompt = `Modern profile avatar of a ${characterDescription}${nameContext}. Minimalist, centered composition, soft studio lighting. Solid pastel background. Clean digital portrait style, sharp focus. No text, no words, no letters, no watermarks, no logos, no graphics, no overlays, no UI elements — portrait only.`;
 
   const personality = persona.archetype
     ? `Archetype: ${persona.archetype}${persona.archetypeRole ? ` — ${persona.archetypeRole}` : ""}.`
@@ -95,7 +95,7 @@ export async function POST(req: Request) {
     const result = await generateImage({
       model: google.image("imagen-4.0-fast-generate-001"),
       prompt,
-      aspectRatio: "16:9",
+      aspectRatio: "1:1",
     });
 
     const base64Data = result.image.base64;

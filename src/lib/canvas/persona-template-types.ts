@@ -1,6 +1,7 @@
 export type PersonaTemplateData = {
   id: string;
   position: { x: number; y: number };
+  personaId?: string;       // Stable AI-assigned ID (e.g. "persona-1") — survives name/archetype renames
   archetype?: string;       // "The Dreamer"
   archetypeRole?: string;   // "Business Leader"
   name?: string;

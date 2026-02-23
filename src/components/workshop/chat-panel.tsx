@@ -451,6 +451,34 @@ function parsePersonaTemplates(content: string): { cleanContent: string; templat
 }
 
 /**
+ * Parse [PERSONA_PLAN][...JSON array...][/PERSONA_PLAN] block from AI content.
+ * Returns clean content (markup removed) and extracted persona plan entries.
+ */
+function parsePersonaPlan(content: string): { cleanContent: string; plan: Array<{ personaId?: string; archetype: string; archetypeRole: string }> } {
+  const match = content.match(/\[PERSONA_PLAN\]([\s\S]*?)\[\/PERSONA_PLAN\]/);
+  if (match) {
+    const cleanContent = content.replace(/\[PERSONA_PLAN\][\s\S]*?\[\/PERSONA_PLAN\]/, '').trim();
+    try {
+      const plan = JSON.parse(match[1].trim());
+      if (Array.isArray(plan)) {
+        return { cleanContent, plan };
+      }
+    } catch {
+      // Skip malformed JSON
+    }
+    return { cleanContent, plan: [] };
+  }
+
+  // Incomplete block (mid-stream): strip from [PERSONA_PLAN] to end
+  if (content.includes('[PERSONA_PLAN]')) {
+    const cleanContent = content.replace(/\[PERSONA_PLAN\][\s\S]*$/, '').trim();
+    return { cleanContent, plan: [] };
+  }
+
+  return { cleanContent: content, plan: [] };
+}
+
+/**
  * Parse [JOURNEY_STAGES]stage1|stage2|stage3[/JOURNEY_STAGES] markup from AI content.
  * Returns clean content and an array of stage labels to replace the grid columns.
  */
@@ -672,6 +700,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const [interviewMode, setInterviewMode] = React.useState<'synthetic' | 'real' | null>(null);
   const [interviewModeMessageId, setInterviewModeMessageId] = React.useState<string | null>(null);
   const [readyToCompile, setReadyToCompile] = React.useState(false);
+  const [personasDone, setPersonasDone] = React.useState(false);
 
   if (!step) {
     return (
@@ -869,6 +898,38 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
   }, [messages, step.id]);
 
+  // Detect "All personas look good — let's move on" from user messages (persona step only)
+  const hasCheckedPersonaDoneHistory = React.useRef(false);
+  React.useEffect(() => {
+    if (step.id !== 'persona' || personasDone) return;
+
+    // Check historical messages on first load
+    if (!hasCheckedPersonaDoneHistory.current) {
+      hasCheckedPersonaDoneHistory.current = true;
+      for (const msg of messages) {
+        if (msg.role !== 'user') continue;
+        const textParts = msg.parts?.filter((p) => p.type === 'text') || [];
+        const content = textParts.map((p) => p.text).join('');
+        if (/personas look good|let'?s move on|I'm done with personas/i.test(content)) {
+          setPersonasDone(true);
+          return;
+        }
+      }
+    }
+
+    // Also detect live messages as they come in
+    if (status === 'ready' && messages.length > 0) {
+      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+      if (lastUserMsg) {
+        const textParts = lastUserMsg.parts?.filter((p) => p.type === 'text') || [];
+        const content = textParts.map((p) => p.text).join('');
+        if (/personas look good|let'?s move on|I'm done with personas/i.test(content)) {
+          setPersonasDone(true);
+        }
+      }
+    }
+  }, [messages, step.id, status, personasDone]);
+
   // Initialize addedMessageIds from history — mark ALL historical assistant messages as processed
   // when canvas already has sticky notes (restored from DB). The saved canvas state is the source
   // of truth — we must NOT re-process historical [CANVAS_ITEM], [CLUSTER], or [THEME_SORT]
@@ -889,13 +950,14 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       const { shouldSort } = parseThemeSortTrigger(content);
       const { deleteTexts } = parseCanvasDeletes(content);
       const { templates: personaTemplateParsed } = parsePersonaTemplates(content);
+      const { plan: personaPlanParsed } = parsePersonaPlan(content);
       const { stages: journeyStages } = parseJourneyStages(content);
       const { cards: hmwCardParsed } = parseHmwCards(content);
       const { nodes: mindMapNodesParsed } = parseMindMapNodes(content);
       const { cards: conceptCardParsed } = parseConceptCards(content);
       if (shouldSort) hadHistoricalSort = true;
       // Mark any message that contains canvas-modifying markup as already processed
-      if (canvasItems.length > 0 || clusters.length > 0 || shouldSort || deleteTexts.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || mindMapNodesParsed.length > 0 || conceptCardParsed.length > 0) {
+      if (canvasItems.length > 0 || clusters.length > 0 || shouldSort || deleteTexts.length > 0 || personaTemplateParsed.length > 0 || personaPlanParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || mindMapNodesParsed.length > 0 || conceptCardParsed.length > 0) {
         ids.add(msg.id);
       }
     }
@@ -1076,10 +1138,37 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     const { deleteTexts } = parseCanvasDeletes(content);
     const { clusters } = parseClusterSuggestions(content);
     const { templates: personaTemplateParsed } = parsePersonaTemplates(content);
+    const { plan: personaPlanParsed } = parsePersonaPlan(content);
     const { stages: journeyStages } = parseJourneyStages(content);
     const { cards: hmwCardParsed } = parseHmwCards(content);
     const { nodes: mindMapNodesParsed } = parseMindMapNodes(content);
     const { cards: conceptCardParsed } = parseConceptCards(content);
+
+    // Process persona plan — create skeleton cards for each archetype
+    if (personaPlanParsed.length > 0 && step.id === 'persona') {
+      const latestTemplates = storeApi.getState().personaTemplates;
+      const PERSONA_CARD_WIDTH = 680;
+      const PERSONA_GAP = 40;
+      let createdCount = 0;
+      for (const entry of personaPlanParsed) {
+        // Guard: don't create if an existing card already has this personaId or archetype
+        const alreadyExists = latestTemplates.some(t =>
+          (entry.personaId && t.personaId === entry.personaId) || t.archetype === entry.archetype
+        );
+        if (alreadyExists) continue;
+        const offsetX = (latestTemplates.length + createdCount) * (PERSONA_CARD_WIDTH + PERSONA_GAP);
+        addPersonaTemplate({
+          position: { x: offsetX, y: 0 },
+          personaId: entry.personaId,
+          archetype: entry.archetype,
+          archetypeRole: entry.archetypeRole,
+        });
+        createdCount++;
+      }
+      if (createdCount > 0) {
+        setPendingFitView(true);
+      }
+    }
 
     // Process journey stage replacements — update grid columns to match template
     if (journeyStages.length >= 3 && step.id === 'journey-mapping') {
@@ -1130,14 +1219,20 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         {}
       );
 
-      // Find matching template: by name, or fall back to a blank (unfilled) template
-      const matchByName = merged.name
+      // Find matching template: personaId (strongest), name, archetype, or blank fallback
+      const matchByPersonaId = merged.personaId
+        ? latestTemplates.find(t => t.personaId === merged.personaId)
+        : undefined;
+      const matchByName = !matchByPersonaId && merged.name
         ? latestTemplates.find(t => t.name === merged.name)
         : undefined;
-      const blankTemplate = !matchByName
-        ? latestTemplates.find(t => !t.name)
+      const matchByArchetype = !matchByPersonaId && !matchByName && merged.archetype
+        ? latestTemplates.find(t => t.archetype === merged.archetype)
         : undefined;
-      const target = matchByName || blankTemplate;
+      const blankTemplate = !matchByPersonaId && !matchByName && !matchByArchetype
+        ? latestTemplates.find(t => !t.name && !t.archetype)
+        : undefined;
+      const target = matchByPersonaId || matchByName || matchByArchetype || blankTemplate;
 
       if (target) {
         updatePersonaTemplate(target.id, merged);
@@ -1404,7 +1499,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
 
     // Mark as processed if we did any work (avoid re-processing non-sticky note items)
-    const hasNonStickyNoteWork = deleteTexts.length > 0 || clusters.length > 0 || personaTemplateParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || mindMapNodesParsed.length > 0 || conceptCardParsed.length > 0 || gridItems.length > 0 || templateItems.length > 0;
+    const hasNonStickyNoteWork = deleteTexts.length > 0 || clusters.length > 0 || personaTemplateParsed.length > 0 || personaPlanParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || mindMapNodesParsed.length > 0 || conceptCardParsed.length > 0 || gridItems.length > 0 || templateItems.length > 0;
     const hasRegularCanvasItems = nonTemplateCanvasItems.some(item => !item.isGridItem);
     if (hasNonStickyNoteWork || (hasRegularCanvasItems && !addedMessageIds.has(lastMsg.id))) {
       setAddedMessageIds(prev => new Set(prev).add(lastMsg.id));
@@ -1717,7 +1812,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               const { cleanContent: noDeletes } = parseCanvasDeletes(noThemeSort);
               const { cleanContent: noClusters } = parseClusterSuggestions(noDeletes);
               const { cleanContent: noPersonaTemplates } = parsePersonaTemplates(noClusters);
-              const { cleanContent: noJourneyStages } = parseJourneyStages(noPersonaTemplates);
+              const { cleanContent: noPersonaPlan } = parsePersonaPlan(noPersonaTemplates);
+              const { cleanContent: noJourneyStages } = parseJourneyStages(noPersonaPlan);
               const { cleanContent: noHmwCards } = parseHmwCards(noJourneyStages);
               const { cleanContent: noMindMapNodes } = parseMindMapNodes(noHmwCards);
               const { cleanContent: noConceptCards } = parseConceptCards(noMindMapNodes);
@@ -2186,8 +2282,13 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
             )}
 
             {/* In-chat accept / edit buttons */}
-            {showStepConfirm && status === 'ready' && !justConfirmed && (
-              <div className="flex justify-center pt-2">
+            {showStepConfirm && status === 'ready' && !justConfirmed && !(step.id === 'persona' && !personasDone) && (
+              <div className="flex flex-col items-center gap-2 pt-2">
+                {step.id === 'persona' && (
+                  <p className="text-sm text-muted-foreground text-center max-w-xs">
+                    You can edit any field on the persona cards — name, age, job, insights, narrative, and quote — directly on the canvas.
+                  </p>
+                )}
                 <button
                   onClick={() => {
                     setJustConfirmed(true);

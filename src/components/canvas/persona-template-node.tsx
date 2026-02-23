@@ -118,6 +118,7 @@ function HeroSection({
   archetypeRole,
   name,
   isGenerating,
+  isSkeleton,
   onGenerate,
   onFieldChange,
   nodeId,
@@ -127,6 +128,7 @@ function HeroSection({
   archetypeRole?: string;
   name?: string;
   isGenerating: boolean;
+  isSkeleton?: boolean;
   onGenerate?: () => void;
   onFieldChange?: (id: string, field: string, value: string) => void;
   nodeId: string;
@@ -145,6 +147,14 @@ function HeroSection({
           style={{ backgroundColor: SAGE.headerBg }}
         >
           <Sparkles className="h-12 w-12 animate-spin text-white/60" style={{ animationDuration: '3s' }} />
+        </div>
+      ) : isSkeleton ? (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center gap-3"
+          style={{ backgroundColor: SAGE.headerBg }}
+        >
+          <User className="h-16 w-16 text-white/30 animate-pulse" />
+          <span className="text-sm font-medium text-white/40 animate-pulse">Awaiting generation...</span>
         </div>
       ) : hasImage ? (
         <button
@@ -341,6 +351,7 @@ function EditableField({
 
 export const PersonaTemplateNode = memo(
   ({ data, id, selected }: NodeProps<PersonaTemplateNodeType>) => {
+    const isSkeleton = !!data.archetype && !data.name;
     const hasEmpathyData = EMPATHY_ZONES.some(
       z => data[z.key as keyof PersonaTemplateData]
     );
@@ -366,6 +377,7 @@ export const PersonaTemplateNode = memo(
           borderWidth: 2,
           borderStyle: 'solid',
           borderColor: selected ? SAGE.borderSelected : SAGE.border,
+          opacity: isSkeleton ? 0.6 : 1,
         }}
       >
         <Handle
@@ -381,6 +393,7 @@ export const PersonaTemplateNode = memo(
           archetypeRole={data.archetypeRole}
           name={data.name}
           isGenerating={isGenerating}
+          isSkeleton={isSkeleton}
           onGenerate={handleGenerateAvatar}
           onFieldChange={data.onFieldChange}
           nodeId={id}
@@ -399,37 +412,44 @@ export const PersonaTemplateNode = memo(
             avatarUrl={data.avatarUrl}
             isGenerating={isGenerating}
           />
-          <div className="flex-1 space-y-0.5">
-            <div className="flex items-baseline gap-2">
-              <User className="h-4 w-4 shrink-0 translate-y-[1px]" style={{ color: 'var(--persona-text-muted)' }} />
-              <EditableField
-                value={data.name}
-                placeholder="Full Name"
-                onBlur={(v) => data.onFieldChange?.(id, 'name', v)}
-                className="text-base font-semibold text-white placeholder:text-white/40 focus:bg-white/10"
-                autoWidth
-                minWidth={80}
-              />
-              <span className="shrink-0 text-base font-semibold text-white/80">,</span>
-              <EditableField
-                value={data.age ? String(data.age) : ''}
-                placeholder="Age"
-                onBlur={(v) => data.onFieldChange?.(id, 'age', v)}
-                className="text-base font-semibold text-white placeholder:text-white/40 focus:bg-white/10"
-                autoWidth
-                minWidth={28}
-              />
+          {isSkeleton ? (
+            <div className="flex-1 space-y-2">
+              <div className="h-5 w-32 rounded bg-white/20 animate-pulse" />
+              <div className="h-4 w-48 rounded bg-white/10 animate-pulse" />
             </div>
-            <div className="flex items-center gap-2">
-              <Briefcase className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--persona-text-muted)' }} />
-              <EditableField
-                value={data.job}
-                placeholder="Job Title"
-                onBlur={(v) => data.onFieldChange?.(id, 'job', v)}
-                className="text-sm text-white/70 placeholder:text-white/30 focus:bg-white/10"
-              />
+          ) : (
+            <div className="flex-1 space-y-0.5">
+              <div className="flex items-baseline gap-2">
+                <User className="h-4 w-4 shrink-0 translate-y-[1px]" style={{ color: 'var(--persona-text-muted)' }} />
+                <EditableField
+                  value={data.name}
+                  placeholder="Full Name"
+                  onBlur={(v) => data.onFieldChange?.(id, 'name', v)}
+                  className="text-base font-semibold text-white placeholder:text-white/40 focus:bg-white/10"
+                  autoWidth
+                  minWidth={80}
+                />
+                <span className="shrink-0 text-base font-semibold text-white/80">,</span>
+                <EditableField
+                  value={data.age ? String(data.age) : ''}
+                  placeholder="Age"
+                  onBlur={(v) => data.onFieldChange?.(id, 'age', v)}
+                  className="text-base font-semibold text-white placeholder:text-white/40 focus:bg-white/10"
+                  autoWidth
+                  minWidth={28}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Briefcase className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--persona-text-muted)' }} />
+                <EditableField
+                  value={data.job}
+                  placeholder="Job Title"
+                  onBlur={(v) => data.onFieldChange?.(id, 'job', v)}
+                  className="text-sm text-white/70 placeholder:text-white/30 focus:bg-white/10"
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* ── Empathy Map Insights (6 zones in 3x2 grid) ── */}
@@ -466,14 +486,18 @@ export const PersonaTemplateNode = memo(
                     {label}
                   </span>
                 </div>
-                <EditableField
-                  value={semicolonsToParagraphs(data[key as keyof PersonaTemplateData] as string | undefined)}
-                  placeholder="Awaiting insights..."
-                  onBlur={(v) => data.onFieldChange?.(id, key, v)}
-                  className="text-xs leading-relaxed"
-                  multiline
-                  autoResize
-                />
+                {isSkeleton ? (
+                  <div className="h-3 w-20 rounded animate-pulse mt-1" style={{ backgroundColor: 'currentColor', opacity: 0.15 }} />
+                ) : (
+                  <EditableField
+                    value={semicolonsToParagraphs(data[key as keyof PersonaTemplateData] as string | undefined)}
+                    placeholder="Awaiting insights..."
+                    onBlur={(v) => data.onFieldChange?.(id, key, v)}
+                    className="text-xs leading-relaxed"
+                    multiline
+                    autoResize
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -490,14 +514,21 @@ export const PersonaTemplateNode = memo(
               Narrative
             </h4>
           </div>
-          <EditableField
-            value={data.narrative}
-            placeholder="Awaiting AI draft..."
-            onBlur={(v) => data.onFieldChange?.(id, 'narrative', v)}
-            className="text-sm leading-relaxed"
-            multiline
-            autoResize
-          />
+          {isSkeleton ? (
+            <div className="space-y-2">
+              <div className="h-3 w-full rounded animate-pulse" style={{ backgroundColor: 'currentColor', opacity: 0.12 }} />
+              <div className="h-3 w-3/4 rounded animate-pulse" style={{ backgroundColor: 'currentColor', opacity: 0.12 }} />
+            </div>
+          ) : (
+            <EditableField
+              value={data.narrative}
+              placeholder="Awaiting AI draft..."
+              onBlur={(v) => data.onFieldChange?.(id, 'narrative', v)}
+              className="text-sm leading-relaxed"
+              multiline
+              autoResize
+            />
+          )}
         </div>
 
         {/* ── Quote ── */}
@@ -512,14 +543,18 @@ export const PersonaTemplateNode = memo(
             className="rounded-xl py-3 pl-5 pr-4"
             style={{ backgroundColor: 'var(--persona-quote-bg)', borderLeft: `4px solid ${SAGE.avatarBg}` }}
           >
-            <EditableField
-              value={data.quote}
-              placeholder="Awaiting AI draft..."
-              onBlur={(v) => data.onFieldChange?.(id, 'quote', v)}
-              className="text-sm italic leading-relaxed"
-              multiline
-              autoResize
-            />
+            {isSkeleton ? (
+              <div className="h-3 w-48 rounded animate-pulse" style={{ backgroundColor: 'currentColor', opacity: 0.12 }} />
+            ) : (
+              <EditableField
+                value={data.quote}
+                placeholder="Awaiting AI draft..."
+                onBlur={(v) => data.onFieldChange?.(id, 'quote', v)}
+                className="text-sm italic leading-relaxed"
+                multiline
+                autoResize
+              />
+            )}
           </div>
         </div>
 

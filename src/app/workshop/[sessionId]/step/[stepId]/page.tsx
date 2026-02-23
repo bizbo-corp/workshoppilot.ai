@@ -255,14 +255,8 @@ export default async function StepPage({ params }: StepPageProps) {
     }
   }
 
-  // Lazy migration: Create blank persona template card (AI fills all fields at once)
-  if (step.id === 'persona' && initialCanvasStickyNotes.length === 0 && initialPersonaTemplates.length === 0) {
-    const template: PersonaTemplateData = {
-      id: crypto.randomUUID(),
-      position: { x: 0, y: 0 },
-    };
-    initialPersonaTemplates = [template];
-  }
+  // Persona skeleton cards are created from [PERSONA_PLAN] in chat-panel.tsx when the AI's first message arrives.
+  // No blank seed needed here.
 
   // Lazy migration: Create skeleton HMW card for reframe step
   if (step.id === 'reframe' && initialHmwCards.length === 0) {
