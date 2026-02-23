@@ -47,6 +47,14 @@ const EMPATHY_ZONES = [
 ] as const;
 
 /**
+ * Converts semicolon-separated text to paragraph-separated (newline-delimited)
+ */
+function semicolonsToParagraphs(text?: string): string | undefined {
+  if (!text) return text;
+  return text.replace(/;\s*/g, '\n\n').trim();
+}
+
+/**
  * Extracts initials from a name string
  */
 function getInitials(name?: string): string {
@@ -56,112 +64,101 @@ function getInitials(name?: string): string {
 }
 
 /**
- * PersonaAvatar — handles three states:
- * - No image: initials circle with sparkle hover overlay
- * - Loading: shimmer/pulse animation
- * - Has image: 48px thumbnail (used in identity row when portrait section is showing)
+ * Small circular avatar for the profile bar — shows initials, image thumbnail, or loading state
  */
-function PersonaAvatar({
+function ProfileAvatar({
   name,
   avatarUrl,
   isGenerating,
-  onGenerate,
-  size = 'large',
 }: {
   name?: string;
   avatarUrl?: string;
   isGenerating: boolean;
-  onGenerate?: () => void;
-  size?: 'large' | 'small';
 }) {
   const initials = getInitials(name);
-  const sizeClass = size === 'large' ? 'h-24 w-24 text-2xl' : 'h-12 w-12 text-sm';
 
-  // Loading state
   if (isGenerating) {
     return (
       <div
-        className={cn(
-          'flex shrink-0 items-center justify-center rounded-full animate-pulse',
-          sizeClass
-        )}
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full animate-pulse"
         style={{ backgroundColor: SAGE.avatarBg, color: '#ffffff' }}
       >
-        <Sparkles className={size === 'large' ? 'h-8 w-8 animate-spin' : 'h-4 w-4 animate-spin'} style={{ animationDuration: '3s' }} />
+        <Sparkles className="h-4 w-4 animate-spin" style={{ animationDuration: '3s' }} />
       </div>
     );
   }
 
-  // Has image — show as thumbnail
   if (avatarUrl) {
     return (
       <img
         src={avatarUrl}
         alt={name || 'Persona'}
-        className={cn('shrink-0 rounded-full object-cover', sizeClass)}
+        className="h-12 w-12 shrink-0 rounded-full object-cover"
       />
     );
   }
 
-  // No image — initials circle with sparkle hover
   return (
-    <button
-      type="button"
-      onClick={onGenerate}
-      className={cn(
-        'nodrag nopan group relative flex shrink-0 items-center justify-center rounded-full font-bold tracking-tight cursor-pointer transition-all',
-        sizeClass
-      )}
+    <div
+      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full font-bold text-sm tracking-tight"
       style={{ backgroundColor: SAGE.avatarBg, color: '#ffffff' }}
-      title="Generate portrait"
     >
-      <span className="transition-opacity group-hover:opacity-30">{initials}</span>
-      <div className="absolute inset-0 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-        <Sparkles className={size === 'large' ? 'h-8 w-8' : 'h-4 w-4'} />
-      </div>
-    </button>
+      {initials}
+    </div>
   );
 }
 
 /**
- * Large portrait section — shown between header and identity row when avatarUrl exists
+ * Hero section — full-width cover image with gradient overlay and archetype text.
+ * When no image: shows a solid background with generate prompt.
  */
-function PortraitSection({
+function HeroSection({
   avatarUrl,
+  archetype,
+  archetypeRole,
   name,
   isGenerating,
-  onRegenerate,
+  onGenerate,
+  onFieldChange,
+  nodeId,
 }: {
-  avatarUrl: string;
+  avatarUrl?: string;
+  archetype?: string;
+  archetypeRole?: string;
   name?: string;
   isGenerating: boolean;
-  onRegenerate?: () => void;
+  onGenerate?: () => void;
+  onFieldChange?: (id: string, field: string, value: string) => void;
+  nodeId: string;
 }) {
+  const hasImage = !!avatarUrl;
+
   return (
     <div
-      className="relative w-full flex items-center justify-center overflow-hidden"
-      style={{
-        height: 280,
-        backgroundColor: 'var(--persona-portrait-bg)',
-        borderBottom: `1px solid ${SAGE.sectionBorder}`,
-      }}
+      className="relative w-full overflow-hidden"
+      style={{ height: 320 }}
     >
+      {/* Background: image or solid color */}
       {isGenerating ? (
-        <div className="flex items-center justify-center w-full h-full animate-pulse">
-          <Sparkles className="h-12 w-12 animate-spin" style={{ color: SAGE.avatarBg, animationDuration: '3s' }} />
+        <div
+          className="absolute inset-0 flex items-center justify-center animate-pulse"
+          style={{ backgroundColor: SAGE.headerBg }}
+        >
+          <Sparkles className="h-12 w-12 animate-spin text-white/60" style={{ animationDuration: '3s' }} />
         </div>
-      ) : (
+      ) : hasImage ? (
         <button
           type="button"
-          onClick={onRegenerate}
-          className="nodrag nopan group relative w-full h-full cursor-pointer"
+          onClick={onGenerate}
+          className="nodrag nopan group absolute inset-0 cursor-pointer"
           title="Regenerate portrait"
         >
           <img
             src={avatarUrl}
             alt={name || 'Persona portrait'}
-            className="w-full h-full object-contain"
+            className="absolute inset-0 w-full h-full object-cover"
           />
+          {/* Hover regenerate overlay */}
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
             <div className="flex items-center gap-2 rounded-full bg-card/90 px-4 py-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
               <RefreshCw className="h-4 w-4 text-card-foreground" />
@@ -169,7 +166,44 @@ function PortraitSection({
             </div>
           </div>
         </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onGenerate}
+          className="nodrag nopan group absolute inset-0 cursor-pointer"
+          style={{ backgroundColor: SAGE.headerBg }}
+          title="Generate portrait"
+        >
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 opacity-60 group-hover:opacity-100 transition-opacity">
+            <Sparkles className="h-10 w-10 text-white/70" />
+            <span className="text-sm font-medium text-white/70">Generate portrait</span>
+          </div>
+        </button>
       )}
+
+      {/* Gradient overlay for text readability */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3"
+        style={{
+          background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
+        }}
+      />
+
+      {/* Archetype title overlay — positioned at bottom-left */}
+      <div className="pointer-events-auto absolute inset-x-0 bottom-0 px-6 pb-5">
+        <EditableField
+          value={archetype}
+          placeholder="Archetype Title"
+          onBlur={(v) => onFieldChange?.(nodeId, 'archetype', v)}
+          className="text-2xl font-bold text-white placeholder:text-white/40 drop-shadow-md focus:bg-white/10"
+        />
+        <EditableField
+          value={archetypeRole}
+          placeholder="Role / Tagline"
+          onBlur={(v) => onFieldChange?.(nodeId, 'archetypeRole', v)}
+          className="text-sm font-medium text-white/80 placeholder:text-white/30 drop-shadow-md focus:bg-white/10"
+        />
+      </div>
     </div>
   );
 }
@@ -191,6 +225,7 @@ function EditableField({
   rows,
   autoWidth,
   minWidth,
+  autoResize,
 }: {
   value?: string;
   placeholder: string;
@@ -200,6 +235,7 @@ function EditableField({
   rows?: number;
   autoWidth?: boolean;
   minWidth?: number;
+  autoResize?: boolean;
 }) {
   const ref = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
@@ -210,6 +246,25 @@ function EditableField({
       ref.current.value = value || '';
     }
   }, [value]);
+
+  // Auto-resize textarea height to fit content
+  // Uses minHeight so flex-1 can still stretch the textarea to fill taller grid siblings
+  const syncHeight = useCallback(() => {
+    if (autoResize && ref.current && ref.current.tagName === 'TEXTAREA') {
+      const el = ref.current as HTMLTextAreaElement;
+      el.style.minHeight = 'auto';
+      el.style.minHeight = `${el.scrollHeight}px`;
+    }
+  }, [autoResize]);
+
+  // Re-sync height when value changes or on mount
+  useEffect(syncHeight, [value, syncHeight]);
+  useEffect(() => {
+    // Defer to next frame so the textarea is rendered with defaultValue
+    if (autoResize) {
+      requestAnimationFrame(syncHeight);
+    }
+  }, [autoResize, syncHeight]);
 
   // Auto-size input width to content
   const syncWidth = () => {
@@ -228,14 +283,16 @@ function EditableField({
       <textarea
         ref={ref as React.RefObject<HTMLTextAreaElement>}
         className={cn(
-          'nodrag nopan w-full resize-none bg-transparent outline-none transition-colors',
+          'nodrag nopan w-full resize-none bg-transparent outline-none transition-colors overflow-hidden',
           'focus:bg-card/60 focus:rounded-md focus:px-2 focus:py-1',
+          autoResize && 'flex-1',
           className
         )}
-        rows={rows ?? 3}
+        rows={autoResize ? 1 : (rows ?? 3)}
         placeholder={placeholder}
         defaultValue={value || ''}
         onBlur={(e) => onBlur(e.target.value)}
+        onInput={autoResize ? syncHeight : undefined}
       />
     );
   }
@@ -300,8 +357,6 @@ export const PersonaTemplateNode = memo(
       }
     }, [data.onGenerateAvatar, id, isGenerating]);
 
-    const hasPortrait = !!data.avatarUrl;
-
     return (
       <div
         className="persona-card w-[680px] rounded-2xl shadow-xl overflow-hidden"
@@ -319,75 +374,59 @@ export const PersonaTemplateNode = memo(
           className="!opacity-0 !w-0 !h-0"
         />
 
-        {/* ── Header band ── */}
-        <div
-          className="px-6 py-5"
-          style={{ backgroundColor: SAGE.headerBg }}
-        >
-          <EditableField
-            value={data.archetype}
-            placeholder="Archetype Title"
-            onBlur={(v) => data.onFieldChange?.(id, 'archetype', v)}
-            className="text-2xl font-bold text-white placeholder:text-white/40 focus:bg-neutral-olive-100/15"
-          />
-          <EditableField
-            value={data.archetypeRole}
-            placeholder="Role / Tagline"
-            onBlur={(v) => data.onFieldChange?.(id, 'archetypeRole', v)}
-            className="text-sm font-medium text-white/75 placeholder:text-white/30 focus:bg-neutral-olive-100/15"
-          />
-        </div>
+        {/* ── Hero section: full-width image with overlaid archetype text ── */}
+        <HeroSection
+          avatarUrl={data.avatarUrl}
+          archetype={data.archetype}
+          archetypeRole={data.archetypeRole}
+          name={data.name}
+          isGenerating={isGenerating}
+          onGenerate={handleGenerateAvatar}
+          onFieldChange={data.onFieldChange}
+          nodeId={id}
+        />
 
-        {/* ── Portrait section (shown when avatarUrl exists) ── */}
-        {hasPortrait && (
-          <PortraitSection
-            avatarUrl={data.avatarUrl!}
-            name={data.name}
-            isGenerating={isGenerating}
-            onRegenerate={handleGenerateAvatar}
-          />
-        )}
-
-        {/* ── Identity row ── */}
+        {/* ── Profile bar: avatar + name + job ── */}
         <div
-          className="flex items-center gap-5 px-6 py-5"
-          style={{ borderBottom: `1px solid ${SAGE.sectionBorder}` }}
+          className="flex items-center gap-4 px-6 py-4"
+          style={{
+            borderBottom: `1px solid ${SAGE.sectionBorder}`,
+            backgroundColor: SAGE.headerBg,
+          }}
         >
-          <PersonaAvatar
+          <ProfileAvatar
             name={data.name}
             avatarUrl={data.avatarUrl}
             isGenerating={isGenerating}
-            onGenerate={handleGenerateAvatar}
-            size={hasPortrait ? 'small' : 'large'}
           />
-          <div className="flex-1 space-y-1.5">
+          <div className="flex-1 space-y-0.5">
             <div className="flex items-baseline gap-2">
-              <User className="h-4 w-4 shrink-0 translate-y-[1px]" style={{ color: SAGE.avatarBg }} />
+              <User className="h-4 w-4 shrink-0 translate-y-[1px]" style={{ color: 'var(--persona-text-muted)' }} />
               <EditableField
                 value={data.name}
                 placeholder="Full Name"
                 onBlur={(v) => data.onFieldChange?.(id, 'name', v)}
-                className="text-lg font-semibold"
+                className="text-base font-semibold text-white placeholder:text-white/40 focus:bg-white/10"
                 autoWidth
                 minWidth={80}
               />
-              <span className="shrink-0 text-lg font-semibold" style={{ color: 'var(--persona-text-strong)' }}>,</span>
+              <span className="shrink-0 text-base font-semibold text-white/80">,</span>
               <EditableField
                 value={data.age ? String(data.age) : ''}
                 placeholder="Age"
                 onBlur={(v) => data.onFieldChange?.(id, 'age', v)}
-                className="text-lg font-semibold"
+                className="text-base font-semibold text-white placeholder:text-white/40 focus:bg-white/10"
                 autoWidth
                 minWidth={28}
               />
             </div>
-            <div className="flex items-center gap-2" style={{ color: 'var(--persona-text-medium)' }}>
-              <Briefcase className="h-4 w-4 shrink-0" style={{ color: SAGE.avatarBg }} />
+            <div className="flex items-center gap-2">
+              <Briefcase className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--persona-text-muted)' }} />
               <EditableField
                 value={data.job}
                 placeholder="Job Title"
                 onBlur={(v) => data.onFieldChange?.(id, 'job', v)}
-                className="text-sm"
+                className="text-sm text-white/70 placeholder:text-white/30 focus:bg-white/10"
               />
             </div>
           </div>
@@ -414,7 +453,7 @@ export const PersonaTemplateNode = memo(
             {EMPATHY_ZONES.map(({ key, label, Icon, accent, textColor }) => (
               <div
                 key={key}
-                className="rounded-xl border p-3"
+                className="flex flex-col rounded-xl border p-3"
                 style={{
                   backgroundColor: `color-mix(in srgb, ${accent} 10%, transparent)`,
                   borderColor: `color-mix(in srgb, ${accent} 25%, transparent)`,
@@ -428,12 +467,12 @@ export const PersonaTemplateNode = memo(
                   </span>
                 </div>
                 <EditableField
-                  value={data[key as keyof PersonaTemplateData] as string | undefined}
+                  value={semicolonsToParagraphs(data[key as keyof PersonaTemplateData] as string | undefined)}
                   placeholder="Awaiting insights..."
                   onBlur={(v) => data.onFieldChange?.(id, key, v)}
                   className="text-xs leading-relaxed"
                   multiline
-                  rows={4}
+                  autoResize
                 />
               </div>
             ))}
@@ -457,7 +496,7 @@ export const PersonaTemplateNode = memo(
             onBlur={(v) => data.onFieldChange?.(id, 'narrative', v)}
             className="text-sm leading-relaxed"
             multiline
-            rows={4}
+            autoResize
           />
         </div>
 
@@ -479,7 +518,7 @@ export const PersonaTemplateNode = memo(
               onBlur={(v) => data.onFieldChange?.(id, 'quote', v)}
               className="text-sm italic leading-relaxed"
               multiline
-              rows={2}
+              autoResize
             />
           </div>
         </div>

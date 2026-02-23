@@ -2104,6 +2104,32 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               </div>
             )}
 
+            {/* Persistent "Pains & Gains" action button — sense-making Phase 1 → Phase 2 transition */}
+            {step.id === 'sense-making' &&
+             stickyNotes.some(n => ['says', 'thinks', 'feels', 'does'].includes(n.cellAssignment?.row || '')) &&
+             !stickyNotes.some(n => n.cellAssignment?.row === 'pains' || n.cellAssignment?.row === 'gains') && (
+              <div className="flex justify-center pt-2">
+                <button
+                  disabled={isLoading}
+                  onClick={async () => {
+                    setQuickAck(getRandomAck());
+                    await flushCanvasToDb();
+                    sendMessage({
+                      role: 'user',
+                      parts: [{ type: 'text', text: "This looks great, let's move to pains and gains" }],
+                    });
+                  }}
+                  className={cn(
+                    'inline-flex items-center gap-2 rounded-full border border-olive-400 bg-white px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700',
+                    'disabled:cursor-not-allowed disabled:opacity-50'
+                  )}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Let&apos;s move on to pains and gains
+                </button>
+              </div>
+            )}
+
             {/* Real interviews: "I'm ready to compile" button */}
             {step.id === 'user-research' && interviewMode === 'real' && personaSelectConfirmed && !readyToCompile && status === 'ready' && (
               <div className="mx-auto max-w-sm rounded-xl border border-olive-200 bg-olive-50/60 p-4 text-center dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30 animate-in fade-in slide-in-from-bottom-2 duration-500">

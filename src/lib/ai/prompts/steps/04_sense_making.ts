@@ -90,13 +90,9 @@ Underneath those statements, there's a shared belief that [inferred thought]. Bo
 
 I'm seeing **three themes** emerging: [theme 1], [theme 2], and [theme 3].
 
-Take a look at the board — some really interesting patterns jumping out already! ✨"
+Take a look at the board and add anything you'd like — when you're ready, hit the button below to move on to pains and gains. ✨"
 
-[SUGGESTIONS]
-- This looks great, let's move to pains and gains
-- I want to add something to the board
-- Can you move some items around?
-[/SUGGESTIONS]
+Do NOT include a [SUGGESTIONS] block in Phase 1. The UI provides a persistent action button for moving to pains and gains.
 
 If the user wants to add or adjust, accommodate. If they're happy, move to Phase 2.
 

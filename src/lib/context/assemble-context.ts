@@ -3,7 +3,7 @@ import { stepSummaries, workshopSteps } from '@/db/schema';
 import { eq, and, ne, asc, inArray } from 'drizzle-orm';
 import { getStepById } from '@/lib/workshop/step-metadata';
 import { loadCanvasState } from '@/actions/canvas-actions';
-import { assembleCanvasContextForStep, assembleEmpathyMapCanvasContext, assembleStakeholderCanvasContext } from '@/lib/workshop/context/canvas-context';
+import { assembleCanvasContextForStep, assembleEmpathyMapCanvasContext, assembleStakeholderCanvasContext, assembleUserResearchCanvasContext } from '@/lib/workshop/context/canvas-context';
 import type { StepContext } from './types';
 
 /**
@@ -122,9 +122,20 @@ export async function assembleStepContext(
     }
   }
 
-  // For persona step, inject Step 4's empathy map canvas data so the AI
-  // can populate the empathy fields with real insights from the research
+  // For persona step, inject Step 3's user research canvas so the AI
+  // knows exactly how many persona types were researched (by cluster name)
   if (currentStepId === 'persona') {
+    const step3Canvas = await loadCanvasState(workshopId, 'user-research');
+    if (step3Canvas?.stickyNotes && step3Canvas.stickyNotes.length > 0) {
+      const userResearchContext = assembleUserResearchCanvasContext(step3Canvas.stickyNotes);
+      if (userResearchContext) {
+        canvasContext = canvasContext
+          ? `${canvasContext}\n\nStep 3 User Research Canvas (each named group = a persona to build):\n${userResearchContext}`
+          : `Step 3 User Research Canvas (each named group = a persona to build):\n${userResearchContext}`;
+      }
+    }
+
+    // Also inject Step 4's empathy map canvas data to populate empathy fields
     const step4Canvas = await loadCanvasState(workshopId, 'sense-making');
     if (step4Canvas?.stickyNotes && step4Canvas.stickyNotes.length > 0) {
       const empathyContext = assembleEmpathyMapCanvasContext(step4Canvas.stickyNotes);

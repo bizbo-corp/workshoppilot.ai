@@ -93,10 +93,10 @@ export function EmpathyMapOverlay({ config }: EmpathyMapOverlayProps) {
         const isGains = zoneKey === 'gains';
         const Icon = ZONE_ICONS[zoneKey];
 
-        // Sage-palette text colors — darker for readability
-        let textColorClass = 'text-[#4a5a32]'; // dark sage for main zones
-        if (isPains) textColorClass = 'text-[#8b4f3b]'; // dark terracotta
-        if (isGains) textColorClass = 'text-[#3d6b4f]'; // dark sage-teal
+        // Sage-palette text colors — dark for light mode, light for dark mode
+        let textColorClass = 'text-[#4a5a32] dark:text-[#d4e0b8]'; // sage
+        if (isPains) textColorClass = 'text-[#8b4f3b] dark:text-[#e8b4a0]'; // terracotta
+        if (isGains) textColorClass = 'text-[#3d6b4f] dark:text-[#a8d4b8]'; // sage-teal
 
         return (
           <foreignObject

@@ -87,6 +87,8 @@ export function StepContainer({
   const setConceptCards = useCanvasStore((s) => s.setConceptCards);
   const setGridColumns = useCanvasStore((s) => s.setGridColumns);
   const setSelectedSlotIds = useCanvasStore((s) => s.setSelectedSlotIds);
+  const setPersonaTemplates = useCanvasStore((s) => s.setPersonaTemplates);
+  const setHmwCards = useCanvasStore((s) => s.setHmwCards);
   const setBrainRewritingMatrices = useCanvasStore((s) => s.setBrainRewritingMatrices);
   // HMW card counts as "content" only when all 4 fields are filled (card is 'filled')
   const hmwCardComplete = hmwCards.some((c) => c.cardState === 'filled');
@@ -347,6 +349,8 @@ export function StepContainer({
       setConceptCards([]);
       setGridColumns([]);
       setSelectedSlotIds([]);
+      setPersonaTemplates([]);
+      setHmwCards([]);
       setBrainRewritingMatrices([]);
       // Force re-mount of ChatPanel/IdeationSubStepContainer to clear useChat state
       setResetKey(prev => prev + 1);
@@ -357,7 +361,7 @@ export function StepContainer({
     } finally {
       setIsResetting(false);
     }
-  }, [workshopId, stepOrder, sessionId, router, setStickyNotes, setDrawingNodes, setCrazy8sSlots, setMindMapState, setConceptCards, setGridColumns, setSelectedSlotIds, setBrainRewritingMatrices]);
+  }, [workshopId, stepOrder, sessionId, router, setStickyNotes, setDrawingNodes, setCrazy8sSlots, setMindMapState, setConceptCards, setGridColumns, setSelectedSlotIds, setPersonaTemplates, setHmwCards, setBrainRewritingMatrices]);
 
   // Step 10: render Build Pack deliverable cards + extraction status
   // Synthesis summary (narrative, journey, confidence, next steps) lives on the results page
