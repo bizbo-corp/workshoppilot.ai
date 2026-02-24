@@ -38,6 +38,17 @@ const SUGGESTION_BUTTON_STYLES: Record<StickyNoteColor, string> = {
   orange: 'border-orange-300 bg-[var(--sticky-note-orange)] dark:border-orange-600/50 dark:bg-orange-900/30 dark:text-orange-200',
 };
 
+/** Row-based sticky note colors for journey map swimlanes */
+const GRID_ROW_COLORS: Record<string, StickyNoteColor> = {
+  actions: 'blue',
+  goals: 'green',
+  barriers: 'red',
+  touchpoints: 'pink',
+  emotions: 'green', // fallback; explicit color attr takes priority
+  moments: 'yellow',
+  opportunities: 'orange',
+};
+
 /** Compute the display color for a canvas suggestion item */
 function getSuggestionItemColor(item: CanvasItemParsed): StickyNoteColor {
   const VALID_COLORS = new Set(['yellow', 'pink', 'blue', 'green', 'orange', 'red']);
@@ -1011,12 +1022,12 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         dynamicGridConfig,
       );
 
-      // Color priority: explicit color attr > category-specific > zone-specific > grid green > default yellow
+      // Color priority: explicit color attr > category-specific > zone-specific > row-based > grid green > default yellow
       const VALID_COLORS = new Set(['yellow', 'pink', 'blue', 'green', 'orange', 'red']);
       const color = (item.color && VALID_COLORS.has(item.color) ? item.color as StickyNoteColor : null)
         || (item.category && CATEGORY_COLORS[item.category])
         || (item.quadrant && ZONE_COLORS[item.quadrant])
-        || (item.isGridItem ? 'green' : 'yellow');
+        || (item.isGridItem ? (GRID_ROW_COLORS[item.row || ''] || 'green') : 'yellow');
 
       const { width: itemWidth, height: itemHeight } = computeStickyNoteSize(item.text);
       const newStickyNote = {
@@ -1085,7 +1096,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     const color = (item.color && VALID_COLORS.has(item.color) ? item.color as StickyNoteColor : null)
       || (item.category && CATEGORY_COLORS[item.category])
       || (item.quadrant && ZONE_COLORS[item.quadrant])
-      || (item.isGridItem ? 'green' : 'yellow');
+      || (item.isGridItem ? (GRID_ROW_COLORS[item.row || ''] || 'green') : 'yellow');
 
     const { width: itemWidth, height: itemHeight } = computeStickyNoteSize(item.text);
     addStickyNote({
@@ -2194,7 +2205,15 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               // Separate "Next" suggestion from others for journey mapping
               const isNextSuggestion = (s: string) => /^next\b/i.test(s.trim());
               const nextSuggestion = step.id === 'journey-mapping' ? suggestions.find(isNextSuggestion) : undefined;
-              const otherSuggestions = nextSuggestion ? suggestions.filter(s => s !== nextSuggestion) : suggestions;
+
+              // Detect "Looks good" during stage confirmation (no grid items yet)
+              const isLooksGoodSuggestion = (s: string) => /^looks good/i.test(s.trim());
+              const hasGridItems = stickyNotes.some(n => n.cellAssignment?.row);
+              const looksGoodSuggestion = step.id === 'journey-mapping' && !hasGridItems
+                ? suggestions.find(isLooksGoodSuggestion)
+                : undefined;
+
+              const otherSuggestions = suggestions.filter(s => s !== nextSuggestion && s !== looksGoodSuggestion);
 
               // Compute next row label for journey mapping
               let nextRowLabel = '';
@@ -2234,6 +2253,27 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                       ))}
                     </div>
                   )}
+                  {looksGoodSuggestion ? (
+                    <button
+                      disabled={isLoading}
+                      onClick={async () => {
+                        setSuggestions([]);
+                        setQuickAck(getRandomAck());
+                        await flushCanvasToDb();
+                        sendMessage({
+                          role: 'user',
+                          parts: [{ type: 'text', text: 'Looks good!' }],
+                        });
+                      }}
+                      className={cn(
+                        'cursor-pointer inline-flex items-center gap-2 rounded-full border border-olive-500 bg-olive-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-olive-700 dark:bg-olive-700 dark:border-olive-600 dark:hover:bg-olive-600 transition-colors',
+                        'disabled:cursor-not-allowed disabled:opacity-50'
+                      )}
+                    >
+                      Looks good — Add these stages
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
                   {nextSuggestion ? (
                     <button
                       disabled={isLoading}
