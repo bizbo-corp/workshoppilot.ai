@@ -1,5 +1,6 @@
 import { google } from '@ai-sdk/google';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
+import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { db } from '@/db/client';
 import { workshops, workshopSteps, stepArtifacts } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -138,6 +139,16 @@ Example format:
         model: google('gemini-2.0-flash'),
         temperature: 0.7, // Higher for creative prompts
         prompt,
+      });
+
+      // Record usage (fire-and-forget)
+      recordUsageEvent({
+        workshopId,
+        stepId: 'ideation',
+        operation: 'suggest-sketch-prompts',
+        model: 'gemini-2.0-flash',
+        inputTokens: result.usage?.inputTokens,
+        outputTokens: result.usage?.outputTokens,
       });
 
       // Parse JSON response

@@ -164,6 +164,24 @@
   --persona-empathy-gains: #6b9a7a;
   --persona-empathy-pains-text: #8b4f3b;
   --persona-empathy-gains-text: #3d6b4f;
+  /* HMW card */
+  --hmw-bg: #f4f7ef;
+  --hmw-border: #c5d1a8;
+  --hmw-border-selected: #6b7f4e;
+  --hmw-header-bg: #6b7f4e;
+  --hmw-header-text: #ffffff;
+  --hmw-section-border: #dde5cc;
+  --hmw-section-bg: #e8eddb;
+  --hmw-chip-bg: #dde5cc;
+  --hmw-chip-hover: #c5d1a8;
+  --hmw-chip-text: #3a4a2a;
+  --hmw-label-text: #6b7f4e;
+  --hmw-prefix-text: #4a5a32;
+  --hmw-hint-text: #8a9a5b;
+  --hmw-field-text: #3a4a2a;
+  --hmw-statement-bg: #eef2e4;
+  --hmw-badge-bg: rgba(255, 255, 255, 0.2);
+  --hmw-placeholder: rgba(138, 154, 91, 0.4);
   --background: var(--neutral-olive-100);
   --foreground: var(--neutral-olive-800);
   --card: var(--neutral-olive-50);
@@ -260,6 +278,24 @@
   --persona-empathy-gains: #88b89a;
   --persona-empathy-pains-text: #d4a08b;
   --persona-empathy-gains-text: #88b89a;
+  /* HMW card */
+  --hmw-bg: #232b1c;
+  --hmw-border: #4a5a32;
+  --hmw-border-selected: #8a9a5b;
+  --hmw-header-bg: #3d4b29;
+  --hmw-header-text: #e8eddb;
+  --hmw-section-border: #3a4a28;
+  --hmw-section-bg: #2e3a20;
+  --hmw-chip-bg: #3d4b29;
+  --hmw-chip-hover: #4a5a32;
+  --hmw-chip-text: #d6dccf;
+  --hmw-label-text: #a3b18a;
+  --hmw-prefix-text: #b5c4a0;
+  --hmw-hint-text: #8a9a5b;
+  --hmw-field-text: #d6dccf;
+  --hmw-statement-bg: #2a3320;
+  --hmw-badge-bg: rgba(255, 255, 255, 0.12);
+  --hmw-placeholder: rgba(163, 177, 138, 0.4);
   --background: var(--neutral-olive-950);
   --foreground: var(--neutral-olive-200);
   --card: var(--neutral-olive-900);
@@ -310,6 +346,9 @@
   .persona-card input::placeholder,
   .persona-card textarea::placeholder {
     color: var(--persona-placeholder);
+  }
+  .hmw-card input::placeholder {
+    color: var(--hmw-placeholder);
   }
 }
 
@@ -392,9 +431,11 @@
   background-color: transparent !important;
 }
 
-/* Chat scrollbar — hidden by default, thin on scroll */
+/* Chat scrollbar — always reserves gutter space, thumb visible on scroll */
 .chat-scroll {
-  scrollbar-width: none;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
 .chat-scroll::-webkit-scrollbar {
   width: 6px;
@@ -410,6 +451,5 @@
   background: var(--neutral-olive-400);
 }
 .chat-scroll.is-scrolling {
-  scrollbar-width: thin;
   scrollbar-color: var(--neutral-olive-400) transparent;
 }

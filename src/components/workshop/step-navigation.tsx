@@ -11,7 +11,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, RotateCcw, Plus, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -52,9 +52,37 @@ export function StepNavigation({
 }: StepNavigationProps) {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
+  const [usage, setUsage] = useState<{
+    callCount: number;
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    totalImages: number;
+    totalCostDollars: number;
+  } | null>(null);
   const isFirstStep = currentStepOrder === 1;
   const isLastStep = currentStepOrder === STEPS.length;
   const isCompleted = stepStatus === 'complete';
+
+  // Poll usage API when admin toggle is on
+  useEffect(() => {
+    if (!isAdmin || !isGuideEditing) {
+      setUsage(null);
+      return;
+    }
+
+    const fetchUsage = async () => {
+      try {
+        const res = await fetch(`/api/workshops/${workshopId}/usage`);
+        if (res.ok) setUsage(await res.json());
+      } catch {
+        // Silently ignore fetch errors
+      }
+    };
+
+    fetchUsage();
+    const interval = setInterval(fetchUsage, 10_000);
+    return () => clearInterval(interval);
+  }, [workshopId, isAdmin, isGuideEditing]);
 
   const handleNext = async () => {
     // Guard: prevent double-clicks and navigation from last step
@@ -162,6 +190,11 @@ export function StepNavigation({
                     <Camera className="mr-2 h-4 w-4" />
                     Save Default View
                   </Button>
+                )}
+                {usage && (
+                  <span className="ml-2 font-mono text-xs text-amber-600 dark:text-amber-400">
+                    {usage.callCount} calls · {usage.totalInputTokens.toLocaleString()}↑ {usage.totalOutputTokens.toLocaleString()}↓ · ${usage.totalCostDollars.toFixed(4)}
+                  </span>
                 )}
               </div>
             )}

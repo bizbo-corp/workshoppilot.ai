@@ -251,7 +251,7 @@ export async function advanceToNextStep(
         const stepName = stepMetadata?.name || currentStepId;
 
         // Generate summary for the completed step
-        await generateStepSummary(sessionId, workshopStepId, currentStepId, stepName);
+        await generateStepSummary(workshopId, sessionId, workshopStepId, currentStepId, stepName);
       } else {
         console.error(`Workshop step not found for workshopId=${workshopId}, stepId=${currentStepId}`);
       }

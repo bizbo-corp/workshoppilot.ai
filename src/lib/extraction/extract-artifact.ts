@@ -41,7 +41,7 @@ export async function extractStepArtifact(
   stepId: string,
   conversationHistory: Array<{ role: string; content: string }>,
   maxRetries: number = 2
-): Promise<{ artifact: Record<string, unknown>; stepId: string }> {
+): Promise<{ artifact: Record<string, unknown>; stepId: string; usage?: { inputTokens?: number; outputTokens?: number } }> {
   // Look up schema for this step
   const schema = getSchemaForStep(stepId);
   if (!schema) {
@@ -90,10 +90,17 @@ export async function extractStepArtifact(
       // Belt-and-suspenders: Validate with Zod
       const validated = schema.parse(extracted);
 
-      // Success! Return the validated artifact
+      // Await usage from the stream result
+      const usage = await result.usage;
+
+      // Success! Return the validated artifact with usage data
       return {
         artifact: validated as Record<string, unknown>,
         stepId,
+        usage: usage ? {
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+        } : undefined,
       };
     } catch (error) {
       lastError = error;

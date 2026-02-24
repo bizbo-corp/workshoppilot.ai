@@ -8,6 +8,7 @@
 import { generateObject } from 'ai';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
+import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { db } from '@/db/client';
 import { stepArtifacts, workshopSteps } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -139,6 +140,16 @@ Output as JSON array of strings. Example: ["Mobile-First Experience", "Community
         themes: z.array(z.string()).describe('Array of 3-5 theme branch names'),
       }),
       prompt,
+    });
+
+    // Record usage (fire-and-forget)
+    recordUsageEvent({
+      workshopId,
+      stepId: 'ideation',
+      operation: 'suggest-themes',
+      model: 'gemini-2.0-flash',
+      inputTokens: result.usage?.inputTokens,
+      outputTokens: result.usage?.outputTokens,
     });
 
     // Validate AI response

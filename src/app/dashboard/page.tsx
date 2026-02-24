@@ -3,8 +3,9 @@ export const dynamic = 'force-dynamic';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { db } from '@/db/client';
-import { users, workshops, workshopSteps, stepArtifacts, buildPacks } from '@/db/schema';
-import { eq, desc, isNull, and, inArray } from 'drizzle-orm';
+import { users, workshops, workshopSteps, stepArtifacts, buildPacks, aiUsageEvents } from '@/db/schema';
+import { eq, desc, isNull, and, inArray, sql } from 'drizzle-orm';
+import { isAdmin } from '@/lib/auth/roles';
 import { MigrationCheck } from '@/components/auth/migration-check';
 import { WorkshopGrid } from '@/components/dashboard/workshop-grid';
 import { CompletedWorkshopCard } from '@/components/dashboard/completed-workshop-card';
@@ -16,10 +17,18 @@ import { getStepByOrder } from '@/lib/workshop/step-metadata';
 
 export default async function DashboardPage() {
   // Defense in depth: verify auth at page level
-  const { userId } = await auth();
+  const { userId, sessionClaims } = await auth();
 
   if (!userId) {
     redirect('/');
+  }
+
+  let adminUser = isAdmin(sessionClaims);
+  if (!adminUser) {
+    const clerkUserForAdmin = await currentUser();
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const userEmail = clerkUserForAdmin?.emailAddresses?.[0]?.emailAddress;
+    adminUser = !!(adminEmail && userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase());
   }
 
   // Query user from database
@@ -161,6 +170,23 @@ export default async function DashboardPage() {
     }
   }
 
+  // Batch-load AI cost data for admin users
+  let costMap = new Map<string, number>();
+  if (adminUser && completedIds.length > 0) {
+    const costRows = await db
+      .select({
+        workshopId: aiUsageEvents.workshopId,
+        totalCostCents: sql<number>`coalesce(sum(${aiUsageEvents.costCents}), 0)`.as('total_cost_cents'),
+      })
+      .from(aiUsageEvents)
+      .where(inArray(aiUsageEvents.workshopId, completedIds))
+      .groupBy(aiUsageEvents.workshopId);
+
+    for (const row of costRows) {
+      costMap.set(row.workshopId, Number(row.totalCostCents));
+    }
+  }
+
   // CTA logic: prioritize most recent active workshop, fall back to most recent completed
   const mostRecentActive = activeWorkshops[0];
   const mostRecentCompleted = completedWorkshops[0];
@@ -272,6 +298,7 @@ export default async function DashboardPage() {
                     emoji={w.emoji}
                     synthesisArtifact={synthesisMap.get(w.id) || null}
                     prototypeUrl={prototypeUrlMap.get(w.id) || null}
+                    totalCostCents={costMap.get(w.id) ?? null}
                     onRename={renameWorkshop}
                     onUpdateAppearance={updateWorkshopAppearance}
                   />

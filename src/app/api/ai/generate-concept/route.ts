@@ -1,5 +1,6 @@
 import { google } from '@ai-sdk/google';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
+import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { db } from '@/db/client';
 import { workshops, workshopSteps, stepArtifacts } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -225,6 +226,16 @@ export async function POST(req: Request) {
         model: google('gemini-2.0-flash'),
         temperature: 0.5, // Lower than sketch prompts for more consistent structured output
         prompt,
+      });
+
+      // Record usage (fire-and-forget)
+      recordUsageEvent({
+        workshopId,
+        stepId: 'ideation',
+        operation: 'generate-concept',
+        model: 'gemini-2.0-flash',
+        inputTokens: result.usage?.inputTokens,
+        outputTokens: result.usage?.outputTokens,
       });
 
       // Parse JSON response

@@ -72,6 +72,7 @@ export async function POST(
       const stepName = step?.name || stepId;
 
       await generateStepSummary(
+        workshopId,
         sessionId,
         workshopStep.id,
         stepId,

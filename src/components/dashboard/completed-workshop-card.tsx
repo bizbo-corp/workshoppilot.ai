@@ -43,6 +43,7 @@ interface CompletedWorkshopCardProps {
   emoji: string | null;
   synthesisArtifact: Record<string, unknown> | null;
   prototypeUrl: string | null;
+  totalCostCents?: number | null;
   onRename: (workshopId: string, newName: string) => Promise<void>;
   onUpdateAppearance: (workshopId: string, updates: { color?: string; emoji?: string | null }) => Promise<void>;
 }
@@ -56,6 +57,7 @@ export function CompletedWorkshopCard({
   emoji,
   synthesisArtifact,
   prototypeUrl,
+  totalCostCents,
   onRename,
   onUpdateAppearance,
 }: CompletedWorkshopCardProps) {
@@ -178,6 +180,13 @@ export function CompletedWorkshopCard({
               {formatDistanceToNow(new Date(updatedAt), { addSuffix: true })}
             </span>
           </div>
+
+          {/* AI cost (admin only) */}
+          {totalCostCents != null && totalCostCents > 0 && (
+            <div className="mt-1 text-xs text-muted-foreground">
+              AI cost: ${(totalCostCents / 100).toFixed(4)}
+            </div>
+          )}
         </CardContent>
       </Link>
 

@@ -7,6 +7,7 @@
 
 import { extractStepArtifact, ExtractionError } from '@/lib/extraction';
 import { saveStepArtifact } from '@/lib/context/save-artifact';
+import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { db } from '@/db/client';
 import { chatMessages, workshopSteps } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
@@ -82,6 +83,18 @@ export async function POST(req: Request) {
 
     // Extract artifact using AI
     const result = await extractStepArtifact(stepId, messages);
+
+    // Record usage (fire-and-forget)
+    if (result.usage) {
+      recordUsageEvent({
+        workshopId,
+        stepId,
+        operation: 'extract',
+        model: 'gemini-2.0-flash',
+        inputTokens: result.usage.inputTokens,
+        outputTokens: result.usage.outputTokens,
+      });
+    }
 
     // Look up workshopStepId from database
     const workshopStepRows = await db

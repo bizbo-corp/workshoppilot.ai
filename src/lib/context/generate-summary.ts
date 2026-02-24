@@ -3,6 +3,7 @@ import { chatMessages, stepSummaries } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { google } from '@ai-sdk/google';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
+import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 
 /**
  * Generate AI-powered conversation summary on step completion
@@ -13,6 +14,7 @@ import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
  * This runs in the background during step completion. If AI summarization fails,
  * saves a fallback message to ensure step completion isn't blocked.
  *
+ * @param workshopId - The workshop ID (ws_xxx)
  * @param sessionId - The session ID (ses_xxx)
  * @param workshopStepId - The workshop step ID (wst_xxx)
  * @param stepId - The semantic step ID ('challenge', 'stakeholder-mapping', etc.)
@@ -20,6 +22,7 @@ import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
  * @returns The generated summary text
  */
 export async function generateStepSummary(
+  workshopId: string,
   sessionId: string,
   workshopStepId: string,
   stepId: string,
@@ -72,6 +75,16 @@ ${formattedConversation}`,
 
     const summary = result.text.trim();
     const tokenCount = result.usage?.totalTokens || null;
+
+    // Record usage (fire-and-forget)
+    recordUsageEvent({
+      workshopId,
+      stepId,
+      operation: 'generate-summary',
+      model: 'gemini-2.0-flash',
+      inputTokens: result.usage?.inputTokens,
+      outputTokens: result.usage?.outputTokens,
+    });
 
     // Save summary to database
     await db.insert(stepSummaries).values({

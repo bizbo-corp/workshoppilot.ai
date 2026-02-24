@@ -9,4 +9,5 @@ export * from './build-packs';
 export * from './chat-messages';
 export * from './canvas-guides';
 export * from './step-canvas-settings';
+export * from './ai-usage-events';
 export * from './relations';

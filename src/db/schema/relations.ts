@@ -7,6 +7,7 @@ import { stepSummaries } from './step-summaries';
 import { sessions } from './sessions';
 import { buildPacks } from './build-packs';
 import { chatMessages } from './chat-messages';
+import { aiUsageEvents } from './ai-usage-events';
 
 /**
  * Users relations
@@ -28,6 +29,7 @@ export const workshopsRelations = relations(workshops, ({ many }) => ({
   members: many(workshopMembers),
   sessions: many(sessions),
   buildPacks: many(buildPacks),
+  aiUsageEvents: many(aiUsageEvents),
 }));
 
 /**
@@ -111,5 +113,15 @@ export const stepSummariesRelations = relations(stepSummaries, ({ one }) => ({
   workshopStep: one(workshopSteps, {
     fields: [stepSummaries.workshopStepId],
     references: [workshopSteps.id],
+  }),
+}));
+
+/**
+ * AI Usage Events relations
+ */
+export const aiUsageEventsRelations = relations(aiUsageEvents, ({ one }) => ({
+  workshop: one(workshops, {
+    fields: [aiUsageEvents.workshopId],
+    references: [workshops.id],
   }),
 }));

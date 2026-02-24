@@ -59,6 +59,12 @@ export function IdeationSubStepContainer({
   const [liveMessageCount, setLiveMessageCount] = React.useState(0);
   const [mobileView, setMobileView] = React.useState<'chat' | 'canvas'>('chat');
 
+  // Admin toggle state
+  const [isGuideEditing, setIsGuideEditing] = React.useState(false);
+  const handleToggleGuideEditor = React.useCallback(() => {
+    setIsGuideEditing((prev) => !prev);
+  }, []);
+
   // Idea selection local state
   const [localSelectedSlotIds, setLocalSelectedSlotIds] = React.useState<string[]>([]);
 
@@ -533,6 +539,8 @@ export function IdeationSubStepContainer({
         stepStatus={stepStatus}
         isAdmin={isAdmin}
         onReset={onReset}
+        onToggleGuideEditor={handleToggleGuideEditor}
+        isGuideEditing={isGuideEditing}
       />
     </div>
   );

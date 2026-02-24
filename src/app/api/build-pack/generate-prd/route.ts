@@ -6,6 +6,7 @@
  */
 
 import { google } from '@ai-sdk/google';
+import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { db } from '@/db/client';
 import { buildPacks } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -70,6 +71,16 @@ export async function POST(req: Request) {
       model: google('gemini-2.0-flash'),
       temperature: 0.4,
       prompt: geminiPrompt,
+    });
+
+    // Record usage (fire-and-forget)
+    recordUsageEvent({
+      workshopId,
+      stepId: 'validate',
+      operation: 'generate-prd',
+      model: 'gemini-2.0-flash',
+      inputTokens: result.usage?.inputTokens,
+      outputTokens: result.usage?.outputTokens,
     });
 
     const generatedPrompt = result.text.trim();

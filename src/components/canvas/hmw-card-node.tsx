@@ -13,22 +13,22 @@ export type HmwCardNodeRendererData = HmwCardData & {
 
 export type HmwCardNodeType = Node<HmwCardNodeRendererData, 'hmwCard'>;
 
-/* ── Sage palette (matches persona & empathy map) ── */
+/* ── Sage palette (adapts via CSS custom properties in globals.css) ── */
 const SAGE = {
-  bg: '#f4f7ef',
-  border: '#c5d1a8',
-  borderSelected: '#6b7f4e',
-  headerBg: '#6b7f4e',
-  headerText: '#ffffff',
-  sectionBorder: '#dde5cc',
-  sectionBg: '#e8eddb',
-  chipBg: '#dde5cc',
-  chipHover: '#c5d1a8',
-  chipText: '#3a4a2a',
-  labelText: '#6b7f4e',
-  prefixText: '#4a5a32',
-  hintText: '#8a9a5b',
-  statementBg: '#eef2e4',
+  bg: 'var(--hmw-bg)',
+  border: 'var(--hmw-border)',
+  borderSelected: 'var(--hmw-border-selected)',
+  headerBg: 'var(--hmw-header-bg)',
+  headerText: 'var(--hmw-header-text)',
+  sectionBorder: 'var(--hmw-section-border)',
+  sectionBg: 'var(--hmw-section-bg)',
+  chipBg: 'var(--hmw-chip-bg)',
+  chipHover: 'var(--hmw-chip-hover)',
+  chipText: 'var(--hmw-chip-text)',
+  labelText: 'var(--hmw-label-text)',
+  prefixText: 'var(--hmw-prefix-text)',
+  hintText: 'var(--hmw-hint-text)',
+  statementBg: 'var(--hmw-statement-bg)',
 };
 
 /** Field configuration for the 4-part HMW builder */
@@ -70,7 +70,7 @@ function EditableField({
       type="text"
       className={cn(
         'nodrag nopan w-full bg-transparent outline-none transition-colors',
-        'placeholder:text-[#8a9a5b]/40',
+        'placeholder:text-[var(--hmw-placeholder)]',
         'focus:bg-card/60 focus:rounded-md focus:px-2 focus:py-1',
         disabled && 'pointer-events-none',
         className
@@ -157,15 +157,17 @@ export const HmwCardNode = memo(
 
     // Strip trailing periods so the assembled sentence reads cleanly (e.g. "happy family." → "happy family")
     const strip = (s?: string) => s?.replace(/\.+$/, '') ?? '';
+    // Lowercase first character so field values flow as part of one sentence
+    const lcFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
     // Auto-assembled statement
     const assembledStatement = allFieldsFilled
-      ? `Given that ${strip(data.givenThat)}, how might we help ${strip(data.persona)} ${strip(data.immediateGoal)} so they can ${strip(data.deeperGoal)}?`
+      ? `Given that ${lcFirst(strip(data.givenThat))}, how might we help ${lcFirst(strip(data.persona))} ${lcFirst(strip(data.immediateGoal))} so they can ${lcFirst(strip(data.deeperGoal))}?`
       : null;
 
     return (
       <div
-        className="w-[700px] rounded-2xl shadow-xl overflow-hidden"
+        className="hmw-card w-[700px] rounded-2xl shadow-xl overflow-hidden"
         style={{
           backgroundColor: SAGE.bg,
           borderWidth: 2,
@@ -186,14 +188,17 @@ export const HmwCardNode = memo(
           style={{ backgroundColor: SAGE.headerBg }}
         >
           <div className="flex items-center gap-3">
-            <Lightbulb className="h-5 w-5 text-white/80" />
-            <span className="text-lg font-bold text-white tracking-wide">
+            <Lightbulb className="h-5 w-5" style={{ color: SAGE.headerText, opacity: 0.8 }} />
+            <span
+              className="text-lg font-bold tracking-wide"
+              style={{ color: SAGE.headerText }}
+            >
               HOW MIGHT WE CARD
             </span>
           </div>
           <span
             className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
-            style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
+            style={{ backgroundColor: 'var(--hmw-badge-bg)', color: SAGE.headerText }}
           >
             HMW
           </span>
@@ -256,7 +261,7 @@ export const HmwCardNode = memo(
                         value={fieldValue}
                         placeholder={hint}
                         onBlur={(v) => data.onFieldChange?.(id, key, v)}
-                        className="text-sm text-[#3a4a2a] font-normal"
+                        className="text-sm font-normal text-[var(--hmw-field-text)]"
                         disabled={isSkeleton}
                       />
                     </div>

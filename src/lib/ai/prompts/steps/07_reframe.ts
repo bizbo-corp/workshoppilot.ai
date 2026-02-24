@@ -23,6 +23,21 @@ Make it specific to the Persona from Step 5 — focus on their pain points and d
 
 The 4-part HMW template: "Given that [context], how might we help [persona] do/be/feel/achieve [immediate goal] so they can [deeper goal]?" Each part draws from specific research. Multiple HMW statements are welcome — the user can create variations and select which to carry into ideation.
 
+DEEPER GOAL GUIDANCE — AIM HIGH:
+The "so they can" field is NOT a restatement of the immediate goal — it's the aspirational, transformational outcome. Push beyond the functional to the emotional and life-changing. Think: what does achieving the immediate goal UNLOCK for this person? What becomes possible in their career, relationships, identity, or life trajectory?
+
+BAD (too functional, just restates the immediate goal):
+- "so they can persuade and inspire their audience"
+- "so they can organize their schedule"
+- "so they can find the right information"
+
+GOOD (aspirational, transformational, elevates the stakes):
+- "so they can persuade and inspire their audience to action, achieving their personal and business outcomes and elevating their career to new heights"
+- "so they can reclaim their time and energy, freeing them to focus on the work and relationships that matter most"
+- "so they can make confident, informed decisions that accelerate their growth and open doors they didn't know existed"
+
+The deeper goal should make the user think bigger about who they're designing for. It should feel like a north star — the kind of outcome that makes solving this problem genuinely meaningful. Write it as one flowing clause, not a list.
+
 CANVAS CARD INTEGRATION:
 There's an HMW Card on the canvas that starts as a skeleton. You activate it by sending [HMW_CARD] markup with field values and suggestions. As you guide the conversation through each field, populate the card in real-time:
 - Send suggestions as clickable chips so the user can pick from research-grounded options
@@ -35,7 +50,7 @@ BOUNDARY: This step is about reframing the problem with research clarity, not so
 PRIOR CONTEXT USAGE:
 Reference Journey Map dip (Step 6) HEAVILY — "Given that" and immediate goal come from dip stage barriers and goals.
 Reference Persona (Step 5) for persona field and to ensure HMW addresses their specific pain points (use persona pains to validate relevance).
-Reference Step 4 gains for deeper goal field (what broader outcome do they seek beyond the immediate task).
+Reference Step 4 gains for deeper goal field — but don't just repeat the gains verbatim. Elevate them into an aspirational vision of what becomes possible when the immediate goal is achieved. Think about career trajectory, personal fulfilment, meaningful impact on others, and unlocked potential.
 Compare to Step 1 original HMW to show evolution: "The original HMW was [Step 1]. Research revealed [key insights]. The reframed HMW is now [new HMW], which focuses specifically on [dip pain]."`,
 
   interactionLogic: `CONVERSATION FLOW:
@@ -61,7 +76,7 @@ After user picks: [HMW_CARD]{"persona": "selected persona", "suggestions": {"imm
 "do/be/feel/achieve..." — "What should they be able to do at that critical moment?"
 After user picks: [HMW_CARD]{"immediateGoal": "selected goal", "suggestions": {"deeperGoal": ["option 1", "option 2", "option 3"]}}[/HMW_CARD]
 
-"so they can..." — "And the bigger picture — what's the deeper outcome?"
+"so they can..." — "And the bigger picture — what does achieving this unlock for them? Think beyond the task itself..." Push the user toward something aspirational and transformational. The suggestions you offer should be lofty — connecting the immediate goal to career growth, personal fulfilment, unlocked potential, or meaningful impact on others. Write each suggestion as a flowing clause, not a short phrase.
 After user picks: [HMW_CARD]{"deeperGoal": "selected deeper goal"}[/HMW_CARD]
 
 Show source context for each option so the user can see the research backing.
@@ -78,7 +93,7 @@ Before finalizing, do a quick quality check — conversationally, not as a check
 
 Check traceability: "This HMW traces back to the dip at [stage name] where [persona name] hits [specific barrier], and it's aiming for [gain from Step 4]. The research chain is solid."
 
-Check quality: Is it more focused than the original? Does it focus on the person's pain, not a solution? Is the immediate goal specific enough to act on? Is the deeper goal meaningful and emotional?
+Check quality: Is it more focused than the original? Does it focus on the person's pain, not a solution? Is the immediate goal specific enough to act on? Is the deeper goal aspirational and transformational — not just a restatement of the immediate goal, but a lofty vision of what becomes possible?
 
 Present both naturally: "Compare this to where we started — the original was '[Step 1 HMW]'. This new version is tighter, more specific, and grounded in what we actually learned."
 

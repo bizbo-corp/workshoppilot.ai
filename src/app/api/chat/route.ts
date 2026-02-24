@@ -8,6 +8,7 @@ import { workshops } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getCurrentArcPhase } from '@/lib/ai/conversation-state';
 import { streamTextWithRetry, isGeminiRateLimitError } from '@/lib/ai/gemini-retry';
+import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { loadCanvasState } from '@/actions/canvas-actions';
 
 /**
@@ -114,6 +115,20 @@ export async function POST(req: Request) {
 
     // Consume stream server-side to ensure onFinish fires even if client disconnects
     result.consumeStream();
+
+    // Record token usage after stream completes (fire-and-forget)
+    Promise.resolve(result.usage).then((usage) => {
+      if (usage) {
+        recordUsageEvent({
+          workshopId,
+          stepId,
+          operation: 'chat',
+          model: 'gemini-2.0-flash',
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+        });
+      }
+    }).catch(() => {});
 
     // Return streaming response with persistence on finish
     // originalMessages enables "persistence mode" — onFinish receives the

@@ -364,8 +364,9 @@ RULES:
 - Send partial updates (only changed fields) — the card merges updates.
 - Always include suggestions when introducing a new field so the user sees clickable options.
 - The card auto-transitions from skeleton → active on first update, and to filled when all 4 fields are set.
-- Keep suggestion text brief (under 60 characters each).
+- Keep suggestion text brief (under 60 characters each) — EXCEPT deeperGoal suggestions which should be longer flowing clauses (up to 120 characters) to capture the aspirational vision.
 - You can update multiple fields at once if the user provides several in one message.
+- IMPORTANT: Write field values with a LOWERCASE first letter (e.g. "speakers who want to connect..." not "Speakers who want to connect..."). The card prefixes ("Given that", "how might we help", etc.) already provide the sentence start — field values flow after them as one continuous sentence.
 
 CHIP SELECTION MESSAGES:
 When the user sends a message like 'For "Given that": [value]' or 'For "how might we (help)": [value]', this means they clicked a suggestion chip on the HMW card. The field is already set on the card. Respond by:

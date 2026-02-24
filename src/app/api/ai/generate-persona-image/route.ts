@@ -1,6 +1,7 @@
 import { generateImage } from "ai";
 import { google } from "@ai-sdk/google";
 import { put } from "@vercel/blob";
+import { recordUsageEvent } from "@/lib/ai/usage-tracking";
 
 /**
  * Increase Vercel serverless timeout for image generation
@@ -96,6 +97,15 @@ export async function POST(req: Request) {
       model: google.image("imagen-4.0-fast-generate-001"),
       prompt,
       aspectRatio: "1:1",
+    });
+
+    // Record usage (fire-and-forget)
+    recordUsageEvent({
+      workshopId,
+      stepId: "persona",
+      operation: "generate-persona-image",
+      model: "imagen-4.0-fast-generate-001",
+      imageCount: 1,
     });
 
     const base64Data = result.image.base64;
