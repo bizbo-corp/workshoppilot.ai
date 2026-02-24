@@ -149,7 +149,7 @@ export type CanvasActions = {
   setSelectedSlotIds: (ids: string[]) => void;
   setBrainRewritingMatrices: (matrices: BrainRewritingMatrix[]) => void;
   updateBrainRewritingCell: (slotId: string, cellId: string, updates: Partial<BrainRewritingCell>) => void;
-  toggleBrainRewritingDone: (slotId: string) => void;
+  toggleBrainRewritingIncluded: (slotId: string) => void;
   markClean: () => void;
   markDirty: () => void;
 };
@@ -776,11 +776,11 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             isDirty: true,
           })),
 
-        toggleBrainRewritingDone: (slotId) =>
+        toggleBrainRewritingIncluded: (slotId) =>
           set((state) => ({
             brainRewritingMatrices: state.brainRewritingMatrices.map((matrix) =>
               matrix.slotId === slotId
-                ? { ...matrix, done: !matrix.done }
+                ? { ...matrix, includedInConcepts: matrix.includedInConcepts === false }
                 : matrix
             ),
             isDirty: true,

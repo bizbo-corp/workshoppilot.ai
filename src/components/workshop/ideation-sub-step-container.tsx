@@ -47,9 +47,52 @@ export function IdeationSubStepContainer({
 }: IdeationSubStepContainerProps) {
   const { chatCollapsed, canvasCollapsed, setChatCollapsed, setCanvasCollapsed } = usePanelLayout();
 
+  // Canvas state (hooks must come before state initializers that depend on them)
+  const mindMapNodes = useCanvasStore(state => state.mindMapNodes);
+  const crazy8sSlots = useCanvasStore(state => state.crazy8sSlots);
+  const selectedSlotIds = useCanvasStore(state => state.selectedSlotIds);
+  const brainRewritingMatrices = useCanvasStore(state => state.brainRewritingMatrices);
+  const canvasStoreApi = useCanvasStoreApi();
+
+  // Compute initial phase synchronously from store — eliminates flash of wrong phase on refresh
+  const initialResumeState = React.useMemo(() => {
+    const state = canvasStoreApi.getState();
+    const isComplete = stepStatus === 'complete';
+
+    if (state.brainRewritingMatrices.length > 0) {
+      return {
+        phase: 'brain-rewriting' as IdeationPhase,
+        showCrazy8s: true,
+        selectedSlotIds: state.selectedSlotIds,
+        artifactConfirmed: isComplete,
+      };
+    } else if (state.selectedSlotIds.length > 0) {
+      return {
+        phase: 'idea-selection' as IdeationPhase,
+        showCrazy8s: true,
+        selectedSlotIds: state.selectedSlotIds,
+        artifactConfirmed: false,
+      };
+    } else if (state.crazy8sSlots.some(slot => slot.imageUrl)) {
+      return {
+        phase: 'idea-selection' as IdeationPhase,
+        showCrazy8s: true,
+        selectedSlotIds: [] as string[],
+        artifactConfirmed: false,
+      };
+    }
+    return {
+      phase: 'mind-mapping' as IdeationPhase,
+      showCrazy8s: false,
+      selectedSlotIds: [] as string[],
+      artifactConfirmed: isComplete,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only compute once on mount
+  }, []);
+
   // Phase management: mind-mapping → crazy-eights → idea-selection → brain-rewriting
-  const [currentPhase, setCurrentPhase] = React.useState<IdeationPhase>('mind-mapping');
-  const [showCrazy8s, setShowCrazy8s] = React.useState(false);
+  const [currentPhase, setCurrentPhase] = React.useState<IdeationPhase>(initialResumeState.phase);
+  const [showCrazy8s, setShowCrazy8s] = React.useState(initialResumeState.showCrazy8s);
   const [isMobile, setIsMobile] = React.useState(false);
   const [artifact, setArtifact] = React.useState<Record<string, unknown> | null>(
     initialArtifact || null
@@ -64,12 +107,12 @@ export function IdeationSubStepContainer({
   }, []);
 
   // Idea selection local state
-  const [localSelectedSlotIds, setLocalSelectedSlotIds] = React.useState<string[]>([]);
+  const [localSelectedSlotIds, setLocalSelectedSlotIds] = React.useState<string[]>(initialResumeState.selectedSlotIds);
 
   // Artifact confirmation state
-  const [artifactConfirmed, setArtifactConfirmed] = React.useState(
-    stepStatus === 'complete' && initialArtifact !== null
-  );
+  const [artifactConfirmed, setArtifactConfirmed] = React.useState(initialResumeState.artifactConfirmed);
+  // Explicit confirmation: true only when user clicks "Proceed" during this session (triggers shimmer)
+  const [explicitlyConfirmed, setExplicitlyConfirmed] = React.useState(false);
 
   // Fire confetti when user explicitly confirms (not on page load for already-complete steps)
   const prevConfirmed = React.useRef(artifactConfirmed);
@@ -79,13 +122,6 @@ export function IdeationSubStepContainer({
     }
     prevConfirmed.current = artifactConfirmed;
   }, [artifactConfirmed]);
-
-  // Canvas state
-  const mindMapNodes = useCanvasStore(state => state.mindMapNodes);
-  const crazy8sSlots = useCanvasStore(state => state.crazy8sSlots);
-  const selectedSlotIds = useCanvasStore(state => state.selectedSlotIds);
-  const brainRewritingMatrices = useCanvasStore(state => state.brainRewritingMatrices);
-  const canvasStoreApi = useCanvasStoreApi();
 
   // Get stepId for canvases
   const [stepId, setStepId] = React.useState<string>('');
@@ -103,32 +139,6 @@ export function IdeationSubStepContainer({
     () => mindMapNodes.filter(node => node.level === 1).length > 0,
     [mindMapNodes]
   );
-
-  // Auto-resume: check state in priority order on mount
-  React.useEffect(() => {
-    const state = canvasStoreApi.getState();
-
-    const isComplete = stepStatus === 'complete';
-
-    if (state.brainRewritingMatrices.length > 0) {
-      // Resume at brain rewriting
-      setShowCrazy8s(true);
-      setCurrentPhase('brain-rewriting');
-      setLocalSelectedSlotIds(state.selectedSlotIds);
-      if (!isComplete) setArtifactConfirmed(false);
-    } else if (state.selectedSlotIds.length > 0) {
-      // Resume at idea selection
-      setShowCrazy8s(true);
-      setCurrentPhase('idea-selection');
-      setLocalSelectedSlotIds(state.selectedSlotIds);
-      if (!isComplete) setArtifactConfirmed(false);
-    } else if (state.crazy8sSlots.some(slot => slot.imageUrl)) {
-      // Crazy 8s done but no selection yet → go to idea selection
-      setShowCrazy8s(true);
-      setCurrentPhase('idea-selection');
-      if (!isComplete) setArtifactConfirmed(false);
-    }
-  }, [canvasStoreApi, stepStatus]);
 
   // Check for mobile on mount and resize
   React.useEffect(() => {
@@ -236,9 +246,10 @@ export function IdeationSubStepContainer({
     state.setSelectedSlotIds(localSelectedSlotIds);
 
     if (skip) {
-      // Skip brain rewriting — enable Next
+      // Skip brain rewriting — enable Next with shimmer
       await flushCanvasState();
       setArtifactConfirmed(true);
+      setExplicitlyConfirmed(true);
     } else {
       // Initialize brain rewriting matrices for selected slots
       const matrices = localSelectedSlotIds.map((slotId) => {
@@ -253,17 +264,18 @@ export function IdeationSubStepContainer({
     }
   }, [stepId, canvasStoreApi, localSelectedSlotIds, flushCanvasState]);
 
-  // Save Brain Rewriting: flush canvas and activate Next
+  // Save Brain Rewriting: flush canvas and activate Next with shimmer
   const handleSaveBrainRewriting = React.useCallback(async () => {
     await flushCanvasState();
     setArtifactConfirmed(true);
+    setExplicitlyConfirmed(true);
   }, [flushCanvasState]);
 
-  // Handle brain rewriting toggle done
-  const handleBrainRewritingToggleDone = React.useCallback(
+  // Handle brain rewriting toggle included
+  const handleBrainRewritingToggleIncluded = React.useCallback(
     (slotId: string) => {
       const state = canvasStoreApi.getState();
-      state.toggleBrainRewritingDone(slotId);
+      state.toggleBrainRewritingIncluded(slotId);
     },
     [canvasStoreApi]
   );
@@ -347,7 +359,7 @@ export function IdeationSubStepContainer({
             // Brain rewriting (shown as side-by-side nodes)
             brainRewritingMatrices={currentPhase === 'brain-rewriting' ? brainRewritingMatrices : undefined}
             onBrainRewritingCellUpdate={handleBrainRewritingCellUpdate}
-            onBrainRewritingToggleDone={handleBrainRewritingToggleDone}
+            onBrainRewritingToggleIncluded={handleBrainRewritingToggleIncluded}
             onBrainRewritingDone={handleSaveBrainRewriting}
           />
         )}
@@ -389,7 +401,7 @@ export function IdeationSubStepContainer({
           workshopId={workshopId}
           currentStepOrder={8}
           artifactConfirmed={artifactConfirmed}
-          stepExplicitlyConfirmed={artifactConfirmed}
+          stepExplicitlyConfirmed={explicitlyConfirmed}
           stepStatus={stepStatus}
           isAdmin={isAdmin}
           onReset={onReset}
@@ -470,7 +482,7 @@ export function IdeationSubStepContainer({
         workshopId={workshopId}
         currentStepOrder={8}
         artifactConfirmed={artifactConfirmed}
-        stepExplicitlyConfirmed={artifactConfirmed}
+        stepExplicitlyConfirmed={explicitlyConfirmed}
         stepStatus={stepStatus}
         isAdmin={isAdmin}
         onReset={onReset}

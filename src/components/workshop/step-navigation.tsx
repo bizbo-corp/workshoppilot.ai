@@ -203,13 +203,21 @@ export function StepNavigation({
       </div>
 
       {/* Right: Next/advance button or forward navigation */}
-      {!isLastStep && !isCompleted ? (
+      {!isLastStep && stepExplicitlyConfirmed ? (
+        <Button
+          onClick={handleNext}
+          disabled={isNavigating}
+          size="lg"
+          className={cn(!isNavigating && 'btn-shimmer')}
+        >
+          {isNavigating ? 'Advancing...' : 'Next'}
+          {!isNavigating && <ChevronRight className="ml-2 h-4 w-4" />}
+        </Button>
+      ) : !isLastStep && !isCompleted ? (
         <Button
           onClick={handleNext}
           disabled={isNavigating || !artifactConfirmed}
           variant={artifactConfirmed ? 'default' : 'outline'}
-          size={stepExplicitlyConfirmed ? 'lg' : 'default'}
-          className={cn(stepExplicitlyConfirmed && !isNavigating && 'btn-shimmer')}
         >
           {isNavigating ? 'Advancing...' : 'Next'}
           {!isNavigating && <ChevronRight className="ml-2 h-4 w-4" />}

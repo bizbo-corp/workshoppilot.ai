@@ -210,7 +210,7 @@ export async function loadCanvasState(
         selectedSlotIds?: string[];
         brainRewritingMatrices?: BrainRewritingMatrix[];
       };
-      if (canvas?.stickyNotes || canvas?.personaTemplates || canvas?.hmwCards || canvas?.mindMapNodes || canvas?.crazy8sSlots || canvas?.conceptCards || canvas?.selectedSlotIds) {
+      if (canvas?.stickyNotes || canvas?.personaTemplates || canvas?.hmwCards || canvas?.mindMapNodes || canvas?.crazy8sSlots || canvas?.conceptCards || canvas?.selectedSlotIds || canvas?.brainRewritingMatrices) {
         return {
           stickyNotes: canvas.stickyNotes || [],
           ...(canvas.gridColumns ? { gridColumns: canvas.gridColumns } : {}),
