@@ -135,7 +135,7 @@ export const STEP_CANVAS_CONFIGS: Record<string, StepCanvasConfig> = {
         { id: 'stage-4', label: 'Stage 4', width: 240 },
         { id: 'stage-5', label: 'Stage 5', width: 240 },
       ],
-      origin: { x: 160, y: 60 }, // 160px for row labels, 60px for column headers
+      origin: { x: 200, y: 60 }, // 200px for row labels, 60px for column headers
       cellPadding: 12,
     },
   },

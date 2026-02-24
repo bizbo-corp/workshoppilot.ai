@@ -379,13 +379,14 @@
   transition: none !important;
 }
 
-/* Canvas background — set on .react-flow so the dot grid (z-index -1 → 2)
-   renders above overlays (z-1) but below nodes (z-4 renderer). */
+/* Canvas background — set on .react-flow so the dot grid (z-index 2)
+   renders below the grid overlay (z-3) and nodes (z-4 renderer).
+   Stacking: base bg → dots (z-2) → grid overlay (z-3) → nodes (z-4+) */
 .react-flow {
   background-color: var(--canvas-bg);
 }
 
-/* Raise dot grid above overlays so dots are visible through tinted fills */
+/* Raise dot grid above base but below grid overlay */
 .react-flow__background {
   z-index: 2 !important;
   background-color: transparent !important;

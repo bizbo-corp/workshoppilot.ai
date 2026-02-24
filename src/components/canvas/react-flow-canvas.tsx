@@ -501,17 +501,13 @@ function ReactFlowCanvasInner({
     }
   }, [stepConfig, gridColumns.length, setGridColumns]);
 
-  // Build dynamic gridConfig from store columns
+  // Build dynamic gridConfig from store columns (fall back to static config for first render)
   const dynamicGridConfig = useMemo<GridConfig | undefined>(() => {
-    if (
-      !stepConfig.hasGrid ||
-      !stepConfig.gridConfig ||
-      gridColumns.length === 0
-    )
+    if (!stepConfig.hasGrid || !stepConfig.gridConfig)
       return undefined;
     return {
       ...stepConfig.gridConfig,
-      columns: gridColumns,
+      columns: gridColumns.length > 0 ? gridColumns : stepConfig.gridConfig.columns,
     };
   }, [stepConfig, gridColumns]);
 

@@ -1,9 +1,11 @@
 'use client';
 
 import { PanelRightClose } from 'lucide-react';
+import * as React from 'react';
 import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
+import type { StepCanvasSettingsData } from '@/lib/canvas/step-canvas-settings-types';
 
 interface RightPanelProps {
   stepOrder: number;
@@ -11,12 +13,14 @@ interface RightPanelProps {
   workshopId: string;
   onCollapse?: () => void;
   canvasGuides?: CanvasGuideData[];
+  defaultViewportSettings?: StepCanvasSettingsData | null;
   isAdmin?: boolean;
   isAdminEditing?: boolean;
   onEditGuide?: (guide: CanvasGuideData, position: { x: number; y: number }) => void;
   onAddGuide?: (position: { x: number; y: number }) => void;
   onGuidePositionUpdate?: (guideId: string, x: number, y: number) => void;
   onGuideSizeUpdate?: (guideId: string, width: number, height: number, x: number, y: number) => void;
+  canvasRef?: React.Ref<{ getViewport: () => { x: number; y: number; zoom: number } }>;
 }
 
 export function RightPanel({
@@ -25,12 +29,14 @@ export function RightPanel({
   workshopId,
   onCollapse,
   canvasGuides,
+  defaultViewportSettings,
   isAdmin,
   isAdminEditing,
   onEditGuide,
   onAddGuide,
   onGuidePositionUpdate,
   onGuideSizeUpdate,
+  canvasRef,
 }: RightPanelProps) {
   const stepMeta = getStepByOrder(stepOrder);
 
@@ -55,12 +61,14 @@ export function RightPanel({
           stepId={stepMeta?.id || ''}
           workshopId={workshopId}
           canvasGuides={canvasGuides}
+          defaultViewportSettings={defaultViewportSettings}
           isAdmin={isAdmin}
           isAdminEditing={isAdminEditing}
           onEditGuide={onEditGuide}
           onAddGuide={onAddGuide}
           onGuidePositionUpdate={onGuidePositionUpdate}
           onGuideSizeUpdate={onGuideSizeUpdate}
+          canvasRef={canvasRef}
         />
       </div>
     </div>

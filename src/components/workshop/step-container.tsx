@@ -497,12 +497,14 @@ export function StepContainer({
                   stepId={step.id}
                   workshopId={workshopId}
                   canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
+                  defaultViewportSettings={canvasSettings}
                   isAdmin={isAdmin}
                   isAdminEditing={isGuideEditing}
                   onEditGuide={handleEditGuide}
                   onAddGuide={handleAddGuide}
                   onGuidePositionUpdate={handleGuidePositionUpdate}
                   onGuideSizeUpdate={handleGuideSizeUpdate}
+                  canvasRef={canvasRef}
                 />
                 {step.id === 'concept' && (
                   <ConceptCanvasOverlay
@@ -521,12 +523,14 @@ export function StepContainer({
                 sessionId={sessionId}
                 workshopId={workshopId}
                 canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
+                defaultViewportSettings={canvasSettings}
                 isAdmin={isAdmin}
                 isAdminEditing={isGuideEditing}
                 onEditGuide={handleEditGuide}
                 onAddGuide={handleAddGuide}
                 onGuidePositionUpdate={handleGuidePositionUpdate}
-                  onGuideSizeUpdate={handleGuideSizeUpdate}
+                onGuideSizeUpdate={handleGuideSizeUpdate}
+                canvasRef={canvasRef}
               />
             )}
           </div>
@@ -657,12 +661,14 @@ export function StepContainer({
                     workshopId={workshopId}
                     onCollapse={() => setCanvasCollapsed(true)}
                     canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
+                    defaultViewportSettings={canvasSettings}
                     isAdmin={isAdmin}
                     isAdminEditing={isGuideEditing}
                     onEditGuide={handleEditGuide}
                     onAddGuide={handleAddGuide}
                     onGuidePositionUpdate={handleGuidePositionUpdate}
-                  onGuideSizeUpdate={handleGuideSizeUpdate}
+                    onGuideSizeUpdate={handleGuideSizeUpdate}
+                    canvasRef={canvasRef}
                   />
                 )}
               </Panel>
@@ -693,12 +699,14 @@ export function StepContainer({
                     stepId={step.id}
                     workshopId={workshopId}
                     canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
+                    defaultViewportSettings={canvasSettings}
                     isAdmin={isAdmin}
                     isAdminEditing={isGuideEditing}
                     onEditGuide={handleEditGuide}
                     onAddGuide={handleAddGuide}
                     onGuidePositionUpdate={handleGuidePositionUpdate}
-                  onGuideSizeUpdate={handleGuideSizeUpdate}
+                    onGuideSizeUpdate={handleGuideSizeUpdate}
+                    canvasRef={canvasRef}
                   />
                   {step.id === 'concept' && (
                     <ConceptCanvasOverlay
@@ -729,12 +737,14 @@ export function StepContainer({
                   workshopId={workshopId}
                   onCollapse={() => setCanvasCollapsed(true)}
                   canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
+                  defaultViewportSettings={canvasSettings}
                   isAdmin={isAdmin}
                   isAdminEditing={isGuideEditing}
                   onEditGuide={handleEditGuide}
                   onAddGuide={handleAddGuide}
                   onGuidePositionUpdate={handleGuidePositionUpdate}
                   onGuideSizeUpdate={handleGuideSizeUpdate}
+                  canvasRef={canvasRef}
                 />
               )}
             </div>
