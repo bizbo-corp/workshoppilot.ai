@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import { DrawingStoreProvider, useDrawingStore } from '@/providers/drawing-store
 import { EzyDrawToolbar, EzyDrawFooter } from './toolbar';
 import { EzyDrawStage, type EzyDrawStageHandle } from './ezydraw-stage';
 import type { DrawingElement } from '@/lib/drawing/types';
-import { exportToPNG } from '@/lib/drawing/export';
+import { exportToJPEG } from '@/lib/drawing/export';
 
 /** Default canvas size: 4:3 landscape */
 const DEFAULT_CANVAS_WIDTH = 800;
@@ -19,19 +19,27 @@ const DEFAULT_CANVAS_HEIGHT = 600;
 /** Toolbar (48px) + footer (48px) */
 const BASE_CHROME_HEIGHT = 96;
 
-/** Extra height for slot info row */
-const SLOT_INFO_ROW_HEIGHT = 40;
+/** Height for stacked slot info row (title + 2-line desc + padding) */
+const SLOT_INFO_ROW_HEIGHT = 68;
+
+export type EzyDrawSaveResult = {
+  pngDataUrl: string;
+  elements: DrawingElement[];
+  backgroundImageUrl: string | null;
+};
 
 export interface EzyDrawModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (result: { pngDataUrl: string; elements: DrawingElement[] }) => void | Promise<void>;
+  onSave: (result: EzyDrawSaveResult) => void | Promise<void>;
   initialElements?: DrawingElement[];
-  drawingId?: string;  // If set, we're re-editing an existing drawing
-  canvasSize?: { width: number; height: number };  // Optional canvas dimensions (defaults to 6:4)
+  initialBackgroundImageUrl?: string | null;
+  drawingId?: string;
+  canvasSize?: { width: number; height: number };
   slotTitle?: string;
   slotDescription?: string;
   onSlotInfoChange?: (updates: { title?: string; description?: string }) => void;
+  workshopId?: string;
 }
 
 /**
@@ -44,24 +52,80 @@ function EzyDrawContent({
   slotTitle,
   slotDescription,
   onSlotInfoChange,
+  workshopId,
 }: {
   stageRef: React.RefObject<EzyDrawStageHandle | null>;
-  onSave: (result: { pngDataUrl: string; elements: DrawingElement[] }) => void | Promise<void>;
+  onSave: (result: EzyDrawSaveResult) => void;
   onCancel: () => void;
   slotTitle?: string;
   slotDescription?: string;
   onSlotInfoChange?: (updates: { title?: string; description?: string }) => void;
+  workshopId?: string;
 }) {
   const getSnapshot = useDrawingStore((s) => s.getSnapshot);
+  const replaceWithGeneratedImage = useDrawingStore((s) => s.replaceWithGeneratedImage);
+  const backgroundImageUrl = useDrawingStore((s) => s.backgroundImageUrl);
+
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   const handleSave = () => {
     const stage = stageRef.current?.getStage();
     if (!stage) return;
 
-    const pngDataUrl = exportToPNG(stage, { pixelRatio: 2 });
-    const elements = getSnapshot();
-    onSave({ pngDataUrl, elements });
+    try {
+      // Export as JPEG (quality 0.8) — dramatically smaller than PNG (~200KB vs ~4MB)
+      // Vector data in vectorJson preserves full fidelity for re-editing
+      const pngDataUrl = exportToJPEG(stage, { pixelRatio: 1, quality: 0.8 });
+      const elements = getSnapshot();
+      onSave({ pngDataUrl, elements, backgroundImageUrl });
+    } catch (error) {
+      // Canvas taint (CORS) or other export error — still save elements + background URL
+      console.error('Image export failed, saving without image:', error);
+      const elements = getSnapshot();
+      onSave({ pngDataUrl: '', elements, backgroundImageUrl });
+    }
   };
+
+  const handleGenerateImage = useCallback(async () => {
+    if (!workshopId || !slotTitle || isGeneratingImage) return;
+
+    setIsGeneratingImage(true);
+    try {
+      // Capture current canvas as a small JPEG reference for the AI
+      let existingImageBase64: string | undefined;
+      const stage = stageRef.current?.getStage();
+      const elements = getSnapshot();
+      if (stage && (elements.length > 0 || backgroundImageUrl)) {
+        existingImageBase64 = exportToJPEG(stage, { pixelRatio: 1, quality: 0.5 });
+      }
+
+      const response = await fetch('/api/ai/generate-sketch-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workshopId,
+          ideaTitle: slotTitle,
+          ideaDescription: slotDescription || '',
+          existingImageBase64,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate sketch');
+      }
+
+      const data = await response.json();
+      if (data.imageUrl) {
+        // Atomic: clear canvas + set background in one history entry
+        replaceWithGeneratedImage(data.imageUrl);
+      }
+    } catch (error) {
+      console.error('Failed to generate sketch:', error);
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  }, [workshopId, slotTitle, slotDescription, isGeneratingImage, getSnapshot, backgroundImageUrl, stageRef, replaceWithGeneratedImage]);
 
   return (
     <div className="flex h-full flex-col">
@@ -75,6 +139,8 @@ function EzyDrawContent({
         slotTitle={slotTitle}
         slotDescription={slotDescription}
         onSlotInfoChange={onSlotInfoChange}
+        onGenerateImage={workshopId && onSlotInfoChange ? handleGenerateImage : undefined}
+        isGeneratingImage={isGeneratingImage}
       />
     </div>
   );
@@ -85,11 +151,13 @@ export function EzyDrawModal({
   onClose,
   onSave,
   initialElements,
+  initialBackgroundImageUrl,
   drawingId,
   canvasSize,
   slotTitle,
   slotDescription,
   onSlotInfoChange,
+  workshopId,
 }: EzyDrawModalProps) {
   const stageRef = useRef<EzyDrawStageHandle>(null);
 
@@ -107,9 +175,14 @@ export function EzyDrawModal({
     onClose();
   };
 
-  const handleSaveComplete = async (result: { pngDataUrl: string; elements: DrawingElement[] }) => {
-    await onSave(result);
+  /**
+   * Capture data synchronously, close dialog immediately,
+   * then fire onSave in the background.
+   */
+  const handleSaveComplete = (result: EzyDrawSaveResult) => {
     onClose();
+    // Fire-and-forget — parent handles saving state
+    Promise.resolve(onSave(result)).catch(console.error);
   };
 
   return (
@@ -129,9 +202,10 @@ export function EzyDrawModal({
         </DialogTitle>
 
         <DrawingStoreProvider
-          initialState={
-            initialElements ? { elements: initialElements } : undefined
-          }
+          initialState={{
+            ...(initialElements ? { elements: initialElements } : {}),
+            ...(initialBackgroundImageUrl ? { backgroundImageUrl: initialBackgroundImageUrl } : {}),
+          }}
         >
           <EzyDrawContent
             stageRef={stageRef}
@@ -140,6 +214,7 @@ export function EzyDrawModal({
             slotTitle={slotTitle}
             slotDescription={slotDescription}
             onSlotInfoChange={onSlotInfoChange}
+            workshopId={workshopId}
           />
         </DrawingStoreProvider>
       </DialogContent>

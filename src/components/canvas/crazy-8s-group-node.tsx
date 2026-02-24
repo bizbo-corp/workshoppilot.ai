@@ -3,7 +3,7 @@
 import { memo, useState } from 'react';
 import { type NodeProps, type Node } from '@xyflow/react';
 import { Crazy8sCanvas } from '@/components/workshop/crazy-8s-canvas';
-import { Zap, Save, Check, Loader2, SkipForward, CheckCircle2 } from 'lucide-react';
+import { Zap, Save, Check, Loader2, SkipForward, CheckCircle2, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 
@@ -16,6 +16,7 @@ export type Crazy8sGroupNodeData = {
   selectedSlotIds?: string[];
   onSelectionChange?: (slotIds: string[]) => void;
   onConfirmSelection?: (skip: boolean) => void;
+  onBackToDrawing?: () => void;
 };
 
 export type Crazy8sGroupNode = Node<Crazy8sGroupNodeData, 'crazy8sGroupNode'>;
@@ -80,6 +81,15 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
               </span>
             </div>
             <div className="flex items-center gap-2">
+              {data.onBackToDrawing && (
+                <button
+                  onClick={data.onBackToDrawing}
+                  className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40 transition-colors"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit Sketches
+                </button>
+              )}
               <button
                 onClick={() => data.onConfirmSelection?.(true)}
                 className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40 transition-colors"

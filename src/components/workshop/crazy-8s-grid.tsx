@@ -8,7 +8,7 @@
 
 import { cn } from '@/lib/utils';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
-import { Pencil } from 'lucide-react';
+import { Pencil, Loader2 } from 'lucide-react';
 
 interface Crazy8sGridProps {
   slots: Crazy8sSlot[];
@@ -16,6 +16,7 @@ interface Crazy8sGridProps {
   onTitleChange: (slotId: string, title: string) => void;
   onDescriptionChange: (slotId: string, description: string) => void;
   aiPrompts?: string[];  // Optional sketch prompts from AI (Plan 28-05 feature hook)
+  savingSlotId?: string | null;
 }
 
 /**
@@ -23,7 +24,7 @@ interface Crazy8sGridProps {
  * Displays 8 sketch slots in a 2x4 layout with empty/filled states
  * Supports editable titles, descriptions, and AI-suggested prompts
  */
-export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionChange, aiPrompts }: Crazy8sGridProps) {
+export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionChange, aiPrompts, savingSlotId }: Crazy8sGridProps) {
   return (
     <div className="w-full">
       {/* Instructions header */}
@@ -38,6 +39,7 @@ export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionCh
         {slots.map((slot, index) => {
           const hasImage = Boolean(slot.imageUrl);
           const hasPreFill = Boolean(slot.title || slot.description);
+          const isSaving = savingSlotId === slot.slotId;
 
           return (
             <div
@@ -54,6 +56,16 @@ export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionCh
               <div className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-background border flex items-center justify-center text-xs font-semibold">
                 {index + 1}
               </div>
+
+              {/* Saving spinner overlay */}
+              {isSaving && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
+                  <div className="flex items-center gap-2 rounded-full bg-background/90 px-3 py-1.5 shadow-sm border">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Saving...</span>
+                  </div>
+                </div>
+              )}
 
               {hasImage ? (
                 <>

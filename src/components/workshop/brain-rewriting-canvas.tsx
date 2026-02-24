@@ -86,7 +86,7 @@ export function BrainRewritingCanvas({
   };
 
   /**
-   * Handle drawing save: simplify -> upload PNG -> update cell
+   * Handle drawing save: simplify -> upload PNG via API -> save metadata via server action
    */
   const handleDrawingSave = async (result: {
     pngDataUrl: string;
@@ -98,13 +98,35 @@ export function BrainRewritingCanvas({
     const vectorJson = JSON.stringify(simplified);
 
     try {
+      // Step 1: Upload image via API route as binary FormData
+      let pngUrl = '';
+      if (result.pngDataUrl) {
+        const blobRes = await fetch(result.pngDataUrl);
+        const imageBlob = await blobRes.blob();
+
+        const formData = new FormData();
+        formData.append('file', imageBlob, `drawing.${imageBlob.type === 'image/png' ? 'png' : 'jpg'}`);
+        formData.append('workshopId', workshopId);
+
+        const uploadRes = await fetch('/api/upload-drawing-png', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!uploadRes.ok) {
+          console.error('Image upload failed:', uploadRes.statusText);
+          return;
+        }
+        const uploadData = await uploadRes.json();
+        pngUrl = uploadData.pngUrl;
+      }
+
+      // Step 2: Save metadata via server action
       if (ezyDrawState.drawingId) {
-        // Re-editing existing drawing
         const response = await updateDrawing({
           workshopId,
           stepId,
           drawingId: ezyDrawState.drawingId,
-          pngBase64: result.pngDataUrl,
+          pngUrl,
           vectorJson,
           width: CRAZY_8S_CANVAS_SIZE.width,
           height: CRAZY_8S_CANVAS_SIZE.height,
@@ -114,11 +136,10 @@ export function BrainRewritingCanvas({
           onCellUpdate(matrix.slotId, ezyDrawState.cellId, response.pngUrl, ezyDrawState.drawingId);
         }
       } else {
-        // Creating new drawing
         const response = await saveDrawing({
           workshopId,
           stepId,
-          pngBase64: result.pngDataUrl,
+          pngUrl,
           vectorJson,
           width: CRAZY_8S_CANVAS_SIZE.width,
           height: CRAZY_8S_CANVAS_SIZE.height,

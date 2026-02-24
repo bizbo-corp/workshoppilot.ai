@@ -2130,13 +2130,41 @@ function ReactFlowCanvasInner({
       const width = 1200;
       const height = 800;
 
+      // Step 1: Upload image via API route as binary FormData
+      let pngUrl = '';
+      if (result.pngDataUrl) {
+        try {
+          const blobRes = await fetch(result.pngDataUrl);
+          const imageBlob = await blobRes.blob();
+
+          const formData = new FormData();
+          formData.append('file', imageBlob, `drawing.${imageBlob.type === 'image/png' ? 'png' : 'jpg'}`);
+          formData.append('workshopId', workshopId);
+
+          const uploadRes = await fetch('/api/upload-drawing-png', {
+            method: 'POST',
+            body: formData,
+          });
+          if (!uploadRes.ok) {
+            console.error("Image upload failed:", uploadRes.statusText);
+            return;
+          }
+          const uploadData = await uploadRes.json();
+          pngUrl = uploadData.pngUrl;
+        } catch (err) {
+          console.error("Image upload error:", err);
+          return;
+        }
+      }
+
+      // Step 2: Save metadata via server action
       if (ezyDrawState?.drawingId) {
         // Re-edit: update existing drawing
         const response = await updateDrawing({
           workshopId,
           stepId,
           drawingId: ezyDrawState.drawingId,
-          pngBase64: result.pngDataUrl,
+          pngUrl,
           vectorJson,
           width,
           height,
@@ -2157,7 +2185,7 @@ function ReactFlowCanvasInner({
         const response = await saveDrawing({
           workshopId,
           stepId,
-          pngBase64: result.pngDataUrl,
+          pngUrl,
           vectorJson,
           width,
           height,

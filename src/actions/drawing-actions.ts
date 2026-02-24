@@ -3,7 +3,6 @@
 import { db } from '@/db/client';
 import { stepArtifacts, workshopSteps } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { put } from '@vercel/blob';
 
 /**
  * Drawing record stored in stepArtifacts.drawings[] array
@@ -12,7 +11,7 @@ import { put } from '@vercel/blob';
 type Drawing = {
   id: string;
   pngUrl: string;
-  vectorJson: string; // JSON.stringify'd DrawingElement[]
+  vectorJson: string; // JSON.stringify'd DrawingElement[] or VectorData wrapper
   width: number;
   height: number;
   createdAt: string; // ISO timestamp
@@ -20,15 +19,16 @@ type Drawing = {
 };
 
 /**
- * Save new drawing with PNG upload and vector JSON storage
+ * Save new drawing — PNG already uploaded via /api/upload-drawing-png.
+ * Only stores the blob URL + vector JSON in the DB.
  *
- * @param params - Drawing data including workshop context, PNG base64, and vector JSON
+ * @param params - Drawing data with pre-uploaded PNG URL and vector JSON
  * @returns Drawing ID and PNG URL, or error
  */
 export async function saveDrawing(params: {
   workshopId: string;
   stepId: string;
-  pngBase64: string;
+  pngUrl: string;
   vectorJson: string;
   width: number;
   height: number;
@@ -37,32 +37,7 @@ export async function saveDrawing(params: {
   | { success: false; error: string }
 > {
   try {
-    const { workshopId, stepId, pngBase64, vectorJson, width, height } = params;
-
-    // Upload PNG to Vercel Blob (or fall back to data URL for local dev)
-    let url: string;
-
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const base64Data = pngBase64.split(',')[1];
-      if (!base64Data) {
-        return { success: false, error: 'Invalid base64 data URL format' };
-      }
-      const buffer = Buffer.from(base64Data, 'base64');
-
-      const blob = await put(
-        `drawings/${workshopId}/${Date.now()}.png`,
-        buffer,
-        {
-          access: 'public',
-          addRandomSuffix: true,
-        }
-      );
-      url = blob.url;
-    } else {
-      // Fallback: store data URL directly (works for dev, not recommended for production)
-      console.warn('BLOB_READ_WRITE_TOKEN not set — storing drawing as data URL. Set token in .env.local for Vercel Blob storage.');
-      url = pngBase64;
-    }
+    const { workshopId, stepId, pngUrl, vectorJson, width, height } = params;
 
     // Find workshopStep record
     const workshopStepRecords = await db
@@ -98,7 +73,7 @@ export async function saveDrawing(params: {
     // Create drawing record
     const newDrawing: Drawing = {
       id: crypto.randomUUID(),
-      pngUrl: url,
+      pngUrl,
       vectorJson,
       width,
       height,
@@ -106,33 +81,65 @@ export async function saveDrawing(params: {
     };
 
     if (existingArtifacts.length > 0) {
-      // Merge into existing artifact
-      const existing = existingArtifacts[0];
-      const currentVersion = existing.version;
-      const newVersion = currentVersion + 1;
-      const existingArtifact = (existing.artifact || {}) as Record<
-        string,
-        unknown
-      >;
-      const existingDrawings = (existingArtifact.drawings || []) as Drawing[];
+      // Merge into existing artifact.
+      // Retry up to 3 times on version conflicts (saveCanvasState auto-save can race).
+      const MAX_RETRIES = 3;
+      let saved = false;
 
-      const mergedArtifact = {
-        ...existingArtifact,
-        drawings: [...existingDrawings, newDrawing],
-      };
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        // Re-read on retry to get fresh version
+        const record = attempt === 0
+          ? existingArtifacts[0]
+          : (await db
+              .select({ id: stepArtifacts.id, version: stepArtifacts.version, artifact: stepArtifacts.artifact })
+              .from(stepArtifacts)
+              .where(eq(stepArtifacts.workshopStepId, workshopStepId))
+              .limit(1))[0];
 
-      await db
-        .update(stepArtifacts)
-        .set({
-          artifact: mergedArtifact,
-          version: newVersion,
-        })
-        .where(
-          and(
-            eq(stepArtifacts.id, existing.id),
-            eq(stepArtifacts.version, currentVersion)
+        if (!record) return { success: false, error: 'Artifact disappeared during save' };
+
+        const currentVersion = record.version;
+        const newVersion = currentVersion + 1;
+        const existingArtifact = (record.artifact || {}) as Record<
+          string,
+          unknown
+        >;
+        const existingDrawings = (existingArtifact.drawings || []) as Drawing[];
+
+        const mergedArtifact = {
+          ...existingArtifact,
+          drawings: [...existingDrawings, newDrawing],
+        };
+
+        const updateResult = await db
+          .update(stepArtifacts)
+          .set({
+            artifact: mergedArtifact,
+            version: newVersion,
+          })
+          .where(
+            and(
+              eq(stepArtifacts.id, record.id),
+              eq(stepArtifacts.version, currentVersion)
+            )
           )
-        );
+          .returning({ id: stepArtifacts.id });
+
+        if (updateResult.length > 0) {
+          saved = true;
+          break;
+        }
+
+        // Version conflict — retry with fresh read
+        if (attempt === MAX_RETRIES - 1) {
+          console.warn('saveDrawing: version conflict after max retries');
+          return { success: false, error: 'version_conflict' };
+        }
+      }
+
+      if (!saved) {
+        return { success: false, error: 'Failed to save drawing after retries' };
+      }
     } else {
       // Insert new artifact
       await db.insert(stepArtifacts).values({
@@ -147,7 +154,7 @@ export async function saveDrawing(params: {
     return {
       success: true,
       drawingId: newDrawing.id,
-      pngUrl: url,
+      pngUrl,
     };
   } catch (error) {
     console.error('Failed to save drawing:', error);
@@ -235,16 +242,17 @@ export async function loadDrawing(params: {
 }
 
 /**
- * Update existing drawing with new PNG and vector data
+ * Update existing drawing — PNG already uploaded via /api/upload-drawing-png.
+ * Only updates the blob URL + vector JSON in the DB.
  *
- * @param params - Drawing data including new PNG base64 and vector JSON
+ * @param params - Drawing data with pre-uploaded PNG URL and vector JSON
  * @returns New PNG URL or error
  */
 export async function updateDrawing(params: {
   workshopId: string;
   stepId: string;
   drawingId: string;
-  pngBase64: string;
+  pngUrl: string;
   vectorJson: string;
   width: number;
   height: number;
@@ -256,35 +264,11 @@ export async function updateDrawing(params: {
       workshopId,
       stepId,
       drawingId,
-      pngBase64,
+      pngUrl,
       vectorJson,
       width,
       height,
     } = params;
-
-    // Upload PNG to Vercel Blob (or fall back to data URL for local dev)
-    let url: string;
-
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const base64Data = pngBase64.split(',')[1];
-      if (!base64Data) {
-        return { success: false, error: 'Invalid base64 data URL format' };
-      }
-      const buffer = Buffer.from(base64Data, 'base64');
-
-      const blob = await put(
-        `drawings/${workshopId}/${Date.now()}.png`,
-        buffer,
-        {
-          access: 'public',
-          addRandomSuffix: true,
-        }
-      );
-      url = blob.url;
-    } else {
-      console.warn('BLOB_READ_WRITE_TOKEN not set — storing drawing as data URL.');
-      url = pngBase64;
-    }
 
     // Find workshopStep record
     const workshopStepRecords = await db
@@ -321,54 +305,77 @@ export async function updateDrawing(params: {
       return { success: false, error: 'No artifact found for this step' };
     }
 
-    const existing = existingArtifacts[0];
-    const currentVersion = existing.version;
-    const newVersion = currentVersion + 1;
-    const existingArtifact = (existing.artifact || {}) as Record<
-      string,
-      unknown
-    >;
-    const existingDrawings = (existingArtifact.drawings || []) as Drawing[];
+    // Retry up to 3 times on version conflicts (saveCanvasState auto-save can race).
+    const MAX_RETRIES = 3;
 
-    // Find and update drawing
-    const drawingIndex = existingDrawings.findIndex((d) => d.id === drawingId);
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      // Re-read on retry to get fresh version
+      const record = attempt === 0
+        ? existingArtifacts[0]
+        : (await db
+            .select({ id: stepArtifacts.id, version: stepArtifacts.version, artifact: stepArtifacts.artifact })
+            .from(stepArtifacts)
+            .where(eq(stepArtifacts.workshopStepId, workshopStepId))
+            .limit(1))[0];
 
-    if (drawingIndex === -1) {
-      return { success: false, error: 'Drawing not found' };
+      if (!record) return { success: false, error: 'Artifact disappeared during update' };
+
+      const currentVersion = record.version;
+      const newVersion = currentVersion + 1;
+      const existingArtifact = (record.artifact || {}) as Record<
+        string,
+        unknown
+      >;
+      const existingDrawings = (existingArtifact.drawings || []) as Drawing[];
+
+      // Find and update drawing
+      const drawingIndex = existingDrawings.findIndex((d) => d.id === drawingId);
+
+      if (drawingIndex === -1) {
+        return { success: false, error: 'Drawing not found' };
+      }
+
+      const updatedDrawings = [...existingDrawings];
+      updatedDrawings[drawingIndex] = {
+        ...updatedDrawings[drawingIndex],
+        pngUrl,
+        vectorJson,
+        width,
+        height,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const mergedArtifact = {
+        ...existingArtifact,
+        drawings: updatedDrawings,
+      };
+
+      const updateResult = await db
+        .update(stepArtifacts)
+        .set({
+          artifact: mergedArtifact,
+          version: newVersion,
+        })
+        .where(
+          and(
+            eq(stepArtifacts.id, record.id),
+            eq(stepArtifacts.version, currentVersion)
+          )
+        )
+        .returning({ id: stepArtifacts.id });
+
+      if (updateResult.length > 0) {
+        return { success: true, pngUrl };
+      }
+
+      // Version conflict — retry with fresh read
+      if (attempt === MAX_RETRIES - 1) {
+        console.warn('updateDrawing: version conflict after max retries');
+        return { success: false, error: 'version_conflict' };
+      }
     }
 
-    const updatedDrawings = [...existingDrawings];
-    updatedDrawings[drawingIndex] = {
-      ...updatedDrawings[drawingIndex],
-      pngUrl: url,
-      vectorJson,
-      width,
-      height,
-      updatedAt: new Date().toISOString(),
-    };
-
-    const mergedArtifact = {
-      ...existingArtifact,
-      drawings: updatedDrawings,
-    };
-
-    await db
-      .update(stepArtifacts)
-      .set({
-        artifact: mergedArtifact,
-        version: newVersion,
-      })
-      .where(
-        and(
-          eq(stepArtifacts.id, existing.id),
-          eq(stepArtifacts.version, currentVersion)
-        )
-      );
-
-    return {
-      success: true,
-      pngUrl: url,
-    };
+    return { success: false, error: 'Failed to update drawing after retries' };
   } catch (error) {
     console.error('Failed to update drawing:', error);
     return {

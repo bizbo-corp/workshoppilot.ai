@@ -12,6 +12,7 @@ import { DrawingHistory } from '@/lib/drawing/history';
 
 export type DrawingState = {
   elements: DrawingElement[];
+  backgroundImageUrl: string | null;
   selectedElementId: string | null;
   activeTool: DrawingTool;
   strokeColor: string;
@@ -41,12 +42,14 @@ export type DrawingActions = {
   redo: () => void;
   clearAll: () => void;
   getSnapshot: () => DrawingElement[];
+  replaceWithGeneratedImage: (imageUrl: string) => void;
 };
 
 export type DrawingStore = DrawingState & DrawingActions;
 
 const DEFAULT_STATE: DrawingState = {
   elements: [],
+  backgroundImageUrl: null,
   selectedElementId: null,
   activeTool: 'pencil',
   strokeColor: '#000000',
@@ -63,7 +66,10 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
   return createStore<DrawingStore>()((set, get) => {
     // Initialize history with starting state
     const initialState = { ...DEFAULT_STATE, ...initState };
-    history.push(initialState.elements);
+    history.push({
+      elements: initialState.elements,
+      backgroundImageUrl: initialState.backgroundImageUrl,
+    });
 
     return {
       ...initialState,
@@ -76,7 +82,7 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
 
         set((state) => {
           const newElements = [...state.elements, newElement];
-          history.push(newElements);
+          history.push({ elements: newElements, backgroundImageUrl: state.backgroundImageUrl });
 
           return {
             elements: newElements,
@@ -94,7 +100,7 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
 
         set((state) => {
           const updatedElements = [...state.elements, ...newElements];
-          history.push(updatedElements);
+          history.push({ elements: updatedElements, backgroundImageUrl: state.backgroundImageUrl });
 
           return {
             elements: updatedElements,
@@ -109,7 +115,7 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
           const newElements = state.elements.map((element) =>
             element.id === id ? ({ ...element, ...updates } as DrawingElement) : element
           );
-          history.push(newElements);
+          history.push({ elements: newElements, backgroundImageUrl: state.backgroundImageUrl });
 
           return {
             elements: newElements,
@@ -122,7 +128,7 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
       deleteElement: (id) => {
         set((state) => {
           const newElements = state.elements.filter((element) => element.id !== id);
-          history.push(newElements);
+          history.push({ elements: newElements, backgroundImageUrl: state.backgroundImageUrl });
 
           return {
             elements: newElements,
@@ -136,7 +142,7 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
       deleteElementGroup: (groupId) => {
         set((state) => {
           const newElements = state.elements.filter((element) => element.groupId !== groupId);
-          history.push(newElements);
+          history.push({ elements: newElements, backgroundImageUrl: state.backgroundImageUrl });
 
           // Clear selection if selected element was in deleted group
           const wasSelectedInGroup = state.selectedElementId &&
@@ -156,7 +162,7 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
           const newElements = state.elements.map((element) =>
             element.groupId === groupId ? ({ ...element, ...updates } as DrawingElement) : element
           );
-          history.push(newElements);
+          history.push({ elements: newElements, backgroundImageUrl: state.backgroundImageUrl });
 
           return {
             elements: newElements,
@@ -173,7 +179,7 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
               ? ({ ...element, x: element.x + deltaX, y: element.y + deltaY } as DrawingElement)
               : element
           );
-          history.push(newElements);
+          history.push({ elements: newElements, backgroundImageUrl: state.backgroundImageUrl });
 
           return {
             elements: newElements,
@@ -230,7 +236,8 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
         const snapshot = history.undo();
         if (snapshot !== null) {
           set(() => ({
-            elements: snapshot,
+            elements: snapshot.elements,
+            backgroundImageUrl: snapshot.backgroundImageUrl,
             canUndo: history.canUndo,
             canRedo: history.canRedo,
           }));
@@ -241,7 +248,8 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
         const snapshot = history.redo();
         if (snapshot !== null) {
           set(() => ({
-            elements: snapshot,
+            elements: snapshot.elements,
+            backgroundImageUrl: snapshot.backgroundImageUrl,
             canUndo: history.canUndo,
             canRedo: history.canRedo,
           }));
@@ -249,10 +257,10 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
       },
 
       clearAll: () => {
-        set(() => {
+        set((state) => {
           const emptyElements: DrawingElement[] = [];
           history.clear();
-          history.push(emptyElements);
+          history.push({ elements: emptyElements, backgroundImageUrl: state.backgroundImageUrl });
 
           return {
             elements: emptyElements,
@@ -265,6 +273,25 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
 
       getSnapshot: () => {
         return get().elements;
+      },
+
+      /**
+       * Clear all drawing elements and set a new background image.
+       * Pushed as a single atomic history entry for clean undo/redo.
+       */
+      replaceWithGeneratedImage: (imageUrl) => {
+        set(() => {
+          const emptyElements: DrawingElement[] = [];
+          history.push({ elements: emptyElements, backgroundImageUrl: imageUrl });
+
+          return {
+            elements: emptyElements,
+            backgroundImageUrl: imageUrl,
+            selectedElementId: null,
+            canUndo: history.canUndo,
+            canRedo: history.canRedo,
+          };
+        });
       },
     };
   });

@@ -1,14 +1,20 @@
 /**
  * Drawing history manager for undo/redo functionality
  *
- * Maintains a stack of drawing element snapshots with a 50-step limit.
+ * Maintains a stack of drawing snapshots with a 50-step limit.
+ * Each snapshot includes elements and optional background image.
  * Uses structuredClone() for deep cloning to prevent reference issues.
  */
 
 import type { DrawingElement } from './types';
 
+export type DrawingSnapshot = {
+  elements: DrawingElement[];
+  backgroundImageUrl: string | null;
+};
+
 export class DrawingHistory {
-  private history: DrawingElement[][] = [];
+  private history: DrawingSnapshot[] = [];
   private currentStep = -1;
   private readonly maxSteps = 50;
 
@@ -16,13 +22,16 @@ export class DrawingHistory {
    * Push a new snapshot to the history stack
    * Truncates any future history if user has undone and then makes a new change
    */
-  push(elements: DrawingElement[]): void {
+  push(snapshot: DrawingSnapshot): void {
     // Remove any future history after current step
     this.history = this.history.slice(0, this.currentStep + 1);
 
-    // Deep clone to prevent reference issues
-    const snapshot = structuredClone(elements);
-    this.history.push(snapshot);
+    // Deep clone elements, keep backgroundImageUrl as-is (string is immutable)
+    const cloned: DrawingSnapshot = {
+      elements: structuredClone(snapshot.elements),
+      backgroundImageUrl: snapshot.backgroundImageUrl,
+    };
+    this.history.push(cloned);
 
     // Enforce max steps limit (keep most recent)
     if (this.history.length > this.maxSteps) {
@@ -36,26 +45,34 @@ export class DrawingHistory {
    * Undo to previous snapshot
    * Returns the snapshot or null if at the start
    */
-  undo(): DrawingElement[] | null {
+  undo(): DrawingSnapshot | null {
     if (!this.canUndo) {
       return null;
     }
 
     this.currentStep--;
-    return structuredClone(this.history[this.currentStep]);
+    const snap = this.history[this.currentStep];
+    return {
+      elements: structuredClone(snap.elements),
+      backgroundImageUrl: snap.backgroundImageUrl,
+    };
   }
 
   /**
    * Redo to next snapshot
    * Returns the snapshot or null if at the end
    */
-  redo(): DrawingElement[] | null {
+  redo(): DrawingSnapshot | null {
     if (!this.canRedo) {
       return null;
     }
 
     this.currentStep++;
-    return structuredClone(this.history[this.currentStep]);
+    const snap = this.history[this.currentStep];
+    return {
+      elements: structuredClone(snap.elements),
+      backgroundImageUrl: snap.backgroundImageUrl,
+    };
   }
 
   /**

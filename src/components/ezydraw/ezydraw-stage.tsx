@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { Stage, Layer, Line, Rect, Ellipse, Arrow, Text, Path } from 'react-konva';
+import { Stage, Layer, Line, Rect, Ellipse, Arrow, Text, Path, Image as KonvaImage } from 'react-konva';
 import type Konva from 'konva';
 import { useDrawingStore } from '@/providers/drawing-store-provider';
 import { usePencilTool, PencilToolPreview } from '@/components/ezydraw/tools/pencil-tool';
@@ -29,6 +29,25 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+
+  // Background image from store (supports undo/redo)
+  const backgroundImageUrl = useDrawingStore((s) => s.backgroundImageUrl);
+  const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (!backgroundImageUrl) {
+      setBgImage(null);
+      return;
+    }
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => setBgImage(img);
+    img.onerror = () => {
+      console.error('Failed to load background image');
+      setBgImage(null);
+    };
+    img.src = backgroundImageUrl;
+  }, [backgroundImageUrl]);
 
   // Text editing state
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
@@ -228,6 +247,18 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
               }
             }}
           />
+
+          {/* AI-generated background image (renders behind all drawing elements) */}
+          {bgImage && (
+            <KonvaImage
+              image={bgImage}
+              x={0}
+              y={0}
+              width={dimensions.width}
+              height={dimensions.height}
+              listening={false}
+            />
+          )}
 
           {/* Render completed elements */}
           {elements.map((element) => {

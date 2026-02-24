@@ -46,6 +46,36 @@ export function exportToPNG(
 }
 
 /**
+ * Export Konva stage to JPEG data URL (smaller size, good for reference images)
+ */
+export function exportToJPEG(
+  stage: Konva.Stage,
+  options: { pixelRatio?: number; quality?: number } = {}
+): string {
+  const { pixelRatio = 1, quality = 0.7 } = options;
+
+  const layers = stage.getLayers();
+  const uiLayer = layers.find((layer) => layer.getAttr('name') === 'ui-layer');
+
+  const wasVisible = uiLayer?.visible() ?? false;
+  if (uiLayer) {
+    uiLayer.visible(false);
+  }
+
+  const dataURL = stage.toDataURL({
+    mimeType: 'image/jpeg',
+    pixelRatio,
+    quality,
+  });
+
+  if (uiLayer) {
+    uiLayer.visible(wasVisible);
+  }
+
+  return dataURL;
+}
+
+/**
  * Export Konva stage to PNG Blob (for upload to Vercel Blob in Phase 26)
  *
  * @param stage - Konva Stage instance

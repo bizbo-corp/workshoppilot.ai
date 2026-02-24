@@ -222,6 +222,11 @@ export function IdeationSubStepContainer({
     setCurrentPhase('idea-selection');
   }, [flushCanvasState]);
 
+  // Back to drawing mode from idea selection
+  const handleBackToDrawing = React.useCallback(() => {
+    setCurrentPhase('crazy-eights');
+  }, []);
+
   // Confirm selection from inline Crazy 8s node → brain rewriting (or skip)
   const handleConfirmSelection = React.useCallback(async (skip: boolean) => {
     if (!stepId) return;
@@ -329,6 +334,7 @@ export function IdeationSubStepContainer({
             selectedSlotIds={localSelectedSlotIds}
             onSelectionChange={setLocalSelectedSlotIds}
             onConfirmSelection={handleConfirmSelection}
+            onBackToDrawing={handleBackToDrawing}
             // Brain rewriting (shown as side-by-side nodes)
             brainRewritingMatrices={currentPhase === 'brain-rewriting' ? brainRewritingMatrices : undefined}
             onBrainRewritingCellUpdate={handleBrainRewritingCellUpdate}

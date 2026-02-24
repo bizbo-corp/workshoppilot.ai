@@ -21,6 +21,8 @@ import {
   MessageCircle,
   Smile,
   ChevronDown,
+  Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,6 +42,8 @@ interface EzyDrawFooterProps {
   slotTitle?: string;
   slotDescription?: string;
   onSlotInfoChange?: (updates: { title?: string; description?: string }) => void;
+  onGenerateImage?: () => void;
+  isGeneratingImage?: boolean;
 }
 
 const TOOL_BUTTONS = [
@@ -236,10 +240,17 @@ export function EzyDrawToolbar() {
 }
 
 /**
- * Footer bar: undo, redo, clear, cancel, save
- * Optionally shows slot title/description editing row for Crazy 8s
+ * Footer bar: stacked title/description, undo/redo/clear, AI generate, cancel/save
  */
-export function EzyDrawFooter({ onSave, onCancel, slotTitle, slotDescription, onSlotInfoChange }: EzyDrawFooterProps) {
+export function EzyDrawFooter({
+  onSave,
+  onCancel,
+  slotTitle,
+  slotDescription,
+  onSlotInfoChange,
+  onGenerateImage,
+  isGeneratingImage,
+}: EzyDrawFooterProps) {
   const canUndo = useDrawingStore((state) => state.canUndo);
   const canRedo = useDrawingStore((state) => state.canRedo);
   const undo = useDrawingStore((state) => state.undo);
@@ -257,11 +268,11 @@ export function EzyDrawFooter({ onSave, onCancel, slotTitle, slotDescription, on
 
   return (
     <div className="z-10 shrink-0 border-t bg-card/95 backdrop-blur">
-      {/* Slot info row (only for Crazy 8s) */}
+      {/* Stacked title + description (only for Crazy 8s) */}
       {onSlotInfoChange && (
-        <div className="flex h-10 items-center gap-3 border-b border-border/50 px-3">
-          <div className="flex items-center gap-1.5 min-w-0" style={{ width: '40%' }}>
-            <span className="text-[10px] font-medium text-muted-foreground shrink-0">Title</span>
+        <div className="space-y-0 border-b border-border/50 px-3 py-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-medium text-muted-foreground shrink-0 w-8">Title</span>
             <input
               type="text"
               value={slotTitle || ''}
@@ -270,15 +281,14 @@ export function EzyDrawFooter({ onSave, onCancel, slotTitle, slotDescription, on
               className="min-w-0 flex-1 bg-transparent text-xs font-medium outline-none placeholder:text-muted-foreground/40"
             />
           </div>
-          <div className="h-5 w-px bg-border/50" />
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <span className="text-[10px] font-medium text-muted-foreground shrink-0">Desc</span>
-            <input
-              type="text"
+          <div className="flex items-start gap-1.5">
+            <span className="text-[10px] font-medium text-muted-foreground shrink-0 w-8 pt-0.5">Desc</span>
+            <textarea
               value={slotDescription || ''}
               onChange={(e) => onSlotInfoChange({ description: e.target.value })}
               placeholder="Brief description..."
-              className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/40"
+              rows={2}
+              className="min-w-0 flex-1 resize-none bg-transparent text-xs outline-none placeholder:text-muted-foreground/40 leading-relaxed"
             />
           </div>
         </div>
@@ -321,6 +331,25 @@ export function EzyDrawFooter({ onSave, onCancel, slotTitle, slotDescription, on
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
+
+        {/* Center: AI generate */}
+        {onGenerateImage && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            onClick={onGenerateImage}
+            disabled={isGeneratingImage}
+            title="Generate AI sketch from description"
+          >
+            {isGeneratingImage ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-1.5" />
+            )}
+            {isGeneratingImage ? 'Generating...' : 'Generate Sketch'}
+          </Button>
+        )}
 
         {/* Right: cancel / save */}
         <div className="flex items-center gap-2">

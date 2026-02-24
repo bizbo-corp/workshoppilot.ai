@@ -79,6 +79,7 @@ export type MindMapCanvasProps = {
   selectedSlotIds?: string[];
   onSelectionChange?: (slotIds: string[]) => void;
   onConfirmSelection?: (skip: boolean) => void;
+  onBackToDrawing?: () => void;
   // Brain rewriting
   brainRewritingMatrices?: BrainRewritingMatrix[];
   onBrainRewritingCellUpdate?: (slotId: string, cellId: string, imageUrl: string, drawingId: string) => void;
@@ -105,6 +106,7 @@ function MindMapCanvasInner({
   selectedSlotIds,
   onSelectionChange,
   onConfirmSelection,
+  onBackToDrawing,
   brainRewritingMatrices,
   onBrainRewritingCellUpdate,
   onBrainRewritingDone,
@@ -374,9 +376,10 @@ function MindMapCanvasInner({
         selectedSlotIds,
         onSelectionChange,
         onConfirmSelection,
+        onBackToDrawing,
       },
     };
-  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection]);
+  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing]);
 
   // Brain rewriting group nodes — positioned to the right of Crazy 8s
   const brainRewritingNodes = useMemo<Node[]>(() => {
