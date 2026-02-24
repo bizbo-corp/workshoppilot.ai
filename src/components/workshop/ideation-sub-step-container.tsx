@@ -259,6 +259,15 @@ export function IdeationSubStepContainer({
     setArtifactConfirmed(true);
   }, [flushCanvasState]);
 
+  // Handle brain rewriting toggle done
+  const handleBrainRewritingToggleDone = React.useCallback(
+    (slotId: string) => {
+      const state = canvasStoreApi.getState();
+      state.toggleBrainRewritingDone(slotId);
+    },
+    [canvasStoreApi]
+  );
+
   // Handle brain rewriting cell update
   const handleBrainRewritingCellUpdate = React.useCallback(
     (slotId: string, cellId: string, imageUrl: string, drawingId: string) => {
@@ -338,6 +347,7 @@ export function IdeationSubStepContainer({
             // Brain rewriting (shown as side-by-side nodes)
             brainRewritingMatrices={currentPhase === 'brain-rewriting' ? brainRewritingMatrices : undefined}
             onBrainRewritingCellUpdate={handleBrainRewritingCellUpdate}
+            onBrainRewritingToggleDone={handleBrainRewritingToggleDone}
             onBrainRewritingDone={handleSaveBrainRewriting}
           />
         )}

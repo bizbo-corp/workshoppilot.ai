@@ -19,7 +19,8 @@ import {
   type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, CheckCircle2 } from 'lucide-react';
+import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, ArrowRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 import { MindMapNode } from '@/components/canvas/mind-map-node';
 import { MindMapEdge } from '@/components/canvas/mind-map-edge';
@@ -83,6 +84,7 @@ export type MindMapCanvasProps = {
   // Brain rewriting
   brainRewritingMatrices?: BrainRewritingMatrix[];
   onBrainRewritingCellUpdate?: (slotId: string, cellId: string, imageUrl: string, drawingId: string) => void;
+  onBrainRewritingToggleDone?: (slotId: string) => void;
   onBrainRewritingDone?: () => void;
 };
 
@@ -109,6 +111,7 @@ function MindMapCanvasInner({
   onBackToDrawing,
   brainRewritingMatrices,
   onBrainRewritingCellUpdate,
+  onBrainRewritingToggleDone,
   onBrainRewritingDone,
 }: MindMapCanvasProps) {
   const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
@@ -405,10 +408,11 @@ function MindMapCanvasInner({
           slotTitle: slot?.title || `Sketch ${slotNumber}`,
           indexLabel: `${index + 1} of ${brainRewritingMatrices.length}`,
           onCellUpdate: onBrainRewritingCellUpdate,
+          onToggleDone: onBrainRewritingToggleDone,
         },
       };
     });
-  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, onBrainRewritingCellUpdate]);
+  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, onBrainRewritingCellUpdate, onBrainRewritingToggleDone]);
 
   // Combined nodes array: mind map + optional crazy 8s + brain rewriting
   const rfNodes = useMemo(() => {
@@ -696,19 +700,35 @@ function MindMapCanvasInner({
           maskColor="rgba(0,0,0,0.1)"
         />
 
-        {/* Floating "Done" button when brain rewriting is active */}
-        {brainRewritingMatrices && brainRewritingMatrices.length > 0 && onBrainRewritingDone && (
-          <Panel position="top-right" className="!mt-4 !mr-4">
-            <Button
-              onClick={onBrainRewritingDone}
-              size="sm"
-              className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white shadow-lg"
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              Done
-            </Button>
-          </Panel>
-        )}
+        {/* Proceed button when brain rewriting is active */}
+        {brainRewritingMatrices && brainRewritingMatrices.length > 0 && onBrainRewritingDone && (() => {
+          const allDone = brainRewritingMatrices.every((m) => !!m.done);
+          return (
+            <Panel position="top-right" className="!mt-4 !mr-4">
+              <div className="flex flex-col items-end gap-1.5">
+                <Button
+                  onClick={onBrainRewritingDone}
+                  disabled={!allDone}
+                  size="sm"
+                  className={cn(
+                    'gap-1.5 shadow-lg transition-colors',
+                    allDone
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                      : 'bg-muted text-muted-foreground cursor-not-allowed'
+                  )}
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  Proceed to Concept Development
+                </Button>
+                {!allDone && (
+                  <span className="text-xs text-muted-foreground">
+                    Mark all cards as done to proceed
+                  </span>
+                )}
+              </div>
+            </Panel>
+          );
+        })()}
 
         {/* Bottom toolbar */}
         <Panel position="bottom-center" className="!mb-4">

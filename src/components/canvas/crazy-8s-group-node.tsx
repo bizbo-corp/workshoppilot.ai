@@ -65,7 +65,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
   if (data.selectionMode) {
     return (
       <div
-        className="nodrag nopan nowheel cursor-default"
+        className="nodrag nopan cursor-default"
         style={{ width: CRAZY_8S_NODE_WIDTH, height: CRAZY_8S_NODE_HEIGHT, pointerEvents: 'all' }}
       >
         <div className="rounded-xl border-2 border-amber-400/60 bg-background shadow-lg h-full flex flex-col">
@@ -165,7 +165,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
   // --- Normal drawing mode ---
   return (
     <div
-      className="nodrag nopan nowheel cursor-default"
+      className="nodrag nopan cursor-default"
       style={{ width: CRAZY_8S_NODE_WIDTH, height: CRAZY_8S_NODE_HEIGHT, pointerEvents: 'all' }}
     >
       <div className="rounded-xl border-2 border-amber-400/60 bg-background shadow-lg h-full flex flex-col">

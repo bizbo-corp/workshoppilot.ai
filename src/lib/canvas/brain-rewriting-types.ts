@@ -16,6 +16,7 @@ export interface BrainRewritingMatrix {
   slotId: string;              // Source Crazy 8s slot ('slot-1', etc.)
   sourceImageUrl?: string;     // Read-only copy of original sketch
   cells: BrainRewritingCell[]; // Always 3 cells
+  done?: boolean;              // User marked this card as done (after 0+ iterations)
 }
 
 export const BRAIN_REWRITING_CELL_ORDER: BrainRewritingCellId[] = [
@@ -38,5 +39,6 @@ export function createEmptyMatrix(slotId: string, sourceImageUrl?: string): Brai
     slotId,
     sourceImageUrl,
     cells: BRAIN_REWRITING_CELL_ORDER.map((cellId) => ({ cellId })),
+    done: false,
   };
 }
