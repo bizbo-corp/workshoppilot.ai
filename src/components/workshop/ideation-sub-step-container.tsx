@@ -17,6 +17,7 @@ import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-prov
 import { usePanelLayout } from '@/hooks/use-panel-layout';
 import { saveCanvasState } from '@/actions/canvas-actions';
 import { createEmptyMatrix } from '@/lib/canvas/brain-rewriting-types';
+import { EMPTY_CRAZY_8S_SLOTS } from '@/lib/canvas/crazy-8s-types';
 
 type IdeationPhase = 'mind-mapping' | 'crazy-eights' | 'idea-selection' | 'brain-rewriting';
 
@@ -144,11 +145,60 @@ export function IdeationSubStepContainer({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Transition to crazy 8s phase
-  const handleStartCrazy8s = React.useCallback(() => {
+  // Loading state for AI enhancement during mind map → crazy 8s transition
+  const [isEnhancingIdeas, setIsEnhancingIdeas] = React.useState(false);
+
+  // Transition to crazy 8s phase — pre-fill slots with AI-enhanced titles + descriptions
+  const handleStartCrazy8s = React.useCallback(async () => {
+    const state = canvasStoreApi.getState();
+    const starredLabels = state.mindMapNodes
+      .filter((n) => n.isStarred && !n.isRoot && n.label.trim())
+      .map((n) => n.label.trim())
+      .slice(0, 8);
+
+    if (starredLabels.length > 0) {
+      // Try AI enhancement
+      setIsEnhancingIdeas(true);
+      try {
+        const response = await fetch('/api/ai/enhance-sketch-ideas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workshopId, ideas: starredLabels }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const aiSlots = data.slots as { title: string; description: string }[];
+          const slots = EMPTY_CRAZY_8S_SLOTS.map((slot, i) => ({
+            ...slot,
+            title: aiSlots[i]?.title || starredLabels[i] || '',
+            description: aiSlots[i]?.description || '',
+          }));
+          state.setCrazy8sSlots(slots);
+        } else {
+          // Fallback: raw labels as titles
+          const slots = EMPTY_CRAZY_8S_SLOTS.map((slot, i) => ({
+            ...slot,
+            title: starredLabels[i] || '',
+          }));
+          state.setCrazy8sSlots(slots);
+        }
+      } catch {
+        // Fallback: raw labels as titles
+        const slots = EMPTY_CRAZY_8S_SLOTS.map((slot, i) => ({
+          ...slot,
+          title: starredLabels[i] || '',
+        }));
+        state.setCrazy8sSlots(slots);
+      } finally {
+        setIsEnhancingIdeas(false);
+      }
+      state.markDirty();
+    }
+
     setShowCrazy8s(true);
     setCurrentPhase('crazy-eights');
-  }, []);
+  }, [canvasStoreApi, workshopId]);
 
   // Helper: flush full canvas state to DB
   const flushCanvasState = React.useCallback(async () => {
@@ -246,8 +296,9 @@ export function IdeationSubStepContainer({
           subStep={currentPhase}
           showStepConfirm={currentPhase === 'mind-mapping' && !showCrazy8s && hasEnoughMessages && mindMapHasThemes}
           onStepConfirm={handleStartCrazy8s}
-          stepConfirmLabel="Confirm Mind Map"
+          stepConfirmLabel={isEnhancingIdeas ? 'Enhancing ideas...' : 'Confirm Mind Map'}
           stepConfirmIsTransition
+          stepConfirmDisabled={isEnhancingIdeas}
         />
       </div>
     </div>

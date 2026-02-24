@@ -37,6 +37,9 @@ import type { DrawingElement } from '@/lib/drawing/types';
 interface EzyDrawFooterProps {
   onSave: () => void;
   onCancel: () => void;
+  slotTitle?: string;
+  slotDescription?: string;
+  onSlotInfoChange?: (updates: { title?: string; description?: string }) => void;
 }
 
 const TOOL_BUTTONS = [
@@ -234,8 +237,9 @@ export function EzyDrawToolbar() {
 
 /**
  * Footer bar: undo, redo, clear, cancel, save
+ * Optionally shows slot title/description editing row for Crazy 8s
  */
-export function EzyDrawFooter({ onSave, onCancel }: EzyDrawFooterProps) {
+export function EzyDrawFooter({ onSave, onCancel, slotTitle, slotDescription, onSlotInfoChange }: EzyDrawFooterProps) {
   const canUndo = useDrawingStore((state) => state.canUndo);
   const canRedo = useDrawingStore((state) => state.canRedo);
   const undo = useDrawingStore((state) => state.undo);
@@ -252,64 +256,94 @@ export function EzyDrawFooter({ onSave, onCancel }: EzyDrawFooterProps) {
   };
 
   return (
-    <div className="z-10 flex h-12 shrink-0 items-center justify-between border-t bg-card/95 px-3 backdrop-blur">
-      {/* Left: undo / redo / clear */}
-      <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={undo}
-          disabled={!canUndo}
-          title="Undo (Cmd+Z)"
-        >
-          <Undo2 className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={redo}
-          disabled={!canRedo}
-          title="Redo (Cmd+Shift+Z)"
-        >
-          <Redo2 className="h-4 w-4" />
-        </Button>
+    <div className="z-10 shrink-0 border-t bg-card/95 backdrop-blur">
+      {/* Slot info row (only for Crazy 8s) */}
+      {onSlotInfoChange && (
+        <div className="flex h-10 items-center gap-3 border-b border-border/50 px-3">
+          <div className="flex items-center gap-1.5 min-w-0" style={{ width: '40%' }}>
+            <span className="text-[10px] font-medium text-muted-foreground shrink-0">Title</span>
+            <input
+              type="text"
+              value={slotTitle || ''}
+              onChange={(e) => onSlotInfoChange({ title: e.target.value })}
+              placeholder="Sketch title..."
+              className="min-w-0 flex-1 bg-transparent text-xs font-medium outline-none placeholder:text-muted-foreground/40"
+            />
+          </div>
+          <div className="h-5 w-px bg-border/50" />
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <span className="text-[10px] font-medium text-muted-foreground shrink-0">Desc</span>
+            <input
+              type="text"
+              value={slotDescription || ''}
+              onChange={(e) => onSlotInfoChange({ description: e.target.value })}
+              placeholder="Brief description..."
+              className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/40"
+            />
+          </div>
+        </div>
+      )}
 
-        <div className="mx-1 h-6 w-px bg-border" />
+      {/* Button bar */}
+      <div className="flex h-12 items-center justify-between px-3">
+        {/* Left: undo / redo / clear */}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={undo}
+            disabled={!canUndo}
+            title="Undo (Cmd+Z)"
+          >
+            <Undo2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={redo}
+            disabled={!canRedo}
+            title="Redo (Cmd+Shift+Z)"
+          >
+            <Redo2 className="h-4 w-4" />
+          </Button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={handleClearAll}
-          title="Clear all"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
+          <div className="mx-1 h-6 w-px bg-border" />
 
-      {/* Right: cancel / save */}
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8"
-          onClick={onCancel}
-          title="Cancel"
-        >
-          <X className="h-4 w-4 mr-1" />
-          Cancel
-        </Button>
-        <Button
-          size="sm"
-          className="h-8"
-          onClick={onSave}
-          title="Save drawing"
-        >
-          <Save className="h-4 w-4 mr-1" />
-          Save
-        </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={handleClearAll}
+            title="Clear all"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Right: cancel / save */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8"
+            onClick={onCancel}
+            title="Cancel"
+          >
+            <X className="h-4 w-4 mr-1" />
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            className="h-8"
+            onClick={onSave}
+            title="Save drawing"
+          >
+            <Save className="h-4 w-4 mr-1" />
+            Save
+          </Button>
+        </div>
       </div>
     </div>
   );

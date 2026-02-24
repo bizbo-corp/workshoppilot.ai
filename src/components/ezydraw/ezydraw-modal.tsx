@@ -17,7 +17,10 @@ const DEFAULT_CANVAS_WIDTH = 800;
 const DEFAULT_CANVAS_HEIGHT = 600;
 
 /** Toolbar (48px) + footer (48px) */
-const CHROME_HEIGHT = 96;
+const BASE_CHROME_HEIGHT = 96;
+
+/** Extra height for slot info row */
+const SLOT_INFO_ROW_HEIGHT = 40;
 
 export interface EzyDrawModalProps {
   isOpen: boolean;
@@ -26,6 +29,9 @@ export interface EzyDrawModalProps {
   initialElements?: DrawingElement[];
   drawingId?: string;  // If set, we're re-editing an existing drawing
   canvasSize?: { width: number; height: number };  // Optional canvas dimensions (defaults to 6:4)
+  slotTitle?: string;
+  slotDescription?: string;
+  onSlotInfoChange?: (updates: { title?: string; description?: string }) => void;
 }
 
 /**
@@ -35,10 +41,16 @@ function EzyDrawContent({
   stageRef,
   onSave,
   onCancel,
+  slotTitle,
+  slotDescription,
+  onSlotInfoChange,
 }: {
   stageRef: React.RefObject<EzyDrawStageHandle | null>;
   onSave: (result: { pngDataUrl: string; elements: DrawingElement[] }) => void | Promise<void>;
   onCancel: () => void;
+  slotTitle?: string;
+  slotDescription?: string;
+  onSlotInfoChange?: (updates: { title?: string; description?: string }) => void;
 }) {
   const getSnapshot = useDrawingStore((s) => s.getSnapshot);
 
@@ -57,7 +69,13 @@ function EzyDrawContent({
       <div className="flex-1 overflow-hidden bg-card">
         <EzyDrawStage ref={stageRef} />
       </div>
-      <EzyDrawFooter onSave={handleSave} onCancel={onCancel} />
+      <EzyDrawFooter
+        onSave={handleSave}
+        onCancel={onCancel}
+        slotTitle={slotTitle}
+        slotDescription={slotDescription}
+        onSlotInfoChange={onSlotInfoChange}
+      />
     </div>
   );
 }
@@ -69,15 +87,21 @@ export function EzyDrawModal({
   initialElements,
   drawingId,
   canvasSize,
+  slotTitle,
+  slotDescription,
+  onSlotInfoChange,
 }: EzyDrawModalProps) {
   const stageRef = useRef<EzyDrawStageHandle>(null);
 
   const cw = canvasSize?.width ?? DEFAULT_CANVAS_WIDTH;
   const ch = canvasSize?.height ?? DEFAULT_CANVAS_HEIGHT;
 
+  // Add extra height for slot info row when present
+  const chromeHeight = BASE_CHROME_HEIGHT + (onSlotInfoChange ? SLOT_INFO_ROW_HEIGHT : 0);
+
   // Dialog matches the canvas: width = canvas width, height = canvas + chrome
   const dialogW = cw;
-  const dialogH = ch + CHROME_HEIGHT;
+  const dialogH = ch + chromeHeight;
 
   const handleCancel = () => {
     onClose();
@@ -113,6 +137,9 @@ export function EzyDrawModal({
             stageRef={stageRef}
             onSave={handleSaveComplete}
             onCancel={handleCancel}
+            slotTitle={slotTitle}
+            slotDescription={slotDescription}
+            onSlotInfoChange={onSlotInfoChange}
           />
         </DrawingStoreProvider>
       </DialogContent>

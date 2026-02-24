@@ -790,9 +790,10 @@ interface ChatPanelProps {
   onStepRevise?: () => void;
   stepConfirmLabel?: string;
   stepConfirmIsTransition?: boolean; // If true, don't send [STEP_CONFIRMED] or show revise button
+  stepConfirmDisabled?: boolean; // Disable the confirm button (e.g. during AI processing)
 }
 
-export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep, showStepConfirm, onStepConfirm, onStepRevise, stepConfirmLabel, stepConfirmIsTransition }: ChatPanelProps) {
+export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep, showStepConfirm, onStepConfirm, onStepRevise, stepConfirmLabel, stepConfirmIsTransition, stepConfirmDisabled }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
   const storeApi = useCanvasStoreApi();
   const addStickyNote = useCanvasStore((state) => state.addStickyNote);
@@ -2593,6 +2594,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                 )}
                 <button
                   onClick={() => {
+                    if (stepConfirmDisabled) return;
                     onStepConfirm?.();
                     if (stepConfirmIsTransition) return; // Sub-step transition — no AI message or revise flow
                     setJustConfirmed(true);
@@ -2602,7 +2604,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                       parts: [{ type: 'text', text: '[STEP_CONFIRMED] I\'m happy with this — wrap it up!' }],
                     });
                   }}
-                  className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-olive-50 px-4 py-2 text-sm font-medium text-olive-800 transition-colors hover:bg-olive-100 dark:border-olive-700 dark:bg-olive-950/30 dark:text-olive-300 dark:hover:bg-olive-900/40"
+                  disabled={stepConfirmDisabled}
+                  className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-olive-50 px-4 py-2 text-sm font-medium text-olive-800 transition-colors hover:bg-olive-100 disabled:opacity-50 disabled:cursor-not-allowed dark:border-olive-700 dark:bg-olive-950/30 dark:text-olive-300 dark:hover:bg-olive-900/40"
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   {stepConfirmLabel}

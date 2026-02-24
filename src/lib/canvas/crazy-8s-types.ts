@@ -7,6 +7,7 @@
 export interface Crazy8sSlot {
   slotId: string;           // 'slot-1' through 'slot-8'
   title: string;            // User-editable title (empty string = untitled)
+  description?: string;     // Expanded description of the sketch idea
   imageUrl?: string;        // PNG URL from Vercel Blob (filled after drawing)
   drawingId?: string;       // Reference to drawing in stepArtifacts.drawings[]
 }

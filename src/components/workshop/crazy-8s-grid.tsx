@@ -14,15 +14,16 @@ interface Crazy8sGridProps {
   slots: Crazy8sSlot[];
   onSlotClick: (slotId: string) => void;
   onTitleChange: (slotId: string, title: string) => void;
+  onDescriptionChange: (slotId: string, description: string) => void;
   aiPrompts?: string[];  // Optional sketch prompts from AI (Plan 28-05 feature hook)
 }
 
 /**
  * Crazy 8s Grid Component
  * Displays 8 sketch slots in a 2x4 layout with empty/filled states
- * Supports editable titles and AI-suggested prompts
+ * Supports editable titles, descriptions, and AI-suggested prompts
  */
-export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, aiPrompts }: Crazy8sGridProps) {
+export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionChange, aiPrompts }: Crazy8sGridProps) {
   return (
     <div className="w-full">
       {/* Instructions header */}
@@ -36,6 +37,7 @@ export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, aiPrompts }: Cr
       <div className="grid grid-cols-4 gap-4">
         {slots.map((slot, index) => {
           const hasImage = Boolean(slot.imageUrl);
+          const hasPreFill = Boolean(slot.title || slot.description);
 
           return (
             <div
@@ -62,8 +64,8 @@ export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, aiPrompts }: Cr
                     className="w-full h-full object-cover"
                   />
 
-                  {/* Title overlay at bottom */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-background/90 backdrop-blur-sm p-2">
+                  {/* Title + description overlay at bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-background/90 backdrop-blur-sm p-2 space-y-0.5">
                     <input
                       type="text"
                       value={slot.title}
@@ -72,6 +74,14 @@ export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, aiPrompts }: Cr
                       placeholder="Add title..."
                       className="w-full bg-transparent text-xs font-medium outline-none placeholder:text-muted-foreground/50"
                     />
+                    <input
+                      type="text"
+                      value={slot.description || ''}
+                      onChange={(e) => onDescriptionChange(slot.slotId, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      placeholder="Add description..."
+                      className="w-full bg-transparent text-[10px] text-muted-foreground outline-none placeholder:text-muted-foreground/30"
+                    />
                   </div>
                 </>
               ) : (
@@ -79,13 +89,30 @@ export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, aiPrompts }: Cr
                   {/* Empty slot: show pencil icon and prompt */}
                   <div className="flex flex-col items-center justify-center h-full p-4">
                     <Pencil className="h-12 w-12 text-muted-foreground opacity-40" />
-                    <p className="text-xs text-muted-foreground mt-2">Click to sketch</p>
 
-                    {/* AI prompt (if available) */}
-                    {aiPrompts?.[index] && (
-                      <p className="text-xs text-muted-foreground/70 mt-1 italic max-w-[80%] text-center">
-                        {aiPrompts[index]}
-                      </p>
+                    {hasPreFill ? (
+                      <>
+                        {/* Pre-filled title + description as sketch prompt */}
+                        <p className="text-xs font-medium text-foreground/80 mt-2 text-center line-clamp-2">
+                          {slot.title}
+                        </p>
+                        {slot.description && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5 text-center line-clamp-2 max-w-[90%]">
+                            {slot.description}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs text-muted-foreground mt-2">Click to sketch</p>
+
+                        {/* AI prompt (if available) */}
+                        {aiPrompts?.[index] && (
+                          <p className="text-xs text-muted-foreground/70 mt-1 italic max-w-[80%] text-center">
+                            {aiPrompts[index]}
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                 </>

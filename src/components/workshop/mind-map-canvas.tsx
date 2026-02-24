@@ -90,6 +90,7 @@ function MindMapCanvasInner({
   const addMindMapEdge = useCanvasStore((state) => state.addMindMapEdge);
   const deleteMindMapEdge = useCanvasStore((state) => state.deleteMindMapEdge);
   const deleteMindMapNode = useCanvasStore((state) => state.deleteMindMapNode);
+  const toggleMindMapNodeStar = useCanvasStore((state) => state.toggleMindMapNodeStar);
   const setMindMapState = useCanvasStore((state) => state.setMindMapState);
   const pendingFitView = useCanvasStore((state) => state.pendingFitView);
   const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
@@ -294,6 +295,14 @@ function MindMapCanvasInner({
     [mindMapNodes, mindMapEdges, deleteMindMapNode]
   );
 
+  // Callback: Toggle star on node
+  const handleToggleStar = useCallback(
+    (nodeId: string) => {
+      toggleMindMapNodeStar(nodeId);
+    },
+    [toggleMindMapNodeStar]
+  );
+
   // Convert store state to ReactFlow mind map nodes
   const rfMindMapNodes: Node[] = useMemo(() => {
     return mindMapNodes.map((nodeState) => ({
@@ -307,14 +316,16 @@ function MindMapCanvasInner({
         themeColor: nodeState.themeColor,
         themeBgColor: nodeState.themeBgColor,
         isRoot: nodeState.isRoot,
+        isStarred: nodeState.isStarred,
         level: nodeState.level,
         onLabelChange: handleLabelChange,
         onAddChild: handleAddChild,
         onDelete: handleDelete,
+        onToggleStar: handleToggleStar,
       },
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions is a ref
-  }, [mindMapNodes, handleLabelChange, handleAddChild, handleDelete]);
+  }, [mindMapNodes, handleLabelChange, handleAddChild, handleDelete, handleToggleStar]);
 
   // Crazy 8s group node — positioned to the right of the mind map
   const crazy8sNode = useMemo<Node | null>(() => {

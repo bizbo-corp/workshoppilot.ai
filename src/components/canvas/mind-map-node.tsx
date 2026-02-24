@@ -2,6 +2,7 @@
 
 import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type MindMapNodeData = {
@@ -10,10 +11,12 @@ export type MindMapNodeData = {
   themeColor: string; // border and text hex
   themeBgColor: string; // background hex
   isRoot?: boolean;
+  isStarred?: boolean;
   level: number;
   onLabelChange?: (id: string, label: string) => void;
   onAddChild?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onToggleStar?: (id: string) => void;
 };
 
 export type MindMapNode = Node<MindMapNodeData, 'mindMapNode'>;
@@ -70,6 +73,14 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
     (e: React.MouseEvent) => {
       e.stopPropagation();
       data.onDelete?.(id);
+    },
+    [id, data]
+  );
+
+  const handleToggleStar = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      data.onToggleStar?.(id);
     },
     [id, data]
   );
@@ -138,8 +149,23 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
         </div>
       )}
 
-      {/* Action buttons (hover) */}
-      <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Action buttons (hover) — star always visible when starred */}
+      <div className={cn(
+        'flex gap-1 mt-2 transition-opacity',
+        data.isStarred ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+      )}>
+        {/* Star toggle — hidden for root */}
+        {!isRoot && (
+          <button
+            onClick={handleToggleStar}
+            className="nodrag nopan text-xs px-1.5 py-0.5 rounded hover:bg-neutral-olive-100/50 transition-colors"
+            style={{ color: data.themeColor }}
+            title={data.isStarred ? 'Unstar idea' : 'Star for Crazy 8s'}
+          >
+            <Star className={cn('h-3.5 w-3.5', data.isStarred && 'fill-current')} />
+          </button>
+        )}
+
         {/* Add Child / +Branch button */}
         <button
           onClick={handleAddChild}

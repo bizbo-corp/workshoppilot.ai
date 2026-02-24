@@ -6,7 +6,7 @@
  * Handles drawing lifecycle: tap slot → draw → save PNG + vector JSON → display in slot
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Crazy8sGrid } from './crazy-8s-grid';
 import { EzyDrawLoader } from '@/components/ezydraw/ezydraw-loader';
 import { saveDrawing, loadDrawing, updateDrawing } from '@/actions/drawing-actions';
@@ -171,6 +171,21 @@ export function Crazy8sCanvas({ workshopId, stepId }: Crazy8sCanvasProps) {
   };
 
   /**
+   * Handle description change in grid
+   */
+  const handleDescriptionChange = (slotId: string, description: string) => {
+    updateCrazy8sSlot(slotId, { description });
+  };
+
+  /**
+   * Handle slot info change from EzyDraw footer
+   */
+  const handleSlotInfoChange = useCallback((updates: { title?: string; description?: string }) => {
+    if (!ezyDrawState) return;
+    updateCrazy8sSlot(ezyDrawState.slotId, updates);
+  }, [ezyDrawState, updateCrazy8sSlot]);
+
+  /**
    * Fetch AI-suggested sketch prompts
    * Only show button when all slots are empty
    */
@@ -199,6 +214,11 @@ export function Crazy8sCanvas({ workshopId, stepId }: Crazy8sCanvasProps) {
   // Check if all slots are empty (no images)
   const allSlotsEmpty = crazy8sSlots.every((slot) => !slot.imageUrl);
 
+  // Look up current slot info for EzyDraw
+  const currentSlot = ezyDrawState
+    ? crazy8sSlots.find((s) => s.slotId === ezyDrawState.slotId)
+    : null;
+
   return (
     <div className="h-full overflow-auto p-6">
       {/* AI Suggest Prompts button - only show when all slots empty */}
@@ -220,6 +240,7 @@ export function Crazy8sCanvas({ workshopId, stepId }: Crazy8sCanvasProps) {
         slots={crazy8sSlots}
         onSlotClick={handleSlotClick}
         onTitleChange={handleTitleChange}
+        onDescriptionChange={handleDescriptionChange}
         aiPrompts={aiPrompts}
       />
 
@@ -230,6 +251,9 @@ export function Crazy8sCanvas({ workshopId, stepId }: Crazy8sCanvasProps) {
           onSave={handleDrawingSave}
           initialElements={ezyDrawState.initialElements}
           canvasSize={CRAZY_8S_CANVAS_SIZE}
+          slotTitle={currentSlot?.title}
+          slotDescription={currentSlot?.description}
+          onSlotInfoChange={handleSlotInfoChange}
         />
       )}
     </div>
