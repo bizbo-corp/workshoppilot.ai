@@ -373,14 +373,15 @@ export default async function StepPage({ params }: StepPageProps) {
       }
     }
 
-    // Load Step 8 canvas state for crazy8sSlots
+    // Load Step 8 canvas state for crazy8sSlots and selectedSlotIds
     const step8Canvas = await loadCanvasState(session.workshop.id, 'ideation');
-    if (step8Canvas?.crazy8sSlots) {
-      // Also check for selectedSlotIds in canvas state (fallback for extraction-based path)
-      if (!step8SelectedSlotIds && step8Canvas.selectedSlotIds && step8Canvas.selectedSlotIds.length > 0) {
-        step8SelectedSlotIds = step8Canvas.selectedSlotIds;
-      }
 
+    // Check for selectedSlotIds in canvas state (fallback for extraction-based path)
+    if (!step8SelectedSlotIds && step8Canvas?.selectedSlotIds && step8Canvas.selectedSlotIds.length > 0) {
+      step8SelectedSlotIds = step8Canvas.selectedSlotIds;
+    }
+
+    if (step8Canvas?.crazy8sSlots) {
       const brainMatrices = step8Canvas.brainRewritingMatrices || [];
 
       // Resolve final sketch image per slot: use last brain rewriting iteration, or fall back to original
@@ -409,22 +410,36 @@ export default async function StepPage({ params }: StepPageProps) {
     }
 
     // Create skeleton concept cards for selected ideas (one per selected slot, max 4)
-    if (initialConceptCards.length === 0 && step8SelectedSlotIds && step8SelectedSlotIds.length > 0 && step8Crazy8sSlots) {
-      const selectedSlots = step8SelectedSlotIds
-        .map((slotId) => step8Crazy8sSlots!.find((s) => s.slotId === slotId))
-        .filter(Boolean)
-        .slice(0, 4);
+    if (initialConceptCards.length === 0 && step8SelectedSlotIds && step8SelectedSlotIds.length > 0) {
+      if (step8Crazy8sSlots) {
+        // Full path: match selected IDs to crazy 8s slots for titles and images
+        const selectedSlots = step8SelectedSlotIds
+          .map((slotId) => step8Crazy8sSlots!.find((s) => s.slotId === slotId))
+          .filter(Boolean)
+          .slice(0, 4);
 
-      initialConceptCards = selectedSlots.map((slot, index) =>
-        createDefaultConceptCard({
-          ideaSource: slot!.title || `Sketch ${slot!.slotId}`,
-          sketchSlotId: slot!.slotId,
-          sketchImageUrl: slot!.imageUrl,
-          cardState: 'skeleton',
-          cardIndex: index,
-          position: { x: index * 720, y: 0 },
-        })
-      );
+        initialConceptCards = selectedSlots.map((slot, index) =>
+          createDefaultConceptCard({
+            ideaSource: slot!.title || `Sketch ${slot!.slotId}`,
+            sketchSlotId: slot!.slotId,
+            sketchImageUrl: slot!.imageUrl,
+            cardState: 'skeleton',
+            cardIndex: index,
+            position: { x: index * 720, y: 0 },
+          })
+        );
+      } else {
+        // Fallback: create skeletons from slot IDs alone (no titles/images)
+        initialConceptCards = step8SelectedSlotIds.slice(0, 4).map((slotId, index) =>
+          createDefaultConceptCard({
+            ideaSource: `Sketch ${slotId}`,
+            sketchSlotId: slotId,
+            cardState: 'skeleton',
+            cardIndex: index,
+            position: { x: index * 720, y: 0 },
+          })
+        );
+      }
     }
   }
 

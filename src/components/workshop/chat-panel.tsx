@@ -17,7 +17,7 @@ import { computeCanvasPosition, computeStickyNoteSize, computeThemeSortPositions
 import type { StickyNoteColor, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
-import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
+import { createDefaultConceptCard, type ConceptCardData } from '@/lib/canvas/concept-card-types';
 import { THEME_COLORS, ROOT_COLOR } from '@/lib/canvas/mind-map-theme-colors';
 import { computeNewNodePosition } from '@/lib/canvas/mind-map-layout';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
@@ -811,6 +811,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const crazy8sSlots = useCanvasStore((state) => state.crazy8sSlots);
   const conceptCards = useCanvasStore((state) => state.conceptCards);
   const updateConceptCard = useCanvasStore((state) => state.updateConceptCard);
+  const addConceptCard = useCanvasStore((state) => state.addConceptCard);
   const personaTemplates = useCanvasStore((state) => state.personaTemplates);
   const addPersonaTemplate = useCanvasStore((state) => state.addPersonaTemplate);
   const updatePersonaTemplate = useCanvasStore((state) => state.updatePersonaTemplate);
@@ -1622,9 +1623,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       }
     }
 
-    // Process concept card blocks — merge into existing skeleton cards
+    // Process concept card blocks — merge into existing skeleton cards or create new ones
     if (conceptCardParsed.length > 0 && step.id === 'concept') {
-      const latestConceptCards = storeApi.getState().conceptCards;
+      let latestConceptCards = storeApi.getState().conceptCards;
 
       for (const parsed of conceptCardParsed) {
         const targetIndex = parsed.cardIndex ?? 0;
@@ -1650,6 +1651,18 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
           }
 
           updateConceptCard(existing.id, updates);
+        } else {
+          // No matching skeleton — create a new card from the AI data
+          addConceptCard({
+            ...createDefaultConceptCard({
+              ...parsed,
+              cardState: 'active',
+              cardIndex: targetIndex,
+              position: { x: targetIndex * 720, y: 0 },
+            }),
+          });
+          // Refresh reference so subsequent iterations in this loop can find newly added cards
+          latestConceptCards = storeApi.getState().conceptCards;
         }
       }
       setPendingFitView(true);
@@ -1676,7 +1689,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         }
       }, 300); // Short delay to ensure new items are in store
     }
-  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, handleAddSingleItem, batchUpdatePositions, storeApi, step.id, setPendingFitView, deleteStickyNote, updateStickyNote, setCluster, addPersonaTemplate, updatePersonaTemplate, replaceGridColumns, addHmwCard, updateHmwCard, updateConceptCard, conceptCards.length, flushCanvasToDb]);
+  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, handleAddSingleItem, batchUpdatePositions, storeApi, step.id, setPendingFitView, deleteStickyNote, updateStickyNote, setCluster, addPersonaTemplate, updatePersonaTemplate, replaceGridColumns, addHmwCard, updateHmwCard, updateConceptCard, addConceptCard, conceptCards.length, flushCanvasToDb]);
 
   // Clear stream error on successful completion
   React.useEffect(() => {

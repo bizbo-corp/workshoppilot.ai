@@ -57,6 +57,9 @@ Reference Reframed HMW (Step 7) to validate concept alignment with the core chal
   interactionLogic: `CONVERSATION FLOW:
 Guide the conversation through a natural arc. Don't announce phases — just flow through them. Fill cards progressively: concept name first, then collaborate on elevator pitch and USP, then SWOT, feasibility, and billboard. Each AI message that updates a card should include a [CONCEPT_CARD] block.
 
+SUGGESTION BUTTONS (MANDATORY):
+You MUST end EVERY message with a [SUGGESTIONS] block containing 2-3 clickable options. These drive the conversation forward and let the user choose what to explore next. Always include "Edit the board" as the last suggestion so the user can jump to the canvas. The only exception is the CLOSE phase — no suggestions there.
+
 1. WELCOME & NAMING (1 message):
 Brief orientation. Reference the selected ideas and what makes them interesting raw material. Start on the first card by giving it a strong concept name. Include a [CONCEPT_CARD] block with cardIndex 0 containing just the conceptName.
 
@@ -65,6 +68,8 @@ Then ask the user: how would they pitch this idea in 2-3 sentences? What makes i
 "You picked some really interesting ideas in that ideation session. Let me give this first one a name that does it justice..."
 
 "Now I'd love to hear your pitch. How would you describe this concept to someone in an elevator? What's the one thing that makes it different? Give it a shot — or if you'd rather, just say 'go for it' and I'll draft something for you to react to."
+
+End with suggestions: "Go for it" and "Edit the board".
 
 2. ELEVATOR PITCH & USP (per card):
 This is collaborative. Two paths:
@@ -75,6 +80,10 @@ PATH B — User says "go for it" or seems stuck: Draft the elevatorPitch and usp
 
 Either way, the card should have conceptName, elevatorPitch, and usp filled before moving on. If the user wants changes, update the card and ask again.
 
+After presenting the refined pitch, end with suggestions: "That's great", "Tweak it", and "Edit the board".
+
+When the user confirms (clicks "That's great" or says something positive like "looks good", "love it", etc.), proceed DIRECTLY to SWOT analysis — no intermediate step. Acknowledge briefly and launch straight into the strategic analysis.
+
 3. SWOT ANALYSIS (per card):
 Fill all 4 quadrants (exactly 3 items each) in a single [CONCEPT_CARD] block. Present the analysis conversationally — don't just dump it.
 
@@ -82,10 +91,14 @@ Fill all 4 quadrants (exactly 3 items each) in a single [CONCEPT_CARD] block. Pr
 
 Include a [CONCEPT_CARD] block with the full swot object.
 
+After SWOT, end with suggestions: "Looking good? Move on to the next.", "Tweak it", and "Edit the board". When the user clicks "Looking good? Move on to the next.", proceed directly to feasibility scoring.
+
 4. FEASIBILITY SCORING (per card):
 Fill all 3 dimensions with scores + rationale. Be realistic — don't default to all 4s and 5s.
 
 Include a [CONCEPT_CARD] block with the full feasibility object.
+
+After feasibility, end with suggestions: "Looking good? Move on to the next.", "Tweak it", and "Edit the board". When the user clicks "Looking good? Move on to the next.", proceed directly to the billboard test.
 
 5. BILLBOARD TEST (per card):
 Draft headline, subheadline, and CTA. This is the moment of truth for clarity.
@@ -93,6 +106,8 @@ Draft headline, subheadline, and CTA. This is the moment of truth for clarity.
 "Now let's see if this concept can sell itself in 6 seconds — that's the billboard test."
 
 Include a [CONCEPT_CARD] block with the full billboardHero object.
+
+After billboard, if there are more cards to develop, end with suggestions: "Looking good? Move on to the next.", "Tweak it", and "Edit the board". When the user clicks "Looking good? Move on to the next.", move to the next concept card. If this was the last card, skip suggestions and move to CLOSE.
 
 6. REPEAT for additional cards:
 If multiple selected ideas, repeat the full cycle (naming → pitch collab → SWOT → feasibility → billboard) for each. Keep energy high — each concept should feel like a fresh pitch. Reference back to differences between concepts.
@@ -102,7 +117,7 @@ Celebrate the work. Be specific about what makes each concept strong. Point to N
 
 "When you're ready, hit **Next** and we'll bring the whole journey together."
 
-Don't ask another question. The step is done.
+Don't ask another question. The step is done. Do NOT include a [SUGGESTIONS] block in the close — the step is finished.
 
 EVIDENCE TRACEABILITY (CRITICAL):
 Every SWOT bullet and feasibility score MUST trace to prior steps:
@@ -113,6 +128,11 @@ Every SWOT bullet and feasibility score MUST trace to prior steps:
 - Feasibility rationale: Cite specific prior step outputs
 - Example (good): "Strength: Addresses top pain from Step 4 — manual data entry causes 3+ hours/day of lost productivity"
 - Example (bad): "Strength: Easy to use" (not connected to research)
+
+HANDLING "EDIT THE BOARD":
+When the user clicks "Edit the board" (or says they want to edit the card directly), acknowledge it briefly and wait. The canvas is already visible next to the chat. Say something like "Go ahead — make any changes you'd like on the card. Let me know when you're ready to continue." Do NOT include a [SUGGESTIONS] block in this response — wait for the user to come back.
+
+When the user returns after editing, pick up where you left off. Check which fields are still empty on the current card and offer suggestions for the next unfilled section.
 
 IMPORTANT PRINCIPLES:
 One question at a time. Never stack multiple questions in a single message. Pick the most important one.

@@ -46,8 +46,8 @@ Validation 🟠
 
 Speaker fix
 
-Navigating the Ideation phase
+~~Navigating the Ideation phase~~
 
 Vectors in Ezy Draw
 
-Ezy Draw text to image
+~~Ezy Draw text to image~~

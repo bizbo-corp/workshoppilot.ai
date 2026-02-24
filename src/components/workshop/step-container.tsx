@@ -99,7 +99,9 @@ export function StepContainer({
   const setBrainRewritingMatrices = useCanvasStore((s) => s.setBrainRewritingMatrices);
   // HMW card counts as "content" only when all 4 fields are filled (card is 'filled')
   const hmwCardComplete = hmwCards.some((c) => c.cardState === 'filled');
-  const canvasHasContent = stickyNotes.some(p => !p.templateKey || p.text.trim().length > 0) || conceptCards.length > 0 || hmwCardComplete || personaTemplates.some(t => !!t.name);
+  // Concept card counts as "content" only when all sections are filled (pitch, USP, SWOT, feasibility, billboard)
+  const conceptCardComplete = conceptCards.some((c) => c.cardState === 'filled');
+  const canvasHasContent = stickyNotes.some(p => !p.templateKey || p.text.trim().length > 0) || conceptCardComplete || hmwCardComplete || personaTemplates.some(t => !!t.name);
 
   // Next button requires explicit confirmation (e.g. "Confirm Research Insights") for all steps
   const effectiveConfirmed = artifactConfirmed;
@@ -107,7 +109,8 @@ export function StepContainer({
   // In-chat accept button: show when step has a confirm label, canvas has enough content, and user hasn't clicked Accept yet
   const confirmLabel = step ? STEP_CONFIRM_LABELS[step.id] : undefined;
   const minItems = step ? (STEP_CONFIRM_MIN_ITEMS[step.id] ?? 1) : 1;
-  const canvasItemCount = stickyNotes.length + conceptCards.length + (hmwCardComplete ? 1 : 0) + personaTemplates.filter(t => !!t.name).length;
+  const filledConceptCount = conceptCards.filter(c => c.cardState === 'filled').length;
+  const canvasItemCount = stickyNotes.length + filledConceptCount + (hmwCardComplete ? 1 : 0) + personaTemplates.filter(t => !!t.name).length;
   const allPersonasInterviewed = step?.id === 'user-research'
     ? areAllPersonasInterviewed(stickyNotes)
     : true;
