@@ -40,6 +40,8 @@ interface StepContainerProps {
   initialArtifact?: Record<string, unknown> | null;
   stepStatus?: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
   hmwStatement?: string;
+  challengeStatement?: string;
+  hmwGoals?: Array<{ label: string; fullStatement: string }>;
   step8SelectedSlotIds?: string[];
   step8Crazy8sSlots?: Array<{ slotId: string; title: string; imageUrl?: string }>;
   isAdmin?: boolean;
@@ -56,6 +58,8 @@ export function StepContainer({
   initialArtifact,
   stepStatus,
   hmwStatement,
+  challengeStatement,
+  hmwGoals,
   step8SelectedSlotIds,
   step8Crazy8sSlots,
   isAdmin,
@@ -435,6 +439,8 @@ export function StepContainer({
           isAdmin={isAdmin}
           onReset={() => setShowResetDialog(true)}
           hmwStatement={hmwStatement}
+          challengeStatement={challengeStatement}
+          hmwGoals={hmwGoals}
         />
         <ResetStepDialog
           open={showResetDialog}

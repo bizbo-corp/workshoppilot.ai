@@ -30,7 +30,7 @@ Custom:
 
 Scores for confidence  🟢
 
-Comletness 🟢
+Completness 🟢
 
 Validation 🟠 
 
@@ -53,8 +53,4 @@ I need the functionality for the pointer tool to be available for any step that 
 
 
 
-
-I need to modify the ideation mind map step. When asking the chat to generate ideas, it seems to go with wild, far-fetched ideas. It seems like there are too numerous a number, with too many subcategories, to start with. 
-
- can we rein in the mind mapping ideation somewhat so that it starts off with a node for an idea that's directly related to solving the persona's challenge.  for instance if it's about structuring one's thoughts, you might come up with an app to provide a framework to organise complex topics into simple processes . that's just an example but to keep things grounded I think that we start there and then we might want to have a wild card that is slightly more extreme in idea.  
 

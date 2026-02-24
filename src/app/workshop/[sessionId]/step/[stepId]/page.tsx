@@ -136,9 +136,74 @@ export default async function StepPage({ params }: StepPageProps) {
     }
   }
 
+  // Extract a shortened label from a reframed HMW statement for mind map branch nodes.
+  // Full: "Given that [context], how might we help [persona], who struggles to [X] [do Y] so they can [Z]?"
+  // Label: extract the core action essence, e.g. "explain complex topics simply create a clear flow"
+  function extractHmwBranchLabel(fullStatement: string): string {
+    // Find "how might we" and take from there
+    const hmwIdx = fullStatement.toLowerCase().indexOf('how might we');
+    if (hmwIdx === -1) return fullStatement.slice(0, 60);
+
+    let middle = fullStatement.slice(hmwIdx);
+    // Strip trailing "?"
+    middle = middle.replace(/\?$/, '').trim();
+    // Remove "how might we" prefix
+    middle = middle.replace(/^how might we\s+/i, '').trim();
+    // Strip persona context: "help [name...], who [struggles/wants/needs] to" → keep the verb onwards
+    middle = middle.replace(/^help\s+[^,]+?,\s*who\s+(?:struggles?|wants?|needs?|seeks?|tries?|has|finds? it)\s+to\s+/i, '').trim();
+    // Also handle "help [name] to" without the "who" clause
+    middle = middle.replace(/^help\s+\S+(?:\s+\S+)?\s+to\s+/i, '').trim();
+    // Trim "so they/he/she can..." suffix
+    middle = middle.replace(/\s+so\s+(they|he|she|we|it)\s+can\b.*$/i, '').trim();
+    // Trim trailing "for his/her/their [presentations/etc]"
+    middle = middle.replace(/\s+for\s+(his|her|their|the)\s+\w+$/i, '').trim();
+    // Capitalize first letter
+    if (middle.length > 0) {
+      middle = middle.charAt(0).toUpperCase() + middle.slice(1);
+    }
+
+    return middle;
+  }
+
   // For Step 8 (ideation), load the HMW statement from Step 7 (reframe) artifact
+  // Also load challenge statement (Step 1) and all HMW goals for mind map pre-population
   let hmwStatement: string | undefined;
+  let challengeStatement: string | undefined;
+  let hmwGoals: Array<{ label: string; fullStatement: string }> = [];
+
   if (step.id === 'ideation') {
+    // Load original HMW statement from Step 1 (used as mind map root node)
+    const challengeStep = session.workshop.steps.find((s) => s.stepId === 'challenge');
+    if (challengeStep) {
+      // Try 1: Extracted artifact — use hmwStatement (the original "How might we...")
+      const challengeArtifactRecord = await db
+        .select()
+        .from(stepArtifacts)
+        .where(eq(stepArtifacts.workshopStepId, challengeStep.id))
+        .limit(1);
+
+      if (challengeArtifactRecord.length > 0) {
+        const challengeArtifact = challengeArtifactRecord[0].artifact as Record<string, unknown>;
+        challengeStatement = challengeArtifact.hmwStatement as string | undefined;
+        if (!hmwStatement) {
+          hmwStatement = challengeStatement;
+        }
+      }
+
+      // Try 2: Canvas "challenge-statement" template sticky note
+      if (!challengeStatement) {
+        const challengeCanvas = await loadCanvasState(session.workshop.id, 'challenge');
+        if (challengeCanvas?.stickyNotes) {
+          const hmwNote = (challengeCanvas.stickyNotes as Array<{ templateKey?: string; text?: string }>)
+            .find((n) => n.templateKey === 'challenge-statement' && n.text);
+          if (hmwNote?.text) {
+            challengeStatement = hmwNote.text;
+          }
+        }
+      }
+    }
+
+    // Load ALL HMW statements from Step 7 (reframe) artifact
     const reframeStep = session.workshop.steps.find((s) => s.stepId === 'reframe');
     if (reframeStep) {
       const reframeArtifactRecord = await db
@@ -151,37 +216,41 @@ export default async function StepPage({ params }: StepPageProps) {
         const reframeArtifact = reframeArtifactRecord[0].artifact as Record<string, unknown>;
 
         // Try 1: Top-level extracted artifact (from /api/extract)
-        const hmwStatements = reframeArtifact.hmwStatements as Array<{ fullStatement: string }> | undefined;
+        const hmwStatements = reframeArtifact.hmwStatements as Array<{ fullStatement: string; immediateGoal?: string }> | undefined;
         const selectedIndices = reframeArtifact.selectedForIdeation as number[] | undefined;
         const selectedIdx = selectedIndices?.[0] ?? 0;
         hmwStatement = hmwStatements?.[selectedIdx]?.fullStatement;
 
-        // Try 2: Canvas-stored HMW cards (always saved by auto-save)
-        if (!hmwStatement) {
-          const canvasData = reframeArtifact._canvas as { hmwCards?: Array<{ fullStatement?: string; cardIndex?: number }> } | undefined;
-          if (canvasData?.hmwCards && canvasData.hmwCards.length > 0) {
-            // Prefer the card with the lowest cardIndex that has a fullStatement
-            const sortedCards = [...canvasData.hmwCards]
-              .sort((a, b) => (a.cardIndex ?? 0) - (b.cardIndex ?? 0));
-            const filledCard = sortedCards.find((c) => c.fullStatement);
-            hmwStatement = filledCard?.fullStatement;
-          }
+        // Build hmwGoals from ALL HMW statements — extract middle portion as label
+        if (hmwStatements && hmwStatements.length > 0) {
+          hmwGoals = hmwStatements.map((stmt) => ({
+            label: extractHmwBranchLabel(stmt.fullStatement),
+            fullStatement: stmt.fullStatement,
+          }));
         }
-      }
-    }
-    // Fallback: try Step 1 challenge artifact
-    if (!hmwStatement) {
-      const challengeStep = session.workshop.steps.find((s) => s.stepId === 'challenge');
-      if (challengeStep) {
-        const challengeArtifactRecord = await db
-          .select()
-          .from(stepArtifacts)
-          .where(eq(stepArtifacts.workshopStepId, challengeStep.id))
-          .limit(1);
 
-        if (challengeArtifactRecord.length > 0) {
-          const challengeArtifact = challengeArtifactRecord[0].artifact as Record<string, unknown>;
-          hmwStatement = challengeArtifact.hmwStatement as string | undefined;
+        // Try 2: Canvas-stored HMW cards (always saved by auto-save)
+        if (!hmwStatement || hmwGoals.length === 0) {
+          const reframeCanvas = await loadCanvasState(session.workshop.id, 'reframe');
+          const hmwCards = reframeCanvas?.hmwCards as Array<{ fullStatement?: string; immediateGoal?: string; cardIndex?: number }> | undefined;
+          if (hmwCards && hmwCards.length > 0) {
+            const sortedCards = [...hmwCards]
+              .sort((a, b) => (a.cardIndex ?? 0) - (b.cardIndex ?? 0));
+
+            if (!hmwStatement) {
+              const filledCard = sortedCards.find((c) => c.fullStatement);
+              hmwStatement = filledCard?.fullStatement;
+            }
+
+            if (hmwGoals.length === 0) {
+              hmwGoals = sortedCards
+                .filter((c) => c.fullStatement)
+                .map((c) => ({
+                  label: extractHmwBranchLabel(c.fullStatement!),
+                  fullStatement: c.fullStatement!,
+                }));
+            }
+          }
         }
       }
     }
@@ -391,6 +460,8 @@ export default async function StepPage({ params }: StepPageProps) {
           initialArtifact={initialArtifact}
           stepStatus={stepRecord?.status}
           hmwStatement={hmwStatement}
+          challengeStatement={challengeStatement}
+          hmwGoals={hmwGoals}
           step8SelectedSlotIds={step8SelectedSlotIds}
           step8Crazy8sSlots={step8Crazy8sSlots}
           isAdmin={userIsAdmin}

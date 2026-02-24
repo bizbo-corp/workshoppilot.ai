@@ -6,7 +6,7 @@
  * Other steps: Flat list of sticky note text
  */
 
-import type { StickyNote, GridColumn } from '@/stores/canvas-store';
+import type { StickyNote, GridColumn, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 
@@ -434,10 +434,57 @@ export function assembleUserResearchCanvasContext(stickyNotes: StickyNote[]): st
 }
 
 /**
+ * Assemble mind map canvas context for Step 8 (Ideation)
+ * Formats mind map nodes as a tree so the AI can see branch labels and existing ideas
+ */
+export function assembleMindMapCanvasContext(mindMapNodes: MindMapNodeState[], mindMapEdges: MindMapEdgeState[]): string {
+  if (mindMapNodes.length === 0) return '';
+
+  // Build parent→children lookup from edges
+  const childrenOf = new Map<string, MindMapNodeState[]>();
+  const nodeById = new Map<string, MindMapNodeState>();
+  for (const node of mindMapNodes) {
+    nodeById.set(node.id, node);
+  }
+  for (const edge of mindMapEdges) {
+    if (!childrenOf.has(edge.source)) childrenOf.set(edge.source, []);
+    const targetNode = nodeById.get(edge.target);
+    if (targetNode) childrenOf.get(edge.source)!.push(targetNode);
+  }
+
+  const root = mindMapNodes.find(n => n.isRoot);
+  if (!root) return '';
+
+  const lines: string[] = [`Root: "${root.label}"`];
+
+  // Level-1 branches (HMW goals)
+  const branches = childrenOf.get(root.id) || [];
+  for (const branch of branches) {
+    lines.push(`\nBranch: "${branch.label}"`);
+    // Level-2 solution directions under this branch
+    const ideas = childrenOf.get(branch.id) || [];
+    if (ideas.length > 0) {
+      for (const idea of ideas) {
+        lines.push(`  - ${idea.label}`);
+      }
+    } else {
+      lines.push(`  (no solution directions yet)`);
+    }
+  }
+
+  return `mindMapNodes:\n${lines.join('\n')}`;
+}
+
+/**
  * Assemble canvas context for a specific step
  * Routes to step-specific assembly function based on stepId
  */
-export function assembleCanvasContextForStep(stepId: string, stickyNotes: StickyNote[], gridColumns?: GridColumn[], personaTemplates?: PersonaTemplateData[], hmwCards?: HmwCardData[]): string {
+export function assembleCanvasContextForStep(stepId: string, stickyNotes: StickyNote[], gridColumns?: GridColumn[], personaTemplates?: PersonaTemplateData[], hmwCards?: HmwCardData[], mindMapNodes?: MindMapNodeState[], mindMapEdges?: MindMapEdgeState[]): string {
+  // Ideation step uses mind map nodes
+  if (stepId === 'ideation' && mindMapNodes && mindMapNodes.length > 0) {
+    return assembleMindMapCanvasContext(mindMapNodes, mindMapEdges || []);
+  }
+
   // For journey-mapping, always return context (even if no items) so AI sees column structure
   if (stepId === 'journey-mapping') {
     return assembleJourneyMapCanvasContext(stickyNotes, gridColumns);

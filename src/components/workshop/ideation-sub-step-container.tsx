@@ -35,6 +35,8 @@ interface IdeationSubStepContainerProps {
   isAdmin?: boolean;
   onReset?: () => void;
   hmwStatement?: string;
+  challengeStatement?: string;
+  hmwGoals?: Array<{ label: string; fullStatement: string }>;
 }
 
 export function IdeationSubStepContainer({
@@ -46,6 +48,8 @@ export function IdeationSubStepContainer({
   isAdmin,
   onReset,
   hmwStatement,
+  challengeStatement,
+  hmwGoals,
 }: IdeationSubStepContainerProps) {
   const { chatCollapsed, canvasCollapsed, setChatCollapsed, setCanvasCollapsed } = usePanelLayout();
 
@@ -425,6 +429,8 @@ export function IdeationSubStepContainer({
             workshopId={workshopId}
             stepId={stepId}
             hmwStatement={hmwStatement || artifact?.reframedHmw as string || ''}
+            challengeStatement={challengeStatement}
+            hmwGoals={hmwGoals}
             showCrazy8s={showCrazy8s}
             onSaveCrazy8s={handleSaveCrazy8s}
           />

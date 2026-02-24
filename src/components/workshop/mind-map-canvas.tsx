@@ -10,12 +10,13 @@ import {
   Panel,
   useReactFlow,
   applyNodeChanges,
+  SelectionMode,
   type Node,
   type Edge,
   type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Sparkles, Loader2, Plus, Undo2, Redo2 } from 'lucide-react';
+import { Plus, Undo2, Redo2, MousePointer2, Hand } from 'lucide-react';
 
 import { MindMapNode } from '@/components/canvas/mind-map-node';
 import { MindMapEdge } from '@/components/canvas/mind-map-edge';
@@ -53,6 +54,8 @@ export type MindMapCanvasProps = {
   workshopId: string;
   stepId: string;
   hmwStatement?: string;
+  challengeStatement?: string;
+  hmwGoals?: Array<{ label: string; fullStatement: string }>;
   showCrazy8s?: boolean;
   onSaveCrazy8s?: () => Promise<void>;
 };
@@ -69,6 +72,8 @@ function MindMapCanvasInner({
   workshopId,
   stepId,
   hmwStatement,
+  challengeStatement,
+  hmwGoals,
   showCrazy8s,
   onSaveCrazy8s,
 }: MindMapCanvasProps) {
@@ -79,10 +84,10 @@ function MindMapCanvasInner({
   const updateMindMapNodePosition = useCanvasStore((state) => state.updateMindMapNodePosition);
   const deleteMindMapNode = useCanvasStore((state) => state.deleteMindMapNode);
   const setMindMapState = useCanvasStore((state) => state.setMindMapState);
+  const pendingFitView = useCanvasStore((state) => state.pendingFitView);
+  const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
 
   const { fitView } = useReactFlow();
-  const [isSuggesting, setIsSuggesting] = useState(false);
-  const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
   const storeApi = useCanvasStoreApi();
 
@@ -90,15 +95,35 @@ function MindMapCanvasInner({
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
+  // Tool mode: 'select' = marquee selection on drag, 'pan' = hand tool (default)
+  const [toolMode, setToolMode] = useState<'select' | 'pan'>('pan');
+
+  // Keyboard shortcuts: V = select, H = hand (standard design tool convention)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore when typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+      if (e.key === 'v' || e.key === 'V') setToolMode('select');
+      if (e.key === 'h' || e.key === 'H') setToolMode('pan');
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Live positions ref — prevents flicker during drag (same pattern as react-flow-canvas.tsx)
   const livePositions = useRef<Record<string, { x: number; y: number }>>({});
 
-  // Initialize with root node if empty
+  // Guard: only create HMW branch nodes once per mount
+  const hmwNodesCreated = useRef(false);
+
+  // Initialize root node if canvas is empty
   useEffect(() => {
     if (mindMapNodes.length === 0) {
+      const rootLabel = challengeStatement || hmwStatement || 'How might we...?';
       const rootNode: MindMapNodeState = {
         id: 'root',
-        label: hmwStatement || 'How might we...?',
+        label: rootLabel,
         themeColorId: 'gray',
         themeColor: ROOT_COLOR.color,
         themeBgColor: ROOT_COLOR.bgColor,
@@ -108,17 +133,70 @@ function MindMapCanvasInner({
       };
       setMindMapState([rootNode], []);
     }
-  }, [mindMapNodes.length, hmwStatement, setMindMapState]);
+  }, [mindMapNodes.length, challengeStatement, hmwStatement, setMindMapState]);
 
-  // Update root node label when hmwStatement arrives later
+  // Pre-populate HMW branch nodes (runs once, even if root already existed)
   useEffect(() => {
-    if (hmwStatement && mindMapNodes.length > 0) {
-      const rootNode = mindMapNodes.find((n) => n.isRoot);
-      if (rootNode && rootNode.label === 'How might we...?') {
-        updateMindMapNode('root', { label: hmwStatement });
-      }
+    if (hmwNodesCreated.current) return;
+    if (!hmwGoals || hmwGoals.length === 0) return;
+    // Only add if no hmw-* nodes exist yet
+    const hasHmwNodes = mindMapNodes.some((n) => n.id.startsWith('hmw-'));
+    if (hasHmwNodes) {
+      hmwNodesCreated.current = true;
+      return;
     }
-  }, [hmwStatement, mindMapNodes, updateMindMapNode]);
+    // Need at least a root node before adding branches
+    if (mindMapNodes.length === 0) return;
+
+    const RADIUS = 350;
+    hmwGoals.forEach((goal, index) => {
+      const themeColor = THEME_COLORS[index % THEME_COLORS.length];
+      const angle = (2 * Math.PI * index) / hmwGoals.length - Math.PI / 2;
+      const nodeId = `hmw-${index}`;
+
+      const newNode: MindMapNodeState = {
+        id: nodeId,
+        label: goal.label,
+        themeColorId: themeColor.id,
+        themeColor: themeColor.color,
+        themeBgColor: themeColor.bgColor,
+        isRoot: false,
+        level: 1,
+        parentId: 'root',
+        position: {
+          x: snapToGrid(RADIUS * Math.cos(angle)),
+          y: snapToGrid(RADIUS * Math.sin(angle)),
+        },
+      };
+
+      const newEdge: MindMapEdgeState = {
+        id: `root-${nodeId}`,
+        source: 'root',
+        target: nodeId,
+        themeColor: themeColor.color,
+      };
+
+      addMindMapNode(newNode, newEdge);
+    });
+    hmwNodesCreated.current = true;
+
+    setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
+  }, [mindMapNodes, hmwGoals, addMindMapNode, fitView]);
+
+  // Update root node label to use challenge statement (handles existing canvases)
+  const rootLabelUpdated = useRef(false);
+  useEffect(() => {
+    if (rootLabelUpdated.current) return;
+    if (!challengeStatement) return;
+    if (mindMapNodes.length === 0) return;
+    const rootNode = mindMapNodes.find((n) => n.isRoot);
+    if (!rootNode) return;
+    // Update if root still has placeholder or full HMW text (not the challenge statement)
+    if (rootNode.label !== challengeStatement) {
+      updateMindMapNode('root', { label: challengeStatement });
+    }
+    rootLabelUpdated.current = true;
+  }, [challengeStatement, mindMapNodes, updateMindMapNode]);
 
   // Callback: Update node label
   const handleLabelChange = useCallback(
@@ -302,6 +380,14 @@ function MindMapCanvasInner({
     prevShowCrazy8s.current = showCrazy8s;
   }, [showCrazy8s, fitView]);
 
+  // Consume pendingFitView flag set by chat panel when adding nodes
+  useEffect(() => {
+    if (pendingFitView) {
+      setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 150);
+      setPendingFitView(false);
+    }
+  }, [pendingFitView, fitView, setPendingFitView]);
+
   // Handle node changes (drag, selection)
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -332,93 +418,6 @@ function MindMapCanvasInner({
     },
     [updateMindMapNodePosition]
   );
-
-  // Callback: AI theme suggestion
-  const handleSuggestThemes = useCallback(async () => {
-    setIsSuggesting(true);
-    setSuggestionError(null);
-
-    try {
-      const rootNode = mindMapNodes.find((n) => n.isRoot);
-      if (!rootNode) {
-        setSuggestionError('No root node found');
-        return;
-      }
-
-      const existingThemes = mindMapNodes
-        .filter((n) => n.level === 1)
-        .map((n) => n.label)
-        .filter(Boolean);
-
-      const response = await fetch('/api/ai/suggest-themes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workshopId,
-          hmwStatement: rootNode.label,
-          existingThemes,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate theme suggestions');
-      }
-
-      const data = await response.json();
-      const themes: string[] = data.themes || [];
-
-      if (themes.length === 0) {
-        setSuggestionError('No themes generated');
-        return;
-      }
-
-      // Place themes radially around root at 350px radius
-      const rootPos = rootNode.position || { x: 0, y: 0 };
-      const existingLevel1Count = mindMapNodes.filter((n) => n.level === 1).length;
-      const totalAfter = existingLevel1Count + themes.length;
-
-      themes.forEach((themeLabel, index) => {
-        const colorIndex = (existingLevel1Count + index) % THEME_COLORS.length;
-        const themeColor = THEME_COLORS[colorIndex];
-
-        // Spread all themes (existing + new) evenly; place new ones at the end
-        const angle = (2 * Math.PI * (existingLevel1Count + index)) / totalAfter - Math.PI / 2;
-        const RADIUS = 350;
-
-        const newNodeId = crypto.randomUUID();
-        const newNode: MindMapNodeState = {
-          id: newNodeId,
-          label: themeLabel,
-          themeColorId: themeColor.id,
-          themeColor: themeColor.color,
-          themeBgColor: themeColor.bgColor,
-          isRoot: false,
-          level: 1,
-          parentId: 'root',
-          position: {
-            x: snapToGrid(rootPos.x + RADIUS * Math.cos(angle)),
-            y: snapToGrid(rootPos.y + RADIUS * Math.sin(angle)),
-          },
-        };
-
-        const newEdge: MindMapEdgeState = {
-          id: `root-${newNodeId}`,
-          source: 'root',
-          target: newNodeId,
-          themeColor: themeColor.color,
-        };
-
-        addMindMapNode(newNode, newEdge);
-      });
-
-      setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
-    } catch (error) {
-      console.error('Theme suggestion error:', error);
-      setSuggestionError('Failed to generate themes. Please try again.');
-    } finally {
-      setIsSuggesting(false);
-    }
-  }, [mindMapNodes, workshopId, addMindMapNode, fitView]);
 
   // Undo/redo handlers
   const handleUndo = useCallback(() => {
@@ -486,10 +485,6 @@ function MindMapCanvasInner({
     setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
   }, [mindMapNodes, addMindMapNode, fitView]);
 
-  // Check if button should be visible (< 6 level-1 branches)
-  const level1Count = mindMapNodes.filter((n) => n.level === 1).length;
-  const showSuggestButton = level1Count < 6;
-
   return (
     <div className="h-full w-full">
       <ReactFlow
@@ -506,6 +501,9 @@ function MindMapCanvasInner({
         nodesDraggable={true}
         nodesConnectable={false}
         edgesFocusable={false}
+        panOnDrag={toolMode === 'pan'}
+        selectionOnDrag={toolMode === 'select'}
+        selectionMode={SelectionMode.Partial}
         selectNodesOnDrag={false}
         snapToGrid={true}
         snapGrid={[SNAP_GRID, SNAP_GRID]}
@@ -528,7 +526,27 @@ function MindMapCanvasInner({
 
         {/* Bottom toolbar */}
         <Panel position="bottom-center" className="!mb-4">
-          <div className="flex items-center gap-2 rounded-lg border bg-background p-1.5 shadow-md">
+          <div className="flex items-center gap-1 rounded-lg border bg-background p-1.5 shadow-md">
+            {/* Tool mode toggle */}
+            <Button
+              onClick={() => setToolMode('select')}
+              size="icon"
+              variant={toolMode === 'select' ? 'secondary' : 'ghost'}
+              className="h-8 w-8"
+              title="Select (marquee)"
+            >
+              <MousePointer2 className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={() => setToolMode('pan')}
+              size="icon"
+              variant={toolMode === 'pan' ? 'secondary' : 'ghost'}
+              className="h-8 w-8"
+              title="Pan (hand)"
+            >
+              <Hand className="h-4 w-4" />
+            </Button>
+            <div className="mx-1 h-5 w-px bg-border" />
             <Button
               onClick={handleAddNode}
               size="sm"
@@ -538,22 +556,6 @@ function MindMapCanvasInner({
               <Plus className="h-4 w-4" />
               Add Node
             </Button>
-            {showSuggestButton && (
-              <Button
-                onClick={handleSuggestThemes}
-                disabled={isSuggesting}
-                size="sm"
-                variant="ghost"
-                className="gap-1.5"
-              >
-                {isSuggesting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
-                {isSuggesting ? 'Generating...' : 'Suggest Themes'}
-              </Button>
-            )}
             <div className="mx-1 h-5 w-px bg-border" />
             <Button
               onClick={handleUndo}
@@ -574,9 +576,6 @@ function MindMapCanvasInner({
               <Redo2 className="h-4 w-4" />
             </Button>
           </div>
-          {suggestionError && (
-            <p className="mt-1 text-center text-xs text-destructive">{suggestionError}</p>
-          )}
         </Panel>
       </ReactFlow>
     </div>
