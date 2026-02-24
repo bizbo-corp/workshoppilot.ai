@@ -11,12 +11,15 @@ import {
   useReactFlow,
   applyNodeChanges,
   SelectionMode,
+  ConnectionMode,
   type Node,
   type Edge,
+  type EdgeChange,
   type NodeChange,
+  type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Plus, Undo2, Redo2, MousePointer2, Hand } from 'lucide-react';
+import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid } from 'lucide-react';
 
 import { MindMapNode } from '@/components/canvas/mind-map-node';
 import { MindMapEdge } from '@/components/canvas/mind-map-edge';
@@ -31,6 +34,7 @@ import {
   ROOT_COLOR,
   type ThemeColor,
 } from '@/lib/canvas/mind-map-theme-colors';
+import { computeRadialLayout, computeNewNodePosition } from '@/lib/canvas/mind-map-layout';
 import type {
   MindMapNodeState,
   MindMapEdgeState,
@@ -82,6 +86,9 @@ function MindMapCanvasInner({
   const addMindMapNode = useCanvasStore((state) => state.addMindMapNode);
   const updateMindMapNode = useCanvasStore((state) => state.updateMindMapNode);
   const updateMindMapNodePosition = useCanvasStore((state) => state.updateMindMapNodePosition);
+  const batchUpdateMindMapNodePositions = useCanvasStore((state) => state.batchUpdateMindMapNodePositions);
+  const addMindMapEdge = useCanvasStore((state) => state.addMindMapEdge);
+  const deleteMindMapEdge = useCanvasStore((state) => state.deleteMindMapEdge);
   const deleteMindMapNode = useCanvasStore((state) => state.deleteMindMapNode);
   const setMindMapState = useCanvasStore((state) => state.setMindMapState);
   const pendingFitView = useCanvasStore((state) => state.pendingFitView);
@@ -148,10 +155,14 @@ function MindMapCanvasInner({
     // Need at least a root node before adding branches
     if (mindMapNodes.length === 0) return;
 
-    const RADIUS = 350;
+    // Horizontal layout: root on top, branches in a row below
+    const H_SPACING = 400; // px between branch centers
+    const V_OFFSET = 160;  // px below root
+    const totalWidth = (hmwGoals.length - 1) * H_SPACING;
+    const startX = -totalWidth / 2;
+
     hmwGoals.forEach((goal, index) => {
       const themeColor = THEME_COLORS[index % THEME_COLORS.length];
-      const angle = (2 * Math.PI * index) / hmwGoals.length - Math.PI / 2;
       const nodeId = `hmw-${index}`;
 
       const newNode: MindMapNodeState = {
@@ -164,8 +175,8 @@ function MindMapCanvasInner({
         level: 1,
         parentId: 'root',
         position: {
-          x: snapToGrid(RADIUS * Math.cos(angle)),
-          y: snapToGrid(RADIUS * Math.sin(angle)),
+          x: snapToGrid(startX + index * H_SPACING),
+          y: V_OFFSET,
         },
       };
 
@@ -227,33 +238,7 @@ function MindMapCanvasInner({
         themeColor = inheritedColor || ROOT_COLOR;
       }
 
-      // Compute radial offset from parent
-      const parentPos = livePositions.current[parentId] || parentNode.position || { x: 0, y: 0 };
-      const siblingCount = mindMapEdges.filter((e) => e.source === parentId).length;
-      const CHILD_DISTANCE = 250;
-
-      // If parent is root, spread around evenly; otherwise, fan out from parent's direction
-      let childX: number;
-      let childY: number;
-
-      if (parentNode.isRoot) {
-        const totalChildren = siblingCount + 1;
-        const childAngle = (2 * Math.PI * siblingCount) / totalChildren - Math.PI / 2;
-        childX = snapToGrid(parentPos.x + CHILD_DISTANCE * Math.cos(childAngle));
-        childY = snapToGrid(parentPos.y + CHILD_DISTANCE * Math.sin(childAngle));
-      } else {
-        // Direction from root to parent
-        const rootNode = mindMapNodes.find((n) => n.isRoot);
-        const rootPos = rootNode?.position || { x: 0, y: 0 };
-        const dirAngle = Math.atan2(parentPos.y - rootPos.y, parentPos.x - rootPos.x);
-        // Fan children around that direction
-        const spread = Math.PI / 3;
-        const startAngle = dirAngle - spread / 2;
-        const angleStep = siblingCount > 0 ? spread / siblingCount : 0;
-        const childAngle = siblingCount === 0 ? dirAngle : startAngle + angleStep * siblingCount;
-        childX = snapToGrid(parentPos.x + CHILD_DISTANCE * Math.cos(childAngle));
-        childY = snapToGrid(parentPos.y + CHILD_DISTANCE * Math.sin(childAngle));
-      }
+      const position = computeNewNodePosition(parentId, mindMapNodes, mindMapEdges);
 
       const newNodeId = crypto.randomUUID();
       const newNode: MindMapNodeState = {
@@ -265,7 +250,7 @@ function MindMapCanvasInner({
         isRoot: false,
         level: childLevel,
         parentId,
-        position: { x: childX, y: childY },
+        position,
       };
 
       const newEdge: MindMapEdgeState = {
@@ -357,8 +342,12 @@ function MindMapCanvasInner({
       source: edgeState.source,
       target: edgeState.target,
       type: 'mindMapEdge',
+      // Secondary edges can be selected and deleted
+      selectable: !!edgeState.isSecondary,
+      deletable: !!edgeState.isSecondary,
       data: {
         themeColor: edgeState.themeColor,
+        isSecondary: edgeState.isSecondary,
       },
     }));
   }, [mindMapEdges]);
@@ -452,11 +441,7 @@ function MindMapCanvasInner({
     const colorIndex = existingLevel1Nodes.length % THEME_COLORS.length;
     const themeColor = THEME_COLORS[colorIndex];
 
-    const rootNode = mindMapNodes.find((n) => n.isRoot);
-    const rootPos = rootNode?.position || { x: 0, y: 0 };
-    const totalChildren = existingLevel1Nodes.length + 1;
-    const angle = (2 * Math.PI * existingLevel1Nodes.length) / totalChildren - Math.PI / 2;
-    const RADIUS = 350;
+    const position = computeNewNodePosition('root', mindMapNodes, mindMapEdges);
 
     const newNodeId = crypto.randomUUID();
     const newNode: MindMapNodeState = {
@@ -468,10 +453,7 @@ function MindMapCanvasInner({
       isRoot: false,
       level: 1,
       parentId: 'root',
-      position: {
-        x: snapToGrid(rootPos.x + RADIUS * Math.cos(angle)),
-        y: snapToGrid(rootPos.y + RADIUS * Math.sin(angle)),
-      },
+      position,
     };
 
     const newEdge: MindMapEdgeState = {
@@ -483,7 +465,93 @@ function MindMapCanvasInner({
 
     addMindMapNode(newNode, newEdge);
     setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
-  }, [mindMapNodes, addMindMapNode, fitView]);
+  }, [mindMapNodes, mindMapEdges, addMindMapNode, fitView]);
+
+  // Auto-layout: recompute all positions using radial algorithm
+  const handleAutoLayout = useCallback(() => {
+    const positionMap = computeRadialLayout(mindMapNodes, mindMapEdges);
+    const updates: Array<{ id: string; position: { x: number; y: number } }> = [];
+    positionMap.forEach((pos, nodeId) => {
+      updates.push({ id: nodeId, position: pos });
+    });
+    if (updates.length > 0) {
+      batchUpdateMindMapNodePositions(updates);
+      // Clear live positions to avoid stale refs
+      livePositions.current = {};
+      setTimeout(() => fitView({ padding: 0.3, duration: 400 }), 100);
+    }
+  }, [mindMapNodes, mindMapEdges, batchUpdateMindMapNodePositions, fitView]);
+
+  // Connection handler: create secondary cross-connection edge
+  const handleConnect = useCallback(
+    (connection: Connection) => {
+      if (!connection.source || !connection.target) return;
+
+      // Get source node to inherit its theme color
+      const sourceNode = mindMapNodes.find((n) => n.id === connection.source);
+      const themeColor = sourceNode?.themeColor || '#94a3b8';
+
+      const edgeId = `secondary-${connection.source}-${connection.target}`;
+      const newEdge: MindMapEdgeState = {
+        id: edgeId,
+        source: connection.source,
+        target: connection.target,
+        themeColor,
+        isSecondary: true,
+      };
+
+      addMindMapEdge(newEdge);
+    },
+    [mindMapNodes, addMindMapEdge]
+  );
+
+  // Validate connections: block self-connections, duplicates, and crazy8s node
+  const isValidConnection = useCallback(
+    (connection: Connection | Edge) => {
+      if (!connection.source || !connection.target) return false;
+      // No self-connections
+      if (connection.source === connection.target) return false;
+      // Block connections to/from crazy 8s group node
+      if (connection.source === CRAZY_8S_NODE_ID || connection.target === CRAZY_8S_NODE_ID) return false;
+      // No duplicate edges
+      const exists = mindMapEdges.some(
+        (e) =>
+          (e.source === connection.source && e.target === connection.target) ||
+          (e.source === connection.target && e.target === connection.source)
+      );
+      return !exists;
+    },
+    [mindMapEdges]
+  );
+
+  // Handle edge deletion (only secondary edges are deletable)
+  const handleEdgesDelete = useCallback(
+    (edges: Edge[]) => {
+      for (const edge of edges) {
+        // Double-check it's secondary before deleting
+        const storeEdge = mindMapEdges.find((e) => e.id === edge.id);
+        if (storeEdge?.isSecondary) {
+          deleteMindMapEdge(edge.id);
+        }
+      }
+    },
+    [mindMapEdges, deleteMindMapEdge]
+  );
+
+  // Handle edge changes (selection, removal)
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      for (const change of changes) {
+        if (change.type === 'remove') {
+          const storeEdge = mindMapEdges.find((e) => e.id === change.id);
+          if (storeEdge?.isSecondary) {
+            deleteMindMapEdge(change.id);
+          }
+        }
+      }
+    },
+    [mindMapEdges, deleteMindMapEdge]
+  );
 
   return (
     <div className="h-full w-full">
@@ -491,6 +559,10 @@ function MindMapCanvasInner({
         nodes={nodes}
         edges={rfEdges}
         onNodesChange={handleNodesChange}
+        onEdgesChange={handleEdgesChange}
+        onEdgesDelete={handleEdgesDelete}
+        onConnect={handleConnect}
+        isValidConnection={isValidConnection}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
@@ -499,8 +571,9 @@ function MindMapCanvasInner({
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
         nodesDraggable={true}
-        nodesConnectable={false}
-        edgesFocusable={false}
+        nodesConnectable={true}
+        connectionMode={ConnectionMode.Loose}
+        edgesFocusable={true}
         panOnDrag={toolMode === 'pan'}
         selectionOnDrag={toolMode === 'select'}
         selectionMode={SelectionMode.Partial}
@@ -555,6 +628,16 @@ function MindMapCanvasInner({
             >
               <Plus className="h-4 w-4" />
               Add Node
+            </Button>
+            <Button
+              onClick={handleAutoLayout}
+              size="sm"
+              variant="ghost"
+              className="gap-1.5"
+              title="Auto-layout (radial)"
+            >
+              <LayoutGrid className="h-4 w-4" />
+              Layout
             </Button>
             <div className="mx-1 h-5 w-px bg-border" />
             <Button

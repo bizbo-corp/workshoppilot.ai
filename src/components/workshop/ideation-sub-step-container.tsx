@@ -11,7 +11,8 @@ import { BrainRewritingCanvas } from './brain-rewriting-canvas';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { fireConfetti } from '@/lib/utils/confetti';
-import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, Zap, CheckCircle2, SkipForward, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical, CheckCircle2, SkipForward, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Panel as ResizablePanel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
 import { saveCanvasState } from '@/actions/canvas-actions';
@@ -19,12 +20,6 @@ import { createEmptyMatrix } from '@/lib/canvas/brain-rewriting-types';
 
 type IdeationPhase = 'mind-mapping' | 'crazy-eights' | 'idea-selection' | 'brain-rewriting';
 
-const PHASE_LABELS: Record<IdeationPhase, string> = {
-  'mind-mapping': 'Mind Mapping',
-  'crazy-eights': 'Crazy 8s',
-  'idea-selection': 'Idea Selection',
-  'brain-rewriting': 'Brain Rewriting (Optional)',
-};
 
 interface IdeationSubStepContainerProps {
   sessionId: string;
@@ -224,7 +219,8 @@ export function IdeationSubStepContainer({
     [canvasStoreApi]
   );
 
-  const hasEnoughMessages = liveMessageCount >= 4;
+  // Show confirm button after AI's first response (auto-start trigger = 1, AI response = 2)
+  const hasEnoughMessages = liveMessageCount >= 2;
 
   // Render chat panel
   const renderChatPanel = () => (
@@ -248,17 +244,12 @@ export function IdeationSubStepContainer({
           initialMessages={initialMessages}
           onMessageCountChange={setLiveMessageCount}
           subStep={currentPhase}
+          showStepConfirm={currentPhase === 'mind-mapping' && !showCrazy8s && hasEnoughMessages && mindMapHasThemes}
+          onStepConfirm={handleStartCrazy8s}
+          stepConfirmLabel="Confirm Mind Map"
+          stepConfirmIsTransition
         />
       </div>
-      {/* Transition button: Continue to Crazy 8s */}
-      {currentPhase === 'mind-mapping' && !showCrazy8s && hasEnoughMessages && mindMapHasThemes && (
-        <div className="flex shrink-0 justify-center border-t bg-background p-4">
-          <Button onClick={handleStartCrazy8s} size="sm">
-            <Zap className="mr-2 h-4 w-4" />
-            Continue to Crazy 8s
-          </Button>
-        </div>
-      )}
     </div>
   );
 
@@ -439,100 +430,113 @@ export function IdeationSubStepContainer({
     );
   };
 
+  if (isMobile) {
+    return (
+      <div className="flex h-full flex-col">
+        {/* Mobile: tab-based layout */}
+        <div className="flex border-b px-4">
+          <button
+            onClick={() => setMobileView('chat')}
+            className={cn(
+              'px-3 py-2 text-sm font-medium',
+              mobileView === 'chat' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
+            )}
+          >
+            Chat
+          </button>
+          <button
+            onClick={() => setMobileView('canvas')}
+            className={cn(
+              'px-3 py-2 text-sm font-medium',
+              mobileView === 'canvas' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
+            )}
+          >
+            Canvas
+          </button>
+        </div>
+        <div className="min-h-0 flex-1">
+          {mobileView === 'chat' ? renderChatPanel() : renderCanvas()}
+        </div>
+
+        {/* Step navigation */}
+        <StepNavigation
+          sessionId={sessionId}
+          workshopId={workshopId}
+          currentStepOrder={8}
+          artifactConfirmed={artifactConfirmed}
+          stepExplicitlyConfirmed={artifactConfirmed}
+          stepStatus={stepStatus}
+          isAdmin={isAdmin}
+          onReset={onReset}
+          onToggleGuideEditor={handleToggleGuideEditor}
+          isGuideEditing={isGuideEditing}
+        />
+      </div>
+    );
+  }
+
+  // Desktop: resizable panels matching standard step-container layout
   return (
     <div className="flex h-full flex-col">
-      {/* Step header with phase indicator */}
-      <div className="border-b bg-muted/30 px-6 py-3">
-        <div className="flex items-center gap-2 text-base">
-          <span className="font-medium">Step 8: Ideation</span>
-          <span className="text-muted-foreground">&mdash;</span>
-          <span className="text-sm text-muted-foreground">{PHASE_LABELS[currentPhase]}</span>
-        </div>
-      </div>
-
-      {/* Main content area */}
-      <div className="flex-1 min-h-0">
-        {isMobile ? (
-          /* Mobile: toggle between chat and canvas */
-          <div className="flex h-full flex-col">
-            <div className="flex border-b px-4">
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="flex h-full">
+          {/* Chat collapsed strip */}
+          {chatCollapsed && (
+            <div className="flex w-10 flex-col items-center border-r bg-muted/30 py-4">
               <button
-                onClick={() => setMobileView('chat')}
-                className={cn(
-                  'px-3 py-2 text-sm font-medium',
-                  mobileView === 'chat' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
-                )}
+                onClick={() => setChatCollapsed(false)}
+                className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                title="Expand chat"
               >
-                Chat
-              </button>
-              <button
-                onClick={() => setMobileView('canvas')}
-                className={cn(
-                  'px-3 py-2 text-sm font-medium',
-                  mobileView === 'canvas' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'
-                )}
-              >
-                Canvas
+                <MessageSquare className="h-5 w-5" />
               </button>
             </div>
-            <div className="min-h-0 flex-1">
-              {mobileView === 'chat' ? renderChatPanel() : renderCanvas()}
-            </div>
-          </div>
-        ) : (
-          /* Desktop: chat + canvas side by side */
-          <div className="flex h-full">
-            {/* Chat collapsed strip */}
-            {chatCollapsed && (
-              <div className="flex w-10 flex-col items-center border-r bg-muted/30 py-4">
-                <button
-                  onClick={() => setChatCollapsed(false)}
-                  className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                  title="Expand chat"
-                >
-                  <MessageSquare className="h-5 w-5" />
-                </button>
-              </div>
-            )}
+          )}
 
-            {/* Chat takes full width when canvas collapsed */}
-            {!chatCollapsed && canvasCollapsed && (
-              <div className="flex-1">{renderChatPanel()}</div>
-            )}
-
-            {/* Both panels visible */}
-            {!chatCollapsed && !canvasCollapsed && (
-              <>
-                <div className="w-[400px] shrink-0 border-r">
-                  {renderChatPanel()}
+          {/* Resizable panel group (chat + canvas) */}
+          {!chatCollapsed && !canvasCollapsed && (
+            <PanelGroup orientation="horizontal" className="flex-1">
+              <ResizablePanel defaultSize={480} minSize={280} maxSize="60%">
+                {renderChatPanel()}
+              </ResizablePanel>
+              <PanelResizeHandle className="group relative flex w-2 items-center justify-center bg-border/40 transition-colors hover:bg-border data-[active]:bg-primary/20">
+                <div className="z-10 flex h-8 w-3.5 items-center justify-center rounded-sm border bg-border">
+                  <GripVertical className="h-3 w-3 text-muted-foreground" />
                 </div>
-                <div className="flex-1 min-w-0 relative">
+              </PanelResizeHandle>
+              <ResizablePanel minSize="30%">
+                <div className="h-full relative">
                   {renderCanvas()}
                 </div>
-              </>
-            )}
+              </ResizablePanel>
+            </PanelGroup>
+          )}
 
-            {/* Canvas takes full width when chat collapsed */}
-            {chatCollapsed && !canvasCollapsed && (
-              <div className="flex-1 relative">
-                {renderCanvas()}
-              </div>
-            )}
+          {/* Chat takes full width when canvas collapsed */}
+          {!chatCollapsed && canvasCollapsed && (
+            <div className="flex-1">{renderChatPanel()}</div>
+          )}
 
-            {/* Canvas collapsed strip */}
-            {canvasCollapsed && (
-              <div className="flex w-10 flex-col items-center border-l bg-muted/30 py-4">
-                <button
-                  onClick={() => setCanvasCollapsed(false)}
-                  className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                  title="Expand canvas"
-                >
-                  <LayoutGrid className="h-5 w-5" />
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+          {/* Canvas takes full width when chat collapsed */}
+          {chatCollapsed && !canvasCollapsed && (
+            <div className="flex-1 relative">
+              {renderCanvas()}
+            </div>
+          )}
+
+          {/* Canvas collapsed strip */}
+          {canvasCollapsed && (
+            <div className="flex w-10 flex-col items-center border-l bg-muted/30 py-4">
+              <button
+                onClick={() => setCanvasCollapsed(false)}
+                className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                title="Expand canvas"
+              >
+                <LayoutGrid className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Step navigation */}

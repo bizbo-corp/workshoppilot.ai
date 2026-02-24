@@ -76,8 +76,14 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
 
   const isRoot = data.isRoot;
 
-  // Handle style: hidden by default, visible on hover
-  const handleClass = '!w-2 !h-2 !bg-current !opacity-0 group-hover:!opacity-100 !transition-opacity';
+  // Handle style: progressive reveal
+  // Default: tiny & invisible | Node hover: visible connection points | Handle hover: clearly draggable
+  const handleClass = [
+    '!bg-current !border-none !transition-all !duration-150',
+    '!w-2 !h-2 !opacity-0',                          // default: 2px, invisible
+    'group-hover:!w-3 group-hover:!h-3 group-hover:!opacity-60',  // node hover: 3px, 60%
+    'hover:!w-4 hover:!h-4 hover:!opacity-100 hover:!scale-125',  // handle hover: 4px, 100%, scale-up
+  ].join(' ');
 
   return (
     <div

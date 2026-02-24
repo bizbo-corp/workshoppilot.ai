@@ -19,6 +19,7 @@ import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import { THEME_COLORS, ROOT_COLOR } from '@/lib/canvas/mind-map-theme-colors';
+import { computeNewNodePosition } from '@/lib/canvas/mind-map-layout';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { saveCanvasState } from '@/actions/canvas-actions';
 
@@ -788,9 +789,10 @@ interface ChatPanelProps {
   onStepConfirm?: () => void;
   onStepRevise?: () => void;
   stepConfirmLabel?: string;
+  stepConfirmIsTransition?: boolean; // If true, don't send [STEP_CONFIRMED] or show revise button
 }
 
-export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep, showStepConfirm, onStepConfirm, onStepRevise, stepConfirmLabel }: ChatPanelProps) {
+export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep, showStepConfirm, onStepConfirm, onStepRevise, stepConfirmLabel, stepConfirmIsTransition }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
   const storeApi = useCanvasStoreApi();
   const addStickyNote = useCanvasStore((state) => state.addStickyNote);
@@ -1271,7 +1273,6 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     const latestNodes = storeApi.getState().mindMapNodes;
     const latestEdges = storeApi.getState().mindMapEdges;
     const rootNode = latestNodes.find((n) => n.isRoot);
-    const rootPos = rootNode?.position || { x: 0, y: 0 };
 
     // Build label→node map
     const nodeLabelMap = new Map<string, MindMapNodeState>();
@@ -1285,9 +1286,6 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       return;
     }
 
-    const SNAP = 20;
-    const snap = (v: number) => Math.round(v / SNAP) * SNAP;
-
     // Resolve parent: match by theme (exact → substring → word-overlap)
     const parentNode = parsed.theme
       ? (findThemeNode(parsed.theme, latestNodes, nodeLabelMap) || rootNode)
@@ -1295,15 +1293,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
     if (parentNode && !parentNode.isRoot) {
       // Idea-level node — attach to parent theme branch
-      const parentPos = parentNode.position || { x: 0, y: 0 };
-      const siblingCount = latestEdges.filter((e) => e.source === parentNode.id).length;
-
-      const dirAngle = Math.atan2(parentPos.y - rootPos.y, parentPos.x - rootPos.x);
-      const spread = Math.PI / 3;
-      const startAngle = dirAngle - spread / 2;
-      const angleStep = siblingCount > 0 ? spread / siblingCount : 0;
-      const childAngle = siblingCount === 0 ? dirAngle : startAngle + angleStep * siblingCount;
-      const CHILD_DIST = 220;
+      const position = computeNewNodePosition(parentNode.id, latestNodes, latestEdges);
 
       const newId = crypto.randomUUID();
       const newNode: MindMapNodeState = {
@@ -1315,10 +1305,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         isRoot: false,
         level: parentNode.level + 1,
         parentId: parentNode.id,
-        position: {
-          x: snap(parentPos.x + CHILD_DIST * Math.cos(childAngle)),
-          y: snap(parentPos.y + CHILD_DIST * Math.sin(childAngle)),
-        },
+        position,
       };
       const newEdge: MindMapEdgeState = {
         id: `${parentNode.id}-${newId}`,
@@ -1334,9 +1321,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       const colorIndex = existingLevel1 % THEME_COLORS.length;
       const themeColor = THEME_COLORS[colorIndex];
 
-      const totalThemes = existingLevel1 + 1;
-      const angle = (2 * Math.PI * existingLevel1) / totalThemes - Math.PI / 2;
-      const RADIUS = 350;
+      const position = computeNewNodePosition('root', latestNodes, latestEdges);
 
       const newId = crypto.randomUUID();
       const newNode: MindMapNodeState = {
@@ -1348,10 +1333,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         isRoot: false,
         level: 1,
         parentId: 'root',
-        position: {
-          x: snap(rootPos.x + RADIUS * Math.cos(angle)),
-          y: snap(rootPos.y + RADIUS * Math.sin(angle)),
-        },
+        position,
       };
       const newEdge: MindMapEdgeState = {
         id: `root-${newId}`,
@@ -2611,8 +2593,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                 )}
                 <button
                   onClick={() => {
-                    setJustConfirmed(true);
                     onStepConfirm?.();
+                    if (stepConfirmIsTransition) return; // Sub-step transition — no AI message or revise flow
+                    setJustConfirmed(true);
                     // Trigger AI congratulatory close by sending a hidden confirm message
                     sendMessage({
                       role: 'user',

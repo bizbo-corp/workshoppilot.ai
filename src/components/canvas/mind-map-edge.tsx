@@ -5,6 +5,7 @@ import { getBezierPath, useInternalNode, type EdgeProps, type Edge, Position } f
 
 export type MindMapEdgeData = {
   themeColor?: string; // hex color string
+  isSecondary?: boolean; // manual cross-connection
 };
 
 export type MindMapEdgeType = Edge<MindMapEdgeData>;
@@ -112,20 +113,22 @@ const MindMapEdgeComponent = memo(({
   });
 
   const strokeColor = data?.themeColor || '#94a3b8';
+  const isSecondary = data?.isSecondary;
 
   return (
     <g>
       <path
         d={edgePath}
         stroke={strokeColor}
-        strokeWidth={2}
+        strokeWidth={isSecondary ? 1.5 : 2}
         fill="none"
+        strokeDasharray={isSecondary ? '6 3' : undefined}
         className="transition-colors"
       />
       <circle
         cx={params.targetX}
         cy={params.targetY}
-        r={4}
+        r={isSecondary ? 3 : 4}
         fill={strokeColor}
         className="transition-colors"
       />

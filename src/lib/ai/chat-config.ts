@@ -181,7 +181,8 @@ ${existingItemNames.map(name => `- ${name}`).join('\n')}`;
 
   // During Orient and Gather phases, instruct AI to provide suggested responses
   // Step 3 (user-research) needs suggestions in ALL phases — interview questions are core UX
-  if (arcPhase === "orient" || arcPhase === "gather" || stepId === "user-research") {
+  // Step 8 (ideation) manages its own flow — Confirm Mind Map button replaces suggestions
+  if ((arcPhase === "orient" || arcPhase === "gather" || stepId === "user-research") && stepId !== "ideation") {
     prompt += `\n\nSUGGESTED RESPONSES:
 After your message, append a [SUGGESTIONS] block with 2-3 suggested user responses.
 Format:

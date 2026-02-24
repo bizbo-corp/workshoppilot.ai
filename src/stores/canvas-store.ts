@@ -40,6 +40,7 @@ export type MindMapEdgeState = {
   source: string;
   target: string;
   themeColor: string;
+  isSecondary?: boolean; // true = manual cross-connection (not part of tree hierarchy)
 };
 
 export type DrawingNode = {
@@ -111,6 +112,9 @@ export type CanvasActions = {
   updateMindMapNode: (id: string, updates: Partial<MindMapNodeState>) => void;
   deleteMindMapNode: (id: string) => void;
   updateMindMapNodePosition: (id: string, position: { x: number; y: number }) => void;
+  batchUpdateMindMapNodePositions: (updates: Array<{ id: string; position: { x: number; y: number } }>) => void;
+  addMindMapEdge: (edge: MindMapEdgeState) => void;
+  deleteMindMapEdge: (edgeId: string) => void;
   setMindMapState: (nodes: MindMapNodeState[], edges: MindMapEdgeState[]) => void;
   setGridColumns: (gridColumns: GridColumn[]) => void;
   replaceGridColumns: (gridColumns: GridColumn[]) => void;
@@ -575,26 +579,51 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             isDirty: true,
           })),
 
+        batchUpdateMindMapNodePositions: (updates) =>
+          set((state) => {
+            const updateMap = new Map(updates.map((u) => [u.id, u.position]));
+            return {
+              mindMapNodes: state.mindMapNodes.map((node) => {
+                const pos = updateMap.get(node.id);
+                return pos ? { ...node, position: pos } : node;
+              }),
+              isDirty: true,
+            };
+          }),
+
+        addMindMapEdge: (edge) =>
+          set((state) => ({
+            mindMapEdges: [...state.mindMapEdges, edge],
+            isDirty: true,
+          })),
+
+        deleteMindMapEdge: (edgeId) =>
+          set((state) => ({
+            mindMapEdges: state.mindMapEdges.filter((e) => e.id !== edgeId),
+            isDirty: true,
+          })),
+
         deleteMindMapNode: (id) =>
           set((state) => {
-            // Collect all descendant IDs via BFS
+            // Collect all descendant IDs via BFS — only traverse primary (tree) edges
             const removalSet = new Set<string>([id]);
             const queue = [id];
 
             while (queue.length > 0) {
               const currentId = queue.shift()!;
-              // Find all edges where current node is the source
+              // Only follow primary (tree) edges for cascade — skip secondary cross-connections
               const childEdges = state.mindMapEdges.filter(
-                (edge) => edge.source === currentId
+                (edge) => edge.source === currentId && !edge.isSecondary
               );
-              // Add child targets to removal set and queue
               childEdges.forEach((edge) => {
-                removalSet.add(edge.target);
-                queue.push(edge.target);
+                if (!removalSet.has(edge.target)) {
+                  removalSet.add(edge.target);
+                  queue.push(edge.target);
+                }
               });
             }
 
-            // Filter out all nodes and edges in removal set
+            // Filter out all nodes in removal set and any edges touching removed nodes
             return {
               mindMapNodes: state.mindMapNodes.filter(
                 (node) => !removalSet.has(node.id)
