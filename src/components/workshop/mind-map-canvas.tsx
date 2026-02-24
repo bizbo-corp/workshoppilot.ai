@@ -19,7 +19,7 @@ import {
   type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid } from 'lucide-react';
+import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, CheckCircle2 } from 'lucide-react';
 
 import { MindMapNode } from '@/components/canvas/mind-map-node';
 import { MindMapEdge } from '@/components/canvas/mind-map-edge';
@@ -27,7 +27,14 @@ import {
   Crazy8sGroupNode,
   CRAZY_8S_NODE_ID,
   CRAZY_8S_NODE_HEIGHT,
+  CRAZY_8S_NODE_WIDTH,
 } from '@/components/canvas/crazy-8s-group-node';
+import {
+  BrainRewritingGroupNode as BrainRewritingGroupNodeComponent,
+  BR_NODE_WIDTH,
+  BR_NODE_HEIGHT,
+  BR_NODE_GAP,
+} from '@/components/canvas/brain-rewriting-group-node';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import {
   THEME_COLORS,
@@ -39,12 +46,14 @@ import type {
   MindMapNodeState,
   MindMapEdgeState,
 } from '@/stores/canvas-store';
+import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
 import { Button } from '@/components/ui/button';
 
 // Define node and edge types outside component to prevent re-renders
 const nodeTypes = {
   mindMapNode: MindMapNode,
   crazy8sGroupNode: Crazy8sGroupNode,
+  brainRewritingGroupNode: BrainRewritingGroupNodeComponent,
 };
 const edgeTypes = { mindMapEdge: MindMapEdge };
 
@@ -54,6 +63,9 @@ function snapToGrid(val: number): number {
   return Math.round(val / SNAP_GRID) * SNAP_GRID;
 }
 
+// Brain rewriting node ID prefix
+const BR_NODE_PREFIX = 'brain-rewriting-';
+
 export type MindMapCanvasProps = {
   workshopId: string;
   stepId: string;
@@ -62,6 +74,15 @@ export type MindMapCanvasProps = {
   hmwGoals?: Array<{ label: string; fullStatement: string }>;
   showCrazy8s?: boolean;
   onSaveCrazy8s?: () => Promise<void>;
+  // Selection mode (inline on crazy 8s node)
+  selectionMode?: boolean;
+  selectedSlotIds?: string[];
+  onSelectionChange?: (slotIds: string[]) => void;
+  onConfirmSelection?: (skip: boolean) => void;
+  // Brain rewriting
+  brainRewritingMatrices?: BrainRewritingMatrix[];
+  onBrainRewritingCellUpdate?: (slotId: string, cellId: string, imageUrl: string, drawingId: string) => void;
+  onBrainRewritingDone?: () => void;
 };
 
 export function MindMapCanvas(props: MindMapCanvasProps) {
@@ -80,6 +101,13 @@ function MindMapCanvasInner({
   hmwGoals,
   showCrazy8s,
   onSaveCrazy8s,
+  selectionMode,
+  selectedSlotIds,
+  onSelectionChange,
+  onConfirmSelection,
+  brainRewritingMatrices,
+  onBrainRewritingCellUpdate,
+  onBrainRewritingDone,
 }: MindMapCanvasProps) {
   const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
@@ -94,6 +122,7 @@ function MindMapCanvasInner({
   const setMindMapState = useCanvasStore((state) => state.setMindMapState);
   const pendingFitView = useCanvasStore((state) => state.pendingFitView);
   const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
+  const crazy8sSlots = useCanvasStore((state) => state.crazy8sSlots);
 
   const { fitView } = useReactFlow();
 
@@ -337,14 +366,54 @@ function MindMapCanvasInner({
       draggable: false,
       connectable: false,
       focusable: false,
-      data: { workshopId, stepId, onSave: onSaveCrazy8s },
+      data: {
+        workshopId,
+        stepId,
+        onSave: onSaveCrazy8s,
+        selectionMode,
+        selectedSlotIds,
+        onSelectionChange,
+        onConfirmSelection,
+      },
     };
-  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s]);
+  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection]);
 
-  // Combined nodes array: mind map + optional crazy 8s
+  // Brain rewriting group nodes — positioned to the right of Crazy 8s
+  const brainRewritingNodes = useMemo<Node[]>(() => {
+    if (!brainRewritingMatrices || brainRewritingMatrices.length === 0) return [];
+    const baseX = 900 + CRAZY_8S_NODE_WIDTH + 100; // gap after crazy 8s
+    const baseY = -(BR_NODE_HEIGHT / 2);
+
+    return brainRewritingMatrices.map((matrix, index) => {
+      const slot = crazy8sSlots.find((s) => s.slotId === matrix.slotId);
+      const slotNumber = matrix.slotId.replace('slot-', '');
+
+      return {
+        id: `${BR_NODE_PREFIX}${matrix.slotId}`,
+        type: 'brainRewritingGroupNode',
+        position: { x: baseX + index * (BR_NODE_WIDTH + BR_NODE_GAP), y: baseY },
+        draggable: false,
+        connectable: false,
+        focusable: false,
+        data: {
+          workshopId,
+          stepId,
+          matrix,
+          slotTitle: slot?.title || `Sketch ${slotNumber}`,
+          indexLabel: `${index + 1} of ${brainRewritingMatrices.length}`,
+          onCellUpdate: onBrainRewritingCellUpdate,
+        },
+      };
+    });
+  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, onBrainRewritingCellUpdate]);
+
+  // Combined nodes array: mind map + optional crazy 8s + brain rewriting
   const rfNodes = useMemo(() => {
-    return crazy8sNode ? [...rfMindMapNodes, crazy8sNode] : rfMindMapNodes;
-  }, [rfMindMapNodes, crazy8sNode]);
+    const combined = [...rfMindMapNodes];
+    if (crazy8sNode) combined.push(crazy8sNode);
+    if (brainRewritingNodes.length > 0) combined.push(...brainRewritingNodes);
+    return combined;
+  }, [rfMindMapNodes, crazy8sNode, brainRewritingNodes]);
 
   // Convert store state to ReactFlow edges
   const rfEdges: Edge[] = useMemo(() => {
@@ -380,6 +449,19 @@ function MindMapCanvasInner({
     prevShowCrazy8s.current = showCrazy8s;
   }, [showCrazy8s, fitView]);
 
+  // Auto-pan to brain rewriting area when nodes first appear
+  const prevBrCount = useRef(0);
+  useEffect(() => {
+    if (brainRewritingNodes.length > 0 && prevBrCount.current === 0) {
+      // Pan to show crazy 8s + all BR nodes
+      const nodeIds = [CRAZY_8S_NODE_ID, ...brainRewritingNodes.map((n) => n.id)];
+      setTimeout(() => {
+        fitView({ nodes: nodeIds.map((id) => ({ id })), padding: 0.1, duration: 600 });
+      }, 300);
+    }
+    prevBrCount.current = brainRewritingNodes.length;
+  }, [brainRewritingNodes, fitView]);
+
   // Consume pendingFitView flag set by chat panel when adding nodes
   useEffect(() => {
     if (pendingFitView) {
@@ -395,8 +477,8 @@ function MindMapCanvasInner({
       for (const c of changes) {
         if (c.type === 'position') {
           const posChange = c as NodeChange & { id: string; position?: { x: number; y: number }; dragging?: boolean };
-          // Skip the crazy 8s group node
-          if (posChange.id === CRAZY_8S_NODE_ID) continue;
+          // Skip the crazy 8s and brain rewriting group nodes
+          if (posChange.id === CRAZY_8S_NODE_ID || posChange.id.startsWith(BR_NODE_PREFIX)) continue;
           if (posChange.dragging && posChange.position) {
             livePositions.current[posChange.id] = posChange.position;
           } else if (posChange.dragging === false) {
@@ -516,14 +598,15 @@ function MindMapCanvasInner({
     [mindMapNodes, addMindMapEdge]
   );
 
-  // Validate connections: block self-connections, duplicates, and crazy8s node
+  // Validate connections: block self-connections, duplicates, and non-mind-map nodes
   const isValidConnection = useCallback(
     (connection: Connection | Edge) => {
       if (!connection.source || !connection.target) return false;
       // No self-connections
       if (connection.source === connection.target) return false;
-      // Block connections to/from crazy 8s group node
+      // Block connections to/from crazy 8s and brain rewriting nodes
       if (connection.source === CRAZY_8S_NODE_ID || connection.target === CRAZY_8S_NODE_ID) return false;
+      if (connection.source.startsWith(BR_NODE_PREFIX) || connection.target.startsWith(BR_NODE_PREFIX)) return false;
       // No duplicate edges
       const exists = mindMapEdges.some(
         (e) =>
@@ -597,16 +680,32 @@ function MindMapCanvasInner({
         <MiniMap
           nodeStrokeColor={(n) => {
             if (n.id === CRAZY_8S_NODE_ID) return '#f59e0b';
+            if (n.id.startsWith(BR_NODE_PREFIX)) return '#a855f7';
             const color = n.data?.themeColor;
             return typeof color === 'string' ? color : '#6b7280';
           }}
           nodeColor={(n) => {
             if (n.id === CRAZY_8S_NODE_ID) return '#fef3c7';
+            if (n.id.startsWith(BR_NODE_PREFIX)) return '#f3e8ff';
             const bgColor = n.data?.themeBgColor;
             return typeof bgColor === 'string' ? bgColor : '#f3f4f6';
           }}
           maskColor="rgba(0,0,0,0.1)"
         />
+
+        {/* Floating "Done" button when brain rewriting is active */}
+        {brainRewritingMatrices && brainRewritingMatrices.length > 0 && onBrainRewritingDone && (
+          <Panel position="top-right" className="!mt-4 !mr-4">
+            <Button
+              onClick={onBrainRewritingDone}
+              size="sm"
+              className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white shadow-lg"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Done
+            </Button>
+          </Panel>
+        )}
 
         {/* Bottom toolbar */}
         <Panel position="bottom-center" className="!mb-4">

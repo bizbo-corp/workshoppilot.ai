@@ -6,12 +6,10 @@ import type { UIMessage } from 'ai';
 import { ChatPanel } from './chat-panel';
 import { StepNavigation } from './step-navigation';
 import { MindMapCanvas } from './mind-map-canvas';
-import { IdeaSelection } from './idea-selection';
-import { BrainRewritingCanvas } from './brain-rewriting-canvas';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { fireConfetti } from '@/lib/utils/confetti';
-import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical, CheckCircle2, SkipForward, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical } from 'lucide-react';
 import { Panel as ResizablePanel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
@@ -67,9 +65,6 @@ export function IdeationSubStepContainer({
 
   // Idea selection local state
   const [localSelectedSlotIds, setLocalSelectedSlotIds] = React.useState<string[]>([]);
-
-  // Brain rewriting navigation
-  const [currentMatrixIndex, setCurrentMatrixIndex] = React.useState(0);
 
   // Artifact confirmation state
   const [artifactConfirmed, setArtifactConfirmed] = React.useState(
@@ -220,22 +215,22 @@ export function IdeationSubStepContainer({
     state.markClean();
   }, [workshopId, stepId, canvasStoreApi]);
 
-  // Save Crazy 8s: flush canvas state → transition to idea selection
+  // Save Crazy 8s: flush canvas state → transition to idea selection (inline on canvas)
   const handleSaveCrazy8s = React.useCallback(async () => {
     await flushCanvasState();
     setArtifactConfirmed(false);
     setCurrentPhase('idea-selection');
   }, [flushCanvasState]);
 
-  // Save Idea Selection: persist selection, transition to brain rewriting (or skip)
-  const handleSaveIdeaSelection = React.useCallback(async (skipBrainRewriting: boolean) => {
+  // Confirm selection from inline Crazy 8s node → brain rewriting (or skip)
+  const handleConfirmSelection = React.useCallback(async (skip: boolean) => {
     if (!stepId) return;
     const state = canvasStoreApi.getState();
 
     // Persist selected slot IDs to store
     state.setSelectedSlotIds(localSelectedSlotIds);
 
-    if (skipBrainRewriting) {
+    if (skip) {
       // Skip brain rewriting — enable Next
       await flushCanvasState();
       setArtifactConfirmed(true);
@@ -249,7 +244,6 @@ export function IdeationSubStepContainer({
 
       // Persist including new matrices
       await flushCanvasState();
-      setCurrentMatrixIndex(0);
       setCurrentPhase('brain-rewriting');
     }
   }, [stepId, canvasStoreApi, localSelectedSlotIds, flushCanvasState]);
@@ -304,153 +298,8 @@ export function IdeationSubStepContainer({
     </div>
   );
 
-  // Render the canvas area based on current phase
+  // Render the canvas area — always MindMapCanvas, with phase-appropriate props
   const renderCanvas = () => {
-    // Idea Selection phase
-    if (currentPhase === 'idea-selection') {
-      const mindMapThemes = mindMapNodes.filter(n => n.level === 1);
-      return (
-        <div className="relative flex h-full flex-col">
-          {/* Collapse button */}
-          {!isMobile && (
-            <div className="absolute top-2 right-2 z-20">
-              <button
-                onClick={() => setCanvasCollapsed(true)}
-                className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
-                title="Collapse canvas"
-              >
-                <PanelRightClose className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-
-          <div className="flex-1 overflow-y-auto p-6">
-            <IdeaSelection
-              crazy8sSlots={crazy8sSlots}
-              mindMapThemes={mindMapThemes}
-              selectedSlotIds={localSelectedSlotIds}
-              onSelectionChange={setLocalSelectedSlotIds}
-              maxSelection={4}
-            />
-          </div>
-
-          {/* Footer buttons */}
-          <div className="flex shrink-0 items-center justify-between border-t bg-background px-6 py-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setArtifactConfirmed(true);
-                // Skip with current selection (or no selection)
-                const state = canvasStoreApi.getState();
-                state.setSelectedSlotIds(localSelectedSlotIds);
-                flushCanvasState();
-              }}
-            >
-              <SkipForward className="mr-2 h-4 w-4" />
-              Skip to Step 9
-            </Button>
-            <div className="flex items-center gap-3">
-              {localSelectedSlotIds.length === 0 && (
-                <span className="text-xs text-muted-foreground">Tap sketches to select</span>
-              )}
-              <Button
-                size="sm"
-                disabled={localSelectedSlotIds.length === 0}
-                onClick={() => handleSaveIdeaSelection(false)}
-              >
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Continue to Brain Rewriting
-              </Button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Brain Rewriting phase
-    if (currentPhase === 'brain-rewriting') {
-      const matrices = brainRewritingMatrices;
-      const currentMatrix = matrices[currentMatrixIndex];
-      const currentSlot = crazy8sSlots.find(s => s.slotId === currentMatrix?.slotId);
-
-      return (
-        <div className="relative flex h-full flex-col">
-          {/* Collapse button */}
-          {!isMobile && (
-            <div className="absolute top-2 right-2 z-20">
-              <button
-                onClick={() => setCanvasCollapsed(true)}
-                className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
-                title="Collapse canvas"
-              >
-                <PanelRightClose className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-
-          {/* Header with navigation between concepts */}
-          <div className="flex shrink-0 items-center justify-between border-b bg-muted/30 px-4 py-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={currentMatrixIndex === 0}
-              onClick={() => setCurrentMatrixIndex(i => i - 1)}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-medium">
-              {currentSlot?.title || `Sketch ${currentMatrix?.slotId.replace('slot-', '')}`}
-              {' '}
-              <span className="text-muted-foreground">
-                ({currentMatrixIndex + 1} of {matrices.length})
-              </span>
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={currentMatrixIndex >= matrices.length - 1}
-              onClick={() => setCurrentMatrixIndex(i => i + 1)}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Brain rewriting grid */}
-          <div className="flex-1 min-h-0">
-            {currentMatrix && stepId && (
-              <BrainRewritingCanvas
-                matrix={currentMatrix}
-                workshopId={workshopId}
-                stepId={stepId}
-                onCellUpdate={handleBrainRewritingCellUpdate}
-              />
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="flex shrink-0 items-center justify-between border-t bg-background px-6 py-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSaveBrainRewriting}
-            >
-              <SkipForward className="mr-2 h-4 w-4" />
-              Skip
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSaveBrainRewriting}
-            >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Done
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
-    // Default: Mind Map + Crazy 8s
     return (
       <div className="relative h-full">
         {/* Collapse button */}
@@ -475,6 +324,15 @@ export function IdeationSubStepContainer({
             hmwGoals={hmwGoals}
             showCrazy8s={showCrazy8s}
             onSaveCrazy8s={handleSaveCrazy8s}
+            // Selection mode (shown inline on crazy 8s node)
+            selectionMode={currentPhase === 'idea-selection'}
+            selectedSlotIds={localSelectedSlotIds}
+            onSelectionChange={setLocalSelectedSlotIds}
+            onConfirmSelection={handleConfirmSelection}
+            // Brain rewriting (shown as side-by-side nodes)
+            brainRewritingMatrices={currentPhase === 'brain-rewriting' ? brainRewritingMatrices : undefined}
+            onBrainRewritingCellUpdate={handleBrainRewritingCellUpdate}
+            onBrainRewritingDone={handleSaveBrainRewriting}
           />
         )}
       </div>
