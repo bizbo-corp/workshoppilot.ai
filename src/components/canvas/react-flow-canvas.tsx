@@ -69,7 +69,7 @@ import {
   loadDrawing,
 } from "@/actions/drawing-actions";
 import { saveCanvasState } from "@/actions/canvas-actions";
-import type { DrawingElement } from "@/lib/drawing/types";
+import { type DrawingElement, parseVectorJson } from "@/lib/drawing/types";
 import { ClusterEdge } from "./cluster-edge";
 import { ClusterHullsOverlay } from "./cluster-hulls-overlay";
 import {
@@ -465,6 +465,7 @@ function ReactFlowCanvasInner({
     isOpen: boolean;
     drawingId?: string; // undefined = new drawing, string = re-editing
     initialElements?: DrawingElement[];
+    initialBackgroundImageUrl?: string | null;
   } | null>(null);
 
   // Cluster dialog state
@@ -2122,9 +2123,12 @@ function ReactFlowCanvasInner({
 
   // Handle drawing save from EzyDraw modal
   const handleDrawingSave = useCallback(
-    async (result: { pngDataUrl: string; elements: DrawingElement[] }) => {
+    async (result: { pngDataUrl: string; elements: DrawingElement[]; backgroundImageUrl: string | null }) => {
       const simplifiedElements = simplifyDrawingElements(result.elements);
-      const vectorJson = JSON.stringify(simplifiedElements);
+      const vectorJson = JSON.stringify({
+        elements: simplifiedElements,
+        backgroundImageUrl: result.backgroundImageUrl || null,
+      });
 
       // Default stage dimensions (EzyDraw 6:4 canvas)
       const width = 1200;
@@ -2270,11 +2274,12 @@ function ReactFlowCanvasInner({
             drawingId: drawingNode.drawingId,
           });
           if (drawing) {
-            const elements: DrawingElement[] = JSON.parse(drawing.vectorJson);
+            const { elements, backgroundImageUrl } = parseVectorJson(drawing.vectorJson);
             setEzyDrawState({
               isOpen: true,
               drawingId: drawingNode.drawingId,
               initialElements: elements,
+              initialBackgroundImageUrl: backgroundImageUrl,
             });
           } else {
             console.error(
@@ -2841,6 +2846,7 @@ function ReactFlowCanvasInner({
           onClose={() => setEzyDrawState(null)}
           onSave={handleDrawingSave}
           initialElements={ezyDrawState.initialElements}
+          initialBackgroundImageUrl={ezyDrawState.initialBackgroundImageUrl}
           drawingId={ezyDrawState.drawingId}
         />
       )}

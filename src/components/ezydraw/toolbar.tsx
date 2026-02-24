@@ -44,6 +44,8 @@ interface EzyDrawFooterProps {
   onSlotInfoChange?: (updates: { title?: string; description?: string }) => void;
   onGenerateImage?: () => void;
   isGeneratingImage?: boolean;
+  iterationPrompt?: string;
+  onIterationPromptChange?: (prompt: string) => void;
 }
 
 const TOOL_BUTTONS = [
@@ -250,6 +252,8 @@ export function EzyDrawFooter({
   onSlotInfoChange,
   onGenerateImage,
   isGeneratingImage,
+  iterationPrompt,
+  onIterationPromptChange,
 }: EzyDrawFooterProps) {
   const canUndo = useDrawingStore((state) => state.canUndo);
   const canRedo = useDrawingStore((state) => state.canRedo);
@@ -291,6 +295,20 @@ export function EzyDrawFooter({
               className="min-w-0 flex-1 resize-none bg-transparent text-xs outline-none placeholder:text-muted-foreground/40 leading-relaxed"
             />
           </div>
+        </div>
+      )}
+
+      {/* Iteration prompt (Brain Rewriting) */}
+      {onIterationPromptChange && (
+        <div className="flex items-center gap-2 border-b border-purple-200/50 dark:border-purple-800/50 px-3 py-1.5">
+          <Sparkles className="h-3.5 w-3.5 shrink-0 text-purple-500" />
+          <input
+            type="text"
+            value={iterationPrompt || ''}
+            onChange={(e) => onIterationPromptChange(e.target.value)}
+            placeholder="Describe changes for AI generation... (e.g. &quot;add a search bar&quot;)"
+            className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-purple-400/60"
+          />
         </div>
       )}
 

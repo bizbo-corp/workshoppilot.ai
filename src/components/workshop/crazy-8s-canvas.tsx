@@ -13,7 +13,7 @@ import { saveDrawing, loadDrawing, updateDrawing } from '@/actions/drawing-actio
 import { simplifyDrawingElements } from '@/lib/drawing/simplify';
 import { EMPTY_CRAZY_8S_SLOTS, CRAZY_8S_CANVAS_SIZE } from '@/lib/canvas/crazy-8s-types';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
-import type { DrawingElement } from '@/lib/drawing/types';
+import { type DrawingElement, type VectorData, parseVectorJson } from '@/lib/drawing/types';
 import type { EzyDrawSaveResult } from '@/components/ezydraw/ezydraw-modal';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
@@ -29,28 +29,6 @@ interface EzyDrawState {
   drawingId?: string;
   initialElements?: DrawingElement[];
   initialBackgroundImageUrl?: string | null;
-}
-
-/**
- * Vector JSON wrapper — stores both elements and background image URL.
- * Backward-compatible: old format (plain DrawingElement[]) is detected and handled.
- */
-type VectorData = {
-  elements: DrawingElement[];
-  backgroundImageUrl?: string | null;
-};
-
-function parseVectorJson(raw: string): VectorData {
-  const parsed = JSON.parse(raw);
-  // Old format: plain array of elements
-  if (Array.isArray(parsed)) {
-    return { elements: parsed, backgroundImageUrl: null };
-  }
-  // New format: wrapper object
-  return {
-    elements: parsed.elements ?? [],
-    backgroundImageUrl: parsed.backgroundImageUrl ?? null,
-  };
 }
 
 /**

@@ -44,6 +44,7 @@ export const BrainRewritingGroupNode = memo(({ data }: NodeProps<BrainRewritingG
             matrix={data.matrix}
             workshopId={data.workshopId}
             stepId={data.stepId}
+            slotTitle={data.slotTitle}
             onCellUpdate={data.onCellUpdate}
           />
         </div>

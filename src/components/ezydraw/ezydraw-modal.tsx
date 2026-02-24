@@ -22,6 +22,9 @@ const BASE_CHROME_HEIGHT = 96;
 /** Height for stacked slot info row (title + 2-line desc + padding) */
 const SLOT_INFO_ROW_HEIGHT = 68;
 
+/** Height for iteration prompt input row */
+const ITERATION_PROMPT_ROW_HEIGHT = 40;
+
 export type EzyDrawSaveResult = {
   pngDataUrl: string;
   elements: DrawingElement[];
@@ -40,6 +43,8 @@ export interface EzyDrawModalProps {
   slotDescription?: string;
   onSlotInfoChange?: (updates: { title?: string; description?: string }) => void;
   workshopId?: string;
+  iterationPrompt?: string;
+  onIterationPromptChange?: (prompt: string) => void;
 }
 
 /**
@@ -53,6 +58,8 @@ function EzyDrawContent({
   slotDescription,
   onSlotInfoChange,
   workshopId,
+  iterationPrompt,
+  onIterationPromptChange,
 }: {
   stageRef: React.RefObject<EzyDrawStageHandle | null>;
   onSave: (result: EzyDrawSaveResult) => void;
@@ -61,6 +68,8 @@ function EzyDrawContent({
   slotDescription?: string;
   onSlotInfoChange?: (updates: { title?: string; description?: string }) => void;
   workshopId?: string;
+  iterationPrompt?: string;
+  onIterationPromptChange?: (prompt: string) => void;
 }) {
   const getSnapshot = useDrawingStore((s) => s.getSnapshot);
   const replaceWithGeneratedImage = useDrawingStore((s) => s.replaceWithGeneratedImage);
@@ -107,6 +116,7 @@ function EzyDrawContent({
           ideaTitle: slotTitle,
           ideaDescription: slotDescription || '',
           existingImageBase64,
+          ...(iterationPrompt ? { additionalPrompt: iterationPrompt } : {}),
         }),
       });
 
@@ -125,7 +135,7 @@ function EzyDrawContent({
     } finally {
       setIsGeneratingImage(false);
     }
-  }, [workshopId, slotTitle, slotDescription, isGeneratingImage, getSnapshot, backgroundImageUrl, stageRef, replaceWithGeneratedImage]);
+  }, [workshopId, slotTitle, slotDescription, iterationPrompt, isGeneratingImage, getSnapshot, backgroundImageUrl, stageRef, replaceWithGeneratedImage]);
 
   return (
     <div className="flex h-full flex-col">
@@ -139,8 +149,10 @@ function EzyDrawContent({
         slotTitle={slotTitle}
         slotDescription={slotDescription}
         onSlotInfoChange={onSlotInfoChange}
-        onGenerateImage={workshopId && onSlotInfoChange ? handleGenerateImage : undefined}
+        onGenerateImage={workshopId && slotTitle ? handleGenerateImage : undefined}
         isGeneratingImage={isGeneratingImage}
+        iterationPrompt={iterationPrompt}
+        onIterationPromptChange={onIterationPromptChange}
       />
     </div>
   );
@@ -158,14 +170,18 @@ export function EzyDrawModal({
   slotDescription,
   onSlotInfoChange,
   workshopId,
+  iterationPrompt,
+  onIterationPromptChange,
 }: EzyDrawModalProps) {
   const stageRef = useRef<EzyDrawStageHandle>(null);
 
   const cw = canvasSize?.width ?? DEFAULT_CANVAS_WIDTH;
   const ch = canvasSize?.height ?? DEFAULT_CANVAS_HEIGHT;
 
-  // Add extra height for slot info row when present
-  const chromeHeight = BASE_CHROME_HEIGHT + (onSlotInfoChange ? SLOT_INFO_ROW_HEIGHT : 0);
+  // Add extra height for slot info row and/or iteration prompt row when present
+  const chromeHeight = BASE_CHROME_HEIGHT
+    + (onSlotInfoChange ? SLOT_INFO_ROW_HEIGHT : 0)
+    + (onIterationPromptChange ? ITERATION_PROMPT_ROW_HEIGHT : 0);
 
   // Dialog matches the canvas: width = canvas width, height = canvas + chrome
   const dialogW = cw;
@@ -215,6 +231,8 @@ export function EzyDrawModal({
             slotDescription={slotDescription}
             onSlotInfoChange={onSlotInfoChange}
             workshopId={workshopId}
+            iterationPrompt={iterationPrompt}
+            onIterationPromptChange={onIterationPromptChange}
           />
         </DrawingStoreProvider>
       </DialogContent>

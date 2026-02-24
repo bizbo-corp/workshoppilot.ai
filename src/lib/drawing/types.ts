@@ -180,3 +180,28 @@ export function createElementId(): string {
  * Element that belongs to a compound UI kit component
  */
 export type UIKitGroupElement = DrawingElement & { groupId: string };
+
+/**
+ * Vector JSON wrapper — stores both elements and background image URL.
+ * Backward-compatible: old format (plain DrawingElement[]) is detected and handled.
+ */
+export type VectorData = {
+  elements: DrawingElement[];
+  backgroundImageUrl?: string | null;
+};
+
+/**
+ * Parse vectorJson from DB, handling both old (plain array) and new (wrapper object) formats.
+ */
+export function parseVectorJson(raw: string): VectorData {
+  const parsed = JSON.parse(raw);
+  // Old format: plain array of elements
+  if (Array.isArray(parsed)) {
+    return { elements: parsed, backgroundImageUrl: null };
+  }
+  // New format: wrapper object
+  return {
+    elements: parsed.elements ?? [],
+    backgroundImageUrl: parsed.backgroundImageUrl ?? null,
+  };
+}

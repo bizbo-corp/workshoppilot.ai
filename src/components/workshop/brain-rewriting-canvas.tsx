@@ -17,12 +17,13 @@ import {
   type BrainRewritingMatrix,
 } from '@/lib/canvas/brain-rewriting-types';
 import { CRAZY_8S_CANVAS_SIZE } from '@/lib/canvas/crazy-8s-types';
-import type { DrawingElement } from '@/lib/drawing/types';
+import { type DrawingElement, parseVectorJson } from '@/lib/drawing/types';
 
 interface BrainRewritingCanvasProps {
   matrix: BrainRewritingMatrix;
   workshopId: string;
   stepId: string;
+  slotTitle: string;
   onCellUpdate: (slotId: string, cellId: string, imageUrl: string, drawingId: string) => void;
 }
 
@@ -31,15 +32,18 @@ interface EzyDrawState {
   cellId: BrainRewritingCellId;
   drawingId?: string;
   initialElements?: DrawingElement[];
+  initialBackgroundImageUrl?: string | null;
 }
 
 export function BrainRewritingCanvas({
   matrix,
   workshopId,
   stepId,
+  slotTitle,
   onCellUpdate,
 }: BrainRewritingCanvasProps) {
   const [ezyDrawState, setEzyDrawState] = useState<EzyDrawState | null>(null);
+  const [iterationPrompt, setIterationPrompt] = useState('');
 
   // Determine active cell: first cell without imageUrl in order
   const activeCellId: BrainRewritingCellId | null =
@@ -48,9 +52,17 @@ export function BrainRewritingCanvas({
       return !cell?.imageUrl;
     }) ?? null;
 
+  /** Get the image from the previous iteration to use as background */
+  const getPreviousImageUrl = (cellId: BrainRewritingCellId): string | undefined => {
+    if (cellId === 'top-right') return matrix.sourceImageUrl;
+    if (cellId === 'bottom-left') return matrix.cells.find((c) => c.cellId === 'top-right')?.imageUrl;
+    if (cellId === 'bottom-right') return matrix.cells.find((c) => c.cellId === 'bottom-left')?.imageUrl;
+    return undefined;
+  };
+
   /**
    * Handle cell click: open EzyDraw modal
-   * - Empty cell -> blank canvas
+   * - Empty cell -> previous iteration image as background
    * - Filled cell -> load existing vector data for re-edit
    */
   const handleCellClick = async (cellId: BrainRewritingCellId) => {
@@ -67,12 +79,13 @@ export function BrainRewritingCanvas({
 
       if (drawing) {
         try {
-          const elements = JSON.parse(drawing.vectorJson) as DrawingElement[];
+          const { elements, backgroundImageUrl } = parseVectorJson(drawing.vectorJson);
           setEzyDrawState({
             isOpen: true,
             cellId,
             drawingId: cell.drawingId,
             initialElements: elements,
+            initialBackgroundImageUrl: backgroundImageUrl,
           });
         } catch {
           setEzyDrawState({ isOpen: true, cellId });
@@ -81,7 +94,13 @@ export function BrainRewritingCanvas({
         setEzyDrawState({ isOpen: true, cellId });
       }
     } else {
-      setEzyDrawState({ isOpen: true, cellId });
+      // New cell: load previous iteration image as background
+      const previousImageUrl = getPreviousImageUrl(cellId);
+      setEzyDrawState({
+        isOpen: true,
+        cellId,
+        initialBackgroundImageUrl: previousImageUrl || null,
+      });
     }
   };
 
@@ -91,11 +110,15 @@ export function BrainRewritingCanvas({
   const handleDrawingSave = async (result: {
     pngDataUrl: string;
     elements: DrawingElement[];
+    backgroundImageUrl: string | null;
   }) => {
     if (!ezyDrawState) return;
 
     const simplified = simplifyDrawingElements(result.elements);
-    const vectorJson = JSON.stringify(simplified);
+    const vectorJson = JSON.stringify({
+      elements: simplified,
+      backgroundImageUrl: result.backgroundImageUrl || null,
+    });
 
     try {
       // Step 1: Upload image via API route as binary FormData
@@ -167,10 +190,15 @@ export function BrainRewritingCanvas({
       {ezyDrawState?.isOpen && (
         <EzyDrawLoader
           isOpen={true}
-          onClose={() => setEzyDrawState(null)}
+          onClose={() => { setEzyDrawState(null); setIterationPrompt(''); }}
           onSave={handleDrawingSave}
           initialElements={ezyDrawState.initialElements}
+          initialBackgroundImageUrl={ezyDrawState.initialBackgroundImageUrl}
           canvasSize={CRAZY_8S_CANVAS_SIZE}
+          workshopId={workshopId}
+          slotTitle={slotTitle}
+          iterationPrompt={iterationPrompt}
+          onIterationPromptChange={setIterationPrompt}
         />
       )}
     </div>
