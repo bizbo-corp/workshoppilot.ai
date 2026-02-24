@@ -170,16 +170,17 @@ export default async function DashboardPage() {
     }
   }
 
-  // Batch-load AI cost data for admin users
+  // Batch-load AI cost data for admin users (all workshops)
   let costMap = new Map<string, number>();
-  if (adminUser && completedIds.length > 0) {
+  const allWorkshopIds = workshopsWithProgress.map((w) => w.id);
+  if (adminUser && allWorkshopIds.length > 0) {
     const costRows = await db
       .select({
         workshopId: aiUsageEvents.workshopId,
         totalCostCents: sql<number>`coalesce(sum(${aiUsageEvents.costCents}), 0)`.as('total_cost_cents'),
       })
       .from(aiUsageEvents)
-      .where(inArray(aiUsageEvents.workshopId, completedIds))
+      .where(inArray(aiUsageEvents.workshopId, allWorkshopIds))
       .groupBy(aiUsageEvents.workshopId);
 
     for (const row of costRows) {
@@ -276,6 +277,7 @@ export default async function DashboardPage() {
                 updatedAt: w.updatedAt,
                 color: w.color,
                 emoji: w.emoji,
+                totalCostCents: costMap.get(w.id) ?? null,
               }))}
               onRename={renameWorkshop}
               onUpdateAppearance={updateWorkshopAppearance}

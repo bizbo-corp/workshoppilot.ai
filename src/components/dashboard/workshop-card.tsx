@@ -34,6 +34,7 @@ interface WorkshopCardProps {
   color: string | null;
   emoji: string | null;
   onRename: (workshopId: string, newName: string) => Promise<void>;
+  totalCostCents?: number | null;
   onUpdateAppearance: (workshopId: string, updates: { color?: string; emoji?: string | null }) => Promise<void>;
   selected?: boolean;
   onSelect?: () => void;
@@ -48,6 +49,7 @@ export function WorkshopCard({
   updatedAt,
   color,
   emoji,
+  totalCostCents,
   onRename,
   onUpdateAppearance,
   selected = false,
@@ -173,6 +175,13 @@ export function WorkshopCard({
               {formatDistanceToNow(new Date(updatedAt), { addSuffix: true })}
             </span>
           </div>
+
+          {/* AI cost (admin only) */}
+          {totalCostCents != null && totalCostCents > 0 && (
+            <div className="mt-1 text-xs text-muted-foreground">
+              AI cost: ${(totalCostCents / 100).toFixed(4)}
+            </div>
+          )}
         </CardContent>
       </Link>
 

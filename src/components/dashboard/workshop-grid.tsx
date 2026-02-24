@@ -27,6 +27,7 @@ interface WorkshopData {
   updatedAt: Date;
   color: string | null;
   emoji: string | null;
+  totalCostCents: number | null;
 }
 
 interface WorkshopGridProps {
@@ -140,6 +141,7 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
             updatedAt={workshop.updatedAt}
             color={workshop.color}
             emoji={workshop.emoji}
+            totalCostCents={workshop.totalCostCents}
             onRename={onRename}
             onUpdateAppearance={onUpdateAppearance}
             selected={selectedIds.has(workshop.id)}
