@@ -195,7 +195,17 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - isPublicRoute in proxy.ts defined but unused (pricing works via default-allow)
 - Semantic status colors (green/amber/red) in synthesis-summary-view outside olive token system
 
-**Current milestone:** Planning next milestone
+**Current milestone:** v1.6 Production Polish
+
+## Current Milestone: v1.6 Production Polish
+
+**Goal:** Make WorkshopPilot.ai production-ready with working auth, Google OAuth, first-run onboarding, and visual polish across all surfaces.
+
+**Target features:**
+- Fix production auth (missing sign-in button, Clerk domain configuration)
+- Google OAuth (one-click Google sign-in)
+- First-run onboarding flow (guided intro for new users)
+- Visual polish (design consistency pass + motion/micro-interactions)
 
 ---
-*Last updated: 2026-02-19 after v1.5 milestone complete*
+*Last updated: 2026-02-25 after v1.6 milestone started*

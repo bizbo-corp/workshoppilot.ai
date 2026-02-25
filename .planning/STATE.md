@@ -2,18 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-19)
+See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Planning next milestone
+**Current focus:** v1.6 Production Polish
 
 ## Current Position
 
-Phase: All 39 phases complete (7 milestones shipped)
-Status: Between milestones
-Last activity: 2026-02-19 — v1.5 Launch Ready milestone archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-25 — Milestone v1.6 started
 
-Progress: [████████████████████] 100% (39/39 phases, 113 plans, 7 milestones)
+Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -52,8 +53,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-19
-Stopped at: v1.5 milestone archived
+Last session: 2026-02-25
+Stopped at: Defining v1.6 requirements
 Resume file: None
 
-**Next action:** `/gsd:new-milestone` to start next milestone cycle
+**Next action:** Define requirements → create roadmap
