@@ -192,6 +192,18 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | .btn-lift CSS utility | translateY(-1px) hover + box-shadow, reset on active — applied via className | ✓ Good — tactile button feel |
 | NEXT_REDIRECT guard for error toasts | Check error.digest?.startsWith('NEXT_REDIRECT') and rethrow; real errors get toast.error | ✓ Good — clean server action error handling |
 
+## Current Milestone: v1.7 Build Pack
+
+**Goal:** Make the workshop produce tangible, AI-coder-ready output — PRD, Tech Specs, and a workshop presentation — so users walk away with something they can act on.
+
+**Target features:**
+- Step 10 completion flow with AI-guided final review → workshop marked "complete"
+- Outputs page with deliverable cards (PRD, Tech Specs, Workshop Presentation)
+- AI-generated PRD and Tech Specs from 10 steps of workshop data (Markdown + JSON)
+- On-demand server-side PDF/PPT workshop presentation (summary per step)
+- Dashboard routing: completed workshops → outputs page
+- Detail views with rendered markdown, copy-to-clipboard, download
+
 ## Current State
 
 **Shipped:** v1.6 Production Polish (2026-02-25)
