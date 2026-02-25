@@ -139,7 +139,7 @@ See `milestones/v1.7-ROADMAP.md` for full details.
 **Milestone Goal:** Add first-run onboarding experience and credit-based payment system with Stripe Checkout, converting the free taste-test (Steps 1-6) into revenue at Step 7.
 
 - [x] **Phase 47: Database Foundation** — Billing and onboarding schema migrations (completed 2026-02-25)
-- [ ] **Phase 48: Stripe Infrastructure** — SDK, environment config, Products and Prices setup
+- [x] **Phase 48: Stripe Infrastructure** — SDK, environment config, Products and Prices setup (completed 2026-02-25)
 - [ ] **Phase 49: Payment API Layer** — Checkout session route, webhook handler, success/cancel pages
 - [ ] **Phase 50: Credit Actions and Server-Side Enforcement** — Atomic credit deduction and paywall logic
 - [ ] **Phase 51: Paywall UI** — Upgrade modal, locked step indicators, dashboard credit badge
@@ -271,7 +271,7 @@ Plans:
 | 40-42 | v1.6 | 5/5 | Complete | 2026-02-25 |
 | 43-46 | v1.7 | 7/7 | Complete | 2026-02-25 |
 | 47. Database Foundation | 2/2 | Complete    | 2026-02-25 | - |
-| 48. Stripe Infrastructure | v1.8 | 0/TBD | Not started | - |
+| 48. Stripe Infrastructure | 1/1 | Complete   | 2026-02-25 | - |
 | 49. Payment API Layer | v1.8 | 0/TBD | Not started | - |
 | 50. Credit Actions and Server-Side Enforcement | v1.8 | 0/TBD | Not started | - |
 | 51. Paywall UI | v1.8 | 0/TBD | Not started | - |

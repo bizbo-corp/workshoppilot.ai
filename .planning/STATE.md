@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Onboarding + Payments
 status: unknown
-last_updated: "2026-02-25T20:47:36.423Z"
+last_updated: "2026-02-25T21:21:42.902Z"
 progress:
-  total_phases: 37
-  completed_phases: 37
-  total_plans: 106
-  completed_plans: 106
+  total_phases: 38
+  completed_phases: 38
+  total_plans: 107
+  completed_plans: 107
 ---
 
 # Project State
@@ -64,6 +64,8 @@ Key v1.8 decisions affecting current work:
 - onDelete: 'set null' on credit_transactions.workshopId — financial records persist after workshop deletion
 - stripeSessionId UNIQUE nullable — PG allows multiple NULLs, enforces idempotent webhook fulfillment (BILL-04)
 - Seed idempotency: sentinel-record check (query user_seed_billing_zero) rather than per-row checks — scenarios are interdependent (transactions reference runtime-generated workshop IDs)
+- [Phase 48-stripe-infrastructure]: stripe.ts uses import 'server-only' and module-load fail-fast assertion (same pattern as db/client.ts)
+- [Phase 48-stripe-infrastructure]: No @stripe/stripe-js or @stripe/react-stripe-js installed — redirect Checkout mode requires zero client-side Stripe JS
 
 ### Pending Todos
 
