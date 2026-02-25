@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 49 — Payment API Layer
+**Current focus:** Phase 50 — Credit Actions and Server Enforcement
 
 ## Current Position
 
-Phase: 49 of 53 in v1.8 (Payment API Layer) — COMPLETE
-Plan: 3 of 3 in current phase — COMPLETE
-Status: Plan 49-03 Complete — Phase 49 fully complete, advancing to Phase 50
-Last activity: 2026-02-26 — Plan 49-03 complete (success page with dual-trigger fulfillment, cancel page)
+Phase: 50 of 53 in v1.8 (Credit Actions + Server Enforcement) — IN PROGRESS
+Plan: 1 of 2 in current phase — COMPLETE
+Status: Plan 50-01 Complete — billing-actions.ts created with consumeCredit(), getCredits(), markOnboardingComplete()
+Last activity: 2026-02-26 — Plan 50-01 complete (atomic credit consumption server actions)
 
-Progress: [███░░░░░░░] 43% (v1.8 — 3/7 phases complete)
+Progress: [████░░░░░░] 50% (v1.8 — 3.5/7 phases complete)
 
 ## Performance Metrics
 
@@ -79,6 +79,9 @@ Key v1.8 decisions affecting current work:
 - [Phase 49-03]: No auth check on cancel page — Stripe may redirect there regardless of auth state; page is static with no sensitive data
 - [Phase 49-03]: already_fulfilled path fetches balance from DB via db.query (not estimated) — ensures accuracy when webhook beats success page
 - [Phase 49-03]: payment_not_paid shows processing message (not error) — correct tone for deferred payment methods (ACH)
+- [Phase 50-01]: Conditional-UPDATE pattern chosen for consumeCredit() — neon-http does not support SELECT FOR UPDATE; conditional-UPDATE (WHERE credit_balance > 0 RETURNING) is provably atomic at PostgreSQL row level
+- [Phase 50-01]: PAYWALL_CUTOFF_DATE exported from billing-actions.ts as named constant (migration 0008 timestamp 1772051653843) — Plan 50-02 imports rather than duplicating
+- [Phase 50-01]: Post-deduction writes (credit_transactions + workshop.creditConsumedAt) via Promise.all with try/catch logging — not atomic, but consistent with fulfillCreditPurchase precedent; error logged for manual reconciliation
 
 ### Pending Todos
 
@@ -86,12 +89,12 @@ None.
 
 ### Blockers/Concerns
 
-- **Phase 50:** `neon-http` driver does not support `SELECT FOR UPDATE`. Resolve before coding `consumeCredit()`: (a) secondary `neon-ws` client for transaction only, or (b) conditional-UPDATE pattern (`WHERE credit_balance > 0 RETURNING`). Decide during Phase 50 planning.
 - **Phase 49:** Vercel Deployment Protection may block `/api/webhooks/stripe` in preview — add to bypass list before Phase 49 webhook testing begins (still relevant for plan 49-02).
 - **Phase 52 blocker resolved:** `/purchase/success` and `/purchase/cancel` pages created in Plan 49-03.
+- **Phase 50 blocker resolved:** consumeCredit() atomic pattern decided and implemented — conditional-UPDATE (Plan 50-01 complete).
 
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 49-03-PLAN.md (success page dual-trigger fulfillment, cancel page). Phase 49 fully complete. Next: Phase 50 (credit consumption / paywall).
+Stopped at: Completed 50-01-PLAN.md (billing-actions.ts with consumeCredit/getCredits/markOnboardingComplete). Next: Plan 50-02 (Server Component paywall enforcement + PaywallOverlay).
 Resume file: None
