@@ -11,15 +11,15 @@ Requirements for v1.8 milestone. Each maps to roadmap phases.
 
 - [ ] **ONBD-01**: User sees a welcome modal on first visit explaining the app and key areas (chat, canvas, steps)
 - [ ] **ONBD-02**: Welcome modal is dismissible and does not reappear after dismissal
-- [ ] **ONBD-03**: Onboarding state persists across devices (DB-backed, not just localStorage)
+- [x] **ONBD-03**: Onboarding state persists across devices (DB-backed, not just localStorage)
 
 ### Billing
 
 - [ ] **BILL-01**: User can purchase a Single Flight workshop credit ($79) via Stripe Checkout
 - [ ] **BILL-02**: User can purchase a Serial Entrepreneur pack (3 credits, $149) via Stripe Checkout
 - [ ] **BILL-03**: After purchase, credits are immediately available in user's account
-- [ ] **BILL-04**: Stripe webhook handles payment confirmation with idempotent credit fulfillment
-- [ ] **BILL-05**: Credit purchases are recorded in a transaction ledger
+- [x] **BILL-04**: Stripe webhook handles payment confirmation with idempotent credit fulfillment
+- [x] **BILL-05**: Credit purchases are recorded in a transaction ledger
 
 ### Paywall
 
@@ -34,7 +34,7 @@ Requirements for v1.8 milestone. Each maps to roadmap phases.
 
 - [ ] **CRED-01**: User can see remaining workshop credits on the dashboard
 - [ ] **CRED-02**: One credit is consumed when user unlocks Steps 7-10 for a workshop
-- [ ] **CRED-03**: Credit consumption is atomic (no double-spend under concurrent requests)
+- [x] **CRED-03**: Credit consumption is atomic (no double-spend under concurrent requests)
 
 ### Pricing
 
@@ -82,12 +82,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | ONBD-01 | Phase 52 | Pending |
 | ONBD-02 | Phase 52 | Pending |
-| ONBD-03 | Phase 52 | Pending |
+| ONBD-03 | Phase 52 | Complete |
 | BILL-01 | Phase 49 | Pending |
 | BILL-02 | Phase 49 | Pending |
 | BILL-03 | Phase 49 | Pending |
-| BILL-04 | Phase 49 | Pending |
-| BILL-05 | Phase 49 | Pending |
+| BILL-04 | Phase 49 | Complete |
+| BILL-05 | Phase 49 | Complete |
 | PAYW-01 | Phase 50 | Pending |
 | PAYW-02 | Phase 51 | Pending |
 | PAYW-03 | Phase 51 | Pending |
@@ -96,7 +96,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PAYW-06 | Phase 50 | Pending |
 | CRED-01 | Phase 51 | Pending |
 | CRED-02 | Phase 50 | Pending |
-| CRED-03 | Phase 50 | Pending |
+| CRED-03 | Phase 50 | Complete |
 | PRIC-01 | Phase 53 | Pending |
 | PRIC-02 | Phase 53 | Pending |
 | PRIC-03 | Phase 53 | Pending |

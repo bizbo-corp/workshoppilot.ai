@@ -158,10 +158,11 @@ See `milestones/v1.7-ROADMAP.md` for full details.
   3. `credit_transactions` ledger table exists with `stripeSessionId UNIQUE` constraint, `type` enum (purchase | consumption), and `clerkUserId` foreign key
   4. `users` table has `stripeCustomerId` (varchar, nullable) column for future portal access
   5. Drizzle migration runs cleanly on production Neon database with zero downtime
-**Plans**: TBD
+**Plans**: 2
 
 Plans:
-- [ ] 47-01: Schema changes (users, workshops) and credit_transactions table with Drizzle migration
+- [ ] 47-01: Schema changes (users, workshops, credit_transactions) and Drizzle migration (Wave 1)
+- [ ] 47-02: Idempotent billing seed script and npm command (Wave 2)
 
 ### Phase 48: Stripe Infrastructure
 **Goal**: Stripe SDK is installed, all environment variables are configured, Products and Prices exist in Stripe Dashboard, and the Stripe CLI is wired for local webhook testing
@@ -269,7 +270,7 @@ Plans:
 | 36-39 | v1.5 | 9/9 | Complete | 2026-02-19 |
 | 40-42 | v1.6 | 5/5 | Complete | 2026-02-25 |
 | 43-46 | v1.7 | 7/7 | Complete | 2026-02-25 |
-| 47. Database Foundation | v1.8 | 0/TBD | Not started | - |
+| 47. Database Foundation | 1/2 | In Progress|  | - |
 | 48. Stripe Infrastructure | v1.8 | 0/TBD | Not started | - |
 | 49. Payment API Layer | v1.8 | 0/TBD | Not started | - |
 | 50. Credit Actions and Server-Side Enforcement | v1.8 | 0/TBD | Not started | - |

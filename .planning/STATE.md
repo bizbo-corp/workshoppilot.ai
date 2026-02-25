@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 47 of 53 in v1.8 (Database Foundation)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-26 — v1.8 roadmap created (7 phases, 18 requirements mapped)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-02-25 — Plan 47-01 complete (schema + migration 0008 applied to Neon)
 
-Progress: [░░░░░░░░░░] 0% (v1.8 — 0/7 phases complete)
+Progress: [░░░░░░░░░░] 0% (v1.8 — 0/7 phases complete, plan 1/2 of phase 47 complete)
 
 ## Performance Metrics
 
@@ -47,6 +47,9 @@ Key v1.8 decisions affecting current work:
 - DB-stored onboarding state (`users.onboardingComplete`) not localStorage — persists across devices, no hydration mismatch
 - Dual-trigger credit fulfillment (success page + webhook) — prevents stale-credit UX failure when user returns before webhook fires
 - Server-side paywall enforcement in Step Server Component (not middleware) — middleware bypass CVE-2025-29927 makes middleware-only insufficient
+- Text enum pattern for credit_transactions.type + .status (not pgEnum) — consistent with workshops.status pattern
+- onDelete: 'set null' on credit_transactions.workshopId — financial records persist after workshop deletion
+- stripeSessionId UNIQUE nullable — PG allows multiple NULLs, enforces idempotent webhook fulfillment (BILL-04)
 
 ### Pending Todos
 
@@ -60,6 +63,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: v1.8 roadmap created — ROADMAP.md and STATE.md written, REQUIREMENTS.md traceability updated. Ready to plan Phase 47.
+Last session: 2026-02-25
+Stopped at: Completed 47-01-PLAN.md (schema + migration 0008). Next: execute 47-02 (seed script).
 Resume file: None
