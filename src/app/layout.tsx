@@ -63,6 +63,23 @@ export default function RootLayout({
       <ClerkProvider
         signInFallbackRedirectUrl="/dashboard"
         signUpFallbackRedirectUrl="/dashboard"
+        appearance={{
+          variables: {
+            colorPrimary: '#6b7a2f',
+            colorBackground: 'hsl(var(--card))',
+            colorText: 'hsl(var(--foreground))',
+            colorInputBackground: 'hsl(var(--background))',
+            colorInputText: 'hsl(var(--foreground))',
+            borderRadius: '0.5rem',
+            fontFamily: 'var(--font-geist-sans)',
+          },
+          elements: {
+            card: 'shadow-none',
+            formButtonPrimary: 'bg-primary hover:bg-primary/90 text-primary-foreground',
+            footerActionLink: 'text-primary hover:text-primary/80',
+            identityPreviewEditButton: 'text-primary',
+          },
+        }}
       >
         {content}
       </ClerkProvider>

@@ -20,7 +20,7 @@ import {
 /**
  * Landing page header
  * Separate from workshop header (per user decision)
- * Desktop: [Logo] ... [Pricing] [Dashboard?] ... [ThemeToggle] [Sign in / UserButton]
+ * Desktop: [Logo] ... [Pricing] [Dashboard?] ... [ThemeToggle] [Sign in / Dashboard + UserButton]
  * Mobile: [Logo] ... [ThemeToggle] [Hamburger] → Sheet with nav + auth
  */
 export function LandingHeader() {
@@ -98,14 +98,21 @@ export function LandingHeader() {
             <div className="hidden items-center gap-2 md:flex">
               <SignedOut>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
                   onClick={() => setShowSignIn(true)}
                 >
                   Sign in
                 </Button>
               </SignedOut>
               <SignedIn>
+                <Link
+                  href="/dashboard"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Dashboard
+                </Link>
                 <UserButton
                   appearance={{
                     elements: {
@@ -153,8 +160,8 @@ export function LandingHeader() {
                 <div className="mt-auto border-t border-border pt-4">
                   <SignedOut>
                     <Button
-                      variant="outline"
-                      className="w-full"
+                      variant="ghost"
+                      className="w-full text-muted-foreground hover:text-foreground"
                       onClick={() => {
                         setSheetOpen(false);
                         setShowSignIn(true);
@@ -172,9 +179,13 @@ export function LandingHeader() {
                           },
                         }}
                       />
-                      <span className="text-sm text-muted-foreground">
-                        Account
-                      </span>
+                      <Link
+                        href="/dashboard"
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => setSheetOpen(false)}
+                      >
+                        Dashboard
+                      </Link>
                     </div>
                   </SignedIn>
                 </div>

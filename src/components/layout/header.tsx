@@ -5,21 +5,9 @@ import Link from 'next/link';
 import { useState } from 'react';
 import Logo from '@/components/Logo';
 import { SignInModal } from '@/components/auth/sign-in-modal';
-import { SignUpModal } from '@/components/auth/sign-up-modal';
 
 export function Header() {
   const [signInOpen, setSignInOpen] = useState(false);
-  const [signUpOpen, setSignUpOpen] = useState(false);
-
-  const handleSwitchToSignUp = () => {
-    setSignInOpen(false);
-    setSignUpOpen(true);
-  };
-
-  const handleSwitchToSignIn = () => {
-    setSignUpOpen(false);
-    setSignInOpen(true);
-  };
 
   return (
     <>
@@ -35,29 +23,26 @@ export function Header() {
             <SignedOut>
               <button
                 onClick={() => setSignInOpen(true)}
-                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
               >
                 Sign in
               </button>
             </SignedOut>
             <SignedIn>
+              <Link
+                href="/dashboard"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Dashboard
+              </Link>
               <UserButton afterSignOutUrl="/" />
             </SignedIn>
           </div>
         </div>
       </header>
 
-      {/* Modals */}
-      <SignInModal
-        open={signInOpen}
-        onOpenChange={setSignInOpen}
-        onSwitchToSignUp={handleSwitchToSignUp}
-      />
-      <SignUpModal
-        open={signUpOpen}
-        onOpenChange={setSignUpOpen}
-        onSwitchToSignIn={handleSwitchToSignIn}
-      />
+      {/* Modal */}
+      <SignInModal open={signInOpen} onOpenChange={setSignInOpen} />
     </>
   );
 }
