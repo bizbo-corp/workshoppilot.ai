@@ -18,19 +18,19 @@ interface ConfidenceAssessment {
 }
 
 function getConfidenceColor(score: number): string {
-  if (score >= 7) return 'text-green-700 dark:text-green-400';
+  if (score >= 7) return 'text-olive-700 dark:text-olive-400';
   if (score >= 4) return 'text-amber-700 dark:text-amber-400';
-  return 'text-red-700 dark:text-red-400';
+  return 'text-destructive dark:text-destructive';
 }
 
 function getResearchQualityColor(quality: 'thin' | 'moderate' | 'strong'): string {
   switch (quality) {
     case 'strong':
-      return 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30';
+      return 'bg-olive-500/20 text-olive-700 dark:text-olive-400 border-olive-500/30';
     case 'moderate':
       return 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30';
     case 'thin':
-      return 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30';
+      return 'bg-destructive/20 text-destructive border-destructive/30';
   }
 }
 
@@ -143,8 +143,8 @@ export function CompletedWorkshopCard({
         <CardContent className="px-6 pt-4 pb-4">
           {/* Completed badge */}
           <div className="mb-3 flex items-center gap-1.5">
-            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-            <span className="text-sm font-medium text-green-700 dark:text-green-400">Completed</span>
+            <CheckCircle2 className="h-4 w-4 text-olive-600 dark:text-olive-400" />
+            <span className="text-sm font-medium text-olive-700 dark:text-olive-400">Completed</span>
           </div>
 
           {/* Narrative paragraph (truncated) */}

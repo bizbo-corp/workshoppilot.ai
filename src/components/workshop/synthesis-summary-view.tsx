@@ -40,18 +40,18 @@ const DELIVERABLE_ICONS: Record<string, React.ReactNode> = {
  * Get color class for confidence score
  */
 function getConfidenceColor(score: number): string {
-  if (score >= 7) return 'text-green-700 dark:text-green-400';
+  if (score >= 7) return 'text-olive-700 dark:text-olive-400';
   if (score >= 4) return 'text-amber-700 dark:text-amber-400';
-  return 'text-red-700 dark:text-red-400';
+  return 'text-destructive dark:text-destructive';
 }
 
 /**
  * Get background color for confidence gauge
  */
 function getConfidenceBarColor(score: number): string {
-  if (score >= 7) return 'bg-green-500';
+  if (score >= 7) return 'bg-olive-600';
   if (score >= 4) return 'bg-amber-500';
-  return 'bg-red-500';
+  return 'bg-destructive';
 }
 
 /**
@@ -60,11 +60,11 @@ function getConfidenceBarColor(score: number): string {
 function getResearchQualityColor(quality: 'thin' | 'moderate' | 'strong'): string {
   switch (quality) {
     case 'strong':
-      return 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30';
+      return 'bg-olive-500/20 text-olive-700 dark:text-olive-400 border-olive-500/30';
     case 'moderate':
       return 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30';
     case 'thin':
-      return 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30';
+      return 'bg-destructive/20 text-destructive border-destructive/30';
   }
 }
 
