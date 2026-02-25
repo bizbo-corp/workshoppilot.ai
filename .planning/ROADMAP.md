@@ -182,7 +182,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User clicks a completed workshop on the dashboard and lands on `/workshop/[id]/outputs`, not the step view
   2. User clicks an in-progress workshop and resumes at their last active step, unchanged from existing behavior
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 46-01-PLAN.md — Route completed workshops to outputs page, preserve in-progress resume
 
 ## Progress
 
@@ -199,7 +201,7 @@ Plans:
 | 43. Workshop Completion | v1.7 | Complete    | 2026-02-25 | 2026-02-25 |
 | 44. AI Deliverable Generation | 2/2 | Complete    | 2026-02-25 | - |
 | 45. Outputs Page | 2/2 | Complete    | 2026-02-25 | - |
-| 46. Dashboard Routing | v1.7 | 0/? | Not started | - |
+| 46. Dashboard Routing | v1.7 | 0/1 | Not started | - |
 
 **Total project:** 120 plans across 43 phases (8 milestones shipped) + 3 phases planned for v1.7
 
