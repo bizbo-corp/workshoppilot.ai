@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.8 Onboarding + Payments
+**Current focus:** Phase 47 — Database Foundation (v1.8 start)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-26 — Milestone v1.8 started
+Phase: 47 of 53 in v1.8 (Database Foundation)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-02-26 — v1.8 roadmap created (7 phases, 18 requirements mapped)
 
-Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (v1.8)
+Progress: [░░░░░░░░░░] 0% (v1.8 — 0/7 phases complete)
 
 ## Performance Metrics
 
@@ -31,37 +31,35 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (v1.
 | v1.5 | 4 | 9 | 2 days |
 | v1.6 | 2 | 5 | 1 day |
 | v1.7 | 4 | 7 | <1 day |
-| **Total** | **45** | **125** | **15 days** |
+| **Total shipped** | **45** | **125** | **15 days** |
+
+*v1.8 metrics will be recorded after first phase completes*
 
 ## Accumulated Context
 
 ### Decisions
 
-All decisions archived in PROJECT.md Key Decisions table.
+All prior decisions archived in PROJECT.md Key Decisions table.
+Key v1.8 decisions affecting current work:
+
+- Stripe Checkout redirect mode (not Elements) — zero client-side Stripe JS, Stripe hosts PCI surface
+- Credit-based model, not subscription — target users run 1-3 workshops/year, monthly churn approaches 100%
+- DB-stored onboarding state (`users.onboardingComplete`) not localStorage — persists across devices, no hydration mismatch
+- Dual-trigger credit fulfillment (success page + webhook) — prevents stale-credit UX failure when user returns before webhook fires
+- Server-side paywall enforcement in Step Server Component (not middleware) — middleware bypass CVE-2025-29927 makes middleware-only insufficient
 
 ### Pending Todos
 
 None.
 
-### Known Technical Debt
-
-- Next.js middleware → proxy convention migration (non-blocking)
-- CRON_SECRET needs configuration in Vercel dashboard
-- E2E back-navigation testing deferred
-- Mobile grid optimization deferred
-- /api/dev/seed-workshop build error (pre-existing)
-- First-run onboarding tour deferred (ONBD-01/02/03 — being addressed in v1.8)
-- PDF/PPT export deferred — v1.7 delivers Markdown + JSON only
-- No re-generation after step updates — generates once on completion
-
 ### Blockers/Concerns
 
-None.
+- **Phase 50:** `neon-http` driver does not support `SELECT FOR UPDATE`. Resolve before coding `consumeCredit()`: (a) secondary `neon-ws` client for transaction only, or (b) conditional-UPDATE pattern (`WHERE credit_balance > 0 RETURNING`). Decide during Phase 50 planning.
+- **Phase 48:** Vercel Deployment Protection may block `/api/webhooks/stripe` in preview — add to bypass list before Phase 49 testing begins.
+- **Phase 48:** Stripe Customer pre-creation timing — at signup (extend Clerk webhook) or lazy at first checkout. Decide before Phase 48 planning.
 
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Defining v1.8 requirements
+Stopped at: v1.8 roadmap created — ROADMAP.md and STATE.md written, REQUIREMENTS.md traceability updated. Ready to plan Phase 47.
 Resume file: None
-
-**Next action:** Define requirements → create roadmap

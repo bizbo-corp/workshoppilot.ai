@@ -80,32 +80,41 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ONBD-01 | — | Pending |
-| ONBD-02 | — | Pending |
-| ONBD-03 | — | Pending |
-| BILL-01 | — | Pending |
-| BILL-02 | — | Pending |
-| BILL-03 | — | Pending |
-| BILL-04 | — | Pending |
-| BILL-05 | — | Pending |
-| PAYW-01 | — | Pending |
-| PAYW-02 | — | Pending |
-| PAYW-03 | — | Pending |
-| PAYW-04 | — | Pending |
-| PAYW-05 | — | Pending |
-| PAYW-06 | — | Pending |
-| CRED-01 | — | Pending |
-| CRED-02 | — | Pending |
-| CRED-03 | — | Pending |
-| PRIC-01 | — | Pending |
-| PRIC-02 | — | Pending |
-| PRIC-03 | — | Pending |
+| ONBD-01 | Phase 52 | Pending |
+| ONBD-02 | Phase 52 | Pending |
+| ONBD-03 | Phase 52 | Pending |
+| BILL-01 | Phase 49 | Pending |
+| BILL-02 | Phase 49 | Pending |
+| BILL-03 | Phase 49 | Pending |
+| BILL-04 | Phase 49 | Pending |
+| BILL-05 | Phase 49 | Pending |
+| PAYW-01 | Phase 50 | Pending |
+| PAYW-02 | Phase 51 | Pending |
+| PAYW-03 | Phase 51 | Pending |
+| PAYW-04 | Phase 51 | Pending |
+| PAYW-05 | Phase 50 | Pending |
+| PAYW-06 | Phase 50 | Pending |
+| CRED-01 | Phase 51 | Pending |
+| CRED-02 | Phase 50 | Pending |
+| CRED-03 | Phase 50 | Pending |
+| PRIC-01 | Phase 53 | Pending |
+| PRIC-02 | Phase 53 | Pending |
+| PRIC-03 | Phase 53 | Pending |
 
 **Coverage:**
 - v1 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18 ⚠️
+- Mapped to phases: 18
+- Unmapped: 0 ✓
+
+**Phase distribution:**
+- Phase 47 (Database Foundation): schema enables BILL-04, BILL-05, CRED-03, ONBD-03
+- Phase 48 (Stripe Infrastructure): environment for BILL-01, BILL-02
+- Phase 49 (Payment API Layer): BILL-01, BILL-02, BILL-03, BILL-04, BILL-05
+- Phase 50 (Credit Actions and Server-Side Enforcement): PAYW-01, PAYW-05, PAYW-06, CRED-02, CRED-03
+- Phase 51 (Paywall UI): PAYW-02, PAYW-03, PAYW-04, CRED-01
+- Phase 52 (Onboarding UI): ONBD-01, ONBD-02, ONBD-03
+- Phase 53 (Pricing Page and Integration): PRIC-01, PRIC-02, PRIC-03
 
 ---
 *Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 after initial definition*
+*Last updated: 2026-02-26 — traceability complete after roadmap creation*
