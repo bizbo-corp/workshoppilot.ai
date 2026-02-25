@@ -142,7 +142,7 @@ export function CompletedWorkshopCard({
         </div>
       </div>
 
-      <Link href={`/workshop/${sessionId}/results`}>
+      <Link href={`/workshop/${sessionId}/outputs`}>
         <CardContent className="px-6 pt-4 pb-4">
           {/* Completed badge */}
           <div className="mb-3 flex items-center gap-1.5">
@@ -209,13 +209,13 @@ export function CompletedWorkshopCard({
       )}
 
       <CardFooter className="border-t bg-muted/50 p-4 dark:bg-muted/20">
-        <Link href={`/workshop/${sessionId}/results`} className="w-full">
+        <Link href={`/workshop/${sessionId}/outputs`} className="w-full">
           <Button
             variant="ghost"
             size="sm"
             className="w-full justify-between group-hover:bg-accent btn-lift"
           >
-            View Results
+            View Outputs
             <ArrowRight className="h-4 w-4" />
           </Button>
         </Link>
