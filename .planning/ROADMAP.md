@@ -201,7 +201,7 @@ Plans:
 | 43. Workshop Completion | v1.7 | Complete    | 2026-02-25 | 2026-02-25 |
 | 44. AI Deliverable Generation | 2/2 | Complete    | 2026-02-25 | - |
 | 45. Outputs Page | 2/2 | Complete    | 2026-02-25 | - |
-| 46. Dashboard Routing | 1/1 | Complete   | 2026-02-25 | - |
+| 46. Dashboard Routing | 1/1 | Complete    | 2026-02-25 | - |
 
 **Total project:** 120 plans across 43 phases (8 milestones shipped) + 3 phases planned for v1.7
 
