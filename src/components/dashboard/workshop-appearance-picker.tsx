@@ -10,6 +10,7 @@ import {
   DropdownMenuContent,
 } from '@/components/ui/dropdown-menu';
 import { WORKSHOP_COLORS, getWorkshopColor, type WorkshopColor } from '@/lib/workshop/workshop-appearance';
+import { toast } from 'sonner';
 
 // Lazy-load emoji picker (~200KB only when opened)
 const Picker = dynamic(
@@ -63,11 +64,15 @@ export function WorkshopAppearancePicker({
   }, []);
 
   const handleColorSelect = (newColor: WorkshopColor) => {
-    onUpdate(workshopId, { color: newColor.id });
+    onUpdate(workshopId, { color: newColor.id })
+      .then(() => toast.success('Appearance updated', { duration: 3000 }))
+      .catch(() => toast.error('Failed to update appearance', { duration: 4000 }));
   };
 
   const handleEmojiSelect = (emojiNative: string) => {
-    onUpdate(workshopId, { emoji: emojiNative });
+    onUpdate(workshopId, { emoji: emojiNative })
+      .then(() => toast.success('Appearance updated', { duration: 3000 }))
+      .catch(() => toast.error('Failed to update appearance', { duration: 4000 }));
     setEmojiPickerOpen(false);
   };
 

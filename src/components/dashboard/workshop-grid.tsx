@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,13 +67,19 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
 
   const handleDelete = () => {
     const ids = Array.from(selectedIds);
+    const count = ids.length;
     startTransition(async () => {
       try {
         await deleteWorkshops(ids);
         setSelectedIds(new Set());
         setDialogOpen(false);
+        toast.success(
+          count === 1 ? 'Workshop deleted' : `${count} workshops deleted`,
+          { duration: 4000 }
+        );
       } catch (error) {
         console.error('Failed to delete workshops:', error);
+        toast.error('Failed to delete workshop', { duration: 4000 });
       }
     });
   };

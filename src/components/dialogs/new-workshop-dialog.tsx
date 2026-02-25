@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useRef, useTransition, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { Smile, Check } from 'lucide-react';
 import {
@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createWorkshopSession } from '@/actions/workshop-actions';
 import { WORKSHOP_COLORS, type WorkshopColor } from '@/lib/workshop/workshop-appearance';
+import { toast } from 'sonner';
 
 // Lazy-load emoji picker (~200KB only when opened)
 const Picker = dynamic(
@@ -48,6 +49,7 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [emojiData, setEmojiData] = useState<any>(null);
   const emojiContainerRef = useRef<HTMLDivElement>(null);
+  const [isPending, startTransition] = useTransition();
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -73,6 +75,23 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
 
   const trimmedTitle = title.trim();
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      try {
+        await createWorkshopSession(formData);
+      } catch (error) {
+        // NEXT_REDIRECT errors are expected — they indicate successful navigation
+        const digest = (error as Record<string, unknown>)?.digest;
+        if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
+          throw error;
+        }
+        toast.error('Failed to create workshop', { duration: 4000 });
+      }
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -81,7 +100,7 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md overflow-visible">
-        <form action={createWorkshopSession}>
+        <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>New Workshop</DialogTitle>
             <DialogDescription>
@@ -182,8 +201,8 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!trimmedTitle}>
-              Create Workshop
+            <Button type="submit" disabled={!trimmedTitle || isPending}>
+              {isPending ? 'Creating...' : 'Create Workshop'}
             </Button>
           </DialogFooter>
         </form>

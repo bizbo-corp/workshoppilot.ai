@@ -3,6 +3,7 @@
 import { useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { createWorkshopSession } from '@/actions/workshop-actions';
+import { toast } from 'sonner';
 
 /**
  * Primary CTA button for starting a new workshop
@@ -14,7 +15,16 @@ export function StartWorkshopButton() {
 
   const handleClick = () => {
     startTransition(async () => {
-      await createWorkshopSession();
+      try {
+        await createWorkshopSession();
+      } catch (error) {
+        // NEXT_REDIRECT errors are expected — they indicate successful navigation
+        const digest = (error as Record<string, unknown>)?.digest;
+        if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
+          throw error;
+        }
+        toast.error('Failed to create workshop', { duration: 4000 });
+      }
     });
   };
 
