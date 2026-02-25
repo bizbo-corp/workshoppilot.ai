@@ -10,6 +10,11 @@ const requiredVars = [
   'CLERK_SECRET_KEY',
   'DATABASE_URL',
   'GOOGLE_GENERATIVE_AI_API_KEY',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
+  'STRIPE_PRICE_SINGLE_FLIGHT',
+  'STRIPE_PRICE_SERIAL_ENTREPRENEUR',
 ];
 
 const isProduction = process.env.VERCEL_ENV === 'production';
@@ -45,6 +50,13 @@ if (isProduction) {
   if (secretKey?.startsWith('sk_test_')) {
     console.error('❌ CLERK_SECRET_KEY is a test key (sk_test_*) but VERCEL_ENV is production');
     console.error('   Please use production Clerk keys for production deployments');
+    hasErrors = true;
+  }
+
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  if (stripeSecretKey?.startsWith('sk_test_')) {
+    console.error('❌ STRIPE_SECRET_KEY is a test key (sk_test_*) but VERCEL_ENV is production');
+    console.error('   Please use production Stripe keys for production deployments');
     hasErrors = true;
   }
 }
