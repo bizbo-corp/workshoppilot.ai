@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Onboarding + Payments
 status: unknown
-last_updated: "2026-02-25T22:10:52.475Z"
+last_updated: "2026-02-26T22:36:19Z"
 progress:
   total_phases: 38
   completed_phases: 38
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Phase: 49 of 53 in v1.8 (Payment API Layer)
-Plan: 2 of 3 in current phase
-Status: Plan 49-02 Complete — advancing to Plan 49-03
-Last activity: 2026-02-26 — Plan 49-02 complete (fulfillCreditPurchase idempotent function, Stripe webhook handler)
+Phase: 49 of 53 in v1.8 (Payment API Layer) — COMPLETE
+Plan: 3 of 3 in current phase — COMPLETE
+Status: Plan 49-03 Complete — Phase 49 fully complete, advancing to Phase 50
+Last activity: 2026-02-26 — Plan 49-03 complete (success page with dual-trigger fulfillment, cancel page)
 
 Progress: [███░░░░░░░] 43% (v1.8 — 3/7 phases complete)
 
@@ -76,6 +76,9 @@ Key v1.8 decisions affecting current work:
 - [Phase 49-payment-api-layer]: balanceAfter written from RETURNING result of atomic increment (not pre-computed) — avoids RESEARCH.md Pitfall 4 race condition
 - [Phase 49-payment-api-layer]: 400 for invalid Stripe signatures (not 500) — bad signature is not transient; Stripe will not retry 4xx
 - [Phase 49-payment-api-layer]: Both checkout.session.completed and checkout.session.async_payment_succeeded handled — latter covers ACH and deferred payment methods
+- [Phase 49-03]: No auth check on cancel page — Stripe may redirect there regardless of auth state; page is static with no sensitive data
+- [Phase 49-03]: already_fulfilled path fetches balance from DB via db.query (not estimated) — ensures accuracy when webhook beats success page
+- [Phase 49-03]: payment_not_paid shows processing message (not error) — correct tone for deferred payment methods (ACH)
 
 ### Pending Todos
 
@@ -85,10 +88,10 @@ None.
 
 - **Phase 50:** `neon-http` driver does not support `SELECT FOR UPDATE`. Resolve before coding `consumeCredit()`: (a) secondary `neon-ws` client for transaction only, or (b) conditional-UPDATE pattern (`WHERE credit_balance > 0 RETURNING`). Decide during Phase 50 planning.
 - **Phase 49:** Vercel Deployment Protection may block `/api/webhooks/stripe` in preview — add to bypass list before Phase 49 webhook testing begins (still relevant for plan 49-02).
-- **Phase 52:** `/purchase/success` and `/purchase/cancel` pages must be created to match URLs used in checkout/route.ts.
+- **Phase 52 blocker resolved:** `/purchase/success` and `/purchase/cancel` pages created in Plan 49-03.
 
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 49-02-PLAN.md (fulfillCreditPurchase idempotent function, Stripe webhook handler at /api/webhooks/stripe). Next: Phase 49 Plan 03 (success page + credit display).
+Stopped at: Completed 49-03-PLAN.md (success page dual-trigger fulfillment, cancel page). Phase 49 fully complete. Next: Phase 50 (credit consumption / paywall).
 Resume file: None
