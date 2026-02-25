@@ -155,7 +155,10 @@ Plans:
   2. After completing a workshop, a Tech Specs document exists containing technical requirements derived from the workshop data
   3. Each deliverable is stored as both Markdown text and structured JSON, retrievable from the outputs page
   4. Generation uses the full context of all 10 step artifacts — outputs reference specific decisions from the workshop, not generic boilerplate
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 44-01-PLAN.md — Backend: expand artifact loading to all 10 steps, create PRD + Tech Specs prompts, build generation API routes with dual-format storage
+- [ ] 44-02-PLAN.md — Frontend: wire deliverable cards to generation APIs with loading states, success indicators, and error handling
 
 ### Phase 45: Outputs Page
 **Goal**: Users can navigate to `/workshop/[id]/outputs` to see their generated deliverables, read them in full, copy the content, and download as `.md` or JSON.
