@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.6 Production Polish — Phase 42: Visual Polish (in progress)
+**Current focus:** v1.6 Production Polish — Phase 42: Visual Polish (complete)
 
 ## Current Position
 
 Phase: 42 of 42 (Visual Polish)
-Plan: 2 of 3 in current phase
-Status: Plan complete
-Last activity: 2026-02-25 — Phase 42 Plan 02 complete (step transitions, loading skeletons, olive audit on chat action buttons)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-25 — Phase 42 Plan 03 complete (hover micro-interactions, toast notifications, olive toast theming)
 
-Progress: [████░░░░░░░░░░░░░░░░] 20% (v1.6)
+Progress: [████████████████████] 100% (v1.6 Phase 42 complete)
 
 ## Performance Metrics
 
@@ -31,6 +31,7 @@ Progress: [████░░░░░░░░░░░░░░░░] 20% (v1
 | v1.5 | 4 | 9 | 2 days |
 | **Total** | **39** | **113** | **13 days** |
 | Phase 42 P02 | 7 | 2 tasks | 6 files |
+| Phase 42 P03 | 5 | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,12 @@ All prior decisions archived. See PROJECT.md Key Decisions table for full histor
 - Dashboard uses Next.js loading.tsx convention for Suspense loading UI (no manual Suspense wrapping)
 - Chat + canvas panels wrapped together in StepTransitionWrapper so they transition as one unified view
 
+**Phase 42 Plan 03 (2026-02-25):**
+- .btn-lift CSS utility (translateY(-1px) hover, reset on active) applied to CTA buttons via className — avoids shadcn button variant disruption
+- Sonner CSS overrides use [data-sonner-toast][data-type] attribute selectors — richColors retained, olive theming via higher specificity CSS
+- new-workshop-dialog converted from form action to onSubmit + useTransition — enables error toast while preserving NEXT_REDIRECT navigation
+- NEXT_REDIRECT guard pattern: check error.digest?.startsWith('NEXT_REDIRECT') and rethrow; real errors get toast.error
+
 ### Pending Todos
 
 None.
@@ -85,7 +92,7 @@ None — Phase 40 complete. Production auth fully operational on workshoppilot.a
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 42-02-PLAN.md — step transitions, loading skeletons, olive audit on chat action buttons
+Stopped at: Completed 42-03-PLAN.md — hover micro-interactions, toast notifications, olive toast theming
 Resume file: None
 
-**Next action:** Execute Phase 42 Plan 03 (final plan in visual polish phase)
+**Next action:** Phase 42 complete — v1.6 Visual Polish milestone done. Plan next milestone.
