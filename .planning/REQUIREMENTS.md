@@ -32,8 +32,8 @@ Requirements for Build Pack export. Each maps to roadmap phases.
 
 ### Dashboard Routing
 
-- [ ] **DASH-01**: Completed workshops route to outputs page from dashboard
-- [ ] **DASH-02**: In-progress workshops continue routing to resume position
+- [x] **DASH-01**: Completed workshops route to outputs page from dashboard
+- [x] **DASH-02**: In-progress workshops continue routing to resume position
 
 ## v2 Requirements
 
@@ -81,8 +81,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OUT-05 | Phase 45 | Complete |
 | OUT-06 | Phase 45 | Complete |
 | OUT-07 | Phase 45 | Complete |
-| DASH-01 | Phase 46 | Pending |
-| DASH-02 | Phase 46 | Pending |
+| DASH-01 | Phase 46 | Complete |
+| DASH-02 | Phase 46 | Complete |
 
 **Coverage:**
 - v1.7 requirements: 16 total

@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.7 Build Pack — Phase 45: Outputs Page
+**Current focus:** v1.7 Build Pack — Phase 46: Dashboard Routing
 
 ## Current Position
 
-Phase: 45 of 46 (Outputs Page)
-Plan: 2 of 2 complete
+Phase: 46 of 46 (Dashboard Routing)
+Plan: 1 of 1 complete
 Status: Complete
-Last activity: 2026-02-25 — 45-02 complete (detail view, copy/download, View on Outputs Page navigation)
+Last activity: 2026-02-25 — 46-01 complete (dashboard routing completed workshops to /outputs)
 
 Progress: [████████████████████] ~100% (v1.7)
 
@@ -32,6 +32,7 @@ Progress: [████████████████████] ~100% (
 | v1.6 | 2 | 5 | 1 day |
 | **Total** | **41** | **118** | **14 days** |
 | v1.7 (so far) | 45 | 5 | 13 min |
+| Phase 46-dashboard-routing P01 | 1 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,7 @@ Recent decisions relevant to v1.7:
 - [Phase 45-02]: sessionId guard in SynthesisSummaryView/SynthesisBuildPackSection: disabled={isPrdDone && !sessionId} prevents navigating to /workshop/undefined/outputs
 - [Phase 45-02]: output-panel.tsx not modified — guard in component handles no-sessionId gracefully
 - [Phase 45-02]: DeliverableDetailView replaces card grid in-place (not a modal) for better long-content UX
+- [Phase 46-dashboard-routing]: Completed workshop card and dashboard CTA route to /outputs (not /results); in-progress routing via /step/[currentStep] unchanged
 
 ### Pending Todos
 
@@ -86,7 +88,7 @@ None — clean start for v1.7.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 45-02-PLAN.md (detail view, copy/download, View on Outputs Page navigation)
+Stopped at: Completed 46-01-PLAN.md (dashboard routing completed workshops to /outputs)
 Resume file: None
 
-**Next action:** Phase 45 complete — v1.7 Build Pack milestone delivered
+**Next action:** Phase 46 complete — v1.7 Build Pack milestone fully delivered
