@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.7 Build Pack — Phase 43: Workshop Completion
+**Current focus:** v1.7 Build Pack — Phase 44: AI Deliverable Generation
 
 ## Current Position
 
-Phase: 43 of 46 (Workshop Completion)
-Plan: 2 of 2 complete
-Status: Phase complete
-Last activity: 2026-02-25 — 43-02 complete (Complete Workshop button + deliverable card activation)
+Phase: 44 of 46 (AI Deliverable Generation)
+Plan: 1 of 2 complete
+Status: In progress
+Last activity: 2026-02-25 — 44-01 complete (AI generation engine: PRD + Tech Specs API routes)
 
-Progress: [████░░░░░░░░░░░░░░░░] ~20% (v1.7)
+Progress: [████████░░░░░░░░░░░░] ~40% (v1.7)
 
 ## Performance Metrics
 
@@ -50,6 +50,11 @@ Recent decisions relevant to v1.7:
 - workshopStatus prop seeds React state so page refresh preserves completed state without extra fetch (43-02)
 - PRD/Tech Specs activate on completion with label 'Coming in Phase 44'; Stakeholder/User Stories remain disabled (43-02)
 - results-content.tsx passes workshopCompleted={true} unconditionally — results page = always completed (43-02)
+- type='full-prd' field in POST body differentiates new PRD path from V0 prototype path — backward compatible (44-01)
+- Cache lookup uses LIKE 'PRD:%' / 'Tech Specs:%' title prefix to find existing rows (44-01)
+- maxDuration=60 for PRD/Tech Specs routes — Gemini needs more time for 2000-3000 word documents (44-01)
+- Auth check added to generate-prd route — original V0 implementation lacked ownership verification (44-01)
+- Parallel generation via Promise.allSettled — markdown + JSON Gemini calls run concurrently, halving latency (44-01)
 
 ### Pending Todos
 
@@ -71,7 +76,7 @@ None — clean start for v1.7.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 43-02-PLAN.md (Complete Workshop button + deliverable card activation)
+Stopped at: Completed 44-01-PLAN.md (AI generation engine: PRD + Tech Specs API routes)
 Resume file: None
 
-**Next action:** Phase 43 complete — begin Phase 44 (Build Pack Generation)
+**Next action:** Continue Phase 44 — execute Plan 02 (UI wiring for deliverable display)

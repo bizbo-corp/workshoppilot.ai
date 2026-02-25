@@ -15,10 +15,10 @@ Requirements for Build Pack export. Each maps to roadmap phases.
 
 ### Deliverable Generation
 
-- [ ] **GEN-01**: AI generates PRD from all 10 steps of structured workshop data in Markdown format
-- [ ] **GEN-02**: AI generates Tech Specs from workshop data in Markdown format
-- [ ] **GEN-03**: Each deliverable includes structured JSON export alongside Markdown
-- [ ] **GEN-04**: Generation uses Gemini API with full workshop context (all step artifacts)
+- [x] **GEN-01**: AI generates PRD from all 10 steps of structured workshop data in Markdown format
+- [x] **GEN-02**: AI generates Tech Specs from workshop data in Markdown format
+- [x] **GEN-03**: Each deliverable includes structured JSON export alongside Markdown
+- [x] **GEN-04**: Generation uses Gemini API with full workshop context (all step artifacts)
 
 ### Outputs Page
 
@@ -70,10 +70,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COMP-01 | Phase 43 | Complete |
 | COMP-02 | Phase 43 | Complete |
 | COMP-03 | Phase 43 | Complete |
-| GEN-01 | Phase 44 | Pending |
-| GEN-02 | Phase 44 | Pending |
-| GEN-03 | Phase 44 | Pending |
-| GEN-04 | Phase 44 | Pending |
+| GEN-01 | Phase 44 | Complete |
+| GEN-02 | Phase 44 | Complete |
+| GEN-03 | Phase 44 | Complete |
+| GEN-04 | Phase 44 | Complete |
 | OUT-01 | Phase 45 | Pending |
 | OUT-02 | Phase 45 | Pending |
 | OUT-03 | Phase 45 | Pending |

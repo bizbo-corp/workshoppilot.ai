@@ -194,7 +194,7 @@ Plans:
 | 36-39 | v1.5 | 9/9 | Complete | 2026-02-19 |
 | 40-42 | v1.6 | 5/5 | Complete | 2026-02-25 |
 | 43. Workshop Completion | v1.7 | Complete    | 2026-02-25 | 2026-02-25 |
-| 44. AI Deliverable Generation | v1.7 | 0/? | Not started | - |
+| 44. AI Deliverable Generation | 1/2 | In Progress|  | - |
 | 45. Outputs Page | v1.7 | 0/? | Not started | - |
 | 46. Dashboard Routing | v1.7 | 0/? | Not started | - |
 
