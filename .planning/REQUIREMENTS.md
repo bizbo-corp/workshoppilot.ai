@@ -9,8 +9,8 @@ Requirements for Build Pack export. Each maps to roadmap phases.
 
 ### Workshop Completion
 
-- [ ] **COMP-01**: User sees AI-guided final review of key decisions from all 10 steps in Step 10
-- [ ] **COMP-02**: User can confirm workshop completion after AI-guided review
+- [x] **COMP-01**: User sees AI-guided final review of key decisions from all 10 steps in Step 10
+- [x] **COMP-02**: User can confirm workshop completion after AI-guided review
 - [x] **COMP-03**: Workshop status persists as "complete" in database
 
 ### Deliverable Generation
@@ -67,8 +67,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COMP-01 | Phase 43 | Pending |
-| COMP-02 | Phase 43 | Pending |
+| COMP-01 | Phase 43 | Complete |
+| COMP-02 | Phase 43 | Complete |
 | COMP-03 | Phase 43 | Complete |
 | GEN-01 | Phase 44 | Pending |
 | GEN-02 | Phase 44 | Pending |
@@ -91,4 +91,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 — traceability complete, roadmap created*
+*Last updated: 2026-02-25 — COMP-01, COMP-02, COMP-03 complete (Phase 43 done)*

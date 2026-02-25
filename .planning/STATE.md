@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 43 of 46 (Workshop Completion)
-Plan: 1 of 2 complete
-Status: In progress
-Last activity: 2026-02-25 — 43-01 complete (completeWorkshop server action + API endpoint)
+Plan: 2 of 2 complete
+Status: Phase complete
+Last activity: 2026-02-25 — 43-02 complete (Complete Workshop button + deliverable card activation)
 
-Progress: [██░░░░░░░░░░░░░░░░░░] ~10% (v1.7)
+Progress: [████░░░░░░░░░░░░░░░░] ~20% (v1.7)
 
 ## Performance Metrics
 
@@ -46,6 +46,10 @@ Recent decisions relevant to v1.7:
 - completeWorkshop checks steps.length >= 10 AND all completedAt non-null to prevent partial-step edge cases (43-01)
 - Auth errors return 401, incomplete-steps returns 400, unexpected errors return 500 for clean client handling (43-01)
 - No redirect() in completeWorkshop — calling component owns post-completion UI state (43-01)
+- canCompleteWorkshop={!!step10Artifact} gates the button on extraction completion — prevents completing without synthesis (43-02)
+- workshopStatus prop seeds React state so page refresh preserves completed state without extra fetch (43-02)
+- PRD/Tech Specs activate on completion with label 'Coming in Phase 44'; Stakeholder/User Stories remain disabled (43-02)
+- results-content.tsx passes workshopCompleted={true} unconditionally — results page = always completed (43-02)
 
 ### Pending Todos
 
@@ -67,7 +71,7 @@ None — clean start for v1.7.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 43-01-PLAN.md (completeWorkshop server action + API endpoint)
+Stopped at: Completed 43-02-PLAN.md (Complete Workshop button + deliverable card activation)
 Resume file: None
 
-**Next action:** Execute 43-02 — wire completeWorkshop into Step 10 UI
+**Next action:** Phase 43 complete — begin Phase 44 (Build Pack Generation)

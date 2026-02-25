@@ -125,7 +125,7 @@ See `milestones/v1.6-ROADMAP.md` for full details.
 
 **Milestone Goal:** Make the workshop produce tangible, AI-coder-ready output. Users complete Step 10, trigger AI generation of PRD and Tech Specs from their 10 steps of workshop data, and download the deliverables from a dedicated outputs page.
 
-- [ ] **Phase 43: Workshop Completion** - AI-guided final review in Step 10 + workshop marked complete in DB
+- [x] **Phase 43: Workshop Completion** - AI-guided final review in Step 10 + workshop marked complete in DB
 - [ ] **Phase 44: AI Deliverable Generation** - Gemini generates PRD and Tech Specs (Markdown + JSON) from all 10 step artifacts
 - [ ] **Phase 45: Outputs Page** - Dedicated `/workshop/[id]/outputs` page with deliverable cards, detail view, copy, and download
 - [ ] **Phase 46: Dashboard Routing** - Completed workshops route to outputs page; in-progress continue to resume position
@@ -143,8 +143,8 @@ See `milestones/v1.6-ROADMAP.md` for full details.
   4. The Step 10 UI reflects completed state (deliverable cards become active, no longer "Coming Soon")
 **Plans**: 2 plans
 Plans:
-- [ ] 43-01-PLAN.md — Backend: completeWorkshop server action + API endpoint
-- [ ] 43-02-PLAN.md — Frontend: Complete Workshop button + deliverable card activation
+- [x] 43-01-PLAN.md — Backend: completeWorkshop server action + API endpoint
+- [x] 43-02-PLAN.md — Frontend: Complete Workshop button + deliverable card activation
 
 ### Phase 44: AI Deliverable Generation
 **Goal**: On workshop completion, Gemini generates a PRD and Tech Specs document from the full structured workshop data, stored as Markdown and JSON in the database.
@@ -190,12 +190,12 @@ Plans:
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
 | 36-39 | v1.5 | 9/9 | Complete | 2026-02-19 |
 | 40-42 | v1.6 | 5/5 | Complete | 2026-02-25 |
-| 43. Workshop Completion | 1/2 | In Progress|  | - |
+| 43. Workshop Completion | v1.7 | 2/2 | Complete | 2026-02-25 |
 | 44. AI Deliverable Generation | v1.7 | 0/? | Not started | - |
 | 45. Outputs Page | v1.7 | 0/? | Not started | - |
 | 46. Dashboard Routing | v1.7 | 0/? | Not started | - |
 
-**Total project:** 118 plans across 42 phases (8 milestones shipped) + 4 phases planned for v1.7
+**Total project:** 120 plans across 43 phases (8 milestones shipped) + 3 phases planned for v1.7
 
 ---
-*Last updated: 2026-02-25 — Phase 43 planned (2 plans)*
+*Last updated: 2026-02-25 — Phase 43 complete (2/2 plans)*
