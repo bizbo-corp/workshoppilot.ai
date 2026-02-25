@@ -73,7 +73,12 @@ export default clerkMiddleware(async (auth, req) => {
 
   // Protected route protection
   if (isProtectedRoute(req) && !userId) {
-    return NextResponse.redirect(new URL('/', req.url));
+    const isApiRoute = pathname.startsWith('/api/');
+    if (isApiRoute) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    // For page routes, let through — AuthGuard will show sign-in modal in-place
+    return NextResponse.next();
   }
 
   return NextResponse.next();

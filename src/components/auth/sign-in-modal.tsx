@@ -1,21 +1,23 @@
 'use client';
 
 import { SignIn } from '@clerk/nextjs';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
+import { toast } from 'sonner';
 
 export interface SignInModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   redirectUrl?: string;
-  onSwitchToSignUp?: () => void;
 }
 
 export function SignInModal({
   open,
   onOpenChange,
   redirectUrl = '/dashboard',
-  onSwitchToSignUp,
 }: SignInModalProps) {
+  const formRef = useRef<HTMLDivElement>(null);
+
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (open) {
@@ -28,6 +30,36 @@ export function SignInModal({
     };
   }, [open]);
 
+  // MutationObserver to surface Clerk inline errors as toast notifications
+  useEffect(() => {
+    if (!open || !formRef.current) return;
+
+    const seenErrors = new Set<string>();
+
+    const observer = new MutationObserver(() => {
+      const errorEls = formRef.current?.querySelectorAll(
+        '.cl-formFieldErrorText, .cl-alert__text'
+      );
+      errorEls?.forEach((el) => {
+        const text = el.textContent?.trim();
+        if (text && !seenErrors.has(text)) {
+          seenErrors.add(text);
+          toast.error(text);
+          // Clear from seen after a delay so repeated attempts can re-trigger
+          setTimeout(() => seenErrors.delete(text), 5000);
+        }
+      });
+    });
+
+    observer.observe(formRef.current, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    return () => observer.disconnect();
+  }, [open]);
+
   if (!open) return null;
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -38,57 +70,35 @@ export function SignInModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
-      <div className="relative w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
+      <div className="relative w-full max-w-md rounded-xl bg-card shadow-2xl border border-border">
         {/* Close button */}
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          className="absolute right-4 top-4 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           aria-label="Close"
         >
-          <svg
-            className="h-5 w-5"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <X className="h-5 w-5" />
         </button>
 
         {/* Clerk SignIn component */}
-        <div className="mt-2">
+        <div className="p-2" ref={formRef}>
           <SignIn
             routing="hash"
             appearance={{
               elements: {
                 rootBox: 'w-full',
                 card: 'shadow-none border-0',
+                formFieldErrorText: 'sr-only',
+                alert: 'sr-only',
+                alertText: 'sr-only',
               },
             }}
             fallbackRedirectUrl={redirectUrl}
           />
         </div>
-
-        {/* Switch to sign-up link */}
-        {onSwitchToSignUp && (
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
-            <button
-              onClick={onSwitchToSignUp}
-              className="font-medium text-primary hover:text-primary/80 focus:outline-none focus:underline"
-            >
-              Sign up
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

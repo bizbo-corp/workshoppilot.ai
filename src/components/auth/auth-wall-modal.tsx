@@ -1,19 +1,18 @@
 'use client';
 
-import { SignUp } from '@clerk/nextjs';
+import { SignIn } from '@clerk/nextjs';
 import { useEffect } from 'react';
+import { X } from 'lucide-react';
 
 export interface AuthWallModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSwitchToSignIn?: () => void;
   workshopId?: string;
 }
 
 export function AuthWallModal({
   open,
   onOpenChange,
-  onSwitchToSignIn,
 }: AuthWallModalProps) {
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -35,40 +34,28 @@ export function AuthWallModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="relative w-full max-w-4xl rounded-lg bg-card shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="relative w-full max-w-4xl rounded-xl bg-card shadow-2xl border border-border">
         {/* Close button */}
         <button
           onClick={handleNotNow}
           className="absolute right-4 top-4 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           aria-label="Close"
         >
-          <svg
-            className="h-5 w-5"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <X className="h-5 w-5" />
         </button>
 
         {/* Two-column layout */}
         <div className="grid grid-cols-1 md:grid-cols-2">
           {/* LEFT COLUMN: What's Next Preview */}
-          <div className="rounded-l-lg bg-gradient-to-br from-neutral-olive-50 to-neutral-olive-100 p-8 md:p-10">
+          <div className="rounded-l-xl bg-gradient-to-br from-neutral-olive-50 to-neutral-olive-100 p-8 md:p-10">
             <div className="space-y-6">
               <div>
                 <h2 className="text-2xl font-bold text-foreground">
                   Create your account to continue
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  You&apos;ve completed the first 3 steps! Sign up to unlock the rest of your design thinking journey.
+                  You&apos;ve completed the first 3 steps! Sign in or create an account to unlock the rest of your design thinking journey.
                 </p>
               </div>
 
@@ -122,10 +109,10 @@ export function AuthWallModal({
             </div>
           </div>
 
-          {/* RIGHT COLUMN: SignUp Form */}
-          <div className="flex flex-col rounded-r-lg bg-card p-8 md:p-10">
+          {/* RIGHT COLUMN: SignIn Form (handles both sign-in and sign-up) */}
+          <div className="flex flex-col rounded-r-xl bg-card p-8 md:p-10">
             <div className="flex-1">
-              <SignUp
+              <SignIn
                 routing="hash"
                 appearance={{
                   elements: {
@@ -136,19 +123,6 @@ export function AuthWallModal({
                 fallbackRedirectUrl="/dashboard"
               />
             </div>
-
-            {/* Switch to sign-in link */}
-            {onSwitchToSignIn && (
-              <div className="mt-4 text-center text-sm text-muted-foreground">
-                Already have an account?{' '}
-                <button
-                  onClick={onSwitchToSignIn}
-                  className="font-medium text-primary hover:text-primary/80 focus:outline-none focus:underline"
-                >
-                  Sign in
-                </button>
-              </div>
-            )}
           </div>
         </div>
 

@@ -7,6 +7,7 @@ import { users, workshops, workshopSteps, stepArtifacts, buildPacks, aiUsageEven
 import { eq, desc, isNull, and, inArray, sql } from 'drizzle-orm';
 import { isAdmin } from '@/lib/auth/roles';
 import { MigrationCheck } from '@/components/auth/migration-check';
+import { DashboardUnauthenticated } from '@/components/dashboard/dashboard-unauthenticated';
 import { WorkshopGrid } from '@/components/dashboard/workshop-grid';
 import { CompletedWorkshopCard } from '@/components/dashboard/completed-workshop-card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,9 @@ export default async function DashboardPage() {
   const { userId, sessionClaims } = await auth();
 
   if (!userId) {
-    redirect('/');
+    // Show sign-in modal in-place instead of redirecting away.
+    // Middleware already let the request through; AuthGuard handles the UI.
+    return <DashboardUnauthenticated />;
   }
 
   let adminUser = isAdmin(sessionClaims);

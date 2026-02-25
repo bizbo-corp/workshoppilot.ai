@@ -173,10 +173,6 @@ export function WorkshopHeader({
       <SignInModal
         open={signInOpen}
         onOpenChange={setSignInOpen}
-        onSwitchToSignUp={() => {
-          setSignInOpen(false);
-          // Would open sign-up modal if needed
-        }}
       />
     </>
   );
