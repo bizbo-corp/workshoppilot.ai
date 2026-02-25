@@ -151,6 +151,16 @@ All code-side checks pass:
 - Production webhook at https://workshoppilot.ai/api/webhooks/stripe is registered (Dashboard endpoint secret captured in STRIPE_WEBHOOK_SECRET)
 - For local testing in Phase 49: run `stripe listen --forward-to localhost:3000/api/webhooks/stripe` to get a CLI whsec_ value (override STRIPE_WEBHOOK_SECRET locally while listening)
 
+## Self-Check: PASSED
+
+- src/lib/billing/stripe.ts: FOUND
+- scripts/verify-env.ts: FOUND
+- 48-01-SUMMARY.md: FOUND
+- Commit 833691a (Task 1): FOUND
+- Commit 1aebc80 (Task 2): FOUND
+- Commit 42e86d1 (docs prior): FOUND
+- Commit bc730c6 (docs final): FOUND
+
 ---
 *Phase: 48-stripe-infrastructure*
 *Completed: 2026-02-26*
