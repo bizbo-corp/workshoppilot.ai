@@ -23,9 +23,9 @@ Requirements for v1.6 Production Polish. Each maps to roadmap phases.
 ### Visual Polish
 
 - [x] **VISL-01**: Fix remaining olive theme gaps — any components not matching the olive token system
-- [ ] **VISL-02**: Page/route transitions with smooth animation between workshop steps
+- [x] **VISL-02**: Page/route transitions with smooth animation between workshop steps
 - [ ] **VISL-03**: Consistent hover/active states on all interactive elements (buttons, cards, links)
-- [ ] **VISL-04**: Loading skeletons for content areas that flash or pop in
+- [x] **VISL-04**: Loading skeletons for content areas that flash or pop in
 - [ ] **VISL-05**: Toast notifications for user actions (save, delete, error feedback)
 - [ ] **VISL-06**: Micro-interactions on key UI elements (button clicks, card hovers, panel toggles, progress updates)
 
@@ -72,9 +72,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ONBD-02 | Phase 41 | Pending |
 | ONBD-03 | Phase 41 | Pending |
 | VISL-01 | Phase 42 | Complete |
-| VISL-02 | Phase 42 | Pending |
+| VISL-02 | Phase 42 | Complete |
 | VISL-03 | Phase 42 | Pending |
-| VISL-04 | Phase 42 | Pending |
+| VISL-04 | Phase 42 | Complete |
 | VISL-05 | Phase 42 | Pending |
 | VISL-06 | Phase 42 | Pending |
 

@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 42 of 42 (Visual Polish)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Plan complete
-Last activity: 2026-02-25 — Phase 42 Plan 01 complete (guide nodes + canvas guides + synthesis scores converted to olive token system)
+Last activity: 2026-02-25 — Phase 42 Plan 02 complete (step transitions, loading skeletons, olive audit on chat action buttons)
 
 Progress: [████░░░░░░░░░░░░░░░░] 20% (v1.6)
 
@@ -30,6 +30,7 @@ Progress: [████░░░░░░░░░░░░░░░░] 20% (v1
 | v1.4 | 6 | 13 | 1 day |
 | v1.5 | 4 | 9 | 2 days |
 | **Total** | **39** | **113** | **13 days** |
+| Phase 42 P02 | 7 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -56,6 +57,13 @@ All prior decisions archived. See PROJECT.md Key Decisions table for full histor
 - Admin selection rings changed from ring-blue-300/500 to ring-olive-400/600
 - Dismiss button dark mode uses bg-background/20 over bg-white/20 (theme-adaptive)
 
+**Phase 42 Plan 02 (2026-02-25):**
+- StepTransitionWrapper uses CSS opacity transition via useEffect + requestAnimationFrame — no framer-motion (keeps bundle lightweight)
+- React key={stepId} re-mount pattern triggers fresh fade-in on every step navigation
+- Skeleton blocks use bg-accent animate-none to override shadcn Skeleton default pulse (static blocks per user preference)
+- Dashboard uses Next.js loading.tsx convention for Suspense loading UI (no manual Suspense wrapping)
+- Chat + canvas panels wrapped together in StepTransitionWrapper so they transition as one unified view
+
 ### Pending Todos
 
 None.
@@ -68,7 +76,7 @@ None.
 - Mobile grid optimization deferred
 - /api/dev/seed-workshop build error (pre-existing, TypeError on width property)
 - isPublicRoute in proxy.ts defined but unused
-- Pre-existing uncommitted StepTransitionWrapper addition to step-container.tsx (deferred)
+- StepTransitionWrapper committed in 42-02 (was previously pre-existing)
 
 ### Blockers/Concerns
 
@@ -77,7 +85,7 @@ None — Phase 40 complete. Production auth fully operational on workshoppilot.a
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 42-01-PLAN.md — guide nodes + canvas guides + synthesis scores converted to olive token system
+Stopped at: Completed 42-02-PLAN.md — step transitions, loading skeletons, olive audit on chat action buttons
 Resume file: None
 
-**Next action:** Execute Phase 42 Plan 02 (next plan in visual polish phase)
+**Next action:** Execute Phase 42 Plan 03 (final plan in visual polish phase)

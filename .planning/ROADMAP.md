@@ -173,7 +173,7 @@ Plans:
 | 36-39 | v1.5 | 9/9 | Complete | 2026-02-19 |
 | 40. Production Auth | v1.6 | Complete    | 2026-02-25 | 2026-02-25 |
 | 41. User Onboarding | v1.6 | 0/1 | Not started | - |
-| 42. Visual Polish | 1/3 | In Progress|  | - |
+| 42. Visual Polish | 2/3 | In Progress|  | - |
 
 **Total project:** 115 plans across 41 phases (7 milestones shipped) + v1.6 in progress
 
