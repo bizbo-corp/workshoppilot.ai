@@ -453,6 +453,70 @@ export async function resetStep(
 }
 
 /**
+ * Marks a workshop as completed.
+ * Requires all 10 steps to be complete before setting workshop status.
+ * Idempotent: if workshop is already completed, returns success without re-updating.
+ */
+export async function completeWorkshop(
+  workshopId: string,
+  sessionId: string
+): Promise<{ success: true }> {
+  const userId = await getUserId();
+  if (!userId) {
+    throw new Error('Authentication required');
+  }
+
+  // Verify workshop belongs to the current user
+  const [workshop] = await db
+    .select({ id: workshops.id, status: workshops.status, clerkUserId: workshops.clerkUserId })
+    .from(workshops)
+    .where(
+      and(
+        eq(workshops.id, workshopId),
+        eq(workshops.clerkUserId, userId),
+        isNull(workshops.deletedAt)
+      )
+    )
+    .limit(1);
+
+  if (!workshop) {
+    throw new Error('Workshop not found or access denied');
+  }
+
+  // Idempotent: already completed
+  if (workshop.status === 'completed') {
+    return { success: true };
+  }
+
+  // Verify all 10 steps are complete (completedAt must be set on every step)
+  const steps = await db
+    .select({ id: workshopSteps.id, stepId: workshopSteps.stepId, completedAt: workshopSteps.completedAt })
+    .from(workshopSteps)
+    .where(eq(workshopSteps.workshopId, workshopId));
+
+  const incompleteSteps = steps.filter((s) => s.completedAt === null);
+  if (incompleteSteps.length > 0 || steps.length < 10) {
+    throw new Error('All steps must be completed before finishing the workshop');
+  }
+
+  // Set workshop status to 'completed'
+  await db
+    .update(workshops)
+    .set({ status: 'completed' })
+    .where(
+      and(
+        eq(workshops.id, workshopId),
+        eq(workshops.clerkUserId, userId)
+      )
+    );
+
+  revalidatePath('/dashboard');
+  revalidatePath(`/workshop/${sessionId}`);
+
+  return { success: true };
+}
+
+/**
  * Updates a workshop's visual appearance (color accent and/or emoji)
  * Validates color against palette; accepts any emoji string from emoji-mart
  */
