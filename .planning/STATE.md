@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.6 Production Polish — Phase 40: Production Auth
+**Current focus:** v1.6 Production Polish — Phase 40: Production Auth (complete)
 
 ## Current Position
 
 Phase: 40 of 42 (Production Auth)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-25 — Phase 40 Plan 01 complete (auth UI, olive theme, AuthGuard)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-25 — Phase 40 Plan 02 complete (Google + Apple OAuth, olive social buttons, production verified)
 
-Progress: [██░░░░░░░░░░░░░░░░░░] 10% (v1.6)
+Progress: [████░░░░░░░░░░░░░░░░] 20% (v1.6)
 
 ## Performance Metrics
 
@@ -44,6 +44,11 @@ All prior decisions archived. See PROJECT.md Key Decisions table for full histor
 - Protected page routes pass through middleware (NextResponse.next()); API routes return 401
 - AuthGuard client component shows SignInModal in-place when !isSignedIn — no redirect
 
+**Phase 40 Plan 02 (2026-02-25):**
+- socialButtonsVariant set to blockButton (full-width with provider name) over iconButton
+- Social button theming via appearance elements (border-border, hover:bg-accent) makes buttons feel native
+- Provider order (Google first, Apple second) controlled in Clerk Dashboard, not in code
+
 ### Pending Todos
 
 None.
@@ -60,12 +65,12 @@ None.
 
 ### Blockers/Concerns
 
-- AUTH PARTIAL: Phase 40 Plan 01 complete (UI/theme/guard). Phase 40 Plan 02 still pending. Production Clerk keys must be configured in Vercel dashboard for workshoppilot.ai sign-in to work.
+None — Phase 40 complete. Production auth fully operational on workshoppilot.ai (Google OAuth, Apple sign-in, email/password all verified).
 
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 40-01-PLAN.md — auth UI, olive theme, AuthGuard, in-place sign-in modal
+Stopped at: Completed 40-02-PLAN.md — Google + Apple OAuth, olive social buttons, production verified
 Resume file: None
 
-**Next action:** Execute Phase 40 Plan 02
+**Next action:** Execute Phase 41 (next phase in v1.6)

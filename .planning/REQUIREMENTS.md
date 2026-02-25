@@ -11,7 +11,7 @@ Requirements for v1.6 Production Polish. Each maps to roadmap phases.
 
 - [x] **AUTH-01**: Sign-in button is visible and functional on production site (workshoppilot.ai)
 - [x] **AUTH-02**: Clerk is correctly configured for the workshoppilot.ai domain (environment variables, allowed origins)
-- [ ] **AUTH-03**: User can sign in with Google OAuth (one-click alongside email/password)
+- [x] **AUTH-03**: User can sign in with Google OAuth (one-click alongside email/password)
 - [x] **AUTH-04**: Sign-up and sign-in flows complete successfully on production
 
 ### Onboarding
@@ -66,7 +66,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | AUTH-01 | Phase 40 | Complete |
 | AUTH-02 | Phase 40 | Complete |
-| AUTH-03 | Phase 40 | Pending |
+| AUTH-03 | Phase 40 | Complete |
 | AUTH-04 | Phase 40 | Complete |
 | ONBD-01 | Phase 41 | Pending |
 | ONBD-02 | Phase 41 | Pending |
@@ -85,4 +85,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 — traceability complete after roadmap creation*
+*Last updated: 2026-02-25 — AUTH-03, AUTH-04 marked complete after Phase 40 Plan 02 verification*

@@ -127,8 +127,8 @@ See `milestones/v1.5-ROADMAP.md` for full details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 40-01-PLAN.md — Fix sign-in button visibility, restyle as secondary, configure Clerk olive appearance, update auth modals
-- [ ] 40-02-PLAN.md — Add Google OAuth + Apple sign-in social providers, style social buttons, verify end-to-end on production
+- [x] 40-01-PLAN.md — Fix sign-in button visibility, restyle as secondary, configure Clerk olive appearance, update auth modals
+- [x] 40-02-PLAN.md — Add Google OAuth + Apple sign-in social providers, style social buttons, verify end-to-end on production
 
 ### Phase 41: User Onboarding
 **Goal**: New users understand the app immediately without needing external documentation
@@ -171,11 +171,11 @@ Plans:
 | 25-29 | v1.3 | 23/23 | Complete | 2026-02-12 |
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
 | 36-39 | v1.5 | 9/9 | Complete | 2026-02-19 |
-| 40. Production Auth | 1/2 | In Progress|  | - |
+| 40. Production Auth | v1.6 | 2/2 | Complete | 2026-02-25 |
 | 41. User Onboarding | v1.6 | 0/1 | Not started | - |
 | 42. Visual Polish | v1.6 | 0/3 | Not started | - |
 
-**Total project:** 113 plans across 39 phases (7 milestones shipped) + v1.6 in progress
+**Total project:** 115 plans across 41 phases (7 milestones shipped) + v1.6 in progress
 
 ---
-*Last updated: 2026-02-25 — v1.6 Production Polish roadmap created*
+*Last updated: 2026-02-25 — Phase 40 Production Auth complete*
