@@ -153,12 +153,12 @@ Plans:
   3. Every button, card, and link shows a consistent hover/active state matching the olive design language
   4. Content areas that previously flashed or popped in now display loading skeletons during data fetch
   5. User actions (save, delete, errors) produce visible toast notifications with appropriate messaging
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 42-01: Audit and fix remaining olive theme gaps across all components
-- [ ] 42-02: Add page/route transitions and loading skeletons for content areas
-- [ ] 42-03: Implement consistent hover/active states, toast notifications, and micro-interactions
+- [ ] 42-01-PLAN.md — Audit and fix remaining olive theme gaps (chat-panel bg-white, guide-node blue, semantic score colors)
+- [ ] 42-02-PLAN.md — Add step transitions (150ms fade-in) and loading skeletons (static gray blocks for dashboard and chat)
+- [ ] 42-03-PLAN.md — Implement hover/active micro-interactions, comprehensive toast notifications, and btn-lift utility
 
 ## Progress
 
