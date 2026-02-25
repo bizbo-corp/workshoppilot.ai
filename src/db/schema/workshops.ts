@@ -39,6 +39,8 @@ export const workshops = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
     deletedAt: timestamp('deleted_at', { mode: 'date', precision: 3 }),
+    // Credit tracking (v1.8) — marks when a credit was consumed for this workshop
+    creditConsumedAt: timestamp('credit_consumed_at', { mode: 'date', precision: 3 }),
   },
   (table) => ({
     clerkUserIdIdx: index('workshops_clerk_user_id_idx').on(table.clerkUserId),

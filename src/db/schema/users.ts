@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, index, integer, boolean } from 'drizzle-orm/pg-core';
 import { createPrefixedId } from '@/lib/ids';
 
 export const users = pgTable(
@@ -24,9 +24,15 @@ export const users = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
+    // Billing and onboarding columns (v1.8)
+    creditBalance: integer('credit_balance').notNull().default(0),
+    onboardingComplete: boolean('onboarding_complete').notNull().default(false),
+    stripeCustomerId: text('stripe_customer_id'),
+    planTier: text('plan_tier').notNull().default('free'),
   },
   (table) => ({
     clerkUserIdIdx: index('users_clerk_user_id_idx').on(table.clerkUserId),
     emailIdx: index('users_email_idx').on(table.email),
+    stripeCustomerIdIdx: index('users_stripe_customer_id_idx').on(table.stripeCustomerId),
   })
 );
