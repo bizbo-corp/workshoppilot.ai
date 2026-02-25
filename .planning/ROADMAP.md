@@ -270,7 +270,7 @@ Plans:
 | 36-39 | v1.5 | 9/9 | Complete | 2026-02-19 |
 | 40-42 | v1.6 | 5/5 | Complete | 2026-02-25 |
 | 43-46 | v1.7 | 7/7 | Complete | 2026-02-25 |
-| 47. Database Foundation | 2/2 | Complete   | 2026-02-25 | - |
+| 47. Database Foundation | 2/2 | Complete    | 2026-02-25 | - |
 | 48. Stripe Infrastructure | v1.8 | 0/TBD | Not started | - |
 | 49. Payment API Layer | v1.8 | 0/TBD | Not started | - |
 | 50. Credit Actions and Server-Side Enforcement | v1.8 | 0/TBD | Not started | - |
