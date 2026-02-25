@@ -2,7 +2,7 @@
 
 ## What This Is
 
-An AI-powered digital facilitator that guides anyone from a vague idea through a structured 10-step design thinking process, producing validated product specs. The AI isn't a sidebar assistant; it's the principal guide — leading users through conversational prompts, questioning, synthesizing, and generating structured outputs at each stage. Features a split-screen layout with interactive canvas: structured whiteboards for stakeholder rings (Step 2), empathy map zones (Step 4), and journey map swimlanes (Step 6), with AI suggest-then-confirm placement. Includes EzyDraw — an in-app drawing tool with pencil, shapes, UI kit, speech bubbles, and emoji — powering visual mind maps (Step 8a), Crazy 8s sketch grids (Step 8b), and AI-generated concept cards with SWOT analysis and feasibility ratings (Step 9).
+An AI-powered digital facilitator that guides anyone from a vague idea through a structured 10-step design thinking process, producing validated, AI-coder-ready product specs. The AI isn't a sidebar assistant; it's the principal guide — leading users through conversational prompts, questioning, synthesizing, and generating structured outputs at each stage. Features a split-screen layout with interactive canvas: structured whiteboards for stakeholder rings (Step 2), empathy map zones (Step 4), and journey map swimlanes (Step 6), with AI suggest-then-confirm placement. Includes EzyDraw — an in-app drawing tool with pencil, shapes, UI kit, speech bubbles, and emoji — powering visual mind maps (Step 8a), Crazy 8s sketch grids (Step 8b), and AI-generated concept cards with SWOT analysis and feasibility ratings (Step 9). On workshop completion, Gemini generates a PRD and Tech Specs from all 10 steps of workshop data, downloadable as Markdown and JSON from a dedicated outputs page.
 
 ## Core Value
 
@@ -65,6 +65,10 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - ✓ Consistent hover/active states: card lifts, btn-lift utility, olive sidebar hovers — v1.6
 - ✓ Toast notifications for all user actions (rename, delete, extract, appearance, errors) with olive Sonner theming — v1.6
 - ✓ Micro-interactions on cards, buttons, sidebar elements with 150ms transitions — v1.6
+- ✓ Workshop completion flow: Complete Workshop button with AI-guided review, server-side validation, confetti + toast — v1.7
+- ✓ AI deliverable generation: Gemini generates PRD + Tech Specs from all 10 steps, stored as Markdown + JSON, parallel generation with caching — v1.7
+- ✓ Outputs page at `/workshop/[id]/outputs` with deliverable cards, detail view, ReactMarkdown rendering, copy-to-clipboard, `.md`/`.json` download — v1.7
+- ✓ Dashboard routing: completed workshops → outputs page, in-progress → resume step position — v1.7
 
 ### Active
 
@@ -77,7 +81,6 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - [ ] Timer function for time-boxed exercises
 - [ ] Responsive tablet support
 - [ ] Video explanations per step
-- [ ] Build Pack export (PRDs, user stories, tech specs for AI coders) — actual generation for Step 10 deliverables
 
 #### Future — FFP (Full Platform)
 - [ ] Dot voting for idea selection
@@ -180,7 +183,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | Olive theme token substitution pattern | bg-white→bg-card, bg-gray→bg-background, text-gray→text-foreground; consistent across 30+ components | ✓ Good — zero hardcoded colors remaining |
 | Landing page as server components | Standalone sections composed in page.tsx; keeps client surface minimal | ✓ Good — fast initial load |
 | Pricing page hidden from nav | Accessible via direct URL only; informational with no payment processing | ✓ Good — sets expectations without cluttering UX |
-| Step 10 deliverable cards always disabled | Enabling requires only disabled=false + onDownload; no layout restructuring | ✓ Good — extensible for future Build Pack export |
+| Step 10 deliverable cards always disabled | Enabling requires only disabled=false + onDownload; no layout restructuring | ✓ Good — extensible for future Build Pack export (shipped v1.7) |
 | Direct SynthesisSummaryView import in StepContainer | Bypasses orphaned OutputAccordion/OutputPanel chain from Phase 31 retirement | ✓ Good — clean render path fix |
 | Ghost sign-in button (no background/border) | Blends with header, single modal handles sign-in + sign-up via Clerk internal toggle | ✓ Good — clean, minimal auth entry point |
 | MutationObserver for Clerk errors → sonner toasts | Clerk renders errors inline; observer detects and fires toast, hides original with sr-only | ✓ Good — consistent error UX |
@@ -191,30 +194,23 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | Sonner CSS override for olive toasts | [data-sonner-toast][data-type] attribute selectors override richColors with olive palette | ✓ Good — brand-consistent feedback |
 | .btn-lift CSS utility | translateY(-1px) hover + box-shadow, reset on active — applied via className | ✓ Good — tactile button feel |
 | NEXT_REDIRECT guard for error toasts | Check error.digest?.startsWith('NEXT_REDIRECT') and rethrow; real errors get toast.error | ✓ Good — clean server action error handling |
-
-## Current Milestone: v1.7 Build Pack
-
-**Goal:** Make the workshop produce tangible, AI-coder-ready output — PRD, Tech Specs, and a workshop presentation — so users walk away with something they can act on.
-
-**Target features:**
-- Step 10 completion flow with AI-guided final review → workshop marked "complete"
-- Outputs page with deliverable cards (PRD, Tech Specs, Workshop Presentation)
-- AI-generated PRD and Tech Specs from 10 steps of workshop data (Markdown + JSON)
-- On-demand server-side PDF/PPT workshop presentation (summary per step)
-- Dashboard routing: completed workshops → outputs page
-- Detail views with rendered markdown, copy-to-clipboard, download
+| completeWorkshop checks steps.length >= 10 AND all completedAt non-null | Prevents completing with partial steps | ✓ Good — server-side guard |
+| Parallel Gemini generation via Promise.allSettled | Markdown + JSON calls run concurrently, halving latency | ✓ Good — PRD and Tech Specs each get parallel md+json |
+| Cache lookup uses LIKE 'PRD:%' / 'Tech Specs:%' title prefix | Finds existing rows without exact title match | ✓ Good — idempotent regeneration |
+| maxDuration=60 for generation routes | Gemini needs more time for 2000-3000 word documents | ✓ Good — no timeouts in production |
+| DeliverableDetailView replaces card grid in-place (not modal) | Better UX for long-content reading | ✓ Good — clean back navigation |
+| Format pills as inline styled spans (not Badge) | badge.tsx does not exist in project's shadcn setup | ✓ Good — no missing component errors |
 
 ## Current State
 
-**Shipped:** v1.6 Production Polish (2026-02-25)
+**Shipped:** v1.7 Build Pack (2026-02-25)
 **Live at:** https://workshoppilot.ai
-**Codebase:** ~46,000 lines of TypeScript across ~264 files
+**Codebase:** ~47,900 lines of TypeScript across ~270+ files
 **Tech stack:** Clerk + Neon + Gemini + Drizzle + AI SDK 6 + ReactFlow + Konva.js + Zustand + Playwright + Vercel — all validated in production
-**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) + v1.2 (whiteboard, 2 days) + v1.3 (visual ideation, 1 day) + v1.4 (polish, 1 day) + v1.5 (launch ready, 2 days) + v1.6 (production polish, 1 day) = 14 days total
+**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) + v1.2 (whiteboard, 2 days) + v1.3 (visual ideation, 1 day) + v1.4 (polish, 1 day) + v1.5 (launch ready, 2 days) + v1.6 (production polish, 1 day) + v1.7 (build pack, <1 day) = 15 days total
 
 **Known issues / tech debt:**
 - Next.js middleware → proxy convention migration (non-blocking)
-- Step 10 Build Pack deliverable cards are shell only (no actual document generation yet)
 - CRON_SECRET needs to be configured in Vercel dashboard for production cron warming
 - Mobile grid optimization deferred (may need tablet-first approach)
 - E2E back-navigation testing deferred (forward-only tested)
@@ -223,6 +219,8 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - First-run onboarding tour deferred from v1.6 (ONBD-01/02/03 — Phase 41 not started)
 - TODO in sign-up-modal.tsx: configure first name/last name as required in Clerk Dashboard
 - ClerkProvider uses hardcoded #6b7a2f (Clerk API requires hex) — slightly different from app olive tokens
+- PDF/PPT export deferred to future milestone — v1.7 delivers Markdown + JSON only
+- No re-generation after step updates — first version generates once on completion
 
 ---
-*Last updated: 2026-02-25 after v1.6 milestone shipped*
+*Last updated: 2026-02-25 after v1.7 milestone shipped*

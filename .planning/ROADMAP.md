@@ -10,7 +10,7 @@
 - ✅ **v1.4 Personal Workshop Polish** — Phases 30-35 (shipped 2026-02-13)
 - ✅ **v1.5 Launch Ready** — Phases 36-39 (shipped 2026-02-19)
 - ✅ **v1.6 Production Polish** — Phases 40-42 (shipped 2026-02-25)
-- 🚧 **v1.7 Build Pack** — Phases 43-46 (in progress)
+- ✅ **v1.7 Build Pack** — Phases 43-46 (shipped 2026-02-25)
 
 ## Phases
 
@@ -121,70 +121,17 @@ See `milestones/v1.6-ROADMAP.md` for full details.
 
 </details>
 
-### 🚧 v1.7 Build Pack (In Progress)
+<details>
+<summary>✅ v1.7 Build Pack (Phases 43-46) — SHIPPED 2026-02-25</summary>
 
-**Milestone Goal:** Make the workshop produce tangible, AI-coder-ready output. Users complete Step 10, trigger AI generation of PRD and Tech Specs from their 10 steps of workshop data, and download the deliverables from a dedicated outputs page.
+- [x] Phase 43: Workshop Completion (2/2 plans)
+- [x] Phase 44: AI Deliverable Generation (2/2 plans)
+- [x] Phase 45: Outputs Page (2/2 plans)
+- [x] Phase 46: Dashboard Routing (1/1 plan)
 
-- [x] **Phase 43: Workshop Completion** - AI-guided final review in Step 10 + workshop marked complete in DB
-- [x] **Phase 44: AI Deliverable Generation** - Gemini generates PRD and Tech Specs (Markdown + JSON) from all 10 step artifacts (completed 2026-02-25)
-- [x] **Phase 45: Outputs Page** - Dedicated `/workshop/[id]/outputs` page with deliverable cards, detail view, copy, and download (2 plans) (completed 2026-02-25)
-- [x] **Phase 46: Dashboard Routing** - Completed workshops route to outputs page; in-progress continue to resume position (completed 2026-02-25)
+See `milestones/v1.7-ROADMAP.md` for full details.
 
-## Phase Details
-
-### Phase 43: Workshop Completion
-**Goal**: Users can complete a workshop in Step 10 with AI-guided review, and that completion status persists in the database as the trigger for deliverable generation.
-**Depends on**: Phase 42 (v1.6 — Step 10 shell with disabled deliverable cards already exists)
-**Requirements**: COMP-01, COMP-02, COMP-03
-**Success Criteria** (what must be TRUE):
-  1. User reaches Step 10 and sees an AI-facilitated summary of key decisions from all 10 steps
-  2. User can click a "Complete Workshop" action that visibly marks the workshop as done
-  3. Completed workshop status persists in the database — page refresh shows the workshop remains complete
-  4. The Step 10 UI reflects completed state (deliverable cards become active, no longer "Coming Soon")
-**Plans**: 2 plans
-Plans:
-- [x] 43-01-PLAN.md — Backend: completeWorkshop server action + API endpoint
-- [x] 43-02-PLAN.md — Frontend: Complete Workshop button + deliverable card activation
-
-### Phase 44: AI Deliverable Generation
-**Goal**: On workshop completion, Gemini generates a PRD and Tech Specs document from the full structured workshop data, stored as Markdown and JSON in the database.
-**Depends on**: Phase 43 (completion status must exist before generation triggers)
-**Requirements**: GEN-01, GEN-02, GEN-03, GEN-04
-**Success Criteria** (what must be TRUE):
-  1. After completing a workshop, a PRD document exists in the database containing sections derived from all 10 steps
-  2. After completing a workshop, a Tech Specs document exists containing technical requirements derived from the workshop data
-  3. Each deliverable is stored as both Markdown text and structured JSON, retrievable from the outputs page
-  4. Generation uses the full context of all 10 step artifacts — outputs reference specific decisions from the workshop, not generic boilerplate
-**Plans**: 2 plans
-Plans:
-- [ ] 44-01-PLAN.md — Backend: expand artifact loading to all 10 steps, create PRD + Tech Specs prompts, build generation API routes with dual-format storage
-- [ ] 44-02-PLAN.md — Frontend: wire deliverable cards to generation APIs with loading states, success indicators, and error handling
-
-### Phase 45: Outputs Page
-**Goal**: Users can navigate to `/workshop/[id]/outputs` to see their generated deliverables, read them in full, copy the content, and download as `.md` or JSON.
-**Depends on**: Phase 44 (generated deliverables must exist to display)
-**Requirements**: OUT-01, OUT-02, OUT-03, OUT-04, OUT-05, OUT-06, OUT-07
-**Success Criteria** (what must be TRUE):
-  1. User can navigate to `/workshop/[id]/outputs` and see cards for each generated deliverable (PRD, Tech Specs)
-  2. User can click a deliverable card to open a detail view with the full rendered Markdown content
-  3. User can copy the entire deliverable content to clipboard with a single click
-  4. User can download the deliverable as a `.md` file and as a `.json` file
-  5. User can navigate back to their workshop from the outputs page to review or revise steps
-**Plans**: 2 plans
-Plans:
-- [ ] 45-01-PLAN.md — Outputs page shell: API route + page with deliverable cards and back link
-- [ ] 45-02-PLAN.md — Detail view with markdown rendering, copy, download, and navigation wiring
-
-### Phase 46: Dashboard Routing
-**Goal**: The dashboard correctly routes users based on workshop status — completed workshops go to the outputs page, in-progress workshops resume at the last active step.
-**Depends on**: Phase 45 (outputs page must exist before routing to it)
-**Requirements**: DASH-01, DASH-02
-**Success Criteria** (what must be TRUE):
-  1. User clicks a completed workshop on the dashboard and lands on `/workshop/[id]/outputs`, not the step view
-  2. User clicks an in-progress workshop and resumes at their last active step, unchanged from existing behavior
-**Plans**: 1 plan
-Plans:
-- [ ] 46-01-PLAN.md — Route completed workshops to outputs page, preserve in-progress resume
+</details>
 
 ## Progress
 
@@ -198,12 +145,9 @@ Plans:
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
 | 36-39 | v1.5 | 9/9 | Complete | 2026-02-19 |
 | 40-42 | v1.6 | 5/5 | Complete | 2026-02-25 |
-| 43. Workshop Completion | v1.7 | Complete    | 2026-02-25 | 2026-02-25 |
-| 44. AI Deliverable Generation | 2/2 | Complete    | 2026-02-25 | - |
-| 45. Outputs Page | 2/2 | Complete    | 2026-02-25 | - |
-| 46. Dashboard Routing | 1/1 | Complete    | 2026-02-25 | - |
+| 43-46 | v1.7 | 7/7 | Complete | 2026-02-25 |
 
-**Total project:** 120 plans across 43 phases (8 milestones shipped) + 3 phases planned for v1.7
+**Total project:** 125 plans across 46 phases (9 milestones shipped)
 
 ---
-*Last updated: 2026-02-25 — Phase 43 complete (2/2 plans)*
+*Last updated: 2026-02-25 — v1.7 Build Pack shipped*

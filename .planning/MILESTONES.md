@@ -198,12 +198,25 @@
 
 ---
 
-## v1.6 Production Polish (Shipped: 2026-02-25)
+## v1.7 Build Pack (Shipped: 2026-02-25)
 
-**Phases completed:** 38 phases, 109 plans, 43 tasks
+**Delivered:** Made the workshop produce tangible, AI-coder-ready output. Users complete Step 10, trigger Gemini generation of PRD and Tech Specs from all 10 steps of structured workshop data, and access deliverables from a dedicated outputs page with markdown rendering, copy-to-clipboard, and download.
+
+**Phases completed:** 43-46 (7 plans total)
 
 **Key accomplishments:**
-- (none recorded)
+- Workshop completion flow: "Complete Workshop" button in Step 10 with confetti + toast, server-side validation of all 10 steps, deliverable cards activated on completion
+- AI deliverable generation: Gemini generates PRD and Tech Specs from all 10 workshop steps, stored as Markdown + JSON with parallel generation and caching
+- Outputs page at `/workshop/[id]/outputs` with deliverable cards, DeliverableDetailView with ReactMarkdown rendering, copy-to-clipboard, `.md`/`.json` download
+- Dashboard routing: completed workshops route to outputs page, in-progress workshops resume at last active step
+
+**Stats:**
+- 20 files changed (1,991 insertions, 126 deletions)
+- ~47,900 lines of TypeScript (total codebase)
+- 4 phases, 7 plans, 28 tasks
+- ~2 hours (2026-02-25)
+
+**Git range:** `feat(43-01)` → `feat(46-01)`
 
 ---
 
