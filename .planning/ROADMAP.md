@@ -124,11 +124,11 @@ See `milestones/v1.5-ROADMAP.md` for full details.
   2. User can create an account with email/password on workshoppilot.ai
   3. User can sign in with Google OAuth (one-click) on the production site
   4. Clerk environment variables and allowed origins are correctly configured for the workshoppilot.ai domain
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 40-01: Diagnose and fix production sign-in button visibility and Clerk domain configuration
-- [ ] 40-02: Add Google OAuth provider to Clerk and wire into sign-in/sign-up flows
+- [ ] 40-01-PLAN.md — Fix sign-in button visibility, restyle as secondary, configure Clerk olive appearance, update auth modals
+- [ ] 40-02-PLAN.md — Add Google OAuth + Apple sign-in social providers, style social buttons, verify end-to-end on production
 
 ### Phase 41: User Onboarding
 **Goal**: New users understand the app immediately without needing external documentation
