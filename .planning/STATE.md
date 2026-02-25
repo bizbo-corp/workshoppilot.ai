@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.6 Production Polish
+**Current focus:** v1.6 Production Polish — Phase 40: Production Auth
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-25 — Milestone v1.6 started
+Phase: 40 of 42 (Production Auth)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-25 — v1.6 roadmap created, phase 40 is next
 
-Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
+Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (v1.6)
 
 ## Performance Metrics
 
@@ -35,7 +35,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
 
 ### Decisions
 
-All decisions archived. See PROJECT.md Key Decisions table for full history.
+All prior decisions archived. See PROJECT.md Key Decisions table for full history.
 
 ### Pending Todos
 
@@ -51,10 +51,14 @@ None.
 - isPublicRoute in proxy.ts defined but unused
 - Semantic status colors (green/amber/red) in synthesis-summary-view outside olive token system
 
+### Blockers/Concerns
+
+- AUTH CRITICAL: Production sign-in is broken — Phase 40 must be completed before any real users can access the app.
+
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Defining v1.6 requirements
+Stopped at: Roadmap created for v1.6 — ready to plan Phase 40
 Resume file: None
 
-**Next action:** Define requirements → create roadmap
+**Next action:** `/gsd:plan-phase 40`

@@ -64,25 +64,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| AUTH-04 | — | Pending |
-| ONBD-01 | — | Pending |
-| ONBD-02 | — | Pending |
-| ONBD-03 | — | Pending |
-| VISL-01 | — | Pending |
-| VISL-02 | — | Pending |
-| VISL-03 | — | Pending |
-| VISL-04 | — | Pending |
-| VISL-05 | — | Pending |
-| VISL-06 | — | Pending |
+| AUTH-01 | Phase 40 | Pending |
+| AUTH-02 | Phase 40 | Pending |
+| AUTH-03 | Phase 40 | Pending |
+| AUTH-04 | Phase 40 | Pending |
+| ONBD-01 | Phase 41 | Pending |
+| ONBD-02 | Phase 41 | Pending |
+| ONBD-03 | Phase 41 | Pending |
+| VISL-01 | Phase 42 | Pending |
+| VISL-02 | Phase 42 | Pending |
+| VISL-03 | Phase 42 | Pending |
+| VISL-04 | Phase 42 | Pending |
+| VISL-05 | Phase 42 | Pending |
+| VISL-06 | Phase 42 | Pending |
 
 **Coverage:**
 - v1 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13 ⚠️
+- Mapped to phases: 13
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 after initial definition*
+*Last updated: 2026-02-25 — traceability complete after roadmap creation*

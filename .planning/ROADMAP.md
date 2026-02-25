@@ -9,6 +9,7 @@
 - ✅ **v1.3 EzyDraw & Visual Ideation** — Phases 25-29 (shipped 2026-02-12)
 - ✅ **v1.4 Personal Workshop Polish** — Phases 30-35 (shipped 2026-02-13)
 - ✅ **v1.5 Launch Ready** — Phases 36-39 (shipped 2026-02-19)
+- 🚧 **v1.6 Production Polish** — Phases 40-42 (in progress)
 
 ## Phases
 
@@ -108,6 +109,57 @@ See `milestones/v1.5-ROADMAP.md` for full details.
 
 </details>
 
+### 🚧 v1.6 Production Polish (In Progress)
+
+**Milestone Goal:** Make WorkshopPilot.ai production-ready with working auth, Google OAuth, first-run onboarding, and visual polish across all surfaces.
+
+## Phase Details
+
+### Phase 40: Production Auth
+**Goal**: Users can sign in and sign up on workshoppilot.ai without friction
+**Depends on**: Phase 39 (prior milestone complete)
+**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04
+**Success Criteria** (what must be TRUE):
+  1. Sign-in button is visible on the production site homepage and landing page
+  2. User can create an account with email/password on workshoppilot.ai
+  3. User can sign in with Google OAuth (one-click) on the production site
+  4. Clerk environment variables and allowed origins are correctly configured for the workshoppilot.ai domain
+**Plans**: TBD
+
+Plans:
+- [ ] 40-01: Diagnose and fix production sign-in button visibility and Clerk domain configuration
+- [ ] 40-02: Add Google OAuth provider to Clerk and wire into sign-in/sign-up flows
+
+### Phase 41: User Onboarding
+**Goal**: New users understand the app immediately without needing external documentation
+**Depends on**: Phase 40
+**Requirements**: ONBD-01, ONBD-02, ONBD-03
+**Success Criteria** (what must be TRUE):
+  1. First-time user sees a guided welcome tour highlighting chat, canvas, steps, and navigation
+  2. Tour can be dismissed mid-flow and does not reappear on subsequent visits or sessions
+  3. Tour only references UI elements present in the current step context (no phantom references)
+**Plans**: TBD
+
+Plans:
+- [ ] 41-01: Build welcome tour component with step-aware highlights and persistent dismissal state
+
+### Phase 42: Visual Polish
+**Goal**: Every surface of the app looks intentional, consistent, and responsive to user interaction
+**Depends on**: Phase 40
+**Requirements**: VISL-01, VISL-02, VISL-03, VISL-04, VISL-05, VISL-06
+**Success Criteria** (what must be TRUE):
+  1. No component deviates from the olive token system — zero hardcoded gray/blue/white classes visible
+  2. Navigating between workshop steps transitions smoothly without jarring page snaps
+  3. Every button, card, and link shows a consistent hover/active state matching the olive design language
+  4. Content areas that previously flashed or popped in now display loading skeletons during data fetch
+  5. User actions (save, delete, errors) produce visible toast notifications with appropriate messaging
+**Plans**: TBD
+
+Plans:
+- [ ] 42-01: Audit and fix remaining olive theme gaps across all components
+- [ ] 42-02: Add page/route transitions and loading skeletons for content areas
+- [ ] 42-03: Implement consistent hover/active states, toast notifications, and micro-interactions
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -119,8 +171,11 @@ See `milestones/v1.5-ROADMAP.md` for full details.
 | 25-29 | v1.3 | 23/23 | Complete | 2026-02-12 |
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
 | 36-39 | v1.5 | 9/9 | Complete | 2026-02-19 |
+| 40. Production Auth | v1.6 | 0/2 | Not started | - |
+| 41. User Onboarding | v1.6 | 0/1 | Not started | - |
+| 42. Visual Polish | v1.6 | 0/3 | Not started | - |
 
-**Total project:** 113 plans across 39 phases, 7 milestones shipped
+**Total project:** 113 plans across 39 phases (7 milestones shipped) + v1.6 in progress
 
 ---
-*Last updated: 2026-02-19 — v1.5 Launch Ready milestone complete*
+*Last updated: 2026-02-25 — v1.6 Production Polish roadmap created*
