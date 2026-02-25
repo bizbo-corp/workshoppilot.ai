@@ -74,7 +74,7 @@ export interface GuideNodeData extends CanvasGuideData {
 function AdminDragHandle({ guide }: { guide: GuideNodeData }) {
   if (!guide.isAdminEditing) return null;
   return (
-    <div className="guide-drag-handle absolute top-0 left-0 right-0 z-10 flex items-center gap-1.5 px-2 py-1.5 rounded-t-sm bg-blue-500/90 text-white cursor-grab active:cursor-grabbing select-none">
+    <div className="guide-drag-handle absolute top-0 left-0 right-0 z-10 flex items-center gap-1.5 px-2 py-1.5 rounded-t-sm bg-olive-600/90 text-white cursor-grab active:cursor-grabbing select-none">
       <GripVertical className="h-3.5 w-3.5 shrink-0 opacity-70" />
       <span className="text-xs font-medium truncate flex-1">
         {guide.title || VARIANT_LABELS[guide.variant] || 'Guide'}
@@ -85,7 +85,7 @@ function AdminDragHandle({ guide }: { guide: GuideNodeData }) {
             e.stopPropagation();
             guide.onEdit!(guide, { x: e.clientX, y: e.clientY });
           }}
-          className="nodrag rounded p-0.5 hover:bg-white/20 transition-colors"
+          className="nodrag rounded p-0.5 hover:bg-background/20 transition-colors"
           aria-label="Edit guide"
         >
           <Pencil className="h-3 w-3" />
@@ -235,15 +235,15 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
           guide.isExiting
             ? 'animate-out fade-out-0 zoom-out-95 duration-200 fill-mode-forwards'
             : 'animate-in fade-in-0 zoom-in-95 duration-300',
-          guide.isAdminEditing && 'ring-1 ring-blue-300',
-          guide.isAdmin && selected && 'ring-2 ring-blue-500 ring-offset-1',
+          guide.isAdminEditing && 'ring-1 ring-olive-400',
+          guide.isAdmin && selected && 'ring-2 ring-olive-600 ring-offset-1',
         )}
       >
         <NodeResizer
           isVisible={!!selected && !!guide.isAdminEditing}
           minWidth={mins.minWidth}
           minHeight={mins.minHeight}
-          handleClassName="!bg-blue-500"
+          handleClassName="!bg-olive-600"
           onResize={(_event, params) => {
             guide.onGuideResize?.(guide.id, params.width, params.height);
           }}
@@ -281,8 +281,8 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
         guide.variant === 'hint' && 'rounded-lg px-4 py-2.5 backdrop-blur-sm bg-black/50 text-white dark:bg-white/10 dark:text-white/90',
         isImage && 'p-0',
         // Admin selection indicator
-        guide.isAdminEditing && 'ring-1 ring-blue-300',
-        guide.isAdmin && selected && 'ring-2 ring-blue-500 ring-offset-1',
+        guide.isAdminEditing && 'ring-1 ring-olive-400',
+        guide.isAdmin && selected && 'ring-2 ring-olive-600 ring-offset-1',
       )}
       style={{
         // Always apply variant colors
@@ -301,7 +301,7 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
         minWidth={mins.minWidth}
         minHeight={mins.minHeight}
         keepAspectRatio={isImage}
-        handleClassName="!bg-blue-500"
+        handleClassName="!bg-olive-600"
         onResize={(_event, params) => {
           guide.onGuideResize?.(guide.id, params.width, params.height);
         }}
@@ -318,7 +318,7 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
           className={cn(
             'nodrag absolute -top-2 -right-2 rounded-full p-0.5 z-10',
             'bg-black/60 text-white hover:bg-black/80',
-            'dark:bg-white/20 dark:hover:bg-white/40',
+            'dark:bg-background/20 dark:hover:bg-background/40',
             'transition-opacity duration-150',
             'opacity-0 group-hover/guide:opacity-100',
             '[@media(hover:none)]:opacity-100',

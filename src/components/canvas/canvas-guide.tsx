@@ -103,7 +103,7 @@ export function CanvasGuide({ guide, onDismiss, isExiting, isAdminEditing, onEdi
           onClick={(e) => onEdit(guide, { x: e.clientX, y: e.clientY })}
           className={cn(
             'absolute -top-2 -left-2 rounded-full p-1',
-            'bg-blue-500 text-white hover:bg-blue-600',
+            'bg-olive-600 text-white hover:bg-olive-700',
             'shadow-md transition-transform hover:scale-110',
             'z-10',
           )}
@@ -120,7 +120,7 @@ export function CanvasGuide({ guide, onDismiss, isExiting, isAdminEditing, onEdi
           className={cn(
             'absolute -top-2 -right-2 rounded-full p-0.5',
             'bg-black/60 text-white hover:bg-black/80',
-            'dark:bg-white/20 dark:hover:bg-white/40',
+            'dark:bg-background/20 dark:hover:bg-background/40',
             'transition-opacity duration-150',
             'opacity-0 group-hover/guide:opacity-100',
             '[@media(hover:none)]:opacity-100',
