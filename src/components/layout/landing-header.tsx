@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
-import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut, UserButton, ClerkLoading } from '@clerk/nextjs';
 import Logo from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { SignInModal } from '@/components/auth/sign-in-modal';
@@ -96,6 +96,16 @@ export function LandingHeader() {
 
             {/* Desktop auth controls */}
             <div className="hidden items-center gap-2 md:flex">
+              <ClerkLoading>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowSignIn(true)}
+                >
+                  Sign in
+                </Button>
+              </ClerkLoading>
               <SignedOut>
                 <Button
                   variant="ghost"
@@ -158,6 +168,18 @@ export function LandingHeader() {
 
                 {/* Auth controls at bottom */}
                 <div className="mt-auto border-t border-border pt-4">
+                  <ClerkLoading>
+                    <Button
+                      variant="ghost"
+                      className="w-full text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setSheetOpen(false);
+                        setShowSignIn(true);
+                      }}
+                    >
+                      Sign in
+                    </Button>
+                  </ClerkLoading>
                   <SignedOut>
                     <Button
                       variant="ghost"
