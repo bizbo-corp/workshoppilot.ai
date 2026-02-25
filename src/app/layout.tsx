@@ -64,6 +64,9 @@ export default function RootLayout({
         signInFallbackRedirectUrl="/dashboard"
         signUpFallbackRedirectUrl="/dashboard"
         appearance={{
+          layout: {
+            socialButtonsVariant: 'blockButton',
+          },
           variables: {
             colorPrimary: '#6b7a2f',
             colorBackground: 'hsl(var(--card))',
