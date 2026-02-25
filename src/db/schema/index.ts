@@ -10,4 +10,5 @@ export * from './chat-messages';
 export * from './canvas-guides';
 export * from './step-canvas-settings';
 export * from './ai-usage-events';
+export * from './credit-transactions';
 export * from './relations';

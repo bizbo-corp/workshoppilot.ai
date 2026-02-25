@@ -8,6 +8,7 @@ import { sessions } from './sessions';
 import { buildPacks } from './build-packs';
 import { chatMessages } from './chat-messages';
 import { aiUsageEvents } from './ai-usage-events';
+import { creditTransactions } from './credit-transactions';
 
 /**
  * Users relations
@@ -18,6 +19,8 @@ import { aiUsageEvents } from './ai-usage-events';
 export const usersRelations = relations(users, ({ many }) => ({
   // Logical relation: workshops.clerkUserId matches users.clerkUserId
   workshops: many(workshops),
+  // Logical relation: creditTransactions.clerkUserId matches users.clerkUserId
+  creditTransactions: many(creditTransactions),
 }));
 
 /**
@@ -30,6 +33,7 @@ export const workshopsRelations = relations(workshops, ({ many }) => ({
   sessions: many(sessions),
   buildPacks: many(buildPacks),
   aiUsageEvents: many(aiUsageEvents),
+  creditTransactions: many(creditTransactions),
 }));
 
 /**
@@ -122,6 +126,16 @@ export const stepSummariesRelations = relations(stepSummaries, ({ one }) => ({
 export const aiUsageEventsRelations = relations(aiUsageEvents, ({ one }) => ({
   workshop: one(workshops, {
     fields: [aiUsageEvents.workshopId],
+    references: [workshops.id],
+  }),
+}));
+
+/**
+ * Credit Transactions relations
+ */
+export const creditTransactionsRelations = relations(creditTransactions, ({ one }) => ({
+  workshop: one(workshops, {
+    fields: [creditTransactions.workshopId],
     references: [workshops.id],
   }),
 }));
