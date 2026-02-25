@@ -206,11 +206,11 @@ Plans:
   3. Calling `advanceToNextStep()` at Step 6 with one credit deducts exactly one credit and sets `workshop.creditConsumedAt` — two concurrent calls with one credit result in one success and one `{ paywallRequired: true }`
   4. Direct URL navigation to `/workshop/[id]/step/7` for a workshop without `creditConsumedAt` set shows a paywall state — the server component refuses to render step content
   5. Workshops created before the paywall launch (before `creditConsumedAt` column existed) are treated as grandfathered: `creditConsumedAt IS NULL AND workshop.completedAt > [cutoff]` skips the credit check
-**Plans**: TBD
+**Plans**: 2
 
 Plans:
-- [ ] 50-01: `billing-actions.ts` with atomic `consumeCredit()`, `getCredits()`, and `markOnboardingComplete()` server actions
-- [ ] 50-02: Modify `advanceToNextStep()` with Step 6→7 credit gate and grandfathering logic; add server-side credit check to Step 7-10 Server Component
+- [ ] 50-01: `billing-actions.ts` with atomic `consumeCredit()`, `getCredits()`, and `markOnboardingComplete()` server actions (Wave 1)
+- [ ] 50-02: Modify `advanceToNextStep()` with Step 6→7 credit gate and grandfathering logic; add server-side credit check to Step 7-10 Server Component; create PaywallOverlay component (Wave 2, depends on 50-01)
 
 ### Phase 51: Paywall UI
 **Goal**: Users understand the credit model before reaching Step 7, see a compelling upgrade prompt when they hit the paywall, can purchase and return directly to their workshop, and always know their current credit balance
