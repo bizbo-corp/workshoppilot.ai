@@ -443,20 +443,6 @@ export const conceptArtifactSchema = z.object({
               .describe('Rationale for user desirability score citing persona pains/gains'),
           })
           .describe('Feasibility assessment with 1-5 numeric scores and evidence-based rationale per dimension'),
-        billboardHero: z
-          .object({
-            headline: z
-              .string()
-              .describe('6-10 word benefit-focused billboard headline'),
-            subheadline: z
-              .string()
-              .describe('1-2 sentence explanation of how it solves persona pain'),
-            cta: z
-              .string()
-              .describe('Verb-driven, specific call to action'),
-          })
-          .optional()
-          .describe('Billboard Hero exercise testing if the concept pitch is clear and compelling'),
       })
     )
     .min(1)
@@ -489,6 +475,20 @@ export const validateArtifactSchema = z.object({
     .min(3)
     .max(10)
     .describe('Structured summary of key outputs from each step of the journey (aim for all 10 steps)'),
+  billboardHero: z
+    .object({
+      headline: z
+        .string()
+        .describe('6-10 word benefit-focused billboard headline synthesizing all concepts into one unified pitch'),
+      subheadline: z
+        .string()
+        .describe('1-2 sentence explanation of the overall value proposition across all concepts'),
+      cta: z
+        .string()
+        .describe('Verb-driven, specific call to action for the overall idea'),
+    })
+    .optional()
+    .describe('Unified Billboard Hero synthesizing all developed concepts into a single compelling pitch for the overall app/idea'),
   confidenceAssessment: z
     .object({
       score: z

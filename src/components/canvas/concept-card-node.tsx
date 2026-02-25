@@ -7,7 +7,6 @@ import {
   Sparkles,
   Target,
   BarChart3,
-  Megaphone,
   ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -25,6 +24,16 @@ export type ConceptCardNodeRendererData = ConceptCardData & {
 };
 
 export type ConceptCardNodeType = Node<ConceptCardNodeRendererData, 'conceptCard'>;
+
+/* ── Reuse persona palette (CSS custom properties from globals.css) ── */
+const SAGE = {
+  bg: 'var(--persona-bg)',
+  border: 'var(--persona-border)',
+  borderSelected: 'var(--persona-border-selected)',
+  headerBg: 'var(--persona-header-bg)',
+  sectionBorder: 'var(--persona-section-border)',
+  avatarBg: 'var(--persona-avatar-bg)',
+};
 
 /**
  * Inline-editable text — uncontrolled with external sync.
@@ -143,7 +152,7 @@ function FeasibilityDimension({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-card-foreground">{label}</span>
+        <span className="text-sm font-medium" style={{ color: 'var(--persona-text-strong)' }}>{label}</span>
         <div className="flex gap-1">
           {[1, 2, 3, 4, 5].map((dotScore) => (
             <button
@@ -163,7 +172,11 @@ function FeasibilityDimension({
       </div>
       <textarea
         ref={rationaleRef}
-        className="nodrag nopan w-full resize-none rounded border border-border bg-transparent px-2 py-1 text-xs text-muted-foreground outline-none focus:border-olive-600 dark:focus:border-olive-400 placeholder:text-olive-500/40"
+        className="nodrag nopan w-full resize-none rounded border bg-transparent px-2 py-1 text-xs outline-none placeholder:text-olive-500/40"
+        style={{
+          borderColor: SAGE.sectionBorder,
+          color: 'var(--persona-text-muted)',
+        }}
         rows={2}
         placeholder="Rationale..."
         defaultValue={rationale}
@@ -177,10 +190,14 @@ export const ConceptCardNode = memo(
   ({ data, id, selected }: NodeProps<ConceptCardNodeType>) => {
     return (
       <div
-        className={cn(
-          'w-[680px] rounded-2xl shadow-xl overflow-hidden border-2 bg-card',
-          selected ? 'border-olive-700 dark:border-olive-400' : 'border-border'
-        )}
+        className="persona-card w-[680px] rounded-2xl shadow-xl overflow-hidden"
+        style={{
+          backgroundColor: SAGE.bg,
+          color: 'var(--persona-text-strong)',
+          borderWidth: 2,
+          borderStyle: 'solid',
+          borderColor: selected ? SAGE.borderSelected : SAGE.border,
+        }}
       >
         <Handle
           type="target"
@@ -188,39 +205,55 @@ export const ConceptCardNode = memo(
           className="!opacity-0 !w-0 !h-0"
         />
 
-        {/* ── 1. Header Band ── */}
-        <div className="bg-olive-800 dark:bg-olive-900 px-6 py-5">
-          <EditableField
-            value={data.conceptName}
-            placeholder="Concept Name"
-            onBlur={(v) => data.onFieldChange?.(id, 'conceptName', v)}
-            className="text-2xl font-bold text-white placeholder:text-white/40 focus:bg-white/15"
-          />
-          <p className="mt-1 text-sm font-medium text-white/75">
-            From: {data.ideaSource || 'Unknown source'}
-          </p>
-        </div>
-
-        {/* ── 2. Sketch Image ── */}
-        {data.sketchImageUrl ? (
-          <div className="flex items-center justify-center bg-neutral-olive-100 dark:bg-neutral-olive-800 border-b border-border">
+        {/* ── 1. Hero: Sketch Image with gradient overlay + title ── */}
+        <div className="relative w-full overflow-hidden" style={{ height: 480 }}>
+          {/* Background: image or solid color */}
+          {data.sketchImageUrl ? (
             <img
               src={data.sketchImageUrl}
               alt="Concept sketch"
-              className="max-h-[200px] w-full object-contain"
+              className="absolute inset-0 h-full w-full object-cover"
             />
-          </div>
-        ) : (
-          <div className="flex items-center justify-center py-8 text-muted-foreground/30 border-b border-border">
-            <ImageIcon className="h-8 w-8" />
-          </div>
-        )}
+          ) : (
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center gap-3"
+              style={{ backgroundColor: SAGE.headerBg }}
+            >
+              <ImageIcon className="h-12 w-12 text-white/30" />
+              <span className="text-sm font-medium text-white/40">Awaiting sketch...</span>
+            </div>
+          )}
 
-        {/* ── 3. Elevator Pitch ── */}
-        <div className="px-6 py-5 border-b border-border">
+          {/* Gradient overlay for text readability */}
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3"
+            style={{
+              background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
+            }}
+          />
+
+          {/* Concept name + source overlay — positioned at bottom-left */}
+          <div className="pointer-events-auto absolute inset-x-0 bottom-0 px-6 pb-5">
+            <EditableField
+              value={data.conceptName}
+              placeholder="Concept Name"
+              onBlur={(v) => data.onFieldChange?.(id, 'conceptName', v)}
+              className="text-2xl font-bold text-white placeholder:text-white/40 drop-shadow-md focus:bg-white/10"
+            />
+            <p className="mt-1 text-sm font-medium text-white/80 drop-shadow-md">
+              From: {data.ideaSource || 'Unknown source'}
+            </p>
+          </div>
+        </div>
+
+        {/* ── 2. Elevator Pitch ── */}
+        <div
+          className="px-6 py-5"
+          style={{ borderBottom: `1px solid ${SAGE.sectionBorder}` }}
+        >
           <div className="mb-2 flex items-center gap-2">
-            <Rocket className="h-3.5 w-3.5 shrink-0 text-olive-600 dark:text-olive-400" />
-            <h4 className="text-[11px] font-bold uppercase tracking-widest text-olive-600 dark:text-olive-400">
+            <Rocket className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
+            <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               Elevator Pitch
             </h4>
           </div>
@@ -228,18 +261,21 @@ export const ConceptCardNode = memo(
             value={data.elevatorPitch}
             placeholder="2-3 sentence elevator pitch..."
             onBlur={(v) => data.onFieldChange?.(id, 'elevatorPitch', v)}
-            className="text-sm leading-relaxed text-card-foreground/85"
+            className="text-sm leading-relaxed"
             multiline
             rows={3}
             autoGrow
           />
         </div>
 
-        {/* ── 4. USP ── */}
-        <div className="px-6 py-5 border-b border-border">
+        {/* ── 3. USP ── */}
+        <div
+          className="px-6 py-5"
+          style={{ borderBottom: `1px solid ${SAGE.sectionBorder}` }}
+        >
           <div className="mb-2 flex items-center gap-2">
-            <Sparkles className="h-3.5 w-3.5 shrink-0 text-olive-600 dark:text-olive-400" />
-            <h4 className="text-[11px] font-bold uppercase tracking-widest text-olive-600 dark:text-olive-400">
+            <Sparkles className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
+            <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               Unique Selling Proposition
             </h4>
           </div>
@@ -247,27 +283,36 @@ export const ConceptCardNode = memo(
             value={data.usp}
             placeholder="What makes this different from current solutions..."
             onBlur={(v) => data.onFieldChange?.(id, 'usp', v)}
-            className="text-sm leading-relaxed text-card-foreground/85"
+            className="text-sm leading-relaxed"
             multiline
             rows={2}
             autoGrow
           />
         </div>
 
-        {/* ── 5. SWOT Analysis ── */}
-        <div className="px-6 py-5 border-b border-border">
+        {/* ── 4. SWOT Analysis ── */}
+        <div
+          className="px-6 py-5"
+          style={{ borderBottom: `1px solid ${SAGE.sectionBorder}` }}
+        >
           <div className="mb-3 flex items-center gap-2">
-            <Target className="h-3.5 w-3.5 shrink-0 text-olive-600 dark:text-olive-400" />
-            <h4 className="text-[11px] font-bold uppercase tracking-widest text-olive-600 dark:text-olive-400">
+            <Target className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
+            <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               SWOT Analysis
             </h4>
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             {/* Strengths */}
-            <div className="space-y-1 rounded-xl border border-green-500/30 bg-green-50 p-3 dark:bg-green-950/20">
+            <div
+              className="flex flex-col space-y-1 rounded-xl border p-3"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--persona-empathy-gains) 10%, transparent)',
+                borderColor: 'color-mix(in srgb, var(--persona-empathy-gains) 25%, transparent)',
+              }}
+            >
               <div className="mb-2 flex items-center gap-2">
-                <div className="h-3 w-3 rounded bg-green-500" />
-                <h5 className="text-[11px] font-bold uppercase tracking-wider text-green-900 dark:text-green-100">
+                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--persona-empathy-gains)' }} />
+                <h5 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--persona-empathy-gains-text)' }}>
                   Strengths
                 </h5>
               </div>
@@ -277,7 +322,7 @@ export const ConceptCardNode = memo(
                   value={item}
                   placeholder={`Strength ${idx + 1}`}
                   onBlur={(v) => data.onSWOTChange?.(id, 'strengths', idx, v)}
-                  className="text-xs leading-relaxed text-green-800 dark:text-green-200"
+                  className="text-xs leading-relaxed"
                   multiline
                   rows={2}
                   autoGrow
@@ -286,10 +331,16 @@ export const ConceptCardNode = memo(
             </div>
 
             {/* Weaknesses */}
-            <div className="space-y-1 rounded-xl border border-red-500/30 bg-red-50 p-3 dark:bg-red-950/20">
+            <div
+              className="flex flex-col space-y-1 rounded-xl border p-3"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--persona-empathy-pains) 10%, transparent)',
+                borderColor: 'color-mix(in srgb, var(--persona-empathy-pains) 25%, transparent)',
+              }}
+            >
               <div className="mb-2 flex items-center gap-2">
-                <div className="h-3 w-3 rounded bg-red-500" />
-                <h5 className="text-[11px] font-bold uppercase tracking-wider text-red-900 dark:text-red-100">
+                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--persona-empathy-pains)' }} />
+                <h5 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--persona-empathy-pains-text)' }}>
                   Weaknesses
                 </h5>
               </div>
@@ -299,7 +350,7 @@ export const ConceptCardNode = memo(
                   value={item}
                   placeholder={`Weakness ${idx + 1}`}
                   onBlur={(v) => data.onSWOTChange?.(id, 'weaknesses', idx, v)}
-                  className="text-xs leading-relaxed text-red-800 dark:text-red-200"
+                  className="text-xs leading-relaxed"
                   multiline
                   rows={2}
                   autoGrow
@@ -308,10 +359,16 @@ export const ConceptCardNode = memo(
             </div>
 
             {/* Opportunities */}
-            <div className="space-y-1 rounded-xl border border-olive-500/30 bg-olive-50 p-3 dark:bg-olive-950/20">
+            <div
+              className="flex flex-col space-y-1 rounded-xl border p-3"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--persona-empathy-says) 10%, transparent)',
+                borderColor: 'color-mix(in srgb, var(--persona-empathy-says) 25%, transparent)',
+              }}
+            >
               <div className="mb-2 flex items-center gap-2">
-                <div className="h-3 w-3 rounded bg-olive-600" />
-                <h5 className="text-[11px] font-bold uppercase tracking-wider text-olive-900 dark:text-olive-100">
+                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--persona-empathy-says)' }} />
+                <h5 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--persona-text-muted)' }}>
                   Opportunities
                 </h5>
               </div>
@@ -321,7 +378,7 @@ export const ConceptCardNode = memo(
                   value={item}
                   placeholder={`Opportunity ${idx + 1}`}
                   onBlur={(v) => data.onSWOTChange?.(id, 'opportunities', idx, v)}
-                  className="text-xs leading-relaxed text-olive-800 dark:text-olive-200"
+                  className="text-xs leading-relaxed"
                   multiline
                   rows={2}
                   autoGrow
@@ -330,10 +387,16 @@ export const ConceptCardNode = memo(
             </div>
 
             {/* Threats */}
-            <div className="space-y-1 rounded-xl border border-amber-500/30 bg-amber-50 p-3 dark:bg-amber-950/20">
+            <div
+              className="flex flex-col space-y-1 rounded-xl border p-3"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--persona-empathy-feels) 10%, transparent)',
+                borderColor: 'color-mix(in srgb, var(--persona-empathy-feels) 25%, transparent)',
+              }}
+            >
               <div className="mb-2 flex items-center gap-2">
-                <div className="h-3 w-3 rounded bg-amber-500" />
-                <h5 className="text-[11px] font-bold uppercase tracking-wider text-amber-900 dark:text-amber-100">
+                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--persona-empathy-feels)' }} />
+                <h5 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--persona-text-muted)' }}>
                   Threats
                 </h5>
               </div>
@@ -343,7 +406,7 @@ export const ConceptCardNode = memo(
                   value={item}
                   placeholder={`Threat ${idx + 1}`}
                   onBlur={(v) => data.onSWOTChange?.(id, 'threats', idx, v)}
-                  className="text-xs leading-relaxed text-amber-800 dark:text-amber-200"
+                  className="text-xs leading-relaxed"
                   multiline
                   rows={2}
                   autoGrow
@@ -353,11 +416,11 @@ export const ConceptCardNode = memo(
           </div>
         </div>
 
-        {/* ── 6. Feasibility Assessment ── */}
-        <div className="px-6 py-5 border-b border-border">
+        {/* ── 5. Feasibility Assessment ── */}
+        <div className="px-6 py-5">
           <div className="mb-3 flex items-center gap-2">
-            <BarChart3 className="h-3.5 w-3.5 shrink-0 text-olive-600 dark:text-olive-400" />
-            <h4 className="text-[11px] font-bold uppercase tracking-widest text-olive-600 dark:text-olive-400">
+            <BarChart3 className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
+            <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               Feasibility Assessment
             </h4>
           </div>
@@ -395,41 +458,6 @@ export const ConceptCardNode = memo(
                 data.onFeasibilityChange?.(id, 'userDesirability', undefined, rationale)
               }
             />
-          </div>
-        </div>
-
-        {/* ── 7. Billboard Hero ── */}
-        <div className="px-6 py-5">
-          <div className="mb-3 flex items-center gap-2">
-            <Megaphone className="h-3.5 w-3.5 shrink-0 text-olive-600 dark:text-olive-400" />
-            <h4 className="text-[11px] font-bold uppercase tracking-widest text-olive-600 dark:text-olive-400">
-              Billboard Hero
-            </h4>
-          </div>
-          <div className="space-y-3 rounded-xl bg-olive-100/50 dark:bg-olive-950/30 p-4">
-            <EditableField
-              value={data.billboardHero?.headline}
-              placeholder="Headline (6-10 words)"
-              onBlur={(v) => data.onFieldChange?.(id, 'billboardHero.headline', v)}
-              className="text-center text-lg font-bold text-card-foreground"
-            />
-            <EditableField
-              value={data.billboardHero?.subheadline}
-              placeholder="Subheadline (1-2 sentences)"
-              onBlur={(v) => data.onFieldChange?.(id, 'billboardHero.subheadline', v)}
-              className="text-center text-sm text-card-foreground/80"
-              multiline
-              rows={2}
-              autoGrow
-            />
-            <div className="flex justify-center rounded-lg bg-olive-800 dark:bg-olive-700 px-4 py-2">
-              <EditableField
-                value={data.billboardHero?.cta}
-                placeholder="Call to Action"
-                onBlur={(v) => data.onFieldChange?.(id, 'billboardHero.cta', v)}
-                className="text-center font-semibold text-white placeholder:text-white/40"
-              />
-            </div>
           </div>
         </div>
 

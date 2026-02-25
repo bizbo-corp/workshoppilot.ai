@@ -563,6 +563,7 @@ function parseConceptCards(content: string): { cleanContent: string; cards: (Par
 
   let cleanContent = content
     .replace(/\s*\[CONCEPT_CARD\][\s\S]*?\[\/CONCEPT_CARD\]\s*/g, ' ')
+    .replace(/\s*\[CONCEPT_COMPLETE\]\s*/g, ' ')
     .trim();
 
   // Strip incomplete blocks mid-stream
@@ -791,9 +792,10 @@ interface ChatPanelProps {
   stepConfirmLabel?: string;
   stepConfirmIsTransition?: boolean; // If true, don't send [STEP_CONFIRMED] or show revise button
   stepConfirmDisabled?: boolean; // Disable the confirm button (e.g. during AI processing)
+  onConceptComplete?: () => void; // Fired when AI signals all concepts are done or user asks to move on
 }
 
-export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep, showStepConfirm, onStepConfirm, onStepRevise, stepConfirmLabel, stepConfirmIsTransition, stepConfirmDisabled }: ChatPanelProps) {
+export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep, showStepConfirm, onStepConfirm, onStepRevise, stepConfirmLabel, stepConfirmIsTransition, stepConfirmDisabled, onConceptComplete }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
   const storeApi = useCanvasStoreApi();
   const addStickyNote = useCanvasStore((state) => state.addStickyNote);
@@ -1645,8 +1647,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
           const hasUsp = !!merged.usp;
           const hasSwot = merged.swot?.strengths?.some(s => !!s);
           const hasFeasibility = merged.feasibility?.technical?.score > 0;
-          const hasBillboard = !!merged.billboardHero?.headline;
-          if (hasPitch && hasUsp && hasSwot && hasFeasibility && hasBillboard) {
+          if (hasPitch && hasUsp && hasSwot && hasFeasibility) {
             updates.cardState = 'filled';
           }
 
@@ -1666,6 +1667,11 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         }
       }
       setPendingFitView(true);
+    }
+
+    // Detect [CONCEPT_COMPLETE] — AI signals all concepts are done or user asked to move on
+    if (step.id === 'concept' && content.includes('[CONCEPT_COMPLETE]')) {
+      onConceptComplete?.();
     }
 
     // Mark as processed if we did any work (avoid re-processing non-sticky note items)
@@ -1689,7 +1695,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         }
       }, 300); // Short delay to ensure new items are in store
     }
-  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, handleAddSingleItem, batchUpdatePositions, storeApi, step.id, setPendingFitView, deleteStickyNote, updateStickyNote, setCluster, addPersonaTemplate, updatePersonaTemplate, replaceGridColumns, addHmwCard, updateHmwCard, updateConceptCard, addConceptCard, conceptCards.length, flushCanvasToDb]);
+  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, handleAddSingleItem, batchUpdatePositions, storeApi, step.id, setPendingFitView, deleteStickyNote, updateStickyNote, setCluster, addPersonaTemplate, updatePersonaTemplate, replaceGridColumns, addHmwCard, updateHmwCard, updateConceptCard, addConceptCard, conceptCards.length, flushCanvasToDb, onConceptComplete]);
 
   // Clear stream error on successful completion
   React.useEffect(() => {

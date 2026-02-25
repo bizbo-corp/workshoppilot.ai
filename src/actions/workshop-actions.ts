@@ -12,6 +12,7 @@ import { generateStepSummary } from '@/lib/context/generate-summary';
 import { getNextWorkshopColor, WORKSHOP_COLORS } from '@/lib/workshop/workshop-appearance';
 import { deleteBlobUrls } from '@/lib/blob/delete-blob-urls';
 import { extractBlobUrlsFromArtifact } from '@/lib/blob/extract-urls';
+import { dbWithRetry } from '@/db/with-retry';
 
 /**
  * Get user ID from Clerk auth.
@@ -226,25 +227,24 @@ export async function updateStepStatus(
   status: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration',
   sessionId: string
 ): Promise<void> {
-  try {
-    // Determine timestamp updates based on status
-    const updates: {
-      status: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
-      startedAt?: Date | null;
-      completedAt?: Date | null;
-    } = { status };
+  // Determine timestamp updates based on status
+  const updates: {
+    status: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
+    startedAt?: Date | null;
+    completedAt?: Date | null;
+  } = { status };
 
-    if (status === 'complete') {
-      updates.completedAt = new Date();
-    } else if (status === 'in_progress') {
-      updates.startedAt = new Date();
-    } else if (status === 'not_started' || status === 'needs_regeneration') {
-      updates.startedAt = null;
-      updates.completedAt = null;
-    }
+  if (status === 'complete') {
+    updates.completedAt = new Date();
+  } else if (status === 'in_progress') {
+    updates.startedAt = new Date();
+  } else if (status === 'not_started' || status === 'needs_regeneration') {
+    updates.startedAt = null;
+    updates.completedAt = null;
+  }
 
-    // Update the workshop step
-    await db
+  await dbWithRetry(() =>
+    db
       .update(workshopSteps)
       .set(updates)
       .where(
@@ -252,14 +252,11 @@ export async function updateStepStatus(
           eq(workshopSteps.workshopId, workshopId),
           eq(workshopSteps.stepId, stepId)
         )
-      );
+      )
+  );
 
-    // Revalidate workshop layout to refresh step status
-    revalidatePath(`/workshop/${sessionId}`);
-  } catch (error) {
-    console.error('Failed to update step status:', error);
-    throw error;
-  }
+  // Revalidate workshop layout to refresh step status
+  revalidatePath(`/workshop/${sessionId}`);
 }
 
 /**
@@ -282,16 +279,18 @@ export async function advanceToNextStep(
     // Summary generation is synchronous but failure must not block step advance
     try {
       // Get the workshopStepId from the database
-      const workshopStepResult = await db
-        .select({ id: workshopSteps.id })
-        .from(workshopSteps)
-        .where(
-          and(
-            eq(workshopSteps.workshopId, workshopId),
-            eq(workshopSteps.stepId, currentStepId)
+      const workshopStepResult = await dbWithRetry(() =>
+        db
+          .select({ id: workshopSteps.id })
+          .from(workshopSteps)
+          .where(
+            and(
+              eq(workshopSteps.workshopId, workshopId),
+              eq(workshopSteps.stepId, currentStepId)
+            )
           )
-        )
-        .limit(1);
+          .limit(1)
+      );
 
       if (workshopStepResult.length > 0) {
         const workshopStepId = workshopStepResult[0].id;

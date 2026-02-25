@@ -21,6 +21,7 @@ import { BRAIN_REWRITING_CELL_ORDER } from "@/lib/canvas/brain-rewriting-types";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
 import { computeRadialPositions } from "@/lib/canvas/mind-map-layout";
 import { getStepTemplateStickyNotes } from "@/lib/canvas/template-sticky-note-config";
+import { dbWithRetry } from "@/db/with-retry";
 
 interface StepPageProps {
   params: Promise<{
@@ -48,16 +49,18 @@ export default async function StepPage({ params }: StepPageProps) {
   }
 
   // Fetch session with workshop and steps for sequential enforcement
-  const session = await db.query.sessions.findFirst({
-    where: eq(sessions.id, sessionId),
-    with: {
-      workshop: {
-        with: {
-          steps: true,
+  const session = await dbWithRetry(() =>
+    db.query.sessions.findFirst({
+      where: eq(sessions.id, sessionId),
+      with: {
+        workshop: {
+          with: {
+            steps: true,
+          },
         },
       },
-    },
-  });
+    })
+  );
 
   if (!session) {
     redirect("/dashboard");
@@ -338,47 +341,33 @@ export default async function StepPage({ params }: StepPageProps) {
     initialHmwCards = [skeletonCard];
   }
 
-  // Load Step 9 billboard hero data for Step 10 (validate)
-  let billboardHero: { headline: string; subheadline: string; cta: string } | undefined;
-  if (step.id === 'validate') {
-    const conceptCanvas = await loadCanvasState(session.workshop.id, 'concept');
-    if (conceptCanvas?.conceptCards && conceptCanvas.conceptCards.length > 0) {
-      const sortedCards = [...conceptCanvas.conceptCards]
-        .sort((a, b) => (a.cardIndex ?? 0) - (b.cardIndex ?? 0));
-      const filledCard = sortedCards.find(
-        (c) => c.billboardHero?.headline
-      ) as ConceptCardData | undefined;
-      if (filledCard?.billboardHero) {
-        billboardHero = filledCard.billboardHero;
-      }
-    }
-  }
-
   // Load Step 8 data for Step 9 (concept)
   let step8SelectedSlotIds: string[] | undefined;
   let step8Crazy8sSlots: Array<{ slotId: string; title: string; imageUrl?: string }> | undefined;
 
   if (step.id === 'concept') {
-    // Load Step 8 artifact for selectedSketchSlotIds
-    const ideationStep = session.workshop.steps.find((s) => s.stepId === 'ideation');
-    if (ideationStep) {
-      const ideationArtifacts = await db
-        .select({ artifact: stepArtifacts.artifact })
-        .from(stepArtifacts)
-        .where(eq(stepArtifacts.workshopStepId, ideationStep.id))
-        .limit(1);
-      if (ideationArtifacts.length > 0) {
-        const artifact = ideationArtifacts[0].artifact as Record<string, unknown>;
-        step8SelectedSlotIds = artifact?.selectedSketchSlotIds as string[] | undefined;
-      }
-    }
-
     // Load Step 8 canvas state for crazy8sSlots and selectedSlotIds
+    // Canvas state is the primary source — it's saved directly by the UI when user confirms selection
     const step8Canvas = await loadCanvasState(session.workshop.id, 'ideation');
 
-    // Check for selectedSlotIds in canvas state (fallback for extraction-based path)
-    if (!step8SelectedSlotIds && step8Canvas?.selectedSlotIds && step8Canvas.selectedSlotIds.length > 0) {
+    if (step8Canvas?.selectedSlotIds && step8Canvas.selectedSlotIds.length > 0) {
       step8SelectedSlotIds = step8Canvas.selectedSlotIds;
+    }
+
+    // Fallback: try AI-extracted selectedSketchSlotIds from the artifact
+    if (!step8SelectedSlotIds) {
+      const ideationStep = session.workshop.steps.find((s) => s.stepId === 'ideation');
+      if (ideationStep) {
+        const ideationArtifacts = await db
+          .select({ artifact: stepArtifacts.artifact })
+          .from(stepArtifacts)
+          .where(eq(stepArtifacts.workshopStepId, ideationStep.id))
+          .limit(1);
+        if (ideationArtifacts.length > 0) {
+          const artifact = ideationArtifacts[0].artifact as Record<string, unknown>;
+          step8SelectedSlotIds = artifact?.selectedSketchSlotIds as string[] | undefined;
+        }
+      }
     }
 
     if (step8Canvas?.crazy8sSlots) {
@@ -411,34 +400,63 @@ export default async function StepPage({ params }: StepPageProps) {
 
     // Create skeleton concept cards for selected ideas (one per selected slot, max 4)
     if (initialConceptCards.length === 0 && step8SelectedSlotIds && step8SelectedSlotIds.length > 0) {
-      if (step8Crazy8sSlots) {
-        // Full path: match selected IDs to crazy 8s slots for titles and images
-        const selectedSlots = step8SelectedSlotIds
-          .map((slotId) => step8Crazy8sSlots!.find((s) => s.slotId === slotId))
-          .filter(Boolean)
-          .slice(0, 4);
+      initialConceptCards = step8SelectedSlotIds.slice(0, 4).map((slotId, index) => {
+        // Try to find the matching slot for title and image
+        const slot = step8Crazy8sSlots?.find((s) => s.slotId === slotId);
+        return createDefaultConceptCard({
+          ideaSource: slot?.title || `Sketch ${slotId}`,
+          sketchSlotId: slotId,
+          sketchImageUrl: slot?.imageUrl,
+          cardState: 'skeleton',
+          cardIndex: index,
+          position: { x: index * 720, y: 0 },
+        });
+      });
+    }
 
-        initialConceptCards = selectedSlots.map((slot, index) =>
-          createDefaultConceptCard({
-            ideaSource: slot!.title || `Sketch ${slot!.slotId}`,
-            sketchSlotId: slot!.slotId,
-            sketchImageUrl: slot!.imageUrl,
-            cardState: 'skeleton',
-            cardIndex: index,
-            position: { x: index * 720, y: 0 },
-          })
-        );
-      } else {
-        // Fallback: create skeletons from slot IDs alone (no titles/images)
-        initialConceptCards = step8SelectedSlotIds.slice(0, 4).map((slotId, index) =>
-          createDefaultConceptCard({
-            ideaSource: `Sketch ${slotId}`,
-            sketchSlotId: slotId,
-            cardState: 'skeleton',
-            cardIndex: index,
-            position: { x: index * 720, y: 0 },
-          })
-        );
+    // Repair existing concept cards: backfill missing images/titles and add missing cards
+    if (initialConceptCards.length > 0 && step8SelectedSlotIds && step8SelectedSlotIds.length > 0) {
+      // Backfill images/titles on cards that are missing them (repairs AI-created cards)
+      if (step8Crazy8sSlots) {
+        initialConceptCards = initialConceptCards.map((card) => {
+          if (card.sketchImageUrl) return card; // Already has image
+          // Try to find the matching slot: by slotId first, then by cardIndex position
+          let slot = card.sketchSlotId
+            ? step8Crazy8sSlots!.find((s) => s.slotId === card.sketchSlotId)
+            : undefined;
+          if (!slot && card.cardIndex !== undefined && step8SelectedSlotIds![card.cardIndex]) {
+            const inferredSlotId = step8SelectedSlotIds![card.cardIndex];
+            slot = step8Crazy8sSlots!.find((s) => s.slotId === inferredSlotId);
+          }
+          if (!slot) return card;
+          return {
+            ...card,
+            sketchSlotId: card.sketchSlotId || slot.slotId,
+            sketchImageUrl: slot.imageUrl,
+            ideaSource: card.ideaSource || slot.title || `Sketch ${slot.slotId}`,
+          };
+        });
+      }
+
+      // Add missing skeleton cards if fewer cards exist than selected ideas
+      const maxCards = Math.min(step8SelectedSlotIds.length, 4);
+      if (initialConceptCards.length < maxCards) {
+        const existingSlotIds = new Set(initialConceptCards.map((c) => c.sketchSlotId).filter(Boolean));
+        const missingSlotIds = step8SelectedSlotIds.filter((id) => !existingSlotIds.has(id));
+        for (const slotId of missingSlotIds) {
+          if (initialConceptCards.length >= 4) break;
+          const slot = step8Crazy8sSlots?.find((s) => s.slotId === slotId);
+          initialConceptCards.push(
+            createDefaultConceptCard({
+              ideaSource: slot?.title || `Sketch ${slotId}`,
+              sketchSlotId: slotId,
+              sketchImageUrl: slot?.imageUrl,
+              cardState: 'skeleton',
+              cardIndex: initialConceptCards.length,
+              position: { x: initialConceptCards.length * 720, y: 0 },
+            })
+          );
+        }
       }
     }
   }
@@ -480,7 +498,6 @@ export default async function StepPage({ params }: StepPageProps) {
           step8SelectedSlotIds={step8SelectedSlotIds}
           step8Crazy8sSlots={step8Crazy8sSlots}
           isAdmin={userIsAdmin}
-          billboardHero={billboardHero}
           canvasGuides={canvasGuides}
           canvasSettings={canvasSettings}
         />

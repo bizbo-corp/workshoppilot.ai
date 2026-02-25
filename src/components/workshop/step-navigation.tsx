@@ -19,6 +19,7 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { advanceToNextStep } from '@/actions/workshop-actions';
 import { STEPS } from '@/lib/workshop/step-metadata';
+import { toast } from 'sonner';
 
 interface StepNavigationProps {
   sessionId: string;
@@ -111,12 +112,13 @@ export function StepNavigation({
         sessionId
       );
     } catch (error) {
-      // redirect() throws NEXT_REDIRECT which is caught here — this is normal.
-      // Only log real errors.
-      if (error instanceof Error && !error.message.includes('NEXT_REDIRECT')) {
-        console.error('Failed to advance to next step:', error);
+      // redirect() throws NEXT_REDIRECT — must rethrow so Next.js handles navigation
+      const digest = (error as Record<string, unknown>)?.digest;
+      if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
+        throw error;
       }
-    } finally {
+      console.error('Failed to advance to next step:', error);
+      toast.error('Failed to advance — please try again.');
       setIsNavigating(false);
     }
   };

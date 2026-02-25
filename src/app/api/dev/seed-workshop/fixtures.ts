@@ -749,11 +749,6 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
             userDesirability: 5,
             userDesirabilityRationale: 'Directly solves Sarah\'s top 3 pains: tool fragmentation, morning routine fragility, and guilt from missed tasks.',
           },
-          billboardHero: {
-            headline: 'Your Pets Are Cared For. Before You Even Ask.',
-            subheadline: 'PawPal Autopilot adapts your pet care routine to your calendar — so Biscuit and Mochi always get what they need, even on your busiest days.',
-            cta: 'Start Your Free Autopilot Trial',
-          },
         },
         {
           ideaSource: 'Glanceable Widget',
@@ -773,11 +768,6 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
             businessRationale: 'Widget alone doesn\'t drive revenue — must convert users to full app features. Good for acquisition, weak for monetization.',
             userDesirability: 4,
             userDesirabilityRationale: 'Addresses tool fragmentation pain by putting status front and center, but doesn\'t solve the deeper routine management need.',
-          },
-          billboardHero: {
-            headline: 'Everything About Your Pet. One Glance Away.',
-            subheadline: 'PawPal At-a-Glance shows Biscuit and Mochi\'s care status on your home screen — so you always know what\'s done and what\'s next.',
-            cta: 'Add PawPal To Your Home Screen',
           },
         },
       ],
@@ -829,11 +819,6 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
               rationale: 'Directly solves Sarah\'s top 3 pains: tool fragmentation, morning routine fragility, and guilt from missed tasks.',
             },
           },
-          billboardHero: {
-            headline: 'Your Pets Are Cared For. Before You Even Ask.',
-            subheadline: 'PawPal Autopilot adapts your pet care routine to your calendar — so Biscuit and Mochi always get what they need, even on your busiest days.',
-            cta: 'Start Your Free Autopilot Trial',
-          },
         },
         {
           id: crypto.randomUUID(),
@@ -878,11 +863,6 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
               rationale: 'Addresses tool fragmentation pain by putting status front and center, but doesn\'t solve the deeper routine management need.',
             },
           },
-          billboardHero: {
-            headline: 'Everything About Your Pet. One Glance Away.',
-            subheadline: 'PawPal At-a-Glance shows Biscuit and Mochi\'s care status on your home screen — so you always know what\'s done and what\'s next.',
-            cta: 'Add PawPal To Your Home Screen',
-          },
         },
       ],
     },
@@ -906,6 +886,11 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
         { stepNumber: 9, stepName: 'Concept Development', keyOutputs: ['PawPal Autopilot: AI morning routine engine (T:4, B:4, D:5)', 'PawPal At-a-Glance: home screen widget (T:5, B:3, D:4)', 'Billboard: "Your Pets Are Cared For. Before You Even Ask."'] },
         { stepNumber: 10, stepName: 'Validate', keyOutputs: ['Confidence: 7/10 (moderate — synthetic research only)', 'Lead concept: PawPal Autopilot with widget as companion feature', 'Next: real user interviews and prototype testing'] },
       ],
+      billboardHero: {
+        headline: 'Your Pets Are Cared For. Before You Even Ask.',
+        subheadline: 'PawPal combines smart routine automation with at-a-glance status — so busy pet parents like Sarah never miss a feeding, walk, or vet appointment again.',
+        cta: 'Start Your Free Trial',
+      },
       confidenceAssessment: {
         score: 7,
         rationale: 'The concept is well-grounded in logical research synthesis and the persona feels authentic, but all insights come from synthetic interviews — not real users. The journey map dip (notification fatigue) is a genuine risk that the concept acknowledges but hasn\'t tested. Feasibility scores are reasonable but untested with actual technical prototyping. Confidence is moderate: the direction is sound, but real validation is needed.',

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { FileText, Presentation, Users, Code, Zap } from 'lucide-react';
+import { FileText, Presentation, Users, Code, Zap, Megaphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DeliverableCard, DELIVERABLES } from './deliverable-card';
 
@@ -21,6 +21,12 @@ interface ConfidenceAssessment {
   score: number;
   researchQuality: 'thin' | 'moderate' | 'strong';
   rationale: string;
+}
+
+interface BillboardHero {
+  headline: string;
+  subheadline: string;
+  cta: string;
 }
 
 const DELIVERABLE_ICONS: Record<string, React.ReactNode> = {
@@ -68,6 +74,7 @@ function getResearchQualityColor(quality: 'thin' | 'moderate' | 'strong'): strin
  */
 export function SynthesisSummaryView({ artifact, workshopId, onGeneratePrd }: SynthesisSummaryViewProps) {
   const narrative = (artifact.narrativeIntro || artifact.narrative) as string | undefined;
+  const billboardHero = artifact.billboardHero as BillboardHero | undefined;
   const stepSummaries = (artifact.stepSummaries as StepSummary[]) || [];
   const confidenceAssessment = artifact.confidenceAssessment as ConfidenceAssessment | undefined;
   const recommendedNextSteps = (artifact.recommendedNextSteps as string[]) || [];
@@ -91,6 +98,27 @@ export function SynthesisSummaryView({ artifact, workshopId, onGeneratePrd }: Sy
           <p className="text-base leading-relaxed" style={{ fontFamily: 'Georgia, serif' }}>
             {narrative}
           </p>
+        </div>
+      )}
+
+      {/* Billboard Hero */}
+      {billboardHero?.headline && (
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Megaphone className="h-5 w-5 text-primary" />
+            <span>The Billboard Test</span>
+          </h3>
+          <div className="rounded-lg border-2 border-primary bg-gradient-to-br from-primary/10 to-primary/5 p-8 text-center">
+            <h3 className="mb-3 text-2xl font-bold">
+              {billboardHero.headline}
+            </h3>
+            <p className="mb-5 text-lg text-muted-foreground">
+              {billboardHero.subheadline}
+            </p>
+            <div className="inline-block rounded-lg bg-primary px-6 py-3 font-semibold text-primary-foreground">
+              {billboardHero.cta}
+            </div>
+          </div>
         </div>
       )}
 
@@ -258,9 +286,13 @@ export function SynthesisSummaryView({ artifact, workshopId, onGeneratePrd }: Sy
 export function SynthesisBuildPackSection({
   workshopId,
   onGeneratePrd,
+  onGenerateBillboard,
+  hasBillboard,
 }: {
   workshopId?: string;
   onGeneratePrd?: () => void;
+  onGenerateBillboard?: () => void;
+  hasBillboard?: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -269,6 +301,15 @@ export function SynthesisBuildPackSection({
         Export-ready documents generated from your workshop.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Billboard Hero — first card */}
+        <DeliverableCard
+          title="Billboard Hero"
+          description="AI-generated billboard headline, subheadline, CTA, and hero image — your product's elevator pitch visualized."
+          icon={<Megaphone className="h-5 w-5" />}
+          disabled={!workshopId}
+          buttonLabel={hasBillboard ? 'View Billboard' : 'Create Billboard'}
+          onDownload={onGenerateBillboard}
+        />
         <DeliverableCard
           title="V0 Prototype"
           description="AI-generated clickable prototype from your workshop — preview in browser or edit in V0."

@@ -287,7 +287,7 @@ export const STEP_CONFIRM_LABELS: Record<string, string> = {
   'persona': 'Confirm Persona',
   'journey-mapping': 'Confirm Journey Map',
   'reframe': 'Confirm HMW Statement',
-  'concept': 'Confirm Concept',
+  'concept': 'Complete Concept Development',
 };
 
 /** Minimum canvas items required before the confirm button appears (default: 1) */

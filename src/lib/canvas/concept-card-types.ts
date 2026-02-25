@@ -20,11 +20,6 @@ export type ConceptCardData = {
     business: { score: number; rationale: string };
     userDesirability: { score: number; rationale: string };
   };
-  billboardHero: {
-    headline: string;
-    subheadline: string;
-    cta: string;
-  };
 };
 
 /**
@@ -52,11 +47,6 @@ export function createDefaultConceptCard(
       technical: { score: 0, rationale: '' },
       business: { score: 0, rationale: '' },
       userDesirability: { score: 0, rationale: '' },
-    },
-    billboardHero: partial?.billboardHero || {
-      headline: '',
-      subheadline: '',
-      cta: '',
     },
     cardState: partial?.cardState || 'skeleton',
     cardIndex: partial?.cardIndex,

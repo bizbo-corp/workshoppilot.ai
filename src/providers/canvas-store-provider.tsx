@@ -67,24 +67,62 @@ export function CanvasStoreProvider({
     })
   );
 
-  // Sync skeleton concept cards from server props into the store.
-  // Handles two scenarios:
-  // 1. Post-reset refresh: store was cleared but server sends fresh skeletons
-  // 2. Fresh load: store has skeletons from constructor but isDirty is false
+  // Sync concept cards from server props into the store.
+  // Handles navigation (store reused from previous step), post-reset refresh,
+  // and repair scenarios (store has fewer cards or missing step 8 data).
   useEffect(() => {
     if (!initialConceptCards || initialConceptCards.length === 0) return;
     const current = store.getState().conceptCards;
     if (current.length === 0) {
-      // Store is empty but server has cards (post-reset refresh)
+      // Store is empty but server has cards (post-reset refresh or step navigation)
       store.getState().setConceptCards(initialConceptCards);
       store.getState().markDirty();
-    } else if (
-      current.length === initialConceptCards.length &&
-      current.every(c => c.cardState === 'skeleton') &&
-      initialConceptCards.every(c => c.cardState === 'skeleton')
-    ) {
-      // Already have matching skeletons from constructor — just mark dirty for persistence
-      store.getState().markDirty();
+    } else {
+      // Merge server cards into store: patch existing cards with missing step 8 data
+      // (sketchImageUrl, sketchSlotId, ideaSource) and append any new cards.
+      let changed = false;
+      const serverByIndex = new Map(
+        initialConceptCards.filter(c => c.cardIndex !== undefined).map(c => [c.cardIndex!, c])
+      );
+      const serverBySlotId = new Map(
+        initialConceptCards.filter(c => c.sketchSlotId).map(c => [c.sketchSlotId!, c])
+      );
+
+      // Patch existing store cards with step 8 data they're missing
+      const patched = current.map(card => {
+        const serverCard = (card.cardIndex !== undefined && serverByIndex.get(card.cardIndex))
+          || (card.sketchSlotId && serverBySlotId.get(card.sketchSlotId))
+          || undefined;
+        if (!serverCard) return card;
+        const updates: Partial<typeof card> = {};
+        if (!card.sketchImageUrl && serverCard.sketchImageUrl) updates.sketchImageUrl = serverCard.sketchImageUrl;
+        if (!card.sketchSlotId && serverCard.sketchSlotId) updates.sketchSlotId = serverCard.sketchSlotId;
+        if (!card.ideaSource && serverCard.ideaSource) updates.ideaSource = serverCard.ideaSource;
+        if (Object.keys(updates).length === 0) return card;
+        changed = true;
+        return { ...card, ...updates };
+      });
+
+      // Append cards from server that don't exist in store
+      const existingSlotIds = new Set(patched.map(c => c.sketchSlotId).filter(Boolean));
+      const existingIndexes = new Set(patched.map(c => c.cardIndex ?? -1));
+      const missing = initialConceptCards.filter(c => {
+        if (c.sketchSlotId && existingSlotIds.has(c.sketchSlotId)) return false;
+        if (c.cardIndex !== undefined && existingIndexes.has(c.cardIndex)) return false;
+        return true;
+      });
+
+      if (changed || missing.length > 0) {
+        store.getState().setConceptCards([...patched, ...missing]);
+        store.getState().markDirty();
+      } else if (
+        current.length === initialConceptCards.length &&
+        current.every(c => c.cardState === 'skeleton') &&
+        initialConceptCards.every(c => c.cardState === 'skeleton')
+      ) {
+        // All skeletons match — just mark dirty for persistence
+        store.getState().markDirty();
+      }
     }
   }, [initialConceptCards, store]);
 

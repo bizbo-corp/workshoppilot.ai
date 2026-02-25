@@ -12,6 +12,7 @@ import { notFound, redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { sessions } from '@/db/schema';
+import { dbWithRetry } from '@/db/with-retry';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { WorkshopSidebar } from '@/components/layout/workshop-sidebar';
 import { WorkshopHeader } from '@/components/layout/workshop-header';
@@ -30,16 +31,18 @@ export default async function WorkshopLayout({
   const { sessionId } = await params;
 
   // Verify session exists and fetch workshop with steps
-  const session = await db.query.sessions.findFirst({
-    where: eq(sessions.id, sessionId),
-    with: {
-      workshop: {
-        with: {
-          steps: true,
+  const session = await dbWithRetry(() =>
+    db.query.sessions.findFirst({
+      where: eq(sessions.id, sessionId),
+      with: {
+        workshop: {
+          with: {
+            steps: true,
+          },
         },
       },
-    },
-  });
+    })
+  );
 
   // Redirect to dashboard if session not found
   if (!session) {

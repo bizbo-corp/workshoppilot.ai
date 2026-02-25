@@ -32,11 +32,6 @@ interface Concept {
       rationale: string;
     };
   };
-  billboardHero?: {
-    headline: string;
-    subheadline: string;
-    cta: string;
-  };
 }
 
 /**
@@ -250,24 +245,6 @@ export function ConceptSheetView({ artifact }: ConceptSheetViewProps) {
               </div>
             </div>
           </div>
-
-          {/* Billboard Hero Section */}
-          {concept.billboardHero && (
-            <div>
-              <h4 className="mb-3 font-semibold">Billboard Hero</h4>
-              <div className="rounded-lg border-2 border-primary bg-gradient-to-br from-primary/10 to-primary/5 p-8 text-center">
-                <h3 className="mb-3 text-2xl font-bold">
-                  {concept.billboardHero.headline}
-                </h3>
-                <p className="mb-4 text-lg text-muted-foreground">
-                  {concept.billboardHero.subheadline}
-                </p>
-                <div className="inline-block rounded-lg bg-primary px-6 py-3 font-semibold text-primary-foreground">
-                  {concept.billboardHero.cta}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Concept separator (if multiple concepts) */}
           {conceptIdx < concepts.length - 1 && (
