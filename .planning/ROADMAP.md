@@ -171,7 +171,7 @@ Plans:
 | 25-29 | v1.3 | 23/23 | Complete | 2026-02-12 |
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
 | 36-39 | v1.5 | 9/9 | Complete | 2026-02-19 |
-| 40. Production Auth | v1.6 | 2/2 | Complete | 2026-02-25 |
+| 40. Production Auth | v1.6 | Complete    | 2026-02-25 | 2026-02-25 |
 | 41. User Onboarding | v1.6 | 0/1 | Not started | - |
 | 42. Visual Polish | v1.6 | 0/3 | Not started | - |
 
