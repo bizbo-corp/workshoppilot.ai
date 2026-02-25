@@ -174,10 +174,10 @@ Plans:
   3. Two Stripe Products exist (Single Flight $79 / 1 credit, Serial Entrepreneur $149 / 3 credits) with Price IDs recorded in environment variables
   4. `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_PRICE_SINGLE_FLIGHT`, and `STRIPE_PRICE_SERIAL_ENTREPRENEUR` are set in `.env.local` and Vercel dashboard
   5. Stripe CLI is running locally and `stripe listen --forward-to localhost:3000/api/webhooks/stripe` routes test events correctly
-**Plans**: TBD
+**Plans**: 1/1 complete
 
 Plans:
-- [ ] 48-01: Install stripe SDK, create stripe.ts singleton, configure all env vars, create Products/Prices in Stripe Dashboard
+- [x] 48-01: Install stripe SDK, create stripe.ts singleton, configure all env vars, create Products/Prices in Stripe Dashboard
 
 ### Phase 49: Payment API Layer
 **Goal**: Users can complete a purchase through Stripe Checkout and credits are reliably delivered to their account via both the success page and the webhook

@@ -12,6 +12,8 @@ provides:
   - "stripe@20.4.0 SDK installed as runtime dependency"
   - "src/lib/billing/stripe.ts server-only Stripe singleton with startup safety assertions"
   - "scripts/verify-env.ts updated with all 5 Stripe env var validations"
+  - "Two Stripe Products created in Dashboard (Single Flight $79, Serial Entrepreneur $149)"
+  - "Stripe webhook endpoint configured at https://workshoppilot.ai/api/webhooks/stripe (production)"
 affects: [49-checkout-flow, 50-credit-logic, 51-paywall]
 
 # Tech tracking
@@ -34,6 +36,7 @@ key-decisions:
   - "apiVersion pinned to '2026-02-25.clover' (stripe@20.4.0 default) to prevent silent API contract changes on SDK upgrades"
   - "No @stripe/stripe-js or @stripe/react-stripe-js installed — redirect Checkout mode requires zero client-side Stripe JS"
   - "Module-level fail-fast (not lazy) mirrors db/client.ts pattern for consistent startup behavior"
+  - "STRIPE_WEBHOOK_SECRET set to Dashboard endpoint secret (production webhook at workshoppilot.ai) — Stripe CLI whsec_ needed separately for local testing"
 
 patterns-established:
   - "server-only guard pattern: all server secrets modules start with 'import server-only'"
@@ -43,20 +46,20 @@ patterns-established:
 requirements-completed: [BILL-01, BILL-02]
 
 # Metrics
-duration: 8min
-completed: 2026-02-25
+duration: 20min
+completed: 2026-02-26
 ---
 
 # Phase 48 Plan 01: Stripe Infrastructure Summary
 
-**stripe@20.4.0 SDK installed with server-only singleton singleton guarded by startup assertions and production key checks, plus verify-env.ts updated with all 5 Stripe env var validations**
+**stripe@20.4.0 SDK installed with server-only singleton guarded by startup assertions, verify-env.ts updated with all 5 Stripe env var validations, and Stripe Products created with production webhook endpoint configured**
 
 ## Performance
 
-- **Duration:** ~8 min
+- **Duration:** ~20 min (includes user setup at Task 3 checkpoint)
 - **Started:** 2026-02-25T21:19:19Z
-- **Completed:** 2026-02-25T21:27:00Z
-- **Tasks:** 2 automated (Task 3 is checkpoint:human-action awaiting user)
+- **Completed:** 2026-02-26
+- **Tasks:** 3 (2 automated + 1 human-action checkpoint completed)
 - **Files modified:** 3
 
 ## Accomplishments
@@ -64,6 +67,9 @@ completed: 2026-02-25
 - Installed stripe@^20.4.0 as a runtime dependency (zero client-side Stripe packages)
 - Created src/lib/billing/stripe.ts with server-only guard, fail-fast missing key assertion, and production test-key rejection
 - Added all 5 Stripe env vars to verify-env.ts requiredVars array plus production sk_test_ guard
+- User created two Stripe Products in Dashboard: "Single Flight Workshop" ($79) and "Serial Entrepreneur Pack" ($149)
+- Production webhook endpoint registered at https://workshoppilot.ai/api/webhooks/stripe
+- All 5 env vars set in .env.local with real Stripe values
 
 ## Task Commits
 
@@ -71,9 +77,9 @@ Each task was committed atomically:
 
 1. **Task 1: Install Stripe SDK and create server-only singleton** - `833691a` (feat)
 2. **Task 2: Update verify-env.ts with Stripe environment variables** - `1aebc80` (feat)
-3. **Task 3: Create Stripe Products, configure env vars, and set up Stripe CLI** - CHECKPOINT (human-action)
+3. **Task 3: Create Stripe Products, configure env vars, and set up Stripe CLI** - human-action (no code commit — user setup)
 
-**Plan metadata:** pending final commit after Task 3 complete
+**Plan metadata:** `42e86d1` (docs: complete stripe-infrastructure plan 01)
 
 ## Files Created/Modified
 
@@ -89,38 +95,62 @@ Each task was committed atomically:
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+None - plan executed exactly as written. Task 3 (human-action checkpoint) completed by user as specified.
 
 ## Issues Encountered
 
-None.
+**Action Required Before Phase 49:** The `STRIPE_PRICE_SINGLE_FLIGHT` and `STRIPE_PRICE_SERIAL_ENTREPRENEUR` env vars are currently set to Stripe Product IDs (`prod_...`) instead of Price IDs (`price_...`). The checkout flow in Phase 49 requires Price IDs to create a Checkout Session. To fix:
 
-## User Setup Required
+1. Go to https://dashboard.stripe.com (Test mode) → Products
+2. Click on "Single Flight Workshop" → under Pricing, copy the Price ID (`price_...` format)
+3. Click on "Serial Entrepreneur Pack" → under Pricing, copy the Price ID (`price_...` format)
+4. Update `.env.local`:
+   ```
+   STRIPE_PRICE_SINGLE_FLIGHT=price_XXXXXXXXXX
+   STRIPE_PRICE_SERIAL_ENTREPRENEUR=price_XXXXXXXXXX
+   ```
+5. Also update these values in Vercel Dashboard → Project Settings → Environment Variables
 
-**External services require manual configuration.** Task 3 checkpoint provides complete instructions for:
+This does not block Phase 48 completion (the SDK and singleton are working). It must be resolved before Phase 49 checkout API route can be tested end-to-end.
 
-1. **Part A: Stripe Dashboard** — Create test API keys, create two Products:
-   - "Single Flight Workshop" — One-time $79.00 — 1 workshop credit
-   - "Serial Entrepreneur Pack" — One-time $149.00 — 3 workshop credits
-   - Copy resulting Price IDs
+## User Setup Status
 
-2. **Part B: Local .env.local** — Add 5 Stripe env vars:
-   - `STRIPE_SECRET_KEY=sk_test_...`
-   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...`
-   - `STRIPE_WEBHOOK_SECRET=whsec_...` (from Stripe CLI)
-   - `STRIPE_PRICE_SINGLE_FLIGHT=price_...`
-   - `STRIPE_PRICE_SERIAL_ENTREPRENEUR=price_...`
+Task 3 human-action checkpoint completed by user with the following outcomes:
 
-3. **Part C: Stripe CLI** — `brew install stripe/stripe-cli/stripe && stripe login && stripe listen --forward-to localhost:3000/api/webhooks/stripe`
+1. **Part A: Stripe Dashboard** - Two Products created:
+   - "Single Flight Workshop" — One-time $79.00 — 1 workshop credit (product ID: prod_U2vWFKThHIkKtK)
+   - "Serial Entrepreneur Pack" — One-time $149.00 — 3 workshop credits (product ID: prod_U2vXQPXVplxIIM)
+   - NOTE: Price IDs (`price_...`) still needed — see Issues Encountered above
 
-4. **Part D: Vercel** — Add all 5 vars to Vercel Dashboard (live keys for Production, test keys for Preview)
+2. **Part B: Local .env.local** — All 5 Stripe env vars set:
+   - `STRIPE_SECRET_KEY=sk_test_...` (real test key)
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...` (real test key)
+   - `STRIPE_WEBHOOK_SECRET=whsec_...` (Dashboard endpoint secret for production webhook)
+   - `STRIPE_PRICE_SINGLE_FLIGHT=prod_...` (needs updating to price_...)
+   - `STRIPE_PRICE_SERIAL_ENTREPRENEUR=prod_...` (needs updating to price_...)
+
+3. **Part C: Production Webhook** — Endpoint registered at https://workshoppilot.ai/api/webhooks/stripe. The STRIPE_WEBHOOK_SECRET in .env.local reflects the Dashboard endpoint secret. For local development with stripe listen, a separate CLI whsec_ value is generated at runtime.
+
+4. **Part D: Vercel** — Assumed complete (user set up production webhook endpoint, suggesting Vercel deployment is configured)
+
+## Verification Results
+
+All code-side checks pass:
+
+- stripe@^20.4.0 in package.json dependencies: PASS
+- @stripe/stripe-js NOT installed: PASS
+- @stripe/react-stripe-js NOT installed: PASS
+- src/lib/billing/stripe.ts exists with server-only + apiVersion: PASS
+- scripts/verify-env.ts has 7 STRIPE references (>= 6 required): PASS
+- No client-side Stripe imports in src/: PASS
 
 ## Next Phase Readiness
 
-- Stripe SDK and singleton ready for use in Phase 49 (checkout flow API routes)
-- Phase 49 depends on valid `STRIPE_PRICE_SINGLE_FLIGHT` and `STRIPE_PRICE_SERIAL_ENTREPRENEUR` env vars — these must be set before coding checkout route
-- Vercel Deployment Protection may block `/api/webhooks/stripe` in preview — see STATE.md blocker note
+- Stripe SDK and singleton ready for Phase 49 (checkout flow API routes)
+- STRIPE_PRICE_SINGLE_FLIGHT and STRIPE_PRICE_SERIAL_ENTREPRENEUR must be updated to price_ IDs before Phase 49 end-to-end testing
+- Production webhook at https://workshoppilot.ai/api/webhooks/stripe is registered (Dashboard endpoint secret captured in STRIPE_WEBHOOK_SECRET)
+- For local testing in Phase 49: run `stripe listen --forward-to localhost:3000/api/webhooks/stripe` to get a CLI whsec_ value (override STRIPE_WEBHOOK_SECRET locally while listening)
 
 ---
 *Phase: 48-stripe-infrastructure*
-*Completed: 2026-02-25*
+*Completed: 2026-02-26*

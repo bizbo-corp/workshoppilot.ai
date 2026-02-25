@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 47 — Database Foundation (v1.8 start)
+**Current focus:** Phase 48 — Stripe Infrastructure
 
 ## Current Position
 
-Phase: 47 of 53 in v1.8 (Database Foundation)
-Plan: 2 of 2 in current phase
-Status: Phase Complete — advancing to Phase 48
-Last activity: 2026-02-25 — Plan 47-02 complete (billing seed script, 5 scenarios)
+Phase: 48 of 53 in v1.8 (Stripe Infrastructure)
+Plan: 1 of 1 in current phase
+Status: Phase Complete — advancing to Phase 49
+Last activity: 2026-02-26 — Plan 48-01 complete (Stripe SDK, singleton, env validation, Dashboard setup)
 
-Progress: [█░░░░░░░░░] 14% (v1.8 — 1/7 phases complete)
+Progress: [██░░░░░░░░] 28% (v1.8 — 2/7 phases complete)
 
 ## Performance Metrics
 
@@ -66,6 +66,8 @@ Key v1.8 decisions affecting current work:
 - Seed idempotency: sentinel-record check (query user_seed_billing_zero) rather than per-row checks — scenarios are interdependent (transactions reference runtime-generated workshop IDs)
 - [Phase 48-stripe-infrastructure]: stripe.ts uses import 'server-only' and module-load fail-fast assertion (same pattern as db/client.ts)
 - [Phase 48-stripe-infrastructure]: No @stripe/stripe-js or @stripe/react-stripe-js installed — redirect Checkout mode requires zero client-side Stripe JS
+- [Phase 48-stripe-infrastructure]: STRIPE_WEBHOOK_SECRET set to Dashboard endpoint secret (production webhook at workshoppilot.ai); Stripe CLI whsec_ needed separately for local testing
+- [Phase 48-stripe-infrastructure]: apiVersion pinned to '2026-02-25.clover' in stripe.ts to prevent silent API contract changes on SDK upgrades
 
 ### Pending Todos
 
@@ -74,11 +76,12 @@ None.
 ### Blockers/Concerns
 
 - **Phase 50:** `neon-http` driver does not support `SELECT FOR UPDATE`. Resolve before coding `consumeCredit()`: (a) secondary `neon-ws` client for transaction only, or (b) conditional-UPDATE pattern (`WHERE credit_balance > 0 RETURNING`). Decide during Phase 50 planning.
-- **Phase 48:** Vercel Deployment Protection may block `/api/webhooks/stripe` in preview — add to bypass list before Phase 49 testing begins.
-- **Phase 48:** Stripe Customer pre-creation timing — at signup (extend Clerk webhook) or lazy at first checkout. Decide before Phase 48 planning.
+- **Phase 49 pre-req:** STRIPE_PRICE_SINGLE_FLIGHT and STRIPE_PRICE_SERIAL_ENTREPRENEUR are set to product IDs (`prod_...`) — must be updated to price IDs (`price_...`) from Stripe Dashboard before Phase 49 checkout flow can be tested end-to-end.
+- **Phase 49:** Vercel Deployment Protection may block `/api/webhooks/stripe` in preview — add to bypass list before Phase 49 testing begins.
+- **Phase 49:** Stripe Customer pre-creation timing — at signup (extend Clerk webhook) or lazy at first checkout. Decide during Phase 49 planning.
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: Completed 47-02-PLAN.md (billing seed script). Phase 47 complete. Next: Phase 48 (Stripe Checkout).
+Last session: 2026-02-26
+Stopped at: Completed 48-01-PLAN.md (Stripe SDK install, server-only singleton, env validation, user Dashboard setup). Phase 48 complete. Next: Phase 49 (Stripe Checkout Flow).
 Resume file: None
