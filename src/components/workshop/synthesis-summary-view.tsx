@@ -1,12 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import { FileText, Presentation, Users, Code, Zap, Megaphone, CheckCircle2 } from 'lucide-react';
+import { Zap, Megaphone, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DeliverableCard, DELIVERABLES } from './deliverable-card';
-
-type GenerationStatus = 'idle' | 'loading' | 'done' | 'error';
+import { DeliverableCard } from './deliverable-card';
 
 interface SynthesisSummaryViewProps {
   artifact: Record<string, unknown>;
@@ -14,10 +11,6 @@ interface SynthesisSummaryViewProps {
   sessionId?: string;
   onGeneratePrd?: () => void;
   workshopCompleted?: boolean;
-  onGenerateFullPrd?: () => Promise<void>;
-  onGenerateTechSpecs?: () => Promise<void>;
-  prdGenerated?: boolean;
-  techSpecsGenerated?: boolean;
 }
 
 interface StepSummary {
@@ -37,13 +30,6 @@ interface BillboardHero {
   subheadline: string;
   cta: string;
 }
-
-const DELIVERABLE_ICONS: Record<string, React.ReactNode> = {
-  FileText: <FileText className="h-5 w-5" />,
-  Presentation: <Presentation className="h-5 w-5" />,
-  Users: <Users className="h-5 w-5" />,
-  Code: <Code className="h-5 w-5" />,
-};
 
 /**
  * Get color class for confidence score
@@ -84,40 +70,9 @@ function getResearchQualityColor(quality: 'thin' | 'moderate' | 'strong'): strin
 export function SynthesisSummaryView({
   artifact,
   workshopId,
-  sessionId,
   onGeneratePrd,
   workshopCompleted = false,
-  onGenerateFullPrd,
-  onGenerateTechSpecs,
-  prdGenerated = false,
-  techSpecsGenerated = false,
 }: SynthesisSummaryViewProps) {
-  const router = useRouter();
-  const [prdStatus, setPrdStatus] = React.useState<GenerationStatus>('idle');
-  const [techSpecsStatus, setTechSpecsStatus] = React.useState<GenerationStatus>('idle');
-
-  const handleGeneratePrd = React.useCallback(async () => {
-    if (!onGenerateFullPrd) return;
-    setPrdStatus('loading');
-    try {
-      await onGenerateFullPrd();
-      setPrdStatus('done');
-    } catch {
-      setPrdStatus('error');
-    }
-  }, [onGenerateFullPrd]);
-
-  const handleGenerateTechSpecs = React.useCallback(async () => {
-    if (!onGenerateTechSpecs) return;
-    setTechSpecsStatus('loading');
-    try {
-      await onGenerateTechSpecs();
-      setTechSpecsStatus('done');
-    } catch {
-      setTechSpecsStatus('error');
-    }
-  }, [onGenerateTechSpecs]);
-
   const narrative = (artifact.narrativeIntro || artifact.narrative) as string | undefined;
   const billboardHero = artifact.billboardHero as BillboardHero | undefined;
   const stepSummaries = (artifact.stepSummaries as StepSummary[]) || [];
@@ -281,19 +236,15 @@ export function SynthesisSummaryView({
         </div>
       )}
 
-      {/* Build Pack Deliverables */}
+      {/* V0 Prototype */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          Build Pack Deliverables
+          Prototype
           {workshopCompleted && (
             <CheckCircle2 className="h-5 w-5 text-olive-600 dark:text-olive-400" />
           )}
         </h3>
-        <p className="text-sm text-muted-foreground">
-          Export-ready documents generated from your workshop.
-        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* V0 Prototype card — enabled when workshopId present */}
           <DeliverableCard
             title="V0 Prototype"
             description="AI-generated clickable prototype from your workshop — preview in browser or edit in V0."
@@ -302,78 +253,6 @@ export function SynthesisSummaryView({
             buttonLabel={workshopId ? 'Generate Prototype' : 'Coming Soon'}
             onDownload={onGeneratePrd}
           />
-          {/* PRD card — enabled on workshop completion */}
-          {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => {
-            const isPrdDone = prdStatus === 'done' || prdGenerated;
-            const canNavigate = isPrdDone && !!sessionId;
-            return (
-              <DeliverableCard
-                key={d.id}
-                title={d.title}
-                description={d.description}
-                icon={DELIVERABLE_ICONS[d.iconName]}
-                disabled={!workshopCompleted || (isPrdDone && !sessionId)}
-                isLoading={prdStatus === 'loading'}
-                buttonLabel={
-                  !workshopCompleted
-                    ? 'Coming Soon'
-                    : isPrdDone
-                      ? 'View on Outputs Page'
-                      : prdStatus === 'error'
-                        ? 'Retry Generation'
-                        : 'Generate PRD'
-                }
-                onDownload={
-                  canNavigate
-                    ? () => router.push(`/workshop/${sessionId}/outputs`)
-                    : workshopCompleted && !isPrdDone
-                      ? handleGeneratePrd
-                      : undefined
-                }
-              />
-            );
-          })}
-          {/* Tech Specs card — enabled on workshop completion */}
-          {DELIVERABLES.filter((d) => d.id === 'tech-specs').map((d) => {
-            const isTechSpecsDone = techSpecsStatus === 'done' || techSpecsGenerated;
-            const canNavigate = isTechSpecsDone && !!sessionId;
-            return (
-              <DeliverableCard
-                key={d.id}
-                title={d.title}
-                description={d.description}
-                icon={DELIVERABLE_ICONS[d.iconName]}
-                disabled={!workshopCompleted || (isTechSpecsDone && !sessionId)}
-                isLoading={techSpecsStatus === 'loading'}
-                buttonLabel={
-                  !workshopCompleted
-                    ? 'Coming Soon'
-                    : isTechSpecsDone
-                      ? 'View on Outputs Page'
-                      : techSpecsStatus === 'error'
-                        ? 'Retry Generation'
-                        : 'Generate Tech Specs'
-                }
-                onDownload={
-                  canNavigate
-                    ? () => router.push(`/workshop/${sessionId}/outputs`)
-                    : workshopCompleted && !isTechSpecsDone
-                      ? handleGenerateTechSpecs
-                      : undefined
-                }
-              />
-            );
-          })}
-          {/* Stakeholder Presentation and User Stories — out of v1.7 scope, always disabled */}
-          {DELIVERABLES.filter((d) => d.id === 'stakeholder-ppt' || d.id === 'user-stories').map((d) => (
-            <DeliverableCard
-              key={d.id}
-              title={d.title}
-              description={d.description}
-              icon={DELIVERABLE_ICONS[d.iconName]}
-              disabled={true}
-            />
-          ))}
         </div>
       </div>
     </div>
@@ -387,66 +266,30 @@ export function SynthesisSummaryView({
  */
 export function SynthesisBuildPackSection({
   workshopId,
-  sessionId,
   onGeneratePrd,
   onGenerateBillboard,
   hasBillboard,
   workshopCompleted = false,
-  onGenerateFullPrd,
-  onGenerateTechSpecs,
-  prdGenerated = false,
-  techSpecsGenerated = false,
 }: {
   workshopId?: string;
-  sessionId?: string;
   onGeneratePrd?: () => void;
   onGenerateBillboard?: () => void;
   hasBillboard?: boolean;
   workshopCompleted?: boolean;
-  onGenerateFullPrd?: () => Promise<void>;
-  onGenerateTechSpecs?: () => Promise<void>;
-  prdGenerated?: boolean;
-  techSpecsGenerated?: boolean;
 }) {
-  const router = useRouter();
-  const [prdStatus, setPrdStatus] = React.useState<GenerationStatus>('idle');
-  const [techSpecsStatus, setTechSpecsStatus] = React.useState<GenerationStatus>('idle');
-
-  const handleGeneratePrd = React.useCallback(async () => {
-    if (!onGenerateFullPrd) return;
-    setPrdStatus('loading');
-    try {
-      await onGenerateFullPrd();
-      setPrdStatus('done');
-    } catch {
-      setPrdStatus('error');
-    }
-  }, [onGenerateFullPrd]);
-
-  const handleGenerateTechSpecs = React.useCallback(async () => {
-    if (!onGenerateTechSpecs) return;
-    setTechSpecsStatus('loading');
-    try {
-      await onGenerateTechSpecs();
-      setTechSpecsStatus('done');
-    } catch {
-      setTechSpecsStatus('error');
-    }
-  }, [onGenerateTechSpecs]);
-
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold flex items-center gap-2">
-        Build Pack Deliverables
+        Prototype & Preview
         {workshopCompleted && (
           <CheckCircle2 className="h-5 w-5 text-olive-600 dark:text-olive-400" />
         )}
       </h3>
       <p className="text-sm text-muted-foreground">
-        Export-ready documents generated from your workshop.
+        Interactive prototypes and previews generated from your workshop.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Billboard Hero — first card */}
+        {/* Billboard Hero */}
         <DeliverableCard
           title="Billboard Hero"
           description="AI-generated billboard headline, subheadline, CTA, and hero image — your product's elevator pitch visualized."
@@ -455,7 +298,7 @@ export function SynthesisBuildPackSection({
           buttonLabel={hasBillboard ? 'View Billboard' : 'Create Billboard'}
           onDownload={onGenerateBillboard}
         />
-        {/* V0 Prototype card */}
+        {/* V0 Prototype */}
         <DeliverableCard
           title="V0 Prototype"
           description="AI-generated clickable prototype from your workshop — preview in browser or edit in V0."
@@ -464,78 +307,6 @@ export function SynthesisBuildPackSection({
           buttonLabel={workshopId ? 'Generate Prototype' : 'Coming Soon'}
           onDownload={onGeneratePrd}
         />
-        {/* PRD card — enabled on workshop completion */}
-        {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => {
-          const isPrdDone = prdStatus === 'done' || prdGenerated;
-          const canNavigate = isPrdDone && !!sessionId;
-          return (
-            <DeliverableCard
-              key={d.id}
-              title={d.title}
-              description={d.description}
-              icon={DELIVERABLE_ICONS[d.iconName]}
-              disabled={!workshopCompleted || (isPrdDone && !sessionId)}
-              isLoading={prdStatus === 'loading'}
-              buttonLabel={
-                !workshopCompleted
-                  ? 'Coming Soon'
-                  : isPrdDone
-                    ? 'View on Outputs Page'
-                    : prdStatus === 'error'
-                      ? 'Retry Generation'
-                      : 'Generate PRD'
-              }
-              onDownload={
-                canNavigate
-                  ? () => router.push(`/workshop/${sessionId}/outputs`)
-                  : workshopCompleted && !isPrdDone
-                    ? handleGeneratePrd
-                    : undefined
-              }
-            />
-          );
-        })}
-        {/* Tech Specs card — enabled on workshop completion */}
-        {DELIVERABLES.filter((d) => d.id === 'tech-specs').map((d) => {
-          const isTechSpecsDone = techSpecsStatus === 'done' || techSpecsGenerated;
-          const canNavigate = isTechSpecsDone && !!sessionId;
-          return (
-            <DeliverableCard
-              key={d.id}
-              title={d.title}
-              description={d.description}
-              icon={DELIVERABLE_ICONS[d.iconName]}
-              disabled={!workshopCompleted || (isTechSpecsDone && !sessionId)}
-              isLoading={techSpecsStatus === 'loading'}
-              buttonLabel={
-                !workshopCompleted
-                  ? 'Coming Soon'
-                  : isTechSpecsDone
-                    ? 'View on Outputs Page'
-                    : techSpecsStatus === 'error'
-                      ? 'Retry Generation'
-                      : 'Generate Tech Specs'
-              }
-              onDownload={
-                canNavigate
-                  ? () => router.push(`/workshop/${sessionId}/outputs`)
-                  : workshopCompleted && !isTechSpecsDone
-                    ? handleGenerateTechSpecs
-                    : undefined
-              }
-            />
-          );
-        })}
-        {/* Stakeholder Presentation and User Stories — out of v1.7 scope, always disabled */}
-        {DELIVERABLES.filter((d) => d.id === 'stakeholder-ppt' || d.id === 'user-stories').map((d) => (
-          <DeliverableCard
-            key={d.id}
-            title={d.title}
-            description={d.description}
-            icon={DELIVERABLE_ICONS[d.iconName]}
-            disabled={true}
-          />
-        ))}
       </div>
     </div>
   );

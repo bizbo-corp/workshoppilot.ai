@@ -1,13 +1,3 @@
-
-
-
-
-
-
-
-
-
-
 ## Ideas
 
 Deleting a cell will delete all the post-its inside it. 
@@ -30,24 +20,12 @@ improve the ezydraw component to have phone, stick people, and other objects.
 
 ## Concept development
 
-
-
 Scores for confidence  🟢
 
 Completness 🟢
 
 Validation 🟠 
 
-
-
-
-
 ## Todo
 
-Speaker fix
-
-~~Navigating the Ideation phase~~
-
-Vectors in Ezy Draw
-
-~~Ezy Draw text to image~~
+1

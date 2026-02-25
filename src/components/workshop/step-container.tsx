@@ -475,38 +475,6 @@ export function StepContainer({
     }
   }, [workshopId, stepOrder, sessionId, router, setStickyNotes, setDrawingNodes, setCrazy8sSlots, setMindMapState, setConceptCards, setGridColumns, setSelectedSlotIds, setPersonaTemplates, setHmwCards, setBrainRewritingMatrices]);
 
-  // PRD generation handler — calls generate-prd API with type='full-prd'
-  const handleGenerateFullPrd = React.useCallback(async () => {
-    if (!workshopId) return;
-    const res = await fetch('/api/build-pack/generate-prd', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workshopId, type: 'full-prd' }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'Generation failed' }));
-      toast.error('Failed to generate PRD. Please try again.');
-      throw new Error(err.error || 'Failed to generate PRD');
-    }
-    toast.success('PRD generated successfully');
-  }, [workshopId]);
-
-  // Tech Specs generation handler — calls generate-tech-specs API
-  const handleGenerateTechSpecs = React.useCallback(async () => {
-    if (!workshopId) return;
-    const res = await fetch('/api/build-pack/generate-tech-specs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workshopId }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'Generation failed' }));
-      toast.error('Failed to generate Tech Specs. Please try again.');
-      throw new Error(err.error || 'Failed to generate Tech Specs');
-    }
-    toast.success('Tech Specs generated successfully');
-  }, [workshopId]);
-
   // Billboard text generation handler
   const handleGenerateBillboardText = React.useCallback(async () => {
     const selected = selectedConceptIndexes.map(i => conceptCardsForBillboard[i]).filter(Boolean);
@@ -627,7 +595,6 @@ export function StepContainer({
           {/* Build Pack deliverables — always available */}
           <SynthesisBuildPackSection
             workshopId={workshopId}
-            sessionId={sessionId}
             onGeneratePrd={() => setShowPrdDialog(true)}
             onGenerateBillboard={() => {
               // Resume at the right step based on previous progress
@@ -638,8 +605,6 @@ export function StepContainer({
             }}
             hasBillboard={generatedBillboards.length > 0}
             workshopCompleted={workshopCompleted}
-            onGenerateFullPrd={handleGenerateFullPrd}
-            onGenerateTechSpecs={handleGenerateTechSpecs}
           />
         </div>
         <PrdViewerDialog
