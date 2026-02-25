@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Code, Package } from 'lucide-react';
+import { ArrowLeft, FileText, Code, Package, ArrowRight } from 'lucide-react';
 import {
   Card,
   CardHeader,
@@ -11,6 +11,7 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { DeliverableDetailView } from '@/components/workshop/deliverable-detail-view';
 
 interface DeliverableFormat {
   id: string;
@@ -72,6 +73,10 @@ export function OutputsContent({
 }: OutputsContentProps) {
   const [selectedType, setSelectedType] = useState<string | null>(null);
 
+  const selectedDeliverable = selectedType
+    ? deliverables.find((d) => d.type === selectedType) ?? null
+    : null;
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-4xl px-6 py-8 space-y-8">
@@ -81,17 +86,26 @@ export function OutputsContent({
           <p className="text-muted-foreground text-sm">{workshopTitle}</p>
         </div>
 
-        {/* Back link */}
-        <Link
-          href={`/workshop/${sessionId}/step/10`}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Workshop
-        </Link>
+        {/* Back link (only on card grid view) */}
+        {!selectedDeliverable && (
+          <Link
+            href={`/workshop/${sessionId}/step/10`}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Workshop
+          </Link>
+        )}
 
-        {/* Deliverables */}
-        {deliverables.length === 0 ? (
+        {/* Detail view or card grid */}
+        {selectedDeliverable ? (
+          <DeliverableDetailView
+            title={getDeliverableDisplayTitle(selectedDeliverable.type, selectedDeliverable.title)}
+            type={selectedDeliverable.type}
+            formats={selectedDeliverable.formats}
+            onBack={() => setSelectedType(null)}
+          />
+        ) : deliverables.length === 0 ? (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">No deliverables generated yet</CardTitle>
@@ -113,17 +127,12 @@ export function OutputsContent({
               const displayTitle = getDeliverableDisplayTitle(deliverable.type, deliverable.title);
               const description = getDeliverableDescription(deliverable.type);
               const icon = getDeliverableIcon(deliverable.type);
-              const isSelected = selectedType === deliverable.type;
 
               return (
                 <Card
                   key={deliverable.type}
-                  className={`flex flex-col justify-between gap-4 py-5 cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md ${
-                    isSelected ? 'ring-2 ring-primary ring-offset-2' : ''
-                  }`}
-                  onClick={() =>
-                    setSelectedType(isSelected ? null : deliverable.type)
-                  }
+                  className="flex flex-col justify-between gap-4 py-5 cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
+                  onClick={() => setSelectedType(deliverable.type)}
                 >
                   <CardHeader className="gap-3 pb-0">
                     {/* Icon circle */}
@@ -159,10 +168,11 @@ export function OutputsContent({
                       className="w-full"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedType(isSelected ? null : deliverable.type);
+                        setSelectedType(deliverable.type);
                       }}
                     >
                       View Details
+                      <ArrowRight className="h-4 w-4" />
                     </Button>
                   </CardFooter>
                 </Card>
