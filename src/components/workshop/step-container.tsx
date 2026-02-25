@@ -32,6 +32,7 @@ import { ConceptCanvasOverlay } from './concept-canvas-overlay';
 import { GuideEditPopover } from '@/components/canvas/guide-edit-popover';
 import { useAdminGuides } from '@/hooks/use-admin-guides';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
+import { StepTransitionWrapper } from './step-transition-wrapper';
 import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
 import type { StepCanvasSettingsData } from '@/lib/canvas/step-canvas-settings-types';
 
@@ -592,7 +593,7 @@ export function StepContainer({
           >
             <button
               onClick={() => setShowBillboardImageDialog(null)}
-              className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors z-10"
+              className="absolute top-4 right-4 rounded-full bg-background/10 p-2 text-white hover:bg-background/20 transition-colors z-10"
             >
               <X className="h-6 w-6" />
             </button>
@@ -1095,6 +1096,7 @@ export function StepContainer({
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-hidden">
+        <StepTransitionWrapper stepId={step?.id ?? String(stepOrder)}>
         <div className="flex h-full">
           {/* Chat collapsed strip */}
           {chatCollapsed && (
@@ -1277,6 +1279,7 @@ export function StepContainer({
             </div>
           )}
         </div>
+        </StepTransitionWrapper>
       </div>
       <StepNavigation
         sessionId={sessionId}
