@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Onboarding + Payments
 status: unknown
-last_updated: "2026-02-25T21:21:42.902Z"
+last_updated: "2026-02-25T22:10:52.475Z"
 progress:
   total_phases: 38
   completed_phases: 38
