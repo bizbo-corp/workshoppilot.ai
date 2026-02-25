@@ -4,8 +4,9 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db/client';
-import { workshops, sessions, workshopSteps, chatMessages, stepArtifacts, stepSummaries } from '@/db/schema';
-import { eq, and, isNull, inArray, sql } from 'drizzle-orm';
+import { workshops, sessions, workshopSteps, chatMessages, stepArtifacts, stepSummaries, users } from '@/db/schema';
+import { eq, and, isNull, inArray, sql, gt } from 'drizzle-orm';
+import { PAYWALL_CUTOFF_DATE } from '@/actions/billing-actions';
 import { createPrefixedId } from '@/lib/ids';
 import { STEPS, getStepById } from '@/lib/workshop/step-metadata';
 import { generateStepSummary } from '@/lib/context/generate-summary';
@@ -268,10 +269,47 @@ export async function advanceToNextStep(
   currentStepId: string,
   nextStepId: string,
   sessionId: string
-): Promise<{ nextStepOrder: number }> {
+): Promise<{ nextStepOrder: number } | { paywallRequired: true; hasCredits: boolean; creditBalance: number }> {
   let nextStepOrder: number;
 
   try {
+    // Paywall gate: Step 6 → Step 7 boundary
+    const STEP_6_ID = 'journey-mapping';
+    if (process.env.PAYWALL_ENABLED !== 'false' && currentStepId === STEP_6_ID) {
+      const gatUserId = await getUserId();
+      if (!gatUserId) throw new Error('Authentication required');
+
+      // Check workshop credit state
+      const workshopRecord = await db.query.workshops.findFirst({
+        where: and(
+          eq(workshops.id, workshopId),
+          eq(workshops.clerkUserId, gatUserId)
+        ),
+        columns: { creditConsumedAt: true, createdAt: true },
+      });
+
+      if (workshopRecord) {
+        const isUnlocked = workshopRecord.creditConsumedAt !== null;
+        const isGrandfathered =
+          workshopRecord.creditConsumedAt === null &&
+          workshopRecord.createdAt < PAYWALL_CUTOFF_DATE;
+
+        if (!isUnlocked && !isGrandfathered) {
+          // Check credit balance to inform UI which dialog to show
+          const userRecord = await db.query.users.findFirst({
+            where: eq(users.clerkUserId, gatUserId),
+            columns: { creditBalance: true },
+          });
+          const balance = userRecord?.creditBalance ?? 0;
+          return {
+            paywallRequired: true,
+            hasCredits: balance > 0,
+            creditBalance: balance,
+          };
+        }
+      }
+    }
+
     // Mark current step complete
     await updateStepStatus(workshopId, currentStepId, 'complete', sessionId);
 
