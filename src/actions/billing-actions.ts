@@ -5,19 +5,7 @@ import { db } from '@/db/client';
 import { users, workshops, creditTransactions } from '@/db/schema';
 import { eq, gt, and, isNull, sql } from 'drizzle-orm';
 import { createPrefixedId } from '@/lib/ids';
-
-/**
- * Cutoff timestamp for grandfathering existing workshops.
- * Equals the `when` field from migration journal entry 0008_shocking_sphinx.sql,
- * which added the `credit_consumed_at` column — the moment paywall enforcement
- * became possible. Any workshop created before this timestamp predated the paywall.
- *
- * Value: 1772051653843 ms = 2026-02-26T23:54:13.843Z
- *
- * Exported so Plan 50-02 can import it for the Server Component paywall check
- * without duplicating the constant.
- */
-export const PAYWALL_CUTOFF_DATE = new Date(1772051653843);
+import { PAYWALL_CUTOFF_DATE } from '@/lib/billing/paywall-config';
 
 /**
  * Discriminated union result for consumeCredit().

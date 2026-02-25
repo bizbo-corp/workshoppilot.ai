@@ -22,7 +22,7 @@ import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canva
 import { computeRadialPositions } from "@/lib/canvas/mind-map-layout";
 import { getStepTemplateStickyNotes } from "@/lib/canvas/template-sticky-note-config";
 import { dbWithRetry } from "@/db/with-retry";
-import { PAYWALL_CUTOFF_DATE } from "@/actions/billing-actions";
+import { PAYWALL_CUTOFF_DATE } from "@/lib/billing/paywall-config";
 import { PaywallOverlay } from "@/components/workshop/paywall-overlay";
 
 interface StepPageProps {

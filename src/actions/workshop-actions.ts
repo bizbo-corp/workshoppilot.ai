@@ -6,7 +6,7 @@ import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db/client';
 import { workshops, sessions, workshopSteps, chatMessages, stepArtifacts, stepSummaries, users } from '@/db/schema';
 import { eq, and, isNull, inArray, sql, gt } from 'drizzle-orm';
-import { PAYWALL_CUTOFF_DATE } from '@/actions/billing-actions';
+import { PAYWALL_CUTOFF_DATE } from '@/lib/billing/paywall-config';
 import { createPrefixedId } from '@/lib/ids';
 import { STEPS, getStepById } from '@/lib/workshop/step-metadata';
 import { generateStepSummary } from '@/lib/context/generate-summary';
