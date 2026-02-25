@@ -72,6 +72,10 @@ Key v1.8 decisions affecting current work:
 - [Phase 49-payment-api-layer]: Lazy Stripe Customer creation at first checkout (not at signup via Clerk webhook) — simpler, no race conditions
 - [Phase 49-payment-api-layer]: 303 redirect (not 302) for POST->GET to Stripe hosted checkout via NextResponse.redirect
 - [Phase 49-payment-api-layer]: Checkout Session metadata includes clerkUserId + creditQty (string) + productType for idempotent webhook fulfillment in Phase 50
+- [Phase 49-payment-api-layer]: fulfillCreditPurchase does NOT use DB transaction (neon-http does not support interactive multi-statement transactions) — onConflictDoNothing on stripeSessionId UNIQUE provides idempotency
+- [Phase 49-payment-api-layer]: balanceAfter written from RETURNING result of atomic increment (not pre-computed) — avoids RESEARCH.md Pitfall 4 race condition
+- [Phase 49-payment-api-layer]: 400 for invalid Stripe signatures (not 500) — bad signature is not transient; Stripe will not retry 4xx
+- [Phase 49-payment-api-layer]: Both checkout.session.completed and checkout.session.async_payment_succeeded handled — latter covers ACH and deferred payment methods
 
 ### Pending Todos
 
@@ -86,5 +90,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 49-01-PLAN.md (price-config map, Stripe Checkout route handler with lazy Customer creation, 303 redirect). Next: Phase 49 Plan 02 (webhook handler).
+Stopped at: Completed 49-02-PLAN.md (fulfillCreditPurchase idempotent function, Stripe webhook handler at /api/webhooks/stripe). Next: Phase 49 Plan 03 (success page + credit display).
 Resume file: None
