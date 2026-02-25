@@ -64,6 +64,7 @@
     "rehype-raw": "^7.0.0",
     "simplify-js": "^1.2.4",
     "sonner": "^2.0.7",
+    "stripe": "^20.4.0",
     "svix": "^1.84.1",
     "tailwind-merge": "^3.3.1",
     "use-debounce": "^10.1.0",
