@@ -22,6 +22,8 @@ import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canva
 import { computeRadialPositions } from "@/lib/canvas/mind-map-layout";
 import { getStepTemplateStickyNotes } from "@/lib/canvas/template-sticky-note-config";
 import { dbWithRetry } from "@/db/with-retry";
+import { PAYWALL_CUTOFF_DATE } from "@/actions/billing-actions";
+import { PaywallOverlay } from "@/components/workshop/paywall-overlay";
 
 interface StepPageProps {
   params: Promise<{
@@ -85,6 +87,31 @@ export default async function StepPage({ params }: StepPageProps) {
       redirect(`/workshop/${sessionId}/step/${activeStepDef?.order || 1}`);
     }
     redirect(`/workshop/${sessionId}/step/1`);
+  }
+
+  // Paywall enforcement: Steps 7-10 require credit or grandfathering
+  // Must run after sequential enforcement so session.workshop data is already fetched.
+  // Steps 1-6 are completely unaffected — guard is stepNumber >= 7.
+  const PAYWALL_ENABLED = process.env.PAYWALL_ENABLED !== 'false';
+
+  if (PAYWALL_ENABLED && stepNumber >= 7) {
+    const workshop = session.workshop;
+    const isUnlocked = workshop.creditConsumedAt !== null;
+    const isGrandfathered =
+      workshop.creditConsumedAt === null &&
+      workshop.createdAt < PAYWALL_CUTOFF_DATE;
+
+    if (!isUnlocked && !isGrandfathered) {
+      return (
+        <div className="h-full">
+          <PaywallOverlay
+            sessionId={sessionId}
+            workshopId={workshop.id}
+            stepNumber={stepNumber}
+          />
+        </div>
+      );
+    }
   }
 
   // Load chat messages for this session and step
