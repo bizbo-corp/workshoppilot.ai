@@ -127,7 +127,7 @@ See `milestones/v1.6-ROADMAP.md` for full details.
 
 - [x] **Phase 43: Workshop Completion** - AI-guided final review in Step 10 + workshop marked complete in DB
 - [x] **Phase 44: AI Deliverable Generation** - Gemini generates PRD and Tech Specs (Markdown + JSON) from all 10 step artifacts (completed 2026-02-25)
-- [ ] **Phase 45: Outputs Page** - Dedicated `/workshop/[id]/outputs` page with deliverable cards, detail view, copy, and download
+- [ ] **Phase 45: Outputs Page** - Dedicated `/workshop/[id]/outputs` page with deliverable cards, detail view, copy, and download (2 plans)
 - [ ] **Phase 46: Dashboard Routing** - Completed workshops route to outputs page; in-progress continue to resume position
 
 ## Phase Details
@@ -170,7 +170,10 @@ Plans:
   3. User can copy the entire deliverable content to clipboard with a single click
   4. User can download the deliverable as a `.md` file and as a `.json` file
   5. User can navigate back to their workshop from the outputs page to review or revise steps
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 45-01-PLAN.md — Outputs page shell: API route + page with deliverable cards and back link
+- [ ] 45-02-PLAN.md — Detail view with markdown rendering, copy, download, and navigation wiring
 
 ### Phase 46: Dashboard Routing
 **Goal**: The dashboard correctly routes users based on workshop status — completed workshops go to the outputs page, in-progress workshops resume at the last active step.
@@ -195,7 +198,7 @@ Plans:
 | 40-42 | v1.6 | 5/5 | Complete | 2026-02-25 |
 | 43. Workshop Completion | v1.7 | Complete    | 2026-02-25 | 2026-02-25 |
 | 44. AI Deliverable Generation | 2/2 | Complete    | 2026-02-25 | - |
-| 45. Outputs Page | v1.7 | 0/? | Not started | - |
+| 45. Outputs Page | v1.7 | 0/2 | Planned | - |
 | 46. Dashboard Routing | v1.7 | 0/? | Not started | - |
 
 **Total project:** 120 plans across 43 phases (8 milestones shipped) + 3 phases planned for v1.7
