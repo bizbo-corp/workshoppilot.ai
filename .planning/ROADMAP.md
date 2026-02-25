@@ -141,7 +141,10 @@ See `milestones/v1.6-ROADMAP.md` for full details.
   2. User can click a "Complete Workshop" action that visibly marks the workshop as done
   3. Completed workshop status persists in the database — page refresh shows the workshop remains complete
   4. The Step 10 UI reflects completed state (deliverable cards become active, no longer "Coming Soon")
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 43-01-PLAN.md — Backend: completeWorkshop server action + API endpoint
+- [ ] 43-02-PLAN.md — Frontend: Complete Workshop button + deliverable card activation
 
 ### Phase 44: AI Deliverable Generation
 **Goal**: On workshop completion, Gemini generates a PRD and Tech Specs document from the full structured workshop data, stored as Markdown and JSON in the database.
@@ -187,7 +190,7 @@ See `milestones/v1.6-ROADMAP.md` for full details.
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
 | 36-39 | v1.5 | 9/9 | Complete | 2026-02-19 |
 | 40-42 | v1.6 | 5/5 | Complete | 2026-02-25 |
-| 43. Workshop Completion | v1.7 | 0/? | Not started | - |
+| 43. Workshop Completion | v1.7 | 0/2 | Not started | - |
 | 44. AI Deliverable Generation | v1.7 | 0/? | Not started | - |
 | 45. Outputs Page | v1.7 | 0/? | Not started | - |
 | 46. Dashboard Routing | v1.7 | 0/? | Not started | - |
@@ -195,4 +198,4 @@ See `milestones/v1.6-ROADMAP.md` for full details.
 **Total project:** 118 plans across 42 phases (8 milestones shipped) + 4 phases planned for v1.7
 
 ---
-*Last updated: 2026-02-25 — v1.7 Build Pack roadmap created*
+*Last updated: 2026-02-25 — Phase 43 planned (2 plans)*
