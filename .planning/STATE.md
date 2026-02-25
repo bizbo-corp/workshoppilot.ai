@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 40 of 42 (Production Auth)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-25 — v1.6 roadmap created, phase 40 is next
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-25 — Phase 40 Plan 01 complete (auth UI, olive theme, AuthGuard)
 
-Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (v1.6)
+Progress: [██░░░░░░░░░░░░░░░░░░] 10% (v1.6)
 
 ## Performance Metrics
 
@@ -37,6 +37,13 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (v1.
 
 All prior decisions archived. See PROJECT.md Key Decisions table for full history.
 
+**Phase 40 Plan 01 (2026-02-25):**
+- Sign in button uses ghost/subtle style (no background, no border) to blend with header
+- Single Clerk SignIn modal handles both sign-in and sign-up (no separate sign-up button)
+- Clerk errors surfaced as sonner toasts via MutationObserver; inline errors set to sr-only
+- Protected page routes pass through middleware (NextResponse.next()); API routes return 401
+- AuthGuard client component shows SignInModal in-place when !isSignedIn — no redirect
+
 ### Pending Todos
 
 None.
@@ -53,12 +60,12 @@ None.
 
 ### Blockers/Concerns
 
-- AUTH CRITICAL: Production sign-in is broken — Phase 40 must be completed before any real users can access the app.
+- AUTH PARTIAL: Phase 40 Plan 01 complete (UI/theme/guard). Phase 40 Plan 02 still pending. Production Clerk keys must be configured in Vercel dashboard for workshoppilot.ai sign-in to work.
 
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Roadmap created for v1.6 — ready to plan Phase 40
+Stopped at: Completed 40-01-PLAN.md — auth UI, olive theme, AuthGuard, in-place sign-in modal
 Resume file: None
 
-**Next action:** `/gsd:plan-phase 40`
+**Next action:** Execute Phase 40 Plan 02
