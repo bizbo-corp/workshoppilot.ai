@@ -141,7 +141,7 @@ See `milestones/v1.7-ROADMAP.md` for full details.
 - [x] **Phase 47: Database Foundation** — Billing and onboarding schema migrations (completed 2026-02-25)
 - [x] **Phase 48: Stripe Infrastructure** — SDK, environment config, Products and Prices setup (completed 2026-02-25)
 - [x] **Phase 49: Payment API Layer** — Checkout session route, webhook handler, success/cancel pages (completed 2026-02-25)
-- [ ] **Phase 50: Credit Actions and Server-Side Enforcement** — Atomic credit deduction and paywall logic
+- [x] **Phase 50: Credit Actions and Server-Side Enforcement** — Atomic credit deduction and paywall logic (completed 2026-02-25)
 - [ ] **Phase 51: Paywall UI** — Upgrade modal, locked step indicators, dashboard credit badge
 - [ ] **Phase 52: Onboarding UI** — Welcome modal and onboarding state wiring
 - [ ] **Phase 53: Pricing Page and Integration** — Updated tiers, Stripe CTA links, end-to-end validation
@@ -273,7 +273,7 @@ Plans:
 | 47. Database Foundation | 2/2 | Complete    | 2026-02-25 | - |
 | 48. Stripe Infrastructure | 1/1 | Complete    | 2026-02-25 | - |
 | 49. Payment API Layer | 3/3 | Complete    | 2026-02-25 | - |
-| 50. Credit Actions and Server-Side Enforcement | 1/2 | In Progress|  | - |
+| 50. Credit Actions and Server-Side Enforcement | 2/2 | Complete   | 2026-02-25 | - |
 | 51. Paywall UI | v1.8 | 0/TBD | Not started | - |
 | 52. Onboarding UI | v1.8 | 0/TBD | Not started | - |
 | 53. Pricing Page and Integration | v1.8 | 0/TBD | Not started | - |

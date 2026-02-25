@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Phase: 50 of 53 in v1.8 (Credit Actions + Server Enforcement) — IN PROGRESS
-Plan: 1 of 2 in current phase — COMPLETE
-Status: Plan 50-01 Complete — billing-actions.ts created with consumeCredit(), getCredits(), markOnboardingComplete()
-Last activity: 2026-02-26 — Plan 50-01 complete (atomic credit consumption server actions)
+Phase: 50 of 53 in v1.8 (Credit Actions + Server Enforcement) — COMPLETE
+Plan: 2 of 2 in current phase — COMPLETE
+Status: Plan 50-02 Complete — Step 6→7 credit gate, PaywallOverlay component, Server Component paywall check for Steps 7-10
+Last activity: 2026-02-26 — Plan 50-02 complete (paywall enforcement + PaywallOverlay client component)
 
-Progress: [████░░░░░░] 50% (v1.8 — 3.5/7 phases complete)
+Progress: [█████░░░░░] 57% (v1.8 — 4/7 phases complete)
 
 ## Performance Metrics
 
@@ -80,8 +80,10 @@ Key v1.8 decisions affecting current work:
 - [Phase 49-03]: already_fulfilled path fetches balance from DB via db.query (not estimated) — ensures accuracy when webhook beats success page
 - [Phase 49-03]: payment_not_paid shows processing message (not error) — correct tone for deferred payment methods (ACH)
 - [Phase 50-01]: Conditional-UPDATE pattern chosen for consumeCredit() — neon-http does not support SELECT FOR UPDATE; conditional-UPDATE (WHERE credit_balance > 0 RETURNING) is provably atomic at PostgreSQL row level
-- [Phase 50-01]: PAYWALL_CUTOFF_DATE exported from billing-actions.ts as named constant (migration 0008 timestamp 1772051653843) — Plan 50-02 imports rather than duplicating
 - [Phase 50-01]: Post-deduction writes (credit_transactions + workshop.creditConsumedAt) via Promise.all with try/catch logging — not atomic, but consistent with fulfillCreditPurchase precedent; error logged for manual reconciliation
+- [Phase 50-02]: PAYWALL_CUTOFF_DATE moved to lib/billing/paywall-config.ts — Next.js 'use server' files may only export async functions; plain Date constant must live outside server action files
+- [Phase 50-02]: advanceToNextStep() gate returns BEFORE updateStepStatus() at Step 6→7 — Step 6 stays in_progress when paywall fires; Phase 51 UI calls consumeCredit() then advanceToNextStep() again
+- [Phase 50-02]: PaywallOverlay uses router.refresh() (not redirect) after consumeCredit() — triggers Server Component re-render in-place to reveal step content
 
 ### Pending Todos
 
@@ -96,5 +98,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 50-01-PLAN.md (billing-actions.ts with consumeCredit/getCredits/markOnboardingComplete). Next: Plan 50-02 (Server Component paywall enforcement + PaywallOverlay).
+Stopped at: Completed 50-02-PLAN.md (Step 6→7 credit gate, PaywallOverlay, Server Component paywall check). Phase 50 complete. Next: Phase 51 (Paywall UI — dialog at Step 6 for inline credit consumption).
 Resume file: None
