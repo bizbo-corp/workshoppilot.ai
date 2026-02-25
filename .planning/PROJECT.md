@@ -59,17 +59,23 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - ✓ Landing page with hero section, value propositions, testimonials, sticky header, and sign-in CTA — v1.5
 - ✓ Pricing page with three tiers (Single Use $9, Facilitator $29/mo, Annual $249/yr) — hidden from nav — v1.5
 - ✓ Step 10 outputs shell with Build Pack deliverable cards (PRD, Stakeholder PPT, User Stories, Tech Specs) and "Coming Soon" labels — v1.5
+- ✓ Production auth: sign-in button visible, Clerk configured for workshoppilot.ai, email/password + Google OAuth + Apple sign-in — v1.6
+- ✓ Olive theme gap closure: guide nodes, canvas guides, synthesis scores all on olive token system — v1.6
+- ✓ Step transitions with 150ms CSS fade-in (no framer-motion), loading skeletons for dashboard and chat — v1.6
+- ✓ Consistent hover/active states: card lifts, btn-lift utility, olive sidebar hovers — v1.6
+- ✓ Toast notifications for all user actions (rename, delete, extract, appearance, errors) with olive Sonner theming — v1.6
+- ✓ Micro-interactions on cards, buttons, sidebar elements with 150ms transitions — v1.6
 
 ### Active
 
 #### Future — MMP (Visual & Solo Polish)
+- [ ] First-run onboarding tour (guided welcome highlighting chat, canvas, steps, navigation)
 - [ ] Visual stakeholder radar chart
 - [ ] Guided persona builder with per-field regeneration
 - [ ] Billboard Hero exercise (text-based pitch test + EzyDraw visuals)
 - [ ] Billboard template layouts
 - [ ] Timer function for time-boxed exercises
 - [ ] Responsive tablet support
-- [ ] OAuth (Google)
 - [ ] Video explanations per step
 - [ ] Build Pack export (PRDs, user stories, tech specs for AI coders) — actual generation for Step 10 deliverables
 
@@ -130,7 +136,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - **Entry Friction**: Must be near-zero — user types idea and starts immediately
 - **Desktop-First**: MVP targets desktop browsers; mobile deferred to MMP/FFP
 - **Single Player First**: v0.5-v1.4 are single-user; collaboration deferred to FFP
-- **Existing Codebase**: ~32,800 lines TypeScript across ~450 files, 39 phases shipped, production at workshoppilot.ai
+- **Existing Codebase**: ~46,000 lines TypeScript across ~264 files, 42 phases shipped (8 milestones), production at workshoppilot.ai
 
 ## Key Decisions
 
@@ -176,14 +182,23 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | Pricing page hidden from nav | Accessible via direct URL only; informational with no payment processing | ✓ Good — sets expectations without cluttering UX |
 | Step 10 deliverable cards always disabled | Enabling requires only disabled=false + onDownload; no layout restructuring | ✓ Good — extensible for future Build Pack export |
 | Direct SynthesisSummaryView import in StepContainer | Bypasses orphaned OutputAccordion/OutputPanel chain from Phase 31 retirement | ✓ Good — clean render path fix |
+| Ghost sign-in button (no background/border) | Blends with header, single modal handles sign-in + sign-up via Clerk internal toggle | ✓ Good — clean, minimal auth entry point |
+| MutationObserver for Clerk errors → sonner toasts | Clerk renders errors inline; observer detects and fires toast, hides original with sr-only | ✓ Good — consistent error UX |
+| AuthGuard in-place modal (not redirect) | Protected pages show sign-in modal where user is, rather than redirecting to / | ✓ Good — no jarring navigation |
+| socialButtonsVariant blockButton | Full-width Google/Apple buttons with provider name text, not icon-only | ✓ Good — clear social auth options |
+| CSS transition fade-in (not framer-motion) | 150ms opacity transition via useEffect + requestAnimationFrame — zero bundle cost | ✓ Good — lightweight, snappy |
+| Static skeletons (animate-none) | Override shadcn Skeleton pulse with static gray blocks — no shimmer distraction | ✓ Good — calm loading states |
+| Sonner CSS override for olive toasts | [data-sonner-toast][data-type] attribute selectors override richColors with olive palette | ✓ Good — brand-consistent feedback |
+| .btn-lift CSS utility | translateY(-1px) hover + box-shadow, reset on active — applied via className | ✓ Good — tactile button feel |
+| NEXT_REDIRECT guard for error toasts | Check error.digest?.startsWith('NEXT_REDIRECT') and rethrow; real errors get toast.error | ✓ Good — clean server action error handling |
 
 ## Current State
 
-**Shipped:** v1.5 Launch Ready (2026-02-19)
+**Shipped:** v1.6 Production Polish (2026-02-25)
 **Live at:** https://workshoppilot.ai
-**Codebase:** ~32,800 lines of TypeScript across ~450 files
+**Codebase:** ~46,000 lines of TypeScript across ~264 files
 **Tech stack:** Clerk + Neon + Gemini + Drizzle + AI SDK 6 + ReactFlow + Konva.js + Zustand + Playwright + Vercel — all validated in production
-**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) + v1.2 (whiteboard, 2 days) + v1.3 (visual ideation, 1 day) + v1.4 (polish, 1 day) + v1.5 (launch ready, 2 days) = 13 days total
+**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) + v1.2 (whiteboard, 2 days) + v1.3 (visual ideation, 1 day) + v1.4 (polish, 1 day) + v1.5 (launch ready, 2 days) + v1.6 (production polish, 1 day) = 14 days total
 
 **Known issues / tech debt:**
 - Next.js middleware → proxy convention migration (non-blocking)
@@ -193,19 +208,9 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - E2E back-navigation testing deferred (forward-only tested)
 - /api/dev/seed-workshop build error (pre-existing, TypeError on width property)
 - isPublicRoute in proxy.ts defined but unused (pricing works via default-allow)
-- Semantic status colors (green/amber/red) in synthesis-summary-view outside olive token system
-
-**Current milestone:** v1.6 Production Polish
-
-## Current Milestone: v1.6 Production Polish
-
-**Goal:** Make WorkshopPilot.ai production-ready with working auth, Google OAuth, first-run onboarding, and visual polish across all surfaces.
-
-**Target features:**
-- Fix production auth (missing sign-in button, Clerk domain configuration)
-- Google OAuth (one-click Google sign-in)
-- First-run onboarding flow (guided intro for new users)
-- Visual polish (design consistency pass + motion/micro-interactions)
+- First-run onboarding tour deferred from v1.6 (ONBD-01/02/03 — Phase 41 not started)
+- TODO in sign-up-modal.tsx: configure first name/last name as required in Clerk Dashboard
+- ClerkProvider uses hardcoded #6b7a2f (Clerk API requires hex) — slightly different from app olive tokens
 
 ---
-*Last updated: 2026-02-25 after v1.6 milestone started*
+*Last updated: 2026-02-25 after v1.6 milestone shipped*

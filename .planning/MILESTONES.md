@@ -1,5 +1,34 @@
 # Project Milestones: WorkshopPilot.ai
 
+## v1.6 Production Polish (Shipped: 2026-02-25)
+
+**Delivered:** Made WorkshopPilot.ai production-ready with working auth (email/password + Google OAuth + Apple sign-in), olive-themed Clerk modals, and comprehensive visual polish (transitions, skeletons, toasts, micro-interactions).
+
+**Phases completed:** 40, 42 (5 plans total). Phase 41 (User Onboarding) deferred — not started.
+
+**Key accomplishments:**
+- Production auth with olive-themed Clerk sign-in modal, Google OAuth + Apple sign-in, AuthGuard in-place pattern (no redirects)
+- MutationObserver-based Clerk error surfacing as sonner toasts with olive theming
+- Step transition wrapper with 150ms CSS fade-in (no framer-motion) — chat + canvas panels animate as one
+- Static loading skeletons for dashboard (Next.js loading.tsx) and chat panel (isMountLoading pattern) — no shimmer/pulse
+- Toast notifications across 9 components (rename, delete, extract, appearance, create, navigate errors) with olive-themed Sonner CSS
+- Card hover lifts, .btn-lift CSS utility for CTA buttons, olive sidebar hover states — consistent 150ms micro-interactions
+- Final olive theme gap closure: guide nodes, canvas guides, synthesis scores, completed cards all on olive token system
+
+**Known Gaps:**
+- ONBD-01: First-time welcome tour (Phase 41 — not started, deferred to next milestone)
+- ONBD-02: Tour dismissible and persistent (Phase 41 — not started)
+- ONBD-03: Tour adapts to step context (Phase 41 — not started)
+
+**Stats:**
+- 48 files changed (3,016 insertions, 195 deletions)
+- ~46,036 lines of TypeScript (total codebase, 264 files)
+- 2 phases executed, 5 plans, 1 day (2026-02-25)
+
+**Git range:** `feat(40-01)` → `docs(phase-42)`
+
+---
+
 ## v1.5 Launch Ready (Shipped: 2026-02-19)
 
 **Delivered:** Made WorkshopPilot.ai presentable to the public — cohesive olive visual identity across all surfaces, a landing page that converts, a pricing page with real tiers, and Step 10 Build Pack preview cards.
@@ -168,3 +197,13 @@
 **Git range:** `feat(01-01)` → `feat(06-01)`
 
 ---
+
+## v1.6 Production Polish (Shipped: 2026-02-25)
+
+**Phases completed:** 38 phases, 109 plans, 43 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
