@@ -245,7 +245,7 @@ export default async function DashboardPage() {
               <div className="flex-1">
                 <div className="rounded-lg border border-olive-200 bg-olive-50 p-6 dark:border-olive-900 dark:bg-olive-950">
                   <h2 className="mb-2 text-lg font-semibold text-foreground">
-                    {ctaIsCompleted ? 'Review your workshop' : 'Continue where you left off'}
+                    {ctaIsCompleted ? 'View your outputs' : 'Continue where you left off'}
                   </h2>
                   <p className="mb-4 text-sm text-muted-foreground">
                     {ctaWorkshop.title} {ctaIsCompleted ? '— Completed' : `\u2022 Step ${ctaWorkshop.currentStep}`}
@@ -253,9 +253,9 @@ export default async function DashboardPage() {
                   <div className="flex gap-3">
                     <Button asChild size="lg">
                       <a
-                        href={ctaIsCompleted ? `/workshop/${ctaWorkshop.sessionId}/results` : `/workshop/${ctaWorkshop.sessionId}/step/${ctaWorkshop.currentStep}`}
+                        href={ctaIsCompleted ? `/workshop/${ctaWorkshop.sessionId}/outputs` : `/workshop/${ctaWorkshop.sessionId}/step/${ctaWorkshop.currentStep}`}
                       >
-                        {ctaIsCompleted ? 'Review' : 'Continue'} {ctaWorkshop.title}
+                        {ctaIsCompleted ? 'View Outputs' : 'Continue'} {ctaWorkshop.title}
                       </a>
                     </Button>
                     <NewWorkshopButton variant="outline" size="lg">
