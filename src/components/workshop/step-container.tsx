@@ -627,6 +627,7 @@ export function StepContainer({
           {/* Build Pack deliverables — always available */}
           <SynthesisBuildPackSection
             workshopId={workshopId}
+            sessionId={sessionId}
             onGeneratePrd={() => setShowPrdDialog(true)}
             onGenerateBillboard={() => {
               // Resume at the right step based on previous progress

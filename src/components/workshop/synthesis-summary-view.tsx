@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { FileText, Presentation, Users, Code, Zap, Megaphone, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DeliverableCard, DELIVERABLES } from './deliverable-card';
@@ -10,6 +11,7 @@ type GenerationStatus = 'idle' | 'loading' | 'done' | 'error';
 interface SynthesisSummaryViewProps {
   artifact: Record<string, unknown>;
   workshopId?: string;
+  sessionId?: string;
   onGeneratePrd?: () => void;
   workshopCompleted?: boolean;
   onGenerateFullPrd?: () => Promise<void>;
@@ -82,6 +84,7 @@ function getResearchQualityColor(quality: 'thin' | 'moderate' | 'strong'): strin
 export function SynthesisSummaryView({
   artifact,
   workshopId,
+  sessionId,
   onGeneratePrd,
   workshopCompleted = false,
   onGenerateFullPrd,
@@ -89,6 +92,7 @@ export function SynthesisSummaryView({
   prdGenerated = false,
   techSpecsGenerated = false,
 }: SynthesisSummaryViewProps) {
+  const router = useRouter();
   const [prdStatus, setPrdStatus] = React.useState<GenerationStatus>('idle');
   const [techSpecsStatus, setTechSpecsStatus] = React.useState<GenerationStatus>('idle');
 
@@ -301,13 +305,14 @@ export function SynthesisSummaryView({
           {/* PRD card — enabled on workshop completion */}
           {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => {
             const isPrdDone = prdStatus === 'done' || prdGenerated;
+            const canNavigate = isPrdDone && !!sessionId;
             return (
               <DeliverableCard
                 key={d.id}
                 title={d.title}
                 description={d.description}
                 icon={DELIVERABLE_ICONS[d.iconName]}
-                disabled={!workshopCompleted || isPrdDone}
+                disabled={!workshopCompleted || (isPrdDone && !sessionId)}
                 isLoading={prdStatus === 'loading'}
                 buttonLabel={
                   !workshopCompleted
@@ -318,20 +323,27 @@ export function SynthesisSummaryView({
                         ? 'Retry Generation'
                         : 'Generate PRD'
                 }
-                onDownload={workshopCompleted && !isPrdDone ? handleGeneratePrd : undefined}
+                onDownload={
+                  canNavigate
+                    ? () => router.push(`/workshop/${sessionId}/outputs`)
+                    : workshopCompleted && !isPrdDone
+                      ? handleGeneratePrd
+                      : undefined
+                }
               />
             );
           })}
           {/* Tech Specs card — enabled on workshop completion */}
           {DELIVERABLES.filter((d) => d.id === 'tech-specs').map((d) => {
             const isTechSpecsDone = techSpecsStatus === 'done' || techSpecsGenerated;
+            const canNavigate = isTechSpecsDone && !!sessionId;
             return (
               <DeliverableCard
                 key={d.id}
                 title={d.title}
                 description={d.description}
                 icon={DELIVERABLE_ICONS[d.iconName]}
-                disabled={!workshopCompleted || isTechSpecsDone}
+                disabled={!workshopCompleted || (isTechSpecsDone && !sessionId)}
                 isLoading={techSpecsStatus === 'loading'}
                 buttonLabel={
                   !workshopCompleted
@@ -342,7 +354,13 @@ export function SynthesisSummaryView({
                         ? 'Retry Generation'
                         : 'Generate Tech Specs'
                 }
-                onDownload={workshopCompleted && !isTechSpecsDone ? handleGenerateTechSpecs : undefined}
+                onDownload={
+                  canNavigate
+                    ? () => router.push(`/workshop/${sessionId}/outputs`)
+                    : workshopCompleted && !isTechSpecsDone
+                      ? handleGenerateTechSpecs
+                      : undefined
+                }
               />
             );
           })}
@@ -369,6 +387,7 @@ export function SynthesisSummaryView({
  */
 export function SynthesisBuildPackSection({
   workshopId,
+  sessionId,
   onGeneratePrd,
   onGenerateBillboard,
   hasBillboard,
@@ -379,6 +398,7 @@ export function SynthesisBuildPackSection({
   techSpecsGenerated = false,
 }: {
   workshopId?: string;
+  sessionId?: string;
   onGeneratePrd?: () => void;
   onGenerateBillboard?: () => void;
   hasBillboard?: boolean;
@@ -388,6 +408,7 @@ export function SynthesisBuildPackSection({
   prdGenerated?: boolean;
   techSpecsGenerated?: boolean;
 }) {
+  const router = useRouter();
   const [prdStatus, setPrdStatus] = React.useState<GenerationStatus>('idle');
   const [techSpecsStatus, setTechSpecsStatus] = React.useState<GenerationStatus>('idle');
 
@@ -446,13 +467,14 @@ export function SynthesisBuildPackSection({
         {/* PRD card — enabled on workshop completion */}
         {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => {
           const isPrdDone = prdStatus === 'done' || prdGenerated;
+          const canNavigate = isPrdDone && !!sessionId;
           return (
             <DeliverableCard
               key={d.id}
               title={d.title}
               description={d.description}
               icon={DELIVERABLE_ICONS[d.iconName]}
-              disabled={!workshopCompleted || isPrdDone}
+              disabled={!workshopCompleted || (isPrdDone && !sessionId)}
               isLoading={prdStatus === 'loading'}
               buttonLabel={
                 !workshopCompleted
@@ -463,20 +485,27 @@ export function SynthesisBuildPackSection({
                       ? 'Retry Generation'
                       : 'Generate PRD'
               }
-              onDownload={workshopCompleted && !isPrdDone ? handleGeneratePrd : undefined}
+              onDownload={
+                canNavigate
+                  ? () => router.push(`/workshop/${sessionId}/outputs`)
+                  : workshopCompleted && !isPrdDone
+                    ? handleGeneratePrd
+                    : undefined
+              }
             />
           );
         })}
         {/* Tech Specs card — enabled on workshop completion */}
         {DELIVERABLES.filter((d) => d.id === 'tech-specs').map((d) => {
           const isTechSpecsDone = techSpecsStatus === 'done' || techSpecsGenerated;
+          const canNavigate = isTechSpecsDone && !!sessionId;
           return (
             <DeliverableCard
               key={d.id}
               title={d.title}
               description={d.description}
               icon={DELIVERABLE_ICONS[d.iconName]}
-              disabled={!workshopCompleted || isTechSpecsDone}
+              disabled={!workshopCompleted || (isTechSpecsDone && !sessionId)}
               isLoading={techSpecsStatus === 'loading'}
               buttonLabel={
                 !workshopCompleted
@@ -487,7 +516,13 @@ export function SynthesisBuildPackSection({
                       ? 'Retry Generation'
                       : 'Generate Tech Specs'
               }
-              onDownload={workshopCompleted && !isTechSpecsDone ? handleGenerateTechSpecs : undefined}
+              onDownload={
+                canNavigate
+                  ? () => router.push(`/workshop/${sessionId}/outputs`)
+                  : workshopCompleted && !isTechSpecsDone
+                    ? handleGenerateTechSpecs
+                    : undefined
+              }
             />
           );
         })}

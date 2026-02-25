@@ -72,6 +72,7 @@ export function ResultsContent({
           <SynthesisSummaryView
             artifact={synthesisArtifact}
             workshopId={workshopId}
+            sessionId={sessionId}
             onGeneratePrd={() => setShowPrdDialog(true)}
             workshopCompleted={true}
             onGenerateFullPrd={handleGenerateFullPrd}
@@ -93,6 +94,7 @@ export function ResultsContent({
             {/* Deliverables always available */}
             <SynthesisBuildPackSection
               workshopId={workshopId}
+              sessionId={sessionId}
               onGeneratePrd={() => setShowPrdDialog(true)}
               workshopCompleted={true}
               onGenerateFullPrd={handleGenerateFullPrd}
