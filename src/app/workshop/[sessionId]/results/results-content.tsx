@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
 import { SynthesisSummaryView, SynthesisBuildPackSection } from '@/components/workshop/synthesis-summary-view';
 import { PrdViewerDialog } from '@/components/workshop/prd-viewer-dialog';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,34 @@ export function ResultsContent({
   prototypeUrl,
 }: ResultsContentProps) {
   const [showPrdDialog, setShowPrdDialog] = useState(false);
+
+  const handleGenerateFullPrd = useCallback(async () => {
+    const res = await fetch('/api/build-pack/generate-prd', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workshopId, type: 'full-prd' }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Generation failed' }));
+      toast.error('Failed to generate PRD. Please try again.');
+      throw new Error(err.error || 'Failed to generate PRD');
+    }
+    toast.success('PRD generated successfully');
+  }, [workshopId]);
+
+  const handleGenerateTechSpecs = useCallback(async () => {
+    const res = await fetch('/api/build-pack/generate-tech-specs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workshopId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Generation failed' }));
+      toast.error('Failed to generate Tech Specs. Please try again.');
+      throw new Error(err.error || 'Failed to generate Tech Specs');
+    }
+    toast.success('Tech Specs generated successfully');
+  }, [workshopId]);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -45,6 +74,8 @@ export function ResultsContent({
             workshopId={workshopId}
             onGeneratePrd={() => setShowPrdDialog(true)}
             workshopCompleted={true}
+            onGenerateFullPrd={handleGenerateFullPrd}
+            onGenerateTechSpecs={handleGenerateTechSpecs}
           />
         ) : (
           <div className="space-y-8">
@@ -64,6 +95,8 @@ export function ResultsContent({
               workshopId={workshopId}
               onGeneratePrd={() => setShowPrdDialog(true)}
               workshopCompleted={true}
+              onGenerateFullPrd={handleGenerateFullPrd}
+              onGenerateTechSpecs={handleGenerateTechSpecs}
             />
           </div>
         )}

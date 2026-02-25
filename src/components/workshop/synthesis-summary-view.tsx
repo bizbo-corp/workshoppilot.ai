@@ -5,11 +5,17 @@ import { FileText, Presentation, Users, Code, Zap, Megaphone, CheckCircle2 } fro
 import { cn } from '@/lib/utils';
 import { DeliverableCard, DELIVERABLES } from './deliverable-card';
 
+type GenerationStatus = 'idle' | 'loading' | 'done' | 'error';
+
 interface SynthesisSummaryViewProps {
   artifact: Record<string, unknown>;
   workshopId?: string;
   onGeneratePrd?: () => void;
   workshopCompleted?: boolean;
+  onGenerateFullPrd?: () => Promise<void>;
+  onGenerateTechSpecs?: () => Promise<void>;
+  prdGenerated?: boolean;
+  techSpecsGenerated?: boolean;
 }
 
 interface StepSummary {
@@ -73,7 +79,41 @@ function getResearchQualityColor(quality: 'thin' | 'moderate' | 'strong'): strin
  * SynthesisSummaryView component
  * Renders Step 10 validate artifact as a polished journey summary with narrative intro, step summaries, confidence gauge, and next steps
  */
-export function SynthesisSummaryView({ artifact, workshopId, onGeneratePrd, workshopCompleted = false }: SynthesisSummaryViewProps) {
+export function SynthesisSummaryView({
+  artifact,
+  workshopId,
+  onGeneratePrd,
+  workshopCompleted = false,
+  onGenerateFullPrd,
+  onGenerateTechSpecs,
+  prdGenerated = false,
+  techSpecsGenerated = false,
+}: SynthesisSummaryViewProps) {
+  const [prdStatus, setPrdStatus] = React.useState<GenerationStatus>('idle');
+  const [techSpecsStatus, setTechSpecsStatus] = React.useState<GenerationStatus>('idle');
+
+  const handleGeneratePrd = React.useCallback(async () => {
+    if (!onGenerateFullPrd) return;
+    setPrdStatus('loading');
+    try {
+      await onGenerateFullPrd();
+      setPrdStatus('done');
+    } catch {
+      setPrdStatus('error');
+    }
+  }, [onGenerateFullPrd]);
+
+  const handleGenerateTechSpecs = React.useCallback(async () => {
+    if (!onGenerateTechSpecs) return;
+    setTechSpecsStatus('loading');
+    try {
+      await onGenerateTechSpecs();
+      setTechSpecsStatus('done');
+    } catch {
+      setTechSpecsStatus('error');
+    }
+  }, [onGenerateTechSpecs]);
+
   const narrative = (artifact.narrativeIntro || artifact.narrative) as string | undefined;
   const billboardHero = artifact.billboardHero as BillboardHero | undefined;
   const stepSummaries = (artifact.stepSummaries as StepSummary[]) || [];
@@ -259,27 +299,53 @@ export function SynthesisSummaryView({ artifact, workshopId, onGeneratePrd, work
             onDownload={onGeneratePrd}
           />
           {/* PRD card — enabled on workshop completion */}
-          {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => (
-            <DeliverableCard
-              key={d.id}
-              title={d.title}
-              description={d.description}
-              icon={DELIVERABLE_ICONS[d.iconName]}
-              disabled={!workshopCompleted}
-              buttonLabel={workshopCompleted ? 'Coming in Phase 44' : 'Coming Soon'}
-            />
-          ))}
+          {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => {
+            const isPrdDone = prdStatus === 'done' || prdGenerated;
+            return (
+              <DeliverableCard
+                key={d.id}
+                title={d.title}
+                description={d.description}
+                icon={DELIVERABLE_ICONS[d.iconName]}
+                disabled={!workshopCompleted || isPrdDone}
+                isLoading={prdStatus === 'loading'}
+                buttonLabel={
+                  !workshopCompleted
+                    ? 'Coming Soon'
+                    : isPrdDone
+                      ? 'View on Outputs Page'
+                      : prdStatus === 'error'
+                        ? 'Retry Generation'
+                        : 'Generate PRD'
+                }
+                onDownload={workshopCompleted && !isPrdDone ? handleGeneratePrd : undefined}
+              />
+            );
+          })}
           {/* Tech Specs card — enabled on workshop completion */}
-          {DELIVERABLES.filter((d) => d.id === 'tech-specs').map((d) => (
-            <DeliverableCard
-              key={d.id}
-              title={d.title}
-              description={d.description}
-              icon={DELIVERABLE_ICONS[d.iconName]}
-              disabled={!workshopCompleted}
-              buttonLabel={workshopCompleted ? 'Coming in Phase 44' : 'Coming Soon'}
-            />
-          ))}
+          {DELIVERABLES.filter((d) => d.id === 'tech-specs').map((d) => {
+            const isTechSpecsDone = techSpecsStatus === 'done' || techSpecsGenerated;
+            return (
+              <DeliverableCard
+                key={d.id}
+                title={d.title}
+                description={d.description}
+                icon={DELIVERABLE_ICONS[d.iconName]}
+                disabled={!workshopCompleted || isTechSpecsDone}
+                isLoading={techSpecsStatus === 'loading'}
+                buttonLabel={
+                  !workshopCompleted
+                    ? 'Coming Soon'
+                    : isTechSpecsDone
+                      ? 'View on Outputs Page'
+                      : techSpecsStatus === 'error'
+                        ? 'Retry Generation'
+                        : 'Generate Tech Specs'
+                }
+                onDownload={workshopCompleted && !isTechSpecsDone ? handleGenerateTechSpecs : undefined}
+              />
+            );
+          })}
           {/* Stakeholder Presentation and User Stories — out of v1.7 scope, always disabled */}
           {DELIVERABLES.filter((d) => d.id === 'stakeholder-ppt' || d.id === 'user-stories').map((d) => (
             <DeliverableCard
@@ -307,13 +373,46 @@ export function SynthesisBuildPackSection({
   onGenerateBillboard,
   hasBillboard,
   workshopCompleted = false,
+  onGenerateFullPrd,
+  onGenerateTechSpecs,
+  prdGenerated = false,
+  techSpecsGenerated = false,
 }: {
   workshopId?: string;
   onGeneratePrd?: () => void;
   onGenerateBillboard?: () => void;
   hasBillboard?: boolean;
   workshopCompleted?: boolean;
+  onGenerateFullPrd?: () => Promise<void>;
+  onGenerateTechSpecs?: () => Promise<void>;
+  prdGenerated?: boolean;
+  techSpecsGenerated?: boolean;
 }) {
+  const [prdStatus, setPrdStatus] = React.useState<GenerationStatus>('idle');
+  const [techSpecsStatus, setTechSpecsStatus] = React.useState<GenerationStatus>('idle');
+
+  const handleGeneratePrd = React.useCallback(async () => {
+    if (!onGenerateFullPrd) return;
+    setPrdStatus('loading');
+    try {
+      await onGenerateFullPrd();
+      setPrdStatus('done');
+    } catch {
+      setPrdStatus('error');
+    }
+  }, [onGenerateFullPrd]);
+
+  const handleGenerateTechSpecs = React.useCallback(async () => {
+    if (!onGenerateTechSpecs) return;
+    setTechSpecsStatus('loading');
+    try {
+      await onGenerateTechSpecs();
+      setTechSpecsStatus('done');
+    } catch {
+      setTechSpecsStatus('error');
+    }
+  }, [onGenerateTechSpecs]);
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -345,27 +444,53 @@ export function SynthesisBuildPackSection({
           onDownload={onGeneratePrd}
         />
         {/* PRD card — enabled on workshop completion */}
-        {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => (
-          <DeliverableCard
-            key={d.id}
-            title={d.title}
-            description={d.description}
-            icon={DELIVERABLE_ICONS[d.iconName]}
-            disabled={!workshopCompleted}
-            buttonLabel={workshopCompleted ? 'Coming in Phase 44' : 'Coming Soon'}
-          />
-        ))}
+        {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => {
+          const isPrdDone = prdStatus === 'done' || prdGenerated;
+          return (
+            <DeliverableCard
+              key={d.id}
+              title={d.title}
+              description={d.description}
+              icon={DELIVERABLE_ICONS[d.iconName]}
+              disabled={!workshopCompleted || isPrdDone}
+              isLoading={prdStatus === 'loading'}
+              buttonLabel={
+                !workshopCompleted
+                  ? 'Coming Soon'
+                  : isPrdDone
+                    ? 'View on Outputs Page'
+                    : prdStatus === 'error'
+                      ? 'Retry Generation'
+                      : 'Generate PRD'
+              }
+              onDownload={workshopCompleted && !isPrdDone ? handleGeneratePrd : undefined}
+            />
+          );
+        })}
         {/* Tech Specs card — enabled on workshop completion */}
-        {DELIVERABLES.filter((d) => d.id === 'tech-specs').map((d) => (
-          <DeliverableCard
-            key={d.id}
-            title={d.title}
-            description={d.description}
-            icon={DELIVERABLE_ICONS[d.iconName]}
-            disabled={!workshopCompleted}
-            buttonLabel={workshopCompleted ? 'Coming in Phase 44' : 'Coming Soon'}
-          />
-        ))}
+        {DELIVERABLES.filter((d) => d.id === 'tech-specs').map((d) => {
+          const isTechSpecsDone = techSpecsStatus === 'done' || techSpecsGenerated;
+          return (
+            <DeliverableCard
+              key={d.id}
+              title={d.title}
+              description={d.description}
+              icon={DELIVERABLE_ICONS[d.iconName]}
+              disabled={!workshopCompleted || isTechSpecsDone}
+              isLoading={techSpecsStatus === 'loading'}
+              buttonLabel={
+                !workshopCompleted
+                  ? 'Coming Soon'
+                  : isTechSpecsDone
+                    ? 'View on Outputs Page'
+                    : techSpecsStatus === 'error'
+                      ? 'Retry Generation'
+                      : 'Generate Tech Specs'
+              }
+              onDownload={workshopCompleted && !isTechSpecsDone ? handleGenerateTechSpecs : undefined}
+            />
+          );
+        })}
         {/* Stakeholder Presentation and User Stories — out of v1.7 scope, always disabled */}
         {DELIVERABLES.filter((d) => d.id === 'stakeholder-ppt' || d.id === 'user-stories').map((d) => (
           <DeliverableCard
