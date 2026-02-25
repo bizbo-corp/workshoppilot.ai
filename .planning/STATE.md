@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 44 of 46 (AI Deliverable Generation)
-Plan: 1 of 2 complete
-Status: In progress
-Last activity: 2026-02-25 — 44-01 complete (AI generation engine: PRD + Tech Specs API routes)
+Plan: 2 of 2 complete
+Status: Phase complete
+Last activity: 2026-02-25 — 44-02 complete (UI wiring for deliverable cards)
 
-Progress: [████████░░░░░░░░░░░░] ~40% (v1.7)
+Progress: [█████████░░░░░░░░░░░] ~50% (v1.7)
 
 ## Performance Metrics
 
@@ -31,6 +31,7 @@ Progress: [████████░░░░░░░░░░░░] ~40% (v
 | v1.5 | 4 | 9 | 2 days |
 | v1.6 | 2 | 5 | 1 day |
 | **Total** | **41** | **118** | **14 days** |
+| v1.7 (so far) | 44 | 2 | 6 min |
 
 ## Accumulated Context
 
@@ -55,6 +56,9 @@ Recent decisions relevant to v1.7:
 - maxDuration=60 for PRD/Tech Specs routes — Gemini needs more time for 2000-3000 word documents (44-01)
 - Auth check added to generate-prd route — original V0 implementation lacked ownership verification (44-01)
 - Parallel generation via Promise.allSettled — markdown + JSON Gemini calls run concurrently, halving latency (44-01)
+- [Phase 44]: Generation state (prdStatus/techSpecsStatus) kept local in each component — no global state needed since generation is per-session
+- [Phase 44]: Retry logic: error state shows 'Retry Generation' button — clicking re-runs same handler and resets status
+- [Phase 44]: 'View on Outputs Page' label is disabled until Phase 45 adds navigation route — consistent with plan
 
 ### Pending Todos
 
@@ -76,7 +80,7 @@ None — clean start for v1.7.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 44-01-PLAN.md (AI generation engine: PRD + Tech Specs API routes)
+Stopped at: Completed 44-02-PLAN.md (UI wiring for deliverable cards)
 Resume file: None
 
-**Next action:** Continue Phase 44 — execute Plan 02 (UI wiring for deliverable display)
+**Next action:** Continue Phase 45 — Outputs page and deliverable navigation

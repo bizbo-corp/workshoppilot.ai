@@ -126,7 +126,7 @@ See `milestones/v1.6-ROADMAP.md` for full details.
 **Milestone Goal:** Make the workshop produce tangible, AI-coder-ready output. Users complete Step 10, trigger AI generation of PRD and Tech Specs from their 10 steps of workshop data, and download the deliverables from a dedicated outputs page.
 
 - [x] **Phase 43: Workshop Completion** - AI-guided final review in Step 10 + workshop marked complete in DB
-- [ ] **Phase 44: AI Deliverable Generation** - Gemini generates PRD and Tech Specs (Markdown + JSON) from all 10 step artifacts
+- [x] **Phase 44: AI Deliverable Generation** - Gemini generates PRD and Tech Specs (Markdown + JSON) from all 10 step artifacts (completed 2026-02-25)
 - [ ] **Phase 45: Outputs Page** - Dedicated `/workshop/[id]/outputs` page with deliverable cards, detail view, copy, and download
 - [ ] **Phase 46: Dashboard Routing** - Completed workshops route to outputs page; in-progress continue to resume position
 
@@ -194,7 +194,7 @@ Plans:
 | 36-39 | v1.5 | 9/9 | Complete | 2026-02-19 |
 | 40-42 | v1.6 | 5/5 | Complete | 2026-02-25 |
 | 43. Workshop Completion | v1.7 | Complete    | 2026-02-25 | 2026-02-25 |
-| 44. AI Deliverable Generation | 1/2 | In Progress|  | - |
+| 44. AI Deliverable Generation | 2/2 | Complete   | 2026-02-25 | - |
 | 45. Outputs Page | v1.7 | 0/? | Not started | - |
 | 46. Dashboard Routing | v1.7 | 0/? | Not started | - |
 
