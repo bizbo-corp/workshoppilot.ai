@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 45 of 46 (Outputs Page)
-Plan: 1 of 2 complete
-Status: In progress
-Last activity: 2026-02-25 — 45-01 complete (outputs page shell, API route, deliverable cards)
+Plan: 2 of 2 complete
+Status: Complete
+Last activity: 2026-02-25 — 45-02 complete (detail view, copy/download, View on Outputs Page navigation)
 
-Progress: [██████████░░░░░░░░░░] ~60% (v1.7)
+Progress: [████████████████████] ~100% (v1.7)
 
 ## Performance Metrics
 
@@ -31,7 +31,7 @@ Progress: [██████████░░░░░░░░░░] ~60% (v
 | v1.5 | 4 | 9 | 2 days |
 | v1.6 | 2 | 5 | 1 day |
 | **Total** | **41** | **118** | **14 days** |
-| v1.7 (so far) | 45 | 3 | 8 min |
+| v1.7 (so far) | 45 | 5 | 13 min |
 
 ## Accumulated Context
 
@@ -62,6 +62,9 @@ Recent decisions relevant to v1.7:
 - [Phase 45-01]: Format pills rendered as inline styled spans (not Badge component) — badge.tsx does not exist in this project's shadcn setup
 - [Phase 45-01]: selectedType state seeded in OutputsContent now for Plan 02 detail view wiring
 - [Phase 45-01]: Deliverable display titles are fixed canonical strings independent of raw DB title
+- [Phase 45-02]: sessionId guard in SynthesisSummaryView/SynthesisBuildPackSection: disabled={isPrdDone && !sessionId} prevents navigating to /workshop/undefined/outputs
+- [Phase 45-02]: output-panel.tsx not modified — guard in component handles no-sessionId gracefully
+- [Phase 45-02]: DeliverableDetailView replaces card grid in-place (not a modal) for better long-content UX
 
 ### Pending Todos
 
@@ -83,7 +86,7 @@ None — clean start for v1.7.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 45-01-PLAN.md (outputs page shell, API route, deliverable cards)
+Stopped at: Completed 45-02-PLAN.md (detail view, copy/download, View on Outputs Page navigation)
 Resume file: None
 
-**Next action:** Continue Phase 45 — Plan 02: detail viewer / navigation wiring
+**Next action:** Phase 45 complete — v1.7 Build Pack milestone delivered

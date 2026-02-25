@@ -24,10 +24,10 @@ Requirements for Build Pack export. Each maps to roadmap phases.
 
 - [x] **OUT-01**: Dedicated outputs page accessible at `/workshop/[id]/outputs`
 - [x] **OUT-02**: Deliverable cards displayed for each generated document (PRD, Tech Specs)
-- [ ] **OUT-03**: User can click card to see detail view with rendered markdown sections
-- [ ] **OUT-04**: User can copy deliverable content to clipboard
-- [ ] **OUT-05**: User can download deliverable as `.md` file
-- [ ] **OUT-06**: User can download deliverable as JSON
+- [x] **OUT-03**: User can click card to see detail view with rendered markdown sections
+- [x] **OUT-04**: User can copy deliverable content to clipboard
+- [x] **OUT-05**: User can download deliverable as `.md` file
+- [x] **OUT-06**: User can download deliverable as JSON
 - [x] **OUT-07**: Outputs page includes link back to workshop for review
 
 ### Dashboard Routing
@@ -76,10 +76,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GEN-04 | Phase 44 | Complete |
 | OUT-01 | Phase 45 | Complete |
 | OUT-02 | Phase 45 | Complete |
-| OUT-03 | Phase 45 | Pending |
-| OUT-04 | Phase 45 | Pending |
-| OUT-05 | Phase 45 | Pending |
-| OUT-06 | Phase 45 | Pending |
+| OUT-03 | Phase 45 | Complete |
+| OUT-04 | Phase 45 | Complete |
+| OUT-05 | Phase 45 | Complete |
+| OUT-06 | Phase 45 | Complete |
 | OUT-07 | Phase 45 | Complete |
 | DASH-01 | Phase 46 | Pending |
 | DASH-02 | Phase 46 | Pending |
