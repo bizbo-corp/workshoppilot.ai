@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 47 of 53 in v1.8 (Database Foundation)
-Plan: 1 of 2 in current phase
-Status: In Progress
-Last activity: 2026-02-25 — Plan 47-01 complete (schema + migration 0008 applied to Neon)
+Plan: 2 of 2 in current phase
+Status: Phase Complete — advancing to Phase 48
+Last activity: 2026-02-25 — Plan 47-02 complete (billing seed script, 5 scenarios)
 
-Progress: [░░░░░░░░░░] 0% (v1.8 — 0/7 phases complete, plan 1/2 of phase 47 complete)
+Progress: [█░░░░░░░░░] 14% (v1.8 — 1/7 phases complete)
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Key v1.8 decisions affecting current work:
 - Text enum pattern for credit_transactions.type + .status (not pgEnum) — consistent with workshops.status pattern
 - onDelete: 'set null' on credit_transactions.workshopId — financial records persist after workshop deletion
 - stripeSessionId UNIQUE nullable — PG allows multiple NULLs, enforces idempotent webhook fulfillment (BILL-04)
+- Seed idempotency: sentinel-record check (query user_seed_billing_zero) rather than per-row checks — scenarios are interdependent (transactions reference runtime-generated workshop IDs)
 
 ### Pending Todos
 
@@ -64,5 +65,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 47-01-PLAN.md (schema + migration 0008). Next: execute 47-02 (seed script).
+Stopped at: Completed 47-02-PLAN.md (billing seed script). Phase 47 complete. Next: Phase 48 (Stripe Checkout).
 Resume file: None
