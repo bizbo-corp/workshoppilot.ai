@@ -23,6 +23,7 @@ import { computeNewNodePosition } from '@/lib/canvas/mind-map-layout';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { saveCanvasState } from '@/actions/canvas-actions';
 import { ChatSkeleton } from './chat-skeleton';
+import { toast } from 'sonner';
 
 /** Steps that support canvas item auto-add */
 const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe', 'ideation', 'concept'];
@@ -944,6 +945,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       } else {
         // Non-rate-limit streaming error
         setStreamError(true);
+        toast.error('Something went wrong — please try again.', { duration: 4000 });
       }
     },
   });

@@ -23,6 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { getWorkshopColor } from '@/lib/workshop/workshop-appearance';
 import { WorkshopAppearancePicker } from '@/components/dashboard/workshop-appearance-picker';
+import { toast } from 'sonner';
 
 interface WorkshopCardProps {
   workshopId: string;
@@ -71,10 +72,12 @@ export function WorkshopCard({
     try {
       await onRename(workshopId, editedTitle.trim());
       setIsEditing(false);
+      toast.success('Workshop renamed', { duration: 4000 });
     } catch (error) {
       console.error('Failed to rename workshop:', error);
       setEditedTitle(title);
       setIsEditing(false);
+      toast.error('Failed to rename workshop', { duration: 4000 });
     } finally {
       setIsSubmitting(false);
     }

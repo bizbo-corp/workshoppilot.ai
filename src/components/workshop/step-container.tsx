@@ -350,9 +350,11 @@ export function StepContainer({
 
       // Mark step 10 as complete
       await updateStepStatus(workshopId, step.id, 'complete', sessionId);
+      toast.success('Build Pack extracted', { duration: 4000 });
     } catch (error) {
       console.error('Step 10 extraction failed:', error);
       setExtractionError(error instanceof Error ? error.message : 'Something went wrong');
+      toast.error('Failed to extract output', { duration: 4000 });
     } finally {
       setIsExtracting(false);
     }
