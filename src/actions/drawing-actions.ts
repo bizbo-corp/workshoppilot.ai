@@ -3,6 +3,8 @@
 import { db } from '@/db/client';
 import { stepArtifacts, workshopSteps } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { deleteBlobUrls } from '@/lib/blob/delete-blob-urls';
+import { compressVectorJson } from '@/lib/drawing/compress';
 
 /**
  * Drawing record stored in stepArtifacts.drawings[] array
@@ -37,7 +39,8 @@ export async function saveDrawing(params: {
   | { success: false; error: string }
 > {
   try {
-    const { workshopId, stepId, pngUrl, vectorJson, width, height } = params;
+    const { workshopId, stepId, pngUrl, width, height } = params;
+    const vectorJson = compressVectorJson(params.vectorJson);
 
     // Find workshopStep record
     const workshopStepRecords = await db
@@ -265,10 +268,10 @@ export async function updateDrawing(params: {
       stepId,
       drawingId,
       pngUrl,
-      vectorJson,
       width,
       height,
     } = params;
+    const vectorJson = compressVectorJson(params.vectorJson);
 
     // Find workshopStep record
     const workshopStepRecords = await db
@@ -335,6 +338,8 @@ export async function updateDrawing(params: {
         return { success: false, error: 'Drawing not found' };
       }
 
+      const oldPngUrl = existingDrawings[drawingIndex].pngUrl;
+
       const updatedDrawings = [...existingDrawings];
       updatedDrawings[drawingIndex] = {
         ...updatedDrawings[drawingIndex],
@@ -365,6 +370,10 @@ export async function updateDrawing(params: {
         .returning({ id: stepArtifacts.id });
 
       if (updateResult.length > 0) {
+        // Clean up old blob if PNG URL changed
+        if (oldPngUrl && oldPngUrl !== pngUrl) {
+          deleteBlobUrls([oldPngUrl]).catch(console.warn);
+        }
         return { success: true, pngUrl };
       }
 

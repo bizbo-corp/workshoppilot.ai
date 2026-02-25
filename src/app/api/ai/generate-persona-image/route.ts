@@ -1,6 +1,7 @@
 import { generateImage } from "ai";
 import { google } from "@ai-sdk/google";
 import { put } from "@vercel/blob";
+import { deleteBlobUrls } from "@/lib/blob/delete-blob-urls";
 import { recordUsageEvent } from "@/lib/ai/usage-tracking";
 
 /**
@@ -72,6 +73,7 @@ export async function POST(req: Request) {
       empathyGains,
       narrative,
       quote,
+      previousAvatarUrl,
     } = await req.json();
 
     if (!workshopId || !templateId) {
@@ -133,6 +135,11 @@ export async function POST(req: Request) {
         "BLOB_READ_WRITE_TOKEN not set — storing persona image as data URL.",
       );
       imageUrl = `data:${mimeType};base64,${base64Data}`;
+    }
+
+    // Clean up previous avatar blob if URL changed
+    if (previousAvatarUrl && previousAvatarUrl !== imageUrl) {
+      deleteBlobUrls([previousAvatarUrl]).catch(console.warn);
     }
 
     return new Response(JSON.stringify({ imageUrl }), {

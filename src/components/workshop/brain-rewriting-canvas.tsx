@@ -128,7 +128,7 @@ export function BrainRewritingCanvas({
         const imageBlob = await blobRes.blob();
 
         const formData = new FormData();
-        formData.append('file', imageBlob, `drawing.${imageBlob.type === 'image/png' ? 'png' : 'jpg'}`);
+        formData.append('file', imageBlob, `drawing.${imageBlob.type === 'image/png' ? 'png' : imageBlob.type === 'image/webp' ? 'webp' : 'jpg'}`);
         formData.append('workshopId', workshopId);
 
         const uploadRes = await fetch('/api/upload-drawing-png', {

@@ -166,7 +166,7 @@ export function Crazy8sCanvas({ workshopId, stepId }: Crazy8sCanvasProps) {
         console.log(`[drawing-save] Uploading ${Math.round(imageBlob.size / 1024)}KB as FormData...`);
 
         const formData = new FormData();
-        formData.append('file', imageBlob, `drawing.${imageBlob.type === 'image/png' ? 'png' : 'jpg'}`);
+        formData.append('file', imageBlob, `drawing.${imageBlob.type === 'image/png' ? 'png' : imageBlob.type === 'image/webp' ? 'webp' : 'jpg'}`);
         formData.append('workshopId', workshopId);
 
         const uploadRes = await fetch('/api/upload-drawing-png', {

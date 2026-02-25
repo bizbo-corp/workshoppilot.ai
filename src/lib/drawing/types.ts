@@ -191,17 +191,41 @@ export type VectorData = {
 };
 
 /**
+ * Restore compressed default values on drawing elements.
+ * Handles both compressed (defaults stripped) and uncompressed (all fields present) input.
+ */
+function restoreDefaults(elements: unknown[]): DrawingElement[] {
+  const DEFAULTS: Record<string, unknown> = {
+    rotation: 0,
+    scaleX: 1,
+    scaleY: 1,
+    opacity: 1,
+  };
+
+  return elements.map((item) => {
+    const obj = item as Record<string, unknown>;
+    for (const [key, defaultValue] of Object.entries(DEFAULTS)) {
+      if (!(key in obj)) {
+        obj[key] = defaultValue;
+      }
+    }
+    return obj as unknown as DrawingElement;
+  });
+}
+
+/**
  * Parse vectorJson from DB, handling both old (plain array) and new (wrapper object) formats.
+ * Restores compressed default values (rotation, scale, opacity) for backward compatibility.
  */
 export function parseVectorJson(raw: string): VectorData {
   const parsed = JSON.parse(raw);
   // Old format: plain array of elements
   if (Array.isArray(parsed)) {
-    return { elements: parsed, backgroundImageUrl: null };
+    return { elements: restoreDefaults(parsed), backgroundImageUrl: null };
   }
   // New format: wrapper object
   return {
-    elements: parsed.elements ?? [],
+    elements: restoreDefaults(parsed.elements ?? []),
     backgroundImageUrl: parsed.backgroundImageUrl ?? null,
   };
 }

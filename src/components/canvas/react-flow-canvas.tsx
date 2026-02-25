@@ -778,6 +778,7 @@ function ReactFlowCanvasInner({
             empathyGains: persona.empathyGains,
             narrative: persona.narrative,
             quote: persona.quote,
+            ...(persona.avatarUrl?.startsWith('https://') ? { previousAvatarUrl: persona.avatarUrl } : {}),
           }),
         });
 
@@ -2142,7 +2143,7 @@ function ReactFlowCanvasInner({
           const imageBlob = await blobRes.blob();
 
           const formData = new FormData();
-          formData.append('file', imageBlob, `drawing.${imageBlob.type === 'image/png' ? 'png' : 'jpg'}`);
+          formData.append('file', imageBlob, `drawing.${imageBlob.type === 'image/png' ? 'png' : imageBlob.type === 'image/webp' ? 'webp' : 'jpg'}`);
           formData.append('workshopId', workshopId);
 
           const uploadRes = await fetch('/api/upload-drawing-png', {

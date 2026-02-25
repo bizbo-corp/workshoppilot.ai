@@ -10,7 +10,7 @@ import { DrawingStoreProvider, useDrawingStore } from '@/providers/drawing-store
 import { EzyDrawToolbar, EzyDrawFooter } from './toolbar';
 import { EzyDrawStage, type EzyDrawStageHandle } from './ezydraw-stage';
 import type { DrawingElement } from '@/lib/drawing/types';
-import { exportToJPEG } from '@/lib/drawing/export';
+import { exportToWebP } from '@/lib/drawing/export';
 
 /** Default canvas size: 4:3 landscape */
 const DEFAULT_CANVAS_WIDTH = 800;
@@ -82,9 +82,9 @@ function EzyDrawContent({
     if (!stage) return;
 
     try {
-      // Export as JPEG (quality 0.8) — dramatically smaller than PNG (~200KB vs ~4MB)
+      // Export as WebP (quality 0.75) — ~25-30% smaller than JPEG at similar visual quality
       // Vector data in vectorJson preserves full fidelity for re-editing
-      const pngDataUrl = exportToJPEG(stage, { pixelRatio: 1, quality: 0.8 });
+      const pngDataUrl = exportToWebP(stage, { pixelRatio: 1, quality: 0.75 });
       const elements = getSnapshot();
       onSave({ pngDataUrl, elements, backgroundImageUrl });
     } catch (error) {
@@ -105,7 +105,7 @@ function EzyDrawContent({
       const stage = stageRef.current?.getStage();
       const elements = getSnapshot();
       if (stage && (elements.length > 0 || backgroundImageUrl)) {
-        existingImageBase64 = exportToJPEG(stage, { pixelRatio: 1, quality: 0.5 });
+        existingImageBase64 = exportToWebP(stage, { pixelRatio: 1, quality: 0.5 });
       }
 
       const response = await fetch('/api/ai/generate-sketch-image', {
@@ -117,6 +117,7 @@ function EzyDrawContent({
           ideaDescription: slotDescription || '',
           existingImageBase64,
           ...(iterationPrompt ? { additionalPrompt: iterationPrompt } : {}),
+          ...(backgroundImageUrl?.startsWith('https://') ? { previousImageUrl: backgroundImageUrl } : {}),
         }),
       });
 

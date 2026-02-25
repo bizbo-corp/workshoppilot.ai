@@ -3,6 +3,7 @@ import { generateImage } from 'ai';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { put } from '@vercel/blob';
+import { deleteBlobUrls } from '@/lib/blob/delete-blob-urls';
 import { db } from '@/db/client';
 import { workshops, workshopSteps, stepArtifacts } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -201,6 +202,7 @@ export async function POST(req: Request) {
       ideaDescription,
       additionalPrompt,
       existingImageBase64,
+      previousImageUrl,
     } = await req.json();
 
     if (!workshopId || !ideaTitle) {
@@ -260,6 +262,11 @@ export async function POST(req: Request) {
     } else {
       // Fallback for local dev
       imageUrl = `data:${mimeType};base64,${base64Data}`;
+    }
+
+    // Clean up previous blob if URL changed
+    if (previousImageUrl && previousImageUrl !== imageUrl) {
+      deleteBlobUrls([previousImageUrl]).catch(console.warn);
     }
 
     return new Response(

@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
       const arrayBuffer = await file.arrayBuffer();
       fileBuffer = Buffer.from(arrayBuffer);
-      extension = file.type === 'image/png' ? 'png' : 'jpg';
+      extension = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
     } else {
       // JSON fallback (for backwards compatibility)
       const { pngBase64, workshopId: wid } = await req.json();
@@ -49,14 +49,14 @@ export async function POST(req: Request) {
       }
 
       fileBuffer = Buffer.from(base64Data, 'base64');
-      extension = pngBase64.includes('image/png') ? 'png' : 'jpg';
+      extension = pngBase64.includes('image/png') ? 'png' : pngBase64.includes('image/webp') ? 'webp' : 'jpg';
     }
 
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
       // Local dev fallback: convert to a small data URL.
       // Re-encode as base64 and return. This is still large, but downstream
       // code handles it by passing it directly to the DB (not via server action).
-      const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
+      const mimeType = extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
       const base64 = fileBuffer.toString('base64');
       const dataUrl = `data:${mimeType};base64,${base64}`;
       console.warn(`[upload-drawing-png] No BLOB_READ_WRITE_TOKEN — returning data URL (${Math.round(base64.length / 1024)}KB)`);

@@ -10,6 +10,8 @@ import { createPrefixedId } from '@/lib/ids';
 import { STEPS, getStepById } from '@/lib/workshop/step-metadata';
 import { generateStepSummary } from '@/lib/context/generate-summary';
 import { getNextWorkshopColor, WORKSHOP_COLORS } from '@/lib/workshop/workshop-appearance';
+import { deleteBlobUrls } from '@/lib/blob/delete-blob-urls';
+import { extractBlobUrlsFromArtifact } from '@/lib/blob/extract-urls';
 
 /**
  * Get user ID from Clerk auth.
@@ -160,6 +162,54 @@ export async function deleteWorkshops(workshopIds: string[]): Promise<{ deleted:
       )
     )
     .returning({ id: workshops.id });
+
+  const deletedIds = result.map((r) => r.id);
+
+  if (deletedIds.length > 0) {
+    // Find all workshop steps and sessions for deleted workshops
+    const [wsSteps, wsSessions] = await Promise.all([
+      db
+        .select({ id: workshopSteps.id })
+        .from(workshopSteps)
+        .where(inArray(workshopSteps.workshopId, deletedIds)),
+      db
+        .select({ id: sessions.id })
+        .from(sessions)
+        .where(inArray(sessions.workshopId, deletedIds)),
+    ]);
+
+    const wsStepIds = wsSteps.map((s) => s.id);
+    const sessionIds = wsSessions.map((s) => s.id);
+
+    if (wsStepIds.length > 0) {
+      // Extract blob URLs from all artifacts before deleting
+      const artifacts = await db
+        .select({ artifact: stepArtifacts.artifact })
+        .from(stepArtifacts)
+        .where(inArray(stepArtifacts.workshopStepId, wsStepIds));
+
+      const blobUrls = artifacts.flatMap((a) =>
+        extractBlobUrlsFromArtifact((a.artifact || {}) as Record<string, unknown>)
+      );
+
+      // Hard-delete related DB rows (they're useless after soft-delete)
+      const deleteOps: Promise<unknown>[] = [
+        db.delete(stepArtifacts).where(inArray(stepArtifacts.workshopStepId, wsStepIds)),
+        db.delete(stepSummaries).where(inArray(stepSummaries.workshopStepId, wsStepIds)),
+      ];
+      if (sessionIds.length > 0) {
+        deleteOps.push(
+          db.delete(chatMessages).where(inArray(chatMessages.sessionId, sessionIds))
+        );
+      }
+      await Promise.all(deleteOps);
+
+      // Fire-and-forget blob cleanup
+      if (blobUrls.length > 0) {
+        deleteBlobUrls(blobUrls).catch(console.warn);
+      }
+    }
+  }
 
   revalidatePath('/dashboard');
 
@@ -332,10 +382,25 @@ export async function resetStep(
         );
     }
 
+    // Extract blob URLs from artifacts before deleting
+    const artifacts = await db
+      .select({ artifact: stepArtifacts.artifact })
+      .from(stepArtifacts)
+      .where(inArray(stepArtifacts.workshopStepId, workshopStepIds));
+
+    const blobUrls = artifacts.flatMap((a) =>
+      extractBlobUrlsFromArtifact((a.artifact || {}) as Record<string, unknown>)
+    );
+
     // Batch-delete step artifacts for all forward steps
     await db
       .delete(stepArtifacts)
       .where(inArray(stepArtifacts.workshopStepId, workshopStepIds));
+
+    // Fire-and-forget blob cleanup
+    if (blobUrls.length > 0) {
+      deleteBlobUrls(blobUrls).catch(console.warn);
+    }
 
     // Batch-delete step summaries for all forward steps
     await db
