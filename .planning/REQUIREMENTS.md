@@ -1,0 +1,94 @@
+# Requirements: WorkshopPilot.ai
+
+**Defined:** 2026-02-25
+**Core Value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
+
+## v1.7 Requirements
+
+Requirements for Build Pack export. Each maps to roadmap phases.
+
+### Workshop Completion
+
+- [ ] **COMP-01**: User sees AI-guided final review of key decisions from all 10 steps in Step 10
+- [ ] **COMP-02**: User can confirm workshop completion after AI-guided review
+- [ ] **COMP-03**: Workshop status persists as "complete" in database
+
+### Deliverable Generation
+
+- [ ] **GEN-01**: AI generates PRD from all 10 steps of structured workshop data in Markdown format
+- [ ] **GEN-02**: AI generates Tech Specs from workshop data in Markdown format
+- [ ] **GEN-03**: Each deliverable includes structured JSON export alongside Markdown
+- [ ] **GEN-04**: Generation uses Gemini API with full workshop context (all step artifacts)
+
+### Outputs Page
+
+- [ ] **OUT-01**: Dedicated outputs page accessible at `/workshop/[id]/outputs`
+- [ ] **OUT-02**: Deliverable cards displayed for each generated document (PRD, Tech Specs)
+- [ ] **OUT-03**: User can click card to see detail view with rendered markdown sections
+- [ ] **OUT-04**: User can copy deliverable content to clipboard
+- [ ] **OUT-05**: User can download deliverable as `.md` file
+- [ ] **OUT-06**: User can download deliverable as JSON
+- [ ] **OUT-07**: Outputs page includes link back to workshop for review
+
+### Dashboard Routing
+
+- [ ] **DASH-01**: Completed workshops route to outputs page from dashboard
+- [ ] **DASH-02**: In-progress workshops continue routing to resume position
+
+## v2 Requirements
+
+Deferred to future release. Tracked but not in current roadmap.
+
+### Presentation Export
+
+- **PRES-01**: On-demand server-side PDF generation with summary per step
+- **PRES-02**: On-demand PowerPoint generation with summary per step
+- **PRES-03**: Stakeholder-focused presentation deck
+
+### Deliverable Management
+
+- **DLVR-01**: User can regenerate deliverables after updating workshop steps
+- **DLVR-02**: User stories as separate deliverable document
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| PDF/PPT generation | Deferred to v1.8 — separate concern from markdown deliverables |
+| Stakeholder presentation | Deferred — workshop presentation covers it for now |
+| Re-generation after updates | Not in v1.7 — first version generates once on completion |
+| User stories as separate doc | PRD + Tech Specs sufficient for AI coders |
+| Real-time collaboration on outputs | Solo experience first |
+| Deliverable versioning | Premature — no re-generation means no versions |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| COMP-01 | — | Pending |
+| COMP-02 | — | Pending |
+| COMP-03 | — | Pending |
+| GEN-01 | — | Pending |
+| GEN-02 | — | Pending |
+| GEN-03 | — | Pending |
+| GEN-04 | — | Pending |
+| OUT-01 | — | Pending |
+| OUT-02 | — | Pending |
+| OUT-03 | — | Pending |
+| OUT-04 | — | Pending |
+| OUT-05 | — | Pending |
+| OUT-06 | — | Pending |
+| OUT-07 | — | Pending |
+| DASH-01 | — | Pending |
+| DASH-02 | — | Pending |
+
+**Coverage:**
+- v1.7 requirements: 16 total
+- Mapped to phases: 0
+- Unmapped: 16 ⚠️
+
+---
+*Requirements defined: 2026-02-25*
+*Last updated: 2026-02-25 after initial definition*
