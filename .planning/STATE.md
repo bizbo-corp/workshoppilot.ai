@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.7 Build Pack — Phase 44: AI Deliverable Generation
+**Current focus:** v1.7 Build Pack — Phase 45: Outputs Page
 
 ## Current Position
 
-Phase: 44 of 46 (AI Deliverable Generation)
-Plan: 2 of 2 complete
-Status: Phase complete
-Last activity: 2026-02-25 — 44-02 complete (UI wiring for deliverable cards)
+Phase: 45 of 46 (Outputs Page)
+Plan: 1 of 2 complete
+Status: In progress
+Last activity: 2026-02-25 — 45-01 complete (outputs page shell, API route, deliverable cards)
 
-Progress: [█████████░░░░░░░░░░░] ~50% (v1.7)
+Progress: [██████████░░░░░░░░░░] ~60% (v1.7)
 
 ## Performance Metrics
 
@@ -31,7 +31,7 @@ Progress: [█████████░░░░░░░░░░░] ~50% (v
 | v1.5 | 4 | 9 | 2 days |
 | v1.6 | 2 | 5 | 1 day |
 | **Total** | **41** | **118** | **14 days** |
-| v1.7 (so far) | 44 | 2 | 6 min |
+| v1.7 (so far) | 45 | 3 | 8 min |
 
 ## Accumulated Context
 
@@ -59,6 +59,9 @@ Recent decisions relevant to v1.7:
 - [Phase 44]: Generation state (prdStatus/techSpecsStatus) kept local in each component — no global state needed since generation is per-session
 - [Phase 44]: Retry logic: error state shows 'Retry Generation' button — clicking re-runs same handler and resets status
 - [Phase 44]: 'View on Outputs Page' label is disabled until Phase 45 adds navigation route — consistent with plan
+- [Phase 45-01]: Format pills rendered as inline styled spans (not Badge component) — badge.tsx does not exist in this project's shadcn setup
+- [Phase 45-01]: selectedType state seeded in OutputsContent now for Plan 02 detail view wiring
+- [Phase 45-01]: Deliverable display titles are fixed canonical strings independent of raw DB title
 
 ### Pending Todos
 
@@ -80,7 +83,7 @@ None — clean start for v1.7.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 44-02-PLAN.md (UI wiring for deliverable cards)
+Stopped at: Completed 45-01-PLAN.md (outputs page shell, API route, deliverable cards)
 Resume file: None
 
-**Next action:** Continue Phase 45 — Outputs page and deliverable navigation
+**Next action:** Continue Phase 45 — Plan 02: detail viewer / navigation wiring
