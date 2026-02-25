@@ -431,6 +431,41 @@
   background-color: transparent !important;
 }
 
+/* Sonner toast olive theming — success uses olive accent, errors use muted red */
+[data-sonner-toaster] [data-sonner-toast][data-type="success"] {
+  --normal-bg: var(--olive-50);
+  --normal-border: var(--olive-200);
+  --normal-text: var(--olive-900);
+}
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] {
+  --normal-bg: #fef2f2;
+  --normal-border: #fecaca;
+  --normal-text: #991b1b;
+}
+.dark [data-sonner-toaster] [data-sonner-toast][data-type="success"] {
+  --normal-bg: var(--olive-950);
+  --normal-border: var(--olive-800);
+  --normal-text: var(--olive-200);
+}
+.dark [data-sonner-toaster] [data-sonner-toast][data-type="error"] {
+  --normal-bg: #450a0a;
+  --normal-border: #7f1d1d;
+  --normal-text: #fca5a5;
+}
+
+/* Button lift micro-interaction — subtle tactile response for primary CTAs */
+.btn-lift {
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+}
+.btn-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.btn-lift:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
 /* Chat scrollbar — always reserves gutter space, thumb visible on scroll */
 .chat-scroll {
   scrollbar-gutter: stable;

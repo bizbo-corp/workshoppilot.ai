@@ -92,7 +92,7 @@ export function DeliverableCard({
   const label = buttonLabel ?? (disabled ? 'Coming Soon' : 'Download');
 
   return (
-    <Card className="flex flex-col justify-between gap-4 py-5">
+    <Card className="flex flex-col justify-between gap-4 py-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
       <CardHeader className="gap-3 pb-0">
         {/* Icon circle */}
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">

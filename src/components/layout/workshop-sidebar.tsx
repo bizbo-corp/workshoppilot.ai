@@ -164,7 +164,7 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
             variant="ghost"
             size="sm"
             onClick={handleTogglePin}
-            className="w-full justify-start"
+            className="w-full justify-start hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
             title={isPinned ? 'Collapse sidebar (⌘B)' : 'Pin sidebar open (⌘B)'}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -177,7 +177,7 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
             variant="ghost"
             size="icon"
             onClick={handleTogglePin}
-            className="mx-auto flex h-8 w-8"
+            className="mx-auto flex h-8 w-8 hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
             title="Expand sidebar (⌘B)"
           >
             <ChevronRight className="h-4 w-4" />
@@ -238,6 +238,7 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
                   isActive={isCurrent}
                   tooltip={state === 'collapsed' ? step.name : undefined}
                   disabled={!isAccessible}
+                  className="hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
                 >
                   {isAccessible ? (
                     <Link href={`/workshop/${sessionId}/step/${step.order}`}>

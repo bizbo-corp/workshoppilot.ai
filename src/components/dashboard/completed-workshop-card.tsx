@@ -101,7 +101,7 @@ export function CompletedWorkshopCard({
   };
 
   return (
-    <Card className="group relative overflow-hidden border border-border transition-all hover:shadow-md dark:hover:border-neutral-olive-700 pt-0 pb-0 gap-0">
+    <Card className="group relative overflow-hidden border border-border transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg dark:hover:border-neutral-olive-700 pt-0 pb-0 gap-0">
       {/* Colored header band */}
       <div
         className="px-6 pt-5 pb-4"
@@ -210,7 +210,7 @@ export function CompletedWorkshopCard({
           <Button
             variant="ghost"
             size="sm"
-            className="w-full justify-between group-hover:bg-accent"
+            className="w-full justify-between group-hover:bg-accent btn-lift"
           >
             View Results
             <ArrowRight className="h-4 w-4" />

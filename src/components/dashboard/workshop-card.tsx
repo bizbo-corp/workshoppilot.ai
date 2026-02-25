@@ -92,7 +92,7 @@ export function WorkshopCard({
   return (
     <Card
       className={cn(
-        "group relative overflow-hidden border border-border transition-all hover:shadow-md dark:hover:border-neutral-olive-700 pt-0 pb-0 gap-0",
+        "group relative overflow-hidden border border-border transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg dark:hover:border-neutral-olive-700 pt-0 pb-0 gap-0",
         selected && "ring-2 ring-primary border-primary"
       )}
     >
@@ -190,7 +190,7 @@ export function WorkshopCard({
           <Button
             variant="ghost"
             size="sm"
-            className="w-full justify-between group-hover:bg-accent"
+            className="w-full justify-between group-hover:bg-accent btn-lift"
           >
             Continue
             <ArrowRight className="h-4 w-4" />
