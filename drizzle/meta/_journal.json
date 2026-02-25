@@ -57,6 +57,13 @@
       "when": 1771897290168,
       "tag": "0007_rare_roxanne_simpson",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1772051653843,
+      "tag": "0008_shocking_sphinx",
+      "breakpoints": true
     }
   ]
 }
