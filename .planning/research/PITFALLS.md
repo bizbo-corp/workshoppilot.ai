@@ -1,1148 +1,309 @@
-# Pitfalls Research: Adding Drawing Capabilities to ReactFlow Canvas
+# Pitfalls Research: Stripe Checkout + Credit System + Paywall + Onboarding
 
-**Domain:** Adding in-app drawing tool (EzyDraw modal), visual mind maps, sketch grids, and composite cards to existing ReactFlow canvas
-**Researched:** 2026-02-12
-**Confidence:** MEDIUM-HIGH
+**Domain:** Adding Stripe Checkout (redirect), credit-based purchasing, mid-workflow paywall, and first-run onboarding to existing Next.js 16.1.1 + Clerk + Neon + Drizzle app
+**Researched:** 2026-02-26
+**Confidence:** HIGH (Stripe official docs + t3dotgg recommendations + CVE disclosures + Drizzle ORM docs)
 
-**Context:** This research focuses on pitfalls when ADDING drawing capabilities to WorkshopPilot.ai's existing ReactFlow canvas system (v1.2 Canvas Whiteboard with post-its, grids, rings, empathy zones). Specifically addresses adding EzyDraw-style modal drawing tool, mind map layouts with force-directed nodes, Crazy 8s sketch grid, and visual concept cards for Steps 8 (Ideation) and 9 (Concept Development). Current system: ReactFlow + Zustand, 110KB gzipped bundle, mobile-responsive, auto-save to Postgres JSONB, undo/redo via Zustand temporal.
+**Context:** WorkshopPilot.ai v1.8 adds: welcome modal onboarding, taste-test paywall at Step 7 (Steps 1-6 free), Stripe Checkout redirect for purchasing workshop credits, credit auto-unlock after purchase, and dashboard credit display. Existing stack: Clerk (auth), Neon Postgres (neon-http driver), Drizzle ORM, Zustand, Next.js App Router, Vercel deployment.
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Two-Canvas Architecture Event Handling Conflicts
+### Pitfall 1: Webhook Race Condition — User Returns Before Webhook Arrives
 
 **What goes wrong:**
-Adding EzyDraw modal with HTML5 Canvas for drawing alongside existing ReactFlow canvas creates event handling conflicts. User opens drawing modal, draws with mouse/stylus, but panning gestures intended for drawing tool trigger ReactFlow pan underneath. Touch events on iPad fire on both canvases - drawing stroke on EzyDraw modal simultaneously pans ReactFlow viewport. User tries to select drawn sketch on canvas, but ReactFlow's selection mode activates instead of sketch selection. Escape key to close drawing modal also triggers ReactFlow deselection. Two undo/redo systems conflict - Cmd+Z while drawing modal is open undoes ReactFlow canvas action instead of drawing stroke. Z-index layering breaks - ReactFlow controls render on top of drawing modal, blocking interaction.
+User completes Stripe Checkout, gets redirected to the `success_url`, and immediately hits the paywall check — which reads from Neon and still shows zero credits because the `checkout.session.completed` webhook hasn't arrived yet (Stripe webhooks are async, typically 1-5 seconds behind the redirect). User sees "you have no credits" immediately after paying. They panic, click "buy again," and may get double-charged if idempotency isn't enforced.
 
 **Why it happens:**
-ReactFlow uses global event listeners for pan (mousedown/mousemove on document), zoom (wheel events), and keyboard shortcuts. Drawing modal also needs global listeners for drawing (pointer events) and tool shortcuts. Both layers compete for same events. Event bubbling means events on modal canvas propagate to ReactFlow unless explicitly stopped. Touch events fire both touch and mouse events - preventDefault() on wrong event type fails to prevent ReactFlow from reacting. iOS Safari has complex touch handling - preventDefault() on touchmove can disable page scroll but also breaks nested scrollable areas. Two canvas systems = two coordinate spaces - ReactFlow uses flow coordinates (zoom/pan transformed), drawing canvas uses pixel coordinates (0,0 = top-left of modal). Converting between them for "place drawing on canvas" feature becomes error-prone. React's event system (synthetic events) vs native browser events causes timing issues - synthetic events batch in React 19, native events fire immediately, creating race conditions. Modal z-index must be higher than ReactFlow but lower than toasts/notifications - managing global z-index scale becomes fragile. Keyboard shortcuts overlap - ReactFlow uses Space for pan tool, drawing tools might use Space for eraser or stamp tool. Global listeners don't automatically cleanup when modal unmounts in React StrictMode (double mounting) - leads to duplicate event handlers.
+Developers treat the redirect to `success_url` as confirmation of payment. It is not. The `success_url` fires when Stripe redirects the browser — before Stripe has called your webhook endpoint and before your database has been updated. The payment confirmation lives in Stripe; your database is stale until the webhook updates it.
 
 **How to avoid:**
-Disable ReactFlow interactions while drawing modal is open:
+Use a dual-trigger approach (per Stripe's official fulfillment docs):
+1. On the `success_url` landing page, immediately call a server action that retrieves the session directly from Stripe API using the `session_id` query parameter (`stripe.checkout.sessions.retrieve(sessionId)`) and syncs credits to Neon synchronously.
+2. The webhook also runs the same `fulfillCheckoutSession(session)` function as a safety net.
+Both paths call one idempotent `fulfillCheckoutSession` function that checks if the session was already processed before crediting.
+
+Pass `?session_id={CHECKOUT_SESSION_ID}` in the `success_url` so the landing page can retrieve session status immediately.
+
+**Warning signs:**
+- Users report "I paid but nothing happened" within minutes of launch
+- Zero credits shown on dashboard right after successful Stripe redirect
+- Support requests for duplicate charges
+
+**Phase to address:** Stripe Checkout integration phase (webhook + success handler built together, not separately)
+
+---
+
+### Pitfall 2: Double Credit Fulfillment — Same Webhook Delivered Twice
+
+**What goes wrong:**
+Stripe guarantees at-least-once delivery, not exactly-once. Your webhook endpoint may receive the same `checkout.session.completed` event multiple times (network retry, Stripe's retry on non-2xx response, or duplicate delivery). Each call adds credits to the user's balance. A user who purchased 1 credit ends up with 2, 3, or more credits for free.
+
+**Why it happens:**
+Developers handle the webhook event and add credits in a single non-idempotent operation. They don't track which Stripe event IDs have already been processed. A 500 error on the first delivery causes Stripe to retry, and the second delivery fulfills again.
+
+**How to avoid:**
+Create a `stripe_webhook_events` table with `(event_id TEXT PRIMARY KEY, processed_at TIMESTAMPTZ)`. At the start of every webhook handler: check if `event.id` exists in this table. If yes, return 200 immediately. If no, process the event and insert the `event_id` in the same database transaction as the credit addition. This makes fulfillment idempotent — identical to the dual-trigger approach: both the success-page sync and the webhook call `fulfillCheckoutSession(session)` which is guarded by the idempotency check on `session.id` (not `event.id`; use the session ID as the idempotency key since it's stable across both paths).
+
+**Warning signs:**
+- Credit balance higher than purchased
+- Duplicate rows in a credits ledger table without the idempotency guard
+- Stripe dashboard shows webhook retries for the same event ID
+
+**Phase to address:** Stripe webhook handler phase — idempotency table must be created before any credits are granted
+
+---
+
+### Pitfall 3: Credit Double-Spend — Concurrent Workshop Unlock Requests
+
+**What goes wrong:**
+User has 1 credit remaining. They click "Unlock Step 7" twice in rapid succession (or have two browser tabs open). Both requests read the credit balance (1 credit), both see sufficient balance, both deduct 1 credit and unlock Step 7. The database ends up at -1 credits. User has bypassed the paywall for free on the second workshop.
+
+**Why it happens:**
+Serverless Vercel functions handle requests concurrently. If the credit check and deduction are two separate database operations (`SELECT` then `UPDATE`), there's a window between them where another request can read the same stale balance. This is a classic TOCTOU (time-of-check-to-time-of-use) race condition.
+
+**How to avoid:**
+Use a single atomic `UPDATE ... RETURNING` with a `WHERE credits_remaining > 0` constraint inside a Drizzle transaction with `SELECT FOR UPDATE` locking:
 
 ```typescript
-const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false);
+// Correct: atomic check-and-deduct
+const result = await db.transaction(async (tx) => {
+  const [user] = await tx
+    .select()
+    .from(users)
+    .where(eq(users.clerkId, userId))
+    .for('update'); // SELECT FOR UPDATE — row-level lock
 
-// ReactFlow component
-<ReactFlow
-  panOnDrag={!isDrawingModalOpen} // Disable pan during drawing
-  zoomOnScroll={!isDrawingModalOpen}
-  zoomOnPinch={!isDrawingModalOpen}
-  selectionKeyCode={isDrawingModalOpen ? null : "Shift"}
-  deleteKeyCode={isDrawingModalOpen ? null : ["Backspace", "Delete"]}
-  // Disable all interactions when modal open
->
-```
-
-Use proper event capture and stopPropagation in drawing modal:
-
-```typescript
-const DrawingModal = ({ onClose, onSave }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const handlePointerDown = (e: PointerEvent) => {
-      e.stopPropagation(); // Prevent ReactFlow from seeing event
-      e.preventDefault(); // Prevent default browser behavior
-      startDrawing(e);
-    };
-
-    // Use capture phase to intercept before React synthetic events
-    canvas.addEventListener('pointerdown', handlePointerDown, { capture: true });
-
-    return () => {
-      canvas.removeEventListener('pointerdown', handlePointerDown, { capture: true });
-    };
-  }, []);
-
-  return (
-    <div
-      className="fixed inset-0 z-[100]" // Higher than ReactFlow's z-50
-      onClick={(e) => e.stopPropagation()} // Block click events from reaching ReactFlow
-    >
-      <canvas ref={canvasRef} />
-    </div>
-  );
-};
-```
-
-Implement separate undo/redo stacks with context awareness:
-
-```typescript
-const useContextAwareUndo = () => {
-  const isDrawingModalOpen = useDrawingStore(s => s.isOpen);
-  const undoDrawing = useDrawingStore(s => s.undo);
-  const undoCanvas = useCanvasStore(s => s.temporal.getState().undo);
-
-  const handleUndo = useCallback(() => {
-    if (isDrawingModalOpen) {
-      undoDrawing(); // Drawing tool undo
-    } else {
-      undoCanvas(); // ReactFlow canvas undo
-    }
-  }, [isDrawingModalOpen, undoDrawing, undoCanvas]);
-
-  useHotkeys('mod+z', handleUndo, { enableOnFormTags: false });
-};
-```
-
-Use portal rendering for modal to avoid z-index conflicts:
-
-```typescript
-import { createPortal } from 'react-dom';
-
-const DrawingModal = ({ children }) => {
-  return createPortal(
-    <div className="fixed inset-0 z-[100]">
-      {children}
-    </div>,
-    document.body // Render at body level, outside ReactFlow container
-  );
-};
-```
-
-Clean up global event listeners properly:
-
-```typescript
-useEffect(() => {
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      closeModal();
-    }
-  };
-
-  // Only add listener when modal is open
-  if (isOpen) {
-    document.addEventListener('keydown', handleKeyDown);
+  if (!user || user.creditsRemaining < 1) {
+    throw new Error('INSUFFICIENT_CREDITS');
   }
 
-  return () => {
-    document.removeEventListener('keydown', handleKeyDown);
-  };
-}, [isOpen]); // Re-run when isOpen changes
-```
+  const [updated] = await tx
+    .update(users)
+    .set({ creditsRemaining: user.creditsRemaining - 1 })
+    .where(eq(users.clerkId, userId))
+    .returning();
 
-**Warning signs:**
-- Drawing gestures triggering ReactFlow pan/zoom simultaneously
-- Keyboard shortcuts working on both canvases at once
-- Modal controls blocked by ReactFlow overlay elements
-- Undo/redo applying to wrong canvas
-- Touch events causing unexpected behaviors on mobile
-- Event handlers not cleaning up, leading to duplicate actions
-
-**Phase to address:**
-Phase 1 (EzyDraw Modal Foundation) - Event isolation architecture must be established upfront. Test event handling conflicts before implementing drawing features. Document z-index scale and keyboard shortcut registry to prevent conflicts.
-
----
-
-### Pitfall 2: Canvas Context Memory Leaks on Modal Unmount
-
-**What goes wrong:**
-User opens EzyDraw modal, draws sketch, closes modal. Repeat 10 times - browser memory usage climbs from 150MB to 400MB. Chrome DevTools heap snapshot shows 10 detached CanvasRenderingContext2D objects still in memory. On iOS Safari, after 15 modal opens/closes, app crashes with "Too many active WebGL contexts" error (if using WebGL-accelerated canvas). Drawing modal uses requestAnimationFrame for smooth strokes - after unmount, animation loop continues running, consuming CPU. Canvas blob URLs created for export (`canvas.toDataURL()`) never revoked, leaking memory. Event listeners attached to canvas for drawing remain active after modal unmounts. Offscreen canvas workers (if used for performance) never terminate.
-
-**Why it happens:**
-HTML5 Canvas 2D context holds significant memory (ImageData buffer for pixel data). Creating context with `canvas.getContext('2d')` allocates memory, but there's no explicit dispose() method. React component unmount doesn't automatically release canvas context - browser garbage collection only reclaims memory if no references remain. Common memory leak: storing canvas ref or context in Zustand store beyond component lifecycle - store keeps reference alive even after unmount. requestAnimationFrame callbacks capture closure over canvas context - animation loop holds reference, preventing GC. Blob URLs created with `canvas.toBlob()` or `canvas.toDataURL()` allocate memory outside JS heap - must manually call `URL.revokeObjectURL()` to free. Event listeners on canvas element or document (for drawing) hold closure over canvas/context, preventing GC. WebGL contexts (if using WebGL-accelerated canvas libraries) have hard browser limits (typically 16 contexts per tab) - exceeding limit loses oldest context, corrupting rendering. Offscreen canvas workers (Web Workers) run in separate threads - postMessage holds references, and workers must be explicitly terminated. React StrictMode in development causes double mounting - canvas initialized twice but only cleaned up once, leaking on every mount. Third-party drawing libraries (Fabric.js, Konva) maintain internal state - calling library init without calling dispose() on unmount leaks their internal structures.
-
-**How to avoid:**
-Properly cleanup canvas context on unmount:
-
-```typescript
-const DrawingCanvas = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const contextRef = useRef<CanvasRenderingContext2D | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // Initialize context
-    contextRef.current = canvas.getContext('2d');
-
-    return () => {
-      // Cancel animation loop
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-
-      // Clear canvas pixels (helps GC)
-      if (contextRef.current) {
-        contextRef.current.clearRect(0, 0, canvas.width, canvas.height);
-        contextRef.current = null;
-      }
-
-      // Nullify canvas size to release ImageData buffer
-      canvas.width = 0;
-      canvas.height = 0;
-    };
-  }, []);
-};
-```
-
-Revoke blob URLs after use:
-
-```typescript
-const exportDrawing = async () => {
-  const canvas = canvasRef.current;
-  if (!canvas) return;
-
-  const blob = await new Promise<Blob>((resolve) => {
-    canvas.toBlob((blob) => resolve(blob!), 'image/png');
-  });
-
-  const url = URL.createObjectURL(blob);
-
-  // Use URL for download or storage
-  await uploadDrawing(url);
-
-  // CRITICAL: Revoke URL to free memory
-  URL.revokeObjectURL(url);
-};
-```
-
-Clean up event listeners with AbortController:
-
-```typescript
-useEffect(() => {
-  const canvas = canvasRef.current;
-  if (!canvas) return;
-
-  const abortController = new AbortController();
-  const { signal } = abortController;
-
-  canvas.addEventListener('pointerdown', handlePointerDown, { signal });
-  canvas.addEventListener('pointermove', handlePointerMove, { signal });
-  canvas.addEventListener('pointerup', handlePointerUp, { signal });
-
-  return () => {
-    // Single cleanup - removes all listeners
-    abortController.abort();
-  };
-}, []);
-```
-
-Terminate offscreen canvas workers:
-
-```typescript
-const useOffscreenCanvas = () => {
-  const workerRef = useRef<Worker | null>(null);
-
-  useEffect(() => {
-    // Create worker
-    workerRef.current = new Worker('/drawing-worker.js');
-
-    return () => {
-      // Terminate worker on unmount
-      workerRef.current?.terminate();
-      workerRef.current = null;
-    };
-  }, []);
-};
-```
-
-Avoid storing canvas refs in global state:
-
-```typescript
-// BAD: Storing canvas ref in Zustand leaks memory
-interface DrawingStore {
-  canvasRef: HTMLCanvasElement | null; // DON'T DO THIS
-}
-
-// GOOD: Only store serializable data
-interface DrawingStore {
-  strokes: Stroke[]; // Serializable drawing data
-  // Canvas refs stay in component scope
-}
-```
-
-Dispose third-party library instances:
-
-```typescript
-const useFabricCanvas = () => {
-  const fabricRef = useRef<fabric.Canvas | null>(null);
-
-  useEffect(() => {
-    const canvas = new fabric.Canvas('canvas');
-    fabricRef.current = canvas;
-
-    return () => {
-      // CRITICAL: Dispose fabric instance
-      canvas.dispose();
-      fabricRef.current = null;
-    };
-  }, []);
-};
-```
-
-**Warning signs:**
-- Memory usage climbing on repeated modal open/close cycles
-- Browser console warning "Too many active WebGL contexts"
-- DevTools heap snapshot showing detached canvas elements
-- Animation loops consuming CPU after modal closed
-- iOS Safari crashes after multiple drawing sessions
-- React DevTools showing component unmounted but memory not released
-
-**Phase to address:**
-Phase 1 (EzyDraw Modal Foundation) - Implement proper cleanup architecture from start. Test memory leaks with Chrome DevTools Memory Profiler after 20+ modal open/close cycles. Monitor iOS Safari WebGL context limits.
-
----
-
-### Pitfall 3: Drawing Data Storage Bloat in JSONB
-
-**What goes wrong:**
-User draws simple sketch in modal, closes it. Database stepArtifacts JSONB column grows from 15KB to 500KB for one sketch. After adding 3 sketches across 3 ideation cards, single workshop row exceeds 1MB. Postgres query performance degrades - loading workshop takes 3 seconds instead of 300ms. Auto-save with 2-second debounce triggers TOAST compression on every save, causing 200ms save latency spikes. User on mobile 4G network experiences 5-second delays loading canvas because 1.2MB JSONB downloads slowly. Neon Postgres serverless database bills spike - 1MB writes consume 10x more write units than 100KB. Vercel function timeout errors (10-second limit) when saving workshop with 8 high-resolution drawings. Database backup size explodes - 100 workshops with drawings = 500MB backup instead of 5MB.
-
-**Why it happens:**
-Base64 encoding image data adds 33% overhead - 500KB PNG becomes 666KB base64 string. Storing base64 in JSONB adds JSON escaping overhead (quotes, backslashes) - another 10-15% bloat. Canvas.toDataURL() defaults to PNG at full resolution - 800x600 canvas with simple line drawing still produces 200KB+ PNG because every transparent pixel is encoded. Drawing strokes stored as raw coordinate arrays - smooth freehand stroke captures 500+ points at 60fps, each point has {x, y, pressure, timestamp} = 32 bytes, 500 points = 16KB for one stroke. Multiple layers in drawing (background, strokes, annotations) each stored separately - redundant pixel data. Postgres JSONB has 2KB TOAST threshold - data over 2KB gets compressed with PGLZ algorithm (25-35% CPU overhead) and moved to out-of-line storage. PGLZ compression degrades significantly under parallel queries - with 8 concurrent users, compressed JSONB read performance worse than uncompressed. Neon serverless Postgres charges for data transfer - large JSONB writes/reads consume more billable units. Vercel Edge Functions have 1MB request/response limit - workshops exceeding this fail to save/load. Auto-save triggering on every stroke means saving 500KB every 2 seconds = 250KB/sec write rate, overwhelming database connection pool.
-
-**How to avoid:**
-Store vector stroke data instead of rasterized images:
-
-```typescript
-interface Stroke {
-  id: string;
-  points: { x: number; y: number; pressure?: number }[];
-  color: string;
-  width: number;
-  tool: 'pen' | 'marker' | 'eraser';
-}
-
-interface DrawingData {
-  version: 1;
-  strokes: Stroke[];
-  canvasSize: { width: number; height: number };
-  // Much smaller than base64 image
-}
-
-// Serialize to JSONB - typically 5-20KB instead of 500KB
-const serializeDrawing = (strokes: Stroke[]): DrawingData => ({
-  version: 1,
-  strokes: strokes.map(s => ({
-    id: s.id,
-    points: s.points,
-    color: s.color,
-    width: s.width,
-    tool: s.tool
-  })),
-  canvasSize: { width: 800, height: 600 }
+  return updated;
 });
 ```
 
-Simplify stroke paths with Douglas-Peucker algorithm:
+Never implement a `checkCredits()` function separate from `spendCredit()` — they must be one atomic transaction.
 
-```typescript
-// Reduce 500 points to 50-100 points with negligible visual difference
-const simplifyStroke = (points: Point[], tolerance: number = 2): Point[] => {
-  // Douglas-Peucker line simplification
-  if (points.length <= 2) return points;
+**Warning signs:**
+- `creditsRemaining` column goes negative in production data
+- Two workshops unlocked when user only had 1 credit
+- Race condition only appears under load, not in local testing
 
-  let dmax = 0;
-  let index = 0;
-  const end = points.length - 1;
+**Phase to address:** Credit deduction logic phase — before the paywall gate is activated
 
-  for (let i = 1; i < end; i++) {
-    const d = perpendicularDistance(points[i], points[0], points[end]);
-    if (d > dmax) {
-      index = i;
-      dmax = d;
-    }
-  }
+---
 
-  if (dmax > tolerance) {
-    const left = simplifyStroke(points.slice(0, index + 1), tolerance);
-    const right = simplifyStroke(points.slice(index), tolerance);
-    return [...left.slice(0, -1), ...right];
-  } else {
-    return [points[0], points[end]];
-  }
-};
+### Pitfall 4: Paywall Bypass via Client-Side Checks Only
 
-// Usage: 500 points → 80 points, 16KB → 2.5KB
-const optimizedStrokes = strokes.map(s => ({
-  ...s,
-  points: simplifyStroke(s.points, 2)
-}));
+**What goes wrong:**
+The Step 7 paywall check lives only in the React component or Zustand store — `if (user.credits > 0) { navigate to step 7 }`. A user opens browser DevTools, modifies Zustand state or disables the JavaScript that renders the paywall modal, and navigates directly to `/workshop/[id]/step/7`. The server happily serves Step 7 content without checking credits.
+
+**Why it happens:**
+Developers build the paywall as a UI concern — it "blocks" the UI from showing step content. The API routes and server actions that actually load step data and save AI responses don't verify credit status, because "the paywall modal would have stopped them."
+
+**How to avoid:**
+Paywall enforcement must live server-side. Specifically:
+1. The server action or API route that advances to Step 7 (or saves AI responses for Steps 7-10) must call `verifyWorkshopAccess(workshopId, userId)` — a server-side function that queries Neon for the workshop's `unlockedAt` timestamp or the user's credit status.
+2. Middleware protection is insufficient on its own due to CVE-2025-29927 (Next.js middleware bypass via `x-middleware-subrequest` header — patched in Next.js 15.2.3 but this project is on 16.1.1, verify patch status). Defense-in-depth: enforce at both middleware and server action levels.
+3. The React component check is purely UX — it prevents the user from seeing the paywall repeatedly when already unlocked, it does not substitute for server-side enforcement.
+
+**Warning signs:**
+- Step 7 content loads when directly navigating to the URL without a credit
+- Server actions for Steps 7-10 succeed for users with zero credits
+- Workshop completion flow runs without credit verification
+
+**Phase to address:** Server-side paywall enforcement phase — must be built before the UI paywall, not after
+
+---
+
+### Pitfall 5: Clerk userId → Stripe customerId Split Brain
+
+**What goes wrong:**
+The Stripe customer ID is not stored in Neon on signup. Instead, developers look up or create the Stripe customer at checkout time by searching Stripe for the user's email. This creates two problems: (a) if a user changes their email in Clerk, the lookup fails and a duplicate Stripe customer is created for the same Clerk user, and (b) there's no canonical single source of truth for the userId↔customerId mapping, leading to orphaned Stripe customers that never get credited.
+
+**Why it happens:**
+Stripe customer creation is deferred to "when the user needs to pay" rather than on user creation. The mapping is either stored only in Stripe metadata (fragile — Stripe is a billing system, not your database) or recreated ad-hoc each checkout.
+
+**How to avoid:**
+Create (or look up) the Stripe customer at user signup via Clerk's webhook (`user.created` event), store the resulting `stripe_customer_id` in a `users` table in Neon alongside `clerk_id`. Always create the Checkout Session using this stored `customer` ID — never create a customer during checkout. The `users` table becomes the canonical mapping:
+
+```sql
+users (
+  id UUID PRIMARY KEY,
+  clerk_id TEXT UNIQUE NOT NULL,
+  stripe_customer_id TEXT UNIQUE,
+  credits_remaining INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+)
 ```
 
-Store rasterized images in object storage, not JSONB:
+On the Stripe customer object, always include `metadata: { clerkId: userId }` so you can recover the mapping from Stripe's side if Neon data is ever lost.
+
+**Warning signs:**
+- Multiple Stripe customers with the same email in the Stripe dashboard
+- Webhook arrives with a `customer` ID not found in Neon
+- User purchases credits but they're credited to a ghost customer record
+
+**Phase to address:** Schema + Stripe customer provisioning phase — the very first phase of v1.8, before any checkout flow
+
+---
+
+### Pitfall 6: Webhook Signature Verification Broken by Body Parsing
+
+**What goes wrong:**
+The Stripe webhook handler returns `400 Webhook Error: No signatures found matching the expected signature for payload` in production even though the `STRIPE_WEBHOOK_SECRET` is correct. Every webhook is rejected, meaning credits are never granted to paying customers.
+
+**Why it happens:**
+In Next.js App Router, using `await request.json()` before passing the body to `stripe.webhooks.constructEvent()` breaks signature verification. `constructEvent()` requires the raw UTF-8 string body exactly as Stripe sent it. `request.json()` parses it into an object, destroying the raw string. The fix is `await request.text()` — but developers copy patterns from Pages Router docs that use `req.body` (already parsed by Next.js) or middleware that buffers differently.
+
+**How to avoid:**
+In the webhook route (`/api/webhooks/stripe/route.ts`):
 
 ```typescript
-// For final rendered drawings, use S3/R2/Vercel Blob
-const saveDrawing = async (canvas: HTMLCanvasElement, workshopId: string) => {
-  // Compress to WebP (50% smaller than PNG)
-  const blob = await new Promise<Blob>((resolve) => {
-    canvas.toBlob(
-      (blob) => resolve(blob!),
-      'image/webp',
-      0.85 // 85% quality - good balance
+export async function POST(request: Request) {
+  const body = await request.text(); // NOT request.json()
+  const sig = request.headers.get('stripe-signature')!;
+
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET!
     );
-  });
-
-  // Upload to Vercel Blob Storage
-  const { url } = await upload(`drawings/${workshopId}/${nanoid()}.webp`, blob, {
-    access: 'public',
-    addRandomSuffix: false,
-  });
-
-  // Store only URL in JSONB (50 bytes instead of 500KB)
-  return { drawingUrl: url };
-};
-```
-
-Compress vector data before storing in JSONB:
-
-```typescript
-import pako from 'pako';
-
-const compressDrawingData = (data: DrawingData): string => {
-  const json = JSON.stringify(data);
-  const compressed = pako.deflate(json);
-  // Base64 encode compressed binary
-  return btoa(String.fromCharCode(...compressed));
-};
-
-const decompressDrawingData = (compressed: string): DrawingData => {
-  const binary = atob(compressed);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
+  } catch (err) {
+    return NextResponse.json({ error: 'Webhook verification failed' }, { status: 400 });
   }
-  const decompressed = pako.inflate(bytes, { to: 'string' });
-  return JSON.parse(decompressed);
-};
-
-// Typical compression: 20KB JSON → 5KB compressed
-```
-
-Implement drawing data pagination for large canvases:
-
-```typescript
-// Split drawing into chunks to stay under JSONB limits
-interface DrawingChunk {
-  chunkId: string;
-  strokes: Stroke[];
-  bounds: { x: number; y: number; width: number; height: number };
+  // ...
 }
-
-const chunkDrawing = (strokes: Stroke[], chunkSize: number = 50): DrawingChunk[] => {
-  const chunks: DrawingChunk[] = [];
-
-  for (let i = 0; i < strokes.length; i += chunkSize) {
-    const chunkStrokes = strokes.slice(i, i + chunkSize);
-    chunks.push({
-      chunkId: nanoid(),
-      strokes: chunkStrokes,
-      bounds: calculateBounds(chunkStrokes)
-    });
-  }
-
-  return chunks;
-};
-
-// Store metadata in stepArtifacts, chunks in separate table
 ```
 
-Use LZ4 compression instead of PGLZ for JSONB columns:
-
-```typescript
-// Set column storage to use LZ4 (better parallel query performance)
-// In migration:
-ALTER TABLE workshops
-ALTER COLUMN step_artifacts
-SET STORAGE EXTERNAL; -- Disable PGLZ compression
-
--- Let application handle compression with LZ4
-```
+Also: ensure no middleware (including Clerk's `clerkMiddleware`) runs JSON body parsing before this route. The webhook endpoint should be excluded from Clerk auth middleware so Clerk doesn't consume the body stream.
 
 **Warning signs:**
-- Database queries slowing down as users add drawings
-- Postgres TOAST compression causing save latency spikes
-- Mobile users reporting slow canvas loading
-- Database backup sizes growing rapidly
-- Neon Postgres billing increasing unexpectedly
-- Vercel function timeouts on workshops with multiple drawings
-- Auto-save debounce triggering but save still taking >500ms
+- Consistent 400 errors in Stripe webhook delivery logs
+- Signature mismatch errors even with correct `STRIPE_WEBHOOK_SECRET`
+- Works locally with Stripe CLI but fails in production
 
-**Phase to address:**
-Phase 1 (EzyDraw Modal Foundation) - Design storage architecture upfront: vector vs raster, JSONB vs object storage. Implement stroke simplification and compression before beta testing. Phase 2 (Mind Maps & Sketches) - Monitor database performance with real user data, optimize if queries exceed 500ms.
+**Phase to address:** Stripe webhook handler phase — test with `stripe listen --forward-to localhost:3000/api/webhooks/stripe` before deploying
 
 ---
 
-### Pitfall 4: Touch/Stylus Input Divergence from Mouse Input
+### Pitfall 7: Test Mode Keys Leaking into Production
 
 **What goes wrong:**
-Drawing tool works perfectly with mouse on desktop - smooth strokes, accurate positioning. User switches to iPad with Apple Pencil - strokes lag 500ms behind stylus, pressure sensitivity doesn't register. On Android tablet with S Pen, drawing triggers page scroll instead of creating strokes. Palm rejection fails - user's palm resting on iPad screen creates unwanted marks while drawing. Two-finger pinch to zoom ReactFlow canvas conflicts with drawing tool's two-finger undo gesture. Drawing with finger on iPhone works but strokes appear 40px offset from touch point. Eraser tool (inverted Apple Pencil) detected as regular pen, doesn't erase. Rotation on Surface Pro with dial creates strokes instead of rotating canvas.
+Credits are granted to users after `checkout.session.completed` webhooks — but the Stripe dashboard shows no actual payments. Investigation reveals `STRIPE_SECRET_KEY=sk_test_...` is set in the Vercel production environment variables (copy-pasted from `.env.local` during setup). Users are "purchasing" with test card numbers in production because the publishable key is also a test key. Real money never changes hands.
 
 **Why it happens:**
-Touch, mouse, and stylus events have different APIs: `touchstart`/`touchmove`/`touchend` vs `mousedown`/`mousemove`/`mouseup` vs `pointerdown`/`pointermove`/`pointerup`. Pointer Events API unifies them but requires handling pointerType ('mouse' | 'pen' | 'touch') differently. Touch events provide touches array (multi-touch) while mouse provides single cursor - drawing code written for mouse breaks with multi-touch. Pressure sensitivity only available with Pointer Events API (`pointerEvent.pressure` 0-1 range) - touch events have no pressure, mouse events always pressure=0.5. Apple Pencil tilt/azimuth available via `pointerEvent.tiltX`, `tiltY`, `azimuthAngle` - requires checking for undefined. Palm rejection requires checking touch contact area (`pointerEvent.width`, `height`) - large contact = palm, small = finger/stylus. iOS Safari has complex preventDefault() rules: calling preventDefault() on touchstart prevents scrolling but also disables form inputs; calling on touchmove too late causes scroll to have started. Android Chrome requires `touch-action: none` CSS to prevent scroll, but this disables browser zoom which breaks accessibility. Coordinate offsets differ: mouse uses `clientX/clientY`, touch uses `touches[0].clientX`, pointer uses both - getBoundingClientRect() calculations must account for page scroll offsets. Stylus eraser (inverted Apple Pencil) triggers `pointerType: 'pen'` with `button: 5` (eraser button) - must check button codes. Surface Pro dial emits wheel events, not pointer events - separate handling required.
+Developers configure Stripe in development with test keys, then copy the same `.env.local` values to Vercel without switching to live keys. The UI shows a Stripe Checkout page (it looks real) but processes test payments silently.
 
 **How to avoid:**
-Use Pointer Events API exclusively with type branching:
+Maintain a strict naming convention in Vercel environment variables with environment-scoped values:
+- **Development:** `sk_test_...` / `pk_test_...`
+- **Production:** `sk_live_...` / `pk_live_...`
+
+Use separate webhook endpoints in Stripe dashboard: one for test mode (development) pointing at `localhost` via Stripe CLI, one for live mode pointing at the production URL. Add a startup assertion in the webhook handler:
 
 ```typescript
-const DrawingCanvas = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const isDrawingRef = useRef(false);
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    // Ignore palm touches (large contact area)
-    if (e.width > 30 || e.height > 30) {
-      return; // Likely palm
-    }
-
-    // Check for stylus eraser
-    if (e.pointerType === 'pen' && e.button === 5) {
-      startErasing(e);
-      return;
-    }
-
-    // Normal drawing
-    isDrawingRef.current = true;
-    startDrawing(e);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDrawingRef.current) return;
-
-    // Get pressure (0-1 range, defaults to 0.5 for mouse)
-    const pressure = e.pressure || 0.5;
-
-    // Get tilt for pen (undefined for mouse/touch)
-    const tiltX = e.tiltX || 0;
-    const tiltY = e.tiltY || 0;
-
-    addStrokePoint({
-      x: e.clientX - canvas.offsetLeft,
-      y: e.clientY - canvas.offsetTop,
-      pressure,
-      tiltX,
-      tiltY,
-      timestamp: e.timeStamp
-    });
-  };
-
-  return (
-    <canvas
-      ref={canvasRef}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={() => isDrawingRef.current = false}
-      // Prevent touch scrolling
-      style={{ touchAction: 'none' }}
-    />
-  );
-};
-```
-
-Implement proper palm rejection:
-
-```typescript
-const isPalmTouch = (e: PointerEvent): boolean => {
-  // Large contact area = palm
-  const area = (e.width || 0) * (e.height || 0);
-  if (area > 900) return true; // 30x30 threshold
-
-  // Multiple simultaneous touches = hand resting
-  const activeTouches = getActivePointers().length;
-  if (activeTouches > 2) return true;
-
-  return false;
-};
-
-const handlePointerDown = (e: PointerEvent) => {
-  if (isPalmTouch(e)) {
-    e.preventDefault(); // Don't draw
-    return;
-  }
-
-  startDrawing(e);
-};
-```
-
-Handle iOS Safari preventDefault correctly:
-
-```typescript
-useEffect(() => {
-  const canvas = canvasRef.current;
-  if (!canvas) return;
-
-  const handleTouchStart = (e: TouchEvent) => {
-    // Must preventDefault on touchstart to prevent scroll
-    // But only for canvas, not for form inputs
-    if (e.target === canvas) {
-      e.preventDefault();
-    }
-  };
-
-  // Use passive: false to allow preventDefault
-  canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-
-  return () => {
-    canvas.removeEventListener('touchstart', handleTouchStart);
-  };
-}, []);
-```
-
-Accurate coordinate calculation with scroll offsets:
-
-```typescript
-const getCanvasCoordinates = (
-  e: PointerEvent,
-  canvas: HTMLCanvasElement
-): { x: number; y: number } => {
-  const rect = canvas.getBoundingClientRect();
-
-  return {
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top
-  };
-};
-
-// Account for CSS transforms (zoom, rotate)
-const getTransformedCoordinates = (
-  e: PointerEvent,
-  canvas: HTMLCanvasElement
-): { x: number; y: number } => {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-
-  return {
-    x: (e.clientX - rect.left) * scaleX,
-    y: (e.clientY - rect.top) * scaleY
-  };
-};
-```
-
-Separate gesture handling for ReactFlow vs drawing:
-
-```typescript
-const DrawingModal = () => {
-  const [gestureMode, setGestureMode] = useState<'draw' | 'pan'>('draw');
-
-  const handlePointerDown = (e: PointerEvent) => {
-    // Two-finger = pan gesture (for ReactFlow below modal)
-    if (e.pointerType === 'touch' && getActiveTouches().length === 2) {
-      setGestureMode('pan');
-      return;
-    }
-
-    // Single pointer = draw
-    setGestureMode('draw');
-    startDrawing(e);
-  };
-
-  // Block ReactFlow pan when in draw mode
-  useEffect(() => {
-    if (gestureMode === 'draw') {
-      disableReactFlowPan();
-    } else {
-      enableReactFlowPan();
-    }
-  }, [gestureMode]);
-};
-```
-
-**Warning signs:**
-- Drawing works on desktop but not on tablets
-- Pressure sensitivity not registering with Apple Pencil
-- Palm touches creating unwanted marks
-- Touch scrolling interfering with drawing
-- Coordinate offsets on mobile devices
-- Eraser mode not working with inverted stylus
-- Two-finger gestures triggering unintended actions
-
-**Phase to address:**
-Phase 1 (EzyDraw Modal Foundation) - Implement Pointer Events API from start, not mouse events. Test on real devices: iPad Pro with Apple Pencil, Android tablet with S Pen, Surface Pro. Phase 2 (Polish & Accessibility) - Tune palm rejection thresholds based on user feedback.
-
----
-
-### Pitfall 5: Drawing Library Bundle Size Explosion
-
-**What goes wrong:**
-Add Fabric.js for drawing features - bundle size jumps from 110KB gzipped to 280KB (+155%). Initial page load on 3G mobile increases from 1.2s to 3.5s. Add Excalidraw components - another 200KB gzipped, now 480KB total. Lighthouse performance score drops from 95 to 68. Time to Interactive (TTI) increases from 2.1s to 5.8s on mobile. Users on slow connections see white screen for 6+ seconds. Vercel Edge Function cold starts increase from 200ms to 800ms due to larger bundle. Code splitting doesn't help - drawing modal is critical path (users access it within first 10 seconds), so lazy loading saves nothing. Tree shaking fails - importing one Fabric.js method pulls entire library. Dependencies cascade - Fabric.js depends on `jsdom-global` (50KB), `canvas` (native module, 15MB in node_modules). Three different canvas libraries overlap: react-konva for mind maps (80KB), Excalidraw for drawing (200KB), Fabric.js for advanced features (120KB) - 400KB total with shared dependencies.
-
-**Why it happens:**
-Drawing libraries are feature-rich, not modular. Fabric.js provides 100+ shape types, filters, serialization - but you only need free-draw brush and eraser, rest is dead code. Excalidraw is full whiteboard app (200KB minified) - importing `@excalidraw/excalidraw` component pulls entire app even if you only want drawing canvas. React-Konva wraps Konva.js (150KB) which provides comprehensive 2D canvas framework - overkill for simple mind map nodes. Libraries bundle multiple rendering backends: Canvas 2D + WebGL + SVG renderers, even if you only use one. Dependencies aren't tree-shakeable - CommonJS modules, not ES modules, prevent webpack from removing unused code. Polyfills bloat - drawing libraries polyfill browser APIs for Node.js compatibility (jsdom), adding 50-100KB. Perfect-Freehand (pressure-sensitive strokes) is small (15KB) but requires additional physics simulation library for realistic curves. Multiple color manipulation libraries - Fabric.js uses `color`, Excalidraw uses `tinycolor2`, react-konva uses `chroma-js` - all do same thing (hex to RGB), 60KB overlap. Font rendering engines for text tools - each library bundles font metrics, glyph rendering, ligatures - 40-80KB each.
-
-**How to avoid:**
-Build custom lightweight drawing canvas instead of using Excalidraw:
-
-```typescript
-// Instead of: import { Excalidraw } from '@excalidraw/excalidraw'; // +200KB
-
-// Custom canvas with perfect-freehand (15KB)
-import { getStroke } from 'perfect-freehand';
-
-const DrawingCanvas = () => {
-  const [strokes, setStrokes] = useState<Stroke[]>([]);
-
-  const renderStroke = (points: Point[], color: string) => {
-    const stroke = getStroke(points, {
-      size: 4,
-      thinning: 0.5,
-      smoothing: 0.5,
-      streamline: 0.5
-    });
-
-    return (
-      <path
-        d={getSvgPathFromStroke(stroke)}
-        fill={color}
-      />
-    );
-  };
-
-  return (
-    <svg>
-      {strokes.map(s => renderStroke(s.points, s.color))}
-    </svg>
-  );
-};
-
-// Bundle impact: 15KB instead of 200KB
-```
-
-Use SVG for vector graphics instead of Konva for mind maps:
-
-```typescript
-// Instead of: import { Stage, Layer, Circle, Line } from 'react-konva'; // +80KB
-
-// Native SVG with D3 force layout
-const MindMapCanvas = () => {
-  return (
-    <svg width={800} height={600}>
-      {nodes.map(node => (
-        <g key={node.id}>
-          <circle cx={node.x} cy={node.y} r={20} fill={node.color} />
-          <text x={node.x} y={node.y}>{node.label}</text>
-        </g>
-      ))}
-      {links.map(link => (
-        <line
-          key={link.id}
-          x1={link.source.x}
-          y1={link.source.y}
-          x2={link.target.x}
-          y2={link.target.y}
-          stroke="#999"
-        />
-      ))}
-    </svg>
-  );
-};
-
-// Bundle impact: 0KB (native SVG) + 25KB (d3-force) = 25KB instead of 80KB
-```
-
-Import only needed D3 modules, not entire library:
-
-```typescript
-// BAD: import * as d3 from 'd3'; // +280KB
-
-// GOOD: Import specific modules
-import { forceSimulation, forceLink, forceManyBody, forceCenter } from 'd3-force';
-import { zoom } from 'd3-zoom';
-import { drag } from 'd3-drag';
-
-// Bundle impact: 35KB instead of 280KB
-```
-
-Lazy load drawing modal to defer bundle:
-
-```typescript
-// Only load drawing library when modal opens
-const DrawingModal = lazy(() => import('./drawing-modal'));
-
-const IdeationCanvas = () => {
-  const [isDrawing, setIsDrawing] = useState(false);
-
-  return (
-    <>
-      <button onClick={() => setIsDrawing(true)}>Draw</button>
-
-      {isDrawing && (
-        <Suspense fallback={<div>Loading drawing tools...</div>}>
-          <DrawingModal onClose={() => setIsDrawing(false)} />
-        </Suspense>
-      )}
-    </>
-  );
-};
-
-// Drawing library only downloaded when user clicks "Draw"
-```
-
-Use lightweight alternatives for specific features:
-
-```typescript
-// Color manipulation: use 1KB tinycolor2 instead of 15KB color
-import tinycolor from 'tinycolor2';
-
-// Stroke simplification: use 3KB simplify-js instead of Fabric.js
-import simplify from 'simplify-js';
-
-// Path generation: use 15KB perfect-freehand instead of Fabric.js brush
-import { getStroke } from 'perfect-freehand';
-
-// Total: 19KB instead of 120KB Fabric.js
-```
-
-Measure bundle impact with webpack-bundle-analyzer:
-
-```bash
-npm install --save-dev webpack-bundle-analyzer
-
-# In next.config.ts
-import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
-
-export default {
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.plugins.push(
-        new BundleAnalyzerPlugin({
-          analyzerMode: 'static',
-          reportFilename: './bundle-report.html',
-          openAnalyzer: false
-        })
-      );
-    }
-    return config;
-  }
-};
-
-# Run: npm run build
-# Open: .next/bundle-report.html
-```
-
-**Warning signs:**
-- Bundle size exceeding 150KB gzipped (current 110KB baseline)
-- Lighthouse performance score dropping below 85
-- Time to Interactive >3 seconds on 3G mobile
-- Multiple canvas/drawing libraries in bundle
-- Overlap in dependencies (color libraries, math utilities)
-- Lazy loading not working due to critical path
-
-**Phase to address:**
-Phase 1 (EzyDraw Modal Foundation) - Choose lightweight libraries upfront, measure bundle impact before committing. Target: <30KB addition for drawing features. Phase 2 (Mind Maps) - Use native SVG + minimal D3, avoid react-konva. Continuous monitoring with bundle-analyzer on every PR.
-
----
-
-### Pitfall 6: Mind Map Layout Algorithm Performance Degradation
-
-**What goes wrong:**
-Mind map with 5 nodes renders smoothly - layout calculates in 16ms, 60fps. Add 20 nodes - layout calculation takes 180ms, causing visible lag when dragging nodes. Add 50 nodes - force simulation takes 2+ seconds to stabilize, UI frozen. User drags central node - all connected nodes re-calculate positions, triggering 50 React re-renders, UI stutters. Zoom/pan while simulation running causes jarring position jumps - nodes "snap" to new positions mid-animation. On mobile, 30-node mind map causes browser to throttle requestAnimationFrame, reducing to 30fps. D3 force simulation runs indefinitely - alpha never reaches stopping threshold, consuming CPU even when layout stable. Multiple mind maps on canvas (nested sub-maps) each run separate simulations, compounding performance issues.
-
-**Why it happens:**
-Force-directed layout algorithms are O(n²) complexity - every node checks distance to every other node. D3's forceManyBody (repulsion) calculates n×n forces every tick. At 60fps, that's 3600 calculations/sec for 10 nodes, 90,000 calculations/sec for 50 nodes. Force simulation runs iteratively - d3.forceSimulation() uses requestAnimationFrame loop, recalculating positions every frame until alpha (energy) decays below threshold (default 0.001). Default alpha decay is 0.0228 per tick - with complex graphs, can take 300+ ticks (5 seconds at 60fps) to stabilize. React's reconciliation overhead - each simulation tick updates node positions, triggering React re-render. With 50 nodes, that's 50 component updates per frame. D3 force simulation mutates node objects directly - `node.x = newX` - but React expects immutable updates. Bridging mutable D3 with immutable React causes unnecessary re-renders. Collision detection (to prevent node overlap) adds O(n²) calculations on top of force calculations. Link force (edges between nodes) adds O(edges) calculations - dense graphs (many connections) compound performance issues. Running simulation while user interacts (drag, zoom) causes coordinate space conflicts - simulation uses one coordinate system, user interaction uses another, positions desync. Mobile devices have slower CPUs (2-4x slower than desktop) and aggressive battery optimizations - requestAnimationFrame throttled to 30fps, doubling simulation time.
-
-**How to avoid:**
-Pre-calculate layout server-side for static mind maps:
-
-```typescript
-// Server-side (Node.js API route)
-import * as d3 from 'd3-force';
-
-export async function POST(req: Request) {
-  const { nodes, links } = await req.json();
-
-  const simulation = d3.forceSimulation(nodes)
-    .force('link', d3.forceLink(links).id(d => d.id))
-    .force('charge', d3.forceManyBody().strength(-100))
-    .force('center', d3.forceCenter(400, 300));
-
-  // Run simulation to completion (not in browser)
-  for (let i = 0; i < 300; ++i) simulation.tick();
-
-  return Response.json({ nodes, links });
+if (process.env.NODE_ENV === 'production' && process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_')) {
+  throw new Error('FATAL: Test Stripe key in production environment');
 }
-
-// Client-side: Use pre-calculated positions
-const MindMap = ({ initialNodes, initialLinks }) => {
-  const [nodes] = useState(initialNodes); // Positions already calculated
-  return <svg>{/* Render static layout */}</svg>;
-};
 ```
 
-Use progressive enhancement with animation budget:
+**Warning signs:**
+- Stripe dashboard shows no revenue despite "successful" checkouts
+- Test card numbers (4242 4242...) accepted in production
+- `checkout.session.completed` events in Stripe test mode dashboard
+
+**Phase to address:** Stripe environment setup phase (day zero) — before any code
+
+---
+
+### Pitfall 8: Onboarding State Lost on Browser Data Clear
+
+**What goes wrong:**
+The `hasSeenOnboarding` flag is stored in `localStorage`. User completes onboarding, dismisses the welcome modal, uses the app for a week. Then they clear browser history/cache, switch devices, or open an incognito tab. The welcome modal reappears. Repeat users are re-onboarded every time they switch browsers or clear storage. Worse: if a user dismisses the modal mid-tutorial and returns from a different device, they see the tour from the beginning with no memory of their prior session.
+
+**Why it happens:**
+`localStorage` is the path of least resistance for "has seen" flags. It works in development where the developer uses the same browser. It breaks silently in production across any storage boundary: device switch, incognito, browser data clear, cookie blocking.
+
+**How to avoid:**
+Store onboarding state in Neon on the `users` table, not localStorage. Add a single boolean column `onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE` (and optionally `onboarding_completed_at TIMESTAMPTZ`). Update it via a server action on modal dismiss. Read it server-side when rendering the dashboard — since the dashboard is behind Clerk auth and the user row is loaded on every dashboard request, this adds zero additional queries.
+
+Use localStorage only as a hydration hint to prevent flash: read `localStorage.getItem('onboarding_done')` client-side to suppress the modal before the server-confirmed state loads. Never use it as the source of truth.
+
+**Warning signs:**
+- "I keep seeing the tutorial" in user feedback
+- Onboarding analytics show inflated completion rates (users dismissing repeatedly)
+- Reported in incognito mode during testing
+
+**Phase to address:** Onboarding schema phase — add `onboarding_completed` column before building the modal component
+
+---
+
+### Pitfall 9: SSR Hydration Mismatch from Onboarding Modal
+
+**What goes wrong:**
+The welcome modal reads `localStorage` to determine whether to render. The server renders the page without the modal (server has no localStorage). The client hydrates and shows the modal (localStorage says first visit). React throws a hydration mismatch error in development and silently diverges in production — the modal may flash in and out, or behave inconsistently.
+
+**Why it happens:**
+Any `localStorage` read inside a component body (not inside `useEffect`) causes the server render to produce different HTML from the client hydration pass. Next.js App Router renders server components on the server — they can never access `window.localStorage`.
+
+**How to avoid:**
+Gate the modal render inside `useEffect` with a mounted flag:
 
 ```typescript
-const useMindMapLayout = (nodes: Node[], links: Link[]) => {
-  const [positions, setPositions] = useState<Map<string, Position>>(new Map());
-  const simulationRef = useRef<d3.Simulation<Node, Link> | null>(null);
-
-  useEffect(() => {
-    const simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links))
-      .force('charge', d3.forceManyBody())
-      .alphaDecay(0.05) // Faster convergence
-      .stop();
-
-    // Run simulation in chunks to avoid blocking
-    const ticksPerFrame = 5; // Tune based on performance
-    let ticksRemaining = 100; // Budget: max 100 ticks
-
-    const animate = () => {
-      for (let i = 0; i < ticksPerFrame; i++) {
-        simulation.tick();
-        ticksRemaining--;
-      }
-
-      // Update React state (batched)
-      setPositions(new Map(nodes.map(n => [n.id, { x: n.x!, y: n.y! }])));
-
-      if (simulation.alpha() > 0.01 && ticksRemaining > 0) {
-        requestAnimationFrame(animate);
-      } else {
-        simulation.stop(); // Force stop after budget
-      }
-    };
-
-    animate();
-
-    return () => simulation.stop();
-  }, [nodes, links]);
-
-  return positions;
-};
-```
-
-Optimize React rendering with memoization:
-
-```typescript
-const MindMapNode = memo(({ node }: { node: Node }) => {
-  return (
-    <g transform={`translate(${node.x}, ${node.y})`}>
-      <circle r={20} fill={node.color} />
-      <text>{node.label}</text>
-    </g>
-  );
-}, (prev, next) => {
-  // Only re-render if position changed significantly
-  return (
-    Math.abs(prev.node.x - next.node.x) < 1 &&
-    Math.abs(prev.node.y - next.node.y) < 1 &&
-    prev.node.label === next.node.label
-  );
-});
-
-const MindMap = ({ nodes }) => (
-  <svg>
-    {nodes.map(node => (
-      <MindMapNode key={node.id} node={node} />
-    ))}
-  </svg>
-);
-```
-
-Use WebGL for large mind maps instead of SVG:
-
-```typescript
-// For 50+ nodes, switch to WebGL-accelerated rendering
-import { Canvas, useFrame } from '@react-three/fiber';
-
-const MindMapWebGL = ({ nodes, links }) => {
-  return (
-    <Canvas>
-      {nodes.map(node => (
-        <mesh key={node.id} position={[node.x, node.y, 0]}>
-          <circleGeometry args={[20, 32]} />
-          <meshBasicMaterial color={node.color} />
-        </mesh>
-      ))}
-    </Canvas>
-  );
-};
-
-// WebGL handles 1000+ nodes smoothly vs SVG's ~50 node limit
-```
-
-Pause simulation during user interaction:
-
-```typescript
-const [isDragging, setIsDragging] = useState(false);
+const [mounted, setMounted] = useState(false);
+const [showModal, setShowModal] = useState(false);
 
 useEffect(() => {
-  if (isDragging) {
-    simulation.stop(); // Pause layout while dragging
-  } else {
-    simulation.restart(); // Resume after drag
+  setMounted(true);
+  // DB-sourced truth: passed as server prop
+  if (!hasCompletedOnboarding) {
+    setShowModal(true);
   }
-}, [isDragging, simulation]);
+}, [hasCompletedOnboarding]);
+
+if (!mounted) return null; // suppress modal during SSR
 ```
 
-**Warning signs:**
-- Visible lag when dragging mind map nodes
-- UI freezing when adding nodes to mind map
-- Force simulation taking >1 second to stabilize
-- Frame rate dropping below 30fps
-- CPU usage spiking during mind map interactions
-- Mobile devices becoming unresponsive with 20+ nodes
+Better: pass `hasCompletedOnboarding` as a server prop from the dashboard server component (queried from Neon), then the client component renders deterministically. The modal is always hidden on server render (SSR outputs no modal HTML), and the client shows it based on the server-provided prop. Zero hydration mismatch.
 
-**Phase to address:**
-Phase 2 (Mind Map Layout) - Implement performance budget (max 100ms for layout) and progressive enhancement from start. Test with 50-node mind map before shipping. Phase 3 (Performance Optimization) - Switch to WebGL if SVG proves insufficient.
+**Warning signs:**
+- `Error: Hydration failed because the initial UI does not match` in the console
+- Modal flashes briefly on every page load before hiding
+- `suppressHydrationWarning` appearing in code reviews (escape hatch being used as a crutch)
+
+**Phase to address:** Onboarding modal implementation phase — design the data flow (server prop, not localStorage) before writing the component
 
 ---
 
-### Pitfall 7: Undo/Redo State Conflicts Between Drawing Tool and Canvas
+### Pitfall 10: Abandoned Checkout Sessions — User Never Returns
 
 **What goes wrong:**
-User adds 3 post-its to ReactFlow canvas, then opens drawing modal and creates sketch. Presses Cmd+Z expecting to undo last drawing stroke - instead, last post-it deletion is undone. User draws 5 strokes in modal, closes modal, adds stroke to canvas. Presses Cmd+Shift+Z to redo - drawing modal stroke redone instead of canvas action. Undo history becomes corrupted - alternating between canvas actions and drawing actions makes undo sequence nonsensical. User makes 10 drawing strokes, then 10 canvas actions. Tries to undo all canvas actions - but drawing actions interleaved, so undo jumps between canvases unpredictably. Temporal store's undo stack has 50 entries from both canvas and drawing - hitting undo limit (50 actions) causes old drawing actions to be forgotten while canvas actions remain. Drawing modal implements its own undo stack (separate from Zustand temporal), creating two undo systems with same keyboard shortcut. User expects "undo everything since opening modal" but undo operates per-action across both systems.
+User opens Stripe Checkout (redirected away from the app) but closes the browser tab, gets distracted, or hits Back. A Checkout Session was created but never completed. The user later tries to click "Upgrade" again — your code creates a *new* Checkout Session. Over time, the Stripe dashboard fills with abandoned sessions and the user potentially has confusion around multiple pending "transactions." More critically: if your `success_url` relies on the `session_id` parameter to sync credits, a user who bookmarks the success URL and visits it again triggers a second sync attempt — caught only if idempotency is in place.
 
 **Why it happens:**
-Single global undo/redo stack shared between ReactFlow canvas (Zustand temporal) and drawing modal (custom undo system). Both systems register Cmd+Z keyboard handlers - last registered handler wins, but both execute, causing double undo. Zustand temporal middleware tracks ALL state changes - when drawing modal updates its state (add stroke), temporal middleware adds entry to global undo stack. Drawing strokes and canvas actions semantically different (stroke has {points, color} vs canvas action has {nodeId, position}), but temporal store treats them identically. Undo history is flat array - no concept of "context" (modal open vs canvas focused). When modal opens, canvas actions shouldn't be undoable, but temporal store still exposes them. Modal closes, drawing undo stack cleared (component unmounts), but those actions remain in temporal store - desync. Keyboard shortcuts don't check focus context - Cmd+Z fires regardless of whether modal is open or canvas is focused. React's event bubbling causes keyboard event to reach both modal and canvas components - both execute undo handlers. Multiple useHotkeys() registrations don't coordinate - each component independently registers Cmd+Z, creating race condition for which fires first.
+Checkout Sessions are fire-and-forget: create → redirect → wait. There's no app-side state tracking the pending session. Developers don't implement the `checkout.session.expired` webhook, so abandoned sessions are invisible.
 
 **How to avoid:**
-Implement context-aware undo system with separate stacks:
+Store the pending `checkout_session_id` in the `users` table (nullable). Before creating a new Checkout Session, check if a non-expired session exists for this user and redirect to it via `session.url` (Stripe sessions are reusable until expired). Handle `checkout.session.expired` to clear the pending session ID from Neon. Stripe sessions expire after 24 hours by default (configurable to 30 min minimum).
 
-```typescript
-interface UndoContext {
-  type: 'canvas' | 'drawing';
-  stackId: string;
-}
-
-interface UndoEntry {
-  context: UndoContext;
-  action: any;
-  timestamp: number;
-}
-
-const useContextualUndo = () => {
-  const [activeContext, setActiveContext] = useState<UndoContext | null>(null);
-  const [undoStacks, setUndoStacks] = useState<Map<string, UndoEntry[]>>(new Map());
-
-  const undo = useCallback(() => {
-    if (!activeContext) return;
-
-    const stack = undoStacks.get(activeContext.stackId);
-    if (!stack || stack.length === 0) return;
-
-    const entry = stack[stack.length - 1];
-    // Execute undo for active context only
-    executeUndo(entry);
-
-    // Update stack
-    setUndoStacks(prev => {
-      const newStack = stack.slice(0, -1);
-      return new Map(prev).set(activeContext.stackId, newStack);
-    });
-  }, [activeContext, undoStacks]);
-
-  return { undo, setActiveContext };
-};
-```
-
-Disable canvas undo when modal is open:
-
-```typescript
-const App = () => {
-  const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false);
-  const canvasUndo = useCanvasStore(s => s.temporal.getState().undo);
-
-  // Only register canvas undo when modal closed
-  useHotkeys('mod+z', () => {
-    if (!isDrawingModalOpen) {
-      canvasUndo();
-    }
-  }, [isDrawingModalOpen], { enableOnFormTags: false });
-
-  return (
-    <>
-      <ReactFlowCanvas />
-      {isDrawingModalOpen && (
-        <DrawingModal
-          onClose={() => setIsDrawingModalOpen(false)}
-        />
-      )}
-    </>
-  );
-};
-```
-
-Drawing modal manages its own isolated undo stack:
-
-```typescript
-const DrawingModal = ({ onClose }) => {
-  const [strokes, setStrokes] = useState<Stroke[]>([]);
-  const [undoStack, setUndoStack] = useState<Stroke[][]>([]);
-  const [redoStack, setRedoStack] = useState<Stroke[][]>([]);
-
-  const undo = () => {
-    if (undoStack.length === 0) return;
-
-    const prevState = undoStack[undoStack.length - 1];
-    setRedoStack([...redoStack, strokes]);
-    setStrokes(prevState);
-    setUndoStack(undoStack.slice(0, -1));
-  };
-
-  // Modal's undo only active while modal open
-  useHotkeys('mod+z', undo, [], {
-    enableOnFormTags: false,
-    preventDefault: true // Don't let event bubble to canvas
-  });
-
-  return <div>{/* Drawing UI */}</div>;
-};
-```
-
-Batch modal actions into single canvas undo entry:
-
-```typescript
-const saveDrawing = async (strokes: Stroke[]) => {
-  // Convert drawing to canvas node
-  const drawingNode = await renderStrokesToImage(strokes);
-
-  // Add to canvas as single undo-able action
-  addPostIt({
-    text: '',
-    type: 'drawing',
-    drawingData: strokes,
-    imageUrl: drawingNode.imageUrl,
-    position: { x: 100, y: 100 }
-  });
-
-  // Now undo in canvas removes entire drawing, not individual strokes
-};
-```
-
-Use hierarchical undo with sub-actions:
-
-```typescript
-interface HierarchicalUndoEntry {
-  id: string;
-  type: 'canvas' | 'modal';
-  action: any;
-  subActions?: HierarchicalUndoEntry[]; // Drawing modal's actions nested
-}
-
-const undo = () => {
-  const entry = undoStack[undoStack.length - 1];
-
-  if (entry.type === 'modal' && entry.subActions) {
-    // Undo entire modal session (all strokes) as one action
-    entry.subActions.forEach(subAction => executeUndo(subAction));
-  } else {
-    executeUndo(entry);
-  }
-};
-```
+For the `success_url` bookmark problem: idempotency on `fulfillCheckoutSession` (see Pitfall 2) handles this automatically — the second sync attempt sees the session already processed and returns without crediting again.
 
 **Warning signs:**
-- Undo applying to wrong context (modal vs canvas)
-- Keyboard shortcuts triggering multiple undo actions
-- Undo history becoming nonsensical with mixed actions
-- Users confused about what undo will undo
-- Undo stack filling up with drawing actions, pushing out canvas actions
-- Modal undo not working when canvas undo is active
+- High session creation count vs. low completion count in Stripe dashboard
+- Multiple pending `checkout_session_id` rows for the same user
+- Users complaining that clicking "Upgrade" starts a new checkout every time
 
-**Phase to address:**
-Phase 1 (EzyDraw Modal Foundation) - Design isolated undo architecture from start. Document undo scoping in implementation guide. Phase 2 (Integration Testing) - Test undo/redo across all contexts: canvas-only, modal-only, switching between them.
+**Phase to address:** Stripe Checkout creation phase — implement session reuse before launch
 
 ---
 
@@ -1152,35 +313,30 @@ Shortcuts that seem reasonable but create long-term problems.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Storing drawing as base64 in JSONB | Simple, no external storage setup | Database bloat, slow queries, high costs | Only for MVP demo with <5 drawings total |
-| Using Excalidraw full library | Feature-complete whiteboard instantly | 200KB bundle size, performance issues | Never - build custom lightweight canvas |
-| Mouse-only event handlers (no touch/stylus) | Simpler code, works on desktop | Unusable on tablets, no pressure sensitivity | Only for desktop-only internal tool |
-| Single global undo stack | Easier to implement | Undo conflicts between canvas and modal | Never - always scope undo per context |
-| Synchronous D3 force simulation | Smooth animation on small graphs | UI freezes with >30 nodes | Only if mind maps guaranteed <20 nodes |
-| Storing full-resolution drawings | Preserves quality | 500KB+ per drawing, slow loading | Never - compress to WebP 85% quality |
-| No canvas cleanup on unmount | Works in development | Memory leaks in production | Never - always cleanup contexts |
-| Disabling ReactFlow during drawing | Prevents event conflicts | Poor UX, can't pan canvas while drawing | Acceptable for MVP, add gesture isolation later |
-| Using preventDefault() globally on touch | Prevents scroll conflicts | Breaks form inputs, accessibility issues | Never - scope preventDefault to canvas only |
-| Importing entire D3 library | All features available | 280KB bundle increase | Never - import specific modules only |
+| Store credits in Clerk `publicMetadata` instead of Neon | No schema change needed | Credits aren't auditable, no transaction history, Clerk API becomes billing dependency, hard to query across users | Never — Clerk metadata is for auth attributes, not financial state |
+| Client-side credit check in Zustand only | Faster paywall UI | Bypassable, stale on concurrent sessions, doesn't survive page refresh | Never for enforcement — client check is UX only |
+| Single webhook event type (`checkout.session.completed` only) | Simpler handler | Misses async payment methods; missed payment_intent.succeeded events for retry scenarios | Acceptable for MVP if only card payments are enabled |
+| localStorage for onboarding state | Zero backend work | Resets on browser clear, device switch, incognito — users see tutorial repeatedly | Acceptable as hydration hint only, never as source of truth |
+| Create Stripe customer during checkout | No extra signup step | Race conditions if user checks out twice simultaneously; no stable customerId before payment | Never — create customer at user signup |
+| Check webhook signature in development only | Faster local dev | Signature check bypass pattern creeps into production code | Never — verify in all environments; use Stripe CLI for local testing |
+| Use `client_reference_id` instead of `customer` for user mapping | Simpler if customer not pre-created | `client_reference_id` is untyped string, not validated by Stripe, easier to fake or mismatch | Only as secondary reference alongside a real `customer` object |
 
 ---
 
 ## Integration Gotchas
 
-Common mistakes when integrating drawing to existing WorkshopPilot.ai ReactFlow canvas.
+Common mistakes when connecting to external services.
 
-| Integration Point | Common Mistake | Correct Approach |
-|-------------------|----------------|------------------|
-| Event Handling | Both canvases listen to same events | Disable ReactFlow interactions when modal open |
-| Undo/Redo | Single global undo stack | Context-aware undo with separate stacks per canvas |
-| Data Storage | Storing base64 images in JSONB | Store vector data in JSONB, raster images in object storage |
-| Bundle Size | Importing full Excalidraw/Fabric.js | Build custom canvas with perfect-freehand (15KB) |
-| Touch Input | Using mouse events only | Use Pointer Events API with pointerType branching |
-| Mind Map Layout | Running D3 simulation synchronously | Progressive enhancement with animation budget |
-| Memory Management | No canvas cleanup on unmount | Cleanup contexts, revoke blob URLs, cancel animations |
-| Coordinate Systems | Mixing ReactFlow and drawing coordinates | Separate coordinate spaces, transform on integration |
-| Mobile Performance | Desktop-optimized only | Test on real devices, optimize for 3G network |
-| Drawing Data | Storing raw stroke arrays | Simplify strokes with Douglas-Peucker, compress with LZ4 |
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Stripe Checkout | Using `payment_intent.succeeded` for fulfillment | Use `checkout.session.completed` for Checkout-initiated flows; `payment_intent.succeeded` is for PaymentIntents API, not Checkout |
+| Stripe webhooks | `await request.json()` before `constructEvent()` | `await request.text()` — raw body required for HMAC signature verification |
+| Stripe webhooks | Same handler URL for test and live webhooks | Separate webhook endpoints in Stripe dashboard (or at minimum separate secrets via env var scoping) |
+| Clerk + Stripe | Storing `stripeCustomerId` in Clerk `publicMetadata` | Store in Neon `users` table — Clerk metadata is slow to update, not queryable server-side without API call, wrong domain |
+| Neon + Drizzle | Using `neon-http` driver with long-running transactions | `neon-http` is request/response — each query is a separate HTTP call. Use `neon-ws` (WebSocket) driver for transactions requiring `SELECT FOR UPDATE` |
+| Next.js middleware | Relying solely on middleware for paywall enforcement | CVE-2025-29927 allows middleware bypass via `x-middleware-subrequest` header; enforce at server action level too |
+| Stripe Checkout | Creating session without pre-existing Stripe customer | Customer ID must exist before session creation; create on signup or first checkout with idempotency |
+| Vercel env vars | Copying `.env.local` test keys to Vercel production | Set live keys explicitly in Vercel dashboard for Production environment; test keys for Preview/Development |
 
 ---
 
@@ -1190,14 +346,10 @@ Patterns that work at small scale but fail as usage grows.
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Base64 images in JSONB | Fast saves initially, slow queries later | Use object storage, store only URLs in JSONB | >5 drawings per workshop |
-| D3 force simulation for all mind maps | Smooth with 10 nodes, frozen with 50 | Pre-calculate layout server-side, use animation budget | >30 nodes in mind map |
-| No stroke simplification | Small drawing data initially, bloated later | Apply Douglas-Peucker simplification (tolerance=2) | Strokes with >200 points |
-| Synchronous rendering on pointer move | Smooth drawing initially, laggy with complex scenes | Debounce or use requestAnimationFrame | >100 strokes on canvas |
-| SVG for large mind maps | Works for 20 nodes, slow for 100 | Switch to WebGL-accelerated rendering at 50+ nodes | >50 nodes |
-| Global event listeners without cleanup | No issues in dev, memory leaks in prod | Use AbortController, cleanup in useEffect return | After 10+ modal open/close cycles |
-| Full-resolution canvas export | Fine for 1-2 exports, slow for batch | Reduce resolution for previews, full-res on demand | Exporting >5 drawings at once |
-| No compression for vector data | Small JSONB initially, exceeds TOAST limit later | Compress with pako before storing | Drawings with >100 strokes |
+| Fetching Stripe customer status on every page load | Slow dashboard, Stripe rate limit errors (100 req/s) | Cache in Neon; only fetch from Stripe on webhook events and explicit sync triggers | ~500 daily active users hitting dashboard |
+| Blocking webhook handler on slow DB operations | Stripe retries after 30s timeout, duplicate deliveries | Return 200 immediately after idempotency check; run heavy DB work after response via `waitUntil()` or background job | Any webhook with slow Neon cold start |
+| Full workshop credit check on every step render | N+1 queries as users navigate between steps | Load credit/unlock status once at workshop entry, store in Zustand, re-validate only on paywall hit | 10+ concurrent users |
+| Querying `stripe_webhook_events` without index | Slow idempotency check as events accumulate | Index `event_id` (or make it PRIMARY KEY); add TTL cleanup after 30 days | ~100k processed events |
 
 ---
 
@@ -1207,33 +359,28 @@ Domain-specific security issues beyond general web security.
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| No size limits on drawing data | User uploads 10MB drawing, DOS database | Limit strokes to 500, points per stroke to 1000, max canvas size 2000x2000 |
-| Storing user-generated SVG without sanitization | XSS via malicious SVG paths | Sanitize SVG with DOMPurify before rendering or storage |
-| No rate limiting on drawing saves | Attacker spams save endpoint, exhausts DB writes | Rate limit per userId: 20 drawing saves/minute |
-| Allowing external image URLs in drawings | SSRF attacks, loading malicious content | Only allow data URLs or signed object storage URLs |
-| No validation of canvas dimensions | User creates 10000x10000 canvas, consumes memory | Limit max canvas size server-side: 2000x2000px |
-| Exposing blob URLs publicly | Anyone with URL can access private drawings | Use signed URLs with expiration (1 hour) |
-| No CORS validation on image exports | Cross-origin images taint canvas, export fails | Validate image origins, use crossorigin="anonymous" |
-| Storing drawing data without compression | Leaks information about stroke count, complexity | Always compress before storage to obfuscate structure |
+| Trusting `metadata.userId` from Stripe webhook without re-verifying against Clerk session | Attacker crafts fake webhook with different userId to steal credits | Always verify webhook signature first (`constructEvent`), then the userId in metadata must match an existing Neon user row — not just "any string" |
+| Exposing `STRIPE_SECRET_KEY` client-side | Full Stripe account compromise | Never prefix with `NEXT_PUBLIC_`; only publishable key (`pk_`) goes client-side |
+| No rate limiting on "create checkout session" endpoint | Stripe session spam, cost amplification | Rate limit with Upstash or Vercel's edge rate limiting; max 1 active session per user |
+| Paywall check only in middleware | CVE-2025-29927 allows `x-middleware-subrequest` header to bypass Next.js middleware entirely | Server actions and API routes must independently verify workshop unlock status from Neon |
+| Storing `credits_remaining` only in Clerk metadata (client-readable) | User modifies local token cache or Clerk JWT to show higher credit count | Credit truth lives in Neon only; Clerk metadata is a convenience display cache, never authoritative |
+| No CSRF protection on credit spend endpoint | Cross-site request tricks user into burning credits | Next.js Server Actions have built-in CSRF protection via origin header check — use Server Actions, not plain API routes, for credit spend |
 
 ---
 
 ## UX Pitfalls
 
-Common user experience mistakes when adding drawing capabilities.
+Common user experience mistakes in this domain.
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Too many drawing tools overwhelming non-technical users | Cognitive overload, users give up | Progressive disclosure: Start with pen + eraser, hide advanced tools |
-| No visual feedback during drawing save | User unsure if drawing saved, clicks multiple times | Show "Saving drawing..." toast with progress indicator |
-| Drawing modal blocks entire canvas | User can't reference canvas while drawing | Semi-transparent modal or side-panel drawer |
-| No way to edit drawing after saving | User must redraw from scratch for small changes | Store vector data, enable "edit drawing" to reopen modal |
-| Pen tool selected by default on touch devices | Users accidentally draw when trying to pan | Default to pan tool on touch, require explicit tool selection |
-| No indication of pressure sensitivity support | Users expect pressure but device doesn't support it | Show "Pressure sensitivity detected" or "Use stylus for pressure" |
-| Drawing lost if user closes modal accidentally | Frustration, lost work | Auto-save draft in localStorage, restore on reopen |
-| No undo affordance in drawing modal | Users don't know Cmd+Z works | Show undo/redo buttons with keyboard shortcuts in UI |
-| Mind map nodes overlap, illegible text | Users can't read labels | Implement collision detection, auto-adjust positions |
-| Crazy 8s grid doesn't explain time limit | Users confused about purpose | Show timer: "8 ideas in 8 minutes - go!" |
+| Success page shows "pending" while webhook processes | User thinks payment failed, contacts support or repurchases | Immediately sync on `success_url` load (Pitfall 1); show "almost there" spinner for max 3 seconds, then confirm |
+| No email receipt / confirmation after credit purchase | Users unsure if payment went through, chargeback risk | Stripe automatically sends email receipts if customer email is set on the Checkout Session — always set `customer_email` or use pre-created customer |
+| Welcome modal appears on every workshop entry, not just first visit | Experienced users rage-click through tutorial every session | `onboarding_completed` column in DB; never show modal again after first dismissal |
+| Paywall hits mid-AI-conversation with no warning | User is 6 steps invested, discovers paywall at Step 7 during AI response | Show taste-test status (e.g., "3 free steps remaining") in header early; surface paywall prompt before the step loads, not mid-conversation |
+| Credit count not visible until paywall hit | Users surprised by paywall existence | Dashboard header shows "X credits" (or "Upgrade" if zero) at all times for authenticated users |
+| "Buy more credits" CTA takes user away mid-workshop | User loses workshop context on return | Inline upgrade modal (not redirect) — open Stripe Checkout in new tab or popup; on return, poll for credit update and auto-continue |
+| No refund/cancellation messaging | Users feel locked in, chargeback spikes | Include "contact support for refunds" link in purchase confirmation email and on dashboard |
 
 ---
 
@@ -1241,18 +388,16 @@ Common user experience mistakes when adding drawing capabilities.
 
 Things that appear complete but are missing critical pieces.
 
-- [ ] **Canvas Context Cleanup:** Often missing disposal on unmount — verify memory doesn't leak after 20+ modal open/close cycles (Chrome DevTools heap snapshot)
-- [ ] **Touch Event Handling:** Often missing Pointer Events API — verify drawing works on iPad Pro, Android tablet, Surface Pro with stylus
-- [ ] **Undo/Redo Context:** Often missing scope isolation — verify undo in modal doesn't affect canvas, and vice versa
-- [ ] **Drawing Data Compression:** Often missing stroke simplification — verify 500-point stroke simplifies to <100 points with negligible visual difference
-- [ ] **Bundle Size Monitoring:** Often missing webpack-bundle-analyzer — verify drawing features add <30KB gzipped to bundle
-- [ ] **Object Storage Integration:** Often missing for images — verify drawings stored in Vercel Blob, not base64 in JSONB
-- [ ] **Mind Map Performance:** Often missing animation budget — verify 50-node mind map calculates layout in <100ms
-- [ ] **Event Isolation:** Often missing ReactFlow disabling — verify drawing gestures don't trigger ReactFlow pan/zoom
-- [ ] **Blob URL Cleanup:** Often missing revokeObjectURL — verify blob URLs revoked after drawing export
-- [ ] **Mobile Performance:** Often missing real device testing — verify drawing responsive on iPhone, iPad, Android on 3G network
-- [ ] **Pressure Sensitivity:** Often missing Pointer Events pressure — verify Apple Pencil pressure affects stroke width
-- [ ] **Palm Rejection:** Often missing contact area detection — verify palm resting on iPad doesn't create unwanted marks
+- [ ] **Stripe webhook handler:** Often missing signature verification — verify `constructEvent()` is called with `request.text()` (not `request.json()`), `stripe-signature` header, and `STRIPE_WEBHOOK_SECRET`
+- [ ] **Credit deduction:** Often missing `SELECT FOR UPDATE` transaction — verify concurrent requests can't both deduct from the same balance simultaneously
+- [ ] **Webhook idempotency:** Often missing duplicate delivery guard — verify `stripe_webhook_events` table (or equivalent) prevents double-credit on Stripe retry
+- [ ] **Paywall enforcement:** Often missing server-side check — verify that server actions for Steps 7-10 reject requests from users whose workshop is not unlocked, regardless of client state
+- [ ] **Onboarding persistence:** Often missing DB column — verify `onboarding_completed` is in Neon and the welcome modal reads from it, not localStorage
+- [ ] **Stripe customer pre-creation:** Often missing on signup — verify `users.stripe_customer_id` is populated before any checkout attempt, not during it
+- [ ] **Live vs test keys:** Often wrong environment — verify Vercel Production environment uses `sk_live_` and `pk_live_` keys, and the Stripe webhook is registered in live mode
+- [ ] **Success-page sync:** Often missing — verify the `success_url` handler calls Stripe API to retrieve session status rather than just displaying "thank you"
+- [ ] **Checkout session reuse:** Often missing — verify a pending session is reused if user clicks "Upgrade" again before the previous session expires
+- [ ] **Credit display:** Often missing — verify dashboard shows credit count server-side (from Neon), not from Clerk metadata or client-side Zustand only
 
 ---
 
@@ -1262,16 +407,12 @@ When pitfalls occur despite prevention, how to recover.
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Event Handling Conflicts | LOW | Add isDrawingModalOpen flag to disable ReactFlow interactions (2-4 hours) |
-| Canvas Memory Leaks | LOW | Implement cleanup in useEffect return, use AbortController for listeners (4-6 hours) |
-| JSONB Storage Bloat | MEDIUM | Migrate to object storage, implement stroke simplification, backfill existing drawings (1-2 days) |
-| Touch Input Issues | MEDIUM | Refactor to Pointer Events API, add palm rejection, test on real devices (1-2 days) |
-| Bundle Size Explosion | HIGH | Replace Excalidraw with custom canvas, use perfect-freehand, tree-shake D3 (2-3 days) |
-| Mind Map Performance | MEDIUM | Pre-calculate layout server-side, add animation budget, switch to WebGL if needed (1-2 days) |
-| Undo/Redo Conflicts | MEDIUM | Implement context-aware undo with separate stacks, add hierarchical actions (1 day) |
-| Drawing Tool Complexity | LOW | Progressive disclosure, hide advanced tools by default, add onboarding (4-6 hours) |
-| No Edit After Save | MEDIUM | Store vector data alongside rendered image, implement "edit drawing" flow (1 day) |
-| Mobile Drawing Lag | MEDIUM | Optimize pointer event handling, reduce stroke point density, test on real devices (1-2 days) |
+| Double-credited users (duplicate webhooks) | MEDIUM | Query `stripe_webhook_events` to find duplicates; audit user credit balances against Stripe payment records; manually deduct excess credits via admin script; add idempotency table retroactively |
+| User paid but got no credits (webhook failure) | MEDIUM | Pull `checkout.session.completed` events from Stripe dashboard; manually replay via admin endpoint that calls `fulfillCheckoutSession(sessionId)`; send apology email |
+| Negative credit balance (concurrent spend) | LOW | Clamp to 0 in application layer; add `CHECK (credits_remaining >= 0)` constraint to prevent future negatives; audit affected workshops for unauthorized access |
+| Test payments processed in production | HIGH | Stripe test payments have no financial impact but appear as real sessions in your DB; identify by `livemode: false` on Stripe event; delete test user records; rotate to live keys; inform any affected "users" (likely internal testers only) |
+| Onboarding shown repeatedly | LOW | Add `onboarding_completed` column, backfill to TRUE for all existing users (they've already used the app), deploy |
+| Paywall bypass (client-side only) | HIGH | Immediately add server-side check to all Step 7-10 server actions; audit DB for workshops at step 7+ with zero credits (indicates bypass); revoke access to unauthorized workshops; no refunds needed (no money was lost, just free access) |
 
 ---
 
@@ -1281,98 +422,35 @@ How roadmap phases should address these pitfalls.
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Event Handling Conflicts | Phase 1: EzyDraw Modal | Drawing and ReactFlow interactions isolated, no event conflicts |
-| Canvas Memory Leaks | Phase 1: EzyDraw Modal | Memory stable after 20 modal cycles, no detached contexts |
-| JSONB Storage Bloat | Phase 1: EzyDraw Modal | Drawings <20KB in JSONB, images in object storage |
-| Touch Input Issues | Phase 1: EzyDraw Modal | Drawing works on iPad Pro, Android, Surface Pro |
-| Bundle Size Explosion | Phase 1: EzyDraw Modal | Bundle increase <30KB gzipped, Lighthouse score >85 |
-| Mind Map Performance | Phase 2: Mind Maps | 50-node layout calculates in <100ms, 60fps rendering |
-| Undo/Redo Conflicts | Phase 1: EzyDraw Modal | Undo scoped per context, no cross-context conflicts |
-| Drawing Tool Complexity | Phase 3: UX Polish | Non-technical users complete drawing in <2 minutes |
-| No Edit After Save | Phase 2: Integration | Users can edit saved drawings, vector data preserved |
-| Mobile Drawing Lag | Phase 3: Mobile Optimization | Drawing responsive on 3G network, smooth on iPhone |
+| Webhook race condition (stale credits on redirect) | Stripe Checkout + webhook handler phase | Test: complete checkout, check dashboard within 1 second of redirect — credits visible |
+| Double credit fulfillment | Stripe webhook handler phase | Test: replay same `checkout.session.completed` event twice — credit count unchanged after second replay |
+| Credit double-spend | Credit deduction logic phase | Test: fire two concurrent unlock requests with 1 credit — only one succeeds, balance = 0 not -1 |
+| Paywall bypass (client-side only) | Server-side paywall enforcement phase | Test: `curl` Step 7 server action endpoint with no workshop unlock — returns 403 |
+| Clerk-Stripe split brain | Schema + user provisioning phase (first phase) | Verify: `users` table has `stripe_customer_id` populated for all new signups before checkout |
+| Webhook signature failure | Stripe webhook handler phase | Test: send request to webhook endpoint without valid signature — returns 400; with valid — returns 200 |
+| Test keys in production | Stripe environment setup (day zero) | Verify: Vercel Production env vars contain `sk_live_` not `sk_test_` before any real user payment |
+| Onboarding reappearing | Onboarding schema + modal phase | Test: dismiss modal, clear localStorage, reload — modal does not reappear |
+| SSR hydration mismatch | Onboarding modal implementation phase | Verify: no hydration warnings in console; modal renders consistently across SSR and client |
+| Abandoned checkout sessions | Stripe Checkout creation phase | Test: create session, abandon it, click Upgrade again — existing session is reused (or new created after expiry) |
 
 ---
 
 ## Sources
 
-**Drawing Libraries & Bundle Size:**
-- [GitHub: konvajs/react-konva](https://github.com/konvajs/react-konva)
-- [Konva Docs: Getting started with React and Canvas via Konva](https://konvajs.org/docs/react/index.html)
-- [LogRocket: Best React chart libraries (2025 update)](https://blog.logrocket.com/best-react-chart-libraries-2025/)
-- [Medium: React Component Libraries in 2026](https://yakhil25.medium.com/react-component-libraries-in-2026-the-definitive-guide-to-choosing-your-stack-fa7ae0368077)
-- [GitHub: excalidraw/excalidraw](https://github.com/excalidraw/excalidraw)
-- [GitHub: vinothpandian/react-sketch-canvas](https://github.com/vinothpandian/react-sketch-canvas)
-- [Top 5 JavaScript Whiteboard & Canvas Libraries](https://byby.dev/js-whiteboard-libs)
-
-**ReactFlow Integration:**
-- [GitHub Discussion #1492: How do I implement drawing on the react-flow canvas?](https://github.com/xyflow/xyflow/discussions/1492)
-- [GitHub Issue #4003: Excalidraw's canvas not usable with ReactFlow component](https://github.com/xyflow/xyflow/issues/4003)
-- [GitHub Discussion #4997: Drawing using mouse in reactflow canvas](https://github.com/xyflow/xyflow/discussions/4997)
-- [ReactFlow: Undo and Redo Example](https://reactflow.dev/examples/interaction/undo-redo)
-
-**Touch & Stylus Input:**
-- [Blog: Using React Native Skia to Build a 60 FPS Free-hand Drawing App](https://blog.notesnook.com/drawing-app-with-react-native-skia/)
-- [GitHub Discussion #2735: Determine touch input type, finger vs stylus](https://github.com/software-mansion/react-native-gesture-handler/discussions/2735)
-- [GitHub Issue #91: Issues with drawing on iOS devices](https://github.com/embiem/react-canvas-draw/issues/91)
-- [Apple Developer: Handling Events - Safari Web Content Guide](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/HandlingEvents/HandlingEvents.html)
-- [GitHub Issue #3756: Free drawing on IOS disables page scrolling](https://github.com/fabricjs/fabric.js/issues/3756)
-- [Medium: Fixing the Double-Tap and Hover State Issue in iOS Safari](https://medium.com/@kristiantolleshaugmrch/fixing-the-double-tap-issue-in-ios-safari-with-javascript-4e72a18a1feb)
-
-**Memory & Performance:**
-- [GitHub Issue #514: Leaking WebGLRenderer when unmounting](https://github.com/pmndrs/react-three-fiber/issues/514)
-- [Medium: Understanding Memory Leaks in React](https://medium.com/@90mandalchandan/understanding-and-managing-memory-leaks-in-react-applications-bcfcc353e7a5)
-- [Blog: How to fix the React memory leak warning](https://jexperton.dev/en/blog/how-to-fix-react-memory-leak-warning/)
-- [Medium: The React Native Memory Leak You Don't See Until Production](https://medium.com/@silverskytechnology/the-react-native-memory-leak-you-dont-see-until-production-8d62a18d840a)
-- [GitHub Issue #1475: Mount/unmount Canvas causes memory leak](https://github.com/Shopify/react-native-skia/issues/1475)
-
-**Database Storage:**
-- [pganalyze: Postgres performance cliffs with large JSONB values and TOAST](https://pganalyze.com/blog/5mins-postgres-jsonb-toast)
-- [Credativ: TOASTed JSONB data in PostgreSQL - compression algorithms](https://www.credativ.de/en/blog/postgresql-en/toasted-jsonb-data-in-postgresql-performance-tests-of-different-compression-algorithms/)
-- [PostgreSQL: Store base64 in database - bytea or text?](https://www.postgresql.org/message-id/AANLkTim=wp+o_PkBpa1EAP+1W_DJgV-v+C7mNZA94rwT@mail.gmail.com)
-- [Heap: When To Avoid JSONB In A PostgreSQL Schema](https://www.heap.io/blog/when-to-avoid-jsonb-in-a-postgresql-schema)
-
-**Mind Map Layouts:**
-- [ReactFlow: Force Layout Example](https://reactflow.dev/examples/layout/force-layout)
-- [Medium: Data Visualization in Mind-map using D3.js](https://medium.com/globant/data-visualisation-in-mind-map-using-d3-js-59023aac004f)
-- [Blog: Force Directed Layout for Mind Map Interfaces](https://peoplesfeelings.com/force-directed-layout-for-mind-map-interfaces/)
-- [GitHub: d3/d3-force](https://github.com/d3/d3-force)
-- [Observable: ES module that uses D3 Force to make a mind map](https://talk.observablehq.com/t/es-module-that-uses-d3-force-to-make-a-mind-map/5185)
-
-**Image Optimization:**
-- [Request Metrics: How to Optimize Website Images (2026 Guide)](https://requestmetrics.com/web-performance/high-performance-images/)
-- [VectoSolve: SVG Optimization Techniques Every Developer Should Know in 2026](https://vectosolve.com/blog/svg-optimization-techniques-developers-2026)
-- [The CSS Agency: JPG Vs. PNG Vs. WEBP Vs. AVIF - Best Web Image Format for 2026](https://www.thecssagency.com/blog/best-web-image-format)
-
-**Two-Canvas Architecture:**
-- [Litten: Using Multiple HTML5 Canvases as Layers](https://html5.litten.com/using-multiple-html5-canvases-as-layers/)
-- [MDN: Optimizing canvas](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas)
-- [Dustin Pfister: Canvas layers the basics and more](https://dustinpfister.github.io/2019/07/01/canvas-layer/)
-- [DeepWiki: Excalidraw Rendering System](https://deepwiki.com/excalidraw/excalidraw/5-rendering-and-export)
-
-**UX Design Patterns:**
-- [Eleken: 12 Bad UX Examples](https://www.eleken.co/blog-posts/bad-ux-examples)
-- [NN/g: Design Patterns For Complex Apps and Workflows](https://www.nngroup.com/videos/complex-apps-workflows/)
-- [NN/g: UX Strategies for Complex-Application Design](https://www.nngroup.com/articles/strategies-complex-application-design/)
-- [Full Clarity: Reducing cognitive overload in UX design](https://fullclarity.co.uk/insights/cognitive-overload-in-ux-design/)
-- [Design Sprint Kit: Crazy 8's](https://designsprintkit.withgoogle.com/methodology/phase3-sketch/crazy-8s)
-- [Miro: FREE Crazy Eights Template](https://miro.com/templates/crazy-eights/)
-- [Codecademy: UI and UX Design - Crazy Eights](https://www.codecademy.com/resources/docs/uiux/crazy-eights)
-
-**Undo/Redo State Management:**
-- [Medium: Undo/Redo Functionality in React](https://medium.com/@conboys111/undo-redo-functionality-in-react-a-step-by-step-guide-ae8e78d712ed)
-- [Konva: How to implement undo/redo on canvas with React?](https://konvajs.org/docs/react/Undo-Redo.html)
-- [CSS Script: Framework-Agnostic Undo/Redo History Management - Reddo.js](https://www.cssscript.com/undo-redo-history-management/)
-- [Redux: Implementing Undo History](https://redux.js.org/usage/implementing-undo-history)
-- [Kapwing: How to Implement Undo in a React + Redux Application](https://www.kapwing.com/blog/how-to-implement-undo-in-a-react-redux-application/)
-
-**Existing WorkshopPilot Research:**
-- .planning/research/PITFALLS.md (Grid/Swimlane Canvas - previous pitfalls research)
-- .planning/codebase/ARCHITECTURE.md (Current system architecture)
-- .planning/codebase/STACK.md (Current technology stack)
+- [Stripe Fulfill Orders (official) — dual-trigger pattern, idempotency requirement](https://docs.stripe.com/checkout/fulfillment)
+- [Stripe Webhooks — at-least-once delivery guarantee, retry behavior](https://docs.stripe.com/webhooks)
+- [Stripe Checkout Session Expire — abandoned session handling](https://docs.stripe.com/api/checkout/sessions/expire)
+- [t3dotgg/stripe-recommendations — split brain problem, sync function pattern, pre-create customer](https://github.com/t3dotgg/stripe-recommendations)
+- [CVE-2025-29927 — Next.js middleware bypass via x-middleware-subrequest header](https://projectdiscovery.io/blog/nextjs-middleware-authorization-bypass)
+- [Stripe webhook race condition solution — billing webhook race condition blog](https://excessivecoding.com/blog/billing-webhook-race-condition-solution-guide)
+- [Drizzle ORM SELECT FOR UPDATE — row-level locking for credit atomicity](https://github.com/drizzle-team/drizzle-orm/discussions/1337)
+- [Drizzle ORM Transactions](https://orm.drizzle.team/docs/transactions)
+- [Next.js App Router Stripe Webhook Signature Verification — request.text() pattern](https://kitson-broadhurst.medium.com/next-js-app-router-stripe-webhook-signature-verification-ea9d59f3593f)
+- [Clerk + Stripe Metadata — exploring metadata with webhooks](https://clerk.com/blog/exploring-clerk-metadata-stripe-webhooks)
+- [OnboardJS + Supabase — database-persisted onboarding state](https://onboardjs.com/blog/supabase-onboarding-persistence-onboardjs)
+- [Next.js Hydration Error — SSR/client mismatch with localStorage](https://nextjs.org/docs/messages/react-hydration-error)
+- [Stripe Test Mode vs Live Mode — environment key confusion](https://www.quantledger.app/blog/stripe-test-mode-vs-live-mode-analytics)
 
 ---
-
-*Pitfalls research for: Adding Drawing Capabilities to ReactFlow Canvas (WorkshopPilot.ai Steps 8 & 9)*
-*Researched: 2026-02-12*
-*Confidence: MEDIUM-HIGH — Based on official documentation, GitHub issues, community experiences, and existing v1.2 Canvas Whiteboard learnings. Drawing-specific patterns verified through Excalidraw, react-sketch-canvas, and canvas memory management research.*
+*Pitfalls research for: Stripe Checkout + credit system + paywall + onboarding (v1.8)*
+*Researched: 2026-02-26*

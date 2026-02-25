@@ -1,981 +1,911 @@
-# Architecture Research: EzyDraw Integration & Visual Ideation Canvases
+# Architecture Research: Stripe Checkout + Credit System + Onboarding Integration
 
-**Domain:** Drawing tool integration with ReactFlow canvas for design thinking Steps 8 and 9
-**Researched:** 2026-02-12
-**Confidence:** HIGH
+**Domain:** Stripe Checkout (redirect), credit tracking, welcome modal onboarding — integrated into existing Next.js App Router + Clerk + Neon + Drizzle codebase
+**Researched:** 2026-02-26
+**Confidence:** HIGH for Stripe + webhooks + credit schema; MEDIUM for Clerk metadata vs DB onboarding persistence tradeoffs
 
-## Executive Summary
-
-Adding EzyDraw (standalone drawing modal) and visual canvas layouts for Steps 8 (Mind Map, Crazy 8s) and 9 (Visual Concept Cards) to an existing ReactFlow-based design thinking application requires careful data modeling to support both editable drawing state AND rendered images as ReactFlow nodes.
-
-**Critical architectural question:** How to store drawing data that supports both re-editing AND display as image nodes on canvas?
-
-**Recommended approach:** Use tldraw SDK for the drawing modal (proven, feature-rich, React-native), store drawing state as JSON in `stepArtifacts.drawings` array, render exported PNG images as custom ReactFlow nodes with `data-drawing-id` linking back to editable state. New Mind Map uses ReactFlow with dagre layout (consistent with existing canvas architecture), Crazy 8s uses CSS Grid overlay with 8 fixed slots, Concept Cards are rich custom ReactFlow nodes with embedded images.
-
-**Key integration patterns:**
-1. **EzyDraw Modal → Drawing State → PNG Export → ReactFlow Node** (full cycle with re-edit capability)
-2. **Mind Map:** ReactFlow nodes + edges with dagre auto-layout (new node type: `mind-node`)
-3. **Crazy 8s:** ReactFlow with 8-slot grid overlay (similar to existing Journey Map grid)
-4. **Concept Cards:** Custom ReactFlow node with sections for image, text, SWOT grid, feasibility scores
+---
 
 ## System Overview
 
-### Current Architecture (v1.2 — Post-it Canvas)
+### Current Architecture (v1.7 — Baseline)
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                     WORKSHOP LAYOUT                              │
-├──────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────────────────────────────────┐   │
-│  │  Sidebar    │  │      Main Area (Split Screen)           │   │
-│  │             │  │                                         │   │
-│  │  Step 1 ○   │  │  ┌────────────────────────────────────┐ │   │
-│  │  Step 2 ●   │  │  │      StepContainer (Client)        │ │   │
-│  │  Step 4 ●   │  │  │                                    │ │   │
-│  │  Step 6 ●   │  │  │  ┌──────────┐  ┌──────────────┐   │ │   │
-│  │  Step 8 ○   │  │  │  │  Chat    │  │  ReactFlow   │   │ │   │
-│  │  Step 9 ○   │  │  │  │  Panel   │  │  Canvas      │   │ │   │
-│  │    ...      │  │  │  │          │  │  Panel       │   │ │   │
-│  │             │  │  │  └──────────┘  └──────────────┘   │ │   │
-│  └─────────────┘  │  └────────────────────────────────────┘ │   │
-│                   └─────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────┘
-
-Current ReactFlow Canvas Features:
-● = Canvas-enabled step (Steps 2, 4, 6)
-  - postit-node (text post-its with colors, drag/drop)
-  - Overlays: rings, empathy zones, journey map grid
-  - Zustand store: postIts[], gridColumns[]
-  - Auto-save to stepArtifacts.artifact._canvas
+┌──────────────────────────────────────────────────────────────────────┐
+│                         EDGE LAYER                                   │
+│  src/proxy.ts (clerkMiddleware)                                      │
+│  ● Auth: public routes (/, /pricing, /sign-in, Steps 1-3)           │
+│  ● Protected: /dashboard, Steps 4-10, /api/workshops                │
+│  ● Admin: /admin, /api/admin                                         │
+└─────────────────────────────────┬────────────────────────────────────┘
+                                  ↓
+┌──────────────────────────────────────────────────────────────────────┐
+│                       SERVER LAYER                                   │
+│  ┌──────────────────────┐  ┌────────────────────────────────────┐   │
+│  │  Page Components      │  │  Server Actions                    │   │
+│  │  (Server Components)  │  │  src/actions/                      │   │
+│  │                       │  │  ● workshop-actions.ts             │   │
+│  │  /dashboard/page.tsx  │  │  ● canvas-actions.ts               │   │
+│  │  /workshop/.../page   │  │  ● auto-save-actions.ts            │   │
+│  │  /pricing/page.tsx    │  │                                    │   │
+│  └──────────────────────┘  └────────────────────────────────────┘   │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  API Routes (Route Handlers)                                  │   │
+│  │  /api/chat          /api/extract      /api/ai/*              │   │
+│  │  /api/webhooks/clerk                                          │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────┬────────────────────────────────────┘
+                                  ↓
+┌──────────────────────────────────────────────────────────────────────┐
+│                       DATA LAYER                                     │
+│  ┌────────────────────────┐  ┌──────────────────────────────────┐   │
+│  │  Neon Postgres          │  │  Clerk User Store                │   │
+│  │  (Drizzle ORM, HTTP)    │  │  publicMetadata: { roles[] }     │   │
+│  │                         │  │                                  │   │
+│  │  users                  │  └──────────────────────────────────┘   │
+│  │  workshops              │                                          │
+│  │  sessions               │  ┌──────────────────────────────────┐   │
+│  │  workshop_steps         │  │  Vercel Blob                     │   │
+│  │  step_artifacts         │  │  (drawings, PNGs)                │   │
+│  │  build_packs            │  └──────────────────────────────────┘   │
+│  │  ai_usage_events        │                                          │
+│  └────────────────────────┘                                          │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-### Target Architecture (v1.3 — EzyDraw + Visual Canvases)
+### Target Architecture (v1.8 — Onboarding + Payments)
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                     WORKSHOP LAYOUT                              │
-├──────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────────────────────────────────┐   │
-│  │  Sidebar    │  │      Main Area (Split Screen)           │   │
-│  │             │  │                                         │   │
-│  │  Step 8a ◉  │  │  ┌────────────────────────────────────┐ │   │
-│  │  Step 8b ◉  │  │  │      StepContainer (Client)        │ │   │
-│  │  Step 9  ◉  │  │  │                                    │ │   │
-│  │             │  │  │  ┌──────────┐  ┌──────────────┐   │ │   │
-│  │             │  │  │  │  Chat    │  │  ReactFlow   │   │ │   │
-│  │             │  │  │  │  Panel   │  │  Canvas +    │   │ │   │
-│  │             │  │  │  │          │  │  EzyDraw     │   │ │   │
-│  │             │  │  │  └──────────┘  └──────────────┘   │ │   │
-│  └─────────────┘  │  └────────────────────────────────────┘ │   │
-│                   └─────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────┘
-                                ↑
-                    [EzyDraw Modal Overlay]
-                    (Fullscreen, tldraw SDK)
+┌──────────────────────────────────────────────────────────────────────┐
+│                         EDGE LAYER                                   │
+│  src/proxy.ts (clerkMiddleware)  ← MODIFIED                         │
+│  ● All v1.7 routes (unchanged)                                       │
+│  ● NEW: /api/webhooks/stripe added to public routes                  │
+│  NOTE: Paywall NOT in middleware — credit check is async DB query    │
+└─────────────────────────────────┬────────────────────────────────────┘
+                                  ↓
+┌──────────────────────────────────────────────────────────────────────┐
+│                       SERVER LAYER                                   │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Server Actions (MODIFIED + NEW)                              │   │
+│  │                                                               │   │
+│  │  workshop-actions.ts  ← MODIFIED                             │   │
+│  │    advanceToNextStep() now checks credit at Step 6→7 gate    │   │
+│  │    NEW: consumeCredit() — atomic deduction                   │   │
+│  │                                                               │   │
+│  │  NEW: billing-actions.ts                                      │   │
+│  │    createCheckoutSession() → returns Stripe URL              │   │
+│  │    getCredits(userId) → balance from users table             │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  API Routes (NEW)                                             │   │
+│  │                                                               │   │
+│  │  /api/webhooks/stripe/route.ts    ← NEW                      │   │
+│  │    POST — Stripe-signed events                                │   │
+│  │    Handles: checkout.session.completed                        │   │
+│  │    Idempotent: checks stripeSessionId before crediting        │   │
+│  │                                                               │   │
+│  │  /api/billing/checkout/route.ts   ← NEW                      │   │
+│  │    POST — creates Stripe Checkout session                     │   │
+│  │    Embeds: clerkUserId, creditQty in session metadata        │   │
+│  │    Returns: 303 redirect to Stripe URL                       │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Page Components (MODIFIED)                                   │   │
+│  │                                                               │   │
+│  │  /dashboard/page.tsx  ← MODIFIED                             │   │
+│  │    Reads users.creditBalance for header display              │   │
+│  │    Passes onboardingComplete to layout                       │   │
+│  │                                                               │   │
+│  │  /workshop/.../step/[stepId]/page.tsx  ← MODIFIED           │   │
+│  │    At step 7+: reads credit balance                          │   │
+│  │    Passes paywallActive prop to StepContainer                │   │
+│  │                                                               │   │
+│  │  /billing/success/page.tsx  ← NEW                           │   │
+│  │    On success_url load: calls fulfillCheckout()              │   │
+│  │    Redundant with webhook (belt-and-suspenders)              │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────┬────────────────────────────────────┘
+                                  ↓
+┌──────────────────────────────────────────────────────────────────────┐
+│                       DATA LAYER                                     │
+│  ┌────────────────────────┐                                          │
+│  │  Neon Postgres          │                                          │
+│  │  (Drizzle ORM, HTTP)    │                                          │
+│  │                         │                                          │
+│  │  users  ← MODIFIED      │  NEW columns:                           │
+│  │    creditBalance int     │  creditBalance DEFAULT 0               │
+│  │    onboardingComplete    │  onboardingComplete BOOL DEFAULT false  │
+│  │                         │                                          │
+│  │  NEW: credit_transactions│                                          │
+│  │    id, userId,           │                                          │
+│  │    stripeSessionId UNIQUE│                                          │
+│  │    type (purchase|use)  │                                          │
+│  │    creditDelta,          │                                          │
+│  │    workshopId (nullable) │                                          │
+│  │    createdAt             │                                          │
+│  └────────────────────────┘                                          │
+│                                                                      │
+│  ┌──────────────────────────────────────┐                            │
+│  │  Clerk User Store                    │                            │
+│  │  publicMetadata:                     │                            │
+│  │    roles[]             (existing)    │                            │
+│  │    onboardingComplete  (NOT stored   │                            │
+│  │                         here — DB   │                            │
+│  │                         is source)  │                            │
+│  └──────────────────────────────────────┘                            │
+│                                                                      │
+│  ┌──────────────────────────────────────┐                            │
+│  │  Stripe                              │                            │
+│  │  Checkout sessions (redirect mode)  │                            │
+│  │  Products + Prices (static IDs)     │                            │
+│  └──────────────────────────────────────┘                            │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-**New Features:**
-- ◉ = Steps with EzyDraw integration (8a, 8b, 9)
-- **EzyDraw Modal:** Fullscreen drawing interface (tldraw SDK)
-- **Drawing-Image Nodes:** Custom ReactFlow nodes displaying PNG exports with re-edit capability
-- **Mind Map Nodes:** Connected graph nodes (ReactFlow + dagre layout)
-- **Crazy 8s Grid:** 8-slot grid overlay on ReactFlow canvas
-- **Concept Card Nodes:** Rich multi-section custom nodes
+---
 
-## Component Architecture
+## Key Decision: Where Does Each Check Live?
 
-### EzyDraw Integration Layer
+### Paywall Check — Server Component at Step Load Time
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                  EZYDRAW ARCHITECTURE                            │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │            EzyDrawModal (Fullscreen Dialog)              │   │
-│  │  ┌────────────────────────────────────────────────────┐  │   │
-│  │  │         <Tldraw /> Component (tldraw SDK)          │  │   │
-│  │  │  - Drawing tools, shapes, UI kit elements         │  │   │
-│  │  │  - State: TLDrawStore (internal to tldraw)        │  │   │
-│  │  └────────────────────────────────────────────────────┘  │   │
-│  │                                                          │   │
-│  │  [Save] → Export JSON + PNG                             │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                         ↓                                        │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │            drawingStore (Zustand)                        │   │
-│  │  - drawings: DrawingData[]                               │   │
-│  │  - saveDrawing(json, png) → stepArtifacts.drawings      │   │
-│  │  - loadDrawing(id) → opens EzyDrawModal with state      │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                         ↓                                        │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │         canvasStore (Existing Zustand)                   │   │
-│  │  - postIts: PostIt[] (existing)                          │   │
-│  │  - NEW: addDrawingNode(drawingId, pngUrl, position)     │   │
-│  │    → Creates image-node referencing drawing             │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                         ↓                                        │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │              ReactFlow Canvas                            │   │
-│  │  - Renders drawing-image-node (custom node type)        │   │
-│  │  - Double-click → reopens EzyDrawModal for re-edit      │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                  │
-└──────────────────────────────────────────────────────────────────┘
+The credit/paywall check lives in the **Step Server Component** (`/workshop/[sessionId]/step/[stepId]/page.tsx`), NOT in middleware.
+
+**Why not middleware:**
+- Middleware runs at the edge and cannot make TCP database connections — Neon HTTP is fine, but the query is async and middleware should be fast/stateless
+- Middleware doesn't have workshop context (step number, workshopId) — it only sees URL patterns
+- Middleware checking credit state would add 100-300ms to every page load across all routes
+- Existing pattern: protected routes let unauthenticated users through to the page, which shows an AuthGuard modal in-place — the same approach is right for paywall
+
+**Why not in the `advanceToNextStep` server action:**
+- Step advance is one direction (complete current → start next). The paywall needs to block Step 7 access even when the user tries to navigate directly via URL
+- The server action runs when the user completes Step 6. At that point, we don't yet know if they'll pay — we should mark Step 6 complete but show the upgrade modal at Step 7 load time
+
+**Correct pattern — check in server component at step 7 load:**
+
+```typescript
+// In /workshop/[sessionId]/step/[stepId]/page.tsx
+const PAYWALL_STEP = 7; // Steps 7-10 require a credit
+
+if (stepNumber >= PAYWALL_STEP) {
+  // Check credit: is there a credit already "attached" to this workshop?
+  const workshop = session.workshop;
+  const creditConsumed = workshop.creditConsumedAt !== null;
+
+  if (!creditConsumed) {
+    // Check user balance
+    const user = await db.query.users.findFirst({
+      where: eq(users.clerkUserId, userId),
+      columns: { creditBalance: true },
+    });
+
+    if (!user || user.creditBalance <= 0) {
+      // Pass paywallActive=true — StepContainer shows upgrade modal
+      return <StepContainer paywallActive={true} ... />;
+    }
+  }
+}
 ```
 
-### Visual Canvas Layouts (Steps 8 & 9)
+**Credit consumption — in `advanceToNextStep` server action at the Step 6→7 boundary:**
+- When user advances from Step 6 to Step 7, deduct 1 credit atomically
+- Mark `workshops.creditConsumedAt` so subsequent Step 7+ loads skip the balance check
+- This prevents double-deduction if the user reloads Step 7
 
+### Onboarding State — Neon Database (users table column)
+
+Store `onboardingComplete: boolean` as a column in the `users` table, NOT in Clerk `publicMetadata`.
+
+**Why DB over Clerk metadata:**
+- Clerk `publicMetadata` can only be updated server-side (via clerkClient) — requires an extra Clerk API call per update
+- Clerk `publicMetadata` changes don't propagate immediately to the JWT; the client must call `user.reload()` to force a token refresh, adding roundtrip complexity
+- The `users` table is already the source of truth for user state (roles, company, etc.) — onboarding is the same kind of user state
+- DB query is already happening on every dashboard load (`db.query.users.findFirst(...)`) — adding one column adds zero overhead
+- Better fit: onboarding state is app-level data, not auth-level data
+
+**Why not localStorage:**
+- No cross-device persistence (user logs in on different machine, sees modal again)
+- Users who clear browser storage see the modal again unnecessarily
+- localStorage state is not visible to server components — must be read client-side with a useEffect, causing a flash
+
+**Onboarding state flow:**
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                   VISUAL CANVAS TYPES                            │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  1. MIND MAP (Step 8a)                                           │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  ReactFlow + dagre layout                                │   │
-│  │  - Node type: mind-node (text + optional image)          │   │
-│  │  - Edges: smooth connections                             │   │
-│  │  - Layout: auto-positioned via dagre algorithm           │   │
-│  │  - User actions: add child, edit text, delete            │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                  │
-│  2. CRAZY 8s (Step 8b)                                           │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  ReactFlow + 8-slot grid overlay                         │   │
-│  │  - Grid: 2 rows × 4 cols (fixed layout)                  │   │
-│  │  - Cell content: DrawingImageNode + title text           │   │
-│  │  - Actions: "Draw in Slot 1-8" → opens EzyDraw modal     │   │
-│  │  - Cell overlay: slot number, timer countdown (8 min)    │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                  │
-│  3. CONCEPT CARDS (Step 9)                                       │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  ReactFlow with custom concept-card-node                 │   │
-│  │  - Node sections:                                        │   │
-│  │    1. Image area (from Step 8 drawing)                   │   │
-│  │    2. Name + Elevator Pitch (text)                       │   │
-│  │    3. USP (text)                                         │   │
-│  │    4. SWOT grid (2×2 mini-grid with bullets)             │   │
-│  │    5. Feasibility scores (5 horizontal bars)             │   │
-│  │  - Card size: 400px × 600px (large custom node)          │   │
-│  │  - Editing: inline text edit + AI auto-fill             │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                  │
-└──────────────────────────────────────────────────────────────────┘
+1. User creates account → Clerk webhook fires → user row inserted → onboardingComplete: false (default)
+2. Dashboard loads → server component reads user.onboardingComplete
+3. If false → pass showWelcomeModal: true prop to DashboardClient
+4. User dismisses modal → client calls server action markOnboardingComplete()
+5. Server action: UPDATE users SET onboarding_complete = true WHERE clerk_user_id = $1
+6. Server action revalidatePath('/dashboard') → next load, modal is suppressed
 ```
+
+---
 
 ## Component Responsibilities
 
-| Component | Responsibility | Implementation Strategy |
-|-----------|----------------|------------------------|
-| **EzyDrawModal** | Fullscreen drawing interface, save/cancel controls | Dialog with `<Tldraw />` component, export JSON + PNG on save |
-| **drawingStore** | Manage drawing state (create, save, load, delete) | NEW Zustand store, persists to `stepArtifacts.drawings[]` |
-| **DrawingImageNode** | Custom ReactFlow node displaying PNG with re-edit button | Custom node type, double-click or button → reopens EzyDrawModal |
-| **MindMapCanvas** | Step 8a: Interactive node graph with dagre layout | ReactFlow + `mind-node` type + dagre layout hook |
-| **Crazy8sCanvas** | Step 8b: 8-slot grid with drawing slots | ReactFlow + CSS Grid overlay (similar to Journey Map) |
-| **ConceptCardNode** | Step 9: Rich multi-section card node | Custom ReactFlow node with complex layout (image + text sections + SWOT grid) |
-| **canvasStore** | MODIFIED: Add drawing node support alongside post-its | Add `addDrawingNode()`, extend PostIt type to support `drawingId` reference |
+| Component | Status | Responsibility |
+|-----------|--------|----------------|
+| `src/proxy.ts` | MODIFIED | Add `/api/webhooks/stripe` to public routes |
+| `src/db/schema/users.ts` | MODIFIED | Add `creditBalance int DEFAULT 0`, `onboardingComplete bool DEFAULT false` |
+| `src/db/schema/workshops.ts` | MODIFIED | Add `creditConsumedAt timestamp nullable` |
+| `src/db/schema/credit-transactions.ts` | NEW | Ledger of all credit purchase + consumption events |
+| `src/actions/billing-actions.ts` | NEW | `createCheckoutSession()`, `getCredits()`, `consumeCredit()`, `markOnboardingComplete()` |
+| `src/actions/workshop-actions.ts` | MODIFIED | `advanceToNextStep()` checks paywall at Step 6→7 |
+| `src/app/api/webhooks/stripe/route.ts` | NEW | Stripe webhook handler, idempotent credit fulfillment |
+| `src/app/api/billing/checkout/route.ts` | NEW | Create Stripe Checkout session and redirect |
+| `src/app/billing/success/page.tsx` | NEW | Landing page after Stripe redirect, triggers fulfillment |
+| `src/app/billing/cancel/page.tsx` | NEW | Canceled payment redirect, returns to upgrade modal |
+| `src/app/workshop/[sessionId]/step/[stepId]/page.tsx` | MODIFIED | Credit check for steps 7-10, pass `paywallActive` prop |
+| `src/app/dashboard/page.tsx` | MODIFIED | Read `creditBalance`, pass `showWelcomeModal` prop |
+| `src/app/pricing/page.tsx` | MODIFIED | Update tier copy, add "Buy Now" CTA links to checkout |
+| `src/components/billing/upgrade-modal.tsx` | NEW | Inline modal shown when `paywallActive=true` |
+| `src/components/billing/credit-badge.tsx` | NEW | Dashboard header badge showing remaining credits |
+| `src/components/onboarding/welcome-modal.tsx` | NEW | First-run welcome modal with tour steps |
+| `src/lib/billing/stripe.ts` | NEW | Stripe SDK singleton initialization |
 
-## Data Models
+---
 
-### Drawing Data Structure
+## New Database Schema
 
-```typescript
-// NEW: Drawing data model
-export interface DrawingData {
-  id: string;                    // Unique drawing ID
-  stepId: string;                // Which step owns this drawing
-  createdAt: Date;
-  updatedAt: Date;
-
-  // Editable drawing state (tldraw JSON format)
-  tldrawState: {
-    document: any;               // Shapes, pages, layers
-    session: any;                // Camera position, zoom
-  };
-
-  // Rendered output for display
-  pngUrl: string;                // Data URL or uploaded image URL
-  thumbnailUrl?: string;         // Smaller preview (100×100)
-
-  // Metadata
-  title?: string;                // Optional title (Crazy 8s slot label)
-  slotNumber?: number;           // For Crazy 8s (1-8)
-  parentNodeId?: string;         // For Mind Map (which node spawned this drawing)
-}
-```
-
-### Extended Canvas Store Types
+### Modified: `users` table
 
 ```typescript
-// MODIFIED: Extend existing PostIt type
-export type PostIt = {
-  id: string;
-  text: string;
-  position: { x: number; y: number };
-  width: number;
-  height: number;
-  color?: PostItColor;
-  parentId?: string;
-  type?: 'postIt' | 'group' | 'drawing-image' | 'mind-node' | 'concept-card'; // NEW types
+// src/db/schema/users.ts — ADD two columns
+export const users = pgTable('users', {
+  // ... existing columns unchanged ...
+  id: text('id').primaryKey().$defaultFn(() => createPrefixedId('usr')),
+  clerkUserId: text('clerk_user_id').notNull().unique(),
+  email: text('email').notNull(),
+  firstName: text('first_name'),
+  lastName: text('last_name'),
+  imageUrl: text('image_url'),
+  company: text('company'),
+  roles: text('roles').notNull().default('["facilitator"]'),
+  deletedAt: timestamp('deleted_at', { mode: 'date', precision: 3 }),
+  createdAt: timestamp('created_at', { mode: 'date', precision: 3 }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date', precision: 3 }).notNull().defaultNow().$onUpdate(() => new Date()),
 
-  // Existing metadata
-  quadrant?: Quadrant;
-  cellAssignment?: { row: string; col: string };
-  isPreview?: boolean;
-  previewReason?: string;
-
-  // NEW: Drawing-specific metadata
-  drawingId?: string;            // Links to DrawingData.id (for re-editing)
-  imageUrl?: string;             // Direct image URL (for drawing-image nodes)
-
-  // NEW: Mind Map-specific metadata
-  mindMapData?: {
-    isRoot: boolean;
-    depth: number;               // Distance from root (for styling)
-    children: string[];          // Child node IDs
-  };
-
-  // NEW: Concept Card-specific metadata
-  conceptData?: {
-    name: string;
-    elevatorPitch: string;
-    usp: string;
-    swot: {
-      strengths: string[];
-      weaknesses: string[];
-      opportunities: string[];
-      risks: string[];
-    };
-    feasibility: {
-      technical: number;         // 1-5 score
-      operational: number;
-      marketPotential: number;
-      valueAdd: number;
-      attractiveness: number;
-    };
-  };
-};
+  // NEW
+  creditBalance: integer('credit_balance').notNull().default(0),
+  onboardingComplete: boolean('onboarding_complete').notNull().default(false),
+});
 ```
 
-### Step Artifacts Schema Extension
+### Modified: `workshops` table
 
 ```typescript
-// MODIFIED: stepArtifacts.artifact structure
-interface StepArtifact {
-  // Existing fields (unchanged)
-  _canvas: {
-    postIts: PostIt[];
-    gridColumns: GridColumn[];
-  };
+// src/db/schema/workshops.ts — ADD one column
+export const workshops = pgTable('workshops', {
+  // ... existing columns unchanged ...
 
-  // NEW: Drawing storage
-  drawings: DrawingData[];       // All drawings created in this step
-
-  // Step-specific data (unchanged)
-  [key: string]: any;
-}
-
-// Example: Step 8b (Crazy 8s) artifact
-interface Step8bArtifact {
-  _canvas: {
-    postIts: PostIt[];           // 8 drawing-image nodes in grid
-    gridColumns: [];             // Not used for Crazy 8s
-  };
-  drawings: DrawingData[];       // 8 drawings (one per slot)
-  selectedIdeas: string[];       // IDs of drawings selected for Step 9
-  completedAt?: string;
-}
-
-// Example: Step 9 (Concept Development) artifact
-interface Step9Artifact {
-  _canvas: {
-    postIts: PostIt[];           // concept-card nodes
-    gridColumns: [];
-  };
-  drawings: DrawingData[];       // Inherited from Step 8 + new sketches
-  concepts: {
-    id: string;
-    sourceDrawingId: string;     // Links to Step 8 drawing
-    ...conceptData               // From PostIt.conceptData
-  }[];
-  completedAt?: string;
-}
+  // NEW: tracks when a credit was consumed for this workshop
+  // NULL = no credit consumed (free trial steps 1-6)
+  // non-NULL = credit consumed, steps 7-10 unlocked
+  creditConsumedAt: timestamp('credit_consumed_at', { mode: 'date', precision: 3 }),
+});
 ```
 
-## Data Flow: EzyDraw → Canvas → Persistence
+### New: `credit_transactions` table
 
-### Flow 1: Create Drawing from Scratch
+```typescript
+// src/db/schema/credit-transactions.ts — NEW TABLE
+import { pgTable, text, integer, timestamp, index } from 'drizzle-orm/pg-core';
+import { createPrefixedId } from '@/lib/ids';
 
-```
-1. User clicks "Draw Idea" in Crazy 8s slot 1
-   ↓
-2. Open EzyDrawModal (fullscreen)
-   - <Tldraw /> component initialized with blank canvas
-   - User draws wireframe, adds shapes, text
-   ↓
-3. User clicks "Save" in modal
-   ↓
-4. Export tldraw state + PNG:
-   - const snapshot = editor.getSnapshot()
-   - const png = await editor.getSvg()?.toDataURL() // or toBlob
-   ↓
-5. drawingStore.saveDrawing(snapshot, png, metadata)
-   - Generates drawing ID
-   - Uploads PNG to storage (or saves as data URL)
-   - Persists to stepArtifacts.drawings[]
-   ↓
-6. canvasStore.addDrawingNode(drawingId, pngUrl, slotPosition)
-   - Creates PostIt with type: 'drawing-image'
-   - Position calculated from slot number (Crazy 8s grid)
-   - drawingId links to DrawingData for re-editing
-   ↓
-7. ReactFlow canvas re-renders
-   - DrawingImageNode displays PNG
-   - Shows slot label and timer
-   ↓
-8. Auto-save triggers
-   - Updates stepArtifacts.artifact._canvas.postIts[]
-   - Updates stepArtifacts.artifact.drawings[]
-```
+export const creditTransactions = pgTable(
+  'credit_transactions',
+  {
+    id: text('id').primaryKey().$defaultFn(() => createPrefixedId('ctx')),
 
-### Flow 2: Re-Edit Existing Drawing
+    // Who
+    clerkUserId: text('clerk_user_id').notNull(),
 
-```
-1. User double-clicks DrawingImageNode on canvas
-   ↓
-2. canvasStore finds PostIt.drawingId
-   ↓
-3. drawingStore.loadDrawing(drawingId)
-   - Retrieves DrawingData from stepArtifacts.drawings[]
-   - Extracts tldrawState (JSON snapshot)
-   ↓
-4. Open EzyDrawModal with existing state
-   - editor.loadSnapshot(tldrawState)
-   - User sees previous drawing, can edit
-   ↓
-5. User clicks "Save" after changes
-   ↓
-6. Export NEW snapshot + PNG
-   ↓
-7. drawingStore.updateDrawing(drawingId, newSnapshot, newPng)
-   - Updates DrawingData.tldrawState
-   - Updates DrawingData.pngUrl
-   - Increments updatedAt timestamp
-   ↓
-8. canvasStore.updatePostIt(postItId, { imageUrl: newPngUrl })
-   - ReactFlow node updates to show new image
-   ↓
-9. Auto-save persists changes
+    // What
+    type: text('type', {
+      enum: ['purchase', 'consumption'],
+    }).notNull().$type<'purchase' | 'consumption'>(),
+
+    creditDelta: integer('credit_delta').notNull(),
+    // Positive for purchase (+1, +3), negative for consumption (-1)
+
+    // Payment linkage (purchase transactions only)
+    stripeSessionId: text('stripe_session_id').unique(), // UNIQUE prevents double-credit
+    stripePaymentIntentId: text('stripe_payment_intent_id'),
+    stripePriceId: text('stripe_price_id'), // Which product was purchased
+
+    // Usage linkage (consumption transactions only)
+    workshopId: text('workshop_id'), // Which workshop consumed this credit
+
+    // Audit
+    createdAt: timestamp('created_at', { mode: 'date', precision: 3 })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    clerkUserIdIdx: index('credit_txn_clerk_user_id_idx').on(table.clerkUserId),
+    stripeSessionIdIdx: index('credit_txn_stripe_session_id_idx').on(table.stripeSessionId),
+    typeIdx: index('credit_txn_type_idx').on(table.type),
+  })
+);
 ```
 
-### Flow 3: Mind Map Node Creation
+**Why a ledger table instead of only `users.creditBalance`:**
+- Idempotency: `stripeSessionId UNIQUE` constraint prevents the webhook from crediting twice even if called multiple times
+- Audit trail: full history of purchases and usage per user
+- Debugging: if a credit goes missing, the ledger shows exactly when and why
+- Recovery: can recompute `creditBalance` from the ledger if the counter drifts
 
-```
-1. User clicks "Add Child Node" on Mind Map root
-   ↓
-2. canvasStore.addPostIt({ type: 'mind-node', parentId: rootId, ... })
-   - Creates new node with empty text
-   - mindMapData: { isRoot: false, depth: 1, children: [] }
-   ↓
-3. dagre layout recalculates positions
-   - useLayoutNodes hook runs
-   - Updates all node positions to maintain tree structure
-   ↓
-4. canvasStore.updatePostIt() applies new positions
-   ↓
-5. ReactFlow edge created automatically
-   - Edge connects parent → child
-   - Smooth curve styling
-   ↓
-6. User edits node text inline
-   - Direct text editing (like post-it-node)
-   ↓
-7. Auto-save persists mind map structure
-```
-
-### Flow 4: Concept Card Auto-Generation (Step 9)
-
-```
-1. User selects 1-3 drawings from Crazy 8s
-   ↓
-2. AI generates concept sheet per drawing
-   - Context: drawing image (vision API), persona, HMW statement
-   - Output: name, elevator pitch, USP, SWOT, feasibility scores
-   ↓
-3. canvasStore.addPostIt({ type: 'concept-card', conceptData: {...}, drawingId })
-   - Large node (400×600px)
-   - Position: dealing-cards offset
-   ↓
-4. ConceptCardNode renders sections:
-   - Top: Image from drawing (embedded <img>)
-   - Middle: Text sections (editable contentEditable)
-   - Bottom-left: SWOT 2×2 mini-grid
-   - Bottom-right: Feasibility score bars
-   ↓
-5. User edits inline or clicks "Improve Pitch" → AI assists
-   ↓
-6. Auto-save persists concept data to stepArtifacts.artifact.concepts[]
-```
-
-## Recommended Project Structure
-
-```
-src/
-├── components/
-│   ├── canvas/                        # EXISTING canvas infrastructure
-│   │   ├── react-flow-canvas.tsx     # MODIFIED: Add new node types
-│   │   ├── post-it-node.tsx          # EXISTING
-│   │   ├── drawing-image-node.tsx    # NEW: PNG display with re-edit
-│   │   ├── mind-node.tsx             # NEW: Mind map node type
-│   │   ├── concept-card-node.tsx     # NEW: Rich concept card
-│   │   ├── crazy8s-overlay.tsx       # NEW: 8-slot grid overlay
-│   │   └── canvas-toolbar.tsx        # MODIFIED: Add "Draw" button
-│   ├── ezydraw/                       # NEW: Drawing components
-│   │   ├── ezydraw-modal.tsx         # Fullscreen tldraw dialog
-│   │   ├── ezydraw-toolbar.tsx       # Custom toolbar for tldraw
-│   │   └── drawing-thumbnail.tsx     # Preview component
-│   └── workshop/
-│       ├── step-container.tsx        # EXISTING
-│       ├── chat-panel.tsx            # EXISTING
-│       └── output-panel.tsx          # EXISTING
-├── stores/
-│   ├── canvas-store.ts               # MODIFIED: Add drawing node support
-│   ├── drawing-store.ts              # NEW: Drawing state management
-│   └── workshop-store.ts             # EXISTING
-├── hooks/
-│   ├── use-canvas-autosave.ts        # EXISTING
-│   ├── use-layout-nodes.ts           # NEW: dagre layout hook for Mind Map
-│   └── use-drawing.ts                # NEW: Drawing create/edit/save hook
-├── lib/
-│   ├── canvas/
-│   │   ├── step-canvas-config.ts     # MODIFIED: Add Step 8a, 8b, 9 configs
-│   │   ├── grid-layout.ts            # EXISTING (reuse for Crazy 8s)
-│   │   └── mind-map-layout.ts        # NEW: dagre integration
-│   ├── drawing/
-│   │   ├── tldraw-export.ts          # NEW: Export PNG/JSON helpers
-│   │   └── image-upload.ts           # NEW: Upload PNG to storage
-│   └── ai/
-│       └── context-assembly.ts       # MODIFIED: Include drawings in context
-├── app/
-│   └── api/
-│       ├── canvas/
-│       │   └── sync/route.ts         # EXISTING
-│       └── drawings/                  # NEW: Drawing persistence
-│           ├── save/route.ts         # Save drawing JSON + PNG
-│           └── [id]/route.ts         # Load drawing by ID
-└── db/
-    └── schema/
-        └── step-artifacts.ts          # EXISTING (no schema change needed)
-```
-
-### Structure Rationale
-
-- **components/ezydraw/:** Isolated drawing UI components, no coupling to canvas logic
-- **stores/drawing-store.ts:** Separate domain (drawing lifecycle) from canvas state
-- **lib/drawing/:** Drawing-specific utilities (export, upload) separate from canvas
-- **api/drawings/:** Dedicated API routes for drawing persistence (separate from canvas sync)
-- **Mind Map layout logic:** New `lib/canvas/mind-map-layout.ts` for dagre integration
+---
 
 ## Architectural Patterns
 
-### Pattern 1: Drawing as Dual-State (JSON + PNG)
+### Pattern 1: Stripe Checkout Redirect (Route Handler, not Server Action)
 
-**What:** Store both editable drawing state (tldraw JSON) AND rendered output (PNG) for each drawing.
+**What:** Create Stripe Checkout session via a Route Handler (`/api/billing/checkout`) that returns a 303 redirect to the Stripe-hosted page. Stripe docs explicitly recommend Route Handlers for this, not server actions, because the redirect must be a top-level navigation.
 
-**When to use:** Applications where users need to re-edit drawings (not just view them).
+**When to use:** Any time you redirect a user to an external payment page.
 
-**Trade-offs:**
-- PRO: Re-editable drawings (click to open in EzyDraw modal, modify, save)
-- PRO: Fast rendering on canvas (display PNG, don't re-render tldraw)
-- PRO: Fallback if tldraw schema changes (PNG is stable)
-- CON: Storage overhead (~50-200KB JSON + 20-100KB PNG per drawing)
-- CON: Must keep JSON and PNG in sync (update both on save)
+**Why not a server action:** Server actions can call `redirect()`, but Stripe's checkout requires the initial POST response to carry the redirect header before the user's browser can follow to `checkout.stripe.com`. Route Handlers give explicit control over the `303 See Other` response.
 
 **Example:**
+
 ```typescript
-// Save drawing with both states
-async function saveDrawing(editor: Editor, metadata: Partial<DrawingData>) {
-  const snapshot = editor.getSnapshot(); // Editable JSON state
-  const svg = await editor.getSvg();
-  const png = await svgToDataURL(svg);   // Rendered PNG
+// src/app/api/billing/checkout/route.ts
+import { auth } from '@clerk/nextjs/server';
+import Stripe from 'stripe';
+import { NextResponse } from 'next/server';
 
-  const drawing: DrawingData = {
-    id: crypto.randomUUID(),
-    tldrawState: snapshot,               // For re-editing
-    pngUrl: png,                          // For display
-    ...metadata,
-  };
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-  await fetch('/api/drawings/save', {
-    method: 'POST',
-    body: JSON.stringify(drawing),
+export async function POST(req: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { priceId, creditQty } = await req.json();
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    line_items: [{ price: priceId, quantity: 1 }],
+    metadata: {
+      clerkUserId: userId,           // Passed to webhook for credit fulfillment
+      creditQty: String(creditQty),  // Metadata values MUST be strings
+    },
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing/cancel`,
   });
+
+  return NextResponse.redirect(session.url!, 303);
 }
 ```
 
-### Pattern 2: ReactFlow Node as Proxy to Drawing State
+**Client trigger (Upgrade modal button):**
+```typescript
+// Client component — submit form to route handler
+<form action="/api/billing/checkout" method="POST">
+  <input type="hidden" name="priceId" value={PRICE_IDS.singleFlight} />
+  <input type="hidden" name="creditQty" value="1" />
+  <Button type="submit">Buy Workshop Credit — $79</Button>
+</form>
+```
 
-**What:** ReactFlow nodes store only `drawingId` reference, not full drawing data. Full data lives in `stepArtifacts.drawings[]`.
+### Pattern 2: Stripe Webhook Handler (Idempotent Credit Fulfillment)
 
-**When to use:** Large embedded objects (drawings, images) that shouldn't duplicate in canvas node array.
+**What:** A Route Handler at `/api/webhooks/stripe` that receives signed Stripe events, verifies the signature with `req.text()` (raw body required), and fulfills credit purchase exactly once using a DB-level unique constraint.
 
-**Trade-offs:**
-- PRO: Smaller canvas state (PostIt array doesn't bloat with drawing data)
-- PRO: Single source of truth for drawing state
-- PRO: Easy to sync drawing updates (update drawings[], canvas nodes re-render)
-- CON: Requires lookup to render (node → drawingId → drawings[])
-- CON: Slightly more complex data loading on canvas mount
+**When to use:** All Stripe event processing.
+
+**Critical requirement:** Use `await req.text()` not `await req.json()` — Stripe signature verification requires the raw body, and Next.js App Router body parsing would break the signature.
 
 **Example:**
-```typescript
-// Drawing-image node stores only ID and URL
-const drawingImageNode: PostIt = {
-  id: 'node-123',
-  type: 'drawing-image',
-  drawingId: 'drawing-456',              // Reference to DrawingData
-  imageUrl: drawingData.pngUrl,          // Cached for fast render
-  position: { x: 100, y: 100 },
-  width: 200,
-  height: 200,
-};
 
-// To re-edit: lookup full state
-function handleEditDrawing(nodeId: string) {
-  const node = canvasStore.postIts.find(p => p.id === nodeId);
-  const drawing = artifact.drawings.find(d => d.id === node.drawingId);
-  openEzyDrawModal(drawing.tldrawState);
+```typescript
+// src/app/api/webhooks/stripe/route.ts
+import Stripe from 'stripe';
+import { headers } from 'next/headers';
+import { NextResponse } from 'next/server';
+import { db } from '@/db/client';
+import { users, creditTransactions } from '@/db/schema';
+import { eq, sql } from 'drizzle-orm';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+export async function POST(req: Request) {
+  const body = await req.text();  // Raw body — required for signature verification
+  const sig = (await headers()).get('stripe-signature')!;
+
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+  } catch {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    await fulfillCreditPurchase(session);
+  }
+
+  return NextResponse.json({ received: true });
+}
+
+async function fulfillCreditPurchase(session: Stripe.Checkout.Session) {
+  const clerkUserId = session.metadata?.clerkUserId;
+  const creditQty = parseInt(session.metadata?.creditQty || '0', 10);
+
+  if (!clerkUserId || creditQty <= 0) return;
+  if (session.payment_status !== 'paid') return;
+
+  // Idempotency guard: stripeSessionId UNIQUE constraint
+  // If the webhook fires twice, the second insert will fail silently
+  try {
+    await db.insert(creditTransactions).values({
+      clerkUserId,
+      type: 'purchase',
+      creditDelta: creditQty,
+      stripeSessionId: session.id,
+      stripePaymentIntentId: session.payment_intent as string,
+      stripePriceId: session.metadata?.priceId,
+    }).onConflictDoNothing();  // stripeSessionId uniqueness — safe retry
+
+    // Update running balance
+    await db
+      .update(users)
+      .set({
+        creditBalance: sql`${users.creditBalance} + ${creditQty}`,
+      })
+      .where(eq(users.clerkUserId, clerkUserId));
+  } catch (err) {
+    console.error('Credit fulfillment error:', err);
+    // Re-throw so Stripe retries (non-2xx response would also work)
+    throw err;
+  }
 }
 ```
 
-### Pattern 3: Modal-Based Drawing Editor (Not Inline)
+**Note on Drizzle transactions with neon-http driver:** The neon-http driver supports non-interactive transactions via `sql.transaction([...])` at the raw SQL level. However, Drizzle's `db.transaction()` with the neon-http driver is unreliable for interactive multi-step transactions. The solution: use separate statements with the unique constraint as the idempotency guard. The `onConflictDoNothing()` on insert + separate `UPDATE` is safe because: (1) if the insert succeeds, the credit delta is recorded; (2) the UPDATE is idempotent (adding 0 to balance is a no-op if insert was skipped). If you need true atomicity here, switch to `neon-serverless` with Pool for this route only. For v1.8, the two-statement pattern with unique constraint is sufficient.
 
-**What:** Drawing happens in fullscreen modal overlay, not embedded in canvas panel.
+### Pattern 3: Atomic Credit Consumption at Step Advance (Server Action Guard)
 
-**When to use:** Complex editing interfaces (drawing tools) that need full screen real estate.
+**What:** When a user advances from Step 6 to Step 7, the `advanceToNextStep` server action checks credit balance, deducts 1 credit, and marks the workshop as unlocked — all in a guarded sequence before allowing navigation to Step 7.
 
-**Trade-offs:**
-- PRO: Dedicated focus (no distractions from chat panel, canvas clutter)
-- PRO: Larger canvas for detailed drawing
-- PRO: Clear save/cancel workflow (modal controls)
-- CON: Context switching (user leaves canvas view temporarily)
-- CON: Mobile UX challenge (fullscreen modals on small screens)
+**When to use:** The paywall transition point — Step 6 completion is the last free action.
 
 **Example:**
+
 ```typescript
-// EzyDrawModal is a Dialog component
-<Dialog open={isDrawing} onOpenChange={setIsDrawing} modal>
-  <DialogContent className="max-w-[100vw] max-h-[100vh] p-0">
-    <Tldraw
-      persistenceKey={`drawing-${drawingId}`}
-      onMount={(editor) => {
-        if (existingDrawing) {
-          editor.loadSnapshot(existingDrawing.tldrawState);
-        }
-      }}
+// In src/actions/billing-actions.ts
+export async function consumeCredit(workshopId: string): Promise<{ success: boolean; error?: string }> {
+  'use server';
+  const { userId } = await auth();
+  if (!userId) return { success: false, error: 'Unauthenticated' };
+
+  // Step 1: Verify workshop not already unlocked
+  const [workshop] = await db
+    .select({ creditConsumedAt: workshops.creditConsumedAt })
+    .from(workshops)
+    .where(eq(workshops.id, workshopId))
+    .limit(1);
+
+  if (workshop?.creditConsumedAt) {
+    return { success: true }; // Already unlocked — idempotent
+  }
+
+  // Step 2: Check and deduct balance
+  const result = await db
+    .update(users)
+    .set({ creditBalance: sql`${users.creditBalance} - 1` })
+    .where(
+      and(
+        eq(users.clerkUserId, userId),
+        sql`${users.creditBalance} > 0`  // Conditional update prevents negative balance
+      )
+    )
+    .returning({ newBalance: users.creditBalance });
+
+  if (result.length === 0) {
+    return { success: false, error: 'Insufficient credits' };
+  }
+
+  // Step 3: Record consumption
+  await db.insert(creditTransactions).values({
+    clerkUserId: userId,
+    type: 'consumption',
+    creditDelta: -1,
+    workshopId,
+  });
+
+  // Step 4: Mark workshop as unlocked
+  await db
+    .update(workshops)
+    .set({ creditConsumedAt: new Date() })
+    .where(eq(workshops.id, workshopId));
+
+  return { success: true };
+}
+```
+
+**Modified `advanceToNextStep` — paywall gate at Step 6→7:**
+```typescript
+// In src/actions/workshop-actions.ts
+export async function advanceToNextStep(
+  workshopId: string,
+  currentStepId: string,
+  nextStepId: string,
+  sessionId: string
+): Promise<{ nextStepOrder: number } | { paywallRequired: true }> {
+  // ... existing step completion logic ...
+
+  // At Step 6 → Step 7 boundary, consume a credit before allowing advance
+  if (currentStepId === 'reframe' && nextStepId === 'ideation') {
+    const result = await consumeCredit(workshopId);
+    if (!result.success) {
+      return { paywallRequired: true }; // Client shows upgrade modal
+    }
+  }
+
+  // ... existing redirect logic ...
+}
+```
+
+### Pattern 4: Onboarding Modal — DB State, Client-Side Display
+
+**What:** `users.onboardingComplete` is read server-side on dashboard load. If `false`, the dashboard passes `showWelcomeModal={true}` to a client component that renders the modal. On dismiss, a server action sets `onboardingComplete = true`.
+
+**When to use:** Any first-run state that needs cross-device persistence.
+
+**Trade-offs:**
+- No Clerk metadata complexity (no `user.reload()` needed)
+- No localStorage flash (server knows on first render)
+- One extra column on a table that's already queried
+- Cannot show modal before user reaches dashboard (acceptable — that's the right timing)
+
+**Example:**
+
+```typescript
+// src/app/dashboard/page.tsx (Server Component) — MODIFIED
+const user = await db.query.users.findFirst({
+  where: eq(users.clerkUserId, userId),
+  columns: {
+    firstName: true,
+    creditBalance: true,       // NEW
+    onboardingComplete: true,  // NEW
+  },
+});
+
+return (
+  <>
+    <DashboardClient
+      showWelcomeModal={!user?.onboardingComplete}  // NEW
+      creditBalance={user?.creditBalance ?? 0}       // NEW
     />
-    <DialogFooter>
-      <Button onClick={handleSave}>Save</Button>
-      <Button onClick={handleCancel}>Cancel</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+    {/* ... workshop grids ... */}
+  </>
+);
 ```
 
-### Pattern 4: Auto-Layout with dagre for Mind Maps
-
-**What:** Use dagre algorithm to automatically position mind map nodes in tree structure.
-
-**When to use:** Node graphs with hierarchical parent-child relationships (mind maps, org charts).
-
-**Trade-offs:**
-- PRO: Automatic spacing and alignment (no manual positioning)
-- PRO: Scales to large graphs (dagre handles 100+ nodes)
-- PRO: Maintains tree structure on add/delete
-- CON: Limited control over exact placement (algorithm decides)
-- CON: Animations can be jarring if many nodes re-position
-
-**Example:**
 ```typescript
-// useLayoutNodes hook (auto-run on node/edge changes)
-import dagre from '@dagrejs/dagre';
+// src/actions/billing-actions.ts (Server Action) — NEW
+export async function markOnboardingComplete(): Promise<void> {
+  'use server';
+  const { userId } = await auth();
+  if (!userId) return;
 
-function useLayoutNodes(nodes: Node[], edges: Edge[]) {
-  return useMemo(() => {
-    const g = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-    g.setGraph({ rankdir: 'TB' }); // Top-to-bottom
+  await db
+    .update(users)
+    .set({ onboardingComplete: true })
+    .where(eq(users.clerkUserId, userId));
 
-    nodes.forEach(node => g.setNode(node.id, { width: 150, height: 50 }));
-    edges.forEach(edge => g.setEdge(edge.source, edge.target));
-
-    dagre.layout(g);
-
-    return nodes.map(node => {
-      const { x, y } = g.node(node.id);
-      return { ...node, position: { x: x - 75, y: y - 25 } };
-    });
-  }, [nodes, edges]);
+  revalidatePath('/dashboard');
 }
 ```
 
-### Pattern 5: Grid Overlay for Fixed Layouts (Crazy 8s)
+---
 
-**What:** Render CSS Grid overlay on ReactFlow canvas with fixed cells, constrain nodes to cells.
+## Data Flow: Purchase → Credit → Workshop Unlock
 
-**When to use:** Fixed-slot layouts (Crazy 8s, Bingo grids, calendar views).
+### Happy Path (Stripe redirect checkout)
 
-**Trade-offs:**
-- PRO: Familiar pattern (already used in Journey Map)
-- PRO: Visual guidance for users (clear slot boundaries)
-- PRO: Snap-to-cell positioning
-- CON: Not truly freeform canvas (locked to grid)
-- CON: Responsive challenges (grid resizing on small screens)
+```
+User clicks "Upgrade" in Step 7 paywall modal
+         ↓
+POST /api/billing/checkout
+  → Creates Stripe Checkout session
+  → session.metadata = { clerkUserId, creditQty: "1" }
+  → Returns 303 → stripe.com/checkout
+         ↓
+User completes payment on Stripe-hosted page
+         ↓
+Two concurrent paths (belt-and-suspenders):
 
-**Example:**
+PATH A — Webhook (guaranteed):
+  Stripe POST /api/webhooks/stripe
+    → Verify svix signature
+    → event.type = "checkout.session.completed"
+    → fulfillCreditPurchase(session)
+      → INSERT credit_transactions (onConflictDoNothing)
+      → UPDATE users SET credit_balance += 1
+
+PATH B — Success redirect (immediate UX):
+  Browser → /billing/success?session_id=cs_xxx
+    → Server Component reads session_id
+    → Calls fulfillCheckout(session_id)
+      → Same idempotent logic — safe to run twice
+    → revalidatePath('/dashboard')
+    → Shows "Credit added!" confirmation
+         ↓
+User navigates back to workshop → Step 7
+  → page.tsx checks workshop.creditConsumedAt
+  → NULL → checks users.creditBalance > 0
+  → Has credit → paywallActive=false
+  → Calls consumeCredit(workshopId) at step advance
+  → Workshop unlocked, workshop.creditConsumedAt = now()
+         ↓
+Steps 7-10 accessible for this workshop forever
+```
+
+### Credit Check at Step Load
+
+```
+User navigates to /workshop/[sessionId]/step/7
+
+StepPage (Server Component):
+  stepNumber = 7 >= PAYWALL_STEP (7)
+      ↓
+  Load session.workshop (already queried for step enforcement)
+      ↓
+  workshop.creditConsumedAt != null?
+    YES → paywallActive = false (skip balance check)
+    NO  → Check users.creditBalance
+            > 0 → paywallActive = false
+            = 0 → paywallActive = true
+      ↓
+  <StepContainer paywallActive={paywallActive} ... />
+      ↓
+  If paywallActive:
+    Chat panel renders <UpgradeModal />
+    Canvas renders locked overlay
+    Navigation "Complete Step" button disabled
+```
+
+---
+
+## Integration Points with Existing Code
+
+### Files Modified vs Created
+
+| File | Status | Key Change |
+|------|--------|-----------|
+| `src/proxy.ts` | MODIFIED | Add `/api/webhooks/stripe(.*)` to public routes array |
+| `src/db/schema/users.ts` | MODIFIED | Add `creditBalance`, `onboardingComplete` columns |
+| `src/db/schema/workshops.ts` | MODIFIED | Add `creditConsumedAt` column |
+| `src/db/schema/index.ts` | MODIFIED | Export `creditTransactions` |
+| `src/db/schema/credit-transactions.ts` | NEW | Credit ledger table |
+| `src/actions/workshop-actions.ts` | MODIFIED | `advanceToNextStep()` — credit gate at Step 6→7 |
+| `src/actions/billing-actions.ts` | NEW | `createCheckoutSession`, `consumeCredit`, `markOnboardingComplete` |
+| `src/app/api/webhooks/stripe/route.ts` | NEW | Stripe webhook handler |
+| `src/app/api/billing/checkout/route.ts` | NEW | Checkout session creation |
+| `src/app/billing/success/page.tsx` | NEW | Post-payment success + fulfillment trigger |
+| `src/app/billing/cancel/page.tsx` | NEW | Canceled payment page (back to upgrade flow) |
+| `src/app/workshop/[sessionId]/step/[stepId]/page.tsx` | MODIFIED | Credit check, `paywallActive` prop |
+| `src/app/dashboard/page.tsx` | MODIFIED | Read `creditBalance`, `onboardingComplete` |
+| `src/app/pricing/page.tsx` | MODIFIED | New tier copy, "Buy Now" links |
+| `src/components/billing/upgrade-modal.tsx` | NEW | Inline paywall upgrade CTA |
+| `src/components/billing/credit-badge.tsx` | NEW | Dashboard header credit count display |
+| `src/components/onboarding/welcome-modal.tsx` | NEW | First-run welcome modal |
+| `src/lib/billing/stripe.ts` | NEW | Stripe SDK singleton |
+
+### New Environment Variables Required
+
+```bash
+# Stripe
+STRIPE_SECRET_KEY=sk_live_...           # Server-side only
+STRIPE_PUBLISHABLE_KEY=pk_live_...      # Optional for embedded elements
+STRIPE_WEBHOOK_SECRET=whsec_...         # Webhook signature verification
+
+# Stripe Price IDs (set per environment)
+STRIPE_PRICE_SINGLE_FLIGHT=price_...    # $79, 1 credit
+STRIPE_PRICE_SERIAL_ENTREPRENEUR=price_... # $149, 3 credits
+
+# App URL (for redirect URLs)
+NEXT_PUBLIC_APP_URL=https://workshoppilot.ai
+```
+
+---
+
+## Recommended Project Structure (New Files Only)
+
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── billing/
+│   │   │   └── checkout/
+│   │   │       └── route.ts          # NEW: Checkout session creator
+│   │   └── webhooks/
+│   │       └── stripe/
+│   │           └── route.ts          # NEW: Stripe event handler
+│   ├── billing/
+│   │   ├── success/
+│   │   │   └── page.tsx              # NEW: Post-payment success page
+│   │   └── cancel/
+│   │       └── page.tsx              # NEW: Canceled payment page
+│   └── pricing/
+│       └── page.tsx                  # MODIFIED: New tiers + Buy Now
+│
+├── components/
+│   ├── billing/
+│   │   ├── upgrade-modal.tsx         # NEW: Paywall upgrade CTA
+│   │   └── credit-badge.tsx          # NEW: Dashboard credit count
+│   └── onboarding/
+│       └── welcome-modal.tsx         # NEW: First-run modal
+│
+├── actions/
+│   └── billing-actions.ts            # NEW: All billing + onboarding actions
+│
+├── db/
+│   └── schema/
+│       └── credit-transactions.ts    # NEW: Credit ledger table
+│
+└── lib/
+    └── billing/
+        └── stripe.ts                 # NEW: Stripe SDK singleton
+```
+
+---
+
+## Build Order (Dependency Graph)
+
+Dependencies flow strictly: schema → data layer → server logic → UI.
+
+```
+Phase A: Database Foundation (no dependencies)
+  1. Add migration: users.credit_balance, users.onboarding_complete
+  2. Add migration: workshops.credit_consumed_at
+  3. Create credit_transactions table + migration
+  4. Run drizzle-kit generate + migrate in dev
+
+Phase B: Stripe Infrastructure (needs Phase A)
+  5. Install stripe npm package
+  6. Create src/lib/billing/stripe.ts (singleton)
+  7. Add STRIPE_* env vars to .env.local + Vercel dashboard
+  8. Create Stripe products + prices in Stripe Dashboard
+  9. Record Price IDs in env vars
+
+Phase C: Payment API (needs Phase B)
+  10. Create /api/billing/checkout/route.ts
+  11. Create /api/webhooks/stripe/route.ts (fulfillCreditPurchase)
+  12. Add /api/webhooks/stripe to public routes in proxy.ts
+  13. Test webhook locally with Stripe CLI: stripe listen --forward-to localhost:3000/api/webhooks/stripe
+
+Phase D: Billing Actions (needs Phase A + C)
+  14. Create billing-actions.ts: consumeCredit(), markOnboardingComplete()
+  15. Modify workshop-actions.ts: credit gate in advanceToNextStep()
+  16. Create /billing/success/page.tsx (belt-and-suspenders fulfillment)
+  17. Create /billing/cancel/page.tsx
+
+Phase E: Paywall UI (needs Phase C + D)
+  18. Modify step page: read creditBalance, pass paywallActive prop
+  19. Create upgrade-modal.tsx (shown when paywallActive=true)
+  20. Create credit-badge.tsx for dashboard header
+
+Phase F: Onboarding UI (needs Phase A + D — independent from Stripe)
+  21. Create welcome-modal.tsx (reads showWelcomeModal from dashboard)
+  22. Modify dashboard/page.tsx: pass showWelcomeModal, creditBalance
+  23. Wire markOnboardingComplete() to modal dismiss
+
+Phase G: Pricing Page (needs Phase B)
+  24. Update /pricing/page.tsx with new tier copy
+  25. Add "Buy Now" buttons linking to /api/billing/checkout
+
+Phase H: Integration Test
+  26. E2E: complete Steps 1-6 → hit paywall → purchase → Step 7 unlocks
+  27. Dashboard: credit badge shows correct count
+  28. Webhook idempotency: replay same event, balance unchanged
+```
+
+**Onboarding is independent of Stripe** — Phase F can run in parallel with Phases C-E after Phase A is complete. The welcome modal requires only the DB column and server action.
+
+---
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Paywall Check in Middleware
+
+**What people do:** Check `users.creditBalance` in `clerkMiddleware` to block Step 7 URL access.
+
+**Why it's wrong:**
+- Middleware cannot easily make async DB queries and stay fast (edge cold start concerns)
+- It doesn't have workshop-level context: the same user might have different credit states for different workshops
+- If the DB is slow or errors, middleware blocks ALL requests, not just paywalled ones
+- The existing codebase already uses middleware only for auth/role checks, not app-level business logic
+
+**Do this instead:** Check credit in the Step Server Component (per-workshop, per-user, async, non-blocking).
+
+### Anti-Pattern 2: Storing onboardingComplete in Clerk publicMetadata
+
+**What people do:** `await clerkClient().users.updateUserMetadata(id, { publicMetadata: { onboardingComplete: true } })`.
+
+**Why it's wrong:**
+- Requires calling Clerk Admin API on every update (extra latency + rate limit exposure)
+- JWT session claims are stale until `user.reload()` is called client-side
+- Adds complexity: the dashboard Server Component would need to call Clerk API instead of the already-queried DB row
+- The `users` DB table is already the app's user source of truth
+
+**Do this instead:** Add `onboardingComplete` column to `users` table. It's just data.
+
+### Anti-Pattern 3: Trusting Client-Sent Credit Quantity
+
+**What people do:** Pass `creditQty` from a client-side button directly to the checkout session without server-side validation.
+
+**Why it's wrong:**
+- A user could POST `creditQty: 1000` to `/api/billing/checkout`
+- Even though Stripe charges the right amount (Price ID is server-side), the webhook would credit 1000 credits
+
+**Do this instead:** Derive `creditQty` from the `priceId` in the Route Handler using a server-side lookup table. Never trust quantity from the client:
 ```typescript
-// Crazy8sCanvas with 8-slot grid overlay
-const CRAZY8S_GRID = {
-  rows: [
-    { id: 'row-1', label: 'Row 1', height: 300 },
-    { id: 'row-2', label: 'Row 2', height: 300 },
-  ],
-  columns: [
-    { id: 'col-1', label: 'Slot 1', width: 300 },
-    { id: 'col-2', label: 'Slot 2', width: 300 },
-    { id: 'col-3', label: 'Slot 3', width: 300 },
-    { id: 'col-4', label: 'Slot 4', width: 300 },
-  ],
+const PRICE_TO_CREDITS: Record<string, number> = {
+  [process.env.STRIPE_PRICE_SINGLE_FLIGHT!]: 1,
+  [process.env.STRIPE_PRICE_SERIAL_ENTREPRENEUR!]: 3,
 };
-
-// Overlay component (similar to GridOverlay)
-<ReactFlow nodes={nodes} edges={[]}>
-  <Crazy8sGridOverlay config={CRAZY8S_GRID} />
-</ReactFlow>
+const creditQty = PRICE_TO_CREDITS[priceId] ?? 0;
 ```
 
-## Integration Points
+### Anti-Pattern 4: Skipping the Credit Ledger (Balance-Only)
 
-### New vs Modified Components
+**What people do:** Only store `users.creditBalance` integer, no `credit_transactions` table.
 
-| Component | Status | Changes |
-|-----------|--------|---------|
-| **react-flow-canvas.tsx** | MODIFIED | Add node types: `drawing-image`, `mind-node`, `concept-card` |
-| **canvas-store.ts** | MODIFIED | Extend PostIt type, add `addDrawingNode()` method |
-| **step-canvas-config.ts** | MODIFIED | Add configs for Steps 8a (mind map), 8b (Crazy 8s), 9 (concept cards) |
-| **canvas-toolbar.tsx** | MODIFIED | Add "Draw" button (opens EzyDrawModal) |
-| **context-assembly.ts** | MODIFIED | Include drawings in AI context (vision API for concept analysis) |
-| **EzyDrawModal** | NEW | Fullscreen tldraw dialog |
-| **drawingStore** | NEW | Zustand store for drawing lifecycle |
-| **DrawingImageNode** | NEW | Custom ReactFlow node for PNG display |
-| **MindNode** | NEW | Custom ReactFlow node for mind map |
-| **ConceptCardNode** | NEW | Custom ReactFlow node for concept sheets |
-| **Crazy8sGridOverlay** | NEW | CSS Grid overlay for 8 slots |
-| **useLayoutNodes** | NEW | Hook for dagre auto-layout |
-| **/api/drawings/save** | NEW | Persist drawing JSON + PNG |
+**Why it's wrong:**
+- No idempotency guard: two concurrent webhook calls both increment the balance by 1
+- No audit trail: impossible to debug "where did my credits go?"
+- No ability to recover balance if counter corrupts
 
-### External Dependencies
+**Do this instead:** Ledger table with `stripeSessionId UNIQUE` constraint. Balance is the aggregate, ledger is the source of truth.
 
-| Dependency | Purpose | Integration Notes |
-|------------|---------|-------------------|
-| **tldraw SDK** | Drawing canvas, tools, export | Install `tldraw` package (~500KB bundle), use `<Tldraw />` component |
-| **@dagrejs/dagre** | Mind map layout algorithm | Install `@dagrejs/dagre`, integrate with ReactFlow layout hook |
-| **ReactFlow** | EXISTING | Add new custom node types (no version change needed) |
-| **Zustand** | EXISTING | Add drawingStore (same pattern as canvasStore) |
-| **shadcn/ui Dialog** | EXISTING | Use for EzyDrawModal wrapper |
+### Anti-Pattern 5: Using Server Actions for Checkout Redirect
 
-### Build Order (Dependency Graph)
+**What people do:** `createCheckoutSession()` server action calls `stripe.checkout.sessions.create()` then calls `redirect(session.url)`.
 
-```
-Phase 1: EzyDraw Foundation
-1. Install tldraw SDK
-2. drawingStore (Zustand)
-   └─> Drawing lifecycle (create, save, load, update, delete)
-3. EzyDrawModal component
-   └─> Fullscreen Dialog + <Tldraw /> integration
-4. /api/drawings/save API route
-   └─> Persist drawing JSON + PNG to stepArtifacts.drawings[]
+**Why it's wrong:**
+- Server actions can call `redirect()`, but this makes the redirect harder to intercept for error handling
+- Stripe docs explicitly recommend Route Handlers for this pattern
+- Server action `redirect()` throws `NEXT_REDIRECT` which must be re-thrown — adding error-handling complexity at the paywall
 
-Phase 2: Drawing → Canvas Integration
-5. DrawingImageNode (custom ReactFlow node)
-   └─> Display PNG, double-click to re-edit
-6. canvasStore modifications
-   └─> addDrawingNode(), extend PostIt type
-7. canvas-toolbar.tsx modification
-   └─> Add "Draw" button
-8. End-to-end test: Draw → Save → Display → Re-edit
+**Do this instead:** Route Handler at `/api/billing/checkout` returning a 303 redirect. Client submits a form with `method="POST"` to trigger it.
 
-Phase 3: Mind Map Canvas (Step 8a)
-9. Install @dagrejs/dagre
-10. MindNode (custom ReactFlow node)
-    └─> Text node with parent/child metadata
-11. useLayoutNodes hook
-    └─> dagre integration for auto-positioning
-12. step-canvas-config.ts: Add Step 8a config
-13. Mind map interactions: add child, edit text, delete node
-
-Phase 4: Crazy 8s Canvas (Step 8b)
-14. Crazy8sGridOverlay component
-    └─> 2×4 grid with slot labels
-15. step-canvas-config.ts: Add Step 8b config
-16. "Draw in Slot X" workflow
-    └─> Opens EzyDrawModal with slot metadata
-17. Timer integration (8 minutes countdown)
-
-Phase 5: Concept Cards (Step 9)
-18. ConceptCardNode (custom ReactFlow node)
-    └─> Complex multi-section layout
-19. SWOT mini-grid component
-20. Feasibility score bars component
-21. AI auto-generation integration
-    └─> Generate concept data from drawing + context
-22. Inline editing for concept fields
-```
-
-**Total estimated effort:** 15-20 plans across 5 phases
-
-**Critical path:** Phase 1 → Phase 2 (drawing foundation must exist before canvas integration)
-
-**Parallel work opportunities:**
-- Phase 3, 4, 5 can overlap once Phase 2 complete (different canvas types)
-
-## Data Flow Diagrams
-
-### Drawing Creation Flow
-
-```
-User Action                Drawing State              Canvas State              Database
-───────────                ──────────────             ────────────              ────────
-
-"Draw Idea"
-    ↓
-Open EzyDrawModal
-    ↓
-Draw wireframe
-    ↓
-Click "Save"
-    ↓
-Export JSON + PNG
-    ↓                           ↓
-                    drawingStore.saveDrawing()
-                                ↓                         ↓
-                    POST /api/drawings/save    →  stepArtifacts.drawings[]
-                                ↓
-                    return drawingId
-                                ↓                         ↓
-                    canvasStore.addDrawingNode()  →  stepArtifacts._canvas.postIts[]
-                                                          ↓
-Canvas renders
-DrawingImageNode
-```
-
-### Re-Edit Flow
-
-```
-Double-click node
-    ↓
-Get node.drawingId
-    ↓                           ↓
-                    drawingStore.loadDrawing(id)
-                                ↓                                     ↓
-                    Read stepArtifacts.drawings[id]  ←────  Database query
-                                ↓
-                    Load tldrawState
-                                ↓
-Open EzyDrawModal
-with existing state
-    ↓
-Edit drawing
-    ↓
-Click "Save"
-    ↓
-Export NEW JSON + PNG
-    ↓                           ↓
-                    drawingStore.updateDrawing(id)
-                                ↓                                     ↓
-                    Update stepArtifacts.drawings[id]  ─→  Database update
-                                ↓                         ↓
-                    canvasStore.updatePostIt(nodeId)  →  Update imageUrl
-                                                          ↓
-Canvas re-renders
-with new image
-```
-
-### Mind Map Node Addition
-
-```
-Click "Add Child"
-on root node
-    ↓
-canvasStore.addPostIt()
-    ↓
-New mind-node created
-    ↓
-useLayoutNodes() runs
-    ↓
-dagre calculates positions
-    ↓
-canvasStore.updatePostIt()
-for ALL nodes (new positions)
-    ↓
-ReactFlow updates nodes + edges
-    ↓
-Auto-save triggers
-    ↓                                                                 ↓
-stepArtifacts._canvas.postIts[]  ─────────────────────→  Database update
-```
+---
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| **0-100 users (v1.3 MVP)** | Current architecture sufficient. tldraw in-memory, PNG as data URLs, dagre client-side. |
-| **100-1k users (MMP)** | Upload PNGs to object storage (S3/Cloudflare R2) instead of data URLs. Add image optimization (resize, compress). Consider drawing state compression (gzip JSON before storing). |
-| **1k-10k users (FFP)** | Separate drawings table (not in stepArtifacts JSONB). Add versioning (keep drawing history). Implement lazy loading (load drawings on-demand, not all at once). Consider serverless image processing. |
+| 0-1k users | Current design sufficient. Neon HTTP + Drizzle handles concurrent webhook calls fine with unique constraint. |
+| 1k-10k users | Add Stripe webhook retries monitoring. Consider a job queue (e.g., Inngest) if fulfillment logic grows complex. Cache credit balance in Clerk publicMetadata for dashboard read performance (sync on purchase). |
+| 10k+ users | Credit balance reads become hot path — consider Redis cache for balance. Separate billing service if per-request overhead of Stripe SDK adds up. |
 
-### Scaling Priorities
+### Scaling Priority for v1.8
 
-1. **First bottleneck: PNG data URL size in artifacts**
-   - **Symptom:** stepArtifacts exceeds reasonable JSONB size (> 1MB)
-   - **Fix:** Upload PNG to object storage, store URL instead of data URL
-
-2. **Second bottleneck: tldraw bundle size (500KB)**
-   - **Symptom:** Slow page load on Steps 8 & 9
-   - **Fix:** Dynamic import EzyDrawModal only when needed, code split tldraw SDK
-
-3. **Third bottleneck: dagre layout performance with 100+ nodes**
-   - **Symptom:** Lag when adding/removing mind map nodes
-   - **Fix:** Debounce layout recalculation, use web worker for dagre computation
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Embedding tldraw Directly in ReactFlow Node
-
-**What people do:** Render `<Tldraw />` component inside a custom ReactFlow node for inline editing.
-
-**Why it's wrong:**
-- tldraw requires significant screen space (not practical in 200×200px node)
-- Multiple tldraw instances = memory bloat (each has its own editor state)
-- Coordinate system conflicts (ReactFlow zoom vs tldraw zoom)
-
-**Do this instead:** Use modal overlay for drawing (fullscreen), display PNG in ReactFlow node.
-
-### Anti-Pattern 2: Storing Only PNG (No Editable State)
-
-**What people do:** Export drawing to PNG, discard tldraw JSON, save only image.
-
-**Why it's wrong:**
-- Loses re-edit capability (can't modify drawing after creation)
-- Forces users to redraw from scratch if changes needed
-- Misses key product value (iterative design)
-
-**Do this instead:** Store BOTH tldraw JSON (for re-editing) AND PNG (for display). Accept storage overhead.
-
-### Anti-Pattern 3: Real-Time Mind Map Collaboration in MVP
-
-**What people do:** Implement WebSocket sync for mind map node updates before multiplayer needed.
-
-**Why it's wrong:**
-- MVP is single-user (no concurrent editing)
-- Adds complexity (conflict resolution, presence indicators)
-- dagre layout conflicts (two users moving same nodes)
-
-**Do this instead:** Use debounced auto-save (same as post-it canvas). Defer real-time to FFP.
-
-### Anti-Pattern 4: Complex Custom Drawing Tools
-
-**What people do:** Build custom drawing tools from scratch instead of using tldraw SDK.
-
-**Why it's wrong:**
-- Months of dev time (drawing tools are complex: undo/redo, layers, selection, transforms)
-- Missing features (tldraw has 100+ tools, shapes, keyboard shortcuts)
-- Maintenance burden (every new feature = custom implementation)
-
-**Do this instead:** Use tldraw SDK. It's production-ready, well-maintained, and extensible.
-
-### Anti-Pattern 5: Forcing Nodes into Crazy 8s Grid
-
-**What people do:** Prevent users from placing nodes outside grid cells (strict cell locking).
-
-**Why it's wrong:**
-- Removes flexibility (what if user wants annotation outside grid?)
-- Frustrating UX (drag gets blocked at cell boundary)
-- Breaks freeform ideation spirit
-
-**Do this instead:** Grid is visual guide, not hard constraint. Snap to cell on drop, but allow override.
-
-## Responsive Considerations
-
-### Mobile Layout Challenges
-
-| Feature | Desktop | Mobile (< 768px) |
-|---------|---------|------------------|
-| **EzyDrawModal** | Fullscreen (1920×1080) | Fullscreen (390×844), larger touch targets |
-| **Drawing Tools** | Mouse/trackpad | Touch gestures (pinch-zoom, two-finger pan) |
-| **Mind Map** | Dagre layout optimized for wide view | Vertical orientation (rankdir: 'TB' → 'LR') |
-| **Crazy 8s Grid** | 2 rows × 4 cols | Stack to 4 rows × 2 cols (portrait) |
-| **Concept Cards** | 400×600px nodes | 300×450px nodes (smaller, scrollable) |
-
-### Mobile-Specific Adjustments
-
-```typescript
-// EzyDrawModal: Increase touch target size
-const isMobile = useMediaQuery('(max-width: 768px)');
-
-<Tldraw
-  components={{
-    Toolbar: isMobile ? MobileToolbar : DesktopToolbar,
-  }}
-  options={{
-    // Increase minimum touch target size
-    minimumNodeSize: isMobile ? 48 : 24,
-  }}
-/>
-
-// Crazy 8s: Responsive grid
-const crazy8sConfig = useMemo(() => ({
-  rows: isMobile
-    ? [{ id: 'r1', height: 200 }, { id: 'r2', height: 200 }, ...]  // 4 rows
-    : [{ id: 'r1', height: 300 }, { id: 'r2', height: 300 }],      // 2 rows
-  columns: isMobile
-    ? [{ id: 'c1', width: 180 }, { id: 'c2', width: 180 }]         // 2 cols
-    : [{ id: 'c1', width: 300 }, ..., { id: 'c4', width: 300 }],  // 4 cols
-}), [isMobile]);
-```
-
-## Sources
-
-### Drawing Libraries (HIGH confidence)
-- [tldraw: Infinite Canvas SDK for React](https://tldraw.dev/)
-- [tldraw Persistence Documentation](https://tldraw.dev/docs/persistence)
-- [tldraw Save and Load Snapshots](https://tldraw.dev/examples/snapshots)
-- [Embedding Excalidraw in ReactFlow Node Discussion](https://github.com/xyflow/xyflow/discussions/4778)
-- [Top 5 JavaScript Whiteboard & Canvas Libraries](https://byby.dev/js-whiteboard-libs)
-- [Excalidraw vs tldraw Comparison](https://slashdot.org/software/comparison/Excalidraw-vs-tldraw/)
-
-### ReactFlow Integration (HIGH confidence)
-- [ReactFlow Custom Nodes Documentation](https://reactflow.dev/learn/customization/custom-nodes)
-- [ReactFlow Mind Map Tutorial](https://reactflow.dev/learn/tutorials/mind-map-app-with-react-flow)
-- [ReactFlow Dagre Layout Example](https://reactflow.dev/examples/layout/dagre)
-- [Drawing on ReactFlow Canvas Discussion](https://github.com/xyflow/xyflow/discussions/1492)
-
-### Layout Algorithms (HIGH confidence)
-- [dagre.js Graph Layout Library](https://github.com/dagrejs/dagre)
-- [ReactFlow Auto Layout Examples](https://reactflow.dev/examples/layout/auto-layout)
-- [Building Complex Diagrams with ReactFlow and dagre](https://dtoyoda10.medium.com/building-complex-graph-diagrams-with-react-flow-elk-js-and-dagre-js-8832f6a461c5)
-
-### State Management & Persistence (MEDIUM confidence)
-- [Konva Save and Load Best Practices](https://konvajs.org/docs/data_and_serialization/Best_Practices.html)
-- [Canvas Export with react-konva](https://konvajs.org/docs/react/Canvas_Export.html)
-- [React Canvas State Persistence Guide](https://www.dhiwise.com/post/designing-stunning-artwork-with-react-canvas-draw)
-
-### Design Patterns (MEDIUM confidence)
-- [SWOT Analysis Grid Templates 2026](https://www.superside.com/blog/swot-analysis-templates)
-- [Crazy 8s Ideation Technique](https://miro.com/templates/crazy-eights/)
-- [React Modal Dialog Best Practices](https://www.developerway.com/posts/hard-react-questions-and-modal-dialog)
+The first bottleneck is webhook reliability on Vercel: Vercel Deployment Protection must be disabled for `/api/webhooks/stripe` (or add webhook to bypass list). Stripe retries failed webhooks, but if Vercel blocks the route, credits never land.
 
 ---
 
-**Last updated:** 2026-02-12
-**Confidence:** HIGH on drawing integration architecture, HIGH on ReactFlow patterns, MEDIUM on mobile touch optimization
+## Sources
+
+- [Build a Stripe-hosted checkout page — Stripe Docs](https://docs.stripe.com/checkout/quickstart?client=next) — HIGH confidence
+- [Fulfill orders after checkout — Stripe Docs](https://docs.stripe.com/checkout/fulfillment) — HIGH confidence
+- [Resolve webhook signature verification errors — Stripe Docs](https://docs.stripe.com/webhooks/signature) — HIGH confidence
+- [Stripe Metadata docs](https://docs.stripe.com/metadata) — HIGH confidence (metadata values must be strings)
+- [Add custom onboarding to your authentication flow — Clerk Docs](https://clerk.com/docs/references/nextjs/add-onboarding-flow) — HIGH confidence
+- [Stripe + Next.js 15: The Complete 2025 Guide — Pedro Alonso](https://www.pedroalonso.net/blog/stripe-nextjs-complete-guide-2025/) — MEDIUM confidence (community guide, consistent with official docs)
+- [Neon Serverless Driver — Neon Docs](https://neon.com/docs/serverless/serverless-driver) — HIGH confidence (neon-http transaction limitations)
+- [Drizzle ORM Transactions](https://orm.drizzle.team/docs/transactions) — HIGH confidence
+- Existing codebase analysis: `src/proxy.ts`, `src/db/schema/users.ts`, `src/app/api/webhooks/clerk/route.ts`, `src/actions/workshop-actions.ts`, `src/app/workshop/[sessionId]/step/[stepId]/page.tsx` — HIGH confidence (direct inspection)
+
+---
+
+*Architecture research for: Stripe Checkout + Credit System + Onboarding — WorkshopPilot.ai v1.8*
+*Researched: 2026-02-26*
