@@ -10,6 +10,7 @@
 - ✅ **v1.4 Personal Workshop Polish** — Phases 30-35 (shipped 2026-02-13)
 - ✅ **v1.5 Launch Ready** — Phases 36-39 (shipped 2026-02-19)
 - ✅ **v1.6 Production Polish** — Phases 40-42 (shipped 2026-02-25)
+- 🚧 **v1.7 Build Pack** — Phases 43-46 (in progress)
 
 ## Phases
 
@@ -120,6 +121,60 @@ See `milestones/v1.6-ROADMAP.md` for full details.
 
 </details>
 
+### 🚧 v1.7 Build Pack (In Progress)
+
+**Milestone Goal:** Make the workshop produce tangible, AI-coder-ready output. Users complete Step 10, trigger AI generation of PRD and Tech Specs from their 10 steps of workshop data, and download the deliverables from a dedicated outputs page.
+
+- [ ] **Phase 43: Workshop Completion** - AI-guided final review in Step 10 + workshop marked complete in DB
+- [ ] **Phase 44: AI Deliverable Generation** - Gemini generates PRD and Tech Specs (Markdown + JSON) from all 10 step artifacts
+- [ ] **Phase 45: Outputs Page** - Dedicated `/workshop/[id]/outputs` page with deliverable cards, detail view, copy, and download
+- [ ] **Phase 46: Dashboard Routing** - Completed workshops route to outputs page; in-progress continue to resume position
+
+## Phase Details
+
+### Phase 43: Workshop Completion
+**Goal**: Users can complete a workshop in Step 10 with AI-guided review, and that completion status persists in the database as the trigger for deliverable generation.
+**Depends on**: Phase 42 (v1.6 — Step 10 shell with disabled deliverable cards already exists)
+**Requirements**: COMP-01, COMP-02, COMP-03
+**Success Criteria** (what must be TRUE):
+  1. User reaches Step 10 and sees an AI-facilitated summary of key decisions from all 10 steps
+  2. User can click a "Complete Workshop" action that visibly marks the workshop as done
+  3. Completed workshop status persists in the database — page refresh shows the workshop remains complete
+  4. The Step 10 UI reflects completed state (deliverable cards become active, no longer "Coming Soon")
+**Plans**: TBD
+
+### Phase 44: AI Deliverable Generation
+**Goal**: On workshop completion, Gemini generates a PRD and Tech Specs document from the full structured workshop data, stored as Markdown and JSON in the database.
+**Depends on**: Phase 43 (completion status must exist before generation triggers)
+**Requirements**: GEN-01, GEN-02, GEN-03, GEN-04
+**Success Criteria** (what must be TRUE):
+  1. After completing a workshop, a PRD document exists in the database containing sections derived from all 10 steps
+  2. After completing a workshop, a Tech Specs document exists containing technical requirements derived from the workshop data
+  3. Each deliverable is stored as both Markdown text and structured JSON, retrievable from the outputs page
+  4. Generation uses the full context of all 10 step artifacts — outputs reference specific decisions from the workshop, not generic boilerplate
+**Plans**: TBD
+
+### Phase 45: Outputs Page
+**Goal**: Users can navigate to `/workshop/[id]/outputs` to see their generated deliverables, read them in full, copy the content, and download as `.md` or JSON.
+**Depends on**: Phase 44 (generated deliverables must exist to display)
+**Requirements**: OUT-01, OUT-02, OUT-03, OUT-04, OUT-05, OUT-06, OUT-07
+**Success Criteria** (what must be TRUE):
+  1. User can navigate to `/workshop/[id]/outputs` and see cards for each generated deliverable (PRD, Tech Specs)
+  2. User can click a deliverable card to open a detail view with the full rendered Markdown content
+  3. User can copy the entire deliverable content to clipboard with a single click
+  4. User can download the deliverable as a `.md` file and as a `.json` file
+  5. User can navigate back to their workshop from the outputs page to review or revise steps
+**Plans**: TBD
+
+### Phase 46: Dashboard Routing
+**Goal**: The dashboard correctly routes users based on workshop status — completed workshops go to the outputs page, in-progress workshops resume at the last active step.
+**Depends on**: Phase 45 (outputs page must exist before routing to it)
+**Requirements**: DASH-01, DASH-02
+**Success Criteria** (what must be TRUE):
+  1. User clicks a completed workshop on the dashboard and lands on `/workshop/[id]/outputs`, not the step view
+  2. User clicks an in-progress workshop and resumes at their last active step, unchanged from existing behavior
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -132,8 +187,12 @@ See `milestones/v1.6-ROADMAP.md` for full details.
 | 30-35 | v1.4 | 13/13 | Complete | 2026-02-13 |
 | 36-39 | v1.5 | 9/9 | Complete | 2026-02-19 |
 | 40-42 | v1.6 | 5/5 | Complete | 2026-02-25 |
+| 43. Workshop Completion | v1.7 | 0/? | Not started | - |
+| 44. AI Deliverable Generation | v1.7 | 0/? | Not started | - |
+| 45. Outputs Page | v1.7 | 0/? | Not started | - |
+| 46. Dashboard Routing | v1.7 | 0/? | Not started | - |
 
-**Total project:** 118 plans across 42 phases (8 milestones shipped)
+**Total project:** 118 plans across 42 phases (8 milestones shipped) + 4 phases planned for v1.7
 
 ---
-*Last updated: 2026-02-25 — v1.6 Production Polish shipped*
+*Last updated: 2026-02-25 — v1.7 Build Pack roadmap created*

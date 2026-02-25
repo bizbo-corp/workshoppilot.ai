@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.7 Build Pack — AI-coder-ready output from workshop data
+**Current focus:** v1.7 Build Pack — Phase 43: Workshop Completion
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-25 — Milestone v1.7 Build Pack started
+Phase: 43 of 46 (Workshop Completion)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-02-25 — v1.7 roadmap created, 4 phases defined (43-46)
 
-Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
+Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (v1.7)
 
 ## Performance Metrics
 
@@ -36,31 +36,35 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
 
 ### Decisions
 
-All prior decisions archived in PROJECT.md Key Decisions table. Clean slate for next milestone.
+All prior decisions archived in PROJECT.md Key Decisions table.
+
+Recent decisions relevant to v1.7:
+- Step 10 deliverable cards are already rendered as a shell with `disabled=true` — enabling requires only flipping the flag and wiring `onDownload`
+- Workshop data lives in `stepArtifacts` JSONB column per step — generation reads all 10 at once
+- AI generation should use the same Gemini 2.0 Flash model already in use, via Vercel AI SDK
+- PDF/PPT export deferred to v1.8 — v1.7 delivers Markdown + JSON only
 
 ### Pending Todos
 
 None.
 
-### Known Technical Debt
+### Known Technical Debt (carried from v1.6)
 
 - Next.js middleware → proxy convention migration (non-blocking)
-- CRON_SECRET needs configuration in Vercel dashboard for production cron warming
-- E2E back-navigation testing deferred (forward-only tested)
+- CRON_SECRET needs configuration in Vercel dashboard
+- E2E back-navigation testing deferred
 - Mobile grid optimization deferred
-- /api/dev/seed-workshop build error (pre-existing, TypeError on width property)
-- isPublicRoute in proxy.ts defined but unused
-- First-run onboarding tour deferred from v1.6 (ONBD-01/02/03)
-- TODO in sign-up-modal.tsx: configure profile fields in Clerk Dashboard
+- /api/dev/seed-workshop build error (pre-existing)
+- First-run onboarding tour deferred (ONBD-01/02/03 — Phase 41 not started)
 
 ### Blockers/Concerns
 
-None — v1.6 shipped. Production auth fully operational. Visual polish complete.
+None — clean start for v1.7.
 
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: v1.6 milestone completed and archived
+Stopped at: v1.7 roadmap created
 Resume file: None
 
-**Next action:** Define requirements and create roadmap for v1.7
+**Next action:** `/gsd:plan-phase 43` — plan Workshop Completion phase

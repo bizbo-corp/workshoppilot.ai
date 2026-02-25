@@ -67,28 +67,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COMP-01 | — | Pending |
-| COMP-02 | — | Pending |
-| COMP-03 | — | Pending |
-| GEN-01 | — | Pending |
-| GEN-02 | — | Pending |
-| GEN-03 | — | Pending |
-| GEN-04 | — | Pending |
-| OUT-01 | — | Pending |
-| OUT-02 | — | Pending |
-| OUT-03 | — | Pending |
-| OUT-04 | — | Pending |
-| OUT-05 | — | Pending |
-| OUT-06 | — | Pending |
-| OUT-07 | — | Pending |
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
+| COMP-01 | Phase 43 | Pending |
+| COMP-02 | Phase 43 | Pending |
+| COMP-03 | Phase 43 | Pending |
+| GEN-01 | Phase 44 | Pending |
+| GEN-02 | Phase 44 | Pending |
+| GEN-03 | Phase 44 | Pending |
+| GEN-04 | Phase 44 | Pending |
+| OUT-01 | Phase 45 | Pending |
+| OUT-02 | Phase 45 | Pending |
+| OUT-03 | Phase 45 | Pending |
+| OUT-04 | Phase 45 | Pending |
+| OUT-05 | Phase 45 | Pending |
+| OUT-06 | Phase 45 | Pending |
+| OUT-07 | Phase 45 | Pending |
+| DASH-01 | Phase 46 | Pending |
+| DASH-02 | Phase 46 | Pending |
 
 **Coverage:**
 - v1.7 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 after initial definition*
+*Last updated: 2026-02-25 — traceability complete, roadmap created*
