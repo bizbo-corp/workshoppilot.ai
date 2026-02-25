@@ -17,7 +17,7 @@ Requirements for v1.8 milestone. Each maps to roadmap phases.
 
 - [x] **BILL-01**: User can purchase a Single Flight workshop credit ($79) via Stripe Checkout
 - [x] **BILL-02**: User can purchase a Serial Entrepreneur pack (3 credits, $149) via Stripe Checkout
-- [ ] **BILL-03**: After purchase, credits are immediately available in user's account
+- [x] **BILL-03**: After purchase, credits are immediately available in user's account
 - [x] **BILL-04**: Stripe webhook handles payment confirmation with idempotent credit fulfillment
 - [x] **BILL-05**: Credit purchases are recorded in a transaction ledger
 
@@ -85,7 +85,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ONBD-03 | Phase 52 | Complete |
 | BILL-01 | Phase 49 | Complete |
 | BILL-02 | Phase 49 | Complete |
-| BILL-03 | Phase 49 | Pending |
+| BILL-03 | Phase 49 | Complete |
 | BILL-04 | Phase 49 | Complete |
 | BILL-05 | Phase 49 | Complete |
 | PAYW-01 | Phase 50 | Pending |
