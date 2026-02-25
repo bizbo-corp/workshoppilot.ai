@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 43 of 46 (Workshop Completion)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-25 — v1.7 roadmap created, 4 phases defined (43-46)
+Plan: 1 of 2 complete
+Status: In progress
+Last activity: 2026-02-25 — 43-01 complete (completeWorkshop server action + API endpoint)
 
-Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (v1.7)
+Progress: [██░░░░░░░░░░░░░░░░░░] ~10% (v1.7)
 
 ## Performance Metrics
 
@@ -43,6 +43,9 @@ Recent decisions relevant to v1.7:
 - Workshop data lives in `stepArtifacts` JSONB column per step — generation reads all 10 at once
 - AI generation should use the same Gemini 2.0 Flash model already in use, via Vercel AI SDK
 - PDF/PPT export deferred to v1.8 — v1.7 delivers Markdown + JSON only
+- completeWorkshop checks steps.length >= 10 AND all completedAt non-null to prevent partial-step edge cases (43-01)
+- Auth errors return 401, incomplete-steps returns 400, unexpected errors return 500 for clean client handling (43-01)
+- No redirect() in completeWorkshop — calling component owns post-completion UI state (43-01)
 
 ### Pending Todos
 
@@ -64,7 +67,7 @@ None — clean start for v1.7.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: v1.7 roadmap created
+Stopped at: Completed 43-01-PLAN.md (completeWorkshop server action + API endpoint)
 Resume file: None
 
-**Next action:** `/gsd:plan-phase 43` — plan Workshop Completion phase
+**Next action:** Execute 43-02 — wire completeWorkshop into Step 10 UI
