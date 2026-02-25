@@ -292,7 +292,7 @@ export const STEP_CONFIRM_LABELS: Record<string, string> = {
 
 /** Minimum canvas items required before the confirm button appears (default: 1) */
 export const STEP_CONFIRM_MIN_ITEMS: Record<string, number> = {
-  'stakeholder-mapping': 8,
+  'stakeholder-mapping': 4,
   'user-research': 6,
 };
 

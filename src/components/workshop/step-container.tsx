@@ -985,6 +985,7 @@ export function StepContainer({
           onStepConfirm={() => setArtifactConfirmed(true)}
           onStepRevise={() => setArtifactConfirmed(false)}
           stepConfirmLabel={confirmLabel}
+          stepAlreadyConfirmed={artifactConfirmed}
           onConceptComplete={() => setConceptProceedOverride(true)}
         />
       </div>

@@ -792,10 +792,11 @@ interface ChatPanelProps {
   stepConfirmLabel?: string;
   stepConfirmIsTransition?: boolean; // If true, don't send [STEP_CONFIRMED] or show revise button
   stepConfirmDisabled?: boolean; // Disable the confirm button (e.g. during AI processing)
+  stepAlreadyConfirmed?: boolean; // Whether the step has already been confirmed (artifact locked)
   onConceptComplete?: () => void; // Fired when AI signals all concepts are done or user asks to move on
 }
 
-export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep, showStepConfirm, onStepConfirm, onStepRevise, stepConfirmLabel, stepConfirmIsTransition, stepConfirmDisabled, onConceptComplete }: ChatPanelProps) {
+export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep, showStepConfirm, onStepConfirm, onStepRevise, stepConfirmLabel, stepConfirmIsTransition, stepConfirmDisabled, stepAlreadyConfirmed, onConceptComplete }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
   const storeApi = useCanvasStoreApi();
   const addStickyNote = useCanvasStore((state) => state.addStickyNote);
@@ -1686,6 +1687,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     // If AI triggered [THEME_SORT], reorganize after items are added
     if (shouldSort) {
       setHasThemeSorted(true);
+      setShowSortInstructions(true);
       setTimeout(() => {
         const latestStickyNotes = storeApi.getState().stickyNotes;
         const updates = computeThemeSortPositions(latestStickyNotes, step.id);
@@ -2600,11 +2602,33 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                   <li>Drag items <strong className="text-foreground">between groups</strong> to reorganize</li>
                   <li>Double-click any card to <strong className="text-foreground">edit</strong> its label</li>
                 </ul>
+                {/* Show confirm button after sort — use relaxed condition (any items on board) since theme sort signals user is done */}
+                {stepConfirmLabel && !justConfirmed && status === 'ready' && stickyNotes.length > 0 && !stepAlreadyConfirmed && (
+                  <div className="mt-3 pt-3 border-t border-olive-200 dark:border-neutral-olive-700 flex justify-center">
+                    <button
+                      onClick={() => {
+                        if (stepConfirmDisabled) return;
+                        onStepConfirm?.();
+                        if (stepConfirmIsTransition) return;
+                        setJustConfirmed(true);
+                        sendMessage({
+                          role: 'user',
+                          parts: [{ type: 'text', text: '[STEP_CONFIRMED] I\'m happy with this — wrap it up!' }],
+                        });
+                      }}
+                      disabled={stepConfirmDisabled}
+                      className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-white px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      {stepConfirmLabel}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* In-chat accept / edit buttons */}
-            {showStepConfirm && status === 'ready' && !justConfirmed && !(step.id === 'persona' && !personasDone) && (
+            {/* In-chat accept / edit buttons — hidden when sort instructions card already shows the confirm button */}
+            {showStepConfirm && status === 'ready' && !justConfirmed && !(step.id === 'persona' && !personasDone) && !showSortInstructions && (
               <div className="flex flex-col items-center gap-2 pt-2">
                 {step.id === 'persona' && (
                   <p className="text-sm text-muted-foreground text-center max-w-xs">

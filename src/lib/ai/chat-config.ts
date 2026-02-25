@@ -244,9 +244,13 @@ Rules:
             ? "insights or observations"
             : "persona traits";
 
+    const autoAddSteps = ["user-research"];
+    const isAutoAdd = autoAddSteps.includes(stepId);
     prompt += `\n\nCANVAS ACTIONS:
 When suggesting ${itemType} the user should add to their canvas, wrap each item in [CANVAS_ITEM]...[/CANVAS_ITEM] tags.
-Items are auto-added to the canvas. Do not ask the user to click to add.`;
+${isAutoAdd
+  ? "Items are auto-added to the canvas. Do not ask the user to click to add."
+  : "Items appear as clickable suggestion chips below your message. The user taps a chip to add it to the board. Encourage users to tap the chips to build up their board."}`;
 
     // Step-specific attribute instructions
     if (stepId === "stakeholder-mapping") {
