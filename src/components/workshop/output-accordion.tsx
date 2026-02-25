@@ -15,6 +15,7 @@ interface OutputAccordionProps {
   onConfirm: () => void;
   onEdit: () => void;
   onExpandedChange?: (expanded: boolean) => void;
+  workshopCompleted?: boolean;
 }
 
 export function OutputAccordion({
@@ -27,6 +28,7 @@ export function OutputAccordion({
   onConfirm,
   onEdit,
   onExpandedChange,
+  workshopCompleted = false,
 }: OutputAccordionProps) {
   const [isExpanded, setIsExpanded] = React.useState(true);
 
@@ -69,6 +71,7 @@ export function OutputAccordion({
           isExtracting={isExtracting}
           extractionError={extractionError}
           onRetry={onRetry}
+          workshopCompleted={workshopCompleted}
         />
       </div>
 

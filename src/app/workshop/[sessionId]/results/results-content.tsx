@@ -44,6 +44,7 @@ export function ResultsContent({
             artifact={synthesisArtifact}
             workshopId={workshopId}
             onGeneratePrd={() => setShowPrdDialog(true)}
+            workshopCompleted={true}
           />
         ) : (
           <div className="space-y-8">
@@ -62,6 +63,7 @@ export function ResultsContent({
             <SynthesisBuildPackSection
               workshopId={workshopId}
               onGeneratePrd={() => setShowPrdDialog(true)}
+              workshopCompleted={true}
             />
           </div>
         )}

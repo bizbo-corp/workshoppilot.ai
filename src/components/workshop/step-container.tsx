@@ -604,6 +604,7 @@ export function StepContainer({
               setShowBillboardDetail(true);
             }}
             hasBillboard={generatedBillboards.length > 0}
+            workshopCompleted={workshopCompleted}
           />
         </div>
         <PrdViewerDialog

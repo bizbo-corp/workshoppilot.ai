@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { FileText, Presentation, Users, Code, Zap, Megaphone } from 'lucide-react';
+import { FileText, Presentation, Users, Code, Zap, Megaphone, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DeliverableCard, DELIVERABLES } from './deliverable-card';
 
@@ -9,6 +9,7 @@ interface SynthesisSummaryViewProps {
   artifact: Record<string, unknown>;
   workshopId?: string;
   onGeneratePrd?: () => void;
+  workshopCompleted?: boolean;
 }
 
 interface StepSummary {
@@ -72,7 +73,7 @@ function getResearchQualityColor(quality: 'thin' | 'moderate' | 'strong'): strin
  * SynthesisSummaryView component
  * Renders Step 10 validate artifact as a polished journey summary with narrative intro, step summaries, confidence gauge, and next steps
  */
-export function SynthesisSummaryView({ artifact, workshopId, onGeneratePrd }: SynthesisSummaryViewProps) {
+export function SynthesisSummaryView({ artifact, workshopId, onGeneratePrd, workshopCompleted = false }: SynthesisSummaryViewProps) {
   const narrative = (artifact.narrativeIntro || artifact.narrative) as string | undefined;
   const billboardHero = artifact.billboardHero as BillboardHero | undefined;
   const stepSummaries = (artifact.stepSummaries as StepSummary[]) || [];
@@ -238,12 +239,17 @@ export function SynthesisSummaryView({ artifact, workshopId, onGeneratePrd }: Sy
 
       {/* Build Pack Deliverables */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Build Pack Deliverables</h3>
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          Build Pack Deliverables
+          {workshopCompleted && (
+            <CheckCircle2 className="h-5 w-5 text-olive-600 dark:text-olive-400" />
+          )}
+        </h3>
         <p className="text-sm text-muted-foreground">
           Export-ready documents generated from your workshop.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* PRD / Prototype card — enabled */}
+          {/* V0 Prototype card — enabled when workshopId present */}
           <DeliverableCard
             title="V0 Prototype"
             description="AI-generated clickable prototype from your workshop — preview in browser or edit in V0."
@@ -252,18 +258,30 @@ export function SynthesisSummaryView({ artifact, workshopId, onGeneratePrd }: Sy
             buttonLabel={workshopId ? 'Generate Prototype' : 'Coming Soon'}
             onDownload={onGeneratePrd}
           />
-          {/* Remaining deliverables */}
-          {DELIVERABLES.filter((d) => d.id !== 'prd').map((d) => (
+          {/* PRD card — enabled on workshop completion */}
+          {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => (
             <DeliverableCard
               key={d.id}
               title={d.title}
               description={d.description}
               icon={DELIVERABLE_ICONS[d.iconName]}
-              disabled={true}
+              disabled={!workshopCompleted}
+              buttonLabel={workshopCompleted ? 'Coming in Phase 44' : 'Coming Soon'}
             />
           ))}
-          {/* Keep original PRD card (as document version, disabled for now) */}
-          {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => (
+          {/* Tech Specs card — enabled on workshop completion */}
+          {DELIVERABLES.filter((d) => d.id === 'tech-specs').map((d) => (
+            <DeliverableCard
+              key={d.id}
+              title={d.title}
+              description={d.description}
+              icon={DELIVERABLE_ICONS[d.iconName]}
+              disabled={!workshopCompleted}
+              buttonLabel={workshopCompleted ? 'Coming in Phase 44' : 'Coming Soon'}
+            />
+          ))}
+          {/* Stakeholder Presentation and User Stories — out of v1.7 scope, always disabled */}
+          {DELIVERABLES.filter((d) => d.id === 'stakeholder-ppt' || d.id === 'user-stories').map((d) => (
             <DeliverableCard
               key={d.id}
               title={d.title}
@@ -288,15 +306,22 @@ export function SynthesisBuildPackSection({
   onGeneratePrd,
   onGenerateBillboard,
   hasBillboard,
+  workshopCompleted = false,
 }: {
   workshopId?: string;
   onGeneratePrd?: () => void;
   onGenerateBillboard?: () => void;
   hasBillboard?: boolean;
+  workshopCompleted?: boolean;
 }) {
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Build Pack Deliverables</h3>
+      <h3 className="text-lg font-semibold flex items-center gap-2">
+        Build Pack Deliverables
+        {workshopCompleted && (
+          <CheckCircle2 className="h-5 w-5 text-olive-600 dark:text-olive-400" />
+        )}
+      </h3>
       <p className="text-sm text-muted-foreground">
         Export-ready documents generated from your workshop.
       </p>
@@ -310,6 +335,7 @@ export function SynthesisBuildPackSection({
           buttonLabel={hasBillboard ? 'View Billboard' : 'Create Billboard'}
           onDownload={onGenerateBillboard}
         />
+        {/* V0 Prototype card */}
         <DeliverableCard
           title="V0 Prototype"
           description="AI-generated clickable prototype from your workshop — preview in browser or edit in V0."
@@ -318,16 +344,30 @@ export function SynthesisBuildPackSection({
           buttonLabel={workshopId ? 'Generate Prototype' : 'Coming Soon'}
           onDownload={onGeneratePrd}
         />
-        {DELIVERABLES.filter((d) => d.id !== 'prd').map((d) => (
+        {/* PRD card — enabled on workshop completion */}
+        {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => (
           <DeliverableCard
             key={d.id}
             title={d.title}
             description={d.description}
             icon={DELIVERABLE_ICONS[d.iconName]}
-            disabled={true}
+            disabled={!workshopCompleted}
+            buttonLabel={workshopCompleted ? 'Coming in Phase 44' : 'Coming Soon'}
           />
         ))}
-        {DELIVERABLES.filter((d) => d.id === 'prd').map((d) => (
+        {/* Tech Specs card — enabled on workshop completion */}
+        {DELIVERABLES.filter((d) => d.id === 'tech-specs').map((d) => (
+          <DeliverableCard
+            key={d.id}
+            title={d.title}
+            description={d.description}
+            icon={DELIVERABLE_ICONS[d.iconName]}
+            disabled={!workshopCompleted}
+            buttonLabel={workshopCompleted ? 'Coming in Phase 44' : 'Coming Soon'}
+          />
+        ))}
+        {/* Stakeholder Presentation and User Stories — out of v1.7 scope, always disabled */}
+        {DELIVERABLES.filter((d) => d.id === 'stakeholder-ppt' || d.id === 'user-stories').map((d) => (
           <DeliverableCard
             key={d.id}
             title={d.title}

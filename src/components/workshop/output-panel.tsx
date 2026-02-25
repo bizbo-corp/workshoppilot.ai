@@ -19,6 +19,7 @@ interface OutputPanelProps {
   isExtracting: boolean;
   extractionError: string | null;
   onRetry?: () => void;
+  workshopCompleted?: boolean;
 }
 
 /**
@@ -104,6 +105,7 @@ export function OutputPanel({
   isExtracting,
   extractionError,
   onRetry,
+  workshopCompleted = false,
 }: OutputPanelProps) {
   const step = getStepByOrder(stepOrder);
 
@@ -280,7 +282,7 @@ export function OutputPanel({
               Review your extracted output below
             </p>
           </div>
-          <SynthesisSummaryView artifact={artifact} />
+          <SynthesisSummaryView artifact={artifact} workshopCompleted={workshopCompleted} />
         </div>
       );
     }
