@@ -189,12 +189,12 @@ Plans:
   3. If the webhook fires before the user returns (or when Stripe retries), credits are not doubled — the `credit_transactions.stripeSessionId UNIQUE` constraint makes fulfillment idempotent
   4. A row is written to `credit_transactions` for every purchase, recording the session ID, credit quantity, amount, and timestamp
   5. `/api/webhooks/stripe` returns 200 for valid events and 400 for invalid signatures — not 500 regardless of input
-**Plans**: TBD
+**Plans**: 3
 
 Plans:
-- [ ] 49-01: Checkout route handler (`/api/billing/checkout`) with server-side priceId→creditQty lookup and 303 redirect
-- [ ] 49-02: Webhook handler (`/api/webhooks/stripe`) with raw body signature verification and idempotent `fulfillCreditPurchase()`
-- [ ] 49-03: Billing success and cancel pages with dual-trigger credit sync on success
+- [ ] 49-01: Price config + Checkout route handler (`/api/billing/checkout`) with server-side priceId→creditQty lookup, lazy Stripe Customer creation, and 303 redirect (Wave 1)
+- [ ] 49-02: Shared `fulfillCreditPurchase()` function + Webhook handler (`/api/webhooks/stripe`) with raw body signature verification and idempotent fulfillment (Wave 1)
+- [ ] 49-03: Billing success and cancel pages with dual-trigger credit sync on success (Wave 2, depends on 49-02)
 
 ### Phase 50: Credit Actions and Server-Side Enforcement
 **Goal**: Steps 1-6 are unconditionally free, advancement past Step 6 atomically consumes one credit server-side, and the server rejects step access for workshops without a credit regardless of what the client sends
