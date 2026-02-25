@@ -78,6 +78,13 @@ export default function RootLayout({
             formButtonPrimary: 'bg-primary hover:bg-primary/90 text-primary-foreground',
             footerActionLink: 'text-primary hover:text-primary/80',
             identityPreviewEditButton: 'text-primary',
+            socialButtonsBlockButton: 'border-border text-foreground hover:bg-accent',
+            socialButtonsBlockButtonText: 'font-medium',
+            socialButtonsProviderIcon: 'w-5 h-5',
+            dividerLine: 'bg-border',
+            dividerText: 'text-muted-foreground',
+            formFieldInput: 'border-border bg-background text-foreground focus:ring-ring',
+            formFieldLabel: 'text-foreground',
           },
         }}
       >
