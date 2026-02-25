@@ -13,7 +13,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, RotateCcw, Plus, Camera } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw, Plus, Camera, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -35,6 +35,11 @@ interface StepNavigationProps {
   isGuideEditing?: boolean;
   onAddGuide?: (position: { x: number; y: number }) => void;
   onSaveDefaultView?: () => void;
+  /** Step 10 completion props */
+  onCompleteWorkshop?: () => void;
+  isCompletingWorkshop?: boolean;
+  workshopCompleted?: boolean;
+  canCompleteWorkshop?: boolean;
 }
 
 export function StepNavigation({
@@ -50,6 +55,10 @@ export function StepNavigation({
   isGuideEditing,
   onAddGuide,
   onSaveDefaultView,
+  onCompleteWorkshop,
+  isCompletingWorkshop = false,
+  workshopCompleted = false,
+  canCompleteWorkshop = false,
 }: StepNavigationProps) {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
@@ -233,8 +242,29 @@ export function StepNavigation({
           Next Step
           <ChevronRight className="ml-2 h-4 w-4" />
         </Button>
+      ) : isLastStep && workshopCompleted ? (
+        /* Workshop already completed — show non-interactive badge */
+        <Button
+          variant="outline"
+          size="lg"
+          disabled
+          className="text-olive-700 dark:text-olive-400 border-olive-500/40 bg-olive-500/10 cursor-default"
+        >
+          <CheckCircle2 className="mr-2 h-4 w-4" />
+          Workshop Complete
+        </Button>
+      ) : isLastStep && canCompleteWorkshop ? (
+        /* Extraction done, workshop not yet completed */
+        <Button
+          onClick={onCompleteWorkshop}
+          disabled={isCompletingWorkshop}
+          size="lg"
+          className={cn(!isCompletingWorkshop && 'btn-shimmer')}
+        >
+          {isCompletingWorkshop ? 'Completing...' : 'Complete Workshop'}
+        </Button>
       ) : (
-        <div /> /* Spacer for last step */
+        <div /> /* Spacer for last step (extraction not done yet) */
       )}
     </div>
   );

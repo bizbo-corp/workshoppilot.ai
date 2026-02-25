@@ -14,7 +14,7 @@ import { PrdViewerDialog } from './prd-viewer-dialog';
 import { IdeationSubStepContainer } from './ideation-sub-step-container';
 import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical, Loader2, Megaphone, ImageIcon, Sparkles, ArrowLeft, ChevronDown, X } from 'lucide-react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
-import { resetStep, updateStepStatus } from '@/actions/workshop-actions';
+import { resetStep, updateStepStatus, completeWorkshop } from '@/actions/workshop-actions';
 import { loadCanvasState } from '@/actions/canvas-actions';
 import { getStepByOrder, STEP_CONFIRM_LABELS, STEP_CONFIRM_MIN_ITEMS, areAllPersonasInterviewed } from '@/lib/workshop/step-metadata';
 import { STEP_CANVAS_CONFIGS } from '@/lib/canvas/step-canvas-config';
@@ -57,6 +57,7 @@ interface StepContainerProps {
   initialMessages?: UIMessage[];
   initialArtifact?: Record<string, unknown> | null;
   stepStatus?: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
+  workshopStatus?: 'draft' | 'active' | 'paused' | 'completed';
   hmwStatement?: string;
   challengeStatement?: string;
   hmwGoals?: Array<{ label: string; fullStatement: string }>;
@@ -74,6 +75,7 @@ export function StepContainer({
   initialMessages,
   initialArtifact,
   stepStatus,
+  workshopStatus,
   hmwStatement,
   challengeStatement,
   hmwGoals,
@@ -278,6 +280,10 @@ export function StepContainer({
   const [extractionError, setExtractionError] = React.useState<string | null>(null);
   const [step10MessageCount, setStep10MessageCount] = React.useState(0);
 
+  // Workshop completion state — initialized from server-provided workshopStatus
+  const [workshopCompleted, setWorkshopCompleted] = React.useState(workshopStatus === 'completed');
+  const [isCompletingWorkshop, setIsCompletingWorkshop] = React.useState(false);
+
   // Billboard — concept data from Step 9
   const [conceptCardsForBillboard, setConceptCardsForBillboard] = React.useState<ConceptCardData[]>([]);
   const [isLoadingConcepts, setIsLoadingConcepts] = React.useState(false);
@@ -359,6 +365,25 @@ export function StepContainer({
       setIsExtracting(false);
     }
   }, [stepOrder, step, isExtracting, step10Artifact, workshopId, sessionId]);
+
+  // Workshop completion handler — calls server action, fires confetti, transitions UI
+  const handleCompleteWorkshop = React.useCallback(async () => {
+    if (isCompletingWorkshop || workshopCompleted) return;
+
+    setIsCompletingWorkshop(true);
+    try {
+      await completeWorkshop(workshopId, sessionId);
+      setWorkshopCompleted(true);
+      fireConfetti();
+      toast.success('Workshop completed!', { duration: 4000 });
+    } catch (error) {
+      // completeWorkshop does not call redirect(), so no NEXT_REDIRECT to rethrow
+      console.error('Failed to complete workshop:', error);
+      toast.error('Failed to complete workshop');
+    } finally {
+      setIsCompletingWorkshop(false);
+    }
+  }, [isCompletingWorkshop, workshopCompleted, workshopId, sessionId]);
 
   // Step 10: auto-extract on mount when conversation already exists
   const hasAutoExtracted = React.useRef(false);
@@ -1070,6 +1095,10 @@ export function StepContainer({
           isGuideEditing={isGuideEditing}
           onAddGuide={isGuideEditing ? handleAddGuide : undefined}
           onSaveDefaultView={isGuideEditing ? handleSaveDefaultView : undefined}
+          onCompleteWorkshop={stepOrder === 10 ? handleCompleteWorkshop : undefined}
+          isCompletingWorkshop={isCompletingWorkshop}
+          workshopCompleted={workshopCompleted}
+          canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
         />
         <ResetStepDialog
           open={showResetDialog}
@@ -1296,6 +1325,10 @@ export function StepContainer({
         isGuideEditing={isGuideEditing}
         onAddGuide={isGuideEditing ? handleAddGuide : undefined}
         onSaveDefaultView={isGuideEditing ? handleSaveDefaultView : undefined}
+        onCompleteWorkshop={stepOrder === 10 ? handleCompleteWorkshop : undefined}
+        isCompletingWorkshop={isCompletingWorkshop}
+        workshopCompleted={workshopCompleted}
+        canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
       />
       <ResetStepDialog
         open={showResetDialog}

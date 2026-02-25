@@ -492,6 +492,7 @@ export default async function StepPage({ params }: StepPageProps) {
           initialMessages={initialMessages}
           initialArtifact={initialArtifact}
           stepStatus={stepRecord?.status}
+          workshopStatus={session.workshop.status}
           hmwStatement={hmwStatement}
           challengeStatement={challengeStatement}
           hmwGoals={hmwGoals}
