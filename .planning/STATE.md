@@ -2,18 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-25)
+See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Planning next milestone
+**Current focus:** v1.8 Onboarding + Payments
 
 ## Current Position
 
-Phase: 46 of 46 (all milestones complete through v1.7)
-Status: Between milestones
-Last activity: 2026-02-25 — v1.7 Build Pack shipped
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-26 — Milestone v1.8 started
 
-Progress: [████████████████████] 100% (v1.7)
+Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (v1.8)
 
 ## Performance Metrics
 
@@ -49,7 +50,7 @@ None.
 - E2E back-navigation testing deferred
 - Mobile grid optimization deferred
 - /api/dev/seed-workshop build error (pre-existing)
-- First-run onboarding tour deferred (ONBD-01/02/03 — Phase 41 not started)
+- First-run onboarding tour deferred (ONBD-01/02/03 — being addressed in v1.8)
 - PDF/PPT export deferred — v1.7 delivers Markdown + JSON only
 - No re-generation after step updates — generates once on completion
 
@@ -59,8 +60,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: v1.7 Build Pack milestone archived
+Last session: 2026-02-26
+Stopped at: Defining v1.8 requirements
 Resume file: None
 
-**Next action:** `/gsd:new-milestone` to plan next version
+**Next action:** Define requirements → create roadmap

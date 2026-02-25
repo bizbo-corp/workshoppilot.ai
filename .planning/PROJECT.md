@@ -106,7 +106,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Video conferencing integration — rely on external tools (Zoom, etc.)
 - Multi-language support — English first, internationalize later
 - Custom branding per organization — FFP at earliest
-- Pricing/billing integration — pricing page is informational only; no payment processing in v1.5
+- Pricing/billing integration — ~~informational only~~ being built in v1.8
 
 ## Context
 
@@ -139,7 +139,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - **Entry Friction**: Must be near-zero — user types idea and starts immediately
 - **Desktop-First**: MVP targets desktop browsers; mobile deferred to MMP/FFP
 - **Single Player First**: v0.5-v1.4 are single-user; collaboration deferred to FFP
-- **Existing Codebase**: ~46,000 lines TypeScript across ~264 files, 42 phases shipped (8 milestones), production at workshoppilot.ai
+- **Existing Codebase**: ~47,900 lines TypeScript across ~270+ files, 46 phases shipped (9 milestones), production at workshoppilot.ai
 
 ## Key Decisions
 
@@ -201,6 +201,20 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | DeliverableDetailView replaces card grid in-place (not modal) | Better UX for long-content reading | ✓ Good — clean back navigation |
 | Format pills as inline styled spans (not Badge) | badge.tsx does not exist in project's shadcn setup | ✓ Good — no missing component errors |
 
+## Current Milestone: v1.8 Onboarding + Payments
+
+**Goal:** Add first-run onboarding experience and credit-based payment system with Stripe Checkout, converting the free taste-test (Steps 1-6) into revenue at Step 7.
+
+**Target features:**
+- Welcome modal on first visit + contextual tooltips for new users
+- Taste-test paywall at Step 7 — Steps 1-6 free, Steps 7-10 + Build Pack require a workshop credit
+- Inline upgrade modal when user hits the paywall
+- Stripe Checkout (redirect) for purchasing workshop credits
+- New pricing tiers: Single Flight ($79, 1 credit), Serial Entrepreneur ($149, 3 credits never expire), Agency (Contact Sales)
+- Credit auto-unlock — purchase immediately continues into Step 7
+- Dashboard credit display ("X credits remaining")
+- Pricing page updated with new tier structure
+
 ## Current State
 
 **Shipped:** v1.7 Build Pack (2026-02-25)
@@ -223,4 +237,4 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - No re-generation after step updates — first version generates once on completion
 
 ---
-*Last updated: 2026-02-25 after v1.7 milestone shipped*
+*Last updated: 2026-02-26 after v1.8 milestone started*
