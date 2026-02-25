@@ -22,6 +22,7 @@ import { THEME_COLORS, ROOT_COLOR } from '@/lib/canvas/mind-map-theme-colors';
 import { computeNewNodePosition } from '@/lib/canvas/mind-map-layout';
 import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { saveCanvasState } from '@/actions/canvas-actions';
+import { ChatSkeleton } from './chat-skeleton';
 
 /** Steps that support canvas item auto-add */
 const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe', 'ideation', 'concept'];
@@ -856,6 +857,11 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const [interviewModeMessageId, setInterviewModeMessageId] = React.useState<string | null>(null);
   const [readyToCompile, setReadyToCompile] = React.useState(false);
   const [personasDone, setPersonasDone] = React.useState(false);
+  // Show skeleton on mount before JS hydration completes; hide once component is mounted
+  const [isMountLoading, setIsMountLoading] = React.useState(true);
+  React.useEffect(() => {
+    setIsMountLoading(false);
+  }, []);
 
   if (!step) {
     return (
@@ -1906,6 +1912,10 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     <div className="flex h-full flex-col">
       {/* Messages area */}
       <div className="relative flex-1 min-h-0">
+        {isMountLoading ? (
+          <ChatSkeleton />
+        ) : (
+        <>
         <div
           className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12"
           style={{ background: 'linear-gradient(to bottom, var(--background), transparent)' }}
@@ -2540,7 +2550,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                     });
                   }}
                   className={cn(
-                    'inline-flex items-center gap-2 rounded-full border border-olive-400 bg-white px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700',
+                    'inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700',
                     'disabled:cursor-not-allowed disabled:opacity-50'
                   )}
                 >
@@ -2567,7 +2577,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                       parts: [{ type: 'text', text: "[COMPILE_READY] I'm ready for you to compile my research insights." }],
                     });
                   }}
-                  className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-white px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Sparkles className="h-3.5 w-3.5" />
                   I&apos;m ready to compile
@@ -2585,7 +2595,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                 </p>
                 <button
                   onClick={handleThemeSort}
-                  className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-white px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
+                  className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
                 >
                   <Sparkles className="h-3.5 w-3.5" />
                   Sort cards into themes
@@ -2617,7 +2627,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                         });
                       }}
                       disabled={stepConfirmDisabled}
-                      className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-white px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
+                      className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
                     >
                       <CheckCircle2 className="h-4 w-4" />
                       {stepConfirmLabel}
@@ -2692,6 +2702,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
           </div>
         )}
         </div>
+        </>
+        )}
       </div>
 
       {/* Rate limit banner */}
