@@ -20,7 +20,7 @@ Requirements for v1.9 Multiplayer Collaboration. Each maps to roadmap phases.
 - [ ] **SYNC-01**: All canvas nodes and edges sync in real-time across all connected participants
 - [ ] **SYNC-02**: Multiple participants can concurrently edit the canvas (add/move/delete nodes)
 - [ ] **SYNC-03**: Post-it notes inherit the creating participant's assigned color
-- [ ] **SYNC-04**: In Crazy 8s (Step 8b), each participant has their own set of 8 sketch slots for simultaneous drawing *(defer to v2 if too complex — requires per-participant canvas regions)*
+- [ ] ~~**SYNC-04**~~: *(Deferred to v2)* In Crazy 8s (Step 8b), each participant has their own set of 8 sketch slots for simultaneous drawing — requires per-participant partitioned storage regions in Liveblocks, incompatible with the shared-canvas broadcast architecture built in Phase 55
 - [ ] **SYNC-05**: For shared drawing nodes outside Crazy 8s, EzyDraw is locked to one user at a time
 
 ### Live Presence
@@ -65,6 +65,7 @@ Deferred to future release. Tracked but not in current roadmap.
 - **COLLAB-03**: Session recording / transcript export
 - **COLLAB-04**: Facilitator private notes panel
 - **COLLAB-05**: Dot voting for idea selection in multiplayer context
+- **SYNC-04**: Per-participant Crazy 8s slots (each participant has own 8 sketch slots for simultaneous drawing)
 
 ## Out of Scope
 
@@ -85,13 +86,39 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmapper) | | |
+| SESS-01 | Phase 55 | Pending |
+| SESS-02 | Phase 57 | Pending |
+| SESS-03 | Phase 57 | Pending |
+| SESS-04 | Phase 57 | Pending |
+| SESS-05 | Phase 58 | Pending |
+| SYNC-01 | Phase 55 | Pending |
+| SYNC-02 | Phase 55 | Pending |
+| SYNC-03 | Phase 55 | Pending |
+| SYNC-04 | v2 | Deferred |
+| SYNC-05 | Phase 55 | Pending |
+| PRES-01 | Phase 56 | Pending |
+| PRES-02 | Phase 56 | Pending |
+| PRES-03 | Phase 56 | Pending |
+| PRES-04 | Phase 56 | Pending |
+| PRES-05 | Phase 56 | Pending |
+| PRES-06 | Phase 56 | Pending |
+| FACL-01 | Phase 58 | Pending |
+| FACL-02 | Phase 58 | Pending |
+| FACL-03 | Phase 58 | Pending |
+| FACL-04 | Phase 58 | Pending |
+| FACL-05 | Phase 58 | Pending |
+| INFR-01 | Phase 54 | Pending |
+| INFR-02 | Phase 54 | Pending |
+| INFR-03 | Phase 57 | Pending |
+| INFR-04 | Phase 57 | Pending |
+| INFR-05 | Phase 54 | Pending |
 
 **Coverage:**
 - v1.9 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21 ⚠️
+- Mapped to phases: 20
+- Deferred to v2: 1 (SYNC-04)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 after initial definition*
+*Last updated: 2026-02-26 — traceability populated after roadmap creation*
