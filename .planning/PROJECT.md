@@ -81,6 +81,15 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 
 ### Active
 
+#### v1.9 — Multiplayer Collaboration
+- [ ] Multiplayer workshop type (human facilitator + participants)
+- [ ] Share-link join flow (no account needed for participants)
+- [ ] Real-time canvas sync with live cursors (WebSocket/CRDT)
+- [ ] Full canvas access for all participants
+- [ ] AI chat visible to all, facilitator-only input
+- [ ] Facilitator-only step progression
+- [ ] Participant list/presence indicators
+
 #### Future — MMP (Visual & Solo Polish)
 - [ ] First-run onboarding tour (guided welcome highlighting chat, canvas, steps, navigation)
 - [ ] Visual stakeholder radar chart
@@ -93,9 +102,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 
 #### Future — FFP (Full Platform)
 - [ ] Dot voting for idea selection
-- [ ] Basic multi-user collaboration
 - [ ] Brain Writing with real collaboration (multi-user)
-- [ ] Real-time multiplayer (WebSockets)
 - [ ] EzyDraw AI Enhance (rough sketch → clean wireframe)
 - [ ] AI + canvas working side-by-side (auto-suggest, auto-complete nodes)
 - [ ] Voice input
@@ -219,6 +226,19 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | Open redirect validation at 3 points | Checkout route, success page, pricing page — defense in depth | ✓ Good — security |
 | Stripe apiVersion pinned to '2026-02-25.clover' | Prevents silent API contract changes on SDK upgrades | ✓ Good — stability |
 
+## Current Milestone: v1.9 Multiplayer Collaboration
+
+**Goal:** Add real-time multiplayer workshops where a human facilitator leads 5-15 participants through design thinking on a shared canvas with live cursors.
+
+**Target features:**
+- Multiplayer workshop type (alongside existing solo/AI-led mode)
+- Share-link join flow — participants enter name, no account needed
+- Real-time canvas sync with live cursors (WebSocket/CRDT)
+- Full canvas access for all participants (post-its, drawing, move/edit nodes)
+- AI chat visible to all, editable only by facilitator
+- Facilitator-only step progression
+- Participant list/presence indicators
+
 ## Current State
 
 **Shipped:** v1.8 Onboarding + Payments (2026-02-26)
@@ -243,4 +263,4 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Agency tier absent from pricing page (PRIC-02 deferred)
 
 ---
-*Last updated: 2026-02-26 after v1.8 milestone*
+*Last updated: 2026-02-26 after v1.9 milestone started*
