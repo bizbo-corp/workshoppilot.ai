@@ -38,9 +38,9 @@ Requirements for v1.8 milestone. Each maps to roadmap phases.
 
 ### Pricing
 
-- [x] **PRIC-01**: Pricing page displays updated tiers: Single Flight ($79), Serial Entrepreneur ($149), Agency (Contact Sales)
-- [x] **PRIC-02**: Agency tier shows a Contact Sales button (no self-serve billing)
-- [x] **PRIC-03**: Single Flight and Serial Entrepreneur cards link to Stripe Checkout
+- [ ] **PRIC-01**: Pricing page displays updated tiers: Single Flight ($79), Serial Entrepreneur ($149), Agency (Contact Sales)
+- [ ] **PRIC-02**: Agency tier shows a Contact Sales button (no self-serve billing)
+- [ ] **PRIC-03**: Single Flight and Serial Entrepreneur cards link to Stripe Checkout
 
 ## v2 Requirements
 
@@ -97,9 +97,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CRED-01 | Phase 51 | Complete |
 | CRED-02 | Phase 50 | Complete |
 | CRED-03 | Phase 50 | Complete |
-| PRIC-01 | Phase 53 | Complete |
-| PRIC-02 | Phase 53 | Complete |
-| PRIC-03 | Phase 53 | Complete |
+| PRIC-01 | Phase 53 | Unsatisfied |
+| PRIC-02 | Phase 53 | Unsatisfied |
+| PRIC-03 | Phase 53 | Partial |
 
 **Coverage:**
 - v1 requirements: 18 total

@@ -144,7 +144,7 @@ See `milestones/v1.7-ROADMAP.md` for full details.
 - [x] **Phase 50: Credit Actions and Server-Side Enforcement** — Atomic credit deduction and paywall logic (completed 2026-02-25)
 - [x] **Phase 51: Paywall UI** — Upgrade modal, locked step indicators, dashboard credit badge (completed 2026-02-26)
 - [x] **Phase 52: Onboarding UI** — Welcome modal and onboarding state wiring (completed 2026-02-26)
-- [x] **Phase 53: Pricing Page and Integration** — Updated tiers, Stripe CTA links, end-to-end validation (completed 2026-02-26)
+- [ ] **Phase 53: Pricing Page and Integration** — Updated tiers, Stripe CTA links, end-to-end validation
 
 ## Phase Details
 
@@ -254,8 +254,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [x] 53-01: Update `/pricing/page.tsx` with new tiers, CTA links to `/api/billing/checkout`, and Agency contact button
-- [x] 53-02: End-to-end integration validation (Steps 1-6 free → paywall → Stripe test purchase → Step 7 unlocked)
+- [ ] 53-01: Update `/pricing/page.tsx` with new tiers, CTA links to `/api/billing/checkout`, and Agency contact button
+- [ ] 53-02: End-to-end integration validation (Steps 1-6 free → paywall → Stripe test purchase → Step 7 unlocked)
 
 ## Progress
 
@@ -276,9 +276,9 @@ Plans:
 | 50. Credit Actions and Server-Side Enforcement | 2/2 | Complete    | 2026-02-25 | - |
 | 51. Paywall UI | 2/2 | Complete    | 2026-02-26 | - |
 | 52. Onboarding UI | 1/1 | Complete    | 2026-02-26 | - |
-| 53. Pricing Page and Integration | 2/2 | Complete    | 2026-02-26 | - |
+| 53. Pricing Page and Integration | 0/2 | Gaps found  | - | - |
 
-**Total project:** 127 plans across 53 phases shipped (v1.8 completing)
+**Total project:** 125 plans across 52 phases shipped + Phase 53 gaps found
 
 ---
 *Last updated: 2026-02-26 — v1.8 roadmap created*
