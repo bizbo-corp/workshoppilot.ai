@@ -20,9 +20,10 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
  *
  * @param workshopId - The workshop ID (wks_xxx)
  * @param stepId - The semantic step ID ('challenge', 'stakeholder-mapping', etc.)
+ * @param enabled - Set to false to disable auto-save (multiplayer mode uses Liveblocks webhook instead)
  * @returns Object with saveStatus for UI indicator
  */
-export function useCanvasAutosave(workshopId: string, stepId: string) {
+export function useCanvasAutosave(workshopId: string, stepId: string, enabled = true) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const failureCountRef = useRef(0);
 
@@ -46,6 +47,8 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
   // Debounced save callback
   const debouncedSave = useDebouncedCallback(
     async () => {
+      // Skip if auto-save is disabled (multiplayer mode — Liveblocks handles persistence)
+      if (!enabled) return;
       // Skip if no changes
       if (!isDirty) {
         return;
@@ -119,28 +122,31 @@ export function useCanvasAutosave(workshopId: string, stepId: string) {
 
   // Trigger save when state changes and isDirty
   useEffect(() => {
+    if (!enabled) return;
     if (isDirty) {
       dirtyVersionRef.current++;
       debouncedSave();
     }
-  }, [stickyNotes, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, personaTemplates, hmwCards, isDirty, debouncedSave]);
+  }, [stickyNotes, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, personaTemplates, hmwCards, isDirty, debouncedSave, enabled]);
 
   // Force-save on component unmount
   useEffect(() => {
     return () => {
+      if (!enabled) return;
       debouncedSave.flush();
     };
-  }, [debouncedSave]);
+  }, [debouncedSave, enabled]);
 
   // Force-save on beforeunload (page navigation/close)
   useEffect(() => {
+    if (!enabled) return;
     const handleBeforeUnload = () => {
       debouncedSave.flush();
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [debouncedSave]);
+  }, [debouncedSave, enabled]);
 
   return { saveStatus };
 }

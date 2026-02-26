@@ -14,6 +14,7 @@ export interface CanvasWrapperProps {
   sessionId: string;
   stepId: string;
   workshopId: string;
+  workshopType?: 'solo' | 'multiplayer';
   canvasGuides?: CanvasGuideData[];
   defaultViewportSettings?: StepCanvasSettingsData | null;
   isAdmin?: boolean;
@@ -25,12 +26,13 @@ export interface CanvasWrapperProps {
   canvasRef?: React.Ref<{ getViewport: () => { x: number; y: number; zoom: number } }>;
 }
 
-export function CanvasWrapper({ sessionId, stepId, workshopId, canvasGuides, defaultViewportSettings, isAdmin, isAdminEditing, onEditGuide, onAddGuide, onGuidePositionUpdate, onGuideSizeUpdate, canvasRef }: CanvasWrapperProps) {
+export function CanvasWrapper({ sessionId, stepId, workshopId, workshopType, canvasGuides, defaultViewportSettings, isAdmin, isAdminEditing, onEditGuide, onAddGuide, onGuidePositionUpdate, onGuideSizeUpdate, canvasRef }: CanvasWrapperProps) {
   return (
     <ReactFlowCanvas
       sessionId={sessionId}
       stepId={stepId}
       workshopId={workshopId}
+      workshopType={workshopType}
       canvasGuides={canvasGuides}
       defaultViewportSettings={defaultViewportSettings}
       isAdmin={isAdmin}

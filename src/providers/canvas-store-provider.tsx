@@ -11,18 +11,26 @@ import {
   type MindMapNodeState,
   type MindMapEdgeState,
 } from '@/stores/canvas-store';
+import {
+  createMultiplayerCanvasStore,
+  type MultiplayerCanvasStoreApi,
+} from '@/stores/multiplayer-canvas-store';
+import { getRoomId } from '@/lib/liveblocks/config';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
 
-type CanvasStoreApi = ReturnType<typeof createCanvasStore>;
+type SoloCanvasStoreApi = ReturnType<typeof createCanvasStore>;
+type CanvasStoreApi = SoloCanvasStoreApi | MultiplayerCanvasStoreApi;
 
 const CanvasStoreContext = createContext<CanvasStoreApi | null>(null);
 
 export interface CanvasStoreProviderProps {
   children: React.ReactNode;
+  workshopType?: 'solo' | 'multiplayer';
+  workshopId?: string; // required for multiplayer (room ID)
   initialStickyNotes?: StickyNote[];
   initialGridColumns?: GridColumn[];
   initialDrawingNodes?: DrawingNode[];
@@ -38,6 +46,8 @@ export interface CanvasStoreProviderProps {
 
 export function CanvasStoreProvider({
   children,
+  workshopType,
+  workshopId,
   initialStickyNotes,
   initialGridColumns,
   initialDrawingNodes,
@@ -50,9 +60,11 @@ export function CanvasStoreProvider({
   initialSelectedSlotIds,
   initialBrainRewritingMatrices,
 }: CanvasStoreProviderProps) {
+  const isMultiplayer = workshopType === 'multiplayer';
+
   // Create store ONCE per mount — ensures per-request isolation in SSR
-  const [store] = useState(() =>
-    createCanvasStore({
+  const [store] = useState<CanvasStoreApi>(() => {
+    const initState = {
       stickyNotes: initialStickyNotes || [],
       gridColumns: initialGridColumns || [],
       drawingNodes: initialDrawingNodes || [],
@@ -64,8 +76,23 @@ export function CanvasStoreProvider({
       hmwCards: initialHmwCards || [],
       selectedSlotIds: initialSelectedSlotIds || [],
       brainRewritingMatrices: initialBrainRewritingMatrices || [],
-    })
-  );
+    };
+    if (isMultiplayer) {
+      return createMultiplayerCanvasStore(initState);
+    }
+    return createCanvasStore(initState);
+  });
+
+  // Multiplayer room lifecycle — connect to Liveblocks room on mount, leave on unmount
+  useEffect(() => {
+    if (!isMultiplayer || !workshopId) return;
+    const multiStore = store as MultiplayerCanvasStoreApi;
+    const { enterRoom, leaveRoom } = multiStore.getState().liveblocks;
+    enterRoom(getRoomId(workshopId));
+    return () => {
+      leaveRoom();
+    };
+  }, [isMultiplayer, workshopId, store]);
 
   // Sync concept cards from server props into the store.
   // Handles navigation (store reused from previous step), post-reset refresh,
@@ -140,15 +167,15 @@ export function useCanvasStore<T>(selector: (store: CanvasStore) => T): T {
     throw new Error('useCanvasStore must be used within CanvasStoreProvider');
   }
 
-  return useStore(store, selector);
+  return useStore(store, selector as (state: CanvasStore) => T);
 }
 
-export function useCanvasStoreApi(): CanvasStoreApi {
+export function useCanvasStoreApi(): SoloCanvasStoreApi {
   const store = useContext(CanvasStoreContext);
 
   if (!store) {
     throw new Error('useCanvasStoreApi must be used within CanvasStoreProvider');
   }
 
-  return store;
+  return store as SoloCanvasStoreApi;
 }

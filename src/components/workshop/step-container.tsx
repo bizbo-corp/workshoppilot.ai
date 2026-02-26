@@ -54,6 +54,7 @@ interface StepContainerProps {
   stepOrder: number;
   sessionId: string;
   workshopId: string;
+  workshopType?: 'solo' | 'multiplayer';
   initialMessages?: UIMessage[];
   initialArtifact?: Record<string, unknown> | null;
   stepStatus?: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
@@ -72,6 +73,7 @@ export function StepContainer({
   stepOrder,
   sessionId,
   workshopId,
+  workshopType,
   initialMessages,
   initialArtifact,
   stepStatus,
@@ -1039,6 +1041,7 @@ export function StepContainer({
                   sessionId={sessionId}
                   stepId={step.id}
                   workshopId={workshopId}
+                  workshopType={workshopType}
                   canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
                   defaultViewportSettings={canvasSettings}
                   isAdmin={isAdmin}
@@ -1065,6 +1068,7 @@ export function StepContainer({
                 stepOrder={stepOrder}
                 sessionId={sessionId}
                 workshopId={workshopId}
+                workshopType={workshopType}
                 canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
                 defaultViewportSettings={canvasSettings}
                 isAdmin={isAdmin}
@@ -1170,6 +1174,7 @@ export function StepContainer({
                       sessionId={sessionId}
                       stepId={step.id}
                       workshopId={workshopId}
+                      workshopType={workshopType}
                       canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
                       defaultViewportSettings={canvasSettings}
                       isAdmin={isAdmin}
@@ -1177,7 +1182,7 @@ export function StepContainer({
                       onEditGuide={handleEditGuide}
                       onAddGuide={handleAddGuide}
                       onGuidePositionUpdate={handleGuidePositionUpdate}
-                  onGuideSizeUpdate={handleGuideSizeUpdate}
+                      onGuideSizeUpdate={handleGuideSizeUpdate}
                       canvasRef={canvasRef}
                     />
                     {step.id === 'concept' && (
@@ -1207,6 +1212,7 @@ export function StepContainer({
                     stepOrder={stepOrder}
                     sessionId={sessionId}
                     workshopId={workshopId}
+                    workshopType={workshopType}
                     onCollapse={() => setCanvasCollapsed(true)}
                     canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
                     defaultViewportSettings={canvasSettings}
@@ -1246,6 +1252,7 @@ export function StepContainer({
                     sessionId={sessionId}
                     stepId={step.id}
                     workshopId={workshopId}
+                    workshopType={workshopType}
                     canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
                     defaultViewportSettings={canvasSettings}
                     isAdmin={isAdmin}
@@ -1283,6 +1290,7 @@ export function StepContainer({
                   stepOrder={stepOrder}
                   sessionId={sessionId}
                   workshopId={workshopId}
+                  workshopType={workshopType}
                   onCollapse={() => setCanvasCollapsed(true)}
                   canvasGuides={isGuideEditing ? adminGuides.guides : localCanvasGuides}
                   defaultViewportSettings={canvasSettings}

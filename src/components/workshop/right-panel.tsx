@@ -11,6 +11,7 @@ interface RightPanelProps {
   stepOrder: number;
   sessionId: string;
   workshopId: string;
+  workshopType?: 'solo' | 'multiplayer';
   onCollapse?: () => void;
   canvasGuides?: CanvasGuideData[];
   defaultViewportSettings?: StepCanvasSettingsData | null;
@@ -27,6 +28,7 @@ export function RightPanel({
   stepOrder,
   sessionId,
   workshopId,
+  workshopType,
   onCollapse,
   canvasGuides,
   defaultViewportSettings,
@@ -60,6 +62,7 @@ export function RightPanel({
           sessionId={sessionId}
           stepId={stepMeta?.id || ''}
           workshopId={workshopId}
+          workshopType={workshopType}
           canvasGuides={canvasGuides}
           defaultViewportSettings={defaultViewportSettings}
           isAdmin={isAdmin}

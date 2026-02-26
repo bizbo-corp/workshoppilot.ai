@@ -1,21 +1,72 @@
 'use client';
 
-// Placeholder — implemented in Phase 55 (Core Canvas Sync)
-// This file exists to prevent build-time TypeScript errors from the dynamic import
-// in multiplayer-room-loader.tsx. The dynamic() call is lazy/runtime, but TypeScript
-// validates the import path at build time.
-//
-// Phase 55 will replace this with the actual Zustand + Liveblocks middleware
-// integrated canvas room, including:
-// - RoomProvider wrapping the canvas
-// - createMultiplayerCanvasStore with liveblocks() middleware
-// - Presence indicators and cursor tracking
-// - Real-time element sync via LiveMap<string, LiveObject<CanvasElementStorable>>
+import { createContext, useContext } from 'react';
+import { RoomProvider, useSelf } from '@liveblocks/react';
+import { LiveMap, LiveObject } from '@liveblocks/client';
+import { getRoomId, type CanvasElementStorable } from '@/lib/liveblocks/config';
 
-export default function MultiplayerRoom({ workshopId }: { workshopId: string }) {
+/**
+ * MultiplayerContext — provides participant color and multiplayer flag to
+ * any component in the tree. Populated inside the RoomProvider so that
+ * useSelf() is available.
+ */
+export const MultiplayerContext = createContext<{
+  participantColor: string | null;
+  isMultiplayer: boolean;
+}>({ participantColor: null, isMultiplayer: false });
+
+export function useMultiplayerContext() {
+  return useContext(MultiplayerContext);
+}
+
+/**
+ * MultiplayerRoomInner — rendered inside RoomProvider, reads the current
+ * participant's color from Liveblocks presence and provides it via context.
+ */
+function MultiplayerRoomInner({ children }: { children: React.ReactNode }) {
+  const self = useSelf();
   return (
-    <div className="flex items-center justify-center h-full text-muted-foreground">
-      Multiplayer room for workshop {workshopId} — coming in Phase 55
-    </div>
+    <MultiplayerContext.Provider
+      value={{
+        participantColor: self?.info?.color ?? null,
+        isMultiplayer: true,
+      }}
+    >
+      {children}
+    </MultiplayerContext.Provider>
+  );
+}
+
+interface MultiplayerRoomProps {
+  workshopId: string;
+  children: React.ReactNode;
+}
+
+/**
+ * MultiplayerRoom — wraps children with Liveblocks RoomProvider.
+ *
+ * Enables useSelf() / useOthers() / useUpdateMyPresence() hooks for all
+ * descendant components. The Zustand liveblocks() middleware and the
+ * RoomProvider share the same Liveblocks room (WebSocket connection is
+ * deduplicated by the Liveblocks client).
+ *
+ * initialPresence must include all Presence fields declared in config.ts.
+ */
+export default function MultiplayerRoom({ workshopId, children }: MultiplayerRoomProps) {
+  return (
+    <RoomProvider
+      id={getRoomId(workshopId)}
+      initialPresence={{
+        cursor: null,
+        color: '#6366f1',
+        displayName: '',
+        editingDrawingNodeId: null,
+      }}
+      initialStorage={{
+        elements: new LiveMap<string, LiveObject<CanvasElementStorable>>(),
+      }}
+    >
+      <MultiplayerRoomInner>{children}</MultiplayerRoomInner>
+    </RoomProvider>
   );
 }

@@ -41,6 +41,7 @@ import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
 import { ColorPicker } from "./color-picker";
 import { useCanvasAutosave } from "@/hooks/use-canvas-autosave";
 import { usePreventScrollOnCanvas } from "@/hooks/use-prevent-scroll-on-canvas";
+import { useMultiplayerContext } from "@/components/workshop/multiplayer-room";
 import type {
   StickyNoteColor,
   GridColumn,
@@ -86,6 +87,7 @@ import { GuideNode } from "./guide-node";
 import type { CanvasGuideData } from "@/lib/canvas/canvas-guide-types";
 import type { StepCanvasSettingsData } from "@/lib/canvas/step-canvas-settings-types";
 import { getStepTemplateStickyNotes } from "@/lib/canvas/template-sticky-note-config";
+import { toast } from "sonner";
 // JourneyMapSkeleton removed — skeleton placeholders are now integrated into GridOverlay
 
 // Define node types OUTSIDE component for stable reference
@@ -108,6 +110,7 @@ export interface ReactFlowCanvasProps {
   sessionId: string;
   stepId: string;
   workshopId: string;
+  workshopType?: 'solo' | 'multiplayer';
   canvasGuides?: CanvasGuideData[];
   defaultViewportSettings?: StepCanvasSettingsData | null;
   isAdmin?: boolean;
@@ -134,6 +137,7 @@ function ReactFlowCanvasInner({
   sessionId,
   stepId,
   workshopId,
+  workshopType,
   canvasGuides: canvasGuidesProp,
   defaultViewportSettings,
   isAdmin,
@@ -196,8 +200,28 @@ function ReactFlowCanvasInner({
   // Prevent iOS Safari page scroll when panning canvas
   usePreventScrollOnCanvas(canvasContainerRef);
 
-  // Auto-save integration
-  const { saveStatus } = useCanvasAutosave(workshopId, stepId);
+  // Auto-save integration — disabled in multiplayer mode (Liveblocks webhook handles persistence)
+  const { saveStatus } = useCanvasAutosave(workshopId, stepId, workshopType !== 'multiplayer');
+
+  // Multiplayer context — provides participant color for new sticky notes
+  // Returns { isMultiplayer: false, participantColor: null } when not inside RoomProvider (solo mode)
+  const { isMultiplayer, participantColor } = useMultiplayerContext();
+
+  // Mapping from participant hex color to the closest StickyNoteColor
+  const HEX_TO_STICKY_COLOR: Record<string, StickyNoteColor> = {
+    '#6366f1': 'blue',    // indigo -> blue
+    '#ec4899': 'pink',
+    '#14b8a6': 'green',   // teal -> green
+    '#f59e0b': 'orange',  // amber -> orange
+    '#84cc16': 'yellow',  // lime -> yellow
+    '#8b5cf6': 'red',     // violet -> red (closest warm)
+  };
+
+  // Participant sticky note color — used when creating new notes in multiplayer mode
+  const participantStickyColor: StickyNoteColor | undefined =
+    isMultiplayer && participantColor
+      ? (HEX_TO_STICKY_COLOR[participantColor] ?? 'yellow')
+      : undefined;
 
   // Client-side template sticky note initialization — ensures templates exist even if
   // server-side seeding in page.tsx failed or data was lost. Runs once on mount.
@@ -467,6 +491,48 @@ function ReactFlowCanvasInner({
     initialElements?: DrawingElement[];
     initialBackgroundImageUrl?: string | null;
   } | null>(null);
+
+  // EzyDraw single-editor lock helpers (multiplayer only)
+  // Uses Zustand liveblocks state to avoid conditional hook calls.
+  // In solo mode, liveblocks is undefined — all operations are no-ops.
+  const lbOthers = useCanvasStore((s) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const lb = (s as any).liveblocks;
+    return (lb?.others as Array<{ presence: { editingDrawingNodeId: string | null } }>) ?? [];
+  });
+
+  const isDrawingLockedByOther = useCallback(
+    (drawingNodeId: string): boolean => {
+      if (!isMultiplayer) return false;
+      return lbOthers.some((o) => o.presence.editingDrawingNodeId === drawingNodeId);
+    },
+    [isMultiplayer, lbOthers],
+  );
+
+  const getLockingUser = useCallback(
+    (drawingNodeId: string) => {
+      if (!isMultiplayer) return null;
+      return lbOthers.find((o) => o.presence.editingDrawingNodeId === drawingNodeId) ?? null;
+    },
+    [isMultiplayer, lbOthers],
+  );
+
+  const lockDrawingInPresence = useCallback(
+    (drawingNodeId: string) => {
+      if (!isMultiplayer) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const lb = (storeApi.getState() as any).liveblocks;
+      lb?.room?.updatePresence({ editingDrawingNodeId: drawingNodeId });
+    },
+    [isMultiplayer, storeApi],
+  );
+
+  const unlockDrawingInPresence = useCallback(() => {
+    if (!isMultiplayer) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const lb = (storeApi.getState() as any).liveblocks;
+    lb?.room?.updatePresence({ editingDrawingNodeId: null });
+  }, [isMultiplayer, storeApi]);
 
   // Cluster dialog state
   const [clusterDialogOpen, setClusterDialogOpen] = useState(false);
@@ -1162,6 +1228,9 @@ function ReactFlowCanvasInner({
   // Handle toolbar "+" creation (dealing-cards offset)
   const handleToolbarAdd = useCallback(
     (color?: StickyNoteColor) => {
+      // In multiplayer mode, new sticky notes inherit the participant's assigned color
+      // (unless the caller explicitly passes a color override)
+      const effectiveColor = color ?? participantStickyColor;
       let position: { x: number; y: number };
 
       if (stickyNotes.length > 0) {
@@ -1193,7 +1262,7 @@ function ReactFlowCanvasInner({
           width: 120,
           height: 120,
           cellAssignment: { row: ringId, col: "" },
-          ...(color ? { color } : {}),
+          ...(effectiveColor ? { color: effectiveColor } : {}),
         });
       }
       // Empathy zone snap and assignment for empathy zone steps
@@ -1209,7 +1278,7 @@ function ReactFlowCanvasInner({
           width: 120,
           height: 120,
           cellAssignment: zone ? { row: zone, col: "" } : undefined,
-          ...(color ? { color } : {}),
+          ...(effectiveColor ? { color: effectiveColor } : {}),
         });
       }
       // Grid-based snap and cell assignment for grid steps
@@ -1228,7 +1297,7 @@ function ReactFlowCanvasInner({
           width: 120,
           height: 120,
           cellAssignment,
-          ...(color ? { color } : {}),
+          ...(effectiveColor ? { color: effectiveColor } : {}),
         });
       } else {
         // Quadrant-based snap and detection for quadrant/standard steps
@@ -1243,7 +1312,7 @@ function ReactFlowCanvasInner({
           width: 120,
           height: 120,
           quadrant,
-          ...(color ? { color } : {}),
+          ...(effectiveColor ? { color: effectiveColor } : {}),
         });
       }
       dismissAutoGuides();
@@ -1256,6 +1325,7 @@ function ReactFlowCanvasInner({
       stepConfig,
       dynamicGridConfig,
       dismissAutoGuides,
+      participantStickyColor,
     ],
   );
 
@@ -2267,6 +2337,14 @@ function ReactFlowCanvasInner({
       // Check if this is a drawing node
       const drawingNode = drawingNodes.find((dn) => dn.id === node.id);
       if (drawingNode) {
+        // Multiplayer: check if another participant is already editing this drawing
+        if (isDrawingLockedByOther(drawingNode.id)) {
+          const locker = getLockingUser(drawingNode.id);
+          const name = (locker as { presence: { displayName?: string } } | null)?.presence?.displayName ?? 'Another participant';
+          toast.error(`${name} is currently editing this drawing`);
+          return;
+        }
+
         try {
           // Load vector JSON from server
           const drawing = await loadDrawing({
@@ -2276,6 +2354,8 @@ function ReactFlowCanvasInner({
           });
           if (drawing) {
             const { elements, backgroundImageUrl } = parseVectorJson(drawing.vectorJson);
+            // Lock drawing in presence before opening EzyDraw
+            lockDrawingInPresence(drawingNode.id);
             setEzyDrawState({
               isOpen: true,
               drawingId: drawingNode.drawingId,
@@ -2297,7 +2377,7 @@ function ReactFlowCanvasInner({
       // Existing stickyNote edit behavior
       setEditingNodeId(node.id);
     },
-    [drawingNodes, workshopId, stepId],
+    [drawingNodes, workshopId, stepId, isDrawingLockedByOther, getLockingUser, lockDrawingInPresence],
   );
 
   // Handle pane click (double-click detection + deselect)
@@ -2844,7 +2924,11 @@ function ReactFlowCanvasInner({
       {ezyDrawState?.isOpen && (
         <EzyDrawLoader
           isOpen={true}
-          onClose={() => setEzyDrawState(null)}
+          onClose={() => {
+            // Clear EzyDraw lock in Liveblocks presence when closing
+            unlockDrawingInPresence();
+            setEzyDrawState(null);
+          }}
           onSave={handleDrawingSave}
           initialElements={ezyDrawState.initialElements}
           initialBackgroundImageUrl={ezyDrawState.initialBackgroundImageUrl}
@@ -2897,6 +2981,7 @@ export function ReactFlowCanvas({
   sessionId,
   stepId,
   workshopId,
+  workshopType,
   canvasGuides,
   defaultViewportSettings,
   isAdmin,
@@ -2913,6 +2998,7 @@ export function ReactFlowCanvas({
         sessionId={sessionId}
         stepId={stepId}
         workshopId={workshopId}
+        workshopType={workshopType}
         canvasGuides={canvasGuides}
         defaultViewportSettings={defaultViewportSettings}
         isAdmin={isAdmin}

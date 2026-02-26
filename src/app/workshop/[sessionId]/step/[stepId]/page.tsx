@@ -7,6 +7,7 @@ import { getStepByOrder, STEPS } from "@/lib/workshop/step-metadata";
 import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
 import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
+import { MultiplayerRoomLoader } from "@/components/workshop/multiplayer-room-loader";
 import { loadCanvasState, saveCanvasState } from "@/actions/canvas-actions";
 import { loadCanvasGuides } from "@/actions/canvas-guide-actions";
 import { loadStepCanvasSettings } from "@/actions/step-canvas-settings-actions";
@@ -500,6 +501,8 @@ export default async function StepPage({ params }: StepPageProps) {
   return (
     <div className="h-full">
       <CanvasStoreProvider
+        workshopType={session.workshop.workshopType ?? 'solo'}
+        workshopId={session.workshop.id}
         initialStickyNotes={initialCanvasStickyNotes}
         initialGridColumns={initialGridColumns}
         initialDrawingNodes={initialDrawingNodes}
@@ -512,23 +515,46 @@ export default async function StepPage({ params }: StepPageProps) {
         initialSelectedSlotIds={initialSelectedSlotIds}
         initialBrainRewritingMatrices={initialBrainRewritingMatrices}
       >
-        <StepContainer
-          stepOrder={stepNumber}
-          sessionId={sessionId}
-          workshopId={session.workshop.id}
-          initialMessages={initialMessages}
-          initialArtifact={initialArtifact}
-          stepStatus={stepRecord?.status}
-          workshopStatus={session.workshop.status}
-          hmwStatement={hmwStatement}
-          challengeStatement={challengeStatement}
-          hmwGoals={hmwGoals}
-          step8SelectedSlotIds={step8SelectedSlotIds}
-          step8Crazy8sSlots={step8Crazy8sSlots}
-          isAdmin={userIsAdmin}
-          canvasGuides={canvasGuides}
-          canvasSettings={canvasSettings}
-        />
+        {session.workshop.workshopType === 'multiplayer' ? (
+          <MultiplayerRoomLoader workshopId={session.workshop.id}>
+            <StepContainer
+              stepOrder={stepNumber}
+              sessionId={sessionId}
+              workshopId={session.workshop.id}
+              workshopType={session.workshop.workshopType}
+              initialMessages={initialMessages}
+              initialArtifact={initialArtifact}
+              stepStatus={stepRecord?.status}
+              workshopStatus={session.workshop.status}
+              hmwStatement={hmwStatement}
+              challengeStatement={challengeStatement}
+              hmwGoals={hmwGoals}
+              step8SelectedSlotIds={step8SelectedSlotIds}
+              step8Crazy8sSlots={step8Crazy8sSlots}
+              isAdmin={userIsAdmin}
+              canvasGuides={canvasGuides}
+              canvasSettings={canvasSettings}
+            />
+          </MultiplayerRoomLoader>
+        ) : (
+          <StepContainer
+            stepOrder={stepNumber}
+            sessionId={sessionId}
+            workshopId={session.workshop.id}
+            initialMessages={initialMessages}
+            initialArtifact={initialArtifact}
+            stepStatus={stepRecord?.status}
+            workshopStatus={session.workshop.status}
+            hmwStatement={hmwStatement}
+            challengeStatement={challengeStatement}
+            hmwGoals={hmwGoals}
+            step8SelectedSlotIds={step8SelectedSlotIds}
+            step8Crazy8sSlots={step8Crazy8sSlots}
+            isAdmin={userIsAdmin}
+            canvasGuides={canvasGuides}
+            canvasSettings={canvasSettings}
+          />
+        )}
       </CanvasStoreProvider>
     </div>
   );

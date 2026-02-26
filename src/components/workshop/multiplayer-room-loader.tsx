@@ -10,9 +10,6 @@
  *
  * The 'use client' directive is required in Next.js 15+ when using next/dynamic
  * with ssr: false in a component exported from the app directory.
- *
- * The actual MultiplayerRoom implementation will be created in Phase 55
- * (Core Canvas Sync) when the Zustand + Liveblocks middleware is wired up.
  */
 
 import dynamic from 'next/dynamic';
@@ -31,8 +28,9 @@ const MultiplayerRoom = dynamic(
 
 interface MultiplayerRoomLoaderProps {
   workshopId: string;
+  children: React.ReactNode;
 }
 
-export function MultiplayerRoomLoader({ workshopId }: MultiplayerRoomLoaderProps) {
-  return <MultiplayerRoom workshopId={workshopId} />;
+export function MultiplayerRoomLoader({ workshopId, children }: MultiplayerRoomLoaderProps) {
+  return <MultiplayerRoom workshopId={workshopId}>{children}</MultiplayerRoom>;
 }
