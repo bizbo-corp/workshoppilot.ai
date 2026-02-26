@@ -69,6 +69,15 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - ✓ AI deliverable generation: Gemini generates PRD + Tech Specs from all 10 steps, stored as Markdown + JSON, parallel generation with caching — v1.7
 - ✓ Outputs page at `/workshop/[id]/outputs` with deliverable cards, detail view, ReactMarkdown rendering, copy-to-clipboard, `.md`/`.json` download — v1.7
 - ✓ Dashboard routing: completed workshops → outputs page, in-progress → resume step position — v1.7
+- ✓ First-run welcome modal on dashboard with DB-backed dismissal (cross-device persistence) — v1.8
+- ✓ Credit-based payment system via Stripe Checkout (redirect mode, zero client-side Stripe JS) — v1.8
+- ✓ Idempotent webhook fulfillment with dual-trigger pattern (success page + webhook) — v1.8
+- ✓ Server-side paywall enforcement at Step 7 with atomic credit consumption — v1.8
+- ✓ Inline UpgradeDialog with outcome-framed copy at Step 6 paywall — v1.8
+- ✓ Return-to-workshop flow after Stripe purchase (checkout → success → resume at Step 7) — v1.8
+- ✓ Dashboard credit badge showing remaining balance — v1.8
+- ✓ Grandfathering for pre-paywall workshops (PAYWALL_CUTOFF_DATE) — v1.8
+- ✓ Pricing page with credit-based tiers and Stripe Checkout CTAs — v1.8
 
 ### Active
 
@@ -106,7 +115,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Video conferencing integration — rely on external tools (Zoom, etc.)
 - Multi-language support — English first, internationalize later
 - Custom branding per organization — FFP at earliest
-- Pricing/billing integration — ~~informational only~~ being built in v1.8
+- ~~Pricing/billing integration~~ — shipped in v1.8
 
 ## Context
 
@@ -200,28 +209,23 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | maxDuration=60 for generation routes | Gemini needs more time for 2000-3000 word documents | ✓ Good — no timeouts in production |
 | DeliverableDetailView replaces card grid in-place (not modal) | Better UX for long-content reading | ✓ Good — clean back navigation |
 | Format pills as inline styled spans (not Badge) | badge.tsx does not exist in project's shadcn setup | ✓ Good — no missing component errors |
-
-## Current Milestone: v1.8 Onboarding + Payments
-
-**Goal:** Add first-run onboarding experience and credit-based payment system with Stripe Checkout, converting the free taste-test (Steps 1-6) into revenue at Step 7.
-
-**Target features:**
-- Welcome modal on first visit + contextual tooltips for new users
-- Taste-test paywall at Step 7 — Steps 1-6 free, Steps 7-10 + Build Pack require a workshop credit
-- Inline upgrade modal when user hits the paywall
-- Stripe Checkout (redirect) for purchasing workshop credits
-- New pricing tiers: Single Flight ($79, 1 credit), Serial Entrepreneur ($149, 3 credits never expire), Agency (Contact Sales)
-- Credit auto-unlock — purchase immediately continues into Step 7
-- Dashboard credit display ("X credits remaining")
-- Pricing page updated with new tier structure
+| Stripe Checkout redirect mode (not Elements) | Zero client-side Stripe JS, Stripe hosts PCI surface, Apple Pay/Google Pay automatic | ✓ Good — minimal code, zero PCI surface |
+| Credit-based model (not subscription) | Target users run 1-3 workshops/year; monthly churn approaches 100% | ✓ Good — matches usage pattern |
+| DB-stored onboarding state (not localStorage) | Persists across devices, no hydration mismatch risk | ✓ Good — cross-device works |
+| Dual-trigger credit fulfillment (success page + webhook) | Prevents stale-credit UX when user returns before webhook fires | ✓ Good — instant credit display |
+| Server-side paywall in Step Server Component (not middleware) | Middleware bypass CVE-2025-29927 makes middleware-only insufficient | ✓ Good — defense in depth |
+| Conditional-UPDATE for atomic credit consumption | neon-http doesn't support SELECT FOR UPDATE; WHERE credit_balance > 0 RETURNING is provably atomic at PG row level | ✓ Good — no race conditions |
+| Inline UpgradeDialog (not page redirect) | User stays in workshop context at Step 6 | ✓ Good — low-friction conversion |
+| Open redirect validation at 3 points | Checkout route, success page, pricing page — defense in depth | ✓ Good — security |
+| Stripe apiVersion pinned to '2026-02-25.clover' | Prevents silent API contract changes on SDK upgrades | ✓ Good — stability |
 
 ## Current State
 
-**Shipped:** v1.7 Build Pack (2026-02-25)
+**Shipped:** v1.8 Onboarding + Payments (2026-02-26)
 **Live at:** https://workshoppilot.ai
-**Codebase:** ~47,900 lines of TypeScript across ~270+ files
-**Tech stack:** Clerk + Neon + Gemini + Drizzle + AI SDK 6 + ReactFlow + Konva.js + Zustand + Playwright + Vercel — all validated in production
-**Milestones:** v0.5 (shell, 2 days) + v1.0 (AI facilitation, 3 days) + v1.1 (canvas, 2 days) + v1.2 (whiteboard, 2 days) + v1.3 (visual ideation, 1 day) + v1.4 (polish, 1 day) + v1.5 (launch ready, 2 days) + v1.6 (production polish, 1 day) + v1.7 (build pack, <1 day) = 15 days total
+**Codebase:** ~50,655 lines of TypeScript across ~280+ files
+**Tech stack:** Clerk + Neon + Gemini + Drizzle + Stripe + AI SDK 6 + ReactFlow + Konva.js + Zustand + Playwright + Vercel — all validated in production
+**Milestones:** v0.5 (shell, 2d) + v1.0 (AI, 3d) + v1.1 (canvas, 2d) + v1.2 (whiteboard, 2d) + v1.3 (visual, 1d) + v1.4 (polish, 1d) + v1.5 (launch, 2d) + v1.6 (prod polish, 1d) + v1.7 (build pack, <1d) + v1.8 (payments, 2d) = 17 days total
 
 **Known issues / tech debt:**
 - Next.js middleware → proxy convention migration (non-blocking)
@@ -230,11 +234,13 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - E2E back-navigation testing deferred (forward-only tested)
 - /api/dev/seed-workshop build error (pre-existing, TypeError on width property)
 - isPublicRoute in proxy.ts defined but unused (pricing works via default-allow)
-- First-run onboarding tour deferred from v1.6 (ONBD-01/02/03 — Phase 41 not started)
 - TODO in sign-up-modal.tsx: configure first name/last name as required in Clerk Dashboard
 - ClerkProvider uses hardcoded #6b7a2f (Clerk API requires hex) — slightly different from app olive tokens
 - PDF/PPT export deferred to future milestone — v1.7 delivers Markdown + JSON only
 - No re-generation after step updates — first version generates once on completion
+- price-config.ts amountCents field is dead code (defined but never consumed)
+- Vercel Deployment Protection may block /api/webhooks/stripe in preview — add to bypass list
+- Agency tier absent from pricing page (PRIC-02 deferred)
 
 ---
-*Last updated: 2026-02-26 after v1.8 milestone started*
+*Last updated: 2026-02-26 after v1.8 milestone*

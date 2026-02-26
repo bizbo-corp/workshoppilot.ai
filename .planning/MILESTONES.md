@@ -220,3 +220,34 @@
 
 ---
 
+
+## v1.8 Onboarding + Payments (Shipped: 2026-02-26)
+
+**Delivered:** Added credit-based payment system with Stripe Checkout, server-side paywall enforcement at Step 7, first-run onboarding welcome modal, and pricing page — converting the free taste-test (Steps 1-6) into revenue.
+
+**Phases completed:** 47-53 (7 phases, 11 tracked plans)
+
+**Key accomplishments:**
+- Billing database schema: credit_transactions ledger, users billing columns (creditBalance, stripeCustomerId, onboardingComplete), workshops creditConsumedAt tracking
+- Stripe Checkout integration: server-only SDK, Products/Prices created, dual-trigger fulfillment (success page + webhook) ensuring credits appear instantly
+- Payment API layer: checkout route with server-side price validation, webhook handler with HMAC signature verification, idempotent fulfillment via stripeSessionId UNIQUE constraint
+- Server-side paywall enforcement: atomic credit consumption (conditional-UPDATE), Step 6→7 gate in advanceToNextStep(), PaywallOverlay for direct URL protection, grandfathering for pre-paywall workshops
+- Paywall UI: inline UpgradeDialog with outcome-framed copy ("Your Build Pack is 4 steps away"), lock badges on Steps 7-10, return-to-workshop flow after purchase
+- Onboarding welcome modal: DB-backed dismissal state (cross-device persistence), server-passed prop (no hydration mismatch), React 19 Suspense-safe
+- Pricing page with credit-based tiers and Stripe Checkout CTAs
+
+**Known Gaps:**
+- PRIC-01: Pricing page displays $99/$199 (not $79/$149 from original requirements) — accepted as correct
+- PRIC-02: Agency tier absent from pricing page — deferred
+- PRIC-03: Price display vs Stripe charge amounts differ — accepted as correct
+
+**Stats:**
+- 219 files changed (28,756 insertions, 5,548 deletions)
+- ~50,655 lines of TypeScript (total codebase)
+- 7 phases, 11 plans
+- 2 days (2026-02-25 → 2026-02-26)
+
+**Git range:** `feat(47-01)` → `feat(52-01)`
+
+---
+
