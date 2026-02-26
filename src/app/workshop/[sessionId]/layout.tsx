@@ -17,6 +17,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { WorkshopSidebar } from '@/components/layout/workshop-sidebar';
 import { WorkshopHeader } from '@/components/layout/workshop-header';
 import { MobileStepper } from '@/components/layout/mobile-stepper';
+import { PAYWALL_CUTOFF_DATE } from '@/lib/billing/paywall-config';
 
 interface WorkshopLayoutProps {
   children: React.ReactNode;
@@ -56,19 +57,25 @@ export default async function WorkshopLayout({
     status: s.status as 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration',
   }));
 
+  // Paywall lock state for stepper badges
+  const PAYWALL_ENABLED = process.env.PAYWALL_ENABLED !== 'false';
+  const isUnlocked = session.workshop.creditConsumedAt !== null;
+  const isGrandfathered = !isUnlocked && session.workshop.createdAt < PAYWALL_CUTOFF_DATE;
+  const isPaywallLocked = PAYWALL_ENABLED && !isUnlocked && !isGrandfathered;
+
   return (
     <SidebarProvider defaultOpen={false}>
       <div className="flex h-screen w-full">
         {/* Desktop: Sidebar */}
         <div className="hidden md:block">
-          <WorkshopSidebar sessionId={sessionId} workshopSteps={workshopSteps} />
+          <WorkshopSidebar sessionId={sessionId} workshopSteps={workshopSteps} isPaywallLocked={isPaywallLocked} />
         </div>
 
         {/* Main content column */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Mobile: Stepper bar */}
           <div className="block md:hidden">
-            <MobileStepper sessionId={sessionId} workshopSteps={workshopSteps} />
+            <MobileStepper sessionId={sessionId} workshopSteps={workshopSteps} isPaywallLocked={isPaywallLocked} />
           </div>
 
           {/* Workshop header (scrolls with content) */}

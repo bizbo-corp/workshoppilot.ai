@@ -9,7 +9,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, Lock } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -27,9 +27,10 @@ interface MobileStepperProps {
     stepId: string;
     status: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
   }>;
+  isPaywallLocked?: boolean;
 }
 
-export function MobileStepper({ sessionId, workshopSteps }: MobileStepperProps) {
+export function MobileStepper({ sessionId, workshopSteps, isPaywallLocked }: MobileStepperProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -67,6 +68,7 @@ export function MobileStepper({ sessionId, workshopSteps }: MobileStepperProps) 
             const isComplete = status === 'complete';
             const isCurrent = step.order === currentStep;
             const isAccessible = status !== 'not_started';
+            const isLocked = isPaywallLocked && step.order >= 7;
 
             const content = (
               <>
@@ -81,10 +83,14 @@ export function MobileStepper({ sessionId, workshopSteps }: MobileStepperProps) 
                       'border-2 border-primary bg-background text-primary',
                     !isComplete &&
                       !isCurrent &&
-                      'border bg-background text-muted-foreground'
+                      'border bg-background text-muted-foreground',
+                    isLocked && !isComplete && !isCurrent &&
+                      'border bg-background text-muted-foreground opacity-60',
                   )}
                 >
-                  {isComplete ? (
+                  {isLocked ? (
+                    <Lock className="h-3 w-3" />
+                  ) : isComplete ? (
                     <Check className="h-3 w-3" />
                   ) : (
                     step.order

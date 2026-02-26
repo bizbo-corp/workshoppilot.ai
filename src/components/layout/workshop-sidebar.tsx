@@ -14,7 +14,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -37,9 +37,10 @@ interface WorkshopSidebarProps {
     stepId: string;
     status: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
   }>;
+  isPaywallLocked?: boolean;
 }
 
-export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarProps) {
+export function WorkshopSidebar({ sessionId, workshopSteps, isPaywallLocked }: WorkshopSidebarProps) {
   const pathname = usePathname();
   const { state, setOpen } = useSidebar();
   const [isPinned, setIsPinned, isPinnedLoading] = useLocalStorage('workshoppilot-sidebar-pinned', false);
@@ -192,6 +193,7 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
             const isComplete = status === 'complete';
             const isCurrent = step.order === currentStepNumber;
             const isAccessible = status !== 'not_started';
+            const isLocked = isPaywallLocked && step.order >= 7;
 
             const content = (
               <>
@@ -206,10 +208,14 @@ export function WorkshopSidebar({ sessionId, workshopSteps }: WorkshopSidebarPro
                       'border-2 border-primary bg-background text-primary',
                     !isComplete &&
                       !isCurrent &&
-                      'border bg-background text-muted-foreground'
+                      'border bg-background text-muted-foreground',
+                    isLocked && !isComplete && !isCurrent &&
+                      'border bg-background text-muted-foreground opacity-60',
                   )}
                 >
-                  {isComplete ? (
+                  {isLocked ? (
+                    <Lock className="h-3 w-3" />
+                  ) : isComplete ? (
                     <Check className="h-3 w-3" />
                   ) : (
                     step.order
