@@ -15,6 +15,9 @@ const requiredVars = [
   'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
   'STRIPE_PRICE_SINGLE_FLIGHT',
   'STRIPE_PRICE_SERIAL_ENTREPRENEUR',
+  // Liveblocks
+  'LIVEBLOCKS_SECRET_KEY',
+  'LIVEBLOCKS_WEBHOOK_SECRET',
 ];
 
 const isProduction = process.env.VERCEL_ENV === 'production';
@@ -34,6 +37,21 @@ for (const varName of requiredVars) {
   } else {
     console.log(`✅ ${varName} is set`);
   }
+}
+
+// Validate Liveblocks key formats
+const liveblocksKey = process.env.LIVEBLOCKS_SECRET_KEY;
+if (liveblocksKey && !liveblocksKey.startsWith('sk_')) {
+  console.error('❌ LIVEBLOCKS_SECRET_KEY has an unexpected format (must start with sk_)');
+  console.error('   Check Liveblocks Dashboard -> Project -> API keys');
+  hasErrors = true;
+}
+
+const liveblocksWebhookSecret = process.env.LIVEBLOCKS_WEBHOOK_SECRET;
+if (liveblocksWebhookSecret && !liveblocksWebhookSecret.startsWith('whsec_')) {
+  console.error('❌ LIVEBLOCKS_WEBHOOK_SECRET has an unexpected format (must start with whsec_)');
+  console.error('   Check Liveblocks Dashboard -> Project -> Webhooks -> Endpoint details');
+  hasErrors = true;
 }
 
 // In production, verify Clerk keys are NOT test keys
@@ -57,6 +75,14 @@ if (isProduction) {
   if (stripeSecretKey?.startsWith('sk_test_')) {
     console.error('❌ STRIPE_SECRET_KEY is a test key (sk_test_*) but VERCEL_ENV is production');
     console.error('   Please use production Stripe keys for production deployments');
+    hasErrors = true;
+  }
+
+  // Liveblocks: production must use sk_prod_* keys, not sk_dev_* keys
+  const liveblocksSecretKey = process.env.LIVEBLOCKS_SECRET_KEY;
+  if (liveblocksSecretKey && !liveblocksSecretKey.startsWith('sk_prod_')) {
+    console.error('❌ LIVEBLOCKS_SECRET_KEY is not a production key (sk_prod_*) but VERCEL_ENV is production');
+    console.error('   Please use a production Liveblocks key (starts with sk_prod_) for production deployments');
     hasErrors = true;
   }
 }
