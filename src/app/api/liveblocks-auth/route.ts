@@ -1,5 +1,6 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { Liveblocks } from '@liveblocks/node';
+import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
 
 /**
  * Liveblocks auth endpoint — issues access tokens for authenticated Clerk users.
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
   const session = liveblocks.prepareSession(user.id, {
     userInfo: {
       name: user.fullName ?? user.username ?? 'Facilitator',
-      color: '#6366f1', // Default indigo — per-session color assignment in Phase 57
+      color: PARTICIPANT_COLORS[0], // Owner always gets indigo — per-session rotation in Phase 57
       role: 'owner', // Clerk users are always owners for now — guest role is Phase 57
     },
   });

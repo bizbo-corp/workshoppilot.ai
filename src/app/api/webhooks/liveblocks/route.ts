@@ -1,7 +1,11 @@
 import { WebhookHandler } from '@liveblocks/node';
+import { db } from '@/db/client';
+import { workshopSteps, stepArtifacts } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 /**
- * Liveblocks webhook handler — receives StorageUpdated events and logs room state.
+ * Liveblocks webhook handler — receives StorageUpdated events and persists
+ * the canvas snapshot to the stepArtifacts table via Drizzle upsert.
  *
  * This route is publicly accessible via the existing '/api/webhooks(.*)' matcher
  * in src/proxy.ts — no middleware changes needed.
@@ -15,11 +19,11 @@ import { WebhookHandler } from '@liveblocks/node';
  * - 200 for unhandled event types: Liveblocks sends many events; returning 400
  *   causes needless delivery failures in the Dashboard.
  *
- * TODO (Phase 55): Wire actual Drizzle upsert to stepArtifacts table.
- * The StorageUpdated event fires ~60s after the last change. Phase 55 needs to:
- * 1. Find the active session for the workshopId (query workshop_sessions)
- * 2. Get the current step from the session
- * 3. Upsert the storage snapshot into step_artifacts (or a new canvas_snapshots table)
+ * Storage persistence strategy:
+ * The StorageUpdated event fires ~60s after the last change. We find the
+ * currently in_progress step for the workshop and upsert the raw storage
+ * JSON under the _canvas key in stepArtifacts. This mirrors how the solo
+ * auto-save uses saveCanvasState(), keeping the load path identical.
  *
  * Docs: https://liveblocks.io/docs/platform/webhooks
  *
@@ -89,11 +93,62 @@ export async function POST(request: Request) {
         `Liveblocks StorageUpdated: workshopId=${workshopId}, bytes=${bytes}`
       );
 
-      // TODO (Phase 55): Wire the actual Drizzle upsert to stepArtifacts.
-      // Need active step context from workshop_sessions to know which step to persist.
-      // 1. SELECT * FROM workshop_sessions WHERE liveblocks_room_id = roomId AND status = 'active'
-      // 2. Extract currentStep from session
-      // 3. UPSERT INTO step_artifacts (workshopId, step, canvasSnapshot, updatedAt)
+      // Find the currently active (in_progress) step for this workshop
+      const activeStepRecord = await db
+        .select({
+          id: workshopSteps.id,
+          stepId: workshopSteps.stepId,
+        })
+        .from(workshopSteps)
+        .where(
+          and(
+            eq(workshopSteps.workshopId, workshopId),
+            eq(workshopSteps.status, 'in_progress')
+          )
+        )
+        .limit(1);
+
+      if (activeStepRecord.length === 0) {
+        // No active step found — workshop may have ended or not started
+        console.log(
+          `Liveblocks StorageUpdated: no in_progress step for workshopId=${workshopId}, skipping upsert`
+        );
+        return new Response(null, { status: 200 });
+      }
+
+      const { id: workshopStepId, stepId } = activeStepRecord[0];
+
+      // Parse storage payload to JSON for artifact storage
+      let storageJson: unknown;
+      try {
+        storageJson = JSON.parse(storagePayload);
+      } catch {
+        console.error('Liveblocks StorageUpdated: failed to parse storage payload as JSON');
+        return new Response('Invalid storage payload', { status: 500 });
+      }
+
+      // Upsert into stepArtifacts — store raw Liveblocks storage under _canvas key.
+      // onConflictDoUpdate uses the unique constraint on workshopStepId.
+      await db
+        .insert(stepArtifacts)
+        .values({
+          workshopStepId,
+          stepId,
+          artifact: { _canvas: storageJson as Record<string, unknown> },
+          schemaVersion: 'liveblocks-1.0',
+          version: 1,
+        })
+        .onConflictDoUpdate({
+          target: stepArtifacts.workshopStepId,
+          set: {
+            artifact: { _canvas: storageJson as Record<string, unknown> },
+            extractedAt: new Date(),
+          },
+        });
+
+      console.log(
+        `Liveblocks StorageUpdated: upserted stepArtifact for workshopId=${workshopId} stepId=${stepId}`
+      );
     }
     // All other event types: acknowledge receipt (200), do not process
   } catch (err) {

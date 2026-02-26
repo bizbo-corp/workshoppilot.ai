@@ -19,6 +19,20 @@ export function getRoomId(workshopId: string): string {
 }
 
 /**
+ * Participant color palette — assigned at join time, consistent across reconnects.
+ * Index 0 is the owner/facilitator default (indigo).
+ * Subsequent colors are assigned by participant slot (participantCount % length).
+ */
+export const PARTICIPANT_COLORS = [
+  '#6366f1', // indigo (facilitator/owner default)
+  '#ec4899', // pink
+  '#14b8a6', // teal
+  '#f59e0b', // amber
+  '#84cc16', // lime
+  '#8b5cf6', // violet
+] as const;
+
+/**
  * A JSON-safe, Liveblocks-storable representation of a canvas element.
  * This is the subset stored in Liveblocks Storage; the full canvas element
  * type (with React refs, derived state, etc.) is kept in the local Zustand store.
@@ -56,11 +70,14 @@ declare global {
      * - cursor is null when the participant's mouse leaves the canvas
      * - color is the participant's assigned hex color (assigned at join time)
      * - displayName comes from Clerk (owners) or the guest name entry form (participants)
+     * - editingDrawingNodeId is set when a participant opens EzyDraw on a drawing node,
+     *   enabling single-editor locking (null when not editing)
      */
     Presence: {
       cursor: { x: number; y: number } | null;
       color: string;
       displayName: string;
+      editingDrawingNodeId: string | null; // EzyDraw single-editor lock
     };
 
     /**
