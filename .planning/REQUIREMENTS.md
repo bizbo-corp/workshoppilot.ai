@@ -9,7 +9,7 @@ Requirements for v1.9 Multiplayer Collaboration. Each maps to roadmap phases.
 
 ### Session Management
 
-- [ ] **SESS-01**: Facilitator can create a multiplayer workshop (distinct from solo AI-led mode)
+- [x] **SESS-01**: Facilitator can create a multiplayer workshop (distinct from solo AI-led mode)
 - [ ] **SESS-02**: Facilitator can generate a shareable link for the workshop
 - [ ] **SESS-03**: Participant can join a multiplayer workshop via share link with name only (no account needed)
 - [ ] **SESS-04**: Participants see a lobby/waiting screen before the facilitator starts the session
@@ -86,7 +86,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SESS-01 | Phase 55 | Pending |
+| SESS-01 | Phase 55 | Complete |
 | SESS-02 | Phase 57 | Pending |
 | SESS-03 | Phase 57 | Pending |
 | SESS-04 | Phase 57 | Pending |
