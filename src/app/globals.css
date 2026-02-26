@@ -340,6 +340,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   html, body {
     overscroll-behavior: none;
   }
@@ -487,4 +490,32 @@
 }
 .chat-scroll.is-scrolling {
   scrollbar-color: var(--neutral-olive-400) transparent;
+}
+
+/* Workshop simulation — cursor drift animations */
+@keyframes cursor-drift-1 {
+  0%, 100% { transform: translate(0, 0); }
+  25%      { transform: translate(12px, -8px); }
+  50%      { transform: translate(-6px, -14px); }
+  75%      { transform: translate(8px, 4px); }
+}
+
+@keyframes cursor-drift-2 {
+  0%, 100% { transform: translate(0, 0); }
+  25%      { transform: translate(-10px, 6px); }
+  50%      { transform: translate(8px, -10px); }
+  75%      { transform: translate(-4px, -6px); }
+}
+
+@keyframes cursor-drift-3 {
+  0%, 100% { transform: translate(0, 0); }
+  25%      { transform: translate(6px, 10px); }
+  50%      { transform: translate(-12px, 4px); }
+  75%      { transform: translate(-2px, -12px); }
+}
+
+/* Workshop simulation — sticky note float */
+@keyframes note-float {
+  0%, 100% { transform: translateY(0) rotate(var(--note-rotation, 0deg)); }
+  50%      { transform: translateY(-7px) rotate(var(--note-rotation, 0deg)); }
 }

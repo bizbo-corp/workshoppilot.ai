@@ -19,12 +19,12 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
-import { SignedIn } from '@clerk/nextjs';
 import { LandingHeader } from '@/components/layout/landing-header';
 import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/landing/footer';
 import { Globe } from '@/components/ui/globe';
+import { WorkshopSimulation } from '@/components/landing-v2/workshop-simulation';
 
 /**
  * Landing Page V2 — conversion-optimized
@@ -63,6 +63,9 @@ export default function LandingV2() {
         <div className="absolute inset-x-0 bottom-[-500px] md:bottom-[-700px] xl:bottom-[-900px] mx-auto h-[800px] md:h-[1200px] xl:h-[1600px] w-full max-w-none opacity-50 dark:opacity-70 pointer-events-none select-none z-0">
           <Globe className="h-full w-full" />
         </div>
+
+        {/* Simulated workshop overlay — cursors, name pills, sticky notes */}
+        <WorkshopSimulation />
 
         <div className="relative mx-auto max-w-4xl text-center z-10">
           {/* Eyebrow */}
@@ -116,17 +119,8 @@ export default function LandingV2() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </NewWorkshopButton>
 
-            <SignedIn>
-              <Link href="/dashboard">
-                <Button variant="outline" size="lg">
-                  Continue Workshop
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </SignedIn>
-
             <Link href="#deliverables">
-              <Button variant="ghost" size="lg" className="text-muted-foreground">
+              <Button variant="outline" size="lg">
                 See what you get
                 <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
