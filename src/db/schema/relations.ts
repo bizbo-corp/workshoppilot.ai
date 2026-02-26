@@ -1,6 +1,8 @@
 import { relations } from 'drizzle-orm';
 import { users } from './users';
 import { workshops, workshopMembers } from './workshops';
+import { workshopSessions } from './workshop-sessions';
+import { sessionParticipants } from './session-participants';
 import { stepDefinitions, workshopSteps } from './steps';
 import { stepArtifacts } from './step-artifacts';
 import { stepSummaries } from './step-summaries';
@@ -34,6 +36,7 @@ export const workshopsRelations = relations(workshops, ({ many }) => ({
   buildPacks: many(buildPacks),
   aiUsageEvents: many(aiUsageEvents),
   creditTransactions: many(creditTransactions),
+  workshopSessions: many(workshopSessions),
 }));
 
 /**
@@ -137,5 +140,27 @@ export const creditTransactionsRelations = relations(creditTransactions, ({ one 
   workshop: one(workshops, {
     fields: [creditTransactions.workshopId],
     references: [workshops.id],
+  }),
+}));
+
+/**
+ * Workshop Sessions relations
+ * Enables: db.query.workshopSessions.findFirst({ with: { workshop: true, participants: true } })
+ */
+export const workshopSessionsRelations = relations(workshopSessions, ({ one, many }) => ({
+  workshop: one(workshops, {
+    fields: [workshopSessions.workshopId],
+    references: [workshops.id],
+  }),
+  participants: many(sessionParticipants),
+}));
+
+/**
+ * Session Participants relations
+ */
+export const sessionParticipantsRelations = relations(sessionParticipants, ({ one }) => ({
+  session: one(workshopSessions, {
+    fields: [sessionParticipants.sessionId],
+    references: [workshopSessions.id],
   }),
 }));

@@ -11,4 +11,6 @@ export * from './canvas-guides';
 export * from './step-canvas-settings';
 export * from './ai-usage-events';
 export * from './credit-transactions';
+export * from './workshop-sessions';
+export * from './session-participants';
 export * from './relations';

@@ -64,6 +64,13 @@
       "when": 1772051653843,
       "tag": "0008_shocking_sphinx",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1772094134598,
+      "tag": "0009_curious_william_stryker",
+      "breakpoints": true
     }
   ]
 }
