@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Onboarding + Payments
 status: unknown
-last_updated: "2026-02-26T02:31:22.558Z"
+last_updated: "2026-02-26T02:50:19.730Z"
 progress:
-  total_phases: 41
-  completed_phases: 41
-  total_plans: 114
-  completed_plans: 114
+  total_phases: 42
+  completed_phases: 42
+  total_plans: 115
+  completed_plans: 115
 ---
 
 # Project State
@@ -49,6 +49,7 @@ Progress: [█████░░░░░] 71% (v1.8 — 5/7 phases complete)
 *v1.8 metrics will be recorded after first phase completes*
 | Phase 51-paywall-ui P01 | 5 | 2 tasks | 5 files |
 | Phase 51-paywall-ui P02 | 2 | 2 tasks | 6 files |
+| Phase 52-onboarding-ui P01 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,8 @@ Key v1.8 decisions affecting current work:
 - [Phase 51-paywall-ui P02]: Open redirect validated at three points (checkout route, success page, pricing page) — defense in depth
 - [Phase 51-paywall-ui P02]: validReturnTo redirect after payment_not_paid early return — preserves processing message for deferred payments
 - [Phase 51-paywall-ui P02]: Dashboard layout async to query creditBalance; creditBalance passed as optional prop to DashboardHeader
+- [Phase 52-onboarding-ui]: useState(showWelcomeModal) from server prop prevents hydration mismatch — DB is source of truth for cross-device dismissal
+- [Phase 52-onboarding-ui]: setOpen(false) before await markOnboardingComplete() — dialog closes instantly while DB write runs async
 
 ### Pending Todos
 

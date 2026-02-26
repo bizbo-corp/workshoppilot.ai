@@ -143,7 +143,7 @@ See `milestones/v1.7-ROADMAP.md` for full details.
 - [x] **Phase 49: Payment API Layer** — Checkout session route, webhook handler, success/cancel pages (completed 2026-02-25)
 - [x] **Phase 50: Credit Actions and Server-Side Enforcement** — Atomic credit deduction and paywall logic (completed 2026-02-25)
 - [x] **Phase 51: Paywall UI** — Upgrade modal, locked step indicators, dashboard credit badge (completed 2026-02-26)
-- [ ] **Phase 52: Onboarding UI** — Welcome modal and onboarding state wiring
+- [x] **Phase 52: Onboarding UI** — Welcome modal and onboarding state wiring (completed 2026-02-26)
 - [ ] **Phase 53: Pricing Page and Integration** — Updated tiers, Stripe CTA links, end-to-end validation
 
 ## Phase Details
@@ -275,7 +275,7 @@ Plans:
 | 49. Payment API Layer | 3/3 | Complete    | 2026-02-25 | - |
 | 50. Credit Actions and Server-Side Enforcement | 2/2 | Complete    | 2026-02-25 | - |
 | 51. Paywall UI | 2/2 | Complete    | 2026-02-26 | - |
-| 52. Onboarding UI | v1.8 | 0/TBD | Not started | - |
+| 52. Onboarding UI | 1/1 | Complete   | 2026-02-26 | - |
 | 53. Pricing Page and Integration | v1.8 | 0/TBD | Not started | - |
 
 **Total project:** 125 plans across 46 phases shipped (9 milestones) + v1.8 in progress (7 phases, plans TBD)

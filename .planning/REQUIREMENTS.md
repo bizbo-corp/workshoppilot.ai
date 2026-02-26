@@ -9,8 +9,8 @@ Requirements for v1.8 milestone. Each maps to roadmap phases.
 
 ### Onboarding
 
-- [ ] **ONBD-01**: User sees a welcome modal on first visit explaining the app and key areas (chat, canvas, steps)
-- [ ] **ONBD-02**: Welcome modal is dismissible and does not reappear after dismissal
+- [x] **ONBD-01**: User sees a welcome modal on first visit explaining the app and key areas (chat, canvas, steps)
+- [x] **ONBD-02**: Welcome modal is dismissible and does not reappear after dismissal
 - [x] **ONBD-03**: Onboarding state persists across devices (DB-backed, not just localStorage)
 
 ### Billing
@@ -80,8 +80,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ONBD-01 | Phase 52 | Pending |
-| ONBD-02 | Phase 52 | Pending |
+| ONBD-01 | Phase 52 | Complete |
+| ONBD-02 | Phase 52 | Complete |
 | ONBD-03 | Phase 52 | Complete |
 | BILL-01 | Phase 49 | Complete |
 | BILL-02 | Phase 49 | Complete |
