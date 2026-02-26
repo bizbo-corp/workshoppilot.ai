@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Onboarding + Payments
 status: unknown
-last_updated: "2026-02-26T02:22:21.798Z"
+last_updated: "2026-02-26T02:26:30Z"
 progress:
   total_phases: 41
   completed_phases: 40
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Phase: 51 of 53 in v1.8 (Paywall UI) — IN PROGRESS
-Plan: 1 of 2 in current phase — COMPLETE
-Status: Plan 51-01 Complete — UpgradeDialog, paywallRequired handling in StepNavigation, lock badges in sidebar/mobile stepper
-Last activity: 2026-02-26 — Plan 51-01 complete (inline upgrade dialog + lock badges)
+Phase: 51 of 53 in v1.8 (Paywall UI) — COMPLETE
+Plan: 2 of 2 in current phase — COMPLETE
+Status: Plan 51-02 Complete — return-to-workshop flow after Stripe Checkout, open redirect prevention, credit badge in dashboard header
+Last activity: 2026-02-26 — Plan 51-02 complete (return-to flow, pricing forwarding, dashboard credit badge)
 
 Progress: [█████░░░░░] 71% (v1.8 — 5/7 phases complete)
 
@@ -48,6 +48,7 @@ Progress: [█████░░░░░] 71% (v1.8 — 5/7 phases complete)
 
 *v1.8 metrics will be recorded after first phase completes*
 | Phase 51-paywall-ui P01 | 5 | 2 tasks | 5 files |
+| Phase 51-paywall-ui P02 | 2 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,9 @@ Key v1.8 decisions affecting current work:
 - [Phase 50-02]: PaywallOverlay uses router.refresh() (not redirect) after consumeCredit() — triggers Server Component re-render in-place to reveal step content
 - [Phase 51-paywall-ui]: Inline UpgradeDialog paywall (not page redirect) — user stays in workshop context at Step 6
 - [Phase 51-paywall-ui]: isPaywallLocked computed server-side in layout, passed as optional prop to client stepper components
+- [Phase 51-paywall-ui P02]: Open redirect validated at three points (checkout route, success page, pricing page) — defense in depth
+- [Phase 51-paywall-ui P02]: validReturnTo redirect after payment_not_paid early return — preserves processing message for deferred payments
+- [Phase 51-paywall-ui P02]: Dashboard layout async to query creditBalance; creditBalance passed as optional prop to DashboardHeader
 
 ### Pending Todos
 
@@ -101,5 +105,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 51-01-PLAN.md (UpgradeDialog, paywallRequired handling, lock badges in sidebar/stepper). Next: Phase 51 Plan 02.
+Stopped at: Completed 51-02-PLAN.md (return-to-workshop flow, pricing forwarding, dashboard credit badge). Phase 51 complete — next: Phase 52.
 Resume file: None
