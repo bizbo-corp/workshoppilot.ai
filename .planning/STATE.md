@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Onboarding + Payments
 status: unknown
-last_updated: "2026-02-25T23:51:14.153Z"
+last_updated: "2026-02-26T02:22:21.798Z"
 progress:
-  total_phases: 40
+  total_phases: 41
   completed_phases: 40
-  total_plans: 112
-  completed_plans: 112
+  total_plans: 114
+  completed_plans: 113
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 50 — Credit Actions and Server Enforcement
+**Current focus:** Phase 51 — Paywall UI
 
 ## Current Position
 
-Phase: 50 of 53 in v1.8 (Credit Actions + Server Enforcement) — COMPLETE
-Plan: 2 of 2 in current phase — COMPLETE
-Status: Plan 50-02 Complete — Step 6→7 credit gate, PaywallOverlay component, Server Component paywall check for Steps 7-10
-Last activity: 2026-02-26 — Plan 50-02 complete (paywall enforcement + PaywallOverlay client component)
+Phase: 51 of 53 in v1.8 (Paywall UI) — IN PROGRESS
+Plan: 1 of 2 in current phase — COMPLETE
+Status: Plan 51-01 Complete — UpgradeDialog, paywallRequired handling in StepNavigation, lock badges in sidebar/mobile stepper
+Last activity: 2026-02-26 — Plan 51-01 complete (inline upgrade dialog + lock badges)
 
-Progress: [█████░░░░░] 57% (v1.8 — 4/7 phases complete)
+Progress: [█████░░░░░] 71% (v1.8 — 5/7 phases complete)
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Progress: [█████░░░░░] 57% (v1.8 — 4/7 phases complete)
 | **Total shipped** | **45** | **125** | **15 days** |
 
 *v1.8 metrics will be recorded after first phase completes*
+| Phase 51-paywall-ui P01 | 5 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ Key v1.8 decisions affecting current work:
 - [Phase 50-02]: PAYWALL_CUTOFF_DATE moved to lib/billing/paywall-config.ts — Next.js 'use server' files may only export async functions; plain Date constant must live outside server action files
 - [Phase 50-02]: advanceToNextStep() gate returns BEFORE updateStepStatus() at Step 6→7 — Step 6 stays in_progress when paywall fires; Phase 51 UI calls consumeCredit() then advanceToNextStep() again
 - [Phase 50-02]: PaywallOverlay uses router.refresh() (not redirect) after consumeCredit() — triggers Server Component re-render in-place to reveal step content
+- [Phase 51-paywall-ui]: Inline UpgradeDialog paywall (not page redirect) — user stays in workshop context at Step 6
+- [Phase 51-paywall-ui]: isPaywallLocked computed server-side in layout, passed as optional prop to client stepper components
 
 ### Pending Todos
 
@@ -98,5 +101,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 50-02-PLAN.md (Step 6→7 credit gate, PaywallOverlay, Server Component paywall check). Phase 50 complete. Next: Phase 51 (Paywall UI — dialog at Step 6 for inline credit consumption).
+Stopped at: Completed 51-01-PLAN.md (UpgradeDialog, paywallRequired handling, lock badges in sidebar/stepper). Next: Phase 51 Plan 02.
 Resume file: None

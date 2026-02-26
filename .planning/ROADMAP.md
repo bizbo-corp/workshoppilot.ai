@@ -274,7 +274,7 @@ Plans:
 | 48. Stripe Infrastructure | 1/1 | Complete    | 2026-02-25 | - |
 | 49. Payment API Layer | 3/3 | Complete    | 2026-02-25 | - |
 | 50. Credit Actions and Server-Side Enforcement | 2/2 | Complete    | 2026-02-25 | - |
-| 51. Paywall UI | v1.8 | 0/2 | Not started | - |
+| 51. Paywall UI | 1/2 | In Progress|  | - |
 | 52. Onboarding UI | v1.8 | 0/TBD | Not started | - |
 | 53. Pricing Page and Integration | v1.8 | 0/TBD | Not started | - |
 

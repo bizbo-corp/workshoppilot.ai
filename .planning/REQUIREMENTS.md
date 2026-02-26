@@ -24,8 +24,8 @@ Requirements for v1.8 milestone. Each maps to roadmap phases.
 ### Paywall
 
 - [x] **PAYW-01**: Steps 1-6 are free for all authenticated users
-- [ ] **PAYW-02**: User sees an inline upgrade modal when attempting to proceed past Step 6 without credits
-- [ ] **PAYW-03**: Upgrade modal uses outcome-framed copy ("Your Build Pack is 4 steps away")
+- [x] **PAYW-02**: User sees an inline upgrade modal when attempting to proceed past Step 6 without credits
+- [x] **PAYW-03**: Upgrade modal uses outcome-framed copy ("Your Build Pack is 4 steps away")
 - [ ] **PAYW-04**: After purchasing, user auto-returns to their workshop and continues into Step 7
 - [x] **PAYW-05**: Paywall is enforced server-side (not just client-side checks)
 - [x] **PAYW-06**: Existing workshops created before paywall launch are grandfathered as unlocked
@@ -89,8 +89,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BILL-04 | Phase 49 | Complete |
 | BILL-05 | Phase 49 | Complete |
 | PAYW-01 | Phase 50 | Complete |
-| PAYW-02 | Phase 51 | Pending |
-| PAYW-03 | Phase 51 | Pending |
+| PAYW-02 | Phase 51 | Complete |
+| PAYW-03 | Phase 51 | Complete |
 | PAYW-04 | Phase 51 | Pending |
 | PAYW-05 | Phase 50 | Complete |
 | PAYW-06 | Phase 50 | Complete |
