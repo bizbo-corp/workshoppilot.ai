@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { advanceToNextStep } from '@/actions/workshop-actions';
 import { STEPS } from '@/lib/workshop/step-metadata';
 import { toast } from 'sonner';
+import { UpgradeDialog } from '@/components/workshop/upgrade-dialog';
 
 interface StepNavigationProps {
   sessionId: string;
@@ -62,6 +63,8 @@ export function StepNavigation({
 }: StepNavigationProps) {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [paywallState, setPaywallState] = useState<{ hasCredits: boolean; creditBalance: number } | null>(null);
   const [usage, setUsage] = useState<{
     callCount: number;
     totalInputTokens: number;
@@ -111,15 +114,22 @@ export function StepNavigation({
       }
 
       // Atomically mark current complete, next in_progress, then redirect.
-      // advanceToNextStep calls redirect() internally — the idiomatic Next.js
-      // pattern for server action navigation (router.push doesn't work after
-      // server actions with revalidatePath).
-      await advanceToNextStep(
+      // advanceToNextStep either calls redirect() (throws NEXT_REDIRECT) for normal
+      // navigation, or returns { paywallRequired: true } when the credit gate fires.
+      const result = await advanceToNextStep(
         workshopId,
         currentStep.id,
         nextStep.id,
         sessionId
       );
+
+      // If we reach here, redirect() did NOT fire — this is the paywall return
+      if ('paywallRequired' in result && result.paywallRequired) {
+        setPaywallState({ hasCredits: result.hasCredits, creditBalance: result.creditBalance });
+        setShowUpgradeDialog(true);
+        setIsNavigating(false);
+        return;
+      }
     } catch (error) {
       // redirect() throws NEXT_REDIRECT — must rethrow so Next.js handles navigation
       const digest = (error as Record<string, unknown>)?.digest;
@@ -141,6 +151,7 @@ export function StepNavigation({
   };
 
   return (
+    <>
     <div className="flex items-center justify-between border-t bg-background px-6 py-4">
       {/* Left: Back + Admin controls */}
       <div className="flex items-center gap-3">
@@ -267,5 +278,18 @@ export function StepNavigation({
         <div /> /* Spacer for last step (extraction not done yet) */
       )}
     </div>
+
+    {showUpgradeDialog && paywallState && (
+      <UpgradeDialog
+        open={showUpgradeDialog}
+        onOpenChange={setShowUpgradeDialog}
+        workshopId={workshopId}
+        sessionId={sessionId}
+        currentStepOrder={currentStepOrder}
+        hasCredits={paywallState.hasCredits}
+        creditBalance={paywallState.creditBalance}
+      />
+    )}
+    </>
   );
 }
