@@ -515,7 +515,7 @@ export default function LandingV2() {
               Start Free Workshop
               <ArrowRight className="ml-2 h-4 w-4" />
             </NewWorkshopButton>
-            <Link href="/pricing-v2">
+            <Link href="/pricing">
               <Button variant="outline" size="lg">
                 View Pricing
               </Button>
