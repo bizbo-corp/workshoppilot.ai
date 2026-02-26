@@ -195,11 +195,12 @@ Plans:
   3. A sticky note moved by one participant moves on all other participants' canvases in real time
   4. New post-it nodes created by a participant automatically inherit that participant's assigned color
   5. Opening EzyDraw on a shared drawing node locks that node — a second participant attempting to open it sees a "being edited" indicator and cannot open EzyDraw simultaneously
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 55-01-PLAN.md — Install @liveblocks/zustand + upgrade zustand to v5, create createMultiplayerCanvasStore factory, add multiplayer workshop creation flow to dashboard dialog, and multiplayer badge on cards
-- [ ] 55-02-PLAN.md — Wire CanvasStoreProvider to branch on workshopType with enterRoom/leaveRoom, disable auto-save in multiplayer mode, implement post-it color inheritance, EzyDraw single-editor lock via Presence, and webhook Drizzle upsert
+- [x] 55-01-PLAN.md — Install @liveblocks/zustand + upgrade zustand to v5, create createMultiplayerCanvasStore factory, add multiplayer workshop creation flow to dashboard dialog, and multiplayer badge on cards
+- [x] 55-02-PLAN.md — Wire CanvasStoreProvider to branch on workshopType with enterRoom/leaveRoom, disable auto-save in multiplayer mode, implement post-it color inheritance, EzyDraw single-editor lock via Presence, and webhook Drizzle upsert
+- [ ] 55-03-PLAN.md — Gap closure: Add on-canvas visual "Being edited by [name]" overlay to locked drawing nodes (SYNC-05 indicator)
 
 ### Phase 56: Live Presence
 **Goal**: Every participant can see who else is in the workshop and where their cursors are on the canvas in real time
@@ -270,7 +271,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 54. Liveblocks Foundation | 3/3 | Complete    | 2026-02-26 |
-| 55. Core Canvas Sync | 2/2 | Complete   | 2026-02-26 |
+| 55. Core Canvas Sync | 2/3 | Gap closure   | 2026-02-26 |
 | 56. Live Presence | 0/2 | Not started | - |
 | 57. Guest Auth and Join Flow | 0/2 | Not started | - |
 | 58. Facilitator Controls | 0/2 | Not started | - |
