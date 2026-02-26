@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, index, unique } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp, index, unique } from 'drizzle-orm/pg-core';
 import { createPrefixedId } from '@/lib/ids';
 
 /**
@@ -41,6 +41,14 @@ export const workshops = pgTable(
     deletedAt: timestamp('deleted_at', { mode: 'date', precision: 3 }),
     // Credit tracking (v1.8) — marks when a credit was consumed for this workshop
     creditConsumedAt: timestamp('credit_consumed_at', { mode: 'date', precision: 3 }),
+    // Multiplayer support (v1.9) — set at creation time, not upgradeable
+    workshopType: text('workshop_type', {
+      enum: ['solo', 'multiplayer'],
+    })
+      .notNull()
+      .default('solo')
+      .$type<'solo' | 'multiplayer'>(),
+    maxParticipants: integer('max_participants'), // null for solo (no limit applies)
   },
   (table) => ({
     clerkUserIdIdx: index('workshops_clerk_user_id_idx').on(table.clerkUserId),
