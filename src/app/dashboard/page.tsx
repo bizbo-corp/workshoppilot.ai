@@ -15,6 +15,7 @@ import { PlusCircle } from 'lucide-react';
 import { renameWorkshop, updateWorkshopAppearance } from '@/actions/workshop-actions';
 import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
+import { WelcomeModal } from '@/components/dashboard/welcome-modal';
 
 export default async function DashboardPage() {
   // Defense in depth: verify auth at page level
@@ -199,6 +200,9 @@ export default async function DashboardPage() {
 
   return (
     <>
+      {/* Welcome modal for first-time users */}
+      <WelcomeModal showWelcomeModal={!user.onboardingComplete} />
+
       {/* Migration check component - triggers anonymous session migration */}
       <MigrationCheck />
 
