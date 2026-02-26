@@ -178,12 +178,12 @@ See `milestones/v1.8-ROADMAP.md` for full details.
   3. `/api/liveblocks-auth` route exists and issues access tokens for authenticated Clerk users (guest path stubbed)
   4. `/api/webhooks/liveblocks` StorageUpdated handler is registered and writes canvas state to Neon `stepArtifacts` (verified in Liveblocks dashboard)
   5. Neon schema includes `workshopType` column on workshops, `workshop_sessions` and `session_participants` tables, and multiplayer components are behind `next/dynamic` with `ssr: false`
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 54-01: Install Liveblocks packages, configure types, room convention, and bundle analysis baseline
-- [ ] 54-02: Add Neon schema migrations (workshopType, workshop_sessions, session_participants tables)
-- [ ] 54-03: Implement `/api/liveblocks-auth` (Clerk path), `/api/webhooks/liveblocks` StorageUpdated handler, and `next/dynamic` lazy-loading wrapper
+- [ ] 54-01-PLAN.md — Install Liveblocks packages (v3.14.0), create typed config with global Presence/Storage/UserMeta augmentation, add env var validation
+- [ ] 54-02-PLAN.md — Add workshopType column to workshops, create workshop_sessions and session_participants tables, run Drizzle migration
+- [ ] 54-03-PLAN.md — Implement /api/liveblocks-auth (Clerk path), /api/webhooks/liveblocks StorageUpdated handler, and next/dynamic lazy-loading wrapper
 
 ### Phase 55: Core Canvas Sync
 **Goal**: Two participants in the same multiplayer workshop see each other's canvas edits in real time — nodes created, moved, and deleted by one immediately appear on the other's screen
@@ -269,7 +269,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 54. Liveblocks Foundation | 0/3 | Not started | - |
+| 54. Liveblocks Foundation | 0/3 | Planned | - |
 | 55. Core Canvas Sync | 0/2 | Not started | - |
 | 56. Live Presence | 0/2 | Not started | - |
 | 57. Guest Auth and Join Flow | 0/2 | Not started | - |
