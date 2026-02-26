@@ -237,10 +237,10 @@ Plans:
   2. Dismissing the modal (via the CTA or close button) calls `markOnboardingComplete()` and the modal never appears again in the same session
   3. Signing in from a different browser or device after dismissal does not show the modal again — `users.onboardingComplete = true` in Neon is the source of truth, not localStorage
   4. The welcome modal is rendered client-side only (never SSR) using a server-passed `showWelcomeModal` prop from the dashboard Server Component, preventing hydration mismatches
-**Plans**: TBD
+**Plans**: 1
 
 Plans:
-- [ ] 52-01: `welcome-modal.tsx` (shadcn Dialog) and dashboard wiring with server-side `onboardingComplete` check
+- [ ] 52-01: WelcomeModal component (shadcn Dialog) and dashboard page wiring with server-side `onboardingComplete` check (Wave 1)
 
 ### Phase 53: Pricing Page and Integration
 **Goal**: The pricing page reflects the current credit-based tiers, both self-serve tiers link directly to Stripe Checkout, and the end-to-end purchase flow works correctly from pricing page through to workshop unlock
