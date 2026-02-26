@@ -11,7 +11,7 @@
 - ✅ **v1.5 Launch Ready** — Phases 36-39 (shipped 2026-02-19)
 - ✅ **v1.6 Production Polish** — Phases 40-42 (shipped 2026-02-25)
 - ✅ **v1.7 Build Pack** — Phases 43-46 (shipped 2026-02-25)
-- 🚧 **v1.8 Onboarding + Payments** — Phases 47-53 (in progress)
+- 🚧 **v1.8 Onboarding + Payments** — Phases 47-52 (in progress)
 
 ## Phases
 
@@ -144,7 +144,7 @@ See `milestones/v1.7-ROADMAP.md` for full details.
 - [x] **Phase 50: Credit Actions and Server-Side Enforcement** — Atomic credit deduction and paywall logic (completed 2026-02-25)
 - [x] **Phase 51: Paywall UI** — Upgrade modal, locked step indicators, dashboard credit badge (completed 2026-02-26)
 - [x] **Phase 52: Onboarding UI** — Welcome modal and onboarding state wiring (completed 2026-02-26)
-- [ ] **Phase 53: Pricing Page and Integration** — Updated tiers, Stripe CTA links, end-to-end validation
+- ~~Phase 53: Pricing Page and Integration~~ — Deferred to next milestone (audit gaps: PRIC-01, PRIC-02, PRIC-03)
 
 ## Phase Details
 
@@ -276,9 +276,9 @@ Plans:
 | 50. Credit Actions and Server-Side Enforcement | 2/2 | Complete    | 2026-02-25 | - |
 | 51. Paywall UI | 2/2 | Complete    | 2026-02-26 | - |
 | 52. Onboarding UI | 1/1 | Complete    | 2026-02-26 | - |
-| 53. Pricing Page and Integration | 0/2 | Gaps found  | - | - |
+| 53. Pricing Page and Integration | 0/2 | Deferred  | - | - |
 
-**Total project:** 125 plans across 52 phases shipped + Phase 53 gaps found
+**Total project:** 125 plans across 52 phases shipped (v1.8: Phases 47-52, Phase 53 deferred)
 
 ---
 *Last updated: 2026-02-26 — v1.8 roadmap created*

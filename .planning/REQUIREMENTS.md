@@ -36,15 +36,15 @@ Requirements for v1.8 milestone. Each maps to roadmap phases.
 - [x] **CRED-02**: One credit is consumed when user unlocks Steps 7-10 for a workshop
 - [x] **CRED-03**: Credit consumption is atomic (no double-spend under concurrent requests)
 
-### Pricing
-
-- [ ] **PRIC-01**: Pricing page displays updated tiers: Single Flight ($79), Serial Entrepreneur ($149), Agency (Contact Sales)
-- [ ] **PRIC-02**: Agency tier shows a Contact Sales button (no self-serve billing)
-- [ ] **PRIC-03**: Single Flight and Serial Entrepreneur cards link to Stripe Checkout
-
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
+
+### Pricing Page (deferred from v1.8)
+
+- **PRIC-01**: Pricing page displays updated tiers: Single Flight ($79), Serial Entrepreneur ($149), Agency (Contact Sales)
+- **PRIC-02**: Agency tier shows a Contact Sales button (no self-serve billing)
+- **PRIC-03**: Single Flight and Serial Entrepreneur cards link to Stripe Checkout
 
 ### Enhanced Payments
 
@@ -97,13 +97,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CRED-01 | Phase 51 | Complete |
 | CRED-02 | Phase 50 | Complete |
 | CRED-03 | Phase 50 | Complete |
-| PRIC-01 | Phase 53 | Unsatisfied |
-| PRIC-02 | Phase 53 | Unsatisfied |
-| PRIC-03 | Phase 53 | Partial |
-
 **Coverage:**
-- v1 requirements: 18 total
-- Mapped to phases: 18
+- v1.8 requirements: 15 total (3 PRIC deferred to v2)
+- Mapped to phases: 15
 - Unmapped: 0 ✓
 
 **Phase distribution:**
@@ -113,7 +109,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Phase 50 (Credit Actions and Server-Side Enforcement): PAYW-01, PAYW-05, PAYW-06, CRED-02, CRED-03
 - Phase 51 (Paywall UI): PAYW-02, PAYW-03, PAYW-04, CRED-01
 - Phase 52 (Onboarding UI): ONBD-01, ONBD-02, ONBD-03
-- Phase 53 (Pricing Page and Integration): PRIC-01, PRIC-02, PRIC-03
+- ~~Phase 53 (Pricing Page and Integration): PRIC-01, PRIC-02, PRIC-03~~ — deferred to v2
 
 ---
 *Requirements defined: 2026-02-26*
