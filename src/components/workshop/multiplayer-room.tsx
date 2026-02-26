@@ -1,10 +1,12 @@
 'use client';
 
 import { createContext, useContext } from 'react';
-import { ClientContext, RoomProvider, useSelf } from '@liveblocks/react';
+import { ClientContext, RoomProvider, useSelf, useOthersListener } from '@liveblocks/react';
 import { LiveMap, LiveObject } from '@liveblocks/client';
 import type { OpaqueClient } from '@liveblocks/core';
+import { toast } from 'sonner';
 import { getRoomId, liveblocksClient, type CanvasElementStorable } from '@/lib/liveblocks/config';
+import { PresenceBar } from './presence-bar';
 
 /**
  * MultiplayerContext — provides participant color and multiplayer flag to
@@ -21,8 +23,31 @@ export function useMultiplayerContext() {
 }
 
 /**
+ * JoinLeaveListener — renderless component that fires neutral toasts when
+ * participants join or leave the room. Renders null; zero layout impact.
+ *
+ * Uses plain toast() (not toast.success/toast.error) per context decision.
+ * duration: 3000 = 3-second auto-dismiss. Each person gets their own toast.
+ */
+function JoinLeaveListener() {
+  useOthersListener(({ type, user }) => {
+    if (type === 'enter') {
+      toast(`${user.info?.name ?? 'Someone'} joined`, {
+        duration: 3000,
+      });
+    } else if (type === 'leave') {
+      toast(`${user.info?.name ?? 'Someone'} left`, {
+        duration: 3000,
+      });
+    }
+  });
+  return null;
+}
+
+/**
  * MultiplayerRoomInner — rendered inside RoomProvider, reads the current
  * participant's color from Liveblocks presence and provides it via context.
+ * Also renders PresenceBar (fixed overlay) and JoinLeaveListener (renderless).
  */
 function MultiplayerRoomInner({ children }: { children: React.ReactNode }) {
   const self = useSelf();
@@ -33,6 +58,8 @@ function MultiplayerRoomInner({ children }: { children: React.ReactNode }) {
         isMultiplayer: true,
       }}
     >
+      <PresenceBar />
+      <JoinLeaveListener />
       {children}
     </MultiplayerContext.Provider>
   );
