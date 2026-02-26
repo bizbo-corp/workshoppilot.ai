@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import { db } from '@/db/client';
 import { users, workshops, workshopSteps, stepArtifacts, buildPacks, aiUsageEvents } from '@/db/schema';
 import { eq, desc, isNull, and, inArray, sql } from 'drizzle-orm';
@@ -16,6 +17,7 @@ import { renameWorkshop, updateWorkshopAppearance } from '@/actions/workshop-act
 import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { WelcomeModal } from '@/components/dashboard/welcome-modal';
+import { AdminResetOnboarding } from '@/components/dashboard/admin-reset-onboarding';
 
 export default async function DashboardPage() {
   // Defense in depth: verify auth at page level
@@ -200,15 +202,20 @@ export default async function DashboardPage() {
 
   return (
     <>
-      {/* Welcome modal for first-time users */}
-      <WelcomeModal showWelcomeModal={!user.onboardingComplete} />
+      {/* Welcome modal for first-time users — Suspense boundary absorbs React 19 async tracking from Radix useLayoutEffect */}
+      <Suspense fallback={null}>
+        <WelcomeModal showWelcomeModal={!user.onboardingComplete} />
+      </Suspense>
 
       {/* Migration check component - triggers anonymous session migration */}
       <MigrationCheck />
 
       {/* Page header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Your Workshops</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-foreground">Your Workshops</h1>
+          {adminUser && <AdminResetOnboarding />}
+        </div>
         <p className="mt-2 text-muted-foreground">
           Welcome back, {user.firstName || 'there'}!
         </p>

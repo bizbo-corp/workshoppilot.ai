@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, MessageSquare, LayoutGrid, ListChecks } from 'lucide-react';
 import { markOnboardingComplete } from '@/actions/billing-actions';
 import {
@@ -18,7 +18,13 @@ interface WelcomeModalProps {
 }
 
 export function WelcomeModal({ showWelcomeModal }: WelcomeModalProps) {
-  const [open, setOpen] = useState(showWelcomeModal);
+  const [open, setOpen] = useState(false);
+
+  // Defer open to after hydration — avoids React 19 Suspense tracking error
+  // triggered by Radix UI's useLayoutEffect+setState in useId/Presence during SSR hydration
+  useEffect(() => {
+    if (showWelcomeModal) setOpen(true);
+  }, [showWelcomeModal]);
 
   async function handleDismiss() {
     setOpen(false); // Close immediately (sync)
