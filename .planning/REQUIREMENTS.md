@@ -17,11 +17,11 @@ Requirements for v1.9 Multiplayer Collaboration. Each maps to roadmap phases.
 
 ### Real-Time Canvas
 
-- [ ] **SYNC-01**: All canvas nodes and edges sync in real-time across all connected participants
-- [ ] **SYNC-02**: Multiple participants can concurrently edit the canvas (add/move/delete nodes)
-- [ ] **SYNC-03**: Post-it notes inherit the creating participant's assigned color
+- [x] **SYNC-01**: All canvas nodes and edges sync in real-time across all connected participants
+- [x] **SYNC-02**: Multiple participants can concurrently edit the canvas (add/move/delete nodes)
+- [x] **SYNC-03**: Post-it notes inherit the creating participant's assigned color
 - [ ] ~~**SYNC-04**~~: *(Deferred to v2)* In Crazy 8s (Step 8b), each participant has their own set of 8 sketch slots for simultaneous drawing — requires per-participant partitioned storage regions in Liveblocks, incompatible with the shared-canvas broadcast architecture built in Phase 55
-- [ ] **SYNC-05**: For shared drawing nodes outside Crazy 8s, EzyDraw is locked to one user at a time
+- [x] **SYNC-05**: For shared drawing nodes outside Crazy 8s, EzyDraw is locked to one user at a time
 
 ### Live Presence
 
@@ -91,11 +91,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SESS-03 | Phase 57 | Pending |
 | SESS-04 | Phase 57 | Pending |
 | SESS-05 | Phase 58 | Pending |
-| SYNC-01 | Phase 55 | Pending |
-| SYNC-02 | Phase 55 | Pending |
-| SYNC-03 | Phase 55 | Pending |
+| SYNC-01 | Phase 55 | Complete |
+| SYNC-02 | Phase 55 | Complete |
+| SYNC-03 | Phase 55 | Complete |
 | SYNC-04 | v2 | Deferred |
-| SYNC-05 | Phase 55 | Pending |
+| SYNC-05 | Phase 55 | Complete |
 | PRES-01 | Phase 56 | Pending |
 | PRES-02 | Phase 56 | Pending |
 | PRES-03 | Phase 56 | Pending |
