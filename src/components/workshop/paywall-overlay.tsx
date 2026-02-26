@@ -83,7 +83,7 @@ export function PaywallOverlay({ sessionId, workshopId, stepNumber }: PaywallOve
   }
 
   function handleBuyCredits() {
-    router.push('/pricing');
+    router.push(`/pricing?return_to=${encodeURIComponent(`/workshop/${sessionId}/step/7`)}`);
   }
 
   function handleBackToStep6() {

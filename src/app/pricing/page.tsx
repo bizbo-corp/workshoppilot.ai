@@ -56,7 +56,16 @@ function getTiers(): PricingTier[] {
   ];
 }
 
-export default function PricingPage() {
+interface PricingPageProps {
+  searchParams: Promise<{ return_to?: string }>;
+}
+
+export default async function PricingPage({ searchParams }: PricingPageProps) {
+  const { return_to } = await searchParams;
+
+  // Validate return_to — prevent open redirect (same check as checkout route)
+  const validReturnTo = return_to && return_to.startsWith('/workshop/') ? return_to : null;
+
   const tiers = getTiers();
 
   return (
@@ -131,6 +140,9 @@ export default function PricingPage() {
                   {tier.priceId ? (
                     <form method="POST" action="/api/billing/checkout">
                       <input type="hidden" name="priceId" value={tier.priceId} />
+                      {validReturnTo && (
+                        <input type="hidden" name="workshop_return_url" value={validReturnTo} />
+                      )}
                       <button
                         type="submit"
                         className={`w-full rounded-lg py-3 px-4 font-semibold text-sm transition-colors cursor-pointer${
