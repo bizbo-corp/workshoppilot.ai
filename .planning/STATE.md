@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.9 Multiplayer Collaboration — Phase 55 Plan 02 complete
+**Current focus:** v1.9 Multiplayer Collaboration — Phase 55 Plan 03 complete
 
 ## Current Position
 
 Phase: 55 of 58 (Core Canvas Sync) — In progress
-Plan: 02 complete (55-02-PLAN.md done)
+Plan: 03 complete (55-03-PLAN.md done)
 Status: In progress
-Last activity: 2026-02-26 — Phase 55 plan 02 complete (CanvasStoreProvider branching, RoomProvider, post-it colors, EzyDraw lock, webhook upsert)
+Last activity: 2026-02-27 — Phase 55 plan 03 complete (EzyDraw lock visual overlay on drawing nodes)
 
-Progress: [████░░░░░░] 45% (5/11 plans)
+Progress: [████░░░░░░] 55% (6/11 plans)
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Progress: [████░░░░░░] 45% (5/11 plans)
 | Phase 54 P03 | 3 | 2 tasks | 4 files |
 | Phase 55 P01 | 2 | 2 tasks | 7 files |
 | Phase 55 P02 | 2 | 2 tasks | 12 files |
+| Phase 55 P03 | 5min | 1 task | 2 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ Progress: [████░░░░░░] 45% (5/11 plans)
 - [Phase 55-02]: EzyDraw lock reads lbOthers via Zustand store cast (s as any).liveblocks.others to avoid conditional useOthers() hook violations
 - [Phase 55-02]: HEX_TO_STICKY_COLOR maps PARTICIPANT_COLORS hex to existing StickyNoteColor enum — avoids schema change to StickyNote
 - [Phase 55-02]: Webhook upserts raw Liveblocks storage JSON under _canvas key — mirrors solo saveCanvasState structure, keeping loadCanvasState read path identical
+- [Phase 55-03]: pointer-events-none on lock overlay so double-click still reaches existing handler (which shows toast error in multiplayer)
+- [Phase 55-03]: Pencil hover icon hidden when isLocked=true to prevent conflicting edit affordances; lockedByName falls back to 'Someone' when displayName absent
 
 ### Pending Todos
 
@@ -89,6 +92,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Completed 55-02-PLAN.md — CanvasStoreProvider branching, RoomProvider, post-it color inheritance, EzyDraw lock, webhook Drizzle upsert
+Last session: 2026-02-27
+Stopped at: Completed 55-03-PLAN.md — EzyDraw lock visual overlay (semi-transparent 'Being edited by [name]' indicator on drawing nodes)
 Resume file: None
