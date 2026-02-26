@@ -16,17 +16,25 @@ export async function POST(req: Request) {
 
   // 2. Parse and validate request body (JSON or form data)
   let priceId: string;
+  let workshopReturnUrl: string | null = null;
   try {
     const contentType = req.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
       const body = await req.json();
       priceId = body.priceId;
+      workshopReturnUrl = body.workshop_return_url ?? null;
     } else {
       const formData = await req.formData();
       priceId = formData.get('priceId') as string;
+      workshopReturnUrl = formData.get('workshop_return_url') as string | null;
     }
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
+  // Validate workshop_return_url — prevent open redirect
+  if (workshopReturnUrl && !workshopReturnUrl.startsWith('/workshop/')) {
+    workshopReturnUrl = null; // Silently discard invalid return URLs
   }
 
   // 3. Validate priceId against server-side map — client never supplies credit quantity
@@ -60,11 +68,16 @@ export async function POST(req: Request) {
 
   // 7. Create Stripe Checkout Session
   // NOTE: {CHECKOUT_SESSION_ID} is a Stripe template variable — do NOT interpolate with JS
+  const returnParam = workshopReturnUrl
+    ? `&return_to=${encodeURIComponent(workshopReturnUrl)}`
+    : '';
+  const successUrl = `${origin}/purchase/success?session_id={CHECKOUT_SESSION_ID}${returnParam}`;
+
   const session = await stripe.checkout.sessions.create({
     customer: stripeCustomerId,
     mode: 'payment',
     line_items: [{ price: priceConfig.priceId, quantity: 1 }],
-    success_url: `${origin}/purchase/success?session_id={CHECKOUT_SESSION_ID}`,
+    success_url: successUrl,
     cancel_url: `${origin}/purchase/cancel`,
     metadata: {
       clerkUserId: userId,

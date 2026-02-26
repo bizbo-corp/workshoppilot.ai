@@ -17,7 +17,7 @@ import Link from 'next/link';
  */
 
 interface PurchaseSuccessPageProps {
-  searchParams: Promise<{ session_id?: string }>;
+  searchParams: Promise<{ session_id?: string; return_to?: string }>;
 }
 
 export default async function PurchaseSuccessPage({
@@ -27,9 +27,12 @@ export default async function PurchaseSuccessPage({
   const { userId } = await auth();
   if (!userId) redirect('/');
 
-  // Extract session_id from URL — redirect to dashboard if missing
-  const { session_id } = await searchParams;
+  // Extract session_id and return_to from URL — redirect to dashboard if session_id missing
+  const { session_id, return_to } = await searchParams;
   if (!session_id) redirect('/dashboard');
+
+  // Validate return_to — prevent open redirect
+  const validReturnTo = return_to && return_to.startsWith('/workshop/') ? return_to : null;
 
   // Call fulfillCreditPurchase — dual-trigger pattern
   // This is idempotent: if the webhook already fulfilled, returns already_fulfilled
@@ -140,6 +143,11 @@ export default async function PurchaseSuccessPage({
         </div>
       </div>
     );
+  }
+
+  // If return_to is present and fulfillment succeeded, redirect to workshop
+  if (validReturnTo && (result.status === 'fulfilled' || result.status === 'already_fulfilled')) {
+    redirect(validReturnTo);
   }
 
   // fulfilled or already_fulfilled — show success UI
