@@ -1,911 +1,710 @@
-# Architecture Research: Stripe Checkout + Credit System + Onboarding Integration
+# Architecture Research: v1.9 Multiplayer Collaboration
 
-**Domain:** Stripe Checkout (redirect), credit tracking, welcome modal onboarding — integrated into existing Next.js App Router + Clerk + Neon + Drizzle codebase
+**Domain:** Real-time multiplayer design thinking workshop with live canvas sync
 **Researched:** 2026-02-26
-**Confidence:** HIGH for Stripe + webhooks + credit schema; MEDIUM for Clerk metadata vs DB onboarding persistence tradeoffs
+**Confidence:** HIGH (Liveblocks docs), MEDIUM (integration patterns from examples), HIGH (Vercel constraint confirmed)
+
+---
+
+## The Core Constraint: No Persistent WebSocket Servers on Vercel
+
+Vercel serverless functions cannot maintain persistent connections. This is a fundamental architectural constraint, not a configuration option. The maximum execution timeout prevents WebSocket server-side handlers.
+
+**Source:** [Vercel KB: Do Serverless Functions support WebSocket connections?](https://vercel.com/kb/guide/do-vercel-serverless-functions-support-websocket-connections) — confirmed as hard constraint.
+
+**Consequence:** A dedicated external real-time provider is required. WorkshopPilot.ai cannot self-host WebSocket infrastructure while deployed on Vercel.
+
+**Chosen provider:** **Liveblocks** — the only provider with a documented, working example combining ReactFlow + Zustand + Next.js multiplayer, which exactly matches the existing stack.
 
 ---
 
 ## System Overview
 
-### Current Architecture (v1.7 — Baseline)
-
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                         EDGE LAYER                                   │
-│  src/proxy.ts (clerkMiddleware)                                      │
-│  ● Auth: public routes (/, /pricing, /sign-in, Steps 1-3)           │
-│  ● Protected: /dashboard, Steps 4-10, /api/workshops                │
-│  ● Admin: /admin, /api/admin                                         │
-└─────────────────────────────────┬────────────────────────────────────┘
-                                  ↓
-┌──────────────────────────────────────────────────────────────────────┐
-│                       SERVER LAYER                                   │
-│  ┌──────────────────────┐  ┌────────────────────────────────────┐   │
-│  │  Page Components      │  │  Server Actions                    │   │
-│  │  (Server Components)  │  │  src/actions/                      │   │
-│  │                       │  │  ● workshop-actions.ts             │   │
-│  │  /dashboard/page.tsx  │  │  ● canvas-actions.ts               │   │
-│  │  /workshop/.../page   │  │  ● auto-save-actions.ts            │   │
-│  │  /pricing/page.tsx    │  │                                    │   │
-│  └──────────────────────┘  └────────────────────────────────────┘   │
-│                                                                      │
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Browser (All Participants)                    │
+├──────────────────────────────┬──────────────────────────────────────┤
+│    Facilitator Client        │     Participant Clients (1-14)        │
+│  ┌────────────────────────┐  │  ┌────────────────────────────────┐  │
+│  │  ReactFlow Canvas      │  │  │  ReactFlow Canvas (same data)  │  │
+│  │  + Cursor Overlay      │  │  │  + Cursor Overlay              │  │
+│  │  + Presence Bar        │  │  │  + Presence Bar                │  │
+│  │  + Step Controls       │  │  │  + AI Chat (read-only)         │  │
+│  │  + AI Chat (writable)  │  │  │  + Guest Auth Modal on join    │  │
+│  └─────────┬──────────────┘  │  └─────────────┬──────────────────┘  │
+│            │                 │                │                      │
+└────────────┼─────────────────┴────────────────┼──────────────────────┘
+             │                                  │
+             ▼                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                       Liveblocks Cloud                               │
+│                  (External Real-Time Provider)                       │
 │  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  API Routes (Route Handlers)                                  │   │
-│  │  /api/chat          /api/extract      /api/ai/*              │   │
-│  │  /api/webhooks/clerk                                          │   │
+│  │  Room: "workshop:{workshopId}"                                │   │
+│  │  ┌─────────────────────┐  ┌──────────────────────────────┐  │   │
+│  │  │  Presence (ephemeral)│  │  Storage (durable CRDT)      │  │   │
+│  │  │  - cursor: {x,y}    │  │  - stickyNotes: LiveList     │  │   │
+│  │  │  - userId/guestName │  │  - mindMapNodes: LiveList    │  │   │
+│  │  │  - color: string    │  │  - gridColumns: LiveList     │  │   │
+│  │  └─────────────────────┘  │  - conceptCards: LiveList    │  │   │
+│  │                            │  - [all other canvas state]  │  │   │
+│  │  Events (broadcast)        └──────────────────────────────┘  │   │
+│  │  - STEP_CHANGED            | StorageUpdated webhook (60s)    │   │
+│  │  - AI_CHAT_UPDATE          | fires to Next.js API route      │   │
 │  └──────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────┬────────────────────────────────────┘
-                                  ↓
-┌──────────────────────────────────────────────────────────────────────┐
-│                       DATA LAYER                                     │
-│  ┌────────────────────────┐  ┌──────────────────────────────────┐   │
-│  │  Neon Postgres          │  │  Clerk User Store                │   │
-│  │  (Drizzle ORM, HTTP)    │  │  publicMetadata: { roles[] }     │   │
-│  │                         │  │                                  │   │
-│  │  users                  │  └──────────────────────────────────┘   │
-│  │  workshops              │                                          │
-│  │  sessions               │  ┌──────────────────────────────────┐   │
-│  │  workshop_steps         │  │  Vercel Blob                     │   │
-│  │  step_artifacts         │  │  (drawings, PNGs)                │   │
-│  │  build_packs            │  └──────────────────────────────────┘   │
-│  │  ai_usage_events        │                                          │
-│  └────────────────────────┘                                          │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-### Target Architecture (v1.8 — Onboarding + Payments)
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│                         EDGE LAYER                                   │
-│  src/proxy.ts (clerkMiddleware)  ← MODIFIED                         │
-│  ● All v1.7 routes (unchanged)                                       │
-│  ● NEW: /api/webhooks/stripe added to public routes                  │
-│  NOTE: Paywall NOT in middleware — credit check is async DB query    │
-└─────────────────────────────────┬────────────────────────────────────┘
-                                  ↓
-┌──────────────────────────────────────────────────────────────────────┐
-│                       SERVER LAYER                                   │
-│                                                                      │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  Server Actions (MODIFIED + NEW)                              │   │
-│  │                                                               │   │
-│  │  workshop-actions.ts  ← MODIFIED                             │   │
-│  │    advanceToNextStep() now checks credit at Step 6→7 gate    │   │
-│  │    NEW: consumeCredit() — atomic deduction                   │   │
-│  │                                                               │   │
-│  │  NEW: billing-actions.ts                                      │   │
-│  │    createCheckoutSession() → returns Stripe URL              │   │
-│  │    getCredits(userId) → balance from users table             │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│                                                                      │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  API Routes (NEW)                                             │   │
-│  │                                                               │   │
-│  │  /api/webhooks/stripe/route.ts    ← NEW                      │   │
-│  │    POST — Stripe-signed events                                │   │
-│  │    Handles: checkout.session.completed                        │   │
-│  │    Idempotent: checks stripeSessionId before crediting        │   │
-│  │                                                               │   │
-│  │  /api/billing/checkout/route.ts   ← NEW                      │   │
-│  │    POST — creates Stripe Checkout session                     │   │
-│  │    Embeds: clerkUserId, creditQty in session metadata        │   │
-│  │    Returns: 303 redirect to Stripe URL                       │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│                                                                      │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  Page Components (MODIFIED)                                   │   │
-│  │                                                               │   │
-│  │  /dashboard/page.tsx  ← MODIFIED                             │   │
-│  │    Reads users.creditBalance for header display              │   │
-│  │    Passes onboardingComplete to layout                       │   │
-│  │                                                               │   │
-│  │  /workshop/.../step/[stepId]/page.tsx  ← MODIFIED           │   │
-│  │    At step 7+: reads credit balance                          │   │
-│  │    Passes paywallActive prop to StepContainer                │   │
-│  │                                                               │   │
-│  │  /billing/success/page.tsx  ← NEW                           │   │
-│  │    On success_url load: calls fulfillCheckout()              │   │
-│  │    Redundant with webhook (belt-and-suspenders)              │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────┬────────────────────────────────────┘
-                                  ↓
-┌──────────────────────────────────────────────────────────────────────┐
-│                       DATA LAYER                                     │
-│  ┌────────────────────────┐                                          │
-│  │  Neon Postgres          │                                          │
-│  │  (Drizzle ORM, HTTP)    │                                          │
-│  │                         │                                          │
-│  │  users  ← MODIFIED      │  NEW columns:                           │
-│  │    creditBalance int     │  creditBalance DEFAULT 0               │
-│  │    onboardingComplete    │  onboardingComplete BOOL DEFAULT false  │
-│  │                         │                                          │
-│  │  NEW: credit_transactions│                                          │
-│  │    id, userId,           │                                          │
-│  │    stripeSessionId UNIQUE│                                          │
-│  │    type (purchase|use)  │                                          │
-│  │    creditDelta,          │                                          │
-│  │    workshopId (nullable) │                                          │
-│  │    createdAt             │                                          │
-│  └────────────────────────┘                                          │
-│                                                                      │
-│  ┌──────────────────────────────────────┐                            │
-│  │  Clerk User Store                    │                            │
-│  │  publicMetadata:                     │                            │
-│  │    roles[]             (existing)    │                            │
-│  │    onboardingComplete  (NOT stored   │                            │
-│  │                         here — DB   │                            │
-│  │                         is source)  │                            │
-│  └──────────────────────────────────────┘                            │
-│                                                                      │
-│  ┌──────────────────────────────────────┐                            │
-│  │  Stripe                              │                            │
-│  │  Checkout sessions (redirect mode)  │                            │
-│  │  Products + Prices (static IDs)     │                            │
-│  └──────────────────────────────────────┘                            │
-└──────────────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────────┘
+             │                                  │
+             ▼                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Next.js (Vercel Serverless)                     │
+├────────────────────┬────────────────────┬────────────────────────────┤
+│  /api/liveblocks-  │  /api/webhooks/    │   Server Actions /          │
+│  auth route.ts     │  liveblocks        │   DB (Neon Postgres)         │
+│                    │  route.ts          │                              │
+│  - Clerk auth OR   │                    │  - stepArtifacts (JSONB)     │
+│    guest session   │  - StorageUpdated  │  - chatMessages              │
+│  - prepareSession  │    write to        │  - workshopSteps             │
+│  - allow room      │    stepArtifacts   │  - workshopMembers (guests)  │
+│    by workshopId   │    in Neon         │                              │
+└────────────────────┴────────────────────┴────────────────────────────┘
 ```
 
 ---
 
-## Key Decision: Where Does Each Check Live?
+## Recommended Architecture: Liveblocks + Zustand Middleware
 
-### Paywall Check — Server Component at Step Load Time
+### Why Liveblocks Over Alternatives
 
-The credit/paywall check lives in the **Step Server Component** (`/workshop/[sessionId]/step/[stepId]/page.tsx`), NOT in middleware.
+| Provider | Verdict | Key Reason |
+|----------|---------|------------|
+| **Liveblocks** | **Recommended** | Only provider with working ReactFlow + Zustand + Next.js example. CRDT storage. Presence built-in. Free tier covers early users. |
+| PartyKit | Viable but extra | Requires deploying separate PartyKit server. More flexibility, more ops. No pre-built ReactFlow integration. |
+| Pusher | Not suitable | Pub/sub only, no CRDT storage. Would require building conflict resolution manually. |
+| Ably | Not suitable | Same as Pusher — transport layer only, no shared state management. |
+| Supabase Realtime | Not suitable | Not CRDT-based. Canvas conflict resolution would be complex to implement. |
+| Yjs (self-hosted) | Not viable | Requires persistent server (WebSocket/PartyKit). Cannot self-host on Vercel. |
 
-**Why not middleware:**
-- Middleware runs at the edge and cannot make TCP database connections — Neon HTTP is fine, but the query is async and middleware should be fast/stateless
-- Middleware doesn't have workshop context (step number, workshopId) — it only sees URL patterns
-- Middleware checking credit state would add 100-300ms to every page load across all routes
-- Existing pattern: protected routes let unauthenticated users through to the page, which shows an AuthGuard modal in-place — the same approach is right for paywall
+**Source confidence:** HIGH — ReactFlow explicitly lists Liveblocks as a recommended provider with a Zustand example available at liveblocks.io/examples.
 
-**Why not in the `advanceToNextStep` server action:**
-- Step advance is one direction (complete current → start next). The paywall needs to block Step 7 access even when the user tries to navigate directly via URL
-- The server action runs when the user completes Step 6. At that point, we don't yet know if they'll pay — we should mark Step 6 complete but show the upgrade modal at Step 7 load time
+### Liveblocks Plan Decision
 
-**Correct pattern — check in server component at step 7 load:**
+**Use Free tier to ship, upgrade to Pro ($30/month) when revenue justifies.**
 
-```typescript
-// In /workshop/[sessionId]/step/[stepId]/page.tsx
-const PAYWALL_STEP = 7; // Steps 7-10 require a credit
+Free tier limits (verified from liveblocks.io/pricing):
+- 500 monthly active rooms (sufficient for early adopter workshops)
+- 10 simultaneous connections per room (covers 5-10 participant workshops; > 10 requires Pro)
+- 256 MB realtime data storage
+- 200 monthly active users
 
-if (stepNumber >= PAYWALL_STEP) {
-  // Check credit: is there a credit already "attached" to this workshop?
-  const workshop = session.workshop;
-  const creditConsumed = workshop.creditConsumedAt !== null;
-
-  if (!creditConsumed) {
-    // Check user balance
-    const user = await db.query.users.findFirst({
-      where: eq(users.clerkUserId, userId),
-      columns: { creditBalance: true },
-    });
-
-    if (!user || user.creditBalance <= 0) {
-      // Pass paywallActive=true — StepContainer shows upgrade modal
-      return <StepContainer paywallActive={true} ... />;
-    }
-  }
-}
-```
-
-**Credit consumption — in `advanceToNextStep` server action at the Step 6→7 boundary:**
-- When user advances from Step 6 to Step 7, deduct 1 credit atomically
-- Mark `workshops.creditConsumedAt` so subsequent Step 7+ loads skip the balance check
-- This prevents double-deduction if the user reloads Step 7
-
-### Onboarding State — Neon Database (users table column)
-
-Store `onboardingComplete: boolean` as a column in the `users` table, NOT in Clerk `publicMetadata`.
-
-**Why DB over Clerk metadata:**
-- Clerk `publicMetadata` can only be updated server-side (via clerkClient) — requires an extra Clerk API call per update
-- Clerk `publicMetadata` changes don't propagate immediately to the JWT; the client must call `user.reload()` to force a token refresh, adding roundtrip complexity
-- The `users` table is already the source of truth for user state (roles, company, etc.) — onboarding is the same kind of user state
-- DB query is already happening on every dashboard load (`db.query.users.findFirst(...)`) — adding one column adds zero overhead
-- Better fit: onboarding state is app-level data, not auth-level data
-
-**Why not localStorage:**
-- No cross-device persistence (user logs in on different machine, sees modal again)
-- Users who clear browser storage see the modal again unnecessarily
-- localStorage state is not visible to server components — must be read client-side with a useEffect, causing a flash
-
-**Onboarding state flow:**
-```
-1. User creates account → Clerk webhook fires → user row inserted → onboardingComplete: false (default)
-2. Dashboard loads → server component reads user.onboardingComplete
-3. If false → pass showWelcomeModal: true prop to DashboardClient
-4. User dismisses modal → client calls server action markOnboardingComplete()
-5. Server action: UPDATE users SET onboarding_complete = true WHERE clerk_user_id = $1
-6. Server action revalidatePath('/dashboard') → next load, modal is suppressed
-```
+**Note:** If a facilitator expects 10-15 participants, the Pro plan ($30/month + $0.03/room overage) will be needed. Design the upgrade prompt into the UI from the start.
 
 ---
 
-## Component Responsibilities
+## Standard Architecture
 
-| Component | Status | Responsibility |
-|-----------|--------|----------------|
-| `src/proxy.ts` | MODIFIED | Add `/api/webhooks/stripe` to public routes |
-| `src/db/schema/users.ts` | MODIFIED | Add `creditBalance int DEFAULT 0`, `onboardingComplete bool DEFAULT false` |
-| `src/db/schema/workshops.ts` | MODIFIED | Add `creditConsumedAt timestamp nullable` |
-| `src/db/schema/credit-transactions.ts` | NEW | Ledger of all credit purchase + consumption events |
-| `src/actions/billing-actions.ts` | NEW | `createCheckoutSession()`, `getCredits()`, `consumeCredit()`, `markOnboardingComplete()` |
-| `src/actions/workshop-actions.ts` | MODIFIED | `advanceToNextStep()` checks paywall at Step 6→7 |
-| `src/app/api/webhooks/stripe/route.ts` | NEW | Stripe webhook handler, idempotent credit fulfillment |
-| `src/app/api/billing/checkout/route.ts` | NEW | Create Stripe Checkout session and redirect |
-| `src/app/billing/success/page.tsx` | NEW | Landing page after Stripe redirect, triggers fulfillment |
-| `src/app/billing/cancel/page.tsx` | NEW | Canceled payment redirect, returns to upgrade modal |
-| `src/app/workshop/[sessionId]/step/[stepId]/page.tsx` | MODIFIED | Credit check for steps 7-10, pass `paywallActive` prop |
-| `src/app/dashboard/page.tsx` | MODIFIED | Read `creditBalance`, pass `showWelcomeModal` prop |
-| `src/app/pricing/page.tsx` | MODIFIED | Update tier copy, add "Buy Now" CTA links to checkout |
-| `src/components/billing/upgrade-modal.tsx` | NEW | Inline modal shown when `paywallActive=true` |
-| `src/components/billing/credit-badge.tsx` | NEW | Dashboard header badge showing remaining credits |
-| `src/components/onboarding/welcome-modal.tsx` | NEW | First-run welcome modal with tour steps |
-| `src/lib/billing/stripe.ts` | NEW | Stripe SDK singleton initialization |
+### Component Responsibilities
+
+| Component | Responsibility | New or Modified |
+|-----------|---------------|----------------|
+| `LiveblocksProvider` | WebSocket connection, room lifecycle | NEW — wraps multiplayer workshop page |
+| `liveblocks-auth` API route | Issues access tokens (Clerk users + guests) | NEW — single auth endpoint |
+| `liveblocks-webhook` API route | Syncs StorageUpdated to Neon stepArtifacts | NEW — write-back from Liveblocks to DB |
+| `canvas-store.ts` (Zustand) | Canvas state with Liveblocks middleware added | MODIFIED — add `liveblocks()` middleware |
+| `CanvasStoreProvider` | Per-workshop store scoped to Liveblocks room | MODIFIED — add `enterRoom/leaveRoom` calls |
+| `react-flow-canvas.tsx` | Canvas rendering + live cursor overlay | MODIFIED — add cursor presence rendering |
+| `LiveCursors` component | Renders other users' cursors via ViewportPortal | NEW |
+| `PresenceBar` component | Participant list with avatars and names | NEW |
+| `GuestJoinModal` component | Name-only entry flow for participants | NEW |
+| `WorkshopTypeSelector` | Facilitator chooses solo vs multiplayer at creation | NEW/MODIFIED |
+| `StepProgressionControl` | Facilitator-only next/back step buttons for live session | NEW |
+| Share-link route (`/join/[token]`) | Validates share token, redirects to workshop | NEW |
 
 ---
 
-## New Database Schema
+## Recommended Project Structure
 
-### Modified: `users` table
-
-```typescript
-// src/db/schema/users.ts — ADD two columns
-export const users = pgTable('users', {
-  // ... existing columns unchanged ...
-  id: text('id').primaryKey().$defaultFn(() => createPrefixedId('usr')),
-  clerkUserId: text('clerk_user_id').notNull().unique(),
-  email: text('email').notNull(),
-  firstName: text('first_name'),
-  lastName: text('last_name'),
-  imageUrl: text('image_url'),
-  company: text('company'),
-  roles: text('roles').notNull().default('["facilitator"]'),
-  deletedAt: timestamp('deleted_at', { mode: 'date', precision: 3 }),
-  createdAt: timestamp('created_at', { mode: 'date', precision: 3 }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { mode: 'date', precision: 3 }).notNull().defaultNow().$onUpdate(() => new Date()),
-
-  // NEW
-  creditBalance: integer('credit_balance').notNull().default(0),
-  onboardingComplete: boolean('onboarding_complete').notNull().default(false),
-});
-```
-
-### Modified: `workshops` table
-
-```typescript
-// src/db/schema/workshops.ts — ADD one column
-export const workshops = pgTable('workshops', {
-  // ... existing columns unchanged ...
-
-  // NEW: tracks when a credit was consumed for this workshop
-  // NULL = no credit consumed (free trial steps 1-6)
-  // non-NULL = credit consumed, steps 7-10 unlocked
-  creditConsumedAt: timestamp('credit_consumed_at', { mode: 'date', precision: 3 }),
-});
-```
-
-### New: `credit_transactions` table
-
-```typescript
-// src/db/schema/credit-transactions.ts — NEW TABLE
-import { pgTable, text, integer, timestamp, index } from 'drizzle-orm/pg-core';
-import { createPrefixedId } from '@/lib/ids';
-
-export const creditTransactions = pgTable(
-  'credit_transactions',
-  {
-    id: text('id').primaryKey().$defaultFn(() => createPrefixedId('ctx')),
-
-    // Who
-    clerkUserId: text('clerk_user_id').notNull(),
-
-    // What
-    type: text('type', {
-      enum: ['purchase', 'consumption'],
-    }).notNull().$type<'purchase' | 'consumption'>(),
-
-    creditDelta: integer('credit_delta').notNull(),
-    // Positive for purchase (+1, +3), negative for consumption (-1)
-
-    // Payment linkage (purchase transactions only)
-    stripeSessionId: text('stripe_session_id').unique(), // UNIQUE prevents double-credit
-    stripePaymentIntentId: text('stripe_payment_intent_id'),
-    stripePriceId: text('stripe_price_id'), // Which product was purchased
-
-    // Usage linkage (consumption transactions only)
-    workshopId: text('workshop_id'), // Which workshop consumed this credit
-
-    // Audit
-    createdAt: timestamp('created_at', { mode: 'date', precision: 3 })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => ({
-    clerkUserIdIdx: index('credit_txn_clerk_user_id_idx').on(table.clerkUserId),
-    stripeSessionIdIdx: index('credit_txn_stripe_session_id_idx').on(table.stripeSessionId),
-    typeIdx: index('credit_txn_type_idx').on(table.type),
-  })
-);
-```
-
-**Why a ledger table instead of only `users.creditBalance`:**
-- Idempotency: `stripeSessionId UNIQUE` constraint prevents the webhook from crediting twice even if called multiple times
-- Audit trail: full history of purchases and usage per user
-- Debugging: if a credit goes missing, the ledger shows exactly when and why
-- Recovery: can recompute `creditBalance` from the ledger if the counter drifts
-
----
-
-## Architectural Patterns
-
-### Pattern 1: Stripe Checkout Redirect (Route Handler, not Server Action)
-
-**What:** Create Stripe Checkout session via a Route Handler (`/api/billing/checkout`) that returns a 303 redirect to the Stripe-hosted page. Stripe docs explicitly recommend Route Handlers for this, not server actions, because the redirect must be a top-level navigation.
-
-**When to use:** Any time you redirect a user to an external payment page.
-
-**Why not a server action:** Server actions can call `redirect()`, but Stripe's checkout requires the initial POST response to carry the redirect header before the user's browser can follow to `checkout.stripe.com`. Route Handlers give explicit control over the `303 See Other` response.
-
-**Example:**
-
-```typescript
-// src/app/api/billing/checkout/route.ts
-import { auth } from '@clerk/nextjs/server';
-import Stripe from 'stripe';
-import { NextResponse } from 'next/server';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { priceId, creditQty } = await req.json();
-
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    line_items: [{ price: priceId, quantity: 1 }],
-    metadata: {
-      clerkUserId: userId,           // Passed to webhook for credit fulfillment
-      creditQty: String(creditQty),  // Metadata values MUST be strings
-    },
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing/cancel`,
-  });
-
-  return NextResponse.redirect(session.url!, 303);
-}
-```
-
-**Client trigger (Upgrade modal button):**
-```typescript
-// Client component — submit form to route handler
-<form action="/api/billing/checkout" method="POST">
-  <input type="hidden" name="priceId" value={PRICE_IDS.singleFlight} />
-  <input type="hidden" name="creditQty" value="1" />
-  <Button type="submit">Buy Workshop Credit — $79</Button>
-</form>
-```
-
-### Pattern 2: Stripe Webhook Handler (Idempotent Credit Fulfillment)
-
-**What:** A Route Handler at `/api/webhooks/stripe` that receives signed Stripe events, verifies the signature with `req.text()` (raw body required), and fulfills credit purchase exactly once using a DB-level unique constraint.
-
-**When to use:** All Stripe event processing.
-
-**Critical requirement:** Use `await req.text()` not `await req.json()` — Stripe signature verification requires the raw body, and Next.js App Router body parsing would break the signature.
-
-**Example:**
-
-```typescript
-// src/app/api/webhooks/stripe/route.ts
-import Stripe from 'stripe';
-import { headers } from 'next/headers';
-import { NextResponse } from 'next/server';
-import { db } from '@/db/client';
-import { users, creditTransactions } from '@/db/schema';
-import { eq, sql } from 'drizzle-orm';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-export async function POST(req: Request) {
-  const body = await req.text();  // Raw body — required for signature verification
-  const sig = (await headers()).get('stripe-signature')!;
-
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
-  } catch {
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
-  }
-
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session;
-    await fulfillCreditPurchase(session);
-  }
-
-  return NextResponse.json({ received: true });
-}
-
-async function fulfillCreditPurchase(session: Stripe.Checkout.Session) {
-  const clerkUserId = session.metadata?.clerkUserId;
-  const creditQty = parseInt(session.metadata?.creditQty || '0', 10);
-
-  if (!clerkUserId || creditQty <= 0) return;
-  if (session.payment_status !== 'paid') return;
-
-  // Idempotency guard: stripeSessionId UNIQUE constraint
-  // If the webhook fires twice, the second insert will fail silently
-  try {
-    await db.insert(creditTransactions).values({
-      clerkUserId,
-      type: 'purchase',
-      creditDelta: creditQty,
-      stripeSessionId: session.id,
-      stripePaymentIntentId: session.payment_intent as string,
-      stripePriceId: session.metadata?.priceId,
-    }).onConflictDoNothing();  // stripeSessionId uniqueness — safe retry
-
-    // Update running balance
-    await db
-      .update(users)
-      .set({
-        creditBalance: sql`${users.creditBalance} + ${creditQty}`,
-      })
-      .where(eq(users.clerkUserId, clerkUserId));
-  } catch (err) {
-    console.error('Credit fulfillment error:', err);
-    // Re-throw so Stripe retries (non-2xx response would also work)
-    throw err;
-  }
-}
-```
-
-**Note on Drizzle transactions with neon-http driver:** The neon-http driver supports non-interactive transactions via `sql.transaction([...])` at the raw SQL level. However, Drizzle's `db.transaction()` with the neon-http driver is unreliable for interactive multi-step transactions. The solution: use separate statements with the unique constraint as the idempotency guard. The `onConflictDoNothing()` on insert + separate `UPDATE` is safe because: (1) if the insert succeeds, the credit delta is recorded; (2) the UPDATE is idempotent (adding 0 to balance is a no-op if insert was skipped). If you need true atomicity here, switch to `neon-serverless` with Pool for this route only. For v1.8, the two-statement pattern with unique constraint is sufficient.
-
-### Pattern 3: Atomic Credit Consumption at Step Advance (Server Action Guard)
-
-**What:** When a user advances from Step 6 to Step 7, the `advanceToNextStep` server action checks credit balance, deducts 1 credit, and marks the workshop as unlocked — all in a guarded sequence before allowing navigation to Step 7.
-
-**When to use:** The paywall transition point — Step 6 completion is the last free action.
-
-**Example:**
-
-```typescript
-// In src/actions/billing-actions.ts
-export async function consumeCredit(workshopId: string): Promise<{ success: boolean; error?: string }> {
-  'use server';
-  const { userId } = await auth();
-  if (!userId) return { success: false, error: 'Unauthenticated' };
-
-  // Step 1: Verify workshop not already unlocked
-  const [workshop] = await db
-    .select({ creditConsumedAt: workshops.creditConsumedAt })
-    .from(workshops)
-    .where(eq(workshops.id, workshopId))
-    .limit(1);
-
-  if (workshop?.creditConsumedAt) {
-    return { success: true }; // Already unlocked — idempotent
-  }
-
-  // Step 2: Check and deduct balance
-  const result = await db
-    .update(users)
-    .set({ creditBalance: sql`${users.creditBalance} - 1` })
-    .where(
-      and(
-        eq(users.clerkUserId, userId),
-        sql`${users.creditBalance} > 0`  // Conditional update prevents negative balance
-      )
-    )
-    .returning({ newBalance: users.creditBalance });
-
-  if (result.length === 0) {
-    return { success: false, error: 'Insufficient credits' };
-  }
-
-  // Step 3: Record consumption
-  await db.insert(creditTransactions).values({
-    clerkUserId: userId,
-    type: 'consumption',
-    creditDelta: -1,
-    workshopId,
-  });
-
-  // Step 4: Mark workshop as unlocked
-  await db
-    .update(workshops)
-    .set({ creditConsumedAt: new Date() })
-    .where(eq(workshops.id, workshopId));
-
-  return { success: true };
-}
-```
-
-**Modified `advanceToNextStep` — paywall gate at Step 6→7:**
-```typescript
-// In src/actions/workshop-actions.ts
-export async function advanceToNextStep(
-  workshopId: string,
-  currentStepId: string,
-  nextStepId: string,
-  sessionId: string
-): Promise<{ nextStepOrder: number } | { paywallRequired: true }> {
-  // ... existing step completion logic ...
-
-  // At Step 6 → Step 7 boundary, consume a credit before allowing advance
-  if (currentStepId === 'reframe' && nextStepId === 'ideation') {
-    const result = await consumeCredit(workshopId);
-    if (!result.success) {
-      return { paywallRequired: true }; // Client shows upgrade modal
-    }
-  }
-
-  // ... existing redirect logic ...
-}
-```
-
-### Pattern 4: Onboarding Modal — DB State, Client-Side Display
-
-**What:** `users.onboardingComplete` is read server-side on dashboard load. If `false`, the dashboard passes `showWelcomeModal={true}` to a client component that renders the modal. On dismiss, a server action sets `onboardingComplete = true`.
-
-**When to use:** Any first-run state that needs cross-device persistence.
-
-**Trade-offs:**
-- No Clerk metadata complexity (no `user.reload()` needed)
-- No localStorage flash (server knows on first render)
-- One extra column on a table that's already queried
-- Cannot show modal before user reaches dashboard (acceptable — that's the right timing)
-
-**Example:**
-
-```typescript
-// src/app/dashboard/page.tsx (Server Component) — MODIFIED
-const user = await db.query.users.findFirst({
-  where: eq(users.clerkUserId, userId),
-  columns: {
-    firstName: true,
-    creditBalance: true,       // NEW
-    onboardingComplete: true,  // NEW
-  },
-});
-
-return (
-  <>
-    <DashboardClient
-      showWelcomeModal={!user?.onboardingComplete}  // NEW
-      creditBalance={user?.creditBalance ?? 0}       // NEW
-    />
-    {/* ... workshop grids ... */}
-  </>
-);
-```
-
-```typescript
-// src/actions/billing-actions.ts (Server Action) — NEW
-export async function markOnboardingComplete(): Promise<void> {
-  'use server';
-  const { userId } = await auth();
-  if (!userId) return;
-
-  await db
-    .update(users)
-    .set({ onboardingComplete: true })
-    .where(eq(users.clerkUserId, userId));
-
-  revalidatePath('/dashboard');
-}
-```
-
----
-
-## Data Flow: Purchase → Credit → Workshop Unlock
-
-### Happy Path (Stripe redirect checkout)
-
-```
-User clicks "Upgrade" in Step 7 paywall modal
-         ↓
-POST /api/billing/checkout
-  → Creates Stripe Checkout session
-  → session.metadata = { clerkUserId, creditQty: "1" }
-  → Returns 303 → stripe.com/checkout
-         ↓
-User completes payment on Stripe-hosted page
-         ↓
-Two concurrent paths (belt-and-suspenders):
-
-PATH A — Webhook (guaranteed):
-  Stripe POST /api/webhooks/stripe
-    → Verify svix signature
-    → event.type = "checkout.session.completed"
-    → fulfillCreditPurchase(session)
-      → INSERT credit_transactions (onConflictDoNothing)
-      → UPDATE users SET credit_balance += 1
-
-PATH B — Success redirect (immediate UX):
-  Browser → /billing/success?session_id=cs_xxx
-    → Server Component reads session_id
-    → Calls fulfillCheckout(session_id)
-      → Same idempotent logic — safe to run twice
-    → revalidatePath('/dashboard')
-    → Shows "Credit added!" confirmation
-         ↓
-User navigates back to workshop → Step 7
-  → page.tsx checks workshop.creditConsumedAt
-  → NULL → checks users.creditBalance > 0
-  → Has credit → paywallActive=false
-  → Calls consumeCredit(workshopId) at step advance
-  → Workshop unlocked, workshop.creditConsumedAt = now()
-         ↓
-Steps 7-10 accessible for this workshop forever
-```
-
-### Credit Check at Step Load
-
-```
-User navigates to /workshop/[sessionId]/step/7
-
-StepPage (Server Component):
-  stepNumber = 7 >= PAYWALL_STEP (7)
-      ↓
-  Load session.workshop (already queried for step enforcement)
-      ↓
-  workshop.creditConsumedAt != null?
-    YES → paywallActive = false (skip balance check)
-    NO  → Check users.creditBalance
-            > 0 → paywallActive = false
-            = 0 → paywallActive = true
-      ↓
-  <StepContainer paywallActive={paywallActive} ... />
-      ↓
-  If paywallActive:
-    Chat panel renders <UpgradeModal />
-    Canvas renders locked overlay
-    Navigation "Complete Step" button disabled
-```
-
----
-
-## Integration Points with Existing Code
-
-### Files Modified vs Created
-
-| File | Status | Key Change |
-|------|--------|-----------|
-| `src/proxy.ts` | MODIFIED | Add `/api/webhooks/stripe(.*)` to public routes array |
-| `src/db/schema/users.ts` | MODIFIED | Add `creditBalance`, `onboardingComplete` columns |
-| `src/db/schema/workshops.ts` | MODIFIED | Add `creditConsumedAt` column |
-| `src/db/schema/index.ts` | MODIFIED | Export `creditTransactions` |
-| `src/db/schema/credit-transactions.ts` | NEW | Credit ledger table |
-| `src/actions/workshop-actions.ts` | MODIFIED | `advanceToNextStep()` — credit gate at Step 6→7 |
-| `src/actions/billing-actions.ts` | NEW | `createCheckoutSession`, `consumeCredit`, `markOnboardingComplete` |
-| `src/app/api/webhooks/stripe/route.ts` | NEW | Stripe webhook handler |
-| `src/app/api/billing/checkout/route.ts` | NEW | Checkout session creation |
-| `src/app/billing/success/page.tsx` | NEW | Post-payment success + fulfillment trigger |
-| `src/app/billing/cancel/page.tsx` | NEW | Canceled payment page (back to upgrade flow) |
-| `src/app/workshop/[sessionId]/step/[stepId]/page.tsx` | MODIFIED | Credit check, `paywallActive` prop |
-| `src/app/dashboard/page.tsx` | MODIFIED | Read `creditBalance`, `onboardingComplete` |
-| `src/app/pricing/page.tsx` | MODIFIED | New tier copy, "Buy Now" links |
-| `src/components/billing/upgrade-modal.tsx` | NEW | Inline paywall upgrade CTA |
-| `src/components/billing/credit-badge.tsx` | NEW | Dashboard header credit count display |
-| `src/components/onboarding/welcome-modal.tsx` | NEW | First-run welcome modal |
-| `src/lib/billing/stripe.ts` | NEW | Stripe SDK singleton |
-
-### New Environment Variables Required
-
-```bash
-# Stripe
-STRIPE_SECRET_KEY=sk_live_...           # Server-side only
-STRIPE_PUBLISHABLE_KEY=pk_live_...      # Optional for embedded elements
-STRIPE_WEBHOOK_SECRET=whsec_...         # Webhook signature verification
-
-# Stripe Price IDs (set per environment)
-STRIPE_PRICE_SINGLE_FLIGHT=price_...    # $79, 1 credit
-STRIPE_PRICE_SERIAL_ENTREPRENEUR=price_... # $149, 3 credits
-
-# App URL (for redirect URLs)
-NEXT_PUBLIC_APP_URL=https://workshoppilot.ai
-```
-
----
-
-## Recommended Project Structure (New Files Only)
+New files for v1.9 multiplayer:
 
 ```
 src/
 ├── app/
 │   ├── api/
-│   │   ├── billing/
-│   │   │   └── checkout/
-│   │   │       └── route.ts          # NEW: Checkout session creator
+│   │   ├── liveblocks-auth/
+│   │   │   └── route.ts          # Auth endpoint: Clerk users + guest sessions
 │   │   └── webhooks/
-│   │       └── stripe/
-│   │           └── route.ts          # NEW: Stripe event handler
-│   ├── billing/
-│   │   ├── success/
-│   │   │   └── page.tsx              # NEW: Post-payment success page
-│   │   └── cancel/
-│   │       └── page.tsx              # NEW: Canceled payment page
-│   └── pricing/
-│       └── page.tsx                  # MODIFIED: New tiers + Buy Now
+│   │       └── liveblocks/
+│   │           └── route.ts      # StorageUpdated -> write to Neon stepArtifacts
+│   └── join/
+│       └── [token]/
+│           └── page.tsx          # Share-link entry -> guest name -> redirect
 │
 ├── components/
-│   ├── billing/
-│   │   ├── upgrade-modal.tsx         # NEW: Paywall upgrade CTA
-│   │   └── credit-badge.tsx          # NEW: Dashboard credit count
-│   └── onboarding/
-│       └── welcome-modal.tsx         # NEW: First-run modal
+│   ├── canvas/
+│   │   ├── live-cursors.tsx       # Renders other users' cursors via ViewportPortal
+│   │   └── react-flow-canvas.tsx  # MODIFIED: cursor presence hooks added
+│   ├── multiplayer/
+│   │   ├── presence-bar.tsx       # Participant list with online indicators
+│   │   ├── guest-join-modal.tsx   # Name-only entry modal for participants
+│   │   └── step-progression-control.tsx  # Facilitator-only next/back
+│   └── workshop/
+│       └── workshop-type-selector.tsx    # Solo vs Multiplayer choice
 │
-├── actions/
-│   └── billing-actions.ts            # NEW: All billing + onboarding actions
+├── lib/
+│   └── liveblocks/
+│       ├── client.ts              # createClient() with authEndpoint
+│       ├── config.ts              # Type definitions for Presence, Storage, RoomEvent
+│       └── room-id.ts             # Convention: "workshop:{workshopId}"
 │
-├── db/
-│   └── schema/
-│       └── credit-transactions.ts    # NEW: Credit ledger table
+├── providers/
+│   └── canvas-store-provider.tsx  # MODIFIED: adds liveblocks middleware + enterRoom
 │
-└── lib/
-    └── billing/
-        └── stripe.ts                 # NEW: Stripe SDK singleton
+└── stores/
+    └── canvas-store.ts            # MODIFIED: liveblocks() middleware wrapping
 ```
 
 ---
 
-## Build Order (Dependency Graph)
+## Architectural Patterns
 
-Dependencies flow strictly: schema → data layer → server logic → UI.
+### Pattern 1: Zustand + Liveblocks Middleware (Primary Sync)
 
-```
-Phase A: Database Foundation (no dependencies)
-  1. Add migration: users.credit_balance, users.onboarding_complete
-  2. Add migration: workshops.credit_consumed_at
-  3. Create credit_transactions table + migration
-  4. Run drizzle-kit generate + migrate in dev
+**What:** The `@liveblocks/zustand` middleware intercepts Zustand `set()` calls and syncs declared keys to Liveblocks Storage (CRDT) and Presence. Other clients receive changes via WebSocket and their local Zustand stores update automatically.
 
-Phase B: Stripe Infrastructure (needs Phase A)
-  5. Install stripe npm package
-  6. Create src/lib/billing/stripe.ts (singleton)
-  7. Add STRIPE_* env vars to .env.local + Vercel dashboard
-  8. Create Stripe products + prices in Stripe Dashboard
-  9. Record Price IDs in env vars
+**When to use:** All canvas durable state (sticky notes, mind map nodes, grid columns, concept cards, etc.) that all participants should see.
 
-Phase C: Payment API (needs Phase B)
-  10. Create /api/billing/checkout/route.ts
-  11. Create /api/webhooks/stripe/route.ts (fulfillCreditPurchase)
-  12. Add /api/webhooks/stripe to public routes in proxy.ts
-  13. Test webhook locally with Stripe CLI: stripe listen --forward-to localhost:3000/api/webhooks/stripe
+**How it works:**
 
-Phase D: Billing Actions (needs Phase A + C)
-  14. Create billing-actions.ts: consumeCredit(), markOnboardingComplete()
-  15. Modify workshop-actions.ts: credit gate in advanceToNextStep()
-  16. Create /billing/success/page.tsx (belt-and-suspenders fulfillment)
-  17. Create /billing/cancel/page.tsx
-
-Phase E: Paywall UI (needs Phase C + D)
-  18. Modify step page: read creditBalance, pass paywallActive prop
-  19. Create upgrade-modal.tsx (shown when paywallActive=true)
-  20. Create credit-badge.tsx for dashboard header
-
-Phase F: Onboarding UI (needs Phase A + D — independent from Stripe)
-  21. Create welcome-modal.tsx (reads showWelcomeModal from dashboard)
-  22. Modify dashboard/page.tsx: pass showWelcomeModal, creditBalance
-  23. Wire markOnboardingComplete() to modal dismiss
-
-Phase G: Pricing Page (needs Phase B)
-  24. Update /pricing/page.tsx with new tier copy
-  25. Add "Buy Now" buttons linking to /api/billing/checkout
-
-Phase H: Integration Test
-  26. E2E: complete Steps 1-6 → hit paywall → purchase → Step 7 unlocks
-  27. Dashboard: credit badge shows correct count
-  28. Webhook idempotency: replay same event, balance unchanged
-```
-
-**Onboarding is independent of Stripe** — Phase F can run in parallel with Phases C-E after Phase A is complete. The welcome modal requires only the DB column and server action.
-
----
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Paywall Check in Middleware
-
-**What people do:** Check `users.creditBalance` in `clerkMiddleware` to block Step 7 URL access.
-
-**Why it's wrong:**
-- Middleware cannot easily make async DB queries and stay fast (edge cold start concerns)
-- It doesn't have workshop-level context: the same user might have different credit states for different workshops
-- If the DB is slow or errors, middleware blocks ALL requests, not just paywalled ones
-- The existing codebase already uses middleware only for auth/role checks, not app-level business logic
-
-**Do this instead:** Check credit in the Step Server Component (per-workshop, per-user, async, non-blocking).
-
-### Anti-Pattern 2: Storing onboardingComplete in Clerk publicMetadata
-
-**What people do:** `await clerkClient().users.updateUserMetadata(id, { publicMetadata: { onboardingComplete: true } })`.
-
-**Why it's wrong:**
-- Requires calling Clerk Admin API on every update (extra latency + rate limit exposure)
-- JWT session claims are stale until `user.reload()` is called client-side
-- Adds complexity: the dashboard Server Component would need to call Clerk API instead of the already-queried DB row
-- The `users` DB table is already the app's user source of truth
-
-**Do this instead:** Add `onboardingComplete` column to `users` table. It's just data.
-
-### Anti-Pattern 3: Trusting Client-Sent Credit Quantity
-
-**What people do:** Pass `creditQty` from a client-side button directly to the checkout session without server-side validation.
-
-**Why it's wrong:**
-- A user could POST `creditQty: 1000` to `/api/billing/checkout`
-- Even though Stripe charges the right amount (Price ID is server-side), the webhook would credit 1000 credits
-
-**Do this instead:** Derive `creditQty` from the `priceId` in the Route Handler using a server-side lookup table. Never trust quantity from the client:
 ```typescript
-const PRICE_TO_CREDITS: Record<string, number> = {
-  [process.env.STRIPE_PRICE_SINGLE_FLIGHT!]: 1,
-  [process.env.STRIPE_PRICE_SERIAL_ENTREPRENEUR!]: 3,
+// stores/canvas-store.ts — MODIFIED
+import { liveblocks } from '@liveblocks/zustand';
+import { client } from '@/lib/liveblocks/client';
+
+export const createMultiplayerCanvasStore = (initState?) => {
+  return createStore<CanvasStore>()(
+    temporal(  // existing undo/redo — wraps outermost
+      liveblocks(
+        (set) => ({
+          ...DEFAULT_STATE,
+          // all existing actions unchanged
+        }),
+        {
+          client,
+          storageMapping: {
+            stickyNotes: true,
+            drawingNodes: true,
+            mindMapNodes: true,
+            mindMapEdges: true,
+            gridColumns: true,
+            conceptCards: true,
+            personaTemplates: true,
+            hmwCards: true,
+            crazy8sSlots: true,
+          },
+          presenceMapping: {
+            cursor: true,  // { x: number; y: number } | null
+          },
+        }
+      )
+    )
+  );
 };
-const creditQty = PRICE_TO_CREDITS[priceId] ?? 0;
+
+// Solo store (unchanged existing function)
+export const createSoloCanvasStore = createCanvasStore;
 ```
 
-### Anti-Pattern 4: Skipping the Credit Ledger (Balance-Only)
+The `storageMapping` keys map to Liveblocks `LiveList` (for arrays) and `LiveObject` (for objects) automatically. Conflicts are resolved by the CRDT engine at the field level.
 
-**What people do:** Only store `users.creditBalance` integer, no `credit_transactions` table.
+**Trade-off:** Two store factory functions are required. Solo workshops must NOT use the Liveblocks middleware — it always tries to connect to a room on mount, wasting free tier monthly active room quota.
 
-**Why it's wrong:**
-- No idempotency guard: two concurrent webhook calls both increment the balance by 1
-- No audit trail: impossible to debug "where did my credits go?"
-- No ability to recover balance if counter corrupts
+### Pattern 2: Liveblocks Presence for Live Cursors
 
-**Do this instead:** Ledger table with `stripeSessionId UNIQUE` constraint. Balance is the aggregate, ledger is the source of truth.
+**What:** Ephemeral per-user data (cursor position, display name, color) stored in Presence. Auto-discarded on disconnect. Other users' cursors retrieved via `useOthers`.
 
-### Anti-Pattern 5: Using Server Actions for Checkout Redirect
+**When to use:** Cursor position, user name/color display, any UI state that should vanish when a user leaves.
 
-**What people do:** `createCheckoutSession()` server action calls `stripe.checkout.sessions.create()` then calls `redirect(session.url)`.
+**Canvas coordinate handling — critical detail:** ReactFlow's viewport has its own coordinate system independent of screen pixels. Cursor positions must be stored in **flow coordinates** (not screen pixels) so they render correctly regardless of each viewer's zoom/pan state.
 
-**Why it's wrong:**
-- Server actions can call `redirect()`, but this makes the redirect harder to intercept for error handling
-- Stripe docs explicitly recommend Route Handlers for this pattern
-- Server action `redirect()` throws `NEXT_REDIRECT` which must be re-thrown — adding error-handling complexity at the paywall
+```typescript
+// Inside react-flow-canvas.tsx — MODIFIED
+const { screenToFlowPosition } = useReactFlow();
+const updateMyPresence = useUpdateMyPresence();
 
-**Do this instead:** Route Handler at `/api/billing/checkout` returning a 303 redirect. Client submits a form with `method="POST"` to trigger it.
+const handleMouseMove = useCallback((event: React.MouseEvent) => {
+  const flowPosition = screenToFlowPosition({
+    x: event.clientX,
+    y: event.clientY,
+  });
+  updateMyPresence({ cursor: flowPosition });
+}, [screenToFlowPosition, updateMyPresence]);
+
+const handleMouseLeave = useCallback(() => {
+  updateMyPresence({ cursor: null });
+}, [updateMyPresence]);
+```
+
+**Cursor rendering (live-cursors.tsx):**
+
+```typescript
+// components/canvas/live-cursors.tsx — NEW
+import { ViewportPortal } from '@xyflow/react';
+import { useOthers } from '@liveblocks/react';
+
+export function LiveCursors() {
+  const others = useOthers();
+
+  return (
+    <ViewportPortal>
+      {others.map((user) => {
+        if (!user.presence.cursor) return null;
+        return (
+          <div
+            key={user.connectionId}
+            style={{
+              position: 'absolute',
+              left: user.presence.cursor.x,
+              top: user.presence.cursor.y,
+              pointerEvents: 'none',
+            }}
+          >
+            <CursorIcon color={user.presence.color} />
+            <span>{user.presence.name}</span>
+          </div>
+        );
+      })}
+    </ViewportPortal>
+  );
+}
+```
+
+`ViewportPortal` is the correct placement because cursors must move with the canvas when users pan/zoom. Cursors placed in the DOM outside `ViewportPortal` would drift from actual node positions.
+
+### Pattern 3: Broadcast Events for Facilitator Controls
+
+**What:** One-way ephemeral messages sent to all connected users in a room. Not stored, not replayed on reconnect. Useful for events that do not need to survive disconnection.
+
+**When to use:** Step progression commands (facilitator advances to Step 3), AI chat notifications.
+
+```typescript
+// Facilitator (sends):
+const broadcast = useBroadcastEvent<RoomEvent>();
+const handleNextStep = () => {
+  broadcast({ type: 'STEP_CHANGED', stepNumber: currentStep + 1 });
+  advanceWorkshopStep(workshopId, currentStep + 1); // also write to Neon
+};
+
+// All participants (receives):
+useEventListener<RoomEvent>(({ event }) => {
+  if (event.type === 'STEP_CHANGED') {
+    router.refresh();
+  }
+});
+```
+
+**Important:** Broadcast events are ephemeral. A participant who joins AFTER the step change will NOT receive it. Step state must ALSO be written to Neon so late-joiners load the correct step on page load.
+
+The ReactFlow docs explicitly cite "next/previous slide buttons in presentations" as the canonical use case for broadcast events. Step progression is the same pattern.
+
+### Pattern 4: Dual-Mode Workshop (Solo vs Multiplayer)
+
+**What:** The `workshops` table gains a `workshopType` column. Solo workshops use the existing Zustand store with no Liveblocks middleware. Multiplayer workshops use the Liveblocks-wrapped store.
+
+**Implementation approach:**
+
+```typescript
+// providers/canvas-store-provider.tsx — MODIFIED
+const [store] = useState(() => {
+  if (isMultiplayer) {
+    return createMultiplayerCanvasStore(initialState);
+  }
+  return createSoloCanvasStore(initialState); // existing behavior, untouched
+});
+
+useEffect(() => {
+  if (!isMultiplayer) return;
+  const lb = store.getState().liveblocks;
+  lb.enterRoom(`workshop:${workshopId}`);
+  return () => lb.leaveRoom(`workshop:${workshopId}`);
+}, [isMultiplayer, workshopId, store]);
+```
+
+Room naming convention: `workshop:{workshopId}` (e.g., `workshop:ws_abc123`). The colon separator follows the Liveblocks recommended pattern for wildcard access grants.
+
+### Pattern 5: Guest Authentication (Name-Only Join)
+
+**What:** Participants join via share link, enter their name, receive a Liveblocks access token without a Clerk account. The split auth endpoint handles both Clerk users and guest cookies.
+
+**Flow:**
+```
+1. Facilitator shares /join/[shareToken]
+2. Participant visits link -> GuestJoinModal shows (no workshop content visible)
+3. Participant types name, clicks "Join Workshop"
+4. POST /api/guest-join with { shareToken, guestName }
+5. Server: validates shareToken -> looks up workshopId
+6. Server: creates workshopMembers record { clerkUserId: null, guestName, role: 'participant' }
+7. Server: sets HttpOnly signed cookie { workshopId, guestId, guestName, color }
+8. Redirect to /workshop/[workshopId] (participant view)
+9. On mount: LiveblocksProvider calls /api/liveblocks-auth
+10. Auth endpoint: no Clerk session -> reads cookie -> issues guest access token
+11. Liveblocks room joined -> canvas state loaded
+```
+
+**Auth endpoint (handles both Clerk + guest):**
+
+```typescript
+// app/api/liveblocks-auth/route.ts — NEW
+export async function POST(req: Request) {
+  const { roomId } = await req.json();
+  const workshopId = roomId.replace('workshop:', '');
+
+  // Path A: Authenticated Clerk user (facilitator or invited member)
+  const { userId } = await auth();
+  if (userId) {
+    const workshop = await getWorkshopForUser(workshopId, userId);
+    if (!workshop) return new Response('Not authorized', { status: 401 });
+    const session = liveblocks.prepareSession(userId, {
+      userInfo: { name: fullName, avatar: imageUrl, color: FACILITATOR_COLOR, role: 'facilitator' },
+    });
+    session.allow(roomId, session.FULL_ACCESS);
+    const { status, body } = await session.authorize();
+    return new Response(body, { status });
+  }
+
+  // Path B: Guest participant (HttpOnly signed cookie)
+  const guestSession = getGuestSession(await cookies(), workshopId);
+  if (!guestSession) return new Response('Not authorized', { status: 401 });
+  const session = liveblocks.prepareSession(`guest:${guestSession.guestId}`, {
+    userInfo: { name: guestSession.guestName, avatar: null, color: guestSession.color, role: 'participant' },
+  });
+  session.allow(roomId, session.FULL_ACCESS);
+  const { status, body } = await session.authorize();
+  return new Response(body, { status });
+}
+```
+
+### Pattern 6: Liveblocks to Neon Sync (Write-Back)
+
+**What:** The `StorageUpdated` webhook fires (throttled to once per 60 seconds) and writes the current Liveblocks Storage snapshot to `stepArtifacts` in Neon. This bridges the real-time layer back to the existing persistence layer.
+
+**Purpose:** Liveblocks Storage IS the authoritative canvas state during an active multiplayer session. When the session ends, or when participants later load the workshop in solo mode, they read from Neon — so Neon must stay reasonably current.
+
+```typescript
+// app/api/webhooks/liveblocks/route.ts — NEW
+export async function POST(req: Request) {
+  const rawBody = await req.text();
+  const event = webhookHandler.verifyRequest({
+    headers: Object.fromEntries(req.headers.entries()),
+    rawBody,
+  });
+
+  if (event.type === 'storageUpdated') {
+    const workshopId = event.data.roomId.replace('workshop:', '');
+    const storage = await liveblocks.getStorageDocument(event.data.roomId, 'json');
+    await syncLiveblocksStorageToNeon(workshopId, storage);
+  }
+
+  return new Response('OK', { status: 200 });
+}
+```
+
+**60-second throttle implication:** Neon can be up to 60 seconds stale during an active session. This is acceptable — the active canvas is Liveblocks. On "End Session", trigger a manual sync via the Liveblocks REST API to write the final state to Neon before the room is archived.
+
+**Auto-save must be disabled in multiplayer mode:** The existing `useCanvasAutosave` hook must skip all writes when `isMultiplayer: true`. Both mechanisms writing to Neon simultaneously creates races.
+
+```typescript
+// hooks/use-canvas-autosave.ts — MODIFIED
+export function useCanvasAutosave(workshopId: string, stepId: string, options?: { disabled?: boolean }) {
+  if (options?.disabled) return { saveStatus: 'idle' as const };
+  // ... existing logic unchanged
+}
+```
+
+---
+
+## Data Flow
+
+### Multiplayer Canvas State Flow
+
+```
+Participant A drags sticky note
+    |
+    v
+updateStickyNote(id, { position }) in local Zustand store
+    |
+    v
+liveblocks middleware intercepts set()
+    |
+    v
+Sends delta to Liveblocks Cloud via WebSocket
+    |
+    v
+Liveblocks merges into LiveList (CRDT conflict resolution)
+    |
+    v
+Pushes update to all other connected clients via WebSocket
+    |
+    v
+Other clients' liveblocks middleware receives delta
+    |
+    v
+Patches their local Zustand stickyNotes array
+    |
+    v
+React re-renders ReactFlow canvas with updated node position
+
+    (every 60s, throttled)
+    v
+StorageUpdated webhook fires -> Neon stepArtifacts updated
+```
+
+### Guest Join Flow
+
+```
+Facilitator: shares /join/[shareToken]
+    |
+    v
+Participant visits URL
+    |
+    v
+GuestJoinModal renders (blocks workshop content)
+    |
+    v
+Participant enters name -> POST /api/guest-join
+    |
+    v
+Server: validates shareToken, creates workshopMembers record
+    |
+    v
+Server: sets HttpOnly cookie { guestId, guestName, workshopId, color }
+    |
+    v
+Redirect to /workshop/[workshopId]
+    |
+    v
+LiveblocksProvider mounts -> calls /api/liveblocks-auth
+    |
+    v
+Auth endpoint: no Clerk session -> reads cookie -> issues guest token
+    |
+    v
+Liveblocks room joined -> canvas state loaded -> participant sees live session
+```
+
+### Step Progression Flow (Facilitator-Only)
+
+```
+Facilitator clicks "Next Step"
+    |
+    v
+StepProgressionControl (role check: facilitator only)
+    |
+    v (two parallel)
+broadcast({ type: 'STEP_CHANGED', stepNumber: n })
+advanceWorkshopStep(workshopId, n) -> writes to Neon
+    |
+    v
+All connected clients receive broadcast via useEventListener
+    |
+    v
+router.refresh() on participant clients
+    |
+    (late-joiner path)
+    v
+New participant loads workshop -> reads currentStepNumber from Neon
+```
 
 ---
 
 ## Scaling Considerations
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 0-1k users | Current design sufficient. Neon HTTP + Drizzle handles concurrent webhook calls fine with unique constraint. |
-| 1k-10k users | Add Stripe webhook retries monitoring. Consider a job queue (e.g., Inngest) if fulfillment logic grows complex. Cache credit balance in Clerk publicMetadata for dashboard read performance (sync on purchase). |
-| 10k+ users | Credit balance reads become hot path — consider Redis cache for balance. Separate billing service if per-request overhead of Stripe SDK adds up. |
+| Scale | Architecture Adjustment |
+|-------|------------------------|
+| 0-500 rooms/month | Free tier sufficient |
+| 500+ rooms/month | Upgrade to Liveblocks Pro ($30/month + $0.03/room) |
+| 10+ simultaneous per room | Pro plan required (free tier limit is 10 connections per room) |
+| 100k+ MAU | Liveblocks Team plan ($600/month); reassess at this scale |
 
-### Scaling Priority for v1.8
+### First Bottleneck: Room Connection Limit
 
-The first bottleneck is webhook reliability on Vercel: Vercel Deployment Protection must be disabled for `/api/webhooks/stripe` (or add webhook to bypass list). Stripe retries failed webhooks, but if Vercel blocks the route, credits never land.
+The free tier caps at 10 simultaneous connections per room. A 15-person workshop requires the Pro plan. **The UI should show a "Workshop Full" message when the room is at capacity** — Liveblocks returns a 4001 error code on the connection attempt that can be caught client-side.
+
+### Second Bottleneck: StorageUpdated Webhook Throttle
+
+The 60-second write-back throttle means Neon can be stale during active sessions. Acceptable for read-after-write lag, unacceptable for "End Session" finalization. Mitigate with a manual Liveblocks REST API call on session end.
+
+---
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Running Liveblocks in Solo Workshops
+
+**What people do:** Apply the `liveblocks()` Zustand middleware to all workshops regardless of type.
+
+**Why it's wrong:** Every solo workshop creates a Liveblocks room, consuming monthly active room quota from the free tier.
+
+**Do this instead:** Guard the middleware behind a `workshopType` check. Two store factories: `createSoloCanvasStore` (existing, unchanged) and `createMultiplayerCanvasStore` (with middleware). The provider calls the correct one.
+
+### Anti-Pattern 2: Disabling Auto-Save Without Registering the Liveblocks Webhook
+
+**What people do:** Disable `useCanvasAutosave` in multiplayer mode but forget to register the Liveblocks webhook.
+
+**Why it's wrong:** No writes to Neon occur during the session. When the session ends and the Liveblocks room expires, the canvas state is lost permanently.
+
+**Do this instead:** Register the `StorageUpdated` webhook in the Liveblocks dashboard before shipping. Add an "End Session" button that triggers a manual sync to Neon as a safety net.
+
+### Anti-Pattern 3: Storing Cursor Positions in Screen Coordinates
+
+**What people do:** Broadcast `{ x: event.clientX, y: event.clientY }` directly to Liveblocks presence.
+
+**Why it's wrong:** Screen coordinates are absolute to each user's browser viewport. When a participant pans or zooms the canvas, their view of another user's cursor drifts to a completely wrong position.
+
+**Do this instead:** Always convert to flow coordinates first: `screenToFlowPosition({ x: event.clientX, y: event.clientY })`. Flow coordinates are invariant to viewport pan/zoom.
+
+### Anti-Pattern 4: Facilitator Role Enforced Only Client-Side
+
+**What people do:** Hide the step progression button from non-facilitators with a conditional render, but anyone can call the server action.
+
+**Why it's wrong:** A participant can call `advanceWorkshopStep()` directly from browser dev tools.
+
+**Do this instead:** The `advanceWorkshopStep` server action must check that the calling user is the workshop owner via `auth()` and match against the `workshops.clerkUserId` column. Guest participants have no Clerk session and fail this check by design.
+
+### Anti-Pattern 5: Using Broadcast Events as the Only Step State
+
+**What people do:** Only broadcast `STEP_CHANGED` and never write the step to Neon.
+
+**Why it's wrong:** Broadcast events are ephemeral. A participant who joins mid-session after the step changed sees Step 1 — there is no event for them to receive.
+
+**Do this instead:** Always write the current step to Neon via server action when the facilitator advances. Late-joiners load the step from the database on page mount.
+
+### Anti-Pattern 6: Enabling `snapToGrid` with Live Cursor Tracking
+
+**What people do:** Enable ReactFlow's `snapToGrid` prop while broadcasting `screenToFlowPosition` cursor coordinates to Liveblocks presence.
+
+**Why it's wrong:** `screenToFlowPosition` honors the `snapGrid` configuration. Other users see the cursor jumping between grid cells rather than smooth movement. (Confirmed bug in [ReactFlow issue #3771](https://github.com/xyflow/xyflow/issues/3771))
+
+**Do this instead:** If grid snapping is needed for nodes, implement it in the store action (snap on node drop) rather than via the ReactFlow `snapToGrid` prop. Cursor tracking stays smooth.
+
+---
+
+## Integration Points
+
+### External Services
+
+| Service | Integration Pattern | Notes |
+|---------|---------------------|-------|
+| Liveblocks | WebSocket via `@liveblocks/zustand` middleware + `@liveblocks/react` hooks | Auth via `/api/liveblocks-auth` endpoint; webhook via `/api/webhooks/liveblocks` |
+| Clerk | Existing — used in auth endpoint to distinguish facilitators from guests | No changes to existing Clerk config |
+| Neon Postgres | Existing — receives write-back from Liveblocks webhook (StorageUpdated) | Add `workshopType`, `currentStepNumber` to workshops; `guestName` to workshopMembers |
+| Vercel Blob | Existing — EzyDraw drawings already stored here; unchanged for multiplayer | No changes |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| `canvas-store` (Zustand) to Liveblocks | Intercepted by `liveblocks()` middleware on `set()` calls | Only for `createMultiplayerCanvasStore`; solo store is unchanged |
+| Liveblocks to Neon | `StorageUpdated` webhook -> HTTP POST -> `/api/webhooks/liveblocks` -> Drizzle upsert | 60s throttle; supplement with manual end-session sync |
+| Facilitator to Participants (step control) | Liveblocks broadcast events + Neon server action in parallel | Both paths needed: broadcast for real-time, DB for late-joiners |
+| Guest -> Liveblocks auth | HttpOnly signed cookie -> `/api/liveblocks-auth` -> access token | Cookie set on `/api/guest-join`; scoped per workshopId |
+| ReactFlow viewport -> Presence cursors | `screenToFlowPosition()` in `onMouseMove` -> `updateMyPresence()` | Must convert to flow coords before broadcasting |
+
+---
+
+## Build Order
+
+Dependencies flow from infrastructure to sync to UI. Each phase unblocks the next.
+
+### Phase 1: Foundation (unblocks everything)
+- Install `@liveblocks/client @liveblocks/react @liveblocks/zustand @liveblocks/node`
+- Create `src/lib/liveblocks/` (client, config types, room-id convention)
+- Create `/api/liveblocks-auth` route (Clerk path only, guest path stubbed)
+- Register Liveblocks webhook in the Liveblocks dashboard
+- Create `/api/webhooks/liveblocks` route (StorageUpdated -> Neon sync)
+- Add `workshopType` (`'solo' | 'multiplayer'`) column to workshops table
+- Add `currentStepNumber` column to workshops table
+- Add `guestName` column (nullable) to workshopMembers table
+
+### Phase 2: Core Canvas Sync (requires Phase 1)
+- Export `createMultiplayerCanvasStore` from `canvas-store.ts` with `liveblocks()` middleware
+- Modify `CanvasStoreProvider` to accept `isMultiplayer` prop and call correct factory
+- Add `enterRoom`/`leaveRoom` lifecycle to provider
+- Disable `useCanvasAutosave` in multiplayer mode (`options.disabled`)
+- Test: two browser tabs on same multiplayer workshop, move sticky note in one, see it move in other
+
+### Phase 3: Live Cursors + Presence Bar (requires Phase 2)
+- Add `cursor`, `name`, `color`, `role` fields to Presence type in `config.ts`
+- Add `onMouseMove`/`onMouseLeave` handlers in `react-flow-canvas.tsx`
+- Build `LiveCursors` component with `ViewportPortal`
+- Build `PresenceBar` component using `useOthers()`
+- Test: two tabs, move mouse, see named cursor and avatar in other tab
+
+### Phase 4: Guest Auth + Share Link (requires Phase 1)
+- Add `shareToken` generation to multiplayer workshop creation flow
+- Build `/join/[token]` page with `GuestJoinModal` (blocks canvas access)
+- Build `/api/guest-join` endpoint (validate token, create workshopMember, set HttpOnly signed cookie)
+- Extend `/api/liveblocks-auth` to handle guest cookie path
+- Test: authenticated user creates workshop, copies share link, opens link in incognito, enters name, sees canvas
+
+### Phase 5: Facilitator Controls (requires Phase 2 and Phase 3)
+- Build `StepProgressionControl` component (conditional on `presence.role === 'facilitator'`)
+- Implement `useBroadcastEvent` for `STEP_CHANGED`
+- Implement `useEventListener` on participant clients
+- Add server-side role check in `advanceWorkshopStep` server action
+- Test: facilitator advances step, participant's view refreshes to new step
+
+### Phase 6: Polish + End Session
+- Build "End Session" button — triggers manual Liveblocks REST API call to snapshot storage to Neon immediately
+- Add "Workshop Full" UI (catch Liveblocks 4001 connection error)
+- Handle AI chat: display all messages to participants (read-only); facilitator-only input enforcement
+- Graceful reconnection handling (Liveblocks reconnects automatically; verify page re-subscribes on focus restore)
+
+---
+
+## Confidence Assessment
+
+| Area | Confidence | Source |
+|------|------------|--------|
+| Liveblocks + Zustand middleware pattern | HIGH | Official Liveblocks docs + collaborative whiteboard example with Zustand |
+| ReactFlow cursor coordinate handling | HIGH | ReactFlow multiplayer guide + ViewportPortal docs |
+| Vercel no WebSocket constraint | HIGH | Vercel official KB — hard constraint, not configurable |
+| Liveblocks + Clerk integration | HIGH | Clerk blog guide documents exact pattern |
+| Guest auth via access token (no Clerk) | MEDIUM | Pattern is documented; mixed-auth (Clerk + cookie in same endpoint) requires implementation verification |
+| StorageUpdated webhook -> Neon sync | HIGH | Liveblocks docs with exact Next.js/Vercel Postgres pattern |
+| Broadcast events for step progression | HIGH | Liveblocks tutorial explicitly uses "slide presentation" as canonical example |
+| Free tier room limits | MEDIUM | Pricing page confirmed 500 rooms/month; per-room connection limit shown as component placeholder — could not read exact number |
+
+---
+
+## Open Questions
+
+1. **`temporal` + `liveblocks` middleware ordering:** The existing store wraps state with `zundo`'s `temporal` middleware for undo/redo. The `liveblocks()` middleware must compose correctly with `temporal`. The recommended order is `temporal(liveblocks(stateCreator, config))` but this must be verified empirically in Phase 2 since middleware composition order matters for which gets the intercepted `set` calls.
+
+2. **Guest session cookie signing strategy:** HttpOnly cookies scoped per workshop prevent guest session hijacking, but the cookie signing implementation (using `jose`, Next.js `iron-session`, or a custom HMAC with `process.env.COOKIE_SECRET`) needs to be decided in Phase 4.
+
+3. **Seed data and monthly active room quota:** The PawPal seed workshop CLI script should force `workshopType: 'solo'` to avoid consuming a monthly active room on every developer seed run.
+
+4. **EzyDraw in multiplayer:** The existing EzyDraw tool is a modal that produces a PNG stored in Vercel Blob and a drawing node stored in canvas state. The drawing node IS in the canvas state that Liveblocks syncs, so the rendered image will appear for all participants. However, if two participants open EzyDraw simultaneously on the same drawing node, there is no conflict resolution for the vector JSON in-flight. This is a known scope limitation for v1.9 — EzyDraw editing should be single-user (first to open locks the slot).
+
+5. **AI chat visibility for participants:** The current chat is stored in `chatMessages` in Neon and rendered client-side. In multiplayer mode, participants need to see the facilitator's chat in real-time. Options: poll chatMessages via SWR with short interval, use Liveblocks broadcast for new message notifications then fetch from Neon, or stream chat via Liveblocks Storage. The simplest approach is broadcasting a `AI_CHAT_UPDATED` event and having participants call `router.refresh()` — but this re-renders the whole page. A targeted SWR revalidation is cleaner.
 
 ---
 
 ## Sources
 
-- [Build a Stripe-hosted checkout page — Stripe Docs](https://docs.stripe.com/checkout/quickstart?client=next) — HIGH confidence
-- [Fulfill orders after checkout — Stripe Docs](https://docs.stripe.com/checkout/fulfillment) — HIGH confidence
-- [Resolve webhook signature verification errors — Stripe Docs](https://docs.stripe.com/webhooks/signature) — HIGH confidence
-- [Stripe Metadata docs](https://docs.stripe.com/metadata) — HIGH confidence (metadata values must be strings)
-- [Add custom onboarding to your authentication flow — Clerk Docs](https://clerk.com/docs/references/nextjs/add-onboarding-flow) — HIGH confidence
-- [Stripe + Next.js 15: The Complete 2025 Guide — Pedro Alonso](https://www.pedroalonso.net/blog/stripe-nextjs-complete-guide-2025/) — MEDIUM confidence (community guide, consistent with official docs)
-- [Neon Serverless Driver — Neon Docs](https://neon.com/docs/serverless/serverless-driver) — HIGH confidence (neon-http transaction limitations)
-- [Drizzle ORM Transactions](https://orm.drizzle.team/docs/transactions) — HIGH confidence
-- Existing codebase analysis: `src/proxy.ts`, `src/db/schema/users.ts`, `src/app/api/webhooks/clerk/route.ts`, `src/actions/workshop-actions.ts`, `src/app/workshop/[sessionId]/step/[stepId]/page.tsx` — HIGH confidence (direct inspection)
+- [ReactFlow Multiplayer Guide](https://reactflow.dev/learn/advanced-use/multiplayer) — ephemeral vs durable state, cursor patterns, what to sync
+- [ReactFlow ViewportPortal](https://reactflow.dev/api-reference/components/viewport-portal) — cursor overlay placement inside canvas viewport
+- [Liveblocks Zustand API Reference](https://liveblocks.io/docs/api-reference/liveblocks-zustand) — middleware storageMapping/presenceMapping
+- [Liveblocks Storage with Zustand Guide](https://liveblocks.io/docs/guides/how-to-use-liveblocks-storage-with-zustand) — exact pattern for syncing arrays to LiveList
+- [Liveblocks Broadcasting Events Tutorial](https://liveblocks.io/docs/tutorial/react/getting-started/broadcasting-events) — useBroadcastEvent + useEventListener for facilitator step control
+- [Liveblocks Access Token Auth (Next.js)](https://liveblocks.io/docs/authentication/access-token/nextjs) — prepareSession + allow pattern
+- [Liveblocks Neon Sync Guide](https://liveblocks.io/docs/guides/how-to-synchronize-your-liveblocks-storage-document-data-to-a-vercel-postgres-database) — StorageUpdated webhook -> postgres write-back
+- [Liveblocks Webhooks Reference](https://liveblocks.io/docs/platform/webhooks) — StorageUpdated throttle (60s), UserEntered/UserLeft events, payload shapes
+- [Liveblocks Platform Limits](https://liveblocks.io/docs/platform/limits) — connection limits per room by plan
+- [Liveblocks Pricing](https://liveblocks.io/pricing) — free tier (500 rooms/month, 200 MAU), Pro ($30/month)
+- [Clerk + Liveblocks Guide](https://clerk.com/blog/secure-liveblocks-rooms-clerk-nextjs) — auth endpoint pattern with Clerk session claims
+- [Vercel KB: No WebSocket on Serverless](https://vercel.com/kb/guide/do-vercel-serverless-functions-support-websocket-connections) — constraint confirmed
+- [ReactFlow Issue #3771](https://github.com/xyflow/xyflow/issues/3771) — snapToGrid + screenToFlowPosition cursor bug
 
 ---
 
-*Architecture research for: Stripe Checkout + Credit System + Onboarding — WorkshopPilot.ai v1.8*
+*Architecture research for: v1.9 Multiplayer Collaboration — WorkshopPilot.ai*
 *Researched: 2026-02-26*

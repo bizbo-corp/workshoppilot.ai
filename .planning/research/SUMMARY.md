@@ -1,226 +1,232 @@
 # Project Research Summary
 
-**Project:** WorkshopPilot.ai v1.8 — Onboarding + Payments
-**Domain:** SaaS monetization (Stripe Checkout redirect, credit-based purchasing, mid-workflow paywall) + first-run onboarding (welcome modal, contextual tooltip)
+**Project:** WorkshopPilot.ai — v1.9 Real-Time Multiplayer Collaboration
+**Domain:** Collaborative whiteboard + structured facilitation (design thinking workshop with live canvas sync)
 **Researched:** 2026-02-26
 **Confidence:** HIGH
 
 ## Executive Summary
 
-WorkshopPilot.ai v1.8 introduces first-time revenue infrastructure: a taste-test paywall at Step 7, one-time credit purchases via Stripe Checkout redirect, and a lightweight first-run onboarding modal. The existing stack (Next.js 16.1.1, Clerk, Neon/Drizzle, shadcn/ui, Vercel) requires minimal new dependencies — only `stripe@^20.4.0` (server-only) needs to be installed. All onboarding UI components (shadcn Dialog and Tooltip) are already in the project. The key database additions are two new columns on `users` (`creditBalance`, `onboardingComplete`), one column on `workshops` (`creditConsumedAt`), and a new `credit_transactions` ledger table that serves as both the idempotency guard and audit trail. The layered architecture — schema first, then server logic, then UI — is non-negotiable: partial payment infrastructure creates financial and security exposure.
+WorkshopPilot.ai v1.9 adds a parallel workshop mode: a human facilitator leads 5–15 participants through the same 10-step design thinking process with a shared live canvas. The research is unambiguous about infrastructure: Vercel's serverless execution model makes it impossible to self-host WebSockets, so a managed real-time provider is architecturally required. Liveblocks is the clear recommendation because it is the only provider with a documented, working example combining ReactFlow + Zustand + Next.js, which exactly matches the existing production stack. Liveblocks handles CRDT conflict resolution, presence, and storage internally, eliminating an entire category of hard distributed-systems problems. The existing stack requires only three new production packages: `@liveblocks/client@3.14.0`, `@liveblocks/react@3.14.0`, and `@liveblocks/node@3.14.0` — all pinned to the same version.
 
-The recommended implementation uses Stripe Checkout redirect mode (not embedded or custom Elements), which requires zero client-side Stripe JS, keeps the checkout page on Stripe's servers, and automatically includes Apple Pay and Google Pay. Credit fulfillment uses a dual-trigger pattern: the `success_url` landing page immediately calls `stripe.checkout.sessions.retrieve(sessionId)` to sync credits synchronously (preventing the stale-credit UX failure), and the `checkout.session.completed` webhook provides the guaranteed delivery path. Both triggers call the same idempotent `fulfillCreditPurchase()` function, guarded by a `UNIQUE` constraint on `stripeSessionId` in the ledger table. The paywall check lives in the Step 7 Server Component (not middleware, not client-side state), and credit deduction is an atomic server action using `SELECT FOR UPDATE` row-level locking. Onboarding state lives in Neon (not localStorage or Clerk publicMetadata) to persist across devices and browsers without hydration mismatches.
+The architecture is well-understood and has a clear build order: foundation (Liveblocks config, schema migrations, auth endpoint) unblocks canvas sync, which unblocks cursors and presence, which unblocks the guest join flow, which unblocks facilitator controls. The decisive design constraint — established before writing any code — is the strict boundary between Zustand (solo workshops, AI conversation, step state) and Liveblocks (collaborative canvas nodes/edges, live cursors). Letting both write to the same canvas state is the single most common failure mode in multiplayer canvas applications. Two Zustand store factory functions are required: `createSoloCanvasStore` (unchanged) and `createMultiplayerCanvasStore` (wraps the existing state creator with the `liveblocks()` middleware), instantiated by the canvas store provider based on `workshopType`.
 
-The primary risks are financial and security-critical: webhook race conditions (user returns before webhook arrives), double credit fulfillment (Stripe at-least-once delivery guarantee), credit double-spend (concurrent unlock requests), and paywall bypass via client-side-only enforcement. All four have established prevention patterns that must be implemented in dependency order. The one notable technical gap is that the `neon-http` driver (used throughout the existing codebase) does not support `SELECT FOR UPDATE` interactive transactions — this requires either a secondary `neon-ws` client for transactional credit operations, or accepting the conditional-UPDATE atomic pattern as sufficient for v1.8 concurrency levels.
+The primary risks are all preventable with known patterns. Ephemeral ReactFlow fields (`selected`, `dragging`, `measured`) must never enter shared CRDT storage or participants will steal each other's selections and see jittery drags. Cursor broadcasts must be throttled to ≤50ms intervals or they saturate the Liveblocks channel at 15 users. Guest auth must be validated server-side — hiding the step-advance button in the UI is not a security boundary, and any participant can call the server action from DevTools. The Liveblocks StorageUpdated webhook must be registered before auto-save is disabled, or canvas state is permanently lost when the room expires. The free Liveblocks tier covers early launch (500 rooms/month, 200 MAU) but the 10-simultaneous-connections-per-room cap means facilitators expecting more than 10 participants need the Pro plan ($30/month) — this upgrade prompt should be designed into the UI from Phase 1.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing stack handles v1.8 without architectural change. The only new production dependency is `stripe@^20.4.0` (server-only). No client-side Stripe packages are needed for redirect-mode Checkout — `@stripe/stripe-js` and `@stripe/react-stripe-js` add ~80KB to the bundle for zero benefit when Stripe hosts the checkout page. No tour libraries (Shepherd.js, react-joyride, Intro.js) should be installed — they add 30-100KB, have 60%+ skip rates in research, and the project already has shadcn Dialog and Tooltip installed. The Stripe CLI (`brew install stripe/stripe-cli/stripe`) is required for local webhook development.
+Liveblocks v3.14.0 across three packages — `@liveblocks/client`, `@liveblocks/react`, `@liveblocks/node` — is the complete real-time layer. The `@liveblocks/zustand` middleware is the integration point: it intercepts Zustand `set()` calls for declared storage keys and syncs them as CRDT-safe LiveList/LiveObject entries. For guest session IDs, `nanoid` or `crypto.randomUUID()` are both sufficient — check if nanoid is already in the dependency tree before installing. Two env vars are required: `LIVEBLOCKS_SECRET_KEY` (server-only, never `NEXT_PUBLIC_`) and `NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY`. Vercel deployment requires zero configuration changes; Liveblocks is a Vercel-listed real-time partner and manages its own WebSocket infrastructure. The Liveblocks DevTools browser extension and the Liveblocks Dashboard are the primary development and debugging tools.
 
 **Core technologies:**
-- `stripe@^20.4.0` (server-only): Checkout session creation, webhook signature verification — official SDK, built-in TypeScript types, compatible with Next.js serverless and edge runtimes; released 2026-02-25
-- `shadcn Dialog` (already installed): Welcome modal — zero new dependency, olive-themed, official `dialog-onboarding-welcome` reference block available from shadcn
-- `shadcn Tooltip` (already installed): Step 1 contextual tooltip — wraps Radix UI Floating UI; adding a second tooltip library creates duplicate provider trees
-- Stripe CLI (dev tool): Local webhook forwarding (`stripe listen --forward-to localhost:3000/api/webhooks/stripe`)
+- `@liveblocks/client@3.14.0`: WebSocket connection, CRDT storage (LiveList/LiveObject), room management — purpose-built for canvas/whiteboard tools (Figma, Pitch, Spline), eliminates custom conflict resolution
+- `@liveblocks/react@3.14.0`: React hooks (`useStorage`, `useMyPresence`, `useOthers`, `useMutation`, `useBroadcastEvent`, `useEventListener`) — first-class React integration; official working example combines Liveblocks + Zustand + ReactFlow + Next.js
+- `@liveblocks/node@3.14.0`: Server-side access token issuance in App Router route handlers — edge-compatible, supports arbitrary userId strings (enables guest users without Clerk)
+- `nanoid` (or `crypto.randomUUID()`): Guest session ID generation — stored in sessionStorage, enables stable guest identity across page reloads within a tab
 
-**Critical version and environment requirements:**
-- `stripe@^20.4.0` — current major, built-in TypeScript types, no separate `@types/stripe` needed
-- `redirectToCheckout()` was removed from `@stripe/stripe-js` on 2025-09-30 — do not use
-- `STRIPE_SECRET_KEY` must never be prefixed `NEXT_PUBLIC_` — server-side only
-- Vercel Production environment must use `sk_live_` / `pk_live_` keys — not test keys copied from `.env.local`
-- `/api/webhooks/stripe` must be in the public routes list in `src/proxy.ts` so Clerk middleware does not consume the raw request body
+**Do not add:** socket.io, Yjs, y-websocket, Automerge, PartyKit, Supabase, Ably, Pusher, or a second Postgres provider. Each is either incompatible with Vercel's serverless model or solves a problem Liveblocks already handles.
 
 ### Expected Features
 
-The v1.8 scope covers three distinct feature areas. All P1 items must ship together — partial payment infrastructure (e.g., checkout without webhooks, or paywall without server-side enforcement) creates security and financial exposure.
+The feature set has a clear P1/P2/P3 structure derived from competitive analysis (Miro, MURAL, FigJam, Butter) and ReactFlow's multiplayer documentation. P1 is the minimum for a real multiplayer experience. P2 adds facilitator superpowers that can ship within the same milestone once P1 is stable. P3 items involve architectural complexity not justified for v1.9.
 
-**Must have (P1 — v1.8 launch):**
-- Welcome modal on first visit (shadcn Dialog, `users.onboardingComplete` DB column, one-click dismiss, never shown again)
-- One contextual tooltip on Step 1 chat panel (orientation to split-screen layout, shadcn Tooltip, fires once per user)
-- Paywall gate at Step 7 — server-side credit check in Step Server Component and `advanceToNextStep` Server Action (never client-only)
-- In-place paywall upgrade modal: outcome-focused headline ("Your Build Pack is 4 steps away"), progress context, feature list, pricing, CTA, "save and decide later" dismiss option
-- DB schema: `users.creditBalance` + `users.onboardingComplete` columns, `workshops.creditConsumedAt` column, `credit_transactions` ledger table with `stripeSessionId UNIQUE` constraint
-- Stripe Checkout session creation via Route Handler (`/api/billing/checkout`) returning `303` redirect
-- Stripe webhook handler (`/api/webhooks/stripe`) with `await request.text()` raw body, signature verification, idempotent fulfillment
-- Dual-trigger credit fulfillment: `/billing/success/page.tsx` syncs credits via Stripe API immediately; webhook provides guaranteed delivery
-- Credit display badge on dashboard ("X credits remaining" or "No credits — get one")
-- `?payment=success` redirect handling: toast notification + credit display refresh
-- Pricing page updated (Single Flight $79 / 1 credit, Serial Entrepreneur $149 / 3 credits, Agency "Contact Sales")
-- Locked step indicators (Steps 7-10 show lock badge in stepper when `creditBalance === 0`)
+**Must have (P1 — v1.9 launch):**
+- Multiplayer workshop type — new session entity, creation flow, facilitator role in DB
+- Share-link join flow — unique token, `/join/[token]` route, name entry only, no Clerk account needed
+- Participant lobby — "waiting for facilitator to start" state before canvas unlocks
+- Real-time canvas sync — all nodes/edges broadcast in real time via Liveblocks CRDT Storage
+- Live cursors — colored, named, ephemeral cursor positions (Liveblocks Presence, not Storage)
+- Full canvas edit access for participants — post-its, node moves, EzyDraw
+- AI chat visible to all — full conversation history displayed read-only to all participants
+- AI token streaming to all — streaming tokens broadcast to all connected clients, not just the facilitator
+- Facilitator-only step progression — only the session owner can click Next/Previous Step
+- Participant list panel — names, avatar colors, online/idle status, facilitator badge
+- Join/leave notifications — non-intrusive toasts (bottom corner)
+- Reconnection with state recovery — Liveblocks handles automatically when middleware is used correctly
+- End session — facilitator deliberate action; all participants see "session ended" overlay
 
-**Should have (P2 — post-P1 validation):**
-- Auto-unlock into Step 7 after payment (1-second poll on success redirect, then navigate)
-- Blurred Build Pack sneak peek in paywall modal (conversion lift, low implementation effort)
-- Serial Entrepreneur 3-credit pack as second purchase option in modal and pricing page
-- Stripe Customer Portal link from account settings (receipt access — one API call)
+**Should have (P2 — add once P1 is stable):**
+- "Bring everyone to me" viewport sync — facilitator broadcasts `x, y, zoom` to all clients
+- Step timer — facilitator-set countdown visible to all participants
+- User-specific post-it colors — nodes inherit the creating participant's cursor color
+- Participant emoji reactions on AI messages — ephemeral sentiment signal, no storage
+- Idle presence indicator — visual dim for participants inactive > 2 minutes
 
-**Defer to MMP+:**
-- Agency tier subscription billing (Stripe Billing, different integration from Checkout)
-- A/B testing on paywall copy, pricing, and CTA text
-- Admin credit gifting / manual allocation UI
-- Email drip sequence for users who dismiss paywall without purchasing
-- Usage analytics funnel (step-by-step conversion, paywall hit rate, purchase rate)
+**Defer (v2+):**
+- Private mode for independent ideation — requires server-side per-node authorization per participant, conflicts with current broadcast-all architecture; highest-risk item if attempted in v1.9
+- Breakout groups / sub-canvases — separate architectural problem from shared-canvas model; already in FFP backlog
+- Session recording / transcript export
+- Facilitator private notes panel
+- Dot voting — already in FFP backlog, depends on multiplayer foundation
 
-**Anti-features confirmed (do not build):**
-- Multi-step guided tour (Shepherd.js / Intro.js / react-joyride) — 60%+ skip rate, 80KB+ bundle, brittle DOM selectors that break on UI changes
-- Subscription billing for one-off users — target users run 1-3 workshops/year; monthly churn post-first-use approaches 100%
-- Time-limited free trial — creates anxiety in a multi-hour workflow; step-based gate aligns with natural investment moment
-- Client-side-only paywall enforcement — bypassable via DevTools, Zustand state manipulation, or direct URL navigation
-- Free credits on sign-up — eliminates paywall intent; 6 free steps IS the free value
+**Confirmed anti-features (do not build):**
+- Per-node lock / ownership — prevents collaborative refinement, which is the point
+- Participant-to-participant side channel chat — professional facilitators actively prevent sidebar conversations
+- Each participant gets their own AI conversation — destroys shared understanding
+- Email invitation flow — join link achieves the same goal without the deliverability engineering
+- Forced "follow facilitator" viewport lock — community complaints confirm participants feel trapped; use soft viewport sync instead
 
 ### Architecture Approach
 
-The architecture extends the existing layered pattern (middleware → server components/actions → data layer) without introducing new patterns. The paywall check lives in the Step Server Component, not middleware (which cannot make async DB queries with workshop context and is vulnerable to CVE-2025-29927 middleware bypass). Credit consumption is an atomic server action. Onboarding state is stored in Neon (not localStorage or Clerk publicMetadata) because the `users` table is already queried on every dashboard load, onboarding is app-level data not auth-level data, and DB state persists across devices and browsers without hydration mismatch risk. The checkout flow uses a Route Handler (not a Server Action) returning a `303` redirect — Stripe docs explicitly recommend this for explicit control over the redirect response header.
+The architecture is a strict dual-mode separation: solo workshops use the existing unmodified Zustand store; multiplayer workshops use a Liveblocks-middleware-wrapped variant of the same store. Two factory functions — `createSoloCanvasStore` (unchanged, existing behavior) and `createMultiplayerCanvasStore` (adds `liveblocks()` middleware with `storageMapping` and `presenceMapping`) — are instantiated by the canvas store provider based on `workshopType`. The `storageMapping` declares all canvas entity arrays as Liveblocks LiveList/LiveObject (stickyNotes, mindMapNodes, gridColumns, conceptCards, etc.); `presenceMapping` declares only cursor position. Step progression uses Liveblocks broadcast events (ephemeral, real-time delivery) in parallel with Neon writes (durable, for late-joiner state recovery). The Liveblocks StorageUpdated webhook (60s throttle) writes canvas state back to Neon as a persistence safety net; a manual Liveblocks REST API call on "End Session" provides the final authoritative snapshot. Auto-save is disabled in multiplayer mode to prevent dual writes to Neon. Guest auth uses HttpOnly signed cookies set by `/api/guest-join`, consumed by `/api/liveblocks-auth` when no Clerk session is present.
 
 **Major components:**
-
-1. **`src/db/schema/`** (MODIFIED + NEW): Add `creditBalance int DEFAULT 0`, `onboardingComplete bool DEFAULT false` to `users`; add `creditConsumedAt timestamp nullable` to `workshops`; create `credit_transactions` ledger table with `stripeSessionId UNIQUE` constraint and `type` enum (`purchase | consumption`)
-2. **`src/lib/billing/stripe.ts`** (NEW): Stripe SDK singleton — initialize once with `process.env.STRIPE_SECRET_KEY`, reuse across server actions and route handlers
-3. **`src/app/api/billing/checkout/route.ts`** (NEW): Route Handler that creates Stripe Checkout session and returns `303` redirect to `session.url`; derives `creditQty` from `priceId` server-side via a lookup table — never trusts client-sent quantity
-4. **`src/app/api/webhooks/stripe/route.ts`** (NEW): Stripe webhook handler; uses `await request.text()` (never `request.json()`); calls `fulfillCreditPurchase()` which inserts into `credit_transactions` with `onConflictDoNothing()` then updates `users.creditBalance`
-5. **`src/app/billing/success/page.tsx`** (NEW): Dual-trigger fulfillment — calls `stripe.checkout.sessions.retrieve(sessionId)` immediately on load and runs `fulfillCreditPurchase()` synchronously so credits are visible before the webhook arrives
-6. **`src/actions/billing-actions.ts`** (NEW): `consumeCredit()` (atomic deduction, `SELECT FOR UPDATE` or conditional UPDATE), `markOnboardingComplete()`, `createCheckoutSession()`
-7. **`src/actions/workshop-actions.ts`** (MODIFIED): `advanceToNextStep()` calls `consumeCredit()` at Step 6→7 boundary; sets `workshop.creditConsumedAt` on success; returns `{ paywallRequired: true }` on failure
-8. **`src/app/workshop/.../step/[stepId]/page.tsx`** (MODIFIED): Checks `workshop.creditConsumedAt != null` (skip balance check if set) or `users.creditBalance > 0` for steps 7-10; passes `paywallActive` prop to `StepContainer`
-9. **`src/components/billing/upgrade-modal.tsx`** (NEW): In-place paywall modal shown when `paywallActive=true`; outcome headline, progress context ("6 of 10 steps complete"), feature list, pricing, primary CTA, "save and decide later" dismiss
-10. **`src/components/onboarding/welcome-modal.tsx`** (NEW): Receives `showWelcomeModal` prop from dashboard server component; calls `markOnboardingComplete()` on dismiss; Step 1 tooltip wired separately
-11. **`src/proxy.ts`** (MODIFIED): Add `/api/webhooks/stripe` to public routes
+1. `src/lib/liveblocks/config.ts` — Presence/Storage type definitions, `createRoomContext()` factory; all Liveblocks hooks exported from here (single import point)
+2. `stores/canvas-store.ts` — MODIFIED: exports both `createSoloCanvasStore` (unchanged) and `createMultiplayerCanvasStore` (with `liveblocks()` middleware)
+3. `providers/canvas-store-provider.tsx` — MODIFIED: reads `isMultiplayer` prop, instantiates the correct store factory, calls `enterRoom`/`leaveRoom` lifecycle
+4. `app/api/liveblocks-auth/route.ts` — NEW: unified auth endpoint for Clerk users (facilitators) and guest cookie path (participants)
+5. `app/api/guest-join/route.ts` — NEW: validates share token, creates `workshopMembers` record, sets HttpOnly signed cookie
+6. `app/join/[token]/page.tsx` — NEW: GuestJoinModal blocks canvas until participant name is entered; no workshop content visible before name submission
+7. `components/canvas/live-cursors.tsx` — NEW: renders remote cursors inside ReactFlow `ViewportPortal` using flow coordinates (not screen coordinates)
+8. `components/multiplayer/presence-bar.tsx` — NEW: participant list with avatar initials, online/idle status, facilitator badge, using `useOthers()`
+9. `components/multiplayer/step-progression-control.tsx` — NEW: facilitator-only Next/Previous Step buttons; role check in both UI (`useSelf().info.role`) and server action
+10. `app/api/webhooks/liveblocks/route.ts` — NEW: StorageUpdated webhook writes Liveblocks canvas state to Neon `stepArtifacts` every 60s
 
 ### Critical Pitfalls
 
-1. **Webhook race condition — stale credits on success redirect** — User returns from Stripe before the `checkout.session.completed` webhook arrives (typically 1-5 second lag). Shows zero credits immediately after paying. Prevention: dual-trigger pattern — `success_url` landing page calls `stripe.checkout.sessions.retrieve(sessionId)` directly and fulfills credits synchronously. Both paths call the same idempotent `fulfillCreditPurchase()`.
+1. **Vercel has no native WebSocket support** — socket.io or ws servers deployed to Vercel API routes work in local dev and fail immediately in production (504/timeout). Use Liveblocks from day one; this cannot be deferred or retrofitted. Source: Vercel official KB.
 
-2. **Double credit fulfillment — Stripe at-least-once delivery** — Stripe retries webhooks on non-2xx responses; same event may fire multiple times. Prevention: `credit_transactions.stripeSessionId UNIQUE` constraint + `INSERT ... onConflictDoNothing()` makes the insert idempotent. Balance update after a no-op insert is safe (adding 0 is a no-op if the unique insert was skipped).
+2. **Syncing ephemeral ReactFlow fields into CRDT storage** — including `selected`, `dragging`, `resizing`, or `measured` in `storageMapping` causes selection stealing (User B sees User A's selected nodes), drag jank (every 16ms cursor-position update broadcasts to all clients), and layout instability (DOM-computed `measured.width/height` varies per viewport). `storageMapping` must list only durable fields. Source: ReactFlow official multiplayer documentation.
 
-3. **Credit double-spend — concurrent workshop unlock requests** — Two concurrent requests both read `creditBalance = 1`, both deduct 1, balance goes to -1. User bypasses paywall for free. Prevention: atomic `UPDATE users SET credit_balance = credit_balance - 1 WHERE credit_balance > 0` with `SELECT FOR UPDATE` row-level lock inside a Drizzle transaction. Requires `neon-ws` driver (not `neon-http`) for interactive transactions.
+3. **Cursor broadcasts without throttling** — raw `mousemove` at 60fps from 15 users generates 900 messages/second, saturating the Liveblocks Presence channel and introducing canvas mutation lag. Throttle to 50ms (max 20 updates/second per user). Liveblocks Presence is a separate lower-priority sync path from Storage; use it exclusively for cursors. Source: confirmed performance trap in multiplayer canvas literature.
 
-4. **Paywall bypass via client-side checks only** — User modifies Zustand state or navigates directly to `/workshop/[id]/step/7`. Prevention: server-side credit check in Step Server Component + all Step 7-10 Server Actions. CVE-2025-29927 allows Next.js middleware bypass via `x-middleware-subrequest` header — middleware alone is insufficient; server actions must enforce independently.
+4. **Guest role enforced client-side only** — hiding the step-advance button from non-facilitators in the UI is not a security boundary. Participants can call `advanceWorkshopStep()` directly from browser DevTools. The server action must verify the caller is the workshop owner via `auth()` matching against `workshops.clerkUserId`. Guest participants have no Clerk session and fail this check by design. Source: OWASP WebSocket Security.
 
-5. **Webhook signature verification broken by body parsing** — Using `await request.json()` before `stripe.webhooks.constructEvent()` destroys the raw body and breaks signature verification (consistent 400 errors). Prevention: always `await request.text()`; ensure `/api/webhooks/stripe` is in public routes so Clerk does not parse the body stream.
+5. **Disabling auto-save without registering the StorageUpdated webhook** — if `useCanvasAutosave` is disabled for multiplayer mode but the Liveblocks webhook is not registered, no writes to Neon occur during the session. When the Liveblocks room expires, canvas state is permanently lost. Register and verify the webhook fires before disabling auto-save. Source: Liveblocks architecture pattern.
 
-6. **Test mode keys in production** — `sk_test_...` in Vercel production causes credits to be granted for fake payments with no real revenue. Prevention: add startup assertion `if (NODE_ENV === 'production' && STRIPE_SECRET_KEY.startsWith('sk_test_')) throw new Error('FATAL: Test Stripe key in production')`. Verify before first real transaction.
+6. **Share link route not whitelisted in Clerk middleware** — `/join/[token]` will redirect guests to Clerk sign-in if not added to the public routes list in `clerkMiddleware`. Issue HttpOnly signed cookies (not Clerk JWTs) for guest participants; never prompt guests to create a Clerk account. Source: PITFALLS.md Pitfall 11.
 
-7. **Onboarding state lost on browser data clear** — `localStorage`-only onboarding flag resets when user clears storage, switches devices, or uses incognito. Prevention: `users.onboardingComplete` column in Neon is the source of truth. Pass as server prop from dashboard Server Component — zero hydration mismatch. Do not use `localStorage` as the source of truth.
+7. **Cursor positions stored in screen coordinates, not flow coordinates** — `event.clientX/Y` varies per user's viewport pan/zoom; other participants' cursors drift to wrong positions when they pan or zoom. Always convert with `screenToFlowPosition()` before broadcasting to Presence. Confirmed ReactFlow bug in issue #3771.
 
 ## Implications for Roadmap
 
-The build order has strict dependency requirements. Schema must precede server logic, which must precede UI. The onboarding track is fully independent from the Stripe track after Phase 1 (schema) and can run in parallel. All P1 features must ship together before real transactions are enabled.
+The build order has a clear dependency graph from the combined research. Each phase is a genuine gate: later phases cannot be correctly tested without earlier phases complete.
 
-### Phase 1: Database Foundation
-**Rationale:** Every subsequent phase depends on stable schema. No server action, UI component, or webhook handler can be built correctly without the underlying columns and tables. This phase has zero external dependencies and zero risk of rework if done first.
-**Delivers:** Drizzle migrations for `users.creditBalance`, `users.onboardingComplete`, `workshops.creditConsumedAt`, and the `credit_transactions` ledger table with `stripeSessionId UNIQUE` constraint. Also adds `users.stripeCustomerId` for future portal access.
-**Addresses:** Pitfalls 2 (idempotency via UNIQUE constraint established in schema), 3 (atomic deduction foundation), 7 (onboarding persistence), and Clerk-Stripe split brain prevention
-**Avoids:** Building server logic against an unmigrated schema — the most common cause of rework in payment integrations
+### Phase 1: Foundation and Schema
+**Rationale:** Liveblocks configuration types, database schema additions, the auth endpoint stub, and the lazy-loading bundle strategy are prerequisites for every subsequent phase. Establishing the dual-store factory pattern and room naming convention before any multiplayer features are written prevents mid-implementation rework. Schema migrations are additive (no modification to existing solo-workshop tables).
+**Delivers:** `@liveblocks/client@3.14.0 @liveblocks/react@3.14.0 @liveblocks/node@3.14.0` installed; `src/lib/liveblocks/` with client, config types, and room-id convention; `/api/liveblocks-auth` (Clerk path only, guest path stubbed); `/api/webhooks/liveblocks` StorageUpdated handler registered; Neon schema additions (`workshopType` and `currentStepNumber` columns on workshops, `guestName` on workshopMembers, `workshop_sessions` and `session_participants` tables); dual-store factory pattern established; `next/dynamic` lazy-loading wrapper for multiplayer components; bundle size baseline measured with `@next/bundle-analyzer`.
+**Pitfalls avoided:** Vercel WebSocket constraint (Liveblocks from day one), schema not supporting multiplayer (additive migrations only), bundle size spike (lazy-load before installing), Zustand/Liveblocks dual-write (two store factories, only one active per workshop type), seed scripts must set `workshopType: 'solo'` to avoid consuming free tier room quota.
+**Research flag:** Standard Liveblocks setup — follow STACK.md and ARCHITECTURE.md patterns directly. No additional research needed.
 
-### Phase 2: Stripe Infrastructure Setup
-**Rationale:** Environment variables, SDK singleton, and Stripe Dashboard configuration (Products, Prices) are prerequisites for all Route Handlers and Server Actions that call the Stripe API. Must happen before any code is written.
-**Delivers:** `stripe@^20.4.0` installed, `src/lib/billing/stripe.ts` singleton, all `STRIPE_*` env vars in `.env.local` and Vercel dashboard, Stripe Products and Price IDs created and recorded in env vars, Stripe CLI configured for local webhook forwarding, startup key-mode assertion added.
-**Addresses:** Pitfall 6 (test keys in production caught before first real transaction)
-**Avoids:** Shipping payment code before environment is correctly configured
+### Phase 2: Core Canvas Sync
+**Rationale:** Real-time canvas sync is the critical path dependency for all other multiplayer features. Cursor rendering, facilitator controls, and guest join all depend on the Liveblocks room being functional with the correct storage schema. Building this in isolation (no cursor UI, no guest join) allows clean smoke-testing with two authenticated browser tabs before adding UI complexity.
+**Delivers:** `createMultiplayerCanvasStore` with `liveblocks()` middleware and correct `storageMapping` (all canvas entity arrays: stickyNotes, drawingNodes, mindMapNodes, mindMapEdges, gridColumns, conceptCards, personaTemplates, hmwCards, crazy8sSlots); `CanvasStoreProvider` with `enterRoom`/`leaveRoom` lifecycle calls; auto-save disabled in multiplayer mode via `options.disabled`; smoke test: two browser tabs on the same multiplayer workshop, move sticky note in one, see it move in other.
+**Architecture components:** canvas-store.ts (MODIFIED), CanvasStoreProvider (MODIFIED).
+**Pitfalls avoided:** Syncing ephemeral ReactFlow fields (storageMapping lists only durable fields — no `selected`, `dragging`, `measured`), auto-save overwriting Liveblocks state (disabled), Zustand fighting the real-time store (only one store active per workshopType).
+**Research flag:** Standard — follow ARCHITECTURE.md Pattern 1. Open question: `temporal` (zundo) + `liveblocks()` middleware composition order must be verified empirically. Recommended order is `temporal(liveblocks(stateCreator, config))` per ARCHITECTURE.md, but needs confirmation in Phase 2 before proceeding.
 
-### Phase 3: Payment API Layer (Checkout + Webhook)
-**Rationale:** The two server-side payment endpoints must exist before any UI can trigger purchases or receive fulfillment. Build and test these together — webhook without the checkout session creator (or vice versa) leaves the system unverifiable. This is the most security-critical phase.
-**Delivers:** `/api/billing/checkout/route.ts` (Checkout session creation, server-side `priceId → creditQty` lookup, `303` redirect), `/api/webhooks/stripe/route.ts` (signature verification via `request.text()`, idempotent `fulfillCreditPurchase()`), `/billing/success/page.tsx` (dual-trigger sync — retrieves session from Stripe API on load), `/billing/cancel/page.tsx`.
-**Uses:** `stripe@^20.4.0`, `credit_transactions` table (Phase 1), Stripe CLI for local testing
-**Addresses:** Pitfalls 1 (dual-trigger prevents race condition), 2 (idempotent fulfillment via UNIQUE constraint), 5 (raw body signature verification), 6 (startup assertion)
-**Research flag:** Standard Stripe patterns with official docs — skip `research-phase`
+### Phase 3: Live Cursors and Presence Bar
+**Rationale:** Live cursors require the Liveblocks room to be active (Phase 2). The PresenceBar is required for facilitator controls (kick participant, see idle status) in Phase 5. Separating this into its own phase allows clean testing of the throttle implementation and coordinate conversion before facilitator control logic is added.
+**Delivers:** Presence type with cursor/name/color/role fields added to `liveblocks/config.ts`; `onMouseMove`/`onMouseLeave` handlers in ReactFlow canvas (50ms throttle mandatory, uses `screenToFlowPosition`); `LiveCursors` component using `ViewportPortal` with flow-coordinate-based cursor rendering (not screen coordinates); `PresenceBar` with `useOthers()` showing avatar initials, name, online/idle dot; join/leave toast notifications; facilitator cursor visually distinct (different icon, "Facilitator" badge).
+**Architecture components:** live-cursors.tsx (NEW), react-flow-canvas.tsx (MODIFIED), presence-bar.tsx (NEW).
+**Pitfalls avoided:** Screen coordinates vs. flow coordinates (use `screenToFlowPosition`), cursor channel saturation (50ms throttle mandatory before testing with multiple users), participant seeing own cursor (filter by connectionId), ReactFlow `snapToGrid` + cursor drift bug (implement grid snapping in store action, not via ReactFlow `snapToGrid` prop).
+**Research flag:** Standard — ViewportPortal cursor placement and Presence hook patterns are explicitly documented. No additional research needed.
 
-### Phase 4: Credit Actions and Server-Side Paywall Enforcement
-**Rationale:** Server-side enforcement must be built before the paywall UI. Building UI first creates a window where the product looks gated but the server allows bypass. The `consumeCredit()` Server Action and modified `advanceToNextStep()` are the security primitives that all subsequent UI builds on.
-**Delivers:** `src/actions/billing-actions.ts` (`consumeCredit` with atomic deduction, `markOnboardingComplete`, `getCredits`), modified `advanceToNextStep()` with Step 6→7 credit gate (returns `{ paywallRequired: true }` when credits are insufficient), `/api/credits` endpoint for client-side credit polling after payment.
-**Addresses:** Pitfalls 3 (atomic credit deduction with row-level lock), 4 (server-side paywall enforcement independent of client state)
-**Implementation note:** Resolve `neon-http` vs `neon-ws` driver decision before coding `consumeCredit()` — see Gaps section
+### Phase 4: Guest Auth and Share-Link Join Flow
+**Rationale:** This phase is independent of cursor rendering (Phase 3) but depends on the auth endpoint stub from Phase 1. Guest auth must be fully implemented before facilitator controls (Phase 5) are built, because facilitator-vs-participant role distinction comes from the auth layer. Isolating guest auth into its own phase allows security testing in a controlled environment.
+**Delivers:** Share token generation on multiplayer workshop creation; `/join/[token]` page with GuestJoinModal (blocks all workshop content until name is entered); `/api/guest-join` endpoint (validates share token, creates `workshopMembers` record with `guestName`, sets HttpOnly signed cookie scoped to workshopId); guest cookie path added to `/api/liveblocks-auth`; `/join/[token]` added to `clerkMiddleware` public routes; incognito-tab join test passing.
+**Architecture components:** `/join/[token]` page (NEW), `/api/guest-join` (NEW), `/api/liveblocks-auth` (MODIFIED — adds guest cookie path).
+**Pitfalls avoided:** Share link Clerk auth confusion (join route in public routes, no Clerk redirect), CSWSH (Liveblocks token-based auth makes this structurally impossible), guest tokens in `sessionStorage` (not `localStorage` — clears on tab close), join codes with sufficient entropy (8+ char alphanumeric, not sequential integers).
+**Research flag:** Needs a decision spike before implementation — the mixed-auth endpoint (Clerk session + HttpOnly cookie in the same handler) and cookie signing library choice (`iron-session`, `jose`, or HMAC) are flagged MEDIUM confidence in ARCHITECTURE.md. Resolve before writing the auth endpoint.
 
-### Phase 5: Paywall UI
-**Rationale:** With server enforcement established (Phase 4), the UI layer is purely UX — not a security boundary. Build with confidence that the server will reject unauthorized requests regardless of client state.
-**Delivers:** Modified `step/[stepId]/page.tsx` (credit check via `workshop.creditConsumedAt` and `users.creditBalance`, passes `paywallActive` prop), `upgrade-modal.tsx` (outcome headline, "6 of 10 steps complete" progress context, feature list, pricing, primary CTA, "save and decide later" dismiss), locked step indicators in stepper, `credit-badge.tsx` on dashboard header.
-**Addresses:** UX pitfall — paywall must not be a surprise; locked step indicators and credit badge telegraph the gate before users reach Step 7
-**Research flag:** Standard shadcn/ui component patterns — skip `research-phase`
+### Phase 5: Facilitator Controls and Step Progression
+**Rationale:** Facilitator controls require both an active room (Phase 2) and participant visibility (Phase 3's PresenceBar for kick/idle status). Step progression uses broadcast events (ephemeral) in parallel with Neon writes (durable for late-joiners) — both paths are required; broadcast-only leaves late-joiners on the wrong step.
+**Delivers:** `StepProgressionControl` component (role-gated via `useSelf().info.role === 'facilitator'`); `useBroadcastEvent` for `STEP_CHANGED`; `useEventListener` on participant clients triggering `router.refresh()`; `advanceWorkshopStep` server action updated with server-side Clerk auth check matching `workshops.clerkUserId`; "End Session" button with confirmation modal; "End Session" triggers Liveblocks REST API manual sync to Neon before room archive; "Workshop Full" UI that catches Liveblocks 4001 connection error.
+**Architecture components:** step-progression-control.tsx (NEW), advanceWorkshopStep server action (MODIFIED).
+**Pitfalls avoided:** Broadcast events as the only step state (always write to Neon in parallel — late-joiners need DB), facilitator role enforced client-side only (server action validates caller against `workshops.clerkUserId`), data loss on End Session (manual Liveblocks REST API snapshot before room is archived).
+**Research flag:** Standard — broadcast events for step progression is the canonical Liveblocks tutorial pattern ("slide presentation" is the documented use case). No additional research needed.
 
-### Phase 6: Onboarding UI (Independent Track)
-**Rationale:** Fully independent from the Stripe track after Phase 1. Can run in parallel with Phases 3-5, or sequentially after Phase 5. Only prerequisite is the `users.onboardingComplete` DB column from Phase 1.
-**Delivers:** `welcome-modal.tsx` (shadcn Dialog, outcome headline "Turn your idea into a Product Brief — in one session.", upfront paywall disclosure "Steps 1-6 free, Steps 7-10 + Build Pack require one workshop credit.", single CTA "Start My First Workshop"), modified `dashboard/page.tsx` (reads `onboardingComplete`, passes `showWelcomeModal` prop), `markOnboardingComplete()` wired to modal dismiss, Step 1 contextual tooltip on chat panel.
-**Addresses:** Pitfalls 7 (DB-persisted onboarding state, not localStorage), 8 (SSR hydration mismatch prevention via server prop pattern — modal never rendered server-side)
-**Research flag:** Standard shadcn/ui component patterns, official `dialog-onboarding-welcome` reference block — skip `research-phase`
+### Phase 6: AI Chat in Multiplayer Mode
+**Rationale:** AI chat visibility to all participants is a P1 feature but architecturally the last core feature to implement because it requires the room (Phase 2), participant presence (Phase 3), and facilitator identity (Phase 5) all to be stable first. The AI token streaming pattern (broadcasting Gemini tokens to N clients) is non-standard and needs a validation spike at the start of this phase before the full implementation is written.
+**Delivers:** AI conversation history displayed to all participants in real time (read-only); facilitator-only chat input (hidden for participants via role check); AI streaming tokens broadcast to all connected clients; graceful reconnection with visible "Reconnecting..." banner while disconnected; "Session has ended" full-screen overlay when facilitator ends session (broadcast `SESSION_ENDED` event to all participants).
+**Architecture components:** existing AI chat panel (MODIFIED — dual render mode: facilitator gets input, participants get read-only view).
+**Pitfalls avoided:** AI conversation stored in Liveblocks Storage (keep in Neon, use broadcast/SWR for real-time updates — AI messages are the facilitator's linear history, not collaborative canvas data), participant side-channel chat (read-only display only, no participant input), no session-ended signal (broadcast `SESSION_ENDED` with full-screen overlay).
+**Research flag:** AI token streaming to N clients simultaneously is flagged in FEATURES.md as a non-standard pattern requiring validation. Two options: (A) broadcast `AI_CHAT_UPDATED` event + targeted SWR revalidation on participant clients (simpler, avoids coupling AI streaming to Liveblocks channel), or (B) broadcast each Gemini token chunk via Liveblocks broadcast events. Recommend a 1–2 hour spike at the start of Phase 6 to choose and validate the approach before full implementation.
 
-### Phase 7: Pricing Page + Integration Test
-**Rationale:** Static content updates and end-to-end validation. Pricing page can technically ship before Phase 3 (no payment infra required for content), but positioning here ensures it reflects the completed and tested credit system.
-**Delivers:** Updated `/pricing/page.tsx` (Single Flight $79, Serial Entrepreneur $149, Agency "Contact Sales", "Buy Now" CTA links to `/api/billing/checkout`), `?payment=success` toast handling, end-to-end integration test: Steps 1-6 → paywall modal → Stripe Checkout → return → Step 7 unlocked → dashboard shows correct credit count.
-**Research flag:** No research needed — static content and established patterns from Phases 3-5
-
-### Phase 8: P2 Enhancements (Post-Launch Validation)
-**Rationale:** Conversion-lift features that require the P1 payment flow to be live and producing real data before they are worth implementing. Auto-unlock timing in particular depends on actual Stripe webhook latency observed in production.
-**Delivers:** Auto-unlock into Step 7 (1-second poll on success redirect, then navigate if credits > 0 and pending workshop exists), blurred Build Pack sneak peek in paywall modal, Serial Entrepreneur 3-credit pack as second purchase option, Stripe Customer Portal link from account settings.
-**Research flag:** Auto-unlock poll timing — verify actual webhook latency in production before hardcoding the 1-second delay
+### Phase 7: P2 Facilitator Enhancements
+**Rationale:** P2 features are high value but not required for the first multiplayer session. They build on the stable P1 foundation and should be added incrementally after the core flow is validated with real users. All are low-to-medium complexity incremental additions.
+**Delivers:** "Bring everyone to me" viewport broadcast (facilitator sends `x, y, zoom`; participants animate viewport); step timer (facilitator-set countdown, `useBroadcastEvent`, visible to all); user-specific post-it colors (node `data.creatorColor` set on creation from `useSelf().info.color`); participant emoji reactions on AI messages (ephemeral Liveblocks broadcast, aggregated counts); idle presence indicator (track last-interaction timestamp, dim avatar after 2 minutes).
+**Research flag:** Standard patterns — all documented in FEATURES.md with clear implementation notes. No additional research needed.
 
 ### Phase Ordering Rationale
 
-- **Schema first** is non-negotiable: idempotency constraints, atomic deduction logic, and onboarding persistence all depend on DB structure being stable before code is written against it
-- **Payment API before paywall UI** prevents a window where the product looks gated but the server allows bypass — this is a critical security sequencing requirement, not an arbitrary ordering preference
-- **Dual-trigger fulfillment built in Phase 3 as a single unit** ensures the system is never in a partially-working state (webhook-only leaves users seeing stale credits after payment; success-page-only is not guaranteed on network failures)
-- **Onboarding independence** from Stripe allows Phase 6 to run concurrently with Phases 3-5 if team capacity allows — no shared dependencies after Phase 1
-- **P2 enhancements deferred** until Phase 7 integration test confirms P1 is working correctly in production with real Stripe transactions
+- Foundation first because Liveblocks config types, DB schema, and the lazy-loading pattern are required by every subsequent phase. Retrofitting these later means rewriting already-written code.
+- Canvas sync before guest auth because the Liveblocks room must be functional before the guest join flow can be end-to-end tested. Testing guest auth before the room works produces false failures.
+- Guest auth before facilitator controls because facilitator-vs-participant role distinction comes from the auth layer. Facilitator controls built before roles are defined cannot be correctly gated.
+- Facilitator controls before AI chat because the "facilitator-only input" requirement depends on knowing the current user's role, which comes from the Liveblocks access token issued by the auth endpoint.
+- AI chat last because it is the most novel implementation pattern and benefits from all infrastructure being stable before it is wired in. A bug in AI streaming in a broken room environment is extremely hard to diagnose.
+- P2 enhancements last because they are add-on improvements that require a working P1 session to be validated against real-user behavior.
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 4 (Credit Actions):** The `neon-http` driver limitation with `SELECT FOR UPDATE` needs a confirmed resolution before writing `consumeCredit()`. Two options: (a) create a secondary `neon-ws` client specifically for transactional credit operations, or (b) use the conditional-UPDATE atomic pattern (`UPDATE users SET credit_balance = credit_balance - 1 WHERE credit_balance > 0 RETURNING`) without explicit row locking, accepting this is safe at v1.8 concurrency levels. Validate which approach is compatible with the existing Drizzle client configuration before coding begins.
+Phases needing deeper research or implementation decision spikes before coding:
+- **Phase 2 (Canvas Sync) — middleware ordering:** `temporal` (zundo) + `liveblocks()` middleware composition order needs empirical verification. If composition fails, the fallback is disabling undo/redo for multiplayer sessions (cross-user undo is an anti-feature per FEATURES.md anyway).
+- **Phase 4 (Guest Auth) — mixed-auth endpoint:** The Clerk + HttpOnly cookie in the same `/api/liveblocks-auth` handler is MEDIUM confidence. Cookie signing library choice (`iron-session`, `jose`, or custom HMAC) should be decided before writing the auth endpoint. Check existing auth utilities in the project first.
+- **Phase 6 (AI Chat) — token streaming to N clients:** The approach for broadcasting Gemini stream tokens to all connected participants (SWR revalidation vs. Liveblocks broadcast per token chunk) requires a validation spike before full implementation.
 
-Phases with standard patterns (skip `research-phase`):
-- **Phase 3 (Payment API):** Stripe Checkout redirect, webhook handler, and idempotent fulfillment are thoroughly documented in official Stripe docs and confirmed by multiple corroborating community sources
-- **Phase 5 (Paywall UI):** shadcn Dialog and Tooltip are already installed and themed; component patterns are first-party documented
-- **Phase 6 (Onboarding UI):** shadcn `dialog-onboarding-welcome` is an official Shadcn reference block; DB-sourced server prop pattern is established in the existing codebase
+Phases with standard, well-documented patterns (skip research-phase):
+- **Phase 1 (Foundation):** Liveblocks setup, schema migrations, and next/dynamic lazy loading are all documented with official examples.
+- **Phase 3 (Cursors):** ReactFlow ViewportPortal + Liveblocks Presence cursor pattern has an official working code example.
+- **Phase 5 (Facilitator Controls):** Broadcast events for step progression is Liveblocks' canonical tutorial use case ("slide presentation").
+- **Phase 7 (P2 enhancements):** All are incremental additions with documented patterns in FEATURES.md.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | `stripe@^20.4.0` confirmed from official changelog released 2026-02-25; shadcn component availability verified against existing project; no new dependencies beyond server-only Stripe SDK |
-| Features | HIGH | Paywall UX patterns from Appcues, Monetizely, Foundational Edge, and Kinde; Stripe implementation patterns from official docs with corroborating community guides; credit system patterns from Pedro Alonso guide aligned with Stripe docs |
-| Architecture | HIGH (Stripe/webhooks/credit schema); MEDIUM (Clerk metadata vs DB onboarding tradeoff) | Official Stripe docs and direct codebase inspection provide HIGH confidence. The onboarding storage decision (DB vs Clerk metadata) is well-reasoned; both approaches work but DB is more consistent with existing patterns |
-| Pitfalls | HIGH | CVE-2025-29927 is a confirmed and documented CVE; dual-trigger race condition prevention is from official Stripe fulfillment docs; t3dotgg/stripe-recommendations provides practitioner-level validation; `SELECT FOR UPDATE` limitation confirmed in Drizzle ORM GitHub discussions |
+| Stack | HIGH | Liveblocks recommendation verified via npm (3.14.0 current), official docs, and a working Liveblocks + Zustand + ReactFlow + Next.js example published by Liveblocks. Vercel compatibility confirmed as an official Vercel real-time partner. All alternatives evaluated and rejected with documented rationale. |
+| Features | HIGH | P1/P2/P3 structure derived from competitive analysis (Miro, MURAL, FigJam, Butter) and ReactFlow's official multiplayer documentation. Anti-features are well-reasoned with references to facilitator research. One flag: AI token streaming to N clients is an emerging pattern without a canonical reference implementation. |
+| Architecture | HIGH | Liveblocks official docs, Vercel KB, Clerk+Liveblocks integration guide, ReactFlow multiplayer guide, and OWASP all consulted. Build order and component boundaries are explicit. Two MEDIUM items: mixed-auth endpoint composition, and `temporal` + `liveblocks()` middleware ordering. |
+| Pitfalls | HIGH | 12 specific pitfalls with phase-level prevention assignments. Sources include ReactFlow official docs (#3771, discussion #2570), OWASP WebSocket Security Cheat Sheet, Vercel KB, and PortSwigger CSWSH. All major failure modes are documented with concrete prevention patterns. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **`neon-http` vs `neon-ws` for credit deduction transaction:** The existing codebase uses `neon-http` throughout. `SELECT FOR UPDATE` row locking requires WebSocket connections (`neon-ws`). Resolve during Phase 4 planning: either create a secondary `neon-ws` client used only for the `consumeCredit()` transaction, or accept the conditional-UPDATE pattern (`WHERE credit_balance > 0`) as sufficient for v1.8 concurrency levels (likely safe until hundreds of simultaneous users). Do not leave this decision to implementation time.
+- **AI token streaming strategy:** Two implementation approaches need a decision before Phase 6. Option A (broadcast `AI_CHAT_UPDATED` event + SWR revalidation) is simpler and avoids coupling AI streaming to the Liveblocks channel. Option B (broadcast each Gemini token chunk via Liveblocks broadcast events) provides true real-time streaming to participants. Run a 1–2 hour spike at the start of Phase 6 planning to validate the chosen approach before full implementation.
 
-- **Vercel Deployment Protection on webhook route:** Vercel's Deployment Protection may block `/api/webhooks/stripe` in preview deployments, causing webhook failures during staging tests. Add the webhook path to the Deployment Protection bypass list before Phase 3 testing begins.
+- **`temporal + liveblocks` middleware composition:** The existing store wraps state with `zundo`'s `temporal` middleware for undo/redo. The `liveblocks()` middleware must compose correctly with `temporal`. Recommended order is `temporal(liveblocks(stateCreator, config))` but must be verified in Phase 2. If ordering causes issues, the fallback is disabling undo/redo for multiplayer sessions — cross-user undo is an explicit anti-feature per FEATURES.md.
 
-- **Stripe Customer pre-creation timing:** Research recommends creating the Stripe Customer at user signup (via Clerk `user.created` webhook). The existing `/api/webhooks/clerk/route.ts` handler would need extension. If this adds Phase 1 complexity, an acceptable v1.8 alternative is creating the customer lazily (first checkout) with `clerkUserId` as the idempotency key. Decide before Phase 2 begins.
+- **Liveblocks free tier per-room connection limit:** ARCHITECTURE.md notes the free tier connection limit per room but flags it could not be read from the pricing page render. Verify the exact limit from the Liveblocks dashboard or docs before Phase 1. Design a "Workshop Full" error state (Liveblocks 4001 error code) and upgrade prompt into Phase 1 schema (consider a `planTier` indicator) even if the upgrade flow is wired in Phase 5.
 
-- **`creditConsumedAt` race condition on parallel workshop starts:** If a user somehow starts two workshops simultaneously and advances both to Step 7 before either `creditConsumedAt` is set, the atomic credit check in Phase 4 must handle this. The `SELECT FOR UPDATE` lock on the `users` row protects the balance; `creditConsumedAt` is set per-workshop after deduction, so each workshop correctly consumes one credit. Validate this path in the Phase 7 integration test.
+- **EzyDraw in multiplayer:** EzyDraw is a modal that produces a drawing node in canvas state (which Liveblocks will sync). If two participants open EzyDraw on the same drawing node simultaneously, there is no in-flight vector conflict resolution. For v1.9, scope to first-to-open wins: the EzyDraw modal should be locked to one user at a time per node (using Liveblocks Presence to track which nodes are being edited). Make this an explicit decision in Phase 2 when canvas sync is implemented.
+
+- **Cookie signing library:** `iron-session`, `jose`, or a custom HMAC — check existing auth utilities in the project before Phase 4 begins. The project may already have a preference from v1.8 session management.
+
+- **Seed data and free tier quota:** PawPal seed CLI and any developer seed scripts must force `workshopType: 'solo'` to avoid consuming Liveblocks free tier monthly active room quota on every dev seed run. Add this guard in Phase 1 schema work.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Stripe Checkout: how it works](https://docs.stripe.com/payments/checkout/how-checkout-works) — redirect vs embedded mode, session creation parameters
-- [Stripe Fulfill Orders](https://docs.stripe.com/checkout/fulfillment) — dual-trigger pattern, idempotency requirement (official)
-- [Stripe Webhooks](https://docs.stripe.com/webhooks) — at-least-once delivery, retry behavior, raw body requirement
-- [Stripe Webhook Signature Verification](https://docs.stripe.com/webhooks/signature) — `constructEvent()` raw body requirement
-- [stripe-node CHANGELOG](https://github.com/stripe/stripe-node/blob/master/CHANGELOG.md) — v20.4.0 released 2026-02-25
-- [redirectToCheckout removal 2025-09-30](https://docs.stripe.com/changelog/clover/2025-09-30/remove-redirect-to-checkout) — confirmed removed from SDK
-- [CVE-2025-29927](https://projectdiscovery.io/blog/nextjs-middleware-authorization-bypass) — Next.js middleware bypass via `x-middleware-subrequest` header
-- [Clerk Add Onboarding Flow](https://clerk.com/docs/references/nextjs/add-onboarding-flow) — onboarding state patterns
-- [Neon Serverless Driver](https://neon.com/docs/serverless/serverless-driver) — neon-http transaction limitations
-- [Drizzle ORM Transactions](https://orm.drizzle.team/docs/transactions) — transaction patterns
-- [shadcn dialog-onboarding-welcome block](https://www.shadcn.io/blocks/dialog-onboarding-welcome) — first-party onboarding dialog reference
-- Existing codebase inspection: `src/proxy.ts`, `src/db/schema/users.ts`, `src/app/api/webhooks/clerk/route.ts`, `src/actions/workshop-actions.ts`, `src/app/workshop/[sessionId]/step/[stepId]/page.tsx`
+- `https://liveblocks.io/examples/collaborative-flowchart/zustand-flowchart` — Official working example: Liveblocks + Zustand + ReactFlow + Next.js; direct architectural precedent for WorkshopPilot
+- `https://liveblocks.io/docs/api-reference/liveblocks-zustand` — Middleware `storageMapping`/`presenceMapping` API reference
+- `https://liveblocks.io/docs/authentication/access-token/nextjs` — Access token auth endpoint with arbitrary userId support; `prepareSession` + `allow` pattern
+- `https://liveblocks.io/docs/guides/how-to-synchronize-your-liveblocks-storage-document-data-to-a-vercel-postgres-database` — StorageUpdated webhook to Postgres write-back pattern
+- `https://liveblocks.io/docs/tutorial/react/getting-started/broadcasting-events` — `useBroadcastEvent` + `useEventListener`; "slide presentation" as canonical step progression example
+- `https://reactflow.dev/learn/advanced-use/multiplayer` — Official multiplayer guide: ephemeral vs durable state, cursor patterns, delete-move race condition warning, field-level sync discipline
+- `https://reactflow.dev/api-reference/components/viewport-portal` — ViewportPortal for cursor overlay placement inside the canvas viewport coordinate system
+- `https://vercel.com/kb/guide/do-vercel-serverless-functions-support-websocket-connections` — Vercel Serverless Functions do NOT support persistent WebSockets (hard constraint, not configurable)
+- `https://vercel.com/kb/guide/publish-and-subscribe-to-realtime-data-on-vercel` — Vercel lists Liveblocks as a supported real-time partner
+- `https://clerk.com/blog/secure-liveblocks-rooms-clerk-nextjs` — Clerk + Liveblocks auth endpoint pattern with Clerk session claims
+- `https://cheatsheetseries.owasp.org/cheatsheets/WebSocket_Security_Cheat_Sheet.html` — CSWSH, Origin header validation, token-based auth patterns
+- npm registry — `@liveblocks/client@3.14.0` confirmed current version as of 2026-02-26
+- `https://liveblocks.io/pricing` — Free tier: 500 monthly active rooms, 200 MAU; Pro: $30/month + $0.03/room overage
 
 ### Secondary (MEDIUM confidence)
-- [t3dotgg/stripe-recommendations](https://github.com/t3dotgg/stripe-recommendations) — split brain problem, pre-create customer, sync function pattern (practitioner-level guidance)
-- [Pedro Alonso: Stripe + Next.js Complete Guide 2025](https://www.pedroalonso.net/blog/stripe-nextjs-complete-guide-2025/) — implementation patterns, consistent with official docs
-- [Pedro Alonso: Pre-paid Credit Billing with Stripe](https://www.pedroalonso.net/blog/stripe-usage-credit-billing/) — atomic decrement, idempotency, ledger schema
-- [Clerk + Stripe Metadata blog](https://clerk.com/blog/exploring-clerk-metadata-stripe-webhooks) — passing clerkUserId through session metadata
-- [Kinde: Freemium to Premium conversion](https://www.kinde.com/learn/billing/conversions/freemium-to-premium-converting-free-ai-tool-users-with-smart-billing-triggers/) — paywall trigger timing research
-- [Appcues: Freemium upgrade prompts](https://www.appcues.com/blog/best-freemium-upgrade-prompts) — paywall copy patterns and conversion data
-- [Monetizely: Strategic paywall timing](https://www.getmonetizely.com/articles/mastering-freemium-paywalls-strategic-timing-for-saas-success) — step-gate vs time-limit comparison
-- [Drizzle ORM SELECT FOR UPDATE GitHub discussion](https://github.com/drizzle-team/drizzle-orm/discussions/1337) — row-level locking patterns
-- [Stripe webhook race condition blog](https://excessivecoding.com/blog/billing-webhook-race-condition-solution-guide) — dual-trigger solution pattern
-- [WorkshopPilot monetisation.md](/.planning/monetisation.md) — internal planning doc confirming credit model decision
+- `https://www.mural.co/features/superpowers` — MURAL Facilitation Superpowers: bring everyone to me, private mode, hide cursors (competitor feature analysis)
+- `https://help.miro.com/hc/en-us/articles/360013358479-Attention-management` — Miro Attention Management viewport sync (competitor feature analysis)
+- `https://www.synergycodes.com/blog/real-time-collaboration-for-multiple-users-in-react-flow-projects-with-yjs-e-book` — ReactFlow + Yjs field selection, conflict patterns, Y.Map vs Y.Array tradeoffs
+- `https://ably.com/blog/collaborative-ux-best-practices` — Live cursor UX: throttling, name labels, idle behavior best practices
+- `https://github.com/xyflow/xyflow/issues/3771` — `snapToGrid` + `screenToFlowPosition` cursor drift bug (confirmed community issue)
+- `https://github.com/wbkd/react-flow/discussions/2570` — selection state sync pitfall confirmed by ReactFlow community
+- `https://portswigger.net/web-security/websockets/cross-site-websocket-hijacking` — CSWSH attack pattern details
+- `https://www.butter.us/compare/sessionlab-alternative` — Butter facilitation features (competitor reference)
+- `https://www.sessionlab.com/state-of-facilitation/2025-report/` — State of Facilitation 2025 report (feature priority context)
+
+### Tertiary (LOW confidence)
+- `https://blog.cloudflare.com/cloudflare-acquires-partykit/` — PartyKit acquired by Cloudflare April 2024; transition uncertainty cited as a contributing reason to prefer Liveblocks
+- `https://dev.to/hexshift/robust-websocket-reconnection-strategies-in-javascript-with-exponential-backoff-40n1` — Exponential backoff + jitter reconnection pattern (informational)
 
 ---
 *Research completed: 2026-02-26*
