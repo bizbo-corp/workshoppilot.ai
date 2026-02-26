@@ -42,6 +42,7 @@ import { ColorPicker } from "./color-picker";
 import { useCanvasAutosave } from "@/hooks/use-canvas-autosave";
 import { usePreventScrollOnCanvas } from "@/hooks/use-prevent-scroll-on-canvas";
 import { useMultiplayerContext } from "@/components/workshop/multiplayer-room";
+import { LiveCursors, CursorBroadcaster } from "./live-cursors";
 import type {
   StickyNoteColor,
   GridColumn,
@@ -196,6 +197,12 @@ function ReactFlowCanvasInner({
 
   // Container ref for iOS Safari scroll prevention
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  // Cursor broadcast handlers ref — populated by CursorBroadcaster when multiplayer
+  const cursorHandlersRef = useRef<{
+    onMouseMove: (e: React.MouseEvent) => void;
+    onMouseLeave: () => void;
+  } | null>(null);
 
   // Prevent iOS Safari page scroll when panning canvas
   usePreventScrollOnCanvas(canvasContainerRef);
@@ -2594,6 +2601,10 @@ function ReactFlowCanvasInner({
 
   return (
     <div ref={canvasContainerRef} className="w-full h-full relative">
+      {/* CursorBroadcaster — renderless; wires mouse handlers for presence broadcast (multiplayer only) */}
+      {workshopType === 'multiplayer' && (
+        <CursorBroadcaster handlersRef={cursorHandlersRef} />
+      )}
       <ReactFlow
         className={cn(
           draggingNodeId
@@ -2646,6 +2657,8 @@ function ReactFlowCanvasInner({
         zoomOnPinch={true}
         elevateNodesOnSelect={false}
         proOptions={{ hideAttribution: true }}
+        onMouseMove={(e) => cursorHandlersRef.current?.onMouseMove(e)}
+        onMouseLeave={() => cursorHandlersRef.current?.onMouseLeave()}
       >
         <Background
           variant={BackgroundVariant.Dots}
@@ -2653,6 +2666,8 @@ function ReactFlowCanvasInner({
           size={1.5}
           color="var(--canvas-dots)"
         />
+        {/* Live cursors — renders remote participants' cursors in flow coords (multiplayer only) */}
+        {workshopType === 'multiplayer' && <LiveCursors />}
         {/* Zoom controls — styled to match canvas toolbar */}
         <div className="absolute bottom-4 right-4 z-10 flex flex-col items-center bg-card rounded-xl shadow-md border border-border p-1 gap-0.5">
           <button
