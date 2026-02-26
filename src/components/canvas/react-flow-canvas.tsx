@@ -645,9 +645,10 @@ function ReactFlowCanvasInner({
     [],
   );
 
-  // Undo/redo handlers
+  // Undo/redo handlers (temporal middleware is absent on multiplayer stores)
   const handleUndo = useCallback(() => {
     const temporalStore = storeApi.temporal;
+    if (!temporalStore) return;
     const pastStates = temporalStore.getState().pastStates;
     if (pastStates.length > 0) {
       temporalStore.getState().undo();
@@ -656,6 +657,7 @@ function ReactFlowCanvasInner({
 
   const handleRedo = useCallback(() => {
     const temporalStore = storeApi.temporal;
+    if (!temporalStore) return;
     const futureStates = temporalStore.getState().futureStates;
     if (futureStates.length > 0) {
       temporalStore.getState().redo();
@@ -697,9 +699,10 @@ function ReactFlowCanvasInner({
     { keydown: false, keyup: true, enableOnFormTags: false },
   );
 
-  // Subscribe to temporal store for undo/redo state
+  // Subscribe to temporal store for undo/redo state (temporal absent on multiplayer stores)
   useEffect(() => {
     const temporalStore = storeApi.temporal;
+    if (!temporalStore) return;
     const unsubscribe = temporalStore.subscribe((state) => {
       setCanUndo(state.pastStates.length > 0);
       setCanRedo(state.futureStates.length > 0);

@@ -1,9 +1,10 @@
 'use client';
 
 import { createContext, useContext } from 'react';
-import { RoomProvider, useSelf } from '@liveblocks/react';
+import { ClientContext, RoomProvider, useSelf } from '@liveblocks/react';
 import { LiveMap, LiveObject } from '@liveblocks/client';
-import { getRoomId, type CanvasElementStorable } from '@/lib/liveblocks/config';
+import type { OpaqueClient } from '@liveblocks/core';
+import { getRoomId, liveblocksClient, type CanvasElementStorable } from '@/lib/liveblocks/config';
 
 /**
  * MultiplayerContext — provides participant color and multiplayer flag to
@@ -54,19 +55,21 @@ interface MultiplayerRoomProps {
  */
 export default function MultiplayerRoom({ workshopId, children }: MultiplayerRoomProps) {
   return (
-    <RoomProvider
-      id={getRoomId(workshopId)}
-      initialPresence={{
-        cursor: null,
-        color: '#6366f1',
-        displayName: '',
-        editingDrawingNodeId: null,
-      }}
-      initialStorage={{
-        elements: new LiveMap<string, LiveObject<CanvasElementStorable>>(),
-      }}
-    >
-      <MultiplayerRoomInner>{children}</MultiplayerRoomInner>
-    </RoomProvider>
+    <ClientContext.Provider value={liveblocksClient as unknown as OpaqueClient}>
+      <RoomProvider
+        id={getRoomId(workshopId)}
+        initialPresence={{
+          cursor: null,
+          color: '#6366f1',
+          displayName: '',
+          editingDrawingNodeId: null,
+        }}
+        initialStorage={{
+          elements: new LiveMap<string, LiveObject<CanvasElementStorable>>(),
+        }}
+      >
+        <MultiplayerRoomInner>{children}</MultiplayerRoomInner>
+      </RoomProvider>
+    </ClientContext.Provider>
   );
 }

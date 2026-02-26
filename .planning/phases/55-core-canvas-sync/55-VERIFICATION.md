@@ -1,39 +1,49 @@
 ---
 phase: 55-core-canvas-sync
-verified: 2026-02-26T10:15:00Z
-status: gaps_found
-score: 7/8 must-haves verified
-re_verification: false
-gaps:
-  - truth: "Opening EzyDraw on a shared drawing node locks that node — a second participant sees a 'being edited' indicator and cannot open EzyDraw simultaneously"
-    status: partial
-    reason: "The second participant is correctly blocked from opening EzyDraw (toast error fires and early return prevents modal opening). However, the on-canvas visual 'being edited' indicator is missing — drawing nodes do not show any overlay or badge when another participant has editingDrawingNodeId set to that node's ID. The plan spec and ROADMAP success criterion both require a visible indicator on the locked node, not only a reactive toast."
-    artifacts:
-      - path: "src/components/canvas/drawing-image-node.tsx"
-        issue: "No isLocked prop, no visual overlay rendered when another participant is editing this drawing node"
-      - path: "src/components/canvas/react-flow-canvas.tsx"
-        issue: "Drawing nodes mapped at line 974 do not include isLocked or lockedBy data; lbOthers is read but only used for the toast-on-double-click path, not for per-node visual state"
-    missing:
-      - "Pass isLocked and lockedByName data into DrawingImageNode via node.data when lbOthers has editingDrawingNodeId matching that node"
-      - "Render a semi-transparent 'Being edited by [name]' overlay inside DrawingImageNode when isLocked=true"
+verified: 2026-02-27T00:30:00Z
+status: human_needed
+score: 8/8 must-haves verified
+re_verification: true
+  previous_status: gaps_found
+  previous_score: 7/8
+  gaps_closed:
+    - "Opening EzyDraw on a shared drawing node locks that node — a second participant sees a 'being edited' indicator and cannot open EzyDraw simultaneously"
+  gaps_remaining: []
+  regressions: []
 human_verification:
   - test: "Real-time sticky note creation sync"
     expected: "A sticky note created in one browser tab appears on the canvas in a second browser tab connected to the same multiplayer workshop within 500ms"
     why_human: "Cannot verify WebSocket message latency or Liveblocks CRDT sync timing programmatically — requires two live browser tabs connected to Liveblocks"
   - test: "Real-time sticky note movement sync"
     expected: "Moving a sticky note in one tab causes it to move on a second connected participant's canvas in real time"
-    why_human: "Same as above — requires live Liveblocks room with two connected clients to observe real-time position propagation"
+    why_human: "Requires live Liveblocks room with two connected clients to observe real-time position propagation"
+  - test: "EzyDraw lock indicator visible passively"
+    expected: "When participant A opens EzyDraw on a drawing node, participant B sees a semi-transparent 'Being edited by [A's name]' overlay on that node without needing to click it"
+    why_human: "Requires two live sessions in same room to observe Presence propagation driving the overlay render; also validates displayName is populated in Presence at lock time"
   - test: "EzyDraw lock blocks second participant"
-    expected: "When participant A opens EzyDraw on a drawing node, participant B double-clicking that same node sees a toast error with A's name and cannot open EzyDraw"
-    why_human: "Requires two live sessions in same room; also validates that displayName is populated in Presence at lock time"
+    expected: "When participant A has EzyDraw open, participant B double-clicking the same drawing node sees a toast error with A's name and EzyDraw does NOT open"
+    why_human: "Requires two live browser sessions in the same Liveblocks room"
 ---
 
 # Phase 55: Core Canvas Sync Verification Report
 
 **Phase Goal:** Two participants in the same multiplayer workshop see each other's canvas edits in real time — nodes created, moved, and deleted by one immediately appear on the other's screen
-**Verified:** 2026-02-26T10:15:00Z
-**Status:** gaps_found
-**Re-verification:** No — initial verification
+**Verified:** 2026-02-27T00:30:00Z
+**Status:** human_needed
+**Re-verification:** Yes — after gap closure (55-03 plan)
+
+## Re-Verification Summary
+
+| Item | Previous | Now |
+|------|----------|-----|
+| Overall status | gaps_found | human_needed |
+| Score | 7/8 | 8/8 |
+| SYNC-05 visual indicator | PARTIAL | VERIFIED |
+| Regressions | — | None |
+
+The single gap from the previous verification (Truth 7 — EzyDraw on-canvas "being edited" visual indicator) has been closed by 55-03 (commit `a674b81`). All 8 must-haves now pass automated checks. Three human verification items remain from the initial verification plus one expanded human check for the visual overlay in a live session.
+
+---
 
 ## Goal Achievement
 
@@ -41,63 +51,75 @@ human_verification:
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Facilitator can create a multiplayer workshop from the existing launch modal (Solo AI-led vs Multiplayer choice) | VERIFIED | `new-workshop-dialog.tsx` line 50: `workshopType` state, toggle UI with MessageSquare/Users icons, hidden input at form submit. `workshop-actions.ts` line 67-69: extracts workshopType from formData. |
-| 2 | Multiplayer workshops are visually distinguishable from solo workshops on the dashboard (badge/icon) | VERIFIED | `workshop-card.tsx` line 164-165: conditional `{workshopType === 'multiplayer' && ...}` renders Users icon + "Multiplayer" text badge. `dashboard/page.tsx` line 114 threads `workshopType` through query result. |
-| 3 | createMultiplayerCanvasStore factory exists and compiles with liveblocks() middleware | VERIFIED | `multiplayer-canvas-store.ts`: 621 lines, full CanvasStore action implementations, 11-field storageMapping (stickyNotes, drawingNodes, gridColumns, crazy8sSlots, mindMapNodes, mindMapEdges, conceptCards, personaTemplates, hmwCards, selectedSlotIds, brainRewritingMatrices), ephemeral fields excluded. `MultiplayerCanvasStoreApi` exported. |
-| 4 | A sticky note created in one browser tab appears on the canvas in a second browser tab within 500ms | WIRED (human needed) | `canvas-store-provider.tsx` lines 80-84: branches to `createMultiplayerCanvasStore` when multiplayer; lines 87-95: enterRoom/leaveRoom useEffect lifecycle. Zustand liveblocks() middleware intercepts set() calls. Real-time propagation cannot be verified without live browser tabs. |
+| 1 | Facilitator can create a multiplayer workshop from the existing launch modal (Solo AI-led vs Multiplayer choice) | VERIFIED | `new-workshop-dialog.tsx` line 50: `workshopType` state, toggle UI, hidden input. `workshop-actions.ts` lines 67-69: extracts workshopType from formData. |
+| 2 | Multiplayer workshops are visually distinguishable from solo workshops on the dashboard (badge/icon) | VERIFIED | `workshop-card.tsx` lines 164-168: conditional `{workshopType === 'multiplayer' && ...}` renders Users icon + "Multiplayer" text badge. |
+| 3 | createMultiplayerCanvasStore factory exists and compiles with liveblocks() middleware | VERIFIED | `multiplayer-canvas-store.ts`: 621 lines, full CanvasStore action implementations, 11-field storageMapping, liveblocks() middleware with client + storageMapping options. |
+| 4 | A sticky note created in one browser tab appears on the canvas in a second browser tab within 500ms | WIRED (human needed) | `canvas-store-provider.tsx` lines 80-84: branches to `createMultiplayerCanvasStore` when multiplayer; lines 87-95: enterRoom/leaveRoom lifecycle. Zustand liveblocks() middleware intercepts set() calls. Latency unverifiable without live sessions. |
 | 5 | A sticky note moved by one participant moves on all other participants' canvases in real time | WIRED (human needed) | Same wiring as Truth 4. `batchUpdatePositions` action synced via storageMapping. Cannot verify propagation latency without live sessions. |
-| 6 | New post-it nodes created by a participant automatically inherit that participant's assigned color | VERIFIED | `react-flow-canvas.tsx` lines 207-223: `useMultiplayerContext()` reads `participantColor`, `HEX_TO_STICKY_COLOR` maps 6 PARTICIPANT_COLORS hex values to StickyNoteColor enum. Used in sticky note creation path. `multiplayer-room.tsx` lines 26-37: `MultiplayerRoomInner` reads `useSelf()?.info?.color` and provides via MultiplayerContext. |
-| 7 | Opening EzyDraw on a shared drawing node locks that node — a second participant sees a 'being edited' indicator and cannot open EzyDraw simultaneously | PARTIAL | Lock enforcement: `react-flow-canvas.tsx` line 2341-2345: `isDrawingLockedByOther()` check on double-click shows toast.error and returns early — blocking is WIRED. Lock set: line 2358 calls `lockDrawingInPresence(drawingNode.id)`. Lock clear: line 2929 calls `unlockDrawingInPresence()` on EzyDraw close. MISSING: no on-canvas visual overlay — `DrawingImageNode` has no `isLocked` prop, no "being edited" indicator renders on the node while it is locked. |
-| 8 | Auto-save to Neon is disabled in multiplayer mode (Liveblocks Storage is authoritative) | VERIFIED | `use-canvas-autosave.ts` line 26: `enabled = true` default parameter. Line 51: `if (!enabled) return;` in debouncedSave. `react-flow-canvas.tsx` line 204: `useCanvasAutosave(workshopId, stepId, workshopType !== 'multiplayer')` — passes `false` for multiplayer. |
+| 6 | New post-it nodes created by a participant automatically inherit that participant's assigned color | VERIFIED | `react-flow-canvas.tsx` lines 207-223: `useMultiplayerContext()` reads `participantColor`, `HEX_TO_STICKY_COLOR` maps 6 PARTICIPANT_COLORS hex values to StickyNoteColor enum. `multiplayer-room.tsx` lines 26-37: `useSelf()?.info?.color` provided via MultiplayerContext. |
+| 7 | Opening EzyDraw on a shared drawing node locks that node — a second participant sees a 'being edited' indicator and cannot open EzyDraw simultaneously | VERIFIED | **[Previously PARTIAL — now VERIFIED]** Lock enforcement: `react-flow-canvas.tsx` lines 2341-2345 (toast + early return). Lock set/clear: lines 2358, 2929. Visual overlay: `drawing-image-node.tsx` lines 65-85 — semi-transparent `bg-black/40` scrim + lock icon + "[Name] is editing" pill rendered when `isLocked=true`. Data injection: `react-flow-canvas.tsx` lines 977-995 — `isDrawingLockedByOther(dn.id)` + `getLockingUser(dn.id)` mapped into node data. useMemo deps include both helpers at lines 1154-1155. |
+| 8 | Auto-save to Neon is disabled in multiplayer mode (Liveblocks Storage is authoritative) | VERIFIED | `react-flow-canvas.tsx` line 204: `useCanvasAutosave(workshopId, stepId, workshopType !== 'multiplayer')` passes `false` for multiplayer. `use-canvas-autosave.ts` line 51: `if (!enabled) return;` guards debouncedSave. |
 
-**Score:** 7/8 truths verified (Truth 7 partial — lock enforcement works, visual indicator missing)
+**Score:** 8/8 truths verified (Truths 4 and 5 require human verification for real-time latency)
+
+---
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `src/stores/multiplayer-canvas-store.ts` | createMultiplayerCanvasStore factory with liveblocks() + temporal() middleware | VERIFIED (deviation noted) | Exists — 621 lines, full implementation. temporal() removed due to TypeScript incompatibility; pre-authorized fallback applied. liveblocks() middleware with 11-field storageMapping present. |
-| `src/components/dialogs/new-workshop-dialog.tsx` | Solo vs Multiplayer mode toggle in workshop creation dialog | VERIFIED | Contains `workshopType` state (line 50), toggle UI, hidden input. Resets to 'solo' on dialog open. |
-| `src/actions/workshop-actions.ts` | Server action that creates multiplayer workshops with workshopSessions record | VERIFIED | Lines 67-119: extracts workshopType, sets on workshop insert, creates workshopSessions record (liveblocksRoomId, shareToken, status='waiting') when multiplayer. |
-| `src/components/dashboard/workshop-card.tsx` | Multiplayer badge indicator on workshop cards | VERIFIED | `workshopType` prop at line 40, conditional badge render at line 164. |
-| `src/providers/canvas-store-provider.tsx` | CanvasStoreProvider that branches on workshopType, calls enterRoom/leaveRoom for multiplayer | VERIFIED | Lines 63-95: isMultiplayer flag, store branching in useState initializer, enterRoom/leaveRoom useEffect. |
-| `src/components/workshop/multiplayer-room.tsx` | RoomProvider wrapper that enables useSelf()/useOthers() hooks for multiplayer canvas | VERIFIED | Full RoomProvider wrapper with initialPresence (all 4 fields), initialStorage (LiveMap), MultiplayerContext, MultiplayerRoomInner with useSelf(). Replaced placeholder. |
+| `src/stores/multiplayer-canvas-store.ts` | createMultiplayerCanvasStore factory with liveblocks() middleware | VERIFIED | Exists — 621 lines, full implementation, 11-field storageMapping. |
+| `src/components/dialogs/new-workshop-dialog.tsx` | Solo vs Multiplayer mode toggle in workshop creation dialog | VERIFIED | `workshopType` state (line 50), toggle UI, hidden input. |
+| `src/actions/workshop-actions.ts` | Server action that creates multiplayer workshops with workshopSessions record | VERIFIED | Lines 67-119: extracts workshopType, inserts workshopSessions record when multiplayer. |
+| `src/components/dashboard/workshop-card.tsx` | Multiplayer badge indicator on workshop cards | VERIFIED | `workshopType` prop at line 40, conditional badge at lines 164-168. |
+| `src/providers/canvas-store-provider.tsx` | CanvasStoreProvider that branches on workshopType, calls enterRoom/leaveRoom | VERIFIED | Lines 63-95: isMultiplayer flag, store branching, enterRoom/leaveRoom useEffect. |
+| `src/components/workshop/multiplayer-room.tsx` | RoomProvider wrapper enabling useSelf()/useOthers() hooks | VERIFIED | Full RoomProvider wrapper with initialPresence (4 fields), initialStorage (LiveMap), MultiplayerContext. |
 | `src/hooks/use-canvas-autosave.ts` | Auto-save hook with enabled parameter to disable in multiplayer mode | VERIFIED | `enabled = true` default param, guards in debouncedSave and trigger effects. |
-| `src/lib/liveblocks/config.ts` | Updated Presence type with editingDrawingNodeId field | VERIFIED | Line 80: `editingDrawingNodeId: string | null;` in Presence type. PARTICIPANT_COLORS exported (line 26-33). |
-| `src/app/api/webhooks/liveblocks/route.ts` | Drizzle upsert to stepArtifacts for StorageUpdated events | VERIFIED | Lines 97-147: full implementation — fetches storage from Liveblocks REST API, queries in_progress step, upserts to stepArtifacts with `_canvas` key. No TODO stubs. |
+| `src/lib/liveblocks/config.ts` | Updated Presence type with editingDrawingNodeId field | VERIFIED | Line 80: `editingDrawingNodeId: string | null;` in Presence type. PARTICIPANT_COLORS exported. |
+| `src/app/api/webhooks/liveblocks/route.ts` | Drizzle upsert to stepArtifacts for StorageUpdated events | VERIFIED | Lines 97-147: fetches Liveblocks storage, queries in_progress step, upserts to stepArtifacts with `_canvas` key. |
+| `src/components/canvas/drawing-image-node.tsx` | DrawingImageNode with optional isLocked/lockedByName props and visual lock overlay | VERIFIED | Lines 11-12: type fields added. Lines 46, 65-85: conditional pencil hide and lock overlay render. |
+
+---
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
 | `new-workshop-dialog.tsx` | `workshop-actions.ts` | formData with workshopType hidden input | WIRED | Hidden input `name="workshopType"` present; `createWorkshopSession` extracts via `formData.get('workshopType')` |
-| `workshop-actions.ts` | `workshop-sessions` schema | `db.insert(workshopSessions)` | WIRED | Line 113: `db.insert(workshopSessions).values({...})` inside `if (workshopType === 'multiplayer')` guard |
-| `multiplayer-canvas-store.ts` | `@liveblocks/zustand` | `liveblocks()` middleware wrapping state creator | WIRED | Line 91: `liveblocks(...)` middleware with client and storageMapping options |
-| `canvas-store-provider.tsx` | `multiplayer-canvas-store.ts` | `createMultiplayerCanvasStore()` when workshopType === 'multiplayer' | WIRED | Lines 15-17: import; lines 80-82: `if (isMultiplayer) { return createMultiplayerCanvasStore(initState); }` |
-| `canvas-store-provider.tsx` | Liveblocks room | `store.getState().liveblocks.enterRoom(getRoomId(workshopId))` | WIRED | Lines 89-94: `enterRoom(getRoomId(workshopId))` in useEffect, cleanup calls `leaveRoom()` |
-| `react-flow-canvas.tsx` | `use-canvas-autosave.ts` | `useCanvasAutosave(workshopId, stepId, workshopType !== 'multiplayer')` | WIRED | Line 204: exact pattern `workshopType !== 'multiplayer'` as enabled parameter |
-| `webhooks/liveblocks/route.ts` | `step-artifacts` schema | Drizzle upsert on storageUpdated event | WIRED | Lines 133-147: `db.insert(stepArtifacts).values(...).onConflictDoUpdate(...)` |
+| `workshop-actions.ts` | `workshop-sessions` schema | `db.insert(workshopSessions)` | WIRED | Inside `if (workshopType === 'multiplayer')` guard. |
+| `multiplayer-canvas-store.ts` | `@liveblocks/zustand` | `liveblocks()` middleware wrapping state creator | WIRED | liveblocks() middleware with client and storageMapping options. |
+| `canvas-store-provider.tsx` | `multiplayer-canvas-store.ts` | `createMultiplayerCanvasStore()` when workshopType === 'multiplayer' | WIRED | Lines 80-82: `if (isMultiplayer) { return createMultiplayerCanvasStore(initState); }` |
+| `canvas-store-provider.tsx` | Liveblocks room | `store.getState().liveblocks.enterRoom(getRoomId(workshopId))` | WIRED | Lines 89-94: enterRoom in useEffect, cleanup calls leaveRoom(). |
+| `react-flow-canvas.tsx` | `use-canvas-autosave.ts` | `useCanvasAutosave(workshopId, stepId, workshopType !== 'multiplayer')` | WIRED | Line 204: exact pattern confirmed. |
+| `webhooks/liveblocks/route.ts` | `step-artifacts` schema | Drizzle upsert on storageUpdated event | WIRED | Lines 130-147: `db.insert(stepArtifacts)...onConflictDoUpdate(...)` |
+| `react-flow-canvas.tsx` | `drawing-image-node.tsx` | `isLocked: isDrawingLockedByOther(dn.id)` and `lockedByName` in drawingReactFlowNodes mapping | WIRED | **[New — 55-03]** Lines 977-995: `locked = isDrawingLockedByOther(dn.id)`, `locker = getLockingUser(dn.id)`, both injected into node data. useMemo deps at lines 1154-1155 include both helpers. |
+
+---
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |-------------|------------|-------------|--------|----------|
-| SESS-01 | 55-01 | Facilitator can create a multiplayer workshop (distinct from solo AI-led mode) | SATISFIED | NewWorkshopDialog toggle + server action + workshopSessions DB record creation all implemented and wired |
-| SYNC-01 | 55-02 | All canvas nodes and edges sync in real-time across all connected participants | SATISFIED (human needed for latency) | Liveblocks storageMapping covers all 11 durable node types; enterRoom lifecycle wired; Zustand middleware intercepts mutations |
-| SYNC-02 | 55-02 | Multiple participants can concurrently edit the canvas (add/move/delete nodes) | SATISFIED (human needed) | CRDT-based Liveblocks Storage handles concurrent edits; all CRUD actions in multiplayer store are substantive implementations |
-| SYNC-03 | 55-02 | Post-it notes inherit the creating participant's assigned color | SATISFIED | HEX_TO_STICKY_COLOR mapping, useMultiplayerContext, participantColor from useSelf().info.color, wired in addStickyNote path |
-| SYNC-05 | 55-02 | For shared drawing nodes outside Crazy 8s, EzyDraw is locked to one user at a time | PARTIAL | Lock enforcement (toast + early return) prevents concurrent editing. On-canvas "being edited" visual indicator NOT present on locked drawing nodes. Plan spec and ROADMAP success criterion both require visible indicator. |
+| SESS-01 | 55-01 | Facilitator can create a multiplayer workshop (distinct from solo AI-led mode) | SATISFIED | NewWorkshopDialog toggle + server action + workshopSessions DB record creation all implemented and wired. |
+| SYNC-01 | 55-02 | All canvas nodes and edges sync in real-time across all connected participants | SATISFIED (human needed for latency) | Liveblocks storageMapping covers all 11 durable node types; enterRoom lifecycle wired; Zustand middleware intercepts mutations. |
+| SYNC-02 | 55-02 | Multiple participants can concurrently edit the canvas (add/move/delete nodes) | SATISFIED (human needed) | CRDT-based Liveblocks Storage handles concurrent edits; all CRUD actions in multiplayer store are substantive implementations. |
+| SYNC-03 | 55-02 | Post-it notes inherit the creating participant's assigned color | SATISFIED | HEX_TO_STICKY_COLOR mapping, useMultiplayerContext, participantColor from useSelf().info.color, wired in addStickyNote path. |
+| SYNC-05 | 55-02 + 55-03 | For shared drawing nodes outside Crazy 8s, EzyDraw is locked to one user at a time | SATISFIED | **[Gap closed by 55-03]** Lock enforcement (toast + early return) prevents concurrent editing. On-canvas semi-transparent "Being edited by [name]" overlay now renders on locked drawing nodes via isLocked prop injected from lbOthers presence. Both functional and visual requirements satisfied. |
 
-**Orphaned requirements check:** REQUIREMENTS.md maps INFR-01 and INFR-02 to Phase 54 (not Phase 55), INFR-05 to Phase 55 implicitly. Verified: `multiplayer-room-loader.tsx` uses `next/dynamic` with `ssr: false` for lazy loading of multiplayer components. INFR-05 is satisfied. No orphaned requirements found.
+**Orphaned requirements:** No orphaned requirements found. All five IDs (SESS-01, SYNC-01, SYNC-02, SYNC-03, SYNC-05) are accounted for across the three plans.
+
+---
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `canvas-store-provider.tsx` | 106 | `store.getState().markDirty()` called in concept card sync effect — this is a no-op in multiplayer store (as designed), but may confuse future maintainers | Info | No functional impact; markDirty is intentionally a no-op in multiplayer |
-| `react-flow-canvas.tsx` | 500 | `(s as any).liveblocks` cast to access liveblocks property from Zustand store | Info | Pre-authorized pattern per SUMMARY decision — avoids conditional hook issue. Documented. |
+| `canvas-store-provider.tsx` | 106 | `store.getState().markDirty()` called in concept card sync effect — no-op in multiplayer store by design | Info | No functional impact; markDirty is intentionally a no-op in multiplayer. Carried over from initial verification. |
+| `react-flow-canvas.tsx` | 500 | `(s as any).liveblocks` cast to access liveblocks property from Zustand store | Info | Pre-authorized pattern per 55-02-SUMMARY decision. Documented. |
 
-No blocker anti-patterns found.
+No blocker anti-patterns found. No new anti-patterns introduced by 55-03.
+
+---
 
 ### Human Verification Required
 
@@ -111,23 +133,41 @@ No blocker anti-patterns found.
 
 **Test:** Open the same multiplayer workshop in two browser tabs. In tab A, drag a sticky note to a new position. Check tab B.
 **Expected:** The sticky note moves to the same position on tab B's canvas in real time.
-**Why human:** Same as above — requires live connected sessions to observe position propagation.
+**Why human:** Requires live connected sessions to observe position propagation.
 
-#### 3. EzyDraw Single-Editor Lock End-to-End
+#### 3. EzyDraw Lock Visual Indicator (Passive)
+
+**Test:** Open the same multiplayer workshop in two browser tabs. In tab A, double-click a drawing node to open EzyDraw. Without doing anything in tab B, observe that drawing node on tab B's canvas.
+**Expected:** Tab B shows a semi-transparent dark overlay on the drawing node with a lock icon and "[Tab A participant's name] is editing" text. The overlay disappears when tab A closes EzyDraw.
+**Why human:** Requires two live sessions in the same Liveblocks room to observe Presence propagation driving the overlay. Also validates that `displayName` is populated in Presence at lock time (depends on Liveblocks auth endpoint returning correct `info.name`). Cannot be verified without live WebSocket connection.
+
+#### 4. EzyDraw Single-Editor Lock End-to-End
 
 **Test:** Open the same multiplayer workshop in two browser tabs. In tab A, double-click a drawing node to open EzyDraw. In tab B, attempt to double-click the same drawing node.
 **Expected:** Tab B shows a toast error: "[Participant Name] is currently editing this drawing" and EzyDraw does NOT open. When tab A closes EzyDraw, tab B should be able to open it.
-**Why human:** Requires two live sessions in same Liveblocks room; also validates that `displayName` is populated in Presence when lock is set (depends on auth endpoint returning correct info.name).
-
-### Gaps Summary
-
-One gap was identified:
-
-**SYNC-05 visual indicator missing:** The EzyDraw single-editor lock correctly prevents concurrent editing (the second participant gets a toast error and is blocked), which satisfies the functional requirement. However, the ROADMAP success criterion and plan spec both describe a passive visual indicator on the locked drawing node — "a second participant sees a 'being edited' indicator." This indicator does not exist on the canvas. The `DrawingImageNode` component has no `isLocked` prop and renders no overlay when another participant's Presence has `editingDrawingNodeId` pointing to it. A second participant must attempt to double-click to discover a lock — they cannot see it proactively.
-
-This is categorized as a gap rather than a full failure because: (1) the lock enforcement itself is correct and the core goal (prevent concurrent EzyDraw editing) is achieved, and (2) the visual indicator is a UX enhancement on top of the functional safety guarantee. However, the ROADMAP success criterion explicitly mentions the indicator, so it cannot be considered fully satisfied.
+**Why human:** Requires two live sessions in same Liveblocks room.
 
 ---
 
-_Verified: 2026-02-26T10:15:00Z_
+### Gap Closure Verification
+
+**Gap from previous verification:** SYNC-05 visual indicator — `DrawingImageNode` had no `isLocked` prop and no "being edited" overlay when `lbOthers` had `editingDrawingNodeId` set to that node's ID.
+
+**Fix applied by 55-03 (commit `a674b81`):**
+
+1. `src/components/canvas/drawing-image-node.tsx`:
+   - `DrawingImageNodeData` type now includes `isLocked?: boolean` (line 11) and `lockedByName?: string` (line 12)
+   - Pencil hover icon conditioned on `!data.isLocked` (line 46) — hidden when node is locked
+   - Lock overlay renders at lines 65-85: `bg-black/40` scrim + lock icon SVG + `{data.lockedByName || 'Someone'} is editing` pill badge, with `pointer-events-none` so double-click still reaches the toast handler
+
+2. `src/components/canvas/react-flow-canvas.tsx`:
+   - `drawingReactFlowNodes` mapping (lines 977-995) now calls `isDrawingLockedByOther(dn.id)` and `getLockingUser(dn.id)` to derive `locked` and `lockerName`, injects `isLocked: locked` and `lockedByName: lockerName ?? undefined` into node data
+   - Both helpers added to the enclosing `useMemo` dependency array (lines 1154-1155) ensuring the overlay re-renders reactively when any participant's `editingDrawingNodeId` presence field changes
+
+**Verification:** TypeScript compiles with zero errors. Solo workshops unaffected (`isDrawingLockedByOther` returns `false` when `!isMultiplayer`). Commit exists and is in main branch history.
+
+---
+
+_Verified: 2026-02-27T00:30:00Z_
 _Verifier: Claude (gsd-verifier)_
+_Re-verification: Yes — gap closure after 55-VERIFICATION.md (gaps_found, 7/8)_
