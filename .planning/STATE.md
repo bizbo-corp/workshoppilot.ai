@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Multiplayer Collaboration
 status: unknown
-last_updated: "2026-02-26T20:07:37.378Z"
+last_updated: "2026-02-26T21:11:19.033Z"
 progress:
-  total_phases: 38
-  completed_phases: 38
-  total_plans: 110
-  completed_plans: 110
+  total_phases: 39
+  completed_phases: 39
+  total_plans: 112
+  completed_plans: 112
 ---
 
 # Project State
@@ -53,6 +53,7 @@ Progress: [█████░░░░░] 73% (8/11 plans)
 | Phase 55 P03 | 5min | 1 task | 2 files |
 | Phase 56 P01 | ~10min | 2 tasks | 3 files |
 | Phase 56 P02 | ~10min | 2 tasks | 2 files |
+| Phase 56-live-presence P01 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,9 @@ Progress: [█████░░░░░] 73% (8/11 plans)
 - [Phase 56-02]: useIdleStatus tracks cursor-based activity only — non-cursor presence updates do not reset idle timer
 - [Phase 56-02]: JoinLeaveListener kept in multiplayer-room.tsx (not presence-bar.tsx) to isolate toast concerns from display concerns
 - [Phase 56-02]: Self is never shown as idle — idle status only applies to others
+- [Phase 56-01]: Ref-based handler bridge chosen for CursorBroadcaster — hook approach violates React rules; component-conditional-mount is safe since CursorBroadcaster only mounts inside RoomProvider tree
+- [Phase 56-01]: throttle: 50 on createClient caps all presence broadcasts at 50ms (20fps) for PRES-01 compliance
+- [Phase 56-01]: 80ms CSS transition for cursor smoothing — zero-dependency, works well with 50ms presence update rate
 
 ### Pending Todos
 
@@ -99,5 +103,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 56-02-PLAN.md — PresenceBar avatar stack with idle detection, JoinLeaveListener toast notifications
+Stopped at: Completed 56-01-PLAN.md — live cursor broadcasting and rendering (CursorBroadcaster + LiveCursors, 50ms throttle)
 Resume file: None
