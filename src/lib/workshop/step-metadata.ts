@@ -293,13 +293,18 @@ export const STEP_CONFIRM_LABELS: Record<string, string> = {
 /** Minimum canvas items required before the confirm button appears (default: 1) */
 export const STEP_CONFIRM_MIN_ITEMS: Record<string, number> = {
   'stakeholder-mapping': 4,
-  'user-research': 6,
+  'user-research': 5,
 };
 
 /**
  * Check whether all selected personas have been interviewed.
  * A persona is "interviewed" when at least one insight sticky note is clustered under their name.
  * Persona cards are sticky notes without a `cluster`; insights have a `cluster` matching the persona name.
+ *
+ * The AI gives personas first names during roleplay (e.g., "Maria") and uses those as cluster
+ * names, but persona cards use archetype names from selection (e.g., "The Nature Enthusiast").
+ * Exact name matching is unreliable, so we use a count-based check: the number of distinct
+ * insight clusters must be >= the number of persona cards.
  */
 export function areAllPersonasInterviewed(stickyNotes: { text: string; cluster?: string; type?: string; isPreview?: boolean }[]): boolean {
   const items = stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview);
@@ -308,10 +313,7 @@ export function areAllPersonasInterviewed(stickyNotes: { text: string; cluster?:
     items.filter(p => p.cluster).map(p => p.cluster!.toLowerCase())
   );
   if (personaCards.length === 0) return false;
-  return personaCards.every(card => {
-    const name = card.text.split(/\s*[—–-]\s*/)[0].trim().toLowerCase();
-    return insightClusters.has(name);
-  });
+  return insightClusters.size >= personaCards.length;
 }
 
 /**

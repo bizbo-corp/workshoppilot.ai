@@ -430,6 +430,27 @@ export function assembleUserResearchCanvasContext(stickyNotes: StickyNote[]): st
     sections.push(`**${persona}** (${insights.length} insight${insights.length > 1 ? 's' : ''}):\n${insightList}`);
   }
 
+  // Interview progress tracking — helps the AI know when all personas are done
+  if (personaCards.length > 0) {
+    const totalPersonas = personaCards.length;
+    const interviewedPersonas = insightsByPersona.size;
+    const remaining = totalPersonas - interviewedPersonas;
+
+    // Build list of persona names that haven't been interviewed yet
+    const interviewedNames = new Set(insightsByPersona.keys());
+    const remainingNames = personaCards
+      .map(p => p.text)
+      .filter(name => !interviewedNames.has(name));
+
+    let progressText: string;
+    if (remaining <= 0) {
+      progressText = `**Interview Progress:** ${interviewedPersonas} of ${totalPersonas} persona${totalPersonas > 1 ? 's' : ''} interviewed. All interviews complete — proceed to Phase C (Completion).`;
+    } else {
+      progressText = `**Interview Progress:** ${interviewedPersonas} of ${totalPersonas} persona${totalPersonas > 1 ? 's' : ''} interviewed. Remaining: ${remainingNames.join(', ')}.`;
+    }
+    sections.push(progressText);
+  }
+
   return sections.join('\n\n');
 }
 
