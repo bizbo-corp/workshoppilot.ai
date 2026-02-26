@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Multiplayer Collaboration
-status: roadmap
+status: in-progress
 last_updated: "2026-02-26"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 11
-  completed_plans: 0
+  completed_plans: 2
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.9 Multiplayer Collaboration — Phase 54 ready to plan
+**Current focus:** v1.9 Multiplayer Collaboration — Phase 54 in progress (plans 01-02 complete)
 
 ## Current Position
 
 Phase: 54 of 58 (Liveblocks Foundation)
-Plan: — (not started)
-Status: Ready to plan
-Last activity: 2026-02-26 — v1.9 roadmap created (5 phases, 11 plans)
+Plan: 02 complete (54-02-PLAN.md done)
+Status: In progress
+Last activity: 2026-02-26 — Phase 54 plans 01+02 complete (Liveblocks install + multiplayer schema)
 
-Progress: [░░░░░░░░░░] 0% (0/11 plans)
+Progress: [██░░░░░░░░] 18% (2/11 plans)
 
 ## Performance Metrics
 
@@ -56,6 +56,10 @@ Progress: [░░░░░░░░░░] 0% (0/11 plans)
 - [v1.9 Roadmap]: SYNC-04 (per-participant Crazy 8s slots) deferred to v2 — requires partitioned per-user storage regions, incompatible with shared-canvas broadcast architecture
 - [v1.9 Roadmap]: Guest auth uses HttpOnly signed cookies (not Clerk accounts) — sign-in prompt never shown to workshop participants
 - [v1.9 Roadmap]: Auto-save disabled in multiplayer mode; canvas persisted via Liveblocks StorageUpdated webhook (60s throttle) + manual REST API snapshot on session end
+- [54-02 Schema]: workshopType defaults to 'solo' — safe backfill of all existing workshops with no data migration required
+- [54-02 Schema]: clerkUserId nullable on session_participants — guests join with display name + color, no Clerk account required
+- [54-02 Schema]: shareToken on workshopSessions is UNIQUE NOT NULL — the invite link token for Phase 57 SESS-02
+- [54-02 Schema]: Prefix 'wses' for workshop sessions (avoids collision with existing 'ses' prefix for AI chat sessions)
 
 ### Pending Todos
 
@@ -70,5 +74,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Roadmap created for v1.9, ready to plan Phase 54
+Stopped at: Completed 54-02-PLAN.md (multiplayer schema migration applied to Neon)
 Resume file: None

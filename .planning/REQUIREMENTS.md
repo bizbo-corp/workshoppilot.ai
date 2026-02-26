@@ -43,7 +43,7 @@ Requirements for v1.9 Multiplayer Collaboration. Each maps to roadmap phases.
 ### Infrastructure
 
 - [ ] **INFR-01**: Real-time sync uses a managed WebSocket provider compatible with Vercel serverless (Liveblocks)
-- [ ] **INFR-02**: Canvas state persists to database via webhook for durability
+- [x] **INFR-02**: Canvas state persists to database via webhook for durability
 - [ ] **INFR-03**: Participants can reconnect after network interruption with state recovery
 - [ ] **INFR-04**: Guest authentication uses signed cookies (not Clerk accounts)
 - [ ] **INFR-05**: Multiplayer components are lazy-loaded to avoid bundle size impact on solo workshops
@@ -108,7 +108,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FACL-04 | Phase 58 | Pending |
 | FACL-05 | Phase 58 | Pending |
 | INFR-01 | Phase 54 | Pending |
-| INFR-02 | Phase 54 | Pending |
+| INFR-02 | Phase 54 | Complete |
 | INFR-03 | Phase 57 | Pending |
 | INFR-04 | Phase 57 | Pending |
 | INFR-05 | Phase 54 | Pending |
