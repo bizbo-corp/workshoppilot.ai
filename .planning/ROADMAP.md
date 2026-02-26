@@ -269,7 +269,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 54. Liveblocks Foundation | 1/3 | In Progress|  |
+| 54. Liveblocks Foundation | 2/3 | In Progress|  |
 | 55. Core Canvas Sync | 0/2 | Not started | - |
 | 56. Live Presence | 0/2 | Not started | - |
 | 57. Guest Auth and Join Flow | 0/2 | Not started | - |
