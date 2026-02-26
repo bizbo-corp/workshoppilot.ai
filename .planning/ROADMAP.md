@@ -195,11 +195,11 @@ Plans:
   3. A sticky note moved by one participant moves on all other participants' canvases in real time
   4. New post-it nodes created by a participant automatically inherit that participant's assigned color
   5. Opening EzyDraw on a shared drawing node locks that node — a second participant attempting to open it sees a "being edited" indicator and cannot open EzyDraw simultaneously
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 55-01: Create multiplayer workshop type and dashboard creation flow; add `createMultiplayerCanvasStore` factory with `liveblocks()` middleware and correct `storageMapping` (durable fields only — no `selected`, `dragging`, `measured`)
-- [ ] 55-02: Wire `CanvasStoreProvider` to call `enterRoom`/`leaveRoom` for multiplayer workshops, disable auto-save in multiplayer mode, implement post-it color inheritance from participant identity, and add EzyDraw single-editor lock via Liveblocks Presence
+- [ ] 55-01-PLAN.md — Install @liveblocks/zustand + upgrade zustand to v5, create createMultiplayerCanvasStore factory, add multiplayer workshop creation flow to dashboard dialog, and multiplayer badge on cards
+- [ ] 55-02-PLAN.md — Wire CanvasStoreProvider to branch on workshopType with enterRoom/leaveRoom, disable auto-save in multiplayer mode, implement post-it color inheritance, EzyDraw single-editor lock via Presence, and webhook Drizzle upsert
 
 ### Phase 56: Live Presence
 **Goal**: Every participant can see who else is in the workshop and where their cursors are on the canvas in real time
