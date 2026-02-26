@@ -222,11 +222,11 @@ Plans:
   3. Clicking the primary CTA in the upgrade modal redirects to Stripe Checkout for Single Flight ($79)
   4. After a successful purchase, the user lands back in their workshop at Step 7 with the credit consumed and step content visible
   5. The dashboard header shows a credit badge ("X credits remaining" or "No credits — get one") that reflects the live balance after purchase
-**Plans**: TBD
+**Plans**: 2
 
 Plans:
-- [ ] 51-01: `upgrade-modal.tsx` with outcome headline, progress context, pricing, and CTA wired to checkout route
-- [ ] 51-02: Locked step indicators in stepper, `credit-badge.tsx` on dashboard, and `?payment=success` toast handling
+- [ ] 51-01: Upgrade dialog (outcome-framed dialog at Step 6 paywall + lock badges in stepper) (Wave 1)
+- [ ] 51-02: Return-to-workshop flow (checkout return URL + success page redirect) + dashboard credit badge (Wave 2, depends on 51-01)
 
 ### Phase 52: Onboarding UI
 **Goal**: First-time users see a welcome modal that orients them to the app, the modal never reappears after dismissal, and dismissal state persists across devices and browsers
@@ -274,7 +274,7 @@ Plans:
 | 48. Stripe Infrastructure | 1/1 | Complete    | 2026-02-25 | - |
 | 49. Payment API Layer | 3/3 | Complete    | 2026-02-25 | - |
 | 50. Credit Actions and Server-Side Enforcement | 2/2 | Complete    | 2026-02-25 | - |
-| 51. Paywall UI | v1.8 | 0/TBD | Not started | - |
+| 51. Paywall UI | v1.8 | 0/2 | Not started | - |
 | 52. Onboarding UI | v1.8 | 0/TBD | Not started | - |
 | 53. Pricing Page and Integration | v1.8 | 0/TBD | Not started | - |
 
