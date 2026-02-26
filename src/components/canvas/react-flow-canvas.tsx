@@ -974,6 +974,9 @@ function ReactFlowCanvasInner({
     const drawingReactFlowNodes: Node[] = drawingNodes.map((dn) => {
       const displayWidth = Math.min(dn.width, 400);
       const displayHeight = displayWidth * (dn.height / dn.width);
+      const locked = isDrawingLockedByOther(dn.id);
+      const locker = locked ? getLockingUser(dn.id) : null;
+      const lockerName = (locker as { presence: { displayName?: string } } | null)?.presence?.displayName;
 
       return {
         id: dn.id,
@@ -988,6 +991,8 @@ function ReactFlowCanvasInner({
           drawingId: dn.drawingId,
           width: dn.width,
           height: dn.height,
+          isLocked: locked,
+          lockedByName: lockerName ?? undefined,
         },
         style: { width: displayWidth, height: displayHeight },
       };
@@ -1146,6 +1151,8 @@ function ReactFlowCanvasInner({
     handleHmwFieldChange,
     handleHmwChipSelect,
     dismissGuide,
+    isDrawingLockedByOther,
+    getLockingUser,
   ]);
 
   // Create sticky note at position and set as editing

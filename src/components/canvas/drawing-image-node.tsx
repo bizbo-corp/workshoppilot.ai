@@ -8,6 +8,8 @@ export type DrawingImageNodeData = {
   drawingId: string;     // ID in stepArtifacts.drawings array (for re-edit lookup)
   width: number;         // Drawing width in pixels
   height: number;        // Drawing height in pixels
+  isLocked?: boolean;    // true when another participant is editing this drawing
+  lockedByName?: string; // display name of the participant who has EzyDraw open
 };
 
 export type DrawingImageNode = Node<DrawingImageNodeData, 'drawingImage'>;
@@ -40,22 +42,47 @@ export const DrawingImageNode = memo(({ data, selected, id }: NodeProps<DrawingI
         className="!opacity-0 !w-0 !h-0"
       />
 
-      {/* Pencil icon - visible on hover */}
-      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 16 16"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="text-muted-foreground"
-        >
-          <path
-            d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25a1.75 1.75 0 0 1 .445-.758l8.61-8.61Zm.176 4.823L9.75 4.81l-6.286 6.287a.253.253 0 0 0-.064.108l-.558 1.953 1.953-.558a.253.253 0 0 0 .108-.064l6.286-6.286Z"
-            fill="currentColor"
-          />
-        </svg>
-      </div>
+      {/* Pencil icon - visible on hover, hidden when node is locked by another participant */}
+      {!data.isLocked && (
+        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="text-muted-foreground"
+          >
+            <path
+              d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25a1.75 1.75 0 0 1 .445-.758l8.61-8.61Zm.176 4.823L9.75 4.81l-6.286 6.287a.253.253 0 0 0-.064.108l-.558 1.953 1.953-.558a.253.253 0 0 0 .108-.064l6.286-6.286Z"
+              fill="currentColor"
+            />
+          </svg>
+        </div>
+      )}
+
+      {/* Lock overlay - shown when another participant is editing this drawing */}
+      {data.isLocked && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-black/40 pointer-events-none">
+          <div className="flex items-center gap-1.5 rounded-md bg-background/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-muted-foreground"
+            >
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            {data.lockedByName || 'Someone'} is editing
+          </div>
+        </div>
+      )}
 
       <Handle
         type="source"
