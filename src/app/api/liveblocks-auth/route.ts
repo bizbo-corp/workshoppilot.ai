@@ -21,11 +21,26 @@ import { Liveblocks } from '@liveblocks/node';
  *
  * TODO (Phase 57): Guest auth — read identity from HttpOnly signed cookie, look up
  * the session_participants record, issue token with FULL_ACCESS scoped to the room.
+ *
+ * Implementation note — lazy initialization:
+ * The Liveblocks constructor validates the secret key format at instantiation time.
+ * Module-level initialization fails at build time when LIVEBLOCKS_SECRET_KEY is
+ * not set (e.g., CI builds, local dev without .env.local). Lazy initialization
+ * inside the POST handler defers this to request time, matching Next.js conventions
+ * for environment-dependent server modules.
  */
 
-const liveblocks = new Liveblocks({
-  secret: process.env.LIVEBLOCKS_SECRET_KEY!,
-});
+// Lazily initialized Liveblocks client — avoids build-time env var validation failure
+let _liveblocks: Liveblocks | null = null;
+
+function getLiveblocksClient(): Liveblocks {
+  if (!_liveblocks) {
+    _liveblocks = new Liveblocks({
+      secret: process.env.LIVEBLOCKS_SECRET_KEY!,
+    });
+  }
+  return _liveblocks;
+}
 
 export async function POST(request: Request) {
   // Step 1: Check Clerk authentication
@@ -61,6 +76,7 @@ export async function POST(request: Request) {
 
   // Step 5: Prepare the Liveblocks session with user metadata
   // name: prefer fullName, fall back to username, then a safe default
+  const liveblocks = getLiveblocksClient();
   const session = liveblocks.prepareSession(user.id, {
     userInfo: {
       name: user.fullName ?? user.username ?? 'Facilitator',

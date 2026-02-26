@@ -22,17 +22,29 @@ import { WebhookHandler } from '@liveblocks/node';
  * 3. Upsert the storage snapshot into step_artifacts (or a new canvas_snapshots table)
  *
  * Docs: https://liveblocks.io/docs/platform/webhooks
+ *
+ * Implementation note — lazy initialization:
+ * WebhookHandler validates the secret at instantiation time. Module-level
+ * initialization fails at build time when LIVEBLOCKS_WEBHOOK_SECRET is not set.
+ * Lazy initialization inside the POST handler defers validation to request time.
  */
 
-const webhookHandler = new WebhookHandler(
-  process.env.LIVEBLOCKS_WEBHOOK_SECRET!
-);
+// Lazily initialized webhook handler — avoids build-time env var validation failure
+let _webhookHandler: WebhookHandler | null = null;
+
+function getWebhookHandler(): WebhookHandler {
+  if (!_webhookHandler) {
+    _webhookHandler = new WebhookHandler(process.env.LIVEBLOCKS_WEBHOOK_SECRET!);
+  }
+  return _webhookHandler;
+}
 
 export async function POST(request: Request) {
   // Step 1: Read raw body — NEVER use request.json() as it breaks HMAC verification
   const body = await request.text();
 
   // Step 2: Verify HMAC signature — invalid signature returns 400 (no retry)
+  const webhookHandler = getWebhookHandler();
   let event: ReturnType<WebhookHandler['verifyRequest']>;
   try {
     event = webhookHandler.verifyRequest({
