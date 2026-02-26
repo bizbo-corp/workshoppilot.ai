@@ -7,7 +7,8 @@
 
 import { useState, useEffect, useRef, useTransition, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
-import { Smile, Check } from 'lucide-react';
+import { Smile, Check, MessageSquare, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,7 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
   const [title, setTitle] = useState('');
   const [selectedColor, setSelectedColor] = useState<WorkshopColor>(WORKSHOP_COLORS[0]);
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  const [workshopType, setWorkshopType] = useState<'solo' | 'multiplayer'>('solo');
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [emojiData, setEmojiData] = useState<any>(null);
   const emojiContainerRef = useRef<HTMLDivElement>(null);
@@ -57,6 +59,7 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
       setTitle('');
       setSelectedColor(WORKSHOP_COLORS[0]);
       setSelectedEmoji(null);
+      setWorkshopType('solo');
       setEmojiPickerOpen(false);
     }
   }, [open]);
@@ -124,6 +127,58 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
                 autoFocus
                 maxLength={100}
               />
+            </div>
+
+            {/* Mode selection: Solo AI-led vs Multiplayer */}
+            <div>
+              <label className="text-sm font-medium text-foreground">
+                Workshop mode
+              </label>
+              <div className="mt-1.5 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setWorkshopType('solo')}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 rounded-lg border-2 p-3 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    workshopType === 'solo'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border bg-background hover:border-muted-foreground/40 hover:bg-accent'
+                  )}
+                >
+                  <div className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-md',
+                    workshopType === 'solo' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                  )}>
+                    <MessageSquare className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Solo AI-led</p>
+                    <p className="text-xs text-muted-foreground">Just you and the AI</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setWorkshopType('multiplayer')}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 rounded-lg border-2 p-3 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    workshopType === 'multiplayer'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border bg-background hover:border-muted-foreground/40 hover:bg-accent'
+                  )}
+                >
+                  <div className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-md',
+                    workshopType === 'multiplayer' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                  )}>
+                    <Users className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Multiplayer</p>
+                    <p className="text-xs text-muted-foreground">Collaborate with others</p>
+                  </div>
+                </button>
+              </div>
             </div>
 
             {/* Color + Emoji pickers */}
@@ -196,6 +251,7 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
           {/* Hidden inputs for server action */}
           <input type="hidden" name="color" value={selectedColor.id} />
           <input type="hidden" name="emoji" value={selectedEmoji || ''} />
+          <input type="hidden" name="workshopType" value={workshopType} />
 
           <DialogFooter className="mt-6">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>

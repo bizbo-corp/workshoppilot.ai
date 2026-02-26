@@ -15,7 +15,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { Clock, ArrowRight } from 'lucide-react';
+import { Clock, ArrowRight, Users } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,7 @@ interface WorkshopCardProps {
   onRename: (workshopId: string, newName: string) => Promise<void>;
   totalCostCents?: number | null;
   onUpdateAppearance: (workshopId: string, updates: { color?: string; emoji?: string | null }) => Promise<void>;
+  workshopType?: 'solo' | 'multiplayer';
   selected?: boolean;
   onSelect?: () => void;
 }
@@ -53,6 +54,7 @@ export function WorkshopCard({
   totalCostCents,
   onRename,
   onUpdateAppearance,
+  workshopType,
   selected = false,
   onSelect,
 }: WorkshopCardProps) {
@@ -158,6 +160,14 @@ export function WorkshopCard({
                 </h3>
               )}
             </Link>
+
+            {/* Multiplayer badge — subtle indicator for multiplayer workshops */}
+            {workshopType === 'multiplayer' && (
+              <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-black/10 px-2 py-0.5 dark:bg-white/15">
+                <Users className="h-3 w-3 text-foreground/60" />
+                <span className="text-xs text-foreground/60">Multiplayer</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

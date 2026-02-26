@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db/client';
-import { workshops, sessions, workshopSteps, chatMessages, stepArtifacts, stepSummaries, users } from '@/db/schema';
+import { workshops, sessions, workshopSteps, chatMessages, stepArtifacts, stepSummaries, users, workshopSessions } from '@/db/schema';
+import { randomBytes } from 'crypto';
 import { eq, and, isNull, inArray, sql, gt } from 'drizzle-orm';
 import { PAYWALL_CUTOFF_DATE } from '@/lib/billing/paywall-config';
 import { createPrefixedId } from '@/lib/ids';
@@ -62,6 +63,11 @@ export async function createWorkshopSession(formData?: FormData) {
     const rawEmoji = formData?.get('emoji') as string | null;
     const emoji = rawEmoji || null;
 
+    // Extract workshopType from FormData (defaults to 'solo')
+    const workshopType = (formData?.get('workshopType') as string) === 'multiplayer'
+      ? 'multiplayer' as const
+      : 'solo' as const;
+
     // 1. Create workshop record
     const [workshop] = await db
       .insert(workshops)
@@ -73,6 +79,8 @@ export async function createWorkshopSession(formData?: FormData) {
         status: 'active',
         color,
         emoji,
+        workshopType,
+        maxParticipants: workshopType === 'multiplayer' ? 15 : null,
       })
       .returning();
 
@@ -96,6 +104,20 @@ export async function createWorkshopSession(formData?: FormData) {
     }));
 
     await db.insert(workshopSteps).values(stepRecords);
+
+    // 4. If multiplayer: create workshopSessions record (Liveblocks room registration + share token)
+    if (workshopType === 'multiplayer') {
+      const { getRoomId } = await import('@/lib/liveblocks/config');
+      // Generate 24-character URL-safe token using Node.js crypto (available in Next.js server actions)
+      const shareToken = randomBytes(18).toString('base64url');
+      await db.insert(workshopSessions).values({
+        workshopId: workshop.id,
+        liveblocksRoomId: getRoomId(workshop.id),
+        shareToken,
+        status: 'waiting',
+        maxParticipants: 15,
+      });
+    }
 
     sessionId = session.id;
   } catch (error) {

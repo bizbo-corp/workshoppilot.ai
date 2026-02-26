@@ -29,6 +29,7 @@ interface WorkshopData {
   color: string | null;
   emoji: string | null;
   totalCostCents: number | null;
+  workshopType?: 'solo' | 'multiplayer';
 }
 
 interface WorkshopGridProps {
@@ -149,6 +150,7 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
             color={workshop.color}
             emoji={workshop.emoji}
             totalCostCents={workshop.totalCostCents}
+            workshopType={workshop.workshopType}
             onRename={onRename}
             onUpdateAppearance={onUpdateAppearance}
             selected={selectedIds.has(workshop.id)}

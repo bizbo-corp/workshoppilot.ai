@@ -111,6 +111,7 @@ export default async function DashboardPage() {
       currentStepName: stepMetadata?.name || 'Challenge',
       sessionId: workshop.sessions[0]?.id || '',
       isCompleted,
+      workshopType: workshop.workshopType,
     };
   });
 
@@ -292,6 +293,7 @@ export default async function DashboardPage() {
                 color: w.color,
                 emoji: w.emoji,
                 totalCostCents: costMap.get(w.id) ?? null,
+                workshopType: w.workshopType,
               }))}
               onRename={renameWorkshop}
               onUpdateAppearance={updateWorkshopAppearance}
