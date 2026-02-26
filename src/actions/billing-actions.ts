@@ -177,3 +177,17 @@ export async function markOnboardingComplete(): Promise<void> {
     .set({ onboardingComplete: true })
     .where(eq(users.clerkUserId, userId));
 }
+
+/**
+ * Reset onboarding state so the welcome modal reappears.
+ * Admin-only — used for testing the onboarding flow.
+ */
+export async function resetOnboarding(): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) return;
+
+  await db
+    .update(users)
+    .set({ onboardingComplete: false })
+    .where(eq(users.clerkUserId, userId));
+}
