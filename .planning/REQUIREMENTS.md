@@ -27,10 +27,10 @@ Requirements for v1.9 Multiplayer Collaboration. Each maps to roadmap phases.
 
 - [ ] **PRES-01**: Each participant's cursor is visible to all others in real-time
 - [ ] **PRES-02**: Cursors display the participant's name and assigned color
-- [ ] **PRES-03**: Participant list panel shows all connected users with online/idle status
-- [ ] **PRES-04**: Toast notifications appear when participants join or leave
+- [x] **PRES-03**: Participant list panel shows all connected users with online/idle status
+- [x] **PRES-04**: Toast notifications appear when participants join or leave
 - [ ] **PRES-05**: Facilitator's cursor is visually distinct (badge/icon)
-- [ ] **PRES-06**: Participants inactive >2 minutes show an idle indicator
+- [x] **PRES-06**: Participants inactive >2 minutes show an idle indicator
 
 ### Facilitator Controls
 
@@ -98,10 +98,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SYNC-05 | Phase 55 | Complete |
 | PRES-01 | Phase 56 | Pending |
 | PRES-02 | Phase 56 | Pending |
-| PRES-03 | Phase 56 | Pending |
-| PRES-04 | Phase 56 | Pending |
+| PRES-03 | Phase 56 | Complete |
+| PRES-04 | Phase 56 | Complete |
 | PRES-05 | Phase 56 | Pending |
-| PRES-06 | Phase 56 | Pending |
+| PRES-06 | Phase 56 | Complete |
 | FACL-01 | Phase 58 | Pending |
 | FACL-02 | Phase 58 | Pending |
 | FACL-03 | Phase 58 | Pending |

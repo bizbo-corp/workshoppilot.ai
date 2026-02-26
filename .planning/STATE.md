@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.9 Multiplayer Collaboration — Phase 55 Plan 03 complete
+**Current focus:** v1.9 Multiplayer Collaboration — Phase 56 Plan 02 complete
 
 ## Current Position
 
-Phase: 55 of 58 (Core Canvas Sync) — In progress
-Plan: 03 complete (55-03-PLAN.md done)
+Phase: 56 of 58 (Live Presence) — In progress
+Plan: 02 complete (56-02-PLAN.md done)
 Status: In progress
-Last activity: 2026-02-27 — Phase 55 plan 03 complete (EzyDraw lock visual overlay on drawing nodes)
+Last activity: 2026-02-27 — Phase 56 plan 02 complete (PresenceBar avatar stack, idle detection, join/leave toasts)
 
-Progress: [████░░░░░░] 55% (6/11 plans)
+Progress: [█████░░░░░] 73% (8/11 plans)
 
 ## Performance Metrics
 
@@ -51,6 +51,8 @@ Progress: [████░░░░░░] 55% (6/11 plans)
 | Phase 55 P01 | 2 | 2 tasks | 7 files |
 | Phase 55 P02 | 2 | 2 tasks | 12 files |
 | Phase 55 P03 | 5min | 1 task | 2 files |
+| Phase 56 P01 | ~10min | 2 tasks | 3 files |
+| Phase 56 P02 | ~10min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -80,6 +82,10 @@ Progress: [████░░░░░░] 55% (6/11 plans)
 - [Phase 55-02]: Webhook upserts raw Liveblocks storage JSON under _canvas key — mirrors solo saveCanvasState structure, keeping loadCanvasState read path identical
 - [Phase 55-03]: pointer-events-none on lock overlay so double-click still reaches existing handler (which shows toast error in multiplayer)
 - [Phase 55-03]: Pencil hover icon hidden when isLocked=true to prevent conflicting edit affordances; lockedByName falls back to 'Someone' when displayName absent
+- [Phase 56-02]: Fixed top-right positioning (z-50) chosen so PresenceBar floats above all canvas panels regardless of layout
+- [Phase 56-02]: useIdleStatus tracks cursor-based activity only — non-cursor presence updates do not reset idle timer
+- [Phase 56-02]: JoinLeaveListener kept in multiplayer-room.tsx (not presence-bar.tsx) to isolate toast concerns from display concerns
+- [Phase 56-02]: Self is never shown as idle — idle status only applies to others
 
 ### Pending Todos
 
@@ -93,5 +99,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 55-03-PLAN.md — EzyDraw lock visual overlay (semi-transparent 'Being edited by [name]' indicator on drawing nodes)
+Stopped at: Completed 56-02-PLAN.md — PresenceBar avatar stack with idle detection, JoinLeaveListener toast notifications
 Resume file: None
