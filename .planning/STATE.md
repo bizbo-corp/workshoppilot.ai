@@ -18,16 +18,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 51 — Paywall UI
+**Current focus:** Completing v1.8 milestone
 
 ## Current Position
 
-Phase: 51 of 53 in v1.8 (Paywall UI) — COMPLETE
-Plan: 2 of 2 in current phase — COMPLETE
-Status: Plan 51-02 Complete — return-to-workshop flow after Stripe Checkout, open redirect prevention, credit badge in dashboard header
-Last activity: 2026-02-26 — Plan 51-02 complete (return-to flow, pricing forwarding, dashboard credit badge)
+Phase: All 6 phases complete (47-52), Phase 53 deferred to next milestone
+Status: v1.8 milestone completion IN PROGRESS — user approved shipping, needs archival
+Last activity: 2026-02-26 — Milestone audit done, gaps deferred, ready for /gsd:complete-milestone v1.8
 
-Progress: [█████░░░░░] 71% (v1.8 — 5/7 phases complete)
+Progress: [██████████] 100% (v1.8 — 6/6 in-scope phases complete, Phase 53 deferred)
 
 ## Performance Metrics
 
