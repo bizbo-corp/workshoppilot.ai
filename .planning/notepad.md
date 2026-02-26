@@ -10,22 +10,19 @@ Sign in button works on remote/production
 
 ## Visual updates
 
-Empty canvas graphics.
+## Todo
 
-Challenge -> mountain
+Sticker Library
 
-Idea + Audience + problem
+Step Health indicator
 
 improve the ezydraw component to have phone, stick people, and other objects. 
 
-## Concept development
+- Stripe
+- Multiplayer
+- Onboarding screens
+- Facilitator, Particiapant
+- Facilitator (single mode)
 
-Scores for confidence  🟢
 
-Completness 🟢
 
-Validation 🟠 
-
-## Todo
-
-1

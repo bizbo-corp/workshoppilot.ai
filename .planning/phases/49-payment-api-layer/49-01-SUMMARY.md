@@ -108,6 +108,14 @@ Task 0 (human-action checkpoint) was already completed before this plan ran: STR
 - Phase 52 (success/cancel pages) need `/purchase/success?session_id=...` and `/purchase/cancel` routes created to match the URLs in this route handler
 - Vercel Deployment Protection may block `/api/webhooks/stripe` in preview — add to bypass list before Phase 49 webhook testing begins (noted in STATE.md blockers)
 
+## Self-Check: PASSED
+
+- src/lib/billing/price-config.ts: FOUND
+- src/app/api/billing/checkout/route.ts: FOUND
+- .planning/phases/49-payment-api-layer/49-01-SUMMARY.md: FOUND
+- Commit 1ed57bf (Task 1): FOUND
+- Commit c7cfdde (docs final): FOUND
+
 ---
 *Phase: 49-payment-api-layer*
 *Completed: 2026-02-26*

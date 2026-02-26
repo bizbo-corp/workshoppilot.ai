@@ -111,6 +111,15 @@ None — no external service configuration required.
 - Lock badges in both stepper views signal the gate to users before they hit it
 - Phase 52 can build on this: email capture at paywall, analytics events, A/B copy variants
 
+## Self-Check: PASSED
+
+- upgrade-dialog.tsx: FOUND
+- step-navigation.tsx: FOUND
+- 51-01-SUMMARY.md: FOUND
+- Commit b2f92a2 (Task 1): FOUND
+- Commit 834f289 (Task 2): FOUND
+- Metadata commit 43cb03e: FOUND
+
 ---
 *Phase: 51-paywall-ui*
 *Completed: 2026-02-26*
