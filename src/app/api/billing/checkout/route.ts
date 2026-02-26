@@ -14,11 +14,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // 2. Parse and validate request body
+  // 2. Parse and validate request body (JSON or form data)
   let priceId: string;
   try {
-    const body = await req.json();
-    priceId = body.priceId;
+    const contentType = req.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const body = await req.json();
+      priceId = body.priceId;
+    } else {
+      const formData = await req.formData();
+      priceId = formData.get('priceId') as string;
+    }
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

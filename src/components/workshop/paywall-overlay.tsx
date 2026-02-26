@@ -16,7 +16,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock } from 'lucide-react';
+import { Lock, Lightbulb, Zap, FileText, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getCredits, consumeCredit } from '@/actions/billing-actions';
@@ -26,6 +26,29 @@ interface PaywallOverlayProps {
   workshopId: string;
   stepNumber: number;
 }
+
+const VALUE_ITEMS = [
+  {
+    icon: Lightbulb,
+    title: 'Reframe Your Challenge',
+    description: 'Transform insights into powerful "How Might We" statements',
+  },
+  {
+    icon: Palette,
+    title: 'AI-Powered Ideation',
+    description: 'Generate and sketch ideas with Crazy 8s visual brainstorming',
+  },
+  {
+    icon: Zap,
+    title: 'Concept Development',
+    description: 'Develop your best ideas into concrete, testable concepts',
+  },
+  {
+    icon: FileText,
+    title: 'Build Pack Output',
+    description: 'Get a complete PRD, user stories, and tech specs for your dev team',
+  },
+];
 
 export function PaywallOverlay({ sessionId, workshopId, stepNumber }: PaywallOverlayProps) {
   const router = useRouter();
@@ -45,7 +68,6 @@ export function PaywallOverlay({ sessionId, workshopId, stepNumber }: PaywallOve
     try {
       const result = await consumeCredit(workshopId);
       if (result.status === 'consumed' || result.status === 'already_unlocked' || result.status === 'grandfathered' || result.status === 'paywall_disabled') {
-        // Credit consumed (or workshop already unlocked by another path) — refresh Server Component
         router.refresh();
       } else if (result.status === 'insufficient_credits') {
         toast.error('No credits available. Please purchase credits to continue.');
@@ -70,38 +92,39 @@ export function PaywallOverlay({ sessionId, workshopId, stepNumber }: PaywallOve
 
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
-      {/* Blurred background — decorative locked content hints */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="blur-md opacity-30 h-full w-full">
-          <div className="absolute top-8 left-8 h-32 w-64 rounded-lg bg-muted border" />
-          <div className="absolute top-8 right-8 h-32 w-48 rounded-lg bg-muted border" />
-          <div className="absolute top-48 left-1/4 h-24 w-72 rounded-lg bg-muted border" />
-          <div className="absolute top-48 right-1/4 h-24 w-56 rounded-lg bg-muted border" />
-          <div className="absolute bottom-24 left-12 h-40 w-80 rounded-lg bg-muted border" />
-          <div className="absolute bottom-24 right-12 h-40 w-64 rounded-lg bg-muted border" />
-          {/* Gradient blobs */}
-          <div className="absolute top-1/4 left-1/3 h-48 w-48 rounded-full bg-primary/10" />
-          <div className="absolute bottom-1/3 right-1/4 h-36 w-36 rounded-full bg-primary/8" />
-        </div>
-      </div>
+      {/* Semi-transparent backdrop — lets the step layout show through */}
+      <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px]" />
 
       {/* Overlay card */}
-      <div className="relative z-10 flex max-w-md flex-col items-center gap-6 rounded-xl border bg-background/90 p-8 shadow-lg backdrop-blur-sm">
+      <div className="relative z-10 flex max-w-lg flex-col items-center gap-5 rounded-xl border bg-background/95 p-8 shadow-2xl backdrop-blur-sm">
         {/* Lock icon */}
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
-          <Lock className="h-10 w-10 text-muted-foreground" />
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-olive-100 dark:bg-olive-900/50">
+          <Lock className="h-8 w-8 text-olive-700 dark:text-olive-400" />
         </div>
 
         {/* Heading */}
         <div className="space-y-2 text-center">
           <h2 className="text-xl font-semibold">Unlock Steps 7-10</h2>
           <p className="text-sm text-muted-foreground">
-            Use a credit to continue your workshop and access Steps 7 through 10.
+            You&apos;ve completed the discovery phase. Use a credit to unlock the creation phase and turn your insights into action.
           </p>
         </div>
 
+        {/* Value proposition */}
+        <div className="w-full grid grid-cols-2 gap-3">
+          {VALUE_ITEMS.map((item) => (
+            <div key={item.title} className="flex items-start gap-2.5 rounded-lg border bg-muted/30 p-3">
+              <item.icon className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-xs font-medium leading-tight">{item.title}</p>
+                <p className="text-xs text-muted-foreground leading-tight mt-0.5">{item.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {/* Credit balance display */}
-        <div className="w-full rounded-lg border bg-muted/50 px-4 py-3 text-center">
+        <div className="w-full rounded-lg border bg-muted/50 px-4 py-2.5 text-center">
           {isLoading ? (
             <span className="text-sm text-muted-foreground">Checking credit balance...</span>
           ) : creditBalance !== null && creditBalance > 0 ? (
@@ -114,7 +137,7 @@ export function PaywallOverlay({ sessionId, workshopId, stepNumber }: PaywallOve
         </div>
 
         {/* Action buttons */}
-        <div className="flex w-full flex-col gap-3">
+        <div className="flex w-full flex-col gap-2.5">
           {!isLoading && creditBalance !== null && creditBalance > 0 ? (
             <Button
               onClick={handleUseCredit}
@@ -134,7 +157,7 @@ export function PaywallOverlay({ sessionId, workshopId, stepNumber }: PaywallOve
                 Buy Credits
               </Button>
               <p className="text-center text-xs text-muted-foreground">
-                Starting at $79 for one workshop credit
+                From $79 for one workshop credit
               </p>
             </>
           ) : null}
