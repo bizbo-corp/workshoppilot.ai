@@ -20,6 +20,10 @@ const isPublicRoute = createRouteMatcher([
   '/workshop/:path*/step/1',
   '/workshop/:path*/step/2',
   '/workshop/:path*/step/3',
+  // Guest join flow — no Clerk session required
+  '/join(.*)',          // /join/[token] page
+  '/api/guest-join',   // Guest name submission endpoint
+  '/api/session-status(.*)', // Lobby status polling (Plan 02)
 ]);
 
 const isAdminRoute = createRouteMatcher(['/admin(.*)', '/api/admin(.*)']);
