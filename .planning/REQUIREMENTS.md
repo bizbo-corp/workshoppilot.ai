@@ -13,7 +13,7 @@ Requirements for v1.9 Multiplayer Collaboration. Each maps to roadmap phases.
 - [ ] **SESS-02**: Facilitator can generate a shareable link for the workshop
 - [ ] **SESS-03**: Participant can join a multiplayer workshop via share link with name only (no account needed)
 - [x] **SESS-04**: Participants see a lobby/waiting screen before the facilitator starts the session
-- [ ] **SESS-05**: All participants see a "session ended" overlay when facilitator ends the session
+- [x] **SESS-05**: All participants see a "session ended" overlay when facilitator ends the session
 
 ### Real-Time Canvas
 
@@ -36,9 +36,9 @@ Requirements for v1.9 Multiplayer Collaboration. Each maps to roadmap phases.
 
 - [x] **FACL-01**: Only the facilitator can advance or navigate between steps
 - [x] **FACL-02**: Only the facilitator can interact with the AI chat input
-- [ ] **FACL-03**: Facilitator can broadcast viewport to all participants ("bring everyone to me")
-- [ ] **FACL-04**: Facilitator can set a countdown timer visible to all participants
-- [ ] **FACL-05**: Facilitator can end the session (final state persisted to database)
+- [x] **FACL-03**: Facilitator can broadcast viewport to all participants ("bring everyone to me")
+- [x] **FACL-04**: Facilitator can set a countdown timer visible to all participants
+- [x] **FACL-05**: Facilitator can end the session (final state persisted to database)
 
 ### Infrastructure
 
@@ -90,7 +90,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SESS-02 | Phase 57 | Pending |
 | SESS-03 | Phase 57 | Pending |
 | SESS-04 | Phase 57 | Complete |
-| SESS-05 | Phase 58 | Pending |
+| SESS-05 | Phase 58 | Complete |
 | SYNC-01 | Phase 55 | Complete |
 | SYNC-02 | Phase 55 | Complete |
 | SYNC-03 | Phase 55 | Complete |
@@ -104,9 +104,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRES-06 | Phase 56 | Complete |
 | FACL-01 | Phase 58 | Complete |
 | FACL-02 | Phase 58 | Complete |
-| FACL-03 | Phase 58 | Pending |
-| FACL-04 | Phase 58 | Pending |
-| FACL-05 | Phase 58 | Pending |
+| FACL-03 | Phase 58 | Complete |
+| FACL-04 | Phase 58 | Complete |
+| FACL-05 | Phase 58 | Complete |
 | INFR-01 | Phase 54 | Complete |
 | INFR-02 | Phase 54 | Complete |
 | INFR-03 | Phase 57 | Complete |

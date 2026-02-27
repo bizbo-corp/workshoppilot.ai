@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Phase: 58 of 58 (Facilitator Controls) — In Progress
-Plan: 01 complete (58-01-PLAN.md done)
-Status: Phase 58 in progress (plan 1/1 complete)
-Last activity: 2026-02-28 — Phase 58 plan 01 complete (RoomEvent types, isFacilitator context, StepNav gate, ChatPanel read-only, server-side facilitator auth)
+Phase: 58 of 58 (Facilitator Controls) — Complete
+Plan: 02 complete (58-02-PLAN.md done)
+Status: Phase 58 complete (plan 2/2 complete) — v1.9 Multiplayer Collaboration milestone DONE
+Last activity: 2026-02-27 — Phase 58 plan 02 complete (viewport sync, countdown timer, session end flow, facilitator crown badge)
 
 Progress: [██████████] 100% (12/12 plans)
 
@@ -104,6 +104,10 @@ Progress: [██████████] 100% (12/12 plans)
 - [Phase 58-01]: sessionId threaded from step page through MultiplayerRoomLoader to MultiplayerRoom to enable StepChangedListener navigation routing
 - [Phase 58-01]: isFacilitator defaults false in MultiplayerContext so participants never see facilitator UI flash before Liveblocks resolves
 - [Phase 58-01]: Server ownership check uses 2 queries (workshopType first, then ownership) — only fires for multiplayer workshops to minimize DB overhead
+- [Phase 58-02]: Custom DOM event bridge ('facilitator-viewport-sync') for viewport sync — FacilitatorControls dispatches, FacilitatorViewportCapture inside ReactFlow tree receives and broadcasts
+- [Phase 58-02]: FacilitatorViewportCapture and ViewportSyncReceiver placed inside ReactFlowCanvasInner (inside ReactFlowProvider) — only location where useReactFlow() is callable
+- [Phase 58-02]: endWorkshopSession never throws on canvas snapshot failure — session end must succeed regardless of Liveblocks REST API availability
+- [Phase 58-02]: SESSION_ENDED broadcast fires client-side after server action returns — guarantees Neon write committed before participants see overlay
 
 ### Pending Todos
 
@@ -115,6 +119,6 @@ None — Phase 58 Plan 01 complete.
 
 ## Session Continuity
 
-Last session: 2026-02-28
-Stopped at: Completed 58-01-PLAN.md — RoomEvent types, isFacilitator context, StepNav facilitator gate, ChatPanel read-only for participants, server-side facilitator auth check
+Last session: 2026-02-27
+Stopped at: Completed 58-02-PLAN.md — viewport sync, countdown timer, session end flow with Liveblocks snapshot, SessionEndedOverlay, facilitator crown badge
 Resume file: None

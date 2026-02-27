@@ -164,7 +164,7 @@ See `milestones/v1.8-ROADMAP.md` for full details.
 - [x] **Phase 55: Core Canvas Sync** - Create multiplayer workshop type, wire Liveblocks CRDT storage into canvas store, sync all canvas nodes and edges in real time across participants, enforce EzyDraw single-editor lock (completed 2026-02-26)
 - [x] **Phase 56: Live Presence** - Broadcast and render live cursors in flow coordinates, build participant list panel with online/idle status, surface join/leave toasts and facilitator badge (completed 2026-02-26)
 - [x] **Phase 57: Guest Auth and Join Flow** - Generate share links, build `/join/[token]` page with name-entry gate, implement guest HttpOnly cookie auth, add lobby waiting screen and state recovery on reconnect (completed 2026-02-27)
-- [ ] **Phase 58: Facilitator Controls** - Gate step progression and AI chat input to facilitator, implement viewport broadcast, countdown timer, and session end flow with final canvas persistence
+- [x] **Phase 58: Facilitator Controls** - Gate step progression and AI chat input to facilitator, implement viewport broadcast, countdown timer, and session end flow with final canvas persistence (completed 2026-02-27)
 
 ## Phase Details
 
@@ -274,7 +274,7 @@ Plans:
 | 55. Core Canvas Sync | 3/3 | Complete    | 2026-02-26 |
 | 56. Live Presence | 2/2 | Complete    | 2026-02-26 |
 | 57. Guest Auth and Join Flow | 2/2 | Complete    | 2026-02-27 |
-| 58. Facilitator Controls | 1/2 | In Progress|  |
+| 58. Facilitator Controls | 2/2 | Complete   | 2026-02-27 |
 
 ---
 *Last updated: 2026-02-26 — v1.9 roadmap created*
