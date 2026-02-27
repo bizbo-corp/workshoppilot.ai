@@ -516,7 +516,7 @@ export default async function StepPage({ params }: StepPageProps) {
         initialBrainRewritingMatrices={initialBrainRewritingMatrices}
       >
         {session.workshop.workshopType === 'multiplayer' ? (
-          <MultiplayerRoomLoader workshopId={session.workshop.id}>
+          <MultiplayerRoomLoader workshopId={session.workshop.id} sessionId={sessionId}>
             <StepContainer
               stepOrder={stepNumber}
               sessionId={sessionId}

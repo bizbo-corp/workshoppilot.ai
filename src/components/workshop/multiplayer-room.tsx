@@ -1,22 +1,28 @@
 'use client';
 
 import { createContext, useContext, useRef } from 'react';
-import { ClientContext, RoomProvider, useSelf, useOthersListener, useLostConnectionListener } from '@liveblocks/react';
+import { ClientContext, RoomProvider, useSelf, useOthersListener, useLostConnectionListener, useEventListener } from '@liveblocks/react';
 import { LiveMap, LiveObject } from '@liveblocks/client';
 import type { OpaqueClient } from '@liveblocks/core';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { getRoomId, liveblocksClient, type CanvasElementStorable } from '@/lib/liveblocks/config';
 import { PresenceBar } from './presence-bar';
 
 /**
- * MultiplayerContext — provides participant color and multiplayer flag to
- * any component in the tree. Populated inside the RoomProvider so that
- * useSelf() is available.
+ * MultiplayerContext — provides participant color, multiplayer flag, and
+ * facilitator status to any component in the tree. Populated inside the
+ * RoomProvider so that useSelf() is available.
+ *
+ * isFacilitator defaults to false — before the RoomProvider resolves,
+ * participants won't see facilitator UI flash. The facilitator's UI
+ * appears once useSelf() resolves.
  */
 export const MultiplayerContext = createContext<{
   participantColor: string | null;
   isMultiplayer: boolean;
-}>({ participantColor: null, isMultiplayer: false });
+  isFacilitator: boolean;
+}>({ participantColor: null, isMultiplayer: false, isFacilitator: false });
 
 export function useMultiplayerContext() {
   return useContext(MultiplayerContext);
@@ -77,23 +83,55 @@ function ReconnectionListener() {
 }
 
 /**
- * MultiplayerRoomInner — rendered inside RoomProvider, reads the current
- * participant's color from Liveblocks presence and provides it via context.
- * Also renders PresenceBar (fixed overlay), JoinLeaveListener (renderless),
- * and ReconnectionListener (renderless).
+ * StepChangedListener — renderless component that listens for STEP_CHANGED
+ * broadcast events from the facilitator and navigates participants to the
+ * new step after a 1-second toast delay.
+ *
+ * Only processes events when the current user is a participant (not the
+ * facilitator who originated the step change via their own navigation).
+ * useEventListener does NOT fire for the sender's own broadcasts, but the
+ * !isFacilitator guard is defense-in-depth against reconnection edge cases.
  */
-function MultiplayerRoomInner({ children }: { children: React.ReactNode }) {
+function StepChangedListener({ sessionId }: { sessionId: string }) {
+  const router = useRouter();
+  const { isFacilitator } = useMultiplayerContext();
+
+  useEventListener(({ event }) => {
+    if (event.type === 'STEP_CHANGED' && !isFacilitator) {
+      toast(`Moving to Step ${event.stepOrder}: ${event.stepName}`, {
+        duration: 3000,
+      });
+      // Delay navigation by 1 second so the toast is visible before page transition
+      setTimeout(() => {
+        router.push(`/workshop/${sessionId}/step/${event.stepOrder}`);
+      }, 1000);
+    }
+  });
+
+  return null;
+}
+
+/**
+ * MultiplayerRoomInner — rendered inside RoomProvider, reads the current
+ * participant's color and role from Liveblocks presence and provides them
+ * via context. Also renders PresenceBar (fixed overlay), JoinLeaveListener
+ * (renderless), ReconnectionListener (renderless), and StepChangedListener
+ * (renderless).
+ */
+function MultiplayerRoomInner({ children, sessionId }: { children: React.ReactNode; sessionId: string }) {
   const self = useSelf();
   return (
     <MultiplayerContext.Provider
       value={{
         participantColor: self?.info?.color ?? null,
         isMultiplayer: true,
+        isFacilitator: self?.info?.role === 'owner',
       }}
     >
       <PresenceBar />
       <JoinLeaveListener />
       <ReconnectionListener />
+      <StepChangedListener sessionId={sessionId} />
       {children}
     </MultiplayerContext.Provider>
   );
@@ -101,6 +139,7 @@ function MultiplayerRoomInner({ children }: { children: React.ReactNode }) {
 
 interface MultiplayerRoomProps {
   workshopId: string;
+  sessionId: string;
   children: React.ReactNode;
 }
 
@@ -114,7 +153,7 @@ interface MultiplayerRoomProps {
  *
  * initialPresence must include all Presence fields declared in config.ts.
  */
-export default function MultiplayerRoom({ workshopId, children }: MultiplayerRoomProps) {
+export default function MultiplayerRoom({ workshopId, sessionId, children }: MultiplayerRoomProps) {
   return (
     <ClientContext.Provider value={liveblocksClient as unknown as OpaqueClient}>
       <RoomProvider
@@ -129,7 +168,7 @@ export default function MultiplayerRoom({ workshopId, children }: MultiplayerRoo
           elements: new LiveMap<string, LiveObject<CanvasElementStorable>>(),
         }}
       >
-        <MultiplayerRoomInner>{children}</MultiplayerRoomInner>
+        <MultiplayerRoomInner sessionId={sessionId}>{children}</MultiplayerRoomInner>
       </RoomProvider>
     </ClientContext.Provider>
   );

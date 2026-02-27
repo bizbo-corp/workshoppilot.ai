@@ -28,9 +28,10 @@ const MultiplayerRoom = dynamic(
 
 interface MultiplayerRoomLoaderProps {
   workshopId: string;
+  sessionId: string;
   children: React.ReactNode;
 }
 
-export function MultiplayerRoomLoader({ workshopId, children }: MultiplayerRoomLoaderProps) {
-  return <MultiplayerRoom workshopId={workshopId}>{children}</MultiplayerRoom>;
+export function MultiplayerRoomLoader({ workshopId, sessionId, children }: MultiplayerRoomLoaderProps) {
+  return <MultiplayerRoom workshopId={workshopId} sessionId={sessionId}>{children}</MultiplayerRoom>;
 }

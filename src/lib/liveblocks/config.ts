@@ -107,5 +107,16 @@ declare global {
         role: "owner" | "participant";
       };
     };
+
+    /**
+     * RoomEvent: broadcast events for facilitator controls (Phase 58).
+     * Sent via useBroadcastEvent(), received via useEventListener().
+     * Note: the broadcasting user does NOT receive their own events.
+     */
+    RoomEvent:
+      | { type: 'STEP_CHANGED'; stepOrder: number; stepName: string }
+      | { type: 'VIEWPORT_SYNC'; x: number; y: number; zoom: number }
+      | { type: 'TIMER_UPDATE'; state: 'running' | 'paused' | 'expired' | 'cancelled'; remainingMs: number; totalMs: number }
+      | { type: 'SESSION_ENDED' };
   }
 }
