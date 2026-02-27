@@ -274,7 +274,7 @@ Plans:
 | 55. Core Canvas Sync | 3/3 | Complete    | 2026-02-26 |
 | 56. Live Presence | 2/2 | Complete    | 2026-02-26 |
 | 57. Guest Auth and Join Flow | 2/2 | Complete    | 2026-02-27 |
-| 58. Facilitator Controls | 0/2 | Not started | - |
+| 58. Facilitator Controls | 1/2 | In Progress|  |
 
 ---
 *Last updated: 2026-02-26 — v1.9 roadmap created*

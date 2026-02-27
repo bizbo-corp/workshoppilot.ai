@@ -34,8 +34,8 @@ Requirements for v1.9 Multiplayer Collaboration. Each maps to roadmap phases.
 
 ### Facilitator Controls
 
-- [ ] **FACL-01**: Only the facilitator can advance or navigate between steps
-- [ ] **FACL-02**: Only the facilitator can interact with the AI chat input
+- [x] **FACL-01**: Only the facilitator can advance or navigate between steps
+- [x] **FACL-02**: Only the facilitator can interact with the AI chat input
 - [ ] **FACL-03**: Facilitator can broadcast viewport to all participants ("bring everyone to me")
 - [ ] **FACL-04**: Facilitator can set a countdown timer visible to all participants
 - [ ] **FACL-05**: Facilitator can end the session (final state persisted to database)
@@ -102,8 +102,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRES-04 | Phase 56 | Complete |
 | PRES-05 | Phase 56 | Complete |
 | PRES-06 | Phase 56 | Complete |
-| FACL-01 | Phase 58 | Pending |
-| FACL-02 | Phase 58 | Pending |
+| FACL-01 | Phase 58 | Complete |
+| FACL-02 | Phase 58 | Complete |
 | FACL-03 | Phase 58 | Pending |
 | FACL-04 | Phase 58 | Pending |
 | FACL-05 | Phase 58 | Pending |

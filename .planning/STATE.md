@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Phase: 57 of 58 (Guest Auth and Join Flow) — Complete
-Plan: 02 complete (57-02-PLAN.md done)
-Status: Phase 57 complete
-Last activity: 2026-02-27 — Phase 57 plan 02 complete (guest Liveblocks auth, GuestLobby with polling and auto-transition, ReconnectionListener)
+Phase: 58 of 58 (Facilitator Controls) — In Progress
+Plan: 01 complete (58-01-PLAN.md done)
+Status: Phase 58 in progress (plan 1/1 complete)
+Last activity: 2026-02-28 — Phase 58 plan 01 complete (RoomEvent types, isFacilitator context, StepNav gate, ChatPanel read-only, server-side facilitator auth)
 
-Progress: [███████░░░] 91% (11/11 plans)
+Progress: [██████████] 100% (12/12 plans)
 
 ## Performance Metrics
 
@@ -99,6 +99,11 @@ Progress: [███████░░░] 91% (11/11 plans)
 - [Phase 57-02]: Request body parsed once at top of /api/liveblocks-auth handler — request.json() can only be called once; both Clerk path and guest path share parsed room value
 - [Phase 57-02]: proxy.ts /workshop/:path*/step/:stepId added to isPublicRoute for guest canvas access — safe because workshop page requires valid session ID and Liveblocks room requires valid token
 - [Phase 57-02]: lostConnectionTimeout: 30_000 in createClient — 30s before failed event fires per user decision (INFR-03)
+- [Phase 58-01]: StepAdvanceBroadcaster pattern (conditional mount not conditional hook) chosen for React hook rule compliance — useBroadcastEvent requires RoomProvider, component-conditional-mount is safe
+- [Phase 58-01]: All 4 RoomEvent types (STEP_CHANGED, VIEWPORT_SYNC, TIMER_UPDATE, SESSION_ENDED) defined upfront in config.ts to avoid reopening it in Plans 02-03
+- [Phase 58-01]: sessionId threaded from step page through MultiplayerRoomLoader to MultiplayerRoom to enable StepChangedListener navigation routing
+- [Phase 58-01]: isFacilitator defaults false in MultiplayerContext so participants never see facilitator UI flash before Liveblocks resolves
+- [Phase 58-01]: Server ownership check uses 2 queries (workshopType first, then ownership) — only fires for multiplayer workshops to minimize DB overhead
 
 ### Pending Todos
 
@@ -106,10 +111,10 @@ None.
 
 ### Blockers/Concerns
 
-- Phase 58: AI token streaming strategy (SWR revalidation vs. Liveblocks broadcast per token chunk) — needs a short decision spike at start of Phase 58 planning
+None — Phase 58 Plan 01 complete.
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: Completed 57-02-PLAN.md — guest Liveblocks auth, GuestLobby with polling and auto-transition, ReconnectionListener
+Last session: 2026-02-28
+Stopped at: Completed 58-01-PLAN.md — RoomEvent types, isFacilitator context, StepNav facilitator gate, ChatPanel read-only for participants, server-side facilitator auth check
 Resume file: None
