@@ -11,7 +11,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { sessions } from '@/db/schema';
+import { sessions, workshopSessions } from '@/db/schema';
 import { dbWithRetry } from '@/db/with-retry';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { WorkshopSidebar } from '@/components/layout/workshop-sidebar';
@@ -63,6 +63,17 @@ export default async function WorkshopLayout({
   const isGrandfathered = !isUnlocked && session.workshop.createdAt < PAYWALL_CUTOFF_DATE;
   const isPaywallLocked = PAYWALL_ENABLED && !isUnlocked && !isGrandfathered;
 
+  // Fetch workshop session for multiplayer workshops (provides shareToken for Share button)
+  let workshopSession: { shareToken: string } | null = null;
+  if (session.workshop.workshopType === 'multiplayer') {
+    workshopSession = await dbWithRetry(() =>
+      db.query.workshopSessions.findFirst({
+        where: eq(workshopSessions.workshopId, session.workshop.id),
+        columns: { shareToken: true },
+      })
+    ) ?? null;
+  }
+
   return (
     <SidebarProvider defaultOpen={false}>
       <div className="flex h-screen w-full">
@@ -85,6 +96,8 @@ export default async function WorkshopLayout({
             workshopName={session.workshop.title || 'New Workshop'}
             workshopColor={session.workshop.color}
             workshopEmoji={session.workshop.emoji}
+            workshopType={session.workshop.workshopType ?? 'solo'}
+            shareToken={workshopSession?.shareToken}
           />
 
           {/* Main content area (full width) */}

@@ -12,7 +12,8 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
-import { LogOut } from "lucide-react";
+import { LogOut, Share2, Check } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ExitWorkshopDialog } from "@/components/dialogs/exit-workshop-dialog";
@@ -27,6 +28,46 @@ interface WorkshopHeaderProps {
   workshopName?: string;
   workshopColor?: string | null;
   workshopEmoji?: string | null;
+  shareToken?: string | null;
+  workshopType?: 'solo' | 'multiplayer';
+}
+
+/**
+ * ShareButton — inline component for copying the workshop join URL.
+ * Only rendered for multiplayer workshops with a shareToken.
+ */
+function ShareButton({ shareToken }: { shareToken: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const url = `${window.location.origin}/join/${shareToken}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast('Link copied!', { duration: 2000 });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API unavailable — fall back to manual copy prompt
+      toast.error('Could not copy link. Please copy the URL manually.');
+    }
+  };
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={handleCopy}
+      className="gap-2"
+      title="Copy invite link"
+    >
+      {copied ? (
+        <Check className="h-4 w-4" />
+      ) : (
+        <Share2 className="h-4 w-4" />
+      )}
+      <span className="hidden sm:inline">Share</span>
+    </Button>
+  );
 }
 
 export function WorkshopHeader({
@@ -35,6 +76,8 @@ export function WorkshopHeader({
   workshopName = "New Workshop",
   workshopColor,
   workshopEmoji,
+  shareToken,
+  workshopType,
 }: WorkshopHeaderProps) {
   const pathname = usePathname();
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
@@ -139,6 +182,11 @@ export function WorkshopHeader({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Share button — multiplayer workshops only */}
+          {workshopType === 'multiplayer' && shareToken && (
+            <ShareButton shareToken={shareToken} />
+          )}
+
           <ThemeToggle />
 
           <Button
