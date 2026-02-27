@@ -12,7 +12,7 @@ Requirements for v1.9 Multiplayer Collaboration. Each maps to roadmap phases.
 - [x] **SESS-01**: Facilitator can create a multiplayer workshop (distinct from solo AI-led mode)
 - [ ] **SESS-02**: Facilitator can generate a shareable link for the workshop
 - [ ] **SESS-03**: Participant can join a multiplayer workshop via share link with name only (no account needed)
-- [ ] **SESS-04**: Participants see a lobby/waiting screen before the facilitator starts the session
+- [x] **SESS-04**: Participants see a lobby/waiting screen before the facilitator starts the session
 - [ ] **SESS-05**: All participants see a "session ended" overlay when facilitator ends the session
 
 ### Real-Time Canvas
@@ -44,8 +44,8 @@ Requirements for v1.9 Multiplayer Collaboration. Each maps to roadmap phases.
 
 - [x] **INFR-01**: Real-time sync uses a managed WebSocket provider compatible with Vercel serverless (Liveblocks)
 - [x] **INFR-02**: Canvas state persists to database via webhook for durability
-- [ ] **INFR-03**: Participants can reconnect after network interruption with state recovery
-- [ ] **INFR-04**: Guest authentication uses signed cookies (not Clerk accounts)
+- [x] **INFR-03**: Participants can reconnect after network interruption with state recovery
+- [x] **INFR-04**: Guest authentication uses signed cookies (not Clerk accounts)
 - [x] **INFR-05**: Multiplayer components are lazy-loaded to avoid bundle size impact on solo workshops
 
 ## v2 Requirements
@@ -89,7 +89,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SESS-01 | Phase 55 | Complete |
 | SESS-02 | Phase 57 | Pending |
 | SESS-03 | Phase 57 | Pending |
-| SESS-04 | Phase 57 | Pending |
+| SESS-04 | Phase 57 | Complete |
 | SESS-05 | Phase 58 | Pending |
 | SYNC-01 | Phase 55 | Complete |
 | SYNC-02 | Phase 55 | Complete |
@@ -109,8 +109,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FACL-05 | Phase 58 | Pending |
 | INFR-01 | Phase 54 | Complete |
 | INFR-02 | Phase 54 | Complete |
-| INFR-03 | Phase 57 | Pending |
-| INFR-04 | Phase 57 | Pending |
+| INFR-03 | Phase 57 | Complete |
+| INFR-04 | Phase 57 | Complete |
 | INFR-05 | Phase 54 | Complete |
 
 **Coverage:**
