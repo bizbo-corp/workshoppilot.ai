@@ -273,7 +273,7 @@ Plans:
 | 54. Liveblocks Foundation | 3/3 | Complete    | 2026-02-26 |
 | 55. Core Canvas Sync | 3/3 | Complete    | 2026-02-26 |
 | 56. Live Presence | 2/2 | Complete    | 2026-02-26 |
-| 57. Guest Auth and Join Flow | 2/2 | Complete   | 2026-02-27 |
+| 57. Guest Auth and Join Flow | 2/2 | Complete    | 2026-02-27 |
 | 58. Facilitator Controls | 0/2 | Not started | - |
 
 ---
