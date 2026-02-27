@@ -24,6 +24,11 @@ const isPublicRoute = createRouteMatcher([
   '/join(.*)',          // /join/[token] page
   '/api/guest-join',   // Guest name submission endpoint
   '/api/session-status(.*)', // Lobby status polling (Plan 02)
+  // Multiplayer guest canvas access — all workshop step pages are public for guests.
+  // The workshop page itself requires a valid session ID (redirects to /dashboard if not found).
+  // Liveblocks room access requires a valid token (issued only to verified Clerk users or guests).
+  // Without this, guests would be redirected to sign-in when the lobby transitions to the canvas.
+  '/workshop/:path*/step/:stepId', // All steps accessible for multiplayer participants
 ]);
 
 const isAdminRoute = createRouteMatcher(['/admin(.*)', '/api/admin(.*)']);
