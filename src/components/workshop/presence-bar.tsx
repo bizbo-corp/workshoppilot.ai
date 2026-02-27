@@ -125,11 +125,16 @@ export function PresenceBar() {
                 backgroundColor: p.color,
                 opacity: isIdle ? 0.5 : 1,
               }}
-              title={p.isSelf ? `${p.name} (you)` : p.name}
+              title={p.isSelf ? `${p.name} (you) — Facilitator` : p.role === 'owner' ? `${p.name} — Facilitator` : p.name}
             >
               {getInitials(p.name)}
               {isIdle && (
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-yellow-400 border-2 border-background" />
+              )}
+              {p.role === 'owner' && !isIdle && (
+                <span className="absolute -top-1 -left-1 w-3.5 h-3.5">
+                  <Crown className="w-3.5 h-3.5 text-amber-500 drop-shadow-sm" />
+                </span>
               )}
             </div>
           );

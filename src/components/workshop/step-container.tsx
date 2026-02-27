@@ -37,6 +37,7 @@ import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
 import type { StepCanvasSettingsData } from '@/lib/canvas/step-canvas-settings-types';
 import { useMultiplayerContext } from '@/components/workshop/multiplayer-room';
 import { useBroadcastEvent } from '@liveblocks/react';
+import { FacilitatorControls } from './facilitator-controls';
 
 const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe', 'concept'];
 const CANVAS_ONLY_STEPS = ['stakeholder-mapping', 'sense-making', 'concept'];
@@ -1363,7 +1364,12 @@ export function StepContainer({
       {/* StepAdvanceBroadcaster — only mounted in multiplayer (inside RoomProvider).
           Captures useBroadcastEvent and exposes it via ref for handleBeforeAdvance. */}
       {workshopType === 'multiplayer' && (
-        <StepAdvanceBroadcaster broadcastRef={broadcastRef} />
+        <>
+          <StepAdvanceBroadcaster broadcastRef={broadcastRef} />
+          {/* FacilitatorControls — viewport sync, countdown timer, end session (facilitator-only toolbar).
+              Rendered here (inside RoomProvider) so useBroadcastEvent() works. Internally gates on isFacilitator. */}
+          <FacilitatorControls workshopId={workshopId} sessionId={sessionId} />
+        </>
       )}
       {/* Step navigation — hidden for participants in multiplayer mode */}
       {(!isMultiplayer || isFacilitator) && (

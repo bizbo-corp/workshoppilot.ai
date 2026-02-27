@@ -43,6 +43,7 @@ import { useCanvasAutosave } from "@/hooks/use-canvas-autosave";
 import { usePreventScrollOnCanvas } from "@/hooks/use-prevent-scroll-on-canvas";
 import { useMultiplayerContext } from "@/components/workshop/multiplayer-room";
 import { LiveCursors, CursorBroadcaster } from "./live-cursors";
+import { useBroadcastEvent, useEventListener } from "@liveblocks/react";
 import type {
   StickyNoteColor,
   GridColumn,
@@ -106,6 +107,54 @@ const nodeTypes = {
 const edgeTypes = {
   cluster: ClusterEdge,
 };
+
+/**
+ * FacilitatorViewportCapture — renderless component that listens for the
+ * 'facilitator-viewport-sync' custom DOM event, reads the current ReactFlow
+ * viewport, and broadcasts a VIEWPORT_SYNC event to all participants.
+ *
+ * Must render inside ReactFlowProvider (inside ReactFlowCanvasInner) to use
+ * useReactFlow(). Only mounted when the user is the facilitator.
+ */
+function FacilitatorViewportCapture() {
+  const { getViewport } = useReactFlow();
+  const broadcast = useBroadcastEvent();
+
+  useEffect(() => {
+    function handleRequest() {
+      const vp = getViewport();
+      broadcast({ type: 'VIEWPORT_SYNC', x: vp.x, y: vp.y, zoom: vp.zoom });
+    }
+    document.addEventListener('facilitator-viewport-sync', handleRequest);
+    return () => document.removeEventListener('facilitator-viewport-sync', handleRequest);
+  }, [getViewport, broadcast]);
+
+  return null;
+}
+
+/**
+ * ViewportSyncReceiver — renderless component that listens for VIEWPORT_SYNC
+ * broadcast events and animates the participant's ReactFlow viewport to match.
+ *
+ * Must render inside ReactFlowProvider to use useReactFlow(). Skips processing
+ * if the current user is the facilitator (they originated the broadcast).
+ */
+function ViewportSyncReceiver() {
+  const { setViewport } = useReactFlow();
+  const { isFacilitator } = useMultiplayerContext();
+
+  useEventListener(({ event }) => {
+    if (event.type === 'VIEWPORT_SYNC' && !isFacilitator) {
+      setViewport(
+        { x: event.x, y: event.y, zoom: event.zoom },
+        { duration: 500 }
+      );
+      toast('Facilitator is guiding your view', { duration: 2000 });
+    }
+  });
+
+  return null;
+}
 
 export interface ReactFlowCanvasProps {
   sessionId: string;
@@ -212,7 +261,7 @@ function ReactFlowCanvasInner({
 
   // Multiplayer context — provides participant color for new sticky notes
   // Returns { isMultiplayer: false, participantColor: null } when not inside RoomProvider (solo mode)
-  const { isMultiplayer, participantColor } = useMultiplayerContext();
+  const { isMultiplayer, participantColor, isFacilitator } = useMultiplayerContext();
 
   // Mapping from participant hex color to the closest StickyNoteColor
   const HEX_TO_STICKY_COLOR: Record<string, StickyNoteColor> = {
@@ -2604,6 +2653,13 @@ function ReactFlowCanvasInner({
       {/* CursorBroadcaster — renderless; wires mouse handlers for presence broadcast (multiplayer only) */}
       {workshopType === 'multiplayer' && (
         <CursorBroadcaster handlersRef={cursorHandlersRef} />
+      )}
+      {/* Viewport sync components — multiplayer only (inside ReactFlowProvider, so useReactFlow() works) */}
+      {workshopType === 'multiplayer' && (
+        <>
+          {isFacilitator && <FacilitatorViewportCapture />}
+          <ViewportSyncReceiver />
+        </>
       )}
       <ReactFlow
         className={cn(

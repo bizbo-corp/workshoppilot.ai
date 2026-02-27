@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useRef } from 'react';
+import { createContext, useContext, useRef, useState } from 'react';
 import { ClientContext, RoomProvider, useSelf, useOthersListener, useLostConnectionListener, useEventListener } from '@liveblocks/react';
 import { LiveMap, LiveObject } from '@liveblocks/client';
 import type { OpaqueClient } from '@liveblocks/core';
@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { getRoomId, liveblocksClient, type CanvasElementStorable } from '@/lib/liveblocks/config';
 import { PresenceBar } from './presence-bar';
+import { CountdownTimer } from './countdown-timer';
+import { SessionEndedOverlay } from './session-ended-overlay';
 
 /**
  * MultiplayerContext — provides participant color, multiplayer flag, and
@@ -112,13 +114,33 @@ function StepChangedListener({ sessionId }: { sessionId: string }) {
 }
 
 /**
+ * SessionEndedListener — renderless component that listens for SESSION_ENDED
+ * and renders the full-screen overlay for participants.
+ *
+ * The facilitator never sees this — they redirect immediately after broadcasting.
+ * Participants see the overlay and can click "Return to Dashboard".
+ */
+function SessionEndedListener({ workshopId }: { workshopId: string }) {
+  const [sessionEnded, setSessionEnded] = useState(false);
+
+  useEventListener(({ event }) => {
+    if (event.type === 'SESSION_ENDED') {
+      setSessionEnded(true);
+    }
+  });
+
+  if (!sessionEnded) return null;
+  return <SessionEndedOverlay workshopId={workshopId} />;
+}
+
+/**
  * MultiplayerRoomInner — rendered inside RoomProvider, reads the current
  * participant's color and role from Liveblocks presence and provides them
  * via context. Also renders PresenceBar (fixed overlay), JoinLeaveListener
- * (renderless), ReconnectionListener (renderless), and StepChangedListener
- * (renderless).
+ * (renderless), ReconnectionListener (renderless), StepChangedListener
+ * (renderless), SessionEndedListener (renderless/overlay), and CountdownTimer.
  */
-function MultiplayerRoomInner({ children, sessionId }: { children: React.ReactNode; sessionId: string }) {
+function MultiplayerRoomInner({ children, sessionId, workshopId }: { children: React.ReactNode; sessionId: string; workshopId: string }) {
   const self = useSelf();
   return (
     <MultiplayerContext.Provider
@@ -132,6 +154,8 @@ function MultiplayerRoomInner({ children, sessionId }: { children: React.ReactNo
       <JoinLeaveListener />
       <ReconnectionListener />
       <StepChangedListener sessionId={sessionId} />
+      <SessionEndedListener workshopId={workshopId} />
+      <CountdownTimer />
       {children}
     </MultiplayerContext.Provider>
   );
@@ -168,7 +192,7 @@ export default function MultiplayerRoom({ workshopId, sessionId, children }: Mul
           elements: new LiveMap<string, LiveObject<CanvasElementStorable>>(),
         }}
       >
-        <MultiplayerRoomInner sessionId={sessionId}>{children}</MultiplayerRoomInner>
+        <MultiplayerRoomInner sessionId={sessionId} workshopId={workshopId}>{children}</MultiplayerRoomInner>
       </RoomProvider>
     </ClientContext.Provider>
   );
