@@ -17,15 +17,13 @@
  *   Closing the tab clears identity, matching session expectations.
  * - Auto-rejoin re-calls /api/guest-join rather than trusting the cookie alone —
  *   the cookie may have expired, and re-calling creates a fresh participant record.
- * - Lobby placeholder is intentionally minimal — Plan 02 adds Liveblocks real-time
- *   presence and step progression UI.
- * - Error states provide a retry button rather than hard-failing, since network
- *   flakiness is common on mobile.
+ * - GuestLobby renders after joining, polling /api/session-status/[token] every 3s
+ *   and auto-transitioning to the canvas when the facilitator starts the session.
  */
 
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { GuestJoinModal, type GuestJoinResponse } from '@/components/guest/guest-join-modal';
+import { GuestLobby } from '@/components/guest/guest-lobby';
 
 const SESSION_STORAGE_KEY = 'wp_guest_name';
 
@@ -41,6 +39,8 @@ interface GuestJoinFlowProps {
   sessionStatus: 'waiting' | 'active' | 'ended';
   workshopId: string;
   sessionId: string;
+  aiSessionId: string | null;
+  currentStepOrder: number;
 }
 
 type FlowState =
@@ -56,6 +56,8 @@ export function GuestJoinFlow({
   facilitatorName,
   sessionStatus,
   workshopId,
+  aiSessionId,
+  currentStepOrder,
 }: GuestJoinFlowProps) {
   const [state, setState] = useState<FlowState>({ stage: 'loading' });
 
@@ -154,41 +156,19 @@ export function GuestJoinFlow({
     );
   }
 
-  // stage === 'joined'
+  // stage === 'joined' — render GuestLobby with real-time polling and auto-transition
   const { guestData } = state;
 
-  if (sessionStatus === 'ended') {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-4">
-        <div className="w-full max-w-sm rounded-xl border bg-card p-8 text-center shadow-sm">
-          <h2 className="mb-2 text-lg font-semibold">Workshop Ended</h2>
-          <p className="text-sm text-muted-foreground">
-            This workshop session has ended. Thanks for participating, {guestData.displayName}!
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4">
-      <div className="w-full max-w-sm rounded-xl border bg-card p-8 text-center shadow-sm">
-        <div
-          className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full text-white font-semibold"
-          style={{ backgroundColor: guestData.color }}
-        >
-          {guestData.displayName.charAt(0).toUpperCase()}
-        </div>
-        <h2 className="mb-1 text-lg font-semibold">You&apos;re in!</h2>
-        <p className="mb-2 text-sm text-muted-foreground">
-          Welcome, {guestData.displayName}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {sessionStatus === 'waiting'
-            ? 'Waiting for the facilitator to start the workshop...'
-            : 'The workshop is in progress. Hang tight while the page loads.'}
-        </p>
-      </div>
-    </div>
+    <GuestLobby
+      token={token}
+      workshopTitle={workshopTitle}
+      sessionStatus={sessionStatus}
+      aiSessionId={aiSessionId}
+      currentStepOrder={currentStepOrder}
+      participantId={guestData.participantId}
+      displayName={guestData.displayName}
+      color={guestData.color}
+    />
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
-import { createContext, useContext } from 'react';
-import { ClientContext, RoomProvider, useSelf, useOthersListener } from '@liveblocks/react';
+import { createContext, useContext, useRef } from 'react';
+import { ClientContext, RoomProvider, useSelf, useOthersListener, useLostConnectionListener } from '@liveblocks/react';
 import { LiveMap, LiveObject } from '@liveblocks/client';
 import type { OpaqueClient } from '@liveblocks/core';
 import { toast } from 'sonner';
@@ -45,9 +45,42 @@ function JoinLeaveListener() {
 }
 
 /**
+ * ReconnectionListener — renderless component that fires toast notifications
+ * on Liveblocks connection state changes.
+ *
+ * Events from useLostConnectionListener:
+ * - 'lost': Connection dropped — show persistent "Reconnecting..." toast
+ * - 'restored': Connection recovered — dismiss previous toast, show "Reconnected"
+ * - 'failed': Extended failure (after lostConnectionTimeout) — show persistent error
+ *
+ * Per user decision: "Subtle toast on disconnect/reconnect — 'Reconnecting...' then
+ * 'Reconnected', non-blocking. On extended failure: persistent 'Connection lost' error."
+ */
+function ReconnectionListener() {
+  const toastIdRef = useRef<string | number | null>(null);
+
+  useLostConnectionListener((event) => {
+    if (event === 'lost') {
+      toastIdRef.current = toast('Reconnecting...', { duration: Infinity });
+    } else if (event === 'restored') {
+      if (toastIdRef.current) toast.dismiss(toastIdRef.current);
+      toast('Reconnected', { duration: 3000 });
+      toastIdRef.current = null;
+    } else if (event === 'failed') {
+      if (toastIdRef.current) toast.dismiss(toastIdRef.current);
+      toast.error('Connection lost. Refresh to rejoin.', { duration: Infinity });
+      toastIdRef.current = null;
+    }
+  });
+
+  return null;
+}
+
+/**
  * MultiplayerRoomInner — rendered inside RoomProvider, reads the current
  * participant's color from Liveblocks presence and provides it via context.
- * Also renders PresenceBar (fixed overlay) and JoinLeaveListener (renderless).
+ * Also renders PresenceBar (fixed overlay), JoinLeaveListener (renderless),
+ * and ReconnectionListener (renderless).
  */
 function MultiplayerRoomInner({ children }: { children: React.ReactNode }) {
   const self = useSelf();
@@ -60,6 +93,7 @@ function MultiplayerRoomInner({ children }: { children: React.ReactNode }) {
     >
       <PresenceBar />
       <JoinLeaveListener />
+      <ReconnectionListener />
       {children}
     </MultiplayerContext.Provider>
   );

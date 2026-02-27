@@ -7,6 +7,7 @@ import { createClient, LiveMap, LiveObject, type JsonObject } from "@liveblocks/
 export const liveblocksClient = createClient({
   authEndpoint: "/api/liveblocks-auth",
   throttle: 50, // 50ms max broadcast rate for cursor presence (PRES-01)
+  lostConnectionTimeout: 30_000, // 30s before 'failed' event fires (INFR-03)
 });
 
 /**

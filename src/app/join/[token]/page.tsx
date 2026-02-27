@@ -12,14 +12,14 @@
  * - Server-side token validation prevents leaking workshop details to invalid links.
  * - GuestJoinFlow checks sessionStorage on mount for returning guests (avoids
  *   re-showing the modal on page refresh within the same browser session).
- * - The lobby placeholder ("Joined! Waiting for facilitator...") is intentionally
- *   minimal — Plan 02 implements the full real-time lobby with Liveblocks.
+ * - The AI session ID and current step order are fetched server-side so GuestLobby
+ *   can navigate directly to the canvas URL without an extra client-side lookup.
  */
 
 import Link from 'next/link';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { workshopSessions, sessionParticipants, workshops } from '@/db/schema';
+import { workshopSessions, sessionParticipants, workshops, sessions, workshopSteps } from '@/db/schema';
 import { GuestJoinFlow } from './guest-join-flow';
 
 interface JoinPageProps {
@@ -66,6 +66,22 @@ export default async function JoinPage({ params }: JoinPageProps) {
     ),
   });
 
+  // Fetch the AI session for this workshop — used to construct the canvas URL
+  const aiSession = await db.query.sessions.findFirst({
+    where: eq(sessions.workshopId, workshopSession.workshopId),
+  });
+
+  // Find the currently active step to determine where to navigate
+  const activeStep = await db.query.workshopSteps.findFirst({
+    where: and(
+      eq(workshopSteps.workshopId, workshopSession.workshopId),
+      eq(workshopSteps.status, 'in_progress')
+    ),
+    with: {
+      stepDefinition: true,
+    },
+  });
+
   const facilitatorName = ownerParticipant?.displayName ?? null;
   const workshopTitle = workshopSession.workshop.title;
 
@@ -78,6 +94,8 @@ export default async function JoinPage({ params }: JoinPageProps) {
         sessionStatus={workshopSession.status}
         workshopId={workshopSession.workshopId}
         sessionId={workshopSession.id}
+        aiSessionId={aiSession?.id ?? null}
+        currentStepOrder={activeStep?.stepDefinition?.order ?? 1}
       />
     </div>
   );
