@@ -64,14 +64,24 @@ export default async function WorkshopLayout({
   const isPaywallLocked = PAYWALL_ENABLED && !isUnlocked && !isGrandfathered;
 
   // Fetch workshop session for multiplayer workshops (provides shareToken for Share button)
+  // Also auto-activate: if the facilitator is loading the workshop, the session should be active
   let workshopSession: { shareToken: string } | null = null;
   if (session.workshop.workshopType === 'multiplayer') {
-    workshopSession = await dbWithRetry(() =>
+    const ws = await dbWithRetry(() =>
       db.query.workshopSessions.findFirst({
         where: eq(workshopSessions.workshopId, session.workshop.id),
-        columns: { shareToken: true },
+        columns: { id: true, shareToken: true, status: true },
       })
-    ) ?? null;
+    );
+    if (ws) {
+      workshopSession = { shareToken: ws.shareToken };
+      if (ws.status === 'waiting') {
+        await db
+          .update(workshopSessions)
+          .set({ status: 'active', startedAt: new Date() })
+          .where(eq(workshopSessions.id, ws.id));
+      }
+    }
   }
 
   return (

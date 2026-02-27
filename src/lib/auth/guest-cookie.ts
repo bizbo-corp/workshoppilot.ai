@@ -14,7 +14,11 @@ import { createHmac, timingSafeEqual } from 'crypto';
  *   navigation from the join link, breaking first-load auth.
  */
 
-const SECRET = process.env.GUEST_COOKIE_SECRET!;
+function getSecret(): string {
+  const secret = process.env.GUEST_COOKIE_SECRET;
+  if (!secret) throw new Error('GUEST_COOKIE_SECRET environment variable is required');
+  return secret;
+}
 
 export const COOKIE_NAME = 'wp_guest';
 
@@ -31,7 +35,7 @@ export type GuestCookiePayload = {
 export function signGuestCookie(payload: GuestCookiePayload): string {
   const data = JSON.stringify(payload);
   const encoded = Buffer.from(data).toString('base64url');
-  const sig = createHmac('sha256', SECRET).update(encoded).digest('base64url');
+  const sig = createHmac('sha256', getSecret()).update(encoded).digest('base64url');
   return `${encoded}.${sig}`;
 }
 
@@ -46,7 +50,7 @@ export function verifyGuestCookie(token: string): GuestCookiePayload | null {
   const encoded = token.slice(0, dot);
   const sig = token.slice(dot + 1);
 
-  const expectedSig = createHmac('sha256', SECRET).update(encoded).digest('base64url');
+  const expectedSig = createHmac('sha256', getSecret()).update(encoded).digest('base64url');
 
   // Timing-safe comparison to prevent timing attacks
   try {
