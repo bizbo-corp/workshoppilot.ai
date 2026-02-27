@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 57-guest-auth-and-join-flow
 source: 57-01-SUMMARY.md, 57-02-SUMMARY.md
 started: 2026-02-27T11:00:00Z
-updated: 2026-02-28T00:00:00Z
+updated: 2026-02-28T00:10:00Z
 ---
 
 ## Current Test
@@ -32,49 +32,29 @@ note: Works after env var fix. Guest sees lobby correctly.
 
 ### 5. Lobby Participant List Updates
 expected: When another participant joins (open another incognito tab with the same link), the lobby's participant list updates within ~3 seconds to show the new participant with their own color avatar.
-result: skipped
-reason: not retested after env var fix
+result: pass
 
 ### 6. Auto-Transition to Canvas
-expected: When the facilitator starts the workshop (status becomes active), the lobby fades out (opacity transition over ~500ms) and the guest is automatically redirected to the workshop canvas page.
-result: issue
-reported: "Session status never transitions from 'waiting' to 'active'. No code exists to activate the session. Guest is stuck in lobby permanently."
-severity: blocker
+expected: When the facilitator loads the workshop (which auto-activates the session), the lobby fades out (opacity transition over ~500ms) and the guest is automatically redirected to the workshop canvas page.
+result: pass
+note: Fixed during UAT — added auto-activation in workshop layout.tsx (commit 874bf09).
 
 ### 7. Auto-Rejoin on Page Refresh
 expected: While in the lobby, refreshing the /join/[token] page automatically re-joins without showing the name entry modal again. The guest returns directly to the lobby with their previous name.
-result: skipped
-reason: not retested after env var fix
+result: pass
 
 ### 8. Late Joiner Redirect
 expected: If a guest opens the join link after the workshop is already active, they see a brief "Workshop in progress..." message for ~2 seconds, then are automatically redirected to the canvas.
-result: skipped
-reason: blocked by test 6 — session can never become active
+result: pass
 
 ## Summary
 
 total: 8
-passed: 4
-issues: 1
+passed: 8
+issues: 0
 pending: 0
-skipped: 3
+skipped: 0
 
 ## Gaps
 
-- truth: "When facilitator starts the workshop, session transitions to active and guests auto-transition from lobby to canvas"
-  status: failed
-  reason: "User reported: Session status never transitions from 'waiting' to 'active'. No API endpoint or UI exists to activate the session. workshopSessions.status stays 'waiting' forever."
-  severity: blocker
-  test: 6
-  root_cause: "No code exists anywhere to update workshopSessions.status from 'waiting' to 'active'. Session is created with status:'waiting' in workshop-actions.ts:108 but no activation mechanism was implemented. The guest lobby polls for active status that never comes."
-  artifacts:
-    - path: "src/actions/workshop-actions.ts"
-      issue: "Creates session with status:'waiting' but no activation path"
-    - path: "src/components/layout/workshop-header.tsx"
-      issue: "Has Share button but no Start Session control"
-    - path: "src/app/api/session-status/[token]/route.ts"
-      issue: "Returns status correctly but status is always 'waiting'"
-  missing:
-    - "API endpoint or server action to transition workshopSessions.status from 'waiting' to 'active' (and set startedAt)"
-    - "Either auto-activate when facilitator loads the workshop, or a manual 'Start Session' button in WorkshopHeader"
-  debug_session: ""
+[none — all issues resolved during UAT]
