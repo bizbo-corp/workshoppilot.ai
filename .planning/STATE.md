@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.9 Multiplayer Collaboration — Phase 56 Plan 02 complete
+**Current focus:** v1.9 Multiplayer Collaboration — Phase 57 Plan 01 complete
 
 ## Current Position
 
-Phase: 56 of 58 (Live Presence) — In progress
-Plan: 02 complete (56-02-PLAN.md done)
+Phase: 57 of 58 (Guest Auth and Join Flow) — In progress
+Plan: 01 complete (57-01-PLAN.md done)
 Status: In progress
-Last activity: 2026-02-27 — Phase 56 plan 02 complete (PresenceBar avatar stack, idle detection, join/leave toasts)
+Last activity: 2026-02-27 — Phase 57 plan 01 complete (guest cookie auth, /join/[token] page, GuestJoinModal, ShareButton)
 
-Progress: [█████░░░░░] 73% (8/11 plans)
+Progress: [██████░░░░] 82% (9/11 plans)
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [█████░░░░░] 73% (8/11 plans)
 | Phase 56 P01 | ~10min | 2 tasks | 3 files |
 | Phase 56 P02 | ~10min | 2 tasks | 2 files |
 | Phase 56-live-presence P01 | 2 | 2 tasks | 3 files |
+| Phase 57 P01 | ~4min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,10 @@ Progress: [█████░░░░░] 73% (8/11 plans)
 - [Phase 56-01]: Ref-based handler bridge chosen for CursorBroadcaster — hook approach violates React rules; component-conditional-mount is safe since CursorBroadcaster only mounts inside RoomProvider tree
 - [Phase 56-01]: throttle: 50 on createClient caps all presence broadcasts at 50ms (20fps) for PRES-01 compliance
 - [Phase 56-01]: 80ms CSS transition for cursor smoothing — zero-dependency, works well with 50ms presence update rate
+- [Phase 57-01]: Node.js built-in crypto used for HMAC-SHA256 guest cookie signing — no jose/iron-session needed for simple sign/verify
+- [Phase 57-01]: sameSite: 'lax' on guest cookie — 'strict' drops cookie on navigation from external share link (cross-origin top-level nav)
+- [Phase 57-01]: sessionStorage (not localStorage) for guest name persistence — tab-scoped, clears on tab close, aligns with session semantics
+- [Phase 57-01]: GuestJoinFlow auto-rejoin re-calls /api/guest-join rather than trusting existing cookie alone — handles cookie expiry, creates fresh participant record
 
 ### Pending Todos
 
@@ -97,11 +102,10 @@ None.
 
 ### Blockers/Concerns
 
-- Phase 57: Cookie signing library choice (`iron-session`, `jose`, or custom HMAC) — check existing auth utilities before writing the guest auth endpoint
 - Phase 58: AI token streaming strategy (SWR revalidation vs. Liveblocks broadcast per token chunk) — needs a short decision spike at start of Phase 58 planning
 
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 56-01-PLAN.md — live cursor broadcasting and rendering (CursorBroadcaster + LiveCursors, 50ms throttle)
+Stopped at: Completed 57-01-PLAN.md — guest cookie auth, /join/[token] page with GuestJoinModal, ShareButton in workshop header
 Resume file: None
