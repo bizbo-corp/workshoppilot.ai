@@ -228,11 +228,11 @@ Plans:
   3. After entering a name, the participant lands on a lobby screen ("Waiting for the facilitator to start") — no workshop canvas visible until the facilitator begins
   4. A participant who loses network connection and reconnects sees the current canvas state fully restored without manual refresh
   5. Guest identity persists within the same browser tab (sessionStorage) — page refresh returns to the same lobby or canvas position without re-entering name
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 57-01: Generate share token on multiplayer workshop creation; build `/join/[token]` page with `GuestJoinModal` (blocks all workshop content until name submitted); add `/join/[token]` to `clerkMiddleware` public routes
-- [ ] 57-02: Implement `/api/guest-join` endpoint (validate share token, create `session_participants` record with `guestName`, set HttpOnly signed cookie scoped to workshopId); add guest cookie path to `/api/liveblocks-auth`; implement lobby waiting screen with reconnection and state recovery
+- [ ] 57-01-PLAN.md — Guest cookie utility (HMAC-SHA256), /api/guest-join endpoint, /join/[token] page with GuestJoinModal (full-screen name entry), ShareButton in workshop header, Clerk middleware public route updates
+- [ ] 57-02-PLAN.md — Guest path in /api/liveblocks-auth, /api/session-status/[token] polling endpoint, GuestLobby with auto-transition on session start, ReconnectionListener (toast-based disconnect/reconnect UX), workshop route middleware for guest canvas access
 
 ### Phase 58: Facilitator Controls
 **Goal**: The facilitator has full control of the session — step progression, AI chat, viewport alignment, timers, and graceful session end — while participants cannot interfere with facilitation decisions
