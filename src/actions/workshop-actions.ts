@@ -295,6 +295,32 @@ export async function advanceToNextStep(
   let nextStepOrder: number;
 
   try {
+    // Multiplayer guard: only the workshop owner (facilitator) can advance steps.
+    // Guest participants have no Clerk session — getUserId() returns null for them.
+    // This check fires for Clerk-authenticated users who may attempt to call the
+    // server action directly (e.g., via browser devtools on a multiplayer workshop
+    // they don't own).
+    const authUserId = await getUserId();
+    if (authUserId) {
+      const [ownerCheck] = await db
+        .select({ id: workshops.id, workshopType: workshops.workshopType })
+        .from(workshops)
+        .where(eq(workshops.id, workshopId))
+        .limit(1);
+
+      if (ownerCheck?.workshopType === 'multiplayer') {
+        const [isOwner] = await db
+          .select({ id: workshops.id })
+          .from(workshops)
+          .where(and(eq(workshops.id, workshopId), eq(workshops.clerkUserId, authUserId)))
+          .limit(1);
+
+        if (!isOwner) {
+          throw new Error('Access denied: only the facilitator can advance steps');
+        }
+      }
+    }
+
     // Paywall gate: Step 6 → Step 7 boundary
     const STEP_6_ID = 'journey-mapping';
     if (process.env.PAYWALL_ENABLED !== 'false' && currentStepId === STEP_6_ID) {

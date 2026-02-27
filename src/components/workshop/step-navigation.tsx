@@ -41,6 +41,11 @@ interface StepNavigationProps {
   isCompletingWorkshop?: boolean;
   workshopCompleted?: boolean;
   canCompleteWorkshop?: boolean;
+  /**
+   * Called BEFORE advanceToNextStep — used by multiplayer to broadcast
+   * STEP_CHANGED to participants. Receives the next step order and name.
+   */
+  onBeforeAdvance?: (nextStepOrder: number, nextStepName: string) => void;
 }
 
 export function StepNavigation({
@@ -60,6 +65,7 @@ export function StepNavigation({
   isCompletingWorkshop = false,
   workshopCompleted = false,
   canCompleteWorkshop = false,
+  onBeforeAdvance,
 }: StepNavigationProps) {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
@@ -111,6 +117,12 @@ export function StepNavigation({
       if (!currentStep || !nextStep) {
         console.error('Step definitions not found');
         return;
+      }
+
+      // Broadcast step change to participants before server-side navigation.
+      // This fires before redirect() so participants receive the event in time.
+      if (onBeforeAdvance) {
+        onBeforeAdvance(nextStep.order, nextStep.name);
       }
 
       // Atomically mark current complete, next in_progress, then redirect.

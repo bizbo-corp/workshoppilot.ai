@@ -35,9 +35,30 @@ import { usePanelLayout } from '@/hooks/use-panel-layout';
 import { StepTransitionWrapper } from './step-transition-wrapper';
 import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
 import type { StepCanvasSettingsData } from '@/lib/canvas/step-canvas-settings-types';
+import { useMultiplayerContext } from '@/components/workshop/multiplayer-room';
+import { useBroadcastEvent } from '@liveblocks/react';
 
 const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe', 'concept'];
 const CANVAS_ONLY_STEPS = ['stakeholder-mapping', 'sense-making', 'concept'];
+
+/**
+ * StepAdvanceBroadcaster — renderless component that captures useBroadcastEvent
+ * and exposes it via a ref. Only rendered in multiplayer mode (inside RoomProvider).
+ *
+ * This pattern is required because useBroadcastEvent() must be called inside
+ * RoomProvider. StepContainer is conditionally inside RoomProvider (multiplayer only),
+ * so we conditionally MOUNT this component rather than conditionally calling the hook.
+ */
+function StepAdvanceBroadcaster({ broadcastRef }: {
+  broadcastRef: React.MutableRefObject<((event: { type: 'STEP_CHANGED'; stepOrder: number; stepName: string }) => void) | null>;
+}) {
+  const broadcast = useBroadcastEvent();
+  React.useEffect(() => {
+    broadcastRef.current = broadcast;
+    return () => { broadcastRef.current = null; };
+  }, [broadcast, broadcastRef]);
+  return null;
+}
 
 const BILLBOARD_VISUAL_STYLES = [
   { value: 'vibrant', label: 'Bold & Vibrant', prompt: 'Bold, vibrant colors with high contrast, energetic gradient backgrounds, eye-catching neon accents' },
@@ -91,6 +112,20 @@ export function StepContainer({
   const [isMobile, setIsMobile] = React.useState(false);
   const [mobileTab, setMobileTab] = React.useState<'chat' | 'canvas'>('chat');
   const { chatCollapsed, canvasCollapsed, setChatCollapsed, setCanvasCollapsed } = usePanelLayout();
+
+  // Multiplayer facilitator state — determines whether step navigation is visible
+  // and whether STEP_CHANGED broadcasts fire. Both default to false in solo mode
+  // (isMultiplayer=false from the default MultiplayerContext value).
+  const { isFacilitator, isMultiplayer } = useMultiplayerContext();
+
+  // Broadcast ref — populated by StepAdvanceBroadcaster (only mounted in multiplayer).
+  // Allows StepContainer to trigger broadcasts without calling useBroadcastEvent directly
+  // (which would throw outside RoomProvider in solo mode).
+  const broadcastRef = React.useRef<((event: { type: 'STEP_CHANGED'; stepOrder: number; stepName: string }) => void) | null>(null);
+
+  const handleBeforeAdvance = React.useCallback((nextStepOrder: number, nextStepName: string) => {
+    broadcastRef.current?.({ type: 'STEP_CHANGED', stepOrder: nextStepOrder, stepName: nextStepName });
+  }, []);
 
   // Artifact confirmation state
   // For complete steps: pre-set confirmed (artifact was already confirmed)
@@ -1087,24 +1122,28 @@ export function StepContainer({
         <MobileTabBar activeTab={mobileTab} onTabChange={setMobileTab} />
 
         {/* Step navigation - fixed at bottom, full width */}
-        <StepNavigation
-          sessionId={sessionId}
-          workshopId={workshopId}
-          currentStepOrder={stepOrder}
-          artifactConfirmed={effectiveConfirmed}
-          stepExplicitlyConfirmed={artifactConfirmed}
-          stepStatus={stepStatus}
-          isAdmin={isAdmin}
-          onReset={() => setShowResetDialog(true)}
-          onToggleGuideEditor={isCanvasStep || isAdmin ? handleToggleGuideEditor : undefined}
-          isGuideEditing={isGuideEditing}
-          onAddGuide={isGuideEditing ? handleAddGuide : undefined}
-          onSaveDefaultView={isGuideEditing ? handleSaveDefaultView : undefined}
-          onCompleteWorkshop={stepOrder === 10 ? handleCompleteWorkshop : undefined}
-          isCompletingWorkshop={isCompletingWorkshop}
-          workshopCompleted={workshopCompleted}
-          canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
-        />
+        {/* Hidden for participants in multiplayer mode — only the facilitator can advance */}
+        {(!isMultiplayer || isFacilitator) && (
+          <StepNavigation
+            sessionId={sessionId}
+            workshopId={workshopId}
+            currentStepOrder={stepOrder}
+            artifactConfirmed={effectiveConfirmed}
+            stepExplicitlyConfirmed={artifactConfirmed}
+            stepStatus={stepStatus}
+            isAdmin={isAdmin}
+            onReset={() => setShowResetDialog(true)}
+            onToggleGuideEditor={isCanvasStep || isAdmin ? handleToggleGuideEditor : undefined}
+            isGuideEditing={isGuideEditing}
+            onAddGuide={isGuideEditing ? handleAddGuide : undefined}
+            onSaveDefaultView={isGuideEditing ? handleSaveDefaultView : undefined}
+            onCompleteWorkshop={stepOrder === 10 ? handleCompleteWorkshop : undefined}
+            isCompletingWorkshop={isCompletingWorkshop}
+            workshopCompleted={workshopCompleted}
+            canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
+            onBeforeAdvance={handleBeforeAdvance}
+          />
+        )}
         <ResetStepDialog
           open={showResetDialog}
           onOpenChange={setShowResetDialog}
@@ -1321,24 +1360,33 @@ export function StepContainer({
         </div>
         </StepTransitionWrapper>
       </div>
-      <StepNavigation
-        sessionId={sessionId}
-        workshopId={workshopId}
-        currentStepOrder={stepOrder}
-        artifactConfirmed={effectiveConfirmed}
-        stepExplicitlyConfirmed={artifactConfirmed}
-        stepStatus={stepStatus}
-        isAdmin={isAdmin}
-        onReset={() => setShowResetDialog(true)}
-        onToggleGuideEditor={isCanvasStep || isAdmin ? handleToggleGuideEditor : undefined}
-        isGuideEditing={isGuideEditing}
-        onAddGuide={isGuideEditing ? handleAddGuide : undefined}
-        onSaveDefaultView={isGuideEditing ? handleSaveDefaultView : undefined}
-        onCompleteWorkshop={stepOrder === 10 ? handleCompleteWorkshop : undefined}
-        isCompletingWorkshop={isCompletingWorkshop}
-        workshopCompleted={workshopCompleted}
-        canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
-      />
+      {/* StepAdvanceBroadcaster — only mounted in multiplayer (inside RoomProvider).
+          Captures useBroadcastEvent and exposes it via ref for handleBeforeAdvance. */}
+      {workshopType === 'multiplayer' && (
+        <StepAdvanceBroadcaster broadcastRef={broadcastRef} />
+      )}
+      {/* Step navigation — hidden for participants in multiplayer mode */}
+      {(!isMultiplayer || isFacilitator) && (
+        <StepNavigation
+          sessionId={sessionId}
+          workshopId={workshopId}
+          currentStepOrder={stepOrder}
+          artifactConfirmed={effectiveConfirmed}
+          stepExplicitlyConfirmed={artifactConfirmed}
+          stepStatus={stepStatus}
+          isAdmin={isAdmin}
+          onReset={() => setShowResetDialog(true)}
+          onToggleGuideEditor={isCanvasStep || isAdmin ? handleToggleGuideEditor : undefined}
+          isGuideEditing={isGuideEditing}
+          onAddGuide={isGuideEditing ? handleAddGuide : undefined}
+          onSaveDefaultView={isGuideEditing ? handleSaveDefaultView : undefined}
+          onCompleteWorkshop={stepOrder === 10 ? handleCompleteWorkshop : undefined}
+          isCompletingWorkshop={isCompletingWorkshop}
+          workshopCompleted={workshopCompleted}
+          canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
+          onBeforeAdvance={handleBeforeAdvance}
+        />
+      )}
       <ResetStepDialog
         open={showResetDialog}
         onOpenChange={setShowResetDialog}
