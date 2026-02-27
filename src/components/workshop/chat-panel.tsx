@@ -24,6 +24,7 @@ import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
 import { saveCanvasState } from '@/actions/canvas-actions';
 import { ChatSkeleton } from './chat-skeleton';
 import { toast } from 'sonner';
+import { useMultiplayerContext } from '@/components/workshop/multiplayer-room';
 
 /** Steps that support canvas item auto-add */
 const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe', 'ideation', 'concept'];
@@ -800,6 +801,13 @@ interface ChatPanelProps {
 
 export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep, showStepConfirm, onStepConfirm, onStepRevise, stepConfirmLabel, stepConfirmIsTransition, stepConfirmDisabled, stepAlreadyConfirmed, onConceptComplete }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
+
+  // Multiplayer read-only mode — participants see conversation history only (no input, no actions).
+  // isMultiplayer is false from the default MultiplayerContext in solo mode, so isReadOnly is always
+  // false for solo workshops. No behavioral change for solo users.
+  const { isFacilitator, isMultiplayer } = useMultiplayerContext();
+  const isReadOnly = isMultiplayer && !isFacilitator;
+
   const storeApi = useCanvasStoreApi();
   const addStickyNote = useCanvasStore((state) => state.addStickyNote);
   const updateStickyNote = useCanvasStore((state) => state.updateStickyNote);
@@ -1791,9 +1799,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     };
   }, []);
 
-  // Re-focus input after AI response completes
+  // Re-focus input after AI response completes — skip for read-only participants (no input to focus)
   React.useEffect(() => {
-    if (status === 'ready') {
+    if (status === 'ready' && !isReadOnly) {
       // Don't steal focus from interactive elements (buttons, canvas, other inputs)
       const active = document.activeElement;
       const isInteractive = active && (
@@ -1807,7 +1815,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         inputRef.current?.focus();
       }
     }
-  }, [status]);
+  }, [status, isReadOnly]);
 
   // Auto-start: send trigger message when entering a step with no prior messages
   const shouldAutoStart = !initialMessages || initialMessages.length === 0;
@@ -1818,14 +1826,15 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const showGreeting = shouldAutoStart && !!stepGreeting && !hasAssistantMessage;
 
   React.useEffect(() => {
-    if (shouldAutoStart && messages.length === 0 && status === 'ready' && !hasAutoStarted.current) {
+    // Read-only participants must NOT trigger auto-start — only the facilitator does
+    if (shouldAutoStart && messages.length === 0 && status === 'ready' && !hasAutoStarted.current && !isReadOnly) {
       hasAutoStarted.current = true;
       sendMessage({
         role: 'user',
         parts: [{ type: 'text', text: '__step_start__' }],
       });
     }
-  }, [shouldAutoStart, messages.length, status, sendMessage]);
+  }, [shouldAutoStart, messages.length, status, sendMessage, isReadOnly]);
 
   // Helper: check if user is near bottom of scroll container
   const isNearBottom = React.useCallback(() => {
@@ -2615,7 +2624,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                   <li>Double-click any card to <strong className="text-foreground">edit</strong> its label</li>
                 </ul>
                 {/* Show confirm button after sort — use relaxed condition (any items on board) since theme sort signals user is done */}
-                {stepConfirmLabel && !justConfirmed && status === 'ready' && stickyNotes.length > 0 && !stepAlreadyConfirmed && (
+                {stepConfirmLabel && !justConfirmed && status === 'ready' && stickyNotes.length > 0 && !stepAlreadyConfirmed && !isReadOnly && (
                   <div className="mt-3 pt-3 border-t border-olive-200 dark:border-neutral-olive-700 flex justify-center">
                     <button
                       onClick={() => {
@@ -2639,8 +2648,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               </div>
             )}
 
-            {/* In-chat accept / edit buttons — hidden when sort instructions card already shows the confirm button */}
-            {showStepConfirm && status === 'ready' && !justConfirmed && !(step.id === 'persona' && !personasDone) && !showSortInstructions && (
+            {/* In-chat accept / edit buttons — hidden when sort instructions card already shows the confirm button, and hidden for read-only participants */}
+            {showStepConfirm && status === 'ready' && !justConfirmed && !(step.id === 'persona' && !personasDone) && !showSortInstructions && !isReadOnly && (
               <div className="flex flex-col items-center gap-2 pt-2">
                 {step.id === 'persona' && (
                   <p className="text-sm text-muted-foreground text-center max-w-xs">
@@ -2667,7 +2676,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                 </button>
               </div>
             )}
-            {justConfirmed && (
+            {justConfirmed && !isReadOnly && (
               <div className="flex justify-center pt-2 animate-in fade-in duration-500">
                 <button
                   onClick={async () => {
@@ -2708,44 +2717,46 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         )}
       </div>
 
-      {/* Rate limit banner */}
-      {rateLimitInfo && (
+      {/* Rate limit banner — hidden for read-only participants */}
+      {rateLimitInfo && !isReadOnly && (
         <div className="mx-4 mb-2 flex items-center gap-2 rounded-md border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20 px-3 py-2 text-base text-yellow-800 dark:text-yellow-200">
           <Loader2 className="h-4 w-4 animate-spin shrink-0" />
           <span>AI is busy. Try again in {rateLimitInfo.retryAfter}s...</span>
         </div>
       )}
 
-      {/* Input area */}
-      <div className="border-t bg-background p-4">
-        <form onSubmit={handleSend} className="flex gap-2">
-          <TextareaAutosize
-            ref={inputRef}
-            minRows={1}
-            maxRows={6}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={rateLimitInfo ? 'Waiting for AI to become available...' : 'Type your message...'}
-            disabled={isLoading || !!rateLimitInfo}
-            className={cn(
-              'flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs outline-none transition-[color,box-shadow]',
-              'placeholder:text-muted-foreground',
-              'disabled:cursor-not-allowed disabled:opacity-50',
-              'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
-            )}
-          />
-          <Button
-            type="submit"
-            disabled={isLoading || !inputValue.trim() || !!rateLimitInfo}
-            size="icon"
-            variant="default"
-            aria-label="Send message"
-          >
-            <Send />
-          </Button>
-        </form>
-      </div>
+      {/* Input area — hidden for read-only participants in multiplayer mode */}
+      {!isReadOnly && (
+        <div className="border-t bg-background p-4">
+          <form onSubmit={handleSend} className="flex gap-2">
+            <TextareaAutosize
+              ref={inputRef}
+              minRows={1}
+              maxRows={6}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={rateLimitInfo ? 'Waiting for AI to become available...' : 'Type your message...'}
+              disabled={isLoading || !!rateLimitInfo}
+              className={cn(
+                'flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs outline-none transition-[color,box-shadow]',
+                'placeholder:text-muted-foreground',
+                'disabled:cursor-not-allowed disabled:opacity-50',
+                'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
+              )}
+            />
+            <Button
+              type="submit"
+              disabled={isLoading || !inputValue.trim() || !!rateLimitInfo}
+              size="icon"
+              variant="default"
+              aria-label="Send message"
+            >
+              <Send />
+            </Button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
