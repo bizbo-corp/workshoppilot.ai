@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
+milestone: v0.5
 milestone_name: Dot Voting & Mobile Gate
-status: active
-last_updated: "2026-02-28T12:00:00.000Z"
+status: unknown
+last_updated: "2026-02-28T03:52:09.414Z"
 progress:
-  total_phases: 62
-  completed_phases: 58
-  total_plans: TBD
-  completed_plans: 148
+  total_phases: 37
+  completed_phases: 36
+  total_plans: 106
+  completed_plans: 105
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 ## Current Position
 
 Phase: 59 of 62 (Voting Types + Store Foundation)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-28 — v2.0 roadmap created (4 phases, 17 requirements mapped)
+Plan: 01 of 2 complete
+Status: In progress (1/2 plans done)
+Last activity: 2026-02-28 — 59-01 complete: voting-types.ts + canvas-store voting actions
 
-Progress: [░░░░░░░░░░] 0% (v2.0 milestone)
+Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Progress: [░░░░░░░░░░] 0% (v2.0 milestone)
 | **Total shipped** | **58** | **148** | **20 days** |
 
 *v2.0 metrics will accumulate here as plans complete.*
+| Phase 59-voting-types-store-foundation P01 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -60,6 +61,8 @@ Progress: [░░░░░░░░░░] 0% (v2.0 milestone)
 - [v2.0 Roadmap]: VOTING_OPENED/VOTING_CLOSED are broadcast events for UI transitions only; vote tallies live exclusively in storageMapping (durable CRDT).
 - [v2.0 Roadmap]: Mobile gate scoped to workshop/[sessionId]/layout.tsx only — landing page, dashboard, and pricing remain accessible on mobile.
 - [v1.9 Roadmap]: SYNC-04 (per-participant Crazy 8s slots) deferred to v2+ — relevant context for Phase 61 voting work.
+- [Phase 59-01]: voteBudget default is 2 (locked STATE.md decision) — NNGroup 25%-of-options rule: 8 slots × 25% = 2
+- [Phase 59-01]: Multiplayer voting actions are stubs (no-ops) until Phase 61 wires to Liveblocks storageMapping
 
 ### Pending Todos
 
@@ -72,5 +75,5 @@ None — roadmap defined, ready to plan Phase 59.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: v2.0 roadmap created — ROADMAP.md, STATE.md written, REQUIREMENTS.md traceability updated
+Stopped at: Completed 59-01-PLAN.md — voting types + canvas store foundation
 Resume file: None
