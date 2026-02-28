@@ -57,29 +57,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VOTE-01 | — | Pending |
-| VOTE-02 | — | Pending |
-| VOTE-03 | — | Pending |
-| VOTE-04 | — | Pending |
-| VOTE-05 | — | Pending |
-| VOTE-06 | — | Pending |
-| VOTE-07 | — | Pending |
-| VOTE-08 | — | Pending |
-| VOTE-09 | — | Pending |
-| VOTE-10 | — | Pending |
-| VOTE-11 | — | Pending |
-| VOTE-12 | — | Pending |
-| VOTE-13 | — | Pending |
-| MOBI-01 | — | Pending |
-| MOBI-02 | — | Pending |
-| MOBI-03 | — | Pending |
-| MOBI-04 | — | Pending |
+| VOTE-01 | Phase 59 | Pending |
+| VOTE-02 | Phase 60 | Pending |
+| VOTE-03 | Phase 60 | Pending |
+| VOTE-04 | Phase 60 | Pending |
+| VOTE-05 | Phase 59 | Pending |
+| VOTE-06 | Phase 59 | Pending |
+| VOTE-07 | Phase 59 | Pending |
+| VOTE-08 | Phase 60 | Pending |
+| VOTE-09 | Phase 60 | Pending |
+| VOTE-10 | Phase 61 | Pending |
+| VOTE-11 | Phase 61 | Pending |
+| VOTE-12 | Phase 61 | Pending |
+| VOTE-13 | Phase 60 | Pending |
+| MOBI-01 | Phase 62 | Pending |
+| MOBI-02 | Phase 62 | Pending |
+| MOBI-03 | Phase 62 | Pending |
+| MOBI-04 | Phase 62 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 ⚠️
+- Mapped to phases: 17
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-28*
-*Last updated: 2026-02-28 after initial definition*
+*Last updated: 2026-02-28 — traceability complete after roadmap creation*

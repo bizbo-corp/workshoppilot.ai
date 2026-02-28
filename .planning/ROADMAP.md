@@ -13,6 +13,7 @@
 - ✅ **v1.7 Build Pack** — Phases 43-46 (shipped 2026-02-25)
 - ✅ **v1.8 Onboarding + Payments** — Phases 47-53 (shipped 2026-02-26)
 - ✅ **v1.9 Multiplayer Collaboration** — Phases 54-58 (shipped 2026-02-28)
+- 🚧 **v2.0 Dot Voting & Mobile Gate** — Phases 59-62 (in progress)
 
 ## Phases
 
@@ -150,8 +151,6 @@ See `milestones/v1.8-ROADMAP.md` for full details.
 
 </details>
 
----
-
 <details>
 <summary>✅ v1.9 Multiplayer Collaboration (Phases 54-58) — SHIPPED 2026-02-28</summary>
 
@@ -165,23 +164,86 @@ See `milestones/v1.9-ROADMAP.md` for full details.
 
 </details>
 
+---
+
+### 🚧 v2.0 Dot Voting & Mobile Gate (In Progress)
+
+**Milestone Goal:** Add dot voting to Step 8 Crazy 8s for idea prioritization in solo and multiplayer workshops, and a dismissible mobile phone gate for users on small screens.
+
+#### Phase Summary
+
+- [ ] **Phase 59: Voting Types + Store Foundation** - Data model, state shape, and store actions that all voting UI depends on
+- [ ] **Phase 60: Core Voting UI + Solo Path** - Complete dot voting UX end-to-end for solo workshops with persistence
+- [ ] **Phase 61: Multiplayer Voting** - Real-time vote sync, facilitator controls, and participant indicators for multiplayer workshops
+- [ ] **Phase 62: Mobile Gate** - Dismissible phone-screen overlay scoped to workshop pages
+
+## Phase Details
+
+### Phase 59: Voting Types + Store Foundation
+**Goal**: The data model and store actions for dot voting exist with correct state ownership boundaries
+**Depends on**: Phase 58 (v1.9 Multiplayer — existing Liveblocks + store infrastructure)
+**Requirements**: VOTE-01, VOTE-05, VOTE-06, VOTE-07
+**Success Criteria** (what must be TRUE):
+  1. TypeScript types for `DotVote`, `VotingSession`, and `DEFAULT_VOTING_SESSION` exist with configurable vote budget (default 2, range 1-8)
+  2. Solo canvas store contains `dotVotes` and `votingSession` fields with actions: `castVote`, `retractVote`, `openVoting`, `closeVoting`, `setVotingResults`, `resetVoting`
+  3. Multiplayer canvas store mirrors the same fields and actions with `storageMapping` entries so Liveblocks CRDT syncs vote state automatically
+  4. `RoomEvent` union in `liveblocks/config.ts` includes `VOTING_OPENED` and `VOTING_CLOSED` event types for UI phase transitions
+**Plans**: TBD
+
+### Phase 60: Core Voting UI + Solo Path
+**Goal**: A solo user can complete the full dot voting flow on their Crazy 8s sketches — place votes, see the budget HUD, undo votes, close voting, see ranked results, and select ideas to advance to Step 9
+**Depends on**: Phase 59
+**Requirements**: VOTE-02, VOTE-03, VOTE-04, VOTE-08, VOTE-09, VOTE-13
+**Success Criteria** (what must be TRUE):
+  1. Each Crazy 8s sketch slot displays a vote counter badge showing how many votes it has received
+  2. User sees a persistent "N votes remaining" HUD throughout the voting phase and can stack multiple votes on a single sketch
+  3. User can click a voted sketch to retract one vote, returning it to their budget
+  4. After voting closes, ranked results appear simultaneously showing each sketch ordered by vote count
+  5. Facilitator (or solo user) can pick which ideas advance and those selections write to `selectedSlotIds` for Step 9
+**Plans**: TBD
+
+### Phase 61: Multiplayer Voting
+**Goal**: Participants in a multiplayer workshop can vote in real time with anonymous vote hiding, facilitator-controlled open/close via timer, and a completion indicator showing who has used all votes
+**Depends on**: Phase 60
+**Requirements**: VOTE-10, VOTE-11, VOTE-12
+**Success Criteria** (what must be TRUE):
+  1. Participant votes sync across all connected clients within 50ms via Liveblocks CRDT storage; no participant can see others' vote counts while voting is open
+  2. Facilitator can set a countdown timer that automatically closes voting when it reaches zero, triggering the ranked results reveal for all participants simultaneously
+  3. Participant list shows a completion checkmark next to each participant who has placed all of their allotted votes
+**Plans**: TBD
+
+### Phase 62: Mobile Gate
+**Goal**: Phone users visiting workshop pages see a clear, dismissible recommendation to switch to desktop, without blocking landing page, dashboard, or pricing access
+**Depends on**: Phase 59 (independent — can execute after Phase 59 if Phase 60/61 are in progress)
+**Requirements**: MOBI-01, MOBI-02, MOBI-03, MOBI-04
+**Success Criteria** (what must be TRUE):
+  1. A user on a phone (<768px viewport with coarse pointer) visiting any workshop step page sees a full-screen overlay recommending desktop use before workshop content is accessible
+  2. Dismissing the overlay hides it for the rest of the browser session; opening a new tab or new browser session shows the gate again
+  3. The overlay is not shown on the landing page, dashboard, or pricing page — only on workshop pages
+  4. The overlay contains an "email to self" link that pre-fills a mailto with the current workshop URL so the user can open it on desktop
+**Plans**: TBD
+
 ## Progress
 
-| Milestone | Phases | Plans | Status | Shipped |
-|-----------|--------|-------|--------|---------|
-| v0.5 Application Shell | 1-6 | 19 | Complete | 2026-02-08 |
-| v1.0 Working AI Facilitation | 7-14 | 25 | Complete | 2026-02-10 |
-| v1.1 Canvas Foundation | 15-20 | 15 | Complete | 2026-02-11 |
-| v1.2 Canvas Whiteboard | 21-24 | 9 | Complete | 2026-02-12 |
-| v1.3 EzyDraw & Visual Ideation | 25-29 | 23 | Complete | 2026-02-12 |
-| v1.4 Personal Workshop Polish | 30-35 | 13 | Complete | 2026-02-13 |
-| v1.5 Launch Ready | 36-39 | 9 | Complete | 2026-02-19 |
-| v1.6 Production Polish | 40-42 | 5 | Complete | 2026-02-25 |
-| v1.7 Build Pack | 43-46 | 7 | Complete | 2026-02-25 |
-| v1.8 Onboarding + Payments | 47-53 | 11 | Complete | 2026-02-26 |
-| v1.9 Multiplayer Collaboration | 54-58 | 12 | Complete | 2026-02-28 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1-6. Application Shell | v0.5 | 19/19 | Complete | 2026-02-08 |
+| 7-14. AI Facilitation | v1.0 | 25/25 | Complete | 2026-02-10 |
+| 15-20. Canvas Foundation | v1.1 | 15/15 | Complete | 2026-02-11 |
+| 21-24. Canvas Whiteboard | v1.2 | 9/9 | Complete | 2026-02-12 |
+| 25-29. EzyDraw & Visual Ideation | v1.3 | 23/23 | Complete | 2026-02-12 |
+| 30-35. Workshop Polish | v1.4 | 13/13 | Complete | 2026-02-13 |
+| 36-39. Launch Ready | v1.5 | 9/9 | Complete | 2026-02-19 |
+| 40-42. Production Polish | v1.6 | 5/5 | Complete | 2026-02-25 |
+| 43-46. Build Pack | v1.7 | 7/7 | Complete | 2026-02-25 |
+| 47-53. Onboarding + Payments | v1.8 | 11/11 | Complete | 2026-02-26 |
+| 54-58. Multiplayer Collaboration | v1.9 | 12/12 | Complete | 2026-02-28 |
+| 59. Voting Types + Store Foundation | v2.0 | 0/TBD | Not started | - |
+| 60. Core Voting UI + Solo Path | v2.0 | 0/TBD | Not started | - |
+| 61. Multiplayer Voting | v2.0 | 0/TBD | Not started | - |
+| 62. Mobile Gate | v2.0 | 0/TBD | Not started | - |
 
 **Total shipped:** 11 milestones, 58 phases, ~148 plans in 20 days
 
 ---
-*Last updated: 2026-02-28 — v1.9 milestone completed*
+*Last updated: 2026-02-28 — v2.0 roadmap created*
