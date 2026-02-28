@@ -245,7 +245,7 @@ Plans:
 | 47-53. Onboarding + Payments | v1.8 | 11/11 | Complete | 2026-02-26 |
 | 54-58. Multiplayer Collaboration | v1.9 | 12/12 | Complete | 2026-02-28 |
 | 59. Voting Types + Store Foundation | v2.0 | Complete    | 2026-02-28 | 2026-02-28 |
-| 60. Core Voting UI + Solo Path | v2.0 | 0/TBD | Not started | - |
+| 60. Core Voting UI + Solo Path | 1/2 | In Progress|  | - |
 | 61. Multiplayer Voting | v2.0 | 0/TBD | Not started | - |
 | 62. Mobile Gate | v2.0 | 0/TBD | Not started | - |
 

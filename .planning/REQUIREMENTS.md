@@ -10,18 +10,18 @@ Requirements for v2.0 Dot Voting & Mobile Gate. Each maps to roadmap phases.
 ### Dot Voting
 
 - [x] **VOTE-01**: Facilitator can configure vote budget per participant (default 2, range 1-8)
-- [ ] **VOTE-02**: User can place multiple votes on the same Crazy 8s sketch (stacking)
-- [ ] **VOTE-03**: User can see visual dot indicators on each sketch showing vote count
-- [ ] **VOTE-04**: User can see remaining vote budget HUD during voting
+- [x] **VOTE-02**: User can place multiple votes on the same Crazy 8s sketch (stacking)
+- [x] **VOTE-03**: User can see visual dot indicators on each sketch showing vote count
+- [x] **VOTE-04**: User can see remaining vote budget HUD during voting
 - [x] **VOTE-05**: Facilitator can open and close voting session
 - [x] **VOTE-06**: Votes are anonymous (hidden from others) until facilitator closes voting
 - [x] **VOTE-07**: Ranked results revealed simultaneously to all when voting closes
 - [ ] **VOTE-08**: Facilitator manually selects which ideas advance to Step 9
-- [ ] **VOTE-09**: User can dot-vote in solo workshops (self-prioritization)
+- [x] **VOTE-09**: User can dot-vote in solo workshops (self-prioritization)
 - [ ] **VOTE-10**: User can dot-vote in multiplayer workshops with real-time sync
 - [ ] **VOTE-11**: Facilitator can set countdown timer that auto-closes voting on expiry
 - [ ] **VOTE-12**: Facilitator can see which participants have placed all votes (completion indicator)
-- [ ] **VOTE-13**: User can undo a vote by clicking a voted sketch (retract, return to budget)
+- [x] **VOTE-13**: User can undo a vote by clicking a voted sketch (retract, return to budget)
 
 ### Mobile Gate
 
@@ -58,18 +58,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | VOTE-01 | Phase 59 | Complete |
-| VOTE-02 | Phase 60 | Pending |
-| VOTE-03 | Phase 60 | Pending |
-| VOTE-04 | Phase 60 | Pending |
+| VOTE-02 | Phase 60 | Complete |
+| VOTE-03 | Phase 60 | Complete |
+| VOTE-04 | Phase 60 | Complete |
 | VOTE-05 | Phase 59 | Complete |
 | VOTE-06 | Phase 59 | Complete |
 | VOTE-07 | Phase 59 | Complete |
 | VOTE-08 | Phase 60 | Pending |
-| VOTE-09 | Phase 60 | Pending |
+| VOTE-09 | Phase 60 | Complete |
 | VOTE-10 | Phase 61 | Pending |
 | VOTE-11 | Phase 61 | Pending |
 | VOTE-12 | Phase 61 | Pending |
-| VOTE-13 | Phase 60 | Pending |
+| VOTE-13 | Phase 60 | Complete |
 | MOBI-01 | Phase 62 | Pending |
 | MOBI-02 | Phase 62 | Pending |
 | MOBI-03 | Phase 62 | Pending |

@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v2.0 Dot Voting & Mobile Gate — Phase 59 (Voting Types + Store Foundation)
+**Current focus:** v2.0 Dot Voting & Mobile Gate — Phase 60 (Core Voting UI Solo Path)
 
 ## Current Position
 
-Phase: 59 of 62 (Voting Types + Store Foundation)
-Plan: 02 of 2 complete
-Status: Complete (2/2 plans done)
-Last activity: 2026-02-28 — 59-02 complete: multiplayer voting actions + storageMapping + RoomEvents + provider props
+Phase: 60 of 62 (Core Voting UI Solo Path)
+Plan: 01 of 2 complete
+Status: In Progress (1/2 plans done)
+Last activity: 2026-02-28 — 60-01 complete: VotingHud component + Crazy8sGrid voting UI + JSONB persistence fix
 
 Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
 
@@ -51,6 +51,7 @@ Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
 *v2.0 metrics will accumulate here as plans complete.*
 | Phase 59-voting-types-store-foundation P01 | 3 | 2 tasks | 3 files |
 | Phase 59-voting-types-store-foundation P02 | 3 | 2 tasks | 3 files |
+| Phase 60-core-voting-ui-solo-path P01 | 12 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,9 @@ Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
 - [Phase 59-01]: voteBudget default is 2 (locked STATE.md decision) — NNGroup 25%-of-options rule: 8 slots × 25% = 2
 - [Phase 59-02]: VOTING_CLOSED carries no vote tally payload (VOTE-06 anonymous voting compliance) — results read from CRDT storage
 - [Phase 59-02]: Multiplayer voting actions fully wired to Liveblocks storageMapping — CRDT sync active for dotVotes and votingSession
+- [Phase 60-01]: VotingHud reads useCanvasStore directly (no prop drilling) — parent Crazy8sCanvas stays clean
+- [Phase 60-01]: Idle votingSession is NOT persisted to JSONB — default VotingSession reconstructed on load saves DB space
+- [Phase 60-01]: onRetractVote in Crazy8sGrid receives vote ID (not slotId) — enables precise DotVote removal by ID
 
 ### Pending Todos
 
@@ -77,5 +81,5 @@ None — roadmap defined, ready to plan Phase 59.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 59-02-PLAN.md — multiplayer voting actions + storageMapping + RoomEvents + provider props
+Stopped at: Completed 60-01-PLAN.md — VotingHud component + Crazy8sGrid voting UI + JSONB persistence fix
 Resume file: None
