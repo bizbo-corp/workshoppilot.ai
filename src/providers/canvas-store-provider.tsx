@@ -21,6 +21,7 @@ import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
+import type { DotVote, VotingSession } from '@/lib/canvas/voting-types';
 
 type SoloCanvasStoreApi = ReturnType<typeof createCanvasStore>;
 type CanvasStoreApi = SoloCanvasStoreApi | MultiplayerCanvasStoreApi;
@@ -42,6 +43,8 @@ export interface CanvasStoreProviderProps {
   initialHmwCards?: HmwCardData[];
   initialSelectedSlotIds?: string[];
   initialBrainRewritingMatrices?: BrainRewritingMatrix[];
+  initialDotVotes?: DotVote[];
+  initialVotingSession?: VotingSession;
 }
 
 export function CanvasStoreProvider({
@@ -59,6 +62,8 @@ export function CanvasStoreProvider({
   initialHmwCards,
   initialSelectedSlotIds,
   initialBrainRewritingMatrices,
+  initialDotVotes,
+  initialVotingSession,
 }: CanvasStoreProviderProps) {
   const isMultiplayer = workshopType === 'multiplayer';
 
@@ -76,6 +81,8 @@ export function CanvasStoreProvider({
       hmwCards: initialHmwCards || [],
       selectedSlotIds: initialSelectedSlotIds || [],
       brainRewritingMatrices: initialBrainRewritingMatrices || [],
+      dotVotes: initialDotVotes || [],
+      votingSession: initialVotingSession,
     };
     if (isMultiplayer) {
       return createMultiplayerCanvasStore(initState);

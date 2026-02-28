@@ -109,7 +109,7 @@ declare global {
     };
 
     /**
-     * RoomEvent: broadcast events for facilitator controls (Phase 58).
+     * RoomEvent: broadcast events for facilitator controls (Phase 58) and voting (Phase 59+).
      * Sent via useBroadcastEvent(), received via useEventListener().
      * Note: the broadcasting user does NOT receive their own events.
      */
@@ -117,6 +117,8 @@ declare global {
       | { type: 'STEP_CHANGED'; stepOrder: number; stepName: string }
       | { type: 'VIEWPORT_SYNC'; x: number; y: number; zoom: number }
       | { type: 'TIMER_UPDATE'; state: 'running' | 'paused' | 'expired' | 'cancelled'; remainingMs: number; totalMs: number }
-      | { type: 'SESSION_ENDED' };
+      | { type: 'SESSION_ENDED' }
+      | { type: 'VOTING_OPENED'; voteBudget: number }
+      | { type: 'VOTING_CLOSED' };
   }
 }
