@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 58-facilitator-controls
 source: 58-01-SUMMARY.md, 58-02-SUMMARY.md
 started: 2026-02-28T12:00:00Z
@@ -57,7 +57,12 @@ skipped: 0
   reason: "User reported: Everything passes except the facilitator does not get redirected to the workshop detail page: http://localhost:3000/dashboard/workshops/ws_uh7kngj3djqjkjortkyit46n (page not found)"
   severity: major
   test: 6
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Both facilitator-controls.tsx and session-ended-overlay.tsx redirect to /dashboard/workshops/${workshopId} — a route that does not exist. The app only has /dashboard as the listing page."
+  artifacts:
+    - path: "src/components/workshop/facilitator-controls.tsx"
+      issue: "Line 181: router.push(`/dashboard/workshops/${workshopId}`) — nonexistent route"
+    - path: "src/components/workshop/session-ended-overlay.tsx"
+      issue: "Line 48: router.push(`/dashboard/workshops/${workshopId}`) — nonexistent route"
+  missing:
+    - "Change both redirects to router.push('/dashboard')"
+  debug_session: ".planning/debug/end-session-404-redirect.md"

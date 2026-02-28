@@ -120,7 +120,7 @@ function StepChangedListener({ sessionId }: { sessionId: string }) {
  * The facilitator never sees this — they redirect immediately after broadcasting.
  * Participants see the overlay and can click "Return to Dashboard".
  */
-function SessionEndedListener({ workshopId }: { workshopId: string }) {
+function SessionEndedListener({ sessionId, workshopId }: { sessionId: string; workshopId: string }) {
   const [sessionEnded, setSessionEnded] = useState(false);
 
   useEventListener(({ event }) => {
@@ -130,7 +130,7 @@ function SessionEndedListener({ workshopId }: { workshopId: string }) {
   });
 
   if (!sessionEnded) return null;
-  return <SessionEndedOverlay workshopId={workshopId} />;
+  return <SessionEndedOverlay sessionId={sessionId} />;
 }
 
 /**
@@ -154,7 +154,7 @@ function MultiplayerRoomInner({ children, sessionId, workshopId }: { children: R
       <JoinLeaveListener />
       <ReconnectionListener />
       <StepChangedListener sessionId={sessionId} />
-      <SessionEndedListener workshopId={workshopId} />
+      <SessionEndedListener sessionId={sessionId} workshopId={workshopId} />
       <CountdownTimer />
       {children}
     </MultiplayerContext.Provider>

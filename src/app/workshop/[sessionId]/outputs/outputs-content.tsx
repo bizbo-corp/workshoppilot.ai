@@ -40,6 +40,7 @@ interface OutputsContentProps {
   workshopId: string;
   workshopTitle: string;
   deliverables: Deliverable[];
+  isReadOnly?: boolean;
 }
 
 type GenerationStatus = 'idle' | 'loading' | 'done' | 'error';
@@ -91,6 +92,7 @@ export function OutputsContent({
   workshopId,
   workshopTitle,
   deliverables,
+  isReadOnly = false,
 }: OutputsContentProps) {
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -169,8 +171,8 @@ export function OutputsContent({
           <p className="text-muted-foreground text-sm">{workshopTitle}</p>
         </div>
 
-        {/* Back link (only on card grid view) */}
-        {!selectedDeliverable && (
+        {/* Back link (only on card grid view, hidden for read-only guests) */}
+        {!selectedDeliverable && !isReadOnly && (
           <Link
             href={`/workshop/${sessionId}/step/10`}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
@@ -274,11 +276,11 @@ export function OutputsContent({
                 );
               }
 
-              // Not yet generated — show generate button
+              // Not yet generated — show generate button (or disabled for read-only guests)
               return (
                 <Card
                   key={card.type}
-                  className="flex flex-col justify-between gap-4 py-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
+                  className={`flex flex-col justify-between gap-4 py-5 transition-all duration-150 ${isReadOnly ? '' : 'hover:-translate-y-0.5 hover:shadow-md'}`}
                 >
                   <CardHeader className="gap-3 pb-0">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -292,24 +294,30 @@ export function OutputsContent({
                     </div>
                   </CardHeader>
                   <CardFooter className="pt-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      disabled={isLoading}
-                      onClick={getGenerateHandler(card.type)}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : status === 'error' ? (
-                        `Retry ${card.type === 'prd' ? 'PRD' : 'Tech Specs'}`
-                      ) : (
-                        `Generate ${card.type === 'prd' ? 'PRD' : 'Tech Specs'}`
-                      )}
-                    </Button>
+                    {isReadOnly ? (
+                      <Button variant="outline" size="sm" className="w-full" disabled>
+                        Not yet generated
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        disabled={isLoading}
+                        onClick={getGenerateHandler(card.type)}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : status === 'error' ? (
+                          `Retry ${card.type === 'prd' ? 'PRD' : 'Tech Specs'}`
+                        ) : (
+                          `Generate ${card.type === 'prd' ? 'PRD' : 'Tech Specs'}`
+                        )}
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               );

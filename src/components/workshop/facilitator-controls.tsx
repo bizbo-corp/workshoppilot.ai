@@ -178,7 +178,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId }: Facil
       // Cancel any running timer
       if (intervalRef.current) clearInterval(intervalRef.current);
       // Redirect facilitator to workshop detail page
-      router.push(`/dashboard/workshops/${workshopId}`);
+      router.push('/dashboard');
     } catch (err) {
       console.error('Failed to end session:', err);
       toast.error('Failed to end session. Please try again.');

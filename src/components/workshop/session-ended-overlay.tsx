@@ -1,21 +1,22 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
-
-interface SessionEndedOverlayProps {
-  workshopId: string;
-}
 
 /**
  * SessionEndedOverlay — full-screen overlay shown to participants when
  * the facilitator ends the session via SESSION_ENDED broadcast event.
  *
- * Covers the entire viewport. Participants can only click "Return to Dashboard".
- * The facilitator never sees this — they redirect to the workshop detail page.
+ * Covers the entire viewport.
+ * - Signed-in users: "Return to Dashboard" → /dashboard
+ * - Guests (no Clerk account): "View Workshop Outputs" → /workshop/:sessionId/outputs
  */
-export function SessionEndedOverlay({ workshopId }: SessionEndedOverlayProps) {
+export function SessionEndedOverlay({ sessionId }: { sessionId: string }) {
   const router = useRouter();
+  const { isLoaded, isSignedIn } = useAuth();
+
+  const isGuest = isLoaded && !isSignedIn;
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm">
@@ -43,12 +44,21 @@ export function SessionEndedOverlay({ workshopId }: SessionEndedOverlayProps) {
         <p className="text-muted-foreground">
           The facilitator has ended this workshop session. Thank you for participating!
         </p>
-        <Button
-          size="lg"
-          onClick={() => router.push(`/dashboard/workshops/${workshopId}`)}
-        >
-          Return to Dashboard
-        </Button>
+        {isGuest ? (
+          <Button
+            size="lg"
+            onClick={() => router.push(`/workshop/${sessionId}/outputs`)}
+          >
+            View Workshop Outputs
+          </Button>
+        ) : (
+          <Button
+            size="lg"
+            onClick={() => router.push('/dashboard')}
+          >
+            Return to Dashboard
+          </Button>
+        )}
       </div>
     </div>
   );

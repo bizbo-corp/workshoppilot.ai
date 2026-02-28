@@ -29,6 +29,7 @@ const isPublicRoute = createRouteMatcher([
   // Liveblocks room access requires a valid token (issued only to verified Clerk users or guests).
   // Without this, guests would be redirected to sign-in when the lobby transitions to the canvas.
   '/workshop/:path*/step/:stepId', // All steps accessible for multiplayer participants
+  '/workshop/:path*/outputs',      // Guest access to workshop outputs after session end
 ]);
 
 const isAdminRoute = createRouteMatcher(['/admin(.*)', '/api/admin(.*)']);

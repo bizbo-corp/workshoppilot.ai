@@ -45,9 +45,9 @@ export default async function WorkshopLayout({
     })
   );
 
-  // Redirect to dashboard if session not found
+  // Redirect to home if session not found (not /dashboard — guests don't have accounts)
   if (!session) {
-    redirect('/dashboard');
+    redirect('/');
   }
 
   // Serialize step data for client components

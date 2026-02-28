@@ -1,7 +1,10 @@
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { sessions, buildPacks } from '@/db/schema';
+import { COOKIE_NAME, verifyGuestCookie } from '@/lib/auth/guest-cookie';
 import { OutputsContent } from './outputs-content';
 
 interface OutputsPageProps {
@@ -38,10 +41,32 @@ export default async function OutputsPage({ params }: OutputsPageProps) {
   });
 
   if (!session) {
-    redirect('/dashboard');
+    redirect('/');
   }
 
   const { workshop } = session;
+
+  // Auth: signed-in users proceed normally; guests need valid cookie
+  const { userId } = await auth();
+  let isReadOnly = false;
+
+  if (!userId) {
+    // Guest path: verify wp_guest cookie matches this workshop
+    const cookieStore = await cookies();
+    const guestToken = cookieStore.get(COOKIE_NAME)?.value;
+
+    if (!guestToken) {
+      redirect('/');
+    }
+
+    const payload = verifyGuestCookie(guestToken);
+
+    if (!payload || payload.workshopId !== workshop.id) {
+      redirect('/');
+    }
+
+    isReadOnly = true;
+  }
 
   // Load build_packs for this workshop
   const rows = await db
@@ -80,6 +105,7 @@ export default async function OutputsPage({ params }: OutputsPageProps) {
       workshopId={workshop.id}
       workshopTitle={workshop.title}
       deliverables={deliverables}
+      isReadOnly={isReadOnly}
     />
   );
 }
