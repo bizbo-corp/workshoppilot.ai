@@ -1,195 +1,314 @@
 # Stack Research
 
-**Domain:** Real-time multiplayer collaboration (WebSocket, CRDT, presence, guest auth) — v1.9 addition to WorkshopPilot.ai
-**Researched:** 2026-02-26
-**Confidence:** HIGH (Liveblocks core recommendation verified via npm, official docs, working Zustand+ReactFlow example)
+**Domain:** Dot voting on Crazy 8s sketches (real-time + solo) + mobile phone gate
+**Researched:** 2026-02-28
+**Confidence:** HIGH
 
-> This is a focused addendum for v1.9. The existing stack (Next.js 16.1.1, React 19,
-> Tailwind 4, shadcn/ui, Clerk, Neon/Drizzle, Gemini, Stripe, ReactFlow, Zustand, Vercel) is
-> validated in production and NOT re-researched here. Scope covers only new libraries and
-> patterns needed for v1.9 multiplayer.
-
----
-
-## Recommended Stack
-
-### Core Technologies
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| `@liveblocks/client` | 3.14.0 | WebSocket connection, room management, CRDT-based storage | Purpose-built for multiplayer creative tools (Figma, Pitch, Spline). Handles conflict resolution, presence, history, and storage. Managed infrastructure — no WebSocket server to operate on Vercel. |
-| `@liveblocks/react` | 3.14.0 | React hooks: `useStorage`, `useMyPresence`, `useOthers`, `useMutation` | First-class React hooks. Liveblocks has a documented, working example that combines Liveblocks + Zustand + ReactFlow + Next.js — the closest match to WorkshopPilot's existing architecture. |
-| `@liveblocks/node` | 3.14.0 | Server-side access token issuance in Next.js App Router route handlers | Edge-compatible. Issues short-lived JWTs scoped to a room. `userId` accepts any string — enables guest users with a generated UUID and display name without Clerk. |
-
-### Supporting Libraries
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| `nanoid` | ^5.0.0 | Generate short UUIDs for guest session IDs | Generate a guest `userId` on the join page, stored in `sessionStorage`. Enables guests to rejoin with the same identity on page reload. Already a common ecosystem dependency — check if it is already in `package.json` before installing. |
-
-### Development Tools
-
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| Liveblocks Dashboard | Inspect rooms, live connections, storage state, event logs | Free tier includes 24h event log retention. Use during development to verify presence and storage sync. |
-| Liveblocks DevTools browser extension | Inspect presence, storage, and mutations in browser DevTools | Available for Chrome and Firefox. Install from Liveblocks docs. |
+> This is a focused addendum for v2.0. The full stack (Next.js 16.1.1, React 19, Tailwind 4,
+> shadcn/ui, Clerk, Neon/Drizzle, Gemini, Stripe, ReactFlow, Zustand, Liveblocks v3.14.0, Vercel)
+> is validated in production and NOT re-researched here. Scope covers only what is new or modified
+> for v2.0: dot voting state sync and mobile viewport gate.
 
 ---
 
-## Integration Points with Existing Stack
+## Summary
 
-### ReactFlow Canvas Sync
+**No new packages required.** Both features are fully implementable with the existing stack.
 
-Liveblocks provides a documented working example combining **Liveblocks + Zustand + ReactFlow + Next.js** for a collaborative flowchart (source: `liveblocks.io/examples/collaborative-flowchart/zustand-flowchart`). This is architecturally identical to WorkshopPilot's canvas setup.
+- **Dot voting (multiplayer):** Liveblocks Storage (`LiveMap` + `LiveObject`) — already in the codebase, already used for canvas elements. Add two new Storage keys (`votes`, `votingSession`) to the existing type augmentation and `initialStorage`.
+- **Dot voting (solo):** The `stepArtifacts` JSONB column already stores all Step 8 data. Vote state persists there.
+- **Mobile gate:** The `useIsMobile()` hook already exists at `src/hooks/use-mobile.ts` with the correct 768px breakpoint. Build one new overlay component consuming it.
+- **Voting timer:** The existing `FacilitatorControls` timer infrastructure (broadcast events, `TIMER_UPDATE`) reuses without changes. Wire voting close to timer expiry as an optional behavior.
 
-**Pattern:** The existing Zustand store's local `nodes` and `edges` arrays become Liveblocks `LiveList<Node>` and `LiveList<Edge>`. On every node drag or content edit, `useMutation` updates the shared list. All participants receive the delta via WebSocket with CRDT conflict resolution. No manual merge required.
+Zero changes to `package.json`.
 
-**Type configuration (`liveblocks.config.ts`):**
+---
+
+## What Already Exists (Do NOT Re-add)
+
+| Capability | Already Provided By | Location |
+|------------|--------------------|----|
+| Real-time CRDT sync | `@liveblocks/react` v3.14.0 | `src/lib/liveblocks/config.ts` |
+| Storage mutation API | `useMutation`, `useStorage` | via `@liveblocks/react` |
+| `LiveMap` / `LiveObject` | `@liveblocks/client` v3.14.0 | imported in `src/components/workshop/multiplayer-room.tsx` |
+| Broadcast events | `useBroadcastEvent` / `useEventListener` | `facilitator-controls.tsx`, `countdown-timer.tsx` |
+| Countdown timer (facilitator broadcast) | `FacilitatorControls` + `CountdownTimer` | `src/components/workshop/` |
+| `RoomEvent` type union | Global `Liveblocks` augmentation | `src/lib/liveblocks/config.ts` |
+| Mobile breakpoint hook | `useIsMobile()` (768px matchMedia, SSR-safe) | `src/hooks/use-mobile.ts` |
+| Solo state persistence | `stepArtifacts` JSONB via Drizzle | `src/db/schema/step-artifacts.ts` |
+| Crazy 8s slot types | `Crazy8sSlot` | `src/lib/canvas/crazy-8s-types.ts` |
+| Facilitator role detection | `isFacilitator` from `useMultiplayerContext()` | `src/components/workshop/multiplayer-room.tsx` |
+| Debounced save | `use-debounce` | `package.json` dependency |
+| Toast notifications | `sonner` | `package.json` dependency |
+| Icons | `lucide-react` | `package.json` dependency |
+
+---
+
+## Feature: Dot Voting
+
+### Vote State Architecture
+
+#### Multiplayer Mode — Liveblocks Storage
+
+Vote data lives in Liveblocks Storage, not Postgres. All participants see vote counts update live as votes are cast. Liveblocks CRDT handles conflicts automatically. No polling, no API round-trips per vote.
+
+**Storage shape** — add to the existing `Liveblocks` global type in `src/lib/liveblocks/config.ts`:
+
 ```typescript
-import { createClient } from "@liveblocks/client";
-import { createRoomContext } from "@liveblocks/react";
-import { LiveList, LiveObject } from "@liveblocks/client";
-import type { Node, Edge } from "@xyflow/react";
-
-// Shared canvas state — synced to all participants
-type Storage = {
-  nodes: LiveList<LiveObject<Node>>;
-  edges: LiveList<LiveObject<Edge>>;
+// Extend existing Storage type in the global Liveblocks augmentation:
+Storage: {
+  elements: LiveMap<string, LiveObject<CanvasElementStorable>>; // existing — unchanged
+  votes: LiveMap<string, LiveObject<VoteRecord>>;               // NEW for v2.0
+  votingSession: LiveObject<VotingSessionState>;                // NEW for v2.0
 };
-
-// Ephemeral per-user state — cursors, name, color
-type Presence = {
-  cursor: { x: number; y: number } | null;
-  name: string;
-  color: string;
-  role: "facilitator" | "participant";
-};
-
-export const client = createClient({
-  authEndpoint: "/api/liveblocks-auth",
-});
-
-export const {
-  RoomProvider,
-  useStorage,
-  useMutation,
-  useMyPresence,
-  useUpdateMyPresence,
-  useOthers,
-  useSelf,
-} = createRoomContext<Presence, Storage>(client);
 ```
 
-**What changes in ReactFlow:**
-- `nodes` and `edges` props derive from `useStorage` instead of Zustand
-- `onNodesChange` and `onEdgesChange` call `useMutation` instead of Zustand setters
-- The existing Zustand store retains non-collaborative state (step progress, AI conversation, local UI state)
-- Cursor tracking uses `useUpdateMyPresence` called on ReactFlow's `onMouseMove`
+New supporting types (add to `src/lib/liveblocks/config.ts`):
 
-### Zustand Co-existence
-
-Zustand remains the source of truth for:
-- AI conversation history (facilitator-only, not shared with Liveblocks)
-- Step progression state (facilitator-controlled, stored in Neon)
-- Local UI state (sidebar, loading states, modals)
-
-Liveblocks manages:
-- Canvas node positions and content (shared, CRDT-synced)
-- Live cursor positions (ephemeral Presence, not persisted)
-- Participant presence list (derived from `useOthers`)
-
-### Guest Authentication (No Clerk Account)
-
-Liveblocks access tokens accept any arbitrary `userId` string. This enables guests who join via share link to receive a Liveblocks token without a Clerk account.
-
-**Auth endpoint (`app/api/liveblocks-auth/route.ts`):**
 ```typescript
-import { Liveblocks } from "@liveblocks/node";
+// Key format: `${userId}:${slotId}` — composite key enables:
+//   - Per-user total vote enforcement (sum all records where userId matches)
+//   - Per-user vote retrieval (show which slots this user voted on)
+//   - Undo votes (set count to 0 or delete the record)
+export type VoteRecord = {
+  userId: string;
+  slotId: string;
+  count: number; // votes this user placed on this slot (multi-vote support)
+};
 
-const liveblocks = new Liveblocks({
-  secret: process.env.LIVEBLOCKS_SECRET_KEY!,
-});
+export type VotingSessionState = {
+  isOpen: boolean;
+  maxVotesPerUser: number;  // configurable by facilitator, default 3
+  openedAt: number | null;  // epoch ms — null when not open
+};
+```
 
-export async function POST(request: Request) {
-  const { userId, displayName, roomId, role } = await request.json();
+**Mutation pattern** (uses existing `useMutation` from `@liveblocks/react`, matches patterns already in codebase):
 
-  // SECURITY: Validate roomId exists in Neon as a multiplayer workshop
-  // before issuing any token. Prevents token fishing for arbitrary room IDs.
-  const workshop = await db.query.workshops.findFirst({
-    where: and(eq(workshops.id, roomId), eq(workshops.type, "multiplayer")),
+```typescript
+const castVote = useMutation(({ storage }, userId: string, slotId: string) => {
+  const session = storage.get('votingSession');
+  if (!session.get('isOpen')) return; // Guard: voting must be open
+
+  const maxVotes = session.get('maxVotesPerUser');
+  const votes = storage.get('votes');
+
+  // Count total votes cast by this user across all slots
+  let userTotal = 0;
+  votes.forEach((record) => {
+    if (record.get('userId') === userId) userTotal += record.get('count');
   });
-  if (!workshop) return new Response("Not found", { status: 404 });
+  if (userTotal >= maxVotes) return; // Exceeds allocation
 
-  // Facilitator uses Clerk userId; guests use nanoid UUID from sessionStorage
-  const session = liveblocks.prepareSession(userId, {
-    userInfo: { name: displayName, role, color: assignColor(userId) },
+  const voteKey = `${userId}:${slotId}`;
+  const existing = votes.get(voteKey);
+  if (existing) {
+    existing.set('count', existing.get('count') + 1);
+  } else {
+    votes.set(voteKey, new LiveObject({ userId, slotId, count: 1 }));
+  }
+}, []);
+```
+
+**Read pattern** (for displaying vote totals per slot in the Crazy 8s grid):
+
+```typescript
+const votes = useStorage((root) => root.votes);
+
+const slotVoteTotals = useMemo(() => {
+  const totals: Record<string, number> = {};
+  if (!votes) return totals;
+  votes.forEach((record, key) => {
+    const slotId = key.split(':')[1];
+    totals[slotId] = (totals[slotId] ?? 0) + record.count;
   });
+  return totals;
+}, [votes]);
 
-  // All participants get full canvas write access.
-  // Step progression control is enforced in UI by checking role, not in Liveblocks permissions.
-  session.allow(roomId, session.FULL_ACCESS);
+// Current user's votes per slot (for highlighting their own votes):
+const myVotesPerSlot = useMemo(() => {
+  const mine: Record<string, number> = {};
+  if (!votes || !userId) return mine;
+  votes.forEach((record, key) => {
+    if (key.startsWith(`${userId}:`)) {
+      mine[record.slotId] = record.count;
+    }
+  });
+  return mine;
+}, [votes, userId]);
+```
 
-  const { status, body } = await session.authorize();
-  return new Response(body, { status });
+**`initialStorage` update** — modify `RoomProvider` in `src/components/workshop/multiplayer-room.tsx`:
+
+```typescript
+initialStorage={{
+  elements: new LiveMap<string, LiveObject<CanvasElementStorable>>(),          // existing
+  votes: new LiveMap<string, LiveObject<VoteRecord>>(),                         // NEW
+  votingSession: new LiveObject<VotingSessionState>({                           // NEW
+    isOpen: false,
+    maxVotesPerUser: 3,
+    openedAt: null,
+  }),
+}}
+```
+
+`initialStorage` is only applied on first room creation. Adding new keys is safely additive — existing rooms with `elements` already stored are unaffected.
+
+#### Solo Mode — stepArtifacts JSONB
+
+Solo workshops have no Liveblocks room. Vote state persists in the `artifact` JSONB column of the step's `stepArtifacts` row alongside existing Step 8 data (Crazy 8s slots, mind map nodes).
+
+Shape to add to the Step 8 artifact schema in `src/lib/schemas/step-schemas.ts`:
+
+```typescript
+// Add to existing ideation artifact shape:
+votes: z.record(z.string(), z.number()).optional(), // { [slotId]: totalVoteCount }
+votingOpen: z.boolean().optional(),                 // local facilitator state
+maxVotesPerUser: z.number().optional(),             // configurable, default 3
+```
+
+In solo mode, `isFacilitator` is always `true` (the user is both facilitator and participant). Vote state is React state debounced-saved to the artifact on change — same pattern as all other Step 8 state saves.
+
+### Broadcast Events for Voting Lifecycle
+
+Extend the `RoomEvent` union in `src/lib/liveblocks/config.ts` — additive, no existing events changed:
+
+```typescript
+RoomEvent:
+  | { type: 'STEP_CHANGED'; stepOrder: number; stepName: string }                                    // existing
+  | { type: 'VIEWPORT_SYNC'; x: number; y: number; zoom: number }                                   // existing
+  | { type: 'TIMER_UPDATE'; state: 'running' | 'paused' | 'expired' | 'cancelled'; remainingMs: number; totalMs: number } // existing
+  | { type: 'SESSION_ENDED' }                                                                        // existing
+  | { type: 'VOTING_OPENED'; maxVotesPerUser: number }                                               // NEW
+  | { type: 'VOTING_CLOSED' };                                                                       // NEW
+```
+
+These broadcast events are **ephemeral UI signals** only — trigger toasts and immediate UI transitions. The **authoritative** voting state lives in Storage (`votingSession.isOpen`). If a participant joins mid-voting, they read `useStorage` to get current state; they do not need to have received the broadcast event.
+
+### Facilitator Controls Integration
+
+Voting controls belong in `FacilitatorControls` — the established location for all facilitator-only controls (timer, viewport sync, end session). Add a "Voting" section gated to the Step 8 Crazy 8s sub-step.
+
+**Controls to expose:**
+- `maxVotesPerUser` input (range 1–10, default 3) — configurable before opening
+- Open / Close toggle button — updates `votingSession.isOpen` in Storage + broadcasts event
+- Optional: wire to existing timer — auto-close voting when timer expires
+
+**Participant UX:**
+- `CountdownTimer` component (already exists) handles timer broadcast display for participants
+- A `VotingStatusBanner` or similar renderless listener handles `VOTING_OPENED` / `VOTING_CLOSED` events for participants — same pattern as `StepChangedListener` and `SessionEndedListener` in `multiplayer-room.tsx`
+
+### Result Selection
+
+After voting closes, the facilitator sees ranked results (slots sorted by total vote count) and manually selects which ideas advance to Step 9. This selection writes to the `stepArtifacts` JSONB (existing save mechanism) and flows to Step 9 concept card generation (existing Gemini context pipeline).
+
+---
+
+## Feature: Mobile Phone Gate
+
+### What Already Exists
+
+`src/hooks/use-mobile.ts` — `useIsMobile()` hook already present with exactly the right implementation:
+
+```typescript
+// Already implemented — no changes needed:
+const MOBILE_BREAKPOINT = 768
+
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+
+  React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+    const onChange = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    mql.addEventListener("change", onChange)
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    return () => mql.removeEventListener("change", onChange)
+  }, [])
+
+  return !!isMobile
 }
 ```
 
-**Guest session flow:**
-1. Facilitator generates a share link: `/join/[workshopId]?token=[inviteToken]`
-2. Guest opens link → shown a "Join Workshop" form (name field only)
-3. On submit: `nanoid()` generates a `guestId`, stored in `sessionStorage`
-4. POST to `/api/liveblocks-auth` with `{ userId: guestId, displayName, roomId, role: "participant" }`
-5. Token returned, `RoomProvider` connects. Guest is live in the room.
-6. On page reload: `guestId` re-read from `sessionStorage`, same presence identity
+**SSR behavior:** Returns `false` on server render (`!!undefined === false`). The gate is an additive client-only overlay — shows after hydration on mobile, never on server. No hydration mismatch possible.
 
-### Participant Presence List
+### Gate Design
 
-```typescript
-// Display connected participants
-const others = useOthers();
-const self = useSelf();
+A single `MobileGate` component — full-screen overlay when `useIsMobile()` is `true` and the gate has not been dismissed.
 
-// others[i].info.name — display name
-// others[i].info.role — "facilitator" | "participant"
-// others[i].info.color — assigned color for avatar + cursor
-// others[i].presence.cursor — null if off-canvas
-```
+**Requirements:**
+- Dismissible — user taps "Continue anyway" and gate disappears
+- Persistent dismissal — `localStorage` key survives page navigation within the session
+- Scope — workshop routes only (not landing page, pricing, dashboard)
 
-### Live Cursors on ReactFlow Canvas
+**localStorage key:** `workshoppilot:mobile-gate-dismissed`
+
+**Why `localStorage` not DB:** Dismissal is cosmetic and per-device. No cross-device sync needed (contrast: the welcome modal uses DB-backed dismissal because it must not re-appear on any device). `localStorage` is the correct tool here.
+
+**Placement:** `src/app/workshop/[sessionId]/layout.tsx` — wraps all workshop content. Landing page and dashboard remain accessible on mobile without the gate.
 
 ```typescript
-const updateMyPresence = useUpdateMyPresence();
+// src/app/workshop/[sessionId]/layout.tsx
+import { MobileGate } from '@/components/mobile-gate';
 
-// In ReactFlow's onMouseMove handler:
-const handleMouseMove = useCallback((e: React.MouseEvent) => {
-  // Convert viewport coordinates to ReactFlow canvas coordinates
-  const { x, y } = reactFlowInstance.screenToFlowPosition({
-    x: e.clientX,
-    y: e.clientY,
-  });
-  updateMyPresence({ cursor: { x, y } });
-}, [updateMyPresence, reactFlowInstance]);
-
-// On canvas mouse leave:
-const handleMouseLeave = useCallback(() => {
-  updateMyPresence({ cursor: null });
-}, [updateMyPresence]);
+export default function WorkshopLayout({ children }) {
+  return (
+    <>
+      <MobileGate />  {/* renders null on desktop, overlay on mobile */}
+      {children}
+    </>
+  );
+}
 ```
 
-Render other cursors as absolutely-positioned elements over the ReactFlow canvas, using `reactFlowInstance.flowToScreenPosition()` to convert back to viewport coordinates for rendering.
+**Animation:** Use CSS opacity + transform transition consistent with the existing pattern (no framer-motion — project explicitly uses CSS for transitions per v1.6 decisions).
+
+---
+
+## Recommended Stack Changes
+
+### Core Technologies — No Changes
+
+| Technology | Current Version | Status |
+|------------|-----------------|--------|
+| `@liveblocks/react` | 3.14.0 | No version change — add new Storage keys only |
+| `@liveblocks/client` | 3.14.0 | No version change — `LiveMap`/`LiveObject` already imported |
+| Drizzle ORM | existing | No change — JSONB artifact column already handles solo vote storage |
+| `useIsMobile` hook | — | Already exists in project |
+
+### Supporting Libraries — No New Installs
+
+| Library | Status | Role in v2.0 |
+|---------|--------|--------------|
+| `use-debounce` | Existing | Debounced artifact save for solo vote state |
+| `sonner` | Existing | Voting opened/closed toasts for participants |
+| `lucide-react` | Existing | Vote dot icons (`Circle`, `Dot`, or `Vote`) |
+| `shadcn/ui Dialog` | Existing | Mobile gate overlay (or `div` with portal — no Dialog dependency required) |
+
+### Development Tools — No Changes
+
+No new dev dependencies. Extend existing Playwright E2E tests for voting behavior.
+
+---
+
+## Installation
+
+```bash
+# No new packages.
+# Zero changes to package.json.
+```
 
 ---
 
 ## Alternatives Considered
 
-| Recommended | Alternative | Why Not |
-|-------------|-------------|---------|
-| Liveblocks | **Yjs + y-websocket** | Requires a persistent WebSocket server. Vercel Serverless Functions cannot maintain persistent WebSocket connections (confirmed: `vercel.com/kb/guide/do-vercel-serverless-functions-support-websocket-connections`). Would require a second persistent server (Railway, Fly.io, Render) adding infrastructure to manage. Liveblocks eliminates the server entirely. Yjs is the right primitive if self-hosting is a requirement; it is not for WorkshopPilot. |
-| Liveblocks | **PartyKit (now Cloudflare)** | Acquired by Cloudflare in April 2024. Runs on Cloudflare Durable Objects infrastructure, separate from Vercel — requires deploying a second service. PartyKit is a lower-level primitive; CRDT conflict resolution must be built manually on top of it. Liveblocks provides CRDT storage out of the box. Lower confidence given acquisition transition uncertainty. |
-| Liveblocks | **Ably / Pusher** | Pub/sub channel model, not a document-model CRDT. Good for broadcasting events; not purpose-built for canvas state sync. Would require manual conflict resolution for concurrent node edits. Ably pricing is per-message, which is unpredictable for canvas-heavy workflows where mouse moves are high-frequency. |
-| Liveblocks | **Supabase Realtime** | WorkshopPilot already uses Neon (not Supabase). Supabase Realtime's Presence + Broadcast can handle cursors but has no CRDT or conflict resolution for shared canvas state. Canvas sync would degrade to last-write-wins, breaking concurrent editing. Adding Supabase alongside Neon introduces two Postgres providers with no benefit. |
-| Liveblocks | **Socket.io** | Requires a long-running Node.js server. Incompatible with Vercel's serverless execution model without a separate persistent server. |
-| nanoid for guest IDs | crypto.randomUUID() | `crypto.randomUUID()` is available in modern browsers and could be used instead. nanoid is included here because it produces shorter IDs by default (~21 chars vs 36 with hyphens). If the project already uses nanoid, reuse it. If not, `crypto.randomUUID()` works fine and requires no install. |
+| Approach | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| Multiplayer vote storage | Liveblocks Storage (`LiveMap`) | Postgres `dot_votes` table | DB requires API round-trip per vote click. At 10 participants each casting 3 votes that is 30 separate API calls with perceptible latency. Liveblocks CRDT propagates each vote to all participants in <50ms with no server involvement. |
+| Solo vote storage | `stepArtifacts` JSONB (existing) | Separate `dot_votes` DB table | Solo votes are step-scoped. JSONB in the existing artifact row avoids a schema migration and aligns with how all other Step 8 data (slots, mind map) is already stored. |
+| Mobile detection | `useIsMobile()` (matchMedia, existing) | CSS-only `@media` | CSS can hide content but cannot produce a dismissible gate with persistent localStorage state. Need JavaScript. Hook already exists — no new code required. |
+| Gate persistence | `localStorage` | DB-backed (like welcome modal) | Gate dismissal is cosmetic and per-device. Welcome modal uses DB because it must not re-appear on any device after dismissal. Gate is less critical — `localStorage` is simpler and correct. |
+| Vote composite key | `${userId}:${slotId}` LiveMap key | Separate LiveMap per user or per slot | Composite key enables: (a) total vote count per slot by iterating, (b) per-user total for enforcement, (c) per-user per-slot undo by setting `count: 0`. Single flat LiveMap is simpler than nested structures. |
+| Voting state authority | Liveblocks Storage (`votingSession.isOpen`) | Broadcast event only | Broadcast events are ephemeral — participants who join after voting opens would not receive them. Storage is durable and readable on join. Events are additive UI signals, not the source of truth. |
 
 ---
 
@@ -197,110 +316,89 @@ Render other cursors as absolutely-positioned elements over the ReactFlow canvas
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| `socket.io` / raw WebSockets on Vercel | Vercel Serverless Functions cannot hold persistent connections. Requests time out; connections drop. | Liveblocks managed WebSocket infrastructure |
-| `y-websocket` as a Vercel function | Same constraint — persistent WebSocket connection required. | Liveblocks (which uses Yjs-inspired CRDT data structures internally) |
-| Supabase Realtime for canvas state | Last-write-wins only. Concurrent node moves overwrite each other with no merge. | Liveblocks Storage with CRDT conflict-free merging |
-| Liveblocks Storage for AI chat history | AI messages are the facilitator's linear conversation, not collaborative data. Storing them in shared Liveblocks Storage exposes conversation at the storage layer and uses paid room quota unnecessarily. | Keep AI conversation in Neon Postgres, surface as read-only to participants via existing API routes |
-| Building a custom CRDT | CRDT correctness is notoriously hard. Production-ready implementations (Yjs) took years to stabilize. | Liveblocks (CRDT internals managed by Liveblocks) |
-| Rivet Actors on Vercel | Rivet enables WebSockets on Vercel Functions via tunneling, but it is immature for production (launched October 2025), requires Rivet's infrastructure alongside Vercel, and adds operational complexity for a problem Liveblocks solves completely. | Liveblocks |
+| Postgres table for multiplayer votes | Per-vote API latency, polling complexity, no CRDT merge semantics | Liveblocks Storage `LiveMap` |
+| `usePresence` for vote state | Presence is ephemeral — clears on disconnect/reconnect | Liveblocks Storage (durable, survives reconnects) |
+| New `window.resize` listener for mobile gate | Less efficient than `matchMedia`, causes layout thrash | `useIsMobile()` hook — already uses `matchMedia`, already in codebase |
+| `framer-motion` for gate animation | Project explicitly avoids framer-motion; CSS transitions are the established pattern | CSS `opacity` + `transform` with `transition` (same as step transitions in v1.6) |
+| Separate Liveblocks room for voting | Voting must be in same room as canvas so facilitator controls both simultaneously | Same room, new Storage keys |
+| `sessionStorage` for gate dismissal | Clears on tab close; user gets gate again on every browser session | `localStorage` for persistent dismissal |
 
 ---
 
 ## Stack Patterns by Variant
 
-**For canvas node/edge sync (ReactFlow):**
-- Use Liveblocks Storage: `LiveList<LiveObject<Node>>` and `LiveList<LiveObject<Edge>>`
-- Replace Zustand canvas state with `useStorage` reads and `useMutation` writes
-- All participants get FULL_ACCESS to the canvas room
+**If voting is open (facilitator toggled) in multiplayer:**
+- Crazy 8s grid shows vote count badge on each slot
+- Each participant sees a dot-vote button per slot (disabled after max votes reached)
+- Vote counts update live via `useStorage` selector
+- Facilitator sees real-time totals; can close voting at any time or when timer expires
 
-**For live cursors:**
-- Use Liveblocks Presence (`useMyPresence`, `useOthers`)
-- Track `{ x, y }` in ReactFlow canvas (flow) coordinates, not screen pixels
-- Set cursor to `null` on mouse leave so other participants see cursor disappear
-- Render other cursors as absolutely-positioned `<div>` elements over the ReactFlow wrapper
+**If voting is closed (multiplayer):**
+- Grid shows final vote totals in read-only mode
+- Facilitator sees ranked results overlay
+- Facilitator selects ideas to advance to Step 9 — writes selection to `stepArtifacts`
 
-**For participant presence list:**
-- `useOthers()` returns all connected users with their `userInfo` (name, color, role)
-- Display in a floating panel or avatar stack in the canvas toolbar area
-- Facilitator is always the Clerk-authenticated room creator; guests identified by `role: "participant"`
+**If solo mode (no Liveblocks room):**
+- Same UI renders (same Crazy 8s grid component)
+- Vote state is React local state debounced-saved to artifact JSONB
+- `isFacilitator` is always `true` in solo mode — user sees open/close controls
+- No real-time sync needed — single user, no network overhead
 
-**For facilitator-only controls (step progression, AI input):**
-- Gate step transition mutations to facilitator role, checking `useSelf().info.role === "facilitator"` in the UI
-- AI chat input renders only for facilitator; participants see a read-only live transcript
-- Do NOT enforce this in Liveblocks permissions (all participants need canvas write for post-its); enforce in application logic
+**If mobile and not dismissed:**
+- `MobileGate` overlay renders on top of all workshop content
+- User sees "WorkshopPilot works best on desktop" message
+- "Continue anyway" button sets `localStorage` key and unmounts overlay
 
-**For guest session identity:**
-- Generate `guestId` with `nanoid()` or `crypto.randomUUID()` on the join page
-- Store in `sessionStorage` (survives page reload within tab, cleared on tab close)
-- On `RoomProvider` mount, POST to `/api/liveblocks-auth` with `{ userId: guestId, displayName, roomId }`
+**If mobile and dismissed:**
+- `localStorage` key present — gate does not render
+- User can use the app in degraded mobile state
 
 ---
 
 ## Version Compatibility
 
-| Package | Compatible With | Notes |
-|---------|-----------------|-------|
-| `@liveblocks/client@3.14.0` | `@liveblocks/react@3.14.0`, `@liveblocks/node@3.14.0` | Liveblocks docs state: "Every package should use the same version." Pin all three to the same version. |
-| `@liveblocks/react@3.14.0` | React 19, Next.js 16.x | Actively developed. 3.14.0 confirmed current as of 2026-02-26. |
-| `@liveblocks/node@3.14.0` | Next.js App Router route handlers | Edge-compatible. Works in both Node.js and Edge runtimes. |
-| `@liveblocks/client@3.14.0` | `@xyflow/react` (ReactFlow) | No conflict. Liveblocks manages its own state; ReactFlow consumes derived state from `useStorage`. |
-| `@liveblocks/react@3.14.0` | Zustand ^5.x | No conflict. Zustand handles non-collaborative state; Liveblocks handles shared canvas state. Different state trees. |
+| Package | Version | Compatible With | Notes |
+|---------|---------|-----------------|-------|
+| `@liveblocks/client` | 3.14.0 | `@liveblocks/react` 3.14.0, `@liveblocks/zustand` 3.14.0 | All Liveblocks packages must stay at same version — already locked at 3.14.0 |
+| `LiveMap` / `LiveObject` | — | Liveblocks Storage v3 type augmentation | `initialStorage` new keys are additive — existing room data (canvas elements) is not reset |
+| `useIsMobile` matchMedia | — | All modern browsers including Safari | `addEventListener('change')` API has full support — no polyfill needed |
 
 ---
 
-## Installation
+## Integration Points
 
-```bash
-# Core Liveblocks packages — all must be pinned to the same version
-npm install @liveblocks/client@3.14.0 @liveblocks/react@3.14.0 @liveblocks/node@3.14.0
+### Files to Modify
 
-# Guest session ID generation (check if nanoid already in package.json first)
-npm install nanoid
-```
+| File | Change |
+|------|--------|
+| `src/lib/liveblocks/config.ts` | Add `votes: LiveMap`, `votingSession: LiveObject` to `Storage` type; add `VoteRecord`, `VotingSessionState` types; add `VOTING_OPENED`, `VOTING_CLOSED` to `RoomEvent` union |
+| `src/components/workshop/multiplayer-room.tsx` | Add `votes` + `votingSession` to `initialStorage` in `RoomProvider` |
+| `src/components/workshop/facilitator-controls.tsx` | Add voting open/close section (conditional on Step 8 Crazy 8s sub-step) |
+| `src/components/workshop/crazy-8s-grid.tsx` | Add vote count overlays and vote button per slot; accept vote state props |
+| `src/lib/canvas/crazy-8s-types.ts` | Add optional `votes?: Record<string, number>` to solo artifact shape |
+| `src/lib/schemas/step-schemas.ts` | Add `votes`, `votingOpen`, `maxVotesPerUser` to Step 8 artifact Zod schema |
+| `src/app/workshop/[sessionId]/layout.tsx` | Render `<MobileGate />` |
 
-**Environment variables to add (`.env.local`):**
-```bash
-# Liveblocks — from https://liveblocks.io/dashboard
-LIVEBLOCKS_SECRET_KEY=sk_...            # Server-side ONLY — never prefix NEXT_PUBLIC_
-NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY=pk_... # Client-side room identification
-```
+### New Files to Create
 
----
-
-## Vercel Deployment Compatibility
-
-**Confirmed compatible.** Liveblocks manages its own global WebSocket infrastructure, separate from Vercel Functions. The Next.js app on Vercel makes outbound HTTP calls to Liveblocks from the token route handler. Browser clients connect directly to Liveblocks' WebSocket servers. No changes to `vercel.json`, no edge function configuration, no persistent server required.
-
-Vercel explicitly lists Liveblocks as a supported real-time partner (`vercel.com/kb/guide/publish-and-subscribe-to-realtime-data-on-vercel`).
-
-**Free tier:** 500 monthly active rooms, unlimited users per room, 256 MB realtime data, 512 MB file storage. Sufficient for v1.9 launch at WorkshopPilot's current scale.
-
----
-
-## What NOT to Add (Anti-over-engineering)
-
-- **Do not add a standalone CRDT library (Yjs, Automerge).** Liveblocks provides CRDT semantics internally — owning the library means owning the operational complexity.
-- **Do not add a separate WebSocket server.** Liveblocks eliminates this requirement.
-- **Do not sync AI conversation to Liveblocks Storage.** AI messages are owned by the facilitator and stored in Neon. Participants read them via existing API routes, not via shared storage.
-- **Do not replicate canvas state to Neon in real-time.** Persist canvas to Neon only on step completion (existing behavior). Liveblocks ephemeral storage handles in-session sync. On reconnect, Liveblocks restores room state automatically.
-- **Do not add Supabase.** Already using Neon. Two Postgres providers is confusion with no benefit.
-- **Do not add Ably or Pusher.** These solve pub/sub messaging, not canvas conflict resolution.
+| File | Purpose |
+|------|---------|
+| `src/components/mobile-gate.tsx` | Dismissible overlay for <768px viewports using `useIsMobile()` + localStorage |
+| `src/components/workshop/voting-results.tsx` | Ranked slot list for facilitator after voting closes; facilitator selects ideas to advance |
+| `src/components/workshop/voting-status-listener.tsx` | Renderless listener for `VOTING_OPENED` / `VOTING_CLOSED` events (participant toast + UI state) — follows pattern of `StepChangedListener` and `SessionEndedListener` in `multiplayer-room.tsx` |
 
 ---
 
 ## Sources
 
-- `https://liveblocks.io/examples/collaborative-flowchart/zustand-flowchart` — Official working example: Liveblocks + Zustand + ReactFlow + Next.js. HIGH confidence.
-- `https://liveblocks.io/pricing` — Free tier: 500 monthly active rooms, unlimited users. HIGH confidence (fetched directly).
-- `https://liveblocks.io/docs/authentication/access-token/nextjs` — Access token auth endpoint; `userId` is any string. HIGH confidence.
-- `https://liveblocks.io/docs/rooms/permissions` — `defaultAccesses`, FULL_ACCESS scoping. HIGH confidence.
-- `https://liveblocks.io/docs/ready-made-features/multiplayer/sync-engine/liveblocks-storage` — `LiveList`, `LiveObject`, `useMutation` API. HIGH confidence.
-- `https://liveblocks.io/docs/guides/how-to-use-liveblocks-presence-with-react` — `useMyPresence`, `useOthers`, cursor tracking pattern. HIGH confidence.
-- `https://vercel.com/kb/guide/do-vercel-serverless-functions-support-websocket-connections` — Vercel Serverless Functions do NOT support persistent WebSockets. HIGH confidence.
-- `https://blog.cloudflare.com/cloudflare-acquires-partykit/` — PartyKit acquired by Cloudflare, April 2024. HIGH confidence.
-- npm registry — `@liveblocks/client@3.14.0` confirmed current version as of 2026-02-26. HIGH confidence.
+- Liveblocks Storage API — `LiveMap`, `LiveObject`, `useMutation`, `useStorage`, `initialStorage`: https://liveblocks.io/docs/ready-made-features/multiplayer-editing/sync-engine/liveblocks-storage — HIGH confidence (official docs, fetched directly)
+- Liveblocks React hooks — `useBroadcastEvent`, `useEventListener`, `RoomEvent` type augmentation: https://liveblocks.io/docs/api-reference/liveblocks-react — HIGH confidence (official docs)
+- Liveblocks Storage mutation guide — `useMutation` pattern with nested LiveObject: https://liveblocks.io/docs/guides/how-to-use-liveblocks-storage-with-react — HIGH confidence (official guide)
+- shadcn `useMediaQuery` / `useIsMobile`: https://www.shadcn.io/hooks/use-media-query — MEDIUM confidence (docs confirm SSR safety via `useEffect` + matchMedia; exact implementation verified directly in `src/hooks/use-mobile.ts`)
+- Existing codebase — direct inspection of: `src/lib/liveblocks/config.ts`, `src/components/workshop/multiplayer-room.tsx`, `src/components/workshop/facilitator-controls.tsx`, `src/hooks/use-mobile.ts`, `src/lib/canvas/crazy-8s-types.ts`, `package.json` — HIGH confidence
 
 ---
-*Stack research for: v1.9 Real-time Multiplayer Collaboration (WorkshopPilot.ai)*
-*Researched: 2026-02-26*
-*Previous: v1.8 Stripe Checkout + credit system (2026-02-26)*
+
+*Stack research for: WorkshopPilot.ai v2.0 Dot Voting & Mobile Gate*
+*Researched: 2026-02-28*
+*Previous milestone: v1.9 Multiplayer Collaboration (2026-02-28)*

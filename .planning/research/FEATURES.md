@@ -1,271 +1,206 @@
 # Feature Research
 
-**Domain:** Real-time multiplayer workshop facilitation (design thinking + collaborative whiteboard)
-**Researched:** 2026-02-26
-**Confidence:** HIGH (facilitation patterns from Miro/MURAL/Butter), HIGH (real-time sync patterns from ReactFlow docs + Liveblocks), MEDIUM (AI chat multiplayer patterns — emerging space)
+**Domain:** Workshop facilitation tool — dot voting for idea prioritization (Step 8) + mobile phone gate
+**Researched:** 2026-02-28
+**Confidence:** HIGH (dot voting patterns from Miro, FigJam, MURAL, NNGroup, Google Design Sprint Kit), MEDIUM (mobile gate — established pattern, implementation is straightforward)
 
 ---
 
-## Context: What Is Being Added (v1.9)
+## Context: What Is Being Added (v2.0)
 
-WorkshopPilot already ships a fully functional solo AI-facilitated workshop (10 steps, split-screen canvas, EzyDraw, Build Pack). v1.9 adds a **parallel workshop mode**: a human facilitator leads 5-15 participants through the same 10-step design thinking process with a shared live canvas.
+WorkshopPilot already ships solo and multiplayer workshops, real-time canvas sync via Liveblocks, Crazy 8s sketching (Step 8), and a facilitator-controlled session model. v2.0 adds two features:
 
-This is not a generic whiteboard. It is a **structured, facilitated session** where:
-- The facilitator drives step progression (like a presenter controls slides)
-- The AI chat is visible to all but only the facilitator types into it
-- All participants can contribute to the shared canvas
-- Existing canvas types (post-its, empathy maps, journey maps, mind maps, concept cards) are unchanged
+1. **Dot voting on Crazy 8s sketches** — Participants vote on which sketched ideas to advance. Works in solo mode (self-prioritization) and multiplayer mode (group prioritization). Facilitator controls when voting opens, sets a timer, closes voting, reviews results, and manually selects which ideas advance to Step 9.
 
-Research draws from: Miro, MURAL, FigJam, Butter, SessionLab, and the ReactFlow multiplayer documentation.
+2. **Mobile phone gate** — A dismissible full-screen overlay shown at breakpoint < 768px informing phone users that the experience is designed for desktop. Does not block access if dismissed.
+
+Research draws from: Miro voting system, FigJam voting sessions, MURAL facilitation patterns, NNGroup dot voting research, Google Design Sprint Kit Crazy 8s voting methodology, and existing WorkshopPilot v1.9 codebase.
 
 ---
 
-## Feature Area 1: Session Creation and Join Flow
+## Feature Area 1: Dot Voting — Core Mechanics
 
 ### Table Stakes (Users Expect These)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Shareable join link | Participants in any online collaboration tool join via a link — this is non-negotiable; any other mechanism is friction | LOW | Generate a short URL-safe token on session creation. `/join/[token]` route. No other join mechanism needed. |
-| No account required for participants | Miro, Canva, Collaboard all support guest/link-join without signup. Requiring accounts for 15 participants is a dealbreaker for facilitators | LOW | Participants enter a display name only. Store as ephemeral session presence, not DB user record. |
-| Name entry prompt before entering canvas | Every presence-first tool (MURAL, Excalidraw, Canva) prompts for a name before the session opens. Without it, cursors show as "Anonymous" and the facilitator cannot identify participants | LOW | Single-field modal: "Enter your name to join." Name stored in session context only, no auth. |
-| Session state visible (before/during/ended) | Participants who join early or late need to know where they are | LOW | Show session status on the join screen. "Waiting for facilitator to start" or "Step 3 of 10 in progress." |
-| Facilitator starts the session deliberately | Joining early should not trigger session start; facilitator controls when participants enter the canvas | LOW | Two states: `waiting` (join link active, participants queue) and `active` (canvas unlocked). Facilitator clicks "Start Session." |
+| Fixed vote budget per participant | Every dot voting tool (Miro, FigJam, MURAL, EasyRetro) gives participants a set number of votes. Without a budget, voting becomes meaningless — everyone votes for everything. | LOW | Rule of thumb from NNGroup: votes = ~25% of total options. For 8 Crazy 8s slots, 2 votes per participant is the right default. Make it configurable 1–8. |
+| Multi-vote on same item | Participants must be able to stack multiple votes on a single sketch if it's strongly preferred. This is the canonical dot voting pattern — single-vote-only prevents expressing conviction. | LOW | Miro implements this via "one vote per object" toggle (off by default). Build as same toggle: default allows stacking. |
+| Visual vote counter per sketch | After placing a vote, participants see a count on each sketch. Miro and FigJam both display running dot counts on each item. Without visible feedback, participants cannot track their remaining budget. | LOW | Dot indicator overlaid on each Crazy 8s slot. Shows count + remaining budget in a HUD. |
+| Remaining vote budget visible | Participants track how many votes they have left. FigJam and Miro show this throughout the session. Running out of votes without knowing it causes frustration. | LOW | Persistent vote budget counter (e.g., "2 votes remaining") visible during the voting phase. Decrements as votes are placed. |
+| Facilitator opens/closes voting | In both Miro and MURAL, voting is not open by default — the facilitator starts it deliberately. This prevents premature voting and gives the facilitator control over group pacing. | LOW | "Open Voting" button (facilitator-only in multiplayer, available to solo user). Voting UI activates across all participants simultaneously via Liveblocks broadcast. |
+| Results visible after voting closes | Miro, FigJam, and MURAL all hide results until the facilitator ends voting. Revealing votes while voting is open causes groupthink — participants anchor on the current leaders. | MEDIUM | Hide vote counts from participants while session is open. Reveal all counts simultaneously when facilitator closes voting. In solo mode, reveal immediately on close. |
+| Facilitator manually selects ideas to advance | After voting closes, the facilitator (or solo user) reviews the ranked results and picks which sketches advance to Step 9. This is the Google Design Sprint methodology — votes inform, facilitator decides. | MEDIUM | Post-voting UI shows ranked list with vote counts. Facilitator checks which sketches to advance. Replaces the current manual "idea-selection" tap-to-select on the Crazy 8s canvas. |
 
 ### Differentiators (Worth Adding)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Session lobby / waiting room | Participants who join early see who else has joined and a countdown or "waiting for facilitator" message. Reduces confusion. MURAL does this well. | LOW | Simple list of joined names + session info. No separate infrastructure — just poll the session state. |
-| Link expiry (24-48 hours) | Prevents stale links being accessed post-workshop; Miro uses 30-day expiry for guest links | LOW | `expiresAt` column on session. Configurable at creation. Default 48 hours. |
-| Participant count cap (soft) | Facilitators who run workshops know 5-15 is the productive range. A soft cap prevents accidental oversized sessions. | LOW | Warning (not hard block) at > 15 participants. Facilitator can override. |
+| Countdown timer with auto-close | Miro and MURAL allow facilitators to set a timer (e.g., 5 minutes). The timer displays to all participants, creating urgency. On expiry, voting closes automatically. WorkshopPilot already has a countdown timer component from v1.9 — this reuses existing infrastructure. | LOW | Reuse the existing countdown timer Liveblocks broadcast pattern from v1.9. On expiry, trigger the same close-voting action as manual close. Timer is optional — facilitator can close manually instead. |
+| Anonymous voting during open session | FigJam hides other participants' votes during the voting window to prevent anchoring. MURAL calls this "blind voting." This is a meaningful differentiator over simple sticker-on-board approaches. | LOW | During an open voting session, only show the participant's own votes (not others'). When session closes, reveal all. This is a Liveblocks presence-scoped visibility concern — each client sees only their own votes until reveal. |
+| Ranked results view after close | After voting closes, present sketches ranked by vote count (highest first). NNGroup research confirms this is the expected post-voting output — groups use it to identify clear winners and surface surprises. | LOW | Sort Crazy 8s slots by descending vote count after reveal. Display rank position (1st, 2nd, etc.) alongside each sketch. |
+| Vote undo (before close) | Participants who mis-click or change their mind need to remove a vote. Miro allows clicking an already-voted item to remove the vote. Without undo, voting becomes high-stakes and anxious. | LOW | Toggle behavior: clicking a voted slot removes one vote from it and returns it to the budget. Standard pattern across all voting tools. |
 
 ### Anti-Features (Do Not Build)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Email invitation flow | Feels organized and professional | 5-minute implementation becomes a multi-sprint email delivery project (deliverability, formatting, unsubscribe, spam). Join link achieves the same goal. | Share the join link directly via any existing communication channel (Slack, email, Teams) |
-| QR code on join screen | In-person workshops sometimes use QR codes | WorkshopPilot is a digital tool — in-person projection is edge case, not core use case. Adds complexity for zero multiplayer value. | Join link is sufficient; facilitator pastes it into chat |
-| Password-protected sessions | Feels more secure | The join link IS the access token. Adding a second factor (password) creates friction for legitimate participants with zero security benefit over a long random token. | Use a sufficiently long (20+ char) token for the join link |
+| Automatic idea advancement based on vote count | Seems like it completes the loop automatically | Removes facilitator judgment. Design Sprint methodology is explicit: voting informs, but the Decider (facilitator) makes the final call. Auto-advancement trains users to follow the algorithm over their judgment. | Facilitator reviews ranked results and manually selects which ideas advance. Vote data is input, not output. |
+| Real-time vote count visible to all during session | Transparency feels fair | This is the groupthink trap. NNGroup research is unambiguous: seeing live results anchors later voters to current leaders, destroying the independence that makes voting valuable. Miro learned this and added anonymous mode as the default. | Reveal counts only after facilitator closes the session. |
+| Permanent vote history across sessions | Feels like accountability | Storing per-user vote records across sessions adds GDPR surface and complexity without value. Workshop votes are ephemeral decisions, not auditable records. | Store aggregate vote counts per slot on the workshop record. User identity on votes is irrelevant after the session. |
+| Emoji reactions on sketches (separate from voting) | Richer feedback | Dilutes the voting signal. If participants can react with hearts, fire, and thumbs-up alongside dots, facilitators face conflicting signals. One prioritization mechanism per session. | Dot voting is the prioritization mechanism. Emoji reactions belong on AI messages (already shipped in v1.9 scope). |
+| Custom vote colors per participant | Visual differentiation in multiplayer | Each participant's dots being a different color defeats anonymous voting. It also reintroduces social pressure (everyone can see who voted for what). | Uniform dot appearance. Participant identity on votes is not surfaced during the session. |
 
 ---
 
-## Feature Area 2: Real-Time Canvas Collaboration
+## Feature Area 2: Dot Voting — Solo vs Multiplayer Modes
 
 ### Table Stakes (Users Expect These)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Shared canvas state visible to all | This is the literal definition of a collaborative whiteboard. Any tool that doesn't sync canvas in real time fails its core promise. | HIGH | ReactFlow node/edge state broadcast via WebSocket. ReactFlow's own multiplayer docs recommend Yjs or a managed service (Liveblocks) as the sync layer. |
-| Live cursors with participant names | Miro, MURAL, FigJam, Canva, Excalidraw all show colored cursors with name labels. Without this, participants feel disconnected and cannot reference what others are pointing at. | MEDIUM | Ephemeral (not persisted) cursor positions. Each participant gets a consistent color for the session. Name label appears beside cursor. Hide when cursor is idle > 3s. |
-| All participants can add/edit nodes | Design thinking workshops require every voice. Participants add post-its, edit text, move nodes. If participants can only watch, it's a demo, not a workshop. | HIGH | Full canvas edit access for participants. Facilitator does not need to control who can edit what (unlike Miro's enterprise lock feature). |
-| Real-time node creation visible to all | When a participant drops a post-it, everyone sees it appear immediately — not after a refresh. | HIGH | Fundamental CRDT/sync requirement. Covered by canvas state sync above. |
-| Smooth conflict handling (not jarring) | Two participants editing the same node will happen. The UI must not freeze or show error states. Last-write-wins is acceptable for v1.9. | HIGH | For node positions: last-write-wins. For node text: last-write-wins (optimistic). CRDT merge handles concurrent edits. |
+| Solo mode: self-prioritization | NNGroup notes dot voting can be adapted for solo use, though it's primarily a group tool. For WorkshopPilot solo users, the flow still makes sense: review sketches with a vote budget, then decide. It formalizes the evaluation step. | LOW | Solo mode: same UI as multiplayer, but there are no other participants. User opens voting, places their own votes, closes it, reviews ranked results, advances ideas. No timer required (optional). Vote reveal is immediate on close. |
+| Multiplayer mode: all participants vote | This is the canonical use case. Every participant in the Liveblocks session gets the same vote budget and casts votes during the open window. | MEDIUM | Voting state synced via Liveblocks. Each participant's votes are tracked in presence or storage. Facilitator opens/closes. All participants' votes aggregate for the reveal. |
+| Facilitator controls voting in multiplayer | In all professional workshop tools, the facilitator controls voting start/stop. Participants cannot open their own session. | LOW | Open/Close Voting button is facilitator-only in multiplayer mode. Participants see the voting UI when active but cannot trigger state transitions. |
+| Solo user is their own facilitator | In solo mode, the single user has full control — they open voting, set optional timer, vote, close, review. | LOW | In solo sessions (no Liveblocks room), all facilitator controls are visible to the solo user. No role gating needed. |
 
 ### Differentiators (Worth Adding)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| User-specific node colors | When each participant's post-its are their color, facilitators can quickly see contribution distribution. MURAL does this. | LOW | Apply the participant's session color to nodes they create. Stored on node data, not ephemeral. |
-| Participant cursor follows facilitator (optional) | When facilitator uses "Bring Everyone to Me," all viewports snap to the facilitator's current location. Critical for focused exercises. | MEDIUM | Facilitator-only action. Broadcasts a `focusViewport` event. Each client pans to that position. Not a forced lock — user can pan away after. |
-| Idle presence indicator | Participants who have not interacted in > 2 minutes show as "idle" in the participant list. Facilitator can see who is disengaged. | LOW | Track last-interaction timestamp in session state. Visual: dim avatar or "idle" badge. |
-| Canvas activity feed / last action | Shows "Michael added a post-it" or "Sarah moved a node" in a small corner overlay. Provides orientation when many things are happening at once. | MEDIUM | Optional. Can feel noisy. Consider as a toggle, not always-on. |
+| Configurable vote count at open time | Facilitators who have run workshops know the right vote budget depends on group size and sketch count. Miro exposes a +/- control when starting voting. | LOW | When facilitator opens voting, show a configurable vote count field (default: 2, range: 1–8). This value broadcasts to all participants and sets their budget. |
+| Participant completion indicator | Miro shows who is "done voting" in the participant list. Facilitators need to know when the whole group has finished before closing. | LOW | Track per-participant "done" state in Liveblocks presence. Show completion status in the existing participant list panel (e.g., checkmark beside name when all votes are placed or user clicks "Done Voting"). |
 
 ### Anti-Features (Do Not Build)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Per-node lock (only creator can edit) | Seems like a natural "ownership" concept | Prevents collaborative refinement, which is the point of the workshop. Facilitators who want to protect content should lock the step, not individual nodes. | Step-level facilitator controls (see Area 3) |
-| Persistent undo/redo across all users | Teams want to "undo what John did" | Multi-user undo is an extremely hard CRDT problem. Per-user undo within the same session is acceptable. Cross-user undo causes confusion and correctness issues. | Each user gets their own local undo stack. Session-wide undo is out of scope. |
-| Version history / timeline replay | Useful in Figma for design files | Adds significant storage and compute complexity. Workshop outputs are the artifact — not the history of how you got there. | The canvas state at completion is what matters. No replay needed for v1.9. |
-| Offline canvas editing | Participants should be able to work offline and sync later | A live facilitated session has no valid offline use case — if you're offline, you're not in the session. CRDT offline-first complexity is not justified here. | Reconnection handling is sufficient (see PITFALLS.md) |
+| Per-participant vote budgets (some get more votes) | Seems fair for weighted roles | Adds a permission configuration UI and logic branching that is disproportionate to value. In design thinking, equal voice is the point. | All participants get the same configurable vote count, set by the facilitator at open time. |
 
 ---
 
-## Feature Area 3: Facilitator Controls
+## Feature Area 3: Mobile Phone Gate
 
 ### Table Stakes (Users Expect These)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Facilitator-only step progression | Every structured workshop tool (Butter, MURAL, SessionLab) has the facilitator control when the group moves forward. Participants cannot jump ahead or stay behind. | MEDIUM | "Next Step" and "Previous Step" buttons visible only to the facilitator. State change broadcasts to all clients. All participants transition simultaneously. |
-| Facilitator identity clearly marked | In any session with a named human leader, their presence must be distinct. Participants need to know who to look to. | LOW | Facilitator cursor and avatar in participant list has a distinct badge (e.g., "Facilitator" label, crown icon). |
-| Kick / remove participant | Facilitators running professional workshops must be able to remove disruptive or accidental joiners. | LOW | Facilitator-only action in participant list. Disconnects the participant's session. They receive a message: "You have been removed from this session." |
-| End session with confirmation | Ending the session should be deliberate — not accidental. | LOW | Facilitator-only "End Session" button with confirmation modal. On confirmation, session state moves to `ended`, all participants see "Session has ended" screen. |
-| Participant list panel | Facilitators need to see who is in the room at all times. | LOW | Sidebar or floating panel showing all connected participants with avatar colors, names, and online/idle status. |
+| Full-screen overlay at < 768px | Users who hit a tool on mobile and see a broken layout are more frustrated by the bad experience than by a clear gate. A full-screen overlay intercepts before they encounter the broken canvas. This is standard practice for desktop-first tools (Miro shows a simplified mobile view, many SaaS tools show a "desktop required" overlay). | LOW | Detect viewport width on mount and on resize. If < 768px, render the gate overlay over the entire page. The existing `ideation-sub-step-container.tsx` already has `isMobile` detection at 768px — the gate is a global wrapper of this same check. |
+| Dismissible with user acknowledgment | Users should always be able to override. NNGroup research on error messages: always give users a path forward, even if the path is "proceed anyway." A hard block that cannot be dismissed creates hostility. | LOW | A clear dismiss button ("Continue Anyway" or "I understand, let me try"). Clicking dismiss stores the decision in localStorage so the gate does not re-appear on the same device for the same session. |
+| Clear value message, not just a warning | The overlay must explain what the user is missing, not just say "not supported." Users who understand the reason are more likely to switch to desktop than users who see a generic error. | LOW | Message: tool-specific ("WorkshopPilot is a canvas-based design thinking tool. It requires a desktop or tablet for the best experience."), with an optional CTA to email a link to themselves for later. |
+| Does not block all app access | The gate is informational, not a hard block. Public-facing pages (landing, pricing, sign-in) work fine on mobile. The gate is only relevant inside the workshop flow (canvas + chat). | LOW | Apply the gate inside the workshop page layout, not at the root app level. Marketing pages are outside this scope. |
 
 ### Differentiators (Worth Adding)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| "Bring everyone to me" viewport sync | MIRAL's signature facilitation feature. When the facilitator needs everyone looking at the same thing, one click snaps all viewports to the facilitator's view. Far more effective than "please look at the top left." | MEDIUM | Facilitator-only broadcast event. Clients receive `syncViewport` with `x, y, zoom` and animate their viewport there. |
-| Hide cursors temporarily | MURAL allows facilitators to hide all cursors to reduce visual noise during key moments (voting, reading instructions). | LOW | Facilitator toggle. Broadcasts `hideCursors: true` to all clients. Cursors invisible until facilitator re-enables. |
-| Private mode for independent ideation | When brainstorming (Step 8), facilitators should be able to prevent participants from seeing each other's work until the reveal. Prevents groupthink. MURAL's "Private Mode" does exactly this. | HIGH | Each participant sees only their own nodes. Facilitator sees all. On "reveal," all nodes become visible. This requires server-side authorization of which nodes to broadcast to which client — non-trivial. Flag for deeper research. |
-| Step timer (visible to all) | Workshop exercises are time-boxed. MURAL and Miro both have shared timers. Participants manage their pace better when a countdown is visible. | LOW | Facilitator sets a countdown (e.g., 5 minutes). Timer broadcasts to all clients and displays on each screen. When timer expires, a sound/animation cues the facilitator (not auto-advance). |
+| "Email me a link for desktop" CTA | Users on phone who discover the tool want to try it later on desktop. A one-tap email-to-self removes friction of remembering to come back. | LOW | Simple mailto link pre-populated with the current URL. No server-side sending needed — opens the user's email client. Useful for landing page and workshop invite scenarios. |
+| Persist dismissal across page loads | If a user dismisses the gate, they should not see it again on every navigation within the same session. Re-showing it on every step transition would be more annoying than the original problem. | LOW | Store dismissal in localStorage with a session-scoped key (e.g., `mobile-gate-dismissed`). Clear on sign-out or after 24 hours. |
 
 ### Anti-Features (Do Not Build)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Granular per-participant canvas permissions | Enterprise whiteboards like Miro support per-user edit/view/comment levels | This is a facilitated design thinking workshop, not an enterprise project board. Role complexity prevents the spontaneous collaboration that makes workshops work. | One permission model: facilitator controls steps, everyone edits canvas |
-| Facilitator-assigned breakout groups | Butter and other workshop tools support breakout rooms | Breakout groups require maintaining multiple canvas states simultaneously. This is a separate architectural problem from v1.9's shared-canvas model. | Defer to FFP (it's already in the FFP backlog as "Brain Writing with real collaboration") |
-| Forced "follow facilitator" lock (cannot pan away) | Keeps everyone aligned | Removes participant autonomy. Participants who cannot scroll to a different part of the canvas feel trapped. MIRAL's community forums have many complaints about this exact issue when it was forced. | Soft sync (bring to me) without hard lock |
-
----
-
-## Feature Area 4: AI Chat in Multiplayer Mode
-
-### Table Stakes (Users Expect These)
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| AI chat visible to all participants | If the AI is the knowledge system for the workshop (as in solo mode), participants need to see its outputs to follow the facilitation | MEDIUM | Chat messages broadcast in real time to all connected clients. The AI chat panel shows the same message history to everyone. |
-| Facilitator-only chat input | Only the facilitator drives the AI. Participants asking their own questions to the AI would fragment the facilitation arc and create parallel conversations that invalidate the structured 6-phase conversational flow. | LOW | Chat input box hidden/disabled for participants. Participants see the conversation but cannot type. |
-| AI responses feel live to everyone | If only the facilitator sees streaming AI tokens, participants watch a blank screen and then a completed message appears — kills the "live session" feeling. | HIGH | Stream AI response tokens to all connected clients, not just the facilitator. Each token broadcast as it arrives from Gemini. |
-| Clear distinction between facilitator messages and AI responses | In multiplayer, participants need to know at a glance who said what — the human facilitator, or the AI. | LOW | Existing chat UI distinguishes user and AI messages. In multiplayer, facilitator messages appear as "Facilitator" (their name), AI as the existing AI avatar. No change to the existing component architecture. |
-
-### Differentiators (Worth Adding)
-
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Participant reactions to AI responses | Participants cannot type, but they can signal agreement, confusion, or enthusiasm. Emoji reactions (thumbs up, light bulb, question mark) give the facilitator real-time sentiment data. | LOW | Reaction bar on each AI message. Reactions are ephemeral (not stored). Aggregated counts visible to all. Simple WebSocket event. |
-| Facilitator can highlight AI message for group | When an AI message contains a key insight, facilitator can "spotlight" it — the message pulses or is pinned at the top of everyone's chat view. | MEDIUM | Spotlight event broadcasted. Highlighted message gets a visual treatment. Good for driving group attention. |
-
-### Anti-Features (Do Not Build)
-
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Participant chat sidebar (side channel) | Participants want to communicate with each other | A side channel during a facilitated session destroys attention and fractures the group. Professional facilitators actively prevent sidebar conversations. Butter explicitly warns against this in their facilitation guides. | Use an external tool (Slack, Teams, Zoom chat) that participants already have open. WorkshopPilot is not a communication platform. |
-| Each participant gets their own AI conversation | Personalized AI per participant | Destroys the shared understanding that makes design thinking workshops produce aligned outputs. Each step's outputs must be agreed upon by the group, not individually generated. | One shared AI conversation, facilitator-driven |
-| AI generates responses on its own without facilitator input | "AI auto-facilitates" the group | Removes the human facilitator's judgment about when to probe, when to move on, when to pivot. AI spontaneity in a live group session is chaotic and untrustworthy. | Facilitator types, AI responds. Same as solo mode, but group can see. |
-
----
-
-## Feature Area 5: Presence and Awareness
-
-### Table Stakes (Users Expect These)
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Unique cursor color per participant | Every multiplayer whiteboard tool (Miro, Figma, Excalidraw, Canva) assigns a unique color. Without it, cursors are anonymous and presence is meaningless. | LOW | Assign a color from a predefined palette of 15+ distinct colors on join. Consistent for the session duration. |
-| Name label on cursor | UX research confirms: cursor color alone is not enough. Name (or at minimum initials) must appear beside the cursor for identification. | LOW | Small name tag follows the cursor. Disappears when cursor is idle > 3s (to reduce clutter). Reappears on movement. |
-| Participant join/leave notifications | Participants and facilitator need to know when someone enters or exits. Silent joins create confusion ("was that person always there?"). | LOW | Toast notification: "Sarah joined the session" / "Tom left the session." Non-intrusive. Bottom corner. |
-| Online/offline status in participant list | If a participant's connection drops, the facilitator must know. | LOW | Participant list shows green dot (online) or gray dot (disconnected). Auto-removes after 30s of disconnect without reconnect. |
-| Reconnection with state recovery | Internet hiccups are common. Participants who reconnect should rejoin at the current state, not see a blank canvas. | MEDIUM | On reconnect, client receives the full current canvas state and chat history. Standard pattern for WebSocket-based tools. |
-
-### Differentiators (Worth Adding)
-
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Participant avatars as initials circles | More compact and visually distinct than text-only names in the participant list. Industry standard (Google Docs, Notion, Figma). | LOW | Single-character or two-character initials in a colored circle matching the participant's cursor color. |
-| "Viewing" vs "Active" distinction | Participants who are scrolling/reading vs. actively typing or adding nodes can be visually distinguished — helps facilitator gauge engagement. | LOW | Track last interaction time. "Active" = interacted in last 30s. "Viewing" = 30s-2min. "Idle" = 2min+. |
-
-### Anti-Features (Do Not Build)
-
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Video/audio chat embedded in WorkshopPilot | "One tool for everything" | Adding WebRTC/video to a Next.js app is a separate engineering discipline. Multiplayer workshops are almost always run alongside an existing video call (Zoom, Teams, Meet). Duplicating this creates a worse version of existing tools. | Participants run their existing video call alongside WorkshopPilot. The join link is shared in the video call chat. |
-| Persistent participant profiles | Store participant details for future reference | Participants are ephemeral — they join with a name, contribute, and leave. Storing their data creates GDPR obligations and complexity with no clear user benefit at this stage. | Session-scoped only. Names stored in session context, purged when session ends. |
-| Participant-to-participant direct messaging | Rich social features | A workshop is a group process. Direct messages create private side conversations that undermine the facilitator's ability to manage group dynamics. | External communication tools handle this |
+| Hard block (no dismiss) | Prevents "bad experiences" | Removes user autonomy. Tablet users at 767px get hard-blocked when their experience would actually be fine. Touch users who want to read the AI chat only (not canvas) are unnecessarily locked out. | Dismissible gate with a clear explanation. The app continues to work at the user's own risk. |
+| Full mobile-optimized workshop experience | Mobile participation is in the FFP roadmap | Building a proper mobile experience is a separate engineering project (touch canvas, EzyDraw on mobile, chat layout reflow). A halfway attempt creates a worse experience than the gate. Building it now conflicts with PROJECT.md out-of-scope decisions. | Gate for now. "Mobile participant mode" is already in the FFP backlog. |
+| Redirect to a "mobile landing page" | Gives mobile users something to do | Adds a new page to maintain. The dismiss path is sufficient — most users will either open on desktop or read the landing page which already works fine on mobile. | Gate overlay with dismiss + email-link CTA is sufficient. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Multiplayer Workshop Type] (new DB entity: sessions)
-    └──requires──> Workshop type field (solo vs. multiplayer)
-    └──requires──> Session creation UI (new "Start Multiplayer Workshop" flow)
-    └──requires──> Facilitator role on session (Clerk user who created it)
+[Dot Voting — Open/Close Session]
+    └──requires──> Voting session state (open/closed/revealing)
+    └──requires──> Facilitator role check (multiplayer only)
+    └──broadcasts──> via Liveblocks in multiplayer
+    └──enables──> [Vote Placement UI]
+    └──enables──> [Countdown Timer integration]
 
-[Join Link]
-    └──requires──> [Multiplayer Workshop Type]
-    └──generates──> Unique token stored on session record
-    └──enables──> [No-Account Participant Join]
+[Vote Placement UI]
+    └──requires──> [Dot Voting — Open/Close Session] (voting must be open)
+    └──requires──> crazy8sSlots in canvasStore (existing, already persisted)
+    └──requires──> Vote budget state (per-participant, ephemeral during session)
+    └──enables──> [Anonymous Vote Hide during session]
+    └──enables──> [Vote Undo]
 
-[No-Account Participant Join]
-    └──requires──> [Join Link]
-    └──requires──> Name entry UI at /join/[token]
-    └──creates──> Ephemeral session participant (not a Clerk user)
-    └──enables──> [Live Cursors] and [Participant List]
+[Anonymous Vote Hide during session]
+    └──requires──> [Vote Placement UI]
+    └──requires──> Liveblocks presence-scoped storage (own votes visible, others hidden)
+    └──resolves-to──> Aggregate count visible to all on session close
 
-[Real-Time Canvas Sync]
-    └──requires──> WebSocket infrastructure (Liveblocks, Partykit, or custom)
-    └──requires──> [No-Account Participant Join] (to identify participants)
-    └──enhances──> [Live Cursors] (uses same connection)
-    └──NOTE──> ReactFlow multiplayer requires Yjs or managed sync layer
+[Results Reveal + Ranked View]
+    └──requires──> [Dot Voting — Open/Close Session] session closed
+    └──requires──> Aggregate vote totals per slot
+    └──enables──> [Facilitator Idea Selection to advance to Step 9]
 
-[Live Cursors]
-    └──requires──> [Real-Time Canvas Sync] (same WebSocket connection)
-    └──requires──> [No-Account Participant Join] (participant color/name)
-    └──ephemeral──> Never persisted to DB
+[Facilitator Idea Selection]
+    └──requires──> [Results Reveal + Ranked View]
+    └──replaces──> current manual tap-to-select on Crazy 8s canvas (idea-selection phase)
+    └──writes-to──> selectedSlotIds in canvasStore (existing field)
+    └──enables──> Step 9 concept card generation (existing downstream)
 
-[AI Chat Visible to All]
-    └──requires──> [Real-Time Canvas Sync] (same broadcast channel)
-    └──requires──> Facilitator-only input enforcement (middleware or UI gate)
-    └──requires──> Token streaming broadcast (AI tokens → all clients)
-    └──NOTE──> Streaming to N clients simultaneously under Gemini rate limits needs validation
+[Countdown Timer in Voting]
+    └──enhances──> [Dot Voting — Open/Close Session]
+    └──reuses──> existing v1.9 countdown timer Liveblocks pattern
+    └──auto-triggers──> session close on expiry
 
-[Facilitator Step Progression]
-    └──requires──> [Multiplayer Workshop Type]
-    └──requires──> Role check: only session owner can trigger step change
-    └──broadcasts──> Step change event → all clients render new step
+[Participant Completion Indicator]
+    └──enhances──> [Vote Placement UI]
+    └──requires──> Liveblocks presence (participant list, existing from v1.9)
+    └──requires──> "Done Voting" action per participant
 
-[Participant List / Presence]
-    └──requires──> [No-Account Participant Join]
-    └──requires──> [Real-Time Canvas Sync] (presence channel)
-    └──enhances──> [Facilitator Controls] (kick participant, see idle status)
-
-[Private Mode for Ideation] (differentiator — high complexity)
-    └──requires──> [Real-Time Canvas Sync]
-    └──requires──> Server-side node authorization (which nodes visible to whom)
-    └──conflicts──> Current architecture (all nodes are broadcast to all)
-    └──NOTE──> Flag for deeper research before committing to v1.9 scope
+[Mobile Phone Gate]
+    └──independent──> from all dot voting features (no shared state)
+    └──requires──> viewport width detection (isMobile hook — already exists in ideation-sub-step-container.tsx)
+    └──requires──> localStorage for dismissal persistence
+    └──applies-to──> workshop page layout only (not marketing pages)
 ```
 
 ### Dependency Notes
 
-- **Sync layer decision is the critical path.** Everything else (cursors, chat broadcast, step sync) flows through the same WebSocket infrastructure. The choice between Liveblocks (managed), Partykit (managed), or a self-hosted Yjs+WebSocket solution gates the entire milestone. Research STACK.md for this decision.
-- **AI token streaming to all clients** is a non-standard pattern. Standard Vercel AI SDK streams to one client (the requester). Broadcasting tokens to N participants requires an intermediate relay (the same WebSocket channel) or a server-sent event fan-out. This needs implementation validation before Phase 1 of the milestone.
-- **Participant join without Clerk auth** means the existing auth middleware must be configured to allow `/join/[token]` and session WebSocket connections without a Clerk session. Participants are authenticated by session token, not Clerk.
-- **Private Mode** (independent ideation with deferred reveal) is the only feature that requires server-side node authorization. Everything else is broadcast-all. If Private Mode is included in v1.9 scope, it is the highest-risk item and should be last.
+- **Dot voting replaces, not extends, the current idea-selection phase.** The existing `currentPhase === 'idea-selection'` in `ideation-sub-step-container.tsx` uses tap-to-select directly on the Crazy 8s canvas. The new voting flow supersedes this: voting open → votes placed → voting closed → ranked results → facilitator picks → selectedSlotIds written. The post-voting selection writes to the same `selectedSlotIds` field in canvasStore, so downstream Step 9 is unaffected.
+
+- **Liveblocks is already the sync layer.** Vote placement in multiplayer goes through the existing Liveblocks room. Voting session state (open/closed, budget configuration, aggregate counts) lives in Liveblocks storage, not Postgres. Individual vote placement is ephemeral Liveblocks presence until close, at which point aggregate totals are written to the canvas state and persisted to Postgres via the existing `saveCanvasState` action.
+
+- **Solo mode requires no Liveblocks.** In solo workshops, there is no Liveblocks room. Solo voting is purely local React state — open, place votes, close, reveal, select. No broadcast needed.
+
+- **Mobile gate is independent.** The gate does not depend on voting or any other v2.0 feature. It is a standalone layout component applied to the workshop page. It can be shipped first with no risk of blocking other work.
+
+- **Existing `isMobile` logic in `ideation-sub-step-container.tsx` is already at 768px.** The gate standardizes this breakpoint globally. The existing component-level mobile detection can remain for its tab-based layout switching, but the gate means phone users (< 768px who haven't dismissed) will see the gate before reaching that component.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v1.9 — Must Have)
+### Launch With (v2.0 — Must Have)
 
-- [ ] Multiplayer workshop type — new session entity, creation flow, facilitator role
-- [ ] Share-link join flow — unique token, `/join/[token]` route, name entry, no account needed
-- [ ] Participant lobby / waiting state — "waiting for facilitator to start" before session begins
-- [ ] Real-time canvas sync — all nodes/edges broadcast in real time to all participants
-- [ ] Live cursors — colored, named, ephemeral cursor positions for all participants
-- [ ] Full canvas edit access for participants — add post-its, move nodes, use EzyDraw
-- [ ] AI chat visible to all — all participants see the same conversation in real time
-- [ ] AI token streaming to all — streaming AI response tokens broadcast to all participants (not just facilitator)
-- [ ] Facilitator-only chat input — input hidden/disabled for participants
-- [ ] Facilitator-only step progression — only facilitator can click Next/Previous Step
-- [ ] Participant list panel — names, colors, online/idle status, facilitator badge
-- [ ] Join/leave notifications — toast when participant joins or leaves
-- [ ] Reconnection with state recovery — rejoining drops client back into current session state
-- [ ] End session — facilitator deliberately ends session, all participants see "ended" screen
+- [ ] Voting session state machine (open/closed/revealing) — required for everything
+- [ ] Facilitator opens voting with configurable vote count (default 2, range 1–8)
+- [ ] Vote budget per participant — tracked locally (solo) or via Liveblocks presence (multiplayer)
+- [ ] Vote placement UI — tap Crazy 8s slot to place dot, tap again to remove
+- [ ] Remaining vote count HUD — visible throughout voting
+- [ ] Anonymous mode — own votes visible, others hidden until close
+- [ ] Facilitator closes voting (manually or via countdown timer expiry)
+- [ ] Results reveal — aggregate counts visible to all on close
+- [ ] Ranked results view — slots sorted by vote count
+- [ ] Facilitator idea selection — pick which sketches advance from ranked list
+- [ ] Solo mode — full voting flow without Liveblocks
+- [ ] Multiplayer mode — voting state broadcasts via existing Liveblocks room
+- [ ] Mobile phone gate — dismissible full-screen overlay at < 768px
+- [ ] Gate dismissal persistence — localStorage, does not re-appear on navigation
 
-### Add After Validation (v1.9 Follow-On)
+### Add After Validation (v2.0 Follow-On)
 
-- [ ] "Bring everyone to me" viewport sync — facilitator snaps all viewports to their position
-- [ ] Step timer — facilitator-set countdown visible to all participants
-- [ ] Participant emoji reactions on AI messages — quick sentiment without text
-- [ ] Idle presence indicator — visual dim for participants inactive > 2 minutes
-- [ ] User-specific post-it colors — nodes created by each participant match their cursor color
+- [ ] Countdown timer integration into voting — optional timer set at voting open
+- [ ] Participant completion indicator — checkmark on participant list when votes placed
+- [ ] Email-to-self CTA on gate — mailto link pre-filled with current URL
 
 ### Future Consideration (v2+)
 
-- [ ] Private mode for independent ideation (high complexity, server-side auth required)
-- [ ] Breakout groups / sub-canvases for small group work
-- [ ] Session recording / transcript export
-- [ ] Facilitator notes panel (private to facilitator, not broadcast)
-- [ ] Dot voting (already in FFP backlog — dependent on multiplayer foundation)
+- [ ] Vote history export — include vote tallies in Build Pack deliverable
+- [ ] Multi-round voting — second voting pass with reduced budget to break ties (NNGroup describes this as best practice for close results)
+- [ ] Per-concept card voting in Step 9 (same mechanism, different phase)
 
 ---
 
@@ -273,28 +208,24 @@ Research draws from: Miro, MURAL, FigJam, Butter, SessionLab, and the ReactFlow 
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Sync layer decision (Liveblocks vs. Partykit vs. custom) | HIGH | MEDIUM (research) | P1 |
-| Real-time canvas sync (nodes/edges) | HIGH | HIGH | P1 |
-| Share link + name entry join | HIGH | LOW | P1 |
-| Facilitator-only step progression | HIGH | LOW | P1 |
-| AI chat visible to all + facilitator-only input | HIGH | MEDIUM | P1 |
-| AI token streaming to all clients | HIGH | HIGH | P1 |
-| Live cursors (ephemeral) | HIGH | MEDIUM | P1 |
-| Participant list panel | MEDIUM | LOW | P1 |
-| Join/leave notifications | LOW | LOW | P1 |
-| Reconnection + state recovery | HIGH | MEDIUM | P1 |
-| End session flow | MEDIUM | LOW | P1 |
-| "Bring everyone to me" viewport sync | HIGH | MEDIUM | P2 |
-| Step timer | HIGH | LOW | P2 |
-| User-specific node colors | LOW | LOW | P2 |
-| Emoji reactions on AI messages | LOW | LOW | P2 |
-| Idle presence indicator | LOW | LOW | P2 |
-| Private mode for ideation | HIGH (specific use case) | HIGH | P3 |
-| Breakout groups | MEDIUM | HIGH | P3 |
-| Session recording | LOW | HIGH | P3 |
+| Voting session open/close | HIGH | LOW | P1 |
+| Vote placement UI on Crazy 8s slots | HIGH | LOW | P1 |
+| Vote budget HUD | HIGH | LOW | P1 |
+| Anonymous vote hide during session | HIGH | LOW | P1 |
+| Results reveal + ranked view | HIGH | LOW | P1 |
+| Facilitator idea selection from ranked list | HIGH | MEDIUM | P1 |
+| Solo voting mode (local state) | HIGH | LOW | P1 |
+| Multiplayer voting via Liveblocks | HIGH | MEDIUM | P1 |
+| Mobile phone gate | MEDIUM | LOW | P1 |
+| Gate dismissal persistence (localStorage) | MEDIUM | LOW | P1 |
+| Countdown timer for voting | MEDIUM | LOW | P2 |
+| Participant completion indicator | MEDIUM | LOW | P2 |
+| Email-to-self CTA on gate | LOW | LOW | P2 |
+| Multi-round voting (tie-breaking) | MEDIUM | MEDIUM | P3 |
+| Vote export in Build Pack | LOW | LOW | P3 |
 
 **Priority key:**
-- P1: Must have for v1.9 launch
+- P1: Must have for v2.0 launch
 - P2: Add after P1 is stable — ideally within the same milestone
 - P3: Future milestone
 
@@ -302,43 +233,40 @@ Research draws from: Miro, MURAL, FigJam, Butter, SessionLab, and the ReactFlow 
 
 ## Competitor Feature Analysis
 
-| Feature | Miro | MURAL | FigJam | Butter | WorkshopPilot v1.9 Approach |
-|---------|------|-------|--------|--------|------------------------------|
-| Guest/link join (no account) | Yes — "Visitors" (name entry, limited access) | Yes — prompts name before board opens | Yes — link-based guest join | Yes — no account for attendees | Yes — name entry only, no account, full canvas access |
-| Live cursors | Yes — colored, named | Yes — colored, named, avatar-forward | Yes — colored + cursor chat | Yes — via embedded whiteboard tools | Yes — colored, named, ephemeral |
-| Facilitator step control | Presentation mode (frame-by-frame) | Facilitation Superpowers — "next frame" | Limited | Agenda-based step advance | Full step progression control — facilitator-only |
-| AI in sessions | AI Sidekick (summary, cluster) — individual | AI clustering in beta | AI Jambot (emoji reactions, suggestions) | AI recap post-session | AI as primary facilitator, shared view, facilitator-input-only |
-| Participant permissions | View/Comment/Edit per user | Facilitator Superlock, hide cursors | View/Comment/Edit | Presenter vs. Participant | One tier: everyone edits canvas, facilitator controls steps |
-| "Bring everyone to me" | Yes — Attention Management | Yes — "Bring everyone to me" | No | N/A | Yes — facilitator-only broadcast viewport sync |
-| Timer | Yes — visible to all | Yes — visible to all | No | Yes | Yes — facilitator-set, visible to all |
-| Structured workflow | Template-based, no enforcement | Template-based, no enforcement | Template-based, no enforcement | Agenda-based, soft enforcement | Hard: 10-step design thinking arc, facilitator controls progression |
-| Private ideation mode | No | Yes — "Private Mode" | No | No | Considered for v1.9 — high complexity, P3 |
+| Feature | Miro | FigJam | MURAL | WorkshopPilot v2.0 Approach |
+|---------|------|--------|-------|-----------------------------|
+| Vote budget per participant | Yes — configurable 1–99, +/- control | Yes — configurable count | Yes — configurable | Yes — configurable 1–8, set at open time |
+| Multi-vote on same item | Yes — toggleable "one vote per object" | Implied — stamp tool places multiple votes | Yes | Yes — default allows stacking, no separate toggle needed for v2.0 |
+| Anonymous during session | Yes — "Vote anonymously" toggle | Yes — cursors hidden, others' votes hidden | Yes | Yes — own votes visible, others hidden until close |
+| Results reveal on close | Yes — auto-reveal | Yes — "results immediately shown" | Yes | Yes — aggregate counts revealed when facilitator closes |
+| Countdown timer | Yes — minutes/hours/days, auto-close | Separate timer (not voting-specific) | Yes | Yes — optional, reuses v1.9 timer pattern |
+| Facilitator-only start/stop | Yes — facilitator or board editor | No — anyone with edit can start | Yes | Yes — facilitator-only in multiplayer, solo user controls in solo |
+| Ranked results view | Counts visible, no auto-sort | No auto-sort | Yes — auto-sort by votes | Yes — sort by descending vote count after reveal |
+| Participant completion tracking | Yes — "I'm done" button, shown in participant list | Not explicit | Yes | Yes — "Done Voting" maps to participant list checkmark |
+| Context: tied to specific content type | No — votes on any board object | No — votes on any board object | No — votes on any sticky/frame | Yes — votes specifically on Crazy 8s sketches in Step 8 (context-specific) |
+| Mobile gate | Shows simplified mobile app | Shows simplified mobile app | Shows simplified mobile app | Dismissible overlay with desktop recommendation, gate only inside workshop flow |
 
 ---
 
 ## Sources
 
-- [Miro Attention Management — Miro Help Center](https://help.miro.com/hc/en-us/articles/360013358479-Attention-management)
-- [MURAL Facilitation Superpowers](https://www.mural.co/features/superpowers)
-- [MURAL Facilitator Locking](https://learning.mural.co/lessons/keep-content-in-place-with-facilitator-locking)
-- [Miro vs. MURAL for Workshop Facilitation — Facilitator School](https://www.facilitator.school/blog/miro-vs-mural)
-- [Butter Workshop Facilitation Features](https://www.butter.us/compare/sessionlab-alternative)
-- [ReactFlow Multiplayer Documentation](https://reactflow.dev/learn/advanced-use/multiplayer)
-- [ReactFlow Collaborative Example (Yjs)](https://reactflow.dev/examples/interaction/collaborative)
-- [Liveblocks Pricing — Free tier, monthly active rooms](https://liveblocks.io/pricing)
-- [Liveblocks + Next.js Starter Kit on Vercel](https://vercel.com/templates/next.js/liveblocks-starter-kit)
-- [Synergy Codes — ReactFlow + Yjs real-time collaboration](https://www.synergycodes.com/blog/real-time-collaboration-for-multiple-users-in-react-flow-projects-with-yjs-e-book)
-- [PartyKit — multiplayer platform](https://www.partykit.io/)
-- [CRDTs vs Operational Transforms — Tiny.cloud](https://www.tiny.cloud/blog/real-time-collaboration-ot-vs-crdt/)
-- [Live Cursors UX best practices — Ably](https://ably.com/blog/collaborative-ux-best-practices)
-- [Collaborative UX: presence indicators — SuperViz](https://dev.to/superviz/how-to-use-presence-indicators-like-live-cursors-to-enhance-user-experience-38jn)
-- [Miro for Workshops and Meetings — Miro Help Center](https://help.miro.com/hc/en-us/articles/360012753200-Miro-for-workshops-meetings)
-- [Dot Voting in Design Thinking — NN/G](https://www.nngroup.com/articles/dot-voting/)
-- [State of Facilitation 2025 — SessionLab](https://www.sessionlab.com/state-of-facilitation/2025-report/)
-- [Advanced Virtual Workshop Facilitation Tips — Design Thinking Toolkit](https://designthinkingtoolkit.co/content/advanced-facilitation-tips-for-virtual-workshops)
+- [Dot Voting: A Simple Decision-Making and Prioritizing Technique in UX — NN/G](https://www.nngroup.com/articles/dot-voting/)
+- [Voting — Miro Help Center](https://help.miro.com/hc/en-us/articles/360017572274-Voting)
+- [Run Voting Sessions in FigJam — Figma Help Center](https://help.figma.com/hc/en-us/articles/9359912208663-Run-voting-sessions-in-FigJam)
+- [FREE Dot Voting Template — Miro 2025](https://miro.com/templates/dot-voting/)
+- [Blind Voting Discussion — Miro Community](https://community.miro.com/ask-the-community-45/blind-voting-3418)
+- [Workshop: Dot Voting and the Right Number of Votes — Designary Blog](https://blog.designary.com/p/workshop-dot-voting-and-the-right)
+- [Design Techniques: Better Dot Voting — UX Collective](https://uxdesign.cc/design-techniques-better-dot-voting-590085fe36db)
+- [How to Use Dot Voting for Group Decision-making — Lucidspark](https://lucid.co/blog/dot-voting)
+- [Dot Voting — Wikipedia (multi-vote definition)](https://en.wikipedia.org/wiki/Dot-voting)
+- [Dot Voting in Agile — daily.dev](https://daily.dev/blog/dot-voting-in-agile-prioritization-technique)
+- [What is Multivoting — ASQ (multi-vote same item)](https://asq.org/quality-resources/multivoting)
+- [Crazy 8s Sharing and Voting — Google Design Sprint Kit](https://designsprintkit.withgoogle.com/methodology/phase3-sketch/crazy-8s-sharing-and-voting)
+- [Dot Voting Template — Dot Voting in Design Thinking (Tufts)](https://designthinking.it.tufts.edu/framework/ideate/dot-voting)
 - [WorkshopPilot PROJECT.md — internal planning doc](/.planning/PROJECT.md)
+- [ideation-sub-step-container.tsx — existing codebase](src/components/workshop/ideation-sub-step-container.tsx)
 
 ---
 
-*Feature research for: WorkshopPilot.ai v1.9 — Multiplayer Collaboration*
-*Researched: 2026-02-26*
+*Feature research for: WorkshopPilot.ai v2.0 — Dot Voting & Mobile Gate*
+*Researched: 2026-02-28*

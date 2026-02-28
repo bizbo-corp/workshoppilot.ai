@@ -566,3 +566,508 @@ How roadmap phases should address these pitfalls.
 ---
 *Pitfalls research for: Real-time multiplayer collaboration (v1.9)*
 *Researched: 2026-02-26*
+
+---
+---
+
+# Pitfalls Research: Dot Voting + Mobile Gate (v2.0)
+
+**Domain:** Adding dot voting (Step 8 idea prioritization) and mobile phone gate (<768px) to existing Next.js + Liveblocks + Zustand app
+**Researched:** 2026-02-28
+**Confidence:** HIGH (Liveblocks official docs, NN/g dot voting research, Next.js official hydration docs, codebase inspection of existing timer + Crazy 8s + storageMapping, multiple cross-verified sources)
+
+**Context:** WorkshopPilot.ai v2.0 adds dot voting on Crazy 8s sketches (configurable vote counts, multi-vote per slot, facilitator-controlled open/close with timer, solo + multiplayer modes) and a <768px dismissible mobile wall. Existing Liveblocks integration uses `@liveblocks/zustand` middleware with `storageMapping`, and the existing timer pattern uses `TIMER_UPDATE` broadcast events (not Storage). The `Crazy8sSlot` type in `canvas-store.ts` has no vote data yet. Solo mode uses vanilla Zustand + Neon auto-save.
+
+---
+
+## Critical Pitfalls
+
+### Pitfall 1: Vote Counts in Liveblocks Storage via storageMapping — Lost Updates Under Concurrency
+
+**What goes wrong:**
+Developer adds a `votes` field (e.g., `voteCount: number` or `voters: string[]`) to the `Crazy8sSlot` type and maps `crazy8sSlots` (already in `storageMapping`) to Liveblocks Storage. Two participants vote for the same slot within the same ~100ms window. Both clients read `voteCount: 2`, both compute `voteCount: 3`, and both write `voteCount: 3`. Liveblocks' last-write-wins resolution means only the final received write survives — one vote is silently lost. The displayed count is 3, not 4.
+
+**Why it happens:**
+Liveblocks Storage uses last-write-wins for `LiveObject` property updates. The existing `storageMapping` in `multiplayer-canvas-store.ts` maps the entire `crazy8sSlots` array, meaning the whole array is patched on any slot update. There is no atomic increment primitive in Liveblocks' CRDT for numeric counters. Developers assume eventual consistency means "all votes are counted" — but lost updates are possible and correct under last-write-wins semantics.
+
+**How to avoid:**
+Use an append-only voter identity model instead of a numeric counter:
+
+```typescript
+// Instead of: voteCount: number  (not safe under concurrency)
+// Use:        voters: string[]   (voter IDs — append semantics via LiveList)
+```
+
+Store `voters` as a `LiveList<string>` (Liveblocks list), where each append is a separate operation. LiveList appends are conflict-free — two simultaneous appends both survive, resulting in a list with both entries. Count is derived as `voters.length`. This converts a numeric update (lost under LWW) into a list append (safe under CRDT).
+
+For the `@liveblocks/zustand` integration specifically: the current `storageMapping` syncs entire arrays. Rather than extending the Zustand mapping, consider direct Liveblocks Storage mutation for vote operations outside of Zustand, or store votes in a separate data structure (a `LiveMap<slotId, LiveList<voterId>>`) accessed via `useStorage` hooks rather than the Zustand storageMapping.
+
+**Warning signs:**
+- `voteCount: number` as a field in `Crazy8sSlot` that is part of `storageMapping`
+- `updateCrazy8sSlot(slotId, { voteCount: prev + 1 })` called on multiple clients simultaneously
+- Vote totals not matching expected counts in multiplayer sessions with 5+ participants
+- No voter identity tracking — only a raw integer
+
+**Phase to address:** Dot voting data model phase (first phase of v2.0) — the storage model must be designed before any voting UI is built
+
+---
+
+### Pitfall 2: Dot Voting Timer Reusing TIMER_UPDATE Broadcast — Vote Deadline Confusion
+
+**What goes wrong:**
+The existing `TIMER_UPDATE` broadcast event (from `facilitator-controls.tsx`) is reused for the dot voting countdown. The existing `CountdownTimer` component in `countdown-timer.tsx` already listens for `TIMER_UPDATE` on all participants. Adding a "voting timer" that uses the same event type means participants see the voting countdown in the existing timer pill UI — which appears in all steps, not just Step 8. A facilitator running the voting timer while reviewing Step 5 data (in a separate browser tab) accidentally resets the participant countdown from a step-timer context into a voting context.
+
+**Why it happens:**
+The existing timer infrastructure works for general countdown purposes and is easy to reach for. Developers reuse it rather than adding a voting-specific event type. The event type system (`RoomEvent` in `liveblocks/config.ts`) is extensible, but extending it requires modifying the global Liveblocks type augmentation, which feels heavyweight for a "quick" feature.
+
+**How to avoid:**
+Add a dedicated `VOTING_TIMER_UPDATE` event type to the `RoomEvent` union in `/src/lib/liveblocks/config.ts`:
+
+```typescript
+RoomEvent:
+  | { type: 'STEP_CHANGED'; stepOrder: number; stepName: string }
+  | { type: 'VIEWPORT_SYNC'; x: number; y: number; zoom: number }
+  | { type: 'TIMER_UPDATE'; state: 'running' | 'paused' | 'expired' | 'cancelled'; remainingMs: number; totalMs: number }
+  | { type: 'VOTING_TIMER_UPDATE'; state: 'open' | 'closed' | 'expired'; remainingMs: number; totalMs: number }
+  | { type: 'VOTING_STATE_CHANGED'; isOpen: boolean }
+  | { type: 'SESSION_ENDED' };
+```
+
+Create a separate `DotVotingTimer` component that listens exclusively for `VOTING_TIMER_UPDATE`. This prevents any rendering in the existing `CountdownTimer` component when voting is happening.
+
+**Warning signs:**
+- `TIMER_UPDATE` broadcast used for voting deadline instead of a new event type
+- `CountdownTimer` component appearing on non-Step 8 participants while voting runs
+- Facilitator starting a step timer and inadvertently overwriting the voting deadline broadcast
+
+**Phase to address:** Dot voting multiplayer phase — event type separation must be established before any voting timer broadcast code is written
+
+---
+
+### Pitfall 3: Facilitator Closing Voting While Participants Are Mid-Vote — Race Between "Close" and "Cast Vote"
+
+**What goes wrong:**
+Facilitator clicks "Close Voting." A participant cast their last vote 50ms earlier — the vote write is in-flight to Liveblocks Storage. The `VOTING_STATE_CHANGED { isOpen: false }` broadcast arrives at the participant's client before the in-flight vote write acknowledges. The participant's UI locks ("Voting closed"), but their vote optimistically appeared in local state. When the Storage response arrives, the vote is written to Storage — but the "voting closed" UI state suppresses re-renders. Other participants see the vote count increment post-close. Results are inconsistent.
+
+**Why it happens:**
+Broadcast events (close signal) and Storage writes (votes) travel on separate channels with different latencies. Broadcasts are faster but ephemeral; Storage writes are authoritative but slower. The window between close signal broadcast and all in-flight Storage writes settling is ~100-500ms and is unpredictable.
+
+**How to avoid:**
+Store the voting open/close state in Liveblocks Storage (not just broadcast):
+
+```typescript
+// In storageMapping or direct Liveblocks Storage:
+votingSession: {
+  isOpen: boolean;
+  closedAt: number | null;  // timestamp facilitator closed
+}
+```
+
+Participants validate against the Storage `isOpen` flag before writing votes, not just the broadcast event. The broadcast serves only for immediate UI feedback (lock the button); the Storage value is authoritative. On vote write, check `votingSession.isOpen === true` before applying the mutation. Reject any write when `isOpen === false`.
+
+Additionally: add a 1-second grace window on the facilitator's close action — disable close button for 1 second to let in-flight writes settle, then broadcast close + write `isOpen: false` to Storage together.
+
+**Warning signs:**
+- Voting open/close state only in a `VOTING_STATE_CHANGED` broadcast and local React state (not in Liveblocks Storage)
+- Vote counts incrementing after the facilitator has closed voting (visible in multiplayer sessions)
+- No validation of voting state before applying a vote mutation
+
+**Phase to address:** Dot voting multiplayer phase — the voting session state model must be in Storage before any facilitator open/close controls are built
+
+---
+
+### Pitfall 4: Solo Mode Votes Persisted Through Zustand Auto-Save Race
+
+**What goes wrong:**
+Solo dot voting stores vote data in the Zustand canvas store, which auto-saves to Neon via the debounced (2s) auto-save mechanism. User votes rapidly across 8 slots within 2 seconds. The debounce collapses all intermediate states into one save. If the final save call races with a page navigation event (user proceeds to Step 9), the save might fire after the step transition, writing the wrong step's canvas state to Neon, or the auto-save is cancelled by navigation and votes are lost entirely.
+
+**Why it happens:**
+The existing auto-save is debounced with 2s delay and 10s maxWait. Dot voting produces many rapid state changes within that window. Navigation away from Step 8 can cancel the pending debounced save. The auto-save does not know about the vote-close event as a natural "flush" point.
+
+**How to avoid:**
+Treat "facilitator closes voting" as a hard flush boundary for solo mode. When voting closes (solo), immediately call the canvas save function synchronously (not debounced) before any navigation is allowed:
+
+```typescript
+async function handleVotingClose() {
+  setVotingOpen(false);
+  // Force immediate Neon persistence before state transitions
+  await canvasStore.getState().saveCanvasNow(); // bypass debounce
+  setVotingResults(computeResults());
+}
+```
+
+For the "Advance to Step 9" action after voting, gate the navigation on `isSaving === false` — show a brief "Saving votes..." spinner if a save is in progress.
+
+**Warning signs:**
+- Vote data disappearing when navigating from Step 8 to Step 9 in solo mode
+- Neon canvas state missing vote fields after rapid voting sequences
+- Navigation allowed before the debounced auto-save has fired
+
+**Phase to address:** Solo dot voting phase — vote save discipline must be designed before the solo voting UI is built
+
+---
+
+### Pitfall 5: Mobile Gate Hydration Mismatch — Flash of Full App on Phone
+
+**What goes wrong:**
+The mobile gate is implemented with `window.innerWidth < 768` in a React state initializer or directly in render. The Next.js server renders the full app (no `window` during SSR). The client hydrates with the gate visible. React detects a mismatch between server output (full app) and client output (mobile gate), throws a hydration error in development, and causes a layout flash in production. On a phone, the user sees the full canvas briefly, then the gate appears — a jarring experience that undermines the gate's credibility.
+
+**Why it happens:**
+`window` is undefined during SSR. Any code path that checks `window.innerWidth` during the server render will either throw (if unguarded) or silently return the wrong value (if guarded with `typeof window !== 'undefined'` returning false). The server renders one thing, the client renders another — hydration mismatch.
+
+**How to avoid:**
+Use a `useEffect`-based approach with an initially non-blocking state:
+
+```typescript
+function useMobileGate() {
+  const [isMobile, setIsMobile] = useState<boolean | null>(null); // null = unknown (SSR)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  return isMobile;
+}
+```
+
+During SSR and initial hydration, `isMobile` is `null` — render nothing (or a neutral skeleton). After hydration, the effect runs and the correct gate state is applied. Server and client render the same null/skeleton — no mismatch.
+
+Do NOT use `dynamic(() => import('./MobileGate'), { ssr: false })` alone without handling the flash — the component simply won't render during SSR, which is fine, but the full app still renders on phones until the dynamic import resolves (~200ms). Combine with `null` initial state for zero-flash.
+
+**Warning signs:**
+- "Hydration mismatch" error in browser console on mobile devices
+- Full app visible for ~200ms on phone before gate appears
+- `window.innerWidth` called outside of a `useEffect` or event handler
+- Gate component imported statically in a server component
+
+**Phase to address:** Mobile gate phase — the SSR-safe detection pattern must be the first implementation decision, not a fix applied after the gate "works in development"
+
+---
+
+### Pitfall 6: iPad as False Positive — Gate Showing on 768px Tablet
+
+**What goes wrong:**
+The gate checks `width < 768`. iPad 9th/10th generation portrait mode reports exactly `768px` viewport width. With `<768px`, the iPad narrowly escapes the gate. But iPad mini (768px portrait) hits the boundary exactly. iPad Pro 11" in portrait mode reports 834px — well above 768px. The gate correctly hides for most iPads but blocks iPad mini users who have a perfectly usable experience. Meanwhile, some large Android phones in landscape mode exceed 768px and bypass the gate despite being phone-class devices used in portrait orientation.
+
+**Why it happens:**
+CSS breakpoints treat `768px` as the canonical "tablet" boundary, but real devices cluster at this exact value. The gate's intent is "this device type (phone) cannot use the canvas well" not "this viewport width is too small." Width is a proxy for device type, and it breaks at the boundary.
+
+**How to avoid:**
+Use a compound detection: CSS width check as primary signal, with pointer media query as secondary confirmation:
+
+```typescript
+useEffect(() => {
+  const isNarrow = window.innerWidth < 768;
+  const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+  // Gate fires if: narrow viewport AND touch-primary input
+  // iPad with Pencil reports pointer: fine — excluded correctly
+  // iPhone always reports pointer: coarse — included correctly
+  setIsMobile(isNarrow && isCoarsePointer);
+}, []);
+```
+
+`pointer: coarse` distinguishes touch-primary devices (phones, iPads without Pencil) from mice/trackpads. An iPad mini in portrait (768px) with a Bluetooth keyboard/trackpad reports `pointer: fine` — the gate correctly allows it. A phone in landscape (800px) with `pointer: coarse` — the gate still blocks it.
+
+The gate should also be dismissible with a confirmation message ("I know my screen is small — continue anyway") stored in `localStorage` so the user is not re-gated on every reload.
+
+**Warning signs:**
+- iPad mini users reporting they see the mobile gate
+- Large-screen Android phone users in landscape mode accessing the full canvas despite having a poor experience
+- No `localStorage` persistence of the dismiss choice (gate re-appears on every refresh)
+
+**Phase to address:** Mobile gate phase — compound detection must be designed before the gate component is built, not discovered during cross-device QA
+
+---
+
+### Pitfall 7: Dismissal State Lost on Mobile — Gate Re-Appears Every Refresh
+
+**What goes wrong:**
+User on phone sees the gate, reads "Best on desktop," but proceeds anyway (or taps dismiss). They do some work on the phone. They refresh the page — gate appears again. They can't remember how to dismiss it. They give up. The gate's intent was to discourage phone use, not to make it impossible — but without persistent dismissal, it functionally blocks phone access entirely.
+
+**Why it happens:**
+Gate dismissal stored only in React state (ephemeral, lost on navigation/refresh). `sessionStorage` would persist for the tab session but not across refreshes. `localStorage` persists correctly but developers often miss this for simple UI state.
+
+**How to avoid:**
+Persist dismissal in `localStorage` with a session-scoped key (so users get the hint on their next *fresh* session if they switch devices, but not mid-session):
+
+```typescript
+const MOBILE_GATE_DISMISSED_KEY = 'workshoppilot_mobile_gate_dismissed_v1';
+
+function useMobileGateDismiss() {
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(MOBILE_GATE_DISMISSED_KEY) === 'true';
+  });
+
+  const dismiss = useCallback(() => {
+    localStorage.setItem(MOBILE_GATE_DISMISSED_KEY, 'true');
+    setDismissed(true);
+  }, []);
+
+  return { dismissed, dismiss };
+}
+```
+
+The gate shows if: `isMobile === true AND !dismissed`. The dismiss is permanent until localStorage is cleared (acceptable — if a user explicitly chose to proceed on mobile, don't re-ask every time).
+
+**Warning signs:**
+- Mobile gate state stored in `useState` only (no persistence)
+- Gate re-appearing on page refresh for users who already dismissed
+- No dismiss button at all (fully blocking gate with no escape)
+
+**Phase to address:** Mobile gate phase — dismissal persistence must be part of the initial gate design
+
+---
+
+### Pitfall 8: Vote Visibility Causing Anchoring Bias — All Votes Visible During Voting
+
+**What goes wrong:**
+Participants can see the running vote total in real time during the voting period (e.g., "Slot 4: 5 votes, Slot 2: 3 votes"). Participants who haven't voted yet see which slots are "winning" and anchor their choices to the existing distribution rather than their independent preference. Vote results become self-reinforcing: the leading slot attracts disproportionate votes from late voters who want to be "on the winning side." The final distribution does not reflect independent judgment — it reflects social following.
+
+**Why it happens:**
+Showing live vote counts is technically trivial (it's just a count of voters in Liveblocks Storage). Developers assume transparency is always good in collaborative tools. The social psychology literature on anchoring and groupthink in voting is not commonly known to engineers.
+
+**How to avoid:**
+Hide vote counts from participants during the voting period. Show only whether they personally have voted on each slot (their own dot is placed), not the aggregate count. Reveal totals only when the facilitator closes voting.
+
+Implement two display modes:
+- `VOTING_OPEN`: each participant sees their own votes placed (dots on slots they voted for), but no total count visible
+- `VOTING_CLOSED`: all vote counts revealed simultaneously to all participants
+
+```typescript
+// In the Crazy8sGrid component
+const showVoteCounts = votingState === 'closed'; // not 'open'
+```
+
+For solo mode (self-voting/prioritization), this concern doesn't apply — the user is the only voter and sees their own dots as they place them.
+
+**Warning signs:**
+- Running aggregate vote counts visible to participants during the open voting phase
+- "3 votes" badge on slots while voting is still active in multiplayer
+- Facilitator and participants seeing the same vote-count display during voting
+
+**Phase to address:** Dot voting UI phase — display mode (open vs. closed) must be a design requirement, not an afterthought
+
+---
+
+### Pitfall 9: Multi-Vote Per Slot Without Per-Participant Limits — Vote Stuffing
+
+**What goes wrong:**
+The dot voting feature allows "configurable votes" and "multi-vote support" (from the v2.0 spec). If the per-participant vote limit is enforced only in the UI (disabling a button after N votes), a participant can bypass the limit by directly mutating Liveblocks Storage through the developer console. They cast 20 votes for their own idea when the limit is 5.
+
+**Why it happens:**
+Vote limits enforced at the UI layer only. The underlying Liveblocks mutation (adding a voter ID to the slot's `voters` list) has no server-side constraint — Liveblocks Storage accepts any write. Client-side enforcement is trivially bypassed.
+
+**How to avoid:**
+Enforce vote limits in the mutation logic, not just the button state. Before appending to the voters list, count how many slots already contain the current user's ID and compare against the configured limit:
+
+```typescript
+function castVote(slotId: string, voterId: string, maxVotesPerParticipant: number) {
+  // Count existing votes for this participant across all slots
+  const existingVotes = crazy8sSlots.reduce((count, slot) => {
+    return count + (slot.voters?.includes(voterId) ? 1 : 0);
+  }, 0);
+
+  if (existingVotes >= maxVotesPerParticipant) {
+    toast.error(`You have used all ${maxVotesPerParticipant} votes`);
+    return; // Do not write to Storage
+  }
+
+  // Safe to write
+  appendVoter(slotId, voterId);
+}
+```
+
+This check runs client-side but is validated against the actual Storage state (not just local React state). A participant trying to bypass via DevTools would still need to forge a valid Liveblocks mutation token — which they cannot, since tokens are server-issued.
+
+Note: For a design thinking workshop with 5-15 participants, the risk of deliberate vote stuffing is very low. The primary goal is preventing accidental over-voting (misclick, UI bug), not adversarial cheating.
+
+**Warning signs:**
+- Vote limit enforced only by disabling a button (`disabled={votesUsed >= maxVotes}`)
+- No pre-write validation of existing vote count in the mutation function
+- `voters` list accepting duplicates (same voter ID appearing twice for the same slot)
+
+**Phase to address:** Dot voting data model phase — the vote limit validation logic must be part of the castVote function, not added later as a UI concern
+
+---
+
+### Pitfall 10: Timer Drift Between Facilitator and Participants in Existing Pattern
+
+**What goes wrong:**
+The existing `FacilitatorControls` timer uses `setInterval` (1 second ticks) and broadcasts `TIMER_UPDATE` every tick. The participant `CountdownTimer` also uses a local `setInterval` (1 second ticks) between broadcasts. `setInterval` is not guaranteed to fire exactly every 1000ms — browser tab throttling, garbage collection pauses, and event loop congestion can cause 10-200ms delays per tick. Over a 5-minute voting session, facilitator and participant timers can drift by 3-15 seconds. The facilitator's timer shows "0:00" and they close voting; participants' timers still show "0:12" — participants think they have more time and feel cheated.
+
+**Why it happens:**
+`setInterval` accumulates drift because each tick fires relative to the *previous tick*, not to the original start time. The existing implementation (inspected in `countdown-timer.tsx` and `facilitator-controls.tsx`) uses `prev - 1000` in the state updater — this is correct for display but does not compensate for missed or delayed ticks. This is a known JavaScript timer accuracy issue.
+
+**How to avoid:**
+Use the broadcast's `remainingMs` as the authoritative clock, not the local `setInterval`. On each `TIMER_UPDATE` received, reset the local timer to the broadcast value — don't accumulate local state. The local interval is only for display smoothness between broadcasts, not for accuracy:
+
+```typescript
+// On TIMER_UPDATE received:
+setRemainingMs(event.remainingMs); // authoritative from facilitator
+// Local interval RESETS on next broadcast — drift never accumulates beyond 1 broadcast interval
+```
+
+The facilitator's timer should also use wall clock time rather than accumulated ticks:
+
+```typescript
+// In FacilitatorControls:
+const startTimestamp = Date.now();
+const totalMs = selectedDuration;
+
+const interval = setInterval(() => {
+  const elapsed = Date.now() - startTimestamp;
+  const remaining = Math.max(0, totalMs - elapsed);
+  setRemainingMs(remaining);
+  broadcast({ type: 'VOTING_TIMER_UPDATE', state: 'open', remainingMs: remaining, totalMs });
+  if (remaining === 0) { /* expire */ }
+}, 1000);
+```
+
+Wall-clock elapsed time (`Date.now() - startTimestamp`) does not accumulate setInterval drift.
+
+**Warning signs:**
+- Timer display diverging between facilitator and participant screens during a 5-minute countdown
+- Participants confused when the facilitator closes voting while their timer still shows time remaining
+- `prev - 1000` pattern in a setInterval without a wall-clock correction
+
+**Phase to address:** Dot voting timer phase — wall-clock-based timer must be used for the voting countdown from the start; drift is nearly impossible to fix post-implementation without a full timer rewrite
+
+---
+
+## Technical Debt Patterns
+
+Shortcuts that seem reasonable but create long-term problems.
+
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| `voteCount: number` in Crazy8sSlot storageMapping | Simple data model, easy to read | Lost votes under concurrent updates (last-write-wins CRDT semantics) | Never — use voter ID list append instead |
+| Reusing `TIMER_UPDATE` broadcast for voting timer | No config changes needed | Voting timer appears in all steps' participant UI; step timers interfere with voting timers | Never — add a distinct `VOTING_TIMER_UPDATE` event type |
+| `window.innerWidth < 768` in render or useState init | Works in development | Hydration mismatch in Next.js SSR; flash of full app on mobile before gate appears | Never — use useEffect-based detection with null initial state |
+| Showing live vote counts during open voting period | Feels "interactive," real-time | Anchoring bias; groupthink; final results reflect social following not independent judgment | Never in multiplayer mode — hide counts until voting closes |
+| Gate dismissal in React state only | Zero extra code | Gate re-appears on every page refresh; users who dismiss must do so repeatedly | Never — persist dismissal in localStorage |
+| Width-only mobile detection (`< 768px`) | Simple to implement | iPad mini false positives; large landscape phones bypass gate | Acceptable as first version if `pointer: coarse` addition is planned for fast follow |
+| Enforce vote limit only in UI (`disabled` button) | No validation logic needed | Vote stuffing possible via DevTools console mutation | Acceptable for v2.0 given low-stakes workshop context; schedule for fast-follow hardening |
+
+---
+
+## Integration Gotchas
+
+Common mistakes when connecting to the existing Liveblocks + Zustand pattern.
+
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Crazy8sSlot + storageMapping | Adding `voteCount: number` to `Crazy8sSlot` and relying on last-write-wins for increments | Store `voters: string[]` and use list-append semantics; derive count as `voters.length` |
+| `@liveblocks/zustand` middleware | Adding vote state to `storageMapping` and calling `updateCrazy8sSlot` from multiple clients simultaneously | Use direct Liveblocks Storage mutation outside Zustand for vote operations; storageMapping is designed for state replacement, not concurrent increments |
+| `RoomEvent` type union | Adding voting timer events to existing `TIMER_UPDATE` type | Extend the `RoomEvent` union with `VOTING_TIMER_UPDATE` and `VOTING_STATE_CHANGED`; keep timers semantically separated |
+| Solo mode canvas store | Adding vote state to Zustand canvas store without a flush point | Treat voting close as an explicit save boundary; call `saveCanvasNow()` before any navigation after votes are cast |
+| `useEffect` + `window.innerWidth` | Checking `window.innerWidth` at component initialization (runs on server) | Initialize to `null`; check in `useEffect` after hydration; render gate only when non-null |
+| `localStorage` for gate dismissal | Calling `localStorage.getItem` during SSR (throws `ReferenceError` on server) | Wrap in `typeof window !== 'undefined'` guard or use lazy state initializer |
+| CountdownTimer + DotVotingTimer | Rendering both in the same step, causing two overlapping timer pills | Gate `CountdownTimer` to non-voting contexts; gate `DotVotingTimer` to Step 8 voting phase only |
+
+---
+
+## Performance Traps
+
+Patterns that work at small scale but fail as usage grows.
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Broadcasting full `voters` array on every vote | Large payload per vote event; 10 participants voting simultaneously = 10 full-array broadcasts in <1s | Use append operations on `LiveList` rather than replacing the whole array | 8+ participants voting simultaneously |
+| Re-rendering all 8 Crazy8s slots on every vote update | Each vote on slot 1 re-renders all 8 slot components | Memoize individual slot components with `React.memo`; pass `voters` as a derived count (not the array) to avoid referential instability | Every vote cast — visible as jank immediately |
+| `resize` event on `window` without throttle for mobile gate | Mobile browsers fire `resize` on scroll when address bar shows/hides; gate flickers | Debounce the resize handler at 100ms; also avoid recalculating on virtual keyboard open | Any iOS/Android browser with dynamic viewport |
+| Storing vote state in both Zustand (local display) and Liveblocks Storage (sync) | Dual-write causes double renders; Zustand optimistic state and Storage state briefly diverge | Single source of truth: Liveblocks Storage for multiplayer, Zustand for solo; never both | Any multiplayer voting session |
+
+---
+
+## UX Pitfalls
+
+Common user experience mistakes specific to dot voting and mobile gating.
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Revealing all votes in real time during open voting | Anchoring bias; late voters copy early voters; results don't reflect independent judgment | Hide aggregate counts until facilitator closes voting; show only personal votes placed |
+| No visual feedback when vote is cast | User unsure if their vote registered; may vote multiple times accidentally | Show dot animation on vote cast; show "You've used 3/5 votes" counter updating immediately |
+| Facilitator closes voting without warning | Participants mid-vote have their in-progress interaction suddenly locked | Broadcast a 10-second warning before close; show countdown in participant UI: "Voting closes in 10s" |
+| Mobile gate with no context about "why" | Users on phone feel rejected without understanding; they may be first-time users who don't know what the app is | Gate copy: "WorkshopPilot works best on a larger screen — the canvas and AI chat need more space. Try on a laptop or desktop." + dismiss link |
+| Results screen showing only counts, not which ideas | Facilitator must mentally connect vote counts to sketch images | Results view shows sketch thumbnail + title + vote count side-by-side, sorted descending |
+| No "retract vote" capability when multi-vote is allowed | User accidentally votes for wrong slot; cannot undo | Tapping a voted slot retracts the vote (toggle behavior); show visual diff between voted and unvoted state |
+
+---
+
+## "Looks Done But Isn't" Checklist
+
+Things that appear complete in development but are missing critical pieces.
+
+- [ ] **Vote counts:** Correct in single-user testing — verify counts with 3+ participants voting simultaneously in <200ms (concurrent write test)
+- [ ] **Vote limits:** Max votes enforced by disabled button — verify the mutation function also validates existing vote count in Storage state before writing
+- [ ] **Vote visibility:** Counts visible during open phase — verify counts are hidden from participants during voting; only revealed on close
+- [ ] **Voting timer:** Timer appears correct in development — verify facilitator and participant timers are within 1 second of each other after 5 minutes
+- [ ] **Mobile gate:** Gate appears on resized desktop browser window (mobile emulation) — verify on a real iPhone (Safari, Chrome) — emulation and real device behave differently for `window.innerWidth`
+- [ ] **iPad 768px:** Gate not showing on resized 768px window — verify on actual iPad mini portrait orientation (exact boundary behavior)
+- [ ] **Gate dismissal:** Gate dismissed in one session — verify `localStorage` key is set and gate does not re-appear on page refresh
+- [ ] **Solo vote persistence:** Votes cast in solo mode — navigate to Step 9 and navigate back to Step 8; verify votes are still shown
+- [ ] **Facilitator close + in-flight votes:** Facilitator closes voting — verify no vote count increments arrive in Storage after the `closedAt` timestamp
+- [ ] **Retract vote:** Toggling off a vote in multi-vote mode — verify voter ID is removed from the voters list (not just hidden in UI)
+
+---
+
+## Recovery Strategies
+
+When pitfalls occur despite prevention, how to recover.
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| Lost vote count (numeric LWW collision) | HIGH — undermines trust | Cannot recover lost votes from LWW collisions; requires data model change to voter ID list; re-run the voting session |
+| Timer drift causing unfair close | LOW | Facilitator broadcasts a corrective `VOTING_TIMER_UPDATE` event; extend voting by restarting the timer |
+| Mobile gate blocking valid tablet users | LOW | User clicks dismiss; localStorage is set; gate not seen again |
+| Anchoring bias from visible vote counts | HIGH — results are invalid | Discard results; reset vote state; re-run voting with counts hidden (requires feature fix first) |
+| Solo votes lost on navigation | MEDIUM | Restore from Neon if auto-save fired; if not, votes must be re-cast; prevent with explicit save-before-navigate |
+| Vote stuffing discovered post-session | LOW in workshop context | Results are advisory anyway; facilitator manually overrides selection; plan limit enforcement for fast-follow |
+
+---
+
+## Pitfall-to-Phase Mapping
+
+How roadmap phases should address these pitfalls.
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| Lost votes under LWW concurrency | Dot voting data model (Phase 1 of v2.0) | Concurrent vote test: 3 clients vote same slot within 100ms — all votes counted |
+| Voting timer confusion with existing TIMER_UPDATE | Voting timer event type setup (Phase 1) | `RoomEvent` union extended; `TIMER_UPDATE` and `VOTING_TIMER_UPDATE` are distinct; step timer and vote timer never overlap |
+| Race between close signal and in-flight vote | Voting state model in Storage (Phase 1) | `votingSession.isOpen` in Liveblocks Storage; close action writes Storage before broadcasting close event |
+| Solo vote save race on navigation | Solo voting implementation | Force-save on voting close; navigation gated on `isSaving === false` |
+| Mobile gate hydration mismatch | Mobile gate implementation | No hydration errors in browser console on mobile; gate appears without flash |
+| iPad 768px false positive | Mobile gate implementation | Compound detection (`width + pointer: coarse`); iPad mini without gate; iPhone with gate |
+| Gate dismissal not persisted | Mobile gate implementation | Dismiss → refresh → gate does not re-appear |
+| Anchoring bias from live vote counts | Voting UI design | Vote counts hidden during open phase; revealed only on facilitator close |
+| Vote stuffing via client bypass | Voting mutation logic | Pre-write count validation in castVote function; voter ID deduplication per slot |
+| Timer drift over 5 minutes | Voting timer implementation | Wall-clock elapsed time in facilitator timer; broadcast remaining time resets participant timer |
+
+---
+
+## Sources
+
+- [Liveblocks Storage API — LiveObject last-write-wins conflict resolution behavior](https://liveblocks.io/docs/api-reference/liveblocks-client#Storage)
+- [Liveblocks Storage Guide — conflict resolution, LiveMap vs LiveList semantics](https://liveblocks.io/docs/guides/how-to-use-liveblocks-storage-with-react)
+- [Liveblocks Zustand middleware — storageMapping, concurrent write behavior](https://liveblocks.io/docs/guides/how-to-use-liveblocks-storage-with-zustand)
+- [Liveblocks GitHub Issue #1495 — Zustand middleware set() incompatible with batch() causing duplicate patches](https://github.com/liveblocks/liveblocks/issues/1495)
+- [NN/g: Dot Voting — persuaded voting, split voting, group think as documented weaknesses](https://www.nngroup.com/articles/dot-voting/)
+- [UX Collective: Better Dot Voting — hiding votes during voting period to reduce social influence](https://uxdesign.cc/design-techniques-better-dot-voting-590085fe36db)
+- [Next.js Hydration Error Documentation — server/client mismatch causes, window access during SSR](https://nextjs.org/docs/messages/react-hydration-error)
+- [Next.js Discussion #14810 — rendering different components based on screen size, SSR-safe patterns](https://github.com/vercel/next.js/discussions/14810)
+- [Next.js Discussion #46466 — useMediaQuery returns undefined on first load, SSR pattern guidance](https://github.com/vercel/next.js/discussions/46466)
+- [CSS-Tricks: iPad Media Query boundary at exactly 768px — false positive issue](https://css-tricks.com/snippets/css/media-queries-for-standard-devices/)
+- [MDN: pointer media query — distinguishing touch-primary vs. fine-pointer devices](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Media_queries/Using)
+- [Codebase: `/src/components/workshop/countdown-timer.tsx` — existing TIMER_UPDATE broadcast consumer pattern](../codebase)
+- [Codebase: `/src/components/workshop/facilitator-controls.tsx` — existing facilitator timer with setInterval drift pattern](../codebase)
+- [Codebase: `/src/stores/multiplayer-canvas-store.ts` — storageMapping fields, liveblocks() middleware composition](../codebase)
+- [Codebase: `/src/lib/canvas/crazy-8s-types.ts` — current Crazy8sSlot type (no vote fields yet)](../codebase)
+- [Codebase: `/src/lib/liveblocks/config.ts` — RoomEvent union, Presence, Storage types](../codebase)
+
+---
+*Pitfalls research for: Dot Voting + Mobile Gate (v2.0)*
+*Researched: 2026-02-28*
