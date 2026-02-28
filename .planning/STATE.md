@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.9
-milestone_name: Multiplayer Collaboration
-status: complete
-last_updated: "2026-02-28T02:00:00.000Z"
+milestone: v2.0
+milestone_name: Dot Voting & Mobile Gate
+status: active
+last_updated: "2026-02-28T12:00:00.000Z"
 progress:
   total_phases: 58
   completed_phases: 58
@@ -18,15 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v1.9 complete — ready for `/gsd:new-milestone`
+**Current focus:** v2.0 Dot Voting & Mobile Gate
 
 ## Current Position
 
-Phase: v1.9 milestone complete (all 58 phases shipped across 11 milestones)
-Status: Ready for next milestone
-Last activity: 2026-02-28 — v1.9 Multiplayer Collaboration milestone archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-28 — Milestone v2.0 started
 
-Progress: [██████████] 100% (148 plans across 58 phases)
+Progress: ░░░░░░░░░░ 0%
 
 ## Performance Metrics
 

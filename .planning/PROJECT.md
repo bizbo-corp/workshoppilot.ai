@@ -90,6 +90,16 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 
 ### Active
 
+#### Current Milestone: v2.0 Dot Voting & Mobile Gate
+
+**Goal:** Add dot voting to Step 8 for idea prioritization (solo + multiplayer) and a mobile-aware gate for phone users.
+
+**Target features:**
+- Dot voting on Crazy 8s sketches with configurable vote counts, multi-vote support, facilitator-controlled open/close with timer
+- Facilitator reviews results and manually picks ideas to advance to Step 9
+- Works in both solo (self-prioritization) and multiplayer modes
+- Mobile phone gate (<768px) — "best on desktop" wall, dismissible
+
 #### Future — MMP (Visual & Solo Polish)
 - [ ] First-run onboarding tour (guided welcome highlighting chat, canvas, steps, navigation)
 - [ ] Visual stakeholder radar chart
@@ -101,7 +111,6 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - [ ] Video explanations per step
 
 #### Future — FFP (Full Platform)
-- [ ] Dot voting for idea selection
 - [ ] Brain Writing with real collaboration (multi-user)
 - [ ] EzyDraw AI Enhance (rough sketch → clean wireframe)
 - [ ] AI + canvas working side-by-side (auto-suggest, auto-complete nodes)
@@ -228,7 +237,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 
 ## Current State
 
-**Shipped:** v1.9 Multiplayer Collaboration (2026-02-28)
+**Shipped:** v1.9 Multiplayer Collaboration (2026-02-28), starting v2.0 Dot Voting & Mobile Gate
 **Live at:** https://workshoppilot.ai
 **Codebase:** ~54,595 lines of TypeScript across ~290+ files
 **Tech stack:** Clerk + Neon + Gemini + Drizzle + Stripe + Liveblocks + AI SDK 6 + ReactFlow + Konva.js + Zustand + Playwright + Vercel — all validated in production
@@ -251,4 +260,4 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Undo/redo disabled in multiplayer mode (liveblocks() + temporal() TypeScript incompatible)
 
 ---
-*Last updated: 2026-02-28 after v1.9 milestone*
+*Last updated: 2026-02-28 after v2.0 milestone start*
