@@ -21,7 +21,7 @@
  * storageMapping (durable fields — synced to Liveblocks Storage):
  *   stickyNotes, drawingNodes, gridColumns, crazy8sSlots, mindMapNodes,
  *   mindMapEdges, conceptCards, personaTemplates, hmwCards, selectedSlotIds,
- *   brainRewritingMatrices
+ *   brainRewritingMatrices, dotVotes, votingSession
  */
 
 import { createStore } from 'zustand/vanilla';
@@ -592,15 +592,44 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
             ),
           })),
 
-        // Voting actions — Phase 61 will wire these to Liveblocks storageMapping.
-        // For now they are no-ops to satisfy the CanvasActions type contract.
-        // In solo sessions these are handled by the solo canvas store.
-        castVote: (_vote: Omit<DotVote, 'id'>) => {},
-        retractVote: (_voteId: string) => {},
-        openVoting: (_voteBudget?: number) => {},
-        closeVoting: () => {},
-        setVotingResults: (_results: VotingResult[]) => {},
-        resetVoting: () => {},
+        castVote: (vote) =>
+          set((state) => ({
+            dotVotes: [
+              ...state.dotVotes,
+              { ...vote, id: crypto.randomUUID() },
+            ],
+            // isDirty stays false in multiplayer — Liveblocks handles persistence
+          })),
+
+        retractVote: (voteId) =>
+          set((state) => ({
+            dotVotes: state.dotVotes.filter((v) => v.id !== voteId),
+          })),
+
+        openVoting: (voteBudget) =>
+          set((state) => ({
+            votingSession: {
+              ...state.votingSession,
+              status: 'open' as const,
+              voteBudget: voteBudget ?? state.votingSession.voteBudget,
+            },
+          })),
+
+        closeVoting: () =>
+          set((state) => ({
+            votingSession: { ...state.votingSession, status: 'closed' as const },
+          })),
+
+        setVotingResults: (results) =>
+          set((state) => ({
+            votingSession: { ...state.votingSession, results },
+          })),
+
+        resetVoting: () =>
+          set(() => ({
+            dotVotes: [],
+            votingSession: DEFAULT_VOTING_SESSION,
+          })),
 
         // no-ops in multiplayer — Liveblocks Storage is authoritative, not Neon auto-save
         markClean: () => {},
@@ -614,8 +643,6 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
         storageMapping: {
           // ONLY durable fields — synced to Liveblocks Storage CRDT
           // Ephemeral fields MUST NOT be here — they would thrash between participants
-          // NOTE: dotVotes and votingSession will be added to storageMapping in Phase 61
-          // when voting actions are wired to Liveblocks for multiplayer sync.
           stickyNotes: true,
           drawingNodes: true,
           gridColumns: true,
@@ -627,6 +654,8 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
           hmwCards: true,
           selectedSlotIds: true,
           brainRewritingMatrices: true,
+          dotVotes: true,
+          votingSession: true,
         },
         // presenceMapping: omitted — Presence (cursor, color, displayName) is managed
         // directly via useUpdateMyPresence() in Phase 56. No Zustand fields map to Presence.
