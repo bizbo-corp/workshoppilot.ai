@@ -18,6 +18,7 @@ import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
 import type { Crazy8sSlot } from "@/lib/canvas/crazy-8s-types";
 import type { BrainRewritingMatrix } from "@/lib/canvas/brain-rewriting-types";
+import type { DotVote, VotingSession } from "@/lib/canvas/voting-types";
 import { BRAIN_REWRITING_CELL_ORDER } from "@/lib/canvas/brain-rewriting-types";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
 import { computeRadialPositions } from "@/lib/canvas/mind-map-layout";
@@ -300,6 +301,8 @@ export default async function StepPage({ params }: StepPageProps) {
   const initialMindMapEdges: MindMapEdgeState[] = (canvasData?.mindMapEdges as MindMapEdgeState[]) || [];
   const initialSelectedSlotIds: string[] = canvasData?.selectedSlotIds || [];
   const initialBrainRewritingMatrices: BrainRewritingMatrix[] = canvasData?.brainRewritingMatrices || [];
+  const initialDotVotes: DotVote[] = canvasData?.dotVotes || [];
+  const initialVotingSession: VotingSession | undefined = canvasData?.votingSession;
 
   // Migration: if mind map nodes exist but lack positions, compute radial layout
   if (initialMindMapNodes.length > 0 && !initialMindMapNodes.some((n) => n.position)) {
@@ -514,6 +517,8 @@ export default async function StepPage({ params }: StepPageProps) {
         initialHmwCards={initialHmwCards}
         initialSelectedSlotIds={initialSelectedSlotIds}
         initialBrainRewritingMatrices={initialBrainRewritingMatrices}
+        initialDotVotes={initialDotVotes}
+        initialVotingSession={initialVotingSession}
       >
         {session.workshop.workshopType === 'multiplayer' ? (
           <MultiplayerRoomLoader workshopId={session.workshop.id} sessionId={sessionId}>

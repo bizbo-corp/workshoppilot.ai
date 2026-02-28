@@ -221,6 +221,8 @@ export function IdeationSubStepContainer({
       ...(state.hmwCards.length > 0 ? { hmwCards: state.hmwCards } : {}),
       ...(state.selectedSlotIds.length > 0 ? { selectedSlotIds: state.selectedSlotIds } : {}),
       ...(state.brainRewritingMatrices.length > 0 ? { brainRewritingMatrices: state.brainRewritingMatrices } : {}),
+      ...(state.dotVotes.length > 0 ? { dotVotes: state.dotVotes } : {}),
+      ...(state.votingSession.status !== 'idle' ? { votingSession: state.votingSession } : {}),
     });
     state.markClean();
   }, [workshopId, stepId, canvasStoreApi]);

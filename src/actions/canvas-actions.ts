@@ -9,6 +9,7 @@ import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
+import type { DotVote, VotingSession } from '@/lib/canvas/voting-types';
 
 /**
  * Save canvas state to stepArtifacts JSONB column under the `_canvas` key.
@@ -34,6 +35,8 @@ export async function saveCanvasState(
     hmwCards?: HmwCardData[];
     selectedSlotIds?: string[];
     brainRewritingMatrices?: BrainRewritingMatrix[];
+    dotVotes?: DotVote[];
+    votingSession?: VotingSession;
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -158,6 +161,8 @@ export async function loadCanvasState(
   hmwCards?: HmwCardData[];
   selectedSlotIds?: string[];
   brainRewritingMatrices?: BrainRewritingMatrix[];
+  dotVotes?: DotVote[];
+  votingSession?: VotingSession;
 } | null> {
   try {
     // Find the workshopStep record
@@ -209,8 +214,10 @@ export async function loadCanvasState(
         hmwCards?: HmwCardData[];
         selectedSlotIds?: string[];
         brainRewritingMatrices?: BrainRewritingMatrix[];
+        dotVotes?: DotVote[];
+        votingSession?: VotingSession;
       };
-      if (canvas?.stickyNotes || canvas?.personaTemplates || canvas?.hmwCards || canvas?.mindMapNodes || canvas?.crazy8sSlots || canvas?.conceptCards || canvas?.selectedSlotIds || canvas?.brainRewritingMatrices) {
+      if (canvas?.stickyNotes || canvas?.personaTemplates || canvas?.hmwCards || canvas?.mindMapNodes || canvas?.crazy8sSlots || canvas?.conceptCards || canvas?.selectedSlotIds || canvas?.brainRewritingMatrices || canvas?.dotVotes) {
         return {
           stickyNotes: canvas.stickyNotes || [],
           ...(canvas.gridColumns ? { gridColumns: canvas.gridColumns } : {}),
@@ -223,6 +230,8 @@ export async function loadCanvasState(
           ...(canvas.hmwCards ? { hmwCards: canvas.hmwCards } : {}),
           ...(canvas.selectedSlotIds ? { selectedSlotIds: canvas.selectedSlotIds } : {}),
           ...(canvas.brainRewritingMatrices ? { brainRewritingMatrices: canvas.brainRewritingMatrices } : {}),
+          ...(canvas.dotVotes ? { dotVotes: canvas.dotVotes } : {}),
+          ...(canvas.votingSession ? { votingSession: canvas.votingSession } : {}),
         };
       }
     }
