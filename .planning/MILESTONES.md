@@ -251,3 +251,28 @@
 
 ---
 
+
+## v1.9 Multiplayer Collaboration (Shipped: 2026-02-28)
+
+**Delivered:** Added real-time multiplayer workshops where a human facilitator leads 5-15 participants through design thinking on a shared live canvas — with live cursors, guest join flow, facilitator controls, and session management.
+
+**Phases completed:** 54-58 (5 phases, 12 plans)
+
+**Key accomplishments:**
+- Real-time multiplayer canvas sync via Liveblocks CRDT storage — multiple participants edit simultaneously, auto-persisted to Neon via StorageUpdated webhook
+- Live presence with 50ms-throttled cursor broadcasting, avatar stack with idle detection (>2min), join/leave toast notifications, facilitator crown badge
+- Guest join flow via share links — name-only entry (no Clerk account), HMAC-SHA256 signed HttpOnly cookie auth, lobby waiting screen, auto-rejoin on page refresh
+- Facilitator-gated step progression and AI chat — only facilitator advances steps and types to AI, participants see read-only view with broadcast step transitions
+- Facilitator controls suite — viewport sync ("Bring everyone to me"), countdown timer with audio chime, session end with Liveblocks REST API canvas snapshot persistence
+- Guest access to workshop outputs — read-only Build Pack view for guests after session end, cookie-verified access with proper redirects
+
+**Stats:**
+- 58 commits
+- ~54,595 lines of TypeScript (project total)
+- 5 phases, 12 plans
+- 3 days (2026-02-26 → 2026-02-28)
+
+**Git range:** `feat(54-02)` → `feat(58)`
+
+---
+

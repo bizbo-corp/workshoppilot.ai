@@ -78,17 +78,17 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - ✓ Dashboard credit badge showing remaining balance — v1.8
 - ✓ Grandfathering for pre-paywall workshops (PAYWALL_CUTOFF_DATE) — v1.8
 - ✓ Pricing page with credit-based tiers and Stripe Checkout CTAs — v1.8
+- ✓ Multiplayer workshop type (human facilitator + participants) — v1.9
+- ✓ Share-link join flow (no account needed for participants) — v1.9
+- ✓ Real-time canvas sync with live cursors (Liveblocks CRDT) — v1.9
+- ✓ Full canvas access for all participants — v1.9
+- ✓ AI chat visible to all, facilitator-only input — v1.9
+- ✓ Facilitator-only step progression — v1.9
+- ✓ Participant list/presence indicators with idle detection — v1.9
+- ✓ Facilitator viewport sync, countdown timer, session end flow — v1.9
+- ✓ Guest access to workshop outputs (read-only Build Pack) — v1.9
 
 ### Active
-
-#### v1.9 — Multiplayer Collaboration
-- [ ] Multiplayer workshop type (human facilitator + participants)
-- [ ] Share-link join flow (no account needed for participants)
-- [ ] Real-time canvas sync with live cursors (WebSocket/CRDT)
-- [ ] Full canvas access for all participants
-- [ ] AI chat visible to all, facilitator-only input
-- [ ] Facilitator-only step progression
-- [ ] Participant list/presence indicators
 
 #### Future — MMP (Visual & Solo Polish)
 - [ ] First-run onboarding tour (guided welcome highlighting chat, canvas, steps, navigation)
@@ -154,8 +154,8 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - **AI Provider**: Google Gemini API (gemini-2.0-flash) — chosen for cost/capability balance
 - **Entry Friction**: Must be near-zero — user types idea and starts immediately
 - **Desktop-First**: MVP targets desktop browsers; mobile deferred to MMP/FFP
-- **Single Player First**: v0.5-v1.4 are single-user; collaboration deferred to FFP
-- **Existing Codebase**: ~47,900 lines TypeScript across ~270+ files, 46 phases shipped (9 milestones), production at workshoppilot.ai
+- **Multiplayer via Liveblocks**: Real-time CRDT sync for multiplayer workshops; solo workshops unchanged
+- **Existing Codebase**: ~54,595 lines TypeScript across ~290+ files, 58 phases shipped (11 milestones), production at workshoppilot.ai
 
 ## Key Decisions
 
@@ -226,26 +226,13 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | Open redirect validation at 3 points | Checkout route, success page, pricing page — defense in depth | ✓ Good — security |
 | Stripe apiVersion pinned to '2026-02-25.clover' | Prevents silent API contract changes on SDK upgrades | ✓ Good — stability |
 
-## Current Milestone: v1.9 Multiplayer Collaboration
-
-**Goal:** Add real-time multiplayer workshops where a human facilitator leads 5-15 participants through design thinking on a shared canvas with live cursors.
-
-**Target features:**
-- Multiplayer workshop type (alongside existing solo/AI-led mode)
-- Share-link join flow — participants enter name, no account needed
-- Real-time canvas sync with live cursors (WebSocket/CRDT)
-- Full canvas access for all participants (post-its, drawing, move/edit nodes)
-- AI chat visible to all, editable only by facilitator
-- Facilitator-only step progression
-- Participant list/presence indicators
-
 ## Current State
 
-**Shipped:** v1.8 Onboarding + Payments (2026-02-26)
+**Shipped:** v1.9 Multiplayer Collaboration (2026-02-28)
 **Live at:** https://workshoppilot.ai
-**Codebase:** ~50,655 lines of TypeScript across ~280+ files
-**Tech stack:** Clerk + Neon + Gemini + Drizzle + Stripe + AI SDK 6 + ReactFlow + Konva.js + Zustand + Playwright + Vercel — all validated in production
-**Milestones:** v0.5 (shell, 2d) + v1.0 (AI, 3d) + v1.1 (canvas, 2d) + v1.2 (whiteboard, 2d) + v1.3 (visual, 1d) + v1.4 (polish, 1d) + v1.5 (launch, 2d) + v1.6 (prod polish, 1d) + v1.7 (build pack, <1d) + v1.8 (payments, 2d) = 17 days total
+**Codebase:** ~54,595 lines of TypeScript across ~290+ files
+**Tech stack:** Clerk + Neon + Gemini + Drizzle + Stripe + Liveblocks + AI SDK 6 + ReactFlow + Konva.js + Zustand + Playwright + Vercel — all validated in production
+**Milestones:** v0.5 (shell, 2d) + v1.0 (AI, 3d) + v1.1 (canvas, 2d) + v1.2 (whiteboard, 2d) + v1.3 (visual, 1d) + v1.4 (polish, 1d) + v1.5 (launch, 2d) + v1.6 (prod polish, 1d) + v1.7 (build pack, <1d) + v1.8 (payments, 2d) + v1.9 (multiplayer, 3d) = 20 days total
 
 **Known issues / tech debt:**
 - Next.js middleware → proxy convention migration (non-blocking)
@@ -253,7 +240,6 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Mobile grid optimization deferred (may need tablet-first approach)
 - E2E back-navigation testing deferred (forward-only tested)
 - /api/dev/seed-workshop build error (pre-existing, TypeError on width property)
-- isPublicRoute in proxy.ts defined but unused (pricing works via default-allow)
 - TODO in sign-up-modal.tsx: configure first name/last name as required in Clerk Dashboard
 - ClerkProvider uses hardcoded #6b7a2f (Clerk API requires hex) — slightly different from app olive tokens
 - PDF/PPT export deferred to future milestone — v1.7 delivers Markdown + JSON only
@@ -261,6 +247,8 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - price-config.ts amountCents field is dead code (defined but never consumed)
 - Vercel Deployment Protection may block /api/webhooks/stripe in preview — add to bypass list
 - Agency tier absent from pricing page (PRIC-02 deferred)
+- SYNC-04 (per-participant Crazy 8s slots) deferred to v2 — requires partitioned Liveblocks storage
+- Undo/redo disabled in multiplayer mode (liveblocks() + temporal() TypeScript incompatible)
 
 ---
-*Last updated: 2026-02-26 after v1.9 milestone started*
+*Last updated: 2026-02-28 after v1.9 milestone*
