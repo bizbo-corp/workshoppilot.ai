@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Dot Voting & Mobile Gate
 status: unknown
-last_updated: "2026-02-28T03:52:09.414Z"
+last_updated: "2026-02-28T03:57:00.000Z"
 progress:
   total_phases: 37
   completed_phases: 36
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 ## Current Position
 
 Phase: 59 of 62 (Voting Types + Store Foundation)
-Plan: 01 of 2 complete
-Status: In progress (1/2 plans done)
-Last activity: 2026-02-28 — 59-01 complete: voting-types.ts + canvas-store voting actions
+Plan: 02 of 2 complete
+Status: Complete (2/2 plans done)
+Last activity: 2026-02-28 — 59-02 complete: multiplayer voting actions + storageMapping + RoomEvents + provider props
 
 Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
 
@@ -50,6 +50,7 @@ Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
 
 *v2.0 metrics will accumulate here as plans complete.*
 | Phase 59-voting-types-store-foundation P01 | 3 | 2 tasks | 3 files |
+| Phase 59-voting-types-store-foundation P02 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -62,7 +63,8 @@ Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
 - [v2.0 Roadmap]: Mobile gate scoped to workshop/[sessionId]/layout.tsx only — landing page, dashboard, and pricing remain accessible on mobile.
 - [v1.9 Roadmap]: SYNC-04 (per-participant Crazy 8s slots) deferred to v2+ — relevant context for Phase 61 voting work.
 - [Phase 59-01]: voteBudget default is 2 (locked STATE.md decision) — NNGroup 25%-of-options rule: 8 slots × 25% = 2
-- [Phase 59-01]: Multiplayer voting actions are stubs (no-ops) until Phase 61 wires to Liveblocks storageMapping
+- [Phase 59-02]: VOTING_CLOSED carries no vote tally payload (VOTE-06 anonymous voting compliance) — results read from CRDT storage
+- [Phase 59-02]: Multiplayer voting actions fully wired to Liveblocks storageMapping — CRDT sync active for dotVotes and votingSession
 
 ### Pending Todos
 
@@ -75,5 +77,5 @@ None — roadmap defined, ready to plan Phase 59.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 59-01-PLAN.md — voting types + canvas store foundation
+Stopped at: Completed 59-02-PLAN.md — multiplayer voting actions + storageMapping + RoomEvents + provider props
 Resume file: None

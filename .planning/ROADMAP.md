@@ -190,8 +190,8 @@ See `milestones/v1.9-ROADMAP.md` for full details.
   4. `RoomEvent` union in `liveblocks/config.ts` includes `VOTING_OPENED` and `VOTING_CLOSED` event types for UI phase transitions
 **Plans**: 2 plans
 Plans:
-- [ ] 59-01-PLAN.md — Voting types file + solo canvas store extension
-- [ ] 59-02-PLAN.md — Multiplayer store + Liveblocks RoomEvent + CanvasStoreProvider
+- [x] 59-01-PLAN.md — Voting types file + solo canvas store extension
+- [x] 59-02-PLAN.md — Multiplayer store + Liveblocks RoomEvent + CanvasStoreProvider
 
 ### Phase 60: Core Voting UI + Solo Path
 **Goal**: A solo user can complete the full dot voting flow on their Crazy 8s sketches — place votes, see the budget HUD, undo votes, close voting, see ranked results, and select ideas to advance to Step 9
@@ -241,7 +241,7 @@ Plans:
 | 43-46. Build Pack | v1.7 | 7/7 | Complete | 2026-02-25 |
 | 47-53. Onboarding + Payments | v1.8 | 11/11 | Complete | 2026-02-26 |
 | 54-58. Multiplayer Collaboration | v1.9 | 12/12 | Complete | 2026-02-28 |
-| 59. Voting Types + Store Foundation | 1/2 | In Progress|  | - |
+| 59. Voting Types + Store Foundation | v2.0 | 2/2 | Complete | 2026-02-28 |
 | 60. Core Voting UI + Solo Path | v2.0 | 0/TBD | Not started | - |
 | 61. Multiplayer Voting | v2.0 | 0/TBD | Not started | - |
 | 62. Mobile Gate | v2.0 | 0/TBD | Not started | - |
