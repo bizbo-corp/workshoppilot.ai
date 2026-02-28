@@ -188,7 +188,10 @@ See `milestones/v1.9-ROADMAP.md` for full details.
   2. Solo canvas store contains `dotVotes` and `votingSession` fields with actions: `castVote`, `retractVote`, `openVoting`, `closeVoting`, `setVotingResults`, `resetVoting`
   3. Multiplayer canvas store mirrors the same fields and actions with `storageMapping` entries so Liveblocks CRDT syncs vote state automatically
   4. `RoomEvent` union in `liveblocks/config.ts` includes `VOTING_OPENED` and `VOTING_CLOSED` event types for UI phase transitions
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 59-01-PLAN.md — Voting types file + solo canvas store extension
+- [ ] 59-02-PLAN.md — Multiplayer store + Liveblocks RoomEvent + CanvasStoreProvider
 
 ### Phase 60: Core Voting UI + Solo Path
 **Goal**: A solo user can complete the full dot voting flow on their Crazy 8s sketches — place votes, see the budget HUD, undo votes, close voting, see ranked results, and select ideas to advance to Step 9
