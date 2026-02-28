@@ -16,7 +16,7 @@ Requirements for v2.0 Dot Voting & Mobile Gate. Each maps to roadmap phases.
 - [x] **VOTE-05**: Facilitator can open and close voting session
 - [x] **VOTE-06**: Votes are anonymous (hidden from others) until facilitator closes voting
 - [x] **VOTE-07**: Ranked results revealed simultaneously to all when voting closes
-- [ ] **VOTE-08**: Facilitator manually selects which ideas advance to Step 9
+- [x] **VOTE-08**: Facilitator manually selects which ideas advance to Step 9
 - [x] **VOTE-09**: User can dot-vote in solo workshops (self-prioritization)
 - [ ] **VOTE-10**: User can dot-vote in multiplayer workshops with real-time sync
 - [ ] **VOTE-11**: Facilitator can set countdown timer that auto-closes voting on expiry
@@ -64,7 +64,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VOTE-05 | Phase 59 | Complete |
 | VOTE-06 | Phase 59 | Complete |
 | VOTE-07 | Phase 59 | Complete |
-| VOTE-08 | Phase 60 | Pending |
+| VOTE-08 | Phase 60 | Complete |
 | VOTE-09 | Phase 60 | Complete |
 | VOTE-10 | Phase 61 | Pending |
 | VOTE-11 | Phase 61 | Pending |
