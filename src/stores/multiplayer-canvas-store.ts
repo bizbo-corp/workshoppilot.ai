@@ -44,6 +44,8 @@ import type { BrainRewritingMatrix, BrainRewritingCell } from '@/lib/canvas/brai
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
+import type { DotVote, VotingSession, VotingResult } from '@/lib/canvas/voting-types';
+import { DEFAULT_VOTING_SESSION } from '@/lib/canvas/voting-types';
 
 type InitState = {
   stickyNotes: StickyNote[];
@@ -57,6 +59,8 @@ type InitState = {
   hmwCards?: HmwCardData[];
   selectedSlotIds?: string[];
   brainRewritingMatrices?: BrainRewritingMatrix[];
+  dotVotes?: DotVote[];
+  votingSession?: VotingSession;
 };
 
 /**
@@ -79,6 +83,8 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
     hmwCards: initState?.hmwCards || [],
     selectedSlotIds: initState?.selectedSlotIds || [],
     brainRewritingMatrices: initState?.brainRewritingMatrices || [],
+    dotVotes: initState?.dotVotes || [],
+    votingSession: initState?.votingSession || DEFAULT_VOTING_SESSION,
     gridColumns: initState?.gridColumns || [],
     isDirty: false,
     highlightedCell: null,
@@ -586,6 +592,16 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
             ),
           })),
 
+        // Voting actions — Phase 61 will wire these to Liveblocks storageMapping.
+        // For now they are no-ops to satisfy the CanvasActions type contract.
+        // In solo sessions these are handled by the solo canvas store.
+        castVote: (_vote: Omit<DotVote, 'id'>) => {},
+        retractVote: (_voteId: string) => {},
+        openVoting: (_voteBudget?: number) => {},
+        closeVoting: () => {},
+        setVotingResults: (_results: VotingResult[]) => {},
+        resetVoting: () => {},
+
         // no-ops in multiplayer — Liveblocks Storage is authoritative, not Neon auto-save
         markClean: () => {},
         markDirty: () => {},
@@ -598,6 +614,8 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
         storageMapping: {
           // ONLY durable fields — synced to Liveblocks Storage CRDT
           // Ephemeral fields MUST NOT be here — they would thrash between participants
+          // NOTE: dotVotes and votingSession will be added to storageMapping in Phase 61
+          // when voting actions are wired to Liveblocks for multiplayer sync.
           stickyNotes: true,
           drawingNodes: true,
           gridColumns: true,

@@ -8,6 +8,8 @@ import type { BrainRewritingMatrix, BrainRewritingCell } from '@/lib/canvas/brai
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
+import type { DotVote, VotingSession, VotingResult } from '@/lib/canvas/voting-types';
+import { DEFAULT_VOTING_SESSION } from '@/lib/canvas/voting-types';
 
 export type PendingHmwChipSelection = {
   cardId: string;
@@ -86,6 +88,8 @@ export type CanvasState = {
   hmwCards: HmwCardData[];
   selectedSlotIds: string[];
   brainRewritingMatrices: BrainRewritingMatrix[];
+  dotVotes: DotVote[];
+  votingSession: VotingSession;
   isDirty: boolean;
   gridColumns: GridColumn[]; // Dynamic columns, initialized from step config
   highlightedCell: { row: number; col: number } | null;
@@ -150,13 +154,19 @@ export type CanvasActions = {
   setBrainRewritingMatrices: (matrices: BrainRewritingMatrix[]) => void;
   updateBrainRewritingCell: (slotId: string, cellId: string, updates: Partial<BrainRewritingCell>) => void;
   toggleBrainRewritingIncluded: (slotId: string) => void;
+  castVote: (vote: Omit<DotVote, 'id'>) => void;
+  retractVote: (voteId: string) => void;
+  openVoting: (voteBudget?: number) => void;
+  closeVoting: () => void;
+  setVotingResults: (results: VotingResult[]) => void;
+  resetVoting: () => void;
   markClean: () => void;
   markDirty: () => void;
 };
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; brainRewritingMatrices?: BrainRewritingMatrix[] }) => {
+export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; brainRewritingMatrices?: BrainRewritingMatrix[]; dotVotes?: DotVote[]; votingSession?: VotingSession }) => {
   const DEFAULT_STATE: CanvasState = {
     stickyNotes: initState?.stickyNotes || [],
     drawingNodes: initState?.drawingNodes || [],
@@ -168,6 +178,8 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
     hmwCards: initState?.hmwCards || [],
     selectedSlotIds: initState?.selectedSlotIds || [],
     brainRewritingMatrices: initState?.brainRewritingMatrices || [],
+    dotVotes: initState?.dotVotes || [],
+    votingSession: initState?.votingSession || DEFAULT_VOTING_SESSION,
     gridColumns: initState?.gridColumns || [],
     isDirty: false,
     highlightedCell: null,
@@ -786,6 +798,50 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             isDirty: true,
           })),
 
+        castVote: (vote) =>
+          set((state) => ({
+            dotVotes: [
+              ...state.dotVotes,
+              { ...vote, id: crypto.randomUUID() },
+            ],
+            isDirty: true,
+          })),
+
+        retractVote: (voteId) =>
+          set((state) => ({
+            dotVotes: state.dotVotes.filter((v) => v.id !== voteId),
+            isDirty: true,
+          })),
+
+        openVoting: (voteBudget) =>
+          set((state) => ({
+            votingSession: {
+              ...state.votingSession,
+              status: 'open' as const,
+              voteBudget: voteBudget ?? state.votingSession.voteBudget,
+            },
+            isDirty: true,
+          })),
+
+        closeVoting: () =>
+          set((state) => ({
+            votingSession: { ...state.votingSession, status: 'closed' as const },
+            isDirty: true,
+          })),
+
+        setVotingResults: (results) =>
+          set((state) => ({
+            votingSession: { ...state.votingSession, results },
+            isDirty: true,
+          })),
+
+        resetVoting: () =>
+          set(() => ({
+            dotVotes: [],
+            votingSession: DEFAULT_VOTING_SESSION,
+            isDirty: true,
+          })),
+
         markClean: () =>
           set(() => ({
             isDirty: false,
@@ -809,6 +865,8 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
           hmwCards: state.hmwCards,
           selectedSlotIds: state.selectedSlotIds,
           brainRewritingMatrices: state.brainRewritingMatrices,
+          dotVotes: state.dotVotes,
+          votingSession: state.votingSession,
         }),
         limit: 50,
         equality: (pastState, currentState) =>
