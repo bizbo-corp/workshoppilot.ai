@@ -8,6 +8,7 @@
 
 import { cn } from '@/lib/utils';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import type { DotVote } from '@/lib/canvas/voting-types';
 import { Pencil, Loader2 } from 'lucide-react';
 
 interface Crazy8sGridProps {
@@ -17,6 +18,13 @@ interface Crazy8sGridProps {
   onDescriptionChange: (slotId: string, description: string) => void;
   aiPrompts?: string[];  // Optional sketch prompts from AI (Plan 28-05 feature hook)
   savingSlotId?: string | null;
+  // Voting mode props
+  votingMode?: boolean;
+  dotVotes?: DotVote[];
+  voterId?: string;
+  remainingBudget?: number;
+  onCastVote?: (slotId: string) => void;
+  onRetractVote?: (voteId: string) => void;
 }
 
 /**
@@ -24,7 +32,7 @@ interface Crazy8sGridProps {
  * Displays 8 sketch slots in a 2x4 layout with empty/filled states
  * Supports editable titles, descriptions, and AI-suggested prompts
  */
-export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionChange, aiPrompts, savingSlotId }: Crazy8sGridProps) {
+export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionChange, aiPrompts, savingSlotId, votingMode, dotVotes, voterId, remainingBudget, onCastVote, onRetractVote }: Crazy8sGridProps) {
   return (
     <div className="w-full">
       {/* Instructions header */}
@@ -41,6 +49,14 @@ export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionCh
           const hasPreFill = Boolean(slot.title || slot.description);
           const isSaving = savingSlotId === slot.slotId;
 
+          // Voting mode computed values
+          const slotVoteCount = votingMode
+            ? (dotVotes || []).filter((v) => v.slotId === slot.slotId).length
+            : 0;
+          const myVotesOnSlot = votingMode
+            ? (dotVotes || []).filter((v) => v.slotId === slot.slotId && v.voterId === voterId)
+            : [];
+
           return (
             <div
               key={slot.slotId}
@@ -56,6 +72,34 @@ export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionCh
               <div className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-background border flex items-center justify-center text-xs font-semibold">
                 {index + 1}
               </div>
+
+              {/* Vote count badge (top-right, clickable for retract) */}
+              {votingMode && slotVoteCount > 0 && (
+                <button
+                  className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center shadow-sm hover:bg-primary/80 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Retract the most recent vote on this slot from this voter
+                    const lastVote = myVotesOnSlot[myVotesOnSlot.length - 1];
+                    if (lastVote) onRetractVote?.(lastVote.id);
+                  }}
+                  title="Click to retract one vote"
+                >
+                  {slotVoteCount}
+                </button>
+              )}
+
+              {/* Vote button (bottom-left, "+1") */}
+              {votingMode && (
+                <button
+                  className="absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded-full bg-primary text-primary-foreground px-2.5 py-1 text-xs font-semibold shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={(e) => { e.stopPropagation(); onCastVote?.(slot.slotId); }}
+                  disabled={(remainingBudget ?? 0) <= 0}
+                  title="Cast a vote"
+                >
+                  +1
+                </button>
+              )}
 
               {/* Saving spinner overlay */}
               {isSaving && (
