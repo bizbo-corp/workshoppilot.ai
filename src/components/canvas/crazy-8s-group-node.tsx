@@ -17,6 +17,10 @@ export type Crazy8sGroupNodeData = {
   onSelectionChange?: (slotIds: string[]) => void;
   onConfirmSelection?: (skip: boolean) => void;
   onBackToDrawing?: () => void;
+  // Voting mode props (pass-through to Crazy8sCanvas)
+  votingMode?: boolean;
+  onVoteSelectionConfirm?: (selectedSlotIds: string[]) => void;
+  onReVote?: () => void;
 };
 
 export type Crazy8sGroupNode = Node<Crazy8sGroupNodeData, 'crazy8sGroupNode'>;
@@ -198,7 +202,13 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
           )}
         </div>
         <div className="flex-1 min-h-0">
-          <Crazy8sCanvas workshopId={data.workshopId} stepId={data.stepId} />
+          <Crazy8sCanvas
+            workshopId={data.workshopId}
+            stepId={data.stepId}
+            votingMode={data.votingMode}
+            onVoteSelectionConfirm={data.onVoteSelectionConfirm}
+            onReVote={data.onReVote}
+          />
         </div>
       </div>
     </div>

@@ -85,6 +85,10 @@ export type MindMapCanvasProps = {
   onBrainRewritingCellUpdate?: (slotId: string, cellId: string, imageUrl: string, drawingId: string) => void;
   onBrainRewritingToggleIncluded?: (slotId: string) => void;
   onBrainRewritingDone?: () => void;
+  // Voting mode pass-through to Crazy8sCanvas
+  votingMode?: boolean;
+  onVoteSelectionConfirm?: (selectedSlotIds: string[]) => void;
+  onReVote?: () => void;
 };
 
 export function MindMapCanvas(props: MindMapCanvasProps) {
@@ -112,6 +116,9 @@ function MindMapCanvasInner({
   onBrainRewritingCellUpdate,
   onBrainRewritingToggleIncluded,
   onBrainRewritingDone,
+  votingMode,
+  onVoteSelectionConfirm,
+  onReVote,
 }: MindMapCanvasProps) {
   const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
@@ -379,9 +386,13 @@ function MindMapCanvasInner({
         onSelectionChange,
         onConfirmSelection,
         onBackToDrawing,
+        // Voting mode pass-through
+        votingMode,
+        onVoteSelectionConfirm,
+        onReVote,
       },
     };
-  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing]);
+  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing, votingMode, onVoteSelectionConfirm, onReVote]);
 
   // Brain rewriting group nodes — positioned to the right of Crazy 8s
   const brainRewritingNodes = useMemo<Node[]>(() => {

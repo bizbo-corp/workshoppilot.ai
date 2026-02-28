@@ -6,6 +6,7 @@ import type { UIMessage } from 'ai';
 import { ChatPanel } from './chat-panel';
 import { StepNavigation } from './step-navigation';
 import { MindMapCanvas } from './mind-map-canvas';
+import { VotingHud } from './voting-hud';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { fireConfetti } from '@/lib/utils/confetti';
@@ -52,6 +53,7 @@ export function IdeationSubStepContainer({
   const crazy8sSlots = useCanvasStore(state => state.crazy8sSlots);
   const selectedSlotIds = useCanvasStore(state => state.selectedSlotIds);
   const brainRewritingMatrices = useCanvasStore(state => state.brainRewritingMatrices);
+  const votingSession = useCanvasStore(state => state.votingSession);
   const canvasStoreApi = useCanvasStoreApi();
 
   // Compute initial phase synchronously from store — eliminates flash of wrong phase on refresh
@@ -65,6 +67,14 @@ export function IdeationSubStepContainer({
         showCrazy8s: true,
         selectedSlotIds: state.selectedSlotIds,
         artifactConfirmed: isComplete,
+      };
+    } else if (state.votingSession.status === 'open' || state.votingSession.status === 'closed') {
+      // Voting was in progress — resume into idea-selection (voting lives there)
+      return {
+        phase: 'idea-selection' as IdeationPhase,
+        showCrazy8s: true,
+        selectedSlotIds: state.selectedSlotIds,
+        artifactConfirmed: false,
       };
     } else if (state.selectedSlotIds.length > 0) {
       return {
@@ -291,6 +301,33 @@ export function IdeationSubStepContainer({
     [canvasStoreApi]
   );
 
+  // Voting: confirm selected ideas from voting results → brain rewriting transition
+  const handleVoteSelectionConfirm = React.useCallback(async (selectedIds: string[]) => {
+    // Update local selected state
+    setLocalSelectedSlotIds(selectedIds);
+    // Persist to store
+    const state = canvasStoreApi.getState();
+    state.setSelectedSlotIds(selectedIds);
+
+    // Initialize brain rewriting matrices for selected slots
+    const matrices = selectedIds.map((slotId) => {
+      const slot = state.crazy8sSlots.find((s) => s.slotId === slotId);
+      return createEmptyMatrix(slotId, slot?.imageUrl);
+    });
+    state.setBrainRewritingMatrices(matrices);
+
+    // Persist including new matrices
+    await flushCanvasState();
+    setCurrentPhase('brain-rewriting');
+  }, [canvasStoreApi, flushCanvasState]);
+
+  // Voting: reset and re-open voting (solo forgiveness)
+  const handleReVote = React.useCallback(() => {
+    const state = canvasStoreApi.getState();
+    state.resetVoting(); // clears dotVotes + sets status back to 'idle'
+    state.openVoting(); // immediately re-opens with same voteBudget
+  }, [canvasStoreApi]);
+
   // Show confirm button after AI's first response (auto-start trigger = 1, AI response = 2)
   const hasEnoughMessages = liveMessageCount >= 2;
 
@@ -328,6 +365,13 @@ export function IdeationSubStepContainer({
 
   // Render the canvas area — always MindMapCanvas, with phase-appropriate props
   const renderCanvas = () => {
+    // Voting is active during idea-selection phase
+    const isVotingActive = currentPhase === 'idea-selection';
+
+    // Old inline selection mode is disabled when voting has been started
+    // (VotingHud and VotingResultsPanel take over the selection UX)
+    const useOldSelectionMode = isVotingActive && votingSession.status === 'idle';
+
     return (
       <div className="relative h-full">
         {/* Collapse button */}
@@ -343,6 +387,11 @@ export function IdeationSubStepContainer({
           </div>
         )}
 
+        {/* Voting HUD — mounted at panel level, outside scroll container */}
+        {isVotingActive && votingSession.status !== 'closed' && (
+          <VotingHud />
+        )}
+
         {stepId && (
           <MindMapCanvas
             workshopId={workshopId}
@@ -352,8 +401,8 @@ export function IdeationSubStepContainer({
             hmwGoals={hmwGoals}
             showCrazy8s={showCrazy8s}
             onSaveCrazy8s={handleSaveCrazy8s}
-            // Selection mode (shown inline on crazy 8s node)
-            selectionMode={currentPhase === 'idea-selection'}
+            // Selection mode: disabled when voting is active (voting UI takes over)
+            selectionMode={useOldSelectionMode}
             selectedSlotIds={localSelectedSlotIds}
             onSelectionChange={setLocalSelectedSlotIds}
             onConfirmSelection={handleConfirmSelection}
@@ -363,6 +412,10 @@ export function IdeationSubStepContainer({
             onBrainRewritingCellUpdate={handleBrainRewritingCellUpdate}
             onBrainRewritingToggleIncluded={handleBrainRewritingToggleIncluded}
             onBrainRewritingDone={handleSaveBrainRewriting}
+            // Voting mode (NEW)
+            votingMode={isVotingActive}
+            onVoteSelectionConfirm={handleVoteSelectionConfirm}
+            onReVote={handleReVote}
           />
         )}
       </div>

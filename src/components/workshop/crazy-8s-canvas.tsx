@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Crazy8sGrid } from './crazy-8s-grid';
+import { VotingResultsPanel } from './voting-results-panel';
 import { EzyDrawLoader } from '@/components/ezydraw/ezydraw-loader';
 import { saveDrawing, loadDrawing, updateDrawing } from '@/actions/drawing-actions';
 import { simplifyDrawingElements } from '@/lib/drawing/simplify';
@@ -17,10 +18,15 @@ import { type DrawingElement, type VectorData, parseVectorJson } from '@/lib/dra
 import type { EzyDrawSaveResult } from '@/components/ezydraw/ezydraw-modal';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 
 interface Crazy8sCanvasProps {
   workshopId: string;
   stepId: string;
+  /** True when IdeationSubStepContainer has the idea-selection phase active */
+  votingMode?: boolean;
+  onVoteSelectionConfirm?: (selectedSlotIds: string[]) => void;
+  onReVote?: () => void;
 }
 
 interface EzyDrawState {
@@ -35,12 +41,38 @@ interface EzyDrawState {
  * Crazy 8s Canvas Container
  * Manages 8-slot sketching grid with EzyDraw modal integration
  */
-export function Crazy8sCanvas({ workshopId, stepId }: Crazy8sCanvasProps) {
+export function Crazy8sCanvas({ workshopId, stepId, votingMode, onVoteSelectionConfirm, onReVote }: Crazy8sCanvasProps) {
   // Store selectors
   const crazy8sSlots = useCanvasStore((s) => s.crazy8sSlots);
   const updateCrazy8sSlot = useCanvasStore((s) => s.updateCrazy8sSlot);
   const setCrazy8sSlots = useCanvasStore((s) => s.setCrazy8sSlots);
   const storeApi = useCanvasStoreApi();
+
+  // Voting store selectors
+  const dotVotes = useCanvasStore((s) => s.dotVotes);
+  const votingSession = useCanvasStore((s) => s.votingSession);
+  const castVote = useCanvasStore((s) => s.castVote);
+  const retractVote = useCanvasStore((s) => s.retractVote);
+
+  // Voter identity
+  const { user } = useUser();
+  const voterId = user?.id ?? 'solo-anon';
+
+  // Derived voting budget
+  const myVotes = dotVotes.filter((v) => v.voterId === voterId);
+  const remainingBudget = votingSession.voteBudget - myVotes.length;
+
+  // Cast vote handler
+  const handleCastVote = useCallback((slotId: string) => {
+    if (remainingBudget <= 0 || votingSession.status !== 'open') return;
+    castVote({ slotId, voterId, voteIndex: myVotes.length });
+  }, [remainingBudget, votingSession.status, castVote, voterId, myVotes.length]);
+
+  // Retract vote handler
+  const handleRetractVote = useCallback((voteId: string) => {
+    if (votingSession.status !== 'open') return;
+    retractVote(voteId);
+  }, [votingSession.status, retractVote]);
 
   // EzyDraw modal state
   const [ezyDrawState, setEzyDrawState] = useState<EzyDrawState | null>(null);
@@ -291,8 +323,8 @@ export function Crazy8sCanvas({ workshopId, stepId }: Crazy8sCanvasProps) {
 
   return (
     <div className="h-full overflow-auto p-6">
-      {/* AI Suggest Prompts button - only show when all slots empty */}
-      {allSlotsEmpty && crazy8sSlots.length > 0 && (
+      {/* AI Suggest Prompts button — only when not in voting mode and all slots empty */}
+      {!votingMode && allSlotsEmpty && crazy8sSlots.length > 0 && (
         <div className="flex justify-end mb-4">
           <Button
             variant="outline"
@@ -306,14 +338,28 @@ export function Crazy8sCanvas({ workshopId, stepId }: Crazy8sCanvasProps) {
         </div>
       )}
 
-      <Crazy8sGrid
-        slots={crazy8sSlots}
-        onSlotClick={handleSlotClick}
-        onTitleChange={handleTitleChange}
-        onDescriptionChange={handleDescriptionChange}
-        aiPrompts={aiPrompts}
-        savingSlotId={savingSlotId}
-      />
+      {/* Voting results panel replaces the grid when voting is closed */}
+      {votingMode && votingSession.status === 'closed' ? (
+        <VotingResultsPanel
+          onConfirmSelection={onVoteSelectionConfirm!}
+          onReVote={onReVote!}
+        />
+      ) : (
+        <Crazy8sGrid
+          slots={crazy8sSlots}
+          onSlotClick={handleSlotClick}
+          onTitleChange={handleTitleChange}
+          onDescriptionChange={handleDescriptionChange}
+          aiPrompts={aiPrompts}
+          savingSlotId={savingSlotId}
+          votingMode={votingMode && votingSession.status === 'open'}
+          dotVotes={dotVotes}
+          voterId={voterId}
+          remainingBudget={remainingBudget}
+          onCastVote={handleCastVote}
+          onRetractVote={handleRetractVote}
+        />
+      )}
 
       {ezyDrawState?.isOpen && (
         <EzyDrawLoader
