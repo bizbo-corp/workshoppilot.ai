@@ -203,7 +203,10 @@ Plans:
   3. User can click a voted sketch to retract one vote, returning it to their budget
   4. After voting closes, ranked results appear simultaneously showing each sketch ordered by vote count
   5. Facilitator (or solo user) can pick which ideas advance and those selections write to `selectedSlotIds` for Step 9
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 60-01-PLAN.md — Persistence fix + VotingHud + Crazy8sGrid voting badges
+- [ ] 60-02-PLAN.md — VotingResultsPanel + IdeationSubStepContainer integration
 
 ### Phase 61: Multiplayer Voting
 **Goal**: Participants in a multiplayer workshop can vote in real time with anonymous vote hiding, facilitator-controlled open/close via timer, and a completion indicator showing who has used all votes
