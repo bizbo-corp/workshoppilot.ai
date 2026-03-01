@@ -6,7 +6,7 @@
  * Handles drawing lifecycle: tap slot → draw → save PNG + vector JSON → display in slot
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Crazy8sGrid } from './crazy-8s-grid';
 import { VotingResultsPanel } from './voting-results-panel';
 import { EzyDrawLoader } from '@/components/ezydraw/ezydraw-loader';
@@ -19,6 +19,8 @@ import type { EzyDrawSaveResult } from '@/components/ezydraw/ezydraw-modal';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
+import { useMultiplayerContext } from './multiplayer-room';
+import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
 
 interface Crazy8sCanvasProps {
   workshopId: string;
@@ -58,9 +60,25 @@ export function Crazy8sCanvas({ workshopId, stepId, votingMode, onVoteSelectionC
   const { user } = useUser();
   const voterId = user?.id ?? 'solo-anon';
 
+  // Multiplayer context — safe in both solo and multiplayer
+  const { isFacilitator } = useMultiplayerContext();
+
   // Derived voting budget
   const myVotes = dotVotes.filter((v) => v.voterId === voterId);
   const remainingBudget = votingSession.voteBudget - myVotes.length;
+
+  // Build a deterministic voter color map for the facilitator god view.
+  // Each unique voter is assigned a color from PARTICIPANT_COLORS by arrival order.
+  // This avoids needing useOthers/useSelf in a component that may be in solo mode.
+  const voterColorMap = useMemo(() => {
+    if (!isFacilitator || !votingMode) return new Map<string, string>();
+    const uniqueVoterIds = [...new Set(dotVotes.map((v) => v.voterId))];
+    const map = new Map<string, string>();
+    uniqueVoterIds.forEach((id, i) => {
+      map.set(id, PARTICIPANT_COLORS[i % PARTICIPANT_COLORS.length]);
+    });
+    return map;
+  }, [dotVotes, isFacilitator, votingMode]);
 
   // Cast vote handler
   const handleCastVote = useCallback((slotId: string) => {
@@ -358,6 +376,8 @@ export function Crazy8sCanvas({ workshopId, stepId, votingMode, onVoteSelectionC
           remainingBudget={remainingBudget}
           onCastVote={handleCastVote}
           onRetractVote={handleRetractVote}
+          isFacilitator={isFacilitator}
+          voterColorMap={voterColorMap}
         />
       )}
 

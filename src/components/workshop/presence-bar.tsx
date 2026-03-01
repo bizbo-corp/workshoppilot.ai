@@ -1,9 +1,10 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { useOthers, useSelf, useOthersListener } from '@liveblocks/react';
 import { shallow } from '@liveblocks/react';
-import { Crown } from 'lucide-react';
+import { Crown, Check } from 'lucide-react';
+import { useCanvasStore } from '@/providers/canvas-store-provider';
 
 const IDLE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
@@ -66,6 +67,8 @@ function getInitials(name: string): string {
  * - Collapsed: overlapping colored circles with initials
  * - Expanded: full list with name, online/idle dot, and crown for the facilitator
  * - Idle participants (no cursor activity for 2+ min) shown semi-transparent with a yellow dot
+ * - During open voting: green checkmark badge on avatars of participants who have placed all votes
+ *   Checkmarks disappear dynamically if a participant retracts a vote below their budget
  *
  * Must be rendered inside the Liveblocks RoomProvider tree.
  */
@@ -78,6 +81,7 @@ export function PresenceBar() {
     (others) =>
       others.map((o) => ({
         connectionId: o.connectionId,
+        id: o.id,  // Liveblocks userId — matches DotVote.voterId
         name: o.info?.name ?? 'Unknown',
         color: o.info?.color ?? '#6366f1',
         role: o.info?.role ?? 'participant',
@@ -86,14 +90,35 @@ export function PresenceBar() {
   );
 
   const self = useSelf((me) => ({
+    id: me.id,  // Liveblocks userId — matches DotVote.voterId
     name: me.info?.name ?? 'You',
     color: me.info?.color ?? '#6366f1',
     role: me.info?.role ?? 'participant',
   }));
 
+  // Voting state from canvas store — safe here (PresenceBar only renders inside MultiplayerRoomInner
+  // which is inside CanvasStoreProvider)
+  const dotVotes = useCanvasStore((s) => s.dotVotes);
+  const votingSession = useCanvasStore((s) => s.votingSession);
+
   const allParticipants = self
     ? [{ ...self, connectionId: -1, isSelf: true }, ...others.map((o) => ({ ...o, isSelf: false }))]
     : others.map((o) => ({ ...o, isSelf: false }));
+
+  // Derive the set of voter IDs who have placed all their votes (budget exhausted)
+  // Only meaningful during open voting — empty set otherwise
+  const completedVoterIds = useMemo(() => {
+    if (votingSession.status !== 'open') return new Set<string>();
+    const countByVoter = new Map<string, number>();
+    for (const vote of dotVotes) {
+      countByVoter.set(vote.voterId, (countByVoter.get(vote.voterId) ?? 0) + 1);
+    }
+    const completed = new Set<string>();
+    countByVoter.forEach((count, voterId) => {
+      if (count >= votingSession.voteBudget) completed.add(voterId);
+    });
+    return completed;
+  }, [dotVotes, votingSession.status, votingSession.voteBudget]);
 
   // Close expanded panel when clicking outside
   useEffect(() => {
@@ -117,6 +142,7 @@ export function PresenceBar() {
       >
         {allParticipants.map((p) => {
           const isIdle = !p.isSelf && idleIds.has(p.connectionId);
+          const isVoteComplete = votingSession.status === 'open' && !!p.id && completedVoterIds.has(p.id);
           return (
             <div
               key={p.connectionId}
@@ -128,12 +154,20 @@ export function PresenceBar() {
               title={p.isSelf ? `${p.name} (you) — Facilitator` : p.role === 'owner' ? `${p.name} — Facilitator` : p.name}
             >
               {getInitials(p.name)}
-              {isIdle && (
+              {/* Idle dot — suppressed when vote completion checkmark takes priority */}
+              {isIdle && !isVoteComplete && (
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-yellow-400 border-2 border-background" />
               )}
-              {p.role === 'owner' && !isIdle && (
+              {/* Crown — facilitator badge */}
+              {p.role === 'owner' && !isIdle && !isVoteComplete && (
                 <span className="absolute -top-1 -left-1 w-3.5 h-3.5">
                   <Crown className="w-3.5 h-3.5 text-amber-500 drop-shadow-sm" />
+                </span>
+              )}
+              {/* Vote completion checkmark — visible to all during open voting */}
+              {isVoteComplete && (
+                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-background flex items-center justify-center">
+                  <Check className="w-2 h-2 text-white" />
                 </span>
               )}
             </div>
@@ -149,6 +183,7 @@ export function PresenceBar() {
           </div>
           {allParticipants.map((p) => {
             const isIdle = !p.isSelf && idleIds.has(p.connectionId);
+            const isVoteComplete = votingSession.status === 'open' && !!p.id && completedVoterIds.has(p.id);
             return (
               <div key={p.connectionId} className="flex items-center gap-2 py-1.5">
                 <div
@@ -164,6 +199,12 @@ export function PresenceBar() {
                   )}
                 </span>
                 {p.role === 'owner' && <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                {/* Vote completion indicator in expanded view */}
+                {isVoteComplete && (
+                  <span className="flex items-center gap-0.5 text-[10px] text-green-600 font-medium shrink-0">
+                    <Check className="w-3 h-3" />
+                  </span>
+                )}
                 {/* Online/idle status dot */}
                 <span
                   className={`w-2 h-2 rounded-full shrink-0 ${

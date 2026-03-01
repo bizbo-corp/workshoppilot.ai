@@ -25,6 +25,9 @@ interface Crazy8sGridProps {
   remainingBudget?: number;
   onCastVote?: (slotId: string) => void;
   onRetractVote?: (voteId: string) => void;
+  // Multiplayer god view — facilitator sees per-voter attribution during open voting
+  isFacilitator?: boolean;
+  voterColorMap?: Map<string, string>; // voterId -> hex color
 }
 
 /**
@@ -32,7 +35,7 @@ interface Crazy8sGridProps {
  * Displays 8 sketch slots in a 2x4 layout with empty/filled states
  * Supports editable titles, descriptions, and AI-suggested prompts
  */
-export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionChange, aiPrompts, savingSlotId, votingMode, dotVotes, voterId, remainingBudget, onCastVote, onRetractVote }: Crazy8sGridProps) {
+export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionChange, aiPrompts, savingSlotId, votingMode, dotVotes, voterId, remainingBudget, onCastVote, onRetractVote, isFacilitator, voterColorMap }: Crazy8sGridProps) {
   return (
     <div className="w-full">
       {/* Instructions header */}
@@ -87,6 +90,22 @@ export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionCh
                 >
                   {slotVoteCount}
                 </button>
+              )}
+
+              {/* God view: per-voter colored dots (facilitator only, during open voting) */}
+              {votingMode && isFacilitator && slotVoteCount > 0 && voterColorMap && (
+                <div className="absolute top-10 right-2 z-10 flex flex-col items-end gap-0.5">
+                  {(dotVotes || [])
+                    .filter((v) => v.slotId === slot.slotId)
+                    .map((v) => (
+                      <span
+                        key={v.id}
+                        className="w-2.5 h-2.5 rounded-full border border-background/50 shadow-sm"
+                        style={{ backgroundColor: voterColorMap.get(v.voterId) ?? '#6366f1' }}
+                        title={`Voter: ${v.voterId}`}
+                      />
+                    ))}
+                </div>
               )}
 
               {/* Vote button (bottom-left, "+1") */}
