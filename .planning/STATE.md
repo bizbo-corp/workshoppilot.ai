@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Dot Voting & Mobile Gate
 status: unknown
-last_updated: "2026-02-28T09:02:14.501Z"
+last_updated: "2026-03-01T02:16:45.521Z"
 progress:
-  total_phases: 38
+  total_phases: 39
   completed_phases: 38
-  total_plans: 108
-  completed_plans: 108
+  total_plans: 110
+  completed_plans: 109
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** v2.0 Dot Voting & Mobile Gate — Phase 60 (Core Voting UI Solo Path)
+**Current focus:** v2.0 Dot Voting & Mobile Gate — Phase 61 (Multiplayer Voting)
 
 ## Current Position
 
-Phase: 60 of 62 (Core Voting UI Solo Path)
-Plan: 02 of 2 complete
-Status: Complete (2/2 plans done)
-Last activity: 2026-02-28 — 60-02 complete: VotingResultsPanel + voting lifecycle wired into Crazy8sCanvas + IdeationSubStepContainer
+Phase: 61 of 62 (Multiplayer Voting)
+Plan: 01 of 2 complete
+Status: In Progress (1/2 plans done)
+Last activity: 2026-03-01 — 61-01 complete: Timer-voting coupling + VotingEventListener broadcast listener
 
 Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
 
@@ -53,6 +53,7 @@ Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
 | Phase 59-voting-types-store-foundation P02 | 3 | 2 tasks | 3 files |
 | Phase 60-core-voting-ui-solo-path P01 | 12 | 2 tasks | 5 files |
 | Phase 60 P02 | 3 | 2 tasks | 5 files |
+| Phase 61-multiplayer-voting P01 | 25 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,10 @@ Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
 - [Phase 60-02]: VotingResultsPanel reads useCanvasStore directly (no prop drilling from parent)
 - [Phase 60-02]: Old selectionMode disabled when votingSession.status !== 'idle' — voting UI fully replaces inline selection UX
 - [Phase 60-02]: Voting props flow through Crazy8sGroupNode data to reach Crazy8sCanvas (required undocumented intermediary)
+- [Phase 61-01]: computeVotingResults extracted to src/lib/canvas/voting-utils.ts — shared between FacilitatorControls and VotingEventListener
+- [Phase 61-01]: FacilitatorControls added to Step 8 early return path — was missing from step-container.tsx step 8 branch
+- [Phase 61-01]: votingMode=true when brainRewritingMatrices.length===0 AND votingSession.status !== closed
+- [Phase 61-01]: Re-vote broadcast not needed in handleReVote — CRDT storageMapping syncs resetVoting()+openVoting() automatically
 
 ### Pending Todos
 
@@ -84,6 +89,6 @@ None — roadmap defined, ready to plan Phase 59.
 
 ## Session Continuity
 
-Last session: 2026-02-28
-Stopped at: Completed 60-02-PLAN.md — VotingResultsPanel + full voting lifecycle wired into Crazy8sCanvas + IdeationSubStepContainer
+Last session: 2026-03-01
+Stopped at: Completed 61-01-PLAN.md — timer-voting coupling and VotingEventListener broadcast listener
 Resume file: None

@@ -18,8 +18,8 @@ Requirements for v2.0 Dot Voting & Mobile Gate. Each maps to roadmap phases.
 - [x] **VOTE-07**: Ranked results revealed simultaneously to all when voting closes
 - [x] **VOTE-08**: Facilitator manually selects which ideas advance to Step 9
 - [x] **VOTE-09**: User can dot-vote in solo workshops (self-prioritization)
-- [ ] **VOTE-10**: User can dot-vote in multiplayer workshops with real-time sync
-- [ ] **VOTE-11**: Facilitator can set countdown timer that auto-closes voting on expiry
+- [x] **VOTE-10**: User can dot-vote in multiplayer workshops with real-time sync
+- [x] **VOTE-11**: Facilitator can set countdown timer that auto-closes voting on expiry
 - [ ] **VOTE-12**: Facilitator can see which participants have placed all votes (completion indicator)
 - [x] **VOTE-13**: User can undo a vote by clicking a voted sketch (retract, return to budget)
 
@@ -66,8 +66,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VOTE-07 | Phase 59 | Complete |
 | VOTE-08 | Phase 60 | Complete |
 | VOTE-09 | Phase 60 | Complete |
-| VOTE-10 | Phase 61 | Pending |
-| VOTE-11 | Phase 61 | Pending |
+| VOTE-10 | Phase 61 | Complete |
+| VOTE-11 | Phase 61 | Complete |
 | VOTE-12 | Phase 61 | Pending |
 | VOTE-13 | Phase 60 | Complete |
 | MOBI-01 | Phase 62 | Pending |
