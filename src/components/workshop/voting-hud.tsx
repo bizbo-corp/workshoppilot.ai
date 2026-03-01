@@ -4,15 +4,23 @@
  * VotingHud — Floating pill HUD for dot-vote budget and Start/Close Voting controls.
  *
  * States:
- *   idle   → "Start Voting" pill button
- *   open   → Budget dots + remaining count; "All votes placed" + "Close Voting" when exhausted
+ *   idle   → "Start Voting" pill button (solo only; hidden in multiplayer — timer drives voting)
+ *   open   → Budget dots + remaining count; "All votes placed" text when exhausted
+ *            "Close Voting" button shown for solo only — multiplayer facilitator uses FacilitatorControls
  *   closed → Renders nothing (VotingResultsPanel from Plan 02 takes over)
+ *
+ * Multiplayer behaviour (via useMultiplayerContext):
+ *   - idle:  returns null (facilitator uses FacilitatorControls timer to start voting)
+ *   - open:  shows budget dots for ALL users; "All votes placed" text for anyone done
+ *            Close Voting button is hidden — facilitator uses FacilitatorControls
+ *   - closed: returns null (same as solo)
  */
 
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { CircleDot } from 'lucide-react';
+import { useMultiplayerContext } from './multiplayer-room';
 import type { VotingResult } from '@/lib/canvas/voting-types';
 
 interface VotingHudProps {
@@ -23,6 +31,9 @@ interface VotingHudProps {
 export function VotingHud({ onVotingClosed }: VotingHudProps) {
   const { user } = useUser();
   const voterId = user?.id ?? 'solo-anon';
+
+  // Multiplayer context — safe to call in both solo and multiplayer
+  const { isMultiplayer } = useMultiplayerContext();
 
   // Store selectors
   const dotVotes = useCanvasStore((state) => state.dotVotes);
@@ -37,8 +48,11 @@ export function VotingHud({ onVotingClosed }: VotingHudProps) {
   const totalBudget = votingSession.voteBudget;
   const remainingBudget = totalBudget - myVotes.length;
 
-  // ── Idle: Show "Start Voting" pill ─────────────────────────────────────────
+  // ── Idle: Show "Start Voting" pill (solo only) ──────────────────────────────
   if (votingSession.status === 'idle') {
+    // In multiplayer, voting is started by the facilitator via the timer in FacilitatorControls
+    if (isMultiplayer) return null;
+    // Solo: show Start Voting button
     return (
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30">
         <Button
@@ -118,14 +132,17 @@ export function VotingHud({ onVotingClosed }: VotingHudProps) {
         {allVotesPlaced ? (
           <>
             <span className="text-xs font-medium text-foreground">All votes placed</span>
-            <Button
-              variant="default"
-              size="sm"
-              className="rounded-full h-7 text-xs px-3"
-              onClick={handleCloseVoting}
-            >
-              Close Voting
-            </Button>
+            {/* Close Voting: solo only — in multiplayer, facilitator uses FacilitatorControls */}
+            {!isMultiplayer && (
+              <Button
+                variant="default"
+                size="sm"
+                className="rounded-full h-7 text-xs px-3"
+                onClick={handleCloseVoting}
+              >
+                Close Voting
+              </Button>
+            )}
           </>
         ) : (
           <span className="text-xs text-muted-foreground">
