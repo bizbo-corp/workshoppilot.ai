@@ -10,6 +10,9 @@ import { getRoomId, liveblocksClient, type CanvasElementStorable } from '@/lib/l
 import { PresenceBar } from './presence-bar';
 import { CountdownTimer } from './countdown-timer';
 import { SessionEndedOverlay } from './session-ended-overlay';
+import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
+import type { VotingResult } from '@/lib/canvas/voting-types';
+import { computeVotingResults } from '@/lib/canvas/voting-utils';
 
 /**
  * MultiplayerContext — provides participant color, multiplayer flag, and
@@ -134,11 +137,45 @@ function SessionEndedListener({ sessionId, workshopId }: { sessionId: string; wo
 }
 
 /**
+ * VotingEventListener — renderless component that listens for VOTING_OPENED
+ * and VOTING_CLOSED broadcast events from the facilitator.
+ *
+ * Participants receive these events and update their local store + UI state.
+ * The facilitator does NOT receive their own broadcasts (Liveblocks design),
+ * so the facilitator's store is updated directly in FacilitatorControls.
+ *
+ * Uses storeApi.getState() for VOTING_CLOSED to read fresh dotVotes at
+ * call time, avoiding stale closure (Pitfall 2 from RESEARCH.md).
+ */
+function VotingEventListener() {
+  const openVoting = useCanvasStore((s) => s.openVoting);
+  const closeVoting = useCanvasStore((s) => s.closeVoting);
+  const setVotingResults = useCanvasStore((s) => s.setVotingResults);
+  const storeApi = useCanvasStoreApi();
+
+  useEventListener(({ event }) => {
+    if (event.type === 'VOTING_OPENED') {
+      openVoting(event.voteBudget);
+    }
+    if (event.type === 'VOTING_CLOSED') {
+      // Read fresh state at call time — avoids stale closure (Pitfall 2)
+      const { dotVotes, crazy8sSlots } = storeApi.getState();
+      const results: VotingResult[] = computeVotingResults(dotVotes, crazy8sSlots);
+      closeVoting();
+      setVotingResults(results);
+    }
+  });
+
+  return null;
+}
+
+/**
  * MultiplayerRoomInner — rendered inside RoomProvider, reads the current
  * participant's color and role from Liveblocks presence and provides them
  * via context. Also renders PresenceBar (fixed overlay), JoinLeaveListener
  * (renderless), ReconnectionListener (renderless), StepChangedListener
- * (renderless), SessionEndedListener (renderless/overlay), and CountdownTimer.
+ * (renderless), SessionEndedListener (renderless/overlay), VotingEventListener
+ * (renderless), and CountdownTimer.
  */
 function MultiplayerRoomInner({ children, sessionId, workshopId }: { children: React.ReactNode; sessionId: string; workshopId: string }) {
   const self = useSelf();
@@ -155,6 +192,7 @@ function MultiplayerRoomInner({ children, sessionId, workshopId }: { children: R
       <ReconnectionListener />
       <StepChangedListener sessionId={sessionId} />
       <SessionEndedListener sessionId={sessionId} workshopId={workshopId} />
+      <VotingEventListener />
       <CountdownTimer />
       {children}
     </MultiplayerContext.Provider>

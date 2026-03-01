@@ -12,8 +12,7 @@ import { toast } from 'sonner';
 import { useMultiplayerContext } from './multiplayer-room';
 import { endWorkshopSession } from '@/actions/session-actions';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
-import type { DotVote, VotingResult } from '@/lib/canvas/voting-types';
-import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import { computeVotingResults } from '@/lib/canvas/voting-utils';
 
 // Timer preset durations in milliseconds
 const TIMER_PRESETS = [
@@ -52,35 +51,6 @@ function formatTime(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-/**
- * computeVotingResults — tallies dot votes across all crazy 8s slots and
- * returns ranked results. Ties share the same rank.
- *
- * Used by FacilitatorControls when timer expires or is cancelled while
- * votingMode is active. Mirrors the logic in VotingHud.handleCloseVoting.
- */
-function computeVotingResults(dotVotes: DotVote[], crazy8sSlots: Crazy8sSlot[]): VotingResult[] {
-  const voteCounts = new Map<string, number>();
-  for (const vote of dotVotes) {
-    voteCounts.set(vote.slotId, (voteCounts.get(vote.slotId) ?? 0) + 1);
-  }
-  const allSlotIds = crazy8sSlots.map((s) => s.slotId);
-  const sortedSlotIds = [...allSlotIds].sort((a, b) => {
-    return (voteCounts.get(b) ?? 0) - (voteCounts.get(a) ?? 0);
-  });
-  const results: VotingResult[] = [];
-  let currentRank = 1;
-  for (let i = 0; i < sortedSlotIds.length; i++) {
-    const slotId = sortedSlotIds[i];
-    const totalVotes = voteCounts.get(slotId) ?? 0;
-    if (i > 0) {
-      const prevVotes = voteCounts.get(sortedSlotIds[i - 1]) ?? 0;
-      if (totalVotes < prevVotes) currentRank = i + 1;
-    }
-    results.push({ slotId, totalVotes, rank: currentRank });
-  }
-  return results;
-}
 
 interface FacilitatorControlsProps {
   workshopId: string;
