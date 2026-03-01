@@ -18,6 +18,7 @@ import { WorkshopSidebar } from '@/components/layout/workshop-sidebar';
 import { WorkshopHeader } from '@/components/layout/workshop-header';
 import { MobileStepper } from '@/components/layout/mobile-stepper';
 import { PAYWALL_CUTOFF_DATE } from '@/lib/billing/paywall-config';
+import { MobileGate } from '@/components/workshop/mobile-gate';
 
 interface WorkshopLayoutProps {
   children: React.ReactNode;
@@ -85,7 +86,9 @@ export default async function WorkshopLayout({
   }
 
   return (
-    <SidebarProvider defaultOpen={false}>
+    <>
+      <MobileGate workshopName={session.workshop.title || 'New Workshop'} />
+      <SidebarProvider defaultOpen={false}>
       <div className="flex h-screen w-full">
         {/* Desktop: Sidebar */}
         <div className="hidden md:block">
@@ -114,6 +117,7 @@ export default async function WorkshopLayout({
           <main className="flex-1 overflow-hidden">{children}</main>
         </div>
       </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </>
   );
 }
