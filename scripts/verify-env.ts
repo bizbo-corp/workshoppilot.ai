@@ -78,12 +78,11 @@ if (isProduction) {
     hasErrors = true;
   }
 
-  // Liveblocks: production must use sk_prod_* keys, not sk_dev_* keys
+  // Liveblocks: warn if using dev key in production, but don't block build
+  // Production keys (sk_prod_*) require a paid Liveblocks plan; sk_dev_* keys work functionally
   const liveblocksSecretKey = process.env.LIVEBLOCKS_SECRET_KEY;
   if (liveblocksSecretKey && !liveblocksSecretKey.startsWith('sk_prod_')) {
-    console.error('❌ LIVEBLOCKS_SECRET_KEY is not a production key (sk_prod_*) but VERCEL_ENV is production');
-    console.error('   Please use a production Liveblocks key (starts with sk_prod_) for production deployments');
-    hasErrors = true;
+    console.warn('⚠️  LIVEBLOCKS_SECRET_KEY is a dev key (sk_dev_*) in production — upgrade Liveblocks plan for sk_prod_* keys');
   }
 }
 
