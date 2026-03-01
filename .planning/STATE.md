@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Dot Voting & Mobile Gate
 status: unknown
-last_updated: "2026-03-01T02:16:45.521Z"
+last_updated: "2026-03-01T02:22:00Z"
 progress:
   total_phases: 39
   completed_phases: 38
   total_plans: 110
-  completed_plans: 109
+  completed_plans: 110
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 
 ## Current Position
 
-Phase: 61 of 62 (Multiplayer Voting)
-Plan: 01 of 2 complete
-Status: In Progress (1/2 plans done)
-Last activity: 2026-03-01 — 61-01 complete: Timer-voting coupling + VotingEventListener broadcast listener
+Phase: 61 of 62 (Multiplayer Voting) — COMPLETE
+Plan: 02 of 2 complete
+Status: Phase Complete (2/2 plans done)
+Last activity: 2026-03-01 — 61-02 complete: Role-differentiated multiplayer voting UI (PresenceBar completion checkmarks, god view, read-only participants)
 
-Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
+Progress: [██░░░░░░░░] 20% (v2.0 milestone)
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
 | Phase 60-core-voting-ui-solo-path P01 | 12 | 2 tasks | 5 files |
 | Phase 60 P02 | 3 | 2 tasks | 5 files |
 | Phase 61-multiplayer-voting P01 | 25 | 2 tasks | 5 files |
+| Phase 61-multiplayer-voting P02 | 4 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,10 @@ Progress: [█░░░░░░░░░] 10% (v2.0 milestone)
 - [Phase 61-01]: FacilitatorControls added to Step 8 early return path — was missing from step-container.tsx step 8 branch
 - [Phase 61-01]: votingMode=true when brainRewritingMatrices.length===0 AND votingSession.status !== closed
 - [Phase 61-01]: Re-vote broadcast not needed in handleReVote — CRDT storageMapping syncs resetVoting()+openVoting() automatically
+- [Phase 61-02]: AttributionDots sub-component pattern — conditional mounting for safe useOthers/useSelf inside RoomProvider
+- [Phase 61-02]: Close Voting hidden in multiplayer for both facilitator and participants — FacilitatorControls timer is single close path
+- [Phase 61-02]: Voter color map in Crazy8sCanvas uses deterministic PARTICIPANT_COLORS by arrival order — avoids hook-in-solo-mode problem
+- [Phase 61-02]: Crown badge suppressed when vote completion checkmark active — checkmark takes priority (shared badge position)
 
 ### Pending Todos
 
@@ -90,5 +95,5 @@ None — roadmap defined, ready to plan Phase 59.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 61-01-PLAN.md — timer-voting coupling and VotingEventListener broadcast listener
+Stopped at: Completed 61-02-PLAN.md — role-differentiated multiplayer voting UI (Phase 61 complete)
 Resume file: None

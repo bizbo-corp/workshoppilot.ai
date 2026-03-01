@@ -174,7 +174,7 @@ See `milestones/v1.9-ROADMAP.md` for full details.
 
 - [x] **Phase 59: Voting Types + Store Foundation** - Data model, state shape, and store actions that all voting UI depends on (completed 2026-02-28)
 - [x] **Phase 60: Core Voting UI + Solo Path** - Complete dot voting UX end-to-end for solo workshops with persistence (completed 2026-02-28)
-- [ ] **Phase 61: Multiplayer Voting** - Real-time vote sync, facilitator controls, and participant indicators for multiplayer workshops
+- [x] **Phase 61: Multiplayer Voting** - Real-time vote sync, facilitator controls, and participant indicators for multiplayer workshops (completed 2026-03-01)
 - [ ] **Phase 62: Mobile Gate** - Dismissible phone-screen overlay scoped to workshop pages
 
 ## Phase Details
@@ -246,7 +246,7 @@ Plans:
 | 54-58. Multiplayer Collaboration | v1.9 | 12/12 | Complete | 2026-02-28 |
 | 59. Voting Types + Store Foundation | v2.0 | Complete    | 2026-02-28 | 2026-02-28 |
 | 60. Core Voting UI + Solo Path | 2/2 | Complete    | 2026-02-28 | - |
-| 61. Multiplayer Voting | 1/2 | In Progress|  | - |
+| 61. Multiplayer Voting | 2/2 | Complete   | 2026-03-01 | - |
 | 62. Mobile Gate | v2.0 | 0/TBD | Not started | - |
 
 **Total shipped:** 11 milestones, 58 phases, ~148 plans in 20 days
