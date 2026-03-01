@@ -6,7 +6,7 @@ import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
 /**
  * Client hook for admin guide editor — fetch, create, update, delete guides via API.
  */
-export function useAdminGuides(stepId: string) {
+export function useAdminGuides(stepId: string, enabled: boolean = true) {
   const [guides, setGuides] = useState<CanvasGuideData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,8 +32,10 @@ export function useAdminGuides(stepId: string) {
   }, []);
 
   useEffect(() => {
-    fetchGuides(stepId);
-  }, [stepId, fetchGuides]);
+    if (enabled) {
+      fetchGuides(stepId);
+    }
+  }, [stepId, fetchGuides, enabled]);
 
   // Cleanup timers on unmount
   useEffect(() => {

@@ -1,7 +1,8 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useStore } from 'zustand';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/shallow';
 import {
   createCanvasStore,
   type CanvasStore,
@@ -174,7 +175,7 @@ export function useCanvasStore<T>(selector: (store: CanvasStore) => T): T {
     throw new Error('useCanvasStore must be used within CanvasStoreProvider');
   }
 
-  return useStore(store, selector as (state: CanvasStore) => T);
+  return useStoreWithEqualityFn(store, selector as (state: CanvasStore) => T, shallow);
 }
 
 export function useCanvasStoreApi(): SoloCanvasStoreApi {
