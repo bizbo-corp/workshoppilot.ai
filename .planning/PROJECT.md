@@ -2,7 +2,7 @@
 
 ## What This Is
 
-An AI-powered digital facilitator that guides anyone from a vague idea through a structured 10-step design thinking process, producing validated, AI-coder-ready product specs. The AI isn't a sidebar assistant; it's the principal guide — leading users through conversational prompts, questioning, synthesizing, and generating structured outputs at each stage. Features a split-screen layout with interactive canvas: structured whiteboards for stakeholder rings (Step 2), empathy map zones (Step 4), and journey map swimlanes (Step 6), with AI suggest-then-confirm placement. Includes EzyDraw — an in-app drawing tool with pencil, shapes, UI kit, speech bubbles, and emoji — powering visual mind maps (Step 8a), Crazy 8s sketch grids (Step 8b), and AI-generated concept cards with SWOT analysis and feasibility ratings (Step 9). On workshop completion, Gemini generates a PRD and Tech Specs from all 10 steps of workshop data, downloadable as Markdown and JSON from a dedicated outputs page.
+An AI-powered digital facilitator that guides anyone from a vague idea through a structured 10-step design thinking process, producing validated, AI-coder-ready product specs. The AI isn't a sidebar assistant; it's the principal guide — leading users through conversational prompts, questioning, synthesizing, and generating structured outputs at each stage. Features a split-screen layout with interactive canvas: structured whiteboards for stakeholder rings (Step 2), empathy map zones (Step 4), and journey map swimlanes (Step 6), with AI suggest-then-confirm placement. Includes EzyDraw — an in-app drawing tool with pencil, shapes, UI kit, speech bubbles, and emoji — powering visual mind maps (Step 8a), Crazy 8s sketch grids (Step 8b) with dot voting for idea prioritization, and AI-generated concept cards with SWOT analysis and feasibility ratings (Step 9). Supports real-time multiplayer workshops with live canvas sync, guest join flow, facilitator controls, and anonymous dot voting with timer-controlled reveal. On workshop completion, Gemini generates a PRD and Tech Specs from all 10 steps of workshop data, downloadable as Markdown and JSON from a dedicated outputs page.
 
 ## Core Value
 
@@ -87,18 +87,12 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - ✓ Participant list/presence indicators with idle detection — v1.9
 - ✓ Facilitator viewport sync, countdown timer, session end flow — v1.9
 - ✓ Guest access to workshop outputs (read-only Build Pack) — v1.9
+- ✓ Dot voting on Crazy 8s sketches with configurable vote budget (default 2, range 1-8), multi-vote stacking, and vote retraction — v2.0
+- ✓ Ranked results panel with selection checkboxes for advancing ideas to Step 9 — v2.0
+- ✓ Multiplayer dot voting: anonymous votes, timer-coupled facilitator controls, completion indicators, per-voter attribution dots — v2.0
+- ✓ Mobile gate overlay for workshop pages (<1024px coarse pointer) with email-to-self and copy-link CTAs, sessionStorage dismissal — v2.0
 
 ### Active
-
-#### Current Milestone: v2.0 Dot Voting & Mobile Gate
-
-**Goal:** Add dot voting to Step 8 for idea prioritization (solo + multiplayer) and a mobile-aware gate for phone users.
-
-**Target features:**
-- Dot voting on Crazy 8s sketches with configurable vote counts, multi-vote support, facilitator-controlled open/close with timer
-- Facilitator reviews results and manually picks ideas to advance to Step 9
-- Works in both solo (self-prioritization) and multiplayer modes
-- Mobile phone gate (<768px) — "best on desktop" wall, dismissible
 
 #### Future — MMP (Visual & Solo Polish)
 - [ ] First-run onboarding tour (guided welcome highlighting chat, canvas, steps, navigation)
@@ -164,7 +158,7 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - **Entry Friction**: Must be near-zero — user types idea and starts immediately
 - **Desktop-First**: MVP targets desktop browsers; mobile deferred to MMP/FFP
 - **Multiplayer via Liveblocks**: Real-time CRDT sync for multiplayer workshops; solo workshops unchanged
-- **Existing Codebase**: ~54,595 lines TypeScript across ~290+ files, 58 phases shipped (11 milestones), production at workshoppilot.ai
+- **Existing Codebase**: ~55,873 lines TypeScript across ~300+ files, 62 phases shipped (12 milestones), production at workshoppilot.ai
 
 ## Key Decisions
 
@@ -234,14 +228,21 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | Inline UpgradeDialog (not page redirect) | User stays in workshop context at Step 6 | ✓ Good — low-friction conversion |
 | Open redirect validation at 3 points | Checkout route, success page, pricing page — defense in depth | ✓ Good — security |
 | Stripe apiVersion pinned to '2026-02-25.clover' | Prevents silent API contract changes on SDK upgrades | ✓ Good — stability |
+| Dual-store voting ownership (Zustand solo, Liveblocks multiplayer) | Prevents CRDT conflicts — never both authoritative simultaneously | ✓ Good — clean boundary |
+| Vote budget default 2 (NNGroup 25%-of-options rule) | 8 sketch slots × 25% = 2; configurable 1-8 for facilitator control | ✓ Good — research-backed default |
+| Anonymous votes until facilitator closes voting | Prevents groupthink anchoring (NNGroup research); results revealed simultaneously | ✓ Good — better ideation quality |
+| VOTING_OPENED/CLOSED as broadcast events (no vote payload) | Vote tallies live in CRDT storage only; broadcasts trigger UI phase transitions | ✓ Good — single source of truth |
+| sessionStorage for mobile gate (not localStorage) | Gate reappears in new tabs/sessions; localStorage would suppress indefinitely | ✓ Good — appropriate persistence |
+| Compound matchMedia (coarse pointer + <1024px) | Catches phones and portrait iPads; no unreliable userAgent sniffing | ✓ Good — CSS media feature query |
+| MobileGate outside SidebarProvider as Fragment sibling | Avoids stacking context issues from SidebarProvider transform/will-change | ✓ Good — z-[200] works correctly |
 
 ## Current State
 
-**Shipped:** v1.9 Multiplayer Collaboration (2026-02-28), starting v2.0 Dot Voting & Mobile Gate
+**Shipped:** v2.0 Dot Voting & Mobile Gate (2026-03-01)
 **Live at:** https://workshoppilot.ai
-**Codebase:** ~54,595 lines of TypeScript across ~290+ files
+**Codebase:** ~55,873 lines of TypeScript across ~300+ files
 **Tech stack:** Clerk + Neon + Gemini + Drizzle + Stripe + Liveblocks + AI SDK 6 + ReactFlow + Konva.js + Zustand + Playwright + Vercel — all validated in production
-**Milestones:** v0.5 (shell, 2d) + v1.0 (AI, 3d) + v1.1 (canvas, 2d) + v1.2 (whiteboard, 2d) + v1.3 (visual, 1d) + v1.4 (polish, 1d) + v1.5 (launch, 2d) + v1.6 (prod polish, 1d) + v1.7 (build pack, <1d) + v1.8 (payments, 2d) + v1.9 (multiplayer, 3d) = 20 days total
+**Milestones:** v0.5 (shell, 2d) + v1.0 (AI, 3d) + v1.1 (canvas, 2d) + v1.2 (whiteboard, 2d) + v1.3 (visual, 1d) + v1.4 (polish, 1d) + v1.5 (launch, 2d) + v1.6 (prod polish, 1d) + v1.7 (build pack, <1d) + v1.8 (payments, 2d) + v1.9 (multiplayer, 3d) + v2.0 (voting, 2d) = 22 days total
 
 **Known issues / tech debt:**
 - Next.js middleware → proxy convention migration (non-blocking)
@@ -260,4 +261,4 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Undo/redo disabled in multiplayer mode (liveblocks() + temporal() TypeScript incompatible)
 
 ---
-*Last updated: 2026-02-28 after v2.0 milestone start*
+*Last updated: 2026-03-01 after v2.0 milestone*

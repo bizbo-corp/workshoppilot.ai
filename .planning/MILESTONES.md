@@ -276,3 +276,28 @@
 
 ---
 
+
+## v2.0 Dot Voting & Mobile Gate (Shipped: 2026-03-01)
+
+**Delivered:** Added dot voting to Step 8 Crazy 8s for idea prioritization in both solo and multiplayer workshops, and a dismissible mobile gate overlay recommending desktop use for phone/tablet visitors on workshop pages.
+
+**Phases completed:** 59-62 (4 phases, 7 plans, 14 tasks)
+
+**Key accomplishments:**
+- Dot voting type system with dual-store foundation: solo votes via Zustand/JSONB, multiplayer votes via Liveblocks CRDT — correct ownership boundary prevents conflicts
+- VotingHud with budget dot glyphs, Crazy8sGrid vote badges + buttons, vote stacking, and retraction — full solo dot voting flow end-to-end
+- VotingResultsPanel with ranked results, thumbnails, selection checkboxes, confirm/re-vote — facilitator picks ideas advancing to Step 9
+- Multiplayer voting: timer-coupled facilitator controls, VOTING_OPENED/CLOSED broadcast events, anonymous vote hiding until close, VotingEventListener for participant sync
+- Per-voter colored attribution dots (facilitator-only post-close), PresenceBar completion checkmarks, god-view colored dots during open voting
+- Dismissible mobile gate overlay (z-[200], solid olive-950 bg) with compound matchMedia detection (coarse pointer + <1024px), sessionStorage dismissal, email-to-self mailto CTA, clipboard copy-link
+
+**Stats:**
+- 44 files changed (5,934 insertions, 97 deletions)
+- ~55,873 lines of TypeScript (total codebase)
+- 4 phases, 7 plans, 33 commits
+- 2 days (2026-02-28 → 2026-03-01)
+
+**Git range:** `feat(59-01)` → `feat(62-01)`
+
+---
+
