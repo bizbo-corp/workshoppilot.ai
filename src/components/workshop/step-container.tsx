@@ -156,6 +156,9 @@ export function StepContainer({
   const setPersonaTemplates = useCanvasStore((s) => s.setPersonaTemplates);
   const setHmwCards = useCanvasStore((s) => s.setHmwCards);
   const setBrainRewritingMatrices = useCanvasStore((s) => s.setBrainRewritingMatrices);
+  // Voting state — used to derive votingMode for FacilitatorControls in Step 8
+  const votingSession = useCanvasStore((s) => s.votingSession);
+  const brainRewritingMatrices = useCanvasStore((s) => s.brainRewritingMatrices);
   // HMW card counts as "content" only when all 4 fields are filled (card is 'filled')
   const hmwCardComplete = hmwCards.some((c) => c.cardState === 'filled');
   // Concept card counts as "content" only when all sections are filled (pitch, USP, SWOT, feasibility, billboard)
@@ -219,7 +222,7 @@ export function StepContainer({
   const [localCanvasGuides, setLocalCanvasGuides] = React.useState(canvasGuides);
 
   // Lift useAdminGuides hook for live preview + popover operations
-  const adminGuides = useAdminGuides(step?.id || '');
+  const adminGuides = useAdminGuides(step?.id || '', !!isAdmin);
 
   const handleToggleGuideEditor = React.useCallback(() => {
     setIsGuideEditing(prev => {
@@ -1000,6 +1003,12 @@ export function StepContainer({
 
   // Step 8 uses specialized sub-step container
   if (stepOrder === 8) {
+    // votingMode is true when in idea-selection phase (no brain-rewriting matrices yet)
+    // and voting has not yet closed. FacilitatorControls uses this to couple the timer
+    // to the voting lifecycle (VOTING_OPENED / VOTING_CLOSED broadcasts).
+    const isVotingMode =
+      brainRewritingMatrices.length === 0 && votingSession.status !== 'closed';
+
     return (
       <>
         <IdeationSubStepContainer
@@ -1015,6 +1024,18 @@ export function StepContainer({
           challengeStatement={challengeStatement}
           hmwGoals={hmwGoals}
         />
+        {/* FacilitatorControls for Step 8 — rendered inside multiplayer tree so
+            useBroadcastEvent() works. votingMode couples timer to voting lifecycle. */}
+        {workshopType === 'multiplayer' && (
+          <>
+            <StepAdvanceBroadcaster broadcastRef={broadcastRef} />
+            <FacilitatorControls
+              workshopId={workshopId}
+              sessionId={sessionId}
+              votingMode={isVotingMode}
+            />
+          </>
+        )}
         <ResetStepDialog
           open={showResetDialog}
           onOpenChange={setShowResetDialog}

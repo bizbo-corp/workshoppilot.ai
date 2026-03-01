@@ -11,6 +11,9 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useMultiplayerContext } from './multiplayer-room';
 import { endWorkshopSession } from '@/actions/session-actions';
+import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
+import type { DotVote, VotingResult } from '@/lib/canvas/voting-types';
+import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 
 // Timer preset durations in milliseconds
 const TIMER_PRESETS = [
@@ -49,15 +52,60 @@ function formatTime(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
+/**
+ * computeVotingResults — tallies dot votes across all crazy 8s slots and
+ * returns ranked results. Ties share the same rank.
+ *
+ * Used by FacilitatorControls when timer expires or is cancelled while
+ * votingMode is active. Mirrors the logic in VotingHud.handleCloseVoting.
+ */
+function computeVotingResults(dotVotes: DotVote[], crazy8sSlots: Crazy8sSlot[]): VotingResult[] {
+  const voteCounts = new Map<string, number>();
+  for (const vote of dotVotes) {
+    voteCounts.set(vote.slotId, (voteCounts.get(vote.slotId) ?? 0) + 1);
+  }
+  const allSlotIds = crazy8sSlots.map((s) => s.slotId);
+  const sortedSlotIds = [...allSlotIds].sort((a, b) => {
+    return (voteCounts.get(b) ?? 0) - (voteCounts.get(a) ?? 0);
+  });
+  const results: VotingResult[] = [];
+  let currentRank = 1;
+  for (let i = 0; i < sortedSlotIds.length; i++) {
+    const slotId = sortedSlotIds[i];
+    const totalVotes = voteCounts.get(slotId) ?? 0;
+    if (i > 0) {
+      const prevVotes = voteCounts.get(sortedSlotIds[i - 1]) ?? 0;
+      if (totalVotes < prevVotes) currentRank = i + 1;
+    }
+    results.push({ slotId, totalVotes, rank: currentRank });
+  }
+  return results;
+}
+
 interface FacilitatorControlsProps {
   workshopId: string;
   sessionId: string;
+  votingMode?: boolean; // true when in idea-selection phase (Step 8)
 }
 
-export function FacilitatorControls({ workshopId, sessionId: _sessionId }: FacilitatorControlsProps) {
+export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingMode }: FacilitatorControlsProps) {
   const { isFacilitator } = useMultiplayerContext();
   const broadcast = useBroadcastEvent();
   const router = useRouter();
+
+  // Voting store selectors — always called (hooks before early returns)
+  const openVoting = useCanvasStore((s) => s.openVoting);
+  const closeVoting = useCanvasStore((s) => s.closeVoting);
+  const setVotingResults = useCanvasStore((s) => s.setVotingResults);
+  const votingSession = useCanvasStore((s) => s.votingSession);
+  const storeApi = useCanvasStoreApi();
+
+  // Ref to avoid stale closures in timer intervals (Pitfall 2 from RESEARCH.md)
+  // votingSessionRef always holds the latest votingSession value
+  const votingSessionRef = useRef(votingSession);
+  useEffect(() => {
+    votingSessionRef.current = votingSession;
+  }, [votingSession]);
 
   // Timer state
   const [timerState, setTimerState] = useState<'idle' | 'running' | 'paused' | 'expired'>('idle');
@@ -97,6 +145,13 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId }: Facil
     setShowTimerPresets(false);
     broadcast({ type: 'TIMER_UPDATE', state: 'running', remainingMs: ms, totalMs: ms });
 
+    // Open voting when starting timer in votingMode and voting is idle
+    if (votingMode && votingSessionRef.current?.status === 'idle') {
+      broadcast({ type: 'VOTING_OPENED', voteBudget: votingSessionRef.current.voteBudget });
+      // Facilitator's own store — useEventListener does NOT fire for the sender
+      openVoting();
+    }
+
     intervalRef.current = setInterval(() => {
       setRemainingMs((prev) => {
         const next = prev - 1000;
@@ -105,6 +160,17 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId }: Facil
           setTimerState('expired');
           broadcast({ type: 'TIMER_UPDATE', state: 'expired', remainingMs: 0, totalMs: ms });
           playChime();
+
+          // Close voting on timer expiry when votingMode is active
+          if (votingMode && votingSessionRef.current?.status === 'open') {
+            // Read fresh state at call time — avoids stale closure (Pitfall 2)
+            const { dotVotes, crazy8sSlots } = storeApi.getState();
+            const results = computeVotingResults(dotVotes, crazy8sSlots);
+            broadcast({ type: 'VOTING_CLOSED' });
+            closeVoting();
+            setVotingResults(results);
+          }
+
           // Auto-reset to idle after 5 seconds
           setTimeout(() => {
             setTimerState('idle');
@@ -116,7 +182,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId }: Facil
         return next;
       });
     }, 1000);
-  }, [broadcast]);
+  }, [broadcast, votingMode, openVoting, closeVoting, setVotingResults, storeApi]);
 
   const pauseTimer = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -138,6 +204,17 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId }: Facil
           setTimerState('expired');
           broadcast({ type: 'TIMER_UPDATE', state: 'expired', remainingMs: 0, totalMs: currentTotal });
           playChime();
+
+          // Close voting on timer expiry (resume path) when votingMode is active
+          if (votingMode && votingSessionRef.current?.status === 'open') {
+            // Read fresh state at call time — avoids stale closure (Pitfall 2)
+            const { dotVotes, crazy8sSlots } = storeApi.getState();
+            const results = computeVotingResults(dotVotes, crazy8sSlots);
+            broadcast({ type: 'VOTING_CLOSED' });
+            closeVoting();
+            setVotingResults(results);
+          }
+
           setTimeout(() => {
             setTimerState('idle');
             setRemainingMs(0);
@@ -148,7 +225,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId }: Facil
         return next;
       });
     }, 1000);
-  }, [broadcast, remainingMs, totalMs]);
+  }, [broadcast, remainingMs, totalMs, votingMode, closeVoting, setVotingResults, storeApi]);
 
   const cancelTimer = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -156,7 +233,16 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId }: Facil
     setRemainingMs(0);
     setTotalMs(0);
     broadcast({ type: 'TIMER_UPDATE', state: 'cancelled', remainingMs: 0, totalMs: 0 });
-  }, [broadcast]);
+
+    // Cancelling timer while voting is open also closes voting
+    if (votingMode && votingSessionRef.current?.status === 'open') {
+      const { dotVotes, crazy8sSlots } = storeApi.getState();
+      const results = computeVotingResults(dotVotes, crazy8sSlots);
+      broadcast({ type: 'VOTING_CLOSED' });
+      closeVoting();
+      setVotingResults(results);
+    }
+  }, [broadcast, votingMode, closeVoting, setVotingResults, storeApi]);
 
   const handleCustomTimer = useCallback(() => {
     const mins = parseInt(customMinutes, 10);
@@ -189,6 +275,10 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId }: Facil
   // Gate rendering — all hooks called above; early return here is safe
   if (!isFacilitator) return null;
 
+  // Determine timer button label — "Start Voting Timer" when in voting idle mode
+  const timerButtonLabel = votingMode && votingSession.status === 'idle' ? 'Start Voting Timer' : 'Timer';
+  const timerDropdownHeader = votingMode && votingSession.status === 'idle' ? 'Start Voting Timer' : 'Set Timer';
+
   return (
     <>
       {/* Facilitator toolbar — fixed top-right, below presence bar */}
@@ -213,17 +303,17 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId }: Facil
               size="sm"
               onClick={() => setShowTimerPresets(!showTimerPresets)}
               className="gap-1.5 bg-background/80 backdrop-blur-sm shadow-sm"
-              title="Set countdown timer"
+              title={votingMode && votingSession.status === 'idle' ? 'Start voting timer for participants' : 'Set countdown timer'}
             >
               <Timer className="h-4 w-4" />
-              <span className="hidden sm:inline">Timer</span>
+              <span className="hidden sm:inline">{timerButtonLabel}</span>
             </Button>
 
             {/* Timer preset dropdown */}
             {showTimerPresets && (
               <div className="absolute top-full mt-1 right-0 bg-card rounded-lg shadow-lg border border-border p-2 min-w-[180px] animate-in fade-in-0 zoom-in-95 duration-150 z-50">
                 <div className="text-xs font-medium text-muted-foreground mb-2 px-1">
-                  Set Timer
+                  {timerDropdownHeader}
                 </div>
                 <div className="grid grid-cols-2 gap-1">
                   {TIMER_PRESETS.map((preset) => (
