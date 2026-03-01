@@ -25,10 +25,10 @@ Requirements for v2.0 Dot Voting & Mobile Gate. Each maps to roadmap phases.
 
 ### Mobile Gate
 
-- [ ] **MOBI-01**: Phone users (<768px + coarse pointer) see a dismissible "best on desktop" overlay
-- [ ] **MOBI-02**: Overlay dismissal persists for the browser session (sessionStorage)
-- [ ] **MOBI-03**: Gate applies only to workshop pages (not landing, dashboard, pricing)
-- [ ] **MOBI-04**: Email-to-self CTA with mailto: link containing current URL
+- [x] **MOBI-01**: Phone users (<768px + coarse pointer) see a dismissible "best on desktop" overlay
+- [x] **MOBI-02**: Overlay dismissal persists for the browser session (sessionStorage)
+- [x] **MOBI-03**: Gate applies only to workshop pages (not landing, dashboard, pricing)
+- [x] **MOBI-04**: Email-to-self CTA with mailto: link containing current URL
 
 ## Future Requirements
 
@@ -70,10 +70,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VOTE-11 | Phase 61 | Complete |
 | VOTE-12 | Phase 61 | Complete |
 | VOTE-13 | Phase 60 | Complete |
-| MOBI-01 | Phase 62 | Pending |
-| MOBI-02 | Phase 62 | Pending |
-| MOBI-03 | Phase 62 | Pending |
-| MOBI-04 | Phase 62 | Pending |
+| MOBI-01 | Phase 62 | Complete |
+| MOBI-02 | Phase 62 | Complete |
+| MOBI-03 | Phase 62 | Complete |
+| MOBI-04 | Phase 62 | Complete |
 
 **Coverage:**
 - v2.0 requirements: 17 total
