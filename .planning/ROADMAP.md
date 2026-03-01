@@ -247,7 +247,7 @@ Plans:
 | 59. Voting Types + Store Foundation | v2.0 | Complete    | 2026-02-28 | 2026-02-28 |
 | 60. Core Voting UI + Solo Path | 2/2 | Complete    | 2026-02-28 | - |
 | 61. Multiplayer Voting | 2/2 | Complete    | 2026-03-01 | - |
-| 62. Mobile Gate | 1/1 | Complete   | 2026-03-01 | - |
+| 62. Mobile Gate | 1/1 | Complete    | 2026-03-01 | - |
 
 **Total shipped:** 11 milestones, 58 phases, ~148 plans in 20 days
 
