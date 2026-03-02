@@ -150,7 +150,7 @@ export function WorkshopSidebar({ sessionId, workshopSteps, isPaywallLocked }: W
       onMouseLeave={handleMouseLeave}
     >
       {/* Logo */}
-      <SidebarHeader className={cn("flex h-16 flex-row items-center border-b px-4", state === 'collapsed' ? 'justify-center' : 'justify-start')}>
+      <SidebarHeader className={cn("flex h-16 flex-row items-center border-b", state === 'collapsed' ? 'justify-center px-2' : 'justify-start px-4')}>
         {state === 'collapsed' ? (
           <LogoIcon size="lg" />
         ) : (

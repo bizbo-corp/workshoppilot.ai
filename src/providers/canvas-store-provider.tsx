@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import {
@@ -33,6 +33,7 @@ export interface CanvasStoreProviderProps {
   children: React.ReactNode;
   workshopType?: 'solo' | 'multiplayer';
   workshopId?: string; // required for multiplayer (room ID)
+  stepId?: string; // semantic step ID — used to create per-step Liveblocks Storage rooms
   initialStickyNotes?: StickyNote[];
   initialGridColumns?: GridColumn[];
   initialDrawingNodes?: DrawingNode[];
@@ -52,6 +53,7 @@ export function CanvasStoreProvider({
   children,
   workshopType,
   workshopId,
+  stepId,
   initialStickyNotes,
   initialGridColumns,
   initialDrawingNodes,
@@ -67,6 +69,24 @@ export function CanvasStoreProvider({
   initialVotingSession,
 }: CanvasStoreProviderProps) {
   const isMultiplayer = workshopType === 'multiplayer';
+
+  // Capture server-loaded initial state so we can re-apply after Liveblocks clears it.
+  // When enterRoom is called, the Liveblocks middleware clears all storageMapping fields
+  // while connecting. For a NEW room (empty Storage), the cleared state persists — wiping
+  // template stickies and other server-seeded data. The ref lets us restore them.
+  const initialStateRef = useRef({
+    stickyNotes: initialStickyNotes || [],
+    gridColumns: initialGridColumns || [],
+    drawingNodes: initialDrawingNodes || [],
+    mindMapNodes: initialMindMapNodes || [],
+    mindMapEdges: initialMindMapEdges || [],
+    crazy8sSlots: initialCrazy8sSlots || [],
+    conceptCards: initialConceptCards || [],
+    personaTemplates: initialPersonaTemplates || [],
+    hmwCards: initialHmwCards || [],
+    brainRewritingMatrices: initialBrainRewritingMatrices || [],
+    dotVotes: initialDotVotes || [],
+  });
 
   // Create store ONCE per mount — ensures per-request isolation in SSR
   const [store] = useState<CanvasStoreApi>(() => {
@@ -91,16 +111,77 @@ export function CanvasStoreProvider({
     return createCanvasStore(initState);
   });
 
-  // Multiplayer room lifecycle — connect to Liveblocks room on mount, leave on unmount
+  // Multiplayer room lifecycle — connect to a STEP-SPECIFIC Liveblocks room for Storage.
+  // Each step gets its own Storage room (e.g. "workshop-{wid}-step-challenge") so canvas
+  // data from one step doesn't leak into another. The workshop-level room (via RoomProvider
+  // in MultiplayerRoomLoader) handles broadcasts and presence separately.
   useEffect(() => {
-    if (!isMultiplayer || !workshopId) return;
+    if (!isMultiplayer || !workshopId || !stepId) return;
     const multiStore = store as MultiplayerCanvasStoreApi;
     const { enterRoom, leaveRoom } = multiStore.getState().liveblocks;
-    enterRoom(getRoomId(workshopId));
+    enterRoom(`${getRoomId(workshopId)}-step-${stepId}`);
+
+    // After entering the room, the Liveblocks middleware clears all storageMapping fields
+    // while waiting for Storage to load. For an EXISTING room, Storage data will replace
+    // the cleared values. For a NEW room (empty Storage), the cleared state persists —
+    // wiping server-loaded template stickies and other seed data.
+    // Fix: subscribe to status changes, and when connected, re-apply any fields that
+    // the middleware cleared but the server had initial data for.
+    let applied = false;
+    const unsub = multiStore.subscribe((state) => {
+      if (applied) return;
+      if (state.liveblocks.status !== 'connected') return;
+      applied = true;
+      unsub();
+
+      const init = initialStateRef.current;
+      const current = multiStore.getState();
+      const patch: Record<string, unknown> = {};
+
+      if (current.stickyNotes.length === 0 && init.stickyNotes.length > 0) {
+        patch.stickyNotes = init.stickyNotes;
+      }
+      if (current.gridColumns.length === 0 && init.gridColumns.length > 0) {
+        patch.gridColumns = init.gridColumns;
+      }
+      if (current.drawingNodes.length === 0 && init.drawingNodes.length > 0) {
+        patch.drawingNodes = init.drawingNodes;
+      }
+      if (current.mindMapNodes.length === 0 && init.mindMapNodes.length > 0) {
+        patch.mindMapNodes = init.mindMapNodes;
+      }
+      if (current.mindMapEdges.length === 0 && init.mindMapEdges.length > 0) {
+        patch.mindMapEdges = init.mindMapEdges;
+      }
+      if (current.crazy8sSlots.length === 0 && init.crazy8sSlots.length > 0) {
+        patch.crazy8sSlots = init.crazy8sSlots;
+      }
+      if (current.conceptCards.length === 0 && init.conceptCards.length > 0) {
+        patch.conceptCards = init.conceptCards;
+      }
+      if (current.personaTemplates.length === 0 && init.personaTemplates.length > 0) {
+        patch.personaTemplates = init.personaTemplates;
+      }
+      if (current.hmwCards.length === 0 && init.hmwCards.length > 0) {
+        patch.hmwCards = init.hmwCards;
+      }
+      if (current.brainRewritingMatrices.length === 0 && init.brainRewritingMatrices.length > 0) {
+        patch.brainRewritingMatrices = init.brainRewritingMatrices;
+      }
+      if (current.dotVotes.length === 0 && init.dotVotes.length > 0) {
+        patch.dotVotes = init.dotVotes;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        multiStore.setState(patch);
+      }
+    });
+
     return () => {
+      unsub();
       leaveRoom();
     };
-  }, [isMultiplayer, workshopId, store]);
+  }, [isMultiplayer, workshopId, stepId, store]);
 
   // Sync concept cards from server props into the store.
   // Handles navigation (store reused from previous step), post-reset refresh,

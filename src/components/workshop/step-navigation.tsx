@@ -46,6 +46,8 @@ interface StepNavigationProps {
    * STEP_CHANGED to participants. Receives the next step order and name.
    */
   onBeforeAdvance?: (nextStepOrder: number, nextStepName: string) => void;
+  /** Flush pending canvas changes to DB before navigating away */
+  onFlushCanvas?: () => Promise<void>;
 }
 
 export function StepNavigation({
@@ -66,6 +68,7 @@ export function StepNavigation({
   workshopCompleted = false,
   canCompleteWorkshop = false,
   onBeforeAdvance,
+  onFlushCanvas,
 }: StepNavigationProps) {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
@@ -109,6 +112,13 @@ export function StepNavigation({
 
     try {
       setIsNavigating(true);
+
+      // Flush pending canvas changes before navigating
+      try {
+        await onFlushCanvas?.();
+      } catch (e) {
+        console.warn('Canvas flush before next failed:', e);
+      }
 
       // Find current and next step definitions
       const currentStep = STEPS.find((s) => s.order === currentStepOrder);
@@ -154,9 +164,16 @@ export function StepNavigation({
     }
   };
 
-  const handleBack = () => {
+  const handleBack = async () => {
     // Guard: prevent navigation from first step
     if (isFirstStep) return;
+
+    // Flush pending canvas changes before navigating
+    try {
+      await onFlushCanvas?.();
+    } catch (e) {
+      console.warn('Canvas flush before back failed:', e);
+    }
 
     // Navigate to previous step (no database state change needed)
     router.push(`/workshop/${sessionId}/step/${currentStepOrder - 1}`);
@@ -259,7 +276,14 @@ export function StepNavigation({
       ) : isCompleted && !isLastStep ? (
         <Button
           variant="ghost"
-          onClick={() => router.push(`/workshop/${sessionId}/step/${currentStepOrder + 1}`)}
+          onClick={async () => {
+            try {
+              await onFlushCanvas?.();
+            } catch (e) {
+              console.warn('Canvas flush before forward nav failed:', e);
+            }
+            router.push(`/workshop/${sessionId}/step/${currentStepOrder + 1}`);
+          }}
           disabled={isNavigating}
         >
           Next Step

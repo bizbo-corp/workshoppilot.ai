@@ -15,7 +15,7 @@ import { IdeationSubStepContainer } from './ideation-sub-step-container';
 import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical, Loader2, Megaphone, ImageIcon, Sparkles, ArrowLeft, ChevronDown, X } from 'lucide-react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { resetStep, updateStepStatus, completeWorkshop } from '@/actions/workshop-actions';
-import { loadCanvasState } from '@/actions/canvas-actions';
+import { loadCanvasState, saveCanvasState } from '@/actions/canvas-actions';
 import { getStepByOrder, STEP_CONFIRM_LABELS, STEP_CONFIRM_MIN_ITEMS, areAllPersonasInterviewed } from '@/lib/workshop/step-metadata';
 import { STEP_CANVAS_CONFIGS } from '@/lib/canvas/step-canvas-config';
 import { fireConfetti } from '@/lib/utils/confetti';
@@ -26,7 +26,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import { toast } from 'sonner';
-import { useCanvasStore } from '@/providers/canvas-store-provider';
+import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { ConceptCanvasOverlay } from './concept-canvas-overlay';
 import { GuideEditPopover } from '@/components/canvas/guide-edit-popover';
@@ -160,6 +160,27 @@ export function StepContainer({
   // Voting state — used to derive votingMode for FacilitatorControls in Step 8
   const votingSession = useCanvasStore((s) => s.votingSession);
   const brainRewritingMatrices = useCanvasStore((s) => s.brainRewritingMatrices);
+  const storeApi = useCanvasStoreApi();
+
+  // Flush pending canvas changes to DB — called before step navigation
+  const flushCanvasToDb = React.useCallback(async () => {
+    if (!isCanvasStep || !step) return;
+    const s = storeApi.getState();
+    if (!s.isDirty) return;
+    await saveCanvasState(workshopId, step.id, {
+      stickyNotes: s.stickyNotes,
+      ...(s.gridColumns.length > 0 ? { gridColumns: s.gridColumns } : {}),
+      ...(s.drawingNodes.length > 0 ? { drawingNodes: s.drawingNodes } : {}),
+      ...(s.mindMapNodes.length > 0 ? { mindMapNodes: s.mindMapNodes } : {}),
+      ...(s.mindMapEdges.length > 0 ? { mindMapEdges: s.mindMapEdges } : {}),
+      ...(s.crazy8sSlots.length > 0 ? { crazy8sSlots: s.crazy8sSlots } : {}),
+      ...(s.conceptCards.length > 0 ? { conceptCards: s.conceptCards } : {}),
+      ...(s.personaTemplates.length > 0 ? { personaTemplates: s.personaTemplates } : {}),
+      ...(s.hmwCards.length > 0 ? { hmwCards: s.hmwCards } : {}),
+    });
+    s.markClean();
+  }, [isCanvasStep, workshopId, step, storeApi]);
+
   // HMW card counts as "content" only when all 4 fields are filled (card is 'filled')
   const hmwCardComplete = hmwCards.some((c) => c.cardState === 'filled');
   // Concept card counts as "content" only when all sections are filled (pitch, USP, SWOT, feasibility, billboard)
@@ -1260,6 +1281,7 @@ export function StepContainer({
             workshopCompleted={workshopCompleted}
             canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
             onBeforeAdvance={handleBeforeAdvance}
+            onFlushCanvas={flushCanvasToDb}
           />
         )}
         <ResetStepDialog
@@ -1531,6 +1553,7 @@ export function StepContainer({
           workshopCompleted={workshopCompleted}
           canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
           onBeforeAdvance={handleBeforeAdvance}
+          onFlushCanvas={flushCanvasToDb}
         />
       )}
       <ResetStepDialog

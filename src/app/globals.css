@@ -227,13 +227,13 @@
   --chart-3: rgba(22, 78, 99, 1);
   --chart-4: rgba(251, 191, 36, 1);
   --chart-5: rgba(245, 158, 11, 1);
-  --sidebar: var(--neutral-olive-50);
+  --sidebar: var(--neutral-olive-100);
   --sidebar-foreground: var(--neutral-olive-950);
   --sidebar-primary: var(--neutral-olive-900);
   --sidebar-primary-foreground: var(--neutral-olive-50);
-  --sidebar-accent: var(--neutral-olive-100);
+  --sidebar-accent: var(--neutral-olive-200);
   --sidebar-accent-foreground: var(--neutral-olive-900);
-  --sidebar-border: var(--neutral-olive-200);
+  --sidebar-border: var(--neutral-olive-300);
   --sidebar-ring: var(--neutral-olive-400);
 }
 

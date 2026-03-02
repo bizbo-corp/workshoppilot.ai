@@ -20,6 +20,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "WorkshopPilot",
   description: "AI-powered design thinking facilitator - transform vague ideas into validated Build Packs",
+  manifest: '/manifest.webmanifest',
 };
 
 export const viewport: Viewport = {

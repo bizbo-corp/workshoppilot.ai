@@ -511,8 +511,10 @@ export default async function StepPage({ params }: StepPageProps) {
   return (
     <div className="h-full">
       <CanvasStoreProvider
+        key={step.id}
         workshopType={session.workshop.workshopType ?? 'solo'}
         workshopId={session.workshop.id}
+        stepId={step.id}
         initialStickyNotes={initialCanvasStickyNotes}
         initialGridColumns={initialGridColumns}
         initialDrawingNodes={initialDrawingNodes}

@@ -6,29 +6,10 @@
 
 
 
-mail.4gjofiv7q395.clerk.services
-
-mail.4gjof1v7q395.clerk.services
-
-
-
-dkim1.4gjofiv7q395.clerk.services
-
-dkim1.4gjof1v7q395.clerk.services
-
 ## Todo
 
-Production login and LiveStream working?
-
-remove clerk christie.michael@gmail.com instance. (Delete accunt)
-
-Landing page effectiveness
-
-- Step Graphics / Stickers
-    - Frames for steps e.g Boxes, ellipses
-
-improve the ezydraw component to have phone, stick people, and other objects. 
-
+- Landing page effectiveness
+- Improve the ezydraw component to have phone, stick people, and other objects. 
 - Model Cost optimisation
     - Full e2e cost anaysis
 

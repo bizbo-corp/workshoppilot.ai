@@ -462,6 +462,7 @@ export function IdeationSubStepContainer({
           onReset={onReset}
           onToggleGuideEditor={handleToggleGuideEditor}
           isGuideEditing={isGuideEditing}
+          onFlushCanvas={flushCanvasState}
         />
       </div>
     );
@@ -543,6 +544,7 @@ export function IdeationSubStepContainer({
         onReset={onReset}
         onToggleGuideEditor={handleToggleGuideEditor}
         isGuideEditing={isGuideEditing}
+        onFlushCanvas={flushCanvasState}
       />
     </div>
   );
