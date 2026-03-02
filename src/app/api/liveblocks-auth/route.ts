@@ -57,14 +57,17 @@ export async function POST(request: Request) {
 
   // Step 2: Check Clerk authentication
   const { userId } = await auth();
+  console.log('[liveblocks-auth] userId:', userId ?? 'null', '| room:', room);
 
   // Step 3: Guest path — read and verify the HttpOnly signed cookie
   if (!userId) {
     const cookieStore = await cookies();
     const raw = cookieStore.get(COOKIE_NAME)?.value;
+    console.log('[liveblocks-auth] No Clerk userId, guest cookie present:', !!raw);
     const payload = raw ? verifyGuestCookie(raw) : null;
 
     if (!payload) {
+      console.error('[liveblocks-auth] 401: No valid Clerk session and no valid guest cookie');
       return new Response('Unauthorized', { status: 401 });
     }
 
@@ -117,5 +120,8 @@ export async function POST(request: Request) {
 
   // Step 7: Authorize and return the access token
   const { body, status } = await session.authorize();
+  if (status !== 200) {
+    console.error('[liveblocks-auth] Liveblocks authorize failed:', status, body);
+  }
   return new Response(body, { status });
 }
