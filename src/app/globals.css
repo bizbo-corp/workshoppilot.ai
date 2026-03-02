@@ -411,13 +411,6 @@
   cursor: pointer !important;
 }
 
-/* Guide node drag handle — override the pointer cursor on the grab bar */
-.react-flow .guide-drag-handle {
-  cursor: grab !important;
-}
-.react-flow .guide-drag-handle:active {
-  cursor: grabbing !important;
-}
 
 /* Pulse attention for the Next button when a step is confirmed */
 @keyframes btn-pulse {

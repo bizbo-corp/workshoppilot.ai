@@ -2,7 +2,7 @@
 
 import { memo, useCallback } from 'react';
 import { type NodeProps, NodeResizer } from '@xyflow/react';
-import { X, Pencil, GripVertical } from 'lucide-react';
+import { X, Pencil } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { cn } from '@/lib/utils';
@@ -53,31 +53,26 @@ export interface GuideNodeData extends CanvasGuideData {
   linkedAsset?: { inlineSvg?: string | null; blobUrl: string } | null;
 }
 
-/**
- * Admin drag handle — positioned ABOVE the artifact content via negative
- * top offset so it never overlaps the card body.
- */
-function AdminDragHandle({ guide }: { guide: GuideNodeData }) {
-  if (!guide.isAdminEditing) return null;
+/** Floating edit button — small pill that appears on hover in admin mode. */
+function AdminEditButton({ guide }: { guide: GuideNodeData }) {
+  if (!guide.isAdminEditing || !guide.onEdit) return null;
   return (
-    <div className="guide-drag-handle absolute -top-7 left-0 right-0 z-10 flex items-center gap-1.5 px-2 py-1.5 rounded-t-sm bg-olive-600/90 text-white cursor-grab active:cursor-grabbing select-none">
-      <GripVertical className="h-3.5 w-3.5 shrink-0 opacity-70" />
-      <span className="text-xs font-medium truncate flex-1">
-        {guide.title || VARIANT_LABELS[guide.variant] || 'Guide'}
-      </span>
-      {guide.onEdit && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            guide.onEdit!(guide, { x: e.clientX, y: e.clientY });
-          }}
-          className="nodrag rounded p-0.5 hover:bg-background/20 transition-colors"
-          aria-label="Edit guide"
-        >
-          <Pencil className="h-3 w-3" />
-        </button>
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        guide.onEdit!(guide, { x: e.clientX, y: e.clientY });
+      }}
+      className={cn(
+        'nodrag absolute -top-2 -right-2 z-10 rounded-full p-1',
+        'bg-olive-600/90 text-white hover:bg-olive-700 shadow-sm',
+        'transition-opacity duration-150',
+        'opacity-0 group-hover/guide:opacity-100',
+        'focus:opacity-100',
       )}
-    </div>
+      aria-label="Edit guide"
+    >
+      <Pencil className="h-3 w-3" />
+    </button>
   );
 }
 
@@ -239,7 +234,7 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
             guide.onGuideResizeEnd?.(guide.id, params.width, params.height, params.x, params.y);
           }}
         />
-        <AdminDragHandle guide={guide} />
+        <AdminEditButton guide={guide} />
         {isTemplatePostit && <TemplateStickyNoteContent guide={guide} />}
         {isFrame && <FrameContent guide={guide} />}
         {isArrow && <ArrowContent guide={guide} />}
@@ -293,7 +288,7 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
           guide.onGuideResizeEnd?.(guide.id, params.width, params.height, params.x, params.y);
         }}
       />
-      <AdminDragHandle guide={guide} />
+      <AdminEditButton guide={guide} />
 
       {/* Dismiss button — only in non-admin mode */}
       {!guide.isAdminEditing && guide.dismissBehavior === 'hover-x' && (
