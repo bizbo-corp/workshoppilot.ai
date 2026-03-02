@@ -392,6 +392,16 @@ export function StepContainer({
     }
   }, [adminGuides]);
 
+  // Delete a template sticky note's DB guide when admin removes it from the canvas.
+  const handleTemplateStickyDelete = React.useCallback((templateKey: string) => {
+    const guide = adminGuides.guides.find(
+      (g) => g.variant === 'template-sticky-note' && g.templateKey === templateKey
+    );
+    if (guide) {
+      adminGuides.deleteGuide(guide.id);
+    }
+  }, [adminGuides]);
+
   // PRD viewer dialog state
   const [showPrdDialog, setShowPrdDialog] = React.useState(false);
 
@@ -1190,6 +1200,7 @@ export function StepContainer({
                   onGuidePositionUpdate={handleGuidePositionUpdate}
                   onGuideSizeUpdate={handleGuideSizeUpdate}
                   onTemplateStickyPositionSync={handleTemplateStickyPositionSync}
+                  onTemplateStickyDelete={handleTemplateStickyDelete}
                   canvasRef={canvasRef}
                 />
                 {step.id === 'concept' && (
@@ -1218,6 +1229,7 @@ export function StepContainer({
                 onGuidePositionUpdate={handleGuidePositionUpdate}
                 onGuideSizeUpdate={handleGuideSizeUpdate}
                 onTemplateStickyPositionSync={handleTemplateStickyPositionSync}
+                onTemplateStickyDelete={handleTemplateStickyDelete}
                 canvasRef={canvasRef}
               />
             )}
@@ -1344,6 +1356,7 @@ export function StepContainer({
                       onGuidePositionUpdate={handleGuidePositionUpdate}
                       onGuideSizeUpdate={handleGuideSizeUpdate}
                       onTemplateStickyPositionSync={handleTemplateStickyPositionSync}
+                      onTemplateStickyDelete={handleTemplateStickyDelete}
                       canvasRef={canvasRef}
                     />
                     {step.id === 'concept' && (
@@ -1384,6 +1397,7 @@ export function StepContainer({
                     onGuidePositionUpdate={handleGuidePositionUpdate}
                     onGuideSizeUpdate={handleGuideSizeUpdate}
                     onTemplateStickyPositionSync={handleTemplateStickyPositionSync}
+                    onTemplateStickyDelete={handleTemplateStickyDelete}
                     canvasRef={canvasRef}
                   />
                 )}
@@ -1424,6 +1438,7 @@ export function StepContainer({
                     onGuidePositionUpdate={handleGuidePositionUpdate}
                     onGuideSizeUpdate={handleGuideSizeUpdate}
                     onTemplateStickyPositionSync={handleTemplateStickyPositionSync}
+                    onTemplateStickyDelete={handleTemplateStickyDelete}
                     canvasRef={canvasRef}
                   />
                   {step.id === 'concept' && (
@@ -1464,6 +1479,7 @@ export function StepContainer({
                   onGuidePositionUpdate={handleGuidePositionUpdate}
                   onGuideSizeUpdate={handleGuideSizeUpdate}
                   onTemplateStickyPositionSync={handleTemplateStickyPositionSync}
+                  onTemplateStickyDelete={handleTemplateStickyDelete}
                   canvasRef={canvasRef}
                 />
               )}

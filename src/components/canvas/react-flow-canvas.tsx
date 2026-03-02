@@ -180,6 +180,8 @@ export interface ReactFlowCanvasProps {
   ) => void;
   /** Called when admin drags a template sticky note — syncs position to DB guide */
   onTemplateStickyPositionSync?: (templateKey: string, x: number, y: number) => void;
+  /** Called when admin deletes a template sticky note — removes the DB guide so it won't re-seed */
+  onTemplateStickyDelete?: (templateKey: string) => void;
   canvasRef?: React.Ref<{
     getViewport: () => { x: number; y: number; zoom: number };
     screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number };
@@ -200,6 +202,7 @@ function ReactFlowCanvasInner({
   onGuidePositionUpdate,
   onGuideSizeUpdate,
   onTemplateStickyPositionSync,
+  onTemplateStickyDelete,
   canvasRef,
 }: ReactFlowCanvasProps) {
   // Store access
@@ -1697,15 +1700,27 @@ function ReactFlowCanvasInner({
           n.type !== "hmwCard",
       )
       .map((n) => n.id);
-    if (stickyNoteIds.length > 0) batchDeleteStickyNotes(stickyNoteIds);
+    if (stickyNoteIds.length > 0) {
+      // When admin deletes template sticky notes, also remove the DB guide
+      if (isAdminEditing && onTemplateStickyDelete) {
+        stickyNoteIds.forEach((id) => {
+          const sn = stickyNotes.find((s) => s.id === id);
+          if (sn?.templateKey) onTemplateStickyDelete(sn.templateKey);
+        });
+      }
+      batchDeleteStickyNotes(stickyNoteIds);
+    }
   }, [
     nodes,
+    stickyNotes,
+    isAdminEditing,
     ungroupStickyNotes,
     batchDeleteStickyNotes,
     deleteDrawingNode,
     deleteConceptCard,
     deletePersonaTemplate,
     deleteHmwCard,
+    onTemplateStickyDelete,
   ]);
 
   // Handle node drag start — bring dragged node to top of stack
@@ -1817,7 +1832,16 @@ function ReactFlowCanvasInner({
             node?.type !== "hmwCard"
           );
         });
-        if (stickyNoteIds.length > 0) batchDeleteStickyNotes(stickyNoteIds);
+        if (stickyNoteIds.length > 0) {
+          // When admin deletes template sticky notes, also remove the DB guide
+          if (isAdminEditing && onTemplateStickyDelete) {
+            stickyNoteIds.forEach((id) => {
+              const sn = stickyNotes.find((s) => s.id === id);
+              if (sn?.templateKey) onTemplateStickyDelete(sn.templateKey);
+            });
+          }
+          batchDeleteStickyNotes(stickyNoteIds);
+        }
         return;
       }
 
@@ -2184,6 +2208,7 @@ function ReactFlowCanvasInner({
       rearrangeCluster,
       onGuidePositionUpdate,
       onTemplateStickyPositionSync,
+      onTemplateStickyDelete,
       isAdminEditing,
       stepId,
     ],
@@ -2233,16 +2258,26 @@ function ReactFlowCanvasInner({
         )
         .map((n) => n.id);
       if (stickyNoteIds.length > 0) {
+        // When admin deletes template sticky notes, also remove the DB guide
+        if (isAdminEditing && onTemplateStickyDelete) {
+          stickyNoteIds.forEach((id) => {
+            const sn = stickyNotes.find((s) => s.id === id);
+            if (sn?.templateKey) onTemplateStickyDelete(sn.templateKey);
+          });
+        }
         batchDeleteStickyNotes(stickyNoteIds);
       }
     },
     [
+      stickyNotes,
+      isAdminEditing,
       ungroupStickyNotes,
       batchDeleteStickyNotes,
       deleteDrawingNode,
       deleteConceptCard,
       deletePersonaTemplate,
       deleteHmwCard,
+      onTemplateStickyDelete,
     ],
   );
 
@@ -3094,6 +3129,7 @@ export function ReactFlowCanvas({
   onGuidePositionUpdate,
   onGuideSizeUpdate,
   onTemplateStickyPositionSync,
+  onTemplateStickyDelete,
   canvasRef,
 }: ReactFlowCanvasProps) {
   return (
@@ -3112,6 +3148,7 @@ export function ReactFlowCanvas({
         onGuidePositionUpdate={onGuidePositionUpdate}
         onGuideSizeUpdate={onGuideSizeUpdate}
         onTemplateStickyPositionSync={onTemplateStickyPositionSync}
+        onTemplateStickyDelete={onTemplateStickyDelete}
         canvasRef={canvasRef}
       />
     </ReactFlowProvider>
