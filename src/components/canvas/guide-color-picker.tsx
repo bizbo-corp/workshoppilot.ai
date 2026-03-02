@@ -3,29 +3,38 @@
 import { cn } from '@/lib/utils';
 import type { CanvasGuideVariant } from '@/lib/canvas/canvas-guide-types';
 
-const PRESET_COLORS = [
-  { label: 'Default', value: null, className: 'bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700' },
-  { label: 'Olive', value: '#b8c9a3', className: 'bg-[#b8c9a3]' },
-  { label: 'Sky', value: '#dce8f5', className: 'bg-[#dce8f5]' },
-  { label: 'Dark', value: '#374151', className: 'bg-[#374151]' },
-  { label: 'White', value: '#ffffff', className: 'bg-white' },
-  { label: 'Warm', value: '#fef3c7', className: 'bg-[#fef3c7]' },
-  { label: 'Coral', value: '#fca5a5', className: 'bg-[#fca5a5]' },
-  { label: 'Mint', value: '#a7f3d0', className: 'bg-[#a7f3d0]' },
-  { label: 'Lavender', value: '#ddd6fe', className: 'bg-[#ddd6fe]' },
+const CARD_COLORS: { label: string; value: string | null; className: string }[] = [
+  { label: 'Default', value: null, className: 'bg-olive-100 dark:bg-olive-900' },
+  { label: 'Yellow', value: '#fdf0a0', className: 'bg-[var(--canvas-yellow-pastel)]' },
+  { label: 'Pink', value: '#fcc0d8', className: 'bg-[var(--canvas-pink-pastel)]' },
+  { label: 'Blue', value: '#a0d8f0', className: 'bg-[var(--canvas-blue-pastel)]' },
+  { label: 'Green', value: '#a0e8c0', className: 'bg-[var(--canvas-green-pastel)]' },
+  { label: 'Orange', value: '#fdd0a0', className: 'bg-[var(--canvas-orange-pastel)]' },
+  { label: 'Red', value: '#f5b0a8', className: 'bg-[var(--canvas-red-pastel)]' },
 ];
 
 // StickyNote color swatches — names match StickyNoteColor type and CSS variables
 const POSTIT_COLORS = [
-  { label: 'Yellow', value: 'yellow', className: 'bg-[var(--sticky-note-yellow)]' },
-  { label: 'Pink', value: 'pink', className: 'bg-[var(--sticky-note-pink)]' },
-  { label: 'Blue', value: 'blue', className: 'bg-[var(--sticky-note-blue)]' },
-  { label: 'Green', value: 'green', className: 'bg-[var(--sticky-note-green)]' },
-  { label: 'Orange', value: 'orange', className: 'bg-[var(--sticky-note-orange)]' },
-  { label: 'Red', value: 'red', className: 'bg-[var(--sticky-note-red)]' },
+  { label: 'Yellow', value: 'yellow', className: 'bg-[var(--canvas-yellow-pastel)]' },
+  { label: 'Pink', value: 'pink', className: 'bg-[var(--canvas-pink-pastel)]' },
+  { label: 'Blue', value: 'blue', className: 'bg-[var(--canvas-blue-pastel)]' },
+  { label: 'Green', value: 'green', className: 'bg-[var(--canvas-green-pastel)]' },
+  { label: 'Orange', value: 'orange', className: 'bg-[var(--canvas-orange-pastel)]' },
+  { label: 'Red', value: 'red', className: 'bg-[var(--canvas-red-pastel)]' },
 ];
 
-// Frame/arrow border colors
+// Frame colors — vivid hues matching the same 6 base colors
+const FRAME_COLORS: { label: string; value: string | null; className: string }[] = [
+  { label: 'Default', value: null, className: 'bg-olive-100 dark:bg-olive-900' },
+  { label: 'Yellow', value: '#eab308', className: 'bg-[var(--canvas-yellow)]' },
+  { label: 'Pink', value: '#ec4899', className: 'bg-[var(--canvas-pink)]' },
+  { label: 'Blue', value: '#3b82f6', className: 'bg-[var(--canvas-blue)]' },
+  { label: 'Green', value: '#22c55e', className: 'bg-[var(--canvas-green)]' },
+  { label: 'Orange', value: '#f97316', className: 'bg-[var(--canvas-orange)]' },
+  { label: 'Red', value: '#ef4444', className: 'bg-[var(--canvas-red)]' },
+];
+
+// Arrow border colors
 const BORDER_COLORS = [
   { label: 'Slate', value: '#94a3b8', className: 'bg-[#94a3b8]' },
   { label: 'Red', value: '#ef4444', className: 'bg-[#ef4444]' },
@@ -46,8 +55,10 @@ interface GuideColorPickerProps {
 export function GuideColorPicker({ value, onChange, variant }: GuideColorPickerProps) {
   // Choose swatch set based on variant
   const isPostit = variant === 'template-sticky-note';
-  const isBorderVariant = variant === 'frame' || variant === 'arrow';
-  const colors = isPostit ? POSTIT_COLORS : isBorderVariant ? BORDER_COLORS : PRESET_COLORS;
+  const isCard = variant === 'card';
+  const isFrame = variant === 'frame';
+  const isArrow = variant === 'arrow';
+  const colors = isPostit ? POSTIT_COLORS : isCard ? CARD_COLORS : isFrame ? FRAME_COLORS : isArrow ? BORDER_COLORS : CARD_COLORS;
 
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -66,8 +77,8 @@ export function GuideColorPicker({ value, onChange, variant }: GuideColorPickerP
           )}
         />
       ))}
-      {/* Custom color picker — not shown for sticky note names */}
-      {!isPostit && (
+      {/* Custom color picker — shown for frame and arrow variants */}
+      {(isFrame || isArrow) && (
         <input
           type="color"
           value={value || '#b8c9a3'}

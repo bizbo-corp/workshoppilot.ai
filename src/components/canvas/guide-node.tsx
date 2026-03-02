@@ -2,37 +2,15 @@
 
 import { memo, useCallback } from 'react';
 import { type NodeProps, NodeResizer } from '@xyflow/react';
-import { X, Lightbulb, StickyNote, Pencil, GripVertical } from 'lucide-react';
+import { X, Pencil, GripVertical } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { cn } from '@/lib/utils';
-import { darkenColor } from '@/lib/canvas/color-utils';
+
 import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
 
-// Variant icons (null = no icon for that variant)
-const VARIANT_ICONS: Record<string, typeof StickyNote | null> = {
-  sticker: null,
-  note: Lightbulb,
-  hint: Lightbulb,
-  image: null,
-  'template-sticky-note': null,
-  frame: null,
-  arrow: null,
-};
-
-const VARIANT_DEFAULTS: Record<string, { bg: string }> = {
-  sticker: { bg: '#b8c9a3' },
-  note: { bg: '#dce8f5' },
-  hint: { bg: '' },
-  'template-sticky-note': { bg: '' },
-  frame: { bg: '' },
-  arrow: { bg: '' },
-};
-
 const VARIANT_LABELS: Record<string, string> = {
-  sticker: 'Sticker',
-  note: 'Note',
-  hint: 'Hint',
+  card: 'Card',
   image: 'Image',
   'template-sticky-note': 'Template Sticky note',
   frame: 'Frame',
@@ -41,12 +19,18 @@ const VARIANT_LABELS: Record<string, string> = {
 
 // StickyNote color name → CSS variable class (matches StickyNoteNode COLOR_CLASSES)
 const POSTIT_COLOR_CLASSES: Record<string, string> = {
-  yellow: 'bg-[var(--sticky-note-yellow)]',
-  pink: 'bg-[var(--sticky-note-pink)]',
-  blue: 'bg-[var(--sticky-note-blue)]',
-  green: 'bg-[var(--sticky-note-green)]',
-  orange: 'bg-[var(--sticky-note-orange)]',
-  red: 'bg-[var(--sticky-note-red)]',
+  yellow: 'bg-[var(--canvas-yellow-pastel)]',
+  pink: 'bg-[var(--canvas-pink-pastel)]',
+  blue: 'bg-[var(--canvas-blue-pastel)]',
+  green: 'bg-[var(--canvas-green-pastel)]',
+  orange: 'bg-[var(--canvas-orange-pastel)]',
+  red: 'bg-[var(--canvas-red-pastel)]',
+};
+
+// Hex → canvas color name for adaptive text color lookup
+const HEX_TO_CANVAS_COLOR: Record<string, string> = {
+  '#eab308': 'yellow', '#ec4899': 'pink', '#3b82f6': 'blue',
+  '#22c55e': 'green', '#f97316': 'orange', '#ef4444': 'red',
 };
 
 /** Simple SVG sanitizer — strips <script> tags and on* event attributes. */
@@ -65,16 +49,18 @@ export interface GuideNodeData extends CanvasGuideData {
   onGuideResize?: (id: string, width: number, height: number) => void;
   onGuideResizeEnd?: (id: string, width: number, height: number, x: number, y: number) => void;
   isExiting: boolean;
+  /** Linked library asset data for rendering (populated by parent) */
+  linkedAsset?: { inlineSvg?: string | null; blobUrl: string } | null;
 }
 
 /**
- * Admin drag handle — absolutely positioned overlay so it doesn't affect
- * content layout. Content renders identically in admin and preview modes.
+ * Admin drag handle — positioned ABOVE the artifact content via negative
+ * top offset so it never overlaps the card body.
  */
 function AdminDragHandle({ guide }: { guide: GuideNodeData }) {
   if (!guide.isAdminEditing) return null;
   return (
-    <div className="guide-drag-handle absolute top-0 left-0 right-0 z-10 flex items-center gap-1.5 px-2 py-1.5 rounded-t-sm bg-olive-600/90 text-white cursor-grab active:cursor-grabbing select-none">
+    <div className="guide-drag-handle absolute -top-7 left-0 right-0 z-10 flex items-center gap-1.5 px-2 py-1.5 rounded-t-sm bg-olive-600/90 text-white cursor-grab active:cursor-grabbing select-none">
       <GripVertical className="h-3.5 w-3.5 shrink-0 opacity-70" />
       <span className="text-xs font-medium truncate flex-1">
         {guide.title || VARIANT_LABELS[guide.variant] || 'Guide'}
@@ -123,25 +109,29 @@ function TemplateStickyNoteContent({ guide }: { guide: GuideNodeData }) {
 
 // ─── Frame variant ───
 function FrameContent({ guide }: { guide: GuideNodeData }) {
-  const borderColor = guide.color || '#94a3b8';
+  const baseColor = guide.color || '#b8c9a3'; // olive default
+  const showStroke = (guide as CanvasGuideData).showStroke !== false; // default true
+  const showFill = !!(guide as CanvasGuideData).showFill;
+  const fillColor = showFill ? `${baseColor}1F` : 'transparent';
 
   return (
     <div
       className={cn(
         'rounded-lg w-full h-full',
         !guide.isAdminEditing && 'pointer-events-none',
+        showFill && 'backdrop-blur-sm',
       )}
       style={{
-        border: `2px dashed ${borderColor}`,
+        border: showStroke ? `1px solid ${baseColor}` : 'none',
+        backgroundColor: fillColor,
         position: 'relative',
       }}
     >
       {guide.title && (
         <span
-          className="absolute -top-3 left-3 px-1.5 text-[11px] font-medium leading-none"
+          className="absolute top-2 left-3 text-[11px] font-semibold uppercase tracking-wide leading-none"
           style={{
-            color: borderColor,
-            backgroundColor: 'var(--background, #fff)',
+            color: `var(--canvas-${HEX_TO_CANVAS_COLOR[baseColor] || 'olive'}-text)`,
           }}
         >
           {guide.title}
@@ -208,9 +198,7 @@ const MIN_SIZE_MAP: Record<string, { minWidth: number; minHeight: number }> = {
   'template-sticky-note': { minWidth: 100, minHeight: 60 },
   frame: { minWidth: 120, minHeight: 80 },
   arrow: { minWidth: 60, minHeight: 20 },
-  sticker: { minWidth: 80, minHeight: 40 },
-  note: { minWidth: 80, minHeight: 40 },
-  hint: { minWidth: 100, minHeight: 30 },
+  card: { minWidth: 80, minHeight: 40 },
   image: { minWidth: 40, minHeight: 40 },
 };
 
@@ -259,42 +247,38 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
     );
   }
 
-  // ── Sticker / note / hint / image ──
-  const Icon = VARIANT_ICONS[guide.variant];
-  const isHint = guide.variant === 'hint';
+  // ── Card / image ──
   const isImage = guide.variant === 'image';
-  const baseBg = guide.color || VARIANT_DEFAULTS[guide.variant]?.bg || '#b8c9a3';
-  const textColor = (isHint || isImage) ? undefined : darkenColor(baseBg, 0.55);
-  const iconColor = (isHint || isImage) ? undefined : darkenColor(baseBg, 0.45);
-  const borderBottomColor = (isHint || isImage) ? undefined : darkenColor(baseBg, 0.15);
+  const isCard = guide.variant === 'card';
+  const hasColor = !!guide.color;
 
   return (
     <div
       className={cn(
-        'group/guide relative w-full h-full',
+        'group/guide relative',
+        // Card auto-sizes to content; image fills allocated node area
+        isImage ? 'w-full h-full' : 'w-full',
         guide.isExiting
           ? 'animate-out fade-out-0 zoom-out-95 duration-200 fill-mode-forwards'
           : 'animate-in fade-in-0 zoom-in-95 duration-300',
-        // Variant styling — always applied for visual parity
-        guide.variant === 'sticker' && 'rounded-sm px-6 py-5 shadow-md border-b-4',
-        guide.variant === 'note' && 'rounded-xl px-4 py-3 border',
-        guide.variant === 'hint' && 'rounded-lg px-4 py-2.5 backdrop-blur-sm bg-black/50 text-white dark:bg-white/10 dark:text-white/90',
+        // Card variant — shared shape
+        isCard && 'rounded-xl px-4 py-3 backdrop-blur-sm',
+        // Default (no color): olive/sage semi-transparent, theme text colors
+        isCard && !hasColor && [
+          'bg-olive-100/70 dark:bg-olive-900/70',
+          'text-foreground',
+          'shadow-sm',
+        ],
+        // With color: tinted semi-transparent, theme text colors
+        isCard && hasColor && 'shadow-sm backdrop-blur-sm text-foreground',
         isImage && 'p-0',
         // Admin selection indicator
         guide.isAdminEditing && 'ring-1 ring-olive-400',
         guide.isAdmin && selected && 'ring-2 ring-olive-600 ring-offset-1',
       )}
-      style={{
-        // Always apply variant colors
-        ...(!isHint && !isImage ? {
-          backgroundColor: baseBg,
-          color: textColor,
-          borderTopColor: guide.variant === 'note' ? borderBottomColor : undefined,
-          borderRightColor: guide.variant === 'note' ? borderBottomColor : undefined,
-          borderBottomColor: (guide.variant === 'sticker' || guide.variant === 'note') ? borderBottomColor : undefined,
-          borderLeftColor: guide.variant === 'note' ? borderBottomColor : undefined,
-        } : {}),
-      }}
+      style={(isCard && hasColor) ? {
+        backgroundColor: `${guide.color}cc`,
+      } : undefined}
     >
       <NodeResizer
         isVisible={!!selected && !!guide.isAdminEditing}
@@ -330,34 +314,35 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
       )}
 
       {isImage ? (
-        guide.imageSvg ? (
+        // Fallback chain: libraryAsset.inlineSvg → libraryAsset.blobUrl → guide.imageSvg
+        guide.linkedAsset?.inlineSvg ? (
+          <div
+            className="w-full h-full [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"
+            dangerouslySetInnerHTML={{ __html: sanitizeSvg(guide.linkedAsset.inlineSvg) }}
+          />
+        ) : guide.linkedAsset?.blobUrl ? (
+          <img
+            src={guide.linkedAsset.blobUrl}
+            alt={guide.title || 'Guide image'}
+            className="w-full h-full object-contain"
+          />
+        ) : guide.imageSvg ? (
           <div
             className="w-full h-full [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"
             dangerouslySetInnerHTML={{ __html: sanitizeSvg(guide.imageSvg) }}
           />
         ) : (
-          <p className="text-xs text-muted-foreground italic py-2">No SVG</p>
+          <p className="text-xs text-muted-foreground italic py-2">No image</p>
         )
       ) : (
-        <div className="flex items-start gap-2">
-          {Icon && (
-            <Icon
-              className="mt-0.5 shrink-0 h-4 w-4"
-              style={!isHint ? { color: iconColor, opacity: 0.7 } : { color: '#fde047' }}
-            />
+        <div className="min-w-0">
+          {guide.title && (
+            <p className="text-base font-bold leading-tight mb-1">
+              {guide.title}
+            </p>
           )}
-          <div className="min-w-0">
-            {guide.title && (
-              <p className={cn('text-sm font-semibold leading-tight', guide.variant === 'sticker' && 'mb-1')}>
-                {guide.title}
-              </p>
-            )}
-            <div className={cn(
-              'prose max-w-none [&_p]:m-0 [&_p]:leading-snug [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0',
-              guide.variant === 'hint' ? 'prose-sm dark:prose-invert' : 'prose-xs',
-            )}>
-              <ReactMarkdown rehypePlugins={[rehypeRaw]}>{guide.body}</ReactMarkdown>
-            </div>
+          <div className="prose prose-sm max-w-none [&_p]:m-0 [&_p]:leading-snug [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0 text-foreground/80">
+            <ReactMarkdown rehypePlugins={[rehypeRaw]}>{guide.body}</ReactMarkdown>
           </div>
         </div>
       )}

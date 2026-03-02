@@ -117,13 +117,34 @@
   --canvas-highlight-fill: #fef3c7;
   --canvas-tint-opacity: 0.06;
   --canvas-zone-opacity: 0.08;
-  /* Sticky note colors — vibrant, olive-complementary (shared light/dark) */
-  --sticky-note-yellow: #fdf0a0;
-  --sticky-note-pink: #fcc0d8;
-  --sticky-note-blue: #a0d8f0;
-  --sticky-note-green: #a0e8c0;
-  --sticky-note-orange: #fdd0a0;
-  --sticky-note-red: #f5b0a8;
+  /* Canvas palette — single source of truth for frames, cards, sticky notes */
+  --canvas-yellow: #eab308;
+  --canvas-yellow-pastel: #fdf0a0;
+  --canvas-yellow-text: #854d0e;
+  --canvas-pink: #ec4899;
+  --canvas-pink-pastel: #fcc0d8;
+  --canvas-pink-text: #9d174d;
+  --canvas-blue: #3b82f6;
+  --canvas-blue-pastel: #a0d8f0;
+  --canvas-blue-text: #1e40af;
+  --canvas-green: #22c55e;
+  --canvas-green-pastel: #a0e8c0;
+  --canvas-green-text: #166534;
+  --canvas-orange: #f97316;
+  --canvas-orange-pastel: #fdd0a0;
+  --canvas-orange-text: #9a3412;
+  --canvas-red: #ef4444;
+  --canvas-red-pastel: #f5b0a8;
+  --canvas-red-text: #991b1b;
+  --canvas-olive: #b8c9a3;
+  --canvas-olive-text: var(--olive-800);
+  /* Sticky note colors — aliased from canvas palette */
+  --sticky-note-yellow: var(--canvas-yellow-pastel);
+  --sticky-note-pink: var(--canvas-pink-pastel);
+  --sticky-note-blue: var(--canvas-blue-pastel);
+  --sticky-note-green: var(--canvas-green-pastel);
+  --sticky-note-orange: var(--canvas-orange-pastel);
+  --sticky-note-red: var(--canvas-red-pastel);
   /* Mind map branch colors — vibrant, olive-complementary */
   --mm-blue: #3088c0;
   --mm-blue-bg: #cce4f5;
@@ -231,13 +252,21 @@
   --canvas-highlight-fill: #78350f4d;
   --canvas-tint-opacity: 0.12;
   --canvas-zone-opacity: 0.15;
-  /* Sticky note colors — same as light mode */
-  --sticky-note-yellow: #fdf0a0;
-  --sticky-note-pink: #fcc0d8;
-  --sticky-note-blue: #a0d8f0;
-  --sticky-note-green: #a0e8c0;
-  --sticky-note-orange: #fdd0a0;
-  --sticky-note-red: #f5b0a8;
+  /* Canvas palette — dark mode text overrides (light tints for readability) */
+  --canvas-yellow-text: #fef08a;
+  --canvas-pink-text: #f9a8d4;
+  --canvas-blue-text: #93c5fd;
+  --canvas-green-text: #86efac;
+  --canvas-orange-text: #fdba74;
+  --canvas-red-text: #fca5a5;
+  --canvas-olive-text: var(--olive-200);
+  /* Sticky note colors — aliased from canvas palette */
+  --sticky-note-yellow: var(--canvas-yellow-pastel);
+  --sticky-note-pink: var(--canvas-pink-pastel);
+  --sticky-note-blue: var(--canvas-blue-pastel);
+  --sticky-note-green: var(--canvas-green-pastel);
+  --sticky-note-orange: var(--canvas-orange-pastel);
+  --sticky-note-red: var(--canvas-red-pastel);
   /* Mind map branch colors — dark mode (vibrant, higher contrast) */
   --mm-blue: #68b0e0;
   --mm-blue-bg: #1e3850;
