@@ -16,11 +16,11 @@ export const canvasGuides = pgTable(
     title: text('title'),
     body: text('body').notNull(),
     variant: text('variant', {
-      enum: ['sticker', 'note', 'hint', 'image', 'template-sticky-note', 'frame', 'arrow'],
+      enum: ['card', 'image', 'template-sticky-note', 'frame', 'arrow'],
     })
       .notNull()
-      .default('sticker')
-      .$type<'sticker' | 'note' | 'hint' | 'image' | 'template-sticky-note' | 'frame' | 'arrow'>(),
+      .default('card')
+      .$type<'card' | 'image' | 'template-sticky-note' | 'frame' | 'arrow'>(),
     color: text('color'),
     layer: text('layer', {
       enum: ['background', 'foreground'],
@@ -53,6 +53,11 @@ export const canvasGuides = pgTable(
     imagePosition: text('image_position', {
       enum: ['before', 'above', 'below', 'after'],
     }).$type<'before' | 'above' | 'below' | 'after'>(),
+    showStroke: boolean('show_stroke').notNull().default(true),
+    showFill: boolean('show_fill').notNull().default(false),
+    libraryAssetId: text('library_asset_id'),
+    templateKey: text('template_key'),
+    placeholderText: text('placeholder_text'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

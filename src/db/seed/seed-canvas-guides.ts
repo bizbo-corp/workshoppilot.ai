@@ -8,12 +8,14 @@
  *
  * Idempotent: skips steps that already have guides in the DB.
  */
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
 import { canvasGuides } from '../schema/canvas-guides';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { STEP_CANVAS_GUIDES } from '../../lib/canvas/canvas-guide-config';
+import { getStepTemplateStickyNotes } from '../../lib/canvas/template-sticky-note-config';
 
 async function seed() {
   const connectionString = process.env.DATABASE_URL;
@@ -47,7 +49,7 @@ async function seed() {
         stepId,
         title: guide.title ?? null,
         body: guide.body,
-        variant: guide.variant ?? 'sticker',
+        variant: guide.variant ?? 'card',
         color: guide.color ?? null,
         layer: guide.layer ?? 'foreground',
         placementMode: guide.placementMode ?? 'pinned',
@@ -66,7 +68,58 @@ async function seed() {
     console.log(`  Seeded: ${stepId} (${guides.length} guides)`);
   }
 
-  console.log(`\nDone: ${total} guides inserted, ${skipped} steps skipped.`);
+  console.log(`\nCard guides: ${total} inserted, ${skipped} steps skipped.`);
+
+  // --- Second pass: seed template-sticky-note guides ---
+  const templateSteps = ['challenge']; // Steps that have template sticky notes
+  let templateTotal = 0;
+
+  for (const stepId of templateSteps) {
+    // Check if step already has template-sticky-note guides WITH templateKey populated
+    const existingTemplates = await db
+      .select({ id: canvasGuides.id, templateKey: canvasGuides.templateKey })
+      .from(canvasGuides)
+      .where(
+        and(
+          eq(canvasGuides.stepId, stepId),
+          eq(canvasGuides.variant, 'template-sticky-note'),
+        )
+      );
+
+    const hasPopulatedTemplates = existingTemplates.some(t => !!t.templateKey);
+    if (hasPopulatedTemplates) {
+      console.log(`  Skip template guides: ${stepId} (already has ${existingTemplates.length} template guides with keys)`);
+      continue;
+    }
+
+    const templateDefs = getStepTemplateStickyNotes(stepId);
+    for (let i = 0; i < templateDefs.length; i++) {
+      const def = templateDefs[i];
+      await db.insert(canvasGuides).values({
+        stepId,
+        title: def.label,
+        body: def.placeholderText,
+        variant: 'template-sticky-note',
+        color: def.color,
+        layer: 'foreground',
+        placementMode: 'on-canvas',
+        canvasX: def.position.x,
+        canvasY: def.position.y,
+        width: def.width,
+        height: def.height,
+        dismissBehavior: 'persistent',
+        showOnlyWhenEmpty: false,
+        sortOrder: i,
+        templateKey: def.key,
+        placeholderText: def.placeholderText,
+      });
+      templateTotal++;
+    }
+    console.log(`  Seeded template guides: ${stepId} (${templateDefs.length} templates)`);
+  }
+
+  console.log(`Template guides: ${templateTotal} inserted.`);
+  console.log(`\nDone.`);
 }
 
 seed().catch((err) => {

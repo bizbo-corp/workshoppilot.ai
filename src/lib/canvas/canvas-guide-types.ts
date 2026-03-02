@@ -3,7 +3,7 @@
  * This is the canonical type — replaces CanvasGuideDefinition from canvas-guide-config.ts.
  */
 
-export type CanvasGuideVariant = 'sticker' | 'note' | 'hint' | 'image' | 'template-sticky-note' | 'frame' | 'arrow';
+export type CanvasGuideVariant = 'card' | 'image' | 'template-sticky-note' | 'frame' | 'arrow';
 export type CanvasGuideDismissBehavior = 'auto-dismiss' | 'hover-x' | 'persistent';
 export type CanvasGuidePlacementMode = 'pinned' | 'on-canvas';
 export type CanvasGuideLayer = 'background' | 'foreground';
@@ -35,4 +35,11 @@ export interface CanvasGuideData {
   imageUrl?: string | null;
   imageSvg?: string | null;
   imagePosition?: 'before' | 'above' | 'below' | 'after' | null;
+  showStroke?: boolean;
+  showFill?: boolean;
+  libraryAssetId?: string | null;
+  templateKey?: string | null;
+  placeholderText?: string | null;
+  /** Linked asset data (populated by server join, not stored in DB) */
+  linkedAsset?: { inlineSvg?: string | null; blobUrl: string; name: string } | null;
 }

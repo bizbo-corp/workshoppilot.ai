@@ -23,10 +23,11 @@ export interface CanvasWrapperProps {
   onAddGuide?: (position: { x: number; y: number }) => void;
   onGuidePositionUpdate?: (guideId: string, x: number, y: number) => void;
   onGuideSizeUpdate?: (guideId: string, width: number, height: number, x: number, y: number) => void;
-  canvasRef?: React.Ref<{ getViewport: () => { x: number; y: number; zoom: number } }>;
+  onTemplateStickyPositionSync?: (templateKey: string, x: number, y: number) => void;
+  canvasRef?: React.Ref<{ getViewport: () => { x: number; y: number; zoom: number }; screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number } }>;
 }
 
-export function CanvasWrapper({ sessionId, stepId, workshopId, workshopType, canvasGuides, defaultViewportSettings, isAdmin, isAdminEditing, onEditGuide, onAddGuide, onGuidePositionUpdate, onGuideSizeUpdate, canvasRef }: CanvasWrapperProps) {
+export function CanvasWrapper({ sessionId, stepId, workshopId, workshopType, canvasGuides, defaultViewportSettings, isAdmin, isAdminEditing, onEditGuide, onAddGuide, onGuidePositionUpdate, onGuideSizeUpdate, onTemplateStickyPositionSync, canvasRef }: CanvasWrapperProps) {
   return (
     <ReactFlowCanvas
       sessionId={sessionId}
@@ -41,6 +42,7 @@ export function CanvasWrapper({ sessionId, stepId, workshopId, workshopType, can
       onAddGuide={onAddGuide}
       onGuidePositionUpdate={onGuidePositionUpdate}
       onGuideSizeUpdate={onGuideSizeUpdate}
+      onTemplateStickyPositionSync={onTemplateStickyPositionSync}
       canvasRef={canvasRef}
     />
   );

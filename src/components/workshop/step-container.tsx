@@ -30,6 +30,7 @@ import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { ConceptCanvasOverlay } from './concept-canvas-overlay';
 import { GuideEditPopover } from '@/components/canvas/guide-edit-popover';
+import { AssetDrawer } from '@/components/canvas/asset-drawer';
 import { useAdminGuides } from '@/hooks/use-admin-guides';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
 import { StepTransitionWrapper } from './step-transition-wrapper';
@@ -217,6 +218,13 @@ export function StepContainer({
     position: { x: number; y: number };
   } | null>(null);
 
+  // Asset drawer state
+  const [isAssetDrawerOpen, setIsAssetDrawerOpen] = React.useState(false);
+  // When true, selecting an asset swaps the current editing popover guide's libraryAssetId
+  const [assetDrawerSelectionMode, setAssetDrawerSelectionMode] = React.useState(false);
+  // Cache of linked asset data for popover display
+  const [linkedAssetCache, setLinkedAssetCache] = React.useState<Record<string, import('@/lib/asset-library/asset-library-types').AssetData>>({});
+
   // Local guide state — initialized from server prop, synced when editing toggles off.
   // Without this, toggling guides off reverts to stale server-loaded data.
   const [localCanvasGuides, setLocalCanvasGuides] = React.useState(canvasGuides);
@@ -241,10 +249,27 @@ export function StepContainer({
     setEditingPopover({ guide, position });
   }, []);
 
-  const handleAddGuide = React.useCallback(async (position: { x: number; y: number }) => {
-    const created = await adminGuides.createGuide();
+  const handleAddGuide = React.useCallback(async (_clickPosition: { x: number; y: number }) => {
+    // Compute viewport center in canvas coords for new guide placement
+    const container = document.querySelector('.react-flow');
+    const rect = container?.getBoundingClientRect();
+    let canvasX = 200;
+    let canvasY = 200;
+    if (rect && canvasRef.current?.screenToFlowPosition) {
+      const center = canvasRef.current.screenToFlowPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      });
+      canvasX = Math.round(center.x);
+      canvasY = Math.round(center.y);
+    }
+
+    const created = await adminGuides.createGuide({ canvasX, canvasY });
     if (created) {
-      setEditingPopover({ guide: created, position });
+      // Position popover at screen center + 120px right offset
+      const popoverX = rect ? rect.left + rect.width / 2 + 120 : _clickPosition.x;
+      const popoverY = rect ? rect.top + rect.height / 2 - 100 : _clickPosition.y;
+      setEditingPopover({ guide: created, position: { x: popoverX, y: popoverY } });
     }
   }, [adminGuides]);
 
@@ -263,8 +288,53 @@ export function StepContainer({
     setEditingPopover(null);
   }, [adminGuides]);
 
-  // Canvas ref for reading viewport (Save Default View)
-  const canvasRef = React.useRef<{ getViewport: () => { x: number; y: number; zoom: number } }>(null);
+  // Asset drawer: open in selection mode for hot-swap from popover
+  const handleOpenAssetDrawer = React.useCallback(() => {
+    setAssetDrawerSelectionMode(true);
+    setIsAssetDrawerOpen(true);
+  }, []);
+
+  // Asset drawer: handle asset selection
+  const handleAssetSelected = React.useCallback((asset: import('@/lib/asset-library/asset-library-types').AssetData) => {
+    if (assetDrawerSelectionMode && editingPopover) {
+      // Hot-swap: update the guide's libraryAssetId, clear legacy inline SVG, and set new linkedAsset for live preview
+      handleUpdateGuide(editingPopover.guide.id, {
+        libraryAssetId: asset.id,
+        imageSvg: null,
+        linkedAsset: { inlineSvg: asset.inlineSvg ?? null, blobUrl: asset.blobUrl, name: asset.name },
+      });
+      // Cache linked asset for popover display
+      setLinkedAssetCache(prev => ({ ...prev, [asset.id]: asset }));
+    } else {
+      // Place mode: create a new image guide linked to the asset
+      const container = document.querySelector('.react-flow');
+      const rect = container?.getBoundingClientRect();
+      let canvasX = 200;
+      let canvasY = 200;
+      if (rect && canvasRef.current?.screenToFlowPosition) {
+        const center = canvasRef.current.screenToFlowPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+        });
+        canvasX = Math.round(center.x);
+        canvasY = Math.round(center.y);
+      }
+      adminGuides.createGuide({
+        variant: 'image',
+        canvasX,
+        canvasY,
+        libraryAssetId: asset.id,
+        linkedAsset: { inlineSvg: asset.inlineSvg ?? null, blobUrl: asset.blobUrl, name: asset.name },
+        body: '',
+      });
+      setLinkedAssetCache(prev => ({ ...prev, [asset.id]: asset }));
+    }
+    setIsAssetDrawerOpen(false);
+    setAssetDrawerSelectionMode(false);
+  }, [assetDrawerSelectionMode, editingPopover, handleUpdateGuide, adminGuides]);
+
+  // Canvas ref for reading viewport (Save Default View) and screen-to-flow position conversion
+  const canvasRef = React.useRef<{ getViewport: () => { x: number; y: number; zoom: number }; screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number } }>(null);
 
   // Handle "Save Default View" — reads current viewport, converts to center-offset, saves via API
   const handleSaveDefaultView = React.useCallback(async () => {
@@ -308,6 +378,18 @@ export function StepContainer({
   // Handle guide size updates from canvas resize — updates local state + debounced PATCH
   const handleGuideSizeUpdate = React.useCallback((guideId: string, width: number, height: number, x: number, y: number) => {
     adminGuides.updateGuide(guideId, { width, height, canvasX: x, canvasY: y });
+  }, [adminGuides]);
+
+  // Sync template sticky note position to the corresponding DB guide by templateKey.
+  // When admin drags a real template sticky note, persist the new position globally
+  // so future sessions inherit the updated layout.
+  const handleTemplateStickyPositionSync = React.useCallback((templateKey: string, x: number, y: number) => {
+    const guide = adminGuides.guides.find(
+      (g) => g.variant === 'template-sticky-note' && g.templateKey === templateKey
+    );
+    if (guide) {
+      adminGuides.updateGuide(guide.id, { canvasX: x, canvasY: y });
+    }
   }, [adminGuides]);
 
   // PRD viewer dialog state
@@ -1107,6 +1189,7 @@ export function StepContainer({
                   onAddGuide={handleAddGuide}
                   onGuidePositionUpdate={handleGuidePositionUpdate}
                   onGuideSizeUpdate={handleGuideSizeUpdate}
+                  onTemplateStickyPositionSync={handleTemplateStickyPositionSync}
                   canvasRef={canvasRef}
                 />
                 {step.id === 'concept' && (
@@ -1134,6 +1217,7 @@ export function StepContainer({
                 onAddGuide={handleAddGuide}
                 onGuidePositionUpdate={handleGuidePositionUpdate}
                 onGuideSizeUpdate={handleGuideSizeUpdate}
+                onTemplateStickyPositionSync={handleTemplateStickyPositionSync}
                 canvasRef={canvasRef}
               />
             )}
@@ -1183,6 +1267,21 @@ export function StepContainer({
             onSave={adminGuides.flushAll}
             hasPendingChanges={adminGuides.hasPendingChanges}
             onClose={() => setEditingPopover(null)}
+            linkedAsset={editingPopover.guide.libraryAssetId ? linkedAssetCache[editingPopover.guide.libraryAssetId] ?? null : null}
+            onOpenAssetDrawer={handleOpenAssetDrawer}
+            allGuides={adminGuides.guides}
+          />
+        )}
+        {/* Asset drawer */}
+        {isAdmin && (
+          <AssetDrawer
+            open={isAssetDrawerOpen}
+            onOpenChange={(open) => {
+              setIsAssetDrawerOpen(open);
+              if (!open) setAssetDrawerSelectionMode(false);
+            }}
+            onSelectAsset={handleAssetSelected}
+            selectionLabel={assetDrawerSelectionMode ? 'Select asset to swap' : undefined}
           />
         )}
       </div>
@@ -1244,6 +1343,7 @@ export function StepContainer({
                       onAddGuide={handleAddGuide}
                       onGuidePositionUpdate={handleGuidePositionUpdate}
                       onGuideSizeUpdate={handleGuideSizeUpdate}
+                      onTemplateStickyPositionSync={handleTemplateStickyPositionSync}
                       canvasRef={canvasRef}
                     />
                     {step.id === 'concept' && (
@@ -1283,6 +1383,7 @@ export function StepContainer({
                     onAddGuide={handleAddGuide}
                     onGuidePositionUpdate={handleGuidePositionUpdate}
                     onGuideSizeUpdate={handleGuideSizeUpdate}
+                    onTemplateStickyPositionSync={handleTemplateStickyPositionSync}
                     canvasRef={canvasRef}
                   />
                 )}
@@ -1322,6 +1423,7 @@ export function StepContainer({
                     onAddGuide={handleAddGuide}
                     onGuidePositionUpdate={handleGuidePositionUpdate}
                     onGuideSizeUpdate={handleGuideSizeUpdate}
+                    onTemplateStickyPositionSync={handleTemplateStickyPositionSync}
                     canvasRef={canvasRef}
                   />
                   {step.id === 'concept' && (
@@ -1361,6 +1463,7 @@ export function StepContainer({
                   onAddGuide={handleAddGuide}
                   onGuidePositionUpdate={handleGuidePositionUpdate}
                   onGuideSizeUpdate={handleGuideSizeUpdate}
+                  onTemplateStickyPositionSync={handleTemplateStickyPositionSync}
                   canvasRef={canvasRef}
                 />
               )}
@@ -1431,6 +1534,20 @@ export function StepContainer({
           onSave={adminGuides.flushAll}
           hasPendingChanges={adminGuides.hasPendingChanges}
           onClose={() => setEditingPopover(null)}
+          linkedAsset={editingPopover.guide.libraryAssetId ? linkedAssetCache[editingPopover.guide.libraryAssetId] ?? null : null}
+          onOpenAssetDrawer={handleOpenAssetDrawer}
+        />
+      )}
+      {/* Asset drawer */}
+      {isAdmin && (
+        <AssetDrawer
+          open={isAssetDrawerOpen}
+          onOpenChange={(open) => {
+            setIsAssetDrawerOpen(open);
+            if (!open) setAssetDrawerSelectionMode(false);
+          }}
+          onSelectAsset={handleAssetSelected}
+          selectionLabel={assetDrawerSelectionMode ? 'Select asset to swap' : undefined}
         />
       )}
     </div>

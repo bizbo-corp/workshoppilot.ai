@@ -21,7 +21,8 @@ interface RightPanelProps {
   onAddGuide?: (position: { x: number; y: number }) => void;
   onGuidePositionUpdate?: (guideId: string, x: number, y: number) => void;
   onGuideSizeUpdate?: (guideId: string, width: number, height: number, x: number, y: number) => void;
-  canvasRef?: React.Ref<{ getViewport: () => { x: number; y: number; zoom: number } }>;
+  onTemplateStickyPositionSync?: (templateKey: string, x: number, y: number) => void;
+  canvasRef?: React.Ref<{ getViewport: () => { x: number; y: number; zoom: number }; screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number } }>;
 }
 
 export function RightPanel({
@@ -38,6 +39,7 @@ export function RightPanel({
   onAddGuide,
   onGuidePositionUpdate,
   onGuideSizeUpdate,
+  onTemplateStickyPositionSync,
   canvasRef,
 }: RightPanelProps) {
   const stepMeta = getStepByOrder(stepOrder);
@@ -71,6 +73,7 @@ export function RightPanel({
           onAddGuide={onAddGuide}
           onGuidePositionUpdate={onGuidePositionUpdate}
           onGuideSizeUpdate={onGuideSizeUpdate}
+          onTemplateStickyPositionSync={onTemplateStickyPositionSync}
           canvasRef={canvasRef}
         />
       </div>

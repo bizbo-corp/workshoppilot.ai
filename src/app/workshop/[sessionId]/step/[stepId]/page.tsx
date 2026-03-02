@@ -22,7 +22,7 @@ import type { DotVote, VotingSession } from "@/lib/canvas/voting-types";
 import { BRAIN_REWRITING_CELL_ORDER } from "@/lib/canvas/brain-rewriting-types";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
 import { computeRadialPositions } from "@/lib/canvas/mind-map-layout";
-import { getStepTemplateStickyNotes } from "@/lib/canvas/template-sticky-note-config";
+import { getStepTemplateStickyNotes, guidesToTemplateDefs } from "@/lib/canvas/template-sticky-note-config";
 import { dbWithRetry } from "@/db/with-retry";
 import { PAYWALL_CUTOFF_DATE } from "@/lib/billing/paywall-config";
 import { PaywallOverlay } from "@/components/workshop/paywall-overlay";
@@ -330,13 +330,20 @@ export default async function StepPage({ params }: StepPageProps) {
     }
   }
 
+  // Load canvas guides early so we can use DB-configured template positions
+  const canvasGuidesForTemplates = await loadCanvasGuides(step.id);
+
   // Seed template sticky notes for steps that define them (e.g., Challenge step)
   // Check for absence of template sticky notes specifically — not an empty canvas.
   // This ensures templates are added even if the AI or user already created regular sticky notes.
   const hasTemplateStickyNotes = initialCanvasStickyNotes.some(p => p.templateKey);
   console.log(`[template-seed] step=${step.id}, stickyNotes=${initialCanvasStickyNotes.length}, hasTemplates=${hasTemplateStickyNotes}`);
   if (!hasTemplateStickyNotes) {
-    const templateDefs = getStepTemplateStickyNotes(step.id);
+    // Prefer DB-configured template guides; fall back to hardcoded config
+    let templateDefs = guidesToTemplateDefs(canvasGuidesForTemplates);
+    if (templateDefs.length === 0) {
+      templateDefs = getStepTemplateStickyNotes(step.id);
+    }
     console.log(`[template-seed] templateDefs=${templateDefs.length} for step=${step.id}`);
     if (templateDefs.length > 0) {
       const newTemplates = templateDefs.map(def => ({
@@ -492,8 +499,8 @@ export default async function StepPage({ params }: StepPageProps) {
     }
   }
 
-  // Load canvas guides from DB, falling back to hardcoded defaults
-  let canvasGuides = await loadCanvasGuides(step.id);
+  // Reuse already-loaded canvas guides, falling back to hardcoded defaults
+  let canvasGuides = canvasGuidesForTemplates;
   if (canvasGuides.length === 0) {
     canvasGuides = getDefaultStepCanvasGuides(step.id);
   }

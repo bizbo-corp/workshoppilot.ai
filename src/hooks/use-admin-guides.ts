@@ -46,7 +46,7 @@ export function useAdminGuides(stepId: string, enabled: boolean = true) {
 
   // Create new guide
   const createGuide = useCallback(async (defaults?: Partial<CanvasGuideData>) => {
-    const variant = defaults?.variant ?? 'sticker';
+    const variant = defaults?.variant ?? 'card';
     const canvasOnlyVariants = ['template-sticky-note', 'frame', 'arrow'];
     const isCanvasOnly = canvasOnlyVariants.includes(variant);
     const noBodyVariants = ['frame', 'arrow'];
@@ -63,8 +63,8 @@ export function useAdminGuides(stepId: string, enabled: boolean = true) {
       dismissBehavior: isCanvasOnly ? 'persistent' : 'hover-x',
       showOnlyWhenEmpty: false,
       sortOrder: guides.length,
-      ...(variant === 'template-sticky-note' ? { color: 'yellow', width: 160, height: 100 } : {}),
-      ...(variant === 'frame' ? { width: 400, height: 300, color: '#94a3b8' } : {}),
+      ...(variant === 'template-sticky-note' ? { color: 'yellow', width: 160, height: 100, templateKey: '', placeholderText: '' } : {}),
+      ...(variant === 'frame' ? { width: 400, height: 300, color: null, showStroke: true, showFill: false } : {}),
       ...(variant === 'arrow' ? { width: 120, height: 40, rotation: 0, color: '#64748b' } : {}),
       ...defaults,
     };

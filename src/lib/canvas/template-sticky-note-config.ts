@@ -1,4 +1,5 @@
 import type { StickyNoteColor } from '@/stores/canvas-store';
+import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
 
 /**
  * Template Post-It Definition
@@ -65,4 +66,22 @@ const STEP_TEMPLATE_POSTITS: Record<string, TemplateStickyNoteDefinition[]> = {
  */
 export function getStepTemplateStickyNotes(stepId: string): TemplateStickyNoteDefinition[] {
   return STEP_TEMPLATE_POSTITS[stepId] || [];
+}
+
+/**
+ * Convert DB canvas guides (variant=template-sticky-note) to TemplateStickyNoteDefinitions.
+ * This bridges the admin-editable guide system with the per-session sticky note seeding.
+ */
+export function guidesToTemplateDefs(guides: CanvasGuideData[]): TemplateStickyNoteDefinition[] {
+  return guides
+    .filter(g => g.variant === 'template-sticky-note' && g.templateKey)
+    .map(g => ({
+      key: g.templateKey!,
+      label: g.title || g.templateKey!,
+      placeholderText: g.placeholderText || g.body || '',
+      color: (g.color as StickyNoteColor) || 'yellow',
+      position: { x: g.canvasX ?? 0, y: g.canvasY ?? 0 },
+      width: g.width ?? 220,
+      height: g.height ?? 160,
+    }));
 }

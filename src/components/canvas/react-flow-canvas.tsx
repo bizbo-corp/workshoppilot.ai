@@ -88,7 +88,7 @@ import { CanvasGuide } from "./canvas-guide";
 import { GuideNode } from "./guide-node";
 import type { CanvasGuideData } from "@/lib/canvas/canvas-guide-types";
 import type { StepCanvasSettingsData } from "@/lib/canvas/step-canvas-settings-types";
-import { getStepTemplateStickyNotes } from "@/lib/canvas/template-sticky-note-config";
+import { getStepTemplateStickyNotes, guidesToTemplateDefs } from "@/lib/canvas/template-sticky-note-config";
 import { toast } from "sonner";
 // JourneyMapSkeleton removed — skeleton placeholders are now integrated into GridOverlay
 
@@ -178,8 +178,11 @@ export interface ReactFlowCanvasProps {
     x: number,
     y: number,
   ) => void;
+  /** Called when admin drags a template sticky note — syncs position to DB guide */
+  onTemplateStickyPositionSync?: (templateKey: string, x: number, y: number) => void;
   canvasRef?: React.Ref<{
     getViewport: () => { x: number; y: number; zoom: number };
+    screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number };
   }>;
 }
 
@@ -196,6 +199,7 @@ function ReactFlowCanvasInner({
   onAddGuide,
   onGuidePositionUpdate,
   onGuideSizeUpdate,
+  onTemplateStickyPositionSync,
   canvasRef,
 }: ReactFlowCanvasProps) {
   // Store access
@@ -287,7 +291,10 @@ function ReactFlowCanvasInner({
     const currentStickyNotes = storeApi.getState().stickyNotes;
     const hasTemplates = currentStickyNotes.some((p) => p.templateKey);
     if (!hasTemplates) {
-      const templateDefs = getStepTemplateStickyNotes(stepId);
+      let templateDefs = guidesToTemplateDefs(canvasGuidesProp || []);
+      if (templateDefs.length === 0) {
+        templateDefs = getStepTemplateStickyNotes(stepId);
+      }
       if (templateDefs.length > 0) {
         console.log(
           "[canvas] Client-side template seeding:",
@@ -384,13 +391,14 @@ function ReactFlowCanvasInner({
     getViewport,
   } = useReactFlow();
 
-  // Expose getViewport to parent via canvasRef for "Save Default View"
+  // Expose getViewport and screenToFlowPosition to parent via canvasRef
   useImperativeHandle(
     canvasRef,
     () => ({
       getViewport: () => getViewport(),
+      screenToFlowPosition: (pos: { x: number; y: number }) => screenToFlowPosition(pos),
     }),
-    [getViewport],
+    [getViewport, screenToFlowPosition],
   );
 
   // Track if we've done initial fitView
@@ -1113,32 +1121,30 @@ function ReactFlowCanvasInner({
 
     // Add on-canvas guide nodes
     // Default dimensions per variant — used when guide has no saved width/height
-    const guideDefaultDims: Record<string, { w: number; h: number }> = {
+    const guideDefaultDims: Record<string, { w: number; h?: number }> = {
       "template-sticky-note": { w: 160, h: 100 },
       frame: { w: 400, h: 300 },
       arrow: { w: 120, h: 40 },
-      sticker: { w: 200, h: 80 },
-      note: { w: 200, h: 80 },
-      hint: { w: 220, h: 50 },
+      card: { w: 240 }, // height auto-sizes to content
       image: { w: 200, h: 200 },
     };
 
-    // Hide template-sticky-note guide variants when real template sticky notes are present (they're redundant)
-    const hasTemplateStickyNotes = stickyNotes.some((p) => !!p.templateKey);
-
+    // Template-sticky-note guide variants are never rendered — they're invisible
+    // DB records used only for seeding positions. The real sticky notes (canvas store)
+    // are the single visible cards; admin drags sync back to DB guides.
     const guideReactFlowNodes: Node[] = onCanvasGuides
       .filter(
         (g) =>
+          g.variant !== "template-sticky-note" &&
           !dismissedGuideIds.has(g.id) &&
-          (!g.showOnlyWhenEmpty || !canvasHasItems) &&
-          !(g.variant === "template-sticky-note" && hasTemplateStickyNotes),
+          (!g.showOnlyWhenEmpty || !canvasHasItems),
       )
       .map((g) => {
         const nodeId = `guide-${g.id}`;
         const liveDims = liveDimensions.current[nodeId];
         const defaults = guideDefaultDims[g.variant] || { w: 200, h: 80 };
         const nodeWidth = liveDims?.width ?? g.width ?? defaults.w;
-        const nodeHeight = liveDims?.height ?? g.height ?? defaults.h;
+        const nodeHeight = defaults.h != null ? (liveDims?.height ?? g.height ?? defaults.h) : undefined;
 
         return {
           id: nodeId,
@@ -1147,7 +1153,7 @@ function ReactFlowCanvasInner({
             x: g.canvasX ?? 0,
             y: g.canvasY ?? 0,
           },
-          zIndex: g.layer === "background" ? 2 : 25,
+          zIndex: (g.layer === "background" ? 2 : 25) + (g.sortOrder ?? 0),
           draggable: !!isAdmin && !!isAdminEditing,
           selectable: !!isAdmin && !!isAdminEditing,
           selected: selectedNodeIds.includes(nodeId),
@@ -1161,9 +1167,11 @@ function ReactFlowCanvasInner({
             onGuideResizeEnd: handleGuideResizeEnd,
             isExiting: exitingGuideIds.has(g.id),
           },
-          // Always set explicit dimensions — content uses w-full/h-full to fill.
-          // This ensures admin edit and preview render identically.
-          style: { width: nodeWidth, height: nodeHeight },
+          // Card variant: width-only (height auto-sizes to content)
+          // Other variants: explicit width + height
+          style: nodeHeight != null
+            ? { width: nodeWidth, height: nodeHeight }
+            : { width: nodeWidth },
         };
       });
 
@@ -2134,6 +2142,18 @@ function ReactFlowCanvasInner({
               }
             }
           }
+
+          // --- Sync template sticky note position to DB guide (admin only) ---
+          // When admin drags a real template sticky note, persist the new position
+          // to the corresponding canvas_guide row so future sessions inherit it.
+          if (isAdminEditing && draggedStickyNote?.templateKey && onTemplateStickyPositionSync) {
+            const snappedPos = snapToGrid(change.position);
+            onTemplateStickyPositionSync(
+              draggedStickyNote.templateKey,
+              Math.round(snappedPos.x),
+              Math.round(snappedPos.y),
+            );
+          }
         }
       });
     },
@@ -2163,6 +2183,8 @@ function ReactFlowCanvasInner({
       setCluster,
       rearrangeCluster,
       onGuidePositionUpdate,
+      onTemplateStickyPositionSync,
+      isAdminEditing,
       stepId,
     ],
   );
@@ -3071,6 +3093,7 @@ export function ReactFlowCanvas({
   onAddGuide,
   onGuidePositionUpdate,
   onGuideSizeUpdate,
+  onTemplateStickyPositionSync,
   canvasRef,
 }: ReactFlowCanvasProps) {
   return (
@@ -3088,6 +3111,7 @@ export function ReactFlowCanvas({
         onAddGuide={onAddGuide}
         onGuidePositionUpdate={onGuidePositionUpdate}
         onGuideSizeUpdate={onGuideSizeUpdate}
+        onTemplateStickyPositionSync={onTemplateStickyPositionSync}
         canvasRef={canvasRef}
       />
     </ReactFlowProvider>

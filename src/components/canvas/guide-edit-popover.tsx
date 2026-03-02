@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Trash2, Save, Check, Upload } from 'lucide-react';
+import { Trash2, Save, Check, Upload, Library, ArrowLeftRight, ArrowUpToLine, ArrowDownToLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GuideColorPicker } from './guide-color-picker';
 import type {
@@ -11,11 +11,10 @@ import type {
   CanvasGuidePlacementMode,
   CanvasGuideLayer,
 } from '@/lib/canvas/canvas-guide-types';
+import type { AssetData } from '@/lib/asset-library/asset-library-types';
 
 const VARIANT_OPTIONS: { value: CanvasGuideVariant; label: string }[] = [
-  { value: 'sticker', label: 'Sticker' },
-  { value: 'note', label: 'Note' },
-  { value: 'hint', label: 'Hint' },
+  { value: 'card', label: 'Card' },
   { value: 'image', label: 'Image' },
   { value: 'template-sticky-note', label: 'Template Sticky note' },
   { value: 'frame', label: 'Frame' },
@@ -74,9 +73,15 @@ interface GuideEditPopoverProps {
   onSave: () => Promise<void>;
   hasPendingChanges: boolean;
   onClose: () => void;
+  /** The linked library asset data (if guide has libraryAssetId) */
+  linkedAsset?: AssetData | null;
+  /** Open the asset drawer in selection mode for hot-swap */
+  onOpenAssetDrawer?: () => void;
+  /** All guides for the current step — used for z-index Front/Back controls */
+  allGuides?: CanvasGuideData[];
 }
 
-export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, hasPendingChanges, onClose }: GuideEditPopoverProps) {
+export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, hasPendingChanges, onClose, linkedAsset, onOpenAssetDrawer, allGuides = [] }: GuideEditPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [clampedPos, setClampedPos] = useState(position);
@@ -142,7 +147,7 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
     const reader = new FileReader();
     reader.onload = (event) => {
       const svgText = event.target?.result as string;
-      if (svgText) update({ imageSvg: svgText });
+      if (svgText) update({ imageSvg: svgText, libraryAssetId: null });
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -229,6 +234,32 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
           />
         )}
 
+        {/* Template Key + Placeholder — template-sticky-note variant only */}
+        {guide.variant === 'template-sticky-note' && (
+          <>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Template Key</label>
+              <input
+                type="text"
+                placeholder="e.g. idea, problem, audience"
+                value={guide.templateKey || ''}
+                onChange={(e) => update({ templateKey: e.target.value || null })}
+                className="mt-1 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Placeholder Text</label>
+              <textarea
+                placeholder="Placeholder shown when sticky note is empty..."
+                value={guide.placeholderText || ''}
+                onChange={(e) => update({ placeholderText: e.target.value || null })}
+                rows={2}
+                className="mt-1 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm resize-y"
+              />
+            </div>
+          </>
+        )}
+
         {/* Body — shown only for text-based variants */}
         {!hideBody && (
           <textarea
@@ -240,42 +271,108 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
           />
         )}
 
-        {/* Image SVG editor */}
+        {/* Image editor — library-linked asset or raw SVG fallback */}
         {isImage && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground">SVG Markup</label>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground border border-border hover:bg-muted transition-colors"
-              >
-                <Upload className="h-3 w-3" />
-                Upload SVG
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".svg,image/svg+xml"
-                onChange={handleSvgUpload}
-                className="hidden"
-              />
-            </div>
-            <textarea
-              placeholder="Paste SVG markup..."
-              value={guide.imageSvg || ''}
-              onChange={(e) => update({ imageSvg: e.target.value })}
-              rows={5}
-              className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-mono resize-y"
-            />
-            {guide.imageSvg && (
-              <div className="rounded-md border border-border bg-muted/30 p-2">
-                <p className="text-[10px] text-muted-foreground mb-1">Preview</p>
-                <div
-                  className="[&>svg]:max-w-full [&>svg]:h-auto"
-                  dangerouslySetInnerHTML={{ __html: sanitizeSvg(guide.imageSvg) }}
+            {/* Linked library asset info */}
+            {guide.libraryAssetId && (
+              <div className="rounded-md border border-primary/20 bg-primary/5 p-2 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Library className="h-3 w-3 text-primary" />
+                    <span className="text-[10px] font-medium text-primary">Library Asset</span>
+                  </div>
+                  {onOpenAssetDrawer && (
+                    <button
+                      type="button"
+                      onClick={onOpenAssetDrawer}
+                      className="flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-medium text-primary border border-primary/30 hover:bg-primary/10 transition-colors"
+                    >
+                      <ArrowLeftRight className="h-2.5 w-2.5" />
+                      Swap
+                    </button>
+                  )}
+                </div>
+                {/* Preview from linkedAsset prop or guide's server-joined data */}
+                {(linkedAsset || guide.linkedAsset) ? (
+                  <>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {linkedAsset?.name ?? guide.linkedAsset?.name ?? guide.libraryAssetId}
+                    </p>
+                    {(linkedAsset?.inlineSvg ?? guide.linkedAsset?.inlineSvg) ? (
+                      <div className="rounded border border-border bg-muted/30 p-1.5 [&>svg]:max-w-full [&>svg]:h-auto [&>svg]:max-h-16">
+                        <div dangerouslySetInnerHTML={{ __html: sanitizeSvg((linkedAsset?.inlineSvg ?? guide.linkedAsset?.inlineSvg)!) }} />
+                      </div>
+                    ) : (linkedAsset?.blobUrl ?? guide.linkedAsset?.blobUrl) ? (
+                      <img
+                        src={(linkedAsset?.blobUrl ?? guide.linkedAsset?.blobUrl)!}
+                        alt={linkedAsset?.name ?? guide.linkedAsset?.name ?? 'Asset'}
+                        className="max-h-16 rounded border border-border"
+                      />
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground italic">Linked asset</p>
+                )}
+              </div>
+            )}
+
+            {/* Unlinked: show swap / upload to library buttons */}
+            {!guide.libraryAssetId && (
+              <div className="flex items-center gap-2">
+                {onOpenAssetDrawer && (
+                  <button
+                    type="button"
+                    onClick={onOpenAssetDrawer}
+                    className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground border border-border hover:bg-muted transition-colors"
+                  >
+                    <Library className="h-3 w-3" />
+                    Pick from Library
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground border border-border hover:bg-muted transition-colors"
+                >
+                  <Upload className="h-3 w-3" />
+                  Upload SVG
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".svg,image/svg+xml"
+                  onChange={handleSvgUpload}
+                  className="hidden"
                 />
               </div>
+            )}
+
+            {/* Raw SVG textarea — only shown when no library asset is linked */}
+            {!guide.libraryAssetId && (
+              <details>
+                <summary className="cursor-pointer text-[10px] text-muted-foreground hover:text-foreground">
+                  SVG Markup
+                </summary>
+                <div className="mt-1.5 space-y-2">
+                  <textarea
+                    placeholder="Paste SVG markup..."
+                    value={guide.imageSvg || ''}
+                    onChange={(e) => update({ imageSvg: e.target.value })}
+                    rows={5}
+                    className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-mono resize-y"
+                  />
+                  {guide.imageSvg && (
+                    <div className="rounded-md border border-border bg-muted/30 p-2">
+                      <p className="text-[10px] text-muted-foreground mb-1">Preview</p>
+                      <div
+                        className="[&>svg]:max-w-full [&>svg]:h-auto"
+                        dangerouslySetInnerHTML={{ __html: sanitizeSvg(guide.imageSvg) }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </details>
             )}
           </div>
         )}
@@ -354,6 +451,30 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
                 variant={guide.variant}
               />
             </div>
+          </div>
+        )}
+
+        {/* Stroke & fill toggles — frame variant only */}
+        {guide.variant === 'frame' && (
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={guide.showStroke !== false}
+                onChange={(e) => update({ showStroke: e.target.checked })}
+                className="rounded border-border"
+              />
+              <span className="text-muted-foreground">Stroke</span>
+            </label>
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={!!guide.showFill}
+                onChange={(e) => update({ showFill: e.target.checked })}
+                className="rounded border-border"
+              />
+              <span className="text-muted-foreground">Fill & blur</span>
+            </label>
           </div>
         )}
 
@@ -439,6 +560,51 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
               </select>
             </div>
           )}
+        </div>
+
+        {/* Z-index: Front/Back + Order */}
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <label className="text-xs font-medium text-muted-foreground">Order</label>
+            <input
+              type="number"
+              value={guide.sortOrder ?? 0}
+              onChange={(e) => update({ sortOrder: parseInt(e.target.value, 10) || 0 })}
+              className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs"
+              min={0}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const maxOrder = allGuides.length > 0
+                ? Math.max(...allGuides.map(g => g.sortOrder ?? 0))
+                : 0;
+              update({ sortOrder: maxOrder + 1 });
+            }}
+            className="flex items-center gap-1 rounded px-2 py-1 text-xs border border-border hover:bg-muted transition-colors"
+            title="Bring to front"
+          >
+            <ArrowUpToLine className="h-3 w-3" />
+            Front
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              // Set this guide to 0 and shift others up
+              allGuides.forEach(g => {
+                if (g.id !== guide.id && (g.sortOrder ?? 0) <= (guide.sortOrder ?? 0)) {
+                  onUpdate(g.id, { sortOrder: (g.sortOrder ?? 0) + 1 });
+                }
+              });
+              update({ sortOrder: 0 });
+            }}
+            className="flex items-center gap-1 rounded px-2 py-1 text-xs border border-border hover:bg-muted transition-colors"
+            title="Send to back"
+          >
+            <ArrowDownToLine className="h-3 w-3" />
+            Back
+          </button>
         </div>
 
         {/* Show only when empty — hidden for canvas-only variants */}
