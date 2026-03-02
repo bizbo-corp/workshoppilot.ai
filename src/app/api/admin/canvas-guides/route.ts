@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const variantsWithoutBody = ['frame', 'arrow'];
-  const needsBody = !variantsWithoutBody.includes(body.variant ?? 'sticker');
+  const needsBody = !variantsWithoutBody.includes(body.variant ?? 'card');
   if (!body.stepId || (needsBody && !body.body)) {
     return NextResponse.json({ error: 'stepId is required (body required for most variants)' }, { status: 400 });
   }

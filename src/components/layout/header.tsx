@@ -1,6 +1,6 @@
 'use client';
 
-import { UserButton, SignedIn, SignedOut } from '@clerk/nextjs';
+import { UserButton, SignedIn, SignedOut, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 import { useState } from 'react';
 import Logo from '@/components/Logo';
@@ -8,6 +8,11 @@ import { SignInModal } from '@/components/auth/sign-in-modal';
 
 export function Header() {
   const [signInOpen, setSignInOpen] = useState(false);
+  const { user } = useUser();
+  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
+  const userRoles = (user?.publicMetadata as { roles?: string[] })?.roles ?? [];
+  const showAdmin = userRoles.includes('admin') || !!(adminEmail && userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase());
 
   return (
     <>
@@ -35,6 +40,14 @@ export function Header() {
               >
                 Dashboard
               </Link>
+              {showAdmin && (
+                <Link
+                  href="/admin"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Admin
+                </Link>
+              )}
               <UserButton afterSignOutUrl="/" />
             </SignedIn>
           </div>

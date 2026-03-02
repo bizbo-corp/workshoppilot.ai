@@ -74,8 +74,9 @@ export default clerkMiddleware(async (auth, req) => {
 
     if (!roles.includes('admin')) {
       // For API routes, let the handler do fine-grained checks (email-based fallback).
-      // For page routes, redirect non-admin users.
-      if (!isApiRoute) {
+      // For page routes, also let through — the page server component does its own
+      // full admin check with currentUser() email fallback.
+      if (!isApiRoute && !process.env.ADMIN_EMAIL) {
         return NextResponse.redirect(new URL('/dashboard', req.url));
       }
     }

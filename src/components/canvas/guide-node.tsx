@@ -49,8 +49,6 @@ export interface GuideNodeData extends CanvasGuideData {
   onGuideResize?: (id: string, width: number, height: number) => void;
   onGuideResizeEnd?: (id: string, width: number, height: number, x: number, y: number) => void;
   isExiting: boolean;
-  /** Linked library asset data for rendering (populated by parent) */
-  linkedAsset?: { inlineSvg?: string | null; blobUrl: string } | null;
 }
 
 /** Floating edit button — small pill that appears on hover in admin mode. */
@@ -309,7 +307,7 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
       )}
 
       {isImage ? (
-        // Fallback chain: libraryAsset.inlineSvg → libraryAsset.blobUrl → guide.imageSvg
+        // Render from linked library asset (inlineSvg → blobUrl)
         guide.linkedAsset?.inlineSvg ? (
           <div
             className="w-full h-full [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"
@@ -321,11 +319,6 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
             alt={guide.title || 'Guide image'}
             className="w-full h-full object-contain"
           />
-        ) : guide.imageSvg ? (
-          <div
-            className="w-full h-full [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"
-            dangerouslySetInnerHTML={{ __html: sanitizeSvg(guide.imageSvg) }}
-          />
         ) : (
           <p className="text-xs text-muted-foreground italic py-2">No image</p>
         )
@@ -336,7 +329,7 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
               {guide.title}
             </p>
           )}
-          <div className="prose prose-sm max-w-none [&_p]:m-0 [&_p]:leading-snug [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0 text-foreground/80">
+          <div className="prose prose-sm max-w-none [&_p]:m-0 [&_p]:leading-snug [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0 text-foreground/80 [&_strong]:text-foreground [&_strong]:font-bold">
             <ReactMarkdown rehypePlugins={[rehypeRaw]}>{guide.body}</ReactMarkdown>
           </div>
         </div>

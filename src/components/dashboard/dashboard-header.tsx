@@ -12,8 +12,8 @@
 'use client';
 
 import Link from 'next/link';
-import { UserButton } from '@clerk/nextjs';
-import { Coins } from 'lucide-react';
+import { UserButton, useUser } from '@clerk/nextjs';
+import { Coins, Shield } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,12 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ creditBalance }: DashboardHeaderProps) {
+  const { user } = useUser();
+  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
+  const userRoles = (user?.publicMetadata as { roles?: string[] })?.roles ?? [];
+  const showAdmin = userRoles.includes('admin') || !!(adminEmail && userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase());
+
   return (
     <header className="flex h-16 items-center justify-between border-b bg-background px-6">
       {/* Left section: Logo */}
@@ -46,6 +52,15 @@ export function DashboardHeader({ creditBalance }: DashboardHeaderProps) {
             {creditBalance > 0
               ? `${creditBalance} credit${creditBalance !== 1 ? 's' : ''}`
               : 'No credits'}
+          </Link>
+        )}
+        {showAdmin && (
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+          >
+            <Shield className="h-3 w-3" />
+            Admin
           </Link>
         )}
         <ThemeToggle />

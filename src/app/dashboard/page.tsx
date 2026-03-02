@@ -215,7 +215,6 @@ export default async function DashboardPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-foreground">Your Workshops</h1>
-          {adminUser && <AdminResetOnboarding />}
         </div>
         <p className="mt-2 text-muted-foreground">
           Welcome back, {user.firstName || 'there'}!

@@ -8,6 +8,7 @@ export * from './sessions';
 export * from './build-packs';
 export * from './chat-messages';
 export * from './canvas-guides';
+export * from './asset-library';
 export * from './step-canvas-settings';
 export * from './ai-usage-events';
 export * from './credit-transactions';

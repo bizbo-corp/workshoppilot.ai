@@ -11,6 +11,8 @@ import { buildPacks } from './build-packs';
 import { chatMessages } from './chat-messages';
 import { aiUsageEvents } from './ai-usage-events';
 import { creditTransactions } from './credit-transactions';
+import { assetLibrary } from './asset-library';
+import { canvasGuides } from './canvas-guides';
 
 /**
  * Users relations
@@ -162,5 +164,24 @@ export const sessionParticipantsRelations = relations(sessionParticipants, ({ on
   session: one(workshopSessions, {
     fields: [sessionParticipants.sessionId],
     references: [workshopSessions.id],
+  }),
+}));
+
+/**
+ * Asset Library relations
+ * One asset can be referenced by many canvas guides
+ */
+export const assetLibraryRelations = relations(assetLibrary, ({ many }) => ({
+  canvasGuides: many(canvasGuides),
+}));
+
+/**
+ * Canvas Guides relations
+ * A guide can optionally reference an asset from the library
+ */
+export const canvasGuidesRelations = relations(canvasGuides, ({ one }) => ({
+  libraryAsset: one(assetLibrary, {
+    fields: [canvasGuides.libraryAssetId],
+    references: [assetLibrary.id],
   }),
 }));
