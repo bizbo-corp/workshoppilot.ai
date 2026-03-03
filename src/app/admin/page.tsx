@@ -72,6 +72,17 @@ export default async function AdminPage() {
                 Upload, organize, and manage image assets used by canvas guides.
               </p>
             </Link>
+            <Link
+              href="/admin/dialogue"
+              className="group rounded-lg bg-card p-6 shadow hover:shadow-md transition-shadow"
+            >
+              <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                Dialogue Feedback
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Review, resolve, and manage AI dialogue critiques captured during workshops.
+              </p>
+            </Link>
             <div className="rounded-lg bg-card p-6 shadow">
               <h3 className="text-sm font-semibold text-foreground mb-2">Onboarding</h3>
               <p className="text-sm text-muted-foreground mb-3">
