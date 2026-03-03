@@ -9,6 +9,7 @@
 import type { StickyNote, GridColumn, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
+import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 
 /** Ring display order and labels */
 const RING_ORDER = ['inner', 'middle', 'outer'] as const;
@@ -497,10 +498,63 @@ export function assembleMindMapCanvasContext(mindMapNodes: MindMapNodeState[], m
 }
 
 /**
+ * Assemble concept card canvas context for Step 9 (Concept Development)
+ * Shows each card's state and fields so the AI knows exactly how many
+ * concepts exist and which ones still need work.
+ */
+export function assembleConceptCanvasContext(conceptCards: ConceptCardData[]): string {
+  if (conceptCards.length === 0) return '';
+
+  const sections: string[] = [];
+
+  for (const card of conceptCards) {
+    const state = card.cardState || 'skeleton';
+    const idx = card.cardIndex ?? 0;
+    const lines: string[] = [`**Concept Card ${idx + 1} of ${conceptCards.length}** (cardIndex: ${idx}, state: ${state}):`];
+
+    lines.push(`  Idea Source: ${card.ideaSource || '(unknown)'}`);
+    lines.push(`  Concept Name: ${card.conceptName || '(empty)'}`);
+    lines.push(`  Elevator Pitch: ${card.elevatorPitch || '(empty)'}`);
+    lines.push(`  USP: ${card.usp || '(empty)'}`);
+
+    const hasSwot = card.swot?.strengths?.some(s => !!s);
+    lines.push(`  SWOT: ${hasSwot ? 'filled' : '(empty)'}`);
+
+    const hasFeasibility = card.feasibility?.technical?.score > 0;
+    lines.push(`  Feasibility: ${hasFeasibility ? 'filled' : '(empty)'}`);
+
+    sections.push(lines.join('\n'));
+  }
+
+  // Explicit progress tracking
+  const total = conceptCards.length;
+  const filled = conceptCards.filter(c => c.cardState === 'filled').length;
+  const remaining = total - filled;
+
+  let progressText: string;
+  if (remaining <= 0) {
+    progressText = `**Concept Progress:** ${filled} of ${total} concept card${total > 1 ? 's' : ''} filled. All concepts complete — proceed to CLOSE.`;
+  } else {
+    const remainingCards = conceptCards
+      .filter(c => c.cardState !== 'filled')
+      .map(c => `Card ${(c.cardIndex ?? 0) + 1}${c.conceptName ? ` ("${c.conceptName}")` : ''} [${c.cardState || 'skeleton'}]`);
+    progressText = `**Concept Progress:** ${filled} of ${total} concept card${total > 1 ? 's' : ''} filled. Remaining: ${remainingCards.join(', ')}. You MUST develop all ${total} cards before closing.`;
+  }
+  sections.push(progressText);
+
+  return sections.join('\n\n');
+}
+
+/**
  * Assemble canvas context for a specific step
  * Routes to step-specific assembly function based on stepId
  */
-export function assembleCanvasContextForStep(stepId: string, stickyNotes: StickyNote[], gridColumns?: GridColumn[], personaTemplates?: PersonaTemplateData[], hmwCards?: HmwCardData[], mindMapNodes?: MindMapNodeState[], mindMapEdges?: MindMapEdgeState[]): string {
+export function assembleCanvasContextForStep(stepId: string, stickyNotes: StickyNote[], gridColumns?: GridColumn[], personaTemplates?: PersonaTemplateData[], hmwCards?: HmwCardData[], mindMapNodes?: MindMapNodeState[], mindMapEdges?: MindMapEdgeState[], conceptCards?: ConceptCardData[]): string {
+  // Concept step uses concept cards
+  if (stepId === 'concept' && conceptCards && conceptCards.length > 0) {
+    return assembleConceptCanvasContext(conceptCards);
+  }
+
   // Ideation step uses mind map nodes
   if (stepId === 'ideation' && mindMapNodes && mindMapNodes.length > 0) {
     return assembleMindMapCanvasContext(mindMapNodes, mindMapEdges || []);

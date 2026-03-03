@@ -103,7 +103,7 @@ export async function assembleStepContext(
   // Tier 4: Query canvas state for this step
   const canvasState = await loadCanvasState(workshopId, currentStepId);
   let canvasContext = canvasState
-    ? assembleCanvasContextForStep(currentStepId, canvasState.stickyNotes || [], canvasState.gridColumns, canvasState.personaTemplates, canvasState.hmwCards, canvasState.mindMapNodes, canvasState.mindMapEdges)
+    ? assembleCanvasContextForStep(currentStepId, canvasState.stickyNotes || [], canvasState.gridColumns, canvasState.personaTemplates, canvasState.hmwCards, canvasState.mindMapNodes, canvasState.mindMapEdges, canvasState.conceptCards)
     : (currentStepId === 'journey-mapping'
       ? assembleCanvasContextForStep(currentStepId, [])
       : '');
