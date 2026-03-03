@@ -18,8 +18,10 @@ export type DrawingTool =
   | 'text'
   | 'select'
   | 'eraser'
+  | 'highlighter'
   | 'speechBubble'
-  | 'emoji';
+  | 'emoji'
+  | 'stamp';
 
 /**
  * Base properties shared by all drawing elements
@@ -44,6 +46,17 @@ export type StrokeElement = BaseElement & {
   stroke: string;
   strokeWidth: number;
   fill: string; // For filled path from getStroke()
+};
+
+/**
+ * Highlighter stroke element — pastel yellow with multiply blend
+ */
+export type HighlighterElement = BaseElement & {
+  type: 'highlighter';
+  points: number[];
+  stroke: string;
+  strokeWidth: number;
+  fill: string;
 };
 
 /**
@@ -114,7 +127,11 @@ export type TextElement = BaseElement & {
   fill: string;
   width: number;
   fontFamily: string;
+  textAlign?: 'left' | 'center' | 'right';
 };
+
+/** Handwriting font family used for text and speech bubble elements */
+export const HANDWRITING_FONT = "'Kalam', cursive";
 
 /**
  * Speech bubble element with customizable tail
@@ -143,10 +160,24 @@ export type EmojiElement = BaseElement & {
 };
 
 /**
+ * Stamp element — vector image/object from asset library, placeable in EzyDraw
+ */
+export type StampElement = BaseElement & {
+  type: 'stamp';
+  assetId: string;        // References asset_library.id (enables hot-swap)
+  src: string;            // Blob URL or SVG data URL for rendering
+  width: number;          // Display size on canvas
+  height: number;
+  naturalWidth: number;   // Original asset dimensions (for aspect ratio)
+  naturalHeight: number;
+};
+
+/**
  * Discriminated union of all drawing elements
  */
 export type DrawingElement =
   | StrokeElement
+  | HighlighterElement
   | RectangleElement
   | CircleElement
   | ArrowElement
@@ -154,7 +185,8 @@ export type DrawingElement =
   | DiamondElement
   | TextElement
   | SpeechBubbleElement
-  | EmojiElement;
+  | EmojiElement
+  | StampElement;
 
 /**
  * Complete drawing state

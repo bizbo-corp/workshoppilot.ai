@@ -231,6 +231,7 @@ function ReactFlowCanvasInner({
   const gridColumns = useCanvasStore((s) => s.gridColumns);
   const setGridColumns = useCanvasStore((s) => s.setGridColumns);
   const removeGridColumn = useCanvasStore((s) => s.removeGridColumn);
+  const moveGridColumn = useCanvasStore((s) => s.moveGridColumn);
   const confirmPreview = useCanvasStore((s) => s.confirmPreview);
   const rejectPreview = useCanvasStore((s) => s.rejectPreview);
   const highlightedCell = useCanvasStore((s) => s.highlightedCell);
@@ -2315,6 +2316,19 @@ function ReactFlowCanvasInner({
     }
   }, [deleteColumnDialog, removeGridColumn, dynamicGridConfig]);
 
+  // Handle move column (passed to GridOverlay)
+  const handleMoveColumn = useCallback(
+    (columnId: string, toIndex: number) => {
+      if (dynamicGridConfig) {
+        moveGridColumn(columnId, toIndex, dynamicGridConfig);
+      }
+    },
+    [moveGridColumn, dynamicGridConfig],
+  );
+
+  // Solo mode: always true. Multiplayer: only facilitator.
+  const canEditStructure = !isMultiplayer || isFacilitator;
+
   // Handle drawing save from EzyDraw modal
   const handleDrawingSave = useCallback(
     async (result: { pngDataUrl: string; elements: DrawingElement[]; backgroundImageUrl: string | null }) => {
@@ -2762,7 +2776,7 @@ function ReactFlowCanvasInner({
         // v12 default is 1px — set to 0 to eliminate drag dead-zone
         nodeDragThreshold={0}
         // Delete (CANV-03)
-        deleteKeyCode={editingNodeId ? null : ["Backspace", "Delete"]}
+        deleteKeyCode={editingNodeId || ezyDrawState?.isOpen ? null : ["Backspace", "Delete"]}
         onNodesDelete={handleNodesDelete}
         // Pan/Zoom (CANV-07) - dynamic based on active tool
         panOnDrag={activeTool === "hand"}
@@ -2819,6 +2833,8 @@ function ReactFlowCanvasInner({
             config={dynamicGridConfig}
             highlightedCell={highlightedCell}
             onDeleteColumn={handleDeleteColumn}
+            onMoveColumn={handleMoveColumn}
+            canEditStructure={canEditStructure}
           />
         )}
       </ReactFlow>

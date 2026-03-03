@@ -3,6 +3,7 @@
  */
 
 export type AssetCategory =
+  | 'stamp'
   | 'sticker'
   | 'icon'
   | 'illustration'
@@ -31,6 +32,7 @@ export interface AssetData {
 export interface AssetFilters {
   search?: string;
   category?: AssetCategory;
+  tag?: string;
   page?: number;
   pageSize?: number;
 }

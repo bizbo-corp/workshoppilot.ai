@@ -268,9 +268,12 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
             const targetColumn = state.gridColumns[targetColIndex];
             const filteredColumns = state.gridColumns.filter((col) => col.id !== id);
 
+            const newGridConfig = { ...gridConfig, columns: filteredColumns };
             const updatedStickyNotes = state.stickyNotes.map((stickyNote) => {
               const cellAssignment = stickyNote.cellAssignment;
-              if (cellAssignment?.col === id) {
+              if (!cellAssignment) return stickyNote;
+
+              if (cellAssignment.col === id) {
                 if (targetColumn) {
                   const newColIndex = filteredColumns.findIndex(
                     (col) => col.id === targetColumn.id
@@ -282,7 +285,7 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
                   if (newColIndex !== -1 && rowIndex !== -1) {
                     const newPosition = getCellBounds(
                       { row: rowIndex, col: newColIndex },
-                      { ...gridConfig, columns: filteredColumns }
+                      newGridConfig
                     );
 
                     return {
@@ -303,13 +306,61 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
                   cellAssignment: undefined,
                 };
               }
-              return stickyNote;
+
+              // Surviving column — recalculate position (indices shifted)
+              const newColIndex = filteredColumns.findIndex(
+                (col) => col.id === cellAssignment.col
+              );
+              const rowIndex = gridConfig.rows.findIndex(
+                (row) => row.id === cellAssignment.row
+              );
+              if (newColIndex === -1 || rowIndex === -1) return stickyNote;
+
+              const bounds = getCellBounds(
+                { row: rowIndex, col: newColIndex },
+                newGridConfig
+              );
+              return {
+                ...stickyNote,
+                position: {
+                  x: bounds.x + gridConfig.cellPadding,
+                  y: bounds.y + gridConfig.cellPadding,
+                },
+              };
             });
 
             return {
               stickyNotes: updatedStickyNotes,
               gridColumns: filteredColumns,
             };
+          }),
+
+        moveGridColumn: (id, toIndex, gridConfig: GridConfig) =>
+          set((state) => {
+            const currentIndex = state.gridColumns.findIndex((col) => col.id === id);
+            if (currentIndex === -1 || currentIndex === toIndex) return state;
+
+            const newColumns = [...state.gridColumns];
+            const [removed] = newColumns.splice(currentIndex, 1);
+            newColumns.splice(toIndex, 0, removed);
+
+            const updatedStickyNotes = state.stickyNotes.map((note) => {
+              if (!note.cellAssignment) return note;
+              const newColIdx = newColumns.findIndex((c) => c.id === note.cellAssignment!.col);
+              const rowIdx = gridConfig.rows.findIndex((r) => r.id === note.cellAssignment!.row);
+              if (newColIdx === -1 || rowIdx === -1) return note;
+
+              const bounds = getCellBounds({ row: rowIdx, col: newColIdx }, { ...gridConfig, columns: newColumns });
+              return {
+                ...note,
+                position: {
+                  x: bounds.x + gridConfig.cellPadding,
+                  y: bounds.y + gridConfig.cellPadding,
+                },
+              };
+            });
+
+            return { gridColumns: newColumns, stickyNotes: updatedStickyNotes };
           }),
 
         confirmPreview: (id) =>

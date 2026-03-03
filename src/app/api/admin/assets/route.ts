@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
 
     const name = (formData.get('name') as string) || file.name.replace(/\.[^.]+$/, '');
-    const category = ((formData.get('category') as string) || 'sticker') as AssetCategory;
+    const category = ((formData.get('category') as string) || 'stamp') as AssetCategory;
     const tags = (formData.get('tags') as string) || null;
     const description = (formData.get('description') as string) || null;
 

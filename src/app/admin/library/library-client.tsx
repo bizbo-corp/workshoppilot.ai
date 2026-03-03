@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import {
   Search,
   X,
@@ -15,6 +15,8 @@ import {
   Pencil,
   Check,
   Code,
+  Tag,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -34,6 +36,7 @@ import Link from 'next/link';
 
 const CATEGORY_OPTIONS: { value: AssetCategory | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },
+  { value: 'stamp', label: 'Stamps' },
   { value: 'sticker', label: 'Stickers' },
   { value: 'icon', label: 'Icons' },
   { value: 'illustration', label: 'Illustrations' },
@@ -43,6 +46,7 @@ const CATEGORY_OPTIONS: { value: AssetCategory | 'all'; label: string }[] = [
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
+  stamp: 'Stamp',
   sticker: 'Sticker',
   icon: 'Icon',
   illustration: 'Illustration',
@@ -78,10 +82,38 @@ export function LibraryClient() {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showReplaceDialog, setShowReplaceDialog] = useState<AssetData | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showTagPopover, setShowTagPopover] = useState(false);
+  const [bulkTagInput, setBulkTagInput] = useState('');
+  const [isBulkTagging, setIsBulkTagging] = useState(false);
+  const [isAutoTagging, setIsAutoTagging] = useState(false);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+
+  // Derive available tags from all fetched assets, then client-filter
+  const availableTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    for (const asset of assets) {
+      if (asset.tags) {
+        for (const t of asset.tags.split(',')) {
+          const trimmed = t.trim().toLowerCase();
+          if (trimmed) tagSet.add(trimmed);
+        }
+      }
+    }
+    return Array.from(tagSet).sort();
+  }, [assets]);
+
+  const filteredAssets = useMemo(() => {
+    if (!activeTag) return assets;
+    return assets.filter((a) => {
+      if (!a.tags) return false;
+      const tags = a.tags.split(',').map((t) => t.trim().toLowerCase());
+      return tags.includes(activeTag);
+    });
+  }, [assets, activeTag]);
 
   // Edit form state
   const [editName, setEditName] = useState('');
-  const [editCategory, setEditCategory] = useState<AssetCategory>('sticker');
+  const [editCategory, setEditCategory] = useState<AssetCategory>('stamp');
   const [editTags, setEditTags] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editSvgCode, setEditSvgCode] = useState('');
@@ -166,6 +198,50 @@ export function LibraryClient() {
     }
   }, [selectedIds, refetch]);
 
+  const handleBulkTag = useCallback(async (tags: string) => {
+    if (selectedIds.size === 0 || !tags.trim()) return;
+    setIsBulkTagging(true);
+    try {
+      const res = await fetch('/api/admin/assets/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'tag',
+          assetIds: Array.from(selectedIds),
+          tags,
+        }),
+      });
+      if (res.ok) {
+        setBulkTagInput('');
+        setShowTagPopover(false);
+        refetch();
+      }
+    } finally {
+      setIsBulkTagging(false);
+    }
+  }, [selectedIds, refetch]);
+
+  const handleAutoTag = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    setIsAutoTagging(true);
+    try {
+      const res = await fetch('/api/admin/assets/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'auto-tag',
+          assetIds: Array.from(selectedIds),
+        }),
+      });
+      if (res.ok) {
+        setShowTagPopover(false);
+        refetch();
+      }
+    } finally {
+      setIsAutoTagging(false);
+    }
+  }, [selectedIds, refetch]);
+
   const handleReplace = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -199,7 +275,7 @@ export function LibraryClient() {
     });
   }, []);
 
-  const unusedSelected = assets.filter(
+  const unusedSelected = filteredAssets.filter(
     (a) => selectedIds.has(a.id) && a.usageCount === 0
   );
 
@@ -270,9 +346,10 @@ export function LibraryClient() {
               {CATEGORY_OPTIONS.map((cat) => (
                 <button
                   key={cat.value}
-                  onClick={() =>
-                    updateCategory(cat.value === 'all' ? undefined : cat.value)
-                  }
+                  onClick={() => {
+                    setActiveTag(null);
+                    updateCategory(cat.value === 'all' ? undefined : cat.value);
+                  }}
                   className={cn(
                     'rounded-full px-3 py-1 text-xs font-medium transition-colors',
                     (cat.value === 'all' && !category) || category === cat.value
@@ -289,19 +366,91 @@ export function LibraryClient() {
           <div className="flex items-center gap-2">
             {/* Bulk actions */}
             {selectedIds.size > 0 && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleBulkDelete}
-                disabled={isBulkDeleting || unusedSelected.length === 0}
-              >
-                {isBulkDeleting ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                )}
-                Delete {unusedSelected.length} unused
-              </Button>
+              <>
+                <div className="relative">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowTagPopover((v) => !v)}
+                  >
+                    <Tag className="h-3.5 w-3.5 mr-1.5" />
+                    Tag {selectedIds.size} selected
+                  </Button>
+                  {showTagPopover && (
+                    <div className="absolute right-0 top-full z-50 mt-1 w-72 rounded-lg border border-border bg-background p-3 shadow-lg">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          Add tags (comma-separated)
+                        </label>
+                        <input
+                          type="text"
+                          value={bulkTagInput}
+                          onChange={(e) => setBulkTagInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleBulkTag(bulkTagInput);
+                          }}
+                          placeholder="e.g. ui, action, device"
+                          className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm"
+                          autoFocus
+                        />
+                        <div className="flex flex-wrap gap-1">
+                          {['UI', 'sticker', 'stamp', 'icon', 'stick figure', 'action'].map((t) => (
+                            <button
+                              key={t}
+                              onClick={() => handleBulkTag(t)}
+                              disabled={isBulkTagging}
+                              className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                            >
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex gap-2 pt-1">
+                          <Button
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleBulkTag(bulkTagInput)}
+                            disabled={isBulkTagging || !bulkTagInput.trim()}
+                          >
+                            {isBulkTagging ? (
+                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                            ) : (
+                              <Check className="h-3.5 w-3.5 mr-1.5" />
+                            )}
+                            Apply Tags
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleAutoTag}
+                            disabled={isAutoTagging}
+                          >
+                            {isAutoTagging ? (
+                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                            ) : (
+                              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                            )}
+                            Auto-Tag
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  disabled={isBulkDeleting || unusedSelected.length === 0}
+                >
+                  {isBulkDeleting ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  Delete {unusedSelected.length} unused
+                </Button>
+              </>
             )}
 
             {/* View toggle */}
@@ -328,28 +477,85 @@ export function LibraryClient() {
           </div>
         </div>
 
+        {/* Tag filter pills */}
+        {availableTags.length > 0 && (
+          <div className="mb-4 flex items-center gap-2">
+            <Tag className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+            <div className="flex flex-wrap gap-1">
+              <button
+                onClick={() => setActiveTag(null)}
+                className={cn(
+                  'rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors',
+                  !activeTag
+                    ? 'bg-primary/15 text-primary ring-1 ring-primary/30'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                )}
+              >
+                All tags
+              </button>
+              {availableTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+                  className={cn(
+                    'rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors',
+                    activeTag === tag
+                      ? 'bg-primary/15 text-primary ring-1 ring-primary/30'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                  )}
+                >
+                  {tag}
+                  <span className="ml-1 text-[9px] opacity-60">
+                    {assets.filter((a) =>
+                      a.tags
+                        ?.split(',')
+                        .map((t) => t.trim().toLowerCase())
+                        .includes(tag)
+                    ).length}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Content */}
         {isLoading ? (
           <div className="flex items-center justify-center py-24">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : assets.length === 0 ? (
+        ) : filteredAssets.length === 0 ? (
           <div className="py-24 text-center">
-            <p className="text-muted-foreground">No assets found.</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-4"
-              onClick={() => setShowUploadDialog(true)}
-            >
-              <Upload className="h-3.5 w-3.5 mr-1.5" />
-              Upload your first asset
-            </Button>
+            <p className="text-muted-foreground">
+              {activeTag
+                ? `No assets tagged "${activeTag}".`
+                : 'No assets found.'}
+            </p>
+            {activeTag ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => setActiveTag(null)}
+              >
+                Clear tag filter
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => setShowUploadDialog(true)}
+              >
+                <Upload className="h-3.5 w-3.5 mr-1.5" />
+                Upload your first asset
+              </Button>
+            )}
           </div>
         ) : view === 'grid' ? (
           /* ─── Grid View ─── */
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {assets.map((asset) => (
+            {filteredAssets.map((asset) => (
               <div key={asset.id} className="group relative">
                 <AssetThumbnail
                   asset={asset}
@@ -413,13 +619,13 @@ export function LibraryClient() {
                       type="checkbox"
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setSelectedIds(new Set(assets.map((a) => a.id)));
+                          setSelectedIds(new Set(filteredAssets.map((a) => a.id)));
                         } else {
                           setSelectedIds(new Set());
                         }
                       }}
                       checked={
-                        selectedIds.size === assets.length && assets.length > 0
+                        selectedIds.size === filteredAssets.length && filteredAssets.length > 0
                       }
                       className="h-3.5 w-3.5 rounded border-border"
                     />
@@ -446,7 +652,7 @@ export function LibraryClient() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {assets.map((asset) => (
+                {filteredAssets.map((asset) => (
                   <tr
                     key={asset.id}
                     className="hover:bg-muted/30 transition-colors"

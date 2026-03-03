@@ -5,15 +5,17 @@ import { Stage, Layer, Line, Rect, Ellipse, Arrow, Text, Path, Image as KonvaIma
 import type Konva from 'konva';
 import { useDrawingStore } from '@/providers/drawing-store-provider';
 import { usePencilTool, PencilToolPreview } from '@/components/ezydraw/tools/pencil-tool';
+import { useHighlighterTool, HighlighterToolPreview } from '@/components/ezydraw/tools/highlighter-tool';
 import type { PointerData } from '@/components/ezydraw/tools/pencil-tool';
 import { useShapesTool, ShapesToolPreview } from '@/components/ezydraw/tools/shapes-tool';
 import { useSpeechBubbleTool, SpeechBubblePreview, SpeechBubbleTailHandle } from '@/components/ezydraw/tools/speech-bubble-tool';
 import { SelectTool } from '@/components/ezydraw/tools/select-tool';
 import { TextTool } from '@/components/ezydraw/tools/text-tool';
 import { eraserCursor } from '@/components/ezydraw/tools/eraser-tool';
+import { StampRenderer } from '@/components/ezydraw/tools/stamp-renderer';
 import { generateSpeechBubblePath } from '@/lib/drawing/speech-bubble-path';
-import type { DrawingElement, SpeechBubbleElement } from '@/lib/drawing/types';
-import { createElementId } from '@/lib/drawing/types';
+import type { DrawingElement, SpeechBubbleElement, TextElement } from '@/lib/drawing/types';
+import { createElementId, HANDWRITING_FONT } from '@/lib/drawing/types';
 
 export interface EzyDrawStageHandle {
   getStage: () => Konva.Stage | null;
@@ -49,6 +51,16 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
     img.src = backgroundImageUrl;
   }, [backgroundImageUrl]);
 
+  // Load handwriting font on mount
+  useEffect(() => {
+    if (!document.querySelector('link[href*="Kalam"]')) {
+      const link = document.createElement('link');
+      link.href = 'https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap';
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+  }, []);
+
   // Text editing state
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
@@ -57,7 +69,11 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
     y: number;
     width: number;
     fontSize: number;
+    textAlign?: 'left' | 'center' | 'right';
   } | null>(null);
+  const [originalText, setOriginalText] = useState('');
+  // Guard: prevents background click from creating a new text element right after finishing editing
+  const justFinishedEditingRef = useRef(false);
 
   // Store selectors
   const elements = useDrawingStore((s) => s.elements);
@@ -69,11 +85,17 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
   const deleteElementGroup = useDrawingStore((s) => s.deleteElementGroup);
   const moveElementGroup = useDrawingStore((s) => s.moveElementGroup);
   const selectElement = useDrawingStore((s) => s.selectElement);
+  const setActiveTool = useDrawingStore((s) => s.setActiveTool);
   const strokeColor = useDrawingStore((s) => s.strokeColor);
   const fontSize = useDrawingStore((s) => s.fontSize);
+  const textAlign = useDrawingStore((s) => s.textAlign);
+  const pointerLocked = useDrawingStore((s) => s.pointerLocked);
+  const pointerLockedRef = useRef(pointerLocked);
+  pointerLockedRef.current = pointerLocked;
 
   // Tool hooks
   const pencilHandlers = usePencilTool();
+  const highlighterHandlers = useHighlighterTool();
   const shapeHandlers = useShapesTool();
   const speechBubbleHandlers = useSpeechBubbleTool();
 
@@ -82,6 +104,8 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
   activeToolRef.current = activeTool;
   const pencilRef = useRef(pencilHandlers);
   pencilRef.current = pencilHandlers;
+  const highlighterRef = useRef(highlighterHandlers);
+  highlighterRef.current = highlighterHandlers;
   const shapeRef = useRef(shapeHandlers);
   shapeRef.current = shapeHandlers;
   const speechBubbleRef = useRef(speechBubbleHandlers);
@@ -126,11 +150,15 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
   }, []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (pointerLockedRef.current) return;
     const pos = getPointerPos(e);
     const tool = activeToolRef.current;
 
     if (tool === 'pencil') {
       pencilRef.current.handleDown(pos);
+      e.preventDefault();
+    } else if (tool === 'highlighter') {
+      highlighterRef.current.handleDown(pos);
       e.preventDefault();
     } else if (SHAPE_TOOLS.includes(tool)) {
       shapeRef.current.handleDown(pos);
@@ -142,11 +170,14 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
   }, [getPointerPos]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (pointerLockedRef.current) return;
     const pos = getPointerPos(e);
     const tool = activeToolRef.current;
 
     if (tool === 'pencil') {
       pencilRef.current.handleMove(pos);
+    } else if (tool === 'highlighter') {
+      highlighterRef.current.handleMove(pos);
     } else if (SHAPE_TOOLS.includes(tool)) {
       shapeRef.current.handleMove(pos);
     } else if (tool === 'speechBubble') {
@@ -155,9 +186,12 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
   }, [getPointerPos]);
 
   const handlePointerUp = useCallback(() => {
+    if (pointerLockedRef.current) return;
     const tool = activeToolRef.current;
     if (tool === 'pencil') {
       pencilRef.current.handleUp();
+    } else if (tool === 'highlighter') {
+      highlighterRef.current.handleUp();
     } else if (SHAPE_TOOLS.includes(tool)) {
       shapeRef.current.handleUp();
     } else if (tool === 'speechBubble') {
@@ -173,38 +207,58 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
 
   // Text handling
   const handleTextClick = useCallback((x: number, y: number) => {
-    const newTextId = createElementId();
-    addElement({
+    if (justFinishedEditingRef.current) return;
+    const newId = addElement({
       type: 'text', x, y,
       rotation: 0, scaleX: 1, scaleY: 1, opacity: 1,
-      text: 'Text', fontSize, fill: strokeColor, width: 200, fontFamily: 'sans-serif',
+      text: '', fontSize, fill: strokeColor, width: 200,
+      fontFamily: HANDWRITING_FONT, textAlign,
     } as Omit<DrawingElement, 'id'>);
     setTimeout(() => {
-      selectElement(newTextId);
-      setEditingTextId(newTextId);
-      setEditingText('Text');
-      setEditingPosition({ x, y, width: 200, fontSize });
+      selectElement(newId);
+      setEditingTextId(newId);
+      setEditingText('');
+      setOriginalText('');
+      setEditingPosition({ x, y, width: 200, fontSize, textAlign });
     }, 0);
-  }, [addElement, fontSize, strokeColor, selectElement]);
+  }, [addElement, fontSize, strokeColor, selectElement, textAlign]);
 
-  const startTextEditing = (id: string, x: number, y: number, width: number, fontSize: number, text: string) => {
+  const startTextEditing = (id: string, x: number, y: number, width: number, fontSize: number, text: string, textAlign?: 'left' | 'center' | 'right') => {
     setEditingTextId(id);
     setEditingText(text);
-    setEditingPosition({ x, y, width, fontSize });
+    setOriginalText(text);
+    setEditingPosition({ x, y, width, fontSize, textAlign });
   };
 
-  const finishTextEditing = () => {
-    if (editingTextId && editingText.trim() !== '') {
-      updateElement(editingTextId, { text: editingText });
+  const finishTextEditing = useCallback((cancel?: boolean) => {
+    if (editingTextId) {
+      if (cancel) {
+        // Escape: revert to original text, or delete if it was a new empty element
+        if (!originalText) {
+          deleteElement(editingTextId);
+        }
+        // Otherwise leave element unchanged (keeps original text)
+      } else if (editingText.trim() !== '') {
+        updateElement(editingTextId, { text: editingText });
+      } else {
+        // Empty text on confirm: delete the element
+        deleteElement(editingTextId);
+      }
     }
+    selectElement(null);
     setEditingTextId(null);
     setEditingText('');
+    setOriginalText('');
     setEditingPosition(null);
-  };
+    justFinishedEditingRef.current = true;
+    setTimeout(() => {
+      justFinishedEditingRef.current = false;
+    }, 200);
+  }, [editingTextId, editingText, originalText, updateElement, deleteElement, selectElement]);
 
   const getCursorStyle = () => {
     switch (activeTool) {
-      case 'pencil': case 'rectangle': case 'circle':
+      case 'pencil': case 'highlighter': case 'rectangle': case 'circle':
       case 'diamond': case 'arrow': case 'line': case 'speechBubble':
         return 'crosshair';
       case 'text': return 'text';
@@ -236,10 +290,22 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
             fill="white"
             onClick={(e) => {
               if (activeTool === 'text') {
-                const stage = e.target.getStage();
-                if (stage) {
-                  const pos = stage.getPointerPosition();
-                  if (pos) handleTextClick(pos.x, pos.y);
+                if (editingTextId) {
+                  // Currently editing — confirm and deselect, don't create new text
+                  finishTextEditing(false);
+                  return;
+                }
+                if (selectedElementId) {
+                  // Text element still selected (e.g. formatting) — deselect first
+                  selectElement(null);
+                  return;
+                }
+                if (!justFinishedEditingRef.current) {
+                  const stage = e.target.getStage();
+                  if (stage) {
+                    const pos = stage.getPointerPosition();
+                    if (pos) handleTextClick(pos.x, pos.y);
+                  }
                 }
               }
               if (activeTool === 'select') {
@@ -319,6 +385,17 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
                   scaleX={element.scaleX} scaleY={element.scaleY} opacity={element.opacity} />
               );
             }
+            if (element.type === 'highlighter') {
+              if (!element.points || element.points.length < 4) return null;
+              return (
+                <Line key={element.id} {...commonProps}
+                  points={element.points} fill={element.fill} stroke={element.stroke}
+                  strokeWidth={element.strokeWidth} closed={true} perfectDrawEnabled={false}
+                  x={element.x} y={element.y} rotation={element.rotation}
+                  scaleX={element.scaleX} scaleY={element.scaleY} opacity={element.opacity}
+                  globalCompositeOperation="multiply" />
+              );
+            }
             if (element.type === 'rectangle') {
               return (
                 <Rect key={element.id} {...commonProps}
@@ -366,15 +443,17 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
             if (element.type === 'text') {
               return (
                 <Text key={element.id} {...commonProps}
-                  x={element.x} y={element.y} text={element.text}
+                  x={element.x} y={element.y} text={element.text || ' '}
                   fontSize={element.fontSize} fill={element.fill} width={element.width}
-                  fontFamily={element.fontFamily} rotation={element.rotation}
+                  fontFamily={element.fontFamily} align={element.textAlign || 'left'}
+                  rotation={element.rotation}
                   scaleX={element.scaleX} scaleY={element.scaleY} opacity={element.opacity}
                   onDblClick={(e) => {
                     e.cancelBubble = true;
                     const node = e.target;
                     const absPos = node.getAbsolutePosition();
-                    startTextEditing(element.id, absPos.x, absPos.y, element.width, element.fontSize, element.text);
+                    setActiveTool('text');
+                    startTextEditing(element.id, absPos.x, absPos.y, element.width, element.fontSize, element.text, element.textAlign);
                   }} />
               );
             }
@@ -416,7 +495,7 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
                     text={element.text}
                     fontSize={element.fontSize}
                     fill="#000000"
-                    fontFamily="sans-serif"
+                    fontFamily={HANDWRITING_FONT}
                     listening={false}
                   />
                 </React.Fragment>
@@ -439,6 +518,15 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
                 />
               );
             }
+            if (element.type === 'stamp') {
+              return (
+                <StampRenderer
+                  key={element.id}
+                  element={element}
+                  commonProps={commonProps}
+                />
+              );
+            }
             return null;
           })}
 
@@ -447,6 +535,10 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
             currentPath={pencilHandlers.currentPath}
             isDrawing={pencilHandlers.isDrawing}
             strokeColor={pencilHandlers.strokeColor}
+          />
+          <HighlighterToolPreview
+            currentPath={highlighterHandlers.currentPath}
+            isDrawing={highlighterHandlers.isDrawing}
           />
           <ShapesToolPreview
             previewShape={shapeHandlers.previewShape}
@@ -458,7 +550,9 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
         </Layer>
 
         <Layer ref={uiLayerRef} name="ui-layer">
-          {activeTool === 'select' && <SelectTool stageRef={stageRef} />}
+          {(activeTool === 'select' || (activeTool === 'text' && selectedElementId)) && (
+            <SelectTool stageRef={stageRef} />
+          )}
           {/* Speech bubble tail handle - only visible when speech bubble is selected */}
           {activeTool === 'select' && selectedElementId && (() => {
             const selectedBubble = elements.find(
@@ -481,9 +575,16 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
       <TextTool
         editingTextId={editingTextId}
         editingText={editingText}
-        editingPosition={editingPosition}
+        editingPosition={editingPosition ? {
+          ...editingPosition,
+          // Derive textAlign from the live element so toolbar changes reflect instantly
+          textAlign: editingTextId
+            ? ((elements.find(el => el.id === editingTextId) as TextElement | undefined)?.textAlign || 'left')
+            : editingPosition.textAlign,
+        } : null}
         onTextChange={setEditingText}
-        onFinishEditing={finishTextEditing}
+        onFinishEditing={() => finishTextEditing(false)}
+        onCancelEditing={() => finishTextEditing(true)}
       />
     </div>
   );

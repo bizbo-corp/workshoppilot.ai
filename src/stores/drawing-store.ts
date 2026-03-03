@@ -19,12 +19,16 @@ export type DrawingState = {
   fillColor: string;
   strokeWidth: number;
   fontSize: number;
+  textAlign: 'left' | 'center' | 'right';
   canUndo: boolean;
   canRedo: boolean;
+  /** When true, pointer events on the canvas are suppressed (e.g. picker is open) */
+  pointerLocked: boolean;
 };
 
 export type DrawingActions = {
-  addElement: (element: Omit<DrawingElement, 'id'>) => void;
+  setPointerLocked: (locked: boolean) => void;
+  addElement: (element: Omit<DrawingElement, 'id'>) => string;
   addElements: (elements: Omit<DrawingElement, 'id'>[]) => void;
   updateElement: (id: string, updates: Partial<DrawingElement>) => void;
   deleteElement: (id: string) => void;
@@ -37,6 +41,7 @@ export type DrawingActions = {
   setFillColor: (color: string) => void;
   setStrokeWidth: (width: number) => void;
   setFontSize: (size: number) => void;
+  setTextAlign: (align: 'left' | 'center' | 'right') => void;
   selectElement: (id: string | null) => void;
   undo: () => void;
   redo: () => void;
@@ -56,8 +61,10 @@ const DEFAULT_STATE: DrawingState = {
   fillColor: 'transparent',
   strokeWidth: 4,
   fontSize: 16,
+  textAlign: 'left' as const,
   canUndo: false,
   canRedo: false,
+  pointerLocked: false,
 };
 
 export const createDrawingStore = (initState?: Partial<DrawingState>) => {
@@ -90,6 +97,8 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
             canRedo: history.canRedo,
           };
         });
+
+        return newElement.id;
       },
 
       addElements: (elements) => {
@@ -226,6 +235,12 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
         }));
       },
 
+      setTextAlign: (align) => {
+        set(() => ({
+          textAlign: align,
+        }));
+      },
+
       selectElement: (id) => {
         set(() => ({
           selectedElementId: id,
@@ -279,6 +294,10 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
        * Clear all drawing elements and set a new background image.
        * Pushed as a single atomic history entry for clean undo/redo.
        */
+      setPointerLocked: (locked) => {
+        set(() => ({ pointerLocked: locked }));
+      },
+
       replaceWithGeneratedImage: (imageUrl) => {
         set(() => {
           const emptyElements: DrawingElement[] = [];

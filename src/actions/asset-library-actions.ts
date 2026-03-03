@@ -2,7 +2,7 @@
 
 import { db } from '@/db/client';
 import { assetLibrary, canvasGuides } from '@/db/schema';
-import { eq, ilike, and, sql, desc, asc, count } from 'drizzle-orm';
+import { eq, ilike, and, sql, desc, asc, count, inArray } from 'drizzle-orm';
 import type {
   AssetData,
   AssetFilters,
@@ -14,12 +14,15 @@ import type {
  * List assets with filtering, search, and pagination.
  */
 export async function listAssets(filters: AssetFilters = {}): Promise<AssetListResult> {
-  const { search, category, page = 1, pageSize = 50 } = filters;
+  const { search, category, tag, page = 1, pageSize = 50 } = filters;
   const offset = (page - 1) * pageSize;
 
   const conditions = [];
   if (category) {
     conditions.push(eq(assetLibrary.category, category));
+  }
+  if (tag) {
+    conditions.push(ilike(assetLibrary.tags, `%${tag}%`));
   }
   if (search) {
     conditions.push(
@@ -90,7 +93,7 @@ export async function createAsset(data: {
       fileSize: data.fileSize ?? null,
       width: data.width ?? null,
       height: data.height ?? null,
-      category: data.category ?? 'sticker',
+      category: data.category ?? 'stamp',
       tags: data.tags ?? null,
       description: data.description ?? null,
       uploadedBy: data.uploadedBy ?? null,
@@ -240,6 +243,102 @@ export async function recomputeAssetUsage(assetId: string): Promise<number> {
     .where(eq(assetLibrary.id, assetId));
 
   return actual;
+}
+
+/**
+ * Merge new tags into multiple assets (deduplicated, comma-separated).
+ */
+export async function bulkUpdateTags(
+  assetIds: string[],
+  newTags: string
+): Promise<{ updated: number }> {
+  const tagsToAdd = newTags
+    .split(',')
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (tagsToAdd.length === 0 || assetIds.length === 0) {
+    return { updated: 0 };
+  }
+
+  const rows = await db
+    .select({ id: assetLibrary.id, tags: assetLibrary.tags })
+    .from(assetLibrary)
+    .where(inArray(assetLibrary.id, assetIds));
+
+  let updated = 0;
+  for (const row of rows) {
+    const existing = (row.tags || '')
+      .split(',')
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+    const merged = [...new Set([...existing, ...tagsToAdd])];
+    await db
+      .update(assetLibrary)
+      .set({ tags: merged.join(', ') })
+      .where(eq(assetLibrary.id, row.id));
+    updated++;
+  }
+
+  return { updated };
+}
+
+/**
+ * Auto-tag assets based on name and category heuristics.
+ */
+export async function autoTagAssets(
+  assetIds: string[]
+): Promise<{ updated: number }> {
+  if (assetIds.length === 0) return { updated: 0 };
+
+  const rows = await db
+    .select({
+      id: assetLibrary.id,
+      name: assetLibrary.name,
+      category: assetLibrary.category,
+      tags: assetLibrary.tags,
+    })
+    .from(assetLibrary)
+    .where(inArray(assetLibrary.id, assetIds));
+
+  const uiPatterns = /\b(search|input|button|card|dropdown|modal|dialog|form|table|tab|toggle|checkbox|radio|select|slider|tooltip|accordion|menu|nav|sidebar|header|footer|badge|avatar|alert|toast|progress|spinner|skeleton|divider|breadcrumb)\b/i;
+  const devicePatterns = /\b(mobile|desktop|tablet|phone|laptop)\b/i;
+  const actionPatterns = /\b(heart|star|share|like|bookmark|download|upload|delete|edit|copy|send|save)\b/i;
+  const figurePatterns = /\b(figure|person|human|people|man|woman|body|stick)\b/i;
+
+  let updated = 0;
+  for (const row of rows) {
+    const newTags: string[] = [];
+    const name = row.name.toLowerCase();
+
+    // Category-based tags
+    if (row.category === 'stamp') newTags.push('stamp');
+    if (row.category === 'sticker') newTags.push('sticker');
+    if (row.category === 'icon') newTags.push('icon');
+
+    // Name-based tags
+    if (name.startsWith('sticker-') || name.includes('sticker')) newTags.push('sticker');
+    if (uiPatterns.test(name)) newTags.push('ui');
+    if (devicePatterns.test(name)) newTags.push('device');
+    if (actionPatterns.test(name)) newTags.push('action');
+    if (figurePatterns.test(name)) newTags.push('stick figure');
+
+    if (newTags.length === 0) continue;
+
+    const existing = (row.tags || '')
+      .split(',')
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+    const merged = [...new Set([...existing, ...newTags])];
+
+    await db
+      .update(assetLibrary)
+      .set({ tags: merged.join(', ') })
+      .where(eq(assetLibrary.id, row.id));
+    updated++;
+  }
+
+  return { updated };
 }
 
 function mapRow(r: typeof assetLibrary.$inferSelect): AssetData {

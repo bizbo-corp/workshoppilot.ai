@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -74,6 +74,40 @@ function EzyDrawContent({
   const getSnapshot = useDrawingStore((s) => s.getSnapshot);
   const replaceWithGeneratedImage = useDrawingStore((s) => s.replaceWithGeneratedImage);
   const backgroundImageUrl = useDrawingStore((s) => s.backgroundImageUrl);
+  const selectedElementId = useDrawingStore((s) => s.selectedElementId);
+  const deleteElement = useDrawingStore((s) => s.deleteElement);
+  const selectElement = useDrawingStore((s) => s.selectElement);
+
+  // Refs so the capture-phase listener always reads the latest values
+  const selectedRef = useRef(selectedElementId);
+  selectedRef.current = selectedElementId;
+  const deleteRef = useRef(deleteElement);
+  deleteRef.current = deleteElement;
+  const selectRef = useRef(selectElement);
+  selectRef.current = selectElement;
+
+  // Capture-phase listener: deletes the selected drawing element AND blocks
+  // the event from reaching React Flow (which would delete the canvas node).
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      // Block React Flow from seeing this event
+      e.stopImmediatePropagation();
+      e.preventDefault();
+
+      // Delete the selected drawing element
+      const id = selectedRef.current;
+      if (id) {
+        deleteRef.current(id);
+        selectRef.current(null);
+      }
+    };
+    document.addEventListener('keydown', handler, true);
+    return () => document.removeEventListener('keydown', handler, true);
+  }, []);
 
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
@@ -108,6 +142,9 @@ function EzyDrawContent({
         existingImageBase64 = exportToWebP(stage, { pixelRatio: 1, quality: 0.5 });
       }
 
+      // Check if user placed any stickmen/person stamps on the canvas
+      const hasPersonStamps = elements.some((el) => el.type === 'stamp');
+
       const response = await fetch('/api/ai/generate-sketch-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,6 +153,7 @@ function EzyDrawContent({
           ideaTitle: slotTitle,
           ideaDescription: slotDescription || '',
           existingImageBase64,
+          hasPersonStamps,
           ...(iterationPrompt ? { additionalPrompt: iterationPrompt } : {}),
           ...(backgroundImageUrl?.startsWith('https://') ? { previousImageUrl: backgroundImageUrl } : {}),
         }),
@@ -205,7 +243,7 @@ export function EzyDrawModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="p-0 rounded-xl border gap-0 translate-x-[-50%] translate-y-[-50%] overflow-hidden"
+        className="p-0 rounded-xl border gap-0 translate-x-[-50%] translate-y-[-50%]"
         style={{
           width: `min(${dialogW}px, 95vw)`,
           maxWidth: `min(${dialogW}px, 95vw)`,

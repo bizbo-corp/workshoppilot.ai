@@ -21,11 +21,11 @@ export const assetLibrary = pgTable(
     width: integer('width'),
     height: integer('height'),
     category: text('category', {
-      enum: ['sticker', 'icon', 'illustration', 'background', 'template', 'other'],
+      enum: ['stamp', 'sticker', 'icon', 'illustration', 'background', 'template', 'other'],
     })
       .notNull()
-      .default('sticker')
-      .$type<'sticker' | 'icon' | 'illustration' | 'background' | 'template' | 'other'>(),
+      .default('stamp')
+      .$type<'stamp' | 'sticker' | 'icon' | 'illustration' | 'background' | 'template' | 'other'>(),
     tags: text('tags'),
     usageCount: integer('usage_count').notNull().default(0),
     uploadedBy: text('uploaded_by'),

@@ -28,13 +28,24 @@ export function SelectTool({ stageRef }: { stageRef: React.RefObject<Konva.Stage
     if (!transformerRef.current || !stageRef.current) return;
 
     if (selectedElementId) {
-      // Find the selected Konva node by ID
-      const node = stageRef.current.findOne('#' + selectedElementId);
-      if (node) {
-        // Attach transformer to the node
-        transformerRef.current.nodes([node]);
-        transformerRef.current.getLayer()?.batchDraw();
-      }
+      let attempts = 0;
+      let rafId: number;
+
+      // Retry finding the node because async renderers (e.g. StampRenderer)
+      // may not have mounted the Konva node yet on the first attempt.
+      const tryAttach = () => {
+        const node = stageRef.current?.findOne('#' + selectedElementId);
+        if (node) {
+          transformerRef.current?.nodes([node]);
+          transformerRef.current?.getLayer()?.batchDraw();
+        } else if (attempts < 30) {
+          attempts++;
+          rafId = requestAnimationFrame(tryAttach);
+        }
+      };
+
+      tryAttach();
+      return () => cancelAnimationFrame(rafId);
     } else {
       // Clear transformer
       transformerRef.current.nodes([]);
@@ -115,6 +126,20 @@ export function SelectTool({ stageRef }: { stageRef: React.RefObject<Konva.Stage
             scaleY: 1,
           });
         } else if (element.type === 'diamond') {
+          const width = (element.width || 0) * Math.abs(scaleX);
+          const height = (element.height || 0) * Math.abs(scaleY);
+          node.scaleX(1);
+          node.scaleY(1);
+          updateElement(selectedElementId, {
+            x,
+            y,
+            width,
+            height,
+            rotation,
+            scaleX: 1,
+            scaleY: 1,
+          });
+        } else if (element.type === 'stamp') {
           const width = (element.width || 0) * Math.abs(scaleX);
           const height = (element.height || 0) * Math.abs(scaleY);
           node.scaleX(1);

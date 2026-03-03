@@ -127,6 +127,7 @@ export type CanvasActions = {
   addGridColumn: (label: string) => void;
   updateGridColumn: (id: string, updates: Partial<GridColumn>) => void;
   removeGridColumn: (id: string, gridConfig: GridConfig) => void;
+  moveGridColumn: (id: string, toIndex: number, gridConfig: GridConfig) => void;
   confirmPreview: (id: string) => void;
   rejectPreview: (id: string) => void;
   setHighlightedCell: (cell: { row: number; col: number } | null) => void;
@@ -408,12 +409,15 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             // Filter out deleted column
             const filteredColumns = state.gridColumns.filter((col) => col.id !== id);
 
-            // Update sticky notes that reference deleted column
+            // Update sticky notes: migrate cards from deleted column, reposition ALL remaining
+            const newGridConfig = { ...gridConfig, columns: filteredColumns };
             const updatedStickyNotes = state.stickyNotes.map((stickyNote) => {
               const cellAssignment = stickyNote.cellAssignment;
-              if (cellAssignment?.col === id) {
+              if (!cellAssignment) return stickyNote;
+
+              if (cellAssignment.col === id) {
+                // Card is in the deleted column — migrate to adjacent
                 if (targetColumn) {
-                  // Move to adjacent column
                   const newColIndex = filteredColumns.findIndex(
                     (col) => col.id === targetColumn.id
                   );
@@ -424,7 +428,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
                   if (newColIndex !== -1 && rowIndex !== -1) {
                     const newPosition = getCellBounds(
                       { row: rowIndex, col: newColIndex },
-                      { ...gridConfig, columns: filteredColumns }
+                      newGridConfig
                     );
 
                     return {
@@ -446,7 +450,28 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
                   cellAssignment: undefined,
                 };
               }
-              return stickyNote;
+
+              // Card is in a surviving column — recalculate position
+              // (column indices shift after removal)
+              const newColIndex = filteredColumns.findIndex(
+                (col) => col.id === cellAssignment.col
+              );
+              const rowIndex = gridConfig.rows.findIndex(
+                (row) => row.id === cellAssignment.row
+              );
+              if (newColIndex === -1 || rowIndex === -1) return stickyNote;
+
+              const bounds = getCellBounds(
+                { row: rowIndex, col: newColIndex },
+                newGridConfig
+              );
+              return {
+                ...stickyNote,
+                position: {
+                  x: bounds.x + gridConfig.cellPadding,
+                  y: bounds.y + gridConfig.cellPadding,
+                },
+              };
             });
 
             return {
@@ -454,6 +479,34 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
               gridColumns: filteredColumns,
               isDirty: true,
             };
+          }),
+
+        moveGridColumn: (id, toIndex, gridConfig) =>
+          set((state) => {
+            const currentIndex = state.gridColumns.findIndex((col) => col.id === id);
+            if (currentIndex === -1 || currentIndex === toIndex) return state;
+
+            const newColumns = [...state.gridColumns];
+            const [removed] = newColumns.splice(currentIndex, 1);
+            newColumns.splice(toIndex, 0, removed);
+
+            const updatedStickyNotes = state.stickyNotes.map((note) => {
+              if (!note.cellAssignment) return note;
+              const newColIdx = newColumns.findIndex((c) => c.id === note.cellAssignment!.col);
+              const rowIdx = gridConfig.rows.findIndex((r) => r.id === note.cellAssignment!.row);
+              if (newColIdx === -1 || rowIdx === -1) return note;
+
+              const bounds = getCellBounds({ row: rowIdx, col: newColIdx }, { ...gridConfig, columns: newColumns });
+              return {
+                ...note,
+                position: {
+                  x: bounds.x + gridConfig.cellPadding,
+                  y: bounds.y + gridConfig.cellPadding,
+                },
+              };
+            });
+
+            return { gridColumns: newColumns, stickyNotes: updatedStickyNotes, isDirty: true };
           }),
 
         confirmPreview: (id) =>

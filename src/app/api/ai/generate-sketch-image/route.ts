@@ -131,23 +131,28 @@ function buildSketchPrompt(params: {
     reframedHmw?: string;
   };
   existingSketchDescription?: string;
+  hasPersonStamps?: boolean;
 }): string {
-  const { ideaTitle, ideaDescription, additionalPrompt, workshopContext, existingSketchDescription } = params;
+  const { ideaTitle, ideaDescription, additionalPrompt, workshopContext, existingSketchDescription, hasPersonStamps } = params;
 
   // Determine if this is a digital or physical/service idea
   const digitalKeywords = ['app', 'website', 'dashboard', 'screen', 'interface', 'mobile', 'web', 'digital', 'software', 'platform', 'online', 'notification', 'widget', 'modal', 'page'];
   const combinedText = `${ideaTitle} ${ideaDescription}`.toLowerCase();
   const isDigital = digitalKeywords.some((kw) => combinedText.includes(kw));
 
-  // Build usage context
+  // Build usage context — avoid mentioning people unless stamps indicate them
   const usageContext = isDigital
-    ? 'a person using a mobile app or web interface on their device, showing the screen with the concept visible'
-    : 'a person interacting with this service or product in a real-life setting, showing the physical interaction';
+    ? hasPersonStamps
+      ? 'a person using a mobile app or web interface on their device, showing the screen with the concept visible'
+      : 'a mobile app or web interface screen showing the concept clearly'
+    : hasPersonStamps
+      ? 'a person interacting with this service or product in a real-life setting, showing the physical interaction'
+      : 'this service or product in its real-life setting, showing how it works';
 
   // Core prompt parts
   const parts: string[] = [
-    'Hand-drawn black and white sketch on white paper.',
-    'Rough wireframe pencil drawing style with imperfect lines, simple shapes, and minimal detail.',
+    'Professional hand-drawn sketch in black ink on white paper with selective yellow highlighter accents for emphasis.',
+    'Confident, expressive line work — like a skilled illustrator\'s quick concept sketch. Lines should feel intentional and assured but not rigid, mechanical, or too perfect.',
     `The sketch shows ${usageContext}.`,
     `Concept: "${ideaTitle}" — ${ideaDescription}.`,
   ];
@@ -171,12 +176,23 @@ function buildSketchPrompt(params: {
     parts.push(additionalPrompt.trim());
   }
 
-  // Style constraints
+  // Style constraints — three-tone palette: black ink, white paper, yellow highlight
   parts.push(
-    'No color, no shading, no gradients. Black ink on white background only.',
-    'Simple stick figures for people. Basic boxes and lines for UI elements.',
-    'Include simple labels and annotations where helpful.',
-    'No photorealism, no 3D rendering. Keep it looking like a quick whiteboard sketch.',
+    'Use only three tones: black ink lines, white paper background, and warm yellow highlighter to draw attention to key elements or add visual interest.',
+    'No grayscale shading, no gradients, no other colors. Use yellow sparingly for emphasis — not as fill for large areas.',
+  );
+
+  // People policy — only include figures when user has placed stickmen stamps
+  if (hasPersonStamps) {
+    parts.push('Include simple stick figures or people as indicated in the user\'s sketch.');
+  } else {
+    parts.push('Do NOT include any people, human figures, or stick figures in the sketch.');
+  }
+
+  parts.push(
+    'Basic boxes and lines for UI elements.',
+    'Include clean labels and annotations where helpful.',
+    'No photorealism, no 3D rendering. Keep it looking like a polished concept sketch from a skilled illustrator, not a rough whiteboard doodle.',
   );
 
   return parts.join(' ');
@@ -203,6 +219,7 @@ export async function POST(req: Request) {
       additionalPrompt,
       existingImageBase64,
       previousImageUrl,
+      hasPersonStamps,
     } = await req.json();
 
     if (!workshopId || !ideaTitle) {
@@ -227,6 +244,7 @@ export async function POST(req: Request) {
       additionalPrompt,
       workshopContext,
       existingSketchDescription,
+      hasPersonStamps: !!hasPersonStamps,
     });
 
     // Generate image with Imagen 4 Fast (cheapest available tier)
