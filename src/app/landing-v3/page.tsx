@@ -26,7 +26,18 @@ import { Footer } from '@/components/landing/footer';
 import { Globe } from '@/components/ui/globe';
 import { HeroVisual } from '@/components/landing-v3/hero-visual';
 
-export default function Home() {
+/**
+ * Landing Page V3
+ *
+ * Changes from v2:
+ * - Removed globe
+ * - Hero visual: stickies (left) → arrow (center) → deliverables (right)
+ * - 5 user cursors close to stickies
+ * - Placeholder video object
+ *
+ * Route: /landing-v3
+ */
+export default function LandingV3() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <LandingHeader />
