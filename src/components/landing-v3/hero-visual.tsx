@@ -29,7 +29,7 @@ function StickyNote({
 }) {
   return (
     <div
-      className="absolute rounded-md bg-amber-100 dark:bg-amber-200 w-[90px] h-[90px] flex items-center justify-center shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06),0_2px_8px_-2px_rgba(0,0,0,0.25)] will-change-transform"
+      className="group/note absolute pointer-events-auto rounded-xl bg-card/90 backdrop-blur-sm border border-border w-[90px] h-[90px] flex items-center justify-center shadow-md will-change-transform transition-all duration-300 ease-out hover:bg-amber-100 hover:dark:bg-amber-200 hover:border-amber-200 hover:dark:border-amber-300 hover:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06),0_2px_8px_-2px_rgba(0,0,0,0.25)] hover:rounded-md cursor-default"
       style={
         {
           left,
@@ -37,11 +37,10 @@ function StickyNote({
           zIndex: z,
           transform: `rotate(${rotation})`,
           "--note-rotation": rotation,
-          /* stickies stay still — only cursors animate */
         } as React.CSSProperties
       }
     >
-      <p className="text-xs font-semibold text-center leading-tight text-amber-900/80 px-1.5">
+      <p className="text-xs font-medium text-center leading-tight text-foreground group-hover/note:text-amber-900/80 group-hover/note:font-semibold px-1.5 transition-colors duration-300">
         {text}
       </p>
     </div>
