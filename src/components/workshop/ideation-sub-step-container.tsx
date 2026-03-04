@@ -110,6 +110,10 @@ export function IdeationSubStepContainer({
   const [liveMessageCount, setLiveMessageCount] = React.useState(0);
   const [mobileView, setMobileView] = React.useState<'chat' | 'canvas'>('chat');
 
+  // Track whether auto-start already fired — survives ChatPanel unmount/remount (e.g. chat toggle)
+  const [autoStartFired, setAutoStartFired] = React.useState(false);
+  const handleAutoStarted = React.useCallback(() => setAutoStartFired(true), []);
+
   // Admin toggle state
   const [isGuideEditing, setIsGuideEditing] = React.useState(false);
   const handleToggleGuideEditor = React.useCallback(() => {
@@ -358,6 +362,8 @@ export function IdeationSubStepContainer({
           stepConfirmLabel={isEnhancingIdeas ? 'Enhancing ideas...' : 'Confirm Mind Map'}
           stepConfirmIsTransition
           stepConfirmDisabled={isEnhancingIdeas}
+          skipAutoStart={autoStartFired}
+          onAutoStarted={handleAutoStarted}
         />
       </div>
     </div>

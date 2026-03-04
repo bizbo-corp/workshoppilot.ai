@@ -9,6 +9,7 @@ import {
   Code,
   Presentation,
   Users,
+  Map,
   ArrowRight,
   Loader2,
 } from 'lucide-react';
@@ -85,6 +86,14 @@ const DOCUMENT_CARDS = [
     icon: <Users className="h-5 w-5" />,
     generatable: false,
   },
+  {
+    type: 'journey-map',
+    title: 'UX Journey Map',
+    description:
+      'Interactive roadmap mapping your concepts onto user journey stages — then generate a v0 prototype prompt.',
+    icon: <Map className="h-5 w-5" />,
+    generatable: true,
+  },
 ] as const;
 
 export function OutputsContent({
@@ -98,6 +107,7 @@ export function OutputsContent({
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [prdStatus, setPrdStatus] = useState<GenerationStatus>('idle');
   const [techSpecsStatus, setTechSpecsStatus] = useState<GenerationStatus>('idle');
+  const [journeyMapStatus, setJourneyMapStatus] = useState<GenerationStatus>('idle');
 
   const selectedDeliverable = selectedType
     ? deliverables.find((d) => d.type === selectedType) ?? null
@@ -145,6 +155,27 @@ export function OutputsContent({
     }
   }, [workshopId, router]);
 
+  const handleGenerateJourneyMap = useCallback(async () => {
+    setJourneyMapStatus('loading');
+    try {
+      const res = await fetch('/api/build-pack/generate-journey-map', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workshopId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Journey map generation failed');
+      }
+      setJourneyMapStatus('done');
+      toast.success('Journey map generated');
+      router.push(`/workshop/${sessionId}/outputs/journey-map`);
+    } catch (err) {
+      setJourneyMapStatus('error');
+      toast.error(err instanceof Error ? err.message : 'Journey map generation failed');
+    }
+  }, [workshopId, sessionId, router]);
+
   /** Check whether a deliverable has already been generated (exists in server data) */
   function isGenerated(type: string): boolean {
     return deliverables.some((d) => d.type === type);
@@ -153,13 +184,23 @@ export function OutputsContent({
   function getGenerationStatus(type: string): GenerationStatus {
     if (type === 'prd') return prdStatus;
     if (type === 'tech-specs') return techSpecsStatus;
+    if (type === 'journey-map') return journeyMapStatus;
     return 'idle';
   }
 
   function getGenerateHandler(type: string): (() => void) | undefined {
     if (type === 'prd') return handleGeneratePrd;
     if (type === 'tech-specs') return handleGenerateTechSpecs;
+    if (type === 'journey-map') return handleGenerateJourneyMap;
     return undefined;
+  }
+
+  function handleCardClick(type: string) {
+    if (type === 'journey-map') {
+      router.push(`/workshop/${sessionId}/outputs/journey-map`);
+    } else {
+      setSelectedType(type);
+    }
   }
 
   return (
@@ -232,7 +273,7 @@ export function OutputsContent({
                   <Card
                     key={card.type}
                     className="flex flex-col justify-between gap-4 py-5 cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
-                    onClick={() => setSelectedType(card.type)}
+                    onClick={() => handleCardClick(card.type)}
                   >
                     <CardHeader className="gap-3 pb-0">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -265,7 +306,7 @@ export function OutputsContent({
                         className="w-full"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedType(card.type);
+                          handleCardClick(card.type);
                         }}
                       >
                         View Details
@@ -312,9 +353,9 @@ export function OutputsContent({
                             Generating...
                           </>
                         ) : status === 'error' ? (
-                          `Retry ${card.type === 'prd' ? 'PRD' : 'Tech Specs'}`
+                          `Retry ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : 'Tech Specs'}`
                         ) : (
-                          `Generate ${card.type === 'prd' ? 'PRD' : 'Tech Specs'}`
+                          `Generate ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : 'Tech Specs'}`
                         )}
                       </Button>
                     )}

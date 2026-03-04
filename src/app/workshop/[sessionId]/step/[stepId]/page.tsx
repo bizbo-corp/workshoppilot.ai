@@ -134,8 +134,14 @@ export default async function StepPage({ params }: StepPageProps) {
         )
     );
 
-    if (!hasRealUserMessage) {
-      // No real user interaction — clear stale/duplicate intro messages
+    // Only wipe if the AI hasn't responded yet (no assistant messages with content).
+    // If the AI already generated a response, keep it to avoid regeneration on refresh.
+    const hasAssistantResponse = initialMessages.some(
+      (m) => m.role === "assistant" && m.parts?.some((p) => p.type === "text" && p.text.length > 0)
+    );
+
+    if (!hasRealUserMessage && !hasAssistantResponse) {
+      // No real user interaction AND no AI response — clear stale trigger-only messages
       await db
         .delete(chatMessages)
         .where(

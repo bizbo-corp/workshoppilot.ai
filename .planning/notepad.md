@@ -1,15 +1,12 @@
 ## Ideas
 
-
-
-- [ ] I need to make a feature that the admin can capture feedback about the dialogue and the context. The point that the feedback needs to be given to is captured along with the instructions. 
-- [ ] Validate step. I need A. Journey mapper. Using the React flow 9, I'm going to take the context of the challenge, the chosen journey from the journey map step, and the challenge and the concept ideas to build out a rough UX Journey map
-
-
+- [x] I need to make a feature that the admin can capture feedback about the dialogue and the context. The point that the feedback needs to be given to is captured along with the instructions. 
+- [ ] Validate step. I need a UX Journey mapper Using the React flow. It needs to take the context of the challenge, the chosen journey from the journey map step, and the challenge and the concept ideas to build out a rough UX Journey map.
 
 ## Todo
 
 - [ ] Landing page effectiveness
+- [ ] Last step 10 does not regenerate chat on reload. Have the chat persist and the toggle panel behaviour should be the same.
 - [ ] 10 Validate Step improvements. 
     - [ ] Include wireframe builder
     - [ ] Make the prototype after the wireframe
@@ -46,16 +43,3 @@ Hero area 30' intro
 1 minute LinkenIn
 
 Meta ad?
-
-
-
-
-
-
-
-
-
-
-
-
-

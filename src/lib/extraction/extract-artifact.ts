@@ -10,7 +10,7 @@ import type { ModelMessage } from 'ai';
 import { google } from '@ai-sdk/google';
 import { getSchemaForStep } from '@/lib/schemas';
 import { getStepById } from '@/lib/workshop/step-metadata';
-import { streamTextWithRetry } from '@/lib/ai/gemini-retry';
+import { streamTextWithRetry, generateTextWithRetry } from '@/lib/ai/gemini-retry';
 
 /**
  * Custom error for extraction failures
@@ -58,7 +58,23 @@ export async function extractStepArtifact(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       // Build extraction system prompt
-      let extractionPrompt = `Extract structured data from this design thinking conversation for the ${stepName} step. Use the user's exact words where possible. Only include information explicitly discussed in the conversation.`;
+      let extractionPrompt = `Extract structured data from this design thinking conversation for the ${stepName} step. Use the user's exact words where possible. Only include information explicitly discussed in the conversation.
+
+You MUST return a valid JSON object matching the required schema exactly. Every required field must be present and non-null. Arrays with minimum length constraints must have at least that many items — synthesize from the conversation if needed.`;
+
+      // Step-specific guidance for complex schemas
+      if (stepId === 'validate') {
+        extractionPrompt += `
+
+For the Validate step, you must extract:
+1. narrativeIntro: A 1-2 paragraph story of the journey from vague idea to validated concept
+2. stepSummaries: Array of 3-10 objects with stepNumber (1-10), stepName, and keyOutputs (1-3 strings each). Include summaries for all steps discussed.
+3. billboardHero (optional): headline (6-10 words), subheadline, cta
+4. confidenceAssessment: score (1-10 integer), rationale (string), researchQuality ("thin"|"moderate"|"strong")
+5. recommendedNextSteps: Array of 3-5 concrete next action strings
+
+If the conversation doesn't cover all 10 steps, summarize the ones that were discussed (minimum 3).`;
+      }
 
       // On retry attempts, include previous error context
       if (attempt > 0 && lastError) {
@@ -86,6 +102,17 @@ export async function extractStepArtifact(
 
       // Await the extracted object (output is PromiseLike)
       const extracted = await result.output;
+
+      // Output.object can resolve to null if parsing fails entirely
+      if (extracted === null || extracted === undefined) {
+        // Consume the stream text for debugging
+        const rawText = await result.text;
+        console.warn(`Extraction attempt ${attempt + 1}: Output.object returned null. Raw text length: ${rawText?.length ?? 0}`);
+        throw new Error(
+          'AI returned unstructured output that could not be parsed into the expected schema. ' +
+          'Ensure response is a valid JSON object with all required fields.'
+        );
+      }
 
       // Belt-and-suspenders: Validate with Zod
       const validated = schema.parse(extracted);
@@ -118,9 +145,84 @@ export async function extractStepArtifact(
     }
   }
 
-  // All retries exhausted
+  // All Output.object retries exhausted — try one final fallback with generateText + manual JSON parsing
+  console.warn(`[extract] Output.object failed ${maxRetries + 1} times for ${stepId}. Trying generateText fallback.`);
+
+  try {
+    // Build a human-readable schema description from Zod shape
+    const schemaDescription = describeZodShape(schema);
+
+    const conversationText = conversationHistory
+      .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
+      .join('\n\n');
+
+    const fallbackPrompt = `Extract structured data from this design thinking conversation for the "${stepName}" step.
+
+<conversation>
+${conversationText}
+</conversation>
+
+Return ONLY a valid JSON object with these fields:
+${schemaDescription}
+
+RULES:
+- Return ONLY the JSON object. No markdown fences, no explanation, no preamble.
+- Every required field must be present and non-null.
+- Arrays with minimum length requirements must have at least that many items — synthesize from conversation context if needed.
+- Use the user's exact words where possible.`;
+
+    const result = await generateTextWithRetry({
+      model: google('gemini-2.0-flash'),
+      prompt: fallbackPrompt,
+      temperature: 0.1,
+    });
+
+    const cleaned = result.text.trim()
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/```\s*$/i, '')
+      .trim();
+
+    const parsed = JSON.parse(cleaned);
+    const validated = schema.parse(parsed);
+
+    console.log(`[extract] generateText fallback succeeded for ${stepId}`);
+
+    return {
+      artifact: validated as Record<string, unknown>,
+      stepId,
+      usage: result.usage ? {
+        inputTokens: result.usage.inputTokens,
+        outputTokens: result.usage.outputTokens,
+      } : undefined,
+    };
+  } catch (fallbackError) {
+    console.error(`[extract] generateText fallback also failed for ${stepId}:`, fallbackError);
+  }
+
+  // Everything failed
   throw new ExtractionError(
-    `Failed to extract valid artifact after ${maxRetries + 1} attempts`,
+    `Failed to extract valid artifact after ${maxRetries + 1} attempts plus fallback`,
     lastError
   );
+}
+
+/**
+ * Generate a human-readable description of a Zod object schema.
+ * Uses .description on each field (set via .describe() in schema definitions).
+ */
+function describeZodShape(schema: import('zod').ZodTypeAny): string {
+  const lines: string[] = [];
+
+  if ('shape' in schema && typeof schema.shape === 'object') {
+    const shape = schema.shape as Record<string, import('zod').ZodTypeAny>;
+    for (const [key, field] of Object.entries(shape)) {
+      const desc = field.description || 'value';
+      const isOptional = field.isOptional?.() ?? false;
+      const optTag = isOptional ? ' (optional)' : ' (required)';
+      lines.push(`- ${key}${optTag}: ${desc}`);
+    }
+  }
+
+  return lines.join('\n');
 }

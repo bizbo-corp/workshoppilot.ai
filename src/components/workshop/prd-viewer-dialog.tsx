@@ -26,9 +26,18 @@ interface PrdViewerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workshopId: string;
+  /** Pre-populate the dialog (e.g. from journey mapper) — skips the generate-prd API call */
+  initialData?: {
+    prompt: string;
+    systemPrompt: string;
+    conceptName: string;
+    buildPackId: string;
+  };
+  /** When provided, "Create in V0" fires the API in background and calls this callback instead of waiting in the dialog. Used by journey mapper to redirect to step 10. */
+  onV0Started?: (buildPackId: string) => void;
 }
 
-export function PrdViewerDialog({ open, onOpenChange, workshopId }: PrdViewerDialogProps) {
+export function PrdViewerDialog({ open, onOpenChange, workshopId, initialData, onV0Started }: PrdViewerDialogProps) {
   const [state, setState] = React.useState<DialogState>('idle');
   const [prompt, setPrompt] = React.useState('');
   const [systemPrompt, setSystemPrompt] = React.useState('');
@@ -40,6 +49,20 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId }: PrdViewerDia
   const [showFiles, setShowFiles] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState('prompt');
   const [copied, setCopiedLink] = React.useState(false);
+  const pollIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup polling on unmount or close
+  React.useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
+  React.useEffect(() => {
+    if (!open && pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }, [open]);
 
   // Check V0 availability on mount
   React.useEffect(() => {
@@ -55,10 +78,19 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId }: PrdViewerDia
     }
   }, [open, v0Available]);
 
-  // Auto-generate on open if idle
+  // Auto-populate from initialData or auto-generate on open
   React.useEffect(() => {
     if (open && state === 'idle') {
-      handleGenerate();
+      if (initialData) {
+        setPrompt(initialData.prompt);
+        setSystemPrompt(initialData.systemPrompt);
+        setConceptName(initialData.conceptName);
+        setBuildPackId(initialData.buildPackId);
+        setState('prd-ready');
+        setActiveTab('prompt');
+      } else {
+        handleGenerate();
+      }
     }
   }, [open]);
 
@@ -114,6 +146,21 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId }: PrdViewerDia
   const handleCreateV0 = async () => {
     if (!buildPackId) return;
 
+    // If onV0Started is provided (journey mapper flow), fire in background and redirect
+    if (onV0Started) {
+      // Fire create-v0-chat in the background with current (possibly edited) prompt
+      fetch('/api/build-pack/create-v0-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buildPackId, prompt, systemPrompt }),
+      }).catch(() => {
+        // Errors handled by polling on step 10
+      });
+      onV0Started(buildPackId);
+      return;
+    }
+
+    // Standard flow: fire async V0 creation, then poll for completion
     setState('creating-v0');
     setError(null);
 
@@ -121,7 +168,7 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId }: PrdViewerDia
       const res = await fetch('/api/build-pack/create-v0-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buildPackId }),
+        body: JSON.stringify({ buildPackId, prompt, systemPrompt }),
       });
 
       const data = await res.json();
@@ -132,17 +179,70 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId }: PrdViewerDia
         return;
       }
 
-      setV0Data(data);
-      setState('v0-ready');
-      setActiveTab('preview');
+      // If V0 already completed (unlikely in async mode), show result immediately
+      if (data.status === 'completed' && data.demoUrl) {
+        setV0Data({ demoUrl: data.demoUrl, chatId: data.chatId, editorUrl: data.editorUrl, files: data.files || [] });
+        setState('v0-ready');
+        setActiveTab('preview');
+        return;
+      }
+
+      // V0 is processing — poll v0-status for completion
+      pollForV0Completion(buildPackId);
     } catch {
       setError('Network error connecting to V0. Please try again.');
       setState('v0-error');
     }
   };
 
+  const pollForV0Completion = (bpId: string) => {
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutes at 5s intervals
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await fetch(`/api/build-pack/v0-status?buildPackId=${bpId}`);
+        const data = await res.json();
+
+        if (data.status === 'ready') {
+          clearInterval(interval);
+          setV0Data({
+            demoUrl: data.demoUrl,
+            chatId: '',
+            editorUrl: data.editorUrl,
+            files: [],
+          });
+          setState('v0-ready');
+          setActiveTab('preview');
+        } else if (data.status === 'failed' || attempts >= maxAttempts) {
+          clearInterval(interval);
+          setError(data.error || 'V0 generation timed out. You can still copy the prompt manually.');
+          setState('v0-error');
+        }
+      } catch {
+        // Network error — keep polling
+      }
+    }, 5000);
+
+    // Store interval ref for cleanup
+    pollIntervalRef.current = interval;
+  };
+
+  // Track whether we used initialData so Regenerate can fall back to API
+  const usedInitialData = React.useRef(false);
+  React.useEffect(() => {
+    if (open && initialData && state === 'prd-ready' && !usedInitialData.current) {
+      usedInitialData.current = true;
+    }
+  }, [open, initialData, state]);
+
   const handleRegenerate = () => {
-    // Reset state for fresh generation
+    // Reset state for fresh generation (always uses generate-prd API)
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    usedInitialData.current = false;
     setPrompt('');
     setSystemPrompt('');
     setConceptName('');
@@ -153,13 +253,14 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId }: PrdViewerDia
     handleGenerate();
   };
 
-  // Build fullscreen URL from V0 demo URL by adding f=1 param
+  // Build fullscreen URL from V0 editor URL (v0.app/chat/...) — persistent and reliable
+  // The demoUrl (vusercontent.net) is a temporary sandbox; editorUrl with ?f=1 is the proper shareable link
   const fullscreenUrl = React.useMemo(() => {
-    if (!v0Data?.demoUrl) return null;
-    const url = new URL(v0Data.demoUrl);
+    if (!v0Data?.editorUrl) return null;
+    const url = new URL(v0Data.editorUrl);
     url.searchParams.set('f', '1');
     return url.toString();
-  }, [v0Data?.demoUrl]);
+  }, [v0Data?.editorUrl]);
 
   const handleCopyLink = async () => {
     if (!fullscreenUrl) return;
@@ -227,9 +328,11 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId }: PrdViewerDia
             <TabsContent value="prompt" className="flex-1 min-h-0 mt-3">
               <div className="relative">
                 <CopyButton text={prompt} />
-                <div className="max-h-[45vh] overflow-y-auto rounded-md border bg-muted/30 p-4">
-                  <pre className="whitespace-pre-wrap text-sm leading-relaxed font-sans">{prompt}</pre>
-                </div>
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  className="max-h-[45vh] min-h-[200px] w-full overflow-y-auto rounded-md border bg-muted/30 p-4 text-sm leading-relaxed font-sans resize-y focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                />
               </div>
             </TabsContent>
 

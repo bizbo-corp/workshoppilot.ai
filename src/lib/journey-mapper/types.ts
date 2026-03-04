@@ -1,0 +1,136 @@
+/**
+ * Core data model for the UX Journey Mapper.
+ * Maps Step 9 concepts onto Step 6 journey stages to create
+ * an interactive roadmap for prototyping.
+ */
+
+export type UiType =
+  | 'dashboard'
+  | 'landing-page'
+  | 'form'
+  | 'table'
+  | 'detail-view'
+  | 'wizard'
+  | 'modal'
+  | 'settings';
+
+export type Priority = 'must-have' | 'should-have' | 'nice-to-have';
+
+export type FlowType = 'primary' | 'secondary' | 'error';
+
+export type ConceptRelationship = 'combined' | 'separate-sections' | 'alternative';
+
+export type StrategicIntent =
+  | 'marketing-site'   // Landing pages, conversion funnels
+  | 'admin-portal'     // CRUD management interfaces
+  | 'dashboard'        // Analytics, monitoring, reporting
+  | 'tool'             // Single-purpose utility
+  | 'web-app'          // General web application (new default)
+  | 'app'              // Legacy alias for web-app
+  | 'brochure';        // Legacy alias for marketing-site
+
+/** Normalize legacy intent values to canonical ones */
+export function normalizeIntent(intent: StrategicIntent): StrategicIntent {
+  if (intent === 'brochure') return 'marketing-site';
+  if (intent === 'app') return 'web-app';
+  return intent;
+}
+
+/** True for marketing-site or its legacy alias */
+export function isMarketingIntent(intent: StrategicIntent): boolean {
+  return intent === 'marketing-site' || intent === 'brochure';
+}
+
+/** Display names for the toolbar badge */
+export const INTENT_LABELS: Record<StrategicIntent, string> = {
+  'marketing-site': 'Marketing Site',
+  'admin-portal': 'Admin Portal',
+  'dashboard': 'Dashboard',
+  'tool': 'Tool',
+  'web-app': 'Web App',
+  'app': 'Application',
+  'brochure': 'Landing Page',
+};
+
+/** "Add ___" button label per intent */
+export const INTENT_ADD_LABELS: Record<StrategicIntent, string> = {
+  'marketing-site': 'Add Section',
+  'admin-portal': 'Add View',
+  'dashboard': 'Add Widget',
+  'tool': 'Add Feature',
+  'web-app': 'Add Feature',
+  'app': 'Add Feature',
+  'brochure': 'Add Section',
+};
+
+export type StageEmotion = 'positive' | 'neutral' | 'negative';
+
+export interface JourneyMapperNode {
+  id: string;
+  conceptIndex: number;
+  conceptName: string;
+  featureName: string;
+  featureDescription: string;
+  stageId: string;
+  stageName: string;
+  uiType: UiType;
+  uiPatternSuggestion: string;
+  addressesPain: string;
+  position: { x: number; y: number };
+  priority: Priority;
+}
+
+export interface JourneyMapperEdge {
+  id: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  label?: string;
+  flowType: FlowType;
+}
+
+export interface JourneyStageColumn {
+  id: string;
+  name: string;
+  description: string;
+  emotion: StageEmotion;
+  isDip: boolean;
+  barriers: string[];
+  opportunities: string[];
+}
+
+export interface JourneyMapperState {
+  nodes: JourneyMapperNode[];
+  edges: JourneyMapperEdge[];
+  stages: JourneyStageColumn[];
+  challengeContext: string;
+  personaName: string;
+  conceptRelationship: ConceptRelationship;
+  strategicIntent: StrategicIntent;
+  isApproved: boolean;
+  isDirty: boolean;
+  lastGeneratedAt?: string;
+}
+
+/** Result shape returned by the LLM mapping engine */
+export interface JourneyMappingResult {
+  strategicIntent: StrategicIntent;
+  conceptRelationship: ConceptRelationship;
+  stages: JourneyStageColumn[];
+  features: Array<{
+    conceptIndex: number;
+    conceptName: string;
+    featureName: string;
+    featureDescription: string;
+    stageId: string;
+    uiType: UiType;
+    uiPatternSuggestion: string;
+    addressesPain: string;
+    priority: Priority;
+  }>;
+  edges: Array<{
+    sourceFeatureIndex: number;
+    targetFeatureIndex: number;
+    label?: string;
+    flowType: FlowType;
+  }>;
+}

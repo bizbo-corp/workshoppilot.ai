@@ -797,9 +797,11 @@ interface ChatPanelProps {
   stepConfirmDisabled?: boolean; // Disable the confirm button (e.g. during AI processing)
   stepAlreadyConfirmed?: boolean; // Whether the step has already been confirmed (artifact locked)
   onConceptComplete?: () => void; // Fired when AI signals all concepts are done or user asks to move on
+  skipAutoStart?: boolean; // Prevents auto-start when ChatPanel remounts (e.g. after toggle)
+  onAutoStarted?: () => void; // Callback to notify parent that auto-start was triggered
 }
 
-export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep, showStepConfirm, onStepConfirm, onStepRevise, stepConfirmLabel, stepConfirmIsTransition, stepConfirmDisabled, stepAlreadyConfirmed, onConceptComplete }: ChatPanelProps) {
+export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep, showStepConfirm, onStepConfirm, onStepRevise, stepConfirmLabel, stepConfirmIsTransition, stepConfirmDisabled, stepAlreadyConfirmed, onConceptComplete, skipAutoStart, onAutoStarted }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
 
   // Multiplayer read-only mode — participants see conversation history only (no input, no actions).
@@ -1826,15 +1828,17 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const showGreeting = shouldAutoStart && !!stepGreeting && !hasAssistantMessage;
 
   React.useEffect(() => {
-    // Read-only participants must NOT trigger auto-start — only the facilitator does
-    if (shouldAutoStart && messages.length === 0 && status === 'ready' && !hasAutoStarted.current && !isReadOnly) {
+    // Read-only participants must NOT trigger auto-start — only the facilitator does.
+    // skipAutoStart prevents re-triggering when ChatPanel remounts (e.g. after chat toggle).
+    if (shouldAutoStart && messages.length === 0 && status === 'ready' && !hasAutoStarted.current && !isReadOnly && !skipAutoStart) {
       hasAutoStarted.current = true;
+      onAutoStarted?.();
       sendMessage({
         role: 'user',
         parts: [{ type: 'text', text: '__step_start__' }],
       });
     }
-  }, [shouldAutoStart, messages.length, status, sendMessage, isReadOnly]);
+  }, [shouldAutoStart, messages.length, status, sendMessage, isReadOnly, skipAutoStart, onAutoStarted]);
 
   // Helper: check if user is near bottom of scroll container
   const isNearBottom = React.useCallback(() => {

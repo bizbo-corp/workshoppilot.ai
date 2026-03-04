@@ -26,6 +26,7 @@ interface Deliverable {
 function getDeliverableType(title: string): string {
   if (title.startsWith('PRD:')) return 'prd';
   if (title.startsWith('Tech Specs:')) return 'tech-specs';
+  if (title.startsWith('Journey Map:')) return 'journey-map';
   return 'other';
 }
 

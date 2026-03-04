@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import type { UIMessage } from 'ai';
 import { ChatPanel } from './chat-panel';
@@ -12,7 +12,7 @@ import { StepNavigation } from './step-navigation';
 import { ResetStepDialog } from '@/components/dialogs/reset-step-dialog';
 import { PrdViewerDialog } from './prd-viewer-dialog';
 import { IdeationSubStepContainer } from './ideation-sub-step-container';
-import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical, Loader2, Megaphone, ImageIcon, Sparkles, ArrowLeft, ChevronDown, X } from 'lucide-react';
+import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical, Loader2, Megaphone, ImageIcon, Sparkles, ArrowLeft, ChevronDown, X, ExternalLink, Rocket, CheckCircle2, FileCode2 } from 'lucide-react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { resetStep, updateStepStatus, completeWorkshop } from '@/actions/workshop-actions';
 import { loadCanvasState, saveCanvasState } from '@/actions/canvas-actions';
@@ -227,9 +227,15 @@ export function StepContainer({
   // Local messages state — allows clearing before ChatPanel re-mounts on reset
   const [localMessages, setLocalMessages] = React.useState(initialMessages);
 
+  // Track whether auto-start already fired — survives ChatPanel unmount/remount (e.g. chat toggle).
+  // Reset when navigating to a different step or when messages are explicitly cleared (reset).
+  const [autoStartFired, setAutoStartFired] = React.useState(false);
+  const handleAutoStarted = React.useCallback(() => setAutoStartFired(true), []);
+
   // Sync from server when navigating between steps
   React.useEffect(() => {
     setLocalMessages(initialMessages);
+    setAutoStartFired(false); // Reset for the new step
   }, [stepOrder]);
 
   // Admin guide editing state
@@ -434,6 +440,18 @@ export function StepContainer({
   const [extractionError, setExtractionError] = React.useState<string | null>(null);
   const [step10MessageCount, setStep10MessageCount] = React.useState(0);
 
+  // V0 prototype creation status (polling from journey map)
+  const searchParams = useSearchParams();
+  const v0Creating = stepOrder === 10 && searchParams.get('v0') === 'creating';
+  const [v0Status, setV0Status] = React.useState<'idle' | 'creating' | 'ready' | 'error'>(
+    v0Creating ? 'creating' : 'idle'
+  );
+  const [v0Result, setV0Result] = React.useState<{
+    demoUrl: string;
+    editorUrl: string;
+    fileCount: number;
+  } | null>(null);
+
   // Workshop completion state — initialized from server-provided workshopStatus
   const [workshopCompleted, setWorkshopCompleted] = React.useState(workshopStatus === 'completed');
   const [isCompletingWorkshop, setIsCompletingWorkshop] = React.useState(false);
@@ -562,6 +580,52 @@ export function StepContainer({
     }
   }, [stepOrder, step10Artifact, isExtracting, initialMessages?.length, step10MessageCount, handleStep10Extract]);
 
+  // V0 prototype polling — check status every 3s while creating
+  React.useEffect(() => {
+    if (v0Status !== 'creating') return;
+
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/build-pack/v0-status?workshopId=${workshopId}`);
+        if (cancelled) return;
+        const data = await res.json();
+        if (data.status === 'ready') {
+          setV0Status('ready');
+          setV0Result({
+            demoUrl: data.demoUrl,
+            editorUrl: data.editorUrl,
+            fileCount: data.fileCount,
+          });
+          toast.success('v0 prototype created!', { duration: 5000 });
+        } else if (data.status === 'failed') {
+          setV0Status('error');
+        }
+        // Keep polling on 'pending'
+      } catch {
+        // Network error — keep polling
+      }
+    };
+
+    // Start polling after a short initial delay
+    const initialTimer = setTimeout(poll, 2000);
+    const interval = setInterval(poll, 3000);
+
+    // Stop after 5 minutes (V0 async generation can take 60-120s)
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        setV0Status('error');
+      }
+    }, 300000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [v0Status, workshopId]);
+
   // Reset dialog state
   const [showResetDialog, setShowResetDialog] = React.useState(false);
   const [isResetting, setIsResetting] = React.useState(false);
@@ -598,6 +662,7 @@ export function StepContainer({
       // Reset local state
       setArtifactConfirmed(false);
       setLocalMessages([]);
+      setAutoStartFired(false); // Allow auto-start to fire again after reset
       // Clear Step 10 extraction state
       setStep10Artifact(null);
       hasAutoExtracted.current = false;
@@ -760,6 +825,136 @@ export function StepContainer({
             hasBillboard={generatedBillboards.length > 0}
             workshopCompleted={workshopCompleted}
           />
+
+          {/* UX Journey Map — central gatekeeper before prototyping */}
+          <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-5 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15"/><path d="M15 6v15"/></svg>
+              </div>
+              <div>
+                <h3 className="text-base font-semibold">UX Journey Map</h3>
+                <p className="text-xs text-muted-foreground">
+                  Review and approve your journey map before creating a prototype
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Your validated concepts are mapped onto user journey stages. Approve the map to unlock prototype generation.
+            </p>
+            <div className="flex items-center gap-3">
+              <a
+                href={`/workshop/${sessionId}/outputs/journey-map`}
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15"/><path d="M15 6v15"/></svg>
+                Open Journey Map
+              </a>
+              <span className="text-xs text-muted-foreground">
+                Approve your map to enable prototyping
+              </span>
+            </div>
+          </div>
+
+          {/* V0 Prototype creation status */}
+          {v0Status === 'creating' && (
+            <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold">Creating Prototype</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Your v0 prototype is being built from your journey map...
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                This typically takes 30-60 seconds. You&apos;ll be notified when it&apos;s ready.
+              </p>
+            </div>
+          )}
+
+          {v0Status === 'ready' && v0Result && (
+            <div className="rounded-xl border-2 border-green-500/30 bg-green-500/5 p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-500/10">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold">Prototype Ready</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Your v0 prototype has been created successfully
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                {v0Result.editorUrl && (
+                  <a
+                    href={`${v0Result.editorUrl}${v0Result.editorUrl.includes('?') ? '&' : '?'}f=1`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                  >
+                    <Rocket className="h-4 w-4" />
+                    View Prototype
+                  </a>
+                )}
+                {v0Result.editorUrl && (
+                  <a
+                    href={v0Result.editorUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Edit in v0
+                  </a>
+                )}
+                {v0Result.fileCount > 0 && (
+                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <FileCode2 className="h-3.5 w-3.5" />
+                    {v0Result.fileCount} file{v0Result.fileCount !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {v0Status === 'error' && (
+            <div className="rounded-xl border-2 border-destructive/20 bg-destructive/5 p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                  <Rocket className="h-5 w-5 text-destructive" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold">Prototype Creation Issue</h3>
+                  <p className="text-xs text-muted-foreground">
+                    The prototype is taking longer than expected or may have failed.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setV0Status('creating')}
+                  className="gap-1.5"
+                >
+                  <Loader2 className="h-3.5 w-3.5" />
+                  Keep Waiting
+                </Button>
+                <a
+                  href={`/workshop/${sessionId}/outputs/journey-map`}
+                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Back to Journey Map
+                </a>
+              </div>
+            </div>
+          )}
         </div>
         <PrdViewerDialog
           open={showPrdDialog}
@@ -1188,6 +1383,8 @@ export function StepContainer({
           stepConfirmLabel={confirmLabel}
           stepAlreadyConfirmed={artifactConfirmed}
           onConceptComplete={() => setConceptProceedOverride(true)}
+          skipAutoStart={autoStartFired}
+          onAutoStarted={handleAutoStarted}
         />
       </div>
     </div>
