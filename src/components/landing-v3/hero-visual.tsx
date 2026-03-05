@@ -108,21 +108,47 @@ function UserCursor({
 /* ─── Deliverables data ────────────────────────────────────── */
 
 const deliverables = [
-  { icon: FileText, label: "Markdown PRDs", rotation: "1deg", delay: "0.2s" },
-  { icon: Code2, label: "Tech Specs", rotation: "-1.5deg", delay: "1s" },
-  { icon: UsersIcon, label: "User Stories", rotation: "2deg", delay: "1.8s" },
+  {
+    icon: FileText,
+    label: "Markdown PRDs",
+    rotation: "1deg",
+    delay: "0.2s",
+    color: "#16a34a",
+  },
+  {
+    icon: Code2,
+    label: "Tech Specs",
+    rotation: "-1.5deg",
+    delay: "1s",
+    color: "#6366f1",
+  },
+  {
+    icon: UsersIcon,
+    label: "User Stories",
+    rotation: "2deg",
+    delay: "1.8s",
+    color: "#6366f1",
+  },
   {
     icon: Presentation,
     label: "Stakeholder Deck",
     rotation: "-1deg",
     delay: "2.5s",
+    color: "#e97820",
   },
-  { icon: Map, label: "Journey Map", rotation: "1.5deg", delay: "3.2s" },
+  {
+    icon: Map,
+    label: "Journey Map",
+    rotation: "1.5deg",
+    delay: "3.2s",
+    color: "#06b6d4",
+  },
   {
     icon: MousePointerClick,
     label: "Prototype",
     rotation: "-2deg",
     delay: "0.6s",
+    color: "#16a34a",
   },
 ];
 
@@ -214,7 +240,7 @@ export function HeroVisual() {
         />
         <UserCursor
           name="Product"
-          color="#e87461"
+          color="#e05c14ff"
           left="10%"
           top="66%"
           drift="cursor-drift-3 10s"
@@ -228,6 +254,14 @@ export function HeroVisual() {
           drift="cursor-drift-1 12s"
           delay="6s"
         />
+        <UserCursor
+          name="Founder"
+          color="#06b6d4"
+          left="22%"
+          top="70%"
+          drift="cursor-drift-3 10s"
+          delay="3s"
+        />
       </div>
 
       {/* ── Deliverables — 2×3 grid, lower right (lg+) ── */}
@@ -236,27 +270,32 @@ export function HeroVisual() {
         className="hidden lg:grid absolute grid-cols-2 gap-3 w-[340px]"
         style={{ right: "12%", top: "62%", transform: "translateY(-50%)" }}
       >
-        {deliverables.map(({ icon: Icon, label, rotation, delay }, i) => (
-          <div
-            key={label}
-            data-trail-dest={i}
-            className="rounded-xl bg-card/90 backdrop-blur-sm border border-border px-3 py-2.5 shadow-md will-change-transform flex items-center gap-2.5"
-            style={
-              {
-                transform: `rotate(${rotation})`,
-                "--note-rotation": rotation,
-                animation: `note-float 6s ease-in-out ${delay} infinite`,
-              } as React.CSSProperties
-            }
-          >
-            <div className="w-8 h-8 rounded-lg bg-olive-600 dark:bg-olive-700 flex items-center justify-center shrink-0">
-              <Icon className="h-3.5 w-3.5 text-white" />
+        {deliverables.map(
+          ({ icon: Icon, label, rotation, delay, color }, i) => (
+            <div
+              key={label}
+              data-trail-dest={i}
+              className="rounded-xl bg-card/90 backdrop-blur-sm border border-border px-3 py-2.5 shadow-md will-change-transform flex items-center gap-2.5"
+              style={
+                {
+                  transform: `rotate(${rotation})`,
+                  "--note-rotation": rotation,
+                  animation: `note-float 6s ease-in-out ${delay} infinite`,
+                } as React.CSSProperties
+              }
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{ backgroundColor: color }}
+              >
+                <Icon className="h-3.5 w-3.5 text-white" />
+              </div>
+              <span className="text-[12px] font-medium text-foreground whitespace-nowrap">
+                {label}
+              </span>
             </div>
-            <span className="text-[12px] font-medium text-foreground whitespace-nowrap">
-              {label}
-            </span>
-          </div>
-        ))}
+          ),
+        )}
       </div>
     </div>
   );

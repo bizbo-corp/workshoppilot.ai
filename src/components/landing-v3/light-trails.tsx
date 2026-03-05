@@ -21,9 +21,12 @@ function elRect(el: Element, container: Element) {
 }
 
 function bezier(
-  ax: number, ay: number,
-  bx: number, by: number,
-  pullX: number, pullY: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  pullX: number,
+  pullY: number,
 ) {
   const cp1x = ax + (pullX - ax) * 0.65;
   const cp1y = ay + (pullY - ay) * 0.35;
@@ -38,12 +41,19 @@ function rand(min: number, max: number) {
 
 const NS = "http://www.w3.org/2000/svg";
 
-const LIME = {
-  glow: "#bef264",   // lime-300
-  core: "#a3e635",   // lime-400
-  faint: "#84cc16",  // lime-500
-  dim: "#65a30d",    // lime-600
-};
+type Palette = { glow: string; core: string; faint: string; dim: string };
+
+const PALETTES: Palette[] = [
+  { glow: "#86efac", core: "#4ade80", faint: "#22c55e", dim: "#16a34a" }, // Sales — green
+  { glow: "#a5b4fc", core: "#818cf8", faint: "#6366f1", dim: "#4f46e5" }, // Facilitator — indigo
+  { glow: "#fda4af", core: "#fb7185", faint: "#f43f5e", dim: "#e11d48" }, // Product — rose
+  { glow: "#fdba74", core: "#fb923c", faint: "#f97316", dim: "#ea580c" }, // Operations — orange
+  { glow: "#67e8f9", core: "#22d3ee", faint: "#06b6d4", dim: "#0891b2" }, // Founder — cyan
+];
+
+function pickPalette() {
+  return PALETTES[Math.floor(Math.random() * PALETTES.length)];
+}
 
 function makePath(
   g: SVGGElement,
@@ -83,12 +93,16 @@ export function LightTrails() {
       const svg = svgRef.current!;
       const container = svg.parentElement!;
 
-      const sources = Array.from(container.querySelectorAll("[data-trail-source]"));
+      const sources = Array.from(
+        container.querySelectorAll("[data-trail-source]"),
+      );
       const destBox = container.querySelector("[data-trail-dest-container]");
       if (sources.length === 0 || !destBox) return;
 
       ctxRef.current?.revert();
-      svg.querySelectorAll(".trail-group, .convergence-group, .dest-outline").forEach((el) => el.remove());
+      svg
+        .querySelectorAll(".trail-group, .convergence-group, .dest-outline")
+        .forEach((el) => el.remove());
 
       const cRect = container.getBoundingClientRect();
       const conv = { x: cRect.width * 0.5, y: cRect.height * 0.62 };
@@ -104,7 +118,7 @@ export function LightTrails() {
       outline.setAttribute("rx", "16");
       outline.setAttribute("ry", "16");
       outline.setAttribute("fill", "none");
-      outline.setAttribute("stroke", LIME.faint);
+      outline.setAttribute("stroke", "#ffffff");
       outline.setAttribute("stroke-width", "1");
       outline.setAttribute("stroke-opacity", "0.15");
       outline.classList.add("dest-outline");
@@ -143,23 +157,23 @@ export function LightTrails() {
        * All tail layers share the same leading edge (the dot position).
        * Shorter dashes = only visible near the front = natural fade.
        */
-      function renderTrail(d: string, id: string) {
+      function renderTrail(d: string, id: string, pal: Palette) {
         const g = document.createElementNS(NS, "g");
         g.classList.add("trail-group", id);
 
-        const base = makePath(g, d, LIME.dim, 1, 0.12);
+        const base = makePath(g, d, "currentColor", 1, 0.1);
 
         // 6 graduated tail layers: wide/faint → narrow/bright
-        const t1 = makePath(g, d, LIME.glow, 10, 0.1,  "url(#trailBlur)");
-        const t2 = makePath(g, d, LIME.glow, 7,  0.15, "url(#trailBlur)");
-        const t3 = makePath(g, d, LIME.faint, 5, 0.22, "url(#trailBlurLight)");
-        const t4 = makePath(g, d, LIME.faint, 3.5, 0.35, "url(#trailBlurLight)");
-        const t5 = makePath(g, d, LIME.core, 2.5, 0.5);
-        const t6 = makePath(g, d, LIME.core, 1.5, 0.75);
+        const t1 = makePath(g, d, pal.glow, 10, 0.1, "url(#trailBlur)");
+        const t2 = makePath(g, d, pal.glow, 7, 0.15, "url(#trailBlur)");
+        const t3 = makePath(g, d, pal.faint, 5, 0.22, "url(#trailBlurLight)");
+        const t4 = makePath(g, d, pal.faint, 3.5, 0.35, "url(#trailBlurLight)");
+        const t5 = makePath(g, d, pal.core, 2.5, 0.5);
+        const t6 = makePath(g, d, pal.core, 1.5, 0.75);
 
         const dot = document.createElementNS(NS, "circle");
         dot.setAttribute("r", "3");
-        dot.setAttribute("fill", LIME.core);
+        dot.setAttribute("fill", pal.core);
         dot.setAttribute("fill-opacity", "0");
         dot.setAttribute("filter", "url(#dotGlow)");
         g.appendChild(dot);
@@ -168,8 +182,10 @@ export function LightTrails() {
         return { base, tails: [t1, t2, t3, t4, t5, t6], dot };
       }
 
-      const leftTrails = leftDs.map((d, i) => renderTrail(d, `trail-left-${i}`));
-      const trunkTrail = renderTrail(trunkD, "trail-trunk");
+      const leftTrails = leftDs.map((d, i) =>
+        renderTrail(d, `trail-left-${i}`, pickPalette()),
+      );
+      const trunkTrail = renderTrail(trunkD, "trail-trunk", pickPalette());
 
       /* ── Convergence prism ───────────────────────────── */
 
@@ -189,7 +205,7 @@ export function LightTrails() {
       ring.setAttribute("cy", String(conv.y));
       ring.setAttribute("r", "12");
       ring.setAttribute("fill", "none");
-      ring.setAttribute("stroke", LIME.core);
+      ring.setAttribute("stroke", "#e2e8f0");
       ring.setAttribute("stroke-width", "1.5");
       ring.setAttribute("stroke-opacity", "0.35");
       cg.appendChild(ring);
@@ -198,7 +214,7 @@ export function LightTrails() {
       coreDot.setAttribute("cx", String(conv.x));
       coreDot.setAttribute("cy", String(conv.y));
       coreDot.setAttribute("r", "4");
-      coreDot.setAttribute("fill", LIME.core);
+      coreDot.setAttribute("fill", "#e2e8f0");
       coreDot.setAttribute("fill-opacity", "0.9");
       coreDot.classList.add("prism-core");
       cg.appendChild(coreDot);
@@ -220,12 +236,12 @@ export function LightTrails() {
           // 6 graduated dash lengths: longest (outermost) → shortest (closest to dot)
           const maxTail = Math.min(len * 0.3, 130);
           const tailLengths = [
-            maxTail,            // t1 — outermost, faintest
-            maxTail * 0.8,      // t2
-            maxTail * 0.6,      // t3
-            maxTail * 0.42,     // t4
-            maxTail * 0.25,     // t5
-            maxTail * 0.12,     // t6 — innermost, brightest
+            maxTail, // t1 — outermost, faintest
+            maxTail * 0.8, // t2
+            maxTail * 0.6, // t3
+            maxTail * 0.42, // t4
+            maxTail * 0.25, // t5
+            maxTail * 0.12, // t6 — innermost, brightest
           ];
 
           const layers = trail.tails.map((el, i) => ({
@@ -244,38 +260,43 @@ export function LightTrails() {
 
           const proxy = { head: 0 };
 
-          gsap.timeline({
-            repeat: -1,
-            delay: initialDelay,
-            repeatDelay: pause,
-          }).to(proxy, {
-            // Travel past the end so the tail fully slides off
-            head: len + maxTail,
-            duration,
-            ease: "power1.inOut",
-            onUpdate() {
-              const hp = proxy.head;
+          gsap
+            .timeline({
+              repeat: -1,
+              delay: initialDelay,
+              repeatDelay: pause,
+            })
+            .to(proxy, {
+              // Travel past the end so the tail fully slides off
+              head: len + maxTail,
+              duration,
+              ease: "power1.inOut",
+              onUpdate() {
+                const hp = proxy.head;
 
-              // Update each tail layer — leading edge tracks the dot
-              // offset = dashLen - hp  →  leading edge at hp
-              layers.forEach(({ el, dashLen }) => {
-                el.setAttribute(
-                  "stroke-dashoffset",
-                  String(dashLen - hp),
+                // Update each tail layer — leading edge tracks the dot
+                // offset = dashLen - hp  →  leading edge at hp
+                layers.forEach(({ el, dashLen }) => {
+                  el.setAttribute("stroke-dashoffset", String(dashLen - hp));
+                });
+
+                // Dot tracks leading edge, clamped to path
+                const dotPos = Math.max(0, Math.min(len, hp));
+                const pt = basePath.getPointAtLength(dotPos);
+                (trail.dot as unknown as SVGCircleElement).setAttribute(
+                  "cx",
+                  String(pt.x),
                 );
-              });
-
-              // Dot tracks leading edge, clamped to path
-              const dotPos = Math.max(0, Math.min(len, hp));
-              const pt = basePath.getPointAtLength(dotPos);
-              (trail.dot as unknown as SVGCircleElement).setAttribute("cx", String(pt.x));
-              (trail.dot as unknown as SVGCircleElement).setAttribute("cy", String(pt.y));
-              (trail.dot as unknown as SVGCircleElement).setAttribute(
-                "fill-opacity",
-                hp > 0 && hp <= len ? "1" : "0",
-              );
-            },
-          });
+                (trail.dot as unknown as SVGCircleElement).setAttribute(
+                  "cy",
+                  String(pt.y),
+                );
+                (trail.dot as unknown as SVGCircleElement).setAttribute(
+                  "fill-opacity",
+                  hp > 0 && hp <= len ? "1" : "0",
+                );
+              },
+            });
         }
 
         leftTrails.forEach((trail, i) => {
@@ -353,8 +374,8 @@ export function LightTrails() {
           </feMerge>
         </filter>
         <radialGradient id="prismGlow" r="50%" cx="50%" cy="50%">
-          <stop offset="0%" stopColor={LIME.glow} stopOpacity="0.25" />
-          <stop offset="100%" stopColor={LIME.glow} stopOpacity="0" />
+          <stop offset="0%" stopColor="#e2e8f0" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#e2e8f0" stopOpacity="0" />
         </radialGradient>
       </defs>
     </svg>

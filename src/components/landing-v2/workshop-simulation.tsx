@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /* ─── Sticky Note ────────────────────────────────────────────── */
 
@@ -13,10 +13,12 @@ function StickyNote({ text, className, rotation, delay }: StickyNoteProps) {
   return (
     <div
       className={`absolute rounded-lg bg-amber-100 dark:bg-amber-200 px-3 py-2.5 shadow-md will-change-transform ${className}`}
-      style={{
-        '--note-rotation': rotation,
-        animation: `note-float 5s ease-in-out ${delay} infinite`,
-      } as React.CSSProperties}
+      style={
+        {
+          "--note-rotation": rotation,
+          animation: `note-float 5s ease-in-out ${delay} infinite`,
+        } as React.CSSProperties
+      }
     >
       <p className="text-[11px] leading-snug font-medium text-amber-900/80 max-w-[140px]">
         {text}
@@ -47,7 +49,7 @@ function CursorPill({
 }: CursorPillProps) {
   return (
     <div
-      className={`absolute will-change-transform ${desktopOnly ? 'hidden md:block' : ''} ${className}`}
+      className={`absolute will-change-transform ${desktopOnly ? "hidden md:block" : ""} ${className}`}
       style={{ animation: driftAnimation }}
     >
       {/* SVG arrow cursor */}
