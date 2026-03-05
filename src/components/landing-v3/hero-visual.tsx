@@ -9,6 +9,7 @@ import {
   Sparkles,
   Users as UsersIcon,
 } from "lucide-react";
+import { LightTrails } from "./light-trails";
 
 /* ─── Sticky Note ───────────────────────────────────────────── */
 
@@ -19,6 +20,7 @@ function StickyNote({
   rotation,
   delay = "0s",
   z = 1,
+  trailIndex,
 }: {
   text: string;
   left: string;
@@ -26,9 +28,11 @@ function StickyNote({
   rotation: string;
   delay?: string;
   z?: number;
+  trailIndex?: number;
 }) {
   return (
     <div
+      data-trail-source={trailIndex}
       className="group/note absolute pointer-events-auto rounded-xl bg-card/90 backdrop-blur-sm border border-border w-[90px] h-[90px] flex items-center justify-center shadow-md will-change-transform transition-all duration-300 ease-out hover:bg-amber-100 hover:dark:bg-amber-200 hover:border-amber-200 hover:dark:border-amber-300 hover:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06),0_2px_8px_-2px_rgba(0,0,0,0.25)] hover:rounded-md cursor-default"
       style={
         {
@@ -101,45 +105,26 @@ function UserCursor({
   );
 }
 
-/* ─── Floating Deliverable ──────────────────────────────────── */
+/* ─── Deliverables data ────────────────────────────────────── */
 
-function FloatingDeliverable({
-  icon: Icon,
-  label,
-  left,
-  top,
-  rotation,
-  delay = "0s",
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  left: string;
-  top: string;
-  rotation: string;
-  delay?: string;
-}) {
-  return (
-    <div
-      className="absolute rounded-xl bg-card/90 backdrop-blur-sm border border-border px-4 py-2.5 shadow-md will-change-transform flex items-center gap-3"
-      style={
-        {
-          left,
-          top,
-          transform: `rotate(${rotation})`,
-          "--note-rotation": rotation,
-          animation: `note-float 6s ease-in-out ${delay} infinite`,
-        } as React.CSSProperties
-      }
-    >
-      <span className="text-[13px] font-medium text-foreground whitespace-nowrap">
-        {label}
-      </span>
-      <div className="w-9 h-9 rounded-lg bg-olive-600 dark:bg-olive-700 flex items-center justify-center shrink-0">
-        <Icon className="h-4 w-4 text-white" />
-      </div>
-    </div>
-  );
-}
+const deliverables = [
+  { icon: FileText, label: "Markdown PRDs", rotation: "1deg", delay: "0.2s" },
+  { icon: Code2, label: "Tech Specs", rotation: "-1.5deg", delay: "1s" },
+  { icon: UsersIcon, label: "User Stories", rotation: "2deg", delay: "1.8s" },
+  {
+    icon: Presentation,
+    label: "Stakeholder Deck",
+    rotation: "-1deg",
+    delay: "2.5s",
+  },
+  { icon: Map, label: "Journey Map", rotation: "1.5deg", delay: "3.2s" },
+  {
+    icon: MousePointerClick,
+    label: "Prototype",
+    rotation: "-2deg",
+    delay: "0.6s",
+  },
+];
 
 /* ─── Main Component ────────────────────────────────────────── */
 
@@ -149,15 +134,19 @@ export function HeroVisual() {
       className="absolute inset-0 pointer-events-none overflow-hidden"
       aria-hidden="true"
     >
+      {/* ── Light trails (lg+) ── */}
+      <LightTrails />
+
       {/* ── Stickies — lower left (md+) ── */}
       <div className="hidden md:block">
         <StickyNote
           text="Pain Point"
           left="12%"
-          top="50%"
+          top="46%"
           rotation="-2deg"
           delay="0s"
           z={2}
+          trailIndex={0}
         />
         <StickyNote
           text="Problem"
@@ -166,6 +155,7 @@ export function HeroVisual() {
           rotation="1.5deg"
           delay="0.8s"
           z={1}
+          trailIndex={1}
         />
         <StickyNote
           text="Concept"
@@ -174,6 +164,7 @@ export function HeroVisual() {
           rotation="-1deg"
           delay="1.6s"
           z={3}
+          trailIndex={2}
         />
         <StickyNote
           text="Goal"
@@ -182,6 +173,7 @@ export function HeroVisual() {
           rotation="3deg"
           delay="2.4s"
           z={1}
+          trailIndex={3}
         />
         <StickyNote
           text="Idea"
@@ -190,6 +182,7 @@ export function HeroVisual() {
           rotation="-3deg"
           delay="3.2s"
           z={1}
+          trailIndex={4}
         />
         <StickyNote
           text="Conduct user interviews"
@@ -198,6 +191,7 @@ export function HeroVisual() {
           rotation="2deg"
           delay="0s"
           z={4}
+          trailIndex={5}
         />
 
         {/* 4 Cursors — staggered delays so they don't move in sync */}
@@ -236,56 +230,33 @@ export function HeroVisual() {
         />
       </div>
 
-      {/* ── Floating Deliverables — lower right, closer together (lg+) ── */}
-      <div className="hidden lg:block">
-        <FloatingDeliverable
-          icon={FileText}
-          label="Markdown PRDs"
-          left="calc(64% + 120px)"
-          top="calc(52% + 20px)"
-          rotation="1deg"
-          delay="0.2s"
-        />
-        <FloatingDeliverable
-          icon={Code2}
-          label="Technical Specifications"
-          left="calc(70% + 120px)"
-          top="calc(58% + 20px)"
-          rotation="-1.5deg"
-          delay="1s"
-        />
-        <FloatingDeliverable
-          icon={UsersIcon}
-          label="User Stories"
-          left="calc(62% + 120px)"
-          top="calc(64% + 20px)"
-          rotation="2deg"
-          delay="1.8s"
-        />
-        <FloatingDeliverable
-          icon={Presentation}
-          label="Stakeholder Presentation"
-          left="calc(68% + 120px)"
-          top="calc(70% + 20px)"
-          rotation="-1deg"
-          delay="2.5s"
-        />
-        <FloatingDeliverable
-          icon={Map}
-          label="Journey Map"
-          left="calc(60% + 120px)"
-          top="calc(76% + 20px)"
-          rotation="1.5deg"
-          delay="3.2s"
-        />
-        <FloatingDeliverable
-          icon={MousePointerClick}
-          label="Validation Prototype"
-          left="calc(72% + 120px)"
-          top="calc(82% + 20px)"
-          rotation="-2deg"
-          delay="0.6s"
-        />
+      {/* ── Deliverables — 2×3 grid, lower right (lg+) ── */}
+      <div
+        data-trail-dest-container
+        className="hidden lg:grid absolute grid-cols-2 gap-3 w-[340px]"
+        style={{ right: "12%", top: "62%", transform: "translateY(-50%)" }}
+      >
+        {deliverables.map(({ icon: Icon, label, rotation, delay }, i) => (
+          <div
+            key={label}
+            data-trail-dest={i}
+            className="rounded-xl bg-card/90 backdrop-blur-sm border border-border px-3 py-2.5 shadow-md will-change-transform flex items-center gap-2.5"
+            style={
+              {
+                transform: `rotate(${rotation})`,
+                "--note-rotation": rotation,
+                animation: `note-float 6s ease-in-out ${delay} infinite`,
+              } as React.CSSProperties
+            }
+          >
+            <div className="w-8 h-8 rounded-lg bg-olive-600 dark:bg-olive-700 flex items-center justify-center shrink-0">
+              <Icon className="h-3.5 w-3.5 text-white" />
+            </div>
+            <span className="text-[12px] font-medium text-foreground whitespace-nowrap">
+              {label}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
