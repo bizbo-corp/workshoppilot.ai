@@ -103,6 +103,7 @@ export function LightTrails() {
       svg
         .querySelectorAll(".trail-group, .convergence-group, .dest-outline")
         .forEach((el) => el.remove());
+      svg.querySelector("#trunkFade")?.remove();
 
       const cRect = container.getBoundingClientRect();
       const conv = { x: cRect.width * 0.5, y: cRect.height * 0.62 };
@@ -118,7 +119,7 @@ export function LightTrails() {
       outline.setAttribute("rx", "16");
       outline.setAttribute("ry", "16");
       outline.setAttribute("fill", "none");
-      outline.setAttribute("stroke", "#ffffff");
+      outline.setAttribute("stroke", "currentColor");
       outline.setAttribute("stroke-width", "1");
       outline.setAttribute("stroke-opacity", "0.15");
       outline.classList.add("dest-outline");
@@ -185,7 +186,38 @@ export function LightTrails() {
       const leftTrails = leftDs.map((d, i) =>
         renderTrail(d, `trail-left-${i}`, pickPalette()),
       );
-      const trunkTrail = renderTrail(trunkD, "trail-trunk", pickPalette());
+      /* ── Trunk: solid foreground gradient line ──── */
+      const trunkGrad = document.createElementNS(NS, "linearGradient");
+      trunkGrad.setAttribute("id", "trunkFade");
+      trunkGrad.setAttribute("gradientUnits", "userSpaceOnUse");
+      trunkGrad.setAttribute("x1", String(conv.x));
+      trunkGrad.setAttribute("y1", String(conv.y));
+      trunkGrad.setAttribute("x2", String(trunkEndX));
+      trunkGrad.setAttribute("y2", String(trunkEndY));
+      const gs1 = document.createElementNS(NS, "stop");
+      gs1.setAttribute("offset", "0%");
+      gs1.setAttribute("stop-color", "currentColor");
+      gs1.setAttribute("stop-opacity", "0.35");
+      const gs2 = document.createElementNS(NS, "stop");
+      gs2.setAttribute("offset", "100%");
+      gs2.setAttribute("stop-color", "currentColor");
+      gs2.setAttribute("stop-opacity", "0.08");
+      trunkGrad.appendChild(gs1);
+      trunkGrad.appendChild(gs2);
+      svg.querySelector("defs")!.appendChild(trunkGrad);
+
+      const tg = document.createElementNS(NS, "g");
+      tg.classList.add("trail-group", "trail-trunk");
+      makePath(tg, trunkD, "currentColor", 1, 0.05);
+      svg.appendChild(tg);
+
+      const LIME: Palette = {
+        glow: "#bef264",
+        core: "#a3e635",
+        faint: "#84cc16",
+        dim: "#65a30d",
+      };
+      const trunkComet = renderTrail(trunkD, "trail-trunk-comet", LIME);
 
       /* ── Convergence prism ───────────────────────────── */
 
@@ -203,9 +235,9 @@ export function LightTrails() {
       const ring = document.createElementNS(NS, "circle");
       ring.setAttribute("cx", String(conv.x));
       ring.setAttribute("cy", String(conv.y));
-      ring.setAttribute("r", "12");
+      ring.setAttribute("r", "2");
       ring.setAttribute("fill", "none");
-      ring.setAttribute("stroke", "#e2e8f0");
+      ring.setAttribute("stroke", "currentColor");
       ring.setAttribute("stroke-width", "1.5");
       ring.setAttribute("stroke-opacity", "0.35");
       cg.appendChild(ring);
@@ -213,8 +245,8 @@ export function LightTrails() {
       const coreDot = document.createElementNS(NS, "circle");
       coreDot.setAttribute("cx", String(conv.x));
       coreDot.setAttribute("cy", String(conv.y));
-      coreDot.setAttribute("r", "4");
-      coreDot.setAttribute("fill", "#e2e8f0");
+      coreDot.setAttribute("r", "12");
+      coreDot.setAttribute("fill", "var(--background)");
       coreDot.setAttribute("fill-opacity", "0.9");
       coreDot.classList.add("prism-core");
       cg.appendChild(coreDot);
@@ -309,10 +341,10 @@ export function LightTrails() {
         });
 
         animateComet(
-          trunkTrail,
-          2.0 + rand(-0.2, 0.2),
-          rand(0.5, 1.5),
-          rand(2, 4),
+          trunkComet,
+          1.8 + rand(-0.2, 0.2),
+          rand(0.3, 0.8),
+          rand(1, 2.5),
         );
 
         // Prism breathe
@@ -327,7 +359,7 @@ export function LightTrails() {
         });
 
         gsap.to(svg.querySelector(".prism-core"), {
-          fillOpacity: 0.4,
+          fillOpacity: 0.9,
           duration: 1.8,
           ease: "sine.inOut",
           yoyo: true,
@@ -374,8 +406,8 @@ export function LightTrails() {
           </feMerge>
         </filter>
         <radialGradient id="prismGlow" r="50%" cx="50%" cy="50%">
-          <stop offset="0%" stopColor="#e2e8f0" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#e2e8f0" stopOpacity="0" />
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#a3dc49ff" stopOpacity="0" />
         </radialGradient>
       </defs>
     </svg>
