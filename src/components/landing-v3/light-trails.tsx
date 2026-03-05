@@ -292,11 +292,23 @@ export function LightTrails() {
 
           const proxy = { head: 0 };
 
+          // Color mapping: which palette key each tail layer uses
+          const colorKeys: (keyof Palette)[] = ["glow", "glow", "faint", "faint", "core", "core"];
+
+          function recolorTrail() {
+            const pal = pickPalette();
+            layers.forEach(({ el }, i) => {
+              el.setAttribute("stroke", pal[colorKeys[i]]);
+            });
+            (trail.dot as unknown as SVGCircleElement).setAttribute("fill", pal.core);
+          }
+
           gsap
             .timeline({
               repeat: -1,
               delay: initialDelay,
               repeatDelay: pause,
+              onRepeat: recolorTrail,
             })
             .to(proxy, {
               // Travel past the end so the tail fully slides off

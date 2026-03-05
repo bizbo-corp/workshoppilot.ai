@@ -1,22 +1,19 @@
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
 import {
   ArrowRight,
-  Ban,
-  CheckCircle2,
-  ChevronRight,
+  Check,
+  ChevronDown,
   Clock,
+  Code2,
   FileText,
-  Layers,
-  Lightbulb,
-  Map,
-  MessageSquareX,
-  Rocket,
+  FlagTriangleRight,
+  MousePointerClick,
+  Package,
+  Route,
+  Shield,
   Sparkles,
   Star,
-  Target,
-  Users,
   Zap,
 } from "lucide-react";
 import { LandingHeader } from "@/components/layout/landing-header";
@@ -25,14 +22,15 @@ import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/landing/footer";
 import { Globe } from "@/components/ui/globe";
 import { HeroVisual } from "@/components/landing-v3/hero-visual";
+import { VideoPlayButton } from "@/components/landing-v3/video-dialog";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background scroll-smooth">
       <LandingHeader />
 
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="relative min-h-screen flex flex-col items-center justify-start pt-16 md:pt-24 overflow-hidden px-4">
+      <section className="relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-start pt-16 md:pt-24 overflow-hidden px-4">
         {/* Decorative background */}
         <div
           className="pointer-events-none absolute inset-0"
@@ -79,7 +77,7 @@ export default function Home() {
             </span>
             <br className="hidden sm:block" />{" "}
             <span className="relative inline-block">
-              in 60 Minutes.
+              in 2 hours.
               <svg
                 className="absolute -bottom-2 left-0 w-full text-olive-500/40 dark:text-olive-400/30"
                 viewBox="0 0 200 8"
@@ -114,23 +112,7 @@ export default function Home() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </NewWorkshopButton>
 
-            <Link href="/dashboard">
-              <Button variant="outline" size="lg">
-                Continue Workshop
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-
-            <Link href="#deliverables">
-              <Button
-                variant="ghost"
-                size="lg"
-                className="text-muted-foreground"
-              >
-                See what you get
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </Link>
+            <VideoPlayButton />
           </div>
 
           {/* Social proof */}
@@ -148,125 +130,135 @@ export default function Home() {
             </p>
           </div>
         </div>
+
+        {/* Bottom-center "See what you get" — glassmorphic pill */}
+        <a
+          href="#deliverables"
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-2 rounded-full bg-card/50 backdrop-blur-xl border border-foreground/[0.08] px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          style={{
+            boxShadow:
+              "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.08), 0 2px 8px -2px rgba(0,0,0,0.12)",
+          }}
+        >
+          See what you get
+          <ChevronDown className="h-4 w-4 animate-bounce" />
+        </a>
       </section>
 
       {/* ── Pain Points: "Why Now" ───────────────────────────── */}
-      <section className="py-20 sm:py-28 bg-card">
+      <section className="py-24 sm:py-32 bg-background border-t border-border">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Stop Wasting Time on the Wrong Things
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-              Most software projects fail before the first line of code.
-              Here&apos;s why.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
-            <div className="relative">
-              <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-950/50 mb-6">
-                <MessageSquareX className="h-7 w-7 text-red-600 dark:text-red-400" />
-              </div>
-              <h3 className="text-lg font-bold text-foreground mb-3">
-                Kill the Blank Page
-              </h3>
-              <p className="text-muted-foreground leading-relaxed">
-                No more staring at a cursor wondering what feature comes first.
-                Our AI facilitator asks the right questions in the right order —
-                you just answer.
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+            {/* Left column — sticky headline */}
+            <div className="lg:sticky lg:top-32 lg:self-start">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-serif leading-[1.1] tracking-tight text-foreground mb-6">
+                Most projects fail
+                <br /> before the first
+                <br /> line of code
+              </h2>
+              <p className="text-muted-foreground text-lg max-w-md leading-relaxed">
+                Not from bad developers. From building the wrong thing.
+                WorkshopPilot replaces weeks of scattered planning with a single
+                structured session — so you ship with clarity, not guesswork.
               </p>
             </div>
 
-            <div className="relative">
-              <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950/50 mb-6">
-                <Ban className="h-7 w-7 text-amber-600 dark:text-amber-400" />
+            {/* Right column — stacked pain points */}
+            <div className="space-y-10">
+              {/* Pain 1 */}
+              <div className="border-l-2 border-olive-300 dark:border-olive-600 pl-6">
+                <p className="text-4xl sm:text-5xl font-bold text-foreground mb-2 tracking-tight">
+                  70%
+                </p>
+                <p className="text-muted-foreground leading-relaxed">
+                  of software waste traces back to bad requirements. It&apos;s a
+                  clarity problem, not a coding one.
+                </p>
               </div>
-              <h3 className="text-lg font-bold text-foreground mb-3">
-                Avoid Costly Rebuilds
-              </h3>
-              <p className="text-muted-foreground leading-relaxed">
-                <strong className="text-foreground">
-                  70% of software waste
-                </strong>{" "}
-                comes from poor requirements. We lock yours down before you
-                spend a dime on development.
-              </p>
-            </div>
 
-            <div className="relative">
-              <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-olive-100 dark:bg-olive-950/50 mb-6">
-                <Target className="h-7 w-7 text-olive-600 dark:text-olive-400" />
+              {/* Pain 2 */}
+              <div className="border-l-2 border-olive-300 dark:border-olive-600 pl-6">
+                <p className="text-4xl sm:text-5xl font-bold text-foreground mb-2 tracking-tight">
+                  3 weeks
+                </p>
+                <p className="text-muted-foreground leading-relaxed">
+                  is the average time spent writing PRDs, user stories, and
+                  specs that still miss the mark.
+                </p>
               </div>
-              <h3 className="text-lg font-bold text-foreground mb-3">
-                Founder-to-Developer Clarity
-              </h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Get the artifacts you need to brief developers, pitch investors,
-                or hand off to AI coding tools — with zero ambiguity.
-              </p>
+
+              {/* Pain 3 */}
+              <div className="border-l-2 border-olive-300 dark:border-olive-600 pl-6">
+                <p className="text-4xl sm:text-5xl font-bold text-foreground mb-2 tracking-tight">
+                  &ldquo;Just build it&rdquo;
+                </p>
+                <p className="text-muted-foreground leading-relaxed">
+                  is the most expensive advice in tech. Two hours of structure
+                  beats six months of guessing.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ── How It Works ─────────────────────────────────────── */}
-      <section className="py-20 sm:py-28 bg-background">
+      <section className="py-24 sm:py-32 bg-background border-t border-border">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4">
-              How It Works
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-              Three steps. One session. A complete product blueprint.
+          {/* Header */}
+          <div className="max-w-2xl mb-16 sm:mb-20">
+            <p className="text-sm font-medium uppercase tracking-widest text-olive-600 dark:text-olive-400 mb-4">
+              Process
             </p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif leading-[1.1] tracking-tight text-foreground mb-4">
+              Three steps. One session.
+              <br /> A complete blueprint.
+            </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6">
+          {/* Steps — horizontal ruled layout */}
+          <div className="divide-y divide-border">
             {[
               {
                 step: "01",
-                icon: Lightbulb,
                 title: "Describe Your Idea",
                 description:
                   'Even if it\'s just a sentence. "I want to build an app that helps dog walkers find clients" is enough to start.',
               },
               {
                 step: "02",
-                icon: Zap,
                 title: "AI Runs the Workshop",
                 description:
                   "Our AI facilitator walks you through a structured 10-step Design Thinking process — the same framework used by consultants charging $5,000+.",
               },
               {
                 step: "03",
-                icon: Rocket,
                 title: "Walk Away Build-Ready",
                 description:
                   "Download your Build Pack: PRD, user stories, technical roadmap, and more. Hand it to developers or feed it to AI coding tools.",
               },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.step}
-                  className="relative rounded-2xl border border-border bg-card p-8 text-center"
-                >
-                  <div className="text-sm font-mono font-bold text-olive-600 dark:text-olive-400 mb-4">
-                    STEP {item.step}
-                  </div>
-                  <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-olive-100 dark:bg-olive-950/50 mx-auto mb-6">
-                    <Icon className="h-8 w-8 text-olive-600 dark:text-olive-400" />
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground mb-3">
+            ].map((item) => (
+              <div
+                key={item.step}
+                className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8 py-10 first:pt-0"
+              >
+                <div className="md:col-span-1">
+                  <span className="text-sm font-mono text-olive-600 dark:text-olive-400">
+                    {item.step}
+                  </span>
+                </div>
+                <div className="md:col-span-4">
+                  <h3 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
                     {item.title}
                   </h3>
-                  <p className="text-muted-foreground leading-relaxed">
+                </div>
+                <div className="md:col-span-7">
+                  <p className="text-muted-foreground leading-relaxed max-w-lg">
                     {item.description}
                   </p>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -274,88 +266,103 @@ export default function Home() {
       {/* ── Build Pack Deliverables ──────────────────────────── */}
       <section
         id="deliverables"
-        className="py-20 sm:py-28 bg-card scroll-mt-20"
+        className="py-24 sm:py-32 bg-background border-t border-border scroll-mt-20"
       >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 rounded-full border border-olive-300/50 bg-olive-50/80 px-4 py-1.5 text-sm font-medium text-olive-700 dark:border-olive-700/50 dark:bg-olive-950/50 dark:text-olive-300 mb-6">
-              <Sparkles className="h-4 w-4" />
+          {/* Header — left-aligned, consistent with other sections */}
+          <div className="max-w-2xl mb-16 sm:mb-20">
+            <p className="text-sm font-medium uppercase tracking-widest text-olive-600 dark:text-olive-400 mb-4">
               Your Build Pack
-            </div>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Professional-Grade Deliverables
+            </p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif leading-[1.1] tracking-tight text-foreground mb-4">
+              Walk away with everything
+              <br className="hidden sm:block" /> you need to start building
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-              Not a PDF of your chat. A structured set of artifacts that would
-              cost thousands from a consultant.
+            <p className="text-muted-foreground text-lg">
+              Not a PDF of your chat. Structured, professional artifacts you can
+              hand straight to developers, stakeholders, or AI coding tools.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Deliverables — ruled rows */}
+          <div className="divide-y divide-border">
             {[
               {
                 icon: FileText,
                 title: "Product Requirements Document",
+                format: ".md",
+                audience: "Developers & Product Managers",
                 description:
-                  'The "Bible" for your developers. Prevents scope creep, defines exactly what gets built, and keeps everyone aligned.',
-                tag: "PRD",
+                  "Scope, features, and acceptance criteria in one structured document — ready to hand a developer or drop straight into an AI coding agent like Cursor or Claude Code.",
               },
               {
-                icon: Users,
-                title: "User Stories & Personas",
-                description:
-                  "Import-ready stories for Jira, Linear, or Trello. Saves 10+ hours of manual writing and ensures nothing gets missed.",
-                tag: "Stories",
-              },
-              {
-                icon: Layers,
+                icon: Code2,
                 title: "Technical Specifications",
+                format: ".md",
+                audience: "Engineers & Systems Architects",
                 description:
-                  "Architecture recommendations, data models, and API contracts. Give your dev team (or AI coder) a massive head start.",
-                tag: "Tech Specs",
+                  "Architecture recommendations, data models, and API contracts. Enough detail for your dev team or AI coder to start shipping on day one.",
               },
               {
-                icon: Map,
-                title: "Feature Roadmap",
+                icon: FlagTriangleRight,
+                title: "Prioritised Feature Roadmap",
+                format: ".json",
+                audience: "Founders & Product Leads",
                 description:
-                  "Phase 1 vs Phase 2 prioritisation. Launch an MVP instead of a bloated failure. Know exactly what to build first.",
-                tag: "Roadmap",
+                  "Phase 1 vs Phase 2, decided. Exportable as JSON for direct import into Jira, Linear, or your project management tool of choice.",
               },
               {
-                icon: Target,
-                title: "Lean Canvas",
+                icon: Package,
+                title: "Workshop Outputs Pack",
+                format: ".pptx",
+                audience: "Stakeholders & Investors",
                 description:
-                  "A one-page business model breakdown. Essential for internal alignment, early pitching, and validating market fit.",
-                tag: "Canvas",
+                  "Every workshop artefact in one download — personas, problem statements, lean canvas, and ideation results. Ready to share with your team or attach to a pitch deck.",
               },
               {
-                icon: Zap,
-                title: "AI-Coder Ready Output",
+                icon: Route,
+                title: "Journey Map",
+                format: ".md",
+                audience: "Designers & UX Teams",
                 description:
-                  "Structured for direct handoff to Cursor, Claude Code, Copilot, or any AI coding tool. Skip the prompt engineering.",
-                tag: "AI-Ready",
+                  "A step-by-step map of how users move through your product. Identifies pain points, drop-off risks, and moments that matter before a single screen is designed.",
+              },
+              {
+                icon: MousePointerClick,
+                title: "Prototype",
+                format: "Interactive",
+                audience: "Everyone",
+                description:
+                  "A clickable prototype that brings your idea to life. Test assumptions with real users, align your team visually, and validate before you invest in code.",
               },
             ].map((item) => {
               const Icon = item.icon;
               return (
                 <div
                   key={item.title}
-                  className="group rounded-2xl border border-border bg-background p-6 transition-all hover:border-olive-300 dark:hover:border-olive-700 hover:shadow-sm"
+                  className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-8 py-8 first:pt-0"
                 >
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-olive-100 dark:bg-olive-950/50">
-                      <Icon className="h-5 w-5 text-olive-600 dark:text-olive-400" />
+                  <div className="md:col-span-5">
+                    <div className="flex items-center gap-3">
+                      <Icon className="h-6 w-6 text-olive-600 dark:text-olive-400 shrink-0" />
+                      <h3 className="text-lg font-semibold text-foreground tracking-tight">
+                        {item.title}
+                      </h3>
                     </div>
-                    <span className="text-xs font-mono font-semibold uppercase tracking-wider text-olive-600 dark:text-olive-400">
-                      {item.tag}
-                    </span>
+                    <div className="flex items-center gap-3 mt-1 ml-8">
+                      <span className="text-xs font-mono text-olive-600 dark:text-olive-400">
+                        {item.format}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {item.audience}
+                      </span>
+                    </div>
                   </div>
-                  <h3 className="text-base font-bold text-foreground mb-2">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {item.description}
-                  </p>
+                  <div className="md:col-span-7">
+                    <p className="text-muted-foreground leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
                 </div>
               );
             })}
@@ -364,89 +371,158 @@ export default function Home() {
       </section>
 
       {/* ── Value Comparison ──────────────────────────────────── */}
-      <section className="py-20 sm:py-28 bg-background">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4">
-              What Would This Cost You Otherwise?
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-              The same deliverables. A fraction of the price. Done in an
-              afternoon.
-            </p>
-          </div>
+      <section className="py-24 sm:py-32 bg-background border-t border-border">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+            {/* Left — headline + WorkshopPilot highlight */}
+            <div className="lg:sticky lg:top-32 lg:self-start">
+              <p className="text-sm font-medium uppercase tracking-widest text-olive-600 dark:text-olive-400 mb-4">
+                Compare
+              </p>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif leading-[1.1] tracking-tight text-foreground mb-6">
+                The same deliverables.
+                <br /> A fraction of the cost.
+              </h2>
 
-          <div className="space-y-4">
-            {[
-              {
-                label: "Hire a Product Manager",
-                price: "$3,000+",
-                time: "2-4 weeks",
-              },
-              {
-                label: "Design Thinking Workshop",
-                price: "$5,000+",
-                time: "3-5 days",
-              },
-              {
-                label: "Freelance Consultant",
-                price: "$2,000+",
-                time: "1-2 weeks",
-              },
-            ].map((row) => (
-              <div
-                key={row.label}
-                className="flex items-center justify-between rounded-xl border border-border bg-card px-6 py-4 opacity-60"
-              >
-                <span className="text-foreground line-through">
-                  {row.label}
-                </span>
-                <div className="flex items-center gap-6">
-                  <span className="text-sm text-muted-foreground line-through">
-                    {row.time}
+              {/* WorkshopPilot callout */}
+              <div className="border-l-2 border-olive-500 dark:border-olive-400 pl-6 mt-10">
+                <p className="text-sm font-medium uppercase tracking-widest text-olive-600 dark:text-olive-400 mb-2">
+                  WorkshopPilot
+                </p>
+                <div className="flex items-baseline gap-4">
+                  <span className="text-5xl sm:text-6xl font-bold text-foreground tracking-tight">
+                    $99
                   </span>
-                  <span className="text-lg font-bold text-muted-foreground line-through">
-                    {row.price}
+                  <span className="text-lg text-muted-foreground">
+                    ~2 hours
                   </span>
                 </div>
-              </div>
-            ))}
-
-            <div className="flex items-center justify-between rounded-xl border-2 border-olive-600 dark:border-olive-400 bg-olive-50 dark:bg-olive-950/30 px-6 py-5">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-6 w-6 text-olive-600 dark:text-olive-400" />
-                <span className="text-lg font-bold text-foreground">
-                  WorkshopPilot
-                </span>
-              </div>
-              <div className="flex items-center gap-6">
-                <span className="text-sm font-medium text-olive-600 dark:text-olive-400">
-                  ~60 minutes
-                </span>
-                <span className="text-2xl font-bold text-olive-700 dark:text-olive-300">
-                  $99
-                </span>
+                <p className="text-muted-foreground mt-3 leading-relaxed">
+                  97% cheaper than a consultant — and you keep the output
+                  forever.
+                </p>
               </div>
             </div>
-          </div>
 
-          <p className="text-center text-sm text-muted-foreground mt-8">
-            That&apos;s a 97% saving vs hiring a consultant — and you keep the
-            output forever.
-          </p>
+            {/* Right — alternatives */}
+            <div className="divide-y divide-border">
+              {[
+                {
+                  label: "Hire a Product Manager",
+                  price: "$3,000+",
+                  time: "2–4 weeks",
+                  detail:
+                    "Scoping, stakeholder interviews, documentation. Assumes they already understand your domain.",
+                },
+                {
+                  label: "Design Thinking Workshop",
+                  price: "$5,000+",
+                  time: "3–5 days",
+                  detail:
+                    "Facilitator fees, venue hire, participant time. Then someone still has to write up the outputs.",
+                },
+                {
+                  label: "Freelance Consultant",
+                  price: "$2,000+",
+                  time: "1–2 weeks",
+                  detail:
+                    "Back-and-forth over email, multiple revision rounds, and a deliverable format that may not fit your workflow.",
+                },
+              ].map((row) => (
+                <div key={row.label} className="py-8 first:pt-0">
+                  <div className="flex items-baseline justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-foreground/50 line-through decoration-foreground/20">
+                      {row.label}
+                    </h3>
+                    <div className="flex items-baseline gap-4">
+                      <span className="text-sm text-muted-foreground/60 line-through decoration-muted-foreground/30">
+                        {row.time}
+                      </span>
+                      <span className="text-xl font-bold text-foreground/40 line-through decoration-foreground/20">
+                        {row.price}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground/60">
+                    {row.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ── Testimonials ─────────────────────────────────────── */}
-      <section className="py-20 sm:py-28 bg-card">
+      <section className="py-24 sm:py-32 bg-background border-t border-border">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Builders Like You Are Shipping Faster
+          {/* Header */}
+          <div className="max-w-2xl mb-16 sm:mb-20">
+            <p className="text-sm font-medium uppercase tracking-widest text-olive-600 dark:text-olive-400 mb-4">
+              Testimonials
+            </p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif leading-[1.1] tracking-tight text-foreground">
+              Builders like you are
+              <br className="hidden sm:block" /> shipping faster
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+          {/* Featured testimonials — large, two-column */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16">
+            {[
+              {
+                quote:
+                  "We used WorkshopPilot to test some ideas on how we could better lean into AI tools to improve our processes and outputs. It drove the process extremely effectively, ensuring we gathered information to lay the groundwork. It was organised, creative, thoughtful and insightful. We were wrapped with the direction it gave us in steering our product.",
+                name: "Irene Chapple",
+                role: "Founder, Better Aotearoa",
+                image:
+                  "https://www.bizbo.co.nz/bitmap/people/irene-chapple.jpg",
+              },
+              {
+                quote:
+                  "WorkshopPilot guided through a process to \u2018productise\u2019 our service business. The idea is to take what we do organically to be more deliberate and predictive. It was excellent. It understands and interprets and extracts the essence of what we imagined and suggests a path forward. And all good fun along the way. Good process.",
+                name: "Vincent Heeringa",
+                role: "Founder, Better Aotearoa",
+                image:
+                  "https://www.bizbo.co.nz/bitmap/people/vincent-heeringa.jpg",
+              },
+            ].map((testimonial) => (
+              <div
+                key={testimonial.name}
+                className="border-l-2 border-olive-300 dark:border-olive-600 pl-6 sm:pl-8"
+              >
+                <div className="flex gap-0.5 mb-6">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className="h-4 w-4 fill-olive-500 text-olive-500 dark:fill-olive-400 dark:text-olive-400"
+                    />
+                  ))}
+                </div>
+                <p className="text-foreground/80 leading-relaxed mb-8">
+                  &ldquo;{testimonial.quote}&rdquo;
+                </p>
+                <div className="flex items-center gap-4">
+                  <img
+                    src={testimonial.image}
+                    alt={testimonial.name}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {testimonial.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {testimonial.role}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Secondary testimonials — compact ruled rows */}
+          <div className="divide-y divide-border mt-16 pt-16 border-t border-border">
             {[
               {
                 quote:
@@ -454,7 +530,6 @@ export default function Home() {
                 name: "Sarah K.",
                 role: "Indie Developer",
                 initial: "S",
-                metric: "Saved 3 weeks",
               },
               {
                 quote:
@@ -462,7 +537,6 @@ export default function Home() {
                 name: "Marcus L.",
                 role: "Startup Founder",
                 initial: "M",
-                metric: "First hire in 5 days",
               },
               {
                 quote:
@@ -470,41 +544,34 @@ export default function Home() {
                 name: "Priya M.",
                 role: "Product Designer",
                 initial: "P",
-                metric: "Saved $3,900",
               },
             ].map((testimonial) => (
               <div
                 key={testimonial.name}
-                className="rounded-2xl border border-border bg-background p-6 sm:p-8 flex flex-col"
+                className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8 py-10 first:pt-0"
               >
-                <div className="mb-4">
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-olive-700 dark:text-olive-300 bg-olive-100 dark:bg-olive-900 rounded-full px-3 py-1">
-                    {testimonial.metric}
-                  </span>
+                <div className="md:col-span-8">
+                  <div className="flex gap-0.5 mb-3">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className="h-3.5 w-3.5 fill-olive-500 text-olive-500 dark:fill-olive-400 dark:text-olive-400"
+                      />
+                    ))}
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    &ldquo;{testimonial.quote}&rdquo;
+                  </p>
                 </div>
-
-                <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className="h-3.5 w-3.5 fill-olive-500 text-olive-500 dark:fill-olive-400 dark:text-olive-400"
-                    />
-                  ))}
-                </div>
-
-                <p className="text-sm text-foreground/80 leading-relaxed italic mb-6 flex-1">
-                  &ldquo;{testimonial.quote}&rdquo;
-                </p>
-
-                <div className="flex items-center gap-3">
+                <div className="md:col-span-4 flex items-center md:justify-end gap-3">
                   <div className="w-10 h-10 rounded-full bg-olive-200 dark:bg-olive-800 flex items-center justify-center text-sm font-semibold text-olive-700 dark:text-olive-300 shrink-0">
                     {testimonial.initial}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">
+                    <p className="text-sm font-semibold text-foreground">
                       {testimonial.name}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {testimonial.role}
                     </p>
                   </div>
@@ -515,32 +582,213 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Pricing ────────────────────────────────────────── */}
+      <section
+        id="pricing"
+        className="py-24 sm:py-32 bg-background border-t border-border scroll-mt-20"
+      >
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <div className="max-w-2xl mb-12 sm:mb-16">
+            <p className="text-sm font-medium uppercase tracking-widest text-olive-600 dark:text-olive-400 mb-4">
+              Pricing
+            </p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif leading-[1.1] tracking-tight text-foreground mb-4">
+              Weeks of planning.
+              <br className="hidden sm:block" /> One simple price.
+            </h2>
+            <p className="text-muted-foreground text-lg">
+              The same deliverables a product consultant charges $3,000+ to
+              produce. Start free, pay only when you&apos;re ready for the full
+              Build Pack.
+            </p>
+          </div>
+
+          {/* Value anchor */}
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-8 text-sm text-muted-foreground mb-16 sm:mb-20">
+            <span className="line-through opacity-60">
+              Product Manager: $3,000
+            </span>
+            <span className="hidden sm:inline text-border">|</span>
+            <span className="line-through opacity-60">
+              DT Workshop: $5,000
+            </span>
+            <span className="hidden sm:inline text-border">|</span>
+            <span className="font-semibold text-olive-600 dark:text-olive-400">
+              WorkshopPilot: from $99
+            </span>
+          </div>
+
+          {/* Pricing tiers */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl">
+            {/* Single Pilot */}
+            <div className="rounded-2xl border border-border p-8 flex flex-col">
+              <h3 className="text-lg font-semibold text-foreground mb-1">
+                Single Pilot
+              </h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                One complete workshop. Perfect for validating your next idea.
+              </p>
+              <div className="mb-6">
+                <span className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
+                  $99
+                </span>
+                <span className="text-sm text-muted-foreground ml-2">
+                  / one workshop
+                </span>
+              </div>
+              <ul className="space-y-3 flex-1 mb-8">
+                {[
+                  "Full 10-step design thinking process",
+                  "AI facilitator guides every step",
+                  "Complete Build Pack output",
+                  "Export-ready for dev teams & AI coders",
+                  "Credits never expire",
+                ].map((feature) => (
+                  <li key={feature} className="flex items-start gap-2.5">
+                    <Check className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
+                    <span className="text-sm text-foreground">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              {process.env.STRIPE_PRICE_SINGLE_FLIGHT ? (
+                <form method="POST" action="/api/billing/checkout">
+                  <input
+                    type="hidden"
+                    name="priceId"
+                    value={process.env.STRIPE_PRICE_SINGLE_FLIGHT}
+                  />
+                  <button
+                    type="submit"
+                    className="w-full rounded-xl py-3.5 px-4 font-semibold text-sm bg-card border border-border text-foreground hover:bg-accent transition-colors cursor-pointer"
+                  >
+                    Buy 1 Workshop Credit
+                  </button>
+                </form>
+              ) : (
+                <NewWorkshopButton className="w-full">
+                  Start Free Workshop
+                </NewWorkshopButton>
+              )}
+            </div>
+
+            {/* Serial Entrepreneur */}
+            <div className="rounded-2xl border border-olive-600 dark:border-olive-400 ring-1 ring-olive-600/20 dark:ring-olive-400/20 p-8 flex flex-col">
+              <div className="mb-4">
+                <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-olive-700 dark:text-olive-300 bg-olive-100 dark:bg-olive-900 rounded-full px-3 py-1">
+                  <Sparkles className="h-3 w-3" />
+                  Save $98
+                </span>
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-1">
+                Serial Entrepreneur
+              </h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                For founders who iterate. Your first idea might pivot — and
+                that&apos;s the point.
+              </p>
+              <div className="mb-1">
+                <span className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
+                  $199
+                </span>
+                <span className="text-sm text-muted-foreground ml-2">
+                  / three workshops
+                </span>
+              </div>
+              <p className="text-sm font-medium text-olive-600 dark:text-olive-400 mb-6">
+                Save 33% vs buying individually
+              </p>
+              <ul className="space-y-3 flex-1 mb-8">
+                {[
+                  "Everything in Single Pilot",
+                  "3 workshop credits ($66 each)",
+                  "Compare Build Packs across concepts",
+                  "Perfect for pivots and iterations",
+                  "Credits never expire",
+                ].map((feature) => (
+                  <li key={feature} className="flex items-start gap-2.5">
+                    <Check className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
+                    <span className="text-sm text-foreground">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              {process.env.STRIPE_PRICE_SERIAL_ENTREPRENEUR ? (
+                <form method="POST" action="/api/billing/checkout">
+                  <input
+                    type="hidden"
+                    name="priceId"
+                    value={process.env.STRIPE_PRICE_SERIAL_ENTREPRENEUR}
+                  />
+                  <button
+                    type="submit"
+                    className="w-full rounded-xl py-3.5 px-4 font-semibold text-sm bg-olive-700 text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500 shadow-md shadow-olive-700/20 transition-colors cursor-pointer"
+                  >
+                    Buy 3 Workshop Credits
+                  </button>
+                </form>
+              ) : (
+                <NewWorkshopButton className="w-full">
+                  Start Free Workshop
+                </NewWorkshopButton>
+              )}
+            </div>
+          </div>
+
+          {/* Trust signals */}
+          <div className="mt-12 flex flex-col sm:flex-row items-start gap-6 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Secure payment via Stripe
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Credits never expire
+            </div>
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              Steps 1–6 always free
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Final CTA ────────────────────────────────────────── */}
-      <section className="py-20 sm:py-28 bg-background">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-6">
-            Your idea deserves more than a blank page.
-          </h2>
-          <p className="text-lg text-muted-foreground mb-4 max-w-xl mx-auto">
-            Start a free workshop and walk away with a complete Build Pack — the
-            same deliverables that would cost $3,000+ from a consultant.
-          </p>
-          <p className="text-sm text-muted-foreground mb-10">
-            Steps 1-6 are free. No credit card required to start.
-          </p>
-          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <NewWorkshopButton
-              size="lg"
-              className="min-w-[220px] text-base shadow-lg shadow-olive-600/20"
-            >
-              Start Free Workshop
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </NewWorkshopButton>
-            <Link href="/pricing">
-              <Button variant="outline" size="lg">
-                View Pricing
-              </Button>
-            </Link>
+      <section className="py-24 sm:py-32 bg-background border-t border-border">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left — headline */}
+            <div>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-serif leading-[1.1] tracking-tight text-foreground">
+                Stop planning.
+                <br /> Start building.
+              </h2>
+            </div>
+
+            {/* Right — copy + actions */}
+            <div>
+              <p className="text-muted-foreground text-lg leading-relaxed mb-3">
+                Start a free workshop and walk away with a complete Build
+                Pack — PRD, tech specs, roadmap, and more. The same
+                deliverables that would cost $3,000+ from a consultant.
+              </p>
+              <p className="text-sm text-muted-foreground mb-8">
+                Steps 1–6 are free. No credit card required.
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <NewWorkshopButton
+                  size="lg"
+                  className="min-w-[200px] text-base shadow-lg shadow-olive-600/20"
+                >
+                  Start Free Workshop
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </NewWorkshopButton>
+                <a href="#pricing">
+                  <Button variant="outline" size="lg">
+                    View Pricing
+                  </Button>
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>

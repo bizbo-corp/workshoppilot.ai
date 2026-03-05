@@ -5,13 +5,14 @@ import {
   ArrowRight,
   Ban,
   CheckCircle2,
-  ChevronRight,
+  ChevronDown,
   Clock,
   FileText,
   Layers,
   Lightbulb,
   Map,
   MessageSquareX,
+  Play,
   Rocket,
   Sparkles,
   Star,
@@ -39,7 +40,7 @@ import { HeroVisual } from '@/components/landing-v3/hero-visual';
  */
 export default function LandingV3() {
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background scroll-smooth">
       <LandingHeader />
 
       {/* ── Hero ─────────────────────────────────────────────── */}
@@ -117,19 +118,18 @@ export default function LandingV3() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </NewWorkshopButton>
 
-            <Link href="/dashboard">
-              <Button variant="outline" size="lg">
-                Continue Workshop
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-
-            <Link href="#deliverables">
-              <Button variant="ghost" size="lg" className="text-muted-foreground">
-                See what you get
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </Link>
+            <button
+              className="inline-flex items-center gap-2.5 rounded-full bg-card/50 backdrop-blur-xl border border-foreground/[0.08] px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+              style={{
+                boxShadow:
+                  'inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.08), 0 2px 8px -2px rgba(0,0,0,0.12)',
+              }}
+            >
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-olive-600 dark:bg-olive-500 shrink-0">
+                <Play className="h-3 w-3 text-white fill-white ml-0.5" />
+              </span>
+              Learn about WorkshopPilot in 30s
+            </button>
           </div>
 
           {/* Social proof */}
@@ -148,6 +148,18 @@ export default function LandingV3() {
           </div>
         </div>
 
+        {/* Bottom-center "See what you get" — glassmorphic pill */}
+        <a
+          href="#deliverables"
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-2 rounded-full bg-card/50 backdrop-blur-xl border border-foreground/[0.08] px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          style={{
+            boxShadow:
+              'inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.08), 0 2px 8px -2px rgba(0,0,0,0.12)',
+          }}
+        >
+          See what you get
+          <ChevronDown className="h-4 w-4 animate-bounce" />
+        </a>
       </section>
 
       {/* ── Pain Points: "Why Now" ───────────────────────────── */}

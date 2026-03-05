@@ -33,7 +33,8 @@ function StickyNote({
   return (
     <div
       data-trail-source={trailIndex}
-      className="group/note absolute pointer-events-auto rounded-xl bg-card/90 backdrop-blur-sm border border-border w-[90px] h-[90px] flex items-center justify-center shadow-md will-change-transform transition-all duration-300 ease-out hover:bg-amber-100 hover:dark:bg-amber-200 hover:border-amber-200 hover:dark:border-amber-300 hover:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06),0_2px_8px_-2px_rgba(0,0,0,0.25)] hover:rounded-md cursor-default"
+      className="group/note absolute pointer-events-auto rounded-xl bg-card/20 backdrop-blur-xl border border-white/[0.08] w-[90px] h-[90px] flex items-center justify-center will-change-transform transition-all duration-300 ease-out hover:bg-amber-100/80 hover:dark:bg-amber-200/80 hover:rounded-md cursor-default"
+      /* glassmorphic lighting is applied via style.boxShadow below */
       style={
         {
           left,
@@ -41,6 +42,8 @@ function StickyNote({
           zIndex: z,
           transform: `rotate(${rotation})`,
           "--note-rotation": rotation,
+          boxShadow:
+            "inset 0 1px 0 rgba(240, 214, 49, 0.15), inset 0 -1px 0 rgba(0,0,0,0.08), 0 2px 8px -2px rgba(0,0,0,0.12)",
         } as React.CSSProperties
       }
     >
@@ -275,12 +278,14 @@ export function HeroVisual() {
             <div
               key={label}
               data-trail-dest={i}
-              className="rounded-xl bg-card/90 backdrop-blur-sm border border-border px-3 py-2.5 shadow-md will-change-transform flex items-center gap-2.5"
+              className="rounded-xl bg-card/50 backdrop-blur-xl border border-foreground/[0.08] px-3 py-2.5 will-change-transform flex items-center gap-2.5"
               style={
                 {
                   transform: `rotate(${rotation})`,
                   "--note-rotation": rotation,
                   animation: `note-float 6s ease-in-out ${delay} infinite`,
+                  boxShadow:
+                    "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.08), 0 2px 8px -2px rgba(0,0,0,0.12)",
                 } as React.CSSProperties
               }
             >

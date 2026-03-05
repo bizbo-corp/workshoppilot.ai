@@ -18,10 +18,23 @@ export function Footer() {
             </p>
           </div>
 
-          {/* Right: Copyright */}
-          <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} WorkshopPilot
-          </p>
+          {/* Right: Copyright + Bizbo */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 text-sm text-muted-foreground">
+            <p>
+              A{" "}
+              <a
+                href="https://www.bizbo.co.nz/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                bizbo
+              </a>{" "}
+              company
+            </p>
+            <span className="hidden sm:inline">&middot;</span>
+            <p>&copy; {new Date().getFullYear()} WorkshopPilot</p>
+          </div>
         </div>
       </div>
     </footer>
