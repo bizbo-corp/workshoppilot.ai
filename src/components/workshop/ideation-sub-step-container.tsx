@@ -234,6 +234,7 @@ export function IdeationSubStepContainer({
       ...(state.personaTemplates.length > 0 ? { personaTemplates: state.personaTemplates } : {}),
       ...(state.hmwCards.length > 0 ? { hmwCards: state.hmwCards } : {}),
       ...(state.selectedSlotIds.length > 0 ? { selectedSlotIds: state.selectedSlotIds } : {}),
+      ...(state.slotGroups.length > 0 ? { slotGroups: state.slotGroups } : {}),
       ...(state.brainRewritingMatrices.length > 0 ? { brainRewritingMatrices: state.brainRewritingMatrices } : {}),
       ...(state.dotVotes.length > 0 ? { dotVotes: state.dotVotes } : {}),
       ...(state.votingSession.status !== 'idle' ? { votingSession: state.votingSession } : {}),

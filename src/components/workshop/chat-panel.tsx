@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
-import { computeCanvasPosition, computeStickyNoteSize, computeThemeSortPositions, computeClusterChildPositions, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, ZONE_COLORS } from '@/lib/canvas/canvas-position';
+import { computeCanvasPosition, computeStickyNoteSize, computeThemeSortPositions, computeClusterChildPositions, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, ZONE_COLORS, isPersonaCardForCluster } from '@/lib/canvas/canvas-position';
 import type { StickyNoteColor, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
@@ -1194,10 +1194,18 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
       // Color priority: explicit color attr > category-specific > zone-specific > row-based > grid green > default yellow
       const VALID_COLORS = new Set(['yellow', 'pink', 'blue', 'green', 'orange', 'red']);
-      const color = (item.color && VALID_COLORS.has(item.color) ? item.color as StickyNoteColor : null)
+      let color: StickyNoteColor = (item.color && VALID_COLORS.has(item.color) ? item.color as StickyNoteColor : null)
         || (item.category && CATEGORY_COLORS[item.category])
         || (item.quadrant && ZONE_COLORS[item.quadrant])
         || (item.isGridItem ? (GRID_ROW_COLORS[item.row || ''] || 'green') : 'yellow');
+
+      // For user-research: inherit color from the persona card this insight belongs to
+      if (step.id === 'user-research' && item.cluster) {
+        const personaCard = currentStickyNotes.find(
+          (p) => isPersonaCardForCluster(p, item.cluster!)
+        );
+        if (personaCard?.color) color = personaCard.color;
+      }
 
       const { width: itemWidth, height: itemHeight } = computeStickyNoteSize(item.text);
       const newStickyNote = {
@@ -1538,6 +1546,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       // Field value keys the AI must NOT overwrite during progressive (active) mode.
       // The user owns field values via chip selections; AI only sends suggestions.
       const HMW_FIELD_VALUE_KEYS = ['givenThat', 'persona', 'immediateGoal', 'deeperGoal'];
+      let createdNewHmwCard = false;
 
       for (const parsed of hmwCardParsed) {
         const targetIndex = parsed.cardIndex ?? 0;
@@ -1557,6 +1566,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
           if (existing.cardState === 'skeleton') {
             updates.cardState = 'active';
+            createdNewHmwCard = true; // skeleton → active is effectively a new card appearing
           }
           // Auto-detect 'filled' state (existing fields + any new updates)
           const merged = { ...existing, ...updates };
@@ -1572,9 +1582,13 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
             cardIndex: targetIndex,
             ...parsed,
           });
+          createdNewHmwCard = true;
         }
       }
-      setPendingFitView(true);
+      // Only re-fit viewport when a new card appears, not on suggestion/field updates
+      if (createdNewHmwCard) {
+        setPendingFitView(true);
+      }
     }
 
     // Process AI-requested deletions
@@ -1986,7 +2000,10 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
               if (message.role === 'user') {
                 // Strip internal markup tags from display
-                const displayContent = content.replace(/\[STEP_CONFIRMED\]\s*/g, '').trim();
+                const displayContent = content
+                  .replace(/\[STEP_CONFIRMED\]\s*/g, '')
+                  .replace(/\[SUGGEST_QUESTIONS\]\s*/g, '')
+                  .trim();
                 return (
                   <div key={`${message.id}-${index}`} className="group flex items-start justify-end">
                     <div className="max-w-[80%]">
@@ -2388,11 +2405,11 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               </div>
             )}
 
-            {/* Synthetic interview mode: always show "your turn" prompt + suggestion button */}
+            {/* Synthetic interview mode: always show "your turn" prompt + suggestion buttons */}
             {step.id === 'user-research' && personaSelectConfirmed && interviewMode !== 'real' && status === 'ready' && messages.length > 0 && !justConfirmed && (
               <div className="space-y-2 pt-2">
-                {/* Expanded suggestions (when available and user clicked the button) */}
-                {suggestionsExpanded && suggestions.length > 0 && (
+                {/* Auto-show suggestion pills when AI provides them */}
+                {suggestions.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {suggestions.map((suggestion, i) => (
                       <button
@@ -2418,22 +2435,18 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
                     ))}
                   </div>
                 )}
-                {/* Always-visible suggestion button — expands instantly if suggestions exist, asks AI if not */}
-                {!suggestionsExpanded && (
+                {/* Fallback: "Give me a suggestion" button only when no suggestions available */}
+                {suggestions.length === 0 && (
                   <div>
                     <button
                       disabled={isLoading}
                       onClick={async () => {
-                        if (suggestions.length > 0) {
-                          setSuggestionsExpanded(true);
-                        } else {
-                          setQuickAck(getRandomAck());
-                          await flushCanvasToDb();
-                          sendMessage({
-                            role: 'user',
-                            parts: [{ type: 'text', text: '[SUGGEST_QUESTIONS] Give me some question ideas for this persona.' }],
-                          });
-                        }
+                        setQuickAck(getRandomAck());
+                        await flushCanvasToDb();
+                        sendMessage({
+                          role: 'user',
+                          parts: [{ type: 'text', text: '[SUGGEST_QUESTIONS] Give me some question ideas for this persona.' }],
+                        });
                       }}
                       className={cn(
                         'cursor-pointer inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors',

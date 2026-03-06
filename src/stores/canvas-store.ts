@@ -3,7 +3,7 @@ import { temporal } from 'zundo';
 import type { Quadrant } from '@/lib/canvas/quadrant-detection';
 import type { GridConfig } from '@/lib/canvas/grid-layout';
 import { getCellBounds } from '@/lib/canvas/grid-layout';
-import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import type { Crazy8sSlot, SlotGroup } from '@/lib/canvas/crazy-8s-types';
 import type { BrainRewritingMatrix, BrainRewritingCell } from '@/lib/canvas/brain-rewriting-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
@@ -87,6 +87,7 @@ export type CanvasState = {
   personaTemplates: PersonaTemplateData[];
   hmwCards: HmwCardData[];
   selectedSlotIds: string[];
+  slotGroups: SlotGroup[];
   brainRewritingMatrices: BrainRewritingMatrix[];
   dotVotes: DotVote[];
   votingSession: VotingSession;
@@ -152,6 +153,10 @@ export type CanvasActions = {
   deleteHmwCard: (id: string) => void;
   setHmwCards: (cards: HmwCardData[]) => void;
   setSelectedSlotIds: (ids: string[]) => void;
+  addSlotGroup: (group: SlotGroup) => void;
+  removeSlotGroup: (groupId: string) => void;
+  updateSlotGroupLabel: (groupId: string, label: string) => void;
+  setSlotGroups: (groups: SlotGroup[]) => void;
   setBrainRewritingMatrices: (matrices: BrainRewritingMatrix[]) => void;
   updateBrainRewritingCell: (slotId: string, cellId: string, updates: Partial<BrainRewritingCell>) => void;
   toggleBrainRewritingIncluded: (slotId: string) => void;
@@ -167,7 +172,7 @@ export type CanvasActions = {
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; brainRewritingMatrices?: BrainRewritingMatrix[]; dotVotes?: DotVote[]; votingSession?: VotingSession }) => {
+export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; slotGroups?: SlotGroup[]; brainRewritingMatrices?: BrainRewritingMatrix[]; dotVotes?: DotVote[]; votingSession?: VotingSession }) => {
   const DEFAULT_STATE: CanvasState = {
     stickyNotes: initState?.stickyNotes || [],
     drawingNodes: initState?.drawingNodes || [],
@@ -178,6 +183,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
     personaTemplates: initState?.personaTemplates || [],
     hmwCards: initState?.hmwCards || [],
     selectedSlotIds: initState?.selectedSlotIds || [],
+    slotGroups: initState?.slotGroups || [],
     brainRewritingMatrices: initState?.brainRewritingMatrices || [],
     dotVotes: initState?.dotVotes || [],
     votingSession: initState?.votingSession || DEFAULT_VOTING_SESSION,
@@ -820,6 +826,32 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             isDirty: true,
           })),
 
+        addSlotGroup: (group) =>
+          set((state) => ({
+            slotGroups: [...state.slotGroups, group],
+            isDirty: true,
+          })),
+
+        removeSlotGroup: (groupId) =>
+          set((state) => ({
+            slotGroups: state.slotGroups.filter((g) => g.id !== groupId),
+            isDirty: true,
+          })),
+
+        updateSlotGroupLabel: (groupId, label) =>
+          set((state) => ({
+            slotGroups: state.slotGroups.map((g) =>
+              g.id === groupId ? { ...g, label } : g
+            ),
+            isDirty: true,
+          })),
+
+        setSlotGroups: (groups) =>
+          set(() => ({
+            slotGroups: groups,
+            // NOTE: Does NOT set isDirty — this is for loading from DB
+          })),
+
         setBrainRewritingMatrices: (matrices) =>
           set(() => ({
             brainRewritingMatrices: matrices,
@@ -917,6 +949,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
           personaTemplates: state.personaTemplates,
           hmwCards: state.hmwCards,
           selectedSlotIds: state.selectedSlotIds,
+          slotGroups: state.slotGroups,
           brainRewritingMatrices: state.brainRewritingMatrices,
           dotVotes: state.dotVotes,
           votingSession: state.votingSession,

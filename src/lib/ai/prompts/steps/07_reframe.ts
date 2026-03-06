@@ -102,8 +102,10 @@ Offer the option to create additional HMW statements.
 
 "Would you like to create an alternative version? Sometimes looking at the same dip from a different angle sparks a completely different direction for ideation."
 
-If they want an alternative, use cardIndex: 1 to create a second card:
-[HMW_CARD]{"cardIndex": 1, "suggestions": {"givenThat": ["alt option 1", "alt option 2", "alt option 3"]}}[/HMW_CARD]
+PERSONA ROTATION FOR ALTERNATIVES: If multiple personas were created in Step 5 (check Persona context), each alternative HMW should use a DIFFERENT persona. The first card uses whichever persona was selected; the second card should automatically use a different persona from Step 5 to frame the challenge from their perspective. This creates genuinely different HMW statements targeting different user types with different pain points — not just rephrasing the same angle.
+
+If they want an alternative, use cardIndex: 1 to create a second card with a different persona:
+[HMW_CARD]{"cardIndex": 1, "persona": "different persona name", "suggestions": {"givenThat": ["alt option 1", "alt option 2", "alt option 3"]}}[/HMW_CARD]
 
 If they create multiple, help them select which to carry forward: "Which HMW statement(s) should we take into Step 8? You can pick one or ideate on multiple."
 

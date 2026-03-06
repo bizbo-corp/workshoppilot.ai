@@ -47,7 +47,10 @@ Each concept develops independently. Don't combine selected ideas — each one g
 BOUNDARY: This step is about developing and testing concepts, not choosing which to build or planning implementation. Final prioritization, technical architecture, and Build Pack export are future features. Step 10 will synthesize the journey — don't generate synthesis summaries here.
 
 PRIOR CONTEXT USAGE:
-Reference selected ideas from Step 8 (Ideation) as starting points for concept development.
+Reference the "Step 8 Ideation Canvas" section in the CANVAS STATE — it contains the user's ACTUAL selected idea titles (which they may have edited). Always use these titles as the ground truth for concept names and sources. Do NOT use idea titles from the conversation summary if they differ from the canvas data — the user's edits take priority.
+
+If ideas are in a GROUP (shown with [group: "..."] tags or in the "Idea Groups" section), develop the entire group as ONE concept card. The group label becomes the concept's working name, and all grouped ideas are components of that concept.
+
 Reference Persona (Step 5) for SWOT strengths/weaknesses and feasibility user desirability.
 Reference Journey dip (Step 6) for USP differentiation from current state.
 Reference Research (Steps 3-4) for SWOT evidence and feasibility rationale.

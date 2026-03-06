@@ -4,7 +4,7 @@ import { db } from '@/db/client';
 import { stepArtifacts, workshopSteps } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import type { StickyNote, GridColumn, DrawingNode, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
-import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import type { Crazy8sSlot, SlotGroup } from '@/lib/canvas/crazy-8s-types';
 import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
@@ -34,6 +34,7 @@ export async function saveCanvasState(
     personaTemplates?: PersonaTemplateData[];
     hmwCards?: HmwCardData[];
     selectedSlotIds?: string[];
+    slotGroups?: SlotGroup[];
     brainRewritingMatrices?: BrainRewritingMatrix[];
     dotVotes?: DotVote[];
     votingSession?: VotingSession;
@@ -160,6 +161,7 @@ export async function loadCanvasState(
   personaTemplates?: PersonaTemplateData[];
   hmwCards?: HmwCardData[];
   selectedSlotIds?: string[];
+  slotGroups?: SlotGroup[];
   brainRewritingMatrices?: BrainRewritingMatrix[];
   dotVotes?: DotVote[];
   votingSession?: VotingSession;
@@ -213,6 +215,7 @@ export async function loadCanvasState(
         personaTemplates?: PersonaTemplateData[];
         hmwCards?: HmwCardData[];
         selectedSlotIds?: string[];
+        slotGroups?: SlotGroup[];
         brainRewritingMatrices?: BrainRewritingMatrix[];
         dotVotes?: DotVote[];
         votingSession?: VotingSession;
@@ -229,6 +232,7 @@ export async function loadCanvasState(
           ...(canvas.personaTemplates ? { personaTemplates: canvas.personaTemplates } : {}),
           ...(canvas.hmwCards ? { hmwCards: canvas.hmwCards } : {}),
           ...(canvas.selectedSlotIds ? { selectedSlotIds: canvas.selectedSlotIds } : {}),
+          ...(canvas.slotGroups ? { slotGroups: canvas.slotGroups } : {}),
           ...(canvas.brainRewritingMatrices ? { brainRewritingMatrices: canvas.brainRewritingMatrices } : {}),
           ...(canvas.dotVotes ? { dotVotes: canvas.dotVotes } : {}),
           ...(canvas.votingSession ? { votingSession: canvas.votingSession } : {}),

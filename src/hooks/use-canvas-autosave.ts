@@ -41,6 +41,11 @@ export function useCanvasAutosave(workshopId: string, stepId: string, enabled = 
   const conceptCards = useCanvasStore((s) => s.conceptCards);
   const personaTemplates = useCanvasStore((s) => s.personaTemplates);
   const hmwCards = useCanvasStore((s) => s.hmwCards);
+  const selectedSlotIds = useCanvasStore((s) => s.selectedSlotIds);
+  const slotGroups = useCanvasStore((s) => s.slotGroups);
+  const brainRewritingMatrices = useCanvasStore((s) => s.brainRewritingMatrices);
+  const dotVotes = useCanvasStore((s) => s.dotVotes);
+  const votingSession = useCanvasStore((s) => s.votingSession);
   const isDirty = useCanvasStore((s) => s.isDirty);
   const markClean = useCanvasStore((s) => s.markClean);
 
@@ -78,6 +83,11 @@ export function useCanvasAutosave(workshopId: string, stepId: string, enabled = 
         ...(conceptCards.length > 0 ? { conceptCards } : {}),
         ...(sanitizedPersonaTemplates.length > 0 ? { personaTemplates: sanitizedPersonaTemplates } : {}),
         ...(hmwCards.length > 0 ? { hmwCards } : {}),
+        ...(selectedSlotIds.length > 0 ? { selectedSlotIds } : {}),
+        ...(slotGroups.length > 0 ? { slotGroups } : {}),
+        ...(brainRewritingMatrices.length > 0 ? { brainRewritingMatrices } : {}),
+        ...(dotVotes.length > 0 ? { dotVotes } : {}),
+        ...(votingSession.status !== 'idle' ? { votingSession } : {}),
       });
 
       if (result.success) {
@@ -127,7 +137,7 @@ export function useCanvasAutosave(workshopId: string, stepId: string, enabled = 
       dirtyVersionRef.current++;
       debouncedSave();
     }
-  }, [stickyNotes, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, personaTemplates, hmwCards, isDirty, debouncedSave, enabled]);
+  }, [stickyNotes, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, personaTemplates, hmwCards, selectedSlotIds, slotGroups, brainRewritingMatrices, dotVotes, votingSession, isDirty, debouncedSave, enabled]);
 
   // Force-save on component unmount
   useEffect(() => {

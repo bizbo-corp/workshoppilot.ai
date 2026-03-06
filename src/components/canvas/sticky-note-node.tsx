@@ -15,6 +15,23 @@ export const COLOR_CLASSES: Record<StickyNoteColor, string> = {
   red: 'bg-[var(--sticky-note-red)]',
 };
 
+/** Darker avatar background colors per sticky note color */
+const AVATAR_BG: Record<StickyNoteColor, string> = {
+  yellow: 'bg-amber-500',
+  pink: 'bg-pink-500',
+  blue: 'bg-blue-500',
+  green: 'bg-emerald-500',
+  orange: 'bg-orange-500',
+  red: 'bg-red-500',
+};
+
+/** Extract initials from a persona name (first letter of first two words) */
+function getInitials(name: string): string {
+  const words = name.trim().split(/\s+/);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return words[0]?.substring(0, 2).toUpperCase() || '?';
+}
+
 export type StickyNoteNodeData = {
   text: string;
   color: StickyNoteColor;
@@ -115,6 +132,12 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
   const isEmpty = !data.text?.trim();
   const isTemplatePlaceholder = isTemplate && isEmpty;
 
+  // Persona card detection: has em-dash separator and is not a cluster child
+  const isPersonaCard = data.text.includes(' — ') && !data.clusterLabel;
+  const personaName = isPersonaCard ? data.text.split(/\s*[—–]\s*/)[0].trim() : '';
+  const personaInitials = isPersonaCard ? getInitials(personaName) : '';
+  const avatarBg = isPersonaCard ? (AVATAR_BG[data.color || 'yellow'] || AVATAR_BG.yellow) : '';
+
   return (
     <div
       className={cn(
@@ -177,12 +200,27 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
         />
       ) : (
         <>
-          <p className={cn(
-            'break-words whitespace-pre-wrap overflow-hidden flex-1',
-            isTemplatePlaceholder && 'text-neutral-olive-500/50 italic text-xs'
-          )}>
-            {data.text || data.placeholderText || ''}
-          </p>
+          {isPersonaCard ? (
+            <div className="flex items-start gap-2 flex-1 overflow-hidden">
+              <div className={cn(
+                avatarBg,
+                'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
+                'text-[10px] font-bold text-white leading-none'
+              )}>
+                {personaInitials}
+              </div>
+              <p className="break-words whitespace-pre-wrap overflow-hidden flex-1 font-semibold">
+                {data.text || ''}
+              </p>
+            </div>
+          ) : (
+            <p className={cn(
+              'break-words whitespace-pre-wrap overflow-hidden flex-1',
+              isTemplatePlaceholder && 'text-neutral-olive-500/50 italic text-xs'
+            )}>
+              {data.text || data.placeholderText || ''}
+            </p>
+          )}
           {data.clusterLabel && (
             <span className="inline-flex items-center gap-1 text-[10px] font-medium text-neutral-olive-500 mt-1">
               <Layers className="w-2.5 h-2.5" />

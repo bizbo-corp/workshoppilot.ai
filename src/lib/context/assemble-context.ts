@@ -3,7 +3,7 @@ import { stepSummaries, workshopSteps } from '@/db/schema';
 import { eq, and, ne, asc, inArray } from 'drizzle-orm';
 import { getStepById } from '@/lib/workshop/step-metadata';
 import { loadCanvasState } from '@/actions/canvas-actions';
-import { assembleCanvasContextForStep, assembleEmpathyMapCanvasContext, assembleStakeholderCanvasContext, assembleUserResearchCanvasContext } from '@/lib/workshop/context/canvas-context';
+import { assembleCanvasContextForStep, assembleEmpathyMapCanvasContext, assembleHmwCardCanvasContext, assembleIdeationForConceptContext, assembleStakeholderCanvasContext, assembleUserResearchCanvasContext } from '@/lib/workshop/context/canvas-context';
 import type { StepContext } from './types';
 
 /**
@@ -143,6 +143,39 @@ export async function assembleStepContext(
         canvasContext = canvasContext
           ? `${canvasContext}\n\nStep 4 Empathy Map (use these insights to populate empathy fields):\n${empathyContext}`
           : `Step 4 Empathy Map (use these insights to populate empathy fields):\n${empathyContext}`;
+      }
+    }
+  }
+
+  // For ideation step, inject Step 7's reframe HMW cards so the AI
+  // can reference the reframed HMW statement(s) as ideation prompts and mind map branches
+  if (currentStepId === 'ideation') {
+    const step7Canvas = await loadCanvasState(workshopId, 'reframe');
+    if (step7Canvas?.hmwCards && step7Canvas.hmwCards.length > 0) {
+      const hmwContext = assembleHmwCardCanvasContext(step7Canvas.hmwCards);
+      if (hmwContext) {
+        canvasContext = canvasContext
+          ? `${canvasContext}\n\nStep 7 Reframed HMW Statements (use these as the ideation prompt and mind map branches):\n${hmwContext}`
+          : `Step 7 Reframed HMW Statements (use these as the ideation prompt and mind map branches):\n${hmwContext}`;
+      }
+    }
+  }
+
+  // For concept step, inject Step 8's ideation canvas data so the AI
+  // uses the user's actual selected/edited ideas, not its own earlier suggestions
+  if (currentStepId === 'concept') {
+    const step8Canvas = await loadCanvasState(workshopId, 'ideation');
+    if (step8Canvas?.crazy8sSlots && step8Canvas.crazy8sSlots.length > 0) {
+      const ideationContext = assembleIdeationForConceptContext(
+        step8Canvas.crazy8sSlots,
+        step8Canvas.selectedSlotIds || [],
+        step8Canvas.slotGroups,
+        step8Canvas.mindMapNodes,
+      );
+      if (ideationContext) {
+        canvasContext = canvasContext
+          ? `${canvasContext}\n\nStep 8 Ideation Canvas (GROUND TRUTH — use these titles, not the conversation summary):\n${ideationContext}`
+          : `Step 8 Ideation Canvas (GROUND TRUTH — use these titles, not the conversation summary):\n${ideationContext}`;
       }
     }
   }

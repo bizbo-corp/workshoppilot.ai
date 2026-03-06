@@ -15,6 +15,27 @@ export const POST_IT_WIDTH = 160;
 export const POST_IT_HEIGHT = 100;
 
 /**
+ * Extract the persona name from card text (first segment before em-dash).
+ * "Sally — Salsa Maker — Struggles..." → "sally"
+ */
+export function extractPersonaName(text: string): string {
+  return text.split(/\s*[—–]\s*/)[0].trim().toLowerCase();
+}
+
+/**
+ * Check if a sticky note is a persona card that matches a given cluster name.
+ * Handles multiple matching strategies: exact persona name match, startsWith, etc.
+ */
+export function isPersonaCardForCluster(card: { text: string; cluster?: string | null }, clusterName: string): boolean {
+  if (card.cluster) return false; // cluster children are not persona cards
+  const personaName = extractPersonaName(card.text);
+  const clusterLower = clusterName.toLowerCase().trim();
+  return personaName === clusterLower
+    || card.text.toLowerCase().startsWith(clusterLower)
+    || clusterLower.startsWith(personaName);
+}
+
+/**
  * Compute sticky note dimensions that fit the text content.
  * Short text (< 40 chars) gets the default 160x100.
  * Longer text scales up proportionally, capped at 360x240.
@@ -30,7 +51,7 @@ export function computeStickyNoteSize(text: string): { width: number; height: nu
 /** Columns per row in cluster layout */
 const CLUSTER_COLS = 3;
 /** Gap between items in cluster layout */
-const CLUSTER_GAP = 15;
+const CLUSTER_GAP = 20;
 
 /**
  * Compute child positions for a cluster layout: parent centered above,
@@ -301,8 +322,9 @@ export function computeCanvasPosition(
   if (metadata.cluster) {
     const clusterLower = metadata.cluster.toLowerCase();
     const parent = existingStickyNotes.find(
-      (p) => p.text.toLowerCase() === clusterLower
-        || p.text.toLowerCase().startsWith(clusterLower),
+      (p) => isPersonaCardForCluster(p, metadata.cluster!)
+        || (p.text.toLowerCase() === clusterLower)
+        || (p.text.toLowerCase().startsWith(clusterLower)),
     );
     if (parent) {
       // If parent is on a ring, place child on the same ring
@@ -330,20 +352,49 @@ export function computeCanvasPosition(
         }
       }
 
-      // Non-ring fallback: count siblings by matching cluster attribute
-      const clusterSiblings = existingStickyNotes.filter(
-        (p) => p.cluster?.toLowerCase() === clusterLower,
+      // Non-ring fallback: use 3-column centered cluster layout
+      // Count siblings using the same robust matching the parent uses
+      const parentPersonaName = extractPersonaName(parent.text);
+      const siblings = existingStickyNotes.filter(
+        (p) => p.cluster && (
+          p.cluster.toLowerCase() === clusterLower
+          || extractPersonaName(p.cluster) === parentPersonaName
+        ),
       );
-      const childIdx = clusterSiblings.length;
-      const col = childIdx % 2;
-      const row = Math.floor(childIdx / 2);
-
+      const childIdx = siblings.length;
+      // Use generous cell size to prevent overlap (280×150 fits most insight texts)
+      const positions = computeClusterChildPositions(
+        parent.position, parent.width, parent.height,
+        childIdx + 1, 280, 150,
+      );
       return {
-        position: {
-          x: parent.position.x + col * (POST_IT_WIDTH + 20),
-          y: parent.position.y + (POST_IT_HEIGHT + 25) + row * (POST_IT_HEIGHT + 20),
-        },
+        position: positions[childIdx],
         quadrant: parent.quadrant,
+      };
+    }
+  }
+
+  // --- User Research: unmatched cluster fallback — place near first persona card ---
+  // This catches cases where the AI sends a cluster name that doesn't match any persona card.
+  // Without this, items would end up at the generic stagger position far from the board.
+  if (stepId === 'user-research' && metadata.cluster) {
+    const personaCards = existingStickyNotes.filter(
+      (p) => !p.cluster && (!p.type || p.type === 'stickyNote') && p.text.includes(' — '),
+    );
+    if (personaCards.length > 0) {
+      // Fall back to the last persona card
+      const fallbackParent = personaCards[personaCards.length - 1];
+      const siblings = existingStickyNotes.filter(
+        (p) => p.cluster && isPersonaCardForCluster(fallbackParent, p.cluster),
+      );
+      const childIdx = siblings.length;
+      const positions = computeClusterChildPositions(
+        fallbackParent.position, fallbackParent.width, fallbackParent.height,
+        childIdx + 1, 280, 150,
+      );
+      return {
+        position: positions[childIdx],
+        quadrant: fallbackParent.quadrant,
       };
     }
   }
@@ -354,7 +405,7 @@ export function computeCanvasPosition(
       (p) => !p.cluster && (!p.type || p.type === 'stickyNote'),
     );
     const idx = personaCards.length;
-    const PERSONA_SPACING = 500;
+    const PERSONA_SPACING = 1000;
     return {
       position: {
         x: idx * PERSONA_SPACING,

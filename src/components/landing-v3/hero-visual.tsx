@@ -160,18 +160,18 @@ const deliverables = [
 export function HeroVisual() {
   return (
     <div
-      className="absolute inset-0 pointer-events-none overflow-hidden"
+      className="absolute inset-0 pointer-events-none overflow-hidden bg-red-500/0"
       aria-hidden="true"
     >
       {/* ── Light trails (lg+) ── */}
       <LightTrails />
 
-      {/* ── Stickies — lower left (md+) ── */}
-      <div className="hidden md:block">
+      {/* ── Stickies — start near top, spread downward ── */}
+      <div className="absolute inset-0 scale-[0.55] sm:scale-[0.65] md:scale-[0.75] lg:scale-[0.85] xl:scale-100">
         <StickyNote
           text="Pain Point"
           left="12%"
-          top="46%"
+          top="8%"
           rotation="-2deg"
           delay="0s"
           z={2}
@@ -180,7 +180,7 @@ export function HeroVisual() {
         <StickyNote
           text="Problem"
           left="8%"
-          top="58%"
+          top="28%"
           rotation="1.5deg"
           delay="0.8s"
           z={1}
@@ -189,7 +189,7 @@ export function HeroVisual() {
         <StickyNote
           text="Concept"
           left="16%"
-          top="60%"
+          top="32%"
           rotation="-1deg"
           delay="1.6s"
           z={3}
@@ -198,7 +198,7 @@ export function HeroVisual() {
         <StickyNote
           text="Goal"
           left="16%"
-          top="72%"
+          top="58%"
           rotation="3deg"
           delay="2.4s"
           z={1}
@@ -207,7 +207,7 @@ export function HeroVisual() {
         <StickyNote
           text="Idea"
           left="6%"
-          top="68%"
+          top="50%"
           rotation="-3deg"
           delay="3.2s"
           z={1}
@@ -216,69 +216,70 @@ export function HeroVisual() {
         <StickyNote
           text="Conduct user interviews"
           left="13%"
-          top="56.5%"
+          top="18%"
           rotation="2deg"
           delay="0s"
           z={4}
           trailIndex={5}
         />
 
-        {/* 4 Cursors — staggered delays so they don't move in sync */}
-        <UserCursor
-          name="Sales"
-          color="#16a34a"
-          left="18%"
-          top="56%"
-          drift="cursor-drift-1 9s"
-          delay="0s"
-        />
-        <UserCursor
-          name="Facilitator"
-          color="#6366f1"
-          left="24%"
-          top="62%"
-          drift="cursor-drift-2 11s"
-          delay="2s"
-          hasIcon
-        />
-        <UserCursor
-          name="Product"
-          color="#e05c14ff"
-          left="10%"
-          top="66%"
-          drift="cursor-drift-3 10s"
-          delay="4s"
-        />
-        <UserCursor
-          name="Operations"
-          color="#e97820"
-          left="14%"
-          top="76%"
-          drift="cursor-drift-1 12s"
-          delay="6s"
-        />
-        <UserCursor
-          name="Founder"
-          color="#06b6d4"
-          left="22%"
-          top="70%"
-          drift="cursor-drift-3 10s"
-          delay="3s"
-        />
+        {/* Cursors — md+ only */}
+        <div className="hidden md:block">
+          <UserCursor
+            name="Sales"
+            color="#16a34a"
+            left="18%"
+            top="14%"
+            drift="cursor-drift-1 9s"
+            delay="0s"
+          />
+          <UserCursor
+            name="Facilitator"
+            color="#6366f1"
+            left="24%"
+            top="28%"
+            drift="cursor-drift-2 11s"
+            delay="2s"
+            hasIcon
+          />
+          <UserCursor
+            name="Product"
+            color="#e05c14ff"
+            left="10%"
+            top="38%"
+            drift="cursor-drift-3 10s"
+            delay="4s"
+          />
+          <UserCursor
+            name="Operations"
+            color="#e97820"
+            left="14%"
+            top="56%"
+            drift="cursor-drift-1 12s"
+            delay="6s"
+          />
+          <UserCursor
+            name="Founder"
+            color="#06b6d4"
+            left="22%"
+            top="46%"
+            drift="cursor-drift-3 10s"
+            delay="3s"
+          />
+        </div>
       </div>
 
-      {/* ── Deliverables — 2×3 grid, lower right (lg+) ── */}
+      {/* ── Deliverables — top-aligned, right side ── */}
       <div
         data-trail-dest-container
-        className="hidden lg:grid absolute grid-cols-2 gap-3 w-[340px]"
-        style={{ right: "12%", top: "62%", transform: "translateY(-50%)" }}
+        className="grid absolute grid-cols-2 gap-1.5 w-[200px] right-[3%] top-1/2 -translate-y-1/2 sm:w-[240px] sm:gap-2 sm:right-[4%] md:w-[300px] md:gap-2.5 md:right-[8%] lg:w-[340px] lg:gap-3 lg:right-[12%]"
       >
         {deliverables.map(
           ({ icon: Icon, label, rotation, delay, color }, i) => (
             <div
               key={label}
               data-trail-dest={i}
-              className="rounded-xl bg-card/50 backdrop-blur-xl border border-foreground/[0.08] px-3 py-2.5 will-change-transform flex items-center gap-2.5"
+              className="rounded-xl bg-card/50 backdrop-blur-xl border border-foreground/[0.08] px-2 py-1.5 sm:px-2.5 sm:py-2 md:px-3 md:py-2.5 will-change-transform flex items-center gap-1.5 sm:gap-2 md:gap-2.5"
               style={
                 {
                   transform: `rotate(${rotation})`,
@@ -290,12 +291,12 @@ export function HeroVisual() {
               }
             >
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center shrink-0"
                 style={{ backgroundColor: color }}
               >
-                <Icon className="h-3.5 w-3.5 text-white" />
+                <Icon className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5 text-white" />
               </div>
-              <span className="text-[12px] font-medium text-foreground whitespace-nowrap">
+              <span className="text-[10px] sm:text-[11px] md:text-[12px] font-medium text-foreground whitespace-nowrap">
                 {label}
               </span>
             </div>

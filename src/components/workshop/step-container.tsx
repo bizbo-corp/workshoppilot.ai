@@ -672,19 +672,22 @@ export function StepContainer({
       setBillboardImages({});
       setConceptCardsForBillboard([]);
       setBillboardDialogStep('text');
-      // Clear canvas/whiteboard state
-      setStickyNotes([]);
-      setDrawingNodes([]);
-      setCrazy8sSlots([]);
-      setMindMapState([], []);
-      setConceptCards([]);
-      setGridColumns([]);
-      setSelectedSlotIds([]);
-      setPersonaTemplates([]);
-      setHmwCards([]);
-      setBrainRewritingMatrices([]);
       // Force re-mount of ChatPanel/IdeationSubStepContainer to clear useChat state
       setResetKey(prev => prev + 1);
+      // Clear canvas/whiteboard state AFTER resetKey so the new store mount
+      // gets overwritten with empty state (resetKey re-creates store from stale server props)
+      requestAnimationFrame(() => {
+        setStickyNotes([]);
+        setDrawingNodes([]);
+        setCrazy8sSlots([]);
+        setMindMapState([], []);
+        setConceptCards([]);
+        setGridColumns([]);
+        setSelectedSlotIds([]);
+        setPersonaTemplates([]);
+        setHmwCards([]);
+        setBrainRewritingMatrices([]);
+      });
       // Refresh page to reload with cleared server state
       router.refresh();
     } catch (error) {

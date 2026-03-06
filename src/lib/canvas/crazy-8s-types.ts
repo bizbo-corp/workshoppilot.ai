@@ -13,6 +13,17 @@ export interface Crazy8sSlot {
 }
 
 /**
+ * A group of Crazy 8s slots that represent parts of the same solution.
+ * Groups count as a single selection toward the 4-idea limit and carry
+ * forward as one concept card in Step 9.
+ */
+export interface SlotGroup {
+  id: string;
+  label: string;            // User-defined group name (e.g., "Home Page Design")
+  slotIds: string[];        // Member slot IDs (e.g., ['slot-1', 'slot-3', 'slot-5'])
+}
+
+/**
  * Empty slots for initializing Crazy 8s grid
  * Creates 8 empty slots numbered 1-8
  */

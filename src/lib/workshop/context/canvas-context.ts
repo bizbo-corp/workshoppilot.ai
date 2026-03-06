@@ -10,6 +10,7 @@ import type { StickyNote, GridColumn, MindMapNodeState, MindMapEdgeState } from 
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
+import type { Crazy8sSlot, SlotGroup } from '@/lib/canvas/crazy-8s-types';
 
 /** Ring display order and labels */
 const RING_ORDER = ['inner', 'middle', 'outer'] as const;
@@ -543,6 +544,65 @@ export function assembleConceptCanvasContext(conceptCards: ConceptCardData[]): s
   sections.push(progressText);
 
   return sections.join('\n\n');
+}
+
+/**
+ * Assemble Step 8 ideation canvas data for Step 9 (Concept Development)
+ * Provides the AI with the actual user-edited Crazy 8s titles, slot groups,
+ * and starred mind map nodes — the ground truth for what the user selected.
+ */
+export function assembleIdeationForConceptContext(
+  crazy8sSlots: Crazy8sSlot[],
+  selectedSlotIds: string[],
+  slotGroups?: SlotGroup[],
+  mindMapNodes?: MindMapNodeState[],
+): string {
+  if (selectedSlotIds.length === 0 && (!slotGroups || slotGroups.length === 0)) return '';
+
+  const lines: string[] = [];
+
+  // Selected Crazy 8s ideas (with user-edited titles)
+  if (selectedSlotIds.length > 0) {
+    lines.push('**Selected Crazy 8s Ideas** (these are the user\'s chosen ideas — use these titles as ground truth, NOT earlier AI suggestions):');
+    for (const slotId of selectedSlotIds) {
+      const slot = crazy8sSlots.find((s) => s.slotId === slotId);
+      const title = slot?.title || `Sketch ${slotId}`;
+      const desc = slot?.description ? ` — ${slot.description}` : '';
+      // Check if this slot belongs to a group
+      const group = slotGroups?.find((g) => g.slotIds.includes(slotId));
+      const groupTag = group ? ` [group: "${group.label}"]` : '';
+      lines.push(`- ${slotId}: "${title}"${desc}${groupTag}`);
+    }
+  }
+
+  // Slot groups
+  if (slotGroups && slotGroups.length > 0) {
+    lines.push('');
+    lines.push('**Idea Groups** (grouped ideas represent parts of the same solution — develop each group as ONE concept card):');
+    for (const group of slotGroups) {
+      const memberTitles = group.slotIds
+        .map((id) => {
+          const slot = crazy8sSlots.find((s) => s.slotId === id);
+          return slot?.title || `Sketch ${id}`;
+        })
+        .join(', ');
+      lines.push(`- "${group.label}": combines ${memberTitles}`);
+    }
+  }
+
+  // Starred mind map nodes (context for where ideas originated)
+  if (mindMapNodes && mindMapNodes.length > 0) {
+    const starred = mindMapNodes.filter((n) => n.isStarred && !n.isRoot && n.label.trim());
+    if (starred.length > 0) {
+      lines.push('');
+      lines.push('**Starred Mind Map Ideas** (user-flagged as important during brainstorming):');
+      for (const node of starred) {
+        lines.push(`- "${node.label}"`);
+      }
+    }
+  }
+
+  return lines.join('\n');
 }
 
 /**

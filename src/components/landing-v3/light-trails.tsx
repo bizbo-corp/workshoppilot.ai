@@ -106,7 +106,7 @@ export function LightTrails() {
       svg.querySelector("#trunkFade")?.remove();
 
       const cRect = container.getBoundingClientRect();
-      const conv = { x: cRect.width * 0.5, y: cRect.height * 0.62 };
+      const conv = { x: cRect.width * 0.5, y: cRect.height * 0.5 };
 
       /* ── Deliverables outline rect ───────────────────── */
       const dr = elRect(destBox, container);

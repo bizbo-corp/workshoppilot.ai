@@ -868,11 +868,19 @@ function ReactFlowCanvasInner({
   );
 
   // Handle HMW card field changes (manual text edits — silent, no chat message)
+  // Also clear suggestions for the edited field so chips disappear once user types their own
   const handleHmwFieldChange = useCallback(
     (id: string, field: string, value: string) => {
-      updateHmwCard(id, { [field]: value });
+      const card = hmwCards.find((c) => c.id === id);
+      const updatedSuggestions = card?.suggestions
+        ? { ...card.suggestions, [field]: [] }
+        : undefined;
+      updateHmwCard(id, {
+        [field]: value,
+        ...(updatedSuggestions ? { suggestions: updatedSuggestions } : {}),
+      });
     },
-    [updateHmwCard],
+    [hmwCards, updateHmwCard],
   );
 
   // Handle HMW card chip selection — sets field value, clears that field's suggestions, and signals chat

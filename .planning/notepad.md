@@ -1,0 +1,15 @@
+Paywall
+
+Move the paywall to step 7 after they have completed the "How Might We" card. Make sure that the customer knows that they are about to get to the visual steps, which are more fun and interesting and might entice them to purchase. 
+
+
+
+HMW. 
+
+Once an area has been typed, remove the auto suggestions. Make the complete statement text editable or selectable. 
+
+
+
+Ideation:
+
+If ideas have been grouped make a composite image or merge them together. Make the into a single Brain rewriting where the text description can be consolidated.

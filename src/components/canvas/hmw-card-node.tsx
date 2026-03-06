@@ -296,7 +296,7 @@ export const HmwCardNode = memo(
                 Complete Statement
               </span>
             </div>
-            <p className="text-sm leading-relaxed font-medium" style={{ color: SAGE.prefixText }}>
+            <p className="nodrag nopan text-sm leading-relaxed font-medium select-text cursor-text" style={{ color: SAGE.prefixText }}>
               {assembledStatement || data.fullStatement || 'Complete all four fields above to see the assembled statement.'}
             </p>
           </div>

@@ -14,6 +14,7 @@ import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useStore as useReactFlowStore, type ReactFlowState } from '@xyflow/react';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import type { StickyNote } from '@/stores/canvas-store';
+import { extractPersonaName } from '@/lib/canvas/canvas-position';
 
 const viewportSelector = (state: ReactFlowState) => ({
   x: state.transform[0],
@@ -22,7 +23,7 @@ const viewportSelector = (state: ReactFlowState) => ({
 });
 
 /** Frame dimensions in canvas-space pixels */
-const FRAME_WIDTH = 350;
+const FRAME_WIDTH = 900;
 const MIN_FRAME_HEIGHT = 400;
 const FRAME_PADDING = 24;
 const HEADER_H = 28;
@@ -81,14 +82,33 @@ export function PersonaFrameOverlay() {
       const personaName = card.text.split(/\s*[—–]\s*/)[0].trim();
       const color = card.color || 'yellow';
 
-      // Find clustered children for this persona
+      // Find clustered children for this persona (robust matching)
+      const personaNameLower = personaName.toLowerCase();
       const children = items.filter(
-        p => p.cluster && p.cluster.toLowerCase() === personaName.toLowerCase() && p.id !== card.id
+        p => p.cluster && p.id !== card.id && (
+          p.cluster.toLowerCase() === personaNameLower
+          || extractPersonaName(p.cluster) === personaNameLower
+          || personaNameLower.startsWith(p.cluster.toLowerCase())
+        )
       );
 
       // Frame is centered on card's X, starts just below card
-      const frameX = card.position.x + card.width / 2 - FRAME_WIDTH / 2;
       const frameY = card.position.y + card.height + 10; // small gap below card
+
+      // Calculate width: use default or expand to contain all children
+      let frameWidth = FRAME_WIDTH;
+      let frameX = card.position.x + card.width / 2 - frameWidth / 2;
+      if (children.length > 0) {
+        const childMinX = Math.min(...children.map(c => c.position.x));
+        const childMaxX = Math.max(...children.map(c => c.position.x + c.width));
+        const neededWidth = childMaxX - childMinX + FRAME_PADDING * 2;
+        frameWidth = Math.max(FRAME_WIDTH, neededWidth);
+        const contentCenterX = (childMinX + childMaxX) / 2;
+        const cardCenterX = card.position.x + card.width / 2;
+        // Center on whichever is wider: card or children
+        const centerX = children.length >= 3 ? contentCenterX : cardCenterX;
+        frameX = centerX - frameWidth / 2;
+      }
 
       // Calculate height: min height or extend to contain all children
       let frameHeight = MIN_FRAME_HEIGHT;
@@ -105,7 +125,7 @@ export function PersonaFrameOverlay() {
         cardId: card.id,
         name: personaName,
         color,
-        bounds: { x: frameX, y: frameY, width: FRAME_WIDTH, height: frameHeight },
+        bounds: { x: frameX, y: frameY, width: frameWidth, height: frameHeight },
         memberIds,
       };
     });

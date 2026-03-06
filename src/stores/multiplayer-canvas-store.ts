@@ -39,7 +39,7 @@ import type {
 } from './canvas-store';
 import { getCellBounds } from '@/lib/canvas/grid-layout';
 import type { GridConfig } from '@/lib/canvas/grid-layout';
-import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import type { Crazy8sSlot, SlotGroup } from '@/lib/canvas/crazy-8s-types';
 import type { BrainRewritingMatrix, BrainRewritingCell } from '@/lib/canvas/brain-rewriting-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
@@ -58,6 +58,7 @@ type InitState = {
   personaTemplates?: PersonaTemplateData[];
   hmwCards?: HmwCardData[];
   selectedSlotIds?: string[];
+  slotGroups?: SlotGroup[];
   brainRewritingMatrices?: BrainRewritingMatrix[];
   dotVotes?: DotVote[];
   votingSession?: VotingSession;
@@ -82,6 +83,7 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
     personaTemplates: initState?.personaTemplates || [],
     hmwCards: initState?.hmwCards || [],
     selectedSlotIds: initState?.selectedSlotIds || [],
+    slotGroups: initState?.slotGroups || [],
     brainRewritingMatrices: initState?.brainRewritingMatrices || [],
     dotVotes: initState?.dotVotes || [],
     votingSession: initState?.votingSession || DEFAULT_VOTING_SESSION,
@@ -617,6 +619,18 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
         setSelectedSlotIds: (ids) =>
           set(() => ({ selectedSlotIds: ids })),
 
+        addSlotGroup: (group) =>
+          set((state) => ({ slotGroups: [...state.slotGroups, group] })),
+
+        removeSlotGroup: (groupId) =>
+          set((state) => ({ slotGroups: state.slotGroups.filter((g) => g.id !== groupId) })),
+
+        updateSlotGroupLabel: (groupId, label) =>
+          set((state) => ({ slotGroups: state.slotGroups.map((g) => g.id === groupId ? { ...g, label } : g) })),
+
+        setSlotGroups: (groups) =>
+          set(() => ({ slotGroups: groups })),
+
         setBrainRewritingMatrices: (matrices) =>
           set(() => ({ brainRewritingMatrices: matrices })),
 
@@ -704,6 +718,7 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
           personaTemplates: true,
           hmwCards: true,
           selectedSlotIds: true,
+          slotGroups: true,
           brainRewritingMatrices: true,
           dotVotes: true,
           votingSession: true,

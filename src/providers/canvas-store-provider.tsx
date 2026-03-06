@@ -20,7 +20,7 @@ import { getRoomId } from '@/lib/liveblocks/config';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
-import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import type { Crazy8sSlot, SlotGroup } from '@/lib/canvas/crazy-8s-types';
 import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
 import type { DotVote, VotingSession } from '@/lib/canvas/voting-types';
 
@@ -44,6 +44,7 @@ export interface CanvasStoreProviderProps {
   initialPersonaTemplates?: PersonaTemplateData[];
   initialHmwCards?: HmwCardData[];
   initialSelectedSlotIds?: string[];
+  initialSlotGroups?: SlotGroup[];
   initialBrainRewritingMatrices?: BrainRewritingMatrix[];
   initialDotVotes?: DotVote[];
   initialVotingSession?: VotingSession;
@@ -64,6 +65,7 @@ export function CanvasStoreProvider({
   initialPersonaTemplates,
   initialHmwCards,
   initialSelectedSlotIds,
+  initialSlotGroups,
   initialBrainRewritingMatrices,
   initialDotVotes,
   initialVotingSession,
@@ -101,6 +103,7 @@ export function CanvasStoreProvider({
       personaTemplates: initialPersonaTemplates || [],
       hmwCards: initialHmwCards || [],
       selectedSlotIds: initialSelectedSlotIds || [],
+      slotGroups: initialSlotGroups || [],
       brainRewritingMatrices: initialBrainRewritingMatrices || [],
       dotVotes: initialDotVotes || [],
       votingSession: initialVotingSession,

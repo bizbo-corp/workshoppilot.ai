@@ -53,9 +53,6 @@ export default function Home() {
           <Globe className="h-full w-full" />
         </div>
 
-        {/* Floating stickies + deliverables overlay */}
-        <HeroVisual />
-
         <div className="relative mx-auto max-w-4xl text-center z-10">
           {/* Eyebrow */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-olive-300/50 bg-olive-50/80 px-4 py-1.5 text-sm font-medium text-olive-700 dark:border-olive-700/50 dark:bg-olive-950/50 dark:text-olive-300">
@@ -95,11 +92,18 @@ export default function Home() {
           </h1>
 
           {/* Subheadline */}
-          <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-            Stop guessing and start building. WorkshopPilot uses proven Design
-            Thinking frameworks to turn your vision into a comprehensive{" "}
-            <strong className="text-foreground">Build Pack</strong> — the exact
-            blueprint you need to hire devs or start coding today.
+          <p className="mx-auto mt-8 max-w-6xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
+            WorkshopPilot uses Design-Thinking activities to turn your vision
+            into a comprehensive{" "}
+            <strong className="text-foreground/80 dark:text-foreground/80">
+              Build Pack
+            </strong>{" "}
+            - the ultimate tool to align stakeholders, win over investors and
+            hand off directly to an AI coding agent. <br />
+            <br />
+            <span className="text-foreground font-semibold">
+              No experience required. Just bring your ideas and creativity.
+            </span>
           </p>
 
           {/* CTA Buttons */}
@@ -114,9 +118,12 @@ export default function Home() {
 
             <VideoPlayButton />
           </div>
+        </div>
 
-          {/* Social proof */}
-          <div className="mt-12 flex flex-col items-center gap-3">
+        {/* Visual area — flows below CTA buttons */}
+        <div className="relative w-full flex-1">
+          {/* Social proof — glassmorphic pill, top-center of visual area */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 rounded-full bg-card/10 backdrop-blur-lg  px-6 py-2.5">
             <div className="flex gap-0.5">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
@@ -125,10 +132,13 @@ export default function Home() {
                 />
               ))}
             </div>
-            <p className="text-sm text-muted-foreground">
-              Trusted by indie founders, product teams, and Sue from Accounts
+            <p className="text-sm text-foreground whitespace-nowrap">
+              Trusted by indie founders, product teams and innovators like you.
             </p>
           </div>
+
+          {/* Floating stickies + deliverables */}
+          <HeroVisual />
         </div>
 
         {/* Bottom-center "See what you get" — glassmorphic pill */}
@@ -182,8 +192,8 @@ export default function Home() {
                   3 weeks
                 </p>
                 <p className="text-muted-foreground leading-relaxed">
-                  is the average time spent writing PRDs, user stories, and
-                  specs that still miss the mark.
+                  is the average time spent writing PRDs, user stories and specs
+                  that still miss the mark.
                 </p>
               </div>
 
@@ -235,7 +245,7 @@ export default function Home() {
                 step: "03",
                 title: "Walk Away Build-Ready",
                 description:
-                  "Download your Build Pack: PRD, user stories, technical roadmap, and more. Hand it to developers or feed it to AI coding tools.",
+                  "Download your Build Pack: PRD, user stories, technical roadmap and more. Hand it to developers or feed it to AI coding tools.",
               },
             ].map((item) => (
               <div
@@ -280,7 +290,7 @@ export default function Home() {
             </h2>
             <p className="text-muted-foreground text-lg">
               Not a PDF of your chat. Structured, professional artifacts you can
-              hand straight to developers, stakeholders, or AI coding tools.
+              hand straight to developers, stakeholders or AI coding tools.
             </p>
           </div>
 
@@ -293,7 +303,7 @@ export default function Home() {
                 format: ".md",
                 audience: "Developers & Product Managers",
                 description:
-                  "Scope, features, and acceptance criteria in one structured document — ready to hand a developer or drop straight into an AI coding agent like Cursor or Claude Code.",
+                  "Scope, features and acceptance criteria in one structured document — ready to hand a developer or drop straight into an AI coding agent like Cursor or Claude Code.",
               },
               {
                 icon: Code2,
@@ -301,15 +311,15 @@ export default function Home() {
                 format: ".md",
                 audience: "Engineers & Systems Architects",
                 description:
-                  "Architecture recommendations, data models, and API contracts. Enough detail for your dev team or AI coder to start shipping on day one.",
+                  "Architecture recommendations, data models and API contracts. Enough detail for your dev team or AI coder to start shipping on day one.",
               },
               {
                 icon: FlagTriangleRight,
-                title: "Prioritised Feature Roadmap",
+                title: "Prioritized Feature Roadmap",
                 format: ".json",
                 audience: "Founders & Product Leads",
                 description:
-                  "Phase 1 vs Phase 2, decided. Exportable as JSON for direct import into Jira, Linear, or your project management tool of choice.",
+                  "Phase 1 vs. Phase 2, decided. Exportable as JSON for direct import into Jira, Linear or your project management tool of choice.",
               },
               {
                 icon: Package,
@@ -317,7 +327,7 @@ export default function Home() {
                 format: ".pptx",
                 audience: "Stakeholders & Investors",
                 description:
-                  "Every workshop artefact in one download — personas, problem statements, lean canvas, and ideation results. Ready to share with your team or attach to a pitch deck.",
+                  "Every workshop artifact in one download — personas, problem statements, Lean Canvas and ideation results. Ready to share with your team or attach to a pitch deck.",
               },
               {
                 icon: Route,
@@ -325,7 +335,7 @@ export default function Home() {
                 format: ".md",
                 audience: "Designers & UX Teams",
                 description:
-                  "A step-by-step map of how users move through your product. Identifies pain points, drop-off risks, and moments that matter before a single screen is designed.",
+                  "A step-by-step map of how users move through your product. Identifies pain points, drop-off risks and moments that matter before a single screen is designed.",
               },
               {
                 icon: MousePointerClick,
@@ -333,7 +343,7 @@ export default function Home() {
                 format: "Interactive",
                 audience: "Everyone",
                 description:
-                  "A clickable prototype that brings your idea to life. Test assumptions with real users, align your team visually, and validate before you invest in code.",
+                  "A clickable prototype that brings your idea to life. Test assumptions with real users, align your team visually and validate before you invest in code.",
               },
             ].map((item) => {
               const Icon = item.icon;
@@ -419,14 +429,14 @@ export default function Home() {
                   price: "$5,000+",
                   time: "3–5 days",
                   detail:
-                    "Facilitator fees, venue hire, participant time. Then someone still has to write up the outputs.",
+                    "Facilitator fees, venue rental, participant time. Then someone still has to write up the outputs.",
                 },
                 {
                   label: "Freelance Consultant",
                   price: "$2,000+",
                   time: "1–2 weeks",
                   detail:
-                    "Back-and-forth over email, multiple revision rounds, and a deliverable format that may not fit your workflow.",
+                    "Back-and-forth over email, multiple revision rounds and a deliverable format that may not fit your workflow.",
                 },
               ].map((row) => (
                 <div key={row.label} className="py-8 first:pt-0">
@@ -610,9 +620,7 @@ export default function Home() {
               Product Manager: $3,000
             </span>
             <span className="hidden sm:inline text-border">|</span>
-            <span className="line-through opacity-60">
-              DT Workshop: $5,000
-            </span>
+            <span className="line-through opacity-60">DT Workshop: $5,000</span>
             <span className="hidden sm:inline text-border">|</span>
             <span className="font-semibold text-olive-600 dark:text-olive-400">
               WorkshopPilot: from $99
@@ -642,7 +650,7 @@ export default function Home() {
                   "Full 10-step design thinking process",
                   "AI facilitator guides every step",
                   "Complete Build Pack output",
-                  "Export-ready for dev teams & AI coders",
+                  "Export-ready for dev teams and AI coders",
                   "Credits never expire",
                 ].map((feature) => (
                   <li key={feature} className="flex items-start gap-2.5">
@@ -696,7 +704,7 @@ export default function Home() {
                 </span>
               </div>
               <p className="text-sm font-medium text-olive-600 dark:text-olive-400 mb-6">
-                Save 33% vs buying individually
+                Save 33% vs. buying individually
               </p>
               <ul className="space-y-3 flex-1 mb-8">
                 {[
@@ -759,17 +767,17 @@ export default function Home() {
             {/* Left — headline */}
             <div>
               <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-serif leading-[1.1] tracking-tight text-foreground">
-                Stop planning.
-                <br /> Start building.
+                Plan faster.
+                <br /> Build smarter
               </h2>
             </div>
 
             {/* Right — copy + actions */}
             <div>
               <p className="text-muted-foreground text-lg leading-relaxed mb-3">
-                Start a free workshop and walk away with a complete Build
-                Pack — PRD, tech specs, roadmap, and more. The same
-                deliverables that would cost $3,000+ from a consultant.
+                Start a free workshop and walk away with a complete Build Pack —
+                PRD, tech specs, roadmap, and more. The same deliverables that
+                would cost $3,000+ from a consultant.
               </p>
               <p className="text-sm text-muted-foreground mb-8">
                 Steps 1–6 are free. No credit card required.

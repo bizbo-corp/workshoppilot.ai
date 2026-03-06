@@ -270,23 +270,38 @@ export default async function StepPage({ params }: StepPageProps) {
         // Try 2: Canvas-stored HMW cards (always saved by auto-save)
         if (!hmwStatement || hmwGoals.length === 0) {
           const reframeCanvas = await loadCanvasState(session.workshop.id, 'reframe');
-          const hmwCards = reframeCanvas?.hmwCards as Array<{ fullStatement?: string; immediateGoal?: string; cardIndex?: number }> | undefined;
+          const hmwCards = reframeCanvas?.hmwCards as Array<{
+            fullStatement?: string; givenThat?: string; persona?: string;
+            immediateGoal?: string; deeperGoal?: string; cardIndex?: number;
+          }> | undefined;
           if (hmwCards && hmwCards.length > 0) {
+            // Helper: assemble statement from fields if fullStatement is missing
+            const getStatement = (c: typeof hmwCards[number]): string | undefined => {
+              if (c.fullStatement) return c.fullStatement;
+              if (c.givenThat && c.persona && c.immediateGoal && c.deeperGoal) {
+                return `Given that ${c.givenThat}, how might we help ${c.persona} to ${c.immediateGoal} so they can ${c.deeperGoal}?`;
+              }
+              return undefined;
+            };
+
             const sortedCards = [...hmwCards]
               .sort((a, b) => (a.cardIndex ?? 0) - (b.cardIndex ?? 0));
 
             if (!hmwStatement) {
-              const filledCard = sortedCards.find((c) => c.fullStatement);
-              hmwStatement = filledCard?.fullStatement;
+              const filledCard = sortedCards.find((c) => getStatement(c));
+              hmwStatement = filledCard ? getStatement(filledCard) : undefined;
             }
 
             if (hmwGoals.length === 0) {
               hmwGoals = sortedCards
-                .filter((c) => c.fullStatement)
-                .map((c) => ({
-                  label: extractHmwBranchLabel(c.fullStatement!),
-                  fullStatement: c.fullStatement!,
-                }));
+                .filter((c) => getStatement(c))
+                .map((c) => {
+                  const stmt = getStatement(c)!;
+                  return {
+                    label: extractHmwBranchLabel(stmt),
+                    fullStatement: stmt,
+                  };
+                });
             }
           }
         }
@@ -306,6 +321,7 @@ export default async function StepPage({ params }: StepPageProps) {
   let initialMindMapNodes: MindMapNodeState[] = (canvasData?.mindMapNodes as MindMapNodeState[]) || [];
   const initialMindMapEdges: MindMapEdgeState[] = (canvasData?.mindMapEdges as MindMapEdgeState[]) || [];
   const initialSelectedSlotIds: string[] = canvasData?.selectedSlotIds || [];
+  const initialSlotGroups = canvasData?.slotGroups || [];
   const initialBrainRewritingMatrices: BrainRewritingMatrix[] = canvasData?.brainRewritingMatrices || [];
   const initialDotVotes: DotVote[] = canvasData?.dotVotes || [];
   const initialVotingSession: VotingSession | undefined = canvasData?.votingSession;
@@ -442,19 +458,57 @@ export default async function StepPage({ params }: StepPageProps) {
       });
     }
 
-    // Create skeleton concept cards for selected ideas (one per selected slot, max 4)
+    // Create skeleton concept cards for selected ideas (one per selection unit, max 4)
+    // Groups of slots count as one selection unit and become one concept card
     if (initialConceptCards.length === 0 && step8SelectedSlotIds && step8SelectedSlotIds.length > 0) {
-      initialConceptCards = step8SelectedSlotIds.slice(0, 4).map((slotId, index) => {
-        // Try to find the matching slot for title and image
-        const slot = step8Crazy8sSlots?.find((s) => s.slotId === slotId);
-        return createDefaultConceptCard({
-          ideaSource: slot?.title || `Sketch ${slotId}`,
-          sketchSlotId: slotId,
-          sketchImageUrl: slot?.imageUrl,
-          cardState: 'skeleton',
-          cardIndex: index,
-          position: { x: index * 720, y: 0 },
-        });
+      const step8SlotGroups = step8Canvas?.slotGroups || [];
+
+      // Build selection units: each is either an ungrouped slot or a group
+      type SelectionUnit = { type: 'slot'; slotId: string } | { type: 'group'; group: { id: string; label: string; slotIds: string[] } };
+      const units: SelectionUnit[] = [];
+      const processedSlotIds = new Set<string>();
+
+      for (const slotId of step8SelectedSlotIds) {
+        if (processedSlotIds.has(slotId)) continue;
+
+        const group = step8SlotGroups.find((g) => g.slotIds.includes(slotId));
+        if (group) {
+          // Add the whole group as one unit, mark all members as processed
+          units.push({ type: 'group', group });
+          group.slotIds.forEach((id) => processedSlotIds.add(id));
+        } else {
+          units.push({ type: 'slot', slotId });
+          processedSlotIds.add(slotId);
+        }
+      }
+
+      initialConceptCards = units.slice(0, 4).map((unit, index) => {
+        if (unit.type === 'group') {
+          // Group → one concept card with group label as ideaSource
+          const firstSlot = step8Crazy8sSlots?.find((s) => s.slotId === unit.group.slotIds[0]);
+          const memberTitles = unit.group.slotIds
+            .map((id) => step8Crazy8sSlots?.find((s) => s.slotId === id)?.title || id)
+            .join(', ');
+          return createDefaultConceptCard({
+            ideaSource: `${unit.group.label} (${memberTitles})`,
+            sketchSlotId: unit.group.slotIds[0],
+            sketchImageUrl: firstSlot?.imageUrl,
+            cardState: 'skeleton',
+            cardIndex: index,
+            position: { x: index * 720, y: 0 },
+          });
+        } else {
+          // Ungrouped slot → one concept card
+          const slot = step8Crazy8sSlots?.find((s) => s.slotId === unit.slotId);
+          return createDefaultConceptCard({
+            ideaSource: slot?.title || `Sketch ${unit.slotId}`,
+            sketchSlotId: unit.slotId,
+            sketchImageUrl: slot?.imageUrl,
+            cardState: 'skeleton',
+            cardIndex: index,
+            position: { x: index * 720, y: 0 },
+          });
+        }
       });
     }
 
@@ -531,6 +585,7 @@ export default async function StepPage({ params }: StepPageProps) {
         initialPersonaTemplates={initialPersonaTemplates}
         initialHmwCards={initialHmwCards}
         initialSelectedSlotIds={initialSelectedSlotIds}
+        initialSlotGroups={initialSlotGroups}
         initialBrainRewritingMatrices={initialBrainRewritingMatrices}
         initialDotVotes={initialDotVotes}
         initialVotingSession={initialVotingSession}
