@@ -1,15 +1,17 @@
-Paywall
+- [ ] Paywall\
+  Move the paywall to step 7 after they have completed the "How Might We" card. Make sure that the customer knows that they are about to get to the visual steps, which are more fun and interesting and might entice them to purchase. 
+- [ ] HMW.\
+  Once an area has been typed, remove the auto suggestions. Make the complete statement text editable or selectable. 
+- [ ] Ideation\
+  If ideas have been grouped make a composite image or merge them together. Make the into a single Brain rewriting where the text description can be consolidated.
 
-Move the paywall to step 7 after they have completed the "How Might We" card. Make sure that the customer knows that they are about to get to the visual steps, which are more fun and interesting and might entice them to purchase. 
+## Todo
 
-
-
-HMW. 
-
-Once an area has been typed, remove the auto suggestions. Make the complete statement text editable or selectable. 
-
-
-
-Ideation:
-
-If ideas have been grouped make a composite image or merge them together. Make the into a single Brain rewriting where the text description can be consolidated.
+- [ ] Build Pack
+- [ ] PRD
+- [ ] PPT
+- [ ] Tech Specs
+- [ ] Rate Limit
+- [ ] Idea to concept consolidation
+- [ ] Reply Mike
+- [ ] Add on a human facilitator

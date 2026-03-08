@@ -108,22 +108,8 @@ export function LightTrails() {
       const cRect = container.getBoundingClientRect();
       const conv = { x: cRect.width * 0.5, y: cRect.height * 0.5 };
 
-      /* ── Deliverables outline rect ───────────────────── */
+      /* ── Deliverables rect (used for path calculations) ── */
       const dr = elRect(destBox, container);
-      const pad = 12;
-      const outline = document.createElementNS(NS, "rect");
-      outline.setAttribute("x", String(dr.x - pad));
-      outline.setAttribute("y", String(dr.y - pad));
-      outline.setAttribute("width", String(dr.w + pad * 2));
-      outline.setAttribute("height", String(dr.h + pad * 2));
-      outline.setAttribute("rx", "16");
-      outline.setAttribute("ry", "16");
-      outline.setAttribute("fill", "none");
-      outline.setAttribute("stroke", "currentColor");
-      outline.setAttribute("stroke-width", "1");
-      outline.setAttribute("stroke-opacity", "0.15");
-      outline.classList.add("dest-outline");
-      svg.appendChild(outline);
 
       /* ── Path data ───────────────────────────────────── */
 

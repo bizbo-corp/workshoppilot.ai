@@ -61,7 +61,7 @@ export default function Home() {
           </div>
 
           {/* Headline */}
-          <h1 className="text-4xl font-serif leading-[1.08] tracking-tight text-foreground sm:text-5xl md:text-6xl lg:text-7xl">
+          <h1 className="text-3xl font-serif leading-[1.08] tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl">
             Go from{" "}
             <span className="relative">
               <span className="text-olive-600 dark:text-olive-400">
@@ -72,7 +72,7 @@ export default function Home() {
             <span className="text-olive-600 dark:text-olive-400">
               &ldquo;Developer-Ready&rdquo;
             </span>
-            <br className="hidden sm:block" />{" "}
+            <br className="hidden xl:block" />{" "}
             <span className="relative inline-block">
               in 2 hours.
               <svg
@@ -276,9 +276,14 @@ export default function Home() {
       {/* ── Build Pack Deliverables ──────────────────────────── */}
       <section
         id="deliverables"
-        className="py-24 sm:py-32 bg-background border-t border-border scroll-mt-20"
+        className="relative py-24 sm:py-32 border-t border-border scroll-mt-20 overflow-hidden"
       >
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        {/* Decorative blurs for glassmorphic effect */}
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="absolute top-1/4 -left-32 h-80 w-80 rounded-full bg-olive-400/20 blur-3xl dark:bg-olive-600/15" />
+          <div className="absolute bottom-1/4 -right-32 h-96 w-96 rounded-full bg-olive-300/15 blur-3xl dark:bg-olive-500/10" />
+        </div>
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           {/* Header — left-aligned, consistent with other sections */}
           <div className="max-w-2xl mb-16 sm:mb-20">
             <p className="text-sm font-medium uppercase tracking-widest text-olive-600 dark:text-olive-400 mb-4">
@@ -295,7 +300,13 @@ export default function Home() {
           </div>
 
           {/* Deliverables — ruled rows */}
-          <div className="divide-y divide-border">
+          <div
+            className="divide-y divide-foreground/[0.06] rounded-2xl border border-foreground/[0.08] bg-card/50 backdrop-blur-xl p-6 sm:p-8 shadow-sm"
+            style={{
+              boxShadow:
+                "inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.06), 0 4px 24px -4px rgba(0,0,0,0.08)",
+            }}
+          >
             {[
               {
                 icon: FileText,

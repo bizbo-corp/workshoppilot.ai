@@ -272,7 +272,11 @@ export function HeroVisual() {
       {/* ── Deliverables — top-aligned, right side ── */}
       <div
         data-trail-dest-container
-        className="grid absolute grid-cols-2 gap-1.5 w-[200px] right-[3%] top-1/2 -translate-y-1/2 sm:w-[240px] sm:gap-2 sm:right-[4%] md:w-[300px] md:gap-2.5 md:right-[8%] lg:w-[340px] lg:gap-3 lg:right-[12%]"
+        className="grid absolute grid-cols-2 gap-1.5 w-[220px] right-[1%] top-1/2 -translate-y-1/2 sm:w-[280px] sm:gap-2 sm:right-[2%] md:w-[340px] md:gap-2.5 md:right-[5%] lg:w-[400px] lg:gap-3 lg:right-[8%] rounded-2xl bg-card/30 backdrop-blur-xl p-3 sm:p-4"
+        style={{
+          boxShadow:
+            "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.06), 0 4px 24px -4px rgba(0,0,0,0.08)",
+        }}
       >
         {deliverables.map(
           ({ icon: Icon, label, rotation, delay, color }, i) => (
