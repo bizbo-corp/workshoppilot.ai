@@ -901,6 +901,14 @@ function ReactFlowCanvasInner({
     [hmwCards, updateHmwCard, setPendingHmwChipSelection],
   );
 
+  // Handle HMW card full statement edit
+  const handleHmwStatementChange = useCallback(
+    (id: string, value: string) => {
+      updateHmwCard(id, { fullStatement: value });
+    },
+    [updateHmwCard],
+  );
+
   // Handle persona avatar generation
   const handleGenerateAvatar = useCallback(
     async (templateId: string): Promise<string | null> => {
@@ -1127,6 +1135,7 @@ function ReactFlowCanvasInner({
         ...card,
         onFieldChange: handleHmwFieldChange,
         onChipSelect: handleHmwChipSelect,
+        onStatementChange: handleHmwStatementChange,
       },
       style: { width: 700 },
     }));

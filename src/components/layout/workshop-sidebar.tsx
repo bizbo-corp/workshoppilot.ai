@@ -193,7 +193,7 @@ export function WorkshopSidebar({ sessionId, workshopSteps, isPaywallLocked }: W
             const isComplete = status === 'complete';
             const isCurrent = step.order === currentStepNumber;
             const isAccessible = status !== 'not_started';
-            const isLocked = isPaywallLocked && step.order >= 7;
+            const isLocked = isPaywallLocked && step.order >= 8;
 
             const content = (
               <>

@@ -321,9 +321,9 @@ export async function advanceToNextStep(
       }
     }
 
-    // Paywall gate: Step 6 → Step 7 boundary
-    const STEP_6_ID = 'journey-mapping';
-    if (process.env.PAYWALL_ENABLED !== 'false' && currentStepId === STEP_6_ID) {
+    // Paywall gate: Step 7 → Step 8 boundary (after How Might We, before Ideation)
+    const STEP_7_ID = 'reframe';
+    if (process.env.PAYWALL_ENABLED !== 'false' && currentStepId === STEP_7_ID) {
       const gatUserId = await getUserId();
       if (!gatUserId) throw new Error('Authentication required');
 

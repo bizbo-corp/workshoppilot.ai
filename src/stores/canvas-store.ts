@@ -156,6 +156,8 @@ export type CanvasActions = {
   addSlotGroup: (group: SlotGroup) => void;
   removeSlotGroup: (groupId: string) => void;
   updateSlotGroupLabel: (groupId: string, label: string) => void;
+  updateSlotGroupMerge: (groupId: string, mergedImageUrl: string, mergePrompt?: string) => void;
+  clearSlotGroupMerge: (groupId: string) => void;
   setSlotGroups: (groups: SlotGroup[]) => void;
   setBrainRewritingMatrices: (matrices: BrainRewritingMatrix[]) => void;
   updateBrainRewritingCell: (slotId: string, cellId: string, updates: Partial<BrainRewritingCell>) => void;
@@ -842,6 +844,22 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
           set((state) => ({
             slotGroups: state.slotGroups.map((g) =>
               g.id === groupId ? { ...g, label } : g
+            ),
+            isDirty: true,
+          })),
+
+        updateSlotGroupMerge: (groupId, mergedImageUrl, mergePrompt) =>
+          set((state) => ({
+            slotGroups: state.slotGroups.map((g) =>
+              g.id === groupId ? { ...g, mergedImageUrl, ...(mergePrompt !== undefined ? { mergePrompt } : {}) } : g
+            ),
+            isDirty: true,
+          })),
+
+        clearSlotGroupMerge: (groupId) =>
+          set((state) => ({
+            slotGroups: state.slotGroups.map((g) =>
+              g.id === groupId ? { ...g, mergedImageUrl: undefined, mergePrompt: undefined } : g
             ),
             isDirty: true,
           })),

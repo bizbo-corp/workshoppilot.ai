@@ -4,7 +4,10 @@
  * PaywallOverlay
  *
  * Rendered by the StepPage Server Component when a user directly navigates
- * to Step 7-10 on a workshop that has not been unlocked and is not grandfathered.
+ * to Step 8-10 on a workshop that has not been unlocked and is not grandfathered.
+ *
+ * Emphasizes the visual/creative nature of the remaining steps to entice
+ * users who have completed the analytical phase (Steps 1-7).
  *
  * Fetches the current credit balance on mount to decide which CTA to show:
  * - balance > 0: "Use 1 Credit to Unlock" — calls consumeCredit() server action
@@ -16,10 +19,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, Lightbulb, Zap, FileText, Palette } from 'lucide-react';
+import { Sparkles, Palette, Zap, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getCredits, consumeCredit } from '@/actions/billing-actions';
+import { CreativeStepsPreview } from './creative-steps-preview';
 
 interface PaywallOverlayProps {
   sessionId: string;
@@ -29,24 +33,19 @@ interface PaywallOverlayProps {
 
 const VALUE_ITEMS = [
   {
-    icon: Lightbulb,
-    title: 'Reframe Your Challenge',
-    description: 'Transform insights into powerful "How Might We" statements',
-  },
-  {
     icon: Palette,
-    title: 'AI-Powered Ideation',
-    description: 'Generate and sketch ideas with Crazy 8s visual brainstorming',
+    title: 'Visual Ideation',
+    description: 'Mind maps and Crazy 8s rapid sketching',
   },
   {
     icon: Zap,
     title: 'Concept Development',
-    description: 'Develop your best ideas into concrete, testable concepts',
+    description: 'SWOT analysis, elevator pitches, and concept cards',
   },
   {
     icon: FileText,
     title: 'Build Pack Output',
-    description: 'Get a complete PRD, user stories, and tech specs for your dev team',
+    description: 'Complete PRD, user stories, and tech specs',
   },
 ];
 
@@ -83,11 +82,11 @@ export function PaywallOverlay({ sessionId, workshopId, stepNumber }: PaywallOve
   }
 
   function handleBuyCredits() {
-    router.push(`/pricing?return_to=${encodeURIComponent(`/workshop/${sessionId}/step/7`)}`);
+    router.push(`/pricing?return_to=${encodeURIComponent(`/workshop/${sessionId}/step/8`)}`);
   }
 
-  function handleBackToStep6() {
-    router.push(`/workshop/${sessionId}/step/6`);
+  function handleBackToStep7() {
+    router.push(`/workshop/${sessionId}/step/7`);
   }
 
   return (
@@ -97,24 +96,27 @@ export function PaywallOverlay({ sessionId, workshopId, stepNumber }: PaywallOve
 
       {/* Overlay card */}
       <div className="relative z-10 flex max-w-lg flex-col items-center gap-5 rounded-xl border bg-background/95 p-8 shadow-2xl backdrop-blur-sm">
-        {/* Lock icon */}
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-olive-100 dark:bg-olive-900/50">
-          <Lock className="h-8 w-8 text-olive-700 dark:text-olive-400" />
+        {/* Sparkle icon */}
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50">
+          <Sparkles className="h-8 w-8 text-amber-600 dark:text-amber-400" />
         </div>
 
         {/* Heading */}
         <div className="space-y-2 text-center">
-          <h2 className="text-xl font-semibold">Unlock Steps 7-10</h2>
+          <h2 className="text-xl font-semibold">Time to get creative</h2>
           <p className="text-sm text-muted-foreground">
-            You&apos;ve completed the discovery phase. Use a credit to unlock the creation phase and turn your insights into action.
+            You&apos;ve completed the research and analysis — amazing work! Now unlock the creative phase where you&apos;ll sketch, brainstorm, and develop your ideas visually.
           </p>
         </div>
 
+        {/* Visual preview of creative steps */}
+        <CreativeStepsPreview />
+
         {/* Value proposition */}
-        <div className="w-full grid grid-cols-2 gap-3">
+        <div className="w-full space-y-2">
           {VALUE_ITEMS.map((item) => (
-            <div key={item.title} className="flex items-start gap-2.5 rounded-lg border bg-muted/30 p-3">
-              <item.icon className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
+            <div key={item.title} className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3">
+              <item.icon className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
               <div>
                 <p className="text-xs font-medium leading-tight">{item.title}</p>
                 <p className="text-xs text-muted-foreground leading-tight mt-0.5">{item.description}</p>
@@ -163,12 +165,12 @@ export function PaywallOverlay({ sessionId, workshopId, stepNumber }: PaywallOve
           ) : null}
 
           <Button
-            onClick={handleBackToStep6}
+            onClick={handleBackToStep7}
             variant="ghost"
             className="w-full"
             size="default"
           >
-            Back to Step 6
+            Back to Step 7
           </Button>
         </div>
       </div>

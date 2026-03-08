@@ -9,6 +9,7 @@ import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 export type HmwCardNodeRendererData = HmwCardData & {
   onFieldChange?: (id: string, field: string, value: string) => void;
   onChipSelect?: (id: string, field: string, value: string) => void;
+  onStatementChange?: (id: string, value: string) => void;
 };
 
 export type HmwCardNodeType = Node<HmwCardNodeRendererData, 'hmwCard'>;
@@ -132,6 +133,52 @@ function SuggestionChips({
         Custom...
       </button>
     </div>
+  );
+}
+
+/**
+ * Editable complete statement — textarea that auto-sizes and syncs on blur.
+ */
+function EditableStatement({
+  value,
+  placeholder,
+  onBlur,
+}: {
+  value?: string;
+  placeholder: string;
+  onBlur: (value: string) => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (ref.current && ref.current !== document.activeElement) {
+      ref.current.value = value || '';
+      // Auto-resize
+      ref.current.style.height = 'auto';
+      ref.current.style.height = ref.current.scrollHeight + 'px';
+    }
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      className={cn(
+        'nodrag nopan w-full bg-transparent outline-none resize-none',
+        'text-sm leading-relaxed font-medium select-text cursor-text',
+        'placeholder:text-[var(--hmw-placeholder)]',
+        'focus:bg-card/60 focus:rounded-md focus:px-2 focus:py-1',
+      )}
+      style={{ color: SAGE.prefixText }}
+      placeholder={placeholder}
+      defaultValue={value || ''}
+      rows={2}
+      onBlur={(e) => onBlur(e.target.value)}
+      onInput={(e) => {
+        const el = e.currentTarget;
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+      }}
+    />
   );
 }
 
@@ -270,10 +317,12 @@ export const HmwCardNode = memo(
                         {hint}
                       </span>
                     </div>
-                    <SuggestionChips
-                      suggestions={fieldSuggestions}
-                      onSelect={(v) => data.onChipSelect?.(id, key, v)}
-                    />
+                    {!fieldValue && (
+                      <SuggestionChips
+                        suggestions={fieldSuggestions}
+                        onSelect={(v) => data.onChipSelect?.(id, key, v)}
+                      />
+                    )}
                   </>
                 )}
               </div>
@@ -296,9 +345,11 @@ export const HmwCardNode = memo(
                 Complete Statement
               </span>
             </div>
-            <p className="nodrag nopan text-sm leading-relaxed font-medium select-text cursor-text" style={{ color: SAGE.prefixText }}>
-              {assembledStatement || data.fullStatement || 'Complete all four fields above to see the assembled statement.'}
-            </p>
+            <EditableStatement
+              value={data.fullStatement || assembledStatement || ''}
+              placeholder="Complete all four fields above to see the assembled statement."
+              onBlur={(v) => data.onStatementChange?.(id, v)}
+            />
           </div>
         )}
 

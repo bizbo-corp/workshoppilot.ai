@@ -13,10 +13,11 @@ export interface BrainRewritingCell {
 }
 
 export interface BrainRewritingMatrix {
-  slotId: string;              // Source Crazy 8s slot ('slot-1', etc.)
-  sourceImageUrl?: string;     // Read-only copy of original sketch
+  slotId: string;              // Source Crazy 8s slot ('slot-1', etc.) — or first slot of a group
+  sourceImageUrl?: string;     // Read-only copy of original sketch (or merged group image)
   cells: BrainRewritingCell[]; // Always 3 cells
   includedInConcepts?: boolean; // Whether to carry forward into concept development (default true)
+  groupId?: string;            // When set, this matrix represents a merged group (not an individual slot)
 }
 
 export const BRAIN_REWRITING_CELL_ORDER: BrainRewritingCellId[] = [

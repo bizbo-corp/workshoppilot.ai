@@ -68,7 +68,7 @@ export function MobileStepper({ sessionId, workshopSteps, isPaywallLocked }: Mob
             const isComplete = status === 'complete';
             const isCurrent = step.order === currentStep;
             const isAccessible = status !== 'not_started';
-            const isLocked = isPaywallLocked && step.order >= 7;
+            const isLocked = isPaywallLocked && step.order >= 8;
 
             const content = (
               <>

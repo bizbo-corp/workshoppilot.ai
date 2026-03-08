@@ -586,7 +586,8 @@ export function assembleIdeationForConceptContext(
           return slot?.title || `Sketch ${id}`;
         })
         .join(', ');
-      lines.push(`- "${group.label}": combines ${memberTitles}`);
+      const mergeNote = group.mergedImageUrl ? ' [has merged sketch]' : '';
+      lines.push(`- "${group.label}": combines ${memberTitles}${mergeNote}`);
     }
   }
 

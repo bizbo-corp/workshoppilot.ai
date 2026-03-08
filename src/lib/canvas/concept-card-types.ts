@@ -7,6 +7,7 @@ export type ConceptCardData = {
   ideaSource: string;
   sketchSlotId?: string;       // Crazy 8s slot ID for traceability
   sketchImageUrl?: string;     // Vercel Blob URL from Crazy 8s slot
+  sketchGroupId?: string;      // Group ID for traceability (merged group)
   elevatorPitch: string;
   usp: string;
   swot: {
@@ -35,6 +36,7 @@ export function createDefaultConceptCard(
     ideaSource: partial?.ideaSource || '',
     sketchSlotId: partial?.sketchSlotId,
     sketchImageUrl: partial?.sketchImageUrl,
+    sketchGroupId: partial?.sketchGroupId,
     elevatorPitch: partial?.elevatorPitch || '',
     usp: partial?.usp || '',
     swot: partial?.swot || {

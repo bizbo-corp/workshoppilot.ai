@@ -628,6 +628,20 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
         updateSlotGroupLabel: (groupId, label) =>
           set((state) => ({ slotGroups: state.slotGroups.map((g) => g.id === groupId ? { ...g, label } : g) })),
 
+        updateSlotGroupMerge: (groupId, mergedImageUrl, mergePrompt) =>
+          set((state) => ({
+            slotGroups: state.slotGroups.map((g) =>
+              g.id === groupId ? { ...g, mergedImageUrl, ...(mergePrompt !== undefined ? { mergePrompt } : {}) } : g
+            ),
+          })),
+
+        clearSlotGroupMerge: (groupId) =>
+          set((state) => ({
+            slotGroups: state.slotGroups.map((g) =>
+              g.id === groupId ? { ...g, mergedImageUrl: undefined, mergePrompt: undefined } : g
+            ),
+          })),
+
         setSlotGroups: (groups) =>
           set(() => ({ slotGroups: groups })),
 

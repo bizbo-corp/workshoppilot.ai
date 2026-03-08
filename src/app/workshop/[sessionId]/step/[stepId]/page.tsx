@@ -91,12 +91,12 @@ export default async function StepPage({ params }: StepPageProps) {
     redirect(`/workshop/${sessionId}/step/1`);
   }
 
-  // Paywall enforcement: Steps 7-10 require credit or grandfathering
+  // Paywall enforcement: Steps 8-10 require credit or grandfathering
   // Must run after sequential enforcement so session.workshop data is already fetched.
-  // Steps 1-6 are completely unaffected — guard is stepNumber >= 7.
+  // Steps 1-7 are completely unaffected — guard is stepNumber >= 8.
   const PAYWALL_ENABLED = process.env.PAYWALL_ENABLED !== 'false';
 
-  if (PAYWALL_ENABLED && stepNumber >= 7) {
+  if (PAYWALL_ENABLED && stepNumber >= 8) {
     const workshop = session.workshop;
     const isUnlocked = workshop.creditConsumedAt !== null;
     const isGrandfathered =
@@ -485,14 +485,18 @@ export default async function StepPage({ params }: StepPageProps) {
       initialConceptCards = units.slice(0, 4).map((unit, index) => {
         if (unit.type === 'group') {
           // Group → one concept card with group label as ideaSource
+          // Use merged image if available, otherwise fall back to first slot's image
           const firstSlot = step8Crazy8sSlots?.find((s) => s.slotId === unit.group.slotIds[0]);
+          const groupData = unit.group as { id: string; label: string; slotIds: string[]; mergedImageUrl?: string };
+          const heroImage = groupData.mergedImageUrl || firstSlot?.imageUrl;
           const memberTitles = unit.group.slotIds
             .map((id) => step8Crazy8sSlots?.find((s) => s.slotId === id)?.title || id)
             .join(', ');
           return createDefaultConceptCard({
             ideaSource: `${unit.group.label} (${memberTitles})`,
             sketchSlotId: unit.group.slotIds[0],
-            sketchImageUrl: firstSlot?.imageUrl,
+            sketchImageUrl: heroImage,
+            sketchGroupId: unit.group.id,
             cardState: 'skeleton',
             cardIndex: index,
             position: { x: index * 720, y: 0 },
@@ -514,10 +518,21 @@ export default async function StepPage({ params }: StepPageProps) {
 
     // Repair existing concept cards: backfill missing images/titles and add missing cards
     if (initialConceptCards.length > 0 && step8SelectedSlotIds && step8SelectedSlotIds.length > 0) {
+      const step8SlotGroupsForBackfill = (step8Canvas?.slotGroups || []) as Array<{ id: string; label: string; slotIds: string[]; mergedImageUrl?: string }>;
+
       // Backfill images/titles on cards that are missing them (repairs AI-created cards)
       if (step8Crazy8sSlots) {
         initialConceptCards = initialConceptCards.map((card) => {
           if (card.sketchImageUrl) return card; // Already has image
+
+          // Check if this card belongs to a group with a merged image
+          if (card.sketchGroupId) {
+            const group = step8SlotGroupsForBackfill.find((g) => g.id === card.sketchGroupId);
+            if (group?.mergedImageUrl) {
+              return { ...card, sketchImageUrl: group.mergedImageUrl };
+            }
+          }
+
           // Try to find the matching slot: by slotId first, then by cardIndex position
           let slot = card.sketchSlotId
             ? step8Crazy8sSlots!.find((s) => s.slotId === card.sketchSlotId)

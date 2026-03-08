@@ -3,7 +3,7 @@
 import { memo, useState, useCallback } from 'react';
 import { type NodeProps, type Node } from '@xyflow/react';
 import { Crazy8sCanvas } from '@/components/workshop/crazy-8s-canvas';
-import { Zap, Save, Check, Loader2, SkipForward, CheckCircle2, Pencil, Link2, Unlink, X } from 'lucide-react';
+import { Zap, Save, Check, Loader2, SkipForward, CheckCircle2, Pencil, Link2, Unlink, X, Wand2, Image } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import type { SlotGroup } from '@/lib/canvas/crazy-8s-types';
@@ -22,6 +22,8 @@ export type Crazy8sGroupNodeData = {
   votingMode?: boolean;
   onVoteSelectionConfirm?: (selectedSlotIds: string[]) => void;
   onReVote?: () => void;
+  // Merge dialog trigger
+  onStartMerge?: (groupId: string) => void;
 };
 
 export type Crazy8sGroupNode = Node<Crazy8sGroupNodeData, 'crazy8sGroupNode'>;
@@ -244,6 +246,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                     return slot?.title || `Sketch ${id.replace('slot-', '')}`;
                   })
                   .join(' + ');
+                const hasMerged = !!group.mergedImageUrl;
                 return (
                   <span
                     key={group.id}
@@ -252,6 +255,19 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                     <Link2 className="h-3 w-3" />
                     {group.label}
                     <span className="text-blue-500 dark:text-blue-400">({memberTitles})</span>
+                    {/* Merge button */}
+                    <button
+                      onClick={() => data.onStartMerge?.(group.id)}
+                      className={cn(
+                        'ml-0.5 rounded-full p-0.5 transition-colors',
+                        hasMerged
+                          ? 'text-green-600 hover:bg-green-200 dark:text-green-400 dark:hover:bg-green-900/40'
+                          : 'text-amber-600 hover:bg-amber-200 dark:text-amber-400 dark:hover:bg-amber-900/40'
+                      )}
+                      title={hasMerged ? 'View/edit merged sketch' : 'Merge into single sketch'}
+                    >
+                      {hasMerged ? <Image className="h-3 w-3" /> : <Wand2 className="h-3 w-3" />}
+                    </button>
                     <button
                       onClick={() => handleUngroup(group.id)}
                       className="ml-0.5 rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"

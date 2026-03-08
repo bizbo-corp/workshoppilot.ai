@@ -17,6 +17,7 @@ import { usePanelLayout } from '@/hooks/use-panel-layout';
 import { saveCanvasState } from '@/actions/canvas-actions';
 import { createEmptyMatrix } from '@/lib/canvas/brain-rewriting-types';
 import { EMPTY_CRAZY_8S_SLOTS } from '@/lib/canvas/crazy-8s-types';
+import { MergeGroupDialog } from './merge-group-dialog';
 
 type IdeationPhase = 'mind-mapping' | 'crazy-eights' | 'idea-selection' | 'brain-rewriting';
 
@@ -122,6 +123,11 @@ export function IdeationSubStepContainer({
 
   // Idea selection local state
   const [localSelectedSlotIds, setLocalSelectedSlotIds] = React.useState<string[]>(initialResumeState.selectedSlotIds);
+
+  // Merge dialog state
+  const [mergeGroupId, setMergeGroupId] = React.useState<string | null>(null);
+  const slotGroups = useCanvasStore(state => state.slotGroups);
+  const mergeGroup = mergeGroupId ? slotGroups.find(g => g.id === mergeGroupId) : undefined;
 
   // Artifact confirmation state
   const [artifactConfirmed, setArtifactConfirmed] = React.useState(initialResumeState.artifactConfirmed);
@@ -254,6 +260,38 @@ export function IdeationSubStepContainer({
     setCurrentPhase('crazy-eights');
   }, []);
 
+  // Build brain rewriting matrices from selection units (groups = one matrix each)
+  const buildMatricesFromSelection = React.useCallback((selectedIds: string[], state: ReturnType<typeof canvasStoreApi.getState>) => {
+    type SelectionUnit = { type: 'slot'; slotId: string } | { type: 'group'; group: typeof state.slotGroups[number] };
+    const units: SelectionUnit[] = [];
+    const processedSlotIds = new Set<string>();
+
+    for (const slotId of selectedIds) {
+      if (processedSlotIds.has(slotId)) continue;
+      const group = state.slotGroups.find((g) => g.slotIds.includes(slotId));
+      if (group) {
+        units.push({ type: 'group', group });
+        group.slotIds.forEach((id) => processedSlotIds.add(id));
+      } else {
+        units.push({ type: 'slot', slotId });
+        processedSlotIds.add(slotId);
+      }
+    }
+
+    return units.map((unit) => {
+      if (unit.type === 'group') {
+        const firstSlot = state.crazy8sSlots.find((s) => s.slotId === unit.group.slotIds[0]);
+        const sourceImage = unit.group.mergedImageUrl || firstSlot?.imageUrl;
+        const matrix = createEmptyMatrix(unit.group.slotIds[0], sourceImage);
+        matrix.groupId = unit.group.id;
+        return matrix;
+      } else {
+        const slot = state.crazy8sSlots.find((s) => s.slotId === unit.slotId);
+        return createEmptyMatrix(unit.slotId, slot?.imageUrl);
+      }
+    });
+  }, [canvasStoreApi]);
+
   // Confirm selection from inline Crazy 8s node → brain rewriting (or skip)
   const handleConfirmSelection = React.useCallback(async (skip: boolean) => {
     if (!stepId) return;
@@ -268,18 +306,15 @@ export function IdeationSubStepContainer({
       setArtifactConfirmed(true);
       setExplicitlyConfirmed(true);
     } else {
-      // Initialize brain rewriting matrices for selected slots
-      const matrices = localSelectedSlotIds.map((slotId) => {
-        const slot = state.crazy8sSlots.find((s) => s.slotId === slotId);
-        return createEmptyMatrix(slotId, slot?.imageUrl);
-      });
+      // Initialize brain rewriting matrices — one per selection unit (group = one matrix)
+      const matrices = buildMatricesFromSelection(localSelectedSlotIds, state);
       state.setBrainRewritingMatrices(matrices);
 
       // Persist including new matrices
       await flushCanvasState();
       setCurrentPhase('brain-rewriting');
     }
-  }, [stepId, canvasStoreApi, localSelectedSlotIds, flushCanvasState]);
+  }, [stepId, canvasStoreApi, localSelectedSlotIds, flushCanvasState, buildMatricesFromSelection]);
 
   // Save Brain Rewriting: flush canvas and activate Next with shimmer
   const handleSaveBrainRewriting = React.useCallback(async () => {
@@ -314,17 +349,14 @@ export function IdeationSubStepContainer({
     const state = canvasStoreApi.getState();
     state.setSelectedSlotIds(selectedIds);
 
-    // Initialize brain rewriting matrices for selected slots
-    const matrices = selectedIds.map((slotId) => {
-      const slot = state.crazy8sSlots.find((s) => s.slotId === slotId);
-      return createEmptyMatrix(slotId, slot?.imageUrl);
-    });
+    // Initialize brain rewriting matrices — one per selection unit (group = one matrix)
+    const matrices = buildMatricesFromSelection(selectedIds, state);
     state.setBrainRewritingMatrices(matrices);
 
     // Persist including new matrices
     await flushCanvasState();
     setCurrentPhase('brain-rewriting');
-  }, [canvasStoreApi, flushCanvasState]);
+  }, [canvasStoreApi, flushCanvasState, buildMatricesFromSelection]);
 
   // Voting: reset and re-open voting (solo forgiveness)
   const handleReVote = React.useCallback(() => {
@@ -423,6 +455,19 @@ export function IdeationSubStepContainer({
             votingMode={isVotingActive}
             onVoteSelectionConfirm={handleVoteSelectionConfirm}
             onReVote={handleReVote}
+            // Merge dialog trigger
+            onStartMerge={setMergeGroupId}
+          />
+        )}
+
+        {/* Merge group dialog (portal — renders above everything) */}
+        {mergeGroup && (
+          <MergeGroupDialog
+            open={!!mergeGroupId}
+            onOpenChange={(open) => { if (!open) setMergeGroupId(null); }}
+            group={mergeGroup}
+            workshopId={workshopId}
+            onMerged={flushCanvasState}
           />
         )}
       </div>

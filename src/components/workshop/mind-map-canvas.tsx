@@ -89,6 +89,8 @@ export type MindMapCanvasProps = {
   votingMode?: boolean;
   onVoteSelectionConfirm?: (selectedSlotIds: string[]) => void;
   onReVote?: () => void;
+  // Merge dialog trigger
+  onStartMerge?: (groupId: string) => void;
 };
 
 export function MindMapCanvas(props: MindMapCanvasProps) {
@@ -119,6 +121,7 @@ function MindMapCanvasInner({
   votingMode,
   onVoteSelectionConfirm,
   onReVote,
+  onStartMerge,
 }: MindMapCanvasProps) {
   const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
@@ -134,6 +137,7 @@ function MindMapCanvasInner({
   const pendingFitView = useCanvasStore((state) => state.pendingFitView);
   const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
   const crazy8sSlots = useCanvasStore((state) => state.crazy8sSlots);
+  const slotGroups = useCanvasStore((state) => state.slotGroups);
 
   const { fitView } = useReactFlow();
 
@@ -390,9 +394,11 @@ function MindMapCanvasInner({
         votingMode,
         onVoteSelectionConfirm,
         onReVote,
+        // Merge dialog trigger
+        onStartMerge,
       },
     };
-  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing, votingMode, onVoteSelectionConfirm, onReVote]);
+  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing, votingMode, onVoteSelectionConfirm, onReVote, onStartMerge]);
 
   // Brain rewriting group nodes — positioned to the right of Crazy 8s
   const brainRewritingNodes = useMemo<Node[]>(() => {
@@ -403,6 +409,13 @@ function MindMapCanvasInner({
     return brainRewritingMatrices.map((matrix, index) => {
       const slot = crazy8sSlots.find((s) => s.slotId === matrix.slotId);
       const slotNumber = matrix.slotId.replace('slot-', '');
+
+      // Use group label when this matrix represents a merged group
+      let title = slot?.title || `Sketch ${slotNumber}`;
+      if (matrix.groupId) {
+        const group = slotGroups.find((g) => g.id === matrix.groupId);
+        if (group) title = group.label;
+      }
 
       return {
         id: `${BR_NODE_PREFIX}${matrix.slotId}`,
@@ -415,14 +428,14 @@ function MindMapCanvasInner({
           workshopId,
           stepId,
           matrix,
-          slotTitle: slot?.title || `Sketch ${slotNumber}`,
+          slotTitle: title,
           indexLabel: `${index + 1} of ${brainRewritingMatrices.length}`,
           onCellUpdate: onBrainRewritingCellUpdate,
           onToggleIncluded: onBrainRewritingToggleIncluded,
         },
       };
     });
-  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded]);
+  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, slotGroups, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded]);
 
   // Combined nodes array: mind map + optional crazy 8s + brain rewriting
   const rfNodes = useMemo(() => {

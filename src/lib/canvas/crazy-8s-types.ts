@@ -21,6 +21,8 @@ export interface SlotGroup {
   id: string;
   label: string;            // User-defined group name (e.g., "Home Page Design")
   slotIds: string[];        // Member slot IDs (e.g., ['slot-1', 'slot-3', 'slot-5'])
+  mergedImageUrl?: string;  // AI-generated consolidated sketch URL
+  mergePrompt?: string;     // User's custom merge instructions (stored for regeneration)
 }
 
 /**
