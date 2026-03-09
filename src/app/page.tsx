@@ -21,8 +21,7 @@ import { NewWorkshopButton } from "@/components/dialogs/new-workshop-dialog";
 import { GuidedPilotButton } from "@/components/dialogs/guided-pilot-dialog";
 import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/landing/footer";
-import { Globe } from "@/components/ui/globe";
-import { HeroVisual } from "@/components/landing-v3/hero-visual";
+import { LazyGlobe, LazyHeroVisual } from "@/components/landing-v3/lazy-hero-visuals";
 import { VideoPlayButton } from "@/components/landing-v3/video-dialog";
 
 export default function Home() {
@@ -51,7 +50,7 @@ export default function Home() {
 
         {/* Globe — bottom, matching root page.tsx */}
         <div className="absolute inset-x-0 bottom-[-500px] md:bottom-[-700px] xl:bottom-[-900px] mx-auto h-[800px] md:h-[1200px] xl:h-[1600px] w-full max-w-none opacity-60 dark:opacity-80 pointer-events-none select-none z-0">
-          <Globe className="h-full w-full" />
+          <LazyGlobe className="h-full w-full" />
         </div>
 
         <div className="relative mx-auto max-w-4xl text-center z-10">
@@ -124,7 +123,7 @@ export default function Home() {
         {/* Visual area — flows below CTA buttons */}
         <div className="relative w-full flex-1">
           {/* Social proof — glassmorphic pill, top-center of visual area */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 rounded-full bg-card/10 backdrop-blur-lg  px-6 py-2.5">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 rounded-full bg-card/85 px-6 py-2.5">
             <div className="flex gap-0.5">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
@@ -139,13 +138,13 @@ export default function Home() {
           </div>
 
           {/* Floating stickies + deliverables */}
-          <HeroVisual />
+          <LazyHeroVisual />
         </div>
 
         {/* Bottom-center "See what you get" — glassmorphic pill */}
         <a
           href="#deliverables"
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-2 rounded-full bg-card/50 backdrop-blur-xl border border-foreground/[0.08] px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-2 rounded-full bg-card/90 border border-foreground/[0.08] px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           style={{
             boxShadow:
               "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.08), 0 2px 8px -2px rgba(0,0,0,0.12)",
@@ -157,7 +156,7 @@ export default function Home() {
       </section>
 
       {/* ── Pain Points: "Why Now" ───────────────────────────── */}
-      <section className="py-24 sm:py-32 bg-background border-t border-border">
+      <section className="py-24 sm:py-32 bg-background border-t border-border" style={{ contentVisibility: "auto", containIntrinsicSize: "0 600px" }}>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Left column — sticky headline */}
@@ -214,7 +213,7 @@ export default function Home() {
       </section>
 
       {/* ── How It Works ─────────────────────────────────────── */}
-      <section className="py-24 sm:py-32 bg-background border-t border-border">
+      <section className="py-24 sm:py-32 bg-background border-t border-border" style={{ contentVisibility: "auto", containIntrinsicSize: "0 500px" }}>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="max-w-2xl mb-16 sm:mb-20">
@@ -302,7 +301,7 @@ export default function Home() {
 
           {/* Deliverables — ruled rows */}
           <div
-            className="divide-y divide-foreground/[0.06] rounded-2xl border border-foreground/[0.08] bg-card/50 backdrop-blur-xl p-6 sm:p-8 shadow-sm"
+            className="divide-y divide-foreground/[0.06] rounded-2xl border border-foreground/[0.08] bg-card/90 p-6 sm:p-8 shadow-sm"
             style={{
               boxShadow:
                 "inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.06), 0 4px 24px -4px rgba(0,0,0,0.08)",
@@ -393,7 +392,7 @@ export default function Home() {
       </section>
 
       {/* ── Value Comparison ──────────────────────────────────── */}
-      <section className="py-24 sm:py-32 bg-background border-t border-border">
+      <section className="py-24 sm:py-32 bg-background border-t border-border" style={{ contentVisibility: "auto", containIntrinsicSize: "0 600px" }}>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Left — headline + WorkshopPilot highlight */}
@@ -476,7 +475,7 @@ export default function Home() {
       </section>
 
       {/* ── Testimonials ─────────────────────────────────────── */}
-      <section className="py-24 sm:py-32 bg-background border-t border-border">
+      <section className="py-24 sm:py-32 bg-background border-t border-border" style={{ contentVisibility: "auto", containIntrinsicSize: "0 700px" }}>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="max-w-2xl mb-16 sm:mb-20">
@@ -608,6 +607,7 @@ export default function Home() {
       <section
         id="pricing"
         className="py-24 sm:py-32 bg-background border-t border-border scroll-mt-20"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "0 900px" }}
       >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           {/* Header */}
@@ -838,7 +838,7 @@ export default function Home() {
       </section>
 
       {/* ── Final CTA ────────────────────────────────────────── */}
-      <section className="py-24 sm:py-32 bg-background border-t border-border">
+      <section className="py-24 sm:py-32 bg-background border-t border-border" style={{ contentVisibility: "auto", containIntrinsicSize: "0 400px" }}>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left — headline */}

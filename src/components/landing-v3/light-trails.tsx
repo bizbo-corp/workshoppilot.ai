@@ -88,6 +88,41 @@ export function LightTrails() {
     if (!container) return;
 
     let resizeTimer: ReturnType<typeof setTimeout>;
+    let resumeTimer: ReturnType<typeof setTimeout>;
+    const timelines: gsap.core.Timeline[] = [];
+    const tweens: gsap.core.Tween[] = [];
+
+    // Pause/resume only our own timelines (not the global timeline)
+    function pauseAll() {
+      clearTimeout(resumeTimer);
+      timelines.forEach((tl) => tl.pause());
+      tweens.forEach((tw) => tw.pause());
+    }
+
+    function resumeWithDelay() {
+      clearTimeout(resumeTimer);
+      resumeTimer = setTimeout(() => {
+        timelines.forEach((tl) => tl.resume());
+        tweens.forEach((tw) => tw.resume());
+      }, 800);
+    }
+
+    // Pause when hero scrolls off-screen, resume with delay when visible again
+    const visibilityObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (timelines.length === 0) return;
+        if (entry.isIntersecting) {
+          resumeWithDelay();
+        } else {
+          pauseAll();
+        }
+      },
+      { threshold: 0 },
+    );
+    visibilityObserver.observe(container);
+
+    // Enable lag smoothing so GSAP doesn't try to catch up missed frames
+    gsap.ticker.lagSmoothing(500, 33);
 
     function buildPaths() {
       const svg = svgRef.current!;
@@ -150,13 +185,10 @@ export function LightTrails() {
 
         const base = makePath(g, d, "currentColor", 1, 0.1);
 
-        // 6 graduated tail layers: wide/faint → narrow/bright
-        const t1 = makePath(g, d, pal.glow, 10, 0.1, "url(#trailBlur)");
-        const t2 = makePath(g, d, pal.glow, 7, 0.15, "url(#trailBlur)");
-        const t3 = makePath(g, d, pal.faint, 5, 0.22, "url(#trailBlurLight)");
-        const t4 = makePath(g, d, pal.faint, 3.5, 0.35, "url(#trailBlurLight)");
-        const t5 = makePath(g, d, pal.core, 2.5, 0.5);
-        const t6 = makePath(g, d, pal.core, 1.5, 0.75);
+        // 3 tail layers (reduced from 6 to cut GPU blur work by ~60%)
+        const t1 = makePath(g, d, pal.glow, 8, 0.12, "url(#trailBlurLight)");
+        const t2 = makePath(g, d, pal.faint, 4, 0.3);
+        const t3 = makePath(g, d, pal.core, 1.5, 0.7);
 
         const dot = document.createElementNS(NS, "circle");
         dot.setAttribute("r", "3");
@@ -166,7 +198,7 @@ export function LightTrails() {
         g.appendChild(dot);
 
         svg.appendChild(g);
-        return { base, tails: [t1, t2, t3, t4, t5, t6], dot };
+        return { base, tails: [t1, t2, t3], dot };
       }
 
       const leftTrails = leftDs.map((d, i) =>
@@ -241,6 +273,10 @@ export function LightTrails() {
 
       /* ── GSAP — comet animation ──────────────────────── */
 
+      // Clear any previously collected timelines
+      timelines.length = 0;
+      tweens.length = 0;
+
       ctxRef.current = gsap.context(() => {
         function animateComet(
           trail: ReturnType<typeof renderTrail>,
@@ -251,15 +287,12 @@ export function LightTrails() {
           const basePath = trail.base as unknown as SVGPathElement;
           const len = basePath.getTotalLength();
 
-          // 6 graduated dash lengths: longest (outermost) → shortest (closest to dot)
+          // 3 graduated dash lengths: longest (outermost) → shortest (closest to dot)
           const maxTail = Math.min(len * 0.3, 130);
           const tailLengths = [
             maxTail, // t1 — outermost, faintest
-            maxTail * 0.8, // t2
-            maxTail * 0.6, // t3
-            maxTail * 0.42, // t4
-            maxTail * 0.25, // t5
-            maxTail * 0.12, // t6 — innermost, brightest
+            maxTail * 0.5, // t2 — mid
+            maxTail * 0.15, // t3 — innermost, brightest
           ];
 
           const layers = trail.tails.map((el, i) => ({
@@ -269,8 +302,6 @@ export function LightTrails() {
 
           layers.forEach(({ el, dashLen }) => {
             el.setAttribute("stroke-dasharray", `${dashLen} ${len + maxTail}`);
-            // Start hidden: offset = dashLen puts leading edge at 0,
-            // but dash extends backward off the path start
             el.setAttribute("stroke-dashoffset", String(dashLen));
           });
 
@@ -278,8 +309,7 @@ export function LightTrails() {
 
           const proxy = { head: 0 };
 
-          // Color mapping: which palette key each tail layer uses
-          const colorKeys: (keyof Palette)[] = ["glow", "glow", "faint", "faint", "core", "core"];
+          const colorKeys: (keyof Palette)[] = ["glow", "faint", "core"];
 
           function recolorTrail() {
             const pal = pickPalette();
@@ -289,7 +319,7 @@ export function LightTrails() {
             (trail.dot as unknown as SVGCircleElement).setAttribute("fill", pal.core);
           }
 
-          gsap
+          const tl = gsap
             .timeline({
               repeat: -1,
               delay: initialDelay,
@@ -297,20 +327,16 @@ export function LightTrails() {
               onRepeat: recolorTrail,
             })
             .to(proxy, {
-              // Travel past the end so the tail fully slides off
               head: len + maxTail,
               duration,
               ease: "power1.inOut",
               onUpdate() {
                 const hp = proxy.head;
 
-                // Update each tail layer — leading edge tracks the dot
-                // offset = dashLen - hp  →  leading edge at hp
                 layers.forEach(({ el, dashLen }) => {
                   el.setAttribute("stroke-dashoffset", String(dashLen - hp));
                 });
 
-                // Dot tracks leading edge, clamped to path
                 const dotPos = Math.max(0, Math.min(len, hp));
                 const pt = basePath.getPointAtLength(dotPos);
                 (trail.dot as unknown as SVGCircleElement).setAttribute(
@@ -327,6 +353,7 @@ export function LightTrails() {
                 );
               },
             });
+          timelines.push(tl);
         }
 
         leftTrails.forEach((trail, i) => {
@@ -346,27 +373,32 @@ export function LightTrails() {
         );
 
         // Prism breathe
-        gsap.to(svg.querySelector(".prism-outer"), {
-          scale: 1.2,
-          opacity: 0.6,
-          duration: 2.5,
-          ease: "sine.inOut",
-          yoyo: true,
-          repeat: -1,
-          transformOrigin: "center center",
-        });
+        tweens.push(
+          gsap.to(svg.querySelector(".prism-outer"), {
+            scale: 1.2,
+            opacity: 0.6,
+            duration: 2.5,
+            ease: "sine.inOut",
+            yoyo: true,
+            repeat: -1,
+            transformOrigin: "center center",
+          }),
+        );
 
-        gsap.to(svg.querySelector(".prism-core"), {
-          fillOpacity: 0.9,
-          duration: 1.8,
-          ease: "sine.inOut",
-          yoyo: true,
-          repeat: -1,
-        });
+        tweens.push(
+          gsap.to(svg.querySelector(".prism-core"), {
+            fillOpacity: 0.9,
+            duration: 1.8,
+            ease: "sine.inOut",
+            yoyo: true,
+            repeat: -1,
+          }),
+        );
       }, svg);
     }
 
-    const timer = setTimeout(buildPaths, 250);
+    // Delay initial build to keep main thread free for first interactions
+    const timer = setTimeout(buildPaths, 1500);
 
     const ro = new ResizeObserver(() => {
       clearTimeout(resizeTimer);
@@ -377,7 +409,9 @@ export function LightTrails() {
     return () => {
       clearTimeout(timer);
       clearTimeout(resizeTimer);
+      clearTimeout(resumeTimer);
       ro.disconnect();
+      visibilityObserver.disconnect();
       ctxRef.current?.revert();
     };
   }, []);
@@ -386,18 +420,15 @@ export function LightTrails() {
     <svg
       ref={svgRef}
       className="light-trails-svg absolute inset-0 w-full h-full pointer-events-none hidden lg:block"
-      style={{ zIndex: 1 }}
+      style={{ zIndex: 0 }}
       aria-hidden="true"
     >
       <defs>
-        <filter id="trailBlur">
-          <feGaussianBlur stdDeviation="4" />
-        </filter>
         <filter id="trailBlurLight">
           <feGaussianBlur stdDeviation="2" />
         </filter>
         <filter id="dotGlow">
-          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feGaussianBlur stdDeviation="3" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />

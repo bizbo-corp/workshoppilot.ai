@@ -1,41 +1,53 @@
 import PptxGenJS from 'pptxgenjs';
+import fs from 'fs';
+import path from 'path';
 import type { AllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifacts';
 import type { PresentationSummary } from '@/lib/ai/prompts/presentation-generation';
 
-// ── Design tokens ──────────────────────────────────────────────────────
+// ── Design tokens (matching Workshop Output Template.pptx) ─────────────
 const C = {
-  navy: '1B2A4A',
-  darkNavy: '0F1B33',
+  bg: 'EEEEEE',        // Light gray slide background (lt2 from template)
+  black: '000000',      // Title text (dk1)
+  darkGray: '595959',   // Body/secondary text (dk2)
   white: 'FFFFFF',
-  lightGray: 'F5F6FA',
-  mediumGray: 'E2E4EB',
-  textGray: '6B7280',
-  accent: '3B82F6',
-  green: '10B981',
-  red: 'EF4444',
-  amber: 'F59E0B',
+  imageBorder: 'D6D7D2', // Warm gray border (used on validate slide)
 };
 
-const F = { title: 'Calibri', body: 'Calibri' };
+// Template uses EB Garamond Medium for titles, Arial for body
+const F = { title: 'EB Garamond', body: 'Arial' };
+
+// Layout positions from template (in inches, converted from EMU)
+const L = {
+  titleX: 0.34,       // 311,700 EMU
+  titleY: 0.49,       // 445,025 EMU
+  titleW: 9.32,       // 8,520,600 EMU
+  titleH: 0.63,       // 572,700 EMU
+  bodyX: 0.34,
+  bodyY: 1.26,        // 1,152,475 EMU
+  bodyW: 9.32,
+  bodyH: 3.74,        // 3,416,400 EMU
+  slideNumX: 9.26,    // 8,472,458 EMU
+  slideNumY: 5.10,    // 4,663,217 EMU
+  slideNumW: 0.60,
+  slideNumH: 0.43,
+};
 
 let slideNum = 0;
-const dateStr = () => new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-/** Step key → display title */
+/** Step key -> display title (matching template slide titles) */
 const STEP_TITLES: Record<string, string> = {
-  challenge: 'Challenge Definition',
-  stakeholderMapping: 'Stakeholder Map',
+  challenge: 'Challenge',
+  stakeholderMapping: 'Stakeholders',
   userResearch: 'User Research',
-  senseMaking: 'Research Sense Making',
+  senseMaking: 'Research Sense-making',
   persona: 'Persona Development',
-  journeyMapping: 'Customer Journey Map',
-  reframe: 'Reframed Challenge',
+  journeyMapping: 'Journey Mapping',
+  reframe: 'Reframing Challenge',
   ideation: 'Ideation',
   concept: 'Concept Development',
-  validate: 'Validation & Synthesis',
+  validate: 'Validate',
 };
 
-/** Step ordering */
 const STEP_ORDER = [
   'challenge',
   'stakeholderMapping',
@@ -49,9 +61,19 @@ const STEP_ORDER = [
   'validate',
 ];
 
+// Load logo at runtime from public directory (avoids inline base64 truncation)
+let logoBase64: string | null = null;
+try {
+  const logoPath = path.join(process.cwd(), 'public', 'workshoppilot-logo.png');
+  const logoBuffer = fs.readFileSync(logoPath);
+  logoBase64 = `image/png;base64,${logoBuffer.toString('base64')}`;
+} catch {
+  // Logo not found — will fall back to text placeholder
+}
+
 /**
- * Build a PPTX buffer from captured canvas images + text summaries.
- * Each step is an image slide with a brief summary overlay.
+ * Build a PPTX buffer matching the Workshop Output Template design.
+ * Clean slides: #EEEEEE bg, EB Garamond titles, image in body area.
  */
 export async function buildPresentation(
   stepImages: Record<string, string>,
@@ -62,30 +84,33 @@ export async function buildPresentation(
   const pptx = new PptxGenJS();
   pptx.author = 'WorkshopPilot.ai';
   pptx.company = 'WorkshopPilot.ai';
-  pptx.subject = `${conceptName} — Stakeholder Presentation`;
-  pptx.title = `${conceptName} — Stakeholder Presentation`;
+  pptx.subject = `${conceptName} — Design Thinking Workshop`;
+  pptx.title = conceptName;
   pptx.layout = 'LAYOUT_16x9';
 
   slideNum = 0;
 
   // 1. Title slide
-  addTitleSlide(pptx, conceptName, summary.subtitle);
+  addTitleSlide(pptx, conceptName);
 
-  // 2. Executive summary
-  addExecSummarySlide(pptx, summary.executiveSummary, summaries);
+  // 2. Executive summary (text-only)
+  addExecSummarySlide(pptx, summary.executiveSummary);
 
-  // 3-N. Step slides — image-based, only for steps with captured images
+  // 3. Challenge slide (text-only — HMW statement)
+  if (summaries.challenge) {
+    addChallengeSlide(pptx, summaries.challenge);
+  }
+
+  // 4-12. Step slides — image-based, only for steps with captured images
+  // Skip challenge since it's already a text slide
   for (const stepKey of STEP_ORDER) {
+    if (stepKey === 'challenge') continue;
     const imageData = stepImages[stepKey];
     if (!imageData) continue;
 
     const title = STEP_TITLES[stepKey] || stepKey;
-    const stepSummary = summaries[stepKey] || '';
-    addImageSlide(pptx, title, imageData, stepSummary);
+    addImageSlide(pptx, title, imageData);
   }
-
-  // Thank you
-  addThankYouSlide(pptx, conceptName);
 
   const output = await pptx.write({ outputType: 'nodebuffer' });
   return output as Buffer;
@@ -93,8 +118,6 @@ export async function buildPresentation(
 
 /**
  * Legacy build function for backward compatibility.
- * Accepts AllWorkshopArtifacts + PresentationSummary (the old signature).
- * Falls back to text-only slides when no images are provided.
  */
 export async function buildPresentationLegacy(
   artifacts: AllWorkshopArtifacts,
@@ -104,156 +127,216 @@ export async function buildPresentationLegacy(
   const concepts = (concept?.concepts as Array<Record<string, unknown>>) || [];
   const primaryConcept = concepts[0] || concept || {};
   const conceptName = (primaryConcept.name as string) || (primaryConcept.conceptName as string) || (concept?.name as string) || 'Product';
-
-  // Generate text summaries from artifacts
   const summaries = generateSummariesFromArtifacts(artifacts);
-
-  // No images — build with just summaries (text-only fallback)
   return buildPresentation({}, summaries, conceptName, summary);
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────
-function footer(slide: PptxGenJS.Slide) {
+function addSlideNumber(slide: PptxGenJS.Slide) {
   slideNum++;
-  slide.addText(`Generated by WorkshopPilot.ai  |  ${dateStr()}`, { x: 0.5, y: 5.15, w: 7, fontSize: 7, color: C.textGray, fontFace: F.body });
-  slide.addText(`${slideNum}`, { x: 8.5, y: 5.15, w: 1, fontSize: 7, color: C.textGray, fontFace: F.body, align: 'right' });
+  slide.addText(`${slideNum}`, {
+    x: L.slideNumX,
+    y: L.slideNumY,
+    w: L.slideNumW,
+    h: L.slideNumH,
+    fontSize: 10,
+    fontFace: F.body,
+    color: C.darkGray,
+    align: 'right',
+  });
 }
 
-// ── Title ──────────────────────────────────────────────────────────────
-function addTitleSlide(pptx: PptxGenJS, name: string, subtitle: string) {
+// ── Title Slide ────────────────────────────────────────────────────────
+// Template: centered title (52pt), subtitle below, logo bottom-left
+function addTitleSlide(pptx: PptxGenJS, name: string) {
   const slide = pptx.addSlide();
-  slide.background = { color: C.navy };
-  slide.addText(name, { x: 1, y: 1.4, w: 8, fontSize: 36, fontFace: F.title, color: C.white, bold: true });
-  slide.addShape(pptx.ShapeType.rect, { x: 1, y: 2.3, w: 2, h: 0.04, fill: { color: C.accent } });
-  slide.addText(subtitle, { x: 1, y: 2.55, w: 8, fontSize: 16, fontFace: F.body, color: C.mediumGray });
-  slide.addText(dateStr(), { x: 1, y: 3.6, w: 8, fontSize: 13, fontFace: F.body, color: C.textGray });
+  slide.background = { color: C.bg };
+
+  // Center title
+  slide.addText(name, {
+    x: L.titleX,
+    y: 0.81,    // 744,575 EMU
+    w: L.titleW,
+    h: 2.24,    // 2,052,600 EMU
+    fontSize: 52,
+    fontFace: F.title,
+    color: C.black,
+    align: 'center',
+    valign: 'bottom',
+  });
+
+  // Subtitle
+  slide.addText('Design Thinking Workshop', {
+    x: L.titleX,
+    y: 3.10,    // 2,834,125 EMU
+    w: L.titleW,
+    h: 0.87,    // 792,600 EMU
+    fontSize: 28,
+    fontFace: F.body,
+    color: C.darkGray,
+    align: 'center',
+    valign: 'top',
+  });
+
+  // WorkshopPilot logo bottom-left
+  if (logoBase64) {
+    slide.addImage({
+      data: logoBase64,
+      x: 0.40,
+      y: 4.68,
+      w: 2.35,
+      h: 0.38,
+    });
+  } else {
+    slide.addText('WorkshopPilot.ai', {
+      x: 0.40,
+      y: 4.68,
+      w: 2.35,
+      h: 0.38,
+      fontSize: 14,
+      fontFace: F.body,
+      color: C.darkGray,
+    });
+  }
+
+  addSlideNumber(slide);
 }
 
 // ── Executive Summary ──────────────────────────────────────────────────
-function addExecSummarySlide(pptx: PptxGenJS, summaryText: string, summaries: Record<string, string>) {
+// Template: title + body text, no images, no fact cards
+function addExecSummarySlide(pptx: PptxGenJS, summaryText: string) {
   const slide = pptx.addSlide();
-  slide.background = { color: C.white };
-  slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 10, h: 1.1, fill: { color: C.navy } });
-  slide.addText('Executive Summary', { x: 0.5, y: 0.15, w: 9, fontSize: 22, fontFace: F.title, color: C.white, bold: true });
+  slide.background = { color: C.bg };
 
-  slide.addText(summaryText, { x: 0.7, y: 1.4, w: 8.6, fontSize: 14, fontFace: F.body, color: C.darkNavy, lineSpacingMultiple: 1.4 });
-
-  // Key facts from summaries
-  const facts: Array<{ label: string; value: string }> = [];
-  if (summaries.challenge) facts.push({ label: 'Challenge', value: summaries.challenge.slice(0, 80) });
-  if (summaries.persona) facts.push({ label: 'Persona', value: summaries.persona.slice(0, 80) });
-  if (summaries.concept) facts.push({ label: 'Solution', value: summaries.concept.slice(0, 80) });
-
-  if (facts.length > 0) {
-    const factY = 3.2;
-    const factW = 8.6 / facts.length;
-    facts.forEach((f, i) => {
-      const fx = 0.7 + i * factW;
-      slide.addShape(pptx.ShapeType.rect, { x: fx, y: factY, w: factW - 0.15, h: 1.2, fill: { color: C.lightGray }, rectRadius: 0.08 });
-      slide.addText(f.label, { x: fx + 0.15, y: factY + 0.1, w: factW - 0.4, fontSize: 9, fontFace: F.title, color: C.accent, bold: true });
-      slide.addText(f.value, { x: fx + 0.15, y: factY + 0.4, w: factW - 0.4, fontSize: 10, fontFace: F.body, color: C.darkNavy });
-    });
-  }
-
-  footer(slide);
-}
-
-// ── Image-based step slide ─────────────────────────────────────────────
-function addImageSlide(pptx: PptxGenJS, title: string, imageData: string, stepSummary: string) {
-  const slide = pptx.addSlide();
-  slide.background = { color: C.white };
-
-  // Full-bleed image (10" x 5.625" = 16:9)
-  slide.addImage({
-    data: imageData,
-    x: 0,
-    y: 0,
-    w: 10,
-    h: 5.625,
+  // Title
+  slide.addText('Executive Summary', {
+    x: L.titleX,
+    y: L.titleY,
+    w: L.titleW,
+    h: L.titleH,
+    fontSize: 28,
+    fontFace: F.title,
+    color: C.black,
+    valign: 'top',
   });
 
-  // Semi-transparent summary bar at bottom (if summary exists)
-  if (stepSummary) {
-    slide.addShape(pptx.ShapeType.rect, {
-      x: 0,
-      y: 4.6,
-      w: 10,
-      h: 1.03,
-      fill: { color: C.navy, transparency: 15 },
-    });
-    slide.addText(title, {
-      x: 0.3,
-      y: 4.65,
-      w: 9.4,
-      fontSize: 11,
-      fontFace: F.title,
-      color: C.white,
-      bold: true,
-    });
-    slide.addText(stepSummary, {
-      x: 0.3,
-      y: 4.95,
-      w: 9.4,
-      fontSize: 8,
-      fontFace: F.body,
-      color: C.mediumGray,
-    });
-  }
+  // Body text
+  slide.addText(summaryText, {
+    x: L.bodyX,
+    y: L.bodyY,
+    w: L.bodyW,
+    h: L.bodyH,
+    fontSize: 14,
+    fontFace: F.body,
+    color: C.darkGray,
+    lineSpacingMultiple: 1.15,
+    valign: 'top',
+  });
+
+  addSlideNumber(slide);
 }
 
-// ── Thank You ──────────────────────────────────────────────────────────
-function addThankYouSlide(pptx: PptxGenJS, conceptName: string) {
+// ── Challenge Slide (text-only) ─────────────────────────────────────────
+function addChallengeSlide(pptx: PptxGenJS, challengeText: string) {
   const slide = pptx.addSlide();
-  slide.background = { color: C.navy };
-  slide.addText('Thank You', { x: 1, y: 1.6, w: 8, fontSize: 36, fontFace: F.title, color: C.white, bold: true, align: 'center' });
-  slide.addText(conceptName, { x: 1, y: 2.5, w: 8, fontSize: 18, fontFace: F.body, color: C.mediumGray, align: 'center' });
-  slide.addText('Generated by WorkshopPilot.ai', { x: 1, y: 3.8, w: 8, fontSize: 11, fontFace: F.body, color: C.textGray, align: 'center' });
+  slide.background = { color: C.bg };
+
+  slide.addText('Challenge', {
+    x: L.titleX,
+    y: L.titleY,
+    w: L.titleW,
+    h: L.titleH,
+    fontSize: 28,
+    fontFace: F.title,
+    color: C.black,
+    valign: 'top',
+  });
+
+  slide.addText(challengeText, {
+    x: L.bodyX,
+    y: L.bodyY,
+    w: L.bodyW,
+    h: L.bodyH,
+    fontSize: 18,
+    fontFace: F.body,
+    color: C.black,
+    valign: 'top',
+    lineSpacingMultiple: 1.15,
+  });
+
+  addSlideNumber(slide);
 }
 
-// ── Summary generation from artifacts (for exec summary facts) ─────────
+// ── Image Slide ─────────────────────────────────────────────────────────
+// Template: title at top + large centered image in body area. No overlays.
+function addImageSlide(pptx: PptxGenJS, title: string, imageData: string) {
+  const slide = pptx.addSlide();
+  slide.background = { color: C.bg };
+
+  // Title
+  slide.addText(title, {
+    x: L.titleX,
+    y: L.titleY,
+    w: L.titleW,
+    h: L.titleH,
+    fontSize: 28,
+    fontFace: F.title,
+    color: C.black,
+    valign: 'top',
+  });
+
+  // Image centered in body area
+  // Template images vary in size but typically fill ~9.2" wide x 4.17" tall
+  // and are centered horizontally, positioned just below the title
+  const imgW = 9.18;   // ~8,396,308 EMU (from user research slide)
+  const imgH = 4.17;   // ~3,820,976 EMU (consistent across template)
+  const imgX = (10 - imgW) / 2; // Center horizontally
+  const imgY = 1.15;   // Just below title
+
+  slide.addImage({
+    data: imageData,
+    x: imgX,
+    y: imgY,
+    w: imgW,
+    h: imgH,
+  });
+
+  addSlideNumber(slide);
+}
+
+// ── Summary generation from artifacts ──────────────────────────────────
 export function generateSummariesFromArtifacts(artifacts: AllWorkshopArtifacts): Record<string, string> {
   const summaries: Record<string, string> = {};
 
-  // Challenge
   if (artifacts.challenge) {
     const c = artifacts.challenge as Record<string, unknown>;
-    summaries.challenge = (c.problemStatement as string) || (c.hmwStatement as string) || '';
+    // Use HMW statement for challenge slide (matches template)
+    summaries.challenge = (c.hmwStatement as string) || (c.problemStatement as string) || '';
   }
 
-  // Stakeholder Mapping
   if (artifacts.stakeholderMapping) {
     const s = artifacts.stakeholderMapping as Record<string, unknown>;
     const stakeholders = (s.stakeholders as Array<{ name: string }>) || [];
     summaries.stakeholderMapping = `${stakeholders.length} stakeholders identified across core, direct, and indirect rings`;
   }
 
-  // User Research
   if (artifacts.userResearch) {
     const u = artifacts.userResearch as Record<string, unknown>;
     const insights = (u.insights as Array<{ finding: string }>) || [];
-    summaries.userResearch = insights.length > 0
-      ? `${insights.length} key insights from user research`
-      : '';
+    summaries.userResearch = insights.length > 0 ? `${insights.length} key insights from user research` : '';
   }
 
-  // Sense Making
   if (artifacts.senseMaking) {
     const sm = artifacts.senseMaking as Record<string, unknown>;
     const themes = (sm.themes as Array<{ name: string }>) || [];
-    summaries.senseMaking = themes.length > 0
-      ? `Key themes: ${themes.slice(0, 3).map(t => t.name).join(', ')}`
-      : '';
+    summaries.senseMaking = themes.length > 0 ? `Key themes: ${themes.slice(0, 3).map(t => t.name).join(', ')}` : '';
   }
 
-  // Persona
   if (artifacts.persona) {
     const p = artifacts.persona as Record<string, unknown>;
-    const name = (p.name as string) || '';
-    const role = (p.role as string) || '';
-    summaries.persona = [name, role].filter(Boolean).join(' — ');
+    summaries.persona = [p.name as string, p.role as string].filter(Boolean).join(' — ');
   }
 
-  // Journey Mapping
   if (artifacts.journeyMapping) {
     const j = artifacts.journeyMapping as Record<string, unknown>;
     const stages = (j.stages as Array<Record<string, unknown>>) || [];
@@ -263,14 +346,12 @@ export function generateSummariesFromArtifacts(artifacts: AllWorkshopArtifacts):
       : `${stages.length} journey stages mapped`;
   }
 
-  // Reframe
   if (artifacts.reframe) {
     const r = artifacts.reframe as Record<string, unknown>;
     const hmwStatements = (r.hmwStatements as Array<{ fullStatement?: string }>) || [];
     summaries.reframe = hmwStatements[0]?.fullStatement?.slice(0, 120) || '';
   }
 
-  // Ideation
   if (artifacts.ideation) {
     const id = artifacts.ideation as Record<string, unknown>;
     const clusters = (id.clusters as Array<{ theme: string; ideas: unknown[] }>) || [];
@@ -278,7 +359,6 @@ export function generateSummariesFromArtifacts(artifacts: AllWorkshopArtifacts):
     summaries.ideation = `${totalIdeas} ideas across ${clusters.length} themes`;
   }
 
-  // Concept
   if (artifacts.concept) {
     const c = artifacts.concept as Record<string, unknown>;
     const concepts = (c.concepts as Array<Record<string, unknown>>) || [];
@@ -288,7 +368,6 @@ export function generateSummariesFromArtifacts(artifacts: AllWorkshopArtifacts):
     summaries.concept = pitch ? `${name}: ${pitch.slice(0, 100)}` : name;
   }
 
-  // Validate
   if (artifacts.validate) {
     const v = artifacts.validate as Record<string, unknown>;
     const confidence = v.confidenceAssessment as Record<string, unknown> | undefined;

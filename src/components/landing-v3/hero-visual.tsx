@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import {
   Code2,
   FileText,
@@ -33,7 +34,7 @@ function StickyNote({
   return (
     <div
       data-trail-source={trailIndex}
-      className="group/note absolute pointer-events-auto rounded-xl bg-card/20 backdrop-blur-xl border border-white/[0.08] w-[90px] h-[90px] flex items-center justify-center will-change-transform transition-all duration-300 ease-out hover:bg-amber-100/80 hover:dark:bg-amber-200/80 hover:rounded-md cursor-default"
+      className="group/note absolute pointer-events-auto rounded-xl bg-card/80 border border-white/[0.08] w-[90px] h-[90px] flex items-center justify-center transition-all duration-300 ease-out hover:bg-amber-100/80 hover:dark:bg-amber-200/80 hover:rounded-md cursor-default"
       /* glassmorphic lighting is applied via style.boxShadow below */
       style={
         {
@@ -64,6 +65,7 @@ function UserCursor({
   drift,
   delay,
   hasIcon,
+  playState = "running",
 }: {
   name: string;
   color: string;
@@ -72,14 +74,16 @@ function UserCursor({
   drift: string;
   delay: string;
   hasIcon?: boolean;
+  playState?: string;
 }) {
   return (
     <div
-      className="absolute will-change-transform z-[4]"
+      className="absolute z-[4]"
       style={{
         left,
         top,
         animation: `${drift} ease-in-out ${delay} infinite`,
+        animationPlayState: playState,
       }}
     >
       <svg
@@ -158,8 +162,41 @@ const deliverables = [
 /* ─── Main Component ────────────────────────────────────────── */
 
 export function HeroVisual() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [animating, setAnimating] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    // Start animations after a delay on mount, pause when scrolled off-screen
+    let resumeTimer: ReturnType<typeof setTimeout>;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        clearTimeout(resumeTimer);
+        if (entry.isIntersecting) {
+          // Resume CSS animations with a short delay to avoid competing with interactions
+          resumeTimer = setTimeout(() => setAnimating(true), 800);
+        } else {
+          setAnimating(false);
+        }
+      },
+      { threshold: 0 },
+    );
+    observer.observe(el);
+
+    return () => {
+      clearTimeout(resumeTimer);
+      observer.disconnect();
+    };
+  }, []);
+
+  const playState = animating ? "running" : "paused";
+
   return (
     <div
+      ref={containerRef}
       className="absolute inset-0 pointer-events-none overflow-hidden bg-red-500/0"
       aria-hidden="true"
     >
@@ -167,7 +204,7 @@ export function HeroVisual() {
       <LightTrails />
 
       {/* ── Stickies — start near top, spread downward ── */}
-      <div className="absolute inset-0 scale-[0.55] sm:scale-[0.65] md:scale-[0.75] lg:scale-[0.85] xl:scale-100">
+      <div className="absolute inset-0 z-[1] scale-[0.55] sm:scale-[0.65] md:scale-[0.75] lg:scale-[0.85] xl:scale-100">
         <StickyNote
           text="Pain Point"
           left="12%"
@@ -232,6 +269,7 @@ export function HeroVisual() {
             top="14%"
             drift="cursor-drift-1 9s"
             delay="0s"
+            playState={playState}
           />
           <UserCursor
             name="Facilitator"
@@ -241,6 +279,7 @@ export function HeroVisual() {
             drift="cursor-drift-2 11s"
             delay="2s"
             hasIcon
+            playState={playState}
           />
           <UserCursor
             name="Product"
@@ -249,6 +288,7 @@ export function HeroVisual() {
             top="38%"
             drift="cursor-drift-3 10s"
             delay="4s"
+            playState={playState}
           />
           <UserCursor
             name="Operations"
@@ -257,6 +297,7 @@ export function HeroVisual() {
             top="56%"
             drift="cursor-drift-1 12s"
             delay="6s"
+            playState={playState}
           />
           <UserCursor
             name="Founder"
@@ -265,6 +306,7 @@ export function HeroVisual() {
             top="46%"
             drift="cursor-drift-3 10s"
             delay="3s"
+            playState={playState}
           />
         </div>
       </div>
@@ -272,7 +314,7 @@ export function HeroVisual() {
       {/* ── Deliverables — top-aligned, right side ── */}
       <div
         data-trail-dest-container
-        className="grid absolute grid-cols-2 gap-1.5 w-[220px] right-[1%] top-1/2 -translate-y-1/2 sm:w-[280px] sm:gap-2 sm:right-[2%] md:w-[340px] md:gap-2.5 md:right-[5%] lg:w-[400px] lg:gap-3 lg:right-[8%] rounded-2xl bg-card/30 backdrop-blur-xl p-3 sm:p-4"
+        className="grid absolute z-[1] grid-cols-2 gap-1.5 w-[220px] right-[1%] top-1/2 -translate-y-1/2 sm:w-[280px] sm:gap-2 sm:right-[2%] md:w-[340px] md:gap-2.5 md:right-[5%] lg:w-[400px] lg:gap-3 lg:right-[8%] rounded-2xl bg-card/85 p-3 sm:p-4"
         style={{
           boxShadow:
             "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.06), 0 4px 24px -4px rgba(0,0,0,0.08)",
@@ -283,12 +325,13 @@ export function HeroVisual() {
             <div
               key={label}
               data-trail-dest={i}
-              className="rounded-xl bg-card/50 backdrop-blur-xl border border-foreground/[0.08] px-2 py-1.5 sm:px-2.5 sm:py-2 md:px-3 md:py-2.5 will-change-transform flex items-center gap-1.5 sm:gap-2 md:gap-2.5"
+              className="rounded-xl bg-card/90 border border-foreground/[0.08] px-2 py-1.5 sm:px-2.5 sm:py-2 md:px-3 md:py-2.5 flex items-center gap-1.5 sm:gap-2 md:gap-2.5"
               style={
                 {
                   transform: `rotate(${rotation})`,
                   "--note-rotation": rotation,
                   animation: `note-float 6s ease-in-out ${delay} infinite`,
+                  animationPlayState: playState,
                   boxShadow:
                     "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.08), 0 2px 8px -2px rgba(0,0,0,0.12)",
                 } as React.CSSProperties

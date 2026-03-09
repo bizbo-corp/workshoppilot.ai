@@ -6,12 +6,15 @@ import { useTheme } from "next-themes";
 
 export function Globe({ className }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     let phi = 0;
     let width = 0;
     let height = 0;
+    let isVisible = true;
+    let globe: ReturnType<typeof createGlobe> | null = null;
 
     const onResize = () => {
       if (canvasRef.current) {
@@ -29,44 +32,45 @@ export function Globe({ className }: { className?: string }) {
 
     const isDark = resolvedTheme === "dark";
 
-    // Colors matching the "olive" theme
-    // Olive-500: #8b9679 -> [0.545, 0.588, 0.474]
-    // Dark bg (Neutral-Olive-950): #293021 -> [0.16, 0.188, 0.13]
-    // Light bg (Neutral-Olive-100): #ededea -> [0.93, 0.93, 0.917]
+    // Use lower DPR to reduce canvas rendering cost
+    const dpr = Math.min(window.devicePixelRatio, 1.5);
 
-    const globe = createGlobe(canvasRef.current, {
-      devicePixelRatio: 2,
-      width: width * 2,
-      height: height * 2,
+    const canvas = canvasRef.current;
+
+    // Delay globe creation to keep main thread free for initial interactions
+    const initTimer = setTimeout(() => {
+    globe = createGlobe(canvas, {
+      devicePixelRatio: dpr,
+      width: width * dpr,
+      height: height * dpr,
       phi: 0,
       theta: -0.3,
-      offset: [0, height * 2 * 0.2], // Shift down 20%
+      offset: [0, height * dpr * 0.2],
       dark: isDark ? 1 : 0,
       diffuse: 0.8,
-      mapSamples: 16000,
-      mapBrightness: 12, // Higher brightness for dots
+      mapSamples: 10000,
+      mapBrightness: 12,
       baseColor: isDark
-        ? [0.3, 0.33, 0.24] // Brighter (lighter olive for visibility)
-        : [0.9, 0.9, 0.88], // Slightly darker than bg
-      markerColor: [0.545, 0.588, 0.474], // Olive-500
+        ? [0.3, 0.33, 0.24]
+        : [0.9, 0.9, 0.88],
+      markerColor: [0.545, 0.588, 0.474],
       glowColor: isDark
-        ? [0.2, 0.23, 0.18] // Brighter glow
+        ? [0.2, 0.23, 0.18]
         : [0.93, 0.93, 0.917],
       markers: [
-        // longitude latitude
         { location: [37.7595, -122.4367], size: 0.03 },
         { location: [40.7128, -74.006], size: 0.05 },
-        { location: [51.5074, -0.1278], size: 0.05 }, // London
-        { location: [35.6762, 139.6503], size: 0.05 }, // Tokyo
-        { location: [-33.8688, 151.2093], size: 0.05 }, // Sydney
+        { location: [51.5074, -0.1278], size: 0.05 },
+        { location: [35.6762, 139.6503], size: 0.05 },
+        { location: [-33.8688, 151.2093], size: 0.05 },
       ],
       onRender: (state) => {
-        // Called on every animation frame.
-        // `state` will be an empty object, return updated params.
+        // Skip rendering when off-screen to free main thread
+        if (!isVisible) return;
         state.phi = phi;
-        phi += 0.001; // Rotation speed
-        state.width = width * 2;
-        state.height = height * 2;
+        phi += 0.001;
+        state.width = width * dpr;
+        state.height = height * dpr;
       },
     });
 
@@ -75,15 +79,28 @@ export function Globe({ className }: { className?: string }) {
         canvasRef.current.style.opacity = "1";
       }
     });
+    }, 1500); // end delayed init
+
+    // Pause globe when not visible to reduce main-thread work
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisible = entry.isIntersecting;
+      },
+      { threshold: 0 },
+    );
+    if (containerRef.current) observer.observe(containerRef.current);
 
     return () => {
-      globe.destroy();
+      clearTimeout(initTimer);
+      globe?.destroy();
+      observer.disconnect();
       window.removeEventListener("resize", onResize);
     };
   }, [resolvedTheme]);
 
   return (
     <div
+      ref={containerRef}
       className={className}
       style={{
         width: "100%",
