@@ -18,14 +18,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+
 export const metadata: Metadata = {
   title: "WorkshopPilot",
-  description: "AI-powered design thinking facilitator - transform vague ideas into validated Build Packs",
-  manifest: '/manifest.webmanifest',
+  description:
+    "AI-powered design thinking facilitator - transform vague ideas into validated Build Packs",
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
-  width: 'device-width',
+  width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
@@ -38,7 +40,7 @@ export default function RootLayout({
 }>) {
   const hasClerkKeys =
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.startsWith('pk_');
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.startsWith("pk_");
 
   const content = (
     <html lang="en" suppressHydrationWarning className="h-full">
@@ -67,29 +69,32 @@ export default function RootLayout({
         signUpFallbackRedirectUrl="/dashboard"
         appearance={{
           layout: {
-            socialButtonsVariant: 'blockButton',
+            socialButtonsVariant: "blockButton",
           },
           variables: {
-            colorPrimary: '#6b7a2f',
-            colorBackground: 'hsl(var(--card))',
-            colorText: 'hsl(var(--foreground))',
-            colorInputBackground: 'hsl(var(--background))',
-            colorInputText: 'hsl(var(--foreground))',
-            borderRadius: '0.5rem',
-            fontFamily: 'var(--font-geist-sans)',
+            colorPrimary: "#6b7a2f",
+            colorBackground: "hsl(var(--card))",
+            colorText: "hsl(var(--foreground))",
+            colorInputBackground: "hsl(var(--background))",
+            colorInputText: "hsl(var(--foreground))",
+            borderRadius: "0.5rem",
+            fontFamily: "var(--font-geist-sans)",
           },
           elements: {
-            card: 'shadow-none',
-            formButtonPrimary: 'bg-primary hover:bg-primary/90 text-primary-foreground',
-            footerActionLink: 'text-primary hover:text-primary/80',
-            identityPreviewEditButton: 'text-primary',
-            socialButtonsBlockButton: 'border-border text-foreground hover:bg-accent',
-            socialButtonsBlockButtonText: 'font-medium',
-            socialButtonsProviderIcon: 'w-5 h-5',
-            dividerLine: 'bg-border',
-            dividerText: 'text-muted-foreground',
-            formFieldInput: 'border-border bg-background text-foreground focus:ring-ring',
-            formFieldLabel: 'text-foreground',
+            card: "shadow-none",
+            formButtonPrimary:
+              "bg-primary hover:bg-primary/90 text-primary-foreground",
+            footerActionLink: "text-primary hover:text-primary/80",
+            identityPreviewEditButton: "text-primary",
+            socialButtonsBlockButton:
+              "border-border text-foreground hover:bg-accent",
+            socialButtonsBlockButtonText: "font-medium",
+            socialButtonsProviderIcon: "w-5 h-5",
+            dividerLine: "bg-border",
+            dividerText: "text-muted-foreground",
+            formFieldInput:
+              "border-border bg-background text-foreground focus:ring-ring",
+            formFieldLabel: "text-foreground",
           },
         }}
       >

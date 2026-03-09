@@ -16,16 +16,17 @@ import { PlusCircle } from 'lucide-react';
 import { renameWorkshop, updateWorkshopAppearance } from '@/actions/workshop-actions';
 import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
+import { getWorkshopColor } from '@/lib/workshop/workshop-appearance';
 import { WelcomeModal } from '@/components/dashboard/welcome-modal';
 import { AdminResetOnboarding } from '@/components/dashboard/admin-reset-onboarding';
+import { DashboardIllustration } from '@/components/dashboard/dashboard-illustration';
+import { StepProgressDots } from '@/components/dashboard/step-progress-dots';
 
 export default async function DashboardPage() {
   // Defense in depth: verify auth at page level
   const { userId, sessionClaims } = await auth();
 
   if (!userId) {
-    // Show sign-in modal in-place instead of redirecting away.
-    // Middleware already let the request through; AuthGuard handles the UI.
     return <DashboardUnauthenticated />;
   }
 
@@ -37,13 +38,10 @@ export default async function DashboardPage() {
     adminUser = !!(adminEmail && userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase());
   }
 
-  // Query user from database
   const user = await db.query.users.findFirst({
     where: eq(users.clerkUserId, userId),
   });
 
-  // Handle webhook race condition: user signed up but webhook hasn't created DB record yet
-  // Fallback: create the user record directly from Clerk data (covers local dev without webhooks)
   if (!user) {
     const clerkUser = await currentUser();
     if (clerkUser) {
@@ -57,11 +55,9 @@ export default async function DashboardPage() {
           imageUrl: clerkUser.imageUrl || null,
           roles: JSON.stringify(['facilitator']),
         }).onConflictDoNothing();
-        // Redirect to reload with the newly created user
         redirect('/dashboard');
       }
     }
-    // If we still can't create the user, show the loading state
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -101,17 +97,29 @@ export default async function DashboardPage() {
       workshop.steps.findIndex((s) => s.id === currentStepData?.id) + 1 || 1
     );
 
-    // A workshop is "completed" when Step 10 (validate) is in_progress or complete
     const step10 = workshop.steps.find((s) => s.stepId === 'validate');
     const isCompleted = step10?.status === 'in_progress' || step10?.status === 'complete';
 
+    const daysSinceUpdate = (Date.now() - new Date(workshop.updatedAt).getTime()) / (1000 * 60 * 60 * 24);
+    const workshopStatus: 'completed' | 'active' | 'stalled' = isCompleted
+      ? 'completed'
+      : daysSinceUpdate > 7
+        ? 'stalled'
+        : 'active';
+
     return {
-      ...workshop,
+      id: workshop.id,
+      title: workshop.title,
+      updatedAt: workshop.updatedAt,
+      color: workshop.color,
+      emoji: workshop.emoji,
+      workshopType: workshop.workshopType,
       currentStep: stepMetadata?.order || 1,
       currentStepName: stepMetadata?.name || 'Challenge',
       sessionId: workshop.sessions[0]?.id || '',
       isCompleted,
-      workshopType: workshop.workshopType,
+      workshopStatus,
+      stepProgress: workshop.steps.map((s) => ({ stepId: s.stepId, status: s.status })),
     };
   });
 
@@ -126,7 +134,6 @@ export default async function DashboardPage() {
   let prototypeUrlMap = new Map<string, string>();
 
   if (completedIds.length > 0) {
-    // 1. Step 10 synthesis artifacts
     const synthesisRows = await db
       .select({
         workshopId: workshopSteps.workshopId,
@@ -148,7 +155,6 @@ export default async function DashboardPage() {
       }
     }
 
-    // 2. Build pack prototype URLs (JSON format contains v0DemoUrl)
     const buildPackRows = await db
       .select({
         workshopId: buildPacks.workshopId,
@@ -177,7 +183,7 @@ export default async function DashboardPage() {
     }
   }
 
-  // Batch-load AI cost data for admin users (all workshops)
+  // Batch-load AI cost data for admin users
   let costMap = new Map<string, number>();
   const allWorkshopIds = workshopsWithProgress.map((w) => w.id);
   if (adminUser && allWorkshopIds.length > 0) {
@@ -195,7 +201,7 @@ export default async function DashboardPage() {
     }
   }
 
-  // CTA logic: prioritize most recent active workshop, fall back to most recent completed
+  // CTA logic
   const mostRecentActive = activeWorkshops[0];
   const mostRecentCompleted = completedWorkshops[0];
   const ctaWorkshop = mostRecentActive || mostRecentCompleted;
@@ -203,46 +209,50 @@ export default async function DashboardPage() {
 
   return (
     <>
-      {/* Welcome modal for first-time users — Suspense boundary absorbs React 19 async tracking from Radix useLayoutEffect */}
       <Suspense fallback={null}>
         <WelcomeModal showWelcomeModal={!user.onboardingComplete} />
       </Suspense>
 
-      {/* Migration check component - triggers anonymous session migration */}
       <MigrationCheck />
 
       {/* Page header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-foreground">Your Workshops</h1>
+      <div className="mb-8 flex items-end justify-between">
+        <div>
+          <h1 className="text-4xl sm:text-5xl font-serif leading-[1.1] tracking-tight text-foreground">
+            Your Workshops
+          </h1>
+          <p className="mt-2 text-lg text-muted-foreground">
+            Welcome back, {user.firstName || 'there'}!
+          </p>
         </div>
-        <p className="mt-2 text-muted-foreground">
-          Welcome back, {user.firstName || 'there'}!
-        </p>
+        <DashboardIllustration />
       </div>
 
       {workshopsWithProgress.length === 0 ? (
-        /* Empty state */
-        <div className="rounded-lg border-2 border-dashed border-border bg-card p-12 text-center">
-          <svg
-            className="mx-auto h-12 w-12 text-muted-foreground"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <h3 className="mt-2 text-sm font-semibold text-foreground">No workshops yet</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Get started by creating your first workshop.
+        <div className="rounded-xl border border-border bg-card p-12 text-center">
+          <div className="mx-auto mb-6 flex justify-center">
+            <svg viewBox="0 0 180 120" fill="none" className="w-44 h-28 text-muted-foreground" aria-hidden="true">
+              <rect x="30" y="18" width="80" height="100" rx="8" fill="currentColor" opacity="0.08" transform="rotate(-8 70 68)" stroke="currentColor" strokeWidth="1" strokeOpacity="0.15" />
+              <rect x="42" y="14" width="80" height="100" rx="8" fill="currentColor" opacity="0.12" transform="rotate(-3 82 64)" stroke="currentColor" strokeWidth="1" strokeOpacity="0.2" />
+              <rect x="54" y="10" width="80" height="100" rx="8" fill="hsl(var(--card))" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.3" />
+              <circle cx="74" cy="90" r="3" fill="currentColor" opacity="0.5" />
+              <circle cx="84" cy="90" r="3" fill="currentColor" opacity="0.3" />
+              <circle cx="94" cy="90" r="3" fill="currentColor" opacity="0.15" />
+              <circle cx="104" cy="90" r="3" fill="currentColor" opacity="0.1" />
+              <circle cx="114" cy="90" r="3" fill="currentColor" opacity="0.1" />
+              <rect x="68" y="28" width="52" height="5" rx="2.5" fill="currentColor" opacity="0.2" />
+              <rect x="68" y="40" width="38" height="4" rx="2" fill="currentColor" opacity="0.12" />
+              <rect x="68" y="52" width="44" height="4" rx="2" fill="currentColor" opacity="0.12" />
+            </svg>
+          </div>
+          <h3 className="text-2xl font-serif text-foreground">
+            Start your first workshop
+          </h3>
+          <p className="mt-2 max-w-md mx-auto text-sm text-muted-foreground">
+            Walk through 10 design thinking steps with AI guidance and emerge with a validated Build Pack — PRDs, user stories, and tech specs ready for development.
           </p>
           <div className="mt-6">
-            <NewWorkshopButton size="lg">
+            <NewWorkshopButton size="lg" className="btn-lift">
               <PlusCircle className="mr-2 h-5 w-5" />
               Start Workshop
             </NewWorkshopButton>
@@ -252,28 +262,37 @@ export default async function DashboardPage() {
         <>
           {/* Primary CTA section */}
           {ctaWorkshop && (
-            <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex-1">
-                <div className="rounded-lg border border-olive-200 bg-olive-50 p-6 dark:border-olive-900 dark:bg-olive-950">
-                  <h2 className="mb-2 text-lg font-semibold text-foreground">
-                    {ctaIsCompleted ? 'View your outputs' : 'Continue where you left off'}
-                  </h2>
-                  <p className="mb-4 text-sm text-muted-foreground">
-                    {ctaWorkshop.title} {ctaIsCompleted ? '— Completed' : `\u2022 Step ${ctaWorkshop.currentStep}`}
-                  </p>
-                  <div className="flex gap-3">
-                    <Button asChild size="lg">
-                      <a
-                        href={ctaIsCompleted ? `/workshop/${ctaWorkshop.sessionId}/outputs` : `/workshop/${ctaWorkshop.sessionId}/step/${ctaWorkshop.currentStep}`}
-                      >
-                        {ctaIsCompleted ? 'View Outputs' : 'Continue'} {ctaWorkshop.title}
-                      </a>
-                    </Button>
-                    <NewWorkshopButton variant="outline" size="lg">
-                      <PlusCircle className="mr-2 h-5 w-5" />
-                      Start New Workshop
-                    </NewWorkshopButton>
+            <div className="mb-8">
+              <div
+                className="rounded-xl border border-olive-200 bg-olive-50 p-6 dark:border-olive-900 dark:bg-olive-950"
+                style={{ borderLeft: `4px solid ${getWorkshopColor(ctaWorkshop.color).hex}` }}
+              >
+                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  {ctaIsCompleted ? 'Your Latest Output' : 'Continue Where You Left Off'}
+                </p>
+                <h2 className="mb-3 text-xl font-serif text-foreground">
+                  {ctaWorkshop.title}
+                </h2>
+                {!ctaIsCompleted && (
+                  <div className="mb-4 flex items-center gap-3">
+                    <StepProgressDots steps={ctaWorkshop.stepProgress} />
+                    <span className="text-xs text-muted-foreground">
+                      Step {ctaWorkshop.currentStep} of 10
+                    </span>
                   </div>
+                )}
+                <div className="flex gap-3">
+                  <Button asChild size="lg" className="btn-lift">
+                    <a
+                      href={ctaIsCompleted ? `/workshop/${ctaWorkshop.sessionId}/outputs` : `/workshop/${ctaWorkshop.sessionId}/step/${ctaWorkshop.currentStep}`}
+                    >
+                      {ctaIsCompleted ? 'View Outputs' : 'Continue'}
+                    </a>
+                  </Button>
+                  <NewWorkshopButton variant="outline" size="lg">
+                    <PlusCircle className="mr-2 h-5 w-5" />
+                    Start New Workshop
+                  </NewWorkshopButton>
                 </div>
               </div>
             </div>
@@ -293,6 +312,8 @@ export default async function DashboardPage() {
                 emoji: w.emoji,
                 totalCostCents: costMap.get(w.id) ?? null,
                 workshopType: w.workshopType,
+                workshopStatus: w.workshopStatus,
+                steps: w.stepProgress,
               }))}
               onRename={renameWorkshop}
               onUpdateAppearance={updateWorkshopAppearance}
@@ -302,7 +323,7 @@ export default async function DashboardPage() {
           {/* Completed workshops section */}
           {completedWorkshops.length > 0 && (
             <div className="mb-6">
-              <h2 className="mb-4 text-xl font-semibold text-foreground">Completed Workshops</h2>
+              <h2 className="mb-4 text-xl font-serif text-foreground">Completed Workshops</h2>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {completedWorkshops.map((w) => (
                   <CompletedWorkshopCard
@@ -316,6 +337,7 @@ export default async function DashboardPage() {
                     synthesisArtifact={synthesisMap.get(w.id) || null}
                     prototypeUrl={prototypeUrlMap.get(w.id) || null}
                     totalCostCents={costMap.get(w.id) ?? null}
+                    steps={w.stepProgress}
                     onRename={renameWorkshop}
                     onUpdateAppearance={updateWorkshopAppearance}
                   />

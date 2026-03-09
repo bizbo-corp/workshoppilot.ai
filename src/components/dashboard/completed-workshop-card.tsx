@@ -3,14 +3,19 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { Clock, ArrowRight, ExternalLink, CheckCircle2 } from 'lucide-react';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Clock, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { getWorkshopColor } from '@/lib/workshop/workshop-appearance';
 import { WorkshopAppearancePicker } from '@/components/dashboard/workshop-appearance-picker';
+import { StepProgressDots } from '@/components/dashboard/step-progress-dots';
 import { toast } from 'sonner';
+
+interface StepStatus {
+  stepId: string;
+  status: string;
+}
 
 interface ConfidenceAssessment {
   score: number;
@@ -45,6 +50,7 @@ interface CompletedWorkshopCardProps {
   synthesisArtifact: Record<string, unknown> | null;
   prototypeUrl: string | null;
   totalCostCents?: number | null;
+  steps?: StepStatus[];
   onRename: (workshopId: string, newName: string) => Promise<void>;
   onUpdateAppearance: (workshopId: string, updates: { color?: string; emoji?: string | null }) => Promise<void>;
 }
@@ -59,6 +65,7 @@ export function CompletedWorkshopCard({
   synthesisArtifact,
   prototypeUrl,
   totalCostCents,
+  steps,
   onRename,
   onUpdateAppearance,
 }: CompletedWorkshopCardProps) {
@@ -104,12 +111,12 @@ export function CompletedWorkshopCard({
   };
 
   return (
-    <Card className="group relative overflow-hidden border border-border transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg dark:hover:border-neutral-olive-700 pt-0 pb-0 gap-0">
-      {/* Colored header band */}
-      <div
-        className="px-6 pt-5 pb-4"
-        style={{ backgroundColor: workshopColor.bgHex }}
-      >
+    <Card
+      className="group relative overflow-hidden border border-border transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg dark:hover:border-neutral-olive-700 pt-0 pb-0 gap-0"
+      style={{ borderLeft: `4px solid ${workshopColor.hex}` }}
+    >
+      {/* Header */}
+      <div className="px-6 pt-5 pb-4">
         <div className="flex items-start gap-2.5">
           <WorkshopAppearancePicker
             workshopId={workshopId}
@@ -127,12 +134,12 @@ export function CompletedWorkshopCard({
                 onKeyDown={handleKeyDown}
                 disabled={isSubmitting}
                 autoFocus
-                className="text-lg font-semibold"
+                className="text-xl font-serif"
                 maxLength={100}
               />
             ) : (
               <h3
-                className="cursor-pointer text-lg font-semibold text-foreground transition-colors hover:text-olive-600"
+                className="cursor-pointer text-xl font-serif text-foreground transition-colors hover:text-olive-600"
                 onClick={() => setIsEditing(true)}
               >
                 {title}
@@ -149,6 +156,13 @@ export function CompletedWorkshopCard({
             <CheckCircle2 className="h-4 w-4 text-olive-600 dark:text-olive-400" />
             <span className="text-sm font-medium text-olive-700 dark:text-olive-400">Completed</span>
           </div>
+
+          {/* Step progress dots */}
+          {steps && (
+            <div className="mb-3">
+              <StepProgressDots steps={steps} />
+            </div>
+          )}
 
           {/* Narrative paragraph (truncated) */}
           {narrative ? (
@@ -193,7 +207,7 @@ export function CompletedWorkshopCard({
         </CardContent>
       </Link>
 
-      {/* Prototype link — standalone, outside Link to avoid nested <a> */}
+      {/* Prototype link */}
       {prototypeUrl && (
         <div className="px-6 pb-4">
           <a
@@ -208,18 +222,6 @@ export function CompletedWorkshopCard({
         </div>
       )}
 
-      <CardFooter className="border-t bg-muted/50 p-4 dark:bg-muted/20">
-        <Link href={`/workshop/${sessionId}/outputs`} className="w-full">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-between group-hover:bg-accent btn-lift"
-          >
-            View Outputs
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </Link>
-      </CardFooter>
     </Card>
   );
 }

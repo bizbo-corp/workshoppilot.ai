@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, List, LayoutGrid, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -17,7 +17,15 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { WorkshopCard } from '@/components/dashboard/workshop-card';
+import { WorkshopListItem } from '@/components/dashboard/workshop-list-item';
 import { deleteWorkshops } from '@/actions/workshop-actions';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import { cn } from '@/lib/utils';
+
+interface StepStatus {
+  stepId: string;
+  status: string;
+}
 
 interface WorkshopData {
   id: string;
@@ -30,6 +38,8 @@ interface WorkshopData {
   emoji: string | null;
   totalCostCents: number | null;
   workshopType?: 'solo' | 'multiplayer';
+  workshopStatus: 'completed' | 'active' | 'stalled';
+  steps: StepStatus[];
 }
 
 interface WorkshopGridProps {
@@ -39,6 +49,8 @@ interface WorkshopGridProps {
 }
 
 export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: WorkshopGridProps) {
+  const [viewMode, setViewMode] = useLocalStorage<'grid' | 'list'>('dashboard-view-mode', 'list');
+  const [editMode, setEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -49,21 +61,20 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
   const toggleSelectAll = () => {
-    if (allSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(workshops.map((w) => w.id)));
-    }
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(workshops.map((w) => w.id)));
+  };
+
+  const handleExitEditMode = () => {
+    setEditMode(false);
+    setSelectedIds(new Set());
   };
 
   const handleDelete = () => {
@@ -87,10 +98,54 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
 
   return (
     <div className="mb-6">
-      {/* Header with select all and delete controls */}
+      {/* Header bar */}
       <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold text-foreground">All Workshops</h2>
+        <h2 className="text-xl font-serif text-foreground">All Workshops</h2>
+
+        <div className="flex items-center gap-2">
+          {/* Edit / Done button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={editMode ? handleExitEditMode : () => setEditMode(true)}
+            className="text-muted-foreground"
+          >
+            {editMode ? 'Done' : <><Pencil className="mr-1.5 h-3.5 w-3.5" />Edit</>}
+          </Button>
+
+          {/* View toggle */}
+          <div className="flex items-center rounded-lg border border-border p-0.5">
+            <button
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'rounded-md p-1.5 transition-colors',
+                viewMode === 'list'
+                  ? 'bg-accent text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              aria-label="List view"
+            >
+              <List className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={cn(
+                'rounded-md p-1.5 transition-colors',
+                viewMode === 'grid'
+                  ? 'bg-accent text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              aria-label="Grid view"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit mode controls */}
+      {editMode && (
+        <div className="mb-3 flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Checkbox
               id="select-all"
@@ -102,62 +157,91 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
               Select all
             </label>
           </div>
+
+          {hasSelection && (
+            <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete {selectedIds.size} {selectedIds.size === 1 ? 'workshop' : 'workshops'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {selectedIds.size === 1 ? 'workshop' : 'workshops'}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {selectedIds.size === 1
+                      ? 'This workshop will be removed from your dashboard. This action cannot be undone from the UI.'
+                      : `These ${selectedIds.size} workshops will be removed from your dashboard. This action cannot be undone from the UI.`}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    disabled={isPending}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isPending ? 'Deleting...' : 'Delete'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
+      )}
 
-        {hasSelection && (
-          <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete {selectedIds.size} {selectedIds.size === 1 ? 'workshop' : 'workshops'}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete {selectedIds.size === 1 ? 'workshop' : 'workshops'}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {selectedIds.size === 1
-                    ? 'This workshop will be removed from your dashboard. This action cannot be undone from the UI.'
-                    : `These ${selectedIds.size} workshops will be removed from your dashboard. This action cannot be undone from the UI.`}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  disabled={isPending}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  {isPending ? 'Deleting...' : 'Delete'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
-      </div>
-
-      {/* Workshop card grid */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {workshops.map((workshop) => (
-          <WorkshopCard
-            key={workshop.id}
-            workshopId={workshop.id}
-            sessionId={workshop.sessionId}
-            title={workshop.title}
-            currentStep={workshop.currentStep}
-            currentStepName={workshop.currentStepName}
-            updatedAt={workshop.updatedAt}
-            color={workshop.color}
-            emoji={workshop.emoji}
-            totalCostCents={workshop.totalCostCents}
-            workshopType={workshop.workshopType}
-            onRename={onRename}
-            onUpdateAppearance={onUpdateAppearance}
-            selected={selectedIds.has(workshop.id)}
-            onSelect={() => toggleSelect(workshop.id)}
-          />
-        ))}
-      </div>
+      {/* Content: list or grid */}
+      {viewMode === 'list' ? (
+        <div className="space-y-2">
+          {workshops.map((workshop) => (
+            <WorkshopListItem
+              key={workshop.id}
+              workshopId={workshop.id}
+              sessionId={workshop.sessionId}
+              title={workshop.title}
+              currentStep={workshop.currentStep}
+              currentStepName={workshop.currentStepName}
+              updatedAt={workshop.updatedAt}
+              color={workshop.color}
+              emoji={workshop.emoji}
+              workshopStatus={workshop.workshopStatus}
+              steps={workshop.steps}
+              editMode={editMode}
+              selected={selectedIds.has(workshop.id)}
+              onSelect={() => toggleSelect(workshop.id)}
+              onRename={onRename}
+              onUpdateAppearance={onUpdateAppearance}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {workshops.map((workshop, index) => (
+            <WorkshopCard
+              key={workshop.id}
+              workshopId={workshop.id}
+              sessionId={workshop.sessionId}
+              title={workshop.title}
+              currentStep={workshop.currentStep}
+              currentStepName={workshop.currentStepName}
+              updatedAt={workshop.updatedAt}
+              color={workshop.color}
+              emoji={workshop.emoji}
+              totalCostCents={workshop.totalCostCents}
+              workshopType={workshop.workshopType}
+              workshopStatus={workshop.workshopStatus}
+              steps={workshop.steps}
+              onRename={onRename}
+              onUpdateAppearance={onUpdateAppearance}
+              editMode={editMode}
+              selected={selectedIds.has(workshop.id)}
+              onSelect={() => toggleSelect(workshop.id)}
+              isHero={index === 0 && workshops.length >= 3}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

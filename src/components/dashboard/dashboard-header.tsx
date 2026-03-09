@@ -6,7 +6,7 @@
  * - Credit balance badge (links to /pricing)
  * - Theme toggle
  * - User menu
- * - NOT sticky (scrolls with content)
+ * - Sticky header with backdrop blur
  */
 
 'use client';
@@ -30,7 +30,7 @@ export function DashboardHeader({ creditBalance }: DashboardHeaderProps) {
   const showAdmin = userRoles.includes('admin') || !!(adminEmail && userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase());
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-background px-6">
+    <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background/80 backdrop-blur-md px-6">
       {/* Left section: Logo */}
       <Link href="/" className="flex items-center">
         <Logo size="sm" />

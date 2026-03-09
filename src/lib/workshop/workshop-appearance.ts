@@ -8,19 +8,21 @@
 export interface WorkshopColor {
   id: string;
   label: string;
-  hex: string;       // Border/accent color
-  bgHex: string;     // Semi-transparent background (adapts to light/dark mode)
+  hex: string;          // Border/accent color (full saturation)
+  bgHex: string;        // Semi-transparent background (0.18 opacity)
+  bgHexStrong: string;  // Stronger background for hero/featured cards (0.30 opacity)
+  textHex: string;      // Dark shade for text-on-color contexts
 }
 
 export const WORKSHOP_COLORS: WorkshopColor[] = [
-  { id: 'blue',   label: 'Blue',   hex: '#3B82F6', bgHex: 'rgba(59, 130, 246, 0.10)' },
-  { id: 'green',  label: 'Green',  hex: '#22C55E', bgHex: 'rgba(34, 197, 94, 0.10)' },
-  { id: 'purple', label: 'Purple', hex: '#A855F7', bgHex: 'rgba(168, 85, 247, 0.10)' },
-  { id: 'orange', label: 'Orange', hex: '#F97316', bgHex: 'rgba(249, 115, 22, 0.10)' },
-  { id: 'pink',   label: 'Pink',   hex: '#EC4899', bgHex: 'rgba(236, 72, 153, 0.10)' },
-  { id: 'yellow', label: 'Yellow', hex: '#EAB308', bgHex: 'rgba(234, 179, 8, 0.10)' },
-  { id: 'teal',   label: 'Teal',   hex: '#14B8A6', bgHex: 'rgba(20, 184, 166, 0.10)' },
-  { id: 'red',    label: 'Red',    hex: '#EF4444', bgHex: 'rgba(239, 68, 68, 0.10)' },
+  { id: 'blue',   label: 'Blue',   hex: '#3B82F6', bgHex: 'rgba(59, 130, 246, 0.18)',  bgHexStrong: 'rgba(59, 130, 246, 0.30)',  textHex: '#1e40af' },
+  { id: 'green',  label: 'Green',  hex: '#22C55E', bgHex: 'rgba(34, 197, 94, 0.18)',   bgHexStrong: 'rgba(34, 197, 94, 0.30)',   textHex: '#166534' },
+  { id: 'purple', label: 'Purple', hex: '#A855F7', bgHex: 'rgba(168, 85, 247, 0.18)',  bgHexStrong: 'rgba(168, 85, 247, 0.30)',  textHex: '#6b21a8' },
+  { id: 'orange', label: 'Orange', hex: '#F97316', bgHex: 'rgba(249, 115, 22, 0.18)',  bgHexStrong: 'rgba(249, 115, 22, 0.30)',  textHex: '#9a3412' },
+  { id: 'pink',   label: 'Pink',   hex: '#EC4899', bgHex: 'rgba(236, 72, 153, 0.18)',  bgHexStrong: 'rgba(236, 72, 153, 0.30)',  textHex: '#9d174d' },
+  { id: 'yellow', label: 'Yellow', hex: '#EAB308', bgHex: 'rgba(234, 179, 8, 0.18)',   bgHexStrong: 'rgba(234, 179, 8, 0.30)',   textHex: '#854d0e' },
+  { id: 'teal',   label: 'Teal',   hex: '#14B8A6', bgHex: 'rgba(20, 184, 166, 0.18)',  bgHexStrong: 'rgba(20, 184, 166, 0.30)',  textHex: '#115e59' },
+  { id: 'red',    label: 'Red',    hex: '#EF4444', bgHex: 'rgba(239, 68, 68, 0.18)',   bgHexStrong: 'rgba(239, 68, 68, 0.30)',   textHex: '#991b1b' },
 ];
 
 const COLOR_MAP = new Map(WORKSHOP_COLORS.map((c) => [c.id, c]));

@@ -1,13 +1,6 @@
 /**
- * Workshop Card
- * Displays a workshop in the dashboard with name, current step, last active timestamp
- * Features:
- * - Card layout with Linear-style subtle border and hover effect
- * - Workshop name (bold, clickable) with inline rename on click
- * - Current step indicator
- * - Last active timestamp (relative time)
- * - Continue button
- * - Dark mode support
+ * Workshop Card — redesigned with left color border, serif titles,
+ * progress dots, status badges, and hero variant.
  */
 
 'use client';
@@ -15,15 +8,21 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { Clock, ArrowRight, Users } from 'lucide-react';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Clock, Users } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { getWorkshopColor } from '@/lib/workshop/workshop-appearance';
 import { WorkshopAppearancePicker } from '@/components/dashboard/workshop-appearance-picker';
+import { StepProgressDots } from '@/components/dashboard/step-progress-dots';
+import { WorkshopStatusBadge } from '@/components/dashboard/workshop-status-badge';
 import { toast } from 'sonner';
+
+interface StepStatus {
+  stepId: string;
+  status: string;
+}
 
 interface WorkshopCardProps {
   workshopId: string;
@@ -38,8 +37,12 @@ interface WorkshopCardProps {
   totalCostCents?: number | null;
   onUpdateAppearance: (workshopId: string, updates: { color?: string; emoji?: string | null }) => Promise<void>;
   workshopType?: 'solo' | 'multiplayer';
+  workshopStatus: 'completed' | 'active' | 'stalled';
+  steps: StepStatus[];
+  editMode?: boolean;
   selected?: boolean;
   onSelect?: () => void;
+  isHero?: boolean;
 }
 
 export function WorkshopCard({
@@ -55,8 +58,12 @@ export function WorkshopCard({
   onRename,
   onUpdateAppearance,
   workshopType,
+  workshopStatus,
+  steps,
+  editMode = false,
   selected = false,
   onSelect,
+  isHero = false,
 }: WorkshopCardProps) {
   const workshopColor = getWorkshopColor(color);
   const [isEditing, setIsEditing] = useState(false);
@@ -98,10 +105,12 @@ export function WorkshopCard({
     <Card
       className={cn(
         "group relative overflow-hidden border border-border transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg dark:hover:border-neutral-olive-700 pt-0 pb-0 gap-0",
-        selected && "ring-2 ring-primary border-primary"
+        selected && "ring-2 ring-primary border-primary",
+        isHero && "lg:col-span-2"
       )}
+      style={{ borderLeft: `4px solid ${workshopColor.hex}` }}
     >
-      {onSelect && (
+      {editMode && onSelect && (
         <div
           className="absolute right-3 top-3 z-10"
           onClick={(e) => {
@@ -118,13 +127,10 @@ export function WorkshopCard({
         </div>
       )}
 
-      {/* Colored header band */}
-      <div
-        className="px-6 pt-5 pb-4"
-        style={{ backgroundColor: workshopColor.bgHex }}
-      >
-        <div className="flex items-start gap-2.5">
-          {/* Emoji circle — opens appearance picker (outside Link to avoid navigation) */}
+      {/* Header */}
+      <div className="px-6 pt-5 pb-4">
+        <div className={cn("flex items-start gap-2.5", isHero && "lg:flex-row lg:items-center lg:gap-4")}>
+          {/* Emoji circle */}
           <WorkshopAppearancePicker
             workshopId={workshopId}
             color={color}
@@ -143,13 +149,16 @@ export function WorkshopCard({
                   onKeyDown={handleKeyDown}
                   disabled={isSubmitting}
                   autoFocus
-                  className="text-lg font-semibold"
+                  className={cn("font-serif", isHero ? "text-2xl" : "text-xl")}
                   maxLength={100}
                   onClick={(e) => e.preventDefault()}
                 />
               ) : (
                 <h3
-                  className="cursor-pointer text-lg font-semibold text-foreground transition-colors hover:text-olive-600"
+                  className={cn(
+                    "cursor-pointer font-serif text-foreground transition-colors hover:text-olive-600",
+                    isHero ? "text-2xl" : "text-xl"
+                  )}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -161,7 +170,7 @@ export function WorkshopCard({
               )}
             </Link>
 
-            {/* Multiplayer badge — subtle indicator for multiplayer workshops */}
+            {/* Multiplayer badge */}
             {workshopType === 'multiplayer' && (
               <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-black/10 px-2 py-0.5 dark:bg-white/15">
                 <Users className="h-3 w-3 text-foreground/60" />
@@ -181,12 +190,20 @@ export function WorkshopCard({
             </p>
           </div>
 
-          {/* Last active timestamp */}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
-            <span>
-              {formatDistanceToNow(new Date(updatedAt), { addSuffix: true })}
-            </span>
+          {/* Step progress dots */}
+          <div className="mb-3">
+            <StepProgressDots steps={steps} />
+          </div>
+
+          {/* Status badge + timestamp row */}
+          <div className="flex items-center gap-3">
+            <WorkshopStatusBadge status={workshopStatus} />
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              <span>
+                {formatDistanceToNow(new Date(updatedAt), { addSuffix: true })}
+              </span>
+            </div>
           </div>
 
           {/* AI cost (admin only) */}
@@ -197,19 +214,6 @@ export function WorkshopCard({
           )}
         </CardContent>
       </Link>
-
-      <CardFooter className="border-t bg-muted/50 p-4 dark:bg-muted/20">
-        <Link href={`/workshop/${sessionId}/step/${currentStep}`} className="w-full">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-between group-hover:bg-accent btn-lift"
-          >
-            Continue
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </Link>
-      </CardFooter>
     </Card>
   );
 }
