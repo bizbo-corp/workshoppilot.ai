@@ -1,11 +1,12 @@
 import type { AllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifacts';
+import { serializeArtifactsSafe } from './prd-generation';
 
 /**
  * Build the Technical Specifications generation prompt (Markdown output).
  * Produces a comprehensive Technical Specification document derived from all 10 workshop steps.
  */
 export function buildTechSpecsPrompt(artifacts: AllWorkshopArtifacts): string {
-  const workshopData = JSON.stringify(artifacts, null, 2);
+  const workshopData = serializeArtifactsSafe(artifacts as unknown as Record<string, unknown>);
 
   return `You are a senior software architect with expertise in translating product design thinking into actionable technical specifications. Your task is to produce a comprehensive Technical Specifications document in Markdown format, derived from the design thinking workshop outputs below.
 
@@ -95,7 +96,7 @@ CRITICAL RULES:
  * Same content as buildTechSpecsPrompt but formatted as machine-readable JSON.
  */
 export function buildTechSpecsJsonPrompt(artifacts: AllWorkshopArtifacts): string {
-  const workshopData = JSON.stringify(artifacts, null, 2);
+  const workshopData = serializeArtifactsSafe(artifacts as unknown as Record<string, unknown>);
 
   return `You are a senior software architect. Transform the design thinking workshop outputs below into structured Technical Specifications in JSON format.
 

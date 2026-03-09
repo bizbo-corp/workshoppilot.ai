@@ -7,8 +7,8 @@
 
 ## Todo
 
-- [ ] Build Pack
-- [ ] PRD
+- [x] Build Pack
+- [x] PRD
 - [ ] PPT
 - [ ] Tech Specs
 - [x] Rate Limit

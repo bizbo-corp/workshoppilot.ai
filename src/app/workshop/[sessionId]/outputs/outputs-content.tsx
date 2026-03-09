@@ -195,17 +195,23 @@ export function OutputsContent({
         throw new Error(data.error || 'PRD generation failed');
       }
       const data = await res.json();
+      // Validate that we actually got content back
+      if (!data.markdown && !data.json) {
+        throw new Error('PRD generation produced no content — please try again');
+      }
       // Cache locally so card updates immediately (no waiting for router.refresh)
+      const formats: DeliverableFormat[] = [];
+      if (data.markdown) formats.push({ id: 'local-prd-md', formatType: 'markdown', content: data.markdown });
+      if (data.json) formats.push({ id: 'local-prd-json', formatType: 'json', content: typeof data.json === 'string' ? data.json : JSON.stringify(data.json) });
       setLocalDeliverables(prev => {
         const next = new Map(prev);
-        const formats: DeliverableFormat[] = [];
-        if (data.markdown) formats.push({ id: 'local-prd-md', formatType: 'markdown', content: data.markdown });
-        if (data.json) formats.push({ id: 'local-prd-json', formatType: 'json', content: typeof data.json === 'string' ? data.json : JSON.stringify(data.json) });
         next.set('prd', formats);
         return next;
       });
       setPrdStatus('done');
       toast.success('PRD generated successfully');
+      // Auto-navigate to detail view so user can immediately see the PRD
+      setSelectedType('prd');
       router.refresh();
     } catch (err) {
       setPrdStatus('error');
@@ -226,17 +232,21 @@ export function OutputsContent({
         throw new Error(data.error || 'Tech Specs generation failed');
       }
       const data = await res.json();
+      if (!data.markdown && !data.json) {
+        throw new Error('Tech Specs generation produced no content — please try again');
+      }
       // Cache locally so card updates immediately
+      const formats: DeliverableFormat[] = [];
+      if (data.markdown) formats.push({ id: 'local-ts-md', formatType: 'markdown', content: data.markdown });
+      if (data.json) formats.push({ id: 'local-ts-json', formatType: 'json', content: typeof data.json === 'string' ? data.json : JSON.stringify(data.json) });
       setLocalDeliverables(prev => {
         const next = new Map(prev);
-        const formats: DeliverableFormat[] = [];
-        if (data.markdown) formats.push({ id: 'local-ts-md', formatType: 'markdown', content: data.markdown });
-        if (data.json) formats.push({ id: 'local-ts-json', formatType: 'json', content: typeof data.json === 'string' ? data.json : JSON.stringify(data.json) });
         next.set('tech-specs', formats);
         return next;
       });
       setTechSpecsStatus('done');
       toast.success('Tech Specs generated successfully');
+      setSelectedType('tech-specs');
       router.refresh();
     } catch (err) {
       setTechSpecsStatus('error');

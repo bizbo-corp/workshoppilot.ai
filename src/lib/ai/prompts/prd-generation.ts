@@ -1,11 +1,41 @@
 import type { WorkshopArtifacts, AllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifacts';
 
 /**
+ * Max characters per individual step artifact when serialized.
+ * Keeps total prompt well under Gemini's per-field size limit.
+ */
+const MAX_CHARS_PER_STEP = 4000;
+
+/**
+ * Safe per-step serialization that individually truncates each step's JSON.
+ * Falls back to a raw truncated string if JSON repair fails.
+ */
+export function serializeArtifactsSafe(artifacts: Record<string, unknown>): string {
+  const parts: string[] = ['{'];
+  const entries = Object.entries(artifacts);
+  for (let i = 0; i < entries.length; i++) {
+    const [key, value] = entries[i];
+    const comma = i < entries.length - 1 ? ',' : '';
+    if (value === null || value === undefined) {
+      parts.push(`  "${key}": null${comma}`);
+      continue;
+    }
+    let serialized = JSON.stringify(value, null, 2);
+    if (serialized.length > MAX_CHARS_PER_STEP) {
+      serialized = serialized.slice(0, MAX_CHARS_PER_STEP) + '\n  ...[truncated]';
+    }
+    parts.push(`  "${key}": ${serialized}${comma}`);
+  }
+  parts.push('}');
+  return parts.join('\n');
+}
+
+/**
  * Build the Gemini system prompt that instructs it to synthesize workshop artifacts
  * into a V0-optimized prototype prompt.
  */
 export function buildPrdGenerationPrompt(artifacts: WorkshopArtifacts): string {
-  const artifactJson = JSON.stringify(artifacts, null, 2);
+  const artifactJson = serializeArtifactsSafe(artifacts as unknown as Record<string, unknown>);
 
   return `You are a senior product designer. Your job is to transform design thinking workshop outputs into a clear, actionable prompt that V0 (Vercel's AI code generator) can use to build a clickable frontend prototype.
 
@@ -60,7 +90,7 @@ IMPORTANT:
  * Produces a comprehensive Product Requirements Document derived from all 10 workshop steps.
  */
 export function buildFullPrdPrompt(artifacts: AllWorkshopArtifacts): string {
-  const workshopData = JSON.stringify(artifacts, null, 2);
+  const workshopData = serializeArtifactsSafe(artifacts as unknown as Record<string, unknown>);
 
   return `You are a senior product manager with expertise in design thinking and product requirements documentation. Your task is to produce a comprehensive, professional Product Requirements Document (PRD) in Markdown format, derived entirely from the design thinking workshop outputs below.
 
@@ -153,7 +183,7 @@ CRITICAL RULES:
  * Same content as buildFullPrdPrompt but formatted as machine-readable JSON.
  */
 export function buildFullPrdJsonPrompt(artifacts: AllWorkshopArtifacts): string {
-  const workshopData = JSON.stringify(artifacts, null, 2);
+  const workshopData = serializeArtifactsSafe(artifacts as unknown as Record<string, unknown>);
 
   return `You are a senior product manager. Transform the design thinking workshop outputs below into a structured Product Requirements Document (PRD) in JSON format.
 

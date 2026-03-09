@@ -200,6 +200,14 @@ async function generateFullPrd(workshopId: string): Promise<Response> {
     }
   }
 
+  // If both generations failed, return an error
+  if (!markdownText && !jsonData) {
+    return new Response(
+      JSON.stringify({ error: 'PRD generation failed — both markdown and JSON outputs were empty. Please try again.' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   // Return response — note partial failures if applicable
   return new Response(
     JSON.stringify({

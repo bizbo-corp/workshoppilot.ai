@@ -180,6 +180,14 @@ export async function POST(req: Request) {
       }
     }
 
+    // If both generations failed, return an error
+    if (!markdownText && !jsonData) {
+      return new Response(
+        JSON.stringify({ error: 'Tech Specs generation failed — both markdown and JSON outputs were empty. Please try again.' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Return response — note partial failures if applicable
     return new Response(
       JSON.stringify({
