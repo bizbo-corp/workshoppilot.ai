@@ -25,6 +25,7 @@ export const aiUsageEvents = pgTable(
     outputTokens: integer('output_tokens'), // nullable (null for image gen)
     imageCount: integer('image_count'), // nullable (for image gen only)
     costCents: real('cost_cents').notNull(), // cost in US cents
+    itemId: text('item_id'), // nullable — canonical item identifier for per-item caps (e.g. 'sketch:wks_xxx:slot-1')
     createdAt: timestamp('created_at', { mode: 'date', precision: 3 })
       .notNull()
       .defaultNow(),
@@ -32,5 +33,6 @@ export const aiUsageEvents = pgTable(
   (table) => ({
     workshopIdIdx: index('ai_usage_events_workshop_id_idx').on(table.workshopId),
     createdAtIdx: index('ai_usage_events_created_at_idx').on(table.createdAt),
+    itemIdIdx: index('ai_usage_events_item_id_idx').on(table.itemId),
   })
 );

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { getCurrentArcPhase, transitionArcPhase, type ArcPhase } from '@/lib/ai/conversation-state';
+import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
 
 /**
  * Arc Phase Transition API
@@ -19,6 +21,11 @@ import { getCurrentArcPhase, transitionArcPhase, type ArcPhase } from '@/lib/ai/
  * Note: This runs fire-and-forget from the client. Failures are silent.
  */
 export async function POST(request: NextRequest) {
+  // Soft auth: allow guests for multiplayer
+  const { userId } = await auth();
+  const rl = checkRateLimit(getRateLimitId(request, userId), 'chat');
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+
   try {
     const body = await request.json();
     const { workshopId, stepId, messageCount } = body;

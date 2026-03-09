@@ -1,10 +1,13 @@
 import { google } from '@ai-sdk/google';
 import { generateImage } from 'ai';
+import { auth } from '@clerk/nextjs/server';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { loadWorkshopContext } from '@/lib/ai/workshop-context';
 import { put } from '@vercel/blob';
 import { deleteBlobUrls } from '@/lib/blob/delete-blob-urls';
+import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
+import { checkImageGenerationCap, imageCapExceededResponse } from '@/lib/ai/image-generation-cap';
 
 export const maxDuration = 60;
 
@@ -67,16 +70,25 @@ async function describeSketch(imageBase64: string): Promise<string> {
  * - previousImageUrl?: string (for regeneration — old blob to clean up)
  */
 export async function POST(req: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+  const rl = checkRateLimit(getRateLimitId(req, userId), 'image-gen');
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+
   try {
     const {
       workshopId,
       groupLabel,
+      groupId,
       slotData,
       mergePrompt,
       previousImageUrl,
     } = (await req.json()) as {
       workshopId: string;
       groupLabel: string;
+      groupId?: string;
       slotData: SlotData[];
       mergePrompt?: string;
       previousImageUrl?: string;
@@ -87,6 +99,13 @@ export async function POST(req: Request) {
         JSON.stringify({ error: 'workshopId, groupLabel, and slotData are required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
+    }
+
+    // Check per-item generation cap
+    const itemId = `merge:${workshopId}:${groupId || groupLabel}`;
+    const capCheck = await checkImageGenerationCap(itemId);
+    if (!capCheck.allowed) {
+      return imageCapExceededResponse();
     }
 
     // Load workshop context + describe each member sketch in parallel
@@ -145,13 +164,14 @@ export async function POST(req: Request) {
       aspectRatio: '4:3',
     });
 
-    // Record usage
+    // Record usage with itemId for cap tracking
     recordUsageEvent({
       workshopId,
       stepId: 'ideation',
       operation: 'merge-group-sketches',
       model: 'imagen-4.0-fast-generate-001',
       imageCount: 1,
+      itemId,
     });
 
     const base64Data = result.image.base64;
@@ -178,7 +198,7 @@ export async function POST(req: Request) {
     }
 
     return new Response(
-      JSON.stringify({ mergedImageUrl }),
+      JSON.stringify({ mergedImageUrl, remainingGenerations: capCheck.remaining - 1 }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     );
   } catch (error) {

@@ -11,8 +11,20 @@
 - [ ] PRD
 - [ ] PPT
 - [ ] Tech Specs
-- [ ] Rate Limit
-- [ ] Idea to concept consolidation
+- [x] Rate Limit
+- [x] Idea to concept consolidation
 - [x] Reply Mike
 - [ ] Add on a human facilitator
 - [ ] How does grouping occur and can a grouping only be completed by the facilitator? Are we going to allow the facilitator to merge ideas from multiple participants? That would be cool. 
+
+
+
+
+
+
+
+
+
+\
+ 
+

@@ -1,8 +1,11 @@
 import { generateImage } from "ai";
 import { google } from "@ai-sdk/google";
+import { auth } from "@clerk/nextjs/server";
 import { put } from "@vercel/blob";
 import { deleteBlobUrls } from "@/lib/blob/delete-blob-urls";
 import { recordUsageEvent } from "@/lib/ai/usage-tracking";
+import { checkRateLimit, rateLimitResponse, getRateLimitId } from "@/lib/ai/rate-limiter";
+import { checkImageGenerationCap, imageCapExceededResponse } from "@/lib/ai/image-generation-cap";
 
 /**
  * Increase Vercel serverless timeout for image generation
@@ -57,8 +60,15 @@ function buildBillboardPrompt(billboard: {
  * - userPrompt?: string    — freeform user prompt for image direction
  */
 export async function POST(req: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+  }
+  const rl = checkRateLimit(getRateLimitId(req, userId), "image-gen");
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+
   try {
-    const { workshopId, headline, subheadline, cta, previousImageUrl, visualStyle, userPrompt } =
+    const { workshopId, headline, subheadline, cta, previousImageUrl, visualStyle, userPrompt, billboardIndex } =
       await req.json();
 
     if (!workshopId || !headline) {
@@ -66,6 +76,13 @@ export async function POST(req: Request) {
         JSON.stringify({ error: "workshopId and headline are required" }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
+    }
+
+    // Check per-item generation cap
+    const itemId = `billboard:${workshopId}:${billboardIndex ?? 0}`;
+    const capCheck = await checkImageGenerationCap(itemId);
+    if (!capCheck.allowed) {
+      return imageCapExceededResponse();
     }
 
     const prompt = buildBillboardPrompt({ headline, subheadline, cta, visualStyle, userPrompt });
@@ -76,13 +93,14 @@ export async function POST(req: Request) {
       aspectRatio: "16:9",
     });
 
-    // Record usage (fire-and-forget)
+    // Record usage with itemId for cap tracking
     recordUsageEvent({
       workshopId,
       stepId: "validate",
       operation: "generate-billboard-image",
       model: "imagen-4.0-generate-001",
       imageCount: 1,
+      itemId,
     });
 
     const base64Data = result.image.base64;
@@ -117,7 +135,7 @@ export async function POST(req: Request) {
       deleteBlobUrls([previousImageUrl]).catch(console.warn);
     }
 
-    return new Response(JSON.stringify({ imageUrl }), {
+    return new Response(JSON.stringify({ imageUrl, remainingGenerations: capCheck.remaining - 1 }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

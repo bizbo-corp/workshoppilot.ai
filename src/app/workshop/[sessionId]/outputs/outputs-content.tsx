@@ -9,7 +9,8 @@ import {
   Code,
   Presentation,
   Users,
-  Map,
+  Map as MapIcon,
+  Rocket,
   ArrowRight,
   Loader2,
 } from 'lucide-react';
@@ -52,49 +53,101 @@ const FORMAT_LABELS: Record<string, string> = {
   pdf: 'PDF',
 };
 
-/** All 4 document cards shown on the outputs page */
-const DOCUMENT_CARDS = [
+interface CardDef {
+  type: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  generatable: boolean;
+  navigateTo?: string;
+  buttonLabel?: string;
+}
+
+interface Section {
+  id: string;
+  label: string;
+  iconBgClass: string;
+  iconTextClass: string;
+  cards: CardDef[];
+}
+
+const SECTIONS: Section[] = [
   {
-    type: 'prd',
-    title: 'Product Requirements Document',
-    description:
-      'Complete PRD with objectives, target users, core features, success metrics, and technical constraints — ready for development.',
-    icon: <FileText className="h-5 w-5" />,
-    generatable: true,
+    id: 'business',
+    label: 'Business & Product',
+    iconBgClass: 'bg-amber-500/10',
+    iconTextClass: 'text-amber-500',
+    cards: [
+      {
+        type: 'stakeholder-ppt',
+        title: 'Stakeholder Presentation',
+        description:
+          'Executive summary deck covering the problem, research insights, proposed solution, and implementation roadmap.',
+        icon: <Presentation className="h-5 w-5" />,
+        generatable: false,
+      },
+      {
+        type: 'user-stories',
+        title: 'User Stories',
+        description:
+          'Prioritized user stories with acceptance criteria, mapped to personas and journey stages from your research.',
+        icon: <Users className="h-5 w-5" />,
+        generatable: false,
+      },
+    ],
   },
   {
-    type: 'tech-specs',
-    title: 'Technical Specifications',
-    description:
-      'Architecture overview, API contracts, data models, and integration requirements derived from your concept.',
-    icon: <Code className="h-5 w-5" />,
-    generatable: true,
+    id: 'design',
+    label: 'Design',
+    iconBgClass: 'bg-violet-500/10',
+    iconTextClass: 'text-violet-500',
+    cards: [
+      {
+        type: 'journey-map',
+        title: 'UX Journey Map',
+        description:
+          'Interactive roadmap mapping your concepts onto user journey stages — then generate a v0 prototype prompt.',
+        icon: <MapIcon className="h-5 w-5" />,
+        generatable: true,
+        navigateTo: 'journey-map',
+      },
+      {
+        type: 'prototype',
+        title: 'Prototype',
+        description:
+          'Test your concept with real users — validate assumptions and gather feedback before building.',
+        icon: <Rocket className="h-5 w-5" />,
+        generatable: false,
+        navigateTo: 'step/10',
+        buttonLabel: 'Go to Validate',
+      },
+    ],
   },
   {
-    type: 'stakeholder-ppt',
-    title: 'Stakeholder Presentation',
-    description:
-      'Executive summary deck covering the problem, research insights, proposed solution, and implementation roadmap.',
-    icon: <Presentation className="h-5 w-5" />,
-    generatable: false,
+    id: 'development',
+    label: 'Development',
+    iconBgClass: 'bg-emerald-500/10',
+    iconTextClass: 'text-emerald-500',
+    cards: [
+      {
+        type: 'prd',
+        title: 'Product Requirements Document',
+        description:
+          'Complete PRD with objectives, target users, core features, success metrics, and technical constraints — ready for development.',
+        icon: <FileText className="h-5 w-5" />,
+        generatable: true,
+      },
+      {
+        type: 'tech-specs',
+        title: 'Technical Specifications',
+        description:
+          'Architecture overview, API contracts, data models, and integration requirements derived from your concept.',
+        icon: <Code className="h-5 w-5" />,
+        generatable: true,
+      },
+    ],
   },
-  {
-    type: 'user-stories',
-    title: 'User Stories',
-    description:
-      'Prioritized user stories with acceptance criteria, mapped to personas and journey stages from your research.',
-    icon: <Users className="h-5 w-5" />,
-    generatable: false,
-  },
-  {
-    type: 'journey-map',
-    title: 'UX Journey Map',
-    description:
-      'Interactive roadmap mapping your concepts onto user journey stages — then generate a v0 prototype prompt.',
-    icon: <Map className="h-5 w-5" />,
-    generatable: true,
-  },
-] as const;
+];
 
 export function OutputsContent({
   sessionId,
@@ -108,9 +161,25 @@ export function OutputsContent({
   const [prdStatus, setPrdStatus] = useState<GenerationStatus>('idle');
   const [techSpecsStatus, setTechSpecsStatus] = useState<GenerationStatus>('idle');
   const [journeyMapStatus, setJourneyMapStatus] = useState<GenerationStatus>('idle');
+  const [localDeliverables, setLocalDeliverables] = useState<Map<string, DeliverableFormat[]>>(new Map());
+
+  /** Look up a deliverable from server data first, then fall back to local cache */
+  function findDeliverable(type: string): Deliverable | null {
+    const server = deliverables.find((d) => d.type === type);
+    if (server) return server;
+    const local = localDeliverables.get(type);
+    if (local && local.length > 0) {
+      return {
+        type,
+        title: type === 'prd' ? 'Product Requirements Document' : 'Technical Specifications',
+        formats: local,
+      };
+    }
+    return null;
+  }
 
   const selectedDeliverable = selectedType
-    ? deliverables.find((d) => d.type === selectedType) ?? null
+    ? findDeliverable(selectedType)
     : null;
 
   const handleGeneratePrd = useCallback(async () => {
@@ -125,6 +194,16 @@ export function OutputsContent({
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'PRD generation failed');
       }
+      const data = await res.json();
+      // Cache locally so card updates immediately (no waiting for router.refresh)
+      setLocalDeliverables(prev => {
+        const next = new Map(prev);
+        const formats: DeliverableFormat[] = [];
+        if (data.markdown) formats.push({ id: 'local-prd-md', formatType: 'markdown', content: data.markdown });
+        if (data.json) formats.push({ id: 'local-prd-json', formatType: 'json', content: typeof data.json === 'string' ? data.json : JSON.stringify(data.json) });
+        next.set('prd', formats);
+        return next;
+      });
       setPrdStatus('done');
       toast.success('PRD generated successfully');
       router.refresh();
@@ -146,6 +225,16 @@ export function OutputsContent({
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Tech Specs generation failed');
       }
+      const data = await res.json();
+      // Cache locally so card updates immediately
+      setLocalDeliverables(prev => {
+        const next = new Map(prev);
+        const formats: DeliverableFormat[] = [];
+        if (data.markdown) formats.push({ id: 'local-ts-md', formatType: 'markdown', content: data.markdown });
+        if (data.json) formats.push({ id: 'local-ts-json', formatType: 'json', content: typeof data.json === 'string' ? data.json : JSON.stringify(data.json) });
+        next.set('tech-specs', formats);
+        return next;
+      });
       setTechSpecsStatus('done');
       toast.success('Tech Specs generated successfully');
       router.refresh();
@@ -176,9 +265,9 @@ export function OutputsContent({
     }
   }, [workshopId, sessionId, router]);
 
-  /** Check whether a deliverable has already been generated (exists in server data) */
+  /** Check whether a deliverable has already been generated (server data or local cache) */
   function isGenerated(type: string): boolean {
-    return deliverables.some((d) => d.type === type);
+    return findDeliverable(type) !== null;
   }
 
   function getGenerationStatus(type: string): GenerationStatus {
@@ -195,11 +284,15 @@ export function OutputsContent({
     return undefined;
   }
 
-  function handleCardClick(type: string) {
-    if (type === 'journey-map') {
-      router.push(`/workshop/${sessionId}/outputs/journey-map`);
+  function handleCardClick(card: CardDef) {
+    if (card.navigateTo) {
+      if (card.navigateTo === 'journey-map') {
+        router.push(`/workshop/${sessionId}/outputs/journey-map`);
+      } else {
+        router.push(`/workshop/${sessionId}/${card.navigateTo}`);
+      }
     } else {
-      setSelectedType(type);
+      setSelectedType(card.type);
     }
   }
 
@@ -232,137 +325,183 @@ export function OutputsContent({
             onBack={() => setSelectedType(null)}
           />
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {DOCUMENT_CARDS.map((card) => {
-              const generated = isGenerated(card.type);
-              const status = getGenerationStatus(card.type);
-              const isLoading = status === 'loading';
-              const isDone = status === 'done' || generated;
-              const deliverable = deliverables.find((d) => d.type === card.type);
+          <div className="space-y-10">
+            {SECTIONS.map((section) => (
+              <div key={section.id} className="space-y-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  {section.label}
+                </h2>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {section.cards.map((card) => {
+                    const generated = isGenerated(card.type);
+                    const status = getGenerationStatus(card.type);
+                    const isLoading = status === 'loading';
+                    const isDone = status === 'done' || generated;
+                    const deliverable = findDeliverable(card.type);
 
-              // Not generatable = Coming Soon (disabled)
-              if (!card.generatable) {
-                return (
-                  <Card
-                    key={card.type}
-                    className="flex flex-col justify-between gap-4 py-5 transition-all duration-150"
-                  >
-                    <CardHeader className="gap-3 pb-0">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        {card.icon}
-                      </div>
-                      <div className="space-y-1">
-                        <CardTitle className="text-sm">{card.title}</CardTitle>
-                        <CardDescription className="text-xs leading-relaxed">
-                          {card.description}
-                        </CardDescription>
-                      </div>
-                    </CardHeader>
-                    <CardFooter className="pt-0">
-                      <Button variant="outline" size="sm" className="w-full" disabled>
-                        Coming Soon
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                );
-              }
-
-              // Generatable card: generated → view details; not generated → generate button
-              if (isDone && deliverable) {
-                return (
-                  <Card
-                    key={card.type}
-                    className="flex flex-col justify-between gap-4 py-5 cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
-                    onClick={() => handleCardClick(card.type)}
-                  >
-                    <CardHeader className="gap-3 pb-0">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        {card.icon}
-                      </div>
-                      <div className="space-y-1">
-                        <CardTitle className="text-sm">{card.title}</CardTitle>
-                        <CardDescription className="text-xs leading-relaxed">
-                          {card.description}
-                        </CardDescription>
-                      </div>
-                      {/* Format pills */}
-                      {deliverable.formats.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {deliverable.formats.map((f) => (
-                            <span
-                              key={f.id}
-                              className="inline-flex items-center rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-normal text-secondary-foreground"
+                    // Navigational card (not generatable but has navigateTo) e.g. Prototype
+                    if (!card.generatable && card.navigateTo) {
+                      return (
+                        <Card
+                          key={card.type}
+                          className="flex flex-col justify-between gap-4 py-5 cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
+                          onClick={() => handleCardClick(card)}
+                        >
+                          <CardHeader className="gap-3 pb-0">
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${section.iconBgClass} ${section.iconTextClass}`}>
+                              {card.icon}
+                            </div>
+                            <div className="space-y-1">
+                              <CardTitle className="text-sm">{card.title}</CardTitle>
+                              <CardDescription className="text-xs leading-relaxed">
+                                {card.description}
+                              </CardDescription>
+                            </div>
+                          </CardHeader>
+                          <CardFooter className="pt-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCardClick(card);
+                              }}
                             >
-                              {FORMAT_LABELS[f.formatType] ?? f.formatType}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </CardHeader>
-                    <CardFooter className="pt-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCardClick(card.type);
-                        }}
-                      >
-                        View Details
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                );
-              }
+                              {card.buttonLabel ?? 'Go'}
+                              <ArrowRight className="h-4 w-4" />
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      );
+                    }
 
-              // Not yet generated — show generate button (or disabled for read-only guests)
-              return (
-                <Card
-                  key={card.type}
-                  className={`flex flex-col justify-between gap-4 py-5 transition-all duration-150 ${isReadOnly ? '' : 'hover:-translate-y-0.5 hover:shadow-md'}`}
-                >
-                  <CardHeader className="gap-3 pb-0">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      {card.icon}
-                    </div>
-                    <div className="space-y-1">
-                      <CardTitle className="text-sm">{card.title}</CardTitle>
-                      <CardDescription className="text-xs leading-relaxed">
-                        {card.description}
-                      </CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardFooter className="pt-0">
-                    {isReadOnly ? (
-                      <Button variant="outline" size="sm" className="w-full" disabled>
-                        Not yet generated
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        disabled={isLoading}
-                        onClick={getGenerateHandler(card.type)}
+                    // Not generatable = Coming Soon (disabled)
+                    if (!card.generatable) {
+                      return (
+                        <Card
+                          key={card.type}
+                          className="flex flex-col justify-between gap-4 py-5 transition-all duration-150"
+                        >
+                          <CardHeader className="gap-3 pb-0">
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${section.iconBgClass} ${section.iconTextClass}`}>
+                              {card.icon}
+                            </div>
+                            <div className="space-y-1">
+                              <CardTitle className="text-sm">{card.title}</CardTitle>
+                              <CardDescription className="text-xs leading-relaxed">
+                                {card.description}
+                              </CardDescription>
+                            </div>
+                          </CardHeader>
+                          <CardFooter className="pt-0">
+                            <Button variant="outline" size="sm" className="w-full" disabled>
+                              Coming Soon
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      );
+                    }
+
+                    // Generatable card: generated → view details; not generated → generate button
+                    if (isDone && deliverable) {
+                      return (
+                        <Card
+                          key={card.type}
+                          className="flex flex-col justify-between gap-4 py-5 cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
+                          onClick={() => handleCardClick(card)}
+                        >
+                          <CardHeader className="gap-3 pb-0">
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${section.iconBgClass} ${section.iconTextClass}`}>
+                              {card.icon}
+                            </div>
+                            <div className="space-y-1">
+                              <CardTitle className="text-sm">{card.title}</CardTitle>
+                              <CardDescription className="text-xs leading-relaxed">
+                                {card.description}
+                              </CardDescription>
+                            </div>
+                            {/* Format pills */}
+                            {deliverable.formats.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 pt-1">
+                                {deliverable.formats.map((f) => (
+                                  <span
+                                    key={f.id}
+                                    className="inline-flex items-center rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-normal text-secondary-foreground"
+                                  >
+                                    {FORMAT_LABELS[f.formatType] ?? f.formatType}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </CardHeader>
+                          <CardFooter className="pt-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCardClick(card);
+                              }}
+                            >
+                              View Details
+                              <ArrowRight className="h-4 w-4" />
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      );
+                    }
+
+                    // Not yet generated — show generate button (or disabled for read-only guests)
+                    return (
+                      <Card
+                        key={card.type}
+                        className={`flex flex-col justify-between gap-4 py-5 transition-all duration-150 ${isReadOnly ? '' : 'hover:-translate-y-0.5 hover:shadow-md'}`}
                       >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Generating...
-                          </>
-                        ) : status === 'error' ? (
-                          `Retry ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : 'Tech Specs'}`
-                        ) : (
-                          `Generate ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : 'Tech Specs'}`
-                        )}
-                      </Button>
-                    )}
-                  </CardFooter>
-                </Card>
-              );
-            })}
+                        <CardHeader className="gap-3 pb-0">
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${section.iconBgClass} ${section.iconTextClass}`}>
+                            {card.icon}
+                          </div>
+                          <div className="space-y-1">
+                            <CardTitle className="text-sm">{card.title}</CardTitle>
+                            <CardDescription className="text-xs leading-relaxed">
+                              {card.description}
+                            </CardDescription>
+                          </div>
+                        </CardHeader>
+                        <CardFooter className="pt-0">
+                          {isReadOnly ? (
+                            <Button variant="outline" size="sm" className="w-full" disabled>
+                              Not yet generated
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              disabled={isLoading}
+                              onClick={getGenerateHandler(card.type)}
+                            >
+                              {isLoading ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  Generating...
+                                </>
+                              ) : status === 'error' ? (
+                                `Retry ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : 'Tech Specs'}`
+                              ) : (
+                                `Generate ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : 'Tech Specs'}`
+                              )}
+                            </Button>
+                          )}
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -7,13 +7,22 @@
  */
 
 import { v0 } from 'v0-sdk';
+import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db/client';
 import { buildPacks } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+  const rl = checkRateLimit(getRateLimitId(req, userId), 'build-pack');
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+
   // Check for V0 API key
   if (!process.env.V0_API_KEY) {
     return new Response(

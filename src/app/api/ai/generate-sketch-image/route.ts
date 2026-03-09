@@ -1,10 +1,13 @@
 import { google } from '@ai-sdk/google';
 import { generateImage } from 'ai';
+import { auth } from '@clerk/nextjs/server';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { loadWorkshopContext } from '@/lib/ai/workshop-context';
 import { put } from '@vercel/blob';
 import { deleteBlobUrls } from '@/lib/blob/delete-blob-urls';
+import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
+import { checkImageGenerationCap, imageCapExceededResponse } from '@/lib/ai/image-generation-cap';
 
 export const maxDuration = 60;
 
@@ -128,6 +131,13 @@ function buildSketchPrompt(params: {
  * - existingImageBase64?: string (data URL or raw base64)
  */
 export async function POST(req: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+  const rl = checkRateLimit(getRateLimitId(req, userId), 'image-gen');
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+
   try {
     const {
       workshopId,
@@ -137,6 +147,7 @@ export async function POST(req: Request) {
       existingImageBase64,
       previousImageUrl,
       hasPersonStamps,
+      slotId,
     } = await req.json();
 
     if (!workshopId || !ideaTitle) {
@@ -144,6 +155,13 @@ export async function POST(req: Request) {
         JSON.stringify({ error: 'workshopId and ideaTitle are required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
+    }
+
+    // Check per-item generation cap
+    const itemId = slotId ? `sketch:${workshopId}:${slotId}` : `sketch:${workshopId}:unknown`;
+    const capCheck = await checkImageGenerationCap(itemId);
+    if (!capCheck.allowed) {
+      return imageCapExceededResponse();
     }
 
     // Load workshop context in parallel with optional sketch analysis
@@ -171,13 +189,14 @@ export async function POST(req: Request) {
       aspectRatio: '4:3',
     });
 
-    // Record usage
+    // Record usage with itemId for cap tracking
     recordUsageEvent({
       workshopId,
       stepId: 'ideation',
       operation: 'generate-sketch-image',
       model: 'imagen-4.0-fast-generate-001',
       imageCount: 1,
+      itemId,
     });
 
     const base64Data = result.image.base64;
@@ -205,7 +224,7 @@ export async function POST(req: Request) {
     }
 
     return new Response(
-      JSON.stringify({ imageUrl }),
+      JSON.stringify({ imageUrl, remainingGenerations: capCheck.remaining - 1 }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     );
   } catch (error) {

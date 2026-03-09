@@ -45,6 +45,7 @@ export interface EzyDrawModalProps {
   workshopId?: string;
   iterationPrompt?: string;
   onIterationPromptChange?: (prompt: string) => void;
+  slotId?: string;
 }
 
 /**
@@ -60,6 +61,7 @@ function EzyDrawContent({
   workshopId,
   iterationPrompt,
   onIterationPromptChange,
+  slotId,
 }: {
   stageRef: React.RefObject<EzyDrawStageHandle | null>;
   onSave: (result: EzyDrawSaveResult) => void;
@@ -70,6 +72,7 @@ function EzyDrawContent({
   workshopId?: string;
   iterationPrompt?: string;
   onIterationPromptChange?: (prompt: string) => void;
+  slotId?: string;
 }) {
   const getSnapshot = useDrawingStore((s) => s.getSnapshot);
   const replaceWithGeneratedImage = useDrawingStore((s) => s.replaceWithGeneratedImage);
@@ -154,14 +157,20 @@ function EzyDrawContent({
           ideaDescription: slotDescription || '',
           existingImageBase64,
           hasPersonStamps,
+          slotId,
           ...(iterationPrompt ? { additionalPrompt: iterationPrompt } : {}),
           ...(backgroundImageUrl?.startsWith('https://') ? { previousImageUrl: backgroundImageUrl } : {}),
         }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to generate sketch');
+        const errData = await response.json().catch(() => ({}));
+        if (response.status === 403 && errData.error === 'generation_limit_reached') {
+          const { toast } = await import('sonner');
+          toast.error(errData.message);
+          return;
+        }
+        throw new Error(errData.error || 'Failed to generate sketch');
       }
 
       const data = await response.json();
@@ -211,6 +220,7 @@ export function EzyDrawModal({
   workshopId,
   iterationPrompt,
   onIterationPromptChange,
+  slotId,
 }: EzyDrawModalProps) {
   const stageRef = useRef<EzyDrawStageHandle>(null);
 
@@ -272,6 +282,7 @@ export function EzyDrawModal({
             workshopId={workshopId}
             iterationPrompt={iterationPrompt}
             onIterationPromptChange={onIterationPromptChange}
+            slotId={slotId}
           />
         </DrawingStoreProvider>
       </DialogContent>

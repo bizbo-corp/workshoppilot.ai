@@ -6,11 +6,13 @@
  */
 
 import { extractStepArtifact, ExtractionError } from '@/lib/extraction';
+import { auth } from '@clerk/nextjs/server';
 import { saveStepArtifact } from '@/lib/context/save-artifact';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { db } from '@/db/client';
 import { chatMessages, workshopSteps } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
+import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
 
 /**
  * Increase timeout for extraction (can take longer than chat)
@@ -34,6 +36,13 @@ export const maxDuration = 60;
  * - 500: Internal server error
  */
 export async function POST(req: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+  const rl = checkRateLimit(getRateLimitId(req, userId), 'text-gen');
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+
   try {
     // Parse and validate request body
     const body = await req.json();

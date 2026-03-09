@@ -56,6 +56,7 @@ export function recordUsageEvent(params: {
   inputTokens?: number | null;
   outputTokens?: number | null;
   imageCount?: number | null;
+  itemId?: string | null;
 }): { costCents: number } {
   const costCents = calculateCostCents(params);
 
@@ -70,6 +71,7 @@ export function recordUsageEvent(params: {
       outputTokens: params.outputTokens || null,
       imageCount: params.imageCount || null,
       costCents,
+      itemId: params.itemId || null,
     })
     .catch((error) => {
       console.error('[usage-tracking] Failed to record usage event:', error);

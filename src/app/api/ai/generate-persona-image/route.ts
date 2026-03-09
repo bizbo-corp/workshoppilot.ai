@@ -1,8 +1,11 @@
 import { generateImage } from "ai";
 import { google } from "@ai-sdk/google";
+import { auth } from "@clerk/nextjs/server";
 import { put } from "@vercel/blob";
 import { deleteBlobUrls } from "@/lib/blob/delete-blob-urls";
 import { recordUsageEvent } from "@/lib/ai/usage-tracking";
+import { checkRateLimit, rateLimitResponse, getRateLimitId } from "@/lib/ai/rate-limiter";
+import { checkImageGenerationCap, imageCapExceededResponse } from "@/lib/ai/image-generation-cap";
 
 /**
  * Increase Vercel serverless timeout for image generation
@@ -60,6 +63,13 @@ function buildImagePrompt(persona: {
  * - name, age, job, archetype, archetypeRole, empathyPains, empathyGains, narrative, quote
  */
 export async function POST(req: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+  }
+  const rl = checkRateLimit(getRateLimitId(req, userId), "image-gen");
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+
   try {
     const {
       workshopId,
@@ -83,6 +93,13 @@ export async function POST(req: Request) {
       );
     }
 
+    // Check per-item generation cap
+    const itemId = `persona:${workshopId}:${templateId}`;
+    const capCheck = await checkImageGenerationCap(itemId);
+    if (!capCheck.allowed) {
+      return imageCapExceededResponse();
+    }
+
     const prompt = buildImagePrompt({
       name,
       age,
@@ -101,13 +118,14 @@ export async function POST(req: Request) {
       aspectRatio: "1:1",
     });
 
-    // Record usage (fire-and-forget)
+    // Record usage with itemId for cap tracking
     recordUsageEvent({
       workshopId,
       stepId: "persona",
       operation: "generate-persona-image",
       model: "imagen-4.0-fast-generate-001",
       imageCount: 1,
+      itemId,
     });
 
     const base64Data = result.image.base64;
@@ -142,7 +160,7 @@ export async function POST(req: Request) {
       deleteBlobUrls([previousAvatarUrl]).catch(console.warn);
     }
 
-    return new Response(JSON.stringify({ imageUrl }), {
+    return new Response(JSON.stringify({ imageUrl, remainingGenerations: capCheck.remaining - 1 }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

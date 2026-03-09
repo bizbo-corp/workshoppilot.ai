@@ -1,10 +1,12 @@
 import { google } from '@ai-sdk/google';
+import { auth } from '@clerk/nextjs/server';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { db } from '@/db/client';
 import { workshops, workshopSteps, stepArtifacts } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { CONCEPT_GENERATION_PROMPT } from '@/lib/ai/prompts/step-prompts';
+import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
 
 /**
  * Increase Vercel serverless timeout for AI responses
@@ -21,6 +23,13 @@ export const maxDuration = 30;
  * - crazy8sTitle: string - Title from the Crazy 8s slot
  */
 export async function POST(req: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+  const rl = checkRateLimit(getRateLimitId(req, userId), 'text-gen');
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+
   try {
     const { workshopId, slotId, crazy8sTitle } = await req.json();
 

@@ -8,8 +8,10 @@
 
 import { generateObject } from 'ai';
 import { google } from '@ai-sdk/google';
+import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
+import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
 
 export const maxDuration = 30;
 
@@ -25,6 +27,13 @@ const billboardSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+  const rl = checkRateLimit(getRateLimitId(req, userId), 'text-gen');
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+
   try {
     const body = await req.json();
     const { workshopId, concepts, mode, userPrompt } = body as {

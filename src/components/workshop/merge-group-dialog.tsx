@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Wand2, RefreshCw, Check } from 'lucide-react';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import type { SlotGroup, Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
+import { useImageGenRemaining } from '@/hooks/use-image-gen-remaining';
+import { GenerationCounter } from '@/components/ui/generation-counter';
+import { toast } from 'sonner';
 
 interface MergeGroupDialogProps {
   open: boolean;
@@ -36,6 +39,9 @@ export function MergeGroupDialog({
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(group.mergedImageUrl);
   const [error, setError] = useState<string | null>(null);
 
+  const itemId = `merge:${workshopId}:${group.id}`;
+  const { remaining, loading: capLoading, decrementRemaining, cap } = useImageGenRemaining(open ? itemId : null);
+
   // Get member slot data
   const memberSlots: Crazy8sSlot[] = group.slotIds
     .map((id) => crazy8sSlots.find((s) => s.slotId === id))
@@ -57,6 +63,7 @@ export function MergeGroupDialog({
         body: JSON.stringify({
           workshopId,
           groupLabel: group.label,
+          groupId: group.id,
           slotData,
           mergePrompt: mergePrompt.trim() || undefined,
           previousImageUrl: previewUrl,
@@ -65,11 +72,16 @@ export function MergeGroupDialog({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (res.status === 403 && data.error === 'generation_limit_reached') {
+          toast.error(data.message);
+          return;
+        }
         throw new Error(data.error || 'Failed to generate merged sketch');
       }
 
       const { mergedImageUrl } = await res.json();
       setPreviewUrl(mergedImageUrl);
+      decrementRemaining();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
     } finally {
@@ -141,7 +153,7 @@ export function MergeGroupDialog({
         <div className="flex items-center gap-2">
           <Button
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || remaining <= 0}
             variant={previewUrl ? 'outline' : 'default'}
             size="sm"
           >
@@ -162,6 +174,7 @@ export function MergeGroupDialog({
               </>
             )}
           </Button>
+          <GenerationCounter remaining={remaining} cap={cap} loading={capLoading} />
           {error && (
             <span className="text-xs text-destructive">{error}</span>
           )}

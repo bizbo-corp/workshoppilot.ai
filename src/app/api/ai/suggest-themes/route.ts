@@ -7,11 +7,13 @@
 
 import { generateObject } from 'ai';
 import { google } from '@ai-sdk/google';
+import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { db } from '@/db/client';
 import { stepArtifacts, workshopSteps } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
 
 /**
  * Increase timeout for AI generation
@@ -34,6 +36,13 @@ export const maxDuration = 30;
  * - 500: AI generation failure
  */
 export async function POST(req: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+  const rl = checkRateLimit(getRateLimitId(req, userId), 'text-gen');
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+
   try {
     // Parse and validate request body
     const body = await req.json();

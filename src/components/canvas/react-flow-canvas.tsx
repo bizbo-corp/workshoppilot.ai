@@ -936,7 +936,13 @@ function ReactFlowCanvasInner({
         });
 
         if (!res.ok) {
-          console.error("Failed to generate persona image:", await res.text());
+          const errData = await res.json().catch(() => ({}));
+          if (res.status === 403 && errData.error === 'generation_limit_reached') {
+            const { toast } = await import('sonner');
+            toast.error(errData.message);
+          } else {
+            console.error("Failed to generate persona image:", errData);
+          }
           return null;
         }
 

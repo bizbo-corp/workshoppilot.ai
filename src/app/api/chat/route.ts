@@ -1,4 +1,5 @@
 import { convertToModelMessages, smoothStream } from 'ai';
+import { auth } from '@clerk/nextjs/server';
 import { chatModel, buildStepSystemPrompt } from '@/lib/ai/chat-config';
 import { saveMessages } from '@/lib/ai/message-persistence';
 import { assembleStepContext } from '@/lib/context/assemble-context';
@@ -10,6 +11,7 @@ import { getCurrentArcPhase } from '@/lib/ai/conversation-state';
 import { streamTextWithRetry, isGeminiRateLimitError } from '@/lib/ai/gemini-retry';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { loadCanvasState } from '@/actions/canvas-actions';
+import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
 
 /**
  * Increase Vercel serverless timeout for AI responses.
@@ -28,6 +30,11 @@ export const maxDuration = 60;
  * - workshopId: string - The workshop ID (wks_xxx)
  */
 export async function POST(req: Request) {
+  // Soft auth: allow guests for multiplayer, use IP-based rate limiting for them
+  const { userId } = await auth();
+  const rl = checkRateLimit(getRateLimitId(req, userId), 'chat');
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+
   try {
     const { messages, sessionId, stepId, workshopId, subStep, selectedStickyNoteIds } = await req.json();
 
