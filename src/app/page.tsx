@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { LandingHeader } from "@/components/layout/landing-header";
 import { NewWorkshopButton } from "@/components/dialogs/new-workshop-dialog";
+import { GuidedPilotButton } from "@/components/dialogs/guided-pilot-dialog";
 import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/landing/footer";
 import { Globe } from "@/components/ui/globe";
@@ -639,7 +640,7 @@ export default function Home() {
           </div>
 
           {/* Pricing tiers */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl">
             {/* Single Pilot */}
             <div className="rounded-2xl border border-border p-8 flex flex-col">
               <h3 className="text-lg font-semibold text-foreground mb-1">
@@ -689,6 +690,12 @@ export default function Home() {
                   Start Free Workshop
                 </NewWorkshopButton>
               )}
+              <p className="text-center text-xs text-muted-foreground mt-4">
+                Enterprise or Team?{" "}
+                <GuidedPilotButton variant="link" className="text-xs">
+                  Book a Guided Workshop
+                </GuidedPilotButton>
+              </p>
             </div>
 
             {/* Serial Entrepreneur */}
@@ -750,6 +757,65 @@ export default function Home() {
                   Start Free Workshop
                 </NewWorkshopButton>
               )}
+              <p className="text-center text-xs text-muted-foreground mt-4">
+                Enterprise or Team?{" "}
+                <GuidedPilotButton variant="link" className="text-xs">
+                  Book a Guided Workshop
+                </GuidedPilotButton>
+              </p>
+            </div>
+
+            {/* The Guided Pilot — premium tier */}
+            <div
+              id="guided-pilot"
+              className="rounded-2xl border border-amber-500/40 dark:border-amber-400/30 ring-1 ring-amber-500/20 dark:ring-amber-400/15 p-8 flex flex-col scroll-mt-28 bg-gradient-to-b from-amber-50/50 via-card to-card dark:from-amber-950/30 dark:via-card dark:to-card"
+              style={{
+                boxShadow:
+                  "inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 24px -4px rgba(180,130,40,0.12)",
+              }}
+            >
+              <div className="mb-4">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 rounded-full px-3 py-1">
+                  <Sparkles className="h-3 w-3" />
+                  White Glove
+                </span>
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-1">
+                The Guided Pilot
+              </h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Expert-led facilitation for teams that need it done right the
+                first time.
+              </p>
+              <div className="mb-6">
+                <span className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
+                  $1,100
+                </span>
+                <span className="text-sm text-muted-foreground ml-2">
+                  / per workshop
+                </span>
+              </div>
+              <ul className="space-y-3 flex-1 mb-8">
+                {[
+                  "Full AI Build Pack included",
+                  "1x live 4-hour facilitation session with a Design Thinking pro",
+                  "Expert review — a human PM audits your output for technical gotchas",
+                  "Stakeholder-ready — we help you prep the final deck for investors or leadership",
+                ].map((feature) => (
+                  <li key={feature} className="flex items-start gap-2.5">
+                    <Check className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <span className="text-sm text-foreground">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-muted-foreground mb-5 border-t border-amber-200/50 dark:border-amber-800/30 pt-4">
+                Best for funded startups and corporate innovation teams.
+              </p>
+              <GuidedPilotButton
+                className="w-full rounded-xl py-3.5 px-4 font-semibold text-sm text-center bg-olive-700 text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500 shadow-md shadow-olive-700/20 transition-colors cursor-pointer"
+              >
+                Book a Guided Workshop
+              </GuidedPilotButton>
             </div>
           </div>
 

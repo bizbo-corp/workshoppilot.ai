@@ -9,7 +9,7 @@
 
 - [x] Build Pack
 - [x] PRD
-- [ ] PPT
+- [x] PPT
 - [ ] Tech Specs
 - [x] Rate Limit
 - [x] Idea to concept consolidation

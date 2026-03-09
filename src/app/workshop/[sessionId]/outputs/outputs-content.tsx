@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -13,6 +13,8 @@ import {
   Rocket,
   ArrowRight,
   Loader2,
+  Download,
+  RefreshCw,
 } from 'lucide-react';
 import {
   Card,
@@ -23,6 +25,8 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DeliverableDetailView } from '@/components/workshop/deliverable-detail-view';
+import { CaptureFlow } from '@/components/workshop/presentation-capture/capture-flow';
+import type { StepData } from '@/components/workshop/presentation-capture/step-renderers';
 import { toast } from 'sonner';
 
 interface DeliverableFormat {
@@ -84,7 +88,7 @@ const SECTIONS: Section[] = [
         description:
           'Executive summary deck covering the problem, research insights, proposed solution, and implementation roadmap.',
         icon: <Presentation className="h-5 w-5" />,
-        generatable: false,
+        generatable: true,
       },
       {
         type: 'user-stories',
@@ -161,6 +165,14 @@ export function OutputsContent({
   const [prdStatus, setPrdStatus] = useState<GenerationStatus>('idle');
   const [techSpecsStatus, setTechSpecsStatus] = useState<GenerationStatus>('idle');
   const [journeyMapStatus, setJourneyMapStatus] = useState<GenerationStatus>('idle');
+  const [presentationStatus, setPresentationStatus] = useState<GenerationStatus>('idle');
+  const [presentationGenerated, setPresentationGenerated] = useState(
+    () => deliverables.some((d) => d.type === 'stakeholder-ppt')
+  );
+  const [presentationProgress, setPresentationProgress] = useState('');
+  const [captureStepsData, setCaptureStepsData] = useState<Record<string, StepData> | null>(null);
+  const [captureTrigger, setCaptureTrigger] = useState(false);
+  const captureForceRef = useRef(false);
   const [localDeliverables, setLocalDeliverables] = useState<Map<string, DeliverableFormat[]>>(new Map());
 
   /** Look up a deliverable from server data first, then fall back to local cache */
@@ -169,9 +181,14 @@ export function OutputsContent({
     if (server) return server;
     const local = localDeliverables.get(type);
     if (local && local.length > 0) {
+      const titleMap: Record<string, string> = {
+        prd: 'Product Requirements Document',
+        'tech-specs': 'Technical Specifications',
+        'stakeholder-ppt': 'Stakeholder Presentation',
+      };
       return {
         type,
-        title: type === 'prd' ? 'Product Requirements Document' : 'Technical Specifications',
+        title: titleMap[type] || type,
         formats: local,
       };
     }
@@ -275,6 +292,84 @@ export function OutputsContent({
     }
   }, [workshopId, sessionId, router]);
 
+  const handleGeneratePresentation = useCallback(async (force = false) => {
+    setPresentationStatus('loading');
+    setPresentationProgress('Fetching canvas data...');
+    captureForceRef.current = force;
+
+    try {
+      // Step 1: Fetch canvas data
+      const canvasRes = await fetch(`/api/build-pack/canvas-data?workshopId=${workshopId}`);
+      if (!canvasRes.ok) {
+        throw new Error('Failed to fetch canvas data');
+      }
+      const canvasData = await canvasRes.json();
+      const stepsData = canvasData.steps as Record<string, StepData>;
+
+      setPresentationProgress('Capturing step visuals...');
+
+      // Step 2: Set up capture flow
+      setCaptureStepsData(stepsData);
+      setCaptureTrigger(true);
+    } catch (err) {
+      setPresentationStatus('error');
+      setPresentationProgress('');
+      toast.error(err instanceof Error ? err.message : 'Presentation generation failed');
+    }
+  }, [workshopId]);
+
+  /** Called when capture flow finishes capturing all step images */
+  const handleCaptureComplete = useCallback(async (images: Record<string, string>) => {
+    setCaptureTrigger(false);
+    setCaptureStepsData(null);
+    setPresentationProgress('Building presentation...');
+
+    try {
+      // Step 3: Send images to API to build PPTX
+      const res = await fetch('/api/build-pack/generate-presentation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workshopId,
+          stepImages: images,
+          force: captureForceRef.current,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Presentation generation failed');
+      }
+
+      // Response is binary PPTX — trigger download
+      const blob = await res.blob();
+      const filename = res.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'Stakeholder-Presentation.pptx';
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setPresentationStatus('done');
+      setPresentationGenerated(true);
+      setPresentationProgress('');
+      toast.success('Presentation downloaded successfully');
+    } catch (err) {
+      setPresentationStatus('error');
+      setPresentationProgress('');
+      toast.error(err instanceof Error ? err.message : 'Presentation generation failed');
+    }
+  }, [workshopId]);
+
+  const handleCaptureError = useCallback((error: Error) => {
+    setCaptureTrigger(false);
+    setCaptureStepsData(null);
+    setPresentationStatus('error');
+    setPresentationProgress('');
+    toast.error(`Capture failed: ${error.message}`);
+  }, []);
+
   /** Check whether a deliverable has already been generated (server data or local cache) */
   function isGenerated(type: string): boolean {
     return findDeliverable(type) !== null;
@@ -284,6 +379,7 @@ export function OutputsContent({
     if (type === 'prd') return prdStatus;
     if (type === 'tech-specs') return techSpecsStatus;
     if (type === 'journey-map') return journeyMapStatus;
+    if (type === 'stakeholder-ppt') return presentationStatus;
     return 'idle';
   }
 
@@ -291,6 +387,7 @@ export function OutputsContent({
     if (type === 'prd') return handleGeneratePrd;
     if (type === 'tech-specs') return handleGenerateTechSpecs;
     if (type === 'journey-map') return handleGenerateJourneyMap;
+    if (type === 'stakeholder-ppt') return () => handleGeneratePresentation(false);
     return undefined;
   }
 
@@ -308,6 +405,18 @@ export function OutputsContent({
 
   return (
     <div className="h-full overflow-y-auto">
+      {/* Hidden capture flow for presentation image generation */}
+      {captureStepsData && (
+        <CaptureFlow
+          stepsData={captureStepsData}
+          trigger={captureTrigger}
+          onProgress={(current, total, stepName) => {
+            setPresentationProgress(`Capturing step ${current} of ${total}...`);
+          }}
+          onComplete={handleCaptureComplete}
+          onError={handleCaptureError}
+        />
+      )}
       <div className="mx-auto max-w-4xl px-6 py-8 space-y-8">
         {/* Header */}
         <div className="space-y-1">
@@ -413,6 +522,65 @@ export function OutputsContent({
                       );
                     }
 
+                    // Presentation card: download-only (no detail view)
+                    if (card.type === 'stakeholder-ppt' && (presentationGenerated || presentationStatus === 'done')) {
+                      return (
+                        <Card
+                          key={card.type}
+                          className="flex flex-col justify-between gap-4 py-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
+                        >
+                          <CardHeader className="gap-3 pb-0">
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${section.iconBgClass} ${section.iconTextClass}`}>
+                              {card.icon}
+                            </div>
+                            <div className="space-y-1">
+                              <CardTitle className="text-sm">{card.title}</CardTitle>
+                              <CardDescription className="text-xs leading-relaxed">
+                                {card.description}
+                              </CardDescription>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              <span className="inline-flex items-center rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-normal text-secondary-foreground">
+                                PPTX
+                              </span>
+                            </div>
+                          </CardHeader>
+                          <CardFooter className="flex gap-2 pt-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              disabled={isLoading}
+                              onClick={() => handleGeneratePresentation(false)}
+                            >
+                              {isLoading ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  {presentationProgress || 'Generating...'}
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="h-4 w-4" />
+                                  Download Again
+                                </>
+                              )}
+                            </Button>
+                            {!isReadOnly && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={isLoading}
+                                onClick={() => handleGeneratePresentation(true)}
+                                title="Regenerate with fresh AI content"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </CardFooter>
+                        </Card>
+                      );
+                    }
+
                     // Generatable card: generated → view details; not generated → generate button
                     if (isDone && deliverable) {
                       return (
@@ -496,12 +664,12 @@ export function OutputsContent({
                               {isLoading ? (
                                 <>
                                   <Loader2 className="h-4 w-4 animate-spin" />
-                                  Generating...
+                                  {card.type === 'stakeholder-ppt' && presentationProgress ? presentationProgress : 'Generating...'}
                                 </>
                               ) : status === 'error' ? (
-                                `Retry ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : 'Tech Specs'}`
+                                `Retry ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : card.type === 'stakeholder-ppt' ? 'Presentation' : 'Tech Specs'}`
                               ) : (
-                                `Generate ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : 'Tech Specs'}`
+                                `Generate ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : card.type === 'stakeholder-ppt' ? 'Presentation' : 'Tech Specs'}`
                               )}
                             </Button>
                           )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
@@ -26,10 +26,13 @@ import {
 export function LandingHeader() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
 
+  useEffect(() => setMounted(true), []);
+
   const navLinks = [
-    { href: '/pricing', label: 'Pricing', authOnly: false },
+    { href: '/#pricing', label: 'Pricing', authOnly: false },
     { href: '/dashboard', label: 'Dashboard', authOnly: true },
   ];
 
@@ -84,10 +87,12 @@ export function LandingHeader() {
 
           {/* Center: Nav links (desktop) */}
           <nav className="hidden items-center gap-6 md:flex">
-            <NavLink href="/pricing" label="Pricing" />
-            <SignedIn>
-              <NavLink href="/dashboard" label="Dashboard" />
-            </SignedIn>
+            <NavLink href="/#pricing" label="Pricing" />
+            {mounted && (
+              <SignedIn>
+                <NavLink href="/dashboard" label="Dashboard" />
+              </SignedIn>
+            )}
           </nav>
 
           {/* Right: Theme toggle + Auth (desktop) */}
@@ -96,7 +101,45 @@ export function LandingHeader() {
 
             {/* Desktop auth controls */}
             <div className="hidden items-center gap-2 md:flex">
-              <ClerkLoading>
+              {mounted ? (
+                <>
+                  <ClerkLoading>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowSignIn(true)}
+                    >
+                      Sign in
+                    </Button>
+                  </ClerkLoading>
+                  <SignedOut>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowSignIn(true)}
+                    >
+                      Sign in
+                    </Button>
+                  </SignedOut>
+                  <SignedIn>
+                    <Link
+                      href="/dashboard"
+                      className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Dashboard
+                    </Link>
+                    <UserButton
+                      appearance={{
+                        elements: {
+                          avatarBox: 'w-8 h-8',
+                        },
+                      }}
+                    />
+                  </SignedIn>
+                </>
+              ) : (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -105,32 +148,7 @@ export function LandingHeader() {
                 >
                   Sign in
                 </Button>
-              </ClerkLoading>
-              <SignedOut>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowSignIn(true)}
-                >
-                  Sign in
-                </Button>
-              </SignedOut>
-              <SignedIn>
-                <Link
-                  href="/dashboard"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Dashboard
-                </Link>
-                <UserButton
-                  appearance={{
-                    elements: {
-                      avatarBox: 'w-8 h-8',
-                    },
-                  }}
-                />
-              </SignedIn>
+              )}
             </div>
 
             {/* Mobile hamburger */}
@@ -148,13 +166,15 @@ export function LandingHeader() {
                 <nav className="flex flex-col gap-1 pt-4">
                   {navLinks.map((link) =>
                     link.authOnly ? (
-                      <SignedIn key={link.href}>
-                        <NavLink
-                          href={link.href}
-                          label={link.label}
-                          mobile
-                        />
-                      </SignedIn>
+                      mounted && (
+                        <SignedIn key={link.href}>
+                          <NavLink
+                            href={link.href}
+                            label={link.label}
+                            mobile
+                          />
+                        </SignedIn>
+                      )
                     ) : (
                       <NavLink
                         key={link.href}
@@ -168,7 +188,52 @@ export function LandingHeader() {
 
                 {/* Auth controls at bottom */}
                 <div className="mt-auto border-t border-border pt-4">
-                  <ClerkLoading>
+                  {mounted ? (
+                    <>
+                      <ClerkLoading>
+                        <Button
+                          variant="ghost"
+                          className="w-full text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            setSheetOpen(false);
+                            setShowSignIn(true);
+                          }}
+                        >
+                          Sign in
+                        </Button>
+                      </ClerkLoading>
+                      <SignedOut>
+                        <Button
+                          variant="ghost"
+                          className="w-full text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            setSheetOpen(false);
+                            setShowSignIn(true);
+                          }}
+                        >
+                          Sign in
+                        </Button>
+                      </SignedOut>
+                      <SignedIn>
+                        <div className="flex items-center gap-3 px-3">
+                          <UserButton
+                            appearance={{
+                              elements: {
+                                avatarBox: 'w-8 h-8',
+                              },
+                            }}
+                          />
+                          <Link
+                            href="/dashboard"
+                            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={() => setSheetOpen(false)}
+                          >
+                            Dashboard
+                          </Link>
+                        </div>
+                      </SignedIn>
+                    </>
+                  ) : (
                     <Button
                       variant="ghost"
                       className="w-full text-muted-foreground hover:text-foreground"
@@ -179,37 +244,7 @@ export function LandingHeader() {
                     >
                       Sign in
                     </Button>
-                  </ClerkLoading>
-                  <SignedOut>
-                    <Button
-                      variant="ghost"
-                      className="w-full text-muted-foreground hover:text-foreground"
-                      onClick={() => {
-                        setSheetOpen(false);
-                        setShowSignIn(true);
-                      }}
-                    >
-                      Sign in
-                    </Button>
-                  </SignedOut>
-                  <SignedIn>
-                    <div className="flex items-center gap-3 px-3">
-                      <UserButton
-                        appearance={{
-                          elements: {
-                            avatarBox: 'w-8 h-8',
-                          },
-                        }}
-                      />
-                      <Link
-                        href="/dashboard"
-                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                        onClick={() => setSheetOpen(false)}
-                      >
-                        Dashboard
-                      </Link>
-                    </div>
-                  </SignedIn>
+                  )}
                 </div>
               </SheetContent>
             </Sheet>
