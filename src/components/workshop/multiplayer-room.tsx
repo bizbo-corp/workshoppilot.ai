@@ -42,7 +42,9 @@ export const MultiplayerContext = createContext<{
   participantColor: string | null;
   isMultiplayer: boolean;
   isFacilitator: boolean;
-}>({ participantColor: null, isMultiplayer: false, isFacilitator: false });
+  participantId: string | null;
+  displayName: string | null;
+}>({ participantColor: null, isMultiplayer: false, isFacilitator: false, participantId: null, displayName: null });
 
 export function useMultiplayerContext() {
   return useContext(MultiplayerContext);
@@ -219,6 +221,8 @@ function MultiplayerRoomInner({
         participantColor: self?.info?.color ?? null,
         isMultiplayer: true,
         isFacilitator: self?.info?.role === "owner",
+        participantId: self?.info?.participantId ?? null,
+        displayName: self?.info?.name ?? null,
       }}
     >
       <JoinLeaveListener />

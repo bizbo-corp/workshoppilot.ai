@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import type { UIMessage } from "ai";
 import { ChatPanel } from "./chat-panel";
+import { ParticipantChatPanel } from "./participant-chat-panel";
 import { RightPanel } from "./right-panel";
 import { SynthesisBuildPackSection } from "./synthesis-summary-view";
 import { MobileTabBar } from "./mobile-tab-bar";
@@ -26,6 +27,7 @@ import {
   FileCode2,
   Minimize2,
   Maximize2,
+  MessageSquare,
 } from "lucide-react";
 import {
   resetStep,
@@ -72,6 +74,7 @@ import { useMultiplayerContext } from "@/components/workshop/multiplayer-room";
 import { useBroadcastEvent } from "@liveblocks/react";
 import { FacilitatorControls } from "./facilitator-controls";
 import { PresenceBar } from "./presence-bar";
+import { ParticipantOverview } from "./participant-overview";
 
 const CANVAS_ENABLED_STEPS = [
   "challenge",
@@ -191,6 +194,9 @@ interface StepContainerProps {
   isAdmin?: boolean;
   canvasGuides?: CanvasGuideData[];
   canvasSettings?: StepCanvasSettingsData | null;
+  participantId?: string | null;
+  participantDisplayName?: string | null;
+  participantColor?: string | null;
 }
 
 export function StepContainer({
@@ -210,6 +216,9 @@ export function StepContainer({
   isAdmin,
   canvasGuides,
   canvasSettings,
+  participantId,
+  participantDisplayName,
+  participantColor,
 }: StepContainerProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
@@ -893,6 +902,7 @@ export function StepContainer({
 
   // Reset dialog state
   const [showResetDialog, setShowResetDialog] = React.useState(false);
+  const [showParticipantOverview, setShowParticipantOverview] = React.useState(false);
   const [isResetting, setIsResetting] = React.useState(false);
 
   // Reset key forces ChatPanel/IdeationSubStepContainer to re-mount (clearing useChat state)
@@ -1816,26 +1826,39 @@ export function StepContainer({
         </div>
       )}
       <div className="min-h-0 flex-1">
-        <ChatPanel
-          key={resetKey}
-          stepOrder={stepOrder}
-          sessionId={sessionId}
-          workshopId={workshopId}
-          initialMessages={localMessages}
-          onMessageCountChange={
-            stepOrder === 10 ? setStep10MessageCount : undefined
-          }
-          showStepConfirm={showConfirm}
-          onStepConfirm={() => setArtifactConfirmed(true)}
-          onStepRevise={() => setArtifactConfirmed(false)}
-          stepConfirmLabel={confirmLabel}
-          stepAlreadyConfirmed={artifactConfirmed}
-          onConceptComplete={() => setConceptProceedOverride(true)}
-          skipAutoStart={autoStartFired}
-          onAutoStarted={handleAutoStarted}
-          onLastAssistantMessage={setLastAiMessage}
-          hideAvatar={!isMobile}
-        />
+        {isMultiplayer && !isFacilitator && participantId ? (
+          <ParticipantChatPanel
+            key={resetKey}
+            stepOrder={stepOrder}
+            sessionId={sessionId}
+            workshopId={workshopId}
+            participantId={participantId}
+            displayName={participantDisplayName || "Participant"}
+            participantColor={participantColor || "#6366f1"}
+            initialMessages={localMessages}
+          />
+        ) : (
+          <ChatPanel
+            key={resetKey}
+            stepOrder={stepOrder}
+            sessionId={sessionId}
+            workshopId={workshopId}
+            initialMessages={localMessages}
+            onMessageCountChange={
+              stepOrder === 10 ? setStep10MessageCount : undefined
+            }
+            showStepConfirm={showConfirm}
+            onStepConfirm={() => setArtifactConfirmed(true)}
+            onStepRevise={() => setArtifactConfirmed(false)}
+            stepConfirmLabel={confirmLabel}
+            stepAlreadyConfirmed={artifactConfirmed}
+            onConceptComplete={() => setConceptProceedOverride(true)}
+            skipAutoStart={autoStartFired}
+            onAutoStarted={handleAutoStarted}
+            onLastAssistantMessage={setLastAiMessage}
+            hideAvatar={!isMobile}
+          />
+        )}
       </div>
     </div>
   );
@@ -2107,8 +2130,35 @@ export function StepContainer({
               Styled to match the bottom canvas toolbar (bg-card rounded-xl shadow-md border). */}
           <div className="fixed top-[4.5rem] right-4 z-50 flex items-center gap-0.5 bg-card rounded-xl shadow-md border border-border px-1.5 py-1">
             <FacilitatorControls workshopId={workshopId} sessionId={sessionId} />
+            {isFacilitator && (
+              <button
+                onClick={() => setShowParticipantOverview((v) => !v)}
+                className={cn(
+                  "rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-xs font-medium px-2",
+                  showParticipantOverview && "bg-muted text-foreground",
+                )}
+                title="Participant activity"
+              >
+                <MessageSquare className="h-4 w-4" />
+              </button>
+            )}
             <PresenceBar />
           </div>
+          {/* Participant overview panel */}
+          {isFacilitator && showParticipantOverview && step && (
+            <div className="fixed top-[7rem] right-4 z-40 w-80 max-h-[60vh] overflow-y-auto rounded-xl bg-card shadow-lg border border-border p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold">Participant Activity</h3>
+                <button
+                  onClick={() => setShowParticipantOverview(false)}
+                  className="text-muted-foreground hover:text-foreground text-xs"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <ParticipantOverview sessionId={sessionId} stepId={step.id} />
+            </div>
+          )}
         </>
       )}
       {/* Step navigation — hidden for participants in multiplayer mode */}

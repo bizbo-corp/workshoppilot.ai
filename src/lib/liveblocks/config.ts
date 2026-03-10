@@ -105,6 +105,7 @@ declare global {
         name: string;
         color: string;
         role: "owner" | "participant";
+        participantId: string | null; // spar_xxx for participants, null for owner
       };
     };
 

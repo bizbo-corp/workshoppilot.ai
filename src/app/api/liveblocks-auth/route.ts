@@ -86,6 +86,7 @@ export async function POST(request: Request) {
         name: participant.displayName,
         color: participant.color,
         role: 'participant',
+        participantId: participant.id,
       },
     });
     session.allow(room, session.FULL_ACCESS);
@@ -109,6 +110,7 @@ export async function POST(request: Request) {
       name: user.fullName ?? user.username ?? 'Facilitator',
       color: PARTICIPANT_COLORS[0], // Owner always gets indigo — per-session rotation in Phase 57
       role: 'owner',
+      participantId: null,
     },
   });
 

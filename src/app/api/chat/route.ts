@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
   try {
-    const { messages, sessionId, stepId, workshopId, subStep, selectedStickyNoteIds } = await req.json();
+    const { messages, sessionId, stepId, workshopId, subStep, selectedStickyNoteIds, participantId, participantName } = await req.json();
 
     // Validate required parameters
     if (!sessionId || !stepId || !workshopId) {
@@ -88,6 +88,7 @@ export async function POST(req: Request) {
     }
 
     // Build context-aware system prompt with arc phase and step instructions
+    const isParticipant = !!participantId;
     const systemPrompt = buildStepSystemPrompt(
       stepId,
       stepName,
@@ -99,6 +100,8 @@ export async function POST(req: Request) {
       instructionsOverride,
       workshopTitle,
       stepContext.existingItemNames,
+      isParticipant,
+      participantName,
     );
 
     // Filter out messages with empty content before conversion.
@@ -144,7 +147,7 @@ export async function POST(req: Request) {
       sendReasoning: false,
       originalMessages: messages,
       onFinish: async ({ messages: responseMessages }) => {
-        await saveMessages(sessionId, stepId, responseMessages);
+        await saveMessages(sessionId, stepId, responseMessages, participantId);
       },
     });
   } catch (error) {

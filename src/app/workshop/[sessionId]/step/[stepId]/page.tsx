@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
+import { cookies } from "next/headers";
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db/client";
-import { sessions, stepArtifacts, chatMessages } from "@/db/schema";
+import { sessions, stepArtifacts, chatMessages, sessionParticipants } from "@/db/schema";
 import { getStepByOrder, STEPS } from "@/lib/workshop/step-metadata";
 import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
@@ -26,6 +27,7 @@ import { getStepTemplateStickyNotes, guidesToTemplateDefs } from "@/lib/canvas/t
 import { dbWithRetry } from "@/db/with-retry";
 import { PAYWALL_CUTOFF_DATE } from "@/lib/billing/paywall-config";
 import { PaywallOverlay } from "@/components/workshop/paywall-overlay";
+import { verifyGuestCookie, COOKIE_NAME } from "@/lib/auth/guest-cookie";
 
 interface StepPageProps {
   params: Promise<{
@@ -76,6 +78,50 @@ export default async function StepPage({ params }: StepPageProps) {
   const userEmail = user?.emailAddresses?.[0]?.emailAddress;
   const userIsAdmin = !!(adminEmail && userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase());
 
+  // Determine participant identity for multiplayer
+  let participantId: string | null = null;
+  let participantDisplayName: string | null = null;
+  let participantColor: string | null = null;
+
+  if (session.workshop.workshopType === 'multiplayer') {
+    if (!user) {
+      // Guest path: read wp_guest cookie
+      const cookieStore = await cookies();
+      const raw = cookieStore.get(COOKIE_NAME)?.value;
+      const payload = raw ? verifyGuestCookie(raw) : null;
+      if (payload) {
+        const [participant] = await db
+          .select()
+          .from(sessionParticipants)
+          .where(eq(sessionParticipants.id, payload.participantId))
+          .limit(1);
+        if (participant && participant.role === 'participant') {
+          participantId = participant.id;
+          participantDisplayName = participant.displayName;
+          participantColor = participant.color;
+        }
+      }
+    } else {
+      // Clerk user: check if they're a participant (not owner)
+      const [participant] = await db
+        .select()
+        .from(sessionParticipants)
+        .where(
+          and(
+            eq(sessionParticipants.sessionId, session.id),
+            eq(sessionParticipants.clerkUserId, user.id),
+            eq(sessionParticipants.role, 'participant'),
+          )
+        )
+        .limit(1);
+      if (participant) {
+        participantId = participant.id;
+        participantDisplayName = participant.displayName;
+        participantColor = participant.color;
+      }
+    }
+  }
+
   // Sequential enforcement: redirect if trying to access not_started step
   const stepRecord = session.workshop.steps.find((s) => s.stepId === step.id);
 
@@ -116,8 +162,8 @@ export default async function StepPage({ params }: StepPageProps) {
     }
   }
 
-  // Load chat messages for this session and step
-  let initialMessages = await loadMessages(sessionId, step.id);
+  // Load chat messages for this session and step (scoped to participant if applicable)
+  let initialMessages = await loadMessages(sessionId, step.id, participantId);
 
   // Clean up duplicate intro messages for the head step (furthest in_progress step).
   // If the user hasn't sent any real messages yet (only __step_start__ triggers + AI intros),
@@ -142,12 +188,16 @@ export default async function StepPage({ params }: StepPageProps) {
 
     if (!hasRealUserMessage && !hasAssistantResponse) {
       // No real user interaction AND no AI response — clear stale trigger-only messages
+      // Scope to current user's messages (participantId or facilitator NULL)
       await db
         .delete(chatMessages)
         .where(
           and(
             eq(chatMessages.sessionId, sessionId),
-            eq(chatMessages.stepId, step.id)
+            eq(chatMessages.stepId, step.id),
+            participantId
+              ? eq(chatMessages.participantId, participantId)
+              : isNull(chatMessages.participantId),
           )
         );
       initialMessages = [];
@@ -624,6 +674,9 @@ export default async function StepPage({ params }: StepPageProps) {
               isAdmin={userIsAdmin}
               canvasGuides={canvasGuides}
               canvasSettings={canvasSettings}
+              participantId={participantId}
+              participantDisplayName={participantDisplayName}
+              participantColor={participantColor}
             />
           </MultiplayerRoomLoader>
         ) : (

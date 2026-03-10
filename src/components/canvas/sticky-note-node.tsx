@@ -43,6 +43,9 @@ export type StickyNoteNodeData = {
   templateKey?: string;
   templateLabel?: string;
   placeholderText?: string;
+  ownerId?: string;
+  ownerName?: string;
+  ownerColor?: string;
   onConfirm?: (id: string) => void;
   onReject?: (id: string) => void;
   onTextChange?: (id: string, text: string) => void;
@@ -228,6 +231,22 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
             </span>
           )}
         </>
+      )}
+
+      {/* Provenance indicator for participant-contributed items */}
+      {data.ownerId && (
+        <div
+          className="absolute bottom-1 right-1.5 flex items-center gap-1"
+          title={data.ownerName || 'Participant'}
+        >
+          <div
+            className="h-2.5 w-2.5 rounded-full border border-white/60"
+            style={{ backgroundColor: data.ownerColor || '#6366f1' }}
+          />
+          <span className="text-[9px] font-medium text-neutral-olive-500/70 max-w-[60px] truncate">
+            {data.ownerName}
+          </span>
+        </div>
       )}
 
       <Handle

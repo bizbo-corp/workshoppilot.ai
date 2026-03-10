@@ -11,16 +11,18 @@ import type { UIMessage } from 'ai';
  * @param sessionId - The session ID
  * @param stepId - The step ID
  * @param messages - Array of UIMessage objects from AI SDK
+ * @param participantId - Optional participant ID (NULL = facilitator/solo)
  * @returns Object with isPending flag and flush function
  */
 export function useAutoSave(
   sessionId: string,
   stepId: string,
-  messages: UIMessage[]
+  messages: UIMessage[],
+  participantId?: string | null,
 ) {
   const debouncedSave = useDebouncedCallback(
     async (msgs: UIMessage[]) => {
-      await autoSaveMessages(sessionId, stepId, msgs);
+      await autoSaveMessages(sessionId, stepId, msgs, participantId);
     },
     2000, // 2 second delay
     { maxWait: 10000 } // Force save after 10 seconds max

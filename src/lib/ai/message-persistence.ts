@@ -1,7 +1,17 @@
 import { db } from '@/db/client';
 import { chatMessages } from '@/db/schema';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, isNull } from 'drizzle-orm';
 import type { UIMessage } from 'ai';
+
+/**
+ * Build the WHERE clause for participant-scoped queries.
+ * NULL participantId = facilitator/solo messages.
+ */
+function participantFilter(participantId?: string | null) {
+  return participantId
+    ? eq(chatMessages.participantId, participantId)
+    : isNull(chatMessages.participantId);
+}
 
 /**
  * Save messages to database for a given session and step
@@ -10,18 +20,24 @@ import type { UIMessage } from 'ai';
  * @param sessionId - The session ID (ses_xxx)
  * @param stepId - The semantic step ID ('empathize', 'define', etc.)
  * @param messages - Array of UIMessage objects from AI SDK
+ * @param participantId - Optional participant ID (NULL = facilitator/solo)
  */
 export async function saveMessages(
   sessionId: string,
   stepId: string,
-  messages: UIMessage[]
+  messages: UIMessage[],
+  participantId?: string | null,
 ): Promise<void> {
-  // Fetch existing messageIds for this session+step
+  // Fetch existing messageIds for this session+step+participant
   const existingMessages = await db
     .select({ messageId: chatMessages.messageId })
     .from(chatMessages)
     .where(
-      and(eq(chatMessages.sessionId, sessionId), eq(chatMessages.stepId, stepId))
+      and(
+        eq(chatMessages.sessionId, sessionId),
+        eq(chatMessages.stepId, stepId),
+        participantFilter(participantId),
+      )
     );
 
   const existingMessageIds = new Set(
@@ -49,6 +65,7 @@ export async function saveMessages(
       messageId: msg.id,
       role: msg.role as 'user' | 'assistant' | 'system',
       content,
+      participantId: participantId || null,
     };
   });
 
@@ -60,17 +77,23 @@ export async function saveMessages(
  *
  * @param sessionId - The session ID (ses_xxx)
  * @param stepId - The semantic step ID ('empathize', 'define', etc.)
+ * @param participantId - Optional participant ID (NULL = facilitator/solo)
  * @returns Array of UIMessage objects in chronological order
  */
 export async function loadMessages(
   sessionId: string,
-  stepId: string
+  stepId: string,
+  participantId?: string | null,
 ): Promise<UIMessage[]> {
   const rows = await db
     .select()
     .from(chatMessages)
     .where(
-      and(eq(chatMessages.sessionId, sessionId), eq(chatMessages.stepId, stepId))
+      and(
+        eq(chatMessages.sessionId, sessionId),
+        eq(chatMessages.stepId, stepId),
+        participantFilter(participantId),
+      )
     )
     .orderBy(asc(chatMessages.createdAt));
 

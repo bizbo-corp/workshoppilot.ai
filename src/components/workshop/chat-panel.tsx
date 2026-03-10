@@ -32,9 +32,6 @@ import {
   computeClusterChildPositions,
   POST_IT_WIDTH,
   POST_IT_HEIGHT,
-  CATEGORY_COLORS,
-  ZONE_COLORS,
-  isPersonaCardForCluster,
 } from "@/lib/canvas/canvas-position";
 import type {
   StickyNoteColor,
@@ -50,8 +47,10 @@ import {
 import { THEME_COLORS, ROOT_COLOR } from "@/lib/canvas/mind-map-theme-colors";
 import { computeNewNodePosition } from "@/lib/canvas/mind-map-layout";
 import { getStepCanvasConfig } from "@/lib/canvas/step-canvas-config";
+import { addCanvasItemsToBoard } from "@/lib/canvas/add-canvas-items";
 import { saveCanvasState } from "@/actions/canvas-actions";
 import { ChatSkeleton } from "./chat-skeleton";
+import { parsePersonaSelect } from "@/lib/chat/parse-utils";
 import { toast } from "sonner";
 import { useMultiplayerContext } from "@/components/workshop/multiplayer-room";
 
@@ -70,50 +69,6 @@ const CANVAS_ENABLED_STEPS = [
 
 /** Distinct colors assigned to persona cards in user-research step (one per persona) */
 const PERSONA_CARD_COLORS: StickyNoteColor[] = ["pink", "blue", "green"];
-
-/** Suggestion button color classes per sticky note color */
-const SUGGESTION_BUTTON_STYLES: Record<StickyNoteColor, string> = {
-  yellow:
-    "border-amber-300 bg-[var(--sticky-note-yellow)] dark:border-amber-600/50 dark:bg-amber-900/30 dark:text-amber-200",
-  red: "border-red-300 bg-[var(--sticky-note-red)] dark:border-red-600/50 dark:bg-red-900/30 dark:text-red-200",
-  green:
-    "border-emerald-300 bg-[var(--sticky-note-green)] dark:border-emerald-600/50 dark:bg-emerald-900/30 dark:text-emerald-200",
-  pink: "border-pink-300 bg-[var(--sticky-note-pink)] dark:border-pink-600/50 dark:bg-pink-900/30 dark:text-pink-200",
-  blue: "border-blue-300 bg-[var(--sticky-note-blue)] dark:border-blue-600/50 dark:bg-blue-900/30 dark:text-blue-200",
-  orange:
-    "border-orange-300 bg-[var(--sticky-note-orange)] dark:border-orange-600/50 dark:bg-orange-900/30 dark:text-orange-200",
-};
-
-/** Row-based sticky note colors for journey map swimlanes */
-const GRID_ROW_COLORS: Record<string, StickyNoteColor> = {
-  actions: "blue",
-  goals: "green",
-  barriers: "red",
-  touchpoints: "pink",
-  emotions: "green", // fallback; explicit color attr takes priority
-  moments: "yellow",
-  opportunities: "orange",
-};
-
-/** Compute the display color for a canvas suggestion item */
-function getSuggestionItemColor(item: CanvasItemParsed): StickyNoteColor {
-  const VALID_COLORS = new Set([
-    "yellow",
-    "pink",
-    "blue",
-    "green",
-    "orange",
-    "red",
-  ]);
-  return (
-    (item.color && VALID_COLORS.has(item.color)
-      ? (item.color as StickyNoteColor)
-      : null) ||
-    (item.category && CATEGORY_COLORS[item.category]) ||
-    (item.quadrant && ZONE_COLORS[item.quadrant]) ||
-    "yellow"
-  );
-}
 
 /** Fixed initial greetings shown instantly while AI generates first response */
 const STEP_INITIAL_GREETINGS: Record<string, string> = {
@@ -167,51 +122,6 @@ function parseSuggestions(content: string): {
   }
 
   return { cleanContent: content, suggestions: [] };
-}
-
-/**
- * Parse [PERSONA_SELECT]...[/PERSONA_SELECT] block from AI content.
- * Returns clean content (block removed) and extracted persona options.
- */
-function parsePersonaSelect(content: string): {
-  cleanContent: string;
-  personaOptions: { name: string; description: string }[];
-} {
-  // Complete block: extract persona options and strip
-  const match = content.match(
-    /\[PERSONA_SELECT\]([\s\S]*?)\[\/PERSONA_SELECT\]/,
-  );
-  if (match) {
-    const cleanContent = content
-      .replace(/\[PERSONA_SELECT\][\s\S]*?\[\/PERSONA_SELECT\]/, "")
-      .trim();
-    const personaOptions = match[1]
-      .split("\n")
-      .map((line) => line.replace(/^[-*•\d.]\s*/, "").trim())
-      .filter((line) => line.length > 0)
-      .map((line) => {
-        // Parse "Name — description" or "Name - description"
-        const dashMatch = line.match(/^(.+?)\s*[—–-]\s*(.+)$/);
-        if (dashMatch) {
-          return {
-            name: dashMatch[1].trim(),
-            description: dashMatch[2].trim(),
-          };
-        }
-        return { name: line, description: "" };
-      });
-    return { cleanContent, personaOptions };
-  }
-
-  // Incomplete block (mid-stream): strip from [PERSONA_SELECT] to end
-  if (content.includes("[PERSONA_SELECT]")) {
-    const cleanContent = content
-      .replace(/\[PERSONA_SELECT\][\s\S]*$/, "")
-      .trim();
-    return { cleanContent, personaOptions: [] };
-  }
-
-  return { cleanContent: content, personaOptions: [] };
 }
 
 /**
@@ -1119,9 +1029,6 @@ export function ChatPanel({
   const [addedMessageIds, setAddedMessageIds] = React.useState<Set<string>>(
     () => new Set(),
   );
-  const [addedItemTexts, setAddedItemTexts] = React.useState<Set<string>>(
-    () => new Set(),
-  );
   const [addedMindMapLabels, setAddedMindMapLabels] = React.useState<
     Set<string>
   >(() => new Set());
@@ -1327,7 +1234,7 @@ export function ChatPanel({
 
   // Extract persona select options from last assistant message (Step 3 only)
   React.useEffect(() => {
-    if (step.id !== "user-research" || personaSelectConfirmed) return;
+    if (step.id !== "user-research") return;
 
     if (status === "ready" && messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
@@ -1336,6 +1243,11 @@ export function ChatPanel({
         const content = textParts.map((p) => p.text).join("\n");
         const { personaOptions: parsed } = parsePersonaSelect(content);
         if (parsed.length > 0) {
+          // AI re-presented persona selection in a new message — reset confirmed state
+          if (personaSelectMessageId !== lastMsg.id && personaSelectConfirmed) {
+            setPersonaSelectConfirmed(false);
+            setPersonaSelections(new Set());
+          }
           setPersonaOptions(parsed);
           setPersonaSelectMessageId(lastMsg.id);
         }
@@ -1345,7 +1257,7 @@ export function ChatPanel({
     if (status === "streaming" || status === "submitted") {
       setPersonaOptions((prev) => (prev.length > 0 ? [] : prev));
     }
-  }, [status, messages, step.id, personaSelectConfirmed]);
+  }, [status, messages, step.id, personaSelectConfirmed, personaSelectMessageId]);
 
   // Extract interview mode options from last assistant message (Step 3 only, before mode is chosen)
   React.useEffect(() => {
@@ -1487,16 +1399,6 @@ export function ChatPanel({
     if (ids.size > 0) {
       setAddedMessageIds(ids);
     }
-    // Pre-populate addedItemTexts from existing board content so historical chips show as green
-    const existingTexts = new Set<string>();
-    for (const p of stickyNotes) {
-      if (!p.type || p.type === "stickyNote") {
-        existingTexts.add(p.text.trim().toLowerCase());
-      }
-    }
-    if (existingTexts.size > 0) {
-      setAddedItemTexts(existingTexts);
-    }
     // Pre-populate addedMindMapLabels from existing mind map nodes (level 2+)
     const existingMindMapLabels = new Set<string>();
     for (const n of mindMapNodes) {
@@ -1519,15 +1421,9 @@ export function ChatPanel({
   // Handle adding AI-suggested canvas items to the whiteboard
   const handleAddToWhiteboard = React.useCallback(
     (messageId: string, canvasItems: CanvasItemParsed[]) => {
-      if (addedMessageIds.has(messageId)) return; // Guard against double-click
+      if (addedMessageIds.has(messageId)) return;
 
-      // Read latest state directly from Zustand store (not stale React closure).
-      // Critical when replaceGridColumns() runs in the same effect cycle as this
-      // callback — the React hook value would be stale, but Zustand set() is synchronous.
       const latestGridColumns = storeApi.getState().gridColumns;
-      const latestStickyNotes = storeApi.getState().stickyNotes;
-
-      // Build dynamic gridConfig from store columns for journey-mapping
       const stepConfig = getStepCanvasConfig(step.id);
       const baseGridConfig = stepConfig.gridConfig;
       const dynamicGridConfig =
@@ -1535,100 +1431,17 @@ export function ChatPanel({
           ? { ...baseGridConfig, columns: latestGridColumns }
           : baseGridConfig;
 
-      // Add each item to canvas with computed position, skipping duplicates
-      let currentStickyNotes = [...latestStickyNotes];
-      for (const item of canvasItems) {
-        // Duplicate guard: skip if an item with the same text (case-insensitive) already exists
-        const normalizedText = item.text.trim().toLowerCase();
-        const alreadyExists = currentStickyNotes.some(
-          (p) =>
-            (!p.type || p.type === "stickyNote") &&
-            p.text.trim().toLowerCase() === normalizedText,
-        );
-        if (alreadyExists) continue;
-
-        const { position, quadrant, cellAssignment } = computeCanvasPosition(
-          step.id,
-          {
-            quadrant: item.quadrant,
-            ring: item.ring,
-            row: item.row,
-            col: item.col,
-            category: item.category,
-            cluster: item.cluster,
-          },
-          currentStickyNotes,
-          dynamicGridConfig,
-        );
-
-        // Color priority: explicit color attr > category-specific > zone-specific > row-based > grid green > default yellow
-        const VALID_COLORS = new Set([
-          "yellow",
-          "pink",
-          "blue",
-          "green",
-          "orange",
-          "red",
-        ]);
-        let color: StickyNoteColor =
-          (item.color && VALID_COLORS.has(item.color)
-            ? (item.color as StickyNoteColor)
-            : null) ||
-          (item.category && CATEGORY_COLORS[item.category]) ||
-          (item.quadrant && ZONE_COLORS[item.quadrant]) ||
-          (item.isGridItem
-            ? GRID_ROW_COLORS[item.row || ""] || "green"
-            : "yellow");
-
-        // For user-research: inherit color from the persona card this insight belongs to
-        if (step.id === "user-research" && item.cluster) {
-          const personaCard = currentStickyNotes.find((p) =>
-            isPersonaCardForCluster(p, item.cluster!),
-          );
-          if (personaCard?.color) color = personaCard.color;
-        }
-
-        const { width: itemWidth, height: itemHeight } = computeStickyNoteSize(
-          item.text,
-        );
-        const newStickyNote = {
-          text: item.text,
-          position,
-          width: itemWidth,
-          height: itemHeight,
-          color,
-          quadrant,
-          cellAssignment,
-          cluster: item.cluster,
-        };
-
-        addStickyNote(newStickyNote);
-
-        // Highlight target cell for grid items
-        if (item.isGridItem && cellAssignment && dynamicGridConfig) {
-          const rowIndex = dynamicGridConfig.rows.findIndex(
-            (r) => r.id === cellAssignment.row,
-          );
-          const colIndex = dynamicGridConfig.columns.findIndex(
-            (c) => c.id === cellAssignment.col,
-          );
-          if (rowIndex !== -1 && colIndex !== -1) {
-            setHighlightedCell({ row: rowIndex, col: colIndex });
-          }
-        }
-
-        currentStickyNotes = [
-          ...currentStickyNotes,
-          { ...newStickyNote, id: "pending" },
-        ];
-      }
+      addCanvasItemsToBoard({
+        stepId: step.id,
+        items: canvasItems,
+        storeApi,
+        addStickyNote,
+        gridConfigOverride: dynamicGridConfig,
+        onHighlightCell: setHighlightedCell,
+        onRequestFitView: () => setPendingFitView(true),
+      });
 
       setAddedMessageIds((prev) => new Set(prev).add(messageId));
-      // Don't shift viewport for ring-based canvases — preserve admin default viewport
-      const stepConfigForFitView = getStepCanvasConfig(step.id);
-      if (!stepConfigForFitView.hasRings) {
-        setPendingFitView(true);
-      }
     },
     [
       addedMessageIds,
@@ -1638,88 +1451,6 @@ export function ChatPanel({
       setHighlightedCell,
       setPendingFitView,
     ],
-  );
-
-  // Add a single canvas item to the board (click-to-add from chat chip)
-  const handleAddSingleItem = React.useCallback(
-    (item: CanvasItemParsed) => {
-      const normalizedText = item.text.trim().toLowerCase();
-      if (addedItemTexts.has(normalizedText)) return;
-
-      const latestStickyNotes = storeApi.getState().stickyNotes;
-      // Duplicate guard
-      const alreadyExists = latestStickyNotes.some(
-        (p) =>
-          (!p.type || p.type === "stickyNote") &&
-          p.text.trim().toLowerCase() === normalizedText,
-      );
-      if (alreadyExists) {
-        setAddedItemTexts((prev) => new Set(prev).add(normalizedText));
-        return;
-      }
-
-      const stepConfig = getStepCanvasConfig(step.id);
-      const baseGridConfig = stepConfig.gridConfig;
-      const latestGridColumns = storeApi.getState().gridColumns;
-      const dynamicGridConfig =
-        baseGridConfig && latestGridColumns.length > 0
-          ? { ...baseGridConfig, columns: latestGridColumns }
-          : baseGridConfig;
-
-      const { position, quadrant, cellAssignment } = computeCanvasPosition(
-        step.id,
-        {
-          quadrant: item.quadrant,
-          ring: item.ring,
-          row: item.row,
-          col: item.col,
-          category: item.category,
-          cluster: item.cluster,
-        },
-        latestStickyNotes,
-        dynamicGridConfig,
-      );
-
-      const VALID_COLORS = new Set([
-        "yellow",
-        "pink",
-        "blue",
-        "green",
-        "orange",
-        "red",
-      ]);
-      const color =
-        (item.color && VALID_COLORS.has(item.color)
-          ? (item.color as StickyNoteColor)
-          : null) ||
-        (item.category && CATEGORY_COLORS[item.category]) ||
-        (item.quadrant && ZONE_COLORS[item.quadrant]) ||
-        (item.isGridItem
-          ? GRID_ROW_COLORS[item.row || ""] || "green"
-          : "yellow");
-
-      const { width: itemWidth, height: itemHeight } = computeStickyNoteSize(
-        item.text,
-      );
-      addStickyNote({
-        text: item.text,
-        position,
-        width: itemWidth,
-        height: itemHeight,
-        color,
-        quadrant,
-        cellAssignment,
-        cluster: item.cluster,
-      });
-
-      setAddedItemTexts((prev) => new Set(prev).add(normalizedText));
-      // Don't shift viewport for ring-based canvases — items land within the rings
-      // which are already visible in the admin-configured default viewport
-      if (!stepConfig.hasRings) {
-        setPendingFitView(true);
-      }
-    },
-    [addedItemTexts, step.id, storeApi, addStickyNote, setPendingFitView],
   );
 
   // Add a single mind map node to the canvas (click-to-add from chat chip)
@@ -1934,52 +1665,60 @@ export function ChatPanel({
             "— creating regular sticky note",
           );
           // Template not found (user deleted it) — fall through to normal add
-          handleAddSingleItem(item);
+          addCanvasItemsToBoard({ stepId: step.id, items: [item], storeApi, addStickyNote });
         }
       }
     }
 
-    // Grid items (journey mapping) auto-add immediately; regular sticky notes use click-to-add
+    // Auto-add all non-template canvas items to the board
     const nonTemplateCanvasItems = canvasItems.filter(
       (item) => !item.templateKey,
     );
     const gridItems = nonTemplateCanvasItems.filter((item) => item.isGridItem);
+
+    // Safety net for journey-mapping: auto-derive columns from grid item metadata
+    if (
+      gridItems.length > 0 &&
+      step.id === "journey-mapping" &&
+      gridItems.some((item) => item.col)
+    ) {
+      const latestGridColumns = storeApi.getState().gridColumns;
+      const itemColIds: string[] = [];
+      for (const item of gridItems) {
+        if (item.col && !itemColIds.includes(item.col))
+          itemColIds.push(item.col);
+      }
+      const allMatch = itemColIds.every((colId) =>
+        latestGridColumns.some((c) => c.id === colId),
+      );
+      if (!allMatch && itemColIds.length >= 3) {
+        const derivedColumns = itemColIds.map((colId) => ({
+          id: colId,
+          label: colId
+            .split("-")
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(" "),
+          width: 240,
+        }));
+        replaceGridColumns(derivedColumns);
+      }
+    }
+
+    // Auto-add regular (non-grid) items for all steps
+    const regularItems = nonTemplateCanvasItems.filter(
+      (item) => !item.isGridItem,
+    );
+    if (regularItems.length > 0) {
+      handleAddToWhiteboard(lastMsg.id, regularItems);
+    }
+
+    // Grid items auto-add (journey mapping, etc.) — skip persona/concept as before
     if (
       gridItems.length > 0 &&
       step.id !== "persona" &&
       step.id !== "concept"
     ) {
-      // Safety net: if grid items have col IDs that don't match current columns,
-      // auto-derive columns from the grid item metadata (handles missing [JOURNEY_STAGES])
-      if (step.id === "journey-mapping" && gridItems.some((item) => item.col)) {
-        const latestGridColumns = storeApi.getState().gridColumns;
-        // Collect unique col IDs in the order they appear (preserves stage order)
-        const itemColIds: string[] = [];
-        for (const item of gridItems) {
-          if (item.col && !itemColIds.includes(item.col))
-            itemColIds.push(item.col);
-        }
-        const allMatch = itemColIds.every((colId) =>
-          latestGridColumns.some((c) => c.id === colId),
-        );
-        if (!allMatch && itemColIds.length >= 3) {
-          const derivedColumns = itemColIds.map((colId) => ({
-            id: colId,
-            label: colId
-              .split("-")
-              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-              .join(" "),
-            width: 240,
-          }));
-          replaceGridColumns(derivedColumns);
-        }
-      }
       handleAddToWhiteboard(lastMsg.id, gridItems);
-    }
-
-    // User-research: auto-add all canvas items (persona cards + interview insights)
-    if (step.id === "user-research" && nonTemplateCanvasItems.length > 0) {
-      handleAddToWhiteboard(lastMsg.id, nonTemplateCanvasItems);
     }
 
     // Process persona template blocks — match by name or fill blank template
@@ -2261,7 +2000,6 @@ export function ChatPanel({
     isCanvasStep,
     addedMessageIds,
     handleAddToWhiteboard,
-    handleAddSingleItem,
     batchUpdatePositions,
     storeApi,
     step.id,
@@ -2834,55 +2572,6 @@ export function ChatPanel({
                                   </div>
                                 </>
                               )}
-                              {isCanvasStep &&
-                                step.id !== "ideation" &&
-                                (() => {
-                                  const nonGridItems = canvasItems.filter(
-                                    (item) => !item.isGridItem,
-                                  );
-                                  // Filter out items already on the board — hide duplicates entirely
-                                  const newItems = nonGridItems.filter(
-                                    (item) => {
-                                      const normalizedText = item.text
-                                        .trim()
-                                        .toLowerCase();
-                                      return (
-                                        !addedItemTexts.has(normalizedText) &&
-                                        !stickyNotes.some(
-                                          (p) =>
-                                            (!p.type ||
-                                              p.type === "stickyNote") &&
-                                            p.text.trim().toLowerCase() ===
-                                              normalizedText,
-                                        )
-                                      );
-                                    },
-                                  );
-                                  if (newItems.length === 0) return null;
-                                  return (
-                                    <div className="mt-2">
-                                      <div className="flex flex-wrap gap-2">
-                                        {newItems.map((item, i) => (
-                                          <button
-                                            key={i}
-                                            onClick={() =>
-                                              handleAddSingleItem(item)
-                                            }
-                                            className={cn(
-                                              "cursor-pointer inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm font-medium text-neutral-olive-800 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
-                                              SUGGESTION_BUTTON_STYLES[
-                                                getSuggestionItemColor(item)
-                                              ],
-                                            )}
-                                          >
-                                            <Plus className="h-3 w-3" />
-                                            {item.text}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
                               {/* Interview mode selection (Step 3 — before persona select) */}
                               {isInterviewModeMessage &&
                                 !interviewMode &&
@@ -3070,26 +2759,28 @@ export function ChatPanel({
                                             ...personaSelections,
                                           ];
                                           // Add selected personas as canvas items with distinct colors
-                                          for (
-                                            let i = 0;
-                                            i < selectedNames.length;
-                                            i++
-                                          ) {
-                                            const name = selectedNames[i];
-                                            const persona = personaOptions.find(
-                                              (p) => p.name === name,
-                                            );
-                                            const text = persona?.description
-                                              ? `${name} — ${persona.description}`
-                                              : name;
-                                            handleAddSingleItem({
-                                              text,
-                                              color:
-                                                PERSONA_CARD_COLORS[
-                                                  i % PERSONA_CARD_COLORS.length
-                                                ],
-                                            });
-                                          }
+                                          const personaItems = selectedNames.map(
+                                            (name, i) => {
+                                              const persona = personaOptions.find(
+                                                (p) => p.name === name,
+                                              );
+                                              return {
+                                                text: persona?.description
+                                                  ? `${name} — ${persona.description}`
+                                                  : name,
+                                                color:
+                                                  PERSONA_CARD_COLORS[
+                                                    i % PERSONA_CARD_COLORS.length
+                                                  ],
+                                              };
+                                            },
+                                          );
+                                          addCanvasItemsToBoard({
+                                            stepId: step.id,
+                                            items: personaItems,
+                                            storeApi,
+                                            addStickyNote,
+                                          });
                                           setPersonaSelectConfirmed(true);
                                           setQuickAck(getRandomAck());
                                           await flushCanvasToDb();

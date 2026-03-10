@@ -25,6 +25,7 @@ export const chatMessages = pgTable(
       .notNull()
       .$type<'user' | 'assistant' | 'system'>(),
     content: text('content').notNull(),
+    participantId: text('participant_id'), // NULL = facilitator/solo (backward compatible)
     createdAt: timestamp('created_at', { mode: 'date', precision: 3 })
       .notNull()
       .defaultNow(),
@@ -34,9 +35,15 @@ export const chatMessages = pgTable(
       table.sessionId,
       table.stepId
     ),
-    messageIdUniq: uniqueIndex('chat_messages_session_step_message_uniq').on(
+    sessionStepParticipantIdx: index('chat_messages_session_step_participant_idx').on(
       table.sessionId,
       table.stepId,
+      table.participantId
+    ),
+    messageIdUniq: uniqueIndex('chat_messages_session_step_participant_message_uniq').on(
+      table.sessionId,
+      table.stepId,
+      table.participantId,
       table.messageId
     ),
   })

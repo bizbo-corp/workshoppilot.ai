@@ -2,7 +2,7 @@
 
 import { db } from '@/db/client';
 import { chatMessages } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import type { UIMessage } from 'ai';
 
 /**
@@ -13,19 +13,25 @@ import type { UIMessage } from 'ai';
  * @param sessionId - The session ID (ses_xxx)
  * @param stepId - The semantic step ID ('challenge', 'stakeholder-mapping', etc.)
  * @param messages - Array of UIMessage objects from AI SDK
+ * @param participantId - Optional participant ID (NULL = facilitator/solo)
  */
 export async function autoSaveMessages(
   sessionId: string,
   stepId: string,
-  messages: UIMessage[]
+  messages: UIMessage[],
+  participantId?: string | null,
 ): Promise<void> {
   try {
-    // Fetch existing messageIds for this session+step
+    // Fetch existing messageIds for this session+step+participant
+    const participantWhere = participantId
+      ? eq(chatMessages.participantId, participantId)
+      : isNull(chatMessages.participantId);
+
     const existingMessages = await db
       .select({ messageId: chatMessages.messageId })
       .from(chatMessages)
       .where(
-        and(eq(chatMessages.sessionId, sessionId), eq(chatMessages.stepId, stepId))
+        and(eq(chatMessages.sessionId, sessionId), eq(chatMessages.stepId, stepId), participantWhere)
       );
 
     const existingMessageIds = new Set(
@@ -54,6 +60,7 @@ export async function autoSaveMessages(
           messageId: msg.id,
           role: msg.role as 'user' | 'assistant' | 'system',
           content,
+          participantId: participantId || null,
         };
       })
       .filter((row) => row.content.trim().length > 0);

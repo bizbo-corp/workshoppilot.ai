@@ -75,6 +75,9 @@ export type StickyNote = {
   templateKey?: string;       // Unique key for AI targeting (e.g., 'idea', 'problem')
   templateLabel?: string;     // Persistent header label (e.g., 'The Idea')
   placeholderText?: string;   // Placeholder shown when text is empty
+  ownerId?: string;           // Participant who contributed this item (for provenance)
+  ownerName?: string;         // Display name of the contributing participant
+  ownerColor?: string;        // Hex color of the contributing participant
 };
 
 export type CanvasState = {

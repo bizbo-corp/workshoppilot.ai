@@ -2,6 +2,7 @@ import { google } from "@ai-sdk/google";
 import { getStepSpecificInstructions } from "./prompts/step-prompts";
 import { getArcPhaseInstructions, type ArcPhase } from "./prompts/arc-phases";
 import { getValidationCriteria } from "./prompts/validation-criteria";
+import { getParticipantGuidance } from "./prompts/participant-context";
 
 /**
  * Gemini model configuration for chat
@@ -55,6 +56,8 @@ export function buildStepSystemPrompt(
   instructionsOverride?: string,
   workshopName?: string | null,
   existingItemNames?: string[],
+  isParticipant?: boolean,
+  participantName?: string,
 ): string {
   // Base role for this step (step instructions may override personality)
   let prompt = `You are guiding the user through Step: ${stepName}.`;
@@ -64,6 +67,23 @@ export function buildStepSystemPrompt(
   if (hasCustomName) {
     prompt += `\n\nWORKSHOP NAME: "${workshopName}"
 This is the name the user chose for their workshop. Use it naturally in your introduction to show you're paying attention — e.g., reference the topic/domain it suggests. Don't just repeat the name mechanically.`;
+  }
+
+  // Participant preamble — overrides facilitator-specific behaviors
+  if (isParticipant) {
+    prompt += `\n\nPARTICIPANT MODE:
+You are chatting with ${participantName || 'a participant'}, who is a team member in a multiplayer workshop — NOT the facilitator.
+Your role: Help them think through this step and generate ideas they can contribute to the shared whiteboard.
+- Do NOT control step progression or confirmation — that's the facilitator's job.
+- Focus on brainstorming, exploring perspectives, and generating canvas items.
+- Be encouraging and collaborative. Help them produce concrete contributions.
+- When you suggest items for the canvas, use [CANVAS_ITEM] tags as usual — the participant will review and push them to the shared board.`;
+
+    // Add per-step participant guidance
+    const guidance = getParticipantGuidance(stepId);
+    if (guidance) {
+      prompt += `\n\n${guidance}`;
+    }
   }
 
   // Add arc phase behavioral instructions
@@ -100,7 +120,11 @@ GOOD: "Ooh, storytelling for professionals — I'm into this 🔥 Here's a first
 BAD: "Great! 😊 Let's define the challenge! 🎯 What problem are we solving? 🤔 Who feels it? 👥" (emoji overload, no personality)
 BAD: "Understood. I will now draft a challenge statement based on your input." (robot voice)
 
-AVOID: Generic encouragement padding, parroting back what the user just said, embellishing their words with details they didn't mention, textbook definitions, passive voice or hedging, starting every response with the same opener (vary your conversational starters).
+AVOID: Generic encouragement padding, parroting back what the user just said, embellishing their words with details they didn't mention, textbook definitions, passive voice or hedging, starting every response with the same opener (vary your conversational starters).`;
+
+  // Step confirmation handling — facilitator only
+  if (!isParticipant) {
+    prompt += `
 
 STEP CONFIRMATION HANDLING:
 When the user sends a message containing [STEP_CONFIRMED], it means they clicked the "Confirm" button in the UI to lock in their work for this step. Respond with a warm, energetic congratulatory wrap-up:
@@ -108,6 +132,7 @@ When the user sends a message containing [STEP_CONFIRMED], it means they clicked
 2. Tease the next step — give a brief, exciting preview of what comes next without going into detail.
 3. Direct them to click the **Next** button to continue.
 Keep it to 2-3 short sentences max. Do NOT ask any follow-up questions — the step is done. Do NOT output any [SUGGESTIONS] block. Send them off with genuine energy and confidence.`;
+  }
 
   // Step-specific instructions — these are the authority for personality, tone,
   // format, and interaction style. They override GENERAL DEFAULTS above.
@@ -116,6 +141,18 @@ Keep it to 2-3 short sentences max. Do NOT ask any follow-up questions — the s
   if (stepInstructions) {
     prompt += `\n\nSTEP INSTRUCTIONS (override any defaults above):
 ${stepInstructions}`;
+  }
+
+  // Strip facilitator-only features for participants
+  if (isParticipant) {
+    prompt += `\n\nPARTICIPANT OVERRIDES (take precedence over any step instructions above):
+- Do NOT use or output [INTERVIEW_MODE] markup. Do NOT present interview mode choices (AI vs Real interviews) — participants do not control this.
+${stepId === 'user-research' ? '- You MAY use [PERSONA_SELECT] markup for this step — follow the participant guidance above for persona selection and AI interview flow.' : '- Do NOT use or output [PERSONA_SELECT] markup. Do NOT present persona selection choices.'}
+- Do NOT use or output [HMW_CARD] markup. The HMW card is controlled by the facilitator only.
+- Do NOT use or output [CONCEPT_CARD] markup. Concept cards are controlled by the facilitator only.
+- Do NOT use or output [THEME_SORT] markup. Board organization is controlled by the facilitator only.
+- Do NOT ask about step confirmation or progression — the facilitator controls when the group moves forward.
+${stepId === 'user-research' ? '- Follow the PARTICIPANT GUIDANCE above for persona selection and interview flow — do NOT skip to generic brainstorming.' : '- Instead, jump straight into helping the participant brainstorm and generate ideas for this step using [CANVAS_ITEM] tags.\n- If the step instructions describe an opening that includes mode selection or persona selection, skip those and open with a warm greeting that invites the participant to share their thoughts relevant to this step.'}`;
   }
 
   // During Validate phase, inject validation criteria
