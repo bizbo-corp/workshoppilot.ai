@@ -150,6 +150,8 @@ ${stepInstructions}`;
 ${stepId === 'user-research' ? '- You MAY use [PERSONA_SELECT] markup for this step — follow the participant guidance above for persona selection and AI interview flow.' : '- Do NOT use or output [PERSONA_SELECT] markup. Do NOT present persona selection choices.'}
 - Do NOT use or output [HMW_CARD] markup. The HMW card is controlled by the facilitator only.
 - Do NOT use or output [CONCEPT_CARD] markup. Concept cards are controlled by the facilitator only.
+- Do NOT use or output [PERSONA_PLAN] markup. Persona plan cards are controlled by the facilitator only.
+- Do NOT use or output [PERSONA_TEMPLATE] markup. Persona template cards are controlled by the facilitator only.
 - Do NOT use or output [THEME_SORT] markup. Board organization is controlled by the facilitator only.
 - Do NOT ask about step confirmation or progression — the facilitator controls when the group moves forward.
 ${stepId === 'user-research' ? '- Follow the PARTICIPANT GUIDANCE above for persona selection and interview flow — do NOT skip to generic brainstorming.' : '- Instead, jump straight into helping the participant brainstorm and generate ideas for this step using [CANVAS_ITEM] tags.\n- If the step instructions describe an opening that includes mode selection or persona selection, skip those and open with a warm greeting that invites the participant to share their thoughts relevant to this step.'}`;

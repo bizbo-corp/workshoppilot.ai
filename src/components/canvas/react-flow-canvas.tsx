@@ -2147,11 +2147,7 @@ function ReactFlowCanvasInner({
                 );
 
                 for (const card of personaCards) {
-                  // Compute frame bounds (same logic as PersonaFrameOverlay)
-                  const frameX =
-                    card.position.x + card.width / 2 - FRAME_WIDTH / 2;
-                  const frameY = card.position.y + card.height + 10;
-
+                  // Compute frame bounds (same logic as PersonaFrameOverlay — horizontal row)
                   const personaName = card.text.split(/\s*[—–]\s*/)[0].trim();
                   const children = items.filter(
                     (p) =>
@@ -2159,19 +2155,27 @@ function ReactFlowCanvasInner({
                       p.cluster.toLowerCase() === personaName.toLowerCase() &&
                       p.id !== card.id,
                   );
-                  let frameHeight = MIN_FRAME_HEIGHT;
-                  if (children.length > 0) {
-                    const childMaxY = Math.max(
-                      ...children.map((c) => c.position.y + c.height),
-                    );
-                    const neededHeight = childMaxY - frameY + FRAME_PADDING;
-                    frameHeight = Math.max(MIN_FRAME_HEIGHT, neededHeight);
-                  }
 
-                  // Also include the card area itself as a valid drop zone
+                  const frameX = card.position.x - FRAME_PADDING;
+                  const frameY = card.position.y - FRAME_PADDING;
+
+                  let rightEdge = card.position.x + card.width;
+                  if (children.length > 0) {
+                    const childMaxX = Math.max(...children.map((c) => c.position.x + c.width));
+                    rightEdge = Math.max(rightEdge, childMaxX);
+                  }
+                  const frameWidth = Math.max(FRAME_WIDTH, rightEdge - frameX + FRAME_PADDING);
+
+                  let maxBottom = card.position.y + card.height;
+                  if (children.length > 0) {
+                    const childMaxY = Math.max(...children.map((c) => c.position.y + c.height));
+                    maxBottom = Math.max(maxBottom, childMaxY);
+                  }
+                  const frameHeight = Math.max(MIN_FRAME_HEIGHT, maxBottom - frameY + FRAME_PADDING);
+
                   const dropMinX = frameX;
-                  const dropMinY = card.position.y;
-                  const dropMaxX = frameX + FRAME_WIDTH;
+                  const dropMinY = frameY;
+                  const dropMaxX = frameX + frameWidth;
                   const dropMaxY = frameY + frameHeight;
 
                   if (

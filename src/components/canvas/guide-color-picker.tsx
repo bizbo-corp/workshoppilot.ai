@@ -5,12 +5,12 @@ import type { CanvasGuideVariant } from '@/lib/canvas/canvas-guide-types';
 
 const CARD_COLORS: { label: string; value: string | null; className: string }[] = [
   { label: 'Default', value: null, className: 'bg-olive-100 dark:bg-olive-900' },
-  { label: 'Yellow', value: '#fdf0a0', className: 'bg-[var(--canvas-yellow-pastel)]' },
-  { label: 'Pink', value: '#fcc0d8', className: 'bg-[var(--canvas-pink-pastel)]' },
-  { label: 'Blue', value: '#a0d8f0', className: 'bg-[var(--canvas-blue-pastel)]' },
-  { label: 'Green', value: '#a0e8c0', className: 'bg-[var(--canvas-green-pastel)]' },
-  { label: 'Orange', value: '#fdd0a0', className: 'bg-[var(--canvas-orange-pastel)]' },
-  { label: 'Red', value: '#f5b0a8', className: 'bg-[var(--canvas-red-pastel)]' },
+  { label: 'Yellow', value: '#ede0c0', className: 'bg-[var(--canvas-yellow-pastel)]' },
+  { label: 'Pink', value: '#e8c8c0', className: 'bg-[var(--canvas-pink-pastel)]' },
+  { label: 'Blue', value: '#b8c8d0', className: 'bg-[var(--canvas-blue-pastel)]' },
+  { label: 'Green', value: '#c0d8c0', className: 'bg-[var(--canvas-green-pastel)]' },
+  { label: 'Orange', value: '#e0d0b8', className: 'bg-[var(--canvas-orange-pastel)]' },
+  { label: 'Red', value: '#d8b8a8', className: 'bg-[var(--canvas-red-pastel)]' },
 ];
 
 // StickyNote color swatches — names match StickyNoteColor type and CSS variables
@@ -26,21 +26,21 @@ const POSTIT_COLORS = [
 // Frame colors — vivid hues matching the same 6 base colors
 const FRAME_COLORS: { label: string; value: string | null; className: string }[] = [
   { label: 'Default', value: null, className: 'bg-olive-100 dark:bg-olive-900' },
-  { label: 'Yellow', value: '#eab308', className: 'bg-[var(--canvas-yellow)]' },
-  { label: 'Pink', value: '#ec4899', className: 'bg-[var(--canvas-pink)]' },
-  { label: 'Blue', value: '#3b82f6', className: 'bg-[var(--canvas-blue)]' },
-  { label: 'Green', value: '#22c55e', className: 'bg-[var(--canvas-green)]' },
-  { label: 'Orange', value: '#f97316', className: 'bg-[var(--canvas-orange)]' },
-  { label: 'Red', value: '#ef4444', className: 'bg-[var(--canvas-red)]' },
+  { label: 'Yellow', value: '#c49820', className: 'bg-[var(--canvas-yellow)]' },
+  { label: 'Pink', value: '#b07068', className: 'bg-[var(--canvas-pink)]' },
+  { label: 'Blue', value: '#6888a0', className: 'bg-[var(--canvas-blue)]' },
+  { label: 'Green', value: '#608850', className: 'bg-[var(--canvas-green)]' },
+  { label: 'Orange', value: '#c08030', className: 'bg-[var(--canvas-orange)]' },
+  { label: 'Red', value: '#a86050', className: 'bg-[var(--canvas-red)]' },
 ];
 
 // Arrow border colors
 const BORDER_COLORS = [
   { label: 'Slate', value: '#94a3b8', className: 'bg-[#94a3b8]' },
-  { label: 'Red', value: '#ef4444', className: 'bg-[#ef4444]' },
-  { label: 'Orange', value: '#f97316', className: 'bg-[#f97316]' },
-  { label: 'Blue', value: '#3b82f6', className: 'bg-[#3b82f6]' },
-  { label: 'Green', value: '#22c55e', className: 'bg-[#22c55e]' },
+  { label: 'Red', value: '#a86050', className: 'bg-[#a86050]' },
+  { label: 'Orange', value: '#c08030', className: 'bg-[#c08030]' },
+  { label: 'Blue', value: '#6888a0', className: 'bg-[#6888a0]' },
+  { label: 'Green', value: '#608850', className: 'bg-[#608850]' },
   { label: 'Purple', value: '#a855f7', className: 'bg-[#a855f7]' },
   { label: 'Dark', value: '#374151', className: 'bg-[#374151]' },
   { label: 'Olive', value: '#b8c9a3', className: 'bg-[#b8c9a3]' },

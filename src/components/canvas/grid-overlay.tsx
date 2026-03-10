@@ -50,13 +50,13 @@ const ROW_ICONS: Record<string, LucideIcon> = {
 
 /** Per-row tint colors for swimlane visual identity */
 const ROW_TINT_COLORS: Record<string, string> = {
-  actions: '#a0d8f0',      // blue
-  goals: '#a0e8c0',        // green
-  barriers: '#f5b0a8',     // red
-  touchpoints: '#fcc0d8',  // pink
+  actions: '#b8c8d0',      // blue
+  goals: '#c0d8c0',        // green
+  barriers: '#d8b8a8',     // red
+  touchpoints: '#e8c8c0',  // pink
   emotions: '#a8aaa3',     // neutral gray (traffic light handles color)
-  moments: '#fdf0a0',      // yellow
-  opportunities: '#fdd0a0', // orange
+  moments: '#ede0c0',      // yellow
+  opportunities: '#e0d0b8', // orange
 };
 
 /** Dark accent colors for row label icons + text (light theme / dark theme) */
@@ -290,7 +290,7 @@ export function GridOverlay({
                     width={bounds.width * zoom}
                     height={bounds.height * zoom}
                     fill="none"
-                    stroke="#eab308"
+                    stroke="#c49820"
                     strokeWidth={3}
                   />
                 </g>
@@ -479,7 +479,7 @@ export function GridOverlay({
                 y1={topEdge.y}
                 x2={bottomEdge.x}
                 y2={bottomEdge.y}
-                stroke="#3b82f6"
+                stroke="#6888a0"
                 strokeWidth={2}
                 strokeLinecap="round"
               />

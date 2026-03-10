@@ -352,7 +352,6 @@ export function computeCanvasPosition(
         }
       }
 
-      // Non-ring fallback: use 3-column centered cluster layout
       // Count siblings using the same robust matching the parent uses
       const parentPersonaName = extractPersonaName(parent.text);
       const siblings = existingStickyNotes.filter(
@@ -362,6 +361,22 @@ export function computeCanvasPosition(
         ),
       );
       const childIdx = siblings.length;
+
+      // User-research: place children in a horizontal row to the right of the persona card
+      if (stepId === 'user-research') {
+        const CHILD_WIDTH = 280;
+        const CHILD_GAP = 20;
+        const startX = parent.position.x + parent.width + CHILD_GAP;
+        return {
+          position: {
+            x: startX + childIdx * (CHILD_WIDTH + CHILD_GAP),
+            y: parent.position.y,
+          },
+          quadrant: parent.quadrant,
+        };
+      }
+
+      // Non-ring fallback: use 3-column centered cluster layout
       // Use generous cell size to prevent overlap (280×150 fits most insight texts)
       const positions = computeClusterChildPositions(
         parent.position, parent.width, parent.height,
@@ -374,7 +389,7 @@ export function computeCanvasPosition(
     }
   }
 
-  // --- User Research: unmatched cluster fallback — place near first persona card ---
+  // --- User Research: unmatched cluster fallback — place near last persona card ---
   // This catches cases where the AI sends a cluster name that doesn't match any persona card.
   // Without this, items would end up at the generic stagger position far from the board.
   if (stepId === 'user-research' && metadata.cluster) {
@@ -382,34 +397,36 @@ export function computeCanvasPosition(
       (p) => !p.cluster && (!p.type || p.type === 'stickyNote') && p.text.includes(' — '),
     );
     if (personaCards.length > 0) {
-      // Fall back to the last persona card
+      // Fall back to the last persona card — place in its horizontal row
       const fallbackParent = personaCards[personaCards.length - 1];
       const siblings = existingStickyNotes.filter(
         (p) => p.cluster && isPersonaCardForCluster(fallbackParent, p.cluster),
       );
       const childIdx = siblings.length;
-      const positions = computeClusterChildPositions(
-        fallbackParent.position, fallbackParent.width, fallbackParent.height,
-        childIdx + 1, 280, 150,
-      );
+      const CHILD_WIDTH = 280;
+      const CHILD_GAP = 20;
+      const startX = fallbackParent.position.x + fallbackParent.width + CHILD_GAP;
       return {
-        position: positions[childIdx],
+        position: {
+          x: startX + childIdx * (CHILD_WIDTH + CHILD_GAP),
+          y: fallbackParent.position.y,
+        },
         quadrant: fallbackParent.quadrant,
       };
     }
   }
 
-  // --- User Research: horizontal persona card layout ---
+  // --- User Research: vertical row layout (one row per persona, stacked top-to-bottom) ---
   if (stepId === 'user-research' && !metadata.cluster && !metadata.quadrant && !metadata.ring && !metadata.row) {
     const personaCards = existingStickyNotes.filter(
       (p) => !p.cluster && (!p.type || p.type === 'stickyNote'),
     );
     const idx = personaCards.length;
-    const PERSONA_SPACING = 1000;
+    const ROW_HEIGHT = 340; // persona card height + comfortable gap between rows
     return {
       position: {
-        x: idx * PERSONA_SPACING,
-        y: 0,
+        x: 0,
+        y: idx * ROW_HEIGHT,
       },
     };
   }

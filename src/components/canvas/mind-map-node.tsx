@@ -99,14 +99,13 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
   return (
     <div
       className={cn(
-        'px-4 py-3 rounded-lg border-2 shadow-sm group',
+        'px-4 py-3 rounded-lg shadow-sm group',
         'transition-all duration-150 hover:shadow-md',
         isRoot
           ? 'min-w-[280px] max-w-[400px]'
           : 'min-w-[140px] max-w-[280px]'
       )}
       style={{
-        borderColor: data.themeColor,
         backgroundColor: data.themeBgColor,
       }}
     >

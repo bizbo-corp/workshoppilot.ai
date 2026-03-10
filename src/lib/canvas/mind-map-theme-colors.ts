@@ -15,7 +15,7 @@ export type ThemeColor = {
 
 /**
  * 6-color theme palette for mind map branches
- * Uses CSS variables defined in globals.css for light/dark mode adaptation
+ * Aliased from the canvas palette (same hues as sticky notes) via globals.css
  */
 export const THEME_COLORS: readonly ThemeColor[] = [
   {

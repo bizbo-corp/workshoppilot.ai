@@ -368,11 +368,11 @@ export function SenseMakingRenderer({ data }: { data: StepData }) {
                 <div
                   key={note.id}
                   style={{
-                    backgroundColor: '#fdf0a0',
+                    backgroundColor: '#ede0c0',
                     padding: '3px 6px',
                     borderRadius: 2,
                     fontSize: 9,
-                    color: '#1a1a1a',
+                    color: '#6b5020',
                     maxWidth: zone.w - 24,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -687,7 +687,7 @@ export function JourneyMapRenderer({ data }: { data: StepData }) {
                         padding: '2px 4px',
                         borderRadius: 2,
                         fontSize: 8,
-                        color: '#1a1a1a',
+                        color: getTextColorHex(note.color),
                         lineHeight: 1.2,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -711,12 +711,24 @@ export function JourneyMapRenderer({ data }: { data: StepData }) {
 
 function getColorHex(color?: string): string {
   const map: Record<string, string> = {
-    yellow: '#fdf0a0',
-    pink: '#fcc0d8',
-    blue: '#a0d8f0',
-    green: '#a0e8c0',
-    orange: '#fdd0a0',
-    red: '#f5b0a8',
+    yellow: '#ede0c0',
+    pink: '#e8c8c0',
+    blue: '#b8c8d0',
+    green: '#c0d8c0',
+    orange: '#e0d0b8',
+    red: '#d8b8a8',
+  };
+  return map[color || 'yellow'] || map.yellow;
+}
+
+function getTextColorHex(color?: string): string {
+  const map: Record<string, string> = {
+    yellow: '#6b5020',
+    pink: '#784040',
+    blue: '#344858',
+    green: '#344a2c',
+    orange: '#6b4420',
+    red: '#684038',
   };
   return map[color || 'yellow'] || map.yellow;
 }

@@ -21,12 +21,12 @@ const viewportSelector = (state: ReactFlowState) => ({
 });
 
 const HULL_COLORS = [
-  { fill: 'rgba(99, 102, 241, 0.08)', border: 'rgba(99, 102, 241, 0.30)', text: '#6366f1', activeFill: 'rgba(99, 102, 241, 0.15)', headerBg: 'rgba(99, 102, 241, 0.65)' },
-  { fill: 'rgba(16, 185, 129, 0.08)', border: 'rgba(16, 185, 129, 0.30)', text: '#10b981', activeFill: 'rgba(16, 185, 129, 0.15)', headerBg: 'rgba(16, 185, 129, 0.65)' },
-  { fill: 'rgba(245, 158, 11, 0.08)', border: 'rgba(245, 158, 11, 0.30)', text: '#f59e0b', activeFill: 'rgba(245, 158, 11, 0.15)', headerBg: 'rgba(245, 158, 11, 0.65)' },
-  { fill: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.30)', text: '#ef4444', activeFill: 'rgba(239, 68, 68, 0.15)', headerBg: 'rgba(239, 68, 68, 0.65)' },
-  { fill: 'rgba(168, 85, 247, 0.08)', border: 'rgba(168, 85, 247, 0.30)', text: '#a855f7', activeFill: 'rgba(168, 85, 247, 0.15)', headerBg: 'rgba(168, 85, 247, 0.65)' },
-  { fill: 'rgba(14, 165, 233, 0.08)', border: 'rgba(14, 165, 233, 0.30)', text: '#0ea5e9', activeFill: 'rgba(14, 165, 233, 0.15)', headerBg: 'rgba(14, 165, 233, 0.65)' },
+  { fill: 'rgba(88, 96, 140, 0.08)',  border: 'rgba(88, 96, 140, 0.30)',  text: '#586090', activeFill: 'rgba(88, 96, 140, 0.15)',  headerBg: 'rgba(88, 96, 140, 0.70)' },
+  { fill: 'rgba(72, 128, 96, 0.08)',  border: 'rgba(72, 128, 96, 0.30)',  text: '#488060', activeFill: 'rgba(72, 128, 96, 0.15)',  headerBg: 'rgba(72, 128, 96, 0.70)' },
+  { fill: 'rgba(180, 136, 48, 0.08)', border: 'rgba(180, 136, 48, 0.30)', text: '#b48830', activeFill: 'rgba(180, 136, 48, 0.15)', headerBg: 'rgba(180, 136, 48, 0.70)' },
+  { fill: 'rgba(168, 96, 80, 0.08)',  border: 'rgba(168, 96, 80, 0.30)',  text: '#a86050', activeFill: 'rgba(168, 96, 80, 0.15)',  headerBg: 'rgba(168, 96, 80, 0.70)' },
+  { fill: 'rgba(128, 96, 152, 0.08)', border: 'rgba(128, 96, 152, 0.30)', text: '#806098', activeFill: 'rgba(128, 96, 152, 0.15)', headerBg: 'rgba(128, 96, 152, 0.70)' },
+  { fill: 'rgba(72, 128, 144, 0.08)', border: 'rgba(72, 128, 144, 0.30)', text: '#488090', activeFill: 'rgba(72, 128, 144, 0.15)', headerBg: 'rgba(72, 128, 144, 0.70)' },
 ];
 
 export type ClusterHullData = {

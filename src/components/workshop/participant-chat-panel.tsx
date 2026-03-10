@@ -16,11 +16,6 @@ import {
   useCanvasStore,
   useCanvasStoreApi,
 } from "@/providers/canvas-store-provider";
-import {
-  computeCanvasPosition,
-  POST_IT_WIDTH,
-  POST_IT_HEIGHT,
-} from "@/lib/canvas/canvas-position";
 import type { StickyNoteColor } from "@/stores/canvas-store";
 import { addCanvasItemsToBoard } from "@/lib/canvas/add-canvas-items";
 import {
@@ -40,7 +35,7 @@ const CANVAS_ENABLED_STEPS = [
 ];
 
 /** Distinct colors assigned to persona cards (one per persona) */
-const PERSONA_CARD_COLORS: StickyNoteColor[] = ["pink", "blue", "green"];
+const PERSONA_CARD_COLORS: StickyNoteColor[] = ["yellow", "red", "orange", "blue", "green", "pink"];
 
 interface ParticipantChatPanelProps {
   stepOrder: number;
@@ -180,23 +175,31 @@ export function ParticipantChatPanel({
     }
   }, [messages, stepId]);
 
-  // Persona confirm handler
+  // Persona confirm handler — uses addCanvasItemsToBoard for consistent row positioning
   const handlePersonaConfirm = React.useCallback(() => {
     const selectedNames = [...personaSelections];
     if (selectedNames.length === 0) return;
 
-    for (let i = 0; i < selectedNames.length; i++) {
-      const name = selectedNames[i];
+    // Count existing persona cards (contain em-dash, no cluster) to continue color sequence
+    const existingPersonaCount = storeApi.getState().stickyNotes.filter(
+      (n) => !n.cluster && n.text.includes(" — "),
+    ).length;
+
+    const personaItems = selectedNames.map((name, i) => {
       const persona = personaOptions.find((p) => p.name === name);
-      const text = persona?.description ? `${name} — ${persona.description}` : name;
-      const { position } = computeCanvasPosition(stepId, {}, stickyNotes);
-      addStickyNote({
-        text, position,
-        width: POST_IT_WIDTH, height: POST_IT_HEIGHT,
-        color: PERSONA_CARD_COLORS[i % PERSONA_CARD_COLORS.length],
-        ownerId: participantId, ownerName: displayName, ownerColor: participantColor,
-      });
-    }
+      return {
+        text: persona?.description ? `${name} — ${persona.description}` : name,
+        color: PERSONA_CARD_COLORS[(existingPersonaCount + i) % PERSONA_CARD_COLORS.length],
+      };
+    });
+
+    addCanvasItemsToBoard({
+      stepId,
+      items: personaItems,
+      storeApi,
+      addStickyNote,
+      owner: { ownerId: participantId, ownerName: displayName, ownerColor: participantColor },
+    });
 
     setPersonaSelectConfirmed(true);
     setQuickAck(getRandomAck());
@@ -204,7 +207,7 @@ export function ParticipantChatPanel({
       role: "user",
       parts: [{ type: "text", text: `I'd like to interview these personas: ${selectedNames.join(", ")}` }],
     });
-  }, [personaSelections, personaOptions, stepId, stickyNotes, addStickyNote, participantId, displayName, participantColor, sendMessage]);
+  }, [personaSelections, personaOptions, stepId, storeApi, addStickyNote, participantId, displayName, participantColor, sendMessage]);
 
   // Extract canvas items from completed assistant messages
   const lastAssistantMsg = React.useMemo(() => {
@@ -258,6 +261,12 @@ export function ParticipantChatPanel({
     cleanContent = cleanContent
       .replace(/\[INTERVIEW_MODE\][\s\S]*?\[\/INTERVIEW_MODE\]/, "")
       .replace(/\[INTERVIEW_MODE\][\s\S]*$/, "")
+      // Strip [PERSONA_PLAN] markup — facilitator only
+      .replace(/\[PERSONA_PLAN\][\s\S]*?\[\/PERSONA_PLAN\]/g, "")
+      .replace(/\[PERSONA_PLAN\][\s\S]*$/g, "")
+      // Strip [PERSONA_TEMPLATE] markup — facilitator only
+      .replace(/\[PERSONA_TEMPLATE\][\s\S]*?\[\/PERSONA_TEMPLATE\]/g, "")
+      .replace(/\[PERSONA_TEMPLATE\][\s\S]*$/g, "")
       .trim();
     return cleanContent;
   }, []);

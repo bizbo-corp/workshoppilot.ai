@@ -23,20 +23,22 @@ const viewportSelector = (state: ReactFlowState) => ({
 });
 
 /** Frame dimensions in canvas-space pixels */
-const FRAME_WIDTH = 900;
-const MIN_FRAME_HEIGHT = 400;
+const MIN_FRAME_WIDTH = 1200;
+const MIN_FRAME_HEIGHT = 180;
 const FRAME_PADDING = 24;
 const HEADER_H = 28;
 const EDGE_GRAB = 12;
+/** @deprecated alias kept for export compat */
+const FRAME_WIDTH = MIN_FRAME_WIDTH;
 
-/** Color mapping from StickyNoteColor to frame appearance */
+/** Color mapping from StickyNoteColor to frame appearance — nature palette */
 const FRAME_COLORS: Record<string, { fill: string; border: string; headerBg: string }> = {
-  pink:   { fill: 'rgba(236, 72, 153, 0.06)', border: 'rgba(236, 72, 153, 0.25)', headerBg: 'rgba(236, 72, 153, 0.55)' },
-  blue:   { fill: 'rgba(59, 130, 246, 0.06)', border: 'rgba(59, 130, 246, 0.25)', headerBg: 'rgba(59, 130, 246, 0.55)' },
-  green:  { fill: 'rgba(34, 197, 94, 0.06)',  border: 'rgba(34, 197, 94, 0.25)',  headerBg: 'rgba(34, 197, 94, 0.55)' },
-  yellow: { fill: 'rgba(234, 179, 8, 0.06)',  border: 'rgba(234, 179, 8, 0.25)',  headerBg: 'rgba(234, 179, 8, 0.55)' },
-  orange: { fill: 'rgba(249, 115, 22, 0.06)', border: 'rgba(249, 115, 22, 0.25)', headerBg: 'rgba(249, 115, 22, 0.55)' },
-  red:    { fill: 'rgba(239, 68, 68, 0.06)',  border: 'rgba(239, 68, 68, 0.25)',  headerBg: 'rgba(239, 68, 68, 0.55)' },
+  pink:   { fill: 'rgba(176, 112, 104, 0.08)', border: 'rgba(176, 112, 104, 0.30)', headerBg: 'rgba(176, 112, 104, 0.70)' },
+  blue:   { fill: 'rgba(104, 136, 160, 0.08)', border: 'rgba(104, 136, 160, 0.30)', headerBg: 'rgba(104, 136, 160, 0.70)' },
+  green:  { fill: 'rgba(96, 136, 80, 0.08)',   border: 'rgba(96, 136, 80, 0.30)',   headerBg: 'rgba(96, 136, 80, 0.70)' },
+  yellow: { fill: 'rgba(196, 152, 32, 0.08)',  border: 'rgba(196, 152, 32, 0.30)',  headerBg: 'rgba(196, 152, 32, 0.70)' },
+  orange: { fill: 'rgba(192, 128, 48, 0.08)',  border: 'rgba(192, 128, 48, 0.30)',  headerBg: 'rgba(192, 128, 48, 0.70)' },
+  red:    { fill: 'rgba(168, 96, 80, 0.08)',   border: 'rgba(168, 96, 80, 0.30)',   headerBg: 'rgba(168, 96, 80, 0.70)' },
 };
 
 const DEFAULT_FRAME_COLOR = FRAME_COLORS.yellow;
@@ -92,31 +94,25 @@ export function PersonaFrameOverlay() {
         )
       );
 
-      // Frame is centered on card's X, starts just below card
-      const frameY = card.position.y + card.height + 10; // small gap below card
+      // Frame wraps the entire horizontal row: persona card + children to its right
+      const frameX = card.position.x - FRAME_PADDING;
+      const frameY = card.position.y - FRAME_PADDING;
 
-      // Calculate width: use default or expand to contain all children
-      let frameWidth = FRAME_WIDTH;
-      let frameX = card.position.x + card.width / 2 - frameWidth / 2;
+      // Calculate width: from card left edge to rightmost child, or min width
+      let rightEdge = card.position.x + card.width;
       if (children.length > 0) {
-        const childMinX = Math.min(...children.map(c => c.position.x));
         const childMaxX = Math.max(...children.map(c => c.position.x + c.width));
-        const neededWidth = childMaxX - childMinX + FRAME_PADDING * 2;
-        frameWidth = Math.max(FRAME_WIDTH, neededWidth);
-        const contentCenterX = (childMinX + childMaxX) / 2;
-        const cardCenterX = card.position.x + card.width / 2;
-        // Center on whichever is wider: card or children
-        const centerX = children.length >= 3 ? contentCenterX : cardCenterX;
-        frameX = centerX - frameWidth / 2;
+        rightEdge = Math.max(rightEdge, childMaxX);
       }
+      const frameWidth = Math.max(MIN_FRAME_WIDTH, rightEdge - frameX + FRAME_PADDING);
 
-      // Calculate height: min height or extend to contain all children
-      let frameHeight = MIN_FRAME_HEIGHT;
+      // Calculate height: tallest element in the row + padding
+      let maxBottom = card.position.y + card.height;
       if (children.length > 0) {
         const childMaxY = Math.max(...children.map(c => c.position.y + c.height));
-        const neededHeight = childMaxY - frameY + FRAME_PADDING;
-        frameHeight = Math.max(MIN_FRAME_HEIGHT, neededHeight);
+        maxBottom = Math.max(maxBottom, childMaxY);
       }
+      const frameHeight = Math.max(MIN_FRAME_HEIGHT, maxBottom - frameY + FRAME_PADDING);
 
       // Member IDs: card + all children
       const memberIds = [card.id, ...children.map(c => c.id)];

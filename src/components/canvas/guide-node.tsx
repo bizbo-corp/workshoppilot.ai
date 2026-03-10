@@ -27,8 +27,20 @@ const POSTIT_COLOR_CLASSES: Record<string, string> = {
   red: 'bg-[var(--canvas-red-pastel)]',
 };
 
-// Hex → canvas color name for adaptive text color lookup
+const POSTIT_TEXT_CLASSES: Record<string, string> = {
+  yellow: 'text-[var(--sticky-note-yellow-text)]',
+  pink: 'text-[var(--sticky-note-pink-text)]',
+  blue: 'text-[var(--sticky-note-blue-text)]',
+  green: 'text-[var(--sticky-note-green-text)]',
+  orange: 'text-[var(--sticky-note-orange-text)]',
+  red: 'text-[var(--sticky-note-red-text)]',
+};
+
+// Hex → canvas color name for adaptive text color lookup (includes legacy + current palette)
 const HEX_TO_CANVAS_COLOR: Record<string, string> = {
+  '#c49820': 'yellow', '#b07068': 'pink', '#6888a0': 'blue',
+  '#608850': 'green', '#c08030': 'orange', '#a86050': 'red',
+  // Legacy hex values for backward compat with existing data
   '#eab308': 'yellow', '#ec4899': 'pink', '#3b82f6': 'blue',
   '#22c55e': 'green', '#f97316': 'orange', '#ef4444': 'red',
 };
@@ -78,13 +90,15 @@ function AdminEditButton({ guide }: { guide: GuideNodeData }) {
 function TemplateStickyNoteContent({ guide }: { guide: GuideNodeData }) {
   const colorName = guide.color || 'yellow';
   const bgClass = POSTIT_COLOR_CLASSES[colorName] || POSTIT_COLOR_CLASSES.yellow;
+  const textClass = POSTIT_TEXT_CLASSES[colorName] || POSTIT_TEXT_CLASSES.yellow;
 
   return (
     <div
       className={cn(
         bgClass,
+        textClass,
         'shadow-md rounded-sm p-3 w-full h-full',
-        'font-sans text-sm text-neutral-olive-800',
+        'font-sans text-sm',
         !guide.isAdminEditing && 'pointer-events-none',
       )}
     >

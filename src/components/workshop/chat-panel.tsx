@@ -68,7 +68,7 @@ const CANVAS_ENABLED_STEPS = [
 ];
 
 /** Distinct colors assigned to persona cards in user-research step (one per persona) */
-const PERSONA_CARD_COLORS: StickyNoteColor[] = ["pink", "blue", "green"];
+const PERSONA_CARD_COLORS: StickyNoteColor[] = ["yellow", "red", "orange", "blue", "green", "pink"];
 
 /** Fixed initial greetings shown instantly while AI generates first response */
 const STEP_INITIAL_GREETINGS: Record<string, string> = {
@@ -2746,6 +2746,10 @@ export function ChatPanel({
                                           const selectedNames = [
                                             ...personaSelections,
                                           ];
+                                          // Count existing persona cards (contain em-dash, no cluster) to continue color sequence
+                                          const existingPersonaCount = storeApi.getState().stickyNotes.filter(
+                                            (n) => !n.cluster && n.text.includes(" — "),
+                                          ).length;
                                           // Add selected personas as canvas items with distinct colors
                                           const personaItems = selectedNames.map(
                                             (name, i) => {
@@ -2758,7 +2762,7 @@ export function ChatPanel({
                                                   : name,
                                                 color:
                                                   PERSONA_CARD_COLORS[
-                                                    i % PERSONA_CARD_COLORS.length
+                                                    (existingPersonaCount + i) % PERSONA_CARD_COLORS.length
                                                   ],
                                               };
                                             },

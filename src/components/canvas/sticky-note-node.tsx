@@ -15,14 +15,24 @@ export const COLOR_CLASSES: Record<StickyNoteColor, string> = {
   red: 'bg-[var(--sticky-note-red)]',
 };
 
-/** Darker avatar background colors per sticky note color */
+/** Dark text hues matching each pastel background — constant across light/dark mode */
+export const TEXT_COLOR_CLASSES: Record<StickyNoteColor, string> = {
+  yellow: 'text-[var(--sticky-note-yellow-text)]',
+  pink: 'text-[var(--sticky-note-pink-text)]',
+  blue: 'text-[var(--sticky-note-blue-text)]',
+  green: 'text-[var(--sticky-note-green-text)]',
+  orange: 'text-[var(--sticky-note-orange-text)]',
+  red: 'text-[var(--sticky-note-red-text)]',
+};
+
+/** Darker avatar background colors per sticky note color — muted to match nature palette */
 const AVATAR_BG: Record<StickyNoteColor, string> = {
-  yellow: 'bg-amber-500',
-  pink: 'bg-pink-500',
-  blue: 'bg-blue-500',
-  green: 'bg-emerald-500',
-  orange: 'bg-orange-500',
-  red: 'bg-red-500',
+  yellow: 'bg-amber-700',
+  pink: 'bg-rose-600',
+  blue: 'bg-slate-500',
+  green: 'bg-emerald-700',
+  orange: 'bg-amber-600',
+  red: 'bg-red-700',
 };
 
 /** Extract initials from a persona name (first letter of first two words) */
@@ -58,7 +68,9 @@ export type StickyNoteNode = Node<StickyNoteNodeData, 'stickyNote'>;
 
 // `dragging` comes from ReactFlow's NodeProps — no React state needed for drag feedback
 export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<StickyNoteNode>) => {
-  const bgColor = COLOR_CLASSES[data.color || 'yellow'];
+  const colorKey = data.color || 'yellow';
+  const bgColor = COLOR_CLASSES[colorKey];
+  const textColor = TEXT_COLOR_CLASSES[colorKey];
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -88,8 +100,9 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
       <div
         className={cn(
           bgColor,
+          textColor,
           'shadow-md rounded-sm p-3',
-          'font-sans text-sm text-neutral-olive-800',
+          'font-sans text-sm',
           'opacity-60',
           'ring-2 ring-olive-500 ring-offset-1',
           'w-full h-full flex flex-col',
@@ -145,8 +158,9 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
     <div
       className={cn(
         bgColor,
+        textColor,
         'shadow-md rounded-sm p-3',
-        'font-sans text-sm text-neutral-olive-800',
+        'font-sans text-sm',
         // Transitions only when not actively dragging — instant feedback during manipulation
         !dragging && 'transition-[box-shadow,transform,opacity] duration-150',
         !dragging && !selected && 'hover:shadow-lg hover:-translate-y-0.5',

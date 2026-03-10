@@ -6,12 +6,21 @@
  */
 
 const COLOR_MAP: Record<string, string> = {
-  yellow: '#fdf0a0',
-  pink: '#fcc0d8',
-  blue: '#a0d8f0',
-  green: '#a0e8c0',
-  orange: '#fdd0a0',
-  red: '#f5b0a8',
+  yellow: '#ede0c0',
+  pink: '#e8c8c0',
+  blue: '#b8c8d0',
+  green: '#c0d8c0',
+  orange: '#e0d0b8',
+  red: '#d8b8a8',
+};
+
+const TEXT_COLOR_MAP: Record<string, string> = {
+  yellow: '#6b5020',
+  pink: '#784040',
+  blue: '#344858',
+  green: '#344a2c',
+  orange: '#6b4420',
+  red: '#684038',
 };
 
 interface StickyNoteDivProps {
@@ -40,6 +49,7 @@ export function StickyNoteDiv({
   offsetY = 0,
 }: StickyNoteDivProps) {
   const bg = COLOR_MAP[color] || COLOR_MAP.yellow;
+  const textCol = TEXT_COLOR_MAP[color] || TEXT_COLOR_MAP.yellow;
 
   return (
     <div
@@ -62,7 +72,7 @@ export function StickyNoteDiv({
         style={{
           fontSize: Math.max(9, 12 * scale),
           lineHeight: 1.3,
-          color: '#1a1a1a',
+          color: textCol,
           fontFamily: 'system-ui, -apple-system, sans-serif',
           wordBreak: 'break-word',
         }}

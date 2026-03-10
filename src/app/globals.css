@@ -119,24 +119,25 @@
   --canvas-tint-opacity: 0.06;
   --canvas-zone-opacity: 0.08;
   /* Canvas palette — single source of truth for frames, cards, sticky notes */
-  --canvas-yellow: #eab308;
-  --canvas-yellow-pastel: #fdf0a0;
-  --canvas-yellow-text: #854d0e;
-  --canvas-pink: #ec4899;
-  --canvas-pink-pastel: #fcc0d8;
-  --canvas-pink-text: #9d174d;
-  --canvas-blue: #3b82f6;
-  --canvas-blue-pastel: #a0d8f0;
-  --canvas-blue-text: #1e40af;
-  --canvas-green: #22c55e;
-  --canvas-green-pastel: #a0e8c0;
-  --canvas-green-text: #166534;
-  --canvas-orange: #f97316;
-  --canvas-orange-pastel: #fdd0a0;
-  --canvas-orange-text: #9a3412;
-  --canvas-red: #ef4444;
-  --canvas-red-pastel: #f5b0a8;
-  --canvas-red-text: #991b1b;
+  /* Nature palette: desaturated, warm-shifted to harmonise with olive base */
+  --canvas-yellow: #c49820;
+  --canvas-yellow-pastel: #ede0c0;
+  --canvas-yellow-text: #6b5020;
+  --canvas-pink: #b07068;
+  --canvas-pink-pastel: #e8c8c0;
+  --canvas-pink-text: #784040;
+  --canvas-blue: #6888a0;
+  --canvas-blue-pastel: #b8c8d0;
+  --canvas-blue-text: #344858;
+  --canvas-green: #608850;
+  --canvas-green-pastel: #c0d8c0;
+  --canvas-green-text: #344a2c;
+  --canvas-orange: #c08030;
+  --canvas-orange-pastel: #e0d0b8;
+  --canvas-orange-text: #6b4420;
+  --canvas-red: #a86050;
+  --canvas-red-pastel: #d8b8a8;
+  --canvas-red-text: #684038;
   --canvas-olive: #b8c9a3;
   --canvas-olive-text: var(--olive-800);
   /* Sticky note colors — aliased from canvas palette */
@@ -146,21 +147,28 @@
   --sticky-note-green: var(--canvas-green-pastel);
   --sticky-note-orange: var(--canvas-orange-pastel);
   --sticky-note-red: var(--canvas-red-pastel);
-  /* Mind map branch colors — vibrant, olive-complementary */
-  --mm-blue: #3088c0;
-  --mm-blue-bg: #cce4f5;
-  --mm-green: #30a050;
-  --mm-green-bg: #c4eacc;
-  --mm-purple: #7850b8;
-  --mm-purple-bg: #d8ccf0;
-  --mm-orange: #d08028;
-  --mm-orange-bg: #f0daba;
-  --mm-pink: #c05070;
-  --mm-pink-bg: #f0ccda;
-  --mm-yellow: #b09818;
-  --mm-yellow-bg: #eae6b8;
-  --mm-root: #5a6850;
-  --mm-root-bg: #dae2d0;
+  /* Sticky note text — dark hues matching each pastel (constant across light/dark) */
+  --sticky-note-yellow-text: #6b5020;
+  --sticky-note-pink-text: #784040;
+  --sticky-note-blue-text: #344858;
+  --sticky-note-green-text: #344a2c;
+  --sticky-note-orange-text: #6b4420;
+  --sticky-note-red-text: #684038;
+  /* Mind map branch colors — dark text on canvas pastels, borderless */
+  --mm-blue: #344858;
+  --mm-blue-bg: var(--canvas-blue-pastel);
+  --mm-green: #344a2c;
+  --mm-green-bg: var(--canvas-green-pastel);
+  --mm-purple: #684038;
+  --mm-purple-bg: var(--canvas-red-pastel);
+  --mm-orange: #6b4420;
+  --mm-orange-bg: var(--canvas-orange-pastel);
+  --mm-pink: #784040;
+  --mm-pink-bg: var(--canvas-pink-pastel);
+  --mm-yellow: #6b5020;
+  --mm-yellow-bg: var(--canvas-yellow-pastel);
+  --mm-root: #3d4b29;
+  --mm-root-bg: var(--canvas-olive);
   /* Persona card */
   --persona-bg: #f4f7ef;
   --persona-border: #c5d1a8;
@@ -254,12 +262,12 @@
   --canvas-tint-opacity: 0.12;
   --canvas-zone-opacity: 0.15;
   /* Canvas palette — dark mode text overrides (light tints for readability) */
-  --canvas-yellow-text: #fef08a;
-  --canvas-pink-text: #f9a8d4;
-  --canvas-blue-text: #93c5fd;
-  --canvas-green-text: #86efac;
-  --canvas-orange-text: #fdba74;
-  --canvas-red-text: #fca5a5;
+  --canvas-yellow-text: #f0e0a0;
+  --canvas-pink-text: #e8b8b0;
+  --canvas-blue-text: #a0c0d8;
+  --canvas-green-text: #a0d0a0;
+  --canvas-orange-text: #e8c898;
+  --canvas-red-text: #d8a898;
   --canvas-olive-text: var(--olive-200);
   /* Sticky note colors — aliased from canvas palette */
   --sticky-note-yellow: var(--canvas-yellow-pastel);
@@ -268,21 +276,7 @@
   --sticky-note-green: var(--canvas-green-pastel);
   --sticky-note-orange: var(--canvas-orange-pastel);
   --sticky-note-red: var(--canvas-red-pastel);
-  /* Mind map branch colors — dark mode (vibrant, higher contrast) */
-  --mm-blue: #68b0e0;
-  --mm-blue-bg: #1e3850;
-  --mm-green: #60c880;
-  --mm-green-bg: #1e4828;
-  --mm-purple: #a080d8;
-  --mm-purple-bg: #302050;
-  --mm-orange: #e0a050;
-  --mm-orange-bg: #402a18;
-  --mm-pink: #d878a0;
-  --mm-pink-bg: #402030;
-  --mm-yellow: #c8b040;
-  --mm-yellow-bg: #383218;
-  --mm-root: #88a078;
-  --mm-root-bg: #2a3820;
+  /* Mind map branch colors — same canvas palette pastels in dark mode (matches sticky notes) */
   /* Persona card */
   --persona-bg: #232b1c;
   --persona-border: #4a5a32;
