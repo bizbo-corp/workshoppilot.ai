@@ -52,6 +52,18 @@ export function parseSuggestions(content: string): {
 /**
  * Strip hallucinated system/tool tags from AI content.
  */
+/**
+ * Detect persona introduction messages (🎭 + "I'm [Name]" pattern).
+ * Returns the persona name if found, null otherwise.
+ */
+export function detectPersonaIntro(content: string): { personaName: string } | null {
+  if (!content.includes("🎭")) return null;
+  const match = content.match(
+    /🎭[\s\S]*?(?:I'm|Hey,?\s*I'm|I am)\s+([A-Z][a-z]+)/,
+  );
+  return match ? { personaName: match[1] } : null;
+}
+
 export function stripLeakedTags(content: string): { cleanContent: string } {
   const cleanContent = content
     .replace(/\s*\[artifact[^\]]*\]\s*/gi, " ")

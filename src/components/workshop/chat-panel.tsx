@@ -50,7 +50,7 @@ import { getStepCanvasConfig } from "@/lib/canvas/step-canvas-config";
 import { addCanvasItemsToBoard } from "@/lib/canvas/add-canvas-items";
 import { saveCanvasState } from "@/actions/canvas-actions";
 import { ChatSkeleton } from "./chat-skeleton";
-import { parsePersonaSelect } from "@/lib/chat/parse-utils";
+import { parsePersonaSelect, detectPersonaIntro } from "@/lib/chat/parse-utils";
 import { toast } from "sonner";
 import { useMultiplayerContext } from "@/components/workshop/multiplayer-room";
 
@@ -169,18 +169,6 @@ function parseInterviewMode(content: string): {
   }
 
   return { cleanContent: content, modeOptions: [] };
-}
-
-/**
- * Detect persona introduction messages (🎭 + "I'm [Name]" pattern).
- * Returns the persona name if found, null otherwise.
- */
-function detectPersonaIntro(content: string): { personaName: string } | null {
-  if (!content.includes("🎭")) return null;
-  const match = content.match(
-    /🎭[\s\S]*?(?:I'm|Hey,?\s*I'm|I am)\s+([A-Z][a-z]+)/,
-  );
-  return match ? { personaName: match[1] } : null;
 }
 
 /**
