@@ -1,67 +1,48 @@
-- [x] Paywall\
-  Move the paywall to step 7 after they have completed the "How Might We" card. Make sure that the customer knows that they are about to get to the visual steps, which are more fun and interesting and might entice them to purchase. 
-- [x] HMW.\
-  Once an area has been typed, remove the auto suggestions. Make the complete statement text editable or selectable. 
-- [x] Ideation\
-  If ideas have been grouped make a composite image or merge them together. Make the into a single Brain rewriting where the text description can be consolidated.
-
 ## Todo
 
-- [x] Build Pack
-- [x] PRD
-- [x] PPT
-- [ ] Tech Specs
-- [x] Rate Limit
-- [x] Idea to concept consolidation
-- [x] Reply Mike
-- [x] Add on a human facilitator
-- [ ] How does grouping occur and can a grouping only be completed by the facilitator? Are we going to allow the facilitator to merge ideas from multiple participants? That would be cool. 
+- [ ] E2E Story Framework in multiplayer mode to iron out remaining snags
+    - [ ] Dialog
+    - [ ] Journey Map
+    - [ ] Presentation
+    - [ ] Grouping by facilitator only
+- [ ] Journey Map -> Tech Specs -> PRDs
+
+## Notes
+
+- [ ] After selecting a Multiplayer workshop: I need a more in-your-face way of sharing the link so maybe the first step is a modal for the facilitator to share this via email or get a code that they can pass on to participants. 
+    - [ ] I want the first step (Challenge) to be facilitator only (and single player self facilitated). After they should be able to share the link with particpants
+    - [ ] Participants will first get an intro of what the challenge is (They will be told, rather than have to create)
+
+Improve the UX of the chat window when it's in collapsed mode. 
+
+## Challenge
+
+## Stakeholder Mapping
+
+## User Research
+
+How does the participant participate in user research in the collaboration mode? 
+
+Have the different participants running their own synthetic interviews in isolation. Ask the users to add insights from real customers or add things they have asked real people.
+
+Conclusion: The participants will need their own chat instance throughout the 10 steps - but only a light version. we need this version to strip out the ability that only a facilitator should have, such as sorting themes and confirming the step 
+
+After all  I think I'm going to need to pivot on an earlier decision in that I will need participants to have a sign-in account to participate.  this is primarily to stop bad actors using the system and draining tokens 
 
 
 
 
 
-I'd like these changes to be made: 
+## Research Sense Making
 
-Make a grid view that 'breaks the grid'. Also make a list view and have it as adefault. Also include a progress indicator for workshops. Use a traffic light colour system.
+## Persona Development
 
-Introduce Serif font for titles. I am OK with geist for now for body text, buttons and everything other than headlines. 
+## Journey Mapping
 
-Improve the colour usage. Maintain the olive toned 'professional consultant' look and feel.
+## Reframing Challenge
 
-Make the dashboard more energetic, thoughtful and designed. Fix card header bands: remove the faint colour overlays and use fuller colour to differentiate workshops (if reccomended) somehow.
+## Ideation
 
-Put a placeholder "for an illustration or graphic for subtle illustration or brand element in the header area, richer empty state that previews what a workshop looks like"
+## Concept Development
 
-Hide "Select all" and check boxes unless an edit button has been activated. 
-
-Make the header sticky
-
-One that wasn't afraid to
-
-For completed worshops in grid mode, randomly select a concept image from the workshop as the card's image.
-
- Overall let the screen use real color, real typography hierarchy, and real visual interest. Right now the design is playing it safe—nothing is wrong, but nothing is memorable either.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## Validate

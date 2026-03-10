@@ -251,33 +251,32 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
 
   return (
     <>
-      {/* Facilitator toolbar — fixed top-right, below presence bar */}
-      <div className="fixed top-14 right-3 z-50 flex items-center gap-2">
+      {/* Facilitator toolbar — rendered inline within multiplayer controls container.
+          Button style matches the canvas toolbar: text-muted-foreground with hover:bg-accent. */}
+      <div className="flex items-center gap-0.5">
         {/* Viewport sync button */}
-        <Button
-          variant="outline"
-          size="sm"
+        <button
           onClick={handleViewportSync}
-          className="gap-1.5 bg-background/80 backdrop-blur-sm shadow-sm"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           title="Bring everyone to your view"
         >
           <Eye className="h-4 w-4" />
           <span className="hidden sm:inline">Sync View</span>
-        </Button>
+        </button>
+
+        <div className="w-px h-5 bg-border mx-0.5" />
 
         {/* Timer controls */}
         {timerState === 'idle' ? (
           <div className="relative">
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={() => setShowTimerPresets(!showTimerPresets)}
-              className="gap-1.5 bg-background/80 backdrop-blur-sm shadow-sm"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
               title={votingMode && votingSession.status === 'idle' ? 'Start voting timer for participants' : 'Set countdown timer'}
             >
               <Timer className="h-4 w-4" />
               <span className="hidden sm:inline">{timerButtonLabel}</span>
-            </Button>
+            </button>
 
             {/* Timer preset dropdown */}
             {showTimerPresets && (
@@ -320,13 +319,12 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
           /* Active timer pill */
           <div
             className={cn(
-              'flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-mono font-semibold shadow-sm border',
-              'bg-background/80 backdrop-blur-sm',
+              'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-mono font-semibold',
               timerState === 'expired'
-                ? 'border-red-500 text-red-600 dark:text-red-400 animate-pulse'
+                ? 'bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400 animate-pulse'
                 : timerState === 'paused'
-                ? 'border-yellow-500 text-yellow-600 dark:text-yellow-400'
-                : 'border-border text-foreground'
+                ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-950/50 dark:text-yellow-400'
+                : 'bg-accent text-accent-foreground'
             )}
           >
             <span>{formatTime(remainingMs)}</span>
@@ -334,7 +332,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
             {timerState === 'running' && (
               <button
                 onClick={pauseTimer}
-                className="p-0.5 rounded hover:bg-muted transition-colors"
+                className="p-0.5 rounded hover:bg-background/50 transition-colors"
                 title="Pause timer"
               >
                 <Pause className="h-3.5 w-3.5" />
@@ -343,7 +341,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
             {timerState === 'paused' && (
               <button
                 onClick={resumeTimer}
-                className="p-0.5 rounded hover:bg-muted transition-colors"
+                className="p-0.5 rounded hover:bg-background/50 transition-colors"
                 title="Resume timer"
               >
                 <Play className="h-3.5 w-3.5" />
@@ -352,7 +350,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
             {(timerState === 'running' || timerState === 'paused') && (
               <button
                 onClick={cancelTimer}
-                className="p-0.5 rounded hover:bg-muted transition-colors"
+                className="p-0.5 rounded hover:bg-background/50 transition-colors"
                 title="Cancel timer"
               >
                 <X className="h-3.5 w-3.5" />
@@ -361,17 +359,20 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
           </div>
         )}
 
+        <div className="w-px h-5 bg-border mx-0.5" />
+
         {/* End Session button */}
-        <Button
-          variant="outline"
-          size="sm"
+        <button
           onClick={() => setShowEndConfirm(true)}
-          className="gap-1.5 bg-background/80 backdrop-blur-sm shadow-sm text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/50 hover:bg-destructive/10"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
           title="End workshop session"
         >
           <Square className="h-3.5 w-3.5 fill-current" />
           <span className="hidden sm:inline">End</span>
-        </Button>
+        </button>
+
+        {/* Separator before presence avatars */}
+        <div className="w-px h-5 bg-border mx-0.5" />
       </div>
 
       {/* End Session confirmation dialog */}

@@ -1,70 +1,124 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport, type UIMessage } from 'ai';
-import TextareaAutosize from 'react-textarea-autosize';
-import ReactMarkdown from 'react-markdown';
-import { Send, Loader2, Plus, CheckCircle2, Pencil, Sparkles, UserPlus, ArrowRight } from 'lucide-react';
-import { PersonaInterrupt } from './persona-interrupt';
-import { getStepByOrder } from '@/lib/workshop/step-metadata';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils';
-import { useAutoSave } from '@/hooks/use-auto-save';
-import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
-import { computeCanvasPosition, computeStickyNoteSize, computeThemeSortPositions, computeClusterChildPositions, POST_IT_WIDTH, POST_IT_HEIGHT, CATEGORY_COLORS, ZONE_COLORS, isPersonaCardForCluster } from '@/lib/canvas/canvas-position';
-import type { StickyNoteColor, MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
-import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
-import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
-import { createDefaultConceptCard, type ConceptCardData } from '@/lib/canvas/concept-card-types';
-import { THEME_COLORS, ROOT_COLOR } from '@/lib/canvas/mind-map-theme-colors';
-import { computeNewNodePosition } from '@/lib/canvas/mind-map-layout';
-import { getStepCanvasConfig } from '@/lib/canvas/step-canvas-config';
-import { saveCanvasState } from '@/actions/canvas-actions';
-import { ChatSkeleton } from './chat-skeleton';
-import { toast } from 'sonner';
-import { useMultiplayerContext } from '@/components/workshop/multiplayer-room';
+import * as React from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, type UIMessage } from "ai";
+import TextareaAutosize from "react-textarea-autosize";
+import ReactMarkdown from "react-markdown";
+import {
+  Send,
+  Loader2,
+  Plus,
+  CheckCircle2,
+  Pencil,
+  Sparkles,
+  UserPlus,
+  ArrowRight,
+} from "lucide-react";
+import { PersonaInterrupt } from "./persona-interrupt";
+import { getStepByOrder } from "@/lib/workshop/step-metadata";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
+import { useAutoSave } from "@/hooks/use-auto-save";
+import {
+  useCanvasStore,
+  useCanvasStoreApi,
+} from "@/providers/canvas-store-provider";
+import {
+  computeCanvasPosition,
+  computeStickyNoteSize,
+  computeThemeSortPositions,
+  computeClusterChildPositions,
+  POST_IT_WIDTH,
+  POST_IT_HEIGHT,
+  CATEGORY_COLORS,
+  ZONE_COLORS,
+  isPersonaCardForCluster,
+} from "@/lib/canvas/canvas-position";
+import type {
+  StickyNoteColor,
+  MindMapNodeState,
+  MindMapEdgeState,
+} from "@/stores/canvas-store";
+import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
+import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
+import {
+  createDefaultConceptCard,
+  type ConceptCardData,
+} from "@/lib/canvas/concept-card-types";
+import { THEME_COLORS, ROOT_COLOR } from "@/lib/canvas/mind-map-theme-colors";
+import { computeNewNodePosition } from "@/lib/canvas/mind-map-layout";
+import { getStepCanvasConfig } from "@/lib/canvas/step-canvas-config";
+import { saveCanvasState } from "@/actions/canvas-actions";
+import { ChatSkeleton } from "./chat-skeleton";
+import { toast } from "sonner";
+import { useMultiplayerContext } from "@/components/workshop/multiplayer-room";
 
 /** Steps that support canvas item auto-add */
-const CANVAS_ENABLED_STEPS = ['challenge', 'stakeholder-mapping', 'user-research', 'sense-making', 'persona', 'journey-mapping', 'reframe', 'ideation', 'concept'];
+const CANVAS_ENABLED_STEPS = [
+  "challenge",
+  "stakeholder-mapping",
+  "user-research",
+  "sense-making",
+  "persona",
+  "journey-mapping",
+  "reframe",
+  "ideation",
+  "concept",
+];
 
 /** Distinct colors assigned to persona cards in user-research step (one per persona) */
-const PERSONA_CARD_COLORS: StickyNoteColor[] = ['pink', 'blue', 'green'];
+const PERSONA_CARD_COLORS: StickyNoteColor[] = ["pink", "blue", "green"];
 
 /** Suggestion button color classes per sticky note color */
 const SUGGESTION_BUTTON_STYLES: Record<StickyNoteColor, string> = {
-  yellow: 'border-amber-300 bg-[var(--sticky-note-yellow)] dark:border-amber-600/50 dark:bg-amber-900/30 dark:text-amber-200',
-  red: 'border-red-300 bg-[var(--sticky-note-red)] dark:border-red-600/50 dark:bg-red-900/30 dark:text-red-200',
-  green: 'border-emerald-300 bg-[var(--sticky-note-green)] dark:border-emerald-600/50 dark:bg-emerald-900/30 dark:text-emerald-200',
-  pink: 'border-pink-300 bg-[var(--sticky-note-pink)] dark:border-pink-600/50 dark:bg-pink-900/30 dark:text-pink-200',
-  blue: 'border-blue-300 bg-[var(--sticky-note-blue)] dark:border-blue-600/50 dark:bg-blue-900/30 dark:text-blue-200',
-  orange: 'border-orange-300 bg-[var(--sticky-note-orange)] dark:border-orange-600/50 dark:bg-orange-900/30 dark:text-orange-200',
+  yellow:
+    "border-amber-300 bg-[var(--sticky-note-yellow)] dark:border-amber-600/50 dark:bg-amber-900/30 dark:text-amber-200",
+  red: "border-red-300 bg-[var(--sticky-note-red)] dark:border-red-600/50 dark:bg-red-900/30 dark:text-red-200",
+  green:
+    "border-emerald-300 bg-[var(--sticky-note-green)] dark:border-emerald-600/50 dark:bg-emerald-900/30 dark:text-emerald-200",
+  pink: "border-pink-300 bg-[var(--sticky-note-pink)] dark:border-pink-600/50 dark:bg-pink-900/30 dark:text-pink-200",
+  blue: "border-blue-300 bg-[var(--sticky-note-blue)] dark:border-blue-600/50 dark:bg-blue-900/30 dark:text-blue-200",
+  orange:
+    "border-orange-300 bg-[var(--sticky-note-orange)] dark:border-orange-600/50 dark:bg-orange-900/30 dark:text-orange-200",
 };
 
 /** Row-based sticky note colors for journey map swimlanes */
 const GRID_ROW_COLORS: Record<string, StickyNoteColor> = {
-  actions: 'blue',
-  goals: 'green',
-  barriers: 'red',
-  touchpoints: 'pink',
-  emotions: 'green', // fallback; explicit color attr takes priority
-  moments: 'yellow',
-  opportunities: 'orange',
+  actions: "blue",
+  goals: "green",
+  barriers: "red",
+  touchpoints: "pink",
+  emotions: "green", // fallback; explicit color attr takes priority
+  moments: "yellow",
+  opportunities: "orange",
 };
 
 /** Compute the display color for a canvas suggestion item */
 function getSuggestionItemColor(item: CanvasItemParsed): StickyNoteColor {
-  const VALID_COLORS = new Set(['yellow', 'pink', 'blue', 'green', 'orange', 'red']);
-  return (item.color && VALID_COLORS.has(item.color) ? item.color as StickyNoteColor : null)
-    || (item.category && CATEGORY_COLORS[item.category])
-    || (item.quadrant && ZONE_COLORS[item.quadrant])
-    || 'yellow';
+  const VALID_COLORS = new Set([
+    "yellow",
+    "pink",
+    "blue",
+    "green",
+    "orange",
+    "red",
+  ]);
+  return (
+    (item.color && VALID_COLORS.has(item.color)
+      ? (item.color as StickyNoteColor)
+      : null) ||
+    (item.category && CATEGORY_COLORS[item.category]) ||
+    (item.quadrant && ZONE_COLORS[item.quadrant]) ||
+    "yellow"
+  );
 }
 
 /** Fixed initial greetings shown instantly while AI generates first response */
 const STEP_INITIAL_GREETINGS: Record<string, string> = {
-  'journey-mapping': "Time to map the journey! 🗺️ We're going to walk in your persona's shoes and trace their current experience — every action, emotion, and friction point. I'm pulling together what we've learned so far to recommend the best journey template...",
+  "journey-mapping":
+    "Time to map the journey! 🗺️ We're going to walk in your persona's shoes and trace their current experience — every action, emotion, and friction point. I'm pulling together what we've learned so far to recommend the best journey template...",
 };
 
 /** Client-side quick acknowledgments shown instantly while AI thinks (before streaming begins) */
@@ -88,22 +142,27 @@ function getRandomAck() {
  * Parse [SUGGESTIONS]...[/SUGGESTIONS] block from AI content.
  * Returns clean content (block removed) and extracted suggestion strings.
  */
-function parseSuggestions(content: string): { cleanContent: string; suggestions: string[] } {
+function parseSuggestions(content: string): {
+  cleanContent: string;
+  suggestions: string[];
+} {
   // Complete block: extract suggestions and strip
   const match = content.match(/\[SUGGESTIONS\]([\s\S]*?)\[\/SUGGESTIONS\]/);
   if (match) {
-    const cleanContent = content.replace(/\[SUGGESTIONS\][\s\S]*?\[\/SUGGESTIONS\]/, '').trim();
+    const cleanContent = content
+      .replace(/\[SUGGESTIONS\][\s\S]*?\[\/SUGGESTIONS\]/, "")
+      .trim();
     const suggestions = match[1]
-      .split('\n')
-      .map((line) => line.replace(/^[-*•]\s*/, '').trim())
+      .split("\n")
+      .map((line) => line.replace(/^[-*•]\s*/, "").trim())
       .filter((line) => line.length > 0);
     return { cleanContent, suggestions };
   }
 
   // Incomplete block (mid-stream): strip from [SUGGESTIONS] to end of string
   // Prevents raw suggestion text from flickering in the chat bubble during streaming
-  if (content.includes('[SUGGESTIONS]')) {
-    const cleanContent = content.replace(/\[SUGGESTIONS\][\s\S]*$/, '').trim();
+  if (content.includes("[SUGGESTIONS]")) {
+    const cleanContent = content.replace(/\[SUGGESTIONS\][\s\S]*$/, "").trim();
     return { cleanContent, suggestions: [] };
   }
 
@@ -114,29 +173,41 @@ function parseSuggestions(content: string): { cleanContent: string; suggestions:
  * Parse [PERSONA_SELECT]...[/PERSONA_SELECT] block from AI content.
  * Returns clean content (block removed) and extracted persona options.
  */
-function parsePersonaSelect(content: string): { cleanContent: string; personaOptions: { name: string; description: string }[] } {
+function parsePersonaSelect(content: string): {
+  cleanContent: string;
+  personaOptions: { name: string; description: string }[];
+} {
   // Complete block: extract persona options and strip
-  const match = content.match(/\[PERSONA_SELECT\]([\s\S]*?)\[\/PERSONA_SELECT\]/);
+  const match = content.match(
+    /\[PERSONA_SELECT\]([\s\S]*?)\[\/PERSONA_SELECT\]/,
+  );
   if (match) {
-    const cleanContent = content.replace(/\[PERSONA_SELECT\][\s\S]*?\[\/PERSONA_SELECT\]/, '').trim();
+    const cleanContent = content
+      .replace(/\[PERSONA_SELECT\][\s\S]*?\[\/PERSONA_SELECT\]/, "")
+      .trim();
     const personaOptions = match[1]
-      .split('\n')
-      .map((line) => line.replace(/^[-*•\d.]\s*/, '').trim())
+      .split("\n")
+      .map((line) => line.replace(/^[-*•\d.]\s*/, "").trim())
       .filter((line) => line.length > 0)
       .map((line) => {
         // Parse "Name — description" or "Name - description"
         const dashMatch = line.match(/^(.+?)\s*[—–-]\s*(.+)$/);
         if (dashMatch) {
-          return { name: dashMatch[1].trim(), description: dashMatch[2].trim() };
+          return {
+            name: dashMatch[1].trim(),
+            description: dashMatch[2].trim(),
+          };
         }
-        return { name: line, description: '' };
+        return { name: line, description: "" };
       });
     return { cleanContent, personaOptions };
   }
 
   // Incomplete block (mid-stream): strip from [PERSONA_SELECT] to end
-  if (content.includes('[PERSONA_SELECT]')) {
-    const cleanContent = content.replace(/\[PERSONA_SELECT\][\s\S]*$/, '').trim();
+  if (content.includes("[PERSONA_SELECT]")) {
+    const cleanContent = content
+      .replace(/\[PERSONA_SELECT\][\s\S]*$/, "")
+      .trim();
     return { cleanContent, personaOptions: [] };
   }
 
@@ -147,28 +218,43 @@ function parsePersonaSelect(content: string): { cleanContent: string; personaOpt
  * Parse [INTERVIEW_MODE]...[/INTERVIEW_MODE] block from AI content.
  * Returns clean content (block removed) and extracted mode options.
  */
-function parseInterviewMode(content: string): { cleanContent: string; modeOptions: { id: 'synthetic' | 'real'; label: string; description: string }[] } {
+function parseInterviewMode(content: string): {
+  cleanContent: string;
+  modeOptions: {
+    id: "synthetic" | "real";
+    label: string;
+    description: string;
+  }[];
+} {
   // Complete block: extract mode options and strip
-  const match = content.match(/\[INTERVIEW_MODE\]([\s\S]*?)\[\/INTERVIEW_MODE\]/);
+  const match = content.match(
+    /\[INTERVIEW_MODE\]([\s\S]*?)\[\/INTERVIEW_MODE\]/,
+  );
   if (match) {
-    const cleanContent = content.replace(/\[INTERVIEW_MODE\][\s\S]*?\[\/INTERVIEW_MODE\]/, '').trim();
+    const cleanContent = content
+      .replace(/\[INTERVIEW_MODE\][\s\S]*?\[\/INTERVIEW_MODE\]/, "")
+      .trim();
     const modeOptions = match[1]
-      .split('\n')
-      .map((line) => line.replace(/^[-*•\d.]\s*/, '').trim())
+      .split("\n")
+      .map((line) => line.replace(/^[-*•\d.]\s*/, "").trim())
       .filter((line) => line.length > 0)
       .map((line) => {
         const dashMatch = line.match(/^(.+?)\s*[—–-]\s*(.+)$/);
         const label = dashMatch ? dashMatch[1].trim() : line;
-        const description = dashMatch ? dashMatch[2].trim() : '';
-        const id: 'synthetic' | 'real' = /real/i.test(label) ? 'real' : 'synthetic';
+        const description = dashMatch ? dashMatch[2].trim() : "";
+        const id: "synthetic" | "real" = /real/i.test(label)
+          ? "real"
+          : "synthetic";
         return { id, label, description };
       });
     return { cleanContent, modeOptions };
   }
 
   // Incomplete block (mid-stream): strip from [INTERVIEW_MODE] to end
-  if (content.includes('[INTERVIEW_MODE]')) {
-    const cleanContent = content.replace(/\[INTERVIEW_MODE\][\s\S]*$/, '').trim();
+  if (content.includes("[INTERVIEW_MODE]")) {
+    const cleanContent = content
+      .replace(/\[INTERVIEW_MODE\][\s\S]*$/, "")
+      .trim();
     return { cleanContent, modeOptions: [] };
   }
 
@@ -180,8 +266,10 @@ function parseInterviewMode(content: string): { cleanContent: string; modeOption
  * Returns the persona name if found, null otherwise.
  */
 function detectPersonaIntro(content: string): { personaName: string } | null {
-  if (!content.includes('🎭')) return null;
-  const match = content.match(/🎭[\s\S]*?(?:I'm|Hey,?\s*I'm|I am)\s+([A-Z][a-z]+)/);
+  if (!content.includes("🎭")) return null;
+  const match = content.match(
+    /🎭[\s\S]*?(?:I'm|Hey,?\s*I'm|I am)\s+([A-Z][a-z]+)/,
+  );
   return match ? { personaName: match[1] } : null;
 }
 
@@ -193,12 +281,12 @@ function detectPersonaIntro(content: string): { personaName: string } | null {
 function stripLeakedTags(content: string): { cleanContent: string } {
   const cleanContent = content
     // [artifact ...] or [/artifact] tags
-    .replace(/\s*\[artifact[^\]]*\]\s*/gi, ' ')
-    .replace(/\s*\[\/artifact\]\s*/gi, ' ')
+    .replace(/\s*\[artifact[^\]]*\]\s*/gi, " ")
+    .replace(/\s*\[\/artifact\]\s*/gi, " ")
     // `tool_code` backtick-wrapped markers (Gemini internal leak)
-    .replace(/`tool_code`/gi, '')
+    .replace(/`tool_code`/gi, "")
     // ```tool_code fenced blocks
-    .replace(/```tool_code[\s\S]*?```/gi, '')
+    .replace(/```tool_code[\s\S]*?```/gi, "")
     .trim();
   return { cleanContent };
 }
@@ -207,9 +295,12 @@ function stripLeakedTags(content: string): { cleanContent: string } {
  * Detect and strip [THEME_SORT] markup from AI content.
  * Returns whether the trigger was found and the content with the trigger removed.
  */
-function parseThemeSortTrigger(content: string): { cleanContent: string; shouldSort: boolean } {
-  const shouldSort = content.includes('[THEME_SORT]');
-  const cleanContent = content.replace(/\s*\[THEME_SORT\]\s*/g, ' ').trim();
+function parseThemeSortTrigger(content: string): {
+  cleanContent: string;
+  shouldSort: boolean;
+} {
+  const shouldSort = content.includes("[THEME_SORT]");
+  const cleanContent = content.replace(/\s*\[THEME_SORT\]\s*/g, " ").trim();
   return { cleanContent, shouldSort };
 }
 
@@ -219,21 +310,38 @@ function parseThemeSortTrigger(content: string): { cleanContent: string; shouldS
 type CanvasItemParsed = {
   text: string;
   quadrant?: string;
-  ring?: string;     // Ring ID for concentric ring layout (inner/middle/outer)
+  ring?: string; // Ring ID for concentric ring layout (inner/middle/outer)
   row?: string;
   col?: string;
   category?: string;
-  cluster?: string;  // Parent label for hierarchical clustering (stakeholder mapping)
+  cluster?: string; // Parent label for hierarchical clustering (stakeholder mapping)
   isGridItem?: boolean;
-  color?: string;    // Explicit color override (e.g. emotion traffic light: red/green/orange)
-  templateKey?: string;  // Template targeting key (e.g., 'idea', 'problem')
+  color?: string; // Explicit color override (e.g. emotion traffic light: red/green/orange)
+  templateKey?: string; // Template targeting key (e.g., 'idea', 'problem')
 };
 
 /** Known quadrant/category values that can appear in shorthand Quad: syntax */
-const EMPATHY_ZONE_IDS = new Set(['says', 'thinks', 'feels', 'does', 'pains', 'gains']);
-const SENSE_MAKING_QUADRANTS = new Set(['said', 'thought', 'felt', 'experienced']);
-const PERSONA_CATEGORIES = new Set(['goals', 'motivations', 'frustrations', 'behaviors']);
-const RING_IDS = new Set(['inner', 'middle', 'outer']);
+const EMPATHY_ZONE_IDS = new Set([
+  "says",
+  "thinks",
+  "feels",
+  "does",
+  "pains",
+  "gains",
+]);
+const SENSE_MAKING_QUADRANTS = new Set([
+  "said",
+  "thought",
+  "felt",
+  "experienced",
+]);
+const PERSONA_CATEGORIES = new Set([
+  "goals",
+  "motivations",
+  "frustrations",
+  "behaviors",
+]);
+const RING_IDS = new Set(["inner", "middle", "outer"]);
 
 /**
  * Parse a shorthand "Quad:" value into a quadrant, category, or ring.
@@ -247,7 +355,11 @@ const RING_IDS = new Set(['inner', 'middle', 'outer']);
  * - Pains/gains: returns BOTH quadrant + category (used by empathy zones AND persona step)
  * - Persona categories: "goals" → category: "goals"
  */
-function parseQuadLabel(label: string): { quadrant?: string; category?: string; ring?: string } {
+function parseQuadLabel(label: string): {
+  quadrant?: string;
+  category?: string;
+  ring?: string;
+} {
   const lower = label.toLowerCase().trim();
 
   // Ring IDs (inner/middle/outer) for concentric ring layout
@@ -257,7 +369,7 @@ function parseQuadLabel(label: string): { quadrant?: string; category?: string; 
   // Pains/gains return both quadrant AND category so they work for
   // empathy zone placement (via quadrant) and persona placement (via category)
   if (EMPATHY_ZONE_IDS.has(lower)) {
-    if (lower === 'pains' || lower === 'gains') {
+    if (lower === "pains" || lower === "gains") {
       return { quadrant: lower, category: lower };
     }
     return { quadrant: lower };
@@ -270,14 +382,19 @@ function parseQuadLabel(label: string): { quadrant?: string; category?: string; 
   if (PERSONA_CATEGORIES.has(lower)) return { category: lower };
 
   // Stakeholder power/interest quadrants — natural language
-  const stripped = lower.replace(/[^a-z]/g, '');
-  if (stripped.includes('highpower') && stripped.includes('highinterest')) return { quadrant: 'high-power-high-interest' };
-  if (stripped.includes('highpower') && stripped.includes('lowinterest')) return { quadrant: 'high-power-low-interest' };
-  if (stripped.includes('lowpower') && stripped.includes('highinterest')) return { quadrant: 'low-power-high-interest' };
-  if (stripped.includes('lowpower') && stripped.includes('lowinterest')) return { quadrant: 'low-power-low-interest' };
+  const stripped = lower.replace(/[^a-z]/g, "");
+  if (stripped.includes("highpower") && stripped.includes("highinterest"))
+    return { quadrant: "high-power-high-interest" };
+  if (stripped.includes("highpower") && stripped.includes("lowinterest"))
+    return { quadrant: "high-power-low-interest" };
+  if (stripped.includes("lowpower") && stripped.includes("highinterest"))
+    return { quadrant: "low-power-high-interest" };
+  if (stripped.includes("lowpower") && stripped.includes("lowinterest"))
+    return { quadrant: "low-power-low-interest" };
 
   // Already in kebab-case stakeholder format
-  if (label.startsWith('high-') || label.startsWith('low-')) return { quadrant: label };
+  if (label.startsWith("high-") || label.startsWith("low-"))
+    return { quadrant: label };
 
   return {};
 }
@@ -291,16 +408,20 @@ function parseQuadLabel(label: string): { quadrant?: string; category?: string; 
  *
  * Returns clean content (markup removed) and extracted canvas items with metadata.
  */
-function parseCanvasItems(content: string): { cleanContent: string; canvasItems: CanvasItemParsed[] } {
+function parseCanvasItems(content: string): {
+  cleanContent: string;
+  canvasItems: CanvasItemParsed[];
+} {
   const items: CanvasItemParsed[] = [];
 
   // --- Format 1: Tag pairs  [CANVAS_ITEM ...]...[/CANVAS_ITEM] ---
-  const tagRegex = /\[(CANVAS_ITEM|GRID_ITEM)(?:\s+([^\]]*))?\](.*?)\[\/(CANVAS_ITEM|GRID_ITEM)\]/g;
+  const tagRegex =
+    /\[(CANVAS_ITEM|GRID_ITEM)(?:\s+([^\]]*))?\](.*?)\[\/(CANVAS_ITEM|GRID_ITEM)\]/g;
   let match;
 
   while ((match = tagRegex.exec(content)) !== null) {
     const tagType = match[1];
-    const attrString = match[2] || '';
+    const attrString = match[2] || "";
     const text = match[3].trim();
     if (text.length === 0) continue;
 
@@ -320,7 +441,7 @@ function parseCanvasItems(content: string): { cleanContent: string; canvasItems:
       col: attrs.col,
       category: attrs.category,
       cluster: attrs.cluster,
-      isGridItem: tagType === 'GRID_ITEM',
+      isGridItem: tagType === "GRID_ITEM",
       color: attrs.color,
       templateKey: attrs.key,
     });
@@ -328,7 +449,10 @@ function parseCanvasItems(content: string): { cleanContent: string; canvasItems:
 
   // --- Format 2: Shorthand  [CANVAS_ITEM: Text] or [CANVAS_ITEM: Text, Quad: ...] ---
   // Run on content with tag-format already stripped to avoid double-parsing
-  const contentWithoutTags = content.replace(/\[(CANVAS_ITEM|GRID_ITEM)(?:\s+[^\]]*?)?\].*?\[\/(CANVAS_ITEM|GRID_ITEM)\]/g, '');
+  const contentWithoutTags = content.replace(
+    /\[(CANVAS_ITEM|GRID_ITEM)(?:\s+[^\]]*?)?\].*?\[\/(CANVAS_ITEM|GRID_ITEM)\]/g,
+    "",
+  );
   const shorthandRegex = /\[CANVAS_ITEM:\s*([^\]]+)\]/g;
 
   while ((match = shorthandRegex.exec(contentWithoutTags)) !== null) {
@@ -386,7 +510,15 @@ function parseCanvasItems(content: string): { cleanContent: string; canvasItems:
 
     const text = remaining.trim();
     if (text.length > 0) {
-      items.push({ text, quadrant, ring, category, cluster, color, templateKey });
+      items.push({
+        text,
+        quadrant,
+        ring,
+        category,
+        cluster,
+        color,
+        templateKey,
+      });
     }
   }
 
@@ -394,9 +526,12 @@ function parseCanvasItems(content: string): { cleanContent: string; canvasItems:
   // Use '\n\n' as replacement to preserve paragraph breaks when tags sit between paragraphs.
   let cleanContent = content
     // Tag format
-    .replace(/\s*\[(CANVAS_ITEM|GRID_ITEM)(?:\s+[^\]]*?)?\].*?\[\/(CANVAS_ITEM|GRID_ITEM)\]\s*/g, '\n\n')
+    .replace(
+      /\s*\[(CANVAS_ITEM|GRID_ITEM)(?:\s+[^\]]*?)?\].*?\[\/(CANVAS_ITEM|GRID_ITEM)\]\s*/g,
+      "\n\n",
+    )
     // Shorthand format
-    .replace(/\s*\[CANVAS_ITEM:\s*[^\]]+\]\s*/g, '\n\n')
+    .replace(/\s*\[CANVAS_ITEM:\s*[^\]]+\]\s*/g, "\n\n")
     .trim();
 
   return { cleanContent, canvasItems: items };
@@ -406,7 +541,10 @@ function parseCanvasItems(content: string): { cleanContent: string; canvasItems:
  * Parse [CANVAS_DELETE: text] markup from AI content.
  * Returns clean content and texts to delete.
  */
-function parseCanvasDeletes(content: string): { cleanContent: string; deleteTexts: string[] } {
+function parseCanvasDeletes(content: string): {
+  cleanContent: string;
+  deleteTexts: string[];
+} {
   const deleteTexts: string[] = [];
   const regex = /\[CANVAS_DELETE:\s*([^\]]+)\]/g;
   let match;
@@ -414,7 +552,9 @@ function parseCanvasDeletes(content: string): { cleanContent: string; deleteText
     const text = match[1].trim();
     if (text.length > 0) deleteTexts.push(text);
   }
-  const cleanContent = content.replace(/\s*\[CANVAS_DELETE:\s*[^\]]+\]\s*/g, ' ').trim();
+  const cleanContent = content
+    .replace(/\s*\[CANVAS_DELETE:\s*[^\]]+\]\s*/g, " ")
+    .trim();
   return { cleanContent, deleteTexts };
 }
 
@@ -422,17 +562,25 @@ function parseCanvasDeletes(content: string): { cleanContent: string; deleteText
  * Parse [CLUSTER: Parent | child1 | child2 | child3] markup from AI content.
  * Returns clean content and cluster suggestions.
  */
-function parseClusterSuggestions(content: string): { cleanContent: string; clusters: Array<{ parent: string; children: string[] }> } {
+function parseClusterSuggestions(content: string): {
+  cleanContent: string;
+  clusters: Array<{ parent: string; children: string[] }>;
+} {
   const clusters: Array<{ parent: string; children: string[] }> = [];
   const regex = /\[CLUSTER:\s*([^\]]+)\]/g;
   let match;
   while ((match = regex.exec(content)) !== null) {
-    const parts = match[1].split('|').map(s => s.trim()).filter(s => s.length > 0);
+    const parts = match[1]
+      .split("|")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
     if (parts.length >= 2) {
       clusters.push({ parent: parts[0], children: parts.slice(1) });
     }
   }
-  const cleanContent = content.replace(/\s*\[CLUSTER:\s*[^\]]+\]\s*/g, ' ').trim();
+  const cleanContent = content
+    .replace(/\s*\[CLUSTER:\s*[^\]]+\]\s*/g, " ")
+    .trim();
   return { cleanContent, clusters };
 }
 
@@ -440,7 +588,10 @@ function parseClusterSuggestions(content: string): { cleanContent: string; clust
  * Parse [PERSONA_TEMPLATE]{...JSON...}[/PERSONA_TEMPLATE] blocks from AI content.
  * Returns clean content (markup removed) and extracted persona template data.
  */
-function parsePersonaTemplates(content: string): { cleanContent: string; templates: Partial<PersonaTemplateData>[] } {
+function parsePersonaTemplates(content: string): {
+  cleanContent: string;
+  templates: Partial<PersonaTemplateData>[];
+} {
   const templates: Partial<PersonaTemplateData>[] = [];
   const regex = /\[PERSONA_TEMPLATE\]([\s\S]*?)\[\/PERSONA_TEMPLATE\]/g;
   let match;
@@ -454,12 +605,14 @@ function parsePersonaTemplates(content: string): { cleanContent: string; templat
   }
 
   let cleanContent = content
-    .replace(/\s*\[PERSONA_TEMPLATE\][\s\S]*?\[\/PERSONA_TEMPLATE\]\s*/g, ' ')
+    .replace(/\s*\[PERSONA_TEMPLATE\][\s\S]*?\[\/PERSONA_TEMPLATE\]\s*/g, " ")
     .trim();
 
   // Strip incomplete blocks mid-stream
-  if (cleanContent.includes('[PERSONA_TEMPLATE]')) {
-    cleanContent = cleanContent.replace(/\[PERSONA_TEMPLATE\][\s\S]*$/, '').trim();
+  if (cleanContent.includes("[PERSONA_TEMPLATE]")) {
+    cleanContent = cleanContent
+      .replace(/\[PERSONA_TEMPLATE\][\s\S]*$/, "")
+      .trim();
   }
 
   return { cleanContent, templates };
@@ -469,10 +622,15 @@ function parsePersonaTemplates(content: string): { cleanContent: string; templat
  * Parse [PERSONA_PLAN][...JSON array...][/PERSONA_PLAN] block from AI content.
  * Returns clean content (markup removed) and extracted persona plan entries.
  */
-function parsePersonaPlan(content: string): { cleanContent: string; plan: Array<{ personaId?: string; archetype: string; archetypeRole: string }> } {
+function parsePersonaPlan(content: string): {
+  cleanContent: string;
+  plan: Array<{ personaId?: string; archetype: string; archetypeRole: string }>;
+} {
   const match = content.match(/\[PERSONA_PLAN\]([\s\S]*?)\[\/PERSONA_PLAN\]/);
   if (match) {
-    const cleanContent = content.replace(/\[PERSONA_PLAN\][\s\S]*?\[\/PERSONA_PLAN\]/, '').trim();
+    const cleanContent = content
+      .replace(/\[PERSONA_PLAN\][\s\S]*?\[\/PERSONA_PLAN\]/, "")
+      .trim();
     try {
       const plan = JSON.parse(match[1].trim());
       if (Array.isArray(plan)) {
@@ -485,8 +643,8 @@ function parsePersonaPlan(content: string): { cleanContent: string; plan: Array<
   }
 
   // Incomplete block (mid-stream): strip from [PERSONA_PLAN] to end
-  if (content.includes('[PERSONA_PLAN]')) {
-    const cleanContent = content.replace(/\[PERSONA_PLAN\][\s\S]*$/, '').trim();
+  if (content.includes("[PERSONA_PLAN]")) {
+    const cleanContent = content.replace(/\[PERSONA_PLAN\][\s\S]*$/, "").trim();
     return { cleanContent, plan: [] };
   }
 
@@ -497,23 +655,31 @@ function parsePersonaPlan(content: string): { cleanContent: string; plan: Array<
  * Parse [JOURNEY_STAGES]stage1|stage2|stage3[/JOURNEY_STAGES] markup from AI content.
  * Returns clean content and an array of stage labels to replace the grid columns.
  */
-function parseJourneyStages(content: string): { cleanContent: string; stages: string[] } {
+function parseJourneyStages(content: string): {
+  cleanContent: string;
+  stages: string[];
+} {
   const stages: string[] = [];
   const regex = /\[JOURNEY_STAGES\]([\s\S]*?)\[\/JOURNEY_STAGES\]/g;
   let match;
   while ((match = regex.exec(content)) !== null) {
     const inner = match[1].trim();
-    const parsed = inner.split('|').map(s => s.trim()).filter(s => s.length > 0);
+    const parsed = inner
+      .split("|")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
     if (parsed.length >= 3) {
       stages.push(...parsed);
     }
   }
   let cleanContent = content
-    .replace(/\s*\[JOURNEY_STAGES\][\s\S]*?\[\/JOURNEY_STAGES\]\s*/g, ' ')
+    .replace(/\s*\[JOURNEY_STAGES\][\s\S]*?\[\/JOURNEY_STAGES\]\s*/g, " ")
     .trim();
   // Strip incomplete blocks mid-stream
-  if (cleanContent.includes('[JOURNEY_STAGES]')) {
-    cleanContent = cleanContent.replace(/\[JOURNEY_STAGES\][\s\S]*$/, '').trim();
+  if (cleanContent.includes("[JOURNEY_STAGES]")) {
+    cleanContent = cleanContent
+      .replace(/\[JOURNEY_STAGES\][\s\S]*$/, "")
+      .trim();
   }
   return { cleanContent, stages };
 }
@@ -522,7 +688,10 @@ function parseJourneyStages(content: string): { cleanContent: string; stages: st
  * Parse [HMW_CARD]{...JSON...}[/HMW_CARD] blocks from AI content.
  * Returns clean content (markup removed) and extracted HMW card data.
  */
-function parseHmwCards(content: string): { cleanContent: string; cards: Partial<HmwCardData>[] } {
+function parseHmwCards(content: string): {
+  cleanContent: string;
+  cards: Partial<HmwCardData>[];
+} {
   const cards: Partial<HmwCardData>[] = [];
   const regex = /\[HMW_CARD\]([\s\S]*?)\[\/HMW_CARD\]/g;
   let match;
@@ -536,12 +705,12 @@ function parseHmwCards(content: string): { cleanContent: string; cards: Partial<
   }
 
   let cleanContent = content
-    .replace(/\s*\[HMW_CARD\][\s\S]*?\[\/HMW_CARD\]\s*/g, ' ')
+    .replace(/\s*\[HMW_CARD\][\s\S]*?\[\/HMW_CARD\]\s*/g, " ")
     .trim();
 
   // Strip incomplete blocks mid-stream
-  if (cleanContent.includes('[HMW_CARD]')) {
-    cleanContent = cleanContent.replace(/\[HMW_CARD\][\s\S]*$/, '').trim();
+  if (cleanContent.includes("[HMW_CARD]")) {
+    cleanContent = cleanContent.replace(/\[HMW_CARD\][\s\S]*$/, "").trim();
   }
 
   return { cleanContent, cards };
@@ -551,7 +720,10 @@ function parseHmwCards(content: string): { cleanContent: string; cards: Partial<
  * Parse [CONCEPT_CARD]{...JSON...}[/CONCEPT_CARD] blocks from AI content.
  * Returns clean content (markup removed) and extracted concept card data.
  */
-function parseConceptCards(content: string): { cleanContent: string; cards: (Partial<ConceptCardData> & { cardIndex?: number })[] } {
+function parseConceptCards(content: string): {
+  cleanContent: string;
+  cards: (Partial<ConceptCardData> & { cardIndex?: number })[];
+} {
   const cards: (Partial<ConceptCardData> & { cardIndex?: number })[] = [];
   const regex = /\[CONCEPT_CARD\]([\s\S]*?)\[\/CONCEPT_CARD\]/g;
   let match;
@@ -565,13 +737,13 @@ function parseConceptCards(content: string): { cleanContent: string; cards: (Par
   }
 
   let cleanContent = content
-    .replace(/\s*\[CONCEPT_CARD\][\s\S]*?\[\/CONCEPT_CARD\]\s*/g, ' ')
-    .replace(/\s*\[CONCEPT_COMPLETE\]\s*/g, ' ')
+    .replace(/\s*\[CONCEPT_CARD\][\s\S]*?\[\/CONCEPT_CARD\]\s*/g, " ")
+    .replace(/\s*\[CONCEPT_COMPLETE\]\s*/g, " ")
     .trim();
 
   // Strip incomplete blocks mid-stream
-  if (cleanContent.includes('[CONCEPT_CARD]')) {
-    cleanContent = cleanContent.replace(/\[CONCEPT_CARD\][\s\S]*$/, '').trim();
+  if (cleanContent.includes("[CONCEPT_CARD]")) {
+    cleanContent = cleanContent.replace(/\[CONCEPT_CARD\][\s\S]*$/, "").trim();
   }
 
   return { cleanContent, cards };
@@ -579,7 +751,7 @@ function parseConceptCards(content: string): { cleanContent: string; cards: (Par
 
 type MindMapNodeParsed = {
   label: string;
-  theme?: string;    // Parent theme label (omitted for theme-level nodes)
+  theme?: string; // Parent theme label (omitted for theme-level nodes)
   isWildCard?: boolean;
 };
 
@@ -588,14 +760,17 @@ type MindMapNodeParsed = {
  * Also supports tag format: [MIND_MAP_NODE theme="Parent" wildcard]Label[/MIND_MAP_NODE]
  * Returns clean content and extracted mind map node data.
  */
-function parseMindMapNodes(content: string): { cleanContent: string; nodes: MindMapNodeParsed[] } {
+function parseMindMapNodes(content: string): {
+  cleanContent: string;
+  nodes: MindMapNodeParsed[];
+} {
   const nodes: MindMapNodeParsed[] = [];
 
   // Format 1: Tag pairs [MIND_MAP_NODE theme="..." wildcard?]Label[/MIND_MAP_NODE]
   const tagRegex = /\[MIND_MAP_NODE(?:\s+([^\]]*))?\](.*?)\[\/MIND_MAP_NODE\]/g;
   let match;
   while ((match = tagRegex.exec(content)) !== null) {
-    const attrs = match[1] || '';
+    const attrs = match[1] || "";
     const label = match[2].trim();
     if (!label) continue;
 
@@ -610,12 +785,15 @@ function parseMindMapNodes(content: string): { cleanContent: string; nodes: Mind
   }
 
   // Format 2: Shorthand [MIND_MAP_NODE: Label] or [MIND_MAP_NODE: Label, Theme: Parent]
-  const contentWithoutTags = content.replace(/\[MIND_MAP_NODE(?:\s+[^\]]*?)?\].*?\[\/MIND_MAP_NODE\]/g, '');
+  const contentWithoutTags = content.replace(
+    /\[MIND_MAP_NODE(?:\s+[^\]]*?)?\].*?\[\/MIND_MAP_NODE\]/g,
+    "",
+  );
   const shorthandRegex = /\[MIND_MAP_NODE:\s*([^\]]+)\]/g;
   while ((match = shorthandRegex.exec(contentWithoutTags)) !== null) {
     const inner = match[1].trim();
     // Parse comma-separated attributes
-    const parts = inner.split(',').map(s => s.trim());
+    const parts = inner.split(",").map((s) => s.trim());
     const label = parts[0];
     if (!label) continue;
 
@@ -628,7 +806,7 @@ function parseMindMapNodes(content: string): { cleanContent: string; nodes: Mind
         if (/^wild\s*card$/i.test(part)) {
           isWildCard = true;
         } else {
-          theme += ', ' + part;
+          theme += ", " + part;
         }
         continue;
       }
@@ -640,7 +818,7 @@ function parseMindMapNodes(content: string): { cleanContent: string; nodes: Mind
     // Handle "Wildcard:" prefix in label (e.g. "Wildcard: Some Idea")
     let cleanLabel = label;
     if (/^wildcard:\s*/i.test(cleanLabel)) {
-      cleanLabel = cleanLabel.replace(/^wildcard:\s*/i, '').trim();
+      cleanLabel = cleanLabel.replace(/^wildcard:\s*/i, "").trim();
       isWildCard = true;
     }
 
@@ -649,13 +827,16 @@ function parseMindMapNodes(content: string): { cleanContent: string; nodes: Mind
 
   // Clean markup from content
   let cleanContent = content
-    .replace(/\s*\[MIND_MAP_NODE(?:\s+[^\]]*?)?\].*?\[\/MIND_MAP_NODE\]\s*/g, ' ')
-    .replace(/\s*\[MIND_MAP_NODE:\s*[^\]]+\]\s*/g, ' ')
+    .replace(
+      /\s*\[MIND_MAP_NODE(?:\s+[^\]]*?)?\].*?\[\/MIND_MAP_NODE\]\s*/g,
+      " ",
+    )
+    .replace(/\s*\[MIND_MAP_NODE:\s*[^\]]+\]\s*/g, " ")
     .trim();
 
   // Strip incomplete tags mid-stream
-  if (cleanContent.includes('[MIND_MAP_NODE')) {
-    cleanContent = cleanContent.replace(/\[MIND_MAP_NODE[^\]]*$/, '').trim();
+  if (cleanContent.includes("[MIND_MAP_NODE")) {
+    cleanContent = cleanContent.replace(/\[MIND_MAP_NODE[^\]]*$/, "").trim();
   }
 
   return { cleanContent, nodes };
@@ -666,7 +847,10 @@ function parseMindMapNodes(content: string): { cleanContent: string; nodes: Mind
  * Returns content with %%MMNODE_N%% placeholders and the parsed nodes array.
  * Placeholder indices correspond 1:1 to the returned nodes array.
  */
-function inlineMindMapNodes(content: string): { content: string; nodes: MindMapNodeParsed[] } {
+function inlineMindMapNodes(content: string): {
+  content: string;
+  nodes: MindMapNodeParsed[];
+} {
   const nodes: MindMapNodeParsed[] = [];
   let nodeIndex = 0;
 
@@ -674,9 +858,9 @@ function inlineMindMapNodes(content: string): { content: string; nodes: MindMapN
   let result = content.replace(
     /\[MIND_MAP_NODE(?:\s+([^\]]*))?\](.*?)\[\/MIND_MAP_NODE\]/g,
     (_match, attrs, label) => {
-      const attrStr = attrs || '';
+      const attrStr = attrs || "";
       const trimmedLabel = (label as string).trim();
-      if (!trimmedLabel) return '';
+      if (!trimmedLabel) return "";
 
       const themeMatch = attrStr.match(/theme\s*=\s*"([^"]+)"/i);
       const isWildCard = /wildcard/i.test(attrStr);
@@ -688,9 +872,12 @@ function inlineMindMapNodes(content: string): { content: string; nodes: MindMapN
 
   // Replace shorthand format: [MIND_MAP_NODE: ...]
   result = result.replace(/\[MIND_MAP_NODE:\s*([^\]]+)\]/g, (_match, inner) => {
-    const parts = (inner as string).trim().split(',').map((s: string) => s.trim());
+    const parts = (inner as string)
+      .trim()
+      .split(",")
+      .map((s: string) => s.trim());
     const label = parts[0];
-    if (!label) return '';
+    if (!label) return "";
 
     let theme: string | undefined;
     let isWildCard = false;
@@ -701,7 +888,7 @@ function inlineMindMapNodes(content: string): { content: string; nodes: MindMapN
         if (/^wild\s*card$/i.test(part)) {
           isWildCard = true;
         } else {
-          theme += ', ' + part;
+          theme += ", " + part;
         }
         continue;
       }
@@ -712,7 +899,7 @@ function inlineMindMapNodes(content: string): { content: string; nodes: MindMapN
 
     let cleanLabel = label;
     if (/^wildcard:\s*/i.test(cleanLabel)) {
-      cleanLabel = cleanLabel.replace(/^wildcard:\s*/i, '').trim();
+      cleanLabel = cleanLabel.replace(/^wildcard:\s*/i, "").trim();
       isWildCard = true;
     }
 
@@ -721,8 +908,8 @@ function inlineMindMapNodes(content: string): { content: string; nodes: MindMapN
   });
 
   // Strip incomplete tags mid-stream
-  if (result.includes('[MIND_MAP_NODE')) {
-    result = result.replace(/\[MIND_MAP_NODE[^\]]*$/, '');
+  if (result.includes("[MIND_MAP_NODE")) {
+    result = result.replace(/\[MIND_MAP_NODE[^\]]*$/, "");
   }
 
   return { content: result, nodes };
@@ -736,9 +923,37 @@ function inlineMindMapNodes(content: string): { content: string; nodes: MindMapN
  * - AI sending short label when node label is the full extracted text (label ⊃ theme)
  */
 const MATCH_STOP_WORDS = new Set([
-  'the', 'a', 'an', 'to', 'for', 'and', 'or', 'of', 'in', 'on', 'with',
-  'their', 'his', 'her', 'its', 'who', 'that', 'which', 'how', 'might',
-  'we', 'can', 'more', 'into', 'is', 'are', 'be', 'so', 'they', 'he', 'she',
+  "the",
+  "a",
+  "an",
+  "to",
+  "for",
+  "and",
+  "or",
+  "of",
+  "in",
+  "on",
+  "with",
+  "their",
+  "his",
+  "her",
+  "its",
+  "who",
+  "that",
+  "which",
+  "how",
+  "might",
+  "we",
+  "can",
+  "more",
+  "into",
+  "is",
+  "are",
+  "be",
+  "so",
+  "they",
+  "he",
+  "she",
 ]);
 
 function findThemeNode(
@@ -751,17 +966,20 @@ function findThemeNode(
   if (exact) return exact;
 
   const themeLower = theme.toLowerCase();
-  const level1Nodes = nodes.filter(n => n.level === 1);
+  const level1Nodes = nodes.filter((n) => n.level === 1);
 
   // 2. Bidirectional substring — one string fully contains the other
   for (const n of level1Nodes) {
     const labelLower = n.label.toLowerCase();
-    if (themeLower.includes(labelLower) || labelLower.includes(themeLower)) return n;
+    if (themeLower.includes(labelLower) || labelLower.includes(themeLower))
+      return n;
   }
 
   // 3. Word-overlap scoring — pick the branch sharing the most significant words
   const themeWords = new Set(
-    themeLower.split(/\s+/).filter(w => w.length > 2 && !MATCH_STOP_WORDS.has(w))
+    themeLower
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !MATCH_STOP_WORDS.has(w)),
   );
   if (themeWords.size === 0) return undefined;
 
@@ -769,9 +987,11 @@ function findThemeNode(
   let bestScore = 0;
 
   for (const n of level1Nodes) {
-    const labelWords = n.label.toLowerCase().split(/\s+/)
-      .filter(w => w.length > 2 && !MATCH_STOP_WORDS.has(w));
-    const overlap = labelWords.filter(w => themeWords.has(w)).length;
+    const labelWords = n.label
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !MATCH_STOP_WORDS.has(w));
+    const overlap = labelWords.filter((w) => themeWords.has(w)).length;
     if (overlap > bestScore) {
       bestScore = overlap;
       bestNode = n;
@@ -788,7 +1008,11 @@ interface ChatPanelProps {
   workshopId: string;
   initialMessages?: UIMessage[];
   onMessageCountChange?: (count: number) => void;
-  subStep?: 'mind-mapping' | 'crazy-eights' | 'idea-selection' | 'brain-rewriting';
+  subStep?:
+    | "mind-mapping"
+    | "crazy-eights"
+    | "idea-selection"
+    | "brain-rewriting";
   showStepConfirm?: boolean;
   onStepConfirm?: () => void;
   onStepRevise?: () => void;
@@ -799,9 +1023,30 @@ interface ChatPanelProps {
   onConceptComplete?: () => void; // Fired when AI signals all concepts are done or user asks to move on
   skipAutoStart?: boolean; // Prevents auto-start when ChatPanel remounts (e.g. after toggle)
   onAutoStarted?: () => void; // Callback to notify parent that auto-start was triggered
+  onLastAssistantMessage?: (text: string) => void; // Reports last assistant message text for collapsed preview
+  hideAvatar?: boolean; // Hide in-body avatar when parent renders it in a card header
 }
 
-export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, onMessageCountChange, subStep, showStepConfirm, onStepConfirm, onStepRevise, stepConfirmLabel, stepConfirmIsTransition, stepConfirmDisabled, stepAlreadyConfirmed, onConceptComplete, skipAutoStart, onAutoStarted }: ChatPanelProps) {
+export function ChatPanel({
+  stepOrder,
+  sessionId,
+  workshopId,
+  initialMessages,
+  onMessageCountChange,
+  subStep,
+  showStepConfirm,
+  onStepConfirm,
+  onStepRevise,
+  stepConfirmLabel,
+  stepConfirmIsTransition,
+  stepConfirmDisabled,
+  stepAlreadyConfirmed,
+  onConceptComplete,
+  skipAutoStart,
+  onAutoStarted,
+  onLastAssistantMessage,
+  hideAvatar,
+}: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
 
   // Multiplayer read-only mode — participants see conversation history only (no input, no actions).
@@ -815,10 +1060,14 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const updateStickyNote = useCanvasStore((state) => state.updateStickyNote);
   const deleteStickyNote = useCanvasStore((state) => state.deleteStickyNote);
   const setCluster = useCanvasStore((state) => state.setCluster);
-  const batchUpdatePositions = useCanvasStore((state) => state.batchUpdatePositions);
+  const batchUpdatePositions = useCanvasStore(
+    (state) => state.batchUpdatePositions,
+  );
   const stickyNotes = useCanvasStore((state) => state.stickyNotes);
   const gridColumns = useCanvasStore((state) => state.gridColumns);
-  const replaceGridColumns = useCanvasStore((state) => state.replaceGridColumns);
+  const replaceGridColumns = useCanvasStore(
+    (state) => state.replaceGridColumns,
+  );
   const drawingNodes = useCanvasStore((state) => state.drawingNodes);
   const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
@@ -828,18 +1077,30 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const updateConceptCard = useCanvasStore((state) => state.updateConceptCard);
   const addConceptCard = useCanvasStore((state) => state.addConceptCard);
   const personaTemplates = useCanvasStore((state) => state.personaTemplates);
-  const addPersonaTemplate = useCanvasStore((state) => state.addPersonaTemplate);
-  const updatePersonaTemplate = useCanvasStore((state) => state.updatePersonaTemplate);
+  const addPersonaTemplate = useCanvasStore(
+    (state) => state.addPersonaTemplate,
+  );
+  const updatePersonaTemplate = useCanvasStore(
+    (state) => state.updatePersonaTemplate,
+  );
   const hmwCards = useCanvasStore((state) => state.hmwCards);
   const addHmwCard = useCanvasStore((state) => state.addHmwCard);
   const updateHmwCard = useCanvasStore((state) => state.updateHmwCard);
   const isDirty = useCanvasStore((state) => state.isDirty);
   const markClean = useCanvasStore((state) => state.markClean);
-  const setHighlightedCell = useCanvasStore((state) => state.setHighlightedCell);
+  const setHighlightedCell = useCanvasStore(
+    (state) => state.setHighlightedCell,
+  );
   const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
-  const pendingHmwChipSelection = useCanvasStore((state) => state.pendingHmwChipSelection);
-  const setPendingHmwChipSelection = useCanvasStore((state) => state.setPendingHmwChipSelection);
-  const selectedStickyNoteIds = useCanvasStore((state) => state.selectedStickyNoteIds);
+  const pendingHmwChipSelection = useCanvasStore(
+    (state) => state.pendingHmwChipSelection,
+  );
+  const setPendingHmwChipSelection = useCanvasStore(
+    (state) => state.setPendingHmwChipSelection,
+  );
+  const selectedStickyNoteIds = useCanvasStore(
+    (state) => state.selectedStickyNoteIds,
+  );
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
@@ -847,25 +1108,44 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const hasScrolledOnMount = React.useRef(false);
   const countdownRef = React.useRef<NodeJS.Timeout | null>(null);
   const scrollIdleTimer = React.useRef<NodeJS.Timeout | null>(null);
-  const [inputValue, setInputValue] = React.useState('');
+  const [inputValue, setInputValue] = React.useState("");
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
   const [justConfirmed, setJustConfirmed] = React.useState(false);
-  const [rateLimitInfo, setRateLimitInfo] = React.useState<{ retryAfter: number } | null>(null);
+  const [rateLimitInfo, setRateLimitInfo] = React.useState<{
+    retryAfter: number;
+  } | null>(null);
   const [streamError, setStreamError] = React.useState(false);
   const [quickAck, setQuickAck] = React.useState<string | null>(null);
-  const [addedMessageIds, setAddedMessageIds] = React.useState<Set<string>>(() => new Set());
-  const [addedItemTexts, setAddedItemTexts] = React.useState<Set<string>>(() => new Set());
-  const [addedMindMapLabels, setAddedMindMapLabels] = React.useState<Set<string>>(() => new Set());
+  const [addedMessageIds, setAddedMessageIds] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+  const [addedItemTexts, setAddedItemTexts] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+  const [addedMindMapLabels, setAddedMindMapLabels] = React.useState<
+    Set<string>
+  >(() => new Set());
   const [hasThemeSorted, setHasThemeSorted] = React.useState(false);
   const [showSortInstructions, setShowSortInstructions] = React.useState(false);
-  const [personaOptions, setPersonaOptions] = React.useState<{ name: string; description: string }[]>([]);
-  const [personaSelections, setPersonaSelections] = React.useState<Set<string>>(() => new Set());
-  const [personaSelectConfirmed, setPersonaSelectConfirmed] = React.useState(false);
+  const [personaOptions, setPersonaOptions] = React.useState<
+    { name: string; description: string }[]
+  >([]);
+  const [personaSelections, setPersonaSelections] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+  const [personaSelectConfirmed, setPersonaSelectConfirmed] =
+    React.useState(false);
   const [suggestionsExpanded, setSuggestionsExpanded] = React.useState(false);
-  const [customPersonaInput, setCustomPersonaInput] = React.useState('');
-  const [personaSelectMessageId, setPersonaSelectMessageId] = React.useState<string | null>(null);
-  const [interviewMode, setInterviewMode] = React.useState<'synthetic' | 'real' | null>(null);
-  const [interviewModeMessageId, setInterviewModeMessageId] = React.useState<string | null>(null);
+  const [customPersonaInput, setCustomPersonaInput] = React.useState("");
+  const [personaSelectMessageId, setPersonaSelectMessageId] = React.useState<
+    string | null
+  >(null);
+  const [interviewMode, setInterviewMode] = React.useState<
+    "synthetic" | "real" | null
+  >(null);
+  const [interviewModeMessageId, setInterviewModeMessageId] = React.useState<
+    string | null
+  >(null);
   const [readyToCompile, setReadyToCompile] = React.useState(false);
   const [personasDone, setPersonasDone] = React.useState(false);
   // Show skeleton on mount before JS hydration completes; hide once component is mounted
@@ -898,7 +1178,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       ...(s.mindMapEdges.length > 0 ? { mindMapEdges: s.mindMapEdges } : {}),
       ...(s.crazy8sSlots.length > 0 ? { crazy8sSlots: s.crazy8sSlots } : {}),
       ...(s.conceptCards.length > 0 ? { conceptCards: s.conceptCards } : {}),
-      ...(s.personaTemplates.length > 0 ? { personaTemplates: s.personaTemplates } : {}),
+      ...(s.personaTemplates.length > 0
+        ? { personaTemplates: s.personaTemplates }
+        : {}),
       ...(s.hmwCards.length > 0 ? { hmwCards: s.hmwCards } : {}),
     });
     s.markClean();
@@ -918,10 +1200,16 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   const transport = React.useMemo(
     () =>
       new DefaultChatTransport({
-        api: '/api/chat',
-        body: { sessionId, stepId: step.id, workshopId, subStep, selectedStickyNoteIds },
+        api: "/api/chat",
+        body: {
+          sessionId,
+          stepId: step.id,
+          workshopId,
+          subStep,
+          selectedStickyNoteIds,
+        },
       }),
-    [sessionId, step.id, workshopId, subStep, selectedStickyNoteIds]
+    [sessionId, step.id, workshopId, subStep, selectedStickyNoteIds],
   );
 
   const { messages, sendMessage, status, setMessages } = useChat({
@@ -929,8 +1217,11 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     messages: initialMessages,
     onError: (error) => {
       // Check if this is a rate limit error from our API
-      const errorStr = error?.message || '';
-      if (errorStr.includes('rate_limit_exceeded') || errorStr.includes('429')) {
+      const errorStr = error?.message || "";
+      if (
+        errorStr.includes("rate_limit_exceeded") ||
+        errorStr.includes("429")
+      ) {
         let retryAfter = 30;
         try {
           const parsed = JSON.parse(errorStr);
@@ -955,12 +1246,14 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       } else {
         // Non-rate-limit streaming error
         setStreamError(true);
-        toast.error('Something went wrong — please try again.', { duration: 4000 });
+        toast.error("Something went wrong — please try again.", {
+          duration: 4000,
+        });
       }
     },
   });
 
-  const isLoading = status === 'streaming' || status === 'submitted';
+  const isLoading = status === "streaming" || status === "submitted";
 
   // Auto-save messages every 2 seconds (debounced) with 10s maxWait
   useAutoSave(sessionId, step.id, messages);
@@ -970,14 +1263,39 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     onMessageCountChange?.(messages.length);
   }, [messages.length, onMessageCountChange]);
 
+  // Report last assistant message text for collapsed preview strip
+  React.useEffect(() => {
+    if (!onLastAssistantMessage) return;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant") {
+        const textParts =
+          messages[i].parts?.filter((p) => p.type === "text") || [];
+        const raw = textParts
+          .map((p) => p.text)
+          .join(" ")
+          .replace(/\s+/g, " ")
+          .trim();
+        // Strip markdown/tag noise and truncate
+        const clean = raw
+          .replace(/\[SUGGESTIONS\][\s\S]*?\[\/SUGGESTIONS\]/g, "")
+          .replace(/\[CANVAS_ITEMS\][\s\S]*?\[\/CANVAS_ITEMS\]/g, "")
+          .replace(/[#*_~`>\[\]]/g, "")
+          .trim()
+          .slice(0, 120);
+        onLastAssistantMessage(clean);
+        return;
+      }
+    }
+  }, [messages, onLastAssistantMessage]);
+
   // Fire arc phase transition after each AI response completes
   React.useEffect(() => {
     // Only trigger after ready state with at least one message
-    if (status === 'ready' && messages.length > 0) {
+    if (status === "ready" && messages.length > 0) {
       // Fire-and-forget arc phase transition based on message count
-      fetch('/api/chat/arc-transition', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      fetch("/api/chat/arc-transition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workshopId,
           stepId: step.id,
@@ -991,31 +1309,31 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
   // Extract suggestions from last assistant message when AI finishes responding
   React.useEffect(() => {
-    if (status === 'ready' && messages.length > 0) {
+    if (status === "ready" && messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
-      if (lastMsg.role === 'assistant') {
-        const textParts = lastMsg.parts?.filter((p) => p.type === 'text') || [];
-        const content = textParts.map((p) => p.text).join('\n');
+      if (lastMsg.role === "assistant") {
+        const textParts = lastMsg.parts?.filter((p) => p.type === "text") || [];
+        const content = textParts.map((p) => p.text).join("\n");
         const { suggestions: parsed } = parseSuggestions(content);
         setSuggestions(parsed);
         setSuggestionsExpanded(false);
       }
     }
     // Clear suggestions while AI is responding
-    if (status === 'streaming' || status === 'submitted') {
-      setSuggestions(prev => prev.length > 0 ? [] : prev);
+    if (status === "streaming" || status === "submitted") {
+      setSuggestions((prev) => (prev.length > 0 ? [] : prev));
     }
   }, [status, messages]);
 
   // Extract persona select options from last assistant message (Step 3 only)
   React.useEffect(() => {
-    if (step.id !== 'user-research' || personaSelectConfirmed) return;
+    if (step.id !== "user-research" || personaSelectConfirmed) return;
 
-    if (status === 'ready' && messages.length > 0) {
+    if (status === "ready" && messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
-      if (lastMsg.role === 'assistant') {
-        const textParts = lastMsg.parts?.filter((p) => p.type === 'text') || [];
-        const content = textParts.map((p) => p.text).join('\n');
+      if (lastMsg.role === "assistant") {
+        const textParts = lastMsg.parts?.filter((p) => p.type === "text") || [];
+        const content = textParts.map((p) => p.text).join("\n");
         const { personaOptions: parsed } = parsePersonaSelect(content);
         if (parsed.length > 0) {
           setPersonaOptions(parsed);
@@ -1024,20 +1342,20 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       }
     }
     // Clear persona options while AI is responding
-    if (status === 'streaming' || status === 'submitted') {
-      setPersonaOptions(prev => prev.length > 0 ? [] : prev);
+    if (status === "streaming" || status === "submitted") {
+      setPersonaOptions((prev) => (prev.length > 0 ? [] : prev));
     }
   }, [status, messages, step.id, personaSelectConfirmed]);
 
   // Extract interview mode options from last assistant message (Step 3 only, before mode is chosen)
   React.useEffect(() => {
-    if (step.id !== 'user-research' || interviewMode !== null) return;
+    if (step.id !== "user-research" || interviewMode !== null) return;
 
-    if (status === 'ready' && messages.length > 0) {
+    if (status === "ready" && messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
-      if (lastMsg.role === 'assistant') {
-        const textParts = lastMsg.parts?.filter((p) => p.type === 'text') || [];
-        const content = textParts.map((p) => p.text).join('\n');
+      if (lastMsg.role === "assistant") {
+        const textParts = lastMsg.parts?.filter((p) => p.type === "text") || [];
+        const content = textParts.map((p) => p.text).join("\n");
         const { modeOptions } = parseInterviewMode(content);
         if (modeOptions.length > 0) {
           setInterviewModeMessageId(lastMsg.id);
@@ -1049,23 +1367,23 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   // Detect confirmed persona selection + interview mode from historical messages (persistence across refresh)
   const hasCheckedPersonaHistory = React.useRef(false);
   React.useEffect(() => {
-    if (hasCheckedPersonaHistory.current || step.id !== 'user-research') return;
+    if (hasCheckedPersonaHistory.current || step.id !== "user-research") return;
     hasCheckedPersonaHistory.current = true;
 
     for (const msg of messages) {
-      if (msg.role !== 'user') continue;
-      const textParts = msg.parts?.filter((p) => p.type === 'text') || [];
-      const content = textParts.map((p) => p.text).join('');
+      if (msg.role !== "user") continue;
+      const textParts = msg.parts?.filter((p) => p.type === "text") || [];
+      const content = textParts.map((p) => p.text).join("");
       if (content.startsWith("I'd like to interview these personas:")) {
         setPersonaSelectConfirmed(true);
       }
       if (content.includes("I'd like to use AI Interviews")) {
-        setInterviewMode('synthetic');
+        setInterviewMode("synthetic");
       }
       if (content.includes("I'd like to use Real Interviews")) {
-        setInterviewMode('real');
+        setInterviewMode("real");
       }
-      if (content.includes('[COMPILE_READY]')) {
+      if (content.includes("[COMPILE_READY]")) {
         setReadyToCompile(true);
       }
     }
@@ -1074,16 +1392,20 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   // Detect "All personas look good — let's move on" from user messages (persona step only)
   const hasCheckedPersonaDoneHistory = React.useRef(false);
   React.useEffect(() => {
-    if (step.id !== 'persona' || personasDone) return;
+    if (step.id !== "persona" || personasDone) return;
 
     // Check historical messages on first load
     if (!hasCheckedPersonaDoneHistory.current) {
       hasCheckedPersonaDoneHistory.current = true;
       for (const msg of messages) {
-        if (msg.role !== 'user') continue;
-        const textParts = msg.parts?.filter((p) => p.type === 'text') || [];
-        const content = textParts.map((p) => p.text).join('');
-        if (/personas look good|let'?s move on|I'm done with personas/i.test(content)) {
+        if (msg.role !== "user") continue;
+        const textParts = msg.parts?.filter((p) => p.type === "text") || [];
+        const content = textParts.map((p) => p.text).join("");
+        if (
+          /personas look good|let'?s move on|I'm done with personas/i.test(
+            content,
+          )
+        ) {
           setPersonasDone(true);
           return;
         }
@@ -1091,12 +1413,19 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
 
     // Also detect live messages as they come in
-    if (status === 'ready' && messages.length > 0) {
-      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+    if (status === "ready" && messages.length > 0) {
+      const lastUserMsg = [...messages]
+        .reverse()
+        .find((m) => m.role === "user");
       if (lastUserMsg) {
-        const textParts = lastUserMsg.parts?.filter((p) => p.type === 'text') || [];
-        const content = textParts.map((p) => p.text).join('');
-        if (/personas look good|let'?s move on|I'm done with personas/i.test(content)) {
+        const textParts =
+          lastUserMsg.parts?.filter((p) => p.type === "text") || [];
+        const content = textParts.map((p) => p.text).join("");
+        if (
+          /personas look good|let'?s move on|I'm done with personas/i.test(
+            content,
+          )
+        ) {
           setPersonasDone(true);
         }
       }
@@ -1109,20 +1438,30 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   // markers, as that would overwrite user-arranged positions with recalculated layouts.
   const hasInitializedAddedIds = React.useRef(false);
   React.useEffect(() => {
-    if (hasInitializedAddedIds.current || !isCanvasStep || (stickyNotes.length === 0 && personaTemplates.length === 0 && hmwCards.length === 0 && mindMapNodes.length === 0 && conceptCards.length === 0)) return;
+    if (
+      hasInitializedAddedIds.current ||
+      !isCanvasStep ||
+      (stickyNotes.length === 0 &&
+        personaTemplates.length === 0 &&
+        hmwCards.length === 0 &&
+        mindMapNodes.length === 0 &&
+        conceptCards.length === 0)
+    )
+      return;
     hasInitializedAddedIds.current = true;
 
     const ids = new Set<string>();
     let hadHistoricalSort = false;
     for (const msg of messages) {
-      if (msg.role !== 'assistant') continue;
-      const textParts = msg.parts?.filter((p) => p.type === 'text') || [];
-      const content = textParts.map((p) => p.text).join('\n');
+      if (msg.role !== "assistant") continue;
+      const textParts = msg.parts?.filter((p) => p.type === "text") || [];
+      const content = textParts.map((p) => p.text).join("\n");
       const { canvasItems } = parseCanvasItems(content);
       const { clusters } = parseClusterSuggestions(content);
       const { shouldSort } = parseThemeSortTrigger(content);
       const { deleteTexts } = parseCanvasDeletes(content);
-      const { templates: personaTemplateParsed } = parsePersonaTemplates(content);
+      const { templates: personaTemplateParsed } =
+        parsePersonaTemplates(content);
       const { plan: personaPlanParsed } = parsePersonaPlan(content);
       const { stages: journeyStages } = parseJourneyStages(content);
       const { cards: hmwCardParsed } = parseHmwCards(content);
@@ -1130,7 +1469,17 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       const { cards: conceptCardParsed } = parseConceptCards(content);
       if (shouldSort) hadHistoricalSort = true;
       // Mark any message that contains canvas-modifying markup as already processed
-      if (canvasItems.length > 0 || clusters.length > 0 || shouldSort || deleteTexts.length > 0 || personaTemplateParsed.length > 0 || personaPlanParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || conceptCardParsed.length > 0) {
+      if (
+        canvasItems.length > 0 ||
+        clusters.length > 0 ||
+        shouldSort ||
+        deleteTexts.length > 0 ||
+        personaTemplateParsed.length > 0 ||
+        personaPlanParsed.length > 0 ||
+        journeyStages.length > 0 ||
+        hmwCardParsed.length > 0 ||
+        conceptCardParsed.length > 0
+      ) {
         ids.add(msg.id);
       }
     }
@@ -1141,7 +1490,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     // Pre-populate addedItemTexts from existing board content so historical chips show as green
     const existingTexts = new Set<string>();
     for (const p of stickyNotes) {
-      if (!p.type || p.type === 'stickyNote') {
+      if (!p.type || p.type === "stickyNote") {
         existingTexts.add(p.text.trim().toLowerCase());
       }
     }
@@ -1151,64 +1500,208 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     // Pre-populate addedMindMapLabels from existing mind map nodes (level 2+)
     const existingMindMapLabels = new Set<string>();
     for (const n of mindMapNodes) {
-      if (!n.isRoot && n.level >= 2) existingMindMapLabels.add(n.label.toLowerCase());
+      if (!n.isRoot && n.level >= 2)
+        existingMindMapLabels.add(n.label.toLowerCase());
     }
     if (existingMindMapLabels.size > 0) {
       setAddedMindMapLabels(existingMindMapLabels);
     }
-  }, [messages, isCanvasStep, stickyNotes.length, personaTemplates.length, hmwCards.length, mindMapNodes.length, conceptCards.length]);
+  }, [
+    messages,
+    isCanvasStep,
+    stickyNotes.length,
+    personaTemplates.length,
+    hmwCards.length,
+    mindMapNodes.length,
+    conceptCards.length,
+  ]);
 
   // Handle adding AI-suggested canvas items to the whiteboard
-  const handleAddToWhiteboard = React.useCallback((messageId: string, canvasItems: CanvasItemParsed[]) => {
-    if (addedMessageIds.has(messageId)) return; // Guard against double-click
+  const handleAddToWhiteboard = React.useCallback(
+    (messageId: string, canvasItems: CanvasItemParsed[]) => {
+      if (addedMessageIds.has(messageId)) return; // Guard against double-click
 
-    // Read latest state directly from Zustand store (not stale React closure).
-    // Critical when replaceGridColumns() runs in the same effect cycle as this
-    // callback — the React hook value would be stale, but Zustand set() is synchronous.
-    const latestGridColumns = storeApi.getState().gridColumns;
-    const latestStickyNotes = storeApi.getState().stickyNotes;
+      // Read latest state directly from Zustand store (not stale React closure).
+      // Critical when replaceGridColumns() runs in the same effect cycle as this
+      // callback — the React hook value would be stale, but Zustand set() is synchronous.
+      const latestGridColumns = storeApi.getState().gridColumns;
+      const latestStickyNotes = storeApi.getState().stickyNotes;
 
-    // Build dynamic gridConfig from store columns for journey-mapping
-    const stepConfig = getStepCanvasConfig(step.id);
-    const baseGridConfig = stepConfig.gridConfig;
-    const dynamicGridConfig = baseGridConfig && latestGridColumns.length > 0
-      ? { ...baseGridConfig, columns: latestGridColumns }
-      : baseGridConfig;
+      // Build dynamic gridConfig from store columns for journey-mapping
+      const stepConfig = getStepCanvasConfig(step.id);
+      const baseGridConfig = stepConfig.gridConfig;
+      const dynamicGridConfig =
+        baseGridConfig && latestGridColumns.length > 0
+          ? { ...baseGridConfig, columns: latestGridColumns }
+          : baseGridConfig;
 
-    // Add each item to canvas with computed position, skipping duplicates
-    let currentStickyNotes = [...latestStickyNotes];
-    for (const item of canvasItems) {
-      // Duplicate guard: skip if an item with the same text (case-insensitive) already exists
+      // Add each item to canvas with computed position, skipping duplicates
+      let currentStickyNotes = [...latestStickyNotes];
+      for (const item of canvasItems) {
+        // Duplicate guard: skip if an item with the same text (case-insensitive) already exists
+        const normalizedText = item.text.trim().toLowerCase();
+        const alreadyExists = currentStickyNotes.some(
+          (p) =>
+            (!p.type || p.type === "stickyNote") &&
+            p.text.trim().toLowerCase() === normalizedText,
+        );
+        if (alreadyExists) continue;
+
+        const { position, quadrant, cellAssignment } = computeCanvasPosition(
+          step.id,
+          {
+            quadrant: item.quadrant,
+            ring: item.ring,
+            row: item.row,
+            col: item.col,
+            category: item.category,
+            cluster: item.cluster,
+          },
+          currentStickyNotes,
+          dynamicGridConfig,
+        );
+
+        // Color priority: explicit color attr > category-specific > zone-specific > row-based > grid green > default yellow
+        const VALID_COLORS = new Set([
+          "yellow",
+          "pink",
+          "blue",
+          "green",
+          "orange",
+          "red",
+        ]);
+        let color: StickyNoteColor =
+          (item.color && VALID_COLORS.has(item.color)
+            ? (item.color as StickyNoteColor)
+            : null) ||
+          (item.category && CATEGORY_COLORS[item.category]) ||
+          (item.quadrant && ZONE_COLORS[item.quadrant]) ||
+          (item.isGridItem
+            ? GRID_ROW_COLORS[item.row || ""] || "green"
+            : "yellow");
+
+        // For user-research: inherit color from the persona card this insight belongs to
+        if (step.id === "user-research" && item.cluster) {
+          const personaCard = currentStickyNotes.find((p) =>
+            isPersonaCardForCluster(p, item.cluster!),
+          );
+          if (personaCard?.color) color = personaCard.color;
+        }
+
+        const { width: itemWidth, height: itemHeight } = computeStickyNoteSize(
+          item.text,
+        );
+        const newStickyNote = {
+          text: item.text,
+          position,
+          width: itemWidth,
+          height: itemHeight,
+          color,
+          quadrant,
+          cellAssignment,
+          cluster: item.cluster,
+        };
+
+        addStickyNote(newStickyNote);
+
+        // Highlight target cell for grid items
+        if (item.isGridItem && cellAssignment && dynamicGridConfig) {
+          const rowIndex = dynamicGridConfig.rows.findIndex(
+            (r) => r.id === cellAssignment.row,
+          );
+          const colIndex = dynamicGridConfig.columns.findIndex(
+            (c) => c.id === cellAssignment.col,
+          );
+          if (rowIndex !== -1 && colIndex !== -1) {
+            setHighlightedCell({ row: rowIndex, col: colIndex });
+          }
+        }
+
+        currentStickyNotes = [
+          ...currentStickyNotes,
+          { ...newStickyNote, id: "pending" },
+        ];
+      }
+
+      setAddedMessageIds((prev) => new Set(prev).add(messageId));
+      // Don't shift viewport for ring-based canvases — preserve admin default viewport
+      const stepConfigForFitView = getStepCanvasConfig(step.id);
+      if (!stepConfigForFitView.hasRings) {
+        setPendingFitView(true);
+      }
+    },
+    [
+      addedMessageIds,
+      step.id,
+      storeApi,
+      addStickyNote,
+      setHighlightedCell,
+      setPendingFitView,
+    ],
+  );
+
+  // Add a single canvas item to the board (click-to-add from chat chip)
+  const handleAddSingleItem = React.useCallback(
+    (item: CanvasItemParsed) => {
       const normalizedText = item.text.trim().toLowerCase();
-      const alreadyExists = currentStickyNotes.some(
-        (p) => (!p.type || p.type === 'stickyNote') && p.text.trim().toLowerCase() === normalizedText
+      if (addedItemTexts.has(normalizedText)) return;
+
+      const latestStickyNotes = storeApi.getState().stickyNotes;
+      // Duplicate guard
+      const alreadyExists = latestStickyNotes.some(
+        (p) =>
+          (!p.type || p.type === "stickyNote") &&
+          p.text.trim().toLowerCase() === normalizedText,
       );
-      if (alreadyExists) continue;
+      if (alreadyExists) {
+        setAddedItemTexts((prev) => new Set(prev).add(normalizedText));
+        return;
+      }
+
+      const stepConfig = getStepCanvasConfig(step.id);
+      const baseGridConfig = stepConfig.gridConfig;
+      const latestGridColumns = storeApi.getState().gridColumns;
+      const dynamicGridConfig =
+        baseGridConfig && latestGridColumns.length > 0
+          ? { ...baseGridConfig, columns: latestGridColumns }
+          : baseGridConfig;
 
       const { position, quadrant, cellAssignment } = computeCanvasPosition(
         step.id,
-        { quadrant: item.quadrant, ring: item.ring, row: item.row, col: item.col, category: item.category, cluster: item.cluster },
-        currentStickyNotes,
+        {
+          quadrant: item.quadrant,
+          ring: item.ring,
+          row: item.row,
+          col: item.col,
+          category: item.category,
+          cluster: item.cluster,
+        },
+        latestStickyNotes,
         dynamicGridConfig,
       );
 
-      // Color priority: explicit color attr > category-specific > zone-specific > row-based > grid green > default yellow
-      const VALID_COLORS = new Set(['yellow', 'pink', 'blue', 'green', 'orange', 'red']);
-      let color: StickyNoteColor = (item.color && VALID_COLORS.has(item.color) ? item.color as StickyNoteColor : null)
-        || (item.category && CATEGORY_COLORS[item.category])
-        || (item.quadrant && ZONE_COLORS[item.quadrant])
-        || (item.isGridItem ? (GRID_ROW_COLORS[item.row || ''] || 'green') : 'yellow');
+      const VALID_COLORS = new Set([
+        "yellow",
+        "pink",
+        "blue",
+        "green",
+        "orange",
+        "red",
+      ]);
+      const color =
+        (item.color && VALID_COLORS.has(item.color)
+          ? (item.color as StickyNoteColor)
+          : null) ||
+        (item.category && CATEGORY_COLORS[item.category]) ||
+        (item.quadrant && ZONE_COLORS[item.quadrant]) ||
+        (item.isGridItem
+          ? GRID_ROW_COLORS[item.row || ""] || "green"
+          : "yellow");
 
-      // For user-research: inherit color from the persona card this insight belongs to
-      if (step.id === 'user-research' && item.cluster) {
-        const personaCard = currentStickyNotes.find(
-          (p) => isPersonaCardForCluster(p, item.cluster!)
-        );
-        if (personaCard?.color) color = personaCard.color;
-      }
-
-      const { width: itemWidth, height: itemHeight } = computeStickyNoteSize(item.text);
-      const newStickyNote = {
+      const { width: itemWidth, height: itemHeight } = computeStickyNoteSize(
+        item.text,
+      );
+      addStickyNote({
         text: item.text,
         position,
         width: itemWidth,
@@ -1217,168 +1710,112 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         quadrant,
         cellAssignment,
         cluster: item.cluster,
-      };
+      });
 
-      addStickyNote(newStickyNote);
-
-      // Highlight target cell for grid items
-      if (item.isGridItem && cellAssignment && dynamicGridConfig) {
-        const rowIndex = dynamicGridConfig.rows.findIndex(r => r.id === cellAssignment.row);
-        const colIndex = dynamicGridConfig.columns.findIndex(c => c.id === cellAssignment.col);
-        if (rowIndex !== -1 && colIndex !== -1) {
-          setHighlightedCell({ row: rowIndex, col: colIndex });
-        }
+      setAddedItemTexts((prev) => new Set(prev).add(normalizedText));
+      // Don't shift viewport for ring-based canvases — items land within the rings
+      // which are already visible in the admin-configured default viewport
+      if (!stepConfig.hasRings) {
+        setPendingFitView(true);
       }
-
-      currentStickyNotes = [...currentStickyNotes, { ...newStickyNote, id: 'pending' }];
-    }
-
-    setAddedMessageIds(prev => new Set(prev).add(messageId));
-    // Don't shift viewport for ring-based canvases — preserve admin default viewport
-    const stepConfigForFitView = getStepCanvasConfig(step.id);
-    if (!stepConfigForFitView.hasRings) {
-      setPendingFitView(true);
-    }
-  }, [addedMessageIds, step.id, storeApi, addStickyNote, setHighlightedCell, setPendingFitView]);
-
-  // Add a single canvas item to the board (click-to-add from chat chip)
-  const handleAddSingleItem = React.useCallback((item: CanvasItemParsed) => {
-    const normalizedText = item.text.trim().toLowerCase();
-    if (addedItemTexts.has(normalizedText)) return;
-
-    const latestStickyNotes = storeApi.getState().stickyNotes;
-    // Duplicate guard
-    const alreadyExists = latestStickyNotes.some(
-      (p) => (!p.type || p.type === 'stickyNote') && p.text.trim().toLowerCase() === normalizedText
-    );
-    if (alreadyExists) {
-      setAddedItemTexts(prev => new Set(prev).add(normalizedText));
-      return;
-    }
-
-    const stepConfig = getStepCanvasConfig(step.id);
-    const baseGridConfig = stepConfig.gridConfig;
-    const latestGridColumns = storeApi.getState().gridColumns;
-    const dynamicGridConfig = baseGridConfig && latestGridColumns.length > 0
-      ? { ...baseGridConfig, columns: latestGridColumns }
-      : baseGridConfig;
-
-    const { position, quadrant, cellAssignment } = computeCanvasPosition(
-      step.id,
-      { quadrant: item.quadrant, ring: item.ring, row: item.row, col: item.col, category: item.category, cluster: item.cluster },
-      latestStickyNotes,
-      dynamicGridConfig,
-    );
-
-    const VALID_COLORS = new Set(['yellow', 'pink', 'blue', 'green', 'orange', 'red']);
-    const color = (item.color && VALID_COLORS.has(item.color) ? item.color as StickyNoteColor : null)
-      || (item.category && CATEGORY_COLORS[item.category])
-      || (item.quadrant && ZONE_COLORS[item.quadrant])
-      || (item.isGridItem ? (GRID_ROW_COLORS[item.row || ''] || 'green') : 'yellow');
-
-    const { width: itemWidth, height: itemHeight } = computeStickyNoteSize(item.text);
-    addStickyNote({
-      text: item.text,
-      position,
-      width: itemWidth,
-      height: itemHeight,
-      color,
-      quadrant,
-      cellAssignment,
-      cluster: item.cluster,
-    });
-
-    setAddedItemTexts(prev => new Set(prev).add(normalizedText));
-    // Don't shift viewport for ring-based canvases — items land within the rings
-    // which are already visible in the admin-configured default viewport
-    if (!stepConfig.hasRings) {
-      setPendingFitView(true);
-    }
-  }, [addedItemTexts, step.id, storeApi, addStickyNote, setPendingFitView]);
+    },
+    [addedItemTexts, step.id, storeApi, addStickyNote, setPendingFitView],
+  );
 
   // Add a single mind map node to the canvas (click-to-add from chat chip)
-  const handleAddMindMapNode = React.useCallback((parsed: MindMapNodeParsed) => {
-    const normalizedLabel = parsed.label.toLowerCase();
-    if (addedMindMapLabels.has(normalizedLabel)) return;
+  const handleAddMindMapNode = React.useCallback(
+    (parsed: MindMapNodeParsed) => {
+      const normalizedLabel = parsed.label.toLowerCase();
+      if (addedMindMapLabels.has(normalizedLabel)) return;
 
-    const latestNodes = storeApi.getState().mindMapNodes;
-    const latestEdges = storeApi.getState().mindMapEdges;
-    const rootNode = latestNodes.find((n) => n.isRoot);
+      const latestNodes = storeApi.getState().mindMapNodes;
+      const latestEdges = storeApi.getState().mindMapEdges;
+      const rootNode = latestNodes.find((n) => n.isRoot);
 
-    // Build label→node map
-    const nodeLabelMap = new Map<string, MindMapNodeState>();
-    for (const n of latestNodes) {
-      nodeLabelMap.set(n.label.toLowerCase(), n);
-    }
+      // Build label→node map
+      const nodeLabelMap = new Map<string, MindMapNodeState>();
+      for (const n of latestNodes) {
+        nodeLabelMap.set(n.label.toLowerCase(), n);
+      }
 
-    // Duplicate guard against canvas
-    if (nodeLabelMap.has(normalizedLabel)) {
-      setAddedMindMapLabels(prev => new Set(prev).add(normalizedLabel));
-      return;
-    }
+      // Duplicate guard against canvas
+      if (nodeLabelMap.has(normalizedLabel)) {
+        setAddedMindMapLabels((prev) => new Set(prev).add(normalizedLabel));
+        return;
+      }
 
-    // Resolve parent: match by theme (exact → substring → word-overlap)
-    const parentNode = parsed.theme
-      ? (findThemeNode(parsed.theme, latestNodes, nodeLabelMap) || rootNode)
-      : undefined;
+      // Resolve parent: match by theme (exact → substring → word-overlap)
+      const parentNode = parsed.theme
+        ? findThemeNode(parsed.theme, latestNodes, nodeLabelMap) || rootNode
+        : undefined;
 
-    if (parentNode && !parentNode.isRoot) {
-      // Idea-level node — attach to parent theme branch
-      const position = computeNewNodePosition(parentNode.id, latestNodes, latestEdges);
+      if (parentNode && !parentNode.isRoot) {
+        // Idea-level node — attach to parent theme branch
+        const position = computeNewNodePosition(
+          parentNode.id,
+          latestNodes,
+          latestEdges,
+        );
 
-      const newId = crypto.randomUUID();
-      const newNode: MindMapNodeState = {
-        id: newId,
-        label: parsed.label,
-        themeColorId: parentNode.themeColorId,
-        themeColor: parentNode.themeColor,
-        themeBgColor: parentNode.themeBgColor,
-        isRoot: false,
-        level: parentNode.level + 1,
-        parentId: parentNode.id,
-        position,
-      };
-      const newEdge: MindMapEdgeState = {
-        id: `${parentNode.id}-${newId}`,
-        source: parentNode.id,
-        target: newId,
-        themeColor: parentNode.themeColor,
-      };
+        const newId = crypto.randomUUID();
+        const newNode: MindMapNodeState = {
+          id: newId,
+          label: parsed.label,
+          themeColorId: parentNode.themeColorId,
+          themeColor: parentNode.themeColor,
+          themeBgColor: parentNode.themeBgColor,
+          isRoot: false,
+          level: parentNode.level + 1,
+          parentId: parentNode.id,
+          position,
+        };
+        const newEdge: MindMapEdgeState = {
+          id: `${parentNode.id}-${newId}`,
+          source: parentNode.id,
+          target: newId,
+          themeColor: parentNode.themeColor,
+        };
 
-      addMindMapNode(newNode, newEdge);
-    } else {
-      // Theme-level node (level 1, child of root)
-      const existingLevel1 = latestNodes.filter((n) => n.level === 1).length;
-      const colorIndex = existingLevel1 % THEME_COLORS.length;
-      const themeColor = THEME_COLORS[colorIndex];
+        addMindMapNode(newNode, newEdge);
+      } else {
+        // Theme-level node (level 1, child of root)
+        const existingLevel1 = latestNodes.filter((n) => n.level === 1).length;
+        const colorIndex = existingLevel1 % THEME_COLORS.length;
+        const themeColor = THEME_COLORS[colorIndex];
 
-      const position = computeNewNodePosition('root', latestNodes, latestEdges);
+        const position = computeNewNodePosition(
+          "root",
+          latestNodes,
+          latestEdges,
+        );
 
-      const newId = crypto.randomUUID();
-      const newNode: MindMapNodeState = {
-        id: newId,
-        label: parsed.label,
-        themeColorId: themeColor.id,
-        themeColor: themeColor.color,
-        themeBgColor: themeColor.bgColor,
-        isRoot: false,
-        level: 1,
-        parentId: 'root',
-        position,
-      };
-      const newEdge: MindMapEdgeState = {
-        id: `root-${newId}`,
-        source: 'root',
-        target: newId,
-        themeColor: themeColor.color,
-      };
+        const newId = crypto.randomUUID();
+        const newNode: MindMapNodeState = {
+          id: newId,
+          label: parsed.label,
+          themeColorId: themeColor.id,
+          themeColor: themeColor.color,
+          themeBgColor: themeColor.bgColor,
+          isRoot: false,
+          level: 1,
+          parentId: "root",
+          position,
+        };
+        const newEdge: MindMapEdgeState = {
+          id: `root-${newId}`,
+          source: "root",
+          target: newId,
+          themeColor: themeColor.color,
+        };
 
-      addMindMapNode(newNode, newEdge);
-    }
+        addMindMapNode(newNode, newEdge);
+      }
 
-    setAddedMindMapLabels(prev => new Set(prev).add(normalizedLabel));
-    setPendingFitView(true);
-  }, [addedMindMapLabels, storeApi, addMindMapNode, setPendingFitView]);
+      setAddedMindMapLabels((prev) => new Set(prev).add(normalizedLabel));
+      setPendingFitView(true);
+    },
+    [addedMindMapLabels, storeApi, addMindMapNode, setPendingFitView],
+  );
 
   // Manual theme sort triggered by proactive card button
   const handleThemeSort = React.useCallback(() => {
@@ -1394,18 +1831,26 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
   // Auto-add canvas items when AI finishes streaming
   React.useEffect(() => {
-    if (status !== 'ready' || !isCanvasStep || messages.length === 0) return;
+    if (status !== "ready" || !isCanvasStep || messages.length === 0) return;
     // Wait for historical message initialization to complete before processing.
     // Without this guard, on the same render cycle where stickyNotes load from DB,
     // this effect could fire before addedMessageIds is populated, causing
     // historical messages to be re-processed and overwriting saved positions.
-    if ((stickyNotes.length > 0 || personaTemplates.length > 0 || hmwCards.length > 0 || mindMapNodes.length > 0 || conceptCards.length > 0) && !hasInitializedAddedIds.current) return;
+    if (
+      (stickyNotes.length > 0 ||
+        personaTemplates.length > 0 ||
+        hmwCards.length > 0 ||
+        mindMapNodes.length > 0 ||
+        conceptCards.length > 0) &&
+      !hasInitializedAddedIds.current
+    )
+      return;
     const lastMsg = messages[messages.length - 1];
-    if (lastMsg.role !== 'assistant') return;
+    if (lastMsg.role !== "assistant") return;
     if (addedMessageIds.has(lastMsg.id)) return;
 
-    const textParts = lastMsg.parts?.filter((p) => p.type === 'text') || [];
-    const content = textParts.map((p) => p.text).join('\n');
+    const textParts = lastMsg.parts?.filter((p) => p.type === "text") || [];
+    const content = textParts.map((p) => p.text).join("\n");
     const { canvasItems } = parseCanvasItems(content);
     const { shouldSort } = parseThemeSortTrigger(content);
     const { deleteTexts } = parseCanvasDeletes(content);
@@ -1417,18 +1862,22 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     const { cards: conceptCardParsed } = parseConceptCards(content);
 
     // Process persona plan — create skeleton cards for each archetype
-    if (personaPlanParsed.length > 0 && step.id === 'persona') {
+    if (personaPlanParsed.length > 0 && step.id === "persona") {
       const latestTemplates = storeApi.getState().personaTemplates;
       const PERSONA_CARD_WIDTH = 680;
       const PERSONA_GAP = 40;
       let createdCount = 0;
       for (const entry of personaPlanParsed) {
         // Guard: don't create if an existing card already has this personaId or archetype
-        const alreadyExists = latestTemplates.some(t =>
-          (entry.personaId && t.personaId === entry.personaId) || t.archetype === entry.archetype
+        const alreadyExists = latestTemplates.some(
+          (t) =>
+            (entry.personaId && t.personaId === entry.personaId) ||
+            t.archetype === entry.archetype,
         );
         if (alreadyExists) continue;
-        const offsetX = (latestTemplates.length + createdCount) * (PERSONA_CARD_WIDTH + PERSONA_GAP);
+        const offsetX =
+          (latestTemplates.length + createdCount) *
+          (PERSONA_CARD_WIDTH + PERSONA_GAP);
         addPersonaTemplate({
           position: { x: offsetX, y: 0 },
           personaId: entry.personaId,
@@ -1443,9 +1892,12 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
 
     // Process journey stage replacements — update grid columns to match template
-    if (journeyStages.length >= 3 && step.id === 'journey-mapping') {
+    if (journeyStages.length >= 3 && step.id === "journey-mapping") {
       const newColumns = journeyStages.map((label) => ({
-        id: label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+        id: label
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, ""),
         label,
         width: 240,
       }));
@@ -1453,17 +1905,34 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
 
     // Template-targeted items: update existing template sticky notes by key
-    const templateItems = canvasItems.filter(item => item.templateKey);
+    const templateItems = canvasItems.filter((item) => item.templateKey);
     if (templateItems.length > 0) {
       const currentStickyNotes = storeApi.getState().stickyNotes;
-      console.log('[template-target] Found', templateItems.length, 'template items. Store has', currentStickyNotes.filter(p => p.templateKey).length, 'template sticky notes');
+      console.log(
+        "[template-target] Found",
+        templateItems.length,
+        "template items. Store has",
+        currentStickyNotes.filter((p) => p.templateKey).length,
+        "template sticky notes",
+      );
       for (const item of templateItems) {
-        const target = currentStickyNotes.find(p => p.templateKey === item.templateKey);
+        const target = currentStickyNotes.find(
+          (p) => p.templateKey === item.templateKey,
+        );
         if (target) {
-          console.log('[template-target] Updating', item.templateKey, '→', item.text.slice(0, 40));
+          console.log(
+            "[template-target] Updating",
+            item.templateKey,
+            "→",
+            item.text.slice(0, 40),
+          );
           updateStickyNote(target.id, { text: item.text });
         } else {
-          console.log('[template-target] Template not found for key:', item.templateKey, '— creating regular sticky note');
+          console.log(
+            "[template-target] Template not found for key:",
+            item.templateKey,
+            "— creating regular sticky note",
+          );
           // Template not found (user deleted it) — fall through to normal add
           handleAddSingleItem(item);
         }
@@ -1471,23 +1940,35 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
 
     // Grid items (journey mapping) auto-add immediately; regular sticky notes use click-to-add
-    const nonTemplateCanvasItems = canvasItems.filter(item => !item.templateKey);
-    const gridItems = nonTemplateCanvasItems.filter(item => item.isGridItem);
-    if (gridItems.length > 0 && step.id !== 'persona' && step.id !== 'concept') {
+    const nonTemplateCanvasItems = canvasItems.filter(
+      (item) => !item.templateKey,
+    );
+    const gridItems = nonTemplateCanvasItems.filter((item) => item.isGridItem);
+    if (
+      gridItems.length > 0 &&
+      step.id !== "persona" &&
+      step.id !== "concept"
+    ) {
       // Safety net: if grid items have col IDs that don't match current columns,
       // auto-derive columns from the grid item metadata (handles missing [JOURNEY_STAGES])
-      if (step.id === 'journey-mapping' && gridItems.some(item => item.col)) {
+      if (step.id === "journey-mapping" && gridItems.some((item) => item.col)) {
         const latestGridColumns = storeApi.getState().gridColumns;
         // Collect unique col IDs in the order they appear (preserves stage order)
         const itemColIds: string[] = [];
         for (const item of gridItems) {
-          if (item.col && !itemColIds.includes(item.col)) itemColIds.push(item.col);
+          if (item.col && !itemColIds.includes(item.col))
+            itemColIds.push(item.col);
         }
-        const allMatch = itemColIds.every(colId => latestGridColumns.some(c => c.id === colId));
+        const allMatch = itemColIds.every((colId) =>
+          latestGridColumns.some((c) => c.id === colId),
+        );
         if (!allMatch && itemColIds.length >= 3) {
-          const derivedColumns = itemColIds.map(colId => ({
+          const derivedColumns = itemColIds.map((colId) => ({
             id: colId,
-            label: colId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+            label: colId
+              .split("-")
+              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+              .join(" "),
             width: 240,
           }));
           replaceGridColumns(derivedColumns);
@@ -1497,7 +1978,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
 
     // User-research: auto-add all canvas items (persona cards + interview insights)
-    if (step.id === 'user-research' && nonTemplateCanvasItems.length > 0) {
+    if (step.id === "user-research" && nonTemplateCanvasItems.length > 0) {
       handleAddToWhiteboard(lastMsg.id, nonTemplateCanvasItems);
     }
 
@@ -1507,23 +1988,27 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       // Merge all parsed blocks into a single update (AI may split across blocks)
       const merged = personaTemplateParsed.reduce<Partial<PersonaTemplateData>>(
         (acc, t) => ({ ...acc, ...t }),
-        {}
+        {},
       );
 
       // Find matching template: personaId (strongest), name, archetype, or blank fallback
       const matchByPersonaId = merged.personaId
-        ? latestTemplates.find(t => t.personaId === merged.personaId)
+        ? latestTemplates.find((t) => t.personaId === merged.personaId)
         : undefined;
-      const matchByName = !matchByPersonaId && merged.name
-        ? latestTemplates.find(t => t.name === merged.name)
-        : undefined;
-      const matchByArchetype = !matchByPersonaId && !matchByName && merged.archetype
-        ? latestTemplates.find(t => t.archetype === merged.archetype)
-        : undefined;
-      const blankTemplate = !matchByPersonaId && !matchByName && !matchByArchetype
-        ? latestTemplates.find(t => !t.name && !t.archetype)
-        : undefined;
-      const target = matchByPersonaId || matchByName || matchByArchetype || blankTemplate;
+      const matchByName =
+        !matchByPersonaId && merged.name
+          ? latestTemplates.find((t) => t.name === merged.name)
+          : undefined;
+      const matchByArchetype =
+        !matchByPersonaId && !matchByName && merged.archetype
+          ? latestTemplates.find((t) => t.archetype === merged.archetype)
+          : undefined;
+      const blankTemplate =
+        !matchByPersonaId && !matchByName && !matchByArchetype
+          ? latestTemplates.find((t) => !t.name && !t.archetype)
+          : undefined;
+      const target =
+        matchByPersonaId || matchByName || matchByArchetype || blankTemplate;
 
       if (target) {
         updatePersonaTemplate(target.id, merged);
@@ -1531,7 +2016,8 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         // New persona — place to the right of existing templates
         const PERSONA_CARD_WIDTH = 680;
         const PERSONA_GAP = 40;
-        const offsetX = latestTemplates.length * (PERSONA_CARD_WIDTH + PERSONA_GAP);
+        const offsetX =
+          latestTemplates.length * (PERSONA_CARD_WIDTH + PERSONA_GAP);
         addPersonaTemplate({
           position: { x: offsetX, y: 0 },
           ...merged,
@@ -1545,12 +2031,19 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       const latestHmwCards = storeApi.getState().hmwCards;
       // Field value keys the AI must NOT overwrite during progressive (active) mode.
       // The user owns field values via chip selections; AI only sends suggestions.
-      const HMW_FIELD_VALUE_KEYS = ['givenThat', 'persona', 'immediateGoal', 'deeperGoal'];
+      const HMW_FIELD_VALUE_KEYS = [
+        "givenThat",
+        "persona",
+        "immediateGoal",
+        "deeperGoal",
+      ];
       let createdNewHmwCard = false;
 
       for (const parsed of hmwCardParsed) {
         const targetIndex = parsed.cardIndex ?? 0;
-        const existing = latestHmwCards.find(c => (c.cardIndex ?? 0) === targetIndex);
+        const existing = latestHmwCards.find(
+          (c) => (c.cardIndex ?? 0) === targetIndex,
+        );
 
         if (existing) {
           const updates: Partial<HmwCardData> = { ...parsed };
@@ -1558,27 +2051,32 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
           // During progressive mode (card is 'active'), strip field value overrides.
           // AI can send suggestions and fullStatement, but cannot set field values —
           // only chip selections set those. Once card reaches 'filled', allow full edits.
-          if (existing.cardState === 'active') {
+          if (existing.cardState === "active") {
             for (const key of HMW_FIELD_VALUE_KEYS) {
               delete (updates as Record<string, unknown>)[key];
             }
           }
 
-          if (existing.cardState === 'skeleton') {
-            updates.cardState = 'active';
+          if (existing.cardState === "skeleton") {
+            updates.cardState = "active";
             createdNewHmwCard = true; // skeleton → active is effectively a new card appearing
           }
           // Auto-detect 'filled' state (existing fields + any new updates)
           const merged = { ...existing, ...updates };
-          if (merged.givenThat && merged.persona && merged.immediateGoal && merged.deeperGoal) {
-            updates.cardState = 'filled';
+          if (
+            merged.givenThat &&
+            merged.persona &&
+            merged.immediateGoal &&
+            merged.deeperGoal
+          ) {
+            updates.cardState = "filled";
           }
           updateHmwCard(existing.id, updates);
         } else {
           // Create a new card (for alternative HMW statements)
           addHmwCard({
             position: { x: (targetIndex || 0) * 780, y: 0 },
-            cardState: 'active',
+            cardState: "active",
             cardIndex: targetIndex,
             ...parsed,
           });
@@ -1596,8 +2094,10 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       const latestStickyNotes = storeApi.getState().stickyNotes;
       for (const delText of deleteTexts) {
         const lower = delText.toLowerCase();
-        const match = latestStickyNotes.find(p =>
-          p.text.toLowerCase() === lower && (!p.type || p.type === 'stickyNote')
+        const match = latestStickyNotes.find(
+          (p) =>
+            p.text.toLowerCase() === lower &&
+            (!p.type || p.type === "stickyNote"),
         );
         if (match) deleteStickyNote(match.id);
       }
@@ -1606,19 +2106,27 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     // Process AI-suggested clusters
     if (clusters.length > 0) {
       const latestStickyNotes = storeApi.getState().stickyNotes;
-      const clusterUpdates: Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }> = [];
+      const clusterUpdates: Array<{
+        id: string;
+        position: { x: number; y: number };
+        cellAssignment?: { row: string; col: string };
+      }> = [];
 
       for (const cluster of clusters) {
         const parentLower = cluster.parent.toLowerCase();
-        const parentStickyNote = latestStickyNotes.find(p =>
-          p.text.toLowerCase() === parentLower && (!p.type || p.type === 'stickyNote')
+        const parentStickyNote = latestStickyNotes.find(
+          (p) =>
+            p.text.toLowerCase() === parentLower &&
+            (!p.type || p.type === "stickyNote"),
         );
         const childIds: string[] = [];
         const childStickyNotes: typeof latestStickyNotes = [];
         for (const childText of cluster.children) {
           const childLower = childText.toLowerCase();
-          const match = latestStickyNotes.find(p =>
-            p.text.toLowerCase() === childLower && (!p.type || p.type === 'stickyNote')
+          const match = latestStickyNotes.find(
+            (p) =>
+              p.text.toLowerCase() === childLower &&
+              (!p.type || p.type === "stickyNote"),
           );
           if (match) {
             childIds.push(match.id);
@@ -1642,7 +2150,9 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               clusterUpdates.push({
                 id: childStickyNotes[j].id,
                 position: childPositions[j],
-                ...(parentStickyNote.cellAssignment ? { cellAssignment: parentStickyNote.cellAssignment } : {}),
+                ...(parentStickyNote.cellAssignment
+                  ? { cellAssignment: parentStickyNote.cellAssignment }
+                  : {}),
               });
             }
           }
@@ -1659,29 +2169,31 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
 
     // Process concept card blocks — merge into existing skeleton cards or create new ones
-    if (conceptCardParsed.length > 0 && step.id === 'concept') {
+    if (conceptCardParsed.length > 0 && step.id === "concept") {
       let latestConceptCards = storeApi.getState().conceptCards;
 
       for (const parsed of conceptCardParsed) {
         const targetIndex = parsed.cardIndex ?? 0;
-        const existing = latestConceptCards.find(c => (c.cardIndex ?? 0) === targetIndex);
+        const existing = latestConceptCards.find(
+          (c) => (c.cardIndex ?? 0) === targetIndex,
+        );
 
         if (existing) {
           const updates: Partial<ConceptCardData> = { ...parsed };
 
           // Transition skeleton → active on first AI update
-          if (existing.cardState === 'skeleton') {
-            updates.cardState = 'active';
+          if (existing.cardState === "skeleton") {
+            updates.cardState = "active";
           }
 
           // Auto-detect 'filled' state: check if all major sections have content
           const merged = { ...existing, ...updates };
           const hasPitch = !!merged.elevatorPitch;
           const hasUsp = !!merged.usp;
-          const hasSwot = merged.swot?.strengths?.some(s => !!s);
+          const hasSwot = merged.swot?.strengths?.some((s) => !!s);
           const hasFeasibility = merged.feasibility?.technical?.score > 0;
           if (hasPitch && hasUsp && hasSwot && hasFeasibility) {
-            updates.cardState = 'filled';
+            updates.cardState = "filled";
           }
 
           updateConceptCard(existing.id, updates);
@@ -1690,7 +2202,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
           addConceptCard({
             ...createDefaultConceptCard({
               ...parsed,
-              cardState: 'active',
+              cardState: "active",
               cardIndex: targetIndex,
               position: { x: targetIndex * 720, y: 0 },
             }),
@@ -1703,15 +2215,29 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     }
 
     // Detect [CONCEPT_COMPLETE] — AI signals all concepts are done or user asked to move on
-    if (step.id === 'concept' && content.includes('[CONCEPT_COMPLETE]')) {
+    if (step.id === "concept" && content.includes("[CONCEPT_COMPLETE]")) {
       onConceptComplete?.();
     }
 
     // Mark as processed if we did any work (avoid re-processing non-sticky note items)
-    const hasNonStickyNoteWork = deleteTexts.length > 0 || clusters.length > 0 || personaTemplateParsed.length > 0 || personaPlanParsed.length > 0 || journeyStages.length > 0 || hmwCardParsed.length > 0 || conceptCardParsed.length > 0 || gridItems.length > 0 || templateItems.length > 0;
-    const hasRegularCanvasItems = nonTemplateCanvasItems.some(item => !item.isGridItem);
-    if (hasNonStickyNoteWork || (hasRegularCanvasItems && !addedMessageIds.has(lastMsg.id))) {
-      setAddedMessageIds(prev => new Set(prev).add(lastMsg.id));
+    const hasNonStickyNoteWork =
+      deleteTexts.length > 0 ||
+      clusters.length > 0 ||
+      personaTemplateParsed.length > 0 ||
+      personaPlanParsed.length > 0 ||
+      journeyStages.length > 0 ||
+      hmwCardParsed.length > 0 ||
+      conceptCardParsed.length > 0 ||
+      gridItems.length > 0 ||
+      templateItems.length > 0;
+    const hasRegularCanvasItems = nonTemplateCanvasItems.some(
+      (item) => !item.isGridItem,
+    );
+    if (
+      hasNonStickyNoteWork ||
+      (hasRegularCanvasItems && !addedMessageIds.has(lastMsg.id))
+    ) {
+      setAddedMessageIds((prev) => new Set(prev).add(lastMsg.id));
       // Flush to DB so the next API request sees the items just added
       flushCanvasToDb();
     }
@@ -1729,11 +2255,35 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         }
       }, 300); // Short delay to ensure new items are in store
     }
-  }, [status, messages, isCanvasStep, addedMessageIds, handleAddToWhiteboard, handleAddSingleItem, batchUpdatePositions, storeApi, step.id, setPendingFitView, deleteStickyNote, updateStickyNote, setCluster, addPersonaTemplate, updatePersonaTemplate, replaceGridColumns, addHmwCard, updateHmwCard, updateConceptCard, addConceptCard, conceptCards.length, flushCanvasToDb, onConceptComplete]);
+  }, [
+    status,
+    messages,
+    isCanvasStep,
+    addedMessageIds,
+    handleAddToWhiteboard,
+    handleAddSingleItem,
+    batchUpdatePositions,
+    storeApi,
+    step.id,
+    setPendingFitView,
+    deleteStickyNote,
+    updateStickyNote,
+    setCluster,
+    addPersonaTemplate,
+    updatePersonaTemplate,
+    replaceGridColumns,
+    addHmwCard,
+    updateHmwCard,
+    updateConceptCard,
+    addConceptCard,
+    conceptCards.length,
+    flushCanvasToDb,
+    onConceptComplete,
+  ]);
 
   // Clear stream error on successful completion
   React.useEffect(() => {
-    if (status === 'ready') {
+    if (status === "ready") {
       setStreamError(false);
       // Don't clear rateLimitInfo here — let the countdown finish
     }
@@ -1742,15 +2292,15 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   // Stream timeout detection — resets on actual content progress, not just message count.
   // Tracks the last message's text length so the timer resets as tokens stream in.
   const streamingContentLength = React.useMemo(() => {
-    if (status !== 'streaming' || messages.length === 0) return 0;
+    if (status !== "streaming" || messages.length === 0) return 0;
     const lastMsg = messages[messages.length - 1];
-    if (lastMsg.role !== 'assistant') return 0;
-    const textParts = lastMsg.parts?.filter((p) => p.type === 'text') || [];
+    if (lastMsg.role !== "assistant") return 0;
+    const textParts = lastMsg.parts?.filter((p) => p.type === "text") || [];
     return textParts.reduce((sum, p) => sum + p.text.length, 0);
   }, [status, messages]);
 
   React.useEffect(() => {
-    if (status !== 'streaming') return;
+    if (status !== "streaming") return;
     const timeout = setTimeout(() => {
       setStreamError(true);
     }, 90000); // 90s silence timeout (server maxDuration is 60s; ideation prompts need extra headroom)
@@ -1768,10 +2318,10 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     setPendingHmwChipSelection(null);
 
     const fieldLabels: Record<string, string> = {
-      givenThat: 'Given that',
-      persona: 'how might we (help)',
-      immediateGoal: 'do/be/feel/achieve',
-      deeperGoal: 'So they can',
+      givenThat: "Given that",
+      persona: "how might we (help)",
+      immediateGoal: "do/be/feel/achieve",
+      deeperGoal: "So they can",
     };
     const fieldLabel = fieldLabels[field] || field;
 
@@ -1781,14 +2331,20 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
       try {
         await flushCanvasToDb();
         sendMessage({
-          role: 'user',
-          parts: [{ type: 'text', text: `For "${fieldLabel}": ${value}` }],
+          role: "user",
+          parts: [{ type: "text", text: `For "${fieldLabel}": ${value}` }],
         });
       } catch (err) {
-        console.error('Failed to send HMW chip selection:', err);
+        console.error("Failed to send HMW chip selection:", err);
       }
     })();
-  }, [pendingHmwChipSelection, isLoading, setPendingHmwChipSelection, flushCanvasToDb, sendMessage]);
+  }, [
+    pendingHmwChipSelection,
+    isLoading,
+    setPendingHmwChipSelection,
+    flushCanvasToDb,
+    sendMessage,
+  ]);
 
   // Cleanup countdown on unmount
   React.useEffect(() => {
@@ -1802,31 +2358,31 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     const container = scrollContainerRef.current;
     if (!container) return;
     const onScroll = () => {
-      container.classList.add('is-scrolling');
+      container.classList.add("is-scrolling");
       if (scrollIdleTimer.current) clearTimeout(scrollIdleTimer.current);
       scrollIdleTimer.current = setTimeout(() => {
-        container.classList.remove('is-scrolling');
+        container.classList.remove("is-scrolling");
       }, 1500);
     };
-    container.addEventListener('scroll', onScroll, { passive: true });
+    container.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      container.removeEventListener('scroll', onScroll);
+      container.removeEventListener("scroll", onScroll);
       if (scrollIdleTimer.current) clearTimeout(scrollIdleTimer.current);
     };
   }, []);
 
   // Re-focus input after AI response completes — skip for read-only participants (no input to focus)
   React.useEffect(() => {
-    if (status === 'ready' && !isReadOnly) {
+    if (status === "ready" && !isReadOnly) {
       // Don't steal focus from interactive elements (buttons, canvas, other inputs)
       const active = document.activeElement;
-      const isInteractive = active && (
-        active.tagName === 'BUTTON' ||
-        active.tagName === 'INPUT' ||
-        active.tagName === 'CANVAS' ||
-        active.tagName === 'SELECT' ||
-        (active.tagName === 'TEXTAREA' && active !== inputRef.current)
-      );
+      const isInteractive =
+        active &&
+        (active.tagName === "BUTTON" ||
+          active.tagName === "INPUT" ||
+          active.tagName === "CANVAS" ||
+          active.tagName === "SELECT" ||
+          (active.tagName === "TEXTAREA" && active !== inputRef.current));
       if (!isInteractive) {
         inputRef.current?.focus();
       }
@@ -1838,34 +2394,57 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
   // Fixed greeting shown instantly while AI generates first response
   const stepGreeting = STEP_INITIAL_GREETINGS[step.id];
-  const hasAssistantMessage = messages.some(m => m.role === 'assistant');
-  const showGreeting = shouldAutoStart && !!stepGreeting && !hasAssistantMessage;
+  const hasAssistantMessage = messages.some((m) => m.role === "assistant");
+  const showGreeting =
+    shouldAutoStart && !!stepGreeting && !hasAssistantMessage;
 
   React.useEffect(() => {
     // Read-only participants must NOT trigger auto-start — only the facilitator does.
     // skipAutoStart prevents re-triggering when ChatPanel remounts (e.g. after chat toggle).
-    if (shouldAutoStart && messages.length === 0 && status === 'ready' && !hasAutoStarted.current && !isReadOnly && !skipAutoStart) {
+    if (
+      shouldAutoStart &&
+      messages.length === 0 &&
+      status === "ready" &&
+      !hasAutoStarted.current &&
+      !isReadOnly &&
+      !skipAutoStart
+    ) {
       hasAutoStarted.current = true;
       onAutoStarted?.();
       sendMessage({
-        role: 'user',
-        parts: [{ type: 'text', text: '__step_start__' }],
+        role: "user",
+        parts: [{ type: "text", text: "__step_start__" }],
       });
     }
-  }, [shouldAutoStart, messages.length, status, sendMessage, isReadOnly, skipAutoStart, onAutoStarted]);
+  }, [
+    shouldAutoStart,
+    messages.length,
+    status,
+    sendMessage,
+    isReadOnly,
+    skipAutoStart,
+    onAutoStarted,
+  ]);
 
   // Helper: check if user is near bottom of scroll container
   const isNearBottom = React.useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return true;
     const threshold = 150; // px from bottom
-    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+    return (
+      container.scrollHeight - container.scrollTop - container.clientHeight <
+      threshold
+    );
   }, []);
 
   // Auto-scroll during streaming when user is near bottom
   React.useEffect(() => {
-    if (status === 'streaming' && streamingContentLength > 0 && isNearBottom()) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (
+      status === "streaming" &&
+      streamingContentLength > 0 &&
+      isNearBottom()
+    ) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [status, streamingContentLength, isNearBottom]);
 
@@ -1874,7 +2453,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
     if (!hasScrolledOnMount.current && messages.length > 0) {
       // Use requestAnimationFrame to ensure DOM is painted before scrolling
       requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+        messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
       });
       hasScrolledOnMount.current = true;
     }
@@ -1883,7 +2462,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
   // Auto-scroll on new messages (skip if user has scrolled up)
   React.useEffect(() => {
     if (messages.length > 0 && isNearBottom()) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isNearBottom]);
 
@@ -1900,42 +2479,48 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
     try {
       await sendMessage({
-        role: 'user',
-        parts: [{ type: 'text', text: inputValue }],
+        role: "user",
+        parts: [{ type: "text", text: inputValue }],
       });
     } catch (err) {
       // sendMessage can throw if useChat internal state is temporarily undefined
       // (e.g. during transport recreation when subStep changes). Log and continue —
       // the message was already shown in the UI via optimistic update.
-      console.error('sendMessage error (transport may be reinitializing):', err);
+      console.error(
+        "sendMessage error (transport may be reinitializing):",
+        err,
+      );
       setStreamError(true);
     }
-    setInputValue('');
+    setInputValue("");
     setSuggestions([]);
     setSuggestionsExpanded(false);
   };
 
   // Handle Enter to send (Shift+Enter for newline)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      const form = e.currentTarget.closest('form');
+      const form = e.currentTarget.closest("form");
       if (form) form.requestSubmit();
     }
   };
 
   // Handle adding user message to canvas as a sticky note
-  const handleAddUserMessageToCanvas = React.useCallback((text: string) => {
-    const { position } = computeCanvasPosition(step.id, {}, stickyNotes);
-    const { width, height } = computeStickyNoteSize(text);
-    addStickyNote({
-      text,
-      position,
-      width,
-      height,
-      color: 'yellow',
-    });
-  }, [addStickyNote, stickyNotes, step.id]);
+  const handleAddUserMessageToCanvas = React.useCallback(
+    (text: string) => {
+      const { position } = computeCanvasPosition(step.id, {}, stickyNotes);
+      const { width, height } = computeStickyNoteSize(text);
+      addStickyNote({
+        text,
+        position,
+        width,
+        height,
+        color: "yellow",
+      });
+    },
+    [addStickyNote, stickyNotes, step.id],
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -1944,793 +2529,1094 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
         {isMountLoading ? (
           <ChatSkeleton />
         ) : (
-        <>
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12"
-          style={{ background: 'linear-gradient(to bottom, var(--background), transparent)' }}
-        />
-        <div ref={scrollContainerRef} className="chat-scroll h-full overflow-y-auto p-4">
-        {/* Centered AI avatar at top - scrolls off screen */}
-        <div className="flex justify-center mb-6">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-            AI
-          </div>
-        </div>
-
-        {messages.length === 0 ? (
-          // Show greeting + loading indicator while AI auto-starts
-          <div className="space-y-6">
-            {showGreeting && (
-              <div className="flex items-start">
-                <div className="flex-1">
-                  <div className="text-base prose prose-base dark:prose-invert max-w-none">
-                    <ReactMarkdown>{stepGreeting!}</ReactMarkdown>
+          <>
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12"
+              style={{
+                background:
+                  "linear-gradient(to bottom, var(--background), transparent)",
+              }}
+            />
+            <div
+              ref={scrollContainerRef}
+              className="chat-scroll h-full overflow-y-auto p-4"
+            >
+              {/* Centered AI avatar at top - scrolls off screen (hidden when parent renders header avatar) */}
+              {!hideAvatar && (
+                <div className="flex justify-center mb-6">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
+                    AI
                   </div>
                 </div>
-              </div>
-            )}
-            <div className="flex items-start">
-              <div className="flex-1">
-                <div className="text-base text-muted-foreground">
-                  AI is thinking...
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          // Render conversation messages (filter out __step_start__ trigger)
-          <div className="space-y-6">
-            {/* Fixed initial greeting while AI generates first response */}
-            {showGreeting && (
-              <div className="flex items-start">
-                <div className="flex-1">
-                  <div className="text-base prose prose-base dark:prose-invert max-w-none">
-                    <ReactMarkdown>{stepGreeting!}</ReactMarkdown>
-                  </div>
-                </div>
-              </div>
-            )}
-            {messages.filter((m) => {
-              if (m.role !== 'user') return true;
-              const text = m.parts?.filter((p) => p.type === 'text').map((p) => p.text).join('') || '';
-              return text !== '__step_start__';
-            }).map((message, index) => {
-              const textParts = message.parts?.filter((part) => part.type === 'text') || [];
-              const content = textParts.map((part) => part.text).join('\n');
+              )}
 
-              if (message.role === 'user') {
-                // Strip internal markup tags from display
-                const displayContent = content
-                  .replace(/\[STEP_CONFIRMED\]\s*/g, '')
-                  .replace(/\[SUGGEST_QUESTIONS\]\s*/g, '')
-                  .trim();
-                return (
-                  <div key={`${message.id}-${index}`} className="group flex items-start justify-end">
-                    <div className="max-w-[80%]">
-                      <div className="relative rounded-2xl bg-muted p-3 px-4 text-base text-foreground">
-                        {displayContent}
-                        {isCanvasStep && (
-                          <button
-                            onClick={() => handleAddUserMessageToCanvas(content)}
-                            className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-1 bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                            aria-label="Add to canvas"
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                          </button>
-                        )}
+              {messages.length === 0 ? (
+                // Show greeting + loading indicator while AI auto-starts
+                <div className="space-y-6">
+                  {showGreeting && (
+                    <div className="flex items-start">
+                      <div className="flex-1">
+                        <div className="text-base prose prose-base dark:prose-invert max-w-none">
+                          <ReactMarkdown>{stepGreeting!}</ReactMarkdown>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-start">
+                    <div className="flex-1">
+                      <div className="text-base text-muted-foreground">
+                        AI is thinking...
                       </div>
                     </div>
                   </div>
-                );
-              }
+                </div>
+              ) : (
+                // Render conversation messages (filter out __step_start__ trigger)
+                <div className="space-y-6">
+                  {/* Fixed initial greeting while AI generates first response */}
+                  {showGreeting && (
+                    <div className="flex items-start">
+                      <div className="flex-1">
+                        <div className="text-base prose prose-base dark:prose-invert max-w-none">
+                          <ReactMarkdown>{stepGreeting!}</ReactMarkdown>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {messages
+                    .filter((m) => {
+                      if (m.role !== "user") return true;
+                      const text =
+                        m.parts
+                          ?.filter((p) => p.type === "text")
+                          .map((p) => p.text)
+                          .join("") || "";
+                      return text !== "__step_start__";
+                    })
+                    .map((message, index) => {
+                      const textParts =
+                        message.parts?.filter((part) => part.type === "text") ||
+                        [];
+                      const content = textParts
+                        .map((part) => part.text)
+                        .join("\n");
 
-              // Assistant message — strip all markup
-              const { cleanContent: noSuggestions } = parseSuggestions(content);
-              const { cleanContent: noInterviewMode } = parseInterviewMode(noSuggestions);
-              const { cleanContent: noPersonaSelect } = parsePersonaSelect(noInterviewMode);
-              const { cleanContent: noThemeSort } = parseThemeSortTrigger(noPersonaSelect);
-              const { cleanContent: noDeletes } = parseCanvasDeletes(noThemeSort);
-              const { cleanContent: noClusters } = parseClusterSuggestions(noDeletes);
-              const { cleanContent: noPersonaTemplates } = parsePersonaTemplates(noClusters);
-              const { cleanContent: noPersonaPlan } = parsePersonaPlan(noPersonaTemplates);
-              const { cleanContent: noJourneyStages } = parseJourneyStages(noPersonaPlan);
-              const { cleanContent: noHmwCards } = parseHmwCards(noJourneyStages);
-              // For ideation, replace mind map tags with inline placeholders (not strip)
-              let noMindMapContent: string;
-              let mindMapNodesParsed: MindMapNodeParsed[];
-              if (step.id === 'ideation') {
-                const inlined = inlineMindMapNodes(noHmwCards);
-                noMindMapContent = inlined.content;
-                mindMapNodesParsed = inlined.nodes;
-              } else {
-                const parsed = parseMindMapNodes(noHmwCards);
-                noMindMapContent = parsed.cleanContent;
-                mindMapNodesParsed = parsed.nodes;
-              }
-              const { cleanContent: noConceptCards } = parseConceptCards(noMindMapContent);
-              const { cleanContent: noLeakedTags } = stripLeakedTags(noConceptCards);
-              const { cleanContent: finalContent, canvasItems } = parseCanvasItems(noLeakedTags);
-              const isPersonaSelectMessage = message.id === personaSelectMessageId;
-              const isInterviewModeMessage = message.id === interviewModeMessageId;
-              const personaIntro = detectPersonaIntro(content);
-              // Separate "X down, Y to go" counter from persona answer body
-              const questionCountMatch = finalContent.match(/(?:That's\s+)?\d+\s+down,\s+\d+\s+to\s+go\s+with\s+me\.?/i);
-              const contentAfterCount = questionCountMatch
-                ? finalContent.replace(questionCountMatch[0], '').trim()
-                : finalContent;
-              const questionCountLine = questionCountMatch ? questionCountMatch[0].trim() : null;
-
-              // Split transition messages: content before 🎭 intro vs after
-              // This ensures the PersonaInterrupt banner appears between the outgoing
-              // persona's final answer and the incoming persona's introduction
-              let beforeIntro = contentAfterCount;
-              let afterIntro: string | null = null;
-              if (personaIntro) {
-                const emojiIdx = contentAfterCount.indexOf('🎭');
-                if (emojiIdx > 0) {
-                  beforeIntro = contentAfterCount.slice(0, emojiIdx).trim();
-                  afterIntro = contentAfterCount.slice(emojiIdx).trim();
-                }
-              }
-
-              // Helper: render content with inline mind map buttons for ideation
-              const renderMindMapContent = (text: string) => {
-                if (step.id !== 'ideation' || mindMapNodesParsed.length === 0 || !text.includes('%%MMNODE_')) {
-                  return <ReactMarkdown>{text}</ReactMarkdown>;
-                }
-                // Build label map once for color lookup
-                const nodeLabelMap = new Map<string, MindMapNodeState>();
-                for (const n of mindMapNodes) {
-                  nodeLabelMap.set(n.label.toLowerCase(), n);
-                }
-                // Split content at %%MMNODE_N%% placeholders
-                const parts = text.split(/(%%MMNODE_\d+%%)/);
-                return (
-                  <>
-                    {parts.map((part, pi) => {
-                      const mmMatch = part.match(/%%MMNODE_(\d+)%%/);
-                      if (mmMatch) {
-                        const nodeIdx = parseInt(mmMatch[1], 10);
-                        const node = mindMapNodesParsed[nodeIdx];
-                        if (!node) return null;
-                        const isAdded = addedMindMapLabels.has(node.label.toLowerCase()) ||
-                          mindMapNodes.some(mn => mn.label.toLowerCase() === node.label.toLowerCase());
-                        if (isAdded) {
-                          return (
-                            <span key={pi} className="inline-flex items-center gap-1 rounded-md border border-muted bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground my-1">
-                              <CheckCircle2 className="h-3 w-3" />
-                              {node.label}
-                            </span>
-                          );
-                        }
-                        const parentNode = node.theme
-                          ? findThemeNode(node.theme, mindMapNodes, nodeLabelMap)
-                          : undefined;
-                        if (process.env.NODE_ENV === 'development') {
-                          console.log('[MindMapButton]', node.label, '| theme:', JSON.stringify(node.theme), '| matched:', parentNode?.label ?? 'NONE');
-                        }
+                      if (message.role === "user") {
+                        // Strip internal markup tags from display
+                        const displayContent = content
+                          .replace(/\[STEP_CONFIRMED\]\s*/g, "")
+                          .replace(/\[SUGGEST_QUESTIONS\]\s*/g, "")
+                          .trim();
                         return (
-                          <button
-                            key={pi}
-                            onClick={() => handleAddMindMapNode(node)}
-                            title={`Theme: "${node.theme || '(none)'}" → Branch: "${parentNode?.label || 'UNMATCHED'}"`}
-                            className="cursor-pointer inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-medium shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 my-1"
-                            style={parentNode ? {
-                              borderColor: parentNode.themeColor,
-                              backgroundColor: parentNode.themeBgColor,
-                              color: parentNode.themeColor,
-                            } : {
-                              borderColor: 'var(--mm-root)',
-                              backgroundColor: 'var(--mm-root-bg)',
-                            }}
+                          <div
+                            key={`${message.id}-${index}`}
+                            className="group flex items-start justify-end"
                           >
-                            <Plus className="h-3 w-3" />
-                            {node.label}
-                          </button>
+                            <div className="max-w-[80%]">
+                              <div className="relative rounded-2xl bg-neutral-olive-200/60 dark:bg-olive-800/50 p-3 px-4 text-base text-foreground">
+                                {displayContent}
+                                {isCanvasStep && (
+                                  <button
+                                    onClick={() =>
+                                      handleAddUserMessageToCanvas(content)
+                                    }
+                                    className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-1 bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                                    aria-label="Add to canvas"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         );
                       }
-                      // Regular text segment — render as markdown
-                      const trimmed = part.trim();
-                      if (!trimmed) return null;
-                      return <ReactMarkdown key={pi}>{trimmed}</ReactMarkdown>;
-                    })}
-                  </>
-                );
-              };
 
-              return (
-                <div key={`${message.id}-${index}`}>
-                  {/* Pure intro message (not a transition) — show banner at top */}
-                  {personaIntro && !afterIntro && <PersonaInterrupt personaName={personaIntro.personaName} />}
-                  <div className="flex items-start">
-                  <div className="flex-1">
-                    <div className="text-base prose prose-base dark:prose-invert max-w-none">
-                      {renderMindMapContent(beforeIntro)}
-                    </div>
-                    {questionCountLine && (
-                      <p className="mt-4 text-sm text-muted-foreground italic">{questionCountLine}</p>
-                    )}
-                    {/* Transition message — banner + new persona intro after the previous answer */}
-                    {personaIntro && afterIntro && (
-                      <>
-                        <PersonaInterrupt personaName={personaIntro.personaName} />
-                        <div className="text-base prose prose-base dark:prose-invert max-w-none">
-                          {renderMindMapContent(afterIntro)}
-                        </div>
-                      </>
-                    )}
-                    {isCanvasStep && step.id !== 'ideation' && (() => {
-                      const nonGridItems = canvasItems.filter(item => !item.isGridItem);
-                      // Filter out items already on the board — hide duplicates entirely
-                      const newItems = nonGridItems.filter(item => {
-                        const normalizedText = item.text.trim().toLowerCase();
-                        return !addedItemTexts.has(normalizedText) && !stickyNotes.some(p => (!p.type || p.type === 'stickyNote') && p.text.trim().toLowerCase() === normalizedText);
-                      });
-                      if (newItems.length === 0) return null;
+                      // Assistant message — strip all markup
+                      const { cleanContent: noSuggestions } =
+                        parseSuggestions(content);
+                      const { cleanContent: noInterviewMode } =
+                        parseInterviewMode(noSuggestions);
+                      const { cleanContent: noPersonaSelect } =
+                        parsePersonaSelect(noInterviewMode);
+                      const { cleanContent: noThemeSort } =
+                        parseThemeSortTrigger(noPersonaSelect);
+                      const { cleanContent: noDeletes } =
+                        parseCanvasDeletes(noThemeSort);
+                      const { cleanContent: noClusters } =
+                        parseClusterSuggestions(noDeletes);
+                      const { cleanContent: noPersonaTemplates } =
+                        parsePersonaTemplates(noClusters);
+                      const { cleanContent: noPersonaPlan } =
+                        parsePersonaPlan(noPersonaTemplates);
+                      const { cleanContent: noJourneyStages } =
+                        parseJourneyStages(noPersonaPlan);
+                      const { cleanContent: noHmwCards } =
+                        parseHmwCards(noJourneyStages);
+                      // For ideation, replace mind map tags with inline placeholders (not strip)
+                      let noMindMapContent: string;
+                      let mindMapNodesParsed: MindMapNodeParsed[];
+                      if (step.id === "ideation") {
+                        const inlined = inlineMindMapNodes(noHmwCards);
+                        noMindMapContent = inlined.content;
+                        mindMapNodesParsed = inlined.nodes;
+                      } else {
+                        const parsed = parseMindMapNodes(noHmwCards);
+                        noMindMapContent = parsed.cleanContent;
+                        mindMapNodesParsed = parsed.nodes;
+                      }
+                      const { cleanContent: noConceptCards } =
+                        parseConceptCards(noMindMapContent);
+                      const { cleanContent: noLeakedTags } =
+                        stripLeakedTags(noConceptCards);
+                      const { cleanContent: finalContent, canvasItems } =
+                        parseCanvasItems(noLeakedTags);
+                      const isPersonaSelectMessage =
+                        message.id === personaSelectMessageId;
+                      const isInterviewModeMessage =
+                        message.id === interviewModeMessageId;
+                      const personaIntro = detectPersonaIntro(content);
+                      // Separate "X down, Y to go" counter from persona answer body
+                      const questionCountMatch = finalContent.match(
+                        /(?:That's\s+)?\d+\s+down,\s+\d+\s+to\s+go\s+with\s+me\.?/i,
+                      );
+                      const contentAfterCount = questionCountMatch
+                        ? finalContent.replace(questionCountMatch[0], "").trim()
+                        : finalContent;
+                      const questionCountLine = questionCountMatch
+                        ? questionCountMatch[0].trim()
+                        : null;
+
+                      // Split transition messages: content before 🎭 intro vs after
+                      // This ensures the PersonaInterrupt banner appears between the outgoing
+                      // persona's final answer and the incoming persona's introduction
+                      let beforeIntro = contentAfterCount;
+                      let afterIntro: string | null = null;
+                      if (personaIntro) {
+                        const emojiIdx = contentAfterCount.indexOf("🎭");
+                        if (emojiIdx > 0) {
+                          beforeIntro = contentAfterCount
+                            .slice(0, emojiIdx)
+                            .trim();
+                          afterIntro = contentAfterCount.slice(emojiIdx).trim();
+                        }
+                      }
+
+                      // Helper: render content with inline mind map buttons for ideation
+                      const renderMindMapContent = (text: string) => {
+                        if (
+                          step.id !== "ideation" ||
+                          mindMapNodesParsed.length === 0 ||
+                          !text.includes("%%MMNODE_")
+                        ) {
+                          return <ReactMarkdown>{text}</ReactMarkdown>;
+                        }
+                        // Build label map once for color lookup
+                        const nodeLabelMap = new Map<
+                          string,
+                          MindMapNodeState
+                        >();
+                        for (const n of mindMapNodes) {
+                          nodeLabelMap.set(n.label.toLowerCase(), n);
+                        }
+                        // Split content at %%MMNODE_N%% placeholders
+                        const parts = text.split(/(%%MMNODE_\d+%%)/);
+                        return (
+                          <>
+                            {parts.map((part, pi) => {
+                              const mmMatch = part.match(/%%MMNODE_(\d+)%%/);
+                              if (mmMatch) {
+                                const nodeIdx = parseInt(mmMatch[1], 10);
+                                const node = mindMapNodesParsed[nodeIdx];
+                                if (!node) return null;
+                                const isAdded =
+                                  addedMindMapLabels.has(
+                                    node.label.toLowerCase(),
+                                  ) ||
+                                  mindMapNodes.some(
+                                    (mn) =>
+                                      mn.label.toLowerCase() ===
+                                      node.label.toLowerCase(),
+                                  );
+                                if (isAdded) {
+                                  return (
+                                    <span
+                                      key={pi}
+                                      className="inline-flex items-center gap-1 rounded-md border border-muted bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground my-1"
+                                    >
+                                      <CheckCircle2 className="h-3 w-3" />
+                                      {node.label}
+                                    </span>
+                                  );
+                                }
+                                const parentNode = node.theme
+                                  ? findThemeNode(
+                                      node.theme,
+                                      mindMapNodes,
+                                      nodeLabelMap,
+                                    )
+                                  : undefined;
+                                if (process.env.NODE_ENV === "development") {
+                                  console.log(
+                                    "[MindMapButton]",
+                                    node.label,
+                                    "| theme:",
+                                    JSON.stringify(node.theme),
+                                    "| matched:",
+                                    parentNode?.label ?? "NONE",
+                                  );
+                                }
+                                return (
+                                  <button
+                                    key={pi}
+                                    onClick={() => handleAddMindMapNode(node)}
+                                    title={`Theme: "${node.theme || "(none)"}" → Branch: "${parentNode?.label || "UNMATCHED"}"`}
+                                    className="cursor-pointer inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-medium shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 my-1"
+                                    style={
+                                      parentNode
+                                        ? {
+                                            borderColor: parentNode.themeColor,
+                                            backgroundColor:
+                                              parentNode.themeBgColor,
+                                            color: parentNode.themeColor,
+                                          }
+                                        : {
+                                            borderColor: "var(--mm-root)",
+                                            backgroundColor:
+                                              "var(--mm-root-bg)",
+                                          }
+                                    }
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                    {node.label}
+                                  </button>
+                                );
+                              }
+                              // Regular text segment — render as markdown
+                              const trimmed = part.trim();
+                              if (!trimmed) return null;
+                              return (
+                                <ReactMarkdown key={pi}>
+                                  {trimmed}
+                                </ReactMarkdown>
+                              );
+                            })}
+                          </>
+                        );
+                      };
+
                       return (
-                        <div className="mt-2">
-                          <div className="flex flex-wrap gap-2">
-                            {newItems.map((item, i) => (
-                              <button
-                                key={i}
-                                onClick={() => handleAddSingleItem(item)}
-                                className={cn(
-                                  "cursor-pointer inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm font-medium text-neutral-olive-800 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
-                                  SUGGESTION_BUTTON_STYLES[getSuggestionItemColor(item)]
+                        <div key={`${message.id}-${index}`}>
+                          {/* Pure intro message (not a transition) — show banner at top */}
+                          {personaIntro && !afterIntro && (
+                            <PersonaInterrupt
+                              personaName={personaIntro.personaName}
+                            />
+                          )}
+                          <div className="flex items-start">
+                            <div className="flex-1">
+                              <div className="text-base prose prose-base dark:prose-invert max-w-none">
+                                {renderMindMapContent(beforeIntro)}
+                              </div>
+                              {questionCountLine && (
+                                <p className="mt-4 text-sm text-muted-foreground italic">
+                                  {questionCountLine}
+                                </p>
+                              )}
+                              {/* Transition message — banner + new persona intro after the previous answer */}
+                              {personaIntro && afterIntro && (
+                                <>
+                                  <PersonaInterrupt
+                                    personaName={personaIntro.personaName}
+                                  />
+                                  <div className="text-base prose prose-base dark:prose-invert max-w-none">
+                                    {renderMindMapContent(afterIntro)}
+                                  </div>
+                                </>
+                              )}
+                              {isCanvasStep &&
+                                step.id !== "ideation" &&
+                                (() => {
+                                  const nonGridItems = canvasItems.filter(
+                                    (item) => !item.isGridItem,
+                                  );
+                                  // Filter out items already on the board — hide duplicates entirely
+                                  const newItems = nonGridItems.filter(
+                                    (item) => {
+                                      const normalizedText = item.text
+                                        .trim()
+                                        .toLowerCase();
+                                      return (
+                                        !addedItemTexts.has(normalizedText) &&
+                                        !stickyNotes.some(
+                                          (p) =>
+                                            (!p.type ||
+                                              p.type === "stickyNote") &&
+                                            p.text.trim().toLowerCase() ===
+                                              normalizedText,
+                                        )
+                                      );
+                                    },
+                                  );
+                                  if (newItems.length === 0) return null;
+                                  return (
+                                    <div className="mt-2">
+                                      <div className="flex flex-wrap gap-2">
+                                        {newItems.map((item, i) => (
+                                          <button
+                                            key={i}
+                                            onClick={() =>
+                                              handleAddSingleItem(item)
+                                            }
+                                            className={cn(
+                                              "cursor-pointer inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm font-medium text-neutral-olive-800 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
+                                              SUGGESTION_BUTTON_STYLES[
+                                                getSuggestionItemColor(item)
+                                              ],
+                                            )}
+                                          >
+                                            <Plus className="h-3 w-3" />
+                                            {item.text}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              {/* Interview mode selection (Step 3 — before persona select) */}
+                              {isInterviewModeMessage &&
+                                !interviewMode &&
+                                (() => {
+                                  const { modeOptions } =
+                                    parseInterviewMode(content);
+                                  if (modeOptions.length === 0) return null;
+                                  return (
+                                    <div className="mt-3 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                      {modeOptions.map((option) => (
+                                        <button
+                                          key={option.id}
+                                          disabled={isLoading}
+                                          onClick={async () => {
+                                            setInterviewMode(option.id);
+                                            setQuickAck(getRandomAck());
+                                            await flushCanvasToDb();
+                                            sendMessage({
+                                              role: "user",
+                                              parts: [
+                                                {
+                                                  type: "text",
+                                                  text: `I'd like to use ${option.label}`,
+                                                },
+                                              ],
+                                            });
+                                          }}
+                                          className="cursor-pointer rounded-xl border border-olive-300 bg-card p-4 text-left shadow-sm transition-all hover:border-olive-500 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:border-olive-500"
+                                        >
+                                          <span className="text-sm font-semibold text-foreground">
+                                            {option.label}
+                                          </span>
+                                          {option.description && (
+                                            <p className="mt-1 text-xs text-muted-foreground">
+                                              {option.description}
+                                            </p>
+                                          )}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  );
+                                })()}
+                              {/* Persona selection checkboxes (Step 3 only) */}
+                              {isPersonaSelectMessage &&
+                                personaOptions.length > 0 &&
+                                !personaSelectConfirmed && (
+                                  <div className="mt-3 rounded-xl border border-olive-200 bg-olive-50/60 p-4 dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                    <p className="text-sm font-medium text-foreground mb-3">
+                                      Select up to 3 personas to interview:
+                                    </p>
+                                    <div className="space-y-2">
+                                      {personaOptions.map((persona, i) => {
+                                        const isSelected =
+                                          personaSelections.has(persona.name);
+                                        const atLimit =
+                                          personaSelections.size >= 3;
+                                        return (
+                                          <label
+                                            key={i}
+                                            className={cn(
+                                              "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-all",
+                                              isSelected
+                                                ? "border-olive-400 bg-olive-100/80 dark:border-olive-600 dark:bg-olive-900/40"
+                                                : "border-transparent hover:border-olive-200 hover:bg-olive-50/40 dark:hover:border-neutral-olive-700 dark:hover:bg-neutral-olive-900/20",
+                                              !isSelected &&
+                                                atLimit &&
+                                                "opacity-50 cursor-not-allowed",
+                                            )}
+                                          >
+                                            <Checkbox
+                                              checked={isSelected}
+                                              disabled={!isSelected && atLimit}
+                                              onCheckedChange={(checked) => {
+                                                setPersonaSelections((prev) => {
+                                                  const next = new Set(prev);
+                                                  if (checked) {
+                                                    if (next.size < 3)
+                                                      next.add(persona.name);
+                                                  } else {
+                                                    next.delete(persona.name);
+                                                  }
+                                                  return next;
+                                                });
+                                              }}
+                                              className="mt-0.5"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                              <span className="text-sm font-medium text-foreground">
+                                                {persona.name}
+                                              </span>
+                                              {persona.description && (
+                                                <span className="text-sm text-muted-foreground">
+                                                  {" "}
+                                                  — {persona.description}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+
+                                    {/* Custom persona input */}
+                                    <div className="mt-3 flex items-center gap-2">
+                                      <UserPlus className="h-4 w-4 text-muted-foreground shrink-0" />
+                                      <input
+                                        type="text"
+                                        value={customPersonaInput}
+                                        onChange={(e) =>
+                                          setCustomPersonaInput(e.target.value)
+                                        }
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            const name =
+                                              customPersonaInput.trim();
+                                            if (
+                                              name &&
+                                              !personaOptions.some(
+                                                (p) =>
+                                                  p.name.toLowerCase() ===
+                                                  name.toLowerCase(),
+                                              )
+                                            ) {
+                                              setPersonaOptions((prev) => [
+                                                ...prev,
+                                                { name, description: "" },
+                                              ]);
+                                              setPersonaSelections((prev) => {
+                                                const next = new Set(prev);
+                                                if (next.size < 3)
+                                                  next.add(name);
+                                                return next;
+                                              });
+                                              setCustomPersonaInput("");
+                                            }
+                                          }
+                                        }}
+                                        placeholder="Add your own persona..."
+                                        className="flex-1 rounded-md border border-olive-200 bg-transparent px-3 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus:border-olive-400 dark:border-neutral-olive-700 dark:focus:border-olive-600"
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={!customPersonaInput.trim()}
+                                        onClick={() => {
+                                          const name =
+                                            customPersonaInput.trim();
+                                          if (
+                                            name &&
+                                            !personaOptions.some(
+                                              (p) =>
+                                                p.name.toLowerCase() ===
+                                                name.toLowerCase(),
+                                            )
+                                          ) {
+                                            setPersonaOptions((prev) => [
+                                              ...prev,
+                                              { name, description: "" },
+                                            ]);
+                                            setPersonaSelections((prev) => {
+                                              const next = new Set(prev);
+                                              if (next.size < 3) next.add(name);
+                                              return next;
+                                            });
+                                            setCustomPersonaInput("");
+                                          }
+                                        }}
+                                        className="text-xs"
+                                      >
+                                        Add
+                                      </Button>
+                                    </div>
+
+                                    {/* Confirm button */}
+                                    <div className="mt-4 flex justify-center">
+                                      <Button
+                                        disabled={
+                                          personaSelections.size === 0 ||
+                                          isLoading
+                                        }
+                                        onClick={async () => {
+                                          const selectedNames = [
+                                            ...personaSelections,
+                                          ];
+                                          // Add selected personas as canvas items with distinct colors
+                                          for (
+                                            let i = 0;
+                                            i < selectedNames.length;
+                                            i++
+                                          ) {
+                                            const name = selectedNames[i];
+                                            const persona = personaOptions.find(
+                                              (p) => p.name === name,
+                                            );
+                                            const text = persona?.description
+                                              ? `${name} — ${persona.description}`
+                                              : name;
+                                            handleAddSingleItem({
+                                              text,
+                                              color:
+                                                PERSONA_CARD_COLORS[
+                                                  i % PERSONA_CARD_COLORS.length
+                                                ],
+                                            });
+                                          }
+                                          setPersonaSelectConfirmed(true);
+                                          setQuickAck(getRandomAck());
+                                          await flushCanvasToDb();
+                                          sendMessage({
+                                            role: "user",
+                                            parts: [
+                                              {
+                                                type: "text",
+                                                text: `I'd like to interview these personas: ${selectedNames.join(", ")}`,
+                                              },
+                                            ],
+                                          });
+                                        }}
+                                        className="rounded-full bg-olive-700 px-5 py-2 text-sm font-medium text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
+                                      >
+                                        Confirm Selection (
+                                        {personaSelections.size}/3)
+                                      </Button>
+                                    </div>
+                                  </div>
                                 )}
-                              >
-                                <Plus className="h-3 w-3" />
-                                {item.text}
-                              </button>
-                            ))}
+                            </div>
                           </div>
                         </div>
                       );
-                    })()}
-                    {/* Interview mode selection (Step 3 — before persona select) */}
-                    {isInterviewModeMessage && !interviewMode && (() => {
-                      const { modeOptions } = parseInterviewMode(content);
-                      if (modeOptions.length === 0) return null;
-                      return (
-                        <div className="mt-3 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                          {modeOptions.map((option) => (
+                    })}
+
+                  {/* Typing indicator — quick ack + thinking status */}
+                  {status === "submitted" && (
+                    <>
+                      {quickAck && (
+                        <div className="flex items-start">
+                          <div className="flex-1">
+                            <div className="text-base">{quickAck}</div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-start">
+                        <div className="flex-1">
+                          <div className="text-base text-muted-foreground">
+                            AI is thinking...
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Stream error recovery */}
+                  {streamError && !isLoading && (
+                    <div className="flex items-start">
+                      <div className="flex-1">
+                        <div className="rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20 p-3 text-base">
+                          <p className="text-yellow-800 dark:text-yellow-200">
+                            Response was interrupted.
+                          </p>
+                          <Button
+                            onClick={() => {
+                              setStreamError(false);
+                              // Find last user message and resend it
+                              const lastUserMsg = [...messages]
+                                .reverse()
+                                .find((m) => m.role === "user");
+                              if (lastUserMsg) {
+                                // Remove failed assistant response if present
+                                const lastMsg = messages[messages.length - 1];
+                                if (lastMsg.role === "assistant") {
+                                  setMessages(messages.slice(0, -1));
+                                }
+                                // Resend last user message
+                                setQuickAck(getRandomAck());
+                                sendMessage({
+                                  role: "user",
+                                  parts: lastUserMsg.parts || [],
+                                });
+                              }
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                          >
+                            Retry Response
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Synthetic interview mode: always show "your turn" prompt + suggestion buttons */}
+                  {step.id === "user-research" &&
+                    personaSelectConfirmed &&
+                    interviewMode !== "real" &&
+                    status === "ready" &&
+                    messages.length > 0 &&
+                    !justConfirmed && (
+                      <div className="space-y-2 pt-2">
+                        {/* Auto-show suggestion pills when AI provides them */}
+                        {suggestions.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {suggestions.map((suggestion, i) => (
+                              <button
+                                key={i}
+                                disabled={isLoading}
+                                onClick={async () => {
+                                  setSuggestions([]);
+                                  setSuggestionsExpanded(false);
+                                  setQuickAck(getRandomAck());
+                                  await flushCanvasToDb();
+                                  sendMessage({
+                                    role: "user",
+                                    parts: [{ type: "text", text: suggestion }],
+                                  });
+                                }}
+                                className={cn(
+                                  "cursor-pointer rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors",
+                                  "disabled:cursor-not-allowed disabled:opacity-50",
+                                )}
+                              >
+                                {suggestion}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {/* Fallback: "Give me a suggestion" button only when no suggestions available */}
+                        {suggestions.length === 0 && (
+                          <div>
                             <button
-                              key={option.id}
                               disabled={isLoading}
                               onClick={async () => {
-                                setInterviewMode(option.id);
                                 setQuickAck(getRandomAck());
                                 await flushCanvasToDb();
                                 sendMessage({
-                                  role: 'user',
-                                  parts: [{ type: 'text', text: `I'd like to use ${option.label}` }],
+                                  role: "user",
+                                  parts: [
+                                    {
+                                      type: "text",
+                                      text: "[SUGGEST_QUESTIONS] Give me some question ideas for this persona.",
+                                    },
+                                  ],
                                 });
                               }}
-                              className="cursor-pointer rounded-xl border border-olive-300 bg-card p-4 text-left shadow-sm transition-all hover:border-olive-500 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:border-olive-500"
-                            >
-                              <span className="text-sm font-semibold text-foreground">{option.label}</span>
-                              {option.description && (
-                                <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+                              className={cn(
+                                "cursor-pointer inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors",
+                                "disabled:cursor-not-allowed disabled:opacity-50",
                               )}
+                            >
+                              <Sparkles className="h-3.5 w-3.5" />
+                              Give me a suggestion
                             </button>
-                          ))}
+                          </div>
+                        )}
+                        <p className="text-sm font-medium text-foreground pl-1">
+                          Your turn — give me your next question.
+                        </p>
+                      </div>
+                    )}
+
+                  {/* Suggestion pills — inline after last AI response (non-interview mode) */}
+                  {suggestions.length > 0 &&
+                    !(step.id === "user-research" && personaSelectConfirmed) &&
+                    (() => {
+                      // Separate "Next" suggestion from others for journey mapping
+                      const isNextSuggestion = (s: string) =>
+                        /^next\b/i.test(s.trim());
+                      const nextSuggestion =
+                        step.id === "journey-mapping"
+                          ? suggestions.find(isNextSuggestion)
+                          : undefined;
+
+                      // Detect "Looks good" during stage confirmation (no grid items yet)
+                      const isLooksGoodSuggestion = (s: string) =>
+                        /^looks good/i.test(s.trim());
+                      const hasGridItems = stickyNotes.some(
+                        (n) => n.cellAssignment?.row,
+                      );
+                      const looksGoodSuggestion =
+                        step.id === "journey-mapping" && !hasGridItems
+                          ? suggestions.find(isLooksGoodSuggestion)
+                          : undefined;
+
+                      const otherSuggestions = suggestions.filter(
+                        (s) =>
+                          s !== nextSuggestion && s !== looksGoodSuggestion,
+                      );
+
+                      // Compute next row label for journey mapping
+                      let nextRowLabel = "";
+                      if (nextSuggestion && step.id === "journey-mapping") {
+                        const gridConfig =
+                          getStepCanvasConfig("journey-mapping").gridConfig;
+                        if (gridConfig) {
+                          const filledRows = new Set(
+                            stickyNotes
+                              .filter((n) => n.cellAssignment?.row)
+                              .map((n) => n.cellAssignment!.row),
+                          );
+                          const nextRow = gridConfig.rows.find(
+                            (r) => !filledRows.has(r.id),
+                          );
+                          if (nextRow) nextRowLabel = nextRow.label;
+                        }
+                      }
+
+                      return (
+                        <div className="space-y-2 pt-1">
+                          {otherSuggestions.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {otherSuggestions.map((suggestion, i) => (
+                                <button
+                                  key={i}
+                                  disabled={isLoading}
+                                  onClick={async () => {
+                                    setSuggestions([]);
+                                    setQuickAck(getRandomAck());
+                                    await flushCanvasToDb();
+                                    sendMessage({
+                                      role: "user",
+                                      parts: [
+                                        { type: "text", text: suggestion },
+                                      ],
+                                    });
+                                  }}
+                                  className={cn(
+                                    "cursor-pointer rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors",
+                                    "disabled:cursor-not-allowed disabled:opacity-50",
+                                  )}
+                                >
+                                  {suggestion}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {looksGoodSuggestion ? (
+                            <button
+                              disabled={isLoading}
+                              onClick={async () => {
+                                setSuggestions([]);
+                                setQuickAck(getRandomAck());
+                                await flushCanvasToDb();
+                                sendMessage({
+                                  role: "user",
+                                  parts: [
+                                    { type: "text", text: "Looks good!" },
+                                  ],
+                                });
+                              }}
+                              className={cn(
+                                "cursor-pointer inline-flex items-center gap-2 rounded-full border border-olive-500 bg-olive-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-olive-700 dark:bg-olive-700 dark:border-olive-600 dark:hover:bg-olive-600 transition-colors",
+                                "disabled:cursor-not-allowed disabled:opacity-50",
+                              )}
+                            >
+                              Looks good — Add these stages
+                              <ArrowRight className="h-3.5 w-3.5" />
+                            </button>
+                          ) : null}
+                          {nextSuggestion ? (
+                            <button
+                              disabled={isLoading}
+                              onClick={async () => {
+                                setSuggestions([]);
+                                setQuickAck(getRandomAck());
+                                await flushCanvasToDb();
+                                sendMessage({
+                                  role: "user",
+                                  parts: [{ type: "text", text: "Next" }],
+                                });
+                              }}
+                              className={cn(
+                                "cursor-pointer inline-flex items-center gap-2 rounded-full border border-olive-500 bg-olive-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-olive-700 dark:bg-olive-700 dark:border-olive-600 dark:hover:bg-olive-600 transition-colors",
+                                "disabled:cursor-not-allowed disabled:opacity-50",
+                              )}
+                            >
+                              {nextRowLabel
+                                ? `Move on to ${nextRowLabel}`
+                                : "Next"}
+                              <ArrowRight className="h-3.5 w-3.5" />
+                            </button>
+                          ) : null}
+                          <p className="text-xs text-muted-foreground pl-1">
+                            Use the suggestions above or type your own below.
+                          </p>
                         </div>
                       );
                     })()}
-                    {/* Persona selection checkboxes (Step 3 only) */}
-                    {isPersonaSelectMessage && personaOptions.length > 0 && !personaSelectConfirmed && (
-                      <div className="mt-3 rounded-xl border border-olive-200 bg-olive-50/60 p-4 dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        <p className="text-sm font-medium text-foreground mb-3">Select up to 3 personas to interview:</p>
-                        <div className="space-y-2">
-                          {personaOptions.map((persona, i) => {
-                            const isSelected = personaSelections.has(persona.name);
-                            const atLimit = personaSelections.size >= 3;
-                            return (
-                              <label
-                                key={i}
-                                className={cn(
-                                  'flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-all',
-                                  isSelected
-                                    ? 'border-olive-400 bg-olive-100/80 dark:border-olive-600 dark:bg-olive-900/40'
-                                    : 'border-transparent hover:border-olive-200 hover:bg-olive-50/40 dark:hover:border-neutral-olive-700 dark:hover:bg-neutral-olive-900/20',
-                                  !isSelected && atLimit && 'opacity-50 cursor-not-allowed'
-                                )}
-                              >
-                                <Checkbox
-                                  checked={isSelected}
-                                  disabled={!isSelected && atLimit}
-                                  onCheckedChange={(checked) => {
-                                    setPersonaSelections(prev => {
-                                      const next = new Set(prev);
-                                      if (checked) {
-                                        if (next.size < 3) next.add(persona.name);
-                                      } else {
-                                        next.delete(persona.name);
-                                      }
-                                      return next;
-                                    });
-                                  }}
-                                  className="mt-0.5"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <span className="text-sm font-medium text-foreground">{persona.name}</span>
-                                  {persona.description && (
-                                    <span className="text-sm text-muted-foreground"> — {persona.description}</span>
-                                  )}
-                                </div>
-                              </label>
-                            );
-                          })}
-                        </div>
 
-                        {/* Custom persona input */}
-                        <div className="mt-3 flex items-center gap-2">
-                          <UserPlus className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <input
-                            type="text"
-                            value={customPersonaInput}
-                            onChange={(e) => setCustomPersonaInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                const name = customPersonaInput.trim();
-                                if (name && !personaOptions.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-                                  setPersonaOptions(prev => [...prev, { name, description: '' }]);
-                                  setPersonaSelections(prev => {
-                                    const next = new Set(prev);
-                                    if (next.size < 3) next.add(name);
-                                    return next;
-                                  });
-                                  setCustomPersonaInput('');
-                                }
-                              }
-                            }}
-                            placeholder="Add your own persona..."
-                            className="flex-1 rounded-md border border-olive-200 bg-transparent px-3 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus:border-olive-400 dark:border-neutral-olive-700 dark:focus:border-olive-600"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={!customPersonaInput.trim()}
-                            onClick={() => {
-                              const name = customPersonaInput.trim();
-                              if (name && !personaOptions.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-                                setPersonaOptions(prev => [...prev, { name, description: '' }]);
-                                setPersonaSelections(prev => {
-                                  const next = new Set(prev);
-                                  if (next.size < 3) next.add(name);
-                                  return next;
-                                });
-                                setCustomPersonaInput('');
-                              }
-                            }}
-                            className="text-xs"
-                          >
-                            Add
-                          </Button>
-                        </div>
-
-                        {/* Confirm button */}
-                        <div className="mt-4 flex justify-center">
-                          <Button
-                            disabled={personaSelections.size === 0 || isLoading}
-                            onClick={async () => {
-                              const selectedNames = [...personaSelections];
-                              // Add selected personas as canvas items with distinct colors
-                              for (let i = 0; i < selectedNames.length; i++) {
-                                const name = selectedNames[i];
-                                const persona = personaOptions.find(p => p.name === name);
-                                const text = persona?.description
-                                  ? `${name} — ${persona.description}`
-                                  : name;
-                                handleAddSingleItem({ text, color: PERSONA_CARD_COLORS[i % PERSONA_CARD_COLORS.length] });
-                              }
-                              setPersonaSelectConfirmed(true);
-                              setQuickAck(getRandomAck());
-                              await flushCanvasToDb();
-                              sendMessage({
-                                role: 'user',
-                                parts: [{ type: 'text', text: `I'd like to interview these personas: ${selectedNames.join(', ')}` }],
-                              });
-                            }}
-                            className="rounded-full bg-olive-700 px-5 py-2 text-sm font-medium text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
-                          >
-                            Confirm Selection ({personaSelections.size}/3)
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                </div>
-              );
-            })}
-
-            {/* Typing indicator — quick ack + thinking status */}
-            {status === 'submitted' && (
-              <>
-                {quickAck && (
-                  <div className="flex items-start">
-                    <div className="flex-1">
-                      <div className="text-base">
-                        {quickAck}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-start">
-                  <div className="flex-1">
-                    <div className="text-base text-muted-foreground">
-                      AI is thinking...
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Stream error recovery */}
-            {streamError && !isLoading && (
-              <div className="flex items-start">
-                <div className="flex-1">
-                  <div className="rounded-lg border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20 p-3 text-base">
-                    <p className="text-yellow-800 dark:text-yellow-200">Response was interrupted.</p>
-                    <Button
-                      onClick={() => {
-                        setStreamError(false);
-                        // Find last user message and resend it
-                        const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
-                        if (lastUserMsg) {
-                          // Remove failed assistant response if present
-                          const lastMsg = messages[messages.length - 1];
-                          if (lastMsg.role === 'assistant') {
-                            setMessages(messages.slice(0, -1));
-                          }
-                          // Resend last user message
-                          setQuickAck(getRandomAck());
-                          sendMessage({
-                            role: 'user',
-                            parts: lastUserMsg.parts || [],
-                          });
-                        }
-                      }}
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                    >
-                      Retry Response
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Synthetic interview mode: always show "your turn" prompt + suggestion buttons */}
-            {step.id === 'user-research' && personaSelectConfirmed && interviewMode !== 'real' && status === 'ready' && messages.length > 0 && !justConfirmed && (
-              <div className="space-y-2 pt-2">
-                {/* Auto-show suggestion pills when AI provides them */}
-                {suggestions.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {suggestions.map((suggestion, i) => (
-                      <button
-                        key={i}
-                        disabled={isLoading}
-                        onClick={async () => {
-                          setSuggestions([]);
-                          setSuggestionsExpanded(false);
-                          setQuickAck(getRandomAck());
-                          await flushCanvasToDb();
-                          sendMessage({
-                            role: 'user',
-                            parts: [{ type: 'text', text: suggestion }],
-                          });
-                        }}
-                        className={cn(
-                          'cursor-pointer rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors',
-                          'disabled:cursor-not-allowed disabled:opacity-50'
-                        )}
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {/* Fallback: "Give me a suggestion" button only when no suggestions available */}
-                {suggestions.length === 0 && (
-                  <div>
-                    <button
-                      disabled={isLoading}
-                      onClick={async () => {
-                        setQuickAck(getRandomAck());
-                        await flushCanvasToDb();
-                        sendMessage({
-                          role: 'user',
-                          parts: [{ type: 'text', text: '[SUGGEST_QUESTIONS] Give me some question ideas for this persona.' }],
-                        });
-                      }}
-                      className={cn(
-                        'cursor-pointer inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors',
-                        'disabled:cursor-not-allowed disabled:opacity-50'
-                      )}
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Give me a suggestion
-                    </button>
-                  </div>
-                )}
-                <p className="text-sm font-medium text-foreground pl-1">Your turn — give me your next question.</p>
-              </div>
-            )}
-
-            {/* Suggestion pills — inline after last AI response (non-interview mode) */}
-            {suggestions.length > 0 && !(step.id === 'user-research' && personaSelectConfirmed) && (() => {
-              // Separate "Next" suggestion from others for journey mapping
-              const isNextSuggestion = (s: string) => /^next\b/i.test(s.trim());
-              const nextSuggestion = step.id === 'journey-mapping' ? suggestions.find(isNextSuggestion) : undefined;
-
-              // Detect "Looks good" during stage confirmation (no grid items yet)
-              const isLooksGoodSuggestion = (s: string) => /^looks good/i.test(s.trim());
-              const hasGridItems = stickyNotes.some(n => n.cellAssignment?.row);
-              const looksGoodSuggestion = step.id === 'journey-mapping' && !hasGridItems
-                ? suggestions.find(isLooksGoodSuggestion)
-                : undefined;
-
-              const otherSuggestions = suggestions.filter(s => s !== nextSuggestion && s !== looksGoodSuggestion);
-
-              // Compute next row label for journey mapping
-              let nextRowLabel = '';
-              if (nextSuggestion && step.id === 'journey-mapping') {
-                const gridConfig = getStepCanvasConfig('journey-mapping').gridConfig;
-                if (gridConfig) {
-                  const filledRows = new Set(stickyNotes.filter(n => n.cellAssignment?.row).map(n => n.cellAssignment!.row));
-                  const nextRow = gridConfig.rows.find(r => !filledRows.has(r.id));
-                  if (nextRow) nextRowLabel = nextRow.label;
-                }
-              }
-
-              return (
-                <div className="space-y-2 pt-1">
-                  {otherSuggestions.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {otherSuggestions.map((suggestion, i) => (
+                  {/* Persistent "Pains & Gains" action button — sense-making Phase 1 → Phase 2 transition */}
+                  {step.id === "sense-making" &&
+                    stickyNotes.some((n) =>
+                      ["says", "thinks", "feels", "does"].includes(
+                        n.cellAssignment?.row || "",
+                      ),
+                    ) &&
+                    !stickyNotes.some(
+                      (n) =>
+                        n.cellAssignment?.row === "pains" ||
+                        n.cellAssignment?.row === "gains",
+                    ) && (
+                      <div className="flex justify-center pt-2">
                         <button
-                          key={i}
                           disabled={isLoading}
                           onClick={async () => {
-                            setSuggestions([]);
                             setQuickAck(getRandomAck());
                             await flushCanvasToDb();
                             sendMessage({
-                              role: 'user',
-                              parts: [{ type: 'text', text: suggestion }],
+                              role: "user",
+                              parts: [
+                                {
+                                  type: "text",
+                                  text: "This looks great, let's move to pains and gains",
+                                },
+                              ],
                             });
                           }}
                           className={cn(
-                            'cursor-pointer rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors',
-                            'disabled:cursor-not-allowed disabled:opacity-50'
+                            "inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700",
+                            "disabled:cursor-not-allowed disabled:opacity-50",
                           )}
                         >
-                          {suggestion}
+                          <Sparkles className="h-3.5 w-3.5" />
+                          Let&apos;s move on to pains and gains
                         </button>
-                      ))}
+                      </div>
+                    )}
+
+                  {/* Real interviews: "I'm ready to compile" button */}
+                  {step.id === "user-research" &&
+                    interviewMode === "real" &&
+                    personaSelectConfirmed &&
+                    !readyToCompile &&
+                    status === "ready" && (
+                      <div className="mx-auto max-w-sm rounded-xl border border-olive-200 bg-olive-50/60 p-4 text-center dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Added your interview insights and grouped them by
+                          persona? Let me compile and organize them.
+                        </p>
+                        <button
+                          disabled={isLoading}
+                          onClick={async () => {
+                            setReadyToCompile(true);
+                            setQuickAck(getRandomAck());
+                            await flushCanvasToDb();
+                            sendMessage({
+                              role: "user",
+                              parts: [
+                                {
+                                  type: "text",
+                                  text: "[COMPILE_READY] I'm ready for you to compile my research insights.",
+                                },
+                              ],
+                            });
+                          }}
+                          className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                          I&apos;m ready to compile
+                        </button>
+                      </div>
+                    )}
+
+                  {/* Proactive theme sort card — stakeholder mapping, 5+ items, not yet sorted */}
+                  {step.id === "stakeholder-mapping" &&
+                    status === "ready" &&
+                    !hasThemeSorted &&
+                    stickyNotes.filter(
+                      (p) =>
+                        (!p.type || p.type === "stickyNote") && !p.isPreview,
+                    ).length >= 5 &&
+                    messages.some((m) => m.role === "assistant") && (
+                      <div className="mx-auto max-w-sm rounded-xl border border-olive-200 bg-olive-50/60 p-4 text-center dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30">
+                        <p className="text-sm text-muted-foreground mb-3">
+                          You&apos;ve got a solid collection! Want me to
+                          organize them into groups?
+                        </p>
+                        <button
+                          onClick={handleThemeSort}
+                          className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                          Sort cards into themes
+                        </button>
+                      </div>
+                    )}
+
+                  {/* Post-sort instructions */}
+                  {showSortInstructions && (
+                    <div className="mx-auto max-w-sm rounded-xl border border-olive-200 bg-olive-50/60 p-4 dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                      <p className="text-sm font-medium text-foreground mb-2">
+                        Cards sorted into themes!
+                      </p>
+                      <ul className="text-sm text-muted-foreground space-y-1.5">
+                        <li>
+                          Drag items toward the{" "}
+                          <strong className="text-foreground">center</strong> if
+                          they&apos;re more important
+                        </li>
+                        <li>
+                          Drag items{" "}
+                          <strong className="text-foreground">
+                            between groups
+                          </strong>{" "}
+                          to reorganize
+                        </li>
+                        <li>
+                          Double-click any card to{" "}
+                          <strong className="text-foreground">edit</strong> its
+                          label
+                        </li>
+                      </ul>
+                      {/* Show confirm button after sort — use relaxed condition (any items on board) since theme sort signals user is done */}
+                      {stepConfirmLabel &&
+                        !justConfirmed &&
+                        status === "ready" &&
+                        stickyNotes.length > 0 &&
+                        !stepAlreadyConfirmed &&
+                        !isReadOnly && (
+                          <div className="mt-3 pt-3 border-t border-olive-200 dark:border-neutral-olive-700 flex justify-center">
+                            <button
+                              onClick={() => {
+                                if (stepConfirmDisabled) return;
+                                onStepConfirm?.();
+                                if (stepConfirmIsTransition) return;
+                                setJustConfirmed(true);
+                                sendMessage({
+                                  role: "user",
+                                  parts: [
+                                    {
+                                      type: "text",
+                                      text: "[STEP_CONFIRMED] I'm happy with this — wrap it up!",
+                                    },
+                                  ],
+                                });
+                              }}
+                              disabled={stepConfirmDisabled}
+                              className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              {stepConfirmLabel}
+                            </button>
+                          </div>
+                        )}
                     </div>
                   )}
-                  {looksGoodSuggestion ? (
-                    <button
-                      disabled={isLoading}
-                      onClick={async () => {
-                        setSuggestions([]);
-                        setQuickAck(getRandomAck());
-                        await flushCanvasToDb();
-                        sendMessage({
-                          role: 'user',
-                          parts: [{ type: 'text', text: 'Looks good!' }],
-                        });
-                      }}
-                      className={cn(
-                        'cursor-pointer inline-flex items-center gap-2 rounded-full border border-olive-500 bg-olive-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-olive-700 dark:bg-olive-700 dark:border-olive-600 dark:hover:bg-olive-600 transition-colors',
-                        'disabled:cursor-not-allowed disabled:opacity-50'
-                      )}
-                    >
-                      Looks good — Add these stages
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </button>
-                  ) : null}
-                  {nextSuggestion ? (
-                    <button
-                      disabled={isLoading}
-                      onClick={async () => {
-                        setSuggestions([]);
-                        setQuickAck(getRandomAck());
-                        await flushCanvasToDb();
-                        sendMessage({
-                          role: 'user',
-                          parts: [{ type: 'text', text: 'Next' }],
-                        });
-                      }}
-                      className={cn(
-                        'cursor-pointer inline-flex items-center gap-2 rounded-full border border-olive-500 bg-olive-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-olive-700 dark:bg-olive-700 dark:border-olive-600 dark:hover:bg-olive-600 transition-colors',
-                        'disabled:cursor-not-allowed disabled:opacity-50'
-                      )}
-                    >
-                      {nextRowLabel ? `Move on to ${nextRowLabel}` : 'Next'}
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </button>
-                  ) : null}
-                  <p className="text-xs text-muted-foreground pl-1">Use the suggestions above or type your own below.</p>
-                </div>
-              );
-            })()}
 
-            {/* Persistent "Pains & Gains" action button — sense-making Phase 1 → Phase 2 transition */}
-            {step.id === 'sense-making' &&
-             stickyNotes.some(n => ['says', 'thinks', 'feels', 'does'].includes(n.cellAssignment?.row || '')) &&
-             !stickyNotes.some(n => n.cellAssignment?.row === 'pains' || n.cellAssignment?.row === 'gains') && (
-              <div className="flex justify-center pt-2">
-                <button
-                  disabled={isLoading}
-                  onClick={async () => {
-                    setQuickAck(getRandomAck());
-                    await flushCanvasToDb();
-                    sendMessage({
-                      role: 'user',
-                      parts: [{ type: 'text', text: "This looks great, let's move to pains and gains" }],
-                    });
-                  }}
-                  className={cn(
-                    'inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700',
-                    'disabled:cursor-not-allowed disabled:opacity-50'
+                  {/* In-chat accept / edit buttons — hidden when sort instructions card already shows the confirm button, and hidden for read-only participants */}
+                  {showStepConfirm &&
+                    status === "ready" &&
+                    !justConfirmed &&
+                    !(step.id === "persona" && !personasDone) &&
+                    !showSortInstructions &&
+                    !isReadOnly && (
+                      <div className="flex flex-col items-center gap-2 pt-2">
+                        {step.id === "persona" && (
+                          <p className="text-sm text-muted-foreground text-center max-w-xs">
+                            You can edit any field on the persona cards — name,
+                            age, job, insights, narrative, and quote — directly
+                            on the canvas.
+                          </p>
+                        )}
+                        <button
+                          onClick={() => {
+                            if (stepConfirmDisabled) return;
+                            onStepConfirm?.();
+                            if (stepConfirmIsTransition) return; // Sub-step transition — no AI message or revise flow
+                            setJustConfirmed(true);
+                            // Trigger AI congratulatory close by sending a hidden confirm message
+                            sendMessage({
+                              role: "user",
+                              parts: [
+                                {
+                                  type: "text",
+                                  text: "[STEP_CONFIRMED] I'm happy with this — wrap it up!",
+                                },
+                              ],
+                            });
+                          }}
+                          disabled={stepConfirmDisabled}
+                          className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-olive-50 px-4 py-2 text-sm font-medium text-olive-800 transition-colors hover:bg-olive-100 disabled:opacity-50 disabled:cursor-not-allowed dark:border-olive-700 dark:bg-olive-950/30 dark:text-olive-300 dark:hover:bg-olive-900/40"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          {stepConfirmLabel}
+                        </button>
+                      </div>
+                    )}
+                  {justConfirmed && !isReadOnly && (
+                    <div className="flex justify-center pt-2 animate-in fade-in duration-500">
+                      <button
+                        onClick={async () => {
+                          setJustConfirmed(false);
+                          onStepRevise?.();
+                          // Clear existing canvas items so the revised version replaces them
+                          const state = storeApi.getState();
+                          state.setStickyNotes([]);
+                          if (state.personaTemplates.length > 0) {
+                            state.setPersonaTemplates([]);
+                          }
+                          if (state.hmwCards.length > 0) {
+                            state.setHmwCards([]);
+                          }
+                          // Save cleared state directly to DB (bypass stale flushCanvasToDb closure)
+                          await saveCanvasState(workshopId, step.id, {
+                            stickyNotes: [],
+                          });
+                          state.markClean();
+                          setQuickAck(getRandomAck());
+                          sendMessage({
+                            role: "user",
+                            parts: [
+                              {
+                                type: "text",
+                                text: "I'd like to revise and improve the current output. Please suggest a better version.",
+                              },
+                            ],
+                          });
+                        }}
+                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Edit
+                      </button>
+                    </div>
                   )}
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Let&apos;s move on to pains and gains
-                </button>
-              </div>
-            )}
 
-            {/* Real interviews: "I'm ready to compile" button */}
-            {step.id === 'user-research' && interviewMode === 'real' && personaSelectConfirmed && !readyToCompile && status === 'ready' && (
-              <div className="mx-auto max-w-sm rounded-xl border border-olive-200 bg-olive-50/60 p-4 text-center dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <p className="text-sm text-muted-foreground mb-3">
-                  Added your interview insights and grouped them by persona? Let me compile and organize them.
-                </p>
-                <button
-                  disabled={isLoading}
-                  onClick={async () => {
-                    setReadyToCompile(true);
-                    setQuickAck(getRandomAck());
-                    await flushCanvasToDb();
-                    sendMessage({
-                      role: 'user',
-                      parts: [{ type: 'text', text: "[COMPILE_READY] I'm ready for you to compile my research insights." }],
-                    });
-                  }}
-                  className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  I&apos;m ready to compile
-                </button>
-              </div>
-            )}
-
-            {/* Proactive theme sort card — stakeholder mapping, 5+ items, not yet sorted */}
-            {step.id === 'stakeholder-mapping' && status === 'ready' && !hasThemeSorted &&
-             stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview).length >= 5 &&
-             messages.some(m => m.role === 'assistant') && (
-              <div className="mx-auto max-w-sm rounded-xl border border-olive-200 bg-olive-50/60 p-4 text-center dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30">
-                <p className="text-sm text-muted-foreground mb-3">
-                  You&apos;ve got a solid collection! Want me to organize them into groups?
-                </p>
-                <button
-                  onClick={handleThemeSort}
-                  className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Sort cards into themes
-                </button>
-              </div>
-            )}
-
-            {/* Post-sort instructions */}
-            {showSortInstructions && (
-              <div className="mx-auto max-w-sm rounded-xl border border-olive-200 bg-olive-50/60 p-4 dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <p className="text-sm font-medium text-foreground mb-2">Cards sorted into themes!</p>
-                <ul className="text-sm text-muted-foreground space-y-1.5">
-                  <li>Drag items toward the <strong className="text-foreground">center</strong> if they&apos;re more important</li>
-                  <li>Drag items <strong className="text-foreground">between groups</strong> to reorganize</li>
-                  <li>Double-click any card to <strong className="text-foreground">edit</strong> its label</li>
-                </ul>
-                {/* Show confirm button after sort — use relaxed condition (any items on board) since theme sort signals user is done */}
-                {stepConfirmLabel && !justConfirmed && status === 'ready' && stickyNotes.length > 0 && !stepAlreadyConfirmed && !isReadOnly && (
-                  <div className="mt-3 pt-3 border-t border-olive-200 dark:border-neutral-olive-700 flex justify-center">
-                    <button
-                      onClick={() => {
-                        if (stepConfirmDisabled) return;
-                        onStepConfirm?.();
-                        if (stepConfirmIsTransition) return;
-                        setJustConfirmed(true);
-                        sendMessage({
-                          role: 'user',
-                          parts: [{ type: 'text', text: '[STEP_CONFIRMED] I\'m happy with this — wrap it up!' }],
-                        });
-                      }}
-                      disabled={stepConfirmDisabled}
-                      className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
-                      {stepConfirmLabel}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* In-chat accept / edit buttons — hidden when sort instructions card already shows the confirm button, and hidden for read-only participants */}
-            {showStepConfirm && status === 'ready' && !justConfirmed && !(step.id === 'persona' && !personasDone) && !showSortInstructions && !isReadOnly && (
-              <div className="flex flex-col items-center gap-2 pt-2">
-                {step.id === 'persona' && (
-                  <p className="text-sm text-muted-foreground text-center max-w-xs">
-                    You can edit any field on the persona cards — name, age, job, insights, narrative, and quote — directly on the canvas.
-                  </p>
-                )}
-                <button
-                  onClick={() => {
-                    if (stepConfirmDisabled) return;
-                    onStepConfirm?.();
-                    if (stepConfirmIsTransition) return; // Sub-step transition — no AI message or revise flow
-                    setJustConfirmed(true);
-                    // Trigger AI congratulatory close by sending a hidden confirm message
-                    sendMessage({
-                      role: 'user',
-                      parts: [{ type: 'text', text: '[STEP_CONFIRMED] I\'m happy with this — wrap it up!' }],
-                    });
-                  }}
-                  disabled={stepConfirmDisabled}
-                  className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-olive-50 px-4 py-2 text-sm font-medium text-olive-800 transition-colors hover:bg-olive-100 disabled:opacity-50 disabled:cursor-not-allowed dark:border-olive-700 dark:bg-olive-950/30 dark:text-olive-300 dark:hover:bg-olive-900/40"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  {stepConfirmLabel}
-                </button>
-              </div>
-            )}
-            {justConfirmed && !isReadOnly && (
-              <div className="flex justify-center pt-2 animate-in fade-in duration-500">
-                <button
-                  onClick={async () => {
-                    setJustConfirmed(false);
-                    onStepRevise?.();
-                    // Clear existing canvas items so the revised version replaces them
-                    const state = storeApi.getState();
-                    state.setStickyNotes([]);
-                    if (state.personaTemplates.length > 0) {
-                      state.setPersonaTemplates([]);
-                    }
-                    if (state.hmwCards.length > 0) {
-                      state.setHmwCards([]);
-                    }
-                    // Save cleared state directly to DB (bypass stale flushCanvasToDb closure)
-                    await saveCanvasState(workshopId, step.id, { stickyNotes: [] });
-                    state.markClean();
-                    setQuickAck(getRandomAck());
-                    sendMessage({
-                      role: 'user',
-                      parts: [{ type: 'text', text: 'I\'d like to revise and improve the current output. Please suggest a better version.' }],
-                    });
-                  }}
-                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Pencil className="h-3 w-3" />
-                  Edit
-                </button>
-              </div>
-            )}
-
-            {/* Auto-scroll target */}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-        </div>
-        </>
+                  {/* Auto-scroll target */}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
 
@@ -2744,7 +3630,7 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
 
       {/* Input area — hidden for read-only participants in multiplayer mode */}
       {!isReadOnly && (
-        <div className="border-t bg-background p-4">
+        <div className="border-t bg-background/20 p-4">
           <form onSubmit={handleSend} className="flex gap-2">
             <TextareaAutosize
               ref={inputRef}
@@ -2753,13 +3639,17 @@ export function ChatPanel({ stepOrder, sessionId, workshopId, initialMessages, o
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={rateLimitInfo ? 'Waiting for AI to become available...' : 'Type your message...'}
+              placeholder={
+                rateLimitInfo
+                  ? "Waiting for AI to become available..."
+                  : "Type your message..."
+              }
               disabled={isLoading || !!rateLimitInfo}
               className={cn(
-                'flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs outline-none transition-[color,box-shadow]',
-                'placeholder:text-muted-foreground',
-                'disabled:cursor-not-allowed disabled:opacity-50',
-                'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
+                "flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs outline-none transition-[color,box-shadow]",
+                "placeholder:text-muted-foreground",
+                "disabled:cursor-not-allowed disabled:opacity-50",
+                "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
               )}
             />
             <Button

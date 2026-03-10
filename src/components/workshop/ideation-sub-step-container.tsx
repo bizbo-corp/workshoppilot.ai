@@ -10,7 +10,7 @@ import { VotingHud } from './voting-hud';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { fireConfetti } from '@/lib/utils/confetti';
-import { MessageSquare, LayoutGrid, PanelLeftClose, PanelRightClose, GripVertical } from 'lucide-react';
+import { MessageSquare, PanelLeftClose, GripVertical } from 'lucide-react';
 import { Panel as ResizablePanel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { usePanelLayout } from '@/hooks/use-panel-layout';
@@ -47,7 +47,7 @@ export function IdeationSubStepContainer({
   challengeStatement,
   hmwGoals,
 }: IdeationSubStepContainerProps) {
-  const { chatCollapsed, canvasCollapsed, setChatCollapsed, setCanvasCollapsed } = usePanelLayout();
+  const { chatCollapsed, setChatCollapsed } = usePanelLayout();
 
   // Canvas state (hooks must come before state initializers that depend on them)
   const mindMapNodes = useCanvasStore(state => state.mindMapNodes);
@@ -413,19 +413,6 @@ export function IdeationSubStepContainer({
 
     return (
       <div className="relative h-full">
-        {/* Collapse button */}
-        {!isMobile && (
-          <div className="absolute top-2 right-2 z-20">
-            <button
-              onClick={() => setCanvasCollapsed(true)}
-              className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
-              title="Collapse canvas"
-            >
-              <PanelRightClose className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
         {/* Voting HUD — mounted at panel level, outside scroll container */}
         {isVotingActive && votingSession.status !== 'closed' && (
           <VotingHud />
@@ -539,7 +526,7 @@ export function IdeationSubStepContainer({
           )}
 
           {/* Resizable panel group (chat + canvas) */}
-          {!chatCollapsed && !canvasCollapsed && (
+          {!chatCollapsed && (
             <PanelGroup orientation="horizontal" className="flex-1">
               <ResizablePanel defaultSize={480} minSize={280} maxSize="60%">
                 {renderChatPanel()}
@@ -557,28 +544,10 @@ export function IdeationSubStepContainer({
             </PanelGroup>
           )}
 
-          {/* Chat takes full width when canvas collapsed */}
-          {!chatCollapsed && canvasCollapsed && (
-            <div className="flex-1">{renderChatPanel()}</div>
-          )}
-
           {/* Canvas takes full width when chat collapsed */}
-          {chatCollapsed && !canvasCollapsed && (
+          {chatCollapsed && (
             <div className="flex-1 relative">
               {renderCanvas()}
-            </div>
-          )}
-
-          {/* Canvas collapsed strip */}
-          {canvasCollapsed && (
-            <div className="flex w-10 flex-col items-center border-l bg-muted/30 py-4">
-              <button
-                onClick={() => setCanvasCollapsed(false)}
-                className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                title="Expand canvas"
-              >
-                <LayoutGrid className="h-5 w-5" />
-              </button>
             </div>
           )}
         </div>

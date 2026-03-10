@@ -546,6 +546,17 @@
   50%      { transform: translateY(-7px) rotate(var(--note-rotation, 0deg)); }
 }
 
+
+
+
+div[style*="z-index: 9999"] {
+  right: auto !important;
+  left: -40 !important;
+  bottom: -20 !important;
+}
+
+
+
 /* Accessibility — disable light trail animations for reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   .light-trails-svg path {

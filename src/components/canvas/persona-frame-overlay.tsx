@@ -233,7 +233,7 @@ export function PersonaFrameOverlay() {
                 background: colors.headerBg,
                 borderRadius: '10px 10px 0 0',
                 cursor: isDragging ? 'grabbing' : 'grab',
-                zIndex: 36,
+                zIndex: 10,
                 paddingLeft: 8,
                 paddingRight: 8,
                 boxSizing: 'border-box',
@@ -266,7 +266,7 @@ export function PersonaFrameOverlay() {
                 width: EDGE_GRAB,
                 height: sh,
                 cursor: isDragging ? 'grabbing' : 'grab',
-                zIndex: 35,
+                zIndex: 10,
               }}
               onMouseDown={(e) => startDrag(e, frame)}
             />
@@ -279,7 +279,7 @@ export function PersonaFrameOverlay() {
                 width: EDGE_GRAB,
                 height: sh,
                 cursor: isDragging ? 'grabbing' : 'grab',
-                zIndex: 35,
+                zIndex: 10,
               }}
               onMouseDown={(e) => startDrag(e, frame)}
             />
@@ -292,7 +292,7 @@ export function PersonaFrameOverlay() {
                 width: sw + EDGE_GRAB,
                 height: EDGE_GRAB,
                 cursor: isDragging ? 'grabbing' : 'grab',
-                zIndex: 35,
+                zIndex: 10,
               }}
               onMouseDown={(e) => startDrag(e, frame)}
             />

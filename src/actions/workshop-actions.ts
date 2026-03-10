@@ -358,8 +358,14 @@ export async function advanceToNextStep(
       }
     }
 
-    // Mark current step complete
+    // Mark current step complete and next step in_progress BEFORE summary generation.
+    // This order is critical for multiplayer: the facilitator broadcasts STEP_CHANGED
+    // before this server action runs, so participants may navigate to the next step
+    // within ~1 second. If the next step is still "not_started" when they arrive,
+    // sequential enforcement redirects them back. By updating both statuses first,
+    // the DB is ready for participant navigation before the slow summary generation.
     await updateStepStatus(workshopId, currentStepId, 'complete', sessionId);
+    await updateStepStatus(workshopId, nextStepId, 'in_progress', sessionId);
 
     // Generate conversation summary for the completed step
     // Summary generation is synchronous but failure must not block step advance
@@ -394,9 +400,6 @@ export async function advanceToNextStep(
       // Log error but continue with step advance (per Phase 7 decision)
       console.error(`Failed to generate summary for step ${currentStepId}:`, summaryError);
     }
-
-    // Mark next step in_progress
-    await updateStepStatus(workshopId, nextStepId, 'in_progress', sessionId);
 
     // Find next step's order number from STEPS array
     const nextStep = STEPS.find((s) => s.id === nextStepId);

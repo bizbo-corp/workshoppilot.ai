@@ -212,7 +212,7 @@ export function ClusterHullsOverlay({ onSelectCluster, onRenameCluster }: Cluste
                 background: hull.color.headerBg,
                 borderRadius: '10px 10px 0 0',
                 cursor: isDragging ? 'grabbing' : 'grab',
-                zIndex: isEditing ? 50 : 36,
+                zIndex: isEditing ? 15 : 10,
                 paddingLeft: 8,
                 paddingRight: 8,
                 boxSizing: 'border-box',
@@ -278,7 +278,7 @@ export function ClusterHullsOverlay({ onSelectCluster, onRenameCluster }: Cluste
                 width: EDGE_GRAB,
                 height: sh,
                 cursor: isDragging ? 'grabbing' : 'grab',
-                zIndex: 35,
+                zIndex: 10,
               }}
               onMouseDown={(e) => startDrag(e, hull)}
             />
@@ -291,7 +291,7 @@ export function ClusterHullsOverlay({ onSelectCluster, onRenameCluster }: Cluste
                 width: EDGE_GRAB,
                 height: sh,
                 cursor: isDragging ? 'grabbing' : 'grab',
-                zIndex: 35,
+                zIndex: 10,
               }}
               onMouseDown={(e) => startDrag(e, hull)}
             />
@@ -304,7 +304,7 @@ export function ClusterHullsOverlay({ onSelectCluster, onRenameCluster }: Cluste
                 width: sw + EDGE_GRAB,
                 height: EDGE_GRAB,
                 cursor: isDragging ? 'grabbing' : 'grab',
-                zIndex: 35,
+                zIndex: 10,
               }}
               onMouseDown={(e) => startDrag(e, hull)}
             />

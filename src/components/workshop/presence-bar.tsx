@@ -134,7 +134,7 @@ export function PresenceBar() {
   }, [expanded]);
 
   return (
-    <div className="fixed top-3 right-3 z-50 flex flex-col items-end gap-2" ref={containerRef}>
+    <div className="relative flex flex-col items-end gap-2" ref={containerRef}>
       {/* Collapsed: avatar stack — click to expand */}
       <div
         className="flex items-center -space-x-1 cursor-pointer"
@@ -146,7 +146,7 @@ export function PresenceBar() {
           return (
             <div
               key={p.connectionId}
-              className="relative w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ring-2 ring-background"
+              className="relative w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-semibold ring-2 ring-card"
               style={{
                 backgroundColor: p.color,
                 opacity: isIdle ? 0.5 : 1,
@@ -156,7 +156,7 @@ export function PresenceBar() {
               {getInitials(p.name)}
               {/* Idle dot — suppressed when vote completion checkmark takes priority */}
               {isIdle && !isVoteComplete && (
-                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-yellow-400 border-2 border-background" />
+                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-yellow-400 border-2 border-card" />
               )}
               {/* Crown — facilitator badge */}
               {p.role === 'owner' && !isIdle && !isVoteComplete && (
@@ -166,7 +166,7 @@ export function PresenceBar() {
               )}
               {/* Vote completion checkmark — visible to all during open voting */}
               {isVoteComplete && (
-                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-background flex items-center justify-center">
+                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-card flex items-center justify-center">
                   <Check className="w-2 h-2 text-white" />
                 </span>
               )}
@@ -175,9 +175,9 @@ export function PresenceBar() {
         })}
       </div>
 
-      {/* Expanded: full participant list */}
+      {/* Expanded: full participant list — positioned below the toolbar */}
       {expanded && (
-        <div className="bg-card rounded-xl shadow-lg border border-border p-3 min-w-[200px] animate-in fade-in-0 zoom-in-95 duration-150">
+        <div className="absolute top-full right-0 mt-2 bg-card rounded-xl shadow-lg border border-border p-3 min-w-[200px] animate-in fade-in-0 zoom-in-95 duration-150">
           <div className="text-xs font-medium text-muted-foreground mb-2">
             Participants ({allParticipants.length})
           </div>

@@ -1,6 +1,5 @@
 'use client';
 
-import { PanelRightClose } from 'lucide-react';
 import * as React from 'react';
 import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
@@ -12,7 +11,6 @@ interface RightPanelProps {
   sessionId: string;
   workshopId: string;
   workshopType?: 'solo' | 'multiplayer';
-  onCollapse?: () => void;
   canvasGuides?: CanvasGuideData[];
   defaultViewportSettings?: StepCanvasSettingsData | null;
   isAdmin?: boolean;
@@ -31,7 +29,6 @@ export function RightPanel({
   sessionId,
   workshopId,
   workshopType,
-  onCollapse,
   canvasGuides,
   defaultViewportSettings,
   isAdmin,
@@ -48,18 +45,6 @@ export function RightPanel({
 
   return (
     <div className="flex h-full flex-col relative">
-      {/* Collapse button */}
-      {onCollapse && (
-        <div className="absolute top-2 right-2 z-10">
-          <button
-            onClick={onCollapse}
-            className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-colors"
-            title="Collapse canvas"
-          >
-            <PanelRightClose className="h-4 w-4" />
-          </button>
-        </div>
-      )}
       {/* Canvas section - full height */}
       <div className="min-h-0 flex-1">
         <CanvasWrapper

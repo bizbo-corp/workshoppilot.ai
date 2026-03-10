@@ -1,18 +1,33 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useRef, useState } from 'react';
-import { ClientContext, RoomProvider, useSelf, useOthersListener, useLostConnectionListener, useEventListener } from '@liveblocks/react';
-import { LiveMap, LiveObject } from '@liveblocks/client';
-import type { OpaqueClient } from '@liveblocks/core';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-import { getRoomId, liveblocksClient, type CanvasElementStorable } from '@/lib/liveblocks/config';
-import { PresenceBar } from './presence-bar';
-import { CountdownTimer } from './countdown-timer';
-import { SessionEndedOverlay } from './session-ended-overlay';
-import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
-import type { VotingResult } from '@/lib/canvas/voting-types';
-import { computeVotingResults } from '@/lib/canvas/voting-utils';
+import { createContext, useContext, useRef, useState } from "react";
+import {
+  ClientContext,
+  RoomProvider,
+  useSelf,
+  useOthersListener,
+  useLostConnectionListener,
+  useEventListener,
+} from "@liveblocks/react";
+import { LiveMap, LiveObject } from "@liveblocks/client";
+import type { OpaqueClient } from "@liveblocks/core";
+
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  getRoomId,
+  liveblocksClient,
+  type CanvasElementStorable,
+} from "@/lib/liveblocks/config";
+
+import { CountdownTimer } from "./countdown-timer";
+import { SessionEndedOverlay } from "./session-ended-overlay";
+import {
+  useCanvasStore,
+  useCanvasStoreApi,
+} from "@/providers/canvas-store-provider";
+import type { VotingResult } from "@/lib/canvas/voting-types";
+import { computeVotingResults } from "@/lib/canvas/voting-utils";
 
 /**
  * MultiplayerContext — provides participant color, multiplayer flag, and
@@ -42,12 +57,12 @@ export function useMultiplayerContext() {
  */
 function JoinLeaveListener() {
   useOthersListener(({ type, user }) => {
-    if (type === 'enter') {
-      toast(`${user.info?.name ?? 'Someone'} joined`, {
+    if (type === "enter") {
+      toast(`${user.info?.name ?? "Someone"} joined`, {
         duration: 3000,
       });
-    } else if (type === 'leave') {
-      toast(`${user.info?.name ?? 'Someone'} left`, {
+    } else if (type === "leave") {
+      toast(`${user.info?.name ?? "Someone"} left`, {
         duration: 3000,
       });
     }
@@ -71,15 +86,17 @@ function ReconnectionListener() {
   const toastIdRef = useRef<string | number | null>(null);
 
   useLostConnectionListener((event) => {
-    if (event === 'lost') {
-      toastIdRef.current = toast('Reconnecting...', { duration: Infinity });
-    } else if (event === 'restored') {
+    if (event === "lost") {
+      toastIdRef.current = toast("Reconnecting...", { duration: Infinity });
+    } else if (event === "restored") {
       if (toastIdRef.current) toast.dismiss(toastIdRef.current);
-      toast('Reconnected', { duration: 3000 });
+      toast("Reconnected", { duration: 3000 });
       toastIdRef.current = null;
-    } else if (event === 'failed') {
+    } else if (event === "failed") {
       if (toastIdRef.current) toast.dismiss(toastIdRef.current);
-      toast.error('Connection lost. Refresh to rejoin.', { duration: Infinity });
+      toast.error("Connection lost. Refresh to rejoin.", {
+        duration: Infinity,
+      });
       toastIdRef.current = null;
     }
   });
@@ -102,7 +119,7 @@ function StepChangedListener({ sessionId }: { sessionId: string }) {
   const { isFacilitator } = useMultiplayerContext();
 
   useEventListener(({ event }) => {
-    if (event.type === 'STEP_CHANGED' && !isFacilitator) {
+    if (event.type === "STEP_CHANGED" && !isFacilitator) {
       toast(`Moving to Step ${event.stepOrder}: ${event.stepName}`, {
         duration: 3000,
       });
@@ -123,11 +140,17 @@ function StepChangedListener({ sessionId }: { sessionId: string }) {
  * The facilitator never sees this — they redirect immediately after broadcasting.
  * Participants see the overlay and can click "Return to Dashboard".
  */
-function SessionEndedListener({ sessionId, workshopId }: { sessionId: string; workshopId: string }) {
+function SessionEndedListener({
+  sessionId,
+  workshopId,
+}: {
+  sessionId: string;
+  workshopId: string;
+}) {
   const [sessionEnded, setSessionEnded] = useState(false);
 
   useEventListener(({ event }) => {
-    if (event.type === 'SESSION_ENDED') {
+    if (event.type === "SESSION_ENDED") {
       setSessionEnded(true);
     }
   });
@@ -154,13 +177,16 @@ function VotingEventListener() {
   const storeApi = useCanvasStoreApi();
 
   useEventListener(({ event }) => {
-    if (event.type === 'VOTING_OPENED') {
+    if (event.type === "VOTING_OPENED") {
       openVoting(event.voteBudget);
     }
-    if (event.type === 'VOTING_CLOSED') {
+    if (event.type === "VOTING_CLOSED") {
       // Read fresh state at call time — avoids stale closure (Pitfall 2)
       const { dotVotes, crazy8sSlots } = storeApi.getState();
-      const results: VotingResult[] = computeVotingResults(dotVotes, crazy8sSlots);
+      const results: VotingResult[] = computeVotingResults(
+        dotVotes,
+        crazy8sSlots,
+      );
       closeVoting();
       setVotingResults(results);
     }
@@ -177,17 +203,24 @@ function VotingEventListener() {
  * (renderless), SessionEndedListener (renderless/overlay), VotingEventListener
  * (renderless), and CountdownTimer.
  */
-function MultiplayerRoomInner({ children, sessionId, workshopId }: { children: React.ReactNode; sessionId: string; workshopId: string }) {
+function MultiplayerRoomInner({
+  children,
+  sessionId,
+  workshopId,
+}: {
+  children: React.ReactNode;
+  sessionId: string;
+  workshopId: string;
+}) {
   const self = useSelf();
   return (
     <MultiplayerContext.Provider
       value={{
         participantColor: self?.info?.color ?? null,
         isMultiplayer: true,
-        isFacilitator: self?.info?.role === 'owner',
+        isFacilitator: self?.info?.role === "owner",
       }}
     >
-      <PresenceBar />
       <JoinLeaveListener />
       <ReconnectionListener />
       <StepChangedListener sessionId={sessionId} />
@@ -215,22 +248,30 @@ interface MultiplayerRoomProps {
  *
  * initialPresence must include all Presence fields declared in config.ts.
  */
-export default function MultiplayerRoom({ workshopId, sessionId, children }: MultiplayerRoomProps) {
+export default function MultiplayerRoom({
+  workshopId,
+  sessionId,
+  children,
+}: MultiplayerRoomProps) {
   return (
-    <ClientContext.Provider value={liveblocksClient as unknown as OpaqueClient}>
+    <ClientContext.Provider
+      value={liveblocksClient as unknown as OpaqueClient}
+    >
       <RoomProvider
         id={getRoomId(workshopId)}
         initialPresence={{
           cursor: null,
-          color: '#6366f1',
-          displayName: '',
+          color: "#6366f1",
+          displayName: "",
           editingDrawingNodeId: null,
         }}
         initialStorage={{
           elements: new LiveMap<string, LiveObject<CanvasElementStorable>>(),
         }}
       >
-        <MultiplayerRoomInner sessionId={sessionId} workshopId={workshopId}>{children}</MultiplayerRoomInner>
+        <MultiplayerRoomInner sessionId={sessionId} workshopId={workshopId}>
+          {children}
+        </MultiplayerRoomInner>
       </RoomProvider>
     </ClientContext.Provider>
   );
