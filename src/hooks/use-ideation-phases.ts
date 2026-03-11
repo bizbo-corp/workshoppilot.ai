@@ -349,21 +349,28 @@ export function useIdeationPhases({
     state.openVoting();
   }, [canvasStoreApi]);
 
-  // Compute owner IDs, names, and colors from mind map nodes + ideationOwners
+  // Compute owner IDs, names, and colors from ideationOwners (canonical order)
+  // + mind map nodes (for any late-joined owners not in ideationOwners).
+  // ideationOwners order puts the facilitator first (leftmost in "All" view).
   const { ownerIdsList, ownerNamesMap, ownerColorsMap } = React.useMemo(() => {
     const ids: string[] = [];
     const names: Record<string, string> = {};
     const colors: Record<string, string> = {};
+    // Start with ideationOwners order (facilitator first, then participants)
+    if (ideationOwners) {
+      for (const o of ideationOwners) {
+        if (!ids.includes(o.ownerId)) {
+          ids.push(o.ownerId);
+          names[o.ownerId] = o.ownerName;
+          if (o.ownerColor) colors[o.ownerId] = o.ownerColor;
+        }
+      }
+    }
+    // Add any additional owners found in mind map nodes (late joiners)
     for (const n of mindMapNodes) {
       if (n.ownerId && n.isRoot && !ids.includes(n.ownerId)) {
         ids.push(n.ownerId);
         if (n.ownerName) names[n.ownerId] = n.ownerName;
-      }
-    }
-    // Map ownerColors from ideationOwners array
-    if (ideationOwners) {
-      for (const o of ideationOwners) {
-        if (o.ownerColor) colors[o.ownerId] = o.ownerColor;
       }
     }
     return { ownerIdsList: ids, ownerNamesMap: names, ownerColorsMap: colors };

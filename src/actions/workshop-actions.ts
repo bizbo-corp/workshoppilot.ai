@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db/client';
-import { workshops, sessions, workshopSteps, chatMessages, stepArtifacts, stepSummaries, users, workshopSessions } from '@/db/schema';
+import { workshops, sessions, workshopSteps, chatMessages, stepArtifacts, stepSummaries, users, workshopSessions, sessionParticipants } from '@/db/schema';
 import { randomBytes } from 'crypto';
 import { eq, and, isNull, inArray, sql, gt } from 'drizzle-orm';
 import { PAYWALL_CUTOFF_DATE } from '@/lib/billing/paywall-config';
@@ -12,9 +12,12 @@ import { createPrefixedId } from '@/lib/ids';
 import { STEPS, getStepById } from '@/lib/workshop/step-metadata';
 import { generateStepSummary } from '@/lib/context/generate-summary';
 import { getNextWorkshopColor, WORKSHOP_COLORS } from '@/lib/workshop/workshop-appearance';
+import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
 import { deleteBlobUrls } from '@/lib/blob/delete-blob-urls';
 import { extractBlobUrlsFromArtifact } from '@/lib/blob/extract-urls';
 import { dbWithRetry } from '@/db/with-retry';
+import { unwrapLiveblocksStorage } from '@/lib/liveblocks/unwrap-storage';
+import { getRoomId } from '@/lib/liveblocks/config';
 
 /**
  * Get user ID from Clerk auth.
@@ -106,16 +109,35 @@ export async function createWorkshopSession(formData?: FormData) {
     await db.insert(workshopSteps).values(stepRecords);
 
     // 4. If multiplayer: create workshopSessions record (Liveblocks room registration + share token)
+    //    Also create the owner's sessionParticipants record so the facilitator
+    //    appears as a participant in ideation step (self-serving workshops).
     if (workshopType === 'multiplayer') {
       const { getRoomId } = await import('@/lib/liveblocks/config');
       // Generate 24-character URL-safe token using Node.js crypto (available in Next.js server actions)
       const shareToken = randomBytes(18).toString('base64url');
-      await db.insert(workshopSessions).values({
+      const [workshopSession] = await db.insert(workshopSessions).values({
         workshopId: workshop.id,
         liveblocksRoomId: getRoomId(workshop.id),
         shareToken,
         status: 'waiting',
         maxParticipants: 15,
+      }).returning();
+
+      // Create owner participant record — facilitator gets first color (indigo)
+      const ownerUser = userId
+        ? await db.query.users.findFirst({ where: eq(users.clerkUserId, userId) })
+        : null;
+      const ownerDisplayName = ownerUser
+        ? [ownerUser.firstName, ownerUser.lastName].filter(Boolean).join(' ') || 'Facilitator'
+        : 'Facilitator';
+      await db.insert(sessionParticipants).values({
+        sessionId: workshopSession.id,
+        clerkUserId: userId,
+        liveblocksUserId: userId || clerkUserId,
+        displayName: ownerDisplayName,
+        color: PARTICIPANT_COLORS[0],
+        role: 'owner',
+        status: 'active',
       });
     }
 
@@ -311,23 +333,23 @@ export async function advanceToNextStep(
     // server action directly (e.g., via browser devtools on a multiplayer workshop
     // they don't own).
     const authUserId = await getUserId();
-    if (authUserId) {
-      const [ownerCheck] = await db
-        .select({ id: workshops.id, workshopType: workshops.workshopType })
+    // Fetch workshop type once — needed for multiplayer guard AND canvas extraction.
+    const [workshopTypeCheck] = await db
+      .select({ id: workshops.id, workshopType: workshops.workshopType })
+      .from(workshops)
+      .where(eq(workshops.id, workshopId))
+      .limit(1);
+    const isMultiplayer = workshopTypeCheck?.workshopType === 'multiplayer';
+
+    if (authUserId && isMultiplayer) {
+      const [isOwner] = await db
+        .select({ id: workshops.id })
         .from(workshops)
-        .where(eq(workshops.id, workshopId))
+        .where(and(eq(workshops.id, workshopId), eq(workshops.clerkUserId, authUserId)))
         .limit(1);
 
-      if (ownerCheck?.workshopType === 'multiplayer') {
-        const [isOwner] = await db
-          .select({ id: workshops.id })
-          .from(workshops)
-          .where(and(eq(workshops.id, workshopId), eq(workshops.clerkUserId, authUserId)))
-          .limit(1);
-
-        if (!isOwner) {
-          throw new Error('Access denied: only the facilitator can advance steps');
-        }
+      if (!isOwner) {
+        throw new Error('Access denied: only the facilitator can advance steps');
       }
     }
 
@@ -376,6 +398,16 @@ export async function advanceToNextStep(
     // the DB is ready for participant navigation before the slow summary generation.
     await updateStepStatus(workshopId, currentStepId, 'complete', sessionId);
     await updateStepStatus(workshopId, nextStepId, 'in_progress', sessionId);
+
+    // Extract structured data from canvas on step completion.
+    // For multiplayer: fetches latest from Liveblocks REST API (source of truth).
+    // For solo: reads from auto-saved _canvas in the artifact.
+    // Failure here must not block step advancement.
+    try {
+      await extractCanvasArtifactsOnCompletion(workshopId, currentStepId, isMultiplayer);
+    } catch (extractErr) {
+      console.error(`Failed to extract canvas artifacts for step ${currentStepId}:`, extractErr);
+    }
 
     // Generate conversation summary for the completed step
     // Summary generation is synchronous but failure must not block step advance
@@ -428,6 +460,147 @@ export async function advanceToNextStep(
   // Using router.push() after a server action with revalidatePath doesn't work
   // because the revalidation interferes with client-side navigation.
   redirect(`/workshop/${sessionId}/step/${nextStepOrder}`);
+}
+
+/**
+ * Extract structured artifact fields from canvas data when a step completes.
+ *
+ * For multiplayer: fetches the per-step Liveblocks Storage via REST API
+ * (the source of truth), unwraps the CRDT format, and extracts fields.
+ * For solo: reads from the existing _canvas in the artifact (saved by auto-save).
+ *
+ * Currently extracts:
+ * - Challenge step: hmwStatement from sticky notes (templateKey: 'challenge-statement')
+ * - Reframe step: hmwStatements from HMW cards (fullStatement + 4-part fields + ownerId)
+ *
+ * Extracted fields are merged into the existing artifact (preserving _canvas).
+ */
+async function extractCanvasArtifactsOnCompletion(
+  workshopId: string,
+  stepId: string,
+  isMultiplayer: boolean,
+): Promise<void> {
+  // Only these steps need canvas extraction
+  const EXTRACTABLE_STEPS = ['challenge', 'reframe'];
+  if (!EXTRACTABLE_STEPS.includes(stepId)) return;
+
+  // Find the workshopStep record
+  const [wsRecord] = await db
+    .select({ id: workshopSteps.id })
+    .from(workshopSteps)
+    .where(and(eq(workshopSteps.workshopId, workshopId), eq(workshopSteps.stepId, stepId)))
+    .limit(1);
+  if (!wsRecord) return;
+
+  // Get canvas data — either from Liveblocks REST API (multiplayer) or existing artifact (solo)
+  let canvasData: Record<string, unknown> | null = null;
+
+  if (isMultiplayer) {
+    // Fetch latest storage from Liveblocks REST API — always fresh
+    const liveblocksRoomId = `${getRoomId(workshopId)}-step-${stepId}`;
+    try {
+      const res = await fetch(
+        `https://api.liveblocks.io/v2/rooms/${encodeURIComponent(liveblocksRoomId)}/storage`,
+        { headers: { Authorization: `Bearer ${process.env.LIVEBLOCKS_SECRET_KEY}` } }
+      );
+      if (res.ok) {
+        const raw = await res.json();
+        canvasData = unwrapLiveblocksStorage(raw) as Record<string, unknown>;
+      } else {
+        console.warn(`extractCanvasArtifacts: Liveblocks fetch failed for room=${liveblocksRoomId} status=${res.status}`);
+      }
+    } catch (err) {
+      console.warn('extractCanvasArtifacts: Liveblocks fetch error:', err);
+    }
+  }
+
+  // Fallback or solo: read from existing artifact _canvas
+  if (!canvasData) {
+    const [artifactRecord] = await db
+      .select({ artifact: stepArtifacts.artifact })
+      .from(stepArtifacts)
+      .where(eq(stepArtifacts.workshopStepId, wsRecord.id))
+      .limit(1);
+    if (artifactRecord?.artifact) {
+      const existing = artifactRecord.artifact as Record<string, unknown>;
+      if (existing._canvas && typeof existing._canvas === 'object') {
+        canvasData = existing._canvas as Record<string, unknown>;
+      }
+    }
+  }
+
+  if (!canvasData) return;
+
+  // Extract structured fields based on step type
+  const structuredFields: Record<string, unknown> = {};
+
+  if (stepId === 'challenge') {
+    // Extract hmwStatement from the challenge-statement sticky note
+    const stickyNotes = canvasData.stickyNotes as Array<{ templateKey?: string; text?: string }> | undefined;
+    if (stickyNotes) {
+      const hmwNote = stickyNotes.find((n) => n.templateKey === 'challenge-statement' && n.text);
+      if (hmwNote?.text) {
+        structuredFields.hmwStatement = hmwNote.text;
+      }
+    }
+  }
+
+  if (stepId === 'reframe') {
+    // Extract hmwStatements from HMW cards
+    type HmwCard = {
+      fullStatement?: string; givenThat?: string; persona?: string;
+      immediateGoal?: string; deeperGoal?: string; cardIndex?: number;
+      ownerId?: string; ownerName?: string;
+    };
+    const hmwCards = canvasData.hmwCards as HmwCard[] | undefined;
+    if (hmwCards && hmwCards.length > 0) {
+      const statements = hmwCards
+        .filter((c) => c.fullStatement || (c.givenThat && c.persona && c.immediateGoal && c.deeperGoal))
+        .sort((a, b) => (a.cardIndex ?? 0) - (b.cardIndex ?? 0))
+        .map((c) => ({
+          givenThat: c.givenThat || '',
+          persona: c.persona || '',
+          immediateGoal: c.immediateGoal || '',
+          deeperGoal: c.deeperGoal || '',
+          fullStatement: c.fullStatement ||
+            `Given that ${c.givenThat}, how might we help ${c.persona} to ${c.immediateGoal} so they can ${c.deeperGoal}?`,
+          ownerId: c.ownerId,
+          ownerName: c.ownerName,
+        }));
+      if (statements.length > 0) {
+        structuredFields.hmwStatements = statements;
+      }
+    }
+  }
+
+  if (Object.keys(structuredFields).length === 0) return;
+
+  // Merge structured fields into existing artifact (preserving _canvas and other keys)
+  const [existingArt] = await db
+    .select({ id: stepArtifacts.id, artifact: stepArtifacts.artifact, version: stepArtifacts.version })
+    .from(stepArtifacts)
+    .where(eq(stepArtifacts.workshopStepId, wsRecord.id))
+    .limit(1);
+
+  if (existingArt) {
+    const existing = (existingArt.artifact || {}) as Record<string, unknown>;
+    const merged = { ...existing, ...structuredFields };
+    await db
+      .update(stepArtifacts)
+      .set({ artifact: merged, version: existingArt.version + 1, extractedAt: new Date() })
+      .where(eq(stepArtifacts.id, existingArt.id));
+  } else {
+    // No artifact yet — create one with just the structured fields
+    await db.insert(stepArtifacts).values({
+      workshopStepId: wsRecord.id,
+      stepId,
+      artifact: structuredFields,
+      schemaVersion: '1.0',
+      version: 1,
+    });
+  }
+
+  console.log(`extractCanvasArtifacts: saved ${Object.keys(structuredFields).join(', ')} for step=${stepId}`);
 }
 
 /**

@@ -27,11 +27,19 @@ Improve the UX of the chat window when it's in collapsed mode.
 
 ## Journey Mapping
 
-Need to see persona during journey map
-
 ## Reframing Challenge
 
 ## Ideation
+
+I need the facilitator to be able to remove participants from a workshop. 
+
+
+
+
+
+
+
+
 
 ## Concept Development
 

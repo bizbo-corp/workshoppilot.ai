@@ -198,12 +198,33 @@ function VotingEventListener() {
 }
 
 /**
+ * ParticipantRemovedListener — renderless component that listens for
+ * PARTICIPANT_REMOVED broadcast events. When the current user's participantId
+ * matches, shows a toast and redirects to the home page.
+ */
+function ParticipantRemovedListener() {
+  const router = useRouter();
+  const { participantId } = useMultiplayerContext();
+
+  useEventListener(({ event }) => {
+    if (event.type === 'PARTICIPANT_REMOVED' && participantId && event.participantId === participantId) {
+      toast.error('You have been removed from this session', { duration: 5000 });
+      setTimeout(() => {
+        router.push('/');
+      }, 1500);
+    }
+  });
+
+  return null;
+}
+
+/**
  * MultiplayerRoomInner — rendered inside RoomProvider, reads the current
  * participant's color and role from Liveblocks presence and provides them
  * via context. Also renders PresenceBar (fixed overlay), JoinLeaveListener
  * (renderless), ReconnectionListener (renderless), StepChangedListener
  * (renderless), SessionEndedListener (renderless/overlay), VotingEventListener
- * (renderless), and CountdownTimer.
+ * (renderless), ParticipantRemovedListener (renderless), and CountdownTimer.
  */
 function MultiplayerRoomInner({
   children,
@@ -230,6 +251,7 @@ function MultiplayerRoomInner({
       <StepChangedListener sessionId={sessionId} />
       <SessionEndedListener sessionId={sessionId} workshopId={workshopId} />
       <VotingEventListener />
+      <ParticipantRemovedListener />
       <CountdownTimer />
       {children}
     </MultiplayerContext.Provider>

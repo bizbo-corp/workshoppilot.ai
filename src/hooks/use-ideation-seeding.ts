@@ -11,6 +11,7 @@ export interface IdeationOwner {
   ownerName: string;
   ownerColor: string;
   hmwBranchLabel: string;
+  hmwFullStatement?: string; // Full HMW from step 7 — undefined if participant has none
 }
 
 interface UseIdeationSeedingOptions {
@@ -119,7 +120,6 @@ function seedOwner(
   const state = storeApi.getState();
   const rootLabel = challengeStatement || hmwStatement || 'How might we...?';
   const rootId = `${owner.ownerId}-root`;
-  const hmwNodeId = `hmw-${owner.ownerId}-0`;
   // Each participant gets a unique theme color based on their index
   const themeColor = THEME_COLORS[ownerIndex % THEME_COLORS.length];
 
@@ -136,30 +136,36 @@ function seedOwner(
     ownerName: owner.ownerName,
   };
 
-  const hmwNode: MindMapNodeState = {
-    id: hmwNodeId,
-    label: owner.hmwBranchLabel,
-    themeColorId: themeColor.id,
-    themeColor: themeColor.color,
-    themeBgColor: themeColor.bgColor,
-    isRoot: false,
-    level: 1,
-    parentId: rootId,
-    position: { x: 0, y: 160 },
-    ownerId: owner.ownerId,
-    ownerName: owner.ownerName,
-  };
-
-  const edge: MindMapEdgeState = {
-    id: `${rootId}-${hmwNodeId}`,
-    source: rootId,
-    target: hmwNodeId,
-    themeColor: themeColor.color,
-    ownerId: owner.ownerId,
-  };
-
   state.addMindMapNode(rootNode);
-  state.addMindMapNode(hmwNode, edge);
+
+  // Only add the HMW child node if this participant has a reframed HMW statement.
+  // If no HMW exists, the root (challenge statement) stands alone.
+  if (owner.hmwFullStatement) {
+    const hmwNodeId = `hmw-${owner.ownerId}-0`;
+    const hmwNode: MindMapNodeState = {
+      id: hmwNodeId,
+      label: owner.hmwFullStatement,
+      themeColorId: themeColor.id,
+      themeColor: themeColor.color,
+      themeBgColor: themeColor.bgColor,
+      isRoot: false,
+      level: 1,
+      parentId: rootId,
+      position: { x: 0, y: 160 },
+      ownerId: owner.ownerId,
+      ownerName: owner.ownerName,
+    };
+
+    const edge: MindMapEdgeState = {
+      id: `${rootId}-${hmwNodeId}`,
+      source: rootId,
+      target: hmwNodeId,
+      themeColor: themeColor.color,
+      ownerId: owner.ownerId,
+    };
+
+    state.addMindMapNode(hmwNode, edge);
+  }
 
   // Add 8 crazy 8s slots
   const existingSlots = storeApi.getState().crazy8sSlots;

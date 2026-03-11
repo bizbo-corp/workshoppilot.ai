@@ -1,9 +1,10 @@
 'use client';
 
-import { useRef, useState, useEffect, useMemo } from 'react';
-import { useOthers, useSelf, useOthersListener } from '@liveblocks/react';
+import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import { useOthers, useSelf, useOthersListener, useBroadcastEvent } from '@liveblocks/react';
 import { shallow } from '@liveblocks/react';
-import { Crown, Check } from 'lucide-react';
+import { Crown, Check, Link2, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 
 const IDLE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
@@ -18,19 +19,16 @@ function useIdleStatus(): Set<number> {
 
   useOthersListener(({ type, user }) => {
     if (type === 'enter') {
-      // Treat new/reconnected users as freshly active
       lastSeenRef.current.set(user.connectionId, Date.now());
     } else if (type === 'leave') {
       lastSeenRef.current.delete(user.connectionId);
     } else if (type === 'update') {
-      // Any cursor movement counts as activity
       if (user.presence?.cursor !== null && user.presence?.cursor !== undefined) {
         lastSeenRef.current.set(user.connectionId, Date.now());
       }
     }
   });
 
-  // Re-evaluate idle status every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -61,43 +59,61 @@ function getInitials(name: string): string {
   );
 }
 
+interface PresenceBarProps {
+  shareToken?: string | null;
+  workshopSessionId?: string | null;
+  workshopId?: string;
+  isFacilitator?: boolean;
+}
+
 /**
  * PresenceBar — fixed top-right avatar stack showing all connected participants.
  *
  * - Collapsed: overlapping colored circles with initials
- * - Expanded: full list with name, online/idle dot, and crown for the facilitator
- * - Idle participants (no cursor activity for 2+ min) shown semi-transparent with a yellow dot
- * - During open voting: green checkmark badge on avatars of participants who have placed all votes
- *   Checkmarks disappear dynamically if a participant retracts a vote below their budget
+ * - Expanded: full participant management dropdown with:
+ *   - Share link copy button (facilitator only)
+ *   - Participant list with online/idle status
+ *   - Remove button per participant (facilitator only)
+ *   - Crown badge for facilitator
+ *   - Vote completion checkmarks during open voting
  *
  * Must be rendered inside the Liveblocks RoomProvider tree.
  */
-export function PresenceBar() {
+export function PresenceBar({
+  shareToken,
+  workshopSessionId,
+  workshopId,
+  isFacilitator,
+}: PresenceBarProps) {
   const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null); // participantId pending confirmation
+  const [removeLoading, setRemoveLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const idleIds = useIdleStatus();
+  const broadcast = useBroadcastEvent();
 
   const others = useOthers(
     (others) =>
       others.map((o) => ({
         connectionId: o.connectionId,
-        id: o.id,  // Liveblocks userId — matches DotVote.voterId
+        id: o.id,
         name: o.info?.name ?? 'Unknown',
         color: o.info?.color ?? '#6366f1',
         role: o.info?.role ?? 'participant',
+        participantId: o.info?.participantId ?? null,
       })),
     shallow,
   );
 
   const self = useSelf((me) => ({
-    id: me.id,  // Liveblocks userId — matches DotVote.voterId
+    id: me.id,
     name: me.info?.name ?? 'You',
     color: me.info?.color ?? '#6366f1',
     role: me.info?.role ?? 'participant',
+    participantId: me.info?.participantId ?? null,
   }));
 
-  // Voting state from canvas store — safe here (PresenceBar only renders inside MultiplayerRoomInner
-  // which is inside CanvasStoreProvider)
   const dotVotes = useCanvasStore((s) => s.dotVotes);
   const votingSession = useCanvasStore((s) => s.votingSession);
 
@@ -105,8 +121,6 @@ export function PresenceBar() {
     ? [{ ...self, connectionId: -1, isSelf: true }, ...others.map((o) => ({ ...o, isSelf: false }))]
     : others.map((o) => ({ ...o, isSelf: false }));
 
-  // Derive the set of voter IDs who have placed all their votes (budget exhausted)
-  // Only meaningful during open voting — empty set otherwise
   const completedVoterIds = useMemo(() => {
     if (votingSession.status !== 'open') return new Set<string>();
     const countByVoter = new Map<string, number>();
@@ -125,6 +139,7 @@ export function PresenceBar() {
     function handleMouseDown(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setExpanded(false);
+        setRemovingId(null);
       }
     }
     if (expanded) {
@@ -132,6 +147,42 @@ export function PresenceBar() {
     }
     return () => document.removeEventListener('mousedown', handleMouseDown);
   }, [expanded]);
+
+  const handleCopyLink = useCallback(async () => {
+    if (!shareToken) return;
+    const url = `${window.location.origin}/join/${shareToken}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Failed to copy link');
+    }
+  }, [shareToken]);
+
+  const handleRemoveParticipant = useCallback(async (participantId: string) => {
+    if (!workshopId) return;
+    setRemoveLoading(true);
+    try {
+      const res = await fetch('/api/remove-participant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantId, workshopId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to remove participant');
+      }
+      // Broadcast removal so the participant gets kicked in real-time
+      broadcast({ type: 'PARTICIPANT_REMOVED', participantId });
+      toast('Participant removed', { duration: 3000 });
+      setRemovingId(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove participant');
+    } finally {
+      setRemoveLoading(false);
+    }
+  }, [workshopId, broadcast]);
 
   return (
     <div className="relative flex flex-col items-end gap-2" ref={containerRef}>
@@ -154,17 +205,14 @@ export function PresenceBar() {
               title={p.isSelf ? `${p.name} (you) — Facilitator` : p.role === 'owner' ? `${p.name} — Facilitator` : p.name}
             >
               {getInitials(p.name)}
-              {/* Idle dot — suppressed when vote completion checkmark takes priority */}
               {isIdle && !isVoteComplete && (
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-yellow-400 border-2 border-card" />
               )}
-              {/* Crown — facilitator badge */}
               {p.role === 'owner' && !isIdle && !isVoteComplete && (
                 <span className="absolute -top-1 -left-1 w-3.5 h-3.5">
                   <Crown className="w-3.5 h-3.5 text-amber-500 drop-shadow-sm" />
                 </span>
               )}
-              {/* Vote completion checkmark — visible to all during open voting */}
               {isVoteComplete && (
                 <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-card flex items-center justify-center">
                   <Check className="w-2 h-2 text-white" />
@@ -175,15 +223,34 @@ export function PresenceBar() {
         })}
       </div>
 
-      {/* Expanded: full participant list — positioned below the toolbar */}
+      {/* Expanded: participant management dropdown */}
       {expanded && (
-        <div className="absolute top-full right-0 mt-2 bg-card rounded-xl shadow-lg border border-border p-3 min-w-[200px] animate-in fade-in-0 zoom-in-95 duration-150">
+        <div className="absolute top-full right-0 mt-2 bg-card rounded-xl shadow-lg border border-border p-3 min-w-[240px] max-w-[300px] animate-in fade-in-0 zoom-in-95 duration-150 z-50">
           <div className="text-xs font-medium text-muted-foreground mb-2">
             Participants ({allParticipants.length})
           </div>
+
+          {/* Share link — facilitator only */}
+          {isFacilitator && shareToken && (
+            <button
+              onClick={handleCopyLink}
+              className="flex items-center gap-2 w-full px-2 py-1.5 mb-2 rounded-lg text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors border border-dashed border-border"
+            >
+              <Link2 className="w-3.5 h-3.5 shrink-0" />
+              <span className="flex-1 text-left truncate">Invite Link</span>
+              <span className="text-[10px] font-medium shrink-0">
+                {copied ? 'Copied!' : 'Copy'}
+              </span>
+            </button>
+          )}
+
+          {/* Participant list */}
           {allParticipants.map((p) => {
             const isIdle = !p.isSelf && idleIds.has(p.connectionId);
             const isVoteComplete = votingSession.status === 'open' && !!p.id && completedVoterIds.has(p.id);
+            const canRemove = isFacilitator && !p.isSelf && p.role !== 'owner' && p.participantId;
+            const isConfirming = removingId === p.participantId;
+
             return (
               <div key={p.connectionId} className="flex items-center gap-2 py-1.5">
                 <div
@@ -199,7 +266,6 @@ export function PresenceBar() {
                   )}
                 </span>
                 {p.role === 'owner' && <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
-                {/* Vote completion indicator in expanded view */}
                 {isVoteComplete && (
                   <span className="flex items-center gap-0.5 text-[10px] text-green-600 font-medium shrink-0">
                     <Check className="w-3 h-3" />
@@ -211,6 +277,34 @@ export function PresenceBar() {
                     isIdle ? 'bg-yellow-400' : 'bg-green-500'
                   }`}
                 />
+                {/* Remove button — facilitator only, not on owner */}
+                {canRemove && !isConfirming && (
+                  <button
+                    onClick={() => setRemovingId(p.participantId)}
+                    className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                    title={`Remove ${p.name}`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {/* Inline confirmation */}
+                {canRemove && isConfirming && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleRemoveParticipant(p.participantId!)}
+                      disabled={removeLoading}
+                      className="text-[10px] font-medium text-destructive hover:text-destructive/80 disabled:opacity-50"
+                    >
+                      {removeLoading ? '...' : 'Remove?'}
+                    </button>
+                    <button
+                      onClick={() => setRemovingId(null)}
+                      className="text-[10px] text-muted-foreground hover:text-foreground"
+                    >
+                      No
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}

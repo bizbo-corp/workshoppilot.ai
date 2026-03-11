@@ -279,20 +279,26 @@ function MindMapCanvasInner({
     setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
   }, [mindMapNodes, hmwGoals, addMindMapNode, fitView, currentOwnerId]);
 
-  // Update root node label to use challenge statement (handles existing canvases)
+  // Update root node labels to use challenge statement (handles existing canvases + multiplayer)
   const rootLabelUpdated = useRef(false);
   useEffect(() => {
     if (rootLabelUpdated.current) return;
     if (!challengeStatement) return;
-    if (mindMapNodes.length === 0) return;
-    const rootNode = mindMapNodes.find((n) => n.isRoot);
-    if (!rootNode) return;
-    // Update if root still has placeholder or full HMW text (not the challenge statement)
-    if (rootNode.label !== challengeStatement) {
-      updateMindMapNode(rootNode.id, { label: challengeStatement });
+    if (allMindMapNodes.length === 0) return;
+    // Update ALL root nodes (each owner has one in multiplayer)
+    const rootNodes = allMindMapNodes.filter((n) => n.isRoot);
+    if (rootNodes.length === 0) return;
+    let anyUpdated = false;
+    for (const rootNode of rootNodes) {
+      if (rootNode.label !== challengeStatement) {
+        updateMindMapNode(rootNode.id, { label: challengeStatement });
+        anyUpdated = true;
+      }
     }
-    rootLabelUpdated.current = true;
-  }, [challengeStatement, mindMapNodes, updateMindMapNode]);
+    if (anyUpdated || rootNodes.every((n) => n.label === challengeStatement)) {
+      rootLabelUpdated.current = true;
+    }
+  }, [challengeStatement, allMindMapNodes, updateMindMapNode]);
 
   // Callback: Update node label
   const handleLabelChange = useCallback(

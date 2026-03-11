@@ -120,6 +120,7 @@ declare global {
       | { type: 'TIMER_UPDATE'; state: 'running' | 'paused' | 'expired' | 'cancelled'; remainingMs: number; totalMs: number }
       | { type: 'SESSION_ENDED' }
       | { type: 'VOTING_OPENED'; voteBudget: number }
-      | { type: 'VOTING_CLOSED' };
+      | { type: 'VOTING_CLOSED' }
+      | { type: 'PARTICIPANT_REMOVED'; participantId: string };
   }
 }

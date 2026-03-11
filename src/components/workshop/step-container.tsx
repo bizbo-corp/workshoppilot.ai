@@ -198,7 +198,9 @@ interface StepContainerProps {
   participantId?: string | null;
   participantDisplayName?: string | null;
   participantColor?: string | null;
-  ideationOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string; hmwBranchLabel: string }>;
+  ideationOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string; hmwBranchLabel: string; hmwFullStatement?: string }>;
+  shareToken?: string | null;
+  workshopSessionId?: string | null;
 }
 
 export function StepContainer({
@@ -222,6 +224,8 @@ export function StepContainer({
   participantDisplayName,
   participantColor,
   ideationOwners,
+  shareToken,
+  workshopSessionId,
 }: StepContainerProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
@@ -2183,7 +2187,12 @@ export function StepContainer({
                 <MessageSquare className="h-4 w-4" />
               </button>
             )}
-            <PresenceBar />
+            <PresenceBar
+              shareToken={shareToken}
+              workshopSessionId={workshopSessionId}
+              workshopId={workshopId}
+              isFacilitator={isFacilitator}
+            />
           </div>
           {/* Participant overview panel */}
           {isFacilitator && showParticipantOverview && step && (

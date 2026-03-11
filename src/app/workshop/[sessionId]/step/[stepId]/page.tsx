@@ -28,6 +28,7 @@ import { dbWithRetry } from "@/db/with-retry";
 import { PAYWALL_CUTOFF_DATE } from "@/lib/billing/paywall-config";
 import { PaywallOverlay } from "@/components/workshop/paywall-overlay";
 import { verifyGuestCookie, COOKIE_NAME } from "@/lib/auth/guest-cookie";
+import { PARTICIPANT_COLORS } from "@/lib/liveblocks/config";
 
 interface StepPageProps {
   params: Promise<{
@@ -119,6 +120,22 @@ export default async function StepPage({ params }: StepPageProps) {
         participantDisplayName = participant.displayName;
         participantColor = participant.color;
       }
+    }
+  }
+
+  // Query workshopSession for multiplayer — used to pass shareToken to PresenceBar
+  let workshopShareToken: string | null = null;
+  let workshopSessionId: string | null = null;
+
+  if (session.workshop.workshopType === 'multiplayer') {
+    const [ws] = await db
+      .select({ id: workshopSessions.id, shareToken: workshopSessions.shareToken })
+      .from(workshopSessions)
+      .where(eq(workshopSessions.workshopId, session.workshop.id))
+      .limit(1);
+    if (ws) {
+      workshopShareToken = ws.shareToken;
+      workshopSessionId = ws.id;
     }
   }
 
@@ -281,12 +298,22 @@ export default async function StepPage({ params }: StepPageProps) {
       // Try 2: Canvas "challenge-statement" template sticky note
       if (!challengeStatement) {
         const challengeCanvas = await loadCanvasState(session.workshop.id, 'challenge');
-        if (challengeCanvas?.stickyNotes) {
-          const hmwNote = (challengeCanvas.stickyNotes as Array<{ templateKey?: string; text?: string }>)
-            .find((n) => n.templateKey === 'challenge-statement' && n.text);
+        const stickyNotes = challengeCanvas?.stickyNotes as Array<{ templateKey?: string; text?: string }> | undefined;
+        if (stickyNotes) {
+          const hmwNote = stickyNotes.find((n) => n.templateKey === 'challenge-statement' && n.text);
           if (hmwNote?.text) {
             challengeStatement = hmwNote.text;
           }
+        }
+      }
+
+      // Try 3: Load from workshop context (same source the AI uses)
+      if (!challengeStatement) {
+        const { loadWorkshopContext } = await import('@/lib/ai/workshop-context');
+        const ctx = await loadWorkshopContext(session.workshop.id);
+        challengeStatement = ctx.hmwStatement || undefined;
+        if (!hmwStatement && ctx.reframedHmw) {
+          hmwStatement = ctx.reframedHmw;
         }
       }
     }
@@ -385,7 +412,7 @@ export default async function StepPage({ params }: StepPageProps) {
   // Instead of seeding mind map nodes server-side (which fights Liveblocks recovery),
   // we pass owner metadata to the client. The useIdeationSeeding hook creates nodes
   // INSIDE the Liveblocks-connected store so data flows with Liveblocks, not against it.
-  type IdeationOwnerEntry = { ownerId: string; ownerName: string; ownerColor: string; hmwBranchLabel: string };
+  type IdeationOwnerEntry = { ownerId: string; ownerName: string; ownerColor: string; hmwBranchLabel: string; hmwFullStatement?: string };
   let ideationOwners: IdeationOwnerEntry[] = [];
   if (step.id === 'ideation' && session.workshop.workshopType === 'multiplayer') {
     const [workshopSessionForIdeation] = await db
@@ -400,12 +427,53 @@ export default async function StepPage({ params }: StepPageProps) {
         .from(sessionParticipants)
         .where(eq(sessionParticipants.sessionId, workshopSessionForIdeation.id));
       const activeIdeationParticipants = allParticipantsForIdeation.filter((p) => p.status !== 'removed');
-      const ownerForIdeation = activeIdeationParticipants.find((p) => p.role === 'owner');
+      let ownerForIdeation = activeIdeationParticipants.find((p) => p.role === 'owner');
       const participantsForIdeation = activeIdeationParticipants.filter((p) => p.role === 'participant');
 
-      // Load each participant's HMW card from the reframe canvas state
+      // Lazy init: create owner participant record if missing (existing workshops pre-fix)
+      if (!ownerForIdeation && user) {
+        try {
+          const ownerDisplayName = user.fullName ?? user.username ?? 'Facilitator';
+          const [created] = await db.insert(sessionParticipants).values({
+            sessionId: workshopSessionForIdeation.id,
+            clerkUserId: user.id,
+            liveblocksUserId: user.id,
+            displayName: ownerDisplayName,
+            color: PARTICIPANT_COLORS[0],
+            role: 'owner',
+            status: 'active',
+          }).returning();
+          ownerForIdeation = created;
+        } catch {
+          // Race condition: another request already created the record
+          const existing = allParticipantsForIdeation.find((p) => p.clerkUserId === user.id);
+          if (existing) ownerForIdeation = existing;
+        }
+      }
+
+      // Load each participant's HMW from two sources:
+      // 1. Canvas HMW cards (from loadCanvasState — solo auto-save or webhook)
+      // 2. Structured hmwStatements (from artifact — extracted on step completion or repair)
       const reframeCanvas = await loadCanvasState(session.workshop.id, 'reframe');
       const allHmwCards = (reframeCanvas?.hmwCards || []) as HmwCardData[];
+
+      // Also load structured hmwStatements from the reframe artifact (includes ownerId)
+      const reframeStepForHmw = session.workshop.steps.find((s) => s.stepId === 'reframe');
+      type HmwStatementEntry = { fullStatement: string; ownerId?: string; ownerName?: string; givenThat?: string; persona?: string; immediateGoal?: string; deeperGoal?: string };
+      let artifactHmwStatements: HmwStatementEntry[] = [];
+      if (reframeStepForHmw) {
+        const [reframeArt] = await db
+          .select({ artifact: stepArtifacts.artifact })
+          .from(stepArtifacts)
+          .where(eq(stepArtifacts.workshopStepId, reframeStepForHmw.id))
+          .limit(1);
+        if (reframeArt?.artifact) {
+          const art = reframeArt.artifact as Record<string, unknown>;
+          if (Array.isArray(art.hmwStatements)) {
+            artifactHmwStatements = art.hmwStatements as HmwStatementEntry[];
+          }
+        }
+      }
 
       const getHmwStatementFromCard = (c: HmwCardData | undefined): string | undefined => {
         if (!c) return undefined;
@@ -416,29 +484,39 @@ export default async function StepPage({ params }: StepPageProps) {
         return undefined;
       };
 
+      // Helper: find HMW statement for an ownerId from canvas cards or structured artifact
+      const findHmwForOwner = (ownerId: string): string | undefined => {
+        // Try canvas HMW cards first
+        const card = allHmwCards.find((c) => c.ownerId === ownerId);
+        const fromCard = getHmwStatementFromCard(card);
+        if (fromCard) return fromCard;
+        // Fall back to structured artifact hmwStatements
+        const fromArtifact = artifactHmwStatements.find((s) => s.ownerId === ownerId);
+        return fromArtifact?.fullStatement;
+      };
+
       if (ownerForIdeation) {
-        const ownerHmwCard = allHmwCards.find((c) => c.ownerId === 'facilitator');
-        const stmt = getHmwStatementFromCard(ownerHmwCard);
+        const stmt = findHmwForOwner('facilitator');
         ideationOwners.push({
           ownerId: 'facilitator',
           ownerName: ownerForIdeation.displayName,
           ownerColor: ownerForIdeation.color,
           hmwBranchLabel: stmt ? extractHmwBranchLabel(stmt) : `${ownerForIdeation.displayName}'s HMW`,
+          hmwFullStatement: stmt || undefined,
         });
       }
       for (const p of participantsForIdeation) {
-        const ownerHmwCard = allHmwCards.find((c) => c.ownerId === p.id);
-        const stmt = getHmwStatementFromCard(ownerHmwCard);
+        const stmt = findHmwForOwner(p.id);
         ideationOwners.push({
           ownerId: p.id,
           ownerName: p.displayName,
           ownerColor: p.color,
           hmwBranchLabel: stmt ? extractHmwBranchLabel(stmt) : `${p.displayName}'s HMW`,
+          hmwFullStatement: stmt || undefined,
         });
       }
     }
   }
-
   // Lazy migration: if artifact exists but no canvas state, derive initial positions
   if (initialCanvasStickyNotes.length === 0 && initialArtifact && step) {
     if (step.id === 'stakeholder-mapping') {
@@ -570,8 +648,29 @@ export default async function StepPage({ params }: StepPageProps) {
         .from(sessionParticipants)
         .where(eq(sessionParticipants.sessionId, workshopSession.id));
       const activeParticipants = allParticipants.filter((p) => p.status !== 'removed');
-      const ownerParticipant = activeParticipants.find((p) => p.role === 'owner');
+      let ownerParticipant = activeParticipants.find((p) => p.role === 'owner');
       const participants = activeParticipants.filter((p) => p.role === 'participant');
+
+      // Lazy init: create owner participant record if missing (existing workshops pre-fix)
+      if (!ownerParticipant && user) {
+        try {
+          const ownerDisplayName = user.fullName ?? user.username ?? 'Facilitator';
+          const [created] = await db.insert(sessionParticipants).values({
+            sessionId: workshopSession.id,
+            clerkUserId: user.id,
+            liveblocksUserId: user.id,
+            displayName: ownerDisplayName,
+            color: PARTICIPANT_COLORS[0],
+            role: 'owner',
+            status: 'active',
+          }).returning();
+          ownerParticipant = created;
+        } catch {
+          // Race condition: another request already created the record
+          const existing = activeParticipants.find((p) => p.clerkUserId === user.id);
+          if (existing) ownerParticipant = existing;
+        }
+      }
 
       if (initialHmwCards.length === 0) {
         // Fresh step: create skeleton cards for everyone
@@ -901,6 +1000,8 @@ export default async function StepPage({ params }: StepPageProps) {
               participantDisplayName={participantDisplayName}
               participantColor={participantColor}
               ideationOwners={ideationOwners}
+              shareToken={workshopShareToken}
+              workshopSessionId={workshopSessionId}
             />
           </MultiplayerRoomLoader>
         ) : (

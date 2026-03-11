@@ -79,6 +79,11 @@ export async function POST(request: Request) {
       return new Response('Participant not found', { status: 401 });
     }
 
+    // Block removed participants from reconnecting
+    if (participant.status === 'removed') {
+      return new Response('Removed from session', { status: 403 });
+    }
+
     // Issue Liveblocks token for the guest participant
     const liveblocks = getLiveblocksClient();
     const session = liveblocks.prepareSession(participant.liveblocksUserId, {

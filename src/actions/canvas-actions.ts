@@ -10,6 +10,7 @@ import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { DotVote, VotingSession } from '@/lib/canvas/voting-types';
+import { unwrapLiveblocksStorage } from '@/lib/liveblocks/unwrap-storage';
 
 /**
  * Save canvas state to stepArtifacts JSONB column under the `_canvas` key.
@@ -338,9 +339,15 @@ export async function loadCanvasState(
 
     const artifact = artifactRecords[0].artifact as Record<string, unknown> | null;
 
-    // Read canvas data from the _canvas key (new format)
+    // Read canvas data from the _canvas key (new format).
+    // _canvas may be in CRDT format (from Liveblocks webhook before unwrap fix) — detect and unwrap.
     if (artifact && typeof artifact === 'object' && '_canvas' in artifact) {
-      const canvas = artifact._canvas as {
+      let rawCanvas = artifact._canvas as Record<string, unknown>;
+      // Detect Liveblocks CRDT wrapper and unwrap if needed
+      if (rawCanvas && ('liveblocksType' in rawCanvas || 'type' in rawCanvas)) {
+        rawCanvas = unwrapLiveblocksStorage(rawCanvas) as Record<string, unknown>;
+      }
+      const canvas = rawCanvas as {
         stickyNotes?: StickyNote[];
         gridColumns?: GridColumn[];
         drawingNodes?: DrawingNode[];

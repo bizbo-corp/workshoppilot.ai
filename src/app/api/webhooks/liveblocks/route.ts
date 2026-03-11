@@ -2,6 +2,7 @@ import { WebhookHandler } from '@liveblocks/node';
 import { db } from '@/db/client';
 import { workshopSteps, stepArtifacts } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { unwrapLiveblocksStorage } from '@/lib/liveblocks/unwrap-storage';
 
 /**
  * Liveblocks webhook handler — receives StorageUpdated events and persists
@@ -21,9 +22,13 @@ import { eq, and } from 'drizzle-orm';
  *
  * Storage persistence strategy:
  * The StorageUpdated event fires ~60s after the last change. We find the
- * currently in_progress step for the workshop and upsert the raw storage
- * JSON under the _canvas key in stepArtifacts. This mirrors how the solo
- * auto-save uses saveCanvasState(), keeping the load path identical.
+ * target step for the workshop and upsert the unwrapped storage under the
+ * _canvas key in stepArtifacts, preserving any existing extracted fields
+ * (e.g. hmwStatement, hmwStatements).
+ *
+ * Room ID format:
+ * - Per-step storage rooms: 'workshop-{workshopId}-step-{stepId}'
+ * - Workshop-level rooms: 'workshop-{workshopId}' (broadcasts/presence only)
  *
  * Docs: https://liveblocks.io/docs/platform/webhooks
  *
@@ -41,6 +46,25 @@ function getWebhookHandler(): WebhookHandler {
     _webhookHandler = new WebhookHandler(process.env.LIVEBLOCKS_WEBHOOK_SECRET!);
   }
   return _webhookHandler;
+}
+
+/**
+ * Parse a Liveblocks room ID into workshopId and optional stepId.
+ *
+ * Room naming conventions:
+ * - Per-step storage: 'workshop-{workshopId}-step-{stepId}'
+ * - Workshop-level:   'workshop-{workshopId}'
+ */
+function parseRoomId(roomId: string): { workshopId: string; stepId?: string } {
+  const suffix = roomId.replace(/^workshop-/, '');
+  const stepSepIdx = suffix.indexOf('-step-');
+  if (stepSepIdx >= 0) {
+    return {
+      workshopId: suffix.substring(0, stepSepIdx),
+      stepId: suffix.substring(stepSepIdx + 6), // '-step-'.length === 6
+    };
+  }
+  return { workshopId: suffix };
 }
 
 export async function POST(request: Request) {
@@ -64,10 +88,7 @@ export async function POST(request: Request) {
   try {
     if (event.type === 'storageUpdated') {
       const { roomId } = event.data;
-
-      // Extract workshopId from room name using the established convention:
-      // getRoomId(workshopId) => 'workshop-{workshopId}'
-      const workshopId = roomId.replace(/^workshop-/, '');
+      const { workshopId, stepId: stepIdFromRoom } = parseRoomId(roomId);
 
       // Fetch the current storage snapshot from the Liveblocks REST API
       const storageRes = await fetch(
@@ -90,35 +111,10 @@ export async function POST(request: Request) {
       const storagePayload = await storageRes.text();
       const bytes = Buffer.byteLength(storagePayload, 'utf8');
       console.log(
-        `Liveblocks StorageUpdated: workshopId=${workshopId}, bytes=${bytes}`
+        `Liveblocks StorageUpdated: workshopId=${workshopId} stepId=${stepIdFromRoom ?? '(workshop-level)'} bytes=${bytes}`
       );
 
-      // Find the currently active (in_progress) step for this workshop
-      const activeStepRecord = await db
-        .select({
-          id: workshopSteps.id,
-          stepId: workshopSteps.stepId,
-        })
-        .from(workshopSteps)
-        .where(
-          and(
-            eq(workshopSteps.workshopId, workshopId),
-            eq(workshopSteps.status, 'in_progress')
-          )
-        )
-        .limit(1);
-
-      if (activeStepRecord.length === 0) {
-        // No active step found — workshop may have ended or not started
-        console.log(
-          `Liveblocks StorageUpdated: no in_progress step for workshopId=${workshopId}, skipping upsert`
-        );
-        return new Response(null, { status: 200 });
-      }
-
-      const { id: workshopStepId, stepId } = activeStepRecord[0];
-
-      // Parse storage payload to JSON for artifact storage
+      // Parse storage payload to JSON
       let storageJson: unknown;
       try {
         storageJson = JSON.parse(storagePayload);
@@ -127,24 +123,90 @@ export async function POST(request: Request) {
         return new Response('Invalid storage payload', { status: 500 });
       }
 
-      // Upsert into stepArtifacts — store raw Liveblocks storage under _canvas key.
-      // onConflictDoUpdate uses the unique constraint on workshopStepId.
-      await db
-        .insert(stepArtifacts)
-        .values({
+      // Unwrap CRDT wrappers (LiveObject/LiveList/LiveMap) to plain objects
+      const unwrappedStorage = unwrapLiveblocksStorage(storageJson) as Record<string, unknown>;
+
+      // Determine which workshop step to save to.
+      // Per-step rooms include the stepId in the room name — use it directly.
+      // Workshop-level rooms fall back to the active (in_progress) step.
+      let workshopStepId: string;
+      let stepId: string;
+
+      if (stepIdFromRoom) {
+        // Per-step room — find the exact step
+        const stepRecord = await db
+          .select({ id: workshopSteps.id, stepId: workshopSteps.stepId })
+          .from(workshopSteps)
+          .where(
+            and(
+              eq(workshopSteps.workshopId, workshopId),
+              eq(workshopSteps.stepId, stepIdFromRoom)
+            )
+          )
+          .limit(1);
+
+        if (stepRecord.length === 0) {
+          console.log(
+            `Liveblocks StorageUpdated: no step record for workshopId=${workshopId} stepId=${stepIdFromRoom}, skipping`
+          );
+          return new Response(null, { status: 200 });
+        }
+        workshopStepId = stepRecord[0].id;
+        stepId = stepRecord[0].stepId;
+      } else {
+        // Workshop-level room — find the active step
+        const activeStepRecord = await db
+          .select({ id: workshopSteps.id, stepId: workshopSteps.stepId })
+          .from(workshopSteps)
+          .where(
+            and(
+              eq(workshopSteps.workshopId, workshopId),
+              eq(workshopSteps.status, 'in_progress')
+            )
+          )
+          .limit(1);
+
+        if (activeStepRecord.length === 0) {
+          console.log(
+            `Liveblocks StorageUpdated: no in_progress step for workshopId=${workshopId}, skipping upsert`
+          );
+          return new Response(null, { status: 200 });
+        }
+        workshopStepId = activeStepRecord[0].id;
+        stepId = activeStepRecord[0].stepId;
+      }
+
+      // Read existing artifact to MERGE (preserve extracted fields like hmwStatement)
+      const existingArtifactRecord = await db
+        .select({ id: stepArtifacts.id, artifact: stepArtifacts.artifact, version: stepArtifacts.version })
+        .from(stepArtifacts)
+        .where(eq(stepArtifacts.workshopStepId, workshopStepId))
+        .limit(1);
+
+      if (existingArtifactRecord.length > 0) {
+        // Merge: keep existing top-level fields, update _canvas
+        const existing = (existingArtifactRecord[0].artifact || {}) as Record<string, unknown>;
+        const merged = { ...existing, _canvas: unwrappedStorage };
+        const newVersion = existingArtifactRecord[0].version + 1;
+
+        await db
+          .update(stepArtifacts)
+          .set({
+            artifact: merged,
+            version: newVersion,
+            extractedAt: new Date(),
+          })
+          .where(eq(stepArtifacts.id, existingArtifactRecord[0].id));
+      } else {
+        // Insert new artifact
+        await db.insert(stepArtifacts).values({
           workshopStepId,
           stepId,
-          artifact: { _canvas: storageJson as Record<string, unknown> },
+          artifact: { _canvas: unwrappedStorage },
           schemaVersion: 'liveblocks-1.0',
           version: 1,
-        })
-        .onConflictDoUpdate({
-          target: stepArtifacts.workshopStepId,
-          set: {
-            artifact: { _canvas: storageJson as Record<string, unknown> },
-            extractedAt: new Date(),
-          },
         });
+      }
 
       console.log(
         `Liveblocks StorageUpdated: upserted stepArtifact for workshopId=${workshopId} stepId=${stepId}`
