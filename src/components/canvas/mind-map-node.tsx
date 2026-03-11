@@ -13,6 +13,7 @@ export type MindMapNodeData = {
   isRoot?: boolean;
   isStarred?: boolean;
   level: number;
+  ownerName?: string; // participant name (shown on root nodes in "All" view)
   onLabelChange?: (id: string, label: string) => void;
   onAddChild?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -145,6 +146,16 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
           style={{ color: data.themeColor }}
         >
           {data.label || 'Click to edit'}
+        </div>
+      )}
+
+      {/* Owner name below label on root nodes */}
+      {isRoot && data.ownerName && (
+        <div
+          className="text-xs mt-1 font-medium opacity-60"
+          style={{ color: data.themeColor }}
+        >
+          {data.ownerName}
         </div>
       )}
 

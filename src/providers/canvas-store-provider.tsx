@@ -127,10 +127,6 @@ export function CanvasStoreProvider({
   // in MultiplayerRoomLoader) handles broadcasts and presence separately.
   useEffect(() => {
     if (!isMultiplayer || !workshopId || !stepId) return;
-    // Skip step-level Liveblocks room for ideation — per-participant seeding
-    // is incompatible with Liveblocks clearing storageMapping fields on enterRoom.
-    // DB-based persistence handles ideation canvas state instead.
-    if (stepId === 'ideation') return;
     const multiStore = store as MultiplayerCanvasStoreApi;
     const { enterRoom, leaveRoom } = multiStore.getState().liveblocks;
     enterRoom(`${getRoomId(workshopId)}-step-${stepId}`);
@@ -155,9 +151,6 @@ export function CanvasStoreProvider({
       if (current.drawingNodes.length === 0 && init.drawingNodes.length > 0) {
         patch.drawingNodes = init.drawingNodes;
       }
-      // Mind map nodes/edges and crazy 8s slots are NOT recovered here for
-      // multiplayer ideation. Per-participant seeding is handled client-side
-      // by useIdeationSeeding, which writes directly into the Liveblocks store.
       if (current.mindMapNodes.length === 0 && init.mindMapNodes.length > 0) {
         patch.mindMapNodes = init.mindMapNodes;
       }

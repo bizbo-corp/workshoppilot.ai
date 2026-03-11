@@ -23,9 +23,9 @@ interface UseIdeationSeedingOptions {
 /**
  * Client-side seeding for multiplayer ideation mind map nodes.
  *
- * The step-level Liveblocks room is SKIPPED for ideation (see canvas-store-provider),
- * so we can safely write to the store without Liveblocks clearing our data.
- * This hook seeds on mount if no owned nodes exist yet.
+ * Waits for Liveblocks to connect (if multiplayer) before seeding, so that
+ * the enterRoom() clearing phase doesn't wipe seeded data. After Liveblocks
+ * connects and recovery runs, we check if owned nodes exist and seed if needed.
  */
 export function useIdeationSeeding({
   owners,
@@ -41,28 +41,71 @@ export function useIdeationSeeding({
     if (owners.length === 0) return;
     if (!currentOwnerId) return; // Solo mode — no seeding from this hook
 
-    seeded.current = true;
+    const doSeed = () => {
+      if (seeded.current) return;
+      seeded.current = true;
 
-    const state = storeApi.getState();
-    const hasOwnedNodes = state.mindMapNodes.some((n: MindMapNodeState) => n.ownerId);
+      const state = storeApi.getState();
+      const hasOwnedNodes = state.mindMapNodes.some((n: MindMapNodeState) => n.ownerId);
 
-    if (hasOwnedNodes) {
-      // Check for late-joiner
-      const currentOwnerHasNodes = state.mindMapNodes.some(
-        (n: MindMapNodeState) => n.ownerId === currentOwnerId
-      );
-      if (currentOwnerHasNodes) return;
-      const owner = owners.find((o) => o.ownerId === currentOwnerId);
-      if (owner) {
-        seedOwner(owner, storeApi, challengeStatement, hmwStatement);
+      if (hasOwnedNodes) {
+        // Check for late-joiner
+        const currentOwnerHasNodes = state.mindMapNodes.some(
+          (n: MindMapNodeState) => n.ownerId === currentOwnerId
+        );
+        if (currentOwnerHasNodes) return;
+        const ownerIndex = owners.findIndex((o) => o.ownerId === currentOwnerId);
+        if (ownerIndex >= 0) {
+          seedOwner(owners[ownerIndex], storeApi, challengeStatement, hmwStatement, ownerIndex);
+        }
+        return;
       }
-      return;
+
+      // No owned nodes — seed ALL owners (each gets a unique color index)
+      for (let i = 0; i < owners.length; i++) {
+        seedOwner(owners[i], storeApi, challengeStatement, hmwStatement, i);
+      }
+    };
+
+    // Check if this is a multiplayer store with Liveblocks
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const liveblocksState = (storeApi.getState() as any).liveblocks;
+
+    if (liveblocksState) {
+      // Multiplayer: wait for Liveblocks to connect before seeding.
+      // enterRoom() clears storageMapping fields during connection. Seeding
+      // before connection would get wiped. After connection + recovery, the
+      // store has either Storage data or recovered server data — safe to seed.
+      if (liveblocksState.status === 'connected') {
+        // Already connected — seed after a tick to let recovery run
+        const timer = setTimeout(doSeed, 200);
+        return () => clearTimeout(timer);
+      }
+
+      // Subscribe to status changes and seed when connected
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const unsub = storeApi.subscribe((state: any) => {
+        if (state.liveblocks?.status === 'connected') {
+          unsub();
+          // Small delay to let recovery mechanism run first
+          setTimeout(doSeed, 300);
+        }
+      });
+
+      // Fallback: seed after 5s even if Liveblocks doesn't connect
+      const fallbackTimer = setTimeout(() => {
+        unsub();
+        doSeed();
+      }, 5000);
+
+      return () => {
+        unsub();
+        clearTimeout(fallbackTimer);
+      };
     }
 
-    // No owned nodes — seed ALL owners
-    for (const owner of owners) {
-      seedOwner(owner, storeApi, challengeStatement, hmwStatement);
-    }
+    // Solo store — seed immediately
+    doSeed();
   }, [owners, currentOwnerId, storeApi, challengeStatement, hmwStatement]);
 }
 
@@ -71,12 +114,14 @@ function seedOwner(
   storeApi: ReturnType<typeof useCanvasStoreApi>,
   challengeStatement?: string,
   hmwStatement?: string,
+  ownerIndex: number = 0,
 ) {
   const state = storeApi.getState();
   const rootLabel = challengeStatement || hmwStatement || 'How might we...?';
   const rootId = `${owner.ownerId}-root`;
   const hmwNodeId = `hmw-${owner.ownerId}-0`;
-  const themeColor = THEME_COLORS[0];
+  // Each participant gets a unique theme color based on their index
+  const themeColor = THEME_COLORS[ownerIndex % THEME_COLORS.length];
 
   const rootNode: MindMapNodeState = {
     id: rootId,

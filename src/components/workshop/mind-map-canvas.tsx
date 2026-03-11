@@ -23,6 +23,7 @@ import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, ArrowRight } from 
 
 import { MindMapNode } from '@/components/canvas/mind-map-node';
 import { MindMapEdge } from '@/components/canvas/mind-map-edge';
+import { OwnerZoneNode } from '@/components/canvas/owner-zone-node';
 import {
   Crazy8sGroupNode,
   CRAZY_8S_NODE_ID,
@@ -54,6 +55,7 @@ const nodeTypes = {
   mindMapNode: MindMapNode,
   crazy8sGroupNode: Crazy8sGroupNode,
   brainRewritingGroupNode: BrainRewritingGroupNodeComponent,
+  ownerZoneNode: OwnerZoneNode,
 };
 const edgeTypes = { mindMapEdge: MindMapEdge };
 
@@ -65,6 +67,8 @@ function snapToGrid(val: number): number {
 
 // Brain rewriting node ID prefix
 const BR_NODE_PREFIX = 'brain-rewriting-';
+// Owner zone node ID prefix
+const ZONE_NODE_PREFIX = 'owner-zone-';
 
 export type MindMapCanvasProps = {
   workshopId: string;
@@ -95,7 +99,8 @@ export type MindMapCanvasProps = {
   currentOwnerId?: string;           // filter canvas to this owner's nodes
   allOwnerIds?: string[];             // for facilitator switcher dropdown
   ownerNames?: Record<string, string>; // ownerId → display name
-  onOwnerSwitch?: (ownerId: string) => void;
+  ownerColors?: Record<string, string>; // ownerId → hex color
+  onOwnerSwitch?: (ownerId: string | null) => void;
 };
 
 export function MindMapCanvas(props: MindMapCanvasProps) {
@@ -130,6 +135,7 @@ function MindMapCanvasInner({
   currentOwnerId,
   allOwnerIds,
   ownerNames,
+  ownerColors,
   onOwnerSwitch,
 }: MindMapCanvasProps) {
   const allMindMapNodes = useCanvasStore((state) => state.mindMapNodes);
@@ -383,29 +389,59 @@ function MindMapCanvasInner({
     [toggleMindMapNodeStar]
   );
 
+  // Compute per-owner horizontal offsets for "All" view so trees don't overlap
+  const ownerOffsets = useMemo(() => {
+    const offsets: Record<string, { x: number; y: number }> = {};
+    if (currentOwnerId || !allOwnerIds || allOwnerIds.length <= 1) return offsets;
+    const TREE_SPACING = 1800; // horizontal gap between each participant's tree
+    const totalWidth = (allOwnerIds.length - 1) * TREE_SPACING;
+    allOwnerIds.forEach((oid, i) => {
+      offsets[oid] = { x: i * TREE_SPACING - totalWidth / 2, y: 0 };
+    });
+    return offsets;
+  }, [currentOwnerId, allOwnerIds]);
+
   // Convert store state to ReactFlow mind map nodes
   const rfMindMapNodes: Node[] = useMemo(() => {
-    return mindMapNodes.map((nodeState) => ({
-      id: nodeState.id,
-      type: 'mindMapNode',
-      position: livePositions.current[nodeState.id] || nodeState.position || { x: 0, y: 0 },
-      draggable: true,
-      data: {
-        label: nodeState.label,
-        themeColorId: nodeState.themeColorId,
-        themeColor: nodeState.themeColor,
-        themeBgColor: nodeState.themeBgColor,
-        isRoot: nodeState.isRoot,
-        isStarred: nodeState.isStarred,
-        level: nodeState.level,
-        onLabelChange: handleLabelChange,
-        onAddChild: handleAddChild,
-        onDelete: handleDelete,
-        onToggleStar: handleToggleStar,
-      },
-    }));
+    return mindMapNodes.map((nodeState) => {
+      const basePos = livePositions.current[nodeState.id] || nodeState.position || { x: 0, y: 0 };
+      const offset = nodeState.ownerId ? ownerOffsets[nodeState.ownerId] : undefined;
+      const position = offset
+        ? { x: basePos.x + offset.x, y: basePos.y + offset.y }
+        : basePos;
+
+      // In "All" view, color root nodes with participant's hex color
+      let themeColor = nodeState.themeColor;
+      let themeBgColor = nodeState.themeBgColor;
+      if (nodeState.isRoot && nodeState.ownerId && ownerColors?.[nodeState.ownerId]) {
+        const hex = ownerColors[nodeState.ownerId];
+        themeColor = hex;
+        themeBgColor = `${hex}18`; // ~10% opacity hex suffix
+      }
+
+      return {
+        id: nodeState.id,
+        type: 'mindMapNode',
+        position,
+        draggable: true,
+        data: {
+          label: nodeState.label,
+          themeColorId: nodeState.themeColorId,
+          themeColor,
+          themeBgColor,
+          isRoot: nodeState.isRoot,
+          isStarred: nodeState.isStarred,
+          level: nodeState.level,
+          ownerName: nodeState.isRoot ? nodeState.ownerName : undefined,
+          onLabelChange: handleLabelChange,
+          onAddChild: handleAddChild,
+          onDelete: handleDelete,
+          onToggleStar: handleToggleStar,
+        },
+      };
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions is a ref
-  }, [mindMapNodes, handleLabelChange, handleAddChild, handleDelete, handleToggleStar]);
+  }, [mindMapNodes, ownerOffsets, ownerColors, handleLabelChange, handleAddChild, handleDelete, handleToggleStar]);
 
   // Crazy 8s group node — positioned to the right of the mind map
   const crazy8sNode = useMemo<Node | null>(() => {
@@ -473,13 +509,57 @@ function MindMapCanvasInner({
     });
   }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, slotGroups, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded]);
 
-  // Combined nodes array: mind map + optional crazy 8s + brain rewriting
+  // Owner zone nodes — colored background rectangles behind each participant's tree
+  const ownerZoneNodes = useMemo<Node[]>(() => {
+    if (!allOwnerIds || allOwnerIds.length <= 1) return [];
+
+    // Individual view: show zone for the selected participant only (centered at origin)
+    if (currentOwnerId) {
+      const color = ownerColors?.[currentOwnerId] || '#6b7280';
+      return [{
+        id: `${ZONE_NODE_PREFIX}${currentOwnerId}`,
+        type: 'ownerZoneNode',
+        position: { x: -800, y: -500 },
+        draggable: false,
+        selectable: false,
+        connectable: false,
+        focusable: false,
+        zIndex: -1,
+        data: {
+          ownerName: ownerNames?.[currentOwnerId] || currentOwnerId,
+          ownerColor: color,
+        },
+      }];
+    }
+
+    // "All" view: show zones for every participant at their offset
+    return allOwnerIds.map((oid) => {
+      const offset = ownerOffsets[oid] || { x: 0, y: 0 };
+      const color = ownerColors?.[oid] || '#6b7280';
+      return {
+        id: `${ZONE_NODE_PREFIX}${oid}`,
+        type: 'ownerZoneNode',
+        position: { x: offset.x - 800, y: offset.y - 500 },
+        draggable: false,
+        selectable: false,
+        connectable: false,
+        focusable: false,
+        zIndex: -1,
+        data: {
+          ownerName: ownerNames?.[oid] || oid,
+          ownerColor: color,
+        },
+      };
+    });
+  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, ownerColors]);
+
+  // Combined nodes array: mind map + owner zones + optional crazy 8s + brain rewriting
   const rfNodes = useMemo(() => {
-    const combined = [...rfMindMapNodes];
+    const combined = [...ownerZoneNodes, ...rfMindMapNodes];
     if (crazy8sNode) combined.push(crazy8sNode);
     if (brainRewritingNodes.length > 0) combined.push(...brainRewritingNodes);
     return combined;
-  }, [rfMindMapNodes, crazy8sNode, brainRewritingNodes]);
+  }, [rfMindMapNodes, ownerZoneNodes, crazy8sNode, brainRewritingNodes]);
 
   // Convert store state to ReactFlow edges
   const rfEdges: Edge[] = useMemo(() => {
@@ -536,24 +616,48 @@ function MindMapCanvasInner({
     }
   }, [pendingFitView, fitView, setPendingFitView]);
 
+  // Fit view when switching between participants / "All" view
+  const prevOwnerId = useRef(currentOwnerId);
+  useEffect(() => {
+    if (prevOwnerId.current !== currentOwnerId) {
+      prevOwnerId.current = currentOwnerId;
+      setTimeout(() => fitView({ padding: 0.3, duration: 400 }), 100);
+    }
+  }, [currentOwnerId, fitView]);
+
   // Handle node changes (drag, selection)
+  // Ref for ownerOffsets so drag handler always has current values without re-creating
+  const ownerOffsetsRef = useRef(ownerOffsets);
+  ownerOffsetsRef.current = ownerOffsets;
+
+  // Lookup ownerId for a node by id (for offset subtraction during drag persist)
+  const getNodeOwnerId = useCallback((nodeId: string) => {
+    return allMindMapNodes.find((n) => n.id === nodeId)?.ownerId;
+  }, [allMindMapNodes]);
+
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       // Update live positions ref during drag for flicker-free rendering
       for (const c of changes) {
         if (c.type === 'position') {
           const posChange = c as NodeChange & { id: string; position?: { x: number; y: number }; dragging?: boolean };
-          // Skip the crazy 8s and brain rewriting group nodes
-          if (posChange.id === CRAZY_8S_NODE_ID || posChange.id.startsWith(BR_NODE_PREFIX)) continue;
+          // Skip non-mind-map nodes
+          if (posChange.id === CRAZY_8S_NODE_ID || posChange.id.startsWith(BR_NODE_PREFIX) || posChange.id.startsWith(ZONE_NODE_PREFIX)) continue;
           if (posChange.dragging && posChange.position) {
             livePositions.current[posChange.id] = posChange.position;
           } else if (posChange.dragging === false) {
             // Drag ended — snap to grid and persist to store
             const finalPos = posChange.position || livePositions.current[posChange.id];
             if (finalPos) {
+              // Subtract owner offset (if in "All" view) so stored position is owner-relative
+              const oid = getNodeOwnerId(posChange.id);
+              const offset = oid ? ownerOffsetsRef.current[oid] : undefined;
+              const adjusted = offset
+                ? { x: finalPos.x - offset.x, y: finalPos.y - offset.y }
+                : finalPos;
               const snapped = {
-                x: snapToGrid(finalPos.x),
-                y: snapToGrid(finalPos.y),
+                x: snapToGrid(adjusted.x),
+                y: snapToGrid(adjusted.y),
               };
               updateMindMapNodePosition(posChange.id, snapped);
             }
@@ -564,7 +668,7 @@ function MindMapCanvasInner({
 
       setNodes((nds) => applyNodeChanges(changes, nds));
     },
-    [updateMindMapNodePosition]
+    [updateMindMapNodePosition, getNodeOwnerId]
   );
 
   // Undo/redo handlers (temporal middleware only exists on the solo store, not multiplayer)
@@ -748,12 +852,14 @@ function MindMapCanvasInner({
         <Controls showInteractive={false} />
         <MiniMap
           nodeStrokeColor={(n) => {
+            if (n.id.startsWith(ZONE_NODE_PREFIX)) return 'transparent';
             if (n.id === CRAZY_8S_NODE_ID) return '#f59e0b';
             if (n.id.startsWith(BR_NODE_PREFIX)) return '#a855f7';
             const color = n.data?.themeColor;
             return typeof color === 'string' ? color : '#6b7280';
           }}
           nodeColor={(n) => {
+            if (n.id.startsWith(ZONE_NODE_PREFIX)) return 'transparent';
             if (n.id === CRAZY_8S_NODE_ID) return '#fef3c7';
             if (n.id.startsWith(BR_NODE_PREFIX)) return '#f3e8ff';
             const bgColor = n.data?.themeBgColor;
@@ -766,14 +872,28 @@ function MindMapCanvasInner({
         {allOwnerIds && allOwnerIds.length > 1 && onOwnerSwitch && (
           <Panel position="top-left" className="!mt-4 !ml-4">
             <div className="flex items-center gap-1 rounded-lg border bg-background p-1 shadow-md">
+              <Button
+                size="sm"
+                variant={!currentOwnerId ? 'secondary' : 'ghost'}
+                className="text-xs h-7 px-2"
+                onClick={() => onOwnerSwitch(null)}
+              >
+                All
+              </Button>
               {allOwnerIds.map((oid) => (
                 <Button
                   key={oid}
                   size="sm"
                   variant={currentOwnerId === oid ? 'secondary' : 'ghost'}
-                  className="text-xs h-7 px-2"
+                  className="text-xs h-7 px-2 gap-1.5"
                   onClick={() => onOwnerSwitch(oid)}
                 >
+                  {ownerColors?.[oid] && (
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: ownerColors[oid] }}
+                    />
+                  )}
                   {ownerNames?.[oid] || oid}
                 </Button>
               ))}

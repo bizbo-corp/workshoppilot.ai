@@ -119,7 +119,8 @@ export function useIdeationPhases({
   const [explicitlyConfirmed, setExplicitlyConfirmed] = React.useState(false);
 
   // Facilitator owner switcher state (for viewing different participants' mind maps)
-  const [viewingOwnerId, setViewingOwnerId] = React.useState<string | undefined>(currentOwnerId);
+  // null = "All" (show all owners), undefined = not yet set (falls back to currentOwnerId)
+  const [viewingOwnerId, setViewingOwnerId] = React.useState<string | null | undefined>(currentOwnerId);
 
   // Sync store ideationPhase to local state (multiplayer: facilitator changes propagate)
   const storeIdeationPhase = useCanvasStore(state => state.ideationPhase);
@@ -348,24 +349,32 @@ export function useIdeationPhases({
     state.openVoting();
   }, [canvasStoreApi]);
 
-  // Compute owner IDs and names from mind map nodes for facilitator switcher
-  const { ownerIdsList, ownerNamesMap } = React.useMemo(() => {
+  // Compute owner IDs, names, and colors from mind map nodes + ideationOwners
+  const { ownerIdsList, ownerNamesMap, ownerColorsMap } = React.useMemo(() => {
     const ids: string[] = [];
     const names: Record<string, string> = {};
+    const colors: Record<string, string> = {};
     for (const n of mindMapNodes) {
       if (n.ownerId && n.isRoot && !ids.includes(n.ownerId)) {
         ids.push(n.ownerId);
         if (n.ownerName) names[n.ownerId] = n.ownerName;
       }
     }
-    return { ownerIdsList: ids, ownerNamesMap: names };
-  }, [mindMapNodes]);
+    // Map ownerColors from ideationOwners array
+    if (ideationOwners) {
+      for (const o of ideationOwners) {
+        if (o.ownerColor) colors[o.ownerId] = o.ownerColor;
+      }
+    }
+    return { ownerIdsList: ids, ownerNamesMap: names, ownerColorsMap: colors };
+  }, [mindMapNodes, ideationOwners]);
 
   // Render the canvas area — always MindMapCanvas, with phase-appropriate props
   const renderCanvas = React.useCallback(() => {
     const isVotingActive = currentPhase === 'idea-selection';
     const useOldSelectionMode = isVotingActive && votingSession.status === 'idle';
-    const effectiveOwnerId = viewingOwnerId || currentOwnerId;
+    // null = "All" (no filtering), undefined = not yet set (falls back to currentOwnerId)
+    const effectiveOwnerId = viewingOwnerId === null ? undefined : (viewingOwnerId || currentOwnerId);
 
     return React.createElement('div', { className: 'relative h-full' },
       // Voting HUD
@@ -396,6 +405,7 @@ export function useIdeationPhases({
         currentOwnerId: effectiveOwnerId,
         allOwnerIds: ownerIdsList.length > 1 ? ownerIdsList : undefined,
         ownerNames: ownerNamesMap,
+        ownerColors: ownerColorsMap,
         onOwnerSwitch: setViewingOwnerId,
       }),
       // Merge group dialog
@@ -414,7 +424,7 @@ export function useIdeationPhases({
     handleBackToDrawing, brainRewritingMatrices, handleBrainRewritingCellUpdate,
     handleBrainRewritingToggleIncluded, handleSaveBrainRewriting,
     handleVoteSelectionConfirm, handleReVote, mergeGroupId, mergeGroup, flushCanvasState,
-    setMergeGroupId, viewingOwnerId, currentOwnerId, ownerIdsList, ownerNamesMap,
+    setMergeGroupId, viewingOwnerId, currentOwnerId, ownerIdsList, ownerNamesMap, ownerColorsMap,
   ]);
 
   return {

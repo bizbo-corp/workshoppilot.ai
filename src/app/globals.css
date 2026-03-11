@@ -438,6 +438,11 @@
   transition: none !important;
 }
 
+/* Owner zone backgrounds must render behind all mind map nodes */
+.react-flow__node-ownerZoneNode {
+  z-index: -1 !important;
+}
+
 /* Canvas background — set on .react-flow so the dot grid (z-index 2)
    renders below the grid overlay (z-3) and nodes (z-4 renderer).
    Stacking: base bg → dots (z-2) → grid overlay (z-3) → nodes (z-4+) */
