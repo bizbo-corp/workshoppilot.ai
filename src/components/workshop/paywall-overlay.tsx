@@ -6,12 +6,9 @@
  * Rendered by the StepPage Server Component when a user directly navigates
  * to Step 8-10 on a workshop that has not been unlocked and is not grandfathered.
  *
- * Emphasizes the visual/creative nature of the remaining steps to entice
- * users who have completed the analytical phase (Steps 1-7).
- *
  * Fetches the current credit balance on mount to decide which CTA to show:
  * - balance > 0: "Use 1 Credit to Unlock" — calls consumeCredit() server action
- * - balance === 0: "Buy Credits" — navigates to /pricing
+ * - balance === 0: Inline pricing tiers — calls createCheckoutUrl() for Stripe checkout
  *
  * On successful consumeCredit, calls router.refresh() to re-render the Server
  * Component, which will now see creditConsumedAt set and render the real step.
@@ -19,10 +16,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Palette, Zap, FileText } from 'lucide-react';
+import { Sparkles, Palette, Zap, FileText, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { getCredits, consumeCredit } from '@/actions/billing-actions';
+import { getCredits, consumeCredit, createCheckoutUrl } from '@/actions/billing-actions';
 import { CreativeStepsPreview } from './creative-steps-preview';
 
 interface PaywallOverlayProps {
@@ -54,6 +51,7 @@ export function PaywallOverlay({ sessionId, workshopId, stepNumber }: PaywallOve
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConsuming, setIsConsuming] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   useEffect(() => {
     getCredits().then((balance) => {
@@ -81,8 +79,20 @@ export function PaywallOverlay({ sessionId, workshopId, stepNumber }: PaywallOve
     }
   }
 
-  function handleBuyCredits() {
-    router.push(`/pricing?return_to=${encodeURIComponent(`/workshop/${sessionId}/step/8`)}`);
+  async function handleCheckout(tier: 'single' | 'pack') {
+    setIsCheckingOut(true);
+    try {
+      const result = await createCheckoutUrl(tier, `/workshop/${sessionId}/step/8`);
+      if ('url' in result) {
+        window.location.href = result.url;
+      } else {
+        toast.error(result.error);
+        setIsCheckingOut(false);
+      }
+    } catch {
+      toast.error('Failed to start checkout. Please try again.');
+      setIsCheckingOut(false);
+    }
   }
 
   function handleBackToStep7() {
@@ -125,44 +135,70 @@ export function PaywallOverlay({ sessionId, workshopId, stepNumber }: PaywallOve
           ))}
         </div>
 
-        {/* Credit balance display */}
-        <div className="w-full rounded-lg border bg-muted/50 px-4 py-2.5 text-center">
-          {isLoading ? (
-            <span className="text-sm text-muted-foreground">Checking credit balance...</span>
-          ) : creditBalance !== null && creditBalance > 0 ? (
-            <span className="text-sm font-medium">
-              You have <span className="text-foreground">{creditBalance} {creditBalance === 1 ? 'credit' : 'credits'}</span> available
-            </span>
-          ) : (
-            <span className="text-sm text-muted-foreground">No credits available</span>
-          )}
-        </div>
-
         {/* Action buttons */}
         <div className="flex w-full flex-col gap-2.5">
           {!isLoading && creditBalance !== null && creditBalance > 0 ? (
-            <Button
-              onClick={handleUseCredit}
-              disabled={isConsuming}
-              className="w-full"
-              size="lg"
-            >
-              {isConsuming ? 'Unlocking...' : 'Use 1 Credit to Unlock'}
-            </Button>
-          ) : !isLoading ? (
             <>
+              {/* Credit balance display */}
+              <div className="w-full rounded-lg border bg-muted/50 px-4 py-2.5 text-center">
+                <span className="text-sm font-medium">
+                  You have <span className="text-foreground">{creditBalance} {creditBalance === 1 ? 'credit' : 'credits'}</span> available
+                </span>
+              </div>
               <Button
-                onClick={handleBuyCredits}
+                onClick={handleUseCredit}
+                disabled={isConsuming}
                 className="w-full"
                 size="lg"
               >
-                Buy Credits
+                {isConsuming ? 'Unlocking...' : 'Use 1 Credit to Unlock'}
               </Button>
-              <p className="text-center text-xs text-muted-foreground">
-                From $79 for one workshop credit
-              </p>
             </>
-          ) : null}
+          ) : !isLoading ? (
+            <>
+              {/* Inline pricing tiers */}
+              <button
+                onClick={() => handleCheckout('single')}
+                disabled={isCheckingOut}
+                className="w-full rounded-lg border p-4 text-left hover:bg-accent transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-wait"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">1 Workshop Credit</p>
+                    <p className="text-xs text-muted-foreground">Unlock this workshop</p>
+                  </div>
+                  <span className="text-lg font-bold">$99</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleCheckout('pack')}
+                disabled={isCheckingOut}
+                className="w-full rounded-lg border border-olive-500/50 bg-olive-50/30 dark:bg-olive-950/20 p-4 text-left hover:bg-olive-50/60 dark:hover:bg-olive-950/30 transition-colors relative disabled:opacity-50 cursor-pointer disabled:cursor-wait"
+              >
+                <span className="absolute -top-2.5 right-3 text-[10px] font-semibold bg-olive-100 dark:bg-olive-900 text-olive-700 dark:text-olive-300 rounded-full px-2 py-0.5">
+                  Save $98
+                </span>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">3 Workshop Credits</p>
+                    <p className="text-xs text-muted-foreground">$66 per workshop</p>
+                  </div>
+                  <span className="text-lg font-bold">$199</span>
+                </div>
+              </button>
+
+              {/* Trust signal */}
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+                <Shield className="h-3 w-3" />
+                Secure checkout via Stripe · Credits never expire
+              </div>
+            </>
+          ) : (
+            <div className="w-full rounded-lg border bg-muted/50 px-4 py-2.5 text-center">
+              <span className="text-sm text-muted-foreground">Checking credit balance...</span>
+            </div>
+          )}
 
           <Button
             onClick={handleBackToStep7}

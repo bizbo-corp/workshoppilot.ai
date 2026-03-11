@@ -1,0 +1,1 @@
+ALTER TABLE "workshop_steps" ADD COLUMN "snapshot_url" text;

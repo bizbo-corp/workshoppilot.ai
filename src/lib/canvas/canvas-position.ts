@@ -177,6 +177,7 @@ export function computeCanvasPosition(
   metadata: CanvasItemMetadata,
   existingStickyNotes: StickyNote[],
   gridConfigOverride?: GridConfig,
+  personaTemplates?: Array<{ archetype?: string; position: { x: number; y: number } }>,
 ): {
   position: { x: number; y: number };
   quadrant?: Quadrant;
@@ -316,6 +317,35 @@ export function computeCanvasPosition(
       // Store category in cellAssignment.row for stagger tracking
       cellAssignment: { row: metadata.category, col: '' },
     };
+  }
+
+  // --- Persona-step cluster: position below matching persona template card ---
+  if (stepId === 'persona' && metadata.cluster && personaTemplates?.length) {
+    const clusterLower = metadata.cluster.toLowerCase().trim();
+    const match = personaTemplates.find(
+      (t) => {
+        const archLower = t.archetype?.toLowerCase().trim() || '';
+        // Exact match or cluster contains the archetype as a substring
+        // (handles "Anna, The Aspiring Speaker" matching archetype "The Aspiring Speaker")
+        return archLower === clusterLower || clusterLower.includes(archLower);
+      },
+    );
+    if (match) {
+      const PERSONA_CARD_HEIGHT = 1100;
+      const CARD_GAP = 20;
+      const CHILD_WIDTH = 280;
+      const existingChildren = existingStickyNotes.filter(
+        (p) => p.cluster?.toLowerCase().trim() === clusterLower,
+      );
+      const idx = existingChildren.length;
+      return {
+        position: {
+          x: match.position.x + idx * (CHILD_WIDTH + CARD_GAP),
+          y: match.position.y + PERSONA_CARD_HEIGHT + CARD_GAP,
+        },
+        cellAssignment: { row: metadata.cluster, col: '' },
+      };
+    }
   }
 
   // --- Cluster-based positioning: place near parent sticky note ---

@@ -3,13 +3,13 @@ import { eq, and, isNull } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db/client";
-import { sessions, stepArtifacts, chatMessages, sessionParticipants } from "@/db/schema";
+import { sessions, stepArtifacts, chatMessages, sessionParticipants, workshopSessions } from "@/db/schema";
 import { getStepByOrder, STEPS } from "@/lib/workshop/step-metadata";
 import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
 import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
 import { MultiplayerRoomLoader } from "@/components/workshop/multiplayer-room-loader";
-import { loadCanvasState, saveCanvasState } from "@/actions/canvas-actions";
+import { loadCanvasState, saveCanvasState, loadPersonaCandidates, savePersonaCandidates } from "@/actions/canvas-actions";
 import { loadCanvasGuides } from "@/actions/canvas-guide-actions";
 import { loadStepCanvasSettings } from "@/actions/step-canvas-settings-actions";
 import { getDefaultStepCanvasGuides } from "@/lib/canvas/canvas-guide-config";
@@ -364,12 +364,12 @@ export default async function StepPage({ params }: StepPageProps) {
   let initialCanvasStickyNotes: StickyNote[] = canvasData?.stickyNotes || [];
   const initialGridColumns: GridColumn[] = canvasData?.gridColumns || [];
   const initialDrawingNodes: DrawingNode[] = canvasData?.drawingNodes || [];
-  const initialCrazy8sSlots: Crazy8sSlot[] = canvasData?.crazy8sSlots || [];
+  let initialCrazy8sSlots: Crazy8sSlot[] = canvasData?.crazy8sSlots || [];
   let initialConceptCards: ConceptCardData[] = canvasData?.conceptCards || [];
   let initialPersonaTemplates: PersonaTemplateData[] = canvasData?.personaTemplates || [];
   let initialHmwCards: HmwCardData[] = canvasData?.hmwCards || [];
   let initialMindMapNodes: MindMapNodeState[] = (canvasData?.mindMapNodes as MindMapNodeState[]) || [];
-  const initialMindMapEdges: MindMapEdgeState[] = (canvasData?.mindMapEdges as MindMapEdgeState[]) || [];
+  let initialMindMapEdges: MindMapEdgeState[] = (canvasData?.mindMapEdges as MindMapEdgeState[]) || [];
   const initialSelectedSlotIds: string[] = canvasData?.selectedSlotIds || [];
   const initialSlotGroups = canvasData?.slotGroups || [];
   const initialBrainRewritingMatrices: BrainRewritingMatrix[] = canvasData?.brainRewritingMatrices || [];
@@ -379,6 +379,64 @@ export default async function StepPage({ params }: StepPageProps) {
   // Migration: if mind map nodes exist but lack positions, compute radial layout
   if (initialMindMapNodes.length > 0 && !initialMindMapNodes.some((n) => n.position)) {
     initialMindMapNodes = computeRadialPositions([...initialMindMapNodes], initialMindMapEdges);
+  }
+
+  // ── Per-participant ideation owner metadata for multiplayer ──
+  // Instead of seeding mind map nodes server-side (which fights Liveblocks recovery),
+  // we pass owner metadata to the client. The useIdeationSeeding hook creates nodes
+  // INSIDE the Liveblocks-connected store so data flows with Liveblocks, not against it.
+  type IdeationOwnerEntry = { ownerId: string; ownerName: string; ownerColor: string; hmwBranchLabel: string };
+  let ideationOwners: IdeationOwnerEntry[] = [];
+  if (step.id === 'ideation' && session.workshop.workshopType === 'multiplayer') {
+    const [workshopSessionForIdeation] = await db
+      .select()
+      .from(workshopSessions)
+      .where(eq(workshopSessions.workshopId, session.workshop.id))
+      .limit(1);
+
+    if (workshopSessionForIdeation) {
+      const allParticipantsForIdeation = await db
+        .select()
+        .from(sessionParticipants)
+        .where(eq(sessionParticipants.sessionId, workshopSessionForIdeation.id));
+      const activeIdeationParticipants = allParticipantsForIdeation.filter((p) => p.status !== 'removed');
+      const ownerForIdeation = activeIdeationParticipants.find((p) => p.role === 'owner');
+      const participantsForIdeation = activeIdeationParticipants.filter((p) => p.role === 'participant');
+
+      // Load each participant's HMW card from the reframe canvas state
+      const reframeCanvas = await loadCanvasState(session.workshop.id, 'reframe');
+      const allHmwCards = (reframeCanvas?.hmwCards || []) as HmwCardData[];
+
+      const getHmwStatementFromCard = (c: HmwCardData | undefined): string | undefined => {
+        if (!c) return undefined;
+        if (c.fullStatement) return c.fullStatement;
+        if (c.givenThat && c.persona && c.immediateGoal && c.deeperGoal) {
+          return `Given that ${c.givenThat}, how might we help ${c.persona} to ${c.immediateGoal} so they can ${c.deeperGoal}?`;
+        }
+        return undefined;
+      };
+
+      if (ownerForIdeation) {
+        const ownerHmwCard = allHmwCards.find((c) => c.ownerId === 'facilitator');
+        const stmt = getHmwStatementFromCard(ownerHmwCard);
+        ideationOwners.push({
+          ownerId: 'facilitator',
+          ownerName: ownerForIdeation.displayName,
+          ownerColor: ownerForIdeation.color,
+          hmwBranchLabel: stmt ? extractHmwBranchLabel(stmt) : `${ownerForIdeation.displayName}'s HMW`,
+        });
+      }
+      for (const p of participantsForIdeation) {
+        const ownerHmwCard = allHmwCards.find((c) => c.ownerId === p.id);
+        const stmt = getHmwStatementFromCard(ownerHmwCard);
+        ideationOwners.push({
+          ownerId: p.id,
+          ownerName: p.displayName,
+          ownerColor: p.color,
+          hmwBranchLabel: stmt ? extractHmwBranchLabel(stmt) : `${p.displayName}'s HMW`,
+        });
+      }
+    }
   }
 
   // Lazy migration: if artifact exists but no canvas state, derive initial positions
@@ -437,18 +495,183 @@ export default async function StepPage({ params }: StepPageProps) {
     }
   }
 
-  // Persona skeleton cards are created from [PERSONA_PLAN] in chat-panel.tsx when the AI's first message arrives.
-  // No blank seed needed here.
+  // Pre-seed persona skeleton cards from structured _personaCandidates saved during Step 3.
+  // Falls back to legacy sticky-note text parsing for workshops that completed Step 3 before
+  // the structured save was added.
+  // Only creates templates when NONE exist yet — avoids duplicating cards from prior AI PERSONA_PLAN.
+  if (step.id === 'persona' && initialPersonaTemplates.length === 0) {
+    let candidates = await loadPersonaCandidates(session.workshop.id, 'user-research');
 
-  // Lazy migration: Create skeleton HMW card for reframe step
-  if (step.id === 'reframe' && initialHmwCards.length === 0) {
-    const skeletonCard: HmwCardData = {
+    // Fallback: parse persona cards from Step 3 canvas sticky notes (legacy workshops)
+    if (candidates.length === 0) {
+      const step3Canvas = await loadCanvasState(session.workshop.id, 'user-research');
+      if (step3Canvas?.stickyNotes) {
+        const personaCards = step3Canvas.stickyNotes.filter(
+          (n) => (!n.type || n.type === 'stickyNote') && !n.cluster && n.text.includes(' — ')
+        );
+        candidates = personaCards.map((card) => {
+          const [namePart, description] = card.text.split(' — ').map((s) => s.trim());
+          const commaIdx = namePart ? namePart.indexOf(',') : -1;
+          const firstName = commaIdx > 0 ? namePart.slice(0, commaIdx).trim() : (namePart || card.text);
+          const archetype = commaIdx > 0 ? namePart.slice(commaIdx + 1).trim() : (namePart || card.text);
+          return { name: firstName, archetype, description: description || '' };
+        });
+        // Backfill structured data so future loads skip this fallback
+        if (candidates.length > 0) {
+          await savePersonaCandidates(session.workshop.id, 'user-research', candidates);
+          console.log(`[persona-seed] Backfilled ${candidates.length} persona candidates from legacy sticky notes`);
+        }
+      }
+    }
+
+    if (candidates.length > 0) {
+      const PERSONA_CARD_WIDTH = 680;
+      const PERSONA_GAP = 40;
+
+      initialPersonaTemplates = candidates.map((candidate, i) => ({
+        id: crypto.randomUUID(),
+        position: {
+          x: i * (PERSONA_CARD_WIDTH + PERSONA_GAP),
+          y: 0,
+        },
+        personaId: `persona-${i + 1}`,
+        archetype: candidate.archetype,
+        archetypeRole: candidate.description,
+        name: candidate.name !== candidate.archetype ? candidate.name : undefined,
+      }));
+
+      await saveCanvasState(session.workshop.id, step.id, {
+        stickyNotes: initialCanvasStickyNotes,
+        personaTemplates: initialPersonaTemplates,
+      });
+      console.log(`[persona-seed] Created ${initialPersonaTemplates.length} persona skeleton cards from ${candidates.length} candidates`);
+    }
+  }
+
+  // ── Per-participant HMW cards for reframe step ──
+  // In multiplayer, each person gets their own HMW card.
+  // Requires looking up the workshopSession ID (different table from sessions).
+  // sessionParticipants.sessionId → workshopSessions.id (prefix wses_),
+  // NOT sessions.id (prefix ses_).
+  if (step.id === 'reframe' && session.workshop.workshopType === 'multiplayer') {
+    // Look up the multiplayer workshopSession to get the correct FK for sessionParticipants
+    const [workshopSession] = await db
+      .select()
+      .from(workshopSessions)
+      .where(eq(workshopSessions.workshopId, session.workshop.id))
+      .limit(1);
+
+    if (workshopSession) {
+      const HMW_CARD_SPACING = 780; // 700px card + 80px gap
+
+      // Query all non-removed participants for this workshop session
+      const allParticipants = await db
+        .select()
+        .from(sessionParticipants)
+        .where(eq(sessionParticipants.sessionId, workshopSession.id));
+      const activeParticipants = allParticipants.filter((p) => p.status !== 'removed');
+      const ownerParticipant = activeParticipants.find((p) => p.role === 'owner');
+      const participants = activeParticipants.filter((p) => p.role === 'participant');
+
+      if (initialHmwCards.length === 0) {
+        // Fresh step: create skeleton cards for everyone
+        if (ownerParticipant) {
+          initialHmwCards.push({
+            id: crypto.randomUUID(),
+            position: { x: 0, y: 0 },
+            cardState: 'skeleton',
+            cardIndex: 0,
+            ownerId: 'facilitator',
+            ownerName: ownerParticipant.displayName,
+            ownerColor: ownerParticipant.color,
+          });
+        }
+        for (const p of participants) {
+          initialHmwCards.push({
+            id: crypto.randomUUID(),
+            position: { x: initialHmwCards.length * HMW_CARD_SPACING, y: 0 },
+            cardState: 'skeleton',
+            cardIndex: initialHmwCards.length,
+            ownerId: p.id,
+            ownerName: p.displayName,
+            ownerColor: p.color,
+          });
+        }
+        // Fallback if no participants found
+        if (initialHmwCards.length === 0) {
+          initialHmwCards = [{
+            id: crypto.randomUUID(),
+            position: { x: 0, y: 0 },
+            cardState: 'skeleton',
+            cardIndex: 0,
+          }];
+        }
+      } else if (!initialHmwCards.some((c) => c.ownerId)) {
+        // Migration: existing cards without ownership (created before this feature)
+        // Assign first card to facilitator, create skeletons for participants
+        if (ownerParticipant) {
+          initialHmwCards[0] = {
+            ...initialHmwCards[0],
+            ownerId: 'facilitator',
+            ownerName: ownerParticipant.displayName,
+            ownerColor: ownerParticipant.color,
+          };
+        }
+        for (const p of participants) {
+          initialHmwCards.push({
+            id: crypto.randomUUID(),
+            position: { x: initialHmwCards.length * HMW_CARD_SPACING, y: 0 },
+            cardState: 'skeleton',
+            cardIndex: initialHmwCards.length,
+            ownerId: p.id,
+            ownerName: p.displayName,
+            ownerColor: p.color,
+          });
+        }
+        // Persist migration to DB
+        await saveCanvasState(session.workshop.id, step.id, {
+          stickyNotes: initialCanvasStickyNotes,
+          hmwCards: initialHmwCards,
+        });
+      } else {
+        // Late-joiner: cards have ownership, check if current user is missing
+        if (!participantId && !initialHmwCards.some((c) => c.ownerId === 'facilitator') && ownerParticipant) {
+          // Insert facilitator card at position 0, shift others right
+          initialHmwCards = initialHmwCards.map((c, i) => ({
+            ...c,
+            position: { x: (i + 1) * HMW_CARD_SPACING, y: 0 },
+          }));
+          initialHmwCards.unshift({
+            id: crypto.randomUUID(),
+            position: { x: 0, y: 0 },
+            cardState: 'skeleton',
+            cardIndex: 0,
+            ownerId: 'facilitator',
+            ownerName: ownerParticipant.displayName,
+            ownerColor: ownerParticipant.color,
+          });
+        }
+        if (participantId && !initialHmwCards.some((c) => c.ownerId === participantId)) {
+          initialHmwCards.push({
+            id: crypto.randomUUID(),
+            position: { x: initialHmwCards.length * HMW_CARD_SPACING, y: 0 },
+            cardState: 'skeleton',
+            cardIndex: initialHmwCards.length,
+            ownerId: participantId,
+            ownerName: participantDisplayName || 'Participant',
+            ownerColor: participantColor || '#888888',
+          });
+        }
+      }
+    }
+  } else if (step.id === 'reframe' && initialHmwCards.length === 0) {
+    // Solo mode: single card, no owner fields
+    initialHmwCards = [{
       id: crypto.randomUUID(),
       position: { x: 0, y: 0 },
       cardState: 'skeleton',
       cardIndex: 0,
-    };
-    initialHmwCards = [skeletonCard];
+    }];
   }
 
   // Load Step 8 data for Step 9 (concept)
@@ -677,6 +900,7 @@ export default async function StepPage({ params }: StepPageProps) {
               participantId={participantId}
               participantDisplayName={participantDisplayName}
               participantColor={participantColor}
+              ideationOwners={ideationOwners}
             />
           </MultiplayerRoomLoader>
         ) : (

@@ -53,6 +53,7 @@ export const workshopSteps = pgTable(
     output: jsonb('output').$type<Record<string, unknown>>(),
     startedAt: timestamp('started_at', { mode: 'date', precision: 3 }),
     completedAt: timestamp('completed_at', { mode: 'date', precision: 3 }),
+    snapshotUrl: text('snapshot_url'),
     createdAt: timestamp('created_at', { mode: 'date', precision: 3 })
       .notNull()
       .defaultNow(),

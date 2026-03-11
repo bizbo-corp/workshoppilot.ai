@@ -2,9 +2,11 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { fulfillCreditPurchase } from '@/lib/billing/fulfill-credit-purchase';
 import { db } from '@/db/client';
-import { users } from '@/db/schema';
+import { users, sessions } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import Link from 'next/link';
+import { consumeCredit } from '@/actions/billing-actions';
+import { updateStepStatus } from '@/actions/workshop-actions';
 
 /**
  * Purchase success page — Server Component.
@@ -145,8 +147,47 @@ export default async function PurchaseSuccessPage({
     );
   }
 
-  // If return_to is present and fulfillment succeeded, redirect to workshop
+  // If return_to is present and fulfillment succeeded, auto-unlock workshop and redirect
   if (validReturnTo && (result.status === 'fulfilled' || result.status === 'already_fulfilled')) {
+    // Auto-unlock: consume a credit and advance from step 7→8 so user lands directly on step 8
+    const urlMatch = validReturnTo.match(/^\/workshop\/([^/]+)\/step\/(\d+)$/);
+    if (urlMatch) {
+      const returnSessionId = urlMatch[1];
+      const returnStepNum = parseInt(urlMatch[2], 10);
+
+      if (returnStepNum >= 8) {
+        try {
+          const returnSession = await db.query.sessions.findFirst({
+            where: eq(sessions.id, returnSessionId),
+            with: {
+              workshop: {
+                columns: { id: true, clerkUserId: true },
+                with: { steps: true },
+              },
+            },
+          });
+
+          if (returnSession && returnSession.workshop.clerkUserId === userId) {
+            // Consume a credit to unlock the workshop (idempotent if already unlocked)
+            const creditResult = await consumeCredit(returnSession.workshop.id);
+            const unlocked = ['consumed', 'already_unlocked', 'grandfathered', 'paywall_disabled'].includes(creditResult.status);
+
+            if (unlocked) {
+              // Advance step 7 (reframe) → step 8 (ideation) if still pending
+              const step7 = returnSession.workshop.steps.find((s: { stepId: string }) => s.stepId === 'reframe');
+              if (step7?.status === 'in_progress') {
+                await updateStepStatus(returnSession.workshop.id, 'reframe', 'complete', returnSessionId);
+                await updateStepStatus(returnSession.workshop.id, 'ideation', 'in_progress', returnSessionId);
+              }
+            }
+          }
+        } catch (err) {
+          // Non-blocking: if auto-unlock fails, user sees paywall overlay and can unlock manually
+          console.error('Auto-unlock after purchase failed:', err);
+        }
+      }
+    }
+
     redirect(validReturnTo);
   }
 

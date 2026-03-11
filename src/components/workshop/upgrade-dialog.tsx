@@ -5,16 +5,15 @@
  * to entice users after they've completed the analytical work.
  * Two CTA paths:
  *   - hasCredits=true: "Use 1 Credit to Unlock" -> consumeCredit() + advanceToNextStep()
- *   - hasCredits=false: "Get 1 Credit" -> /pricing?return_to=...
+ *   - hasCredits=false: Inline pricing tiers -> createCheckoutUrl() -> Stripe Checkout
  */
 
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { Sparkles, Palette, Zap, FileText } from 'lucide-react';
+import { Sparkles, Palette, Zap, FileText, Shield } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { consumeCredit } from '@/actions/billing-actions';
+import { consumeCredit, createCheckoutUrl } from '@/actions/billing-actions';
 import { advanceToNextStep } from '@/actions/workshop-actions';
 import { STEPS } from '@/lib/workshop/step-metadata';
 import { CreativeStepsPreview } from './creative-steps-preview';
@@ -49,6 +48,7 @@ export function UpgradeDialog({
   creditBalance,
 }: UpgradeDialogProps) {
   const [isConsuming, setIsConsuming] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   async function handleUseCredit() {
     setIsConsuming(true);
@@ -80,6 +80,22 @@ export function UpgradeDialog({
       toast.error('Failed to unlock workshop. Please try again.');
     } finally {
       setIsConsuming(false);
+    }
+  }
+
+  async function handleCheckout(tier: 'single' | 'pack') {
+    setIsCheckingOut(true);
+    try {
+      const result = await createCheckoutUrl(tier, `/workshop/${sessionId}/step/8`);
+      if ('url' in result) {
+        window.location.href = result.url;
+      } else {
+        toast.error(result.error);
+        setIsCheckingOut(false);
+      }
+    } catch {
+      toast.error('Failed to start checkout. Please try again.');
+      setIsCheckingOut(false);
     }
   }
 
@@ -156,18 +172,47 @@ export function UpgradeDialog({
             </>
           ) : (
             <>
-              {/* Primary CTA: go to pricing */}
-              <Link
-                href={`/pricing?return_to=${encodeURIComponent(`/workshop/${sessionId}/step/8`)}`}
-                className={cn(buttonVariants({ size: 'lg' }), 'w-full text-center')}
-              >
-                Get 1 Credit — $79
-              </Link>
+              {/* Inline pricing tiers */}
+              <div className="space-y-2.5">
+                {/* Single credit */}
+                <button
+                  onClick={() => handleCheckout('single')}
+                  disabled={isCheckingOut}
+                  className="w-full rounded-lg border p-4 text-left hover:bg-accent transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-wait"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">1 Workshop Credit</p>
+                      <p className="text-xs text-muted-foreground">Unlock this workshop</p>
+                    </div>
+                    <span className="text-lg font-bold">$99</span>
+                  </div>
+                </button>
 
-              {/* Secondary option */}
-              <p className="text-xs text-muted-foreground text-center">
-                Or save with the 3-credit pack — $149
-              </p>
+                {/* 3-credit pack */}
+                <button
+                  onClick={() => handleCheckout('pack')}
+                  disabled={isCheckingOut}
+                  className="w-full rounded-lg border border-olive-500/50 bg-olive-50/30 dark:bg-olive-950/20 p-4 text-left hover:bg-olive-50/60 dark:hover:bg-olive-950/30 transition-colors relative disabled:opacity-50 cursor-pointer disabled:cursor-wait"
+                >
+                  <span className="absolute -top-2.5 right-3 text-[10px] font-semibold bg-olive-100 dark:bg-olive-900 text-olive-700 dark:text-olive-300 rounded-full px-2 py-0.5">
+                    Save $98
+                  </span>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">3 Workshop Credits</p>
+                      <p className="text-xs text-muted-foreground">$66 per workshop</p>
+                    </div>
+                    <span className="text-lg font-bold">$199</span>
+                  </div>
+                </button>
+              </div>
+
+              {/* Trust signal */}
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+                <Shield className="h-3 w-3" />
+                Secure checkout via Stripe · Credits never expire
+              </div>
             </>
           )}
 

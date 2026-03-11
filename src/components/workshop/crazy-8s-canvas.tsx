@@ -25,7 +25,7 @@ import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
 interface Crazy8sCanvasProps {
   workshopId: string;
   stepId: string;
-  /** True when IdeationSubStepContainer has the idea-selection phase active */
+  /** True when the idea-selection phase is active */
   votingMode?: boolean;
   onVoteSelectionConfirm?: (selectedSlotIds: string[]) => void;
   onReVote?: () => void;

@@ -76,6 +76,7 @@ export function CanvasStoreProvider({
   // When enterRoom is called, the Liveblocks middleware clears all storageMapping fields
   // while connecting. For a NEW room (empty Storage), the cleared state persists — wiping
   // template stickies and other server-seeded data. The ref lets us restore them.
+  // Updated on every render so router.refresh() delivers fresh server data to recovery.
   const initialStateRef = useRef({
     stickyNotes: initialStickyNotes || [],
     gridColumns: initialGridColumns || [],
@@ -89,6 +90,12 @@ export function CanvasStoreProvider({
     brainRewritingMatrices: initialBrainRewritingMatrices || [],
     dotVotes: initialDotVotes || [],
   });
+  // Keep ref fresh across re-renders (e.g. after router.refresh())
+  initialStateRef.current.hmwCards = initialHmwCards || [];
+  initialStateRef.current.stickyNotes = initialStickyNotes || [];
+  initialStateRef.current.personaTemplates = initialPersonaTemplates || [];
+  initialStateRef.current.mindMapNodes = initialMindMapNodes || [];
+  initialStateRef.current.mindMapEdges = initialMindMapEdges || [];
 
   // Create store ONCE per mount — ensures per-request isolation in SSR
   const [store] = useState<CanvasStoreApi>(() => {
@@ -120,6 +127,10 @@ export function CanvasStoreProvider({
   // in MultiplayerRoomLoader) handles broadcasts and presence separately.
   useEffect(() => {
     if (!isMultiplayer || !workshopId || !stepId) return;
+    // Skip step-level Liveblocks room for ideation — per-participant seeding
+    // is incompatible with Liveblocks clearing storageMapping fields on enterRoom.
+    // DB-based persistence handles ideation canvas state instead.
+    if (stepId === 'ideation') return;
     const multiStore = store as MultiplayerCanvasStoreApi;
     const { enterRoom, leaveRoom } = multiStore.getState().liveblocks;
     enterRoom(`${getRoomId(workshopId)}-step-${stepId}`);
@@ -128,15 +139,9 @@ export function CanvasStoreProvider({
     // while waiting for Storage to load. For an EXISTING room, Storage data will replace
     // the cleared values. For a NEW room (empty Storage), the cleared state persists —
     // wiping server-loaded template stickies and other seed data.
-    // Fix: subscribe to status changes, and when connected, re-apply any fields that
+    // Fix: when connected (or on failure fallback), re-apply any fields that
     // the middleware cleared but the server had initial data for.
-    let applied = false;
-    const unsub = multiStore.subscribe((state) => {
-      if (applied) return;
-      if (state.liveblocks.status !== 'connected') return;
-      applied = true;
-      unsub();
-
+    const applyRecovery = () => {
       const init = initialStateRef.current;
       const current = multiStore.getState();
       const patch: Record<string, unknown> = {};
@@ -150,6 +155,9 @@ export function CanvasStoreProvider({
       if (current.drawingNodes.length === 0 && init.drawingNodes.length > 0) {
         patch.drawingNodes = init.drawingNodes;
       }
+      // Mind map nodes/edges and crazy 8s slots are NOT recovered here for
+      // multiplayer ideation. Per-participant seeding is handled client-side
+      // by useIdeationSeeding, which writes directly into the Liveblocks store.
       if (current.mindMapNodes.length === 0 && init.mindMapNodes.length > 0) {
         patch.mindMapNodes = init.mindMapNodes;
       }
@@ -167,6 +175,14 @@ export function CanvasStoreProvider({
       }
       if (current.hmwCards.length === 0 && init.hmwCards.length > 0) {
         patch.hmwCards = init.hmwCards;
+      } else if (
+        // Ownership migration: server has per-participant cards but Liveblocks
+        // has legacy cards without ownership. Replace with server version.
+        init.hmwCards.some((c) => c.ownerId) &&
+        current.hmwCards.length > 0 &&
+        !current.hmwCards.some((c) => c.ownerId)
+      ) {
+        patch.hmwCards = init.hmwCards;
       }
       if (current.brainRewritingMatrices.length === 0 && init.brainRewritingMatrices.length > 0) {
         patch.brainRewritingMatrices = init.brainRewritingMatrices;
@@ -178,10 +194,25 @@ export function CanvasStoreProvider({
       if (Object.keys(patch).length > 0) {
         multiStore.setState(patch);
       }
+    };
+
+    // Subscribe to ALL status changes. applyRecovery is idempotent — it only
+    // patches fields that are empty or missing ownership. Keeping the subscriber
+    // alive handles: initial connect, auth-failure-then-retry reconnects, and
+    // any future disconnect/reconnect cycles that re-clear the store.
+    const unsub = multiStore.subscribe((state) => {
+      const s = state.liveblocks.status;
+      if (s === 'connected' || s === 'disconnected') {
+        applyRecovery();
+      }
     });
+
+    // Fallback: if Liveblocks stays stuck in 'connecting', force-apply after 3s.
+    const fallbackTimer = setTimeout(() => applyRecovery(), 3000);
 
     return () => {
       unsub();
+      clearTimeout(fallbackTimer);
       leaveRoom();
     };
   }, [isMultiplayer, workshopId, stepId, store]);
@@ -244,6 +275,39 @@ export function CanvasStoreProvider({
       }
     }
   }, [initialConceptCards, store]);
+
+  // Sync persona templates from server props into the store.
+  // Same pattern as concept cards above — when the store is reused across step
+  // navigation, the useState initializer doesn't re-run and persona templates
+  // from the server would be lost without this effect.
+  useEffect(() => {
+    if (!initialPersonaTemplates || initialPersonaTemplates.length === 0) return;
+    const current = store.getState().personaTemplates;
+    if (current.length === 0) {
+      store.getState().setPersonaTemplates(initialPersonaTemplates);
+      store.getState().markDirty();
+    }
+  }, [initialPersonaTemplates, store]);
+
+  // Sync HMW cards from server props into the store.
+  // After reset + router.refresh(), the store is preserved (same key={stepId}) but
+  // the server provides fresh per-participant cards. Without this sync, the store
+  // stays empty and the server-rendered cards flash then vanish.
+  useEffect(() => {
+    if (!initialHmwCards || initialHmwCards.length === 0) return;
+    const current = store.getState().hmwCards;
+    if (current.length === 0) {
+      store.getState().setHmwCards(initialHmwCards);
+      store.getState().markDirty();
+    } else if (
+      initialHmwCards.some((c) => c.ownerId) &&
+      !current.some((c) => c.ownerId)
+    ) {
+      // Server has per-participant cards but store has legacy cards — upgrade
+      store.getState().setHmwCards(initialHmwCards);
+      store.getState().markDirty();
+    }
+  }, [initialHmwCards, store]);
 
   return (
     <CanvasStoreContext.Provider value={store}>

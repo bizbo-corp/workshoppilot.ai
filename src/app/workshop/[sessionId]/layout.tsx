@@ -9,6 +9,7 @@
  */
 
 import { notFound, redirect } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { sessions, workshopSessions } from '@/db/schema';
@@ -51,11 +52,16 @@ export default async function WorkshopLayout({
     redirect('/');
   }
 
+  // Determine if current user is the facilitator (workshop owner)
+  const { userId } = await auth();
+  const isFacilitator = !!userId && userId === session.workshop.clerkUserId;
+
   // Serialize step data for client components
   // Convert to plain serializable array (no Map objects for RSC)
   const workshopSteps = session.workshop.steps.map((s) => ({
     stepId: s.stepId,
     status: s.status as 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration',
+    snapshotUrl: s.snapshotUrl ?? null,
   }));
 
   // Paywall lock state for stepper badges
@@ -111,6 +117,7 @@ export default async function WorkshopLayout({
             workshopEmoji={session.workshop.emoji}
             workshopType={session.workshop.workshopType ?? 'solo'}
             shareToken={workshopSession?.shareToken}
+            isFacilitator={isFacilitator}
           />
 
           {/* Main content area (full width) */}

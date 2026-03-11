@@ -48,15 +48,15 @@ const ROW_ICONS: Record<string, LucideIcon> = {
   opportunities: Lightbulb,
 };
 
-/** Per-row tint colors for swimlane visual identity */
+/** Per-row tint colors for swimlane visual identity — matches sticky note palette */
 const ROW_TINT_COLORS: Record<string, string> = {
-  actions: '#b8c8d0',      // blue
-  goals: '#c0d8c0',        // green
-  barriers: '#d8b8a8',     // red
-  touchpoints: '#e8c8c0',  // pink
-  emotions: '#a8aaa3',     // neutral gray (traffic light handles color)
-  moments: '#ede0c0',      // yellow
-  opportunities: '#e0d0b8', // orange
+  actions: '#b8c8d0',      // blue  (--canvas-blue-pastel)
+  goals: '#c0d8c0',        // green (--canvas-green-pastel)
+  barriers: '#d8b8a8',     // red   (--canvas-red-pastel)
+  touchpoints: '#e8c8c0',  // pink  (--canvas-pink-pastel)
+  emotions: '#e8c8c0',     // pink  (--canvas-pink-pastel) — matches emotion stickies
+  moments: '#ede0c0',      // yellow(--canvas-yellow-pastel)
+  opportunities: '#e0d0b8', // orange(--canvas-orange-pastel)
 };
 
 /** Dark accent colors for row label icons + text (light theme / dark theme) */
@@ -321,7 +321,7 @@ export function GridOverlay({
                 width={fullWidth * zoom}
                 height={rowHeight * zoom}
                 fill={tintColor}
-                opacity={0.15}
+                opacity={0.3}
               />
             );
           })}

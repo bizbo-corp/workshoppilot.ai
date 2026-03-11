@@ -25,8 +25,6 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DeliverableDetailView } from '@/components/workshop/deliverable-detail-view';
-import { CaptureFlow } from '@/components/workshop/presentation-capture/capture-flow';
-import type { StepData } from '@/components/workshop/presentation-capture/step-renderers';
 import { toast } from 'sonner';
 
 interface DeliverableFormat {
@@ -170,8 +168,6 @@ export function OutputsContent({
     () => deliverables.some((d) => d.type === 'stakeholder-ppt')
   );
   const [presentationProgress, setPresentationProgress] = useState('');
-  const [captureStepsData, setCaptureStepsData] = useState<Record<string, StepData> | null>(null);
-  const [captureTrigger, setCaptureTrigger] = useState(false);
   const captureForceRef = useRef(false);
   const [localDeliverables, setLocalDeliverables] = useState<Map<string, DeliverableFormat[]>>(new Map());
 
@@ -294,46 +290,15 @@ export function OutputsContent({
 
   const handleGeneratePresentation = useCallback(async (force = false) => {
     setPresentationStatus('loading');
-    setPresentationProgress('Fetching canvas data...');
+    setPresentationProgress('Building presentation...');
     captureForceRef.current = force;
 
     try {
-      // Step 1: Fetch canvas data
-      const canvasRes = await fetch(`/api/build-pack/canvas-data?workshopId=${workshopId}`);
-      if (!canvasRes.ok) {
-        throw new Error('Failed to fetch canvas data');
-      }
-      const canvasData = await canvasRes.json();
-      const stepsData = canvasData.steps as Record<string, StepData>;
-
-      setPresentationProgress('Capturing step visuals...');
-
-      // Step 2: Set up capture flow
-      setCaptureStepsData(stepsData);
-      setCaptureTrigger(true);
-    } catch (err) {
-      setPresentationStatus('error');
-      setPresentationProgress('');
-      toast.error(err instanceof Error ? err.message : 'Presentation generation failed');
-    }
-  }, [workshopId]);
-
-  /** Called when capture flow finishes capturing all step images */
-  const handleCaptureComplete = useCallback(async (images: Record<string, string>) => {
-    setCaptureTrigger(false);
-    setCaptureStepsData(null);
-    setPresentationProgress('Building presentation...');
-
-    try {
-      // Step 3: Send images to API to build PPTX
+      // Send request without stepImages — server uses stored snapshots
       const res = await fetch('/api/build-pack/generate-presentation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workshopId,
-          stepImages: images,
-          force: captureForceRef.current,
-        }),
+        body: JSON.stringify({ workshopId, force }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -362,13 +327,6 @@ export function OutputsContent({
     }
   }, [workshopId]);
 
-  const handleCaptureError = useCallback((error: Error) => {
-    setCaptureTrigger(false);
-    setCaptureStepsData(null);
-    setPresentationStatus('error');
-    setPresentationProgress('');
-    toast.error(`Capture failed: ${error.message}`);
-  }, []);
 
   /** Check whether a deliverable has already been generated (server data or local cache) */
   function isGenerated(type: string): boolean {
@@ -405,18 +363,6 @@ export function OutputsContent({
 
   return (
     <div className="h-full overflow-y-auto">
-      {/* Hidden capture flow for presentation image generation */}
-      {captureStepsData && (
-        <CaptureFlow
-          stepsData={captureStepsData}
-          trigger={captureTrigger}
-          onProgress={(current, total, stepName) => {
-            setPresentationProgress(`Capturing step ${current} of ${total}...`);
-          }}
-          onComplete={handleCaptureComplete}
-          onError={handleCaptureError}
-        />
-      )}
       <div className="mx-auto max-w-4xl px-6 py-8 space-y-8">
         {/* Header */}
         <div className="space-y-1">

@@ -2,6 +2,62 @@
  * Step 3: User Research — Interviews with AI-generated personas from the stakeholder map.
  * Supports two modes: AI Interviews (synthetic roleplay) and Real Interviews (user-conducted).
  */
+
+/**
+ * Facilitator name pool — distinct from participant pool so both sides
+ * always get different persona names. Shuffled at call time.
+ */
+const FACILITATOR_NAME_POOL = [
+  "Marta",
+  "Tariq",
+  "Lila",
+  "Tāne",
+  "Jin",
+  "Suki",
+  "Rafael",
+  "Olga",
+  "Kenji",
+  "Petra",
+  "Idris",
+  "Anika",
+  "Mateo",
+  "Leila",
+  "Kofi",
+  "Esme",
+  "Ravi",
+  "Niamh",
+  "Dmitri",
+  "Aaliya",
+  "Oscar",
+  "Fatou",
+  "Hiroshi",
+  "Solange",
+  "Anders",
+  "Priya",
+  "Ezra",
+  "Linnea",
+  "Kwame",
+  "Thalia",
+];
+
+function pickRandomFacilitatorNames(count: number): string[] {
+  const shuffled = [...FACILITATOR_NAME_POOL].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
+/**
+ * Process the user research prompt template, injecting random facilitator names.
+ */
+export function processUserResearchPrompt(raw: string): string {
+  const names = pickRandomFacilitatorNames(5);
+  return raw
+    .replace(/\{\{FNAME_1\}\}/g, names[0])
+    .replace(/\{\{FNAME_2\}\}/g, names[1])
+    .replace(/\{\{FNAME_3\}\}/g, names[2])
+    .replace(/\{\{FNAME_4\}\}/g, names[3])
+    .replace(/\{\{FNAME_5\}\}/g, names[4]);
+}
+
 export const userResearchStep = {
   contentStructure: `STEP GOAL: Conduct interviews with personas based on the stakeholders identified in Step 2. Extract deep pain points, hidden needs, and raw quotes that reveal how real people experience the challenge. The user chooses between AI-simulated interviews and real interviews they conduct themselves.
 
@@ -89,15 +145,17 @@ Then present the personas using [PERSONA_SELECT] markup (NOT [CANVAS_ITEM]).
 
 CRITICAL: Your persona candidates MUST be derived from the Step 2 Stakeholder Map data injected into your context. Read the stakeholder clusters, sub-groups, and ring positions carefully. Each persona should map to a specific stakeholder or sub-group from that map — not be invented from scratch. If the stakeholder map has "Small Suppliers" and "Supermarket Buyers," your personas should represent those groups, not generic archetypes.
 
-FORMAT EXAMPLE ONLY (do NOT copy these — generate personas grounded in YOUR stakeholder map):
+You MUST use these exact first names for your 5 personas (do not substitute or change them):
 
 [PERSONA_SELECT]
-- The [Role from Stakeholder Map] — [specific tension or need relevant to the challenge]
-- The [Sub-group from Stakeholder Map] — [their unique perspective on the problem]
-- The [Another Stakeholder] — [what makes their experience different]
-- The [Cross-stakeholder or Indirect Perspective] — [why they matter to this challenge]
-- The [Peripheral or Unexpected Stakeholder] — [the angle others might miss]
+- {{FNAME_1}}, The [Role from Stakeholder Map] — [specific tension or need relevant to the challenge]
+- {{FNAME_2}}, The [Sub-group from Stakeholder Map] — [their unique perspective on the problem]
+- {{FNAME_3}}, The [Another Stakeholder] — [what makes their experience different]
+- {{FNAME_4}}, The [Cross-stakeholder or Indirect Perspective] — [why they matter to this challenge]
+- {{FNAME_5}}, The [Peripheral or Unexpected Stakeholder] — [the angle others might miss]
 [/PERSONA_SELECT]
+
+Use EXACTLY the first names provided above — do not change, skip, or duplicate any name. The archetypes and descriptions should be grounded in the stakeholder map. Format: "FirstName, The Archetype — description".
 
 IMPORTANT: Generate EXACTLY 5 options. Every persona MUST trace back to a specific stakeholder or sub-group from Step 2. Use cluster children (e.g., "Schools" under "Education Centres") as persona candidates, not parent categories. Include at least one cross-stakeholder or peripheral perspective. The persona names and descriptions should use language specific to the challenge domain — never generic labels like "The Budget Beginner" or "The Power User" unless those terms genuinely describe stakeholders from the map.
 
@@ -125,7 +183,7 @@ Generate a tailored interview guide for each selected persona. For each persona:
    - Open-ended, probing questions that dig into pain points and behaviors
    - Mix of logistics, emotions, relationships, and workarounds
    - Include at least one question that targets the gap between stated and revealed preferences
-3. Add a persona card to the canvas: [CANVAS_ITEM: Persona Name — brief description]
+3. Do NOT add persona cards to the canvas — they were already added when the user confirmed their selection
 
 After all persona guides, send a closing message:
 "Copy the questions and go talk to real people! 💬 When you're done, add your interview insights as sticky notes on the canvas. **Drag each sticky note near the persona it belongs to** and it'll auto-assign — you can also right-click any sticky note to assign it. Click **I'm ready to compile** when you've captured everything."

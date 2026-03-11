@@ -93,6 +93,7 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
     pendingFitView: false,
     pendingHmwChipSelection: null,
     selectedStickyNoteIds: [],
+    ideationPhase: 'mind-mapping' as const,
   };
 
   return createStore<WithLiveblocks<CanvasStore>>()(
@@ -710,6 +711,9 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
             votingSession: DEFAULT_VOTING_SESSION,
           })),
 
+        setIdeationPhase: (phase) =>
+          set(() => ({ ideationPhase: phase })),
+
         // no-ops in multiplayer — Liveblocks Storage is authoritative, not Neon auto-save
         markClean: () => {},
         markDirty: () => {},
@@ -736,6 +740,7 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
           brainRewritingMatrices: true,
           dotVotes: true,
           votingSession: true,
+          ideationPhase: true,
         },
         // presenceMapping: omitted — Presence (cursor, color, displayName) is managed
         // directly via useUpdateMyPresence() in Phase 56. No Zustand fields map to Presence.

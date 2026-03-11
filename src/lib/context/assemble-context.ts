@@ -5,6 +5,7 @@ import { getStepById } from '@/lib/workshop/step-metadata';
 import { loadCanvasState } from '@/actions/canvas-actions';
 import { assembleCanvasContextForStep, assembleEmpathyMapCanvasContext, assembleHmwCardCanvasContext, assembleIdeationForConceptContext, assembleStakeholderCanvasContext, assembleUserResearchCanvasContext } from '@/lib/workshop/context/canvas-context';
 import type { StepContext } from './types';
+import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 
 /**
  * Which prior step summaries each step needs as context.
@@ -44,6 +45,7 @@ const STEP_SUMMARY_DEPS: Record<string, string[] | 'all'> = {
 export async function assembleStepContext(
   workshopId: string,
   currentStepId: string,
+  participantId?: string,
 ): Promise<StepContext> {
   // Tier 2: Query summaries filtered by step dependency map
   const deps = STEP_SUMMARY_DEPS[currentStepId];
@@ -103,7 +105,7 @@ export async function assembleStepContext(
   // Tier 4: Query canvas state for this step
   const canvasState = await loadCanvasState(workshopId, currentStepId);
   let canvasContext = canvasState
-    ? assembleCanvasContextForStep(currentStepId, canvasState.stickyNotes || [], canvasState.gridColumns, canvasState.personaTemplates, canvasState.hmwCards, canvasState.mindMapNodes, canvasState.mindMapEdges, canvasState.conceptCards)
+    ? assembleCanvasContextForStep(currentStepId, canvasState.stickyNotes || [], canvasState.gridColumns, canvasState.personaTemplates, canvasState.hmwCards, canvasState.mindMapNodes, canvasState.mindMapEdges, canvasState.conceptCards, participantId)
     : (currentStepId === 'journey-mapping'
       ? assembleCanvasContextForStep(currentStepId, [])
       : '');
@@ -130,8 +132,8 @@ export async function assembleStepContext(
       const userResearchContext = assembleUserResearchCanvasContext(step3Canvas.stickyNotes);
       if (userResearchContext) {
         canvasContext = canvasContext
-          ? `${canvasContext}\n\nStep 3 User Research Canvas (each named group = a persona to build):\n${userResearchContext}`
-          : `Step 3 User Research Canvas (each named group = a persona to build):\n${userResearchContext}`;
+          ? `${canvasContext}\n\nStep 3 User Research Canvas (IMPORTANT: count items under **Persona Cards** — build ONE persona for EACH card listed, even if some lack interview insights):\n${userResearchContext}`
+          : `Step 3 User Research Canvas (IMPORTANT: count items under **Persona Cards** — build ONE persona for EACH card listed, even if some lack interview insights):\n${userResearchContext}`;
       }
     }
 
@@ -152,7 +154,11 @@ export async function assembleStepContext(
   if (currentStepId === 'ideation') {
     const step7Canvas = await loadCanvasState(workshopId, 'reframe');
     if (step7Canvas?.hmwCards && step7Canvas.hmwCards.length > 0) {
-      const hmwContext = assembleHmwCardCanvasContext(step7Canvas.hmwCards);
+      // Filter to participant's HMW card if participantId provided
+      const relevantHmwCards = participantId
+        ? step7Canvas.hmwCards.filter((c: HmwCardData) => c.ownerId === participantId)
+        : step7Canvas.hmwCards;
+      const hmwContext = assembleHmwCardCanvasContext(relevantHmwCards.length > 0 ? relevantHmwCards : step7Canvas.hmwCards);
       if (hmwContext) {
         canvasContext = canvasContext
           ? `${canvasContext}\n\nStep 7 Reframed HMW Statements (use these as the ideation prompt and mind map branches):\n${hmwContext}`

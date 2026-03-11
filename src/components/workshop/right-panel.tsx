@@ -44,9 +44,9 @@ export function RightPanel({
   const stepMeta = getStepByOrder(stepOrder);
 
   return (
-    <div className="flex h-full flex-col relative">
+    <div className="flex h-full flex-col relative overflow-hidden">
       {/* Canvas section - full height */}
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <CanvasWrapper
           sessionId={sessionId}
           stepId={stepMeta?.id || ''}

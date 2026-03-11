@@ -366,7 +366,9 @@ export function assembleHmwCardCanvasContext(hmwCards: HmwCardData[]): string {
   const sections: string[] = [];
 
   for (const card of hmwCards) {
-    const lines: string[] = [`**HMW Card${card.cardIndex !== undefined && card.cardIndex > 0 ? ` #${card.cardIndex + 1} (Alternative)` : ''}** (state: ${card.cardState}):`];
+    const ownerLabel = card.ownerName ? ` (by ${card.ownerName})` : '';
+    const altLabel = card.cardIndex !== undefined && card.cardIndex > 0 ? ` #${card.cardIndex + 1} (Alternative)` : '';
+    const lines: string[] = [`**HMW Card${altLabel}${ownerLabel}** (state: ${card.cardState}):`];
 
     const fields = [
       { key: 'givenThat', label: 'Given that' },
@@ -460,22 +462,26 @@ export function assembleUserResearchCanvasContext(stickyNotes: StickyNote[]): st
  * Assemble mind map canvas context for Step 8 (Ideation)
  * Formats mind map nodes as a tree so the AI can see branch labels and existing ideas
  */
-export function assembleMindMapCanvasContext(mindMapNodes: MindMapNodeState[], mindMapEdges: MindMapEdgeState[]): string {
-  if (mindMapNodes.length === 0) return '';
+export function assembleMindMapCanvasContext(mindMapNodes: MindMapNodeState[], mindMapEdges: MindMapEdgeState[], ownerId?: string): string {
+  // Filter by ownerId if provided (per-participant ideation)
+  const filteredNodes = ownerId ? mindMapNodes.filter(n => n.ownerId === ownerId) : mindMapNodes;
+  const filteredEdges = ownerId ? mindMapEdges.filter(e => e.ownerId === ownerId) : mindMapEdges;
+
+  if (filteredNodes.length === 0) return '';
 
   // Build parent→children lookup from edges
   const childrenOf = new Map<string, MindMapNodeState[]>();
   const nodeById = new Map<string, MindMapNodeState>();
-  for (const node of mindMapNodes) {
+  for (const node of filteredNodes) {
     nodeById.set(node.id, node);
   }
-  for (const edge of mindMapEdges) {
+  for (const edge of filteredEdges) {
     if (!childrenOf.has(edge.source)) childrenOf.set(edge.source, []);
     const targetNode = nodeById.get(edge.target);
     if (targetNode) childrenOf.get(edge.source)!.push(targetNode);
   }
 
-  const root = mindMapNodes.find(n => n.isRoot);
+  const root = filteredNodes.find(n => n.isRoot);
   if (!root) return '';
 
   const lines: string[] = [`Root: "${root.label}"`];
@@ -610,7 +616,7 @@ export function assembleIdeationForConceptContext(
  * Assemble canvas context for a specific step
  * Routes to step-specific assembly function based on stepId
  */
-export function assembleCanvasContextForStep(stepId: string, stickyNotes: StickyNote[], gridColumns?: GridColumn[], personaTemplates?: PersonaTemplateData[], hmwCards?: HmwCardData[], mindMapNodes?: MindMapNodeState[], mindMapEdges?: MindMapEdgeState[], conceptCards?: ConceptCardData[]): string {
+export function assembleCanvasContextForStep(stepId: string, stickyNotes: StickyNote[], gridColumns?: GridColumn[], personaTemplates?: PersonaTemplateData[], hmwCards?: HmwCardData[], mindMapNodes?: MindMapNodeState[], mindMapEdges?: MindMapEdgeState[], conceptCards?: ConceptCardData[], ownerId?: string): string {
   // Concept step uses concept cards
   if (stepId === 'concept' && conceptCards && conceptCards.length > 0) {
     return assembleConceptCanvasContext(conceptCards);
@@ -618,7 +624,7 @@ export function assembleCanvasContextForStep(stepId: string, stickyNotes: Sticky
 
   // Ideation step uses mind map nodes
   if (stepId === 'ideation' && mindMapNodes && mindMapNodes.length > 0) {
-    return assembleMindMapCanvasContext(mindMapNodes, mindMapEdges || []);
+    return assembleMindMapCanvasContext(mindMapNodes, mindMapEdges || [], ownerId);
   }
 
   // For journey-mapping, always return context (even if no items) so AI sees column structure

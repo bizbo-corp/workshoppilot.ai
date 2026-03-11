@@ -13,7 +13,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, RotateCcw, Plus, Camera, CheckCircle2, MessageSquare } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw, Plus, Camera, CheckCircle2, MessageSquare, Aperture } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -75,6 +75,7 @@ export function StepNavigation({
   const [isNavigating, setIsNavigating] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [paywallState, setPaywallState] = useState<{ hasCredits: boolean; creditBalance: number } | null>(null);
   const [usage, setUsage] = useState<{
     callCount: number;
@@ -246,6 +247,42 @@ export function StepNavigation({
                   Save Default View
                 </Button>
               )}
+              <Button
+                onClick={async () => {
+                  const currentStep = STEPS.find((s) => s.order === currentStepOrder);
+                  if (!currentStep) return;
+                  setIsCapturing(true);
+                  try {
+                    const { captureSingleStep } = await import('@/lib/capture/capture-single-step');
+                    const imageBase64 = await captureSingleStep(currentStep.id, {});
+                    if (imageBase64) {
+                      const res = await fetch('/api/upload-step-snapshot', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imageBase64, workshopId, stepId: currentStep.id }),
+                      });
+                      if (res.ok) {
+                        toast.success('Snapshot captured');
+                      } else {
+                        toast.error('Snapshot upload failed');
+                      }
+                    } else {
+                      toast.error('No canvas found to capture');
+                    }
+                  } catch (err) {
+                    console.error('[admin-snapshot]', err);
+                    toast.error('Snapshot capture failed');
+                  } finally {
+                    setIsCapturing(false);
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                disabled={isCapturing}
+              >
+                <Aperture className={cn("mr-2 h-4 w-4", isCapturing && "animate-spin")} />
+                {isCapturing ? 'Capturing...' : 'Snapshot'}
+              </Button>
               <Button
                 onClick={() => setShowFeedbackDialog(true)}
                 variant="outline"

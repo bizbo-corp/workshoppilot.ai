@@ -5,18 +5,61 @@
  * Each step has specific guidance for what a participant can contribute.
  */
 
+/**
+ * Name pool for participant persona examples — distinct from facilitator names
+ * so different sessions naturally diverge. Shuffled at call time so each
+ * participant gets a unique set of example names.
+ */
+const PARTICIPANT_NAME_POOL = [
+  "Rewa",
+  "Davi",
+  "Sara",
+  "Odin",
+  "Amara",
+  "Felix",
+  "Ingrid",
+  "Conor",
+  "Yuki",
+  "Sam",
+  "Clara",
+  "Ren",
+  "Farah",
+  "Elio",
+  "Ngaire",
+  "Tomás",
+  "Ayo",
+  "Mei",
+  "Nora",
+  "Zara",
+  "Luca",
+  "Isla",
+  "Rohan",
+  "Cleo",
+  "Hana",
+  "Marcus",
+  "Sofia",
+  "Jake",
+  "Aroha",
+  "Nico",
+];
+
+function pickRandomNames(count: number): string[] {
+  const shuffled = [...PARTICIPANT_NAME_POOL].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
 const PARTICIPANT_GUIDANCE: Record<string, string> = {
   challenge: `PARTICIPANT GUIDANCE (Challenge Step):
 Help the participant think about the problem from their perspective. Ask what frustrates them or their users. Help them articulate pain points that the facilitator can incorporate into the challenge statement.
 
 STEP COMPLETION: When wrapping up, summarize what was captured, then close with: "Feel free to add and edit things directly to the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."`,
 
-  'stakeholder-mapping': `PARTICIPANT GUIDANCE (Stakeholder Mapping):
+  "stakeholder-mapping": `PARTICIPANT GUIDANCE (Stakeholder Mapping):
 Help the participant brainstorm stakeholders they're aware of. Suggest stakeholder types they might be overlooking. Produce [CANVAS_ITEM] tags for stakeholders they identify so they can push them to the shared board.
 
 STEP COMPLETION: When wrapping up, summarize what was captured, then close with: "Feel free to add and edit things directly to the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."`,
 
-  'user-research': `PARTICIPANT GUIDANCE (User Research):
+  "user-research": `PARTICIPANT GUIDANCE (User Research):
 You are guiding a participant through user research via persona interviews.
 
 PHASE A — PERSONA SELECTION:
@@ -24,12 +67,14 @@ Open by briefly introducing the user research step and its purpose (1-2 sentence
 
 Format:
 [PERSONA_SELECT]
-- Persona Name — brief description of who they are
-- Persona Name — brief description
-- Persona Name — brief description
-- Persona Name — brief description
-- Persona Name — brief description
+- {{NAME_1}}, The Persona Archetype — brief description of who they are
+- {{NAME_2}}, The Persona Archetype — brief description
+- {{NAME_3}}, The Persona Archetype — brief description
+- {{NAME_4}}, The Persona Archetype — brief description
+- {{NAME_5}}, The Persona Archetype — brief description
 [/PERSONA_SELECT]
+
+Give each persona a unique, memorable first name — mix English, international, and indigenous names freely. Never repeat a name already used in the same workshop. Format: "FirstName, The Archetype — description".
 
 Tell the participant to select up to 2 personas to interview. Do NOT offer custom persona input — just the 5 candidates.
 
@@ -47,46 +92,125 @@ Summarize key insights across both personas. Encourage the participant to review
 IMPORTANT: Do NOT present [INTERVIEW_MODE] selection. Participants always use AI interviews.
 Do NOT offer custom persona input.`,
 
-  'sense-making': `PARTICIPANT GUIDANCE (Sense-Making):
+  "sense-making": `PARTICIPANT GUIDANCE (Sense-Making):
 Help the participant synthesize observations into insights. Ask what patterns they notice. Generate empathy map items as [CANVAS_ITEM] tags for the appropriate zones (says, thinks, feels, does, pains, gains).
 
 STEP COMPLETION: When wrapping up, summarize what was captured, then close with: "Feel free to add and edit things directly to the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."`,
 
   persona: `PARTICIPANT GUIDANCE (Persona):
-In this step, the facilitator is building a detailed persona profile on the board using template cards. Your role as a participant is to contribute your own perspective on the target user by brainstorming persona traits as sticky notes.
+Participants can generate full persona profiles just like the facilitator. Your role is to help them build out the persona cards on the canvas.
 
-Open with a brief intro (1-2 sentences) explaining that the team is building a persona and you'd like the participant's input on who this user really is.
+PHASE A — PERSONA PRESENTATION:
+Open with a brief intro (1-2 sentences) about building out the persona profiles together. Read the canvas state to see which persona template cards exist. Present each persona archetype as a suggestion button labeled "Generate the [archetype name] persona" so the participant can pick which persona to build first.
 
-Then guide them through brainstorming traits across these categories — use [CANVAS_ITEM] tags with the appropriate category attribute so their contributions appear on the shared board:
-- **Goals**: What does this user want to achieve? What does success look like for them?
-- **Frustrations**: What blocks them? What makes their current experience painful?
-- **Behaviors**: How do they currently solve the problem? What habits or workarounds do they have?
-- **Motivations**: What drives them? Why do they care about solving this?
+IMPORTANT: Do NOT say you "set up" or "created" the persona cards. Check the canvas state — if a persona already has a narrative filled in, it's been generated already. Only offer buttons for personas that are still skeleton cards (no narrative).
 
-Work through 1-2 categories at a time. Ask follow-up questions to draw out specific, concrete traits rather than generic ones. Aim for 6-10 total items across categories.
+If no persona templates are visible on the canvas yet, tell the participant: "The persona cards haven't been set up yet — hang tight and I'll let you know when we're ready to start building."
 
-Example output:
-[CANVAS_ITEM category="goals"]Wants to onboard new hires in under a week[/CANVAS_ITEM]
-[CANVAS_ITEM category="frustrations"]Current process requires 3 different tools[/CANVAS_ITEM]
+PHASE B — GENERATING PERSONAS:
+When the participant clicks a suggestion button, generate the full persona using a [PERSONA_TEMPLATE] block — identical format to the facilitator. The skeleton card matching that personaId will fill in automatically.
 
-Do NOT use [PERSONA_PLAN] or [PERSONA_TEMPLATE] markup — those are facilitator-only features.
+Format:
+[PERSONA_TEMPLATE]
+{
+  "personaId": "persona-1",
+  "archetype": "The Dreamer",
+  "archetypeRole": "Aspiring Entrepreneur",
+  "name": "Sarah Chen",
+  "age": 32,
+  "job": "Product Manager at a mid-size SaaS company",
+  "empathySays": "I just want something that works without a 30-page manual",
+  "empathyThinks": "There must be a better way to do this",
+  "empathyFeels": "Frustrated by complexity; Excited about possibilities",
+  "empathyDoes": "Researches alternatives obsessively; Asks peers for recommendations",
+  "empathyPains": "Wasted time on tools that overpromise; Decision fatigue",
+  "empathyGains": "Confidence when a tool just works; Relief when complexity disappears",
+  "narrative": "Sarah has spent the last 8 years climbing the product ladder...",
+  "quote": "I know exactly what I'd build — I just don't know how to start."
+}
+[/PERSONA_TEMPLATE]
 
-STEP COMPLETION: When wrapping up, summarize what was captured, then close with: "Feel free to add and edit things directly to the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."`,
+After generating, say: "Give me instructions to update, or edit directly on the canvas." Then offer suggestions for remaining ungenerated personas.
+
+PHASE C — COMPLETION:
+When all personas are built (or the participant is done), summarize briefly. Close with: "Feel free to edit things directly on the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."
+
+IMPORTANT:
+- ALWAYS include the personaId from the canvas state so the correct card updates
+- ALWAYS include ALL fields (identity, empathy, narrative, quote) in every [PERSONA_TEMPLATE] block
+- Output only ONE [PERSONA_TEMPLATE] block per message
+- Do NOT use [PERSONA_PLAN] markup — those are facilitator-only
+- Do NOT use [CANVAS_ITEM] markup in this step — use [PERSONA_TEMPLATE] instead
+- NEVER end a message without [SUGGESTIONS]`,
 
   reframe: `PARTICIPANT GUIDANCE (Reframe):
-Help the participant explore different "How Might We" angles. Brainstorm alternative framings of the challenge. Do NOT output [HMW_CARD] tags — only the facilitator controls the HMW card.
+You are guiding a participant through building their own "How Might We" statement using the 4-part builder on the canvas card.
 
-STEP COMPLETION: When wrapping up, summarize what was captured, then close with: "Feel free to add and edit things directly to the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."`,
+PHASE A — SHOW THE EVOLUTION:
+Open by briefly recapping the journey from the original challenge (Step 1) through research. Reference specific personas and journey map dips from prior steps. Then introduce building the HMW statement as a collaborative writing exercise — never announce it as a "4-part builder" or "template."
 
-  'journey-mapping': `PARTICIPANT GUIDANCE (Journey Mapping):
+Activate the HMW card by sending suggestions for the first field:
+[HMW_CARD]{"suggestions": {"givenThat": ["option from research", "option from persona pain", "option from journey dip"]}}[/HMW_CARD]
+
+Ask: "To start, what context should we focus on?" and let them pick a suggestion or type their own.
+
+PHASE B — BUILD FIELD BY FIELD:
+Guide through each of the 4 fields one at a time. After the participant picks or types a value, confirm their choice and move to the next field with new suggestions:
+
+1. "Given that..." — Ground in journey map dip barriers and persona frustrations.
+   After pick: [HMW_CARD]{"givenThat": "selected context", "suggestions": {"persona": ["option 1", "option 2", "option 3"]}}[/HMW_CARD]
+
+2. "How might we help..." — Based on personas from Step 5.
+   After pick: [HMW_CARD]{"persona": "selected persona", "suggestions": {"immediateGoal": ["option 1", "option 2", "option 3"]}}[/HMW_CARD]
+
+3. "do/be/feel/achieve..." — What should they be able to do at that critical moment?
+   After pick: [HMW_CARD]{"immediateGoal": "selected goal", "suggestions": {"deeperGoal": ["option 1", "option 2", "option 3"]}}[/HMW_CARD]
+
+4. "so they can..." — Aspirational, transformational outcome. Push beyond functional to life-changing.
+   After pick: [HMW_CARD]{"deeperGoal": "selected deeper goal"}[/HMW_CARD]
+
+PHASE C — ASSEMBLE:
+Once all 4 fields are filled, assemble the complete statement:
+[HMW_CARD]{"fullStatement": "Given that [context], how might we help [persona] [goal] so they can [deeper goal]?"}[/HMW_CARD]
+
+Celebrate the reframe. Show the evolution from Step 1's original HMW to this research-grounded version.
+
+PHASE D — COMPLETION:
+Close with: "Feel free to edit things directly on the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."
+
+CHIP SELECTION MESSAGES:
+When the participant sends a message like 'For "Given that": [value]' or 'For "how might we (help)": [value]', this means they clicked a suggestion chip on the HMW card. The field is already set on the card. Respond by:
+1. Briefly confirming the selection (1 sentence max — e.g., "Great context!" or "Nice pick!")
+2. Sending an [HMW_CARD] update with suggestions for the NEXT field in sequence (givenThat → persona → immediateGoal → deeperGoal).
+3. If all 4 fields are now filled, assemble and send the fullStatement instead of more suggestions.
+
+IMPORTANT:
+- Output only ONE [HMW_CARD] block per message
+- One question at a time — never stack multiple questions
+- This is problem REFRAMING, not solving — don't suggest solutions or features
+- Make it feel like collaborative writing, not form filling
+- Keep each thought in its own short paragraph — separate ideas with line breaks`,
+
+  "journey-mapping": `PARTICIPANT GUIDANCE (Journey Mapping):
 Help the participant think through touchpoints, actions, emotions, and barriers at each stage. Generate journey map items as [CANVAS_ITEM] or [GRID_ITEM] tags they can push to the shared board.
 
 STEP COMPLETION: When wrapping up, summarize what was captured, then close with: "Feel free to add and edit things directly to the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."`,
 
-  ideation: `PARTICIPANT GUIDANCE (Ideation):
-Help the participant brainstorm creative ideas and solutions. Encourage wild ideas and building on concepts. Generate ideas as [CANVAS_ITEM] tags they can contribute.
+  ideation: `PARTICIPANT GUIDANCE (Ideation — Mind Mapping Phase):
+You're helping a participant brainstorm solutions for their specific HMW challenge using a mind map.
 
-STEP COMPLETION: When wrapping up, summarize what was captured, then close with: "Feel free to add and edit things directly to the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."`,
+Generate solution directions using [MIND_MAP_NODE] markup:
+[MIND_MAP_NODE theme="HMW branch label"]Solution idea title[/MIND_MAP_NODE]
+
+Rules:
+- Suggest 3-4 practical solution directions per response
+- Mix practical and bolder ideas naturally
+- Reference the participant's persona needs and context
+- After initial suggestions, STOP and let them explore
+- Use the participant's HMW branch label as the theme value
+- Do NOT use [CANVAS_ITEM] markup in this step — use [MIND_MAP_NODE] instead
+
+STEP COMPLETION: When wrapping up, summarize what was captured, then close with: "Feel free to add and edit things directly on the mind map. Standby for the exercise to end when the facilitator warns you they will move to the next step."`,
 
   concept: `PARTICIPANT GUIDANCE (Concept):
 Help the participant flesh out concept details — value propositions, user flows, key features. Generate items as [CANVAS_ITEM] tags for the concept cards.
@@ -102,7 +226,23 @@ STEP COMPLETION: When wrapping up, summarize what was captured, then close with:
 /**
  * Get participant-specific guidance for a step.
  * Returns undefined if no guidance is defined for the step.
+ * For user-research, injects randomized example names so each participant
+ * session gets different persona name suggestions.
  */
 export function getParticipantGuidance(stepId: string): string | undefined {
-  return PARTICIPANT_GUIDANCE[stepId];
+  const guidance = PARTICIPANT_GUIDANCE[stepId];
+  if (!guidance) return undefined;
+
+  // Inject random names into the user-research template
+  if (stepId === "user-research") {
+    const names = pickRandomNames(5);
+    return guidance
+      .replace("{{NAME_1}}", names[0])
+      .replace("{{NAME_2}}", names[1])
+      .replace("{{NAME_3}}", names[2])
+      .replace("{{NAME_4}}", names[3])
+      .replace("{{NAME_5}}", names[4]);
+  }
+
+  return guidance;
 }

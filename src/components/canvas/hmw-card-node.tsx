@@ -2,7 +2,7 @@
 
 import { memo, useRef, useEffect } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 
@@ -10,6 +10,7 @@ export type HmwCardNodeRendererData = HmwCardData & {
   onFieldChange?: (id: string, field: string, value: string) => void;
   onChipSelect?: (id: string, field: string, value: string) => void;
   onStatementChange?: (id: string, value: string) => void;
+  onDelete?: (id: string) => void;
 };
 
 export type HmwCardNodeType = Node<HmwCardNodeRendererData, 'hmwCard'>;
@@ -223,6 +224,13 @@ export const HmwCardNode = memo(
           opacity: isSkeleton ? 0.7 : 1,
         }}
       >
+        {/* Drag handle grip bar */}
+        <div className="card-drag-handle flex items-center justify-center w-full h-6 cursor-grab active:cursor-grabbing bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded-t-2xl">
+          <svg width="32" height="4" viewBox="0 0 32 4" fill="currentColor" className="text-neutral-olive-400">
+            <rect x="0" y="0" width="32" height="2" rx="1" />
+          </svg>
+        </div>
+
         <Handle
           type="target"
           position={Position.Top}
@@ -243,13 +251,44 @@ export const HmwCardNode = memo(
               HOW MIGHT WE CARD
             </span>
           </div>
-          <span
-            className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
-            style={{ backgroundColor: 'var(--hmw-badge-bg)', color: SAGE.headerText }}
-          >
-            HMW
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
+              style={{ backgroundColor: 'var(--hmw-badge-bg)', color: SAGE.headerText }}
+            >
+              HMW
+            </span>
+            {data.onDelete && (
+              <button
+                type="button"
+                onClick={() => data.onDelete?.(id)}
+                className="nodrag nopan rounded-full p-1 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
+                title="Delete card"
+              >
+                <X className="h-4 w-4" style={{ color: SAGE.headerText, opacity: 0.6 }} />
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* ── Owner name band (multiplayer only) ── */}
+        {data.ownerName && (
+          <div
+            className="px-6 py-2 flex items-center gap-2"
+            style={{ backgroundColor: SAGE.sectionBg, borderBottom: `1px solid ${SAGE.sectionBorder}` }}
+          >
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: data.ownerColor || SAGE.headerText }}
+            />
+            <span
+              className="text-xs font-semibold tracking-wide"
+              style={{ color: SAGE.labelText }}
+            >
+              {data.ownerName}
+            </span>
+          </div>
+        )}
 
         {/* ── Section bar ── */}
         <div

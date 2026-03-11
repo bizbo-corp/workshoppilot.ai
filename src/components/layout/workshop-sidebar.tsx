@@ -8,13 +8,19 @@
  * - Shows step number + name with status indicators
  */
 
-'use client';
+"use client";
 
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
-import { useHotkeys } from 'react-hotkeys-hook';
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
-import { Check, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { useHotkeys } from "react-hotkeys-hook";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { Check, ChevronLeft, ChevronRight, Eye, Lock } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -22,29 +28,42 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuAction,
   useSidebar,
-} from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useLocalStorage } from '@/hooks/use-local-storage';
-import { STEPS } from '@/lib/workshop/step-metadata';
-import { cn } from '@/lib/utils';
-import Logo, { LogoIcon } from '@/components/Logo';
+} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useLocalStorage } from "@/hooks/use-local-storage";
+import { STEPS } from "@/lib/workshop/step-metadata";
+import { cn } from "@/lib/utils";
+import Logo, { LogoIcon } from "@/components/Logo";
+import { StepSnapshotDialog } from "@/components/dialogs/step-snapshot-dialog";
 
 interface WorkshopSidebarProps {
   sessionId: string;
   workshopSteps: Array<{
     stepId: string;
-    status: 'not_started' | 'in_progress' | 'complete' | 'needs_regeneration';
+    status: "not_started" | "in_progress" | "complete" | "needs_regeneration";
+    snapshotUrl?: string | null;
   }>;
   isPaywallLocked?: boolean;
 }
 
-export function WorkshopSidebar({ sessionId, workshopSteps, isPaywallLocked }: WorkshopSidebarProps) {
+export function WorkshopSidebar({
+  sessionId,
+  workshopSteps,
+  isPaywallLocked,
+}: WorkshopSidebarProps) {
   const pathname = usePathname();
   const { state, setOpen } = useSidebar();
-  const [isPinned, setIsPinned, isPinnedLoading] = useLocalStorage('workshoppilot-sidebar-pinned', false);
-  const [hasSeenIntro, setHasSeenIntro, isIntroLoading] = useLocalStorage('workshoppilot-sidebar-intro', false);
+  const [isPinned, setIsPinned, isPinnedLoading] = useLocalStorage(
+    "workshoppilot-sidebar-pinned",
+    false,
+  );
+  const [hasSeenIntro, setHasSeenIntro, isIntroLoading] = useLocalStorage(
+    "workshoppilot-sidebar-intro",
+    false,
+  );
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isLoading = isPinnedLoading || isIntroLoading;
@@ -72,7 +91,9 @@ export function WorkshopSidebar({ sessionId, workshopSteps, isPaywallLocked }: W
   }, [isLoading, hasSeenIntro]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hover: temporarily expand when not pinned (with intent delay to ignore accidental pass-throughs)
-  const hoverEnterTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverEnterTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const handleMouseEnter = useCallback(() => {
     if (!isPinned) {
@@ -113,7 +134,7 @@ export function WorkshopSidebar({ sessionId, workshopSteps, isPaywallLocked }: W
   }, [isPinned, setIsPinned, setOpen]);
 
   // Cmd+B keyboard shortcut toggles pin
-  useHotkeys('mod+b', (e) => {
+  useHotkeys("mod+b", (e) => {
     e.preventDefault();
     handleTogglePin();
   });
@@ -123,7 +144,14 @@ export function WorkshopSidebar({ sessionId, workshopSteps, isPaywallLocked }: W
   const currentStepNumber = stepMatch ? parseInt(stepMatch[1], 10) : null;
 
   // Create status lookup map
-  const statusLookup = new Map(workshopSteps.map(s => [s.stepId, s.status]));
+  const statusLookup = new Map(workshopSteps.map((s) => [s.stepId, s.status]));
+  const snapshotLookup = new Map(
+    workshopSteps.map((s) => [s.stepId, s.snapshotUrl]),
+  );
+  const [viewingSnapshot, setViewingSnapshot] = useState<{
+    stepName: string;
+    snapshotUrl: string;
+  } | null>(null);
 
   // Show loading skeleton during hydration
   if (isLoading) {
@@ -150,27 +178,28 @@ export function WorkshopSidebar({ sessionId, workshopSteps, isPaywallLocked }: W
       onMouseLeave={handleMouseLeave}
     >
       {/* Logo */}
-      <SidebarHeader className={cn("flex h-16 flex-row items-center border-b", state === 'collapsed' ? 'justify-center px-2' : 'justify-start px-4')}>
-        {state === 'collapsed' ? (
-          <LogoIcon size="lg" />
-        ) : (
-          <Logo size="md" />
+      <SidebarHeader
+        className={cn(
+          "flex h-16 flex-row items-center border-b",
+          state === "collapsed" ? "justify-center px-2" : "justify-start px-4",
         )}
+      >
+        {state === "collapsed" ? <LogoIcon size="lg" /> : <Logo size="md" />}
       </SidebarHeader>
 
       {/* Toggle row between logo and steps */}
       <div className="border-b px-2 py-2">
-        {state === 'expanded' ? (
+        {state === "expanded" ? (
           <Button
             variant="ghost"
             size="sm"
             onClick={handleTogglePin}
             className="w-full justify-start hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
-            title={isPinned ? 'Collapse sidebar (⌘B)' : 'Pin sidebar open (⌘B)'}
+            title={isPinned ? "Collapse sidebar (⌘B)" : "Pin sidebar open (⌘B)"}
           >
             <ChevronLeft className="h-4 w-4" />
             <span className="ml-2 text-sm text-muted-foreground">
-              {isPinned ? 'Collapse' : 'Pin open'} (⌘B)
+              {isPinned ? "Collapse" : "Pin open"} (⌘B)
             </span>
           </Button>
         ) : (
@@ -189,10 +218,10 @@ export function WorkshopSidebar({ sessionId, workshopSteps, isPaywallLocked }: W
       <SidebarContent className="p-2">
         <SidebarMenu>
           {STEPS.map((step) => {
-            const status = statusLookup.get(step.id) || 'not_started';
-            const isComplete = status === 'complete';
+            const status = statusLookup.get(step.id) || "not_started";
+            const isComplete = status === "complete";
             const isCurrent = step.order === currentStepNumber;
-            const isAccessible = status !== 'not_started';
+            const isAccessible = status !== "not_started";
             const isLocked = isPaywallLocked && step.order >= 8;
 
             const content = (
@@ -200,17 +229,18 @@ export function WorkshopSidebar({ sessionId, workshopSteps, isPaywallLocked }: W
                 {/* Step indicator */}
                 <div
                   className={cn(
-                    'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-medium',
-                    isComplete &&
-                      'bg-primary text-primary-foreground',
+                    "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-medium",
+                    isComplete && "bg-primary text-primary-foreground",
                     isCurrent &&
                       !isComplete &&
-                      'border-2 border-primary bg-background text-primary',
+                      "border-2 border-primary bg-background text-primary",
                     !isComplete &&
                       !isCurrent &&
-                      'border bg-background text-muted-foreground',
-                    isLocked && !isComplete && !isCurrent &&
-                      'border bg-background text-muted-foreground opacity-60',
+                      "border bg-background text-muted-foreground",
+                    isLocked &&
+                      !isComplete &&
+                      !isCurrent &&
+                      "border bg-background text-muted-foreground opacity-60",
                   )}
                 >
                   {isLocked ? (
@@ -223,12 +253,12 @@ export function WorkshopSidebar({ sessionId, workshopSteps, isPaywallLocked }: W
                 </div>
 
                 {/* Step name (hidden when collapsed) */}
-                {state === 'expanded' && (
+                {state === "expanded" && (
                   <span
                     className={cn(
-                      'flex-1 truncate text-base',
-                      isCurrent && 'font-semibold text-primary',
-                      !isCurrent && 'text-foreground'
+                      "flex-1 truncate text-base",
+                      isCurrent && "font-semibold text-primary",
+                      !isCurrent && "text-foreground",
                     )}
                   >
                     {step.name}
@@ -237,12 +267,14 @@ export function WorkshopSidebar({ sessionId, workshopSteps, isPaywallLocked }: W
               </>
             );
 
+            const snapshot = snapshotLookup.get(step.id);
+
             return (
               <SidebarMenuItem key={step.id}>
                 <SidebarMenuButton
                   asChild={isAccessible}
                   isActive={isCurrent}
-                  tooltip={state === 'collapsed' ? step.name : undefined}
+                  tooltip={state === "collapsed" ? step.name : undefined}
                   disabled={!isAccessible}
                   className="hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
                 >
@@ -256,11 +288,38 @@ export function WorkshopSidebar({ sessionId, workshopSteps, isPaywallLocked }: W
                     </div>
                   )}
                 </SidebarMenuButton>
+                {isComplete && snapshot && state === "expanded" && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setViewingSnapshot({
+                        stepName: step.name,
+                        snapshotUrl: snapshot,
+                      });
+                    }}
+                    title={`View ${step.name} snapshot`}
+                    className="absolute right-1 inset-y-1 flex items-center justify-center w-8 rounded-full opacity-0 group-hover/menu-item:opacity-100 transition-opacity hover:bg-olive-200/60 dark:hover:bg-olive-800/40"
+                  >
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                )}
               </SidebarMenuItem>
             );
           })}
         </SidebarMenu>
       </SidebarContent>
+
+      {viewingSnapshot && (
+        <StepSnapshotDialog
+          open={!!viewingSnapshot}
+          onOpenChange={(open) => {
+            if (!open) setViewingSnapshot(null);
+          }}
+          stepName={viewingSnapshot.stepName}
+          snapshotUrl={viewingSnapshot.snapshotUrl}
+        />
+      )}
     </Sidebar>
   );
 }

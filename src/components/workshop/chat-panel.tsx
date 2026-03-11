@@ -48,9 +48,15 @@ import { THEME_COLORS, ROOT_COLOR } from "@/lib/canvas/mind-map-theme-colors";
 import { computeNewNodePosition } from "@/lib/canvas/mind-map-layout";
 import { getStepCanvasConfig } from "@/lib/canvas/step-canvas-config";
 import { addCanvasItemsToBoard } from "@/lib/canvas/add-canvas-items";
-import { saveCanvasState } from "@/actions/canvas-actions";
+import { saveCanvasState, savePersonaCandidates } from "@/actions/canvas-actions";
 import { ChatSkeleton } from "./chat-skeleton";
 import { parsePersonaSelect, detectPersonaIntro } from "@/lib/chat/parse-utils";
+import {
+  parseMindMapNodes,
+  inlineMindMapNodes,
+  findThemeNode,
+  type MindMapNodeParsed,
+} from "@/lib/chat/mind-map-parse-utils";
 import { toast } from "sonner";
 import { useMultiplayerContext } from "@/components/workshop/multiplayer-room";
 
@@ -382,7 +388,8 @@ function parseCanvasItems(content: string): {
     }
 
     // Extract "Cluster: ..." (must check before Ring/Quad since both use comma separation)
-    const clusterMatch = remaining.match(/,\s*Cluster:\s*([^,]+)$/i);
+    // Use (.+) instead of ([^,]+) to handle persona names with commas (e.g. "Rafael, The Hesitant Speaker")
+    const clusterMatch = remaining.match(/,\s*Cluster:\s*(.+)$/i);
     if (clusterMatch) {
       cluster = clusterMatch[1].trim();
       remaining = remaining.slice(0, clusterMatch.index).trim();
@@ -645,259 +652,6 @@ function parseConceptCards(content: string): {
   }
 
   return { cleanContent, cards };
-}
-
-type MindMapNodeParsed = {
-  label: string;
-  theme?: string; // Parent theme label (omitted for theme-level nodes)
-  isWildCard?: boolean;
-};
-
-/**
- * Parse [MIND_MAP_NODE: Label] and [MIND_MAP_NODE: Label, Theme: Parent] markup.
- * Also supports tag format: [MIND_MAP_NODE theme="Parent" wildcard]Label[/MIND_MAP_NODE]
- * Returns clean content and extracted mind map node data.
- */
-function parseMindMapNodes(content: string): {
-  cleanContent: string;
-  nodes: MindMapNodeParsed[];
-} {
-  const nodes: MindMapNodeParsed[] = [];
-
-  // Format 1: Tag pairs [MIND_MAP_NODE theme="..." wildcard?]Label[/MIND_MAP_NODE]
-  const tagRegex = /\[MIND_MAP_NODE(?:\s+([^\]]*))?\](.*?)\[\/MIND_MAP_NODE\]/g;
-  let match;
-  while ((match = tagRegex.exec(content)) !== null) {
-    const attrs = match[1] || "";
-    const label = match[2].trim();
-    if (!label) continue;
-
-    const themeMatch = attrs.match(/theme\s*=\s*"([^"]+)"/i);
-    const isWildCard = /wildcard/i.test(attrs);
-
-    nodes.push({
-      label,
-      theme: themeMatch?.[1],
-      isWildCard,
-    });
-  }
-
-  // Format 2: Shorthand [MIND_MAP_NODE: Label] or [MIND_MAP_NODE: Label, Theme: Parent]
-  const contentWithoutTags = content.replace(
-    /\[MIND_MAP_NODE(?:\s+[^\]]*?)?\].*?\[\/MIND_MAP_NODE\]/g,
-    "",
-  );
-  const shorthandRegex = /\[MIND_MAP_NODE:\s*([^\]]+)\]/g;
-  while ((match = shorthandRegex.exec(contentWithoutTags)) !== null) {
-    const inner = match[1].trim();
-    // Parse comma-separated attributes
-    const parts = inner.split(",").map((s) => s.trim());
-    const label = parts[0];
-    if (!label) continue;
-
-    let theme: string | undefined;
-    let isWildCard = false;
-
-    for (let i = 1; i < parts.length; i++) {
-      const part = parts[i];
-      if (theme !== undefined) {
-        if (/^wild\s*card$/i.test(part)) {
-          isWildCard = true;
-        } else {
-          theme += ", " + part;
-        }
-        continue;
-      }
-      const themeMatch = part.match(/^Theme:\s*(.+)/i);
-      if (themeMatch) theme = themeMatch[1].trim();
-      if (/wild\s*card/i.test(part)) isWildCard = true;
-    }
-
-    // Handle "Wildcard:" prefix in label (e.g. "Wildcard: Some Idea")
-    let cleanLabel = label;
-    if (/^wildcard:\s*/i.test(cleanLabel)) {
-      cleanLabel = cleanLabel.replace(/^wildcard:\s*/i, "").trim();
-      isWildCard = true;
-    }
-
-    nodes.push({ label: cleanLabel, theme, isWildCard });
-  }
-
-  // Clean markup from content
-  let cleanContent = content
-    .replace(
-      /\s*\[MIND_MAP_NODE(?:\s+[^\]]*?)?\].*?\[\/MIND_MAP_NODE\]\s*/g,
-      " ",
-    )
-    .replace(/\s*\[MIND_MAP_NODE:\s*[^\]]+\]\s*/g, " ")
-    .trim();
-
-  // Strip incomplete tags mid-stream
-  if (cleanContent.includes("[MIND_MAP_NODE")) {
-    cleanContent = cleanContent.replace(/\[MIND_MAP_NODE[^\]]*$/, "").trim();
-  }
-
-  return { cleanContent, nodes };
-}
-
-/**
- * Replace [MIND_MAP_NODE] markup with numbered placeholders for inline rendering.
- * Returns content with %%MMNODE_N%% placeholders and the parsed nodes array.
- * Placeholder indices correspond 1:1 to the returned nodes array.
- */
-function inlineMindMapNodes(content: string): {
-  content: string;
-  nodes: MindMapNodeParsed[];
-} {
-  const nodes: MindMapNodeParsed[] = [];
-  let nodeIndex = 0;
-
-  // Replace tag format: [MIND_MAP_NODE ...]...[/MIND_MAP_NODE]
-  let result = content.replace(
-    /\[MIND_MAP_NODE(?:\s+([^\]]*))?\](.*?)\[\/MIND_MAP_NODE\]/g,
-    (_match, attrs, label) => {
-      const attrStr = attrs || "";
-      const trimmedLabel = (label as string).trim();
-      if (!trimmedLabel) return "";
-
-      const themeMatch = attrStr.match(/theme\s*=\s*"([^"]+)"/i);
-      const isWildCard = /wildcard/i.test(attrStr);
-
-      nodes.push({ label: trimmedLabel, theme: themeMatch?.[1], isWildCard });
-      return `\n%%MMNODE_${nodeIndex++}%%\n`;
-    },
-  );
-
-  // Replace shorthand format: [MIND_MAP_NODE: ...]
-  result = result.replace(/\[MIND_MAP_NODE:\s*([^\]]+)\]/g, (_match, inner) => {
-    const parts = (inner as string)
-      .trim()
-      .split(",")
-      .map((s: string) => s.trim());
-    const label = parts[0];
-    if (!label) return "";
-
-    let theme: string | undefined;
-    let isWildCard = false;
-
-    for (let i = 1; i < parts.length; i++) {
-      const part = parts[i];
-      if (theme !== undefined) {
-        if (/^wild\s*card$/i.test(part)) {
-          isWildCard = true;
-        } else {
-          theme += ", " + part;
-        }
-        continue;
-      }
-      const themeMatch = part.match(/^Theme:\s*(.+)/i);
-      if (themeMatch) theme = themeMatch[1].trim();
-      if (/wild\s*card/i.test(part)) isWildCard = true;
-    }
-
-    let cleanLabel = label;
-    if (/^wildcard:\s*/i.test(cleanLabel)) {
-      cleanLabel = cleanLabel.replace(/^wildcard:\s*/i, "").trim();
-      isWildCard = true;
-    }
-
-    nodes.push({ label: cleanLabel, theme, isWildCard });
-    return `\n%%MMNODE_${nodeIndex++}%%\n`;
-  });
-
-  // Strip incomplete tags mid-stream
-  if (result.includes("[MIND_MAP_NODE")) {
-    result = result.replace(/\[MIND_MAP_NODE[^\]]*$/, "");
-  }
-
-  return { content: result, nodes };
-}
-
-/**
- * Fuzzy theme matcher for mind map nodes.
- * Exact match first, then bidirectional substring match against level-1 nodes.
- * Handles:
- * - AI sending full HMW text when node label is shortened (theme ⊃ label)
- * - AI sending short label when node label is the full extracted text (label ⊃ theme)
- */
-const MATCH_STOP_WORDS = new Set([
-  "the",
-  "a",
-  "an",
-  "to",
-  "for",
-  "and",
-  "or",
-  "of",
-  "in",
-  "on",
-  "with",
-  "their",
-  "his",
-  "her",
-  "its",
-  "who",
-  "that",
-  "which",
-  "how",
-  "might",
-  "we",
-  "can",
-  "more",
-  "into",
-  "is",
-  "are",
-  "be",
-  "so",
-  "they",
-  "he",
-  "she",
-]);
-
-function findThemeNode(
-  theme: string,
-  nodes: MindMapNodeState[],
-  nodeLabelMap: Map<string, MindMapNodeState>,
-): MindMapNodeState | undefined {
-  // 1. Exact match (case-insensitive)
-  const exact = nodeLabelMap.get(theme.toLowerCase());
-  if (exact) return exact;
-
-  const themeLower = theme.toLowerCase();
-  const level1Nodes = nodes.filter((n) => n.level === 1);
-
-  // 2. Bidirectional substring — one string fully contains the other
-  for (const n of level1Nodes) {
-    const labelLower = n.label.toLowerCase();
-    if (themeLower.includes(labelLower) || labelLower.includes(themeLower))
-      return n;
-  }
-
-  // 3. Word-overlap scoring — pick the branch sharing the most significant words
-  const themeWords = new Set(
-    themeLower
-      .split(/\s+/)
-      .filter((w) => w.length > 2 && !MATCH_STOP_WORDS.has(w)),
-  );
-  if (themeWords.size === 0) return undefined;
-
-  let bestNode: MindMapNodeState | undefined;
-  let bestScore = 0;
-
-  for (const n of level1Nodes) {
-    const labelWords = n.label
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((w) => w.length > 2 && !MATCH_STOP_WORDS.has(w));
-    const overlap = labelWords.filter((w) => themeWords.has(w)).length;
-    if (overlap > bestScore) {
-      bestScore = overlap;
-      bestNode = n;
-    }
-  }
-
-  // Require at least 2 shared words to avoid false positives
-  return bestScore >= 2 ? bestNode : undefined;
 }
 
 interface ChatPanelProps {
@@ -1302,7 +1056,7 @@ export function ChatPanel({
         const textParts = msg.parts?.filter((p) => p.type === "text") || [];
         const content = textParts.map((p) => p.text).join("");
         if (
-          /personas look good|let'?s move on|I'm done with personas/i.test(
+          /personas look good|let'?s move on|done with personas/i.test(
             content,
           )
         ) {
@@ -1322,7 +1076,7 @@ export function ChatPanel({
           lastUserMsg.parts?.filter((p) => p.type === "text") || [];
         const content = textParts.map((p) => p.text).join("");
         if (
-          /personas look good|let'?s move on|I'm done with personas/i.test(
+          /personas look good|let'?s move on|done with personas/i.test(
             content,
           )
         ) {
@@ -1449,11 +1203,17 @@ export function ChatPanel({
 
       const latestNodes = storeApi.getState().mindMapNodes;
       const latestEdges = storeApi.getState().mindMapEdges;
-      const rootNode = latestNodes.find((n) => n.isRoot);
+      const isOwnershipMode = latestNodes.some((n) => n.ownerId);
+      const rootNode = isOwnershipMode
+        ? latestNodes.find((n) => n.isRoot && n.ownerId === 'facilitator')
+        : latestNodes.find((n) => n.isRoot);
 
-      // Build label→node map
+      // Build label→node map (filter to facilitator's nodes in ownership mode)
+      const scopedNodes = isOwnershipMode
+        ? latestNodes.filter((n) => n.ownerId === 'facilitator')
+        : latestNodes;
       const nodeLabelMap = new Map<string, MindMapNodeState>();
-      for (const n of latestNodes) {
+      for (const n of scopedNodes) {
         nodeLabelMap.set(n.label.toLowerCase(), n);
       }
 
@@ -1465,7 +1225,7 @@ export function ChatPanel({
 
       // Resolve parent: match by theme (exact → substring → word-overlap)
       const parentNode = parsed.theme
-        ? findThemeNode(parsed.theme, latestNodes, nodeLabelMap) || rootNode
+        ? findThemeNode(parsed.theme, scopedNodes, nodeLabelMap) || rootNode
         : undefined;
 
       if (parentNode && !parentNode.isRoot) {
@@ -1487,23 +1247,32 @@ export function ChatPanel({
           level: parentNode.level + 1,
           parentId: parentNode.id,
           position,
+          ...(isOwnershipMode && { ownerId: 'facilitator' }),
         };
         const newEdge: MindMapEdgeState = {
           id: `${parentNode.id}-${newId}`,
           source: parentNode.id,
           target: newId,
           themeColor: parentNode.themeColor,
+          ...(isOwnershipMode && { ownerId: 'facilitator' }),
         };
 
         addMindMapNode(newNode, newEdge);
       } else {
         // Theme-level node (level 1, child of root)
-        const existingLevel1 = latestNodes.filter((n) => n.level === 1).length;
-        const colorIndex = existingLevel1 % THEME_COLORS.length;
+        const facLevel1 = isOwnershipMode
+          ? latestNodes.filter((n) => n.level === 1 && n.ownerId === 'facilitator').length
+          : latestNodes.filter((n) => n.level === 1).length;
+        const colorIndex = facLevel1 % THEME_COLORS.length;
         const themeColor = THEME_COLORS[colorIndex];
 
+        const facRoot = isOwnershipMode
+          ? latestNodes.find((n) => n.isRoot && n.ownerId === 'facilitator')
+          : undefined;
+        const rootId = facRoot?.id || "root";
+
         const position = computeNewNodePosition(
-          "root",
+          rootId,
           latestNodes,
           latestEdges,
         );
@@ -1517,14 +1286,16 @@ export function ChatPanel({
           themeBgColor: themeColor.bgColor,
           isRoot: false,
           level: 1,
-          parentId: "root",
+          parentId: rootId,
           position,
+          ...(isOwnershipMode && { ownerId: 'facilitator' }),
         };
         const newEdge: MindMapEdgeState = {
-          id: `root-${newId}`,
-          source: "root",
+          id: `${rootId}-${newId}`,
+          source: rootId,
           target: newId,
           themeColor: themeColor.color,
+          ...(isOwnershipMode && { ownerId: 'facilitator' }),
         };
 
         addMindMapNode(newNode, newEdge);
@@ -1580,33 +1351,32 @@ export function ChatPanel({
     const { cards: hmwCardParsed } = parseHmwCards(content);
     const { cards: conceptCardParsed } = parseConceptCards(content);
 
-    // Process persona plan — create skeleton cards for each archetype
+    // Process persona plan — only create skeleton cards if NONE exist yet (pre-seeding handles the rest)
     if (personaPlanParsed.length > 0 && step.id === "persona") {
       const latestTemplates = storeApi.getState().personaTemplates;
-      const PERSONA_CARD_WIDTH = 680;
-      const PERSONA_GAP = 40;
-      let createdCount = 0;
-      for (const entry of personaPlanParsed) {
-        // Guard: don't create if an existing card already has this personaId or archetype
-        const alreadyExists = latestTemplates.some(
-          (t) =>
-            (entry.personaId && t.personaId === entry.personaId) ||
-            t.archetype === entry.archetype,
-        );
-        if (alreadyExists) continue;
-        const offsetX =
-          (latestTemplates.length + createdCount) *
-          (PERSONA_CARD_WIDTH + PERSONA_GAP);
-        addPersonaTemplate({
-          position: { x: offsetX, y: 0 },
-          personaId: entry.personaId,
-          archetype: entry.archetype,
-          archetypeRole: entry.archetypeRole,
-        });
-        createdCount++;
-      }
-      if (createdCount > 0) {
-        setPendingFitView(true);
+      // Skip entirely if skeleton cards were pre-seeded from Step 3 data
+      if (latestTemplates.length === 0) {
+        const PERSONA_CARD_WIDTH = 680;
+        const PERSONA_GAP = 40;
+        let createdCount = 0;
+        for (const entry of personaPlanParsed) {
+          const alreadyExists = latestTemplates.some(
+            (t) => t.archetype === entry.archetype,
+          );
+          if (alreadyExists) continue;
+          const cardIndex = latestTemplates.length + createdCount;
+          const offsetX = cardIndex * (PERSONA_CARD_WIDTH + PERSONA_GAP);
+          addPersonaTemplate({
+            position: { x: offsetX, y: 0 },
+            personaId: entry.personaId,
+            archetype: entry.archetype,
+            archetypeRole: entry.archetypeRole,
+          });
+          createdCount++;
+        }
+        if (createdCount > 0) {
+          setPendingFitView(true);
+        }
       }
     }
 
@@ -1718,24 +1488,27 @@ export function ChatPanel({
         {},
       );
 
-      // Find matching template: personaId (strongest), name, archetype, or blank fallback
-      const matchByPersonaId = merged.personaId
-        ? latestTemplates.find((t) => t.personaId === merged.personaId)
+      // Find matching template: archetype (strongest — stable from Step 3 pre-seed),
+      // then personaId, then name, then first unfilled skeleton as fallback.
+      const matchByArchetype = merged.archetype
+        ? latestTemplates.find(
+            (t) => t.archetype?.toLowerCase() === merged.archetype?.toLowerCase(),
+          )
         : undefined;
+      const matchByPersonaId =
+        !matchByArchetype && merged.personaId
+          ? latestTemplates.find((t) => t.personaId === merged.personaId)
+          : undefined;
       const matchByName =
-        !matchByPersonaId && merged.name
+        !matchByArchetype && !matchByPersonaId && merged.name
           ? latestTemplates.find((t) => t.name === merged.name)
           : undefined;
-      const matchByArchetype =
-        !matchByPersonaId && !matchByName && merged.archetype
-          ? latestTemplates.find((t) => t.archetype === merged.archetype)
-          : undefined;
-      const blankTemplate =
-        !matchByPersonaId && !matchByName && !matchByArchetype
-          ? latestTemplates.find((t) => !t.name && !t.archetype)
+      const unfilledSkeleton =
+        !matchByArchetype && !matchByPersonaId && !matchByName
+          ? latestTemplates.find((t) => !t.name && !t.narrative)
           : undefined;
       const target =
-        matchByPersonaId || matchByName || matchByArchetype || blankTemplate;
+        matchByArchetype || matchByPersonaId || matchByName || unfilledSkeleton;
 
       if (target) {
         updatePersonaTemplate(target.id, merged);
@@ -1766,11 +1539,16 @@ export function ChatPanel({
       ];
       let createdNewHmwCard = false;
 
+      // Detect ownership mode: if any card has ownerId set, use ownerId-based matching
+      const isOwnershipMode = latestHmwCards.some((c) => c.ownerId);
+
       for (const parsed of hmwCardParsed) {
         const targetIndex = parsed.cardIndex ?? 0;
-        const existing = latestHmwCards.find(
-          (c) => (c.cardIndex ?? 0) === targetIndex,
-        );
+        // In ownership mode, target facilitator's card first; fall back to cardIndex
+        const existing = isOwnershipMode
+          ? latestHmwCards.find((c) => c.ownerId === 'facilitator') ??
+            latestHmwCards.find((c) => (c.cardIndex ?? 0) === targetIndex)
+          : latestHmwCards.find((c) => (c.cardIndex ?? 0) === targetIndex);
 
         if (existing) {
           const updates: Partial<HmwCardData> = { ...parsed };
@@ -1805,6 +1583,7 @@ export function ChatPanel({
             position: { x: (targetIndex || 0) * 780, y: 0 },
             cardState: "active",
             cardIndex: targetIndex,
+            ...(isOwnershipMode ? { ownerId: 'facilitator' } : {}),
             ...parsed,
           });
           createdNewHmwCard = true;
@@ -2776,6 +2555,15 @@ export function ChatPanel({
                                           setPersonaSelectConfirmed(true);
                                           setQuickAck(getRandomAck());
                                           await flushCanvasToDb();
+                                          // Save structured persona candidates for Step 5 pre-seeding
+                                          const candidatesToSave = selectedNames.map((personaName) => {
+                                            const persona = personaOptions.find((p) => p.name === personaName);
+                                            const commaIdx = personaName.indexOf(',');
+                                            const firstName = commaIdx > 0 ? personaName.slice(0, commaIdx).trim() : personaName;
+                                            const archetype = commaIdx > 0 ? personaName.slice(commaIdx + 1).trim() : personaName;
+                                            return { name: firstName, archetype, description: persona?.description || '' };
+                                          });
+                                          await savePersonaCandidates(workshopId, step.id, candidatesToSave);
                                           sendMessage({
                                             role: "user",
                                             parts: [

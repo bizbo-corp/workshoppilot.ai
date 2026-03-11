@@ -19,25 +19,15 @@ Improve the UX of the chat window when it's in collapsed mode.
 
 ## Stakeholder Mapping
 
-## User Research
-
-How does the participant participate in user research in the collaboration mode? 
-
-Have the different participants running their own synthetic interviews in isolation. Ask the users to add insights from real customers or add things they have asked real people.
-
-Conclusion: The participants will need their own chat instance throughout the 10 steps - but only a light version. we need this version to strip out the ability that only a facilitator should have, such as sorting themes and confirming the step 
-
-After all  I think I'm going to need to pivot on an earlier decision in that I will need participants to have a sign-in account to participate.  this is primarily to stop bad actors using the system and draining tokens 
-
-
-
-
-
 ## Research Sense Making
 
 ## Persona Development
 
+ Give the facilitator the ability to choose the best or combine many into single personas 
+
 ## Journey Mapping
+
+Need to see persona during journey map
 
 ## Reframing Challenge
 
@@ -46,3 +36,19 @@ After all  I think I'm going to need to pivot on an earlier decision in that I w
 ## Concept Development
 
 ## Validate
+
+⏺ Now navigate to this URL in your browser:
+
+  http://localhost:3000/workshop/ses_hl5wohytk59ixz4pqeytex1j/capture-snapshots
+
+  It will:
+
+1. Fetch canvas data for all completed steps via the existing canvas-data API
+2. Render each step off-screen and capture as JPEG
+3. Upload each snapshot to the DB
+
+  When it says "DONE", go back to the workshop page, refresh, then expand the
+
+  sidebar (hover or Cmd+B) — eye icons will appear on completed steps.
+
+✻ Crunched for 2m 0s

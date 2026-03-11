@@ -1,11 +1,14 @@
 'use server';
 
 import { auth } from '@clerk/nextjs/server';
+import { headers } from 'next/headers';
 import { db } from '@/db/client';
 import { users, workshops, creditTransactions } from '@/db/schema';
 import { eq, gt, and, isNull, sql } from 'drizzle-orm';
 import { createPrefixedId } from '@/lib/ids';
 import { PAYWALL_CUTOFF_DATE } from '@/lib/billing/paywall-config';
+import { stripe } from '@/lib/billing/stripe';
+import { getPriceConfig } from '@/lib/billing/price-config';
 
 /**
  * Discriminated union result for consumeCredit().
@@ -190,4 +193,76 @@ export async function resetOnboarding(): Promise<void> {
     .update(users)
     .set({ onboardingComplete: false })
     .where(eq(users.clerkUserId, userId));
+}
+
+/**
+ * Create a Stripe Checkout session and return the URL.
+ *
+ * Called from the inline pricing UI in the UpgradeDialog / PaywallOverlay
+ * so users can purchase credits without leaving the workshop context.
+ *
+ * @param tier - 'single' ($99, 1 credit) or 'pack' ($199, 3 credits)
+ * @param workshopReturnUrl - URL to redirect after purchase (e.g. /workshop/{sessionId}/step/8)
+ */
+export async function createCheckoutUrl(
+  tier: 'single' | 'pack',
+  workshopReturnUrl: string,
+): Promise<{ url: string } | { error: string }> {
+  const { userId } = await auth();
+  if (!userId) return { error: 'Authentication required' };
+
+  // Validate return URL — prevent open redirect
+  if (workshopReturnUrl && !workshopReturnUrl.startsWith('/workshop/')) {
+    return { error: 'Invalid return URL' };
+  }
+
+  // Resolve price ID from tier
+  const priceId =
+    tier === 'single'
+      ? process.env.STRIPE_PRICE_SINGLE_FLIGHT!
+      : process.env.STRIPE_PRICE_SERIAL_ENTREPRENEUR!;
+
+  const priceConfig = getPriceConfig(priceId);
+  if (!priceConfig) return { error: 'Price not configured' };
+
+  // Get or lazily create Stripe customer
+  const user = await db.query.users.findFirst({
+    where: eq(users.clerkUserId, userId),
+  });
+
+  let stripeCustomerId = user?.stripeCustomerId ?? null;
+  if (!stripeCustomerId) {
+    const customer = await stripe.customers.create({
+      metadata: { clerkUserId: userId },
+      email: user?.email,
+    });
+    stripeCustomerId = customer.id;
+    await db
+      .update(users)
+      .set({ stripeCustomerId })
+      .where(eq(users.clerkUserId, userId));
+  }
+
+  // Build success/cancel URLs
+  const origin = (await headers()).get('origin') ?? 'https://workshoppilot.ai';
+  const returnParam = workshopReturnUrl
+    ? `&return_to=${encodeURIComponent(workshopReturnUrl)}`
+    : '';
+  const successUrl = `${origin}/purchase/success?session_id={CHECKOUT_SESSION_ID}${returnParam}`;
+
+  const session = await stripe.checkout.sessions.create({
+    customer: stripeCustomerId,
+    mode: 'payment',
+    line_items: [{ price: priceConfig.priceId, quantity: 1 }],
+    success_url: successUrl,
+    cancel_url: `${origin}/purchase/cancel`,
+    metadata: {
+      clerkUserId: userId,
+      creditQty: String(priceConfig.creditQty),
+      productType: priceConfig.label,
+    },
+  });
+
+  if (!session.url) return { error: 'Failed to create checkout session' };
+  return { url: session.url };
 }

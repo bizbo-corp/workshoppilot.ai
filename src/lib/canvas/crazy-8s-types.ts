@@ -10,6 +10,9 @@ export interface Crazy8sSlot {
   description?: string;     // Expanded description of the sketch idea
   imageUrl?: string;        // PNG URL from Vercel Blob (filled after drawing)
   drawingId?: string;       // Reference to drawing in stepArtifacts.drawings[]
+  ownerId?: string;         // participantId or 'facilitator' (multiplayer per-participant ideation)
+  ownerName?: string;       // display name (for facilitator overview)
+  ownerColor?: string;      // hex color of the contributing participant
 }
 
 /**

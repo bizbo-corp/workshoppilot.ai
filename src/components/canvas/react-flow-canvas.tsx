@@ -405,6 +405,24 @@ function ReactFlowCanvasInner({
     [getViewport, screenToFlowPosition],
   );
 
+  // Fit view with chat panel offset — shifts content right so it's centered
+  // in the visible area (not obscured by the floating chat panel overlay).
+  const CHAT_PANEL_WIDTH = 480;
+  const fitViewWithChatOffset = useCallback(
+    (options?: Parameters<typeof fitView>[0]) => {
+      fitView(options);
+      // After fitView settles, nudge viewport right to account for chat panel
+      setTimeout(() => {
+        const vp = getViewport();
+        setViewport(
+          { x: vp.x + (CHAT_PANEL_WIDTH * vp.zoom) / 2, y: vp.y, zoom: vp.zoom },
+          { duration: options?.duration ?? 0 },
+        );
+      }, (options?.duration ?? 0) + 50);
+    },
+    [fitView, getViewport, setViewport],
+  );
+
   // Track if we've done initial fitView
   const hasFitView = useRef(false);
 
@@ -1098,6 +1116,7 @@ function ReactFlowCanvasInner({
       position: livePositions.current[card.id] || card.position,
       zIndex: nodeZIndicesRef.current[card.id] || 20,
       draggable: true,
+      dragHandle: '.card-drag-handle',
       selectable: true,
       selected: selectedNodeIds.includes(card.id),
       data: {
@@ -1117,6 +1136,7 @@ function ReactFlowCanvasInner({
         position: livePositions.current[template.id] || template.position,
         zIndex: nodeZIndicesRef.current[template.id] || 20,
         draggable: true,
+        dragHandle: '.card-drag-handle',
         selectable: true,
         selected: selectedNodeIds.includes(template.id),
         data: {
@@ -1124,7 +1144,7 @@ function ReactFlowCanvasInner({
           onFieldChange: handlePersonaFieldChange,
           onGenerateAvatar: handleGenerateAvatar,
         },
-        style: { width: 680 },
+        style: { width: 680, height: 1100 },
       }),
     );
 
@@ -1135,6 +1155,7 @@ function ReactFlowCanvasInner({
       position: livePositions.current[card.id] || card.position,
       zIndex: nodeZIndicesRef.current[card.id] || 20,
       draggable: true,
+      dragHandle: '.card-drag-handle',
       selectable: true,
       selected: selectedNodeIds.includes(card.id),
       data: {
@@ -1142,6 +1163,7 @@ function ReactFlowCanvasInner({
         onFieldChange: handleHmwFieldChange,
         onChipSelect: handleHmwChipSelect,
         onStatementChange: handleHmwStatementChange,
+        onDelete: isFacilitator ? deleteHmwCard : undefined,
       },
       style: { width: 700 },
     }));
@@ -1527,9 +1549,9 @@ function ReactFlowCanvasInner({
     const updates = computeThemeSortPositions(stickyNotes, stepId);
     if (updates.length > 0) {
       batchUpdatePositions(updates);
-      setTimeout(() => fitView({ padding: 0.2, duration: 400 }), 150);
+      setTimeout(() => fitViewWithChatOffset({ padding: 0.2, duration: 400 }), 150);
     }
-  }, [stickyNotes, stepId, batchUpdatePositions, fitView]);
+  }, [stickyNotes, stepId, batchUpdatePositions, fitViewWithChatOffset]);
 
   // Handle opening cluster dialog from selection toolbar
   const handleOpenClusterDialog = useCallback(() => {
@@ -2682,11 +2704,11 @@ function ReactFlowCanvasInner({
       !hasFitView.current
     ) {
       setTimeout(() => {
-        fitView({ padding: 0.2, duration: 300 });
+        fitViewWithChatOffset({ padding: 0.2, duration: 300 });
         hasFitView.current = true;
       }, 100);
     }
-  }, [stickyNotes.length, personaTemplates.length, hmwCards.length, fitView]);
+  }, [stickyNotes.length, personaTemplates.length, hmwCards.length, fitViewWithChatOffset]);
 
   // Fit grid to viewport when dynamicGridConfig first becomes available (after gridColumns are seeded)
   const hasSetGridViewport = useRef(false);
@@ -2725,12 +2747,12 @@ function ReactFlowCanvasInner({
   useEffect(() => {
     if (pendingFitView) {
       const timer = setTimeout(() => {
-        fitView({ padding: 0.2, duration: 400 });
+        fitViewWithChatOffset({ padding: 0.3, duration: 500 });
         setPendingFitView(false);
-      }, 150);
+      }, 300);
       return () => clearTimeout(timer);
     }
-  }, [pendingFitView, fitView, setPendingFitView]);
+  }, [pendingFitView, fitViewWithChatOffset, setPendingFitView]);
 
   // Sync local selection to shared store (via effect to avoid setState-during-render)
   useEffect(() => {
@@ -2747,7 +2769,7 @@ function ReactFlowCanvasInner({
   }, [pinnedGuides, dismissedGuideIds, canvasHasItems]);
 
   return (
-    <div ref={canvasContainerRef} className="w-full h-full relative">
+    <div ref={canvasContainerRef} data-canvas-capture className="w-full h-full relative overflow-hidden">
       {/* CursorBroadcaster — renderless; wires mouse handlers for presence broadcast (multiplayer only) */}
       {workshopType === 'multiplayer' && (
         <CursorBroadcaster handlersRef={cursorHandlersRef} />
@@ -2839,7 +2861,7 @@ function ReactFlowCanvasInner({
             <Minus className="w-4 h-4" />
           </button>
           <button
-            onClick={() => fitView({ padding: 0.2, duration: 300 })}
+            onClick={() => fitViewWithChatOffset({ padding: 0.2, duration: 300 })}
             title="Fit view"
             className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           >

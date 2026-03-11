@@ -39,7 +39,11 @@ export function addCanvasItemsToBoard(options: {
   stepId: string;
   items: CanvasItemParsed[];
   storeApi: {
-    getState(): { stickyNotes: StickyNote[]; gridColumns: GridColumn[] };
+    getState(): {
+      stickyNotes: StickyNote[];
+      gridColumns: GridColumn[];
+      personaTemplates?: Array<{ archetype?: string; position: { x: number; y: number } }>;
+    };
   };
   addStickyNote: (note: Omit<StickyNote, "id">) => void;
   owner?: { ownerId: string; ownerName: string; ownerColor: string };
@@ -98,6 +102,7 @@ export function addCanvasItemsToBoard(options: {
       },
       currentStickyNotes,
       gridConfig,
+      storeApi.getState().personaTemplates,
     );
 
     // Color priority: explicit > category > zone > row-based > grid green > default yellow

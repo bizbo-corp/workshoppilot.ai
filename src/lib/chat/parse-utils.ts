@@ -241,7 +241,7 @@ export function parseCanvasItems(content: string): {
       color = colorMatch[1].trim().toLowerCase();
       remaining = remaining.slice(0, colorMatch.index).trim();
     }
-    const clusterMatch = remaining.match(/,\s*Cluster:\s*([^,]+)$/i);
+    const clusterMatch = remaining.match(/,\s*Cluster:\s*(.+)$/i);
     if (clusterMatch) {
       cluster = clusterMatch[1].trim();
       remaining = remaining.slice(0, clusterMatch.index).trim();

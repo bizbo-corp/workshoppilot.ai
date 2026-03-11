@@ -193,7 +193,7 @@ export async function deleteWorkshops(workshopIds: string[]): Promise<{ deleted:
     // Find all workshop steps and sessions for deleted workshops
     const [wsSteps, wsSessions] = await Promise.all([
       db
-        .select({ id: workshopSteps.id })
+        .select({ id: workshopSteps.id, snapshotUrl: workshopSteps.snapshotUrl })
         .from(workshopSteps)
         .where(inArray(workshopSteps.workshopId, deletedIds)),
       db
@@ -215,6 +215,16 @@ export async function deleteWorkshops(workshopIds: string[]): Promise<{ deleted:
       const blobUrls = artifacts.flatMap((a) =>
         extractBlobUrlsFromArtifact((a.artifact || {}) as Record<string, unknown>)
       );
+
+      // Include snapshot URLs in blob cleanup (may be single URL or JSON array)
+      for (const s of wsSteps) {
+        if (!s.snapshotUrl) continue;
+        if (s.snapshotUrl.startsWith('[')) {
+          try { blobUrls.push(...JSON.parse(s.snapshotUrl)); } catch { blobUrls.push(s.snapshotUrl); }
+        } else {
+          blobUrls.push(s.snapshotUrl);
+        }
+      }
 
       // Hard-delete related DB rows (they're useless after soft-delete)
       const deleteOps: Promise<unknown>[] = [
@@ -443,7 +453,7 @@ export async function resetStep(
 
     // Find all workshop step records for forward steps
     const workshopStepRecords = await db
-      .select({ id: workshopSteps.id, stepId: workshopSteps.stepId })
+      .select({ id: workshopSteps.id, stepId: workshopSteps.stepId, snapshotUrl: workshopSteps.snapshotUrl })
       .from(workshopSteps)
       .where(
         and(
@@ -480,6 +490,16 @@ export async function resetStep(
       extractBlobUrlsFromArtifact((a.artifact || {}) as Record<string, unknown>)
     );
 
+    // Include snapshot URLs in blob cleanup (may be single URL or JSON array)
+    for (const r of workshopStepRecords) {
+      if (!r.snapshotUrl) continue;
+      if (r.snapshotUrl.startsWith('[')) {
+        try { blobUrls.push(...JSON.parse(r.snapshotUrl)); } catch { blobUrls.push(r.snapshotUrl); }
+      } else {
+        blobUrls.push(r.snapshotUrl);
+      }
+    }
+
     // Batch-delete step artifacts for all forward steps
     await db
       .delete(stepArtifacts)
@@ -503,6 +523,7 @@ export async function resetStep(
         arcPhase: 'orient',
         startedAt: new Date(),
         completedAt: null,
+        snapshotUrl: null,
       })
       .where(
         and(
@@ -524,6 +545,7 @@ export async function resetStep(
           arcPhase: 'orient',
           startedAt: null,
           completedAt: null,
+          snapshotUrl: null,
         })
         .where(
           and(

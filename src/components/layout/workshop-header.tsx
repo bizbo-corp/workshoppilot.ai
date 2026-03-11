@@ -30,6 +30,7 @@ interface WorkshopHeaderProps {
   workshopEmoji?: string | null;
   shareToken?: string | null;
   workshopType?: 'solo' | 'multiplayer';
+  isFacilitator?: boolean;
 }
 
 /**
@@ -78,6 +79,7 @@ export function WorkshopHeader({
   workshopEmoji,
   shareToken,
   workshopType,
+  isFacilitator,
 }: WorkshopHeaderProps) {
   const pathname = usePathname();
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
@@ -182,8 +184,8 @@ export function WorkshopHeader({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Share button — multiplayer workshops only */}
-          {workshopType === 'multiplayer' && shareToken && (
+          {/* Share button — facilitator only */}
+          {isFacilitator && workshopType === 'multiplayer' && shareToken && (
             <ShareButton shareToken={shareToken} />
           )}
 

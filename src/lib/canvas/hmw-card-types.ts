@@ -15,4 +15,7 @@ export type HmwCardData = {
   };
   team?: string;
   cardIndex?: number;
+  ownerId?: string;    // participantId or 'facilitator'
+  ownerName?: string;  // display name shown on card
+  ownerColor?: string; // hex color for dot indicator
 };

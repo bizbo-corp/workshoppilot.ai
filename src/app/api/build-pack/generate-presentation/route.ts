@@ -14,7 +14,7 @@ import { auth } from '@clerk/nextjs/server';
 import { google } from '@ai-sdk/google';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { db } from '@/db/client';
-import { buildPacks, workshops } from '@/db/schema';
+import { buildPacks, workshops, workshopSteps } from '@/db/schema';
 import { eq, and, like } from 'drizzle-orm';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
 import { loadAllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifacts';
@@ -142,9 +142,72 @@ export async function POST(req: Request) {
       });
     }
 
+    // Use provided stepImages, or fall back to stored snapshots from DB
+    let finalStepImages = stepImages || {};
+
+    if (!stepImages || Object.keys(stepImages).length === 0) {
+      // Fetch snapshot URLs from workshop_steps
+      const snapshotRows = await db
+        .select({ stepId: workshopSteps.stepId, snapshotUrl: workshopSteps.snapshotUrl })
+        .from(workshopSteps)
+        .where(eq(workshopSteps.workshopId, workshopId));
+
+      const STEP_KEY_MAP: Record<string, string> = {
+        'challenge': 'challenge',
+        'stakeholder-mapping': 'stakeholderMapping',
+        'user-research': 'userResearch',
+        'sense-making': 'senseMaking',
+        'persona': 'persona',
+        'journey-mapping': 'journeyMapping',
+        'reframe': 'reframe',
+        'ideation': 'ideation',
+        'concept': 'concept',
+        'validate': 'validate',
+      };
+
+      const snapshotImages: Record<string, string> = {};
+
+      async function fetchAsBase64(url: string): Promise<string | null> {
+        if (url.startsWith('data:')) return url;
+        try {
+          const res = await fetch(url);
+          const buffer = Buffer.from(await res.arrayBuffer());
+          return `data:image/jpeg;base64,${buffer.toString('base64')}`;
+        } catch (err) {
+          console.warn('[generate-presentation] Failed to fetch snapshot:', err);
+          return null;
+        }
+      }
+
+      for (const row of snapshotRows) {
+        if (!row.snapshotUrl) continue;
+        const key = STEP_KEY_MAP[row.stepId];
+        if (!key) continue;
+
+        // Handle JSON array (e.g. persona step with multiple cards)
+        if (row.snapshotUrl.startsWith('[')) {
+          try {
+            const urls: string[] = JSON.parse(row.snapshotUrl);
+            // Use first image as the step snapshot for the presentation
+            if (urls[0]) {
+              const b64 = await fetchAsBase64(urls[0]);
+              if (b64) snapshotImages[key] = b64;
+            }
+          } catch {
+            // Fall through to single-URL handling
+          }
+          continue;
+        }
+
+        const b64 = await fetchAsBase64(row.snapshotUrl);
+        if (b64) snapshotImages[key] = b64;
+      }
+      finalStepImages = snapshotImages;
+    }
+
     // Build PPTX with captured images + summaries
     const pptxBuffer = await buildPresentation(
-      stepImages || {},
+      finalStepImages,
       summaries,
       conceptName,
       summary,

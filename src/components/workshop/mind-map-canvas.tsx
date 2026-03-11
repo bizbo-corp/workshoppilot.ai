@@ -91,6 +91,11 @@ export type MindMapCanvasProps = {
   onReVote?: () => void;
   // Merge dialog trigger
   onStartMerge?: (groupId: string) => void;
+  // Per-participant filtering (multiplayer ideation)
+  currentOwnerId?: string;           // filter canvas to this owner's nodes
+  allOwnerIds?: string[];             // for facilitator switcher dropdown
+  ownerNames?: Record<string, string>; // ownerId → display name
+  onOwnerSwitch?: (ownerId: string) => void;
 };
 
 export function MindMapCanvas(props: MindMapCanvasProps) {
@@ -122,9 +127,24 @@ function MindMapCanvasInner({
   onVoteSelectionConfirm,
   onReVote,
   onStartMerge,
+  currentOwnerId,
+  allOwnerIds,
+  ownerNames,
+  onOwnerSwitch,
 }: MindMapCanvasProps) {
-  const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
-  const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
+  const allMindMapNodes = useCanvasStore((state) => state.mindMapNodes);
+  const allMindMapEdges = useCanvasStore((state) => state.mindMapEdges);
+
+  // Filter mind map nodes/edges by ownerId when in per-participant mode
+  const mindMapNodes = useMemo(() => {
+    if (!currentOwnerId) return allMindMapNodes;
+    return allMindMapNodes.filter((n) => n.ownerId === currentOwnerId);
+  }, [allMindMapNodes, currentOwnerId]);
+
+  const mindMapEdges = useMemo(() => {
+    if (!currentOwnerId) return allMindMapEdges;
+    return allMindMapEdges.filter((e) => e.ownerId === currentOwnerId);
+  }, [allMindMapEdges, currentOwnerId]);
   const addMindMapNode = useCanvasStore((state) => state.addMindMapNode);
   const updateMindMapNode = useCanvasStore((state) => state.updateMindMapNode);
   const updateMindMapNodePosition = useCanvasStore((state) => state.updateMindMapNodePosition);
@@ -136,8 +156,16 @@ function MindMapCanvasInner({
   const setMindMapState = useCanvasStore((state) => state.setMindMapState);
   const pendingFitView = useCanvasStore((state) => state.pendingFitView);
   const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
-  const crazy8sSlots = useCanvasStore((state) => state.crazy8sSlots);
+  const allCrazy8sSlots = useCanvasStore((state) => state.crazy8sSlots);
   const slotGroups = useCanvasStore((state) => state.slotGroups);
+
+  // Filter crazy 8s slots by ownerId (except during idea-selection which shows all)
+  const crazy8sSlots = useMemo(() => {
+    if (!currentOwnerId) return allCrazy8sSlots;
+    // During idea-selection/voting, show ALL participants' slots
+    if (votingMode) return allCrazy8sSlots;
+    return allCrazy8sSlots.filter((s) => s.ownerId === currentOwnerId);
+  }, [allCrazy8sSlots, currentOwnerId, votingMode]);
 
   const { fitView } = useReactFlow();
 
@@ -169,8 +197,12 @@ function MindMapCanvasInner({
   // Guard: only create HMW branch nodes once per mount
   const hmwNodesCreated = useRef(false);
 
-  // Initialize root node if canvas is empty
+  // Initialize root node if canvas is empty (solo mode only).
+  // In multiplayer per-participant mode (currentOwnerId is set), page.tsx seeds
+  // per-owner roots. Creating an unowned root here would race with Liveblocks
+  // recovery and hide all seeded nodes.
   useEffect(() => {
+    if (currentOwnerId) return; // Multiplayer seeding handled by page.tsx
     if (mindMapNodes.length === 0) {
       const rootLabel = challengeStatement || hmwStatement || 'How might we...?';
       const rootNode: MindMapNodeState = {
@@ -185,10 +217,12 @@ function MindMapCanvasInner({
       };
       setMindMapState([rootNode], []);
     }
-  }, [mindMapNodes.length, challengeStatement, hmwStatement, setMindMapState]);
+  }, [mindMapNodes.length, challengeStatement, hmwStatement, setMindMapState, currentOwnerId]);
 
-  // Pre-populate HMW branch nodes (runs once, even if root already existed)
+  // Pre-populate HMW branch nodes (runs once, even if root already existed).
+  // Skip in multiplayer per-participant mode — page.tsx seeds per-owner HMW branches.
   useEffect(() => {
+    if (currentOwnerId) { hmwNodesCreated.current = true; return; }
     if (hmwNodesCreated.current) return;
     if (!hmwGoals || hmwGoals.length === 0) return;
     // Only add if no hmw-* nodes exist yet
@@ -237,7 +271,7 @@ function MindMapCanvasInner({
     hmwNodesCreated.current = true;
 
     setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
-  }, [mindMapNodes, hmwGoals, addMindMapNode, fitView]);
+  }, [mindMapNodes, hmwGoals, addMindMapNode, fitView, currentOwnerId]);
 
   // Update root node label to use challenge statement (handles existing canvases)
   const rootLabelUpdated = useRef(false);
@@ -249,7 +283,7 @@ function MindMapCanvasInner({
     if (!rootNode) return;
     // Update if root still has placeholder or full HMW text (not the challenge statement)
     if (rootNode.label !== challengeStatement) {
-      updateMindMapNode('root', { label: challengeStatement });
+      updateMindMapNode(rootNode.id, { label: challengeStatement });
     }
     rootLabelUpdated.current = true;
   }, [challengeStatement, mindMapNodes, updateMindMapNode]);
@@ -296,6 +330,7 @@ function MindMapCanvasInner({
         level: childLevel,
         parentId,
         position,
+        ...(currentOwnerId && { ownerId: currentOwnerId }),
       };
 
       const newEdge: MindMapEdgeState = {
@@ -303,11 +338,12 @@ function MindMapCanvasInner({
         source: parentId,
         target: newNodeId,
         themeColor: themeColor.color,
+        ...(currentOwnerId && { ownerId: currentOwnerId }),
       };
 
       addMindMapNode(newNode, newEdge);
     },
-    [mindMapNodes, mindMapEdges, addMindMapNode]
+    [mindMapNodes, mindMapEdges, addMindMapNode, currentOwnerId]
   );
 
   // Callback: Delete node with cascade confirmation
@@ -531,9 +567,10 @@ function MindMapCanvasInner({
     [updateMindMapNodePosition]
   );
 
-  // Undo/redo handlers
+  // Undo/redo handlers (temporal middleware only exists on the solo store, not multiplayer)
   const handleUndo = useCallback(() => {
-    const temporalStore = storeApi.temporal;
+    const temporalStore = (storeApi as any).temporal;
+    if (!temporalStore) return;
     const pastStates = temporalStore.getState().pastStates;
     if (pastStates.length > 0) {
       temporalStore.getState().undo();
@@ -541,7 +578,8 @@ function MindMapCanvasInner({
   }, [storeApi]);
 
   const handleRedo = useCallback(() => {
-    const temporalStore = storeApi.temporal;
+    const temporalStore = (storeApi as any).temporal;
+    if (!temporalStore) return;
     const futureStates = temporalStore.getState().futureStates;
     if (futureStates.length > 0) {
       temporalStore.getState().redo();
@@ -550,8 +588,9 @@ function MindMapCanvasInner({
 
   // Subscribe to temporal store for undo/redo state
   useEffect(() => {
-    const temporalStore = storeApi.temporal;
-    const unsubscribe = temporalStore.subscribe((state) => {
+    const temporalStore = (storeApi as any).temporal;
+    if (!temporalStore) return;
+    const unsubscribe = temporalStore.subscribe((state: any) => {
       setCanUndo(state.pastStates.length > 0);
       setCanRedo(state.futureStates.length > 0);
     });
@@ -722,6 +761,25 @@ function MindMapCanvasInner({
           }}
           maskColor="rgba(0,0,0,0.1)"
         />
+
+        {/* Facilitator participant switcher */}
+        {allOwnerIds && allOwnerIds.length > 1 && onOwnerSwitch && (
+          <Panel position="top-left" className="!mt-4 !ml-4">
+            <div className="flex items-center gap-1 rounded-lg border bg-background p-1 shadow-md">
+              {allOwnerIds.map((oid) => (
+                <Button
+                  key={oid}
+                  size="sm"
+                  variant={currentOwnerId === oid ? 'secondary' : 'ghost'}
+                  className="text-xs h-7 px-2"
+                  onClick={() => onOwnerSwitch(oid)}
+                >
+                  {ownerNames?.[oid] || oid}
+                </Button>
+              ))}
+            </div>
+          </Panel>
+        )}
 
         {/* Proceed button when brain rewriting is active */}
         {brainRewritingMatrices && brainRewritingMatrices.length > 0 && onBrainRewritingDone && (

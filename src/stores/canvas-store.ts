@@ -11,6 +11,8 @@ import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { DotVote, VotingSession, VotingResult } from '@/lib/canvas/voting-types';
 import { DEFAULT_VOTING_SESSION } from '@/lib/canvas/voting-types';
 
+export type IdeationPhase = 'mind-mapping' | 'crazy-eights' | 'idea-selection' | 'brain-rewriting';
+
 export type PendingHmwChipSelection = {
   cardId: string;
   field: string;
@@ -36,6 +38,8 @@ export type MindMapNodeState = {
   parentId?: string;      // ID of parent node (undefined for root)
   position?: { x: number; y: number }; // Free-form canvas position (persisted)
   isStarred?: boolean;    // User-flagged for Crazy 8s carry-forward
+  ownerId?: string;       // participantId or 'facilitator' (multiplayer per-participant ideation)
+  ownerName?: string;     // display name (for facilitator overview)
 };
 
 export type MindMapEdgeState = {
@@ -44,6 +48,7 @@ export type MindMapEdgeState = {
   target: string;
   themeColor: string;
   isSecondary?: boolean; // true = manual cross-connection (not part of tree hierarchy)
+  ownerId?: string;      // matches source node's ownerId (multiplayer per-participant ideation)
 };
 
 export type DrawingNode = {
@@ -94,6 +99,7 @@ export type CanvasState = {
   brainRewritingMatrices: BrainRewritingMatrix[];
   dotVotes: DotVote[];
   votingSession: VotingSession;
+  ideationPhase: IdeationPhase;
   isDirty: boolean;
   gridColumns: GridColumn[]; // Dynamic columns, initialized from step config
   highlightedCell: { row: number; col: number } | null;
@@ -171,13 +177,14 @@ export type CanvasActions = {
   closeVoting: () => void;
   setVotingResults: (results: VotingResult[]) => void;
   resetVoting: () => void;
+  setIdeationPhase: (phase: IdeationPhase) => void;
   markClean: () => void;
   markDirty: () => void;
 };
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; slotGroups?: SlotGroup[]; brainRewritingMatrices?: BrainRewritingMatrix[]; dotVotes?: DotVote[]; votingSession?: VotingSession }) => {
+export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; slotGroups?: SlotGroup[]; brainRewritingMatrices?: BrainRewritingMatrix[]; dotVotes?: DotVote[]; votingSession?: VotingSession; ideationPhase?: IdeationPhase }) => {
   const DEFAULT_STATE: CanvasState = {
     stickyNotes: initState?.stickyNotes || [],
     drawingNodes: initState?.drawingNodes || [],
@@ -192,6 +199,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
     brainRewritingMatrices: initState?.brainRewritingMatrices || [],
     dotVotes: initState?.dotVotes || [],
     votingSession: initState?.votingSession || DEFAULT_VOTING_SESSION,
+    ideationPhase: initState?.ideationPhase || 'mind-mapping',
     gridColumns: initState?.gridColumns || [],
     isDirty: false,
     highlightedCell: null,
@@ -948,6 +956,12 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             isDirty: true,
           })),
 
+        setIdeationPhase: (phase) =>
+          set(() => ({
+            ideationPhase: phase,
+            isDirty: true,
+          })),
+
         markClean: () =>
           set(() => ({
             isDirty: false,
@@ -974,6 +988,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
           brainRewritingMatrices: state.brainRewritingMatrices,
           dotVotes: state.dotVotes,
           votingSession: state.votingSession,
+          ideationPhase: state.ideationPhase,
         }),
         limit: 50,
         equality: (pastState, currentState) =>

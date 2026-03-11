@@ -7,7 +7,7 @@
 
 import { challengeStep } from './steps/01_challenge';
 import { stakeholderMappingStep } from './steps/02_stakeholder_mapping';
-import { userResearchStep } from './steps/03_user_research';
+import { userResearchStep, processUserResearchPrompt } from './steps/03_user_research';
 import { senseMakingStep } from './steps/04_sense_making';
 import { personaStep } from './steps/05_persona';
 import { journeyMappingStep } from './steps/06_journey_mapping';
@@ -35,7 +35,12 @@ const steps: Record<string, { contentStructure: string; interactionLogic: string
 export function getStepSpecificInstructions(stepId: string): string {
   const step = steps[stepId];
   if (!step) return `No specific instructions available for step: ${stepId}. Provide general design thinking facilitation.`;
-  return `${step.contentStructure}\n\n${step.interactionLogic}`;
+  let prompt = `${step.contentStructure}\n\n${step.interactionLogic}`;
+  // Inject random facilitator names for user-research to guarantee uniqueness
+  if (stepId === 'user-research') {
+    prompt = processUserResearchPrompt(prompt);
+  }
+  return prompt;
 }
 
 export { getIdeationSubStepInstructions } from './steps/08_ideation';

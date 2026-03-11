@@ -199,6 +199,13 @@ export const ConceptCardNode = memo(
           borderColor: selected ? SAGE.borderSelected : SAGE.border,
         }}
       >
+        {/* Drag handle grip bar */}
+        <div className="card-drag-handle flex items-center justify-center w-full h-6 cursor-grab active:cursor-grabbing bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded-t-2xl">
+          <svg width="32" height="4" viewBox="0 0 32 4" fill="currentColor" className="text-neutral-olive-400">
+            <rect x="0" y="0" width="32" height="2" rx="1" />
+          </svg>
+        </div>
+
         <Handle
           type="target"
           position={Position.Top}

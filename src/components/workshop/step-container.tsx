@@ -12,7 +12,7 @@ import { MobileTabBar } from "./mobile-tab-bar";
 import { StepNavigation } from "./step-navigation";
 import { ResetStepDialog } from "@/components/dialogs/reset-step-dialog";
 import { PrdViewerDialog } from "./prd-viewer-dialog";
-import { IdeationSubStepContainer } from "./ideation-sub-step-container";
+import { useIdeationPhases } from "@/hooks/use-ideation-phases";
 import {
   Loader2,
   Megaphone,
@@ -84,6 +84,7 @@ const CANVAS_ENABLED_STEPS = [
   "persona",
   "journey-mapping",
   "reframe",
+  "ideation",
   "concept",
 ];
 const CANVAS_ONLY_STEPS = ["stakeholder-mapping", "sense-making", "concept"];
@@ -197,6 +198,7 @@ interface StepContainerProps {
   participantId?: string | null;
   participantDisplayName?: string | null;
   participantColor?: string | null;
+  ideationOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string; hmwBranchLabel: string }>;
 }
 
 export function StepContainer({
@@ -219,6 +221,7 @@ export function StepContainer({
   participantId,
   participantDisplayName,
   participantColor,
+  ideationOwners,
 }: StepContainerProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
@@ -311,9 +314,36 @@ export function StepContainer({
         ? { personaTemplates: s.personaTemplates }
         : {}),
       ...(s.hmwCards.length > 0 ? { hmwCards: s.hmwCards } : {}),
+      ...(s.selectedSlotIds.length > 0 ? { selectedSlotIds: s.selectedSlotIds } : {}),
+      ...(s.slotGroups.length > 0 ? { slotGroups: s.slotGroups } : {}),
+      ...(s.brainRewritingMatrices.length > 0 ? { brainRewritingMatrices: s.brainRewritingMatrices } : {}),
+      ...(s.dotVotes.length > 0 ? { dotVotes: s.dotVotes } : {}),
+      ...(s.votingSession.status !== 'idle' ? { votingSession: s.votingSession } : {}),
     });
     s.markClean();
   }, [isCanvasStep, workshopId, step, storeApi]);
+
+  // Ideation phases hook — active only for step 8
+  // Determine currentOwnerId for per-participant filtering
+  const ideationOwnerId = React.useMemo(() => {
+    if (!isMultiplayer) return undefined; // Solo: no filtering
+    if (isFacilitator) return 'facilitator';
+    if (participantId) return participantId;
+    return undefined;
+  }, [isMultiplayer, isFacilitator, participantId]);
+
+  const ideation = useIdeationPhases({
+    enabled: stepOrder === 8,
+    workshopId,
+    stepId: step?.id || '',
+    stepStatus,
+    initialArtifact,
+    hmwStatement,
+    challengeStatement,
+    hmwGoals,
+    currentOwnerId: ideationOwnerId,
+    ideationOwners,
+  });
 
   // HMW card counts as "content" only when all 4 fields are filled (card is 'filled')
   const hmwCardComplete = hmwCards.some((c) => c.cardState === "filled");
@@ -334,7 +364,7 @@ export function StepContainer({
     personaTemplates.some((t) => !!t.name);
 
   // Next button requires explicit confirmation (e.g. "Confirm Research Insights") for all steps
-  const effectiveConfirmed = artifactConfirmed;
+  const effectiveConfirmed = stepOrder === 8 ? ideation.artifactConfirmed : artifactConfirmed;
 
   // In-chat accept button: show when step has a confirm label, canvas has enough content, and user hasn't clicked Accept yet
   const confirmLabel = step ? STEP_CONFIRM_LABELS[step.id] : undefined;
@@ -382,13 +412,40 @@ export function StepContainer({
     (allConceptCardsFilled || conceptProceedOverride);
 
   // Fire confetti when user clicks Accept (not on auto-confirm from canvas content)
+  // Also fire-and-forget snapshot capture for visual reference in sidebar
   const prevConfirmed = React.useRef(artifactConfirmed);
   React.useEffect(() => {
     if (artifactConfirmed && !prevConfirmed.current) {
       fireConfetti();
+
+      // Fire-and-forget snapshot capture — only for fresh confirmations, not revisits
+      if (stepStatus !== "complete" && step) {
+        const captureSnapshot = async () => {
+          try {
+            const { captureSingleStep } = await import(
+              "@/lib/capture/capture-single-step"
+            );
+            const imageBase64 = await captureSingleStep(step.id, {});
+            if (imageBase64) {
+              await fetch("/api/upload-step-snapshot", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  imageBase64,
+                  workshopId,
+                  stepId: step.id,
+                }),
+              });
+            }
+          } catch (err) {
+            console.error("[step-snapshot] Capture failed:", err);
+          }
+        };
+        captureSnapshot();
+      }
     }
     prevConfirmed.current = artifactConfirmed;
-  }, [artifactConfirmed]);
+  }, [artifactConfirmed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Last AI message text — shown in collapsed chat strip preview
   const [lastAiMessage, setLastAiMessage] = React.useState("");
@@ -905,7 +962,7 @@ export function StepContainer({
   const [showParticipantOverview, setShowParticipantOverview] = React.useState(false);
   const [isResetting, setIsResetting] = React.useState(false);
 
-  // Reset key forces ChatPanel/IdeationSubStepContainer to re-mount (clearing useChat state)
+  // Reset key forces ChatPanel to re-mount (clearing useChat state)
   const [resetKey, setResetKey] = React.useState(0);
 
   React.useEffect(() => {
@@ -947,7 +1004,7 @@ export function StepContainer({
       setBillboardImages({});
       setConceptCardsForBillboard([]);
       setBillboardDialogStep("text");
-      // Force re-mount of ChatPanel/IdeationSubStepContainer to clear useChat state
+      // Force re-mount of ChatPanel to clear useChat state
       setResetKey((prev) => prev + 1);
       // Clear canvas/whiteboard state AFTER resetKey so the new store mount
       // gets overwritten with empty state (resetKey re-creates store from stale server props)
@@ -1759,52 +1816,6 @@ export function StepContainer({
     );
   };
 
-  // Step 8 uses specialized sub-step container
-  if (stepOrder === 8) {
-    // votingMode is true when in idea-selection phase (no brain-rewriting matrices yet)
-    // and voting has not yet closed. FacilitatorControls uses this to couple the timer
-    // to the voting lifecycle (VOTING_OPENED / VOTING_CLOSED broadcasts).
-    const isVotingMode =
-      brainRewritingMatrices.length === 0 && votingSession.status !== "closed";
-
-    return (
-      <>
-        <IdeationSubStepContainer
-          key={resetKey}
-          sessionId={sessionId}
-          workshopId={workshopId}
-          initialMessages={localMessages}
-          initialArtifact={initialArtifact}
-          stepStatus={stepStatus}
-          isAdmin={isAdmin}
-          onReset={() => setShowResetDialog(true)}
-          hmwStatement={hmwStatement}
-          challengeStatement={challengeStatement}
-          hmwGoals={hmwGoals}
-        />
-        {/* FacilitatorControls for Step 8 — rendered inside multiplayer tree so
-            useBroadcastEvent() works. votingMode couples timer to voting lifecycle. */}
-        {workshopType === "multiplayer" && (
-          <>
-            <StepAdvanceBroadcaster broadcastRef={broadcastRef} />
-            <FacilitatorControls
-              workshopId={workshopId}
-              sessionId={sessionId}
-              votingMode={isVotingMode}
-            />
-          </>
-        )}
-        <ResetStepDialog
-          open={showResetDialog}
-          onOpenChange={setShowResetDialog}
-          onConfirm={handleReset}
-          isResetting={isResetting}
-          stepName={getStepByOrder(stepOrder)?.name || `Step ${stepOrder}`}
-        />
-      </>
-    );
-  }
-
   // Render content section
   const renderContent = () => (
     <div className="flex h-full min-h-0 flex-col">
@@ -1845,13 +1856,32 @@ export function StepContainer({
             workshopId={workshopId}
             initialMessages={localMessages}
             onMessageCountChange={
-              stepOrder === 10 ? setStep10MessageCount : undefined
+              stepOrder === 8
+                ? ideation.setLiveMessageCount
+                : stepOrder === 10
+                  ? setStep10MessageCount
+                  : undefined
             }
-            showStepConfirm={showConfirm}
-            onStepConfirm={() => setArtifactConfirmed(true)}
+            subStep={stepOrder === 8 ? ideation.currentPhase : undefined}
+            showStepConfirm={
+              stepOrder === 8
+                ? ideation.currentPhase === 'mind-mapping' && !ideation.showCrazy8s && ideation.hasEnoughMessages && ideation.mindMapHasThemes
+                : showConfirm
+            }
+            onStepConfirm={
+              stepOrder === 8
+                ? ideation.handleStartCrazy8s
+                : () => setArtifactConfirmed(true)
+            }
             onStepRevise={() => setArtifactConfirmed(false)}
-            stepConfirmLabel={confirmLabel}
-            stepAlreadyConfirmed={artifactConfirmed}
+            stepConfirmLabel={
+              stepOrder === 8
+                ? (ideation.isEnhancingIdeas ? 'Enhancing ideas...' : 'Confirm Mind Map')
+                : confirmLabel
+            }
+            stepConfirmIsTransition={stepOrder === 8 ? true : undefined}
+            stepConfirmDisabled={stepOrder === 8 ? ideation.isEnhancingIdeas : undefined}
+            stepAlreadyConfirmed={stepOrder === 8 ? undefined : artifactConfirmed}
             onConceptComplete={() => setConceptProceedOverride(true)}
             skipAutoStart={autoStartFired}
             onAutoStarted={handleAutoStarted}
@@ -1906,6 +1936,10 @@ export function StepContainer({
                   />
                 )}
               </div>
+            ) : stepOrder === 8 ? (
+              <div className="h-full relative">
+                {ideation.renderCanvas()}
+              </div>
             ) : stepOrder === 10 ? (
               renderStep10Content()
             ) : (
@@ -1943,7 +1977,7 @@ export function StepContainer({
             workshopId={workshopId}
             currentStepOrder={stepOrder}
             artifactConfirmed={effectiveConfirmed}
-            stepExplicitlyConfirmed={artifactConfirmed}
+            stepExplicitlyConfirmed={stepOrder === 8 ? ideation.explicitlyConfirmed : artifactConfirmed}
             stepStatus={stepStatus}
             isAdmin={isAdmin}
             onReset={() => setShowResetDialog(true)}
@@ -2014,7 +2048,7 @@ export function StepContainer({
   const renderCanvasPanel = () => {
     if (step && CANVAS_ONLY_STEPS.includes(step.id)) {
       return (
-        <div className="h-full relative">
+        <div className="h-full relative overflow-hidden">
           <CanvasWrapper
             sessionId={sessionId}
             stepId={step.id}
@@ -2042,6 +2076,13 @@ export function StepContainer({
               crazy8sSlots={step8Crazy8sSlots}
             />
           )}
+        </div>
+      );
+    }
+    if (stepOrder === 8) {
+      return (
+        <div className="h-full relative">
+          {ideation.renderCanvas()}
         </div>
       );
     }
@@ -2083,9 +2124,9 @@ export function StepContainer({
     <div className="flex h-full flex-col">
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <StepTransitionWrapper stepId={step?.id ?? String(stepOrder)}>
-          <div className="flex h-full">
+          <div className="flex h-full overflow-hidden">
             {/* Canvas — always takes full width */}
-            <div className="flex-1">{renderCanvasPanel()}</div>
+            <div className="flex-1 overflow-hidden">{renderCanvasPanel()}</div>
           </div>
         </StepTransitionWrapper>
 
@@ -2129,7 +2170,7 @@ export function StepContainer({
           {/* Multiplayer controls — fixed top-right, below header bar on the canvas.
               Styled to match the bottom canvas toolbar (bg-card rounded-xl shadow-md border). */}
           <div className="fixed top-[4.5rem] right-4 z-50 flex items-center gap-0.5 bg-card rounded-xl shadow-md border border-border px-1.5 py-1">
-            <FacilitatorControls workshopId={workshopId} sessionId={sessionId} />
+            <FacilitatorControls workshopId={workshopId} sessionId={sessionId} votingMode={stepOrder === 8 ? brainRewritingMatrices.length === 0 && votingSession.status !== "closed" : undefined} />
             {isFacilitator && (
               <button
                 onClick={() => setShowParticipantOverview((v) => !v)}
@@ -2168,7 +2209,7 @@ export function StepContainer({
           workshopId={workshopId}
           currentStepOrder={stepOrder}
           artifactConfirmed={effectiveConfirmed}
-          stepExplicitlyConfirmed={artifactConfirmed}
+          stepExplicitlyConfirmed={stepOrder === 8 ? ideation.explicitlyConfirmed : artifactConfirmed}
           stepStatus={stepStatus}
           isAdmin={isAdmin}
           onReset={() => setShowResetDialog(true)}
