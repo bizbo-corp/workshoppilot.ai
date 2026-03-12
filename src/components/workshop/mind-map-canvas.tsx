@@ -19,8 +19,9 @@ import {
   type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, ArrowRight, X } from 'lucide-react';
+import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, ArrowRight, X, CheckCircle2, Star } from 'lucide-react';
 
+import { cn } from '@/lib/utils';
 import { MindMapNode } from '@/components/canvas/mind-map-node';
 import { useMultiplayerContext } from '@/components/workshop/multiplayer-room';
 import {
@@ -35,6 +36,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { MindMapEdge } from '@/components/canvas/mind-map-edge';
 import { OwnerZoneNode } from '@/components/canvas/owner-zone-node';
+import { MindMapReadinessSync, type MindMapReadinessSyncHandle, type ReadinessMap } from '@/components/canvas/mind-map-readiness';
 import {
   Crazy8sGroupNode,
   CRAZY_8S_NODE_ID,
@@ -80,6 +82,11 @@ function snapToGrid(val: number): number {
 const BR_NODE_PREFIX = 'brain-rewriting-';
 // Owner zone node ID prefix
 const ZONE_NODE_PREFIX = 'owner-zone-';
+// Crazy 8s per-participant node ID prefix
+const CRAZY_8S_NODE_PREFIX = 'crazy-8s-group-';
+/** Check if a node ID is a crazy 8s group node (legacy single or per-participant) */
+const isCrazy8sNode = (id: string) =>
+  id === CRAZY_8S_NODE_ID || id.startsWith(CRAZY_8S_NODE_PREFIX);
 
 export type MindMapCanvasProps = {
   workshopId: string;
@@ -204,7 +211,7 @@ function MindMapCanvasInner({
     return allCrazy8sSlots.filter((s) => s.ownerId === currentOwnerId);
   }, [allCrazy8sSlots, currentOwnerId, votingMode]);
 
-  const { fitView } = useReactFlow();
+  const { fitView, screenToFlowPosition } = useReactFlow();
 
   const storeApi = useCanvasStoreApi();
 
@@ -215,11 +222,67 @@ function MindMapCanvasInner({
   // Tool mode: 'select' = marquee selection on drag, 'pan' = hand tool (default)
   const [toolMode, setToolMode] = useState<'select' | 'pan'>('pan');
 
+  // Auto-focus: track newly created node for edit-mode init + DOM-based focus retry.
+  // ReactFlow steals focus during node creation, so we poll until the textarea appears.
+  const [autoFocusNodeId, setAutoFocusNodeId] = useState<string | null>(null);
+
+  // Clear autoFocusNodeId after one render cycle so isNewlyCreated doesn't persist
+  useEffect(() => {
+    if (autoFocusNodeId) {
+      const timer = setTimeout(() => setAutoFocusNodeId(null), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocusNodeId]);
+
+  // DOM-based focus: polls for the node element, clicks the label to enter
+  // edit mode if needed, then focuses the textarea. Belt-and-suspenders approach
+  // that works regardless of React/ReactFlow rendering pipeline timing.
+  const focusNodeTextarea = useCallback((nodeId: string) => {
+    let attempts = 0;
+    let clickedLabel = false;
+    const tryFocus = () => {
+      const nodeEl = document.querySelector(`[data-id="${nodeId}"]`);
+      if (!nodeEl) {
+        // Node not in DOM yet — keep polling
+        if (attempts++ < 40) requestAnimationFrame(tryFocus);
+        return;
+      }
+      // If textarea exists (edit mode), focus it
+      const textarea = nodeEl.querySelector('textarea') as HTMLTextAreaElement | null;
+      if (textarea) {
+        textarea.focus();
+        return;
+      }
+      // No textarea yet — click the label div to trigger edit mode
+      if (!clickedLabel) {
+        const label = nodeEl.querySelector('.cursor-text') as HTMLElement | null;
+        if (label) {
+          label.click();
+          clickedLabel = true;
+        }
+      }
+      // Retry to find the textarea that should now appear
+      if (attempts++ < 40) requestAnimationFrame(tryFocus);
+    };
+    // Start polling — use setTimeout to escape the current React event batch
+    setTimeout(() => requestAnimationFrame(tryFocus), 0);
+  }, []);
+
   // Facilitator check — only facilitator can delete participants
-  const { isFacilitator } = useMultiplayerContext();
+  const { isFacilitator, participantId: selfParticipantId } = useMultiplayerContext();
+
+  // Readiness state for "I'm Done" feature (multiplayer ideation only)
+  const [readinessMap, setReadinessMap] = useState<ReadinessMap>({});
+  const toggleReadyRef = useRef<MindMapReadinessSyncHandle | null>(null);
+  const handleReadinessChange = useCallback((map: ReadinessMap) => {
+    setReadinessMap(map);
+  }, []);
 
   // Delete confirmation dialog state
   const [deleteTarget, setDeleteTarget] = useState<{ ownerId: string; name: string } | null>(null);
+
+  // Node cascade-delete confirmation dialog state
+  const [nodeCascadeDelete, setNodeCascadeDelete] = useState<{ nodeId: string; descendantCount: number } | null>(null);
 
   // Keyboard shortcuts: V = select, H = hand (standard design tool convention)
   useEffect(() => {
@@ -409,8 +472,10 @@ function MindMapCanvasInner({
       };
 
       addMindMapNode(newNode, newEdge);
+      setAutoFocusNodeId(newNodeId);
+      focusNodeTextarea(newNodeId);
     },
-    [mindMapNodes, mindMapEdges, addMindMapNode, currentOwnerId, isMultiplayerIdeation]
+    [mindMapNodes, mindMapEdges, addMindMapNode, currentOwnerId, isMultiplayerIdeation, focusNodeTextarea]
   );
 
   // Callback: Delete node with cascade confirmation
@@ -431,10 +496,8 @@ function MindMapCanvasInner({
       }
 
       if (descendants.size > 0) {
-        const shouldDelete = window.confirm(
-          `Delete this node and ${descendants.size} child node(s)?`
-        );
-        if (!shouldDelete) return;
+        setNodeCascadeDelete({ nodeId, descendantCount: descendants.size });
+        return;
       }
 
       deleteMindMapNode(nodeId);
@@ -450,17 +513,88 @@ function MindMapCanvasInner({
     [toggleMindMapNodeStar]
   );
 
+  // Callback: Add child at directional offset (from "+" hover zones)
+  const DIRECTION_OFFSETS: Record<string, { x: number; y: number }> = {
+    top: { x: 0, y: -200 },
+    bottom: { x: 0, y: 200 },
+    left: { x: -300, y: 0 },
+    right: { x: 300, y: 0 },
+  };
+
+  const handleAddChildAt = useCallback(
+    (parentId: string, direction: 'top' | 'bottom' | 'left' | 'right') => {
+      const parentNode = mindMapNodes.find((n) => n.id === parentId);
+      if (!parentNode) return;
+
+      const childLevel = parentNode.level + 1;
+      const inheritedColor = THEME_COLORS.find((c) => c.id === parentNode.themeColorId);
+      const themeColor = inheritedColor || ROOT_COLOR;
+
+      const parentPos = parentNode.position || { x: 0, y: 0 };
+      const offset = DIRECTION_OFFSETS[direction];
+      const position = {
+        x: snapToGrid(parentPos.x + offset.x),
+        y: snapToGrid(parentPos.y + offset.y),
+      };
+
+      const newNodeId = crypto.randomUUID();
+      const newNode: MindMapNodeState = {
+        id: newNodeId,
+        label: '',
+        themeColorId: themeColor.id,
+        themeColor: themeColor.color,
+        themeBgColor: themeColor.bgColor,
+        isRoot: false,
+        level: childLevel,
+        parentId,
+        position,
+        ...(currentOwnerId && { ownerId: currentOwnerId }),
+      };
+
+      const newEdge: MindMapEdgeState = {
+        id: `${parentId}-${newNodeId}`,
+        source: parentId,
+        target: newNodeId,
+        themeColor: themeColor.color,
+        ...(currentOwnerId && { ownerId: currentOwnerId }),
+      };
+
+      addMindMapNode(newNode, newEdge);
+      setAutoFocusNodeId(newNodeId);
+      focusNodeTextarea(newNodeId);
+    },
+    [mindMapNodes, addMindMapNode, currentOwnerId, focusNodeTextarea]
+  );
+
+  // Compute per-owner star counts (how many non-root nodes are starred, max 8)
+  const ownerStarCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const node of allMindMapNodes) {
+      if (node.isStarred && !node.isRoot && node.label?.trim()) {
+        const key = node.ownerId || '__solo__';
+        counts[key] = Math.min((counts[key] || 0) + 1, 8);
+      }
+    }
+    return counts;
+  }, [allMindMapNodes]);
+
+  // Solo star count (for single-user mode toolbar badge)
+  const soloStarCount = useMemo(() => {
+    if (allOwnerIds && allOwnerIds.length > 1) return 0;
+    return ownerStarCounts['__solo__'] || Object.values(ownerStarCounts).reduce((a, b) => a + b, 0);
+  }, [ownerStarCounts, allOwnerIds]);
+
   // Compute per-owner horizontal offsets for "All" view so trees don't overlap
   const ownerOffsets = useMemo(() => {
     const offsets: Record<string, { x: number; y: number }> = {};
     if (currentOwnerId || !allOwnerIds || allOwnerIds.length <= 1) return offsets;
-    const TREE_SPACING = 1800; // horizontal gap between each participant's tree
+    const TREE_SPACING = showCrazy8s ? 2800 : 1800; // wider when crazy 8s cards shown
     const totalWidth = (allOwnerIds.length - 1) * TREE_SPACING;
     allOwnerIds.forEach((oid, i) => {
       offsets[oid] = { x: i * TREE_SPACING - totalWidth / 2, y: 0 };
     });
     return offsets;
-  }, [currentOwnerId, allOwnerIds]);
+  }, [currentOwnerId, allOwnerIds, showCrazy8s]);
 
   // Convert store state to ReactFlow mind map nodes
   const rfMindMapNodes: Node[] = useMemo(() => {
@@ -485,54 +619,161 @@ function MindMapCanvasInner({
           isStarred: nodeState.isStarred,
           level: nodeState.level,
           ownerName: nodeState.isRoot ? nodeState.ownerName : undefined,
+          isNewlyCreated: autoFocusNodeId === nodeState.id,
           onLabelChange: handleLabelChange,
           onAddChild: handleAddChild,
+          onAddChildAt: handleAddChildAt,
           onDelete: handleDelete,
           onToggleStar: handleToggleStar,
         },
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions is a ref
-  }, [mindMapNodes, ownerOffsets, handleLabelChange, handleAddChild, handleDelete, handleToggleStar]);
+  }, [mindMapNodes, ownerOffsets, autoFocusNodeId, handleLabelChange, handleAddChild, handleAddChildAt, handleDelete, handleToggleStar]);
 
-  // Crazy 8s group node — positioned to the right of the mind map
-  const crazy8sNode = useMemo<Node | null>(() => {
-    if (!showCrazy8s) return null;
-    return {
-      id: CRAZY_8S_NODE_ID,
-      type: 'crazy8sGroupNode',
-      position: { x: 900, y: -(CRAZY_8S_NODE_HEIGHT / 2) },
-      draggable: false,
-      connectable: false,
-      focusable: false,
-      data: {
-        workshopId,
-        stepId,
-        onSave: onSaveCrazy8s,
-        selectionMode,
-        selectedSlotIds,
-        onSelectionChange,
-        onConfirmSelection,
-        onBackToDrawing,
-        // Voting mode pass-through
-        votingMode,
-        onVoteSelectionConfirm,
-        onReVote,
-        // Merge dialog trigger
-        onStartMerge,
-      },
+  // Derive owner theme colors from their root node's stored palette color.
+  // Falls back to the canvas palette by index, or neutral gray.
+  const getOwnerTheme = useCallback((oid: string) => {
+    const rootNode = allMindMapNodes.find((n) => n.isRoot && n.ownerId === oid);
+    const tc = rootNode?.themeColorId
+      ? THEME_COLORS.find((c) => c.id === rootNode.themeColorId)
+      : undefined;
+    if (tc) {
+      return { themeColor: tc.color, themeBgColor: tc.bgColor, accentColor: tc.accentColor };
+    }
+    // Fallback: derive from owner index in allOwnerIds
+    const idx = allOwnerIds?.indexOf(oid) ?? 0;
+    const fallback = THEME_COLORS[idx % THEME_COLORS.length];
+    return { themeColor: fallback.color, themeBgColor: fallback.bgColor, accentColor: fallback.accentColor };
+  }, [allMindMapNodes, allOwnerIds]);
+
+  // Sync starred mind map nodes → crazy 8s slot titles (re-trigger after initial generation)
+  const syncStarsToSlots = useCallback(() => {
+    const state = storeApi.getState();
+    const isPerParticipant = state.mindMapNodes.some((n) => n.ownerId);
+
+    if (isPerParticipant) {
+      const ownerIds = [...new Set(state.mindMapNodes.map((n) => n.ownerId).filter(Boolean))] as string[];
+      const allSlots = [...state.crazy8sSlots];
+
+      for (const ownerId of ownerIds) {
+        const ownerStarred = state.mindMapNodes
+          .filter((n) => n.ownerId === ownerId && n.isStarred && !n.isRoot && n.label.trim())
+          .map((n) => n.label.trim())
+          .slice(0, 8);
+
+        const ownerSlots = allSlots.filter((s) => s.ownerId === ownerId);
+        if (ownerSlots.length > 0 && ownerStarred.length > 0) {
+          ownerSlots.forEach((slot, i) => {
+            slot.title = ownerStarred[i] || slot.title;
+          });
+        }
+      }
+      state.setCrazy8sSlots(allSlots);
+    } else {
+      const starredLabels = state.mindMapNodes
+        .filter((n) => n.isStarred && !n.isRoot && n.label.trim())
+        .map((n) => n.label.trim())
+        .slice(0, 8);
+
+      if (starredLabels.length > 0) {
+        const updatedSlots = state.crazy8sSlots.map((slot, i) => ({
+          ...slot,
+          title: starredLabels[i] || slot.title,
+        }));
+        state.setCrazy8sSlots(updatedSlots);
+      }
+    }
+    state.markDirty();
+  }, [storeApi]);
+
+  // Crazy 8s group nodes — one per participant in multiplayer, single in solo
+  const crazy8sNodes = useMemo<Node[]>(() => {
+    if (!showCrazy8s) return [];
+
+    const baseData = {
+      workshopId,
+      stepId,
+      onSave: onSaveCrazy8s,
+      selectionMode,
+      selectedSlotIds,
+      onSelectionChange,
+      onConfirmSelection,
+      onBackToDrawing,
+      votingMode,
+      onVoteSelectionConfirm,
+      onReVote,
+      onStartMerge,
+      onSyncStars: syncStarsToSlots,
     };
-  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing, votingMode, onVoteSelectionConfirm, onReVote, onStartMerge]);
 
-  // Brain rewriting group nodes — positioned to the right of Crazy 8s
+    // Solo mode or single owner — single node, no ownerId filtering
+    if (!allOwnerIds || allOwnerIds.length <= 1) {
+      return [{
+        id: CRAZY_8S_NODE_ID,
+        type: 'crazy8sGroupNode',
+        position: { x: 900, y: -(CRAZY_8S_NODE_HEIGHT / 2) },
+        draggable: false,
+        connectable: false,
+        focusable: false,
+        data: baseData,
+      }];
+    }
+
+    // Individual view — single node for the selected owner
+    if (currentOwnerId) {
+      const { accentColor } = getOwnerTheme(currentOwnerId);
+      return [{
+        id: `${CRAZY_8S_NODE_PREFIX}${currentOwnerId}`,
+        type: 'crazy8sGroupNode',
+        position: { x: 900, y: -(CRAZY_8S_NODE_HEIGHT / 2) },
+        draggable: false,
+        connectable: false,
+        focusable: false,
+        data: {
+          ...baseData,
+          ownerId: currentOwnerId,
+          ownerName: ownerNames?.[currentOwnerId] || currentOwnerId,
+          ownerColor: accentColor,
+        },
+      }];
+    }
+
+    // "All" view — one node per owner, positioned next to their mind map
+    return allOwnerIds.map((oid) => {
+      const offset = ownerOffsets[oid] || { x: 0, y: 0 };
+      const { accentColor } = getOwnerTheme(oid);
+      return {
+        id: `${CRAZY_8S_NODE_PREFIX}${oid}`,
+        type: 'crazy8sGroupNode',
+        position: { x: offset.x + 900, y: offset.y - CRAZY_8S_NODE_HEIGHT / 2 },
+        draggable: false,
+        connectable: false,
+        focusable: false,
+        data: {
+          ...baseData,
+          ownerId: oid,
+          ownerName: ownerNames?.[oid] || oid,
+          ownerColor: accentColor,
+          // In "All" view, keep grid visible after voting closes (results shown in separate node)
+          showResultsInline: false,
+        },
+      };
+    });
+  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing, votingMode, onVoteSelectionConfirm, onReVote, onStartMerge, syncStarsToSlots, allOwnerIds, currentOwnerId, ownerOffsets, ownerNames, getOwnerTheme]);
+
+  // Brain rewriting group nodes — positioned to the right of the first crazy 8s node
   const brainRewritingNodes = useMemo<Node[]>(() => {
     if (!brainRewritingMatrices || brainRewritingMatrices.length === 0) return [];
-    const baseX = 900 + CRAZY_8S_NODE_WIDTH + 100; // gap after crazy 8s
+    // Position relative to the first crazy 8s node (facilitator's card in multiplayer)
+    const firstCrazy8s = crazy8sNodes[0];
+    const c8sX = firstCrazy8s?.position?.x ?? 900;
+    const baseX = c8sX + CRAZY_8S_NODE_WIDTH + 100; // gap after crazy 8s
     const baseY = -(BR_NODE_HEIGHT / 2);
 
     return brainRewritingMatrices.map((matrix, index) => {
       const slot = crazy8sSlots.find((s) => s.slotId === matrix.slotId);
-      const slotNumber = matrix.slotId.replace('slot-', '');
+      const slotNumber = matrix.slotId.split('-slot-').pop() || matrix.slotId.replace('slot-', '');
 
       // Use group label when this matrix represents a merged group
       let title = slot?.title || `Sketch ${slotNumber}`;
@@ -559,31 +800,22 @@ function MindMapCanvasInner({
         },
       };
     });
-  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, slotGroups, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded]);
-
-  // Derive owner theme colors from their root node's stored palette color.
-  // Falls back to the canvas palette by index, or neutral gray.
-  const getOwnerTheme = useCallback((oid: string) => {
-    const rootNode = allMindMapNodes.find((n) => n.isRoot && n.ownerId === oid);
-    const tc = rootNode?.themeColorId
-      ? THEME_COLORS.find((c) => c.id === rootNode.themeColorId)
-      : undefined;
-    if (tc) {
-      return { themeColor: tc.color, themeBgColor: tc.bgColor, accentColor: tc.accentColor };
-    }
-    // Fallback: derive from owner index in allOwnerIds
-    const idx = allOwnerIds?.indexOf(oid) ?? 0;
-    const fallback = THEME_COLORS[idx % THEME_COLORS.length];
-    return { themeColor: fallback.color, themeBgColor: fallback.bgColor, accentColor: fallback.accentColor };
-  }, [allMindMapNodes, allOwnerIds]);
+  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, slotGroups, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded, crazy8sNodes]);
 
   // Owner zone nodes — colored background rectangles behind each participant's tree
+  const showDoneButton = !!isMultiplayerIdeation && !showCrazy8s;
   const ownerZoneNodes = useMemo<Node[]>(() => {
     if (!allOwnerIds || allOwnerIds.length <= 1) return [];
+
+    const handleToggle = () => toggleReadyRef.current?.toggleReady();
+
+    // Zone width: wider when crazy 8s cards are shown next to mind map
+    const zoneWidth = showCrazy8s ? 2600 : undefined; // undefined = default 1600
 
     // Individual view: show zone for the selected participant only (centered at origin)
     if (currentOwnerId) {
       const { themeColor, themeBgColor } = getOwnerTheme(currentOwnerId);
+      const isSelf = !!selfParticipantId && currentOwnerId === selfParticipantId;
       return [{
         id: `${ZONE_NODE_PREFIX}${currentOwnerId}`,
         type: 'ownerZoneNode',
@@ -597,6 +829,12 @@ function MindMapCanvasInner({
           ownerName: ownerNames?.[currentOwnerId] || currentOwnerId,
           ownerThemeColor: themeColor,
           ownerThemeBgColor: themeBgColor,
+          isSelf,
+          isReady: readinessMap[currentOwnerId] ?? false,
+          showDoneButton,
+          onToggleReady: handleToggle,
+          width: zoneWidth,
+          starCount: ownerStarCounts[currentOwnerId] || 0,
         },
       }];
     }
@@ -605,6 +843,7 @@ function MindMapCanvasInner({
     return allOwnerIds.map((oid) => {
       const offset = ownerOffsets[oid] || { x: 0, y: 0 };
       const { themeColor, themeBgColor } = getOwnerTheme(oid);
+      const isSelf = !!selfParticipantId && oid === selfParticipantId;
       return {
         id: `${ZONE_NODE_PREFIX}${oid}`,
         type: 'ownerZoneNode',
@@ -618,18 +857,23 @@ function MindMapCanvasInner({
           ownerName: ownerNames?.[oid] || oid,
           ownerThemeColor: themeColor,
           ownerThemeBgColor: themeBgColor,
+          isSelf,
+          isReady: readinessMap[oid] ?? false,
+          showDoneButton,
+          onToggleReady: handleToggle,
+          width: zoneWidth,
+          starCount: ownerStarCounts[oid] || 0,
         },
       };
     });
-  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme]);
+  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, showCrazy8s, ownerStarCounts]);
 
-  // Combined nodes array: mind map + owner zones + optional crazy 8s + brain rewriting
+  // Combined nodes array: mind map + owner zones + crazy 8s + brain rewriting
   const rfNodes = useMemo(() => {
-    const combined = [...ownerZoneNodes, ...rfMindMapNodes];
-    if (crazy8sNode) combined.push(crazy8sNode);
+    const combined = [...ownerZoneNodes, ...rfMindMapNodes, ...crazy8sNodes];
     if (brainRewritingNodes.length > 0) combined.push(...brainRewritingNodes);
     return combined;
-  }, [rfMindMapNodes, ownerZoneNodes, crazy8sNode, brainRewritingNodes]);
+  }, [rfMindMapNodes, ownerZoneNodes, crazy8sNodes, brainRewritingNodes]);
 
   // Convert store state to ReactFlow edges
   const rfEdges: Edge[] = useMemo(() => {
@@ -669,14 +913,15 @@ function MindMapCanvasInner({
   const prevBrCount = useRef(0);
   useEffect(() => {
     if (brainRewritingNodes.length > 0 && prevBrCount.current === 0) {
-      // Pan to show crazy 8s + all BR nodes
-      const nodeIds = [CRAZY_8S_NODE_ID, ...brainRewritingNodes.map((n) => n.id)];
+      // Pan to show first crazy 8s + all BR nodes
+      const firstC8sId = crazy8sNodes[0]?.id || CRAZY_8S_NODE_ID;
+      const nodeIds = [firstC8sId, ...brainRewritingNodes.map((n) => n.id)];
       setTimeout(() => {
         fitView({ nodes: nodeIds.map((id) => ({ id })), padding: 0.1, duration: 600 });
       }, 300);
     }
     prevBrCount.current = brainRewritingNodes.length;
-  }, [brainRewritingNodes, fitView]);
+  }, [brainRewritingNodes, crazy8sNodes, fitView]);
 
   // Consume pendingFitView flag set by chat panel when adding nodes
   useEffect(() => {
@@ -712,7 +957,7 @@ function MindMapCanvasInner({
         if (c.type === 'position') {
           const posChange = c as NodeChange & { id: string; position?: { x: number; y: number }; dragging?: boolean };
           // Skip non-mind-map nodes
-          if (posChange.id === CRAZY_8S_NODE_ID || posChange.id.startsWith(BR_NODE_PREFIX) || posChange.id.startsWith(ZONE_NODE_PREFIX)) continue;
+          if (isCrazy8sNode(posChange.id) || posChange.id.startsWith(BR_NODE_PREFIX) || posChange.id.startsWith(ZONE_NODE_PREFIX)) continue;
           if (posChange.dragging && posChange.position) {
             livePositions.current[posChange.id] = posChange.position;
           } else if (posChange.dragging === false) {
@@ -814,8 +1059,10 @@ function MindMapCanvasInner({
     };
 
     addMindMapNode(newNode, newEdge);
+    setAutoFocusNodeId(newNodeId);
+    focusNodeTextarea(newNodeId);
     setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
-  }, [mindMapNodes, mindMapEdges, addMindMapNode, fitView, isMultiplayerIdeation, currentOwnerId]);
+  }, [mindMapNodes, mindMapEdges, addMindMapNode, fitView, isMultiplayerIdeation, currentOwnerId, focusNodeTextarea]);
 
   // Auto-layout: recompute all positions using radial algorithm
   const handleAutoLayout = useCallback(() => {
@@ -831,6 +1078,86 @@ function MindMapCanvasInner({
       setTimeout(() => fitView({ padding: 0.3, duration: 400 }), 100);
     }
   }, [mindMapNodes, mindMapEdges, batchUpdateMindMapNodePositions, fitView]);
+
+  // Drag-to-create: track source node when a handle drag begins
+  const connectingNodeId = useRef<string | null>(null);
+
+  const handleConnectStart = useCallback(
+    (_: MouseEvent | TouchEvent, params: { nodeId: string | null }) => {
+      connectingNodeId.current = params.nodeId;
+    },
+    []
+  );
+
+  const handleConnectEnd = useCallback(
+    (event: MouseEvent | TouchEvent) => {
+      const sourceId = connectingNodeId.current;
+      connectingNodeId.current = null;
+      if (!sourceId) return;
+
+      // Only create when dropped on the pane (not on another node)
+      const target = (event as MouseEvent).target as HTMLElement;
+      const isPane = target?.classList?.contains('react-flow__pane');
+      if (!isPane) return;
+
+      const sourceNode = mindMapNodes.find((n) => n.id === sourceId);
+      if (!sourceNode) return;
+
+      // Compute flow position from screen coords
+      const clientX = 'changedTouches' in event
+        ? (event as TouchEvent).changedTouches[0].clientX
+        : (event as MouseEvent).clientX;
+      const clientY = 'changedTouches' in event
+        ? (event as TouchEvent).changedTouches[0].clientY
+        : (event as MouseEvent).clientY;
+
+      let flowPos = screenToFlowPosition({ x: clientX, y: clientY });
+
+      // In "All" view, subtract owner offset so stored position is owner-relative
+      const oid = sourceNode.ownerId;
+      if (oid) {
+        const offset = ownerOffsets[oid];
+        if (offset) {
+          flowPos = { x: flowPos.x - offset.x, y: flowPos.y - offset.y };
+        }
+      }
+
+      const snapped = { x: snapToGrid(flowPos.x), y: snapToGrid(flowPos.y) };
+
+      // Inherit theme from source
+      const inheritedColor = THEME_COLORS.find((c) => c.id === sourceNode.themeColorId);
+      const themeColor = inheritedColor || ROOT_COLOR;
+
+      const newNodeId = crypto.randomUUID();
+      const childLevel = sourceNode.level + 1;
+
+      const newNode: MindMapNodeState = {
+        id: newNodeId,
+        label: '',
+        themeColorId: themeColor.id,
+        themeColor: themeColor.color,
+        themeBgColor: themeColor.bgColor,
+        isRoot: false,
+        level: childLevel,
+        parentId: sourceId,
+        position: snapped,
+        ...(currentOwnerId && { ownerId: currentOwnerId }),
+      };
+
+      const newEdge: MindMapEdgeState = {
+        id: `${sourceId}-${newNodeId}`,
+        source: sourceId,
+        target: newNodeId,
+        themeColor: themeColor.color,
+        ...(currentOwnerId && { ownerId: currentOwnerId }),
+      };
+
+      addMindMapNode(newNode, newEdge);
+      setAutoFocusNodeId(newNodeId);
+      focusNodeTextarea(newNodeId);
+    },
+    [mindMapNodes, ownerOffsets, screenToFlowPosition, addMindMapNode, currentOwnerId, focusNodeTextarea]
+  );
 
   // Connection handler: create secondary cross-connection edge
   const handleConnect = useCallback(
@@ -862,7 +1189,7 @@ function MindMapCanvasInner({
       // No self-connections
       if (connection.source === connection.target) return false;
       // Block connections to/from crazy 8s and brain rewriting nodes
-      if (connection.source === CRAZY_8S_NODE_ID || connection.target === CRAZY_8S_NODE_ID) return false;
+      if (isCrazy8sNode(connection.source) || isCrazy8sNode(connection.target)) return false;
       if (connection.source.startsWith(BR_NODE_PREFIX) || connection.target.startsWith(BR_NODE_PREFIX)) return false;
       // No duplicate edges
       const exists = mindMapEdges.some(
@@ -904,8 +1231,23 @@ function MindMapCanvasInner({
     [mindMapEdges, deleteMindMapEdge]
   );
 
+  // Compute "All Ready" state — all non-facilitator participants have signaled ready
+  const allReady = useMemo(() => {
+    if (!isMultiplayerIdeation || !allOwnerIds || allOwnerIds.length <= 1) return false;
+    const participantOwnerIds = allOwnerIds.filter((oid) => oid !== facilitatorOwnerId);
+    if (participantOwnerIds.length === 0) return false;
+    return participantOwnerIds.every((oid) => readinessMap[oid] === true);
+  }, [isMultiplayerIdeation, allOwnerIds, facilitatorOwnerId, readinessMap]);
+
   return (
     <div className="h-full w-full">
+      {/* Readiness sync — renderless, bridges Liveblocks presence to readiness state */}
+      {isMultiplayerIdeation && !showCrazy8s && (
+        <MindMapReadinessSync
+          ref={toggleReadyRef}
+          onReadinessChange={handleReadinessChange}
+        />
+      )}
       <ReactFlow
         nodes={nodes}
         edges={rfEdges}
@@ -913,6 +1255,8 @@ function MindMapCanvasInner({
         onEdgesChange={handleEdgesChange}
         onEdgesDelete={handleEdgesDelete}
         onConnect={handleConnect}
+        onConnectStart={handleConnectStart}
+        onConnectEnd={handleConnectEnd}
         isValidConnection={isValidConnection}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
@@ -937,14 +1281,14 @@ function MindMapCanvasInner({
         <MiniMap
           nodeStrokeColor={(n) => {
             if (n.id.startsWith(ZONE_NODE_PREFIX)) return 'transparent';
-            if (n.id === CRAZY_8S_NODE_ID) return '#f59e0b';
+            if (isCrazy8sNode(n.id)) return (n.data?.ownerColor as string) || '#f59e0b';
             if (n.id.startsWith(BR_NODE_PREFIX)) return '#a855f7';
             const color = n.data?.themeColor;
             return typeof color === 'string' ? color : '#6b7280';
           }}
           nodeColor={(n) => {
             if (n.id.startsWith(ZONE_NODE_PREFIX)) return 'transparent';
-            if (n.id === CRAZY_8S_NODE_ID) return '#fef3c7';
+            if (isCrazy8sNode(n.id)) return (n.data?.ownerColor as string) ? `color-mix(in srgb, ${n.data.ownerColor} 15%, white)` : '#fef3c7';
             if (n.id.startsWith(BR_NODE_PREFIX)) return '#f3e8ff';
             const bgColor = n.data?.themeBgColor;
             return typeof bgColor === 'string' ? bgColor : '#f3f4f6';
@@ -972,11 +1316,20 @@ function MindMapCanvasInner({
                     className="text-xs h-7 px-2 gap-1.5"
                     onClick={() => onOwnerSwitch(oid)}
                   >
+                    {readinessMap[oid] && oid !== facilitatorOwnerId && (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                    )}
                     <span
                       className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: getOwnerTheme(oid).accentColor }}
                     />
                     {ownerNames?.[oid] || oid}
+                    {typeof ownerStarCounts[oid] === 'number' && ownerStarCounts[oid] > 0 && (
+                      <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                        <Star className="h-2.5 w-2.5 fill-current" />
+                        {ownerStarCounts[oid]}
+                      </span>
+                    )}
                   </Button>
                   {onDeleteOwner && isFacilitator && oid !== facilitatorOwnerId && (
                     <button
@@ -992,6 +1345,18 @@ function MindMapCanvasInner({
                   )}
                 </div>
               ))}
+            </div>
+          </Panel>
+        )}
+
+        {/* "All Ready" banner — shown when all participants have signaled done */}
+        {allReady && isFacilitator && (
+          <Panel position="top-center" className="!mt-4">
+            <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2 shadow-md">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <span className="text-sm font-medium text-green-800">
+                All participants are ready
+              </span>
             </div>
           </Panel>
         )}
@@ -1052,6 +1417,18 @@ function MindMapCanvasInner({
               <LayoutGrid className="h-4 w-4" />
               Layout
             </Button>
+            {/* Star count badge (solo mode or when no owner tabs shown) */}
+            {(!allOwnerIds || allOwnerIds.length <= 1) && (
+              <>
+                <div className="mx-1 h-5 w-px bg-border" />
+                <div className="flex items-center gap-1 px-2 text-xs text-muted-foreground" title="Starred ideas for Crazy 8s (max 8)">
+                  <Star className={cn('h-3.5 w-3.5', soloStarCount > 0 ? 'fill-amber-500 text-amber-500' : '')} />
+                  <span className={cn('font-medium', soloStarCount > 0 && 'text-amber-600 dark:text-amber-400')}>
+                    {soloStarCount}/8
+                  </span>
+                </div>
+              </>
+            )}
             <div className="mx-1 h-5 w-px bg-border" />
             <Button
               onClick={handleUndo}
@@ -1094,6 +1471,35 @@ function MindMapCanvasInner({
                   onDeleteOwner(deleteTarget.ownerId);
                 }
                 setDeleteTarget(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Node cascade-delete confirmation dialog */}
+      <AlertDialog open={!!nodeCascadeDelete} onOpenChange={(open) => { if (!open) setNodeCascadeDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete node and children</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete this node and{' '}
+              <span className="font-semibold text-foreground">
+                {nodeCascadeDelete?.descendantCount} child node{nodeCascadeDelete?.descendantCount === 1 ? '' : 's'}
+              </span>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (nodeCascadeDelete) {
+                  deleteMindMapNode(nodeCascadeDelete.nodeId);
+                }
+                setNodeCascadeDelete(null);
               }}
             >
               Delete

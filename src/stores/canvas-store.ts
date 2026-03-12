@@ -724,12 +724,26 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
           }),
 
         toggleMindMapNodeStar: (id) =>
-          set((state) => ({
-            mindMapNodes: state.mindMapNodes.map((node) =>
-              node.id === id ? { ...node, isStarred: !node.isStarred } : node
-            ),
-            isDirty: true,
-          })),
+          set((state) => {
+            const target = state.mindMapNodes.find((n) => n.id === id);
+            if (!target) return state;
+
+            // Enforce max 8 stars per owner (or globally in solo mode)
+            if (!target.isStarred) {
+              const currentStarred = state.mindMapNodes.filter(
+                (n) => n.isStarred && !n.isRoot && n.label?.trim() &&
+                  (target.ownerId ? n.ownerId === target.ownerId : true)
+              ).length;
+              if (currentStarred >= 8) return state;
+            }
+
+            return {
+              mindMapNodes: state.mindMapNodes.map((node) =>
+                node.id === id ? { ...node, isStarred: !node.isStarred } : node
+              ),
+              isDirty: true,
+            };
+          }),
 
         setMindMapState: (nodes, edges) =>
           set(() => ({

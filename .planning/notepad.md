@@ -31,17 +31,46 @@ Improve the UX of the chat window when it's in collapsed mode.
 
 ## Ideation
 
-I need the facilitator to be able to remove participants from a workshop. 
+Bizzy and Sally particpants cannot be truely deleted Fix: 
+
+4 fix attempts haven't solved it. The most likely remaining cause is H4:
+
+  ParticipantRemovedListener may be outside the CanvasStoreProvider tree, so its
+
+  useCanvasStore call either targets the wrong store or silently fails.
+
+  Start the next conversation with:
+
+  "Continue debugging deleted participants reappearing. Read
+
+  /Users/michaelchristie/.claude/projects/-Users-michaelchristie-devProjects-workshopp
+
+  ilot-ai/memory/debug-deleted-participants.md for full context. Investigate
+
+  hypothesis H4 first — check if ParticipantRemovedListener is inside
+
+  CanvasStoreProvider's React tree."
+
+  The key investigation steps for the next session:
+
+1. Trace the component tree to verify ParticipantRemovedListener can access
+
+  CanvasStoreProvider
+
+2. If it can't, move the deletion logic to a component that CAN access both the
+
+  Liveblocks broadcast AND the canvas store
+
+3. Consider the nuclear option from the debug notes: store deletedOwnerIds[] in
+
+  Liveblocks storageMapping itself, so ALL clients see it via CRDT sync and filter
+
+  deleted owners at render time
+
+
+
+
 
 ## Concept Development
 
 ## Validate
-
-
-
-
-
-
-
-
-

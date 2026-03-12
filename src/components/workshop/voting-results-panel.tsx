@@ -109,9 +109,13 @@ interface ResultCardProps {
   /** When true, renders AttributionDots below the card — facilitator-only */
   showAttribution?: boolean;
   dotVotes?: DotVote[];
+  /** Owner name for cross-board attribution */
+  ownerName?: string;
+  /** Owner accent color for cross-board attribution badge */
+  ownerColor?: string;
 }
 
-function ResultCard({ result, slot, index, slotNumber, isSelected, onToggle, readOnly, showAttribution, dotVotes }: ResultCardProps) {
+function ResultCard({ result, slot, index, slotNumber, isSelected, onToggle, readOnly, showAttribution, dotVotes, ownerName, ownerColor }: ResultCardProps) {
   const isZeroVote = result.totalVotes === 0;
   const isTopRanked = result.rank === 1;
 
@@ -155,9 +159,20 @@ function ResultCard({ result, slot, index, slotNumber, isSelected, onToggle, rea
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">
-            {slot?.title || `Sketch ${slotNumber}`}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium truncate">
+              {slot?.title || `Sketch ${slotNumber}`}
+            </p>
+            {ownerName && (
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium text-muted-foreground bg-muted shrink-0">
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: ownerColor || '#6b7280' }}
+                />
+                {ownerName}
+              </span>
+            )}
+          </div>
           {slot?.description && (
             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
               {slot.description}
@@ -290,8 +305,9 @@ export function VotingResultsPanel({ onConfirmSelection, onReVote }: VotingResul
       <div className="space-y-3">
         {sortedResults.map((result, i) => {
           const slot = crazy8sSlots.find((s) => s.slotId === result.slotId);
-          // Derive slot number from slotId (e.g. "slot-3" → 3)
-          const slotNumber = parseInt(result.slotId.replace('slot-', ''), 10) || i + 1;
+          // Derive slot number from slotId — handles both "slot-3" and "{ownerId}-slot-3"
+          const slotPart = result.slotId.split('-slot-').pop() || '';
+          const slotNumber = parseInt(slotPart, 10) || i + 1;
           return (
             <ResultCard
               key={result.slotId}
@@ -304,6 +320,8 @@ export function VotingResultsPanel({ onConfirmSelection, onReVote }: VotingResul
               readOnly={readOnly}
               showAttribution={showAttribution && isFacilitator}
               dotVotes={dotVotes}
+              ownerName={slot?.ownerName}
+              ownerColor={slot?.ownerColor}
             />
           );
         })}

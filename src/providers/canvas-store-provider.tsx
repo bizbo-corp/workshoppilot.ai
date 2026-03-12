@@ -72,11 +72,23 @@ export function CanvasStoreProvider({
 }: CanvasStoreProviderProps) {
   const isMultiplayer = workshopType === 'multiplayer';
 
+  // Track owner IDs that have been deleted this session — prevents recovery from restoring them.
+  // Populated explicitly when deleteOwnerContent removes nodes from the store.
+  const deletedOwnerIdsRef = useRef<Set<string>>(new Set());
+
   // Capture server-loaded initial state so we can re-apply after Liveblocks clears it.
   // When enterRoom is called, the Liveblocks middleware clears all storageMapping fields
   // while connecting. For a NEW room (empty Storage), the cleared state persists — wiping
   // template stickies and other server-seeded data. The ref lets us restore them.
   // Updated on every render so router.refresh() delivers fresh server data to recovery.
+  //
+  // IMPORTANT: All updates filter out deleted owners to prevent them from being
+  // restored by applyRecovery after Liveblocks reconnect.
+  const filterDeletedOwners = <T extends { ownerId?: string }>(items: T[]): T[] => {
+    const deleted = deletedOwnerIdsRef.current;
+    return deleted.size > 0 ? items.filter((item) => !item.ownerId || !deleted.has(item.ownerId)) : items;
+  };
+
   const initialStateRef = useRef({
     stickyNotes: initialStickyNotes || [],
     gridColumns: initialGridColumns || [],
@@ -91,11 +103,13 @@ export function CanvasStoreProvider({
     dotVotes: initialDotVotes || [],
   });
   // Keep ref fresh across re-renders (e.g. after router.refresh())
-  initialStateRef.current.hmwCards = initialHmwCards || [];
-  initialStateRef.current.stickyNotes = initialStickyNotes || [];
+  // Filter out deleted owners so stale server props don't resurrect them.
+  initialStateRef.current.hmwCards = filterDeletedOwners(initialHmwCards || []);
+  initialStateRef.current.stickyNotes = filterDeletedOwners(initialStickyNotes || []);
   initialStateRef.current.personaTemplates = initialPersonaTemplates || [];
-  initialStateRef.current.mindMapNodes = initialMindMapNodes || [];
-  initialStateRef.current.mindMapEdges = initialMindMapEdges || [];
+  initialStateRef.current.mindMapNodes = filterDeletedOwners(initialMindMapNodes || []);
+  initialStateRef.current.mindMapEdges = filterDeletedOwners(initialMindMapEdges || []);
+  initialStateRef.current.crazy8sSlots = filterDeletedOwners(initialCrazy8sSlots || []);
 
   // Create store ONCE per mount — ensures per-request isolation in SSR
   const [store] = useState<CanvasStoreApi>(() => {
@@ -121,6 +135,25 @@ export function CanvasStoreProvider({
     return createCanvasStore(initState);
   });
 
+  // Track deleted owners by intercepting deleteOwnerContent calls.
+  // We wrap the store's deleteOwnerContent to also record the ownerId in our ref,
+  // ensuring applyRecovery and initialStateRef updates exclude deleted owners.
+  useEffect(() => {
+    if (!isMultiplayer) return;
+    const originalDeleteOwnerContent = store.getState().deleteOwnerContent;
+    // Monkey-patch: record deleted owner ID before delegating to original
+    const patchedDelete = (ownerId: string) => {
+      deletedOwnerIdsRef.current.add(ownerId);
+      originalDeleteOwnerContent(ownerId);
+    };
+    store.setState({ deleteOwnerContent: patchedDelete } as Partial<CanvasStore>);
+
+    return () => {
+      // Restore original on cleanup (unlikely but clean)
+      store.setState({ deleteOwnerContent: originalDeleteOwnerContent } as Partial<CanvasStore>);
+    };
+  }, [isMultiplayer, store]);
+
   // Multiplayer room lifecycle — connect to a STEP-SPECIFIC Liveblocks room for Storage.
   // Each step gets its own Storage room (e.g. "workshop-{wid}-step-challenge") so canvas
   // data from one step doesn't leak into another. The workshop-level room (via RoomProvider
@@ -141,9 +174,14 @@ export function CanvasStoreProvider({
       const init = initialStateRef.current;
       const current = multiStore.getState();
       const patch: Record<string, unknown> = {};
+      const deleted = deletedOwnerIdsRef.current;
+
+      // Helper: filter out items belonging to deleted owners
+      const excludeDeleted = <T extends { ownerId?: string }>(items: T[]): T[] =>
+        deleted.size > 0 ? items.filter((item) => !item.ownerId || !deleted.has(item.ownerId)) : items;
 
       if (current.stickyNotes.length === 0 && init.stickyNotes.length > 0) {
-        patch.stickyNotes = init.stickyNotes;
+        patch.stickyNotes = excludeDeleted(init.stickyNotes);
       }
       if (current.gridColumns.length === 0 && init.gridColumns.length > 0) {
         patch.gridColumns = init.gridColumns;
@@ -152,13 +190,13 @@ export function CanvasStoreProvider({
         patch.drawingNodes = init.drawingNodes;
       }
       if (current.mindMapNodes.length === 0 && init.mindMapNodes.length > 0) {
-        patch.mindMapNodes = init.mindMapNodes;
+        patch.mindMapNodes = excludeDeleted(init.mindMapNodes);
       }
       if (current.mindMapEdges.length === 0 && init.mindMapEdges.length > 0) {
-        patch.mindMapEdges = init.mindMapEdges;
+        patch.mindMapEdges = excludeDeleted(init.mindMapEdges);
       }
       if (current.crazy8sSlots.length === 0 && init.crazy8sSlots.length > 0) {
-        patch.crazy8sSlots = init.crazy8sSlots;
+        patch.crazy8sSlots = excludeDeleted(init.crazy8sSlots);
       }
       if (current.conceptCards.length === 0 && init.conceptCards.length > 0) {
         patch.conceptCards = init.conceptCards;
@@ -167,7 +205,7 @@ export function CanvasStoreProvider({
         patch.personaTemplates = init.personaTemplates;
       }
       if (current.hmwCards.length === 0 && init.hmwCards.length > 0) {
-        patch.hmwCards = init.hmwCards;
+        patch.hmwCards = excludeDeleted(init.hmwCards);
       } else if (
         // Ownership migration: server has per-participant cards but Liveblocks
         // has legacy cards without ownership. Replace with server version.
@@ -175,7 +213,7 @@ export function CanvasStoreProvider({
         current.hmwCards.length > 0 &&
         !current.hmwCards.some((c) => c.ownerId)
       ) {
-        patch.hmwCards = init.hmwCards;
+        patch.hmwCards = excludeDeleted(init.hmwCards);
       }
       if (current.brainRewritingMatrices.length === 0 && init.brainRewritingMatrices.length > 0) {
         patch.brainRewritingMatrices = init.brainRewritingMatrices;

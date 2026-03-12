@@ -3,7 +3,7 @@
 import { memo, useState, useCallback } from 'react';
 import { type NodeProps, type Node } from '@xyflow/react';
 import { Crazy8sCanvas } from '@/components/workshop/crazy-8s-canvas';
-import { Zap, Save, Check, Loader2, SkipForward, CheckCircle2, Pencil, Link2, Unlink, X, Wand2, Image } from 'lucide-react';
+import { Zap, Save, Check, Loader2, SkipForward, CheckCircle2, Pencil, Link2, Unlink, X, Wand2, Image, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import type { SlotGroup } from '@/lib/canvas/crazy-8s-types';
@@ -12,6 +12,10 @@ export type Crazy8sGroupNodeData = {
   workshopId: string;
   stepId: string;
   onSave?: () => Promise<void>;
+  // Per-participant owner filtering
+  ownerId?: string;       // filter slots to this owner
+  ownerName?: string;     // display name for header
+  ownerColor?: string;    // hex accent color for border/bg
   // Selection mode props
   selectionMode?: boolean;
   selectedSlotIds?: string[];
@@ -24,6 +28,10 @@ export type Crazy8sGroupNodeData = {
   onReVote?: () => void;
   // Merge dialog trigger
   onStartMerge?: (groupId: string) => void;
+  // Inline results control (multiplayer "All" view keeps grid visible after voting)
+  showResultsInline?: boolean;
+  // Sync starred mind map nodes → slot titles
+  onSyncStars?: () => void;
 };
 
 export type Crazy8sGroupNode = Node<Crazy8sGroupNodeData, 'crazy8sGroupNode'>;
@@ -59,10 +67,21 @@ function countSelectionUnits(selectedSlotIds: string[], slotGroups: SlotGroup[])
 export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const crazy8sSlots = useCanvasStore((s) => s.crazy8sSlots);
+  const allCrazy8sSlots = useCanvasStore((s) => s.crazy8sSlots);
   const slotGroups = useCanvasStore((s) => s.slotGroups);
   const addSlotGroup = useCanvasStore((s) => s.addSlotGroup);
   const removeSlotGroup = useCanvasStore((s) => s.removeSlotGroup);
+
+  // Filter slots by ownerId when set (per-participant card)
+  const crazy8sSlots = data.ownerId
+    ? allCrazy8sSlots.filter((s) => s.ownerId === data.ownerId)
+    : allCrazy8sSlots;
+
+  // Owner color overrides — use owner's accent or fallback to amber
+  const borderColor = data.ownerColor || undefined; // undefined → use default amber
+  const headerTitle = data.ownerName
+    ? `${data.ownerName} — Rapid Sketching`
+    : 'Crazy 8s — Rapid Sketching';
 
   // Group creation state
   const [isNamingGroup, setIsNamingGroup] = useState(false);
@@ -243,7 +262,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                 const memberTitles = group.slotIds
                   .map((id) => {
                     const slot = crazy8sSlots.find((s) => s.slotId === id);
-                    return slot?.title || `Sketch ${id.replace('slot-', '')}`;
+                    return slot?.title || `Sketch ${id.split('-slot-').pop() || id.replace('slot-', '')}`;
                   })
                   .join(' + ');
                 const hasMerged = !!group.mergedImageUrl;
@@ -290,7 +309,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                   const group = getSlotGroup(slot.slotId);
                   const isGrouped = !!group;
                   const isDisabled = !isSelected && selectionUnits >= MAX_SELECTION;
-                  const slotNumber = slot.slotId.replace('slot-', '');
+                  const slotNumber = slot.slotId.split('-slot-').pop() || slot.slotId.replace('slot-', '');
 
                   return (
                     <button
@@ -355,42 +374,62 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
       className="nodrag nopan cursor-default"
       style={{ width: CRAZY_8S_NODE_WIDTH, height: CRAZY_8S_NODE_HEIGHT, pointerEvents: 'all' }}
     >
-      <div className="rounded-xl border-2 border-amber-400/60 bg-background shadow-lg h-full flex flex-col">
-        <div className="flex items-center justify-between border-b bg-amber-50 dark:bg-amber-950/20 px-4 py-2.5 shrink-0 rounded-t-[10px]">
+      <div
+        className={cn('rounded-xl border-2 bg-background shadow-lg h-full flex flex-col', !borderColor && 'border-amber-400/60')}
+        style={borderColor ? { borderColor: `color-mix(in srgb, ${borderColor} 60%, transparent)` } : undefined}
+      >
+        <div
+          className={cn('flex items-center justify-between border-b px-4 py-2.5 shrink-0 rounded-t-[10px]', !borderColor && 'bg-amber-50 dark:bg-amber-950/20')}
+          style={borderColor ? { backgroundColor: `color-mix(in srgb, ${borderColor} 10%, transparent)` } : undefined}
+        >
           <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-amber-600" />
-            <span className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-              Crazy 8s — Rapid Sketching
+            <Zap className="h-4 w-4" style={{ color: borderColor || '#d97706' }} />
+            <span className="text-sm font-semibold" style={{ color: borderColor || undefined }}>
+              {headerTitle}
             </span>
           </div>
-          {data.onSave && hasDrawings && (
-            <button
-              onClick={handleSave}
-              disabled={isSaving || saved}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                saved
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                  : 'bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50'
-              }`}
-            >
-              {isSaving ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : saved ? (
-                <Check className="h-3.5 w-3.5" />
-              ) : (
-                <Save className="h-3.5 w-3.5" />
-              )}
-              {isSaving ? 'Saving...' : saved ? 'Saved' : 'Save & Continue'}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {data.onSyncStars && (
+              <button
+                onClick={data.onSyncStars}
+                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40 transition-colors"
+                title="Update slot titles from starred mind map nodes"
+              >
+                <Star className="h-3.5 w-3.5 fill-current" />
+                Sync Stars
+              </button>
+            )}
+            {data.onSave && hasDrawings && (
+              <button
+                onClick={handleSave}
+                disabled={isSaving || saved}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  saved
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                    : 'bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50'
+                }`}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : saved ? (
+                  <Check className="h-3.5 w-3.5" />
+                ) : (
+                  <Save className="h-3.5 w-3.5" />
+                )}
+                {isSaving ? 'Saving...' : saved ? 'Saved' : 'Save & Continue'}
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex-1 min-h-0">
           <Crazy8sCanvas
             workshopId={data.workshopId}
             stepId={data.stepId}
+            ownerId={data.ownerId}
             votingMode={data.votingMode}
             onVoteSelectionConfirm={data.onVoteSelectionConfirm}
             onReVote={data.onReVote}
+            showResultsInline={data.showResultsInline}
           />
         </div>
       </div>

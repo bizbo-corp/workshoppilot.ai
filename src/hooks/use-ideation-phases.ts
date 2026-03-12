@@ -40,10 +40,20 @@ export function useIdeationPhases({
 }: UseIdeationPhasesOptions) {
   const canvasStoreApi = useCanvasStoreApi();
 
+  // Track deleted owner IDs so they're removed from the filter bar immediately
+  // Declared early so it can filter ideationOwners before seeding.
+  const [deletedOwnerIds, setDeletedOwnerIds] = React.useState<Set<string>>(new Set());
+
+  // Filter ideationOwners to exclude deleted participants before seeding
+  const filteredIdeationOwners = React.useMemo(
+    () => (ideationOwners || []).filter((o) => !deletedOwnerIds.has(o.ownerId)),
+    [ideationOwners, deletedOwnerIds]
+  );
+
   // Client-side seeding for multiplayer ideation — creates nodes INSIDE the
   // Liveblocks-connected store instead of fighting server-side recovery.
   useIdeationSeeding({
-    owners: ideationOwners || [],
+    owners: filteredIdeationOwners,
     challengeStatement,
     hmwStatement,
     currentOwnerId,
@@ -122,8 +132,7 @@ export function useIdeationPhases({
   // null = "All" (show all owners), undefined = not yet set (falls back to currentOwnerId)
   const [viewingOwnerId, setViewingOwnerId] = React.useState<string | null | undefined>(currentOwnerId);
 
-  // Track deleted owner IDs so they're removed from the filter bar immediately
-  const [deletedOwnerIds, setDeletedOwnerIds] = React.useState<Set<string>>(new Set());
+
 
   // Delete a participant and their canvas content
   const handleDeleteOwner = React.useCallback(async (ownerId: string) => {
@@ -147,7 +156,24 @@ export function useIdeationPhases({
     } catch (err) {
       console.error('Failed to delete participant:', err);
     }
-  }, [canvasStoreApi, workshopId]);
+
+    // 5. Persist cleaned canvas state to DB so deleted owner doesn't return on page reload
+    if (stepId) {
+      try {
+        const s = canvasStoreApi.getState();
+        await saveCanvasState(workshopId, stepId, {
+          stickyNotes: s.stickyNotes,
+          ...(s.mindMapNodes.length > 0 ? { mindMapNodes: s.mindMapNodes } : {}),
+          ...(s.mindMapEdges.length > 0 ? { mindMapEdges: s.mindMapEdges } : {}),
+          ...(s.crazy8sSlots.length > 0 ? { crazy8sSlots: s.crazy8sSlots } : {}),
+          ...(s.hmwCards.length > 0 ? { hmwCards: s.hmwCards } : {}),
+        });
+        s.markClean();
+      } catch (err) {
+        console.error('Failed to flush canvas state after owner deletion:', err);
+      }
+    }
+  }, [canvasStoreApi, workshopId, stepId]);
 
   // Sync store ideationPhase to local state (multiplayer: facilitator changes propagate)
   const storeIdeationPhase = useCanvasStore(state => state.ideationPhase);

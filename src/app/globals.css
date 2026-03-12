@@ -438,6 +438,11 @@
   transition: none !important;
 }
 
+/* Allow hover "+" buttons to render outside node bounds */
+.react-flow__node-mindMapNode {
+  overflow: visible !important;
+}
+
 /* Owner zone backgrounds must render behind all mind map nodes */
 .react-flow__node-ownerZoneNode {
   z-index: -1 !important;

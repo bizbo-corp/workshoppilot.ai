@@ -25,10 +25,14 @@ import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
 interface Crazy8sCanvasProps {
   workshopId: string;
   stepId: string;
+  /** Filter slots to this owner (per-participant card) */
+  ownerId?: string;
   /** True when the idea-selection phase is active */
   votingMode?: boolean;
   onVoteSelectionConfirm?: (selectedSlotIds: string[]) => void;
   onReVote?: () => void;
+  /** When false, keep grid visible after voting closes (multiplayer "All" view) */
+  showResultsInline?: boolean;
 }
 
 interface EzyDrawState {
@@ -43,9 +47,14 @@ interface EzyDrawState {
  * Crazy 8s Canvas Container
  * Manages 8-slot sketching grid with EzyDraw modal integration
  */
-export function Crazy8sCanvas({ workshopId, stepId, votingMode, onVoteSelectionConfirm, onReVote }: Crazy8sCanvasProps) {
+export function Crazy8sCanvas({ workshopId, stepId, ownerId, votingMode, onVoteSelectionConfirm, onReVote, showResultsInline = true }: Crazy8sCanvasProps) {
   // Store selectors
-  const crazy8sSlots = useCanvasStore((s) => s.crazy8sSlots);
+  const allCrazy8sSlots = useCanvasStore((s) => s.crazy8sSlots);
+
+  // Filter slots by ownerId when set (per-participant card)
+  const crazy8sSlots = ownerId
+    ? allCrazy8sSlots.filter((s) => s.ownerId === ownerId)
+    : allCrazy8sSlots;
   const updateCrazy8sSlot = useCanvasStore((s) => s.updateCrazy8sSlot);
   const setCrazy8sSlots = useCanvasStore((s) => s.setCrazy8sSlots);
   const storeApi = useCanvasStoreApi();
@@ -356,8 +365,8 @@ export function Crazy8sCanvas({ workshopId, stepId, votingMode, onVoteSelectionC
         </div>
       )}
 
-      {/* Voting results panel replaces the grid when voting is closed */}
-      {votingMode && votingSession.status === 'closed' ? (
+      {/* Voting results panel replaces the grid when voting is closed (only if showResultsInline) */}
+      {votingMode && votingSession.status === 'closed' && showResultsInline ? (
         <VotingResultsPanel
           onConfirmSelection={onVoteSelectionConfirm!}
           onReVote={onReVote!}

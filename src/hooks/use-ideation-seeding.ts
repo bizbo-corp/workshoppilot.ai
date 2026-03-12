@@ -47,11 +47,12 @@ export function useIdeationSeeding({
       seeded.current = true;
 
       const state = storeApi.getState();
-      const hasOwnedNodes = state.mindMapNodes.some((n: MindMapNodeState) => n.ownerId);
+      const ownedNodes = state.mindMapNodes.filter((n: MindMapNodeState) => n.ownerId);
+      const hasOwnedNodes = ownedNodes.length > 0;
 
       if (hasOwnedNodes) {
         // Check for late-joiner
-        const currentOwnerHasNodes = state.mindMapNodes.some(
+        const currentOwnerHasNodes = ownedNodes.some(
           (n: MindMapNodeState) => n.ownerId === currentOwnerId
         );
         if (currentOwnerHasNodes) return;
@@ -62,7 +63,14 @@ export function useIdeationSeeding({
         return;
       }
 
-      // No owned nodes — seed ALL owners (each gets a unique color index)
+      // No owned nodes at all. Only seed if the store has NO mind map nodes whatsoever
+      // (fresh room). If nodes exist but none are owned, this is solo mode — skip.
+      // If all owned nodes were deleted, crazy8sSlots with ownerIds will still exist
+      // as a signal that seeding already happened previously — don't re-seed.
+      const hasOwnerSlots = state.crazy8sSlots.some((s: Crazy8sSlot) => s.ownerId);
+      if (state.mindMapNodes.length > 0 || hasOwnerSlots) return;
+
+      // Truly empty room — seed ALL owners (each gets a unique color index)
       for (let i = 0; i < owners.length; i++) {
         seedOwner(owners[i], storeApi, challengeStatement, hmwStatement, i);
       }

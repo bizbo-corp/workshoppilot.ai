@@ -205,13 +205,19 @@ function VotingEventListener() {
 function ParticipantRemovedListener() {
   const router = useRouter();
   const { participantId } = useMultiplayerContext();
+  const deleteOwnerContent = useCanvasStore((s) => s.deleteOwnerContent);
 
   useEventListener(({ event }) => {
-    if (event.type === 'PARTICIPANT_REMOVED' && participantId && event.participantId === participantId) {
+    if (event.type !== 'PARTICIPANT_REMOVED') return;
+
+    if (participantId && event.participantId === participantId) {
+      // I was removed — redirect
       toast.error('You have been removed from this session', { duration: 5000 });
-      setTimeout(() => {
-        router.push('/');
-      }, 1500);
+      setTimeout(() => { router.push('/'); }, 1500);
+    } else {
+      // Someone else was removed — purge their data from MY local store
+      // so I don't sync stale data back to Liveblocks Storage
+      deleteOwnerContent(event.participantId);
     }
   });
 
@@ -290,6 +296,7 @@ export default function MultiplayerRoom({
           color: "#608850",
           displayName: "",
           editingDrawingNodeId: null,
+          mindMapReady: false,
         }}
         initialStorage={{
           elements: new LiveMap<string, LiveObject<CanvasElementStorable>>(),

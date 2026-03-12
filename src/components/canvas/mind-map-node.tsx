@@ -2,7 +2,7 @@
 
 import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { Star } from 'lucide-react';
+import { Plus, Star, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type MindMapNodeData = {
@@ -14,8 +14,10 @@ export type MindMapNodeData = {
   isStarred?: boolean;
   level: number;
   ownerName?: string; // participant name (shown on root nodes in "All" view)
+  isNewlyCreated?: boolean; // mount in edit mode with empty label
   onLabelChange?: (id: string, label: string) => void;
   onAddChild?: (id: string) => void;
+  onAddChildAt?: (id: string, direction: 'top' | 'bottom' | 'left' | 'right') => void;
   onDelete?: (id: string) => void;
   onToggleStar?: (id: string) => void;
 };
@@ -23,8 +25,10 @@ export type MindMapNodeData = {
 export type MindMapNode = Node<MindMapNodeData, 'mindMapNode'>;
 
 export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editLabel, setEditLabel] = useState(data.label);
+  // Initialize editing state — newly created nodes start in edit mode immediately
+  // so the textarea is in the DOM from the very first render
+  const [isEditing, setIsEditing] = useState(!!data.isNewlyCreated);
+  const [editLabel, setEditLabel] = useState(data.isNewlyCreated ? '' : data.label);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleLabelClick = useCallback(() => {
@@ -53,7 +57,7 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
     [data.label, handleSave]
   );
 
-  // Auto-resize textarea
+  // Auto-resize textarea and focus
   useEffect(() => {
     if (isEditing && textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -100,7 +104,7 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
   return (
     <div
       className={cn(
-        'px-4 py-3 rounded-lg shadow-sm group',
+        'relative px-4 py-3 rounded-lg shadow-sm group',
         'transition-all duration-150 hover:shadow-md',
         isRoot
           ? 'min-w-[280px] max-w-[400px]'
@@ -159,16 +163,16 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
         </div>
       )}
 
-      {/* Action buttons (hover) — star always visible when starred */}
-      <div className={cn(
-        'flex gap-1 mt-2 transition-opacity',
-        data.isStarred ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-      )}>
-        {/* Star toggle — hidden for root */}
+      {/* Action buttons row */}
+      <div className="flex gap-1 mt-2 items-center">
+        {/* Star toggle — always visible when starred, hover-only otherwise */}
         {!isRoot && (
           <button
             onClick={handleToggleStar}
-            className="nodrag nopan text-xs px-1.5 py-0.5 rounded hover:bg-neutral-olive-100/50 transition-colors"
+            className={cn(
+              'nodrag nopan text-xs px-1.5 py-0.5 rounded hover:bg-neutral-olive-100/50 transition-all',
+              data.isStarred ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            )}
             style={{ color: data.themeColor }}
             title={data.isStarred ? 'Unstar idea' : 'Star for Crazy 8s'}
           >
@@ -176,25 +180,58 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
           </button>
         )}
 
-        {/* Add Child / +Branch button */}
+        {/* +Child/+Branch and Delete — hover-only always */}
         <button
           onClick={handleAddChild}
-          className="nodrag nopan text-xs px-2 py-0.5 rounded hover:bg-neutral-olive-100/50 transition-colors"
+          className="nodrag nopan text-xs px-2 py-0.5 rounded hover:bg-neutral-olive-100/50 transition-all opacity-0 group-hover:opacity-100"
           style={{ color: data.themeColor }}
         >
           {isRoot ? '+Branch' : '+Child'}
         </button>
 
-        {/* Delete button — hidden for root */}
         {!isRoot && (
           <button
             onClick={handleDelete}
-            className="nodrag nopan text-xs px-2 py-0.5 rounded hover:bg-red-100 text-red-600 transition-colors"
+            className="nodrag nopan p-1 rounded hover:bg-red-100 text-red-600 transition-all opacity-0 group-hover:opacity-100"
+            title="Delete node"
           >
-            Delete
+            <Trash2 className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
+
+      {/* Hover "+" zones — add child at directional offset */}
+      {data.onAddChildAt && (
+        <>
+          {(['top', 'right', 'bottom', 'left'] as const).map((dir) => (
+            <button
+              key={dir}
+              onClick={(e) => {
+                e.stopPropagation();
+                data.onAddChildAt?.(id, dir);
+              }}
+              className={cn(
+                'nodrag nopan absolute flex items-center justify-center',
+                'w-5 h-5 rounded-full border shadow-sm',
+                'opacity-0 group-hover:opacity-60 hover:!opacity-100',
+                'transition-opacity duration-150',
+                dir === 'top' && 'left-1/2 -translate-x-1/2 -top-7',
+                dir === 'bottom' && 'left-1/2 -translate-x-1/2 -bottom-7',
+                dir === 'left' && 'top-1/2 -translate-y-1/2 -left-7',
+                dir === 'right' && 'top-1/2 -translate-y-1/2 -right-7',
+              )}
+              style={{
+                backgroundColor: data.themeBgColor,
+                borderColor: data.themeColor,
+                color: data.themeColor,
+              }}
+              title={`Add node ${dir}`}
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          ))}
+        </>
+      )}
     </div>
   );
 });

@@ -65,6 +65,13 @@ export async function POST(request: Request) {
     const payload = raw ? verifyGuestCookie(raw) : null;
 
     if (!payload) {
+      // Check if Clerk cookies exist — indicates JWT expired (transient)
+      const hasClerkSession = cookieStore.has('__session') || cookieStore.has('__client');
+      if (hasClerkSession) {
+        console.warn('[liveblocks-auth] Clerk session cookie present but auth() returned null — JWT likely expired, returning 503 for retry');
+        return new Response('Auth temporarily unavailable', { status: 503 });
+      }
+      console.warn('[liveblocks-auth] No userId, no valid guest cookie — unauthorized');
       return new Response('Unauthorized', { status: 401 });
     }
 
@@ -76,6 +83,7 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (!participant) {
+      console.warn(`[liveblocks-auth] Guest cookie valid but participant ${payload.participantId} not found in DB (workshop: ${payload.workshopId})`);
       return new Response('Participant not found', { status: 401 });
     }
 

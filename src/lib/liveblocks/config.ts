@@ -3,9 +3,48 @@ import { createClient, LiveMap, LiveObject, type JsonObject } from "@liveblocks/
 /**
  * Liveblocks client — auth endpoint wires to /api/liveblocks-auth (Phase 56)
  * which returns a Liveblocks token for the current Clerk user or verified guest.
+ *
+ * Uses a callback instead of a URL string so we can retry on 401. After a dev
+ * server restart (or a Clerk JWT expiry), the first auth request may fail
+ * because the Clerk session cookie hasn't been refreshed yet. Retrying after
+ * a short delay gives ClerkProvider time to refresh the JWT.
  */
 export const liveblocksClient = createClient({
-  authEndpoint: "/api/liveblocks-auth",
+  authEndpoint: async (room) => {
+    const maxAttempts = 3;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      if (attempt > 0) {
+        // Wait before retry — gives Clerk time to refresh JWT
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+
+      const response = await fetch("/api/liveblocks-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room }),
+      });
+
+      if (response.ok) {
+        return response.json();
+      }
+
+      // Don't retry on 403 (explicitly forbidden, e.g. removed participant)
+      if (response.status === 403) {
+        const text = await response.text();
+        return { error: "forbidden" as const, reason: text };
+      }
+
+      // Retry on 401 and 5xx
+      if (attempt < maxAttempts - 1) {
+        console.warn(
+          `[Liveblocks] Auth attempt ${attempt + 1}/${maxAttempts} failed (${response.status}), retrying...`
+        );
+      }
+    }
+
+    return { error: "forbidden" as const, reason: "Authentication failed after retries" };
+  },
   throttle: 50, // 50ms max broadcast rate for cursor presence (PRES-01)
   lostConnectionTimeout: 30_000, // 30s before 'failed' event fires (INFR-03)
 });
@@ -81,6 +120,7 @@ declare global {
       color: string;
       displayName: string;
       editingDrawingNodeId: string | null; // EzyDraw single-editor lock
+      mindMapReady: boolean; // participant signals "I'm done" on mind map
     };
 
     /**

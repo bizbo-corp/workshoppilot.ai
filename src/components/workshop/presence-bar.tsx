@@ -160,10 +160,15 @@ export function PresenceBar({
     }
   }, [shareToken]);
 
+  const deleteOwnerContent = useCanvasStore((s) => s.deleteOwnerContent);
+
   const handleRemoveParticipant = useCallback(async (participantId: string) => {
     if (!workshopId) return;
     setRemoveLoading(true);
     try {
+      // Remove canvas content (mind map nodes, crazy 8s slots, etc.)
+      deleteOwnerContent(participantId);
+
       const res = await fetch('/api/remove-participant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -182,7 +187,7 @@ export function PresenceBar({
     } finally {
       setRemoveLoading(false);
     }
-  }, [workshopId, broadcast]);
+  }, [workshopId, broadcast, deleteOwnerContent]);
 
   return (
     <div className="relative flex flex-col items-end gap-2" ref={containerRef}>

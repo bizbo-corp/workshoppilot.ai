@@ -117,9 +117,12 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
 
     // Open voting when starting timer in votingMode and voting is idle
     if (votingMode && votingSessionRef.current?.status === 'idle') {
-      broadcast({ type: 'VOTING_OPENED', voteBudget: votingSessionRef.current.voteBudget });
+      // Scale budget by total filled slots across all participants (25%, min 2)
+      const filledSlots = storeApi.getState().crazy8sSlots.filter((s) => s.imageUrl);
+      const scaledBudget = Math.max(2, Math.ceil(filledSlots.length * 0.25));
+      broadcast({ type: 'VOTING_OPENED', voteBudget: scaledBudget });
       // Facilitator's own store — useEventListener does NOT fire for the sender
-      openVoting();
+      openVoting(scaledBudget);
     }
 
     intervalRef.current = setInterval(() => {
