@@ -123,7 +123,7 @@ export default function Home() {
         {/* Visual area — flows below CTA buttons */}
         <div className="relative w-full flex-1">
           {/* Social proof — glassmorphic pill, top-center of visual area */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 rounded-full bg-card/85 px-6 py-2.5">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 px-6 py-2.5">
             <div className="flex gap-0.5">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
