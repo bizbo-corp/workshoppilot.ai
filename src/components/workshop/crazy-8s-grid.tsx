@@ -101,7 +101,7 @@ export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionCh
                       <span
                         key={v.id}
                         className="w-2.5 h-2.5 rounded-full border border-background/50 shadow-sm"
-                        style={{ backgroundColor: voterColorMap.get(v.voterId) ?? '#6366f1' }}
+                        style={{ backgroundColor: voterColorMap.get(v.voterId) ?? '#608850' }}
                         title={`Voter: ${v.voterId}`}
                       />
                     ))}

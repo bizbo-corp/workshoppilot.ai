@@ -271,14 +271,22 @@ function ReactFlowCanvasInner({
   // Returns { isMultiplayer: false, participantColor: null } when not inside RoomProvider (solo mode)
   const { isMultiplayer, participantColor, isFacilitator } = useMultiplayerContext();
 
-  // Mapping from participant hex color to the closest StickyNoteColor
+  // Mapping from participant hex color to the closest StickyNoteColor.
+  // Matches PARTICIPANT_COLORS order in liveblocks/config.ts.
   const HEX_TO_STICKY_COLOR: Record<string, StickyNoteColor> = {
-    '#6366f1': 'blue',    // indigo -> blue
+    '#608850': 'green',   // facilitator
+    '#b07068': 'pink',
+    '#6888a0': 'blue',
+    '#c08030': 'orange',
+    '#c49820': 'yellow',
+    '#a86050': 'red',
+    // Legacy colors (existing participants may have these stored)
+    '#6366f1': 'blue',
     '#ec4899': 'pink',
-    '#14b8a6': 'green',   // teal -> green
-    '#f59e0b': 'orange',  // amber -> orange
-    '#84cc16': 'yellow',  // lime -> yellow
-    '#8b5cf6': 'red',     // violet -> red (closest warm)
+    '#14b8a6': 'green',
+    '#f59e0b': 'orange',
+    '#84cc16': 'yellow',
+    '#8b5cf6': 'red',
   };
 
   // Participant sticky note color — used when creating new notes in multiplayer mode

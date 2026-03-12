@@ -17,6 +17,7 @@
  */
 
 import Link from 'next/link';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { workshopSessions, sessionParticipants, workshops, sessions, workshopSteps } from '@/db/schema';
@@ -85,6 +86,18 @@ export default async function JoinPage({ params }: JoinPageProps) {
   const facilitatorName = ownerParticipant?.displayName ?? null;
   const workshopTitle = workshopSession.workshop.title;
 
+  // Detect signed-in Clerk user — derive display name for auto-join
+  let clerkDisplayName: string | null = null;
+  const { userId } = await auth();
+  if (userId) {
+    const user = await currentUser();
+    const raw = user?.fullName ?? user?.username ?? '';
+    const trimmed = raw.trim().slice(0, 30);
+    if (trimmed.length >= 2) {
+      clerkDisplayName = trimmed;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <GuestJoinFlow
@@ -96,6 +109,7 @@ export default async function JoinPage({ params }: JoinPageProps) {
         sessionId={workshopSession.id}
         aiSessionId={aiSession?.id ?? null}
         currentStepOrder={activeStep?.stepDefinition?.order ?? 1}
+        clerkDisplayName={clerkDisplayName}
       />
     </div>
   );

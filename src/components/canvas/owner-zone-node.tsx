@@ -5,7 +5,8 @@ import type { NodeProps, Node } from '@xyflow/react';
 
 export type OwnerZoneNodeData = {
   ownerName: string;
-  ownerColor: string; // hex color
+  ownerThemeColor: string;   // CSS variable e.g. var(--mm-blue) — text/border
+  ownerThemeBgColor: string; // CSS variable e.g. var(--mm-blue-bg) — pastel bg
 };
 
 export type OwnerZoneNode = Node<OwnerZoneNodeData, 'ownerZoneNode'>;
@@ -16,8 +17,8 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
       style={{
         width: 1600,
         height: 1400,
-        backgroundColor: `${data.ownerColor}14`,
-        border: `2px solid ${data.ownerColor}26`,
+        backgroundColor: `color-mix(in srgb, ${data.ownerThemeBgColor} 30%, transparent)`,
+        border: `2px solid color-mix(in srgb, ${data.ownerThemeColor} 12%, transparent)`,
         borderRadius: 16,
         pointerEvents: 'none',
         position: 'relative',
@@ -32,8 +33,8 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
           textAlign: 'center',
           fontSize: 14,
           fontWeight: 600,
-          color: data.ownerColor,
-          opacity: 0.7,
+          color: data.ownerThemeColor,
+          opacity: 0.5,
           pointerEvents: 'none',
         }}
       >

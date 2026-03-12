@@ -70,10 +70,9 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Cannot remove workshop owner' }, { status: 400 });
   }
 
-  // Set status to 'removed'
+  // Hard delete the participant record
   await db
-    .update(sessionParticipants)
-    .set({ status: 'removed' })
+    .delete(sessionParticipants)
     .where(eq(sessionParticipants.id, participantId));
 
   return Response.json({ ok: true });

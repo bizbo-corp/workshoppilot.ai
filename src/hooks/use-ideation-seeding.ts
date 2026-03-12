@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useCanvasStoreApi } from '@/providers/canvas-store-provider';
-import { ROOT_COLOR, THEME_COLORS } from '@/lib/canvas/mind-map-theme-colors';
+import { THEME_COLORS } from '@/lib/canvas/mind-map-theme-colors';
 import type { MindMapNodeState, MindMapEdgeState } from '@/stores/canvas-store';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 
@@ -120,15 +120,16 @@ function seedOwner(
   const state = storeApi.getState();
   const rootLabel = challengeStatement || hmwStatement || 'How might we...?';
   const rootId = `${owner.ownerId}-root`;
-  // Each participant gets a unique theme color based on their index
+  // Each participant gets a unique theme color based on their index.
+  // Root node uses the SAME palette color as the HMW child for visual harmony.
   const themeColor = THEME_COLORS[ownerIndex % THEME_COLORS.length];
 
   const rootNode: MindMapNodeState = {
     id: rootId,
     label: rootLabel,
-    themeColorId: 'gray',
-    themeColor: ROOT_COLOR.color,
-    themeBgColor: ROOT_COLOR.bgColor,
+    themeColorId: themeColor.id,
+    themeColor: themeColor.color,
+    themeBgColor: themeColor.bgColor,
     isRoot: true,
     level: 0,
     position: { x: 0, y: 0 },

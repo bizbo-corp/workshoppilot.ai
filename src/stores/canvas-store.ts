@@ -177,6 +177,7 @@ export type CanvasActions = {
   closeVoting: () => void;
   setVotingResults: (results: VotingResult[]) => void;
   resetVoting: () => void;
+  deleteOwnerContent: (ownerId: string) => void;
   setIdeationPhase: (phase: IdeationPhase) => void;
   markClean: () => void;
   markDirty: () => void;
@@ -955,6 +956,21 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             votingSession: DEFAULT_VOTING_SESSION,
             isDirty: true,
           })),
+
+        deleteOwnerContent: (ownerId) =>
+          set((state) => {
+            const nodeIdsToRemove = new Set(
+              state.mindMapNodes.filter((n) => n.ownerId === ownerId).map((n) => n.id)
+            );
+            return {
+              mindMapNodes: state.mindMapNodes.filter((n) => !nodeIdsToRemove.has(n.id)),
+              mindMapEdges: state.mindMapEdges.filter(
+                (e) => !nodeIdsToRemove.has(e.source) && !nodeIdsToRemove.has(e.target)
+              ),
+              crazy8sSlots: state.crazy8sSlots.filter((s) => s.ownerId !== ownerId),
+              isDirty: true,
+            };
+          }),
 
         setIdeationPhase: (phase) =>
           set(() => ({

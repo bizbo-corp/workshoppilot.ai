@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { SignInModal } from '@/components/auth/sign-in-modal';
 
 /**
  * GuestJoinModal
@@ -53,6 +54,7 @@ export function GuestJoinModal({
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,7 +137,7 @@ export function GuestJoinModal({
             </div>
           </CardContent>
 
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-3">
             <Button
               type="submit"
               className="w-full"
@@ -152,7 +154,23 @@ export function GuestJoinModal({
             </Button>
           </CardFooter>
         </form>
+
+        <div className="px-6 pb-6 text-center">
+          <button
+            type="button"
+            onClick={() => setShowSignIn(true)}
+            className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            Have an account? Sign in
+          </button>
+        </div>
       </Card>
+
+      <SignInModal
+        open={showSignIn}
+        onOpenChange={setShowSignIn}
+        redirectUrl={`/join/${shareToken}`}
+      />
     </div>
   );
 }

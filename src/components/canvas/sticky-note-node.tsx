@@ -255,7 +255,7 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
         >
           <div
             className="h-2.5 w-2.5 rounded-full border border-white/60"
-            style={{ backgroundColor: data.ownerColor || '#6366f1' }}
+            style={{ backgroundColor: data.ownerColor || '#608850' }}
           />
           <span className="text-[9px] font-medium text-neutral-olive-500/70 max-w-[60px] truncate">
             {data.ownerName}

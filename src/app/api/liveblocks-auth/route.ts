@@ -1,11 +1,11 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { cookies } from 'next/headers';
 import { Liveblocks } from '@liveblocks/node';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
 import { verifyGuestCookie, COOKIE_NAME } from '@/lib/auth/guest-cookie';
 import { db } from '@/db/client';
-import { sessionParticipants } from '@/db/schema';
+import { sessionParticipants, workshopSessions } from '@/db/schema';
 
 /**
  * Liveblocks auth endpoint — issues access tokens for Clerk users and verified guests.
@@ -99,7 +99,45 @@ export async function POST(request: Request) {
     return new Response(respBody, { status });
   }
 
-  // Step 4: Clerk-authenticated path — resolve full user details
+  // Step 4: Check if this Clerk user is a participant (not owner) in this room
+  // Room format: "workshop-{workshopId}" or "workshop-{workshopId}-step-{stepId}"
+  const roomWorkshopId = room.startsWith('workshop-')
+    ? room.replace(/^workshop-/, '').replace(/-step-.*$/, '')
+    : null;
+
+  if (roomWorkshopId) {
+    // Find the session for this workshop
+    const workshopSession = await db.query.workshopSessions.findFirst({
+      where: eq(workshopSessions.workshopId, roomWorkshopId),
+    });
+
+    if (workshopSession) {
+      const participant = await db.query.sessionParticipants.findFirst({
+        where: and(
+          eq(sessionParticipants.sessionId, workshopSession.id),
+          eq(sessionParticipants.clerkUserId, userId)
+        ),
+      });
+
+      if (participant && participant.status !== 'removed' && participant.role === 'participant') {
+        // Issue token using participant's Liveblocks identity (keeps presence consistent)
+        const liveblocks = getLiveblocksClient();
+        const session = liveblocks.prepareSession(participant.liveblocksUserId, {
+          userInfo: {
+            name: participant.displayName,
+            color: participant.color,
+            role: 'participant',
+            participantId: participant.id,
+          },
+        });
+        session.allow(room, session.FULL_ACCESS);
+        const { body: respBody, status } = await session.authorize();
+        return new Response(respBody, { status });
+      }
+    }
+  }
+
+  // Step 5: Clerk-authenticated owner path — resolve full user details
   const user = await currentUser();
   if (!user) {
     // userId was valid but currentUser() returned null — session may have been revoked
@@ -107,7 +145,7 @@ export async function POST(request: Request) {
     return new Response('User not found', { status: 401 });
   }
 
-  // Step 5: Prepare the Liveblocks session with user metadata
+  // Step 6: Prepare the Liveblocks session with user metadata
   // name: prefer fullName, fall back to username, then a safe default
   const liveblocks = getLiveblocksClient();
   const session = liveblocks.prepareSession(user.id, {
@@ -119,10 +157,10 @@ export async function POST(request: Request) {
     },
   });
 
-  // Step 6: Grant FULL_ACCESS to the requested room
+  // Step 7: Grant FULL_ACCESS to the requested room
   session.allow(room, session.FULL_ACCESS);
 
-  // Step 7: Authorize and return the access token
+  // Step 8: Authorize and return the access token
   const { body, status } = await session.authorize();
   return new Response(body, { status });
 }

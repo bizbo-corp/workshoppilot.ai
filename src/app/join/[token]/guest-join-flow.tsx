@@ -16,7 +16,8 @@
  * - sessionStorage (not localStorage) scopes persistence to the browser tab.
  *   Closing the tab clears identity, matching session expectations.
  * - Auto-rejoin re-calls /api/guest-join rather than trusting the cookie alone —
- *   the cookie may have expired, and re-calling creates a fresh participant record.
+ *   the cookie may have expired. The API reuses the existing participant record
+ *   when the cookie is still valid for the same workshop.
  * - GuestLobby renders after joining, polling /api/session-status/[token] every 3s
  *   and auto-transitioning to the canvas when the facilitator starts the session.
  */
@@ -41,6 +42,7 @@ interface GuestJoinFlowProps {
   sessionId: string;
   aiSessionId: string | null;
   currentStepOrder: number;
+  clerkDisplayName: string | null;
 }
 
 type FlowState =
@@ -58,17 +60,24 @@ export function GuestJoinFlow({
   workshopId,
   aiSessionId,
   currentStepOrder,
+  clerkDisplayName,
 }: GuestJoinFlowProps) {
   const [state, setState] = useState<FlowState>({ stage: 'loading' });
 
   useEffect(() => {
-    // Check sessionStorage for returning guest
+    // Priority 1: Clerk user detected server-side — auto-join with Clerk name
+    if (clerkDisplayName) {
+      setState({ stage: 'auto_rejoining' });
+      autoRejoin(clerkDisplayName);
+      return;
+    }
+
+    // Priority 2: Check sessionStorage for returning guest
     try {
       const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as StoredGuestName;
         if (parsed.workshopId === workshopId && parsed.name) {
-          // Auto-rejoin with the stored name
           setState({ stage: 'auto_rejoining' });
           autoRejoin(parsed.name);
           return;

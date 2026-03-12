@@ -711,6 +711,20 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
             votingSession: DEFAULT_VOTING_SESSION,
           })),
 
+        deleteOwnerContent: (ownerId) =>
+          set((state) => {
+            const nodeIdsToRemove = new Set(
+              state.mindMapNodes.filter((n) => n.ownerId === ownerId).map((n) => n.id)
+            );
+            return {
+              mindMapNodes: state.mindMapNodes.filter((n) => !nodeIdsToRemove.has(n.id)),
+              mindMapEdges: state.mindMapEdges.filter(
+                (e) => !nodeIdsToRemove.has(e.source) && !nodeIdsToRemove.has(e.target)
+              ),
+              crazy8sSlots: state.crazy8sSlots.filter((s) => s.ownerId !== ownerId),
+            };
+          }),
+
         setIdeationPhase: (phase) =>
           set(() => ({ ideationPhase: phase })),
 

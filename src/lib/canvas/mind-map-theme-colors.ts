@@ -9,50 +9,58 @@ import type { Node, Edge } from '@xyflow/react';
 export type ThemeColor = {
   id: string;
   label: string;
-  color: string; // border and text hex
-  bgColor: string; // background hex
+  color: string;        // dark text/border (CSS variable)
+  bgColor: string;      // pastel background (CSS variable)
+  accentColor: string;  // medium-saturation accent for indicator dots & cursors (CSS variable)
 };
 
 /**
- * 6-color theme palette for mind map branches
- * Aliased from the canvas palette (same hues as sticky notes) via globals.css
+ * 6-color theme palette for mind map branches.
+ * Order matters for multiplayer: index 0 = facilitator, index 1+ = participants.
+ * Aliased from the canvas palette (same hues as sticky notes) via globals.css.
  */
 export const THEME_COLORS: readonly ThemeColor[] = [
-  {
-    id: 'blue',
-    label: 'Blue',
-    color: 'var(--mm-blue)',
-    bgColor: 'var(--mm-blue-bg)',
-  },
   {
     id: 'green',
     label: 'Green',
     color: 'var(--mm-green)',
     bgColor: 'var(--mm-green-bg)',
-  },
-  {
-    id: 'purple',
-    label: 'Purple',
-    color: 'var(--mm-purple)',
-    bgColor: 'var(--mm-purple-bg)',
-  },
-  {
-    id: 'orange',
-    label: 'Orange',
-    color: 'var(--mm-orange)',
-    bgColor: 'var(--mm-orange-bg)',
+    accentColor: 'var(--canvas-green)',
   },
   {
     id: 'pink',
     label: 'Pink',
     color: 'var(--mm-pink)',
     bgColor: 'var(--mm-pink-bg)',
+    accentColor: 'var(--canvas-pink)',
+  },
+  {
+    id: 'blue',
+    label: 'Blue',
+    color: 'var(--mm-blue)',
+    bgColor: 'var(--mm-blue-bg)',
+    accentColor: 'var(--canvas-blue)',
+  },
+  {
+    id: 'orange',
+    label: 'Orange',
+    color: 'var(--mm-orange)',
+    bgColor: 'var(--mm-orange-bg)',
+    accentColor: 'var(--canvas-orange)',
   },
   {
     id: 'yellow',
     label: 'Yellow',
     color: 'var(--mm-yellow)',
     bgColor: 'var(--mm-yellow-bg)',
+    accentColor: 'var(--canvas-yellow)',
+  },
+  {
+    id: 'purple',
+    label: 'Purple',
+    color: 'var(--mm-purple)',
+    bgColor: 'var(--mm-purple-bg)',
+    accentColor: 'var(--canvas-red)',
   },
 ] as const;
 
@@ -64,6 +72,7 @@ export const ROOT_COLOR: ThemeColor = {
   label: 'Root',
   color: 'var(--mm-root)',
   bgColor: 'var(--mm-root-bg)',
+  accentColor: 'var(--canvas-olive)',
 };
 
 /**

@@ -122,6 +122,33 @@ export function useIdeationPhases({
   // null = "All" (show all owners), undefined = not yet set (falls back to currentOwnerId)
   const [viewingOwnerId, setViewingOwnerId] = React.useState<string | null | undefined>(currentOwnerId);
 
+  // Track deleted owner IDs so they're removed from the filter bar immediately
+  const [deletedOwnerIds, setDeletedOwnerIds] = React.useState<Set<string>>(new Set());
+
+  // Delete a participant and their canvas content
+  const handleDeleteOwner = React.useCallback(async (ownerId: string) => {
+    // 1. Remove canvas content (client-side, syncs via Liveblocks)
+    const state = canvasStoreApi.getState();
+    state.deleteOwnerContent(ownerId);
+
+    // 2. Remove from filter bar immediately
+    setDeletedOwnerIds((prev) => new Set([...prev, ownerId]));
+
+    // 3. If viewing this owner, switch to "All"
+    setViewingOwnerId((prev) => (prev === ownerId ? null : prev));
+
+    // 4. Hard delete participant from DB (ownerId IS the participantId for non-facilitator)
+    try {
+      await fetch('/api/remove-participant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantId: ownerId, workshopId }),
+      });
+    } catch (err) {
+      console.error('Failed to delete participant:', err);
+    }
+  }, [canvasStoreApi, workshopId]);
+
   // Sync store ideationPhase to local state (multiplayer: facilitator changes propagate)
   const storeIdeationPhase = useCanvasStore(state => state.ideationPhase);
   const setStoreIdeationPhase = useCanvasStore(state => state.setIdeationPhase);
@@ -373,8 +400,10 @@ export function useIdeationPhases({
         if (n.ownerName) names[n.ownerId] = n.ownerName;
       }
     }
-    return { ownerIdsList: ids, ownerNamesMap: names, ownerColorsMap: colors };
-  }, [mindMapNodes, ideationOwners]);
+    // Filter out deleted owners
+    const filteredIds = ids.filter((id) => !deletedOwnerIds.has(id));
+    return { ownerIdsList: filteredIds, ownerNamesMap: names, ownerColorsMap: colors };
+  }, [mindMapNodes, ideationOwners, deletedOwnerIds]);
 
   // Render the canvas area — always MindMapCanvas, with phase-appropriate props
   const renderCanvas = React.useCallback(() => {
@@ -414,6 +443,9 @@ export function useIdeationPhases({
         ownerNames: ownerNamesMap,
         ownerColors: ownerColorsMap,
         onOwnerSwitch: setViewingOwnerId,
+        onDeleteOwner: handleDeleteOwner,
+        facilitatorOwnerId: 'facilitator',
+        isMultiplayerIdeation: !!(ideationOwners && ideationOwners.length > 0),
       }),
       // Merge group dialog
       mergeGroup && React.createElement(MergeGroupDialog, {
@@ -431,7 +463,7 @@ export function useIdeationPhases({
     handleBackToDrawing, brainRewritingMatrices, handleBrainRewritingCellUpdate,
     handleBrainRewritingToggleIncluded, handleSaveBrainRewriting,
     handleVoteSelectionConfirm, handleReVote, mergeGroupId, mergeGroup, flushCanvasState,
-    setMergeGroupId, viewingOwnerId, currentOwnerId, ownerIdsList, ownerNamesMap, ownerColorsMap,
+    setMergeGroupId, viewingOwnerId, currentOwnerId, ownerIdsList, ownerNamesMap, ownerColorsMap, handleDeleteOwner,
   ]);
 
   return {

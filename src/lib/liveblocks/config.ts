@@ -22,16 +22,17 @@ export function getRoomId(workshopId: string): string {
 
 /**
  * Participant color palette — assigned at join time, consistent across reconnects.
- * Index 0 is the owner/facilitator default (indigo).
- * Subsequent colors are assigned by participant slot (participantCount % length).
+ * Order matches THEME_COLORS in mind-map-theme-colors.ts so that indicator dots,
+ * cursors, and mind map nodes all use the same hue family per participant.
+ * Index 0 is the owner/facilitator (green).
  */
 export const PARTICIPANT_COLORS = [
-  '#6366f1', // indigo (facilitator/owner default)
-  '#ec4899', // pink
-  '#14b8a6', // teal
-  '#f59e0b', // amber
-  '#84cc16', // lime
-  '#8b5cf6', // violet
+  '#608850', // green  (facilitator) — matches --canvas-green
+  '#b07068', // pink   (1st participant) — matches --canvas-pink
+  '#6888a0', // blue   — matches --canvas-blue
+  '#c08030', // orange — matches --canvas-orange
+  '#c49820', // yellow — matches --canvas-yellow
+  '#a86050', // red    — matches --canvas-red
 ] as const;
 
 /**

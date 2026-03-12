@@ -430,6 +430,14 @@ export default async function StepPage({ params }: StepPageProps) {
       let ownerForIdeation = activeIdeationParticipants.find((p) => p.role === 'owner');
       const participantsForIdeation = activeIdeationParticipants.filter((p) => p.role === 'participant');
 
+      // Dedup: if current Clerk user already has a participant record, reuse it as owner
+      if (!ownerForIdeation && user) {
+        const existingByClerk = activeIdeationParticipants.find((p) => p.clerkUserId === user.id);
+        if (existingByClerk) {
+          ownerForIdeation = existingByClerk;
+        }
+      }
+
       // Lazy init: create owner participant record if missing (existing workshops pre-fix)
       if (!ownerForIdeation && user) {
         try {

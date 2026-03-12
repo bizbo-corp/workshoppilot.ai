@@ -99,7 +99,7 @@ export function PresenceBar({
         connectionId: o.connectionId,
         id: o.id,
         name: o.info?.name ?? 'Unknown',
-        color: o.info?.color ?? '#6366f1',
+        color: o.info?.color ?? '#608850',
         role: o.info?.role ?? 'participant',
         participantId: o.info?.participantId ?? null,
       })),
@@ -109,7 +109,7 @@ export function PresenceBar({
   const self = useSelf((me) => ({
     id: me.id,
     name: me.info?.name ?? 'You',
-    color: me.info?.color ?? '#6366f1',
+    color: me.info?.color ?? '#608850',
     role: me.info?.role ?? 'participant',
     participantId: me.info?.participantId ?? null,
   }));

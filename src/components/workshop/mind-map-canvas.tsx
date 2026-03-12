@@ -19,9 +19,20 @@ import {
   type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, ArrowRight } from 'lucide-react';
+import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, ArrowRight, X } from 'lucide-react';
 
 import { MindMapNode } from '@/components/canvas/mind-map-node';
+import { useMultiplayerContext } from '@/components/workshop/multiplayer-room';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { MindMapEdge } from '@/components/canvas/mind-map-edge';
 import { OwnerZoneNode } from '@/components/canvas/owner-zone-node';
 import {
@@ -99,8 +110,11 @@ export type MindMapCanvasProps = {
   currentOwnerId?: string;           // filter canvas to this owner's nodes
   allOwnerIds?: string[];             // for facilitator switcher dropdown
   ownerNames?: Record<string, string>; // ownerId → display name
-  ownerColors?: Record<string, string>; // ownerId → hex color
+  ownerColors?: Record<string, string>; // ownerId → hex color (legacy, dots use theme accent)
   onOwnerSwitch?: (ownerId: string | null) => void;
+  onDeleteOwner?: (ownerId: string) => void;
+  facilitatorOwnerId?: string; // The facilitator's ownerId (cannot be deleted)
+  isMultiplayerIdeation?: boolean; // Stable flag — true when multiplayer ideation context
 };
 
 export function MindMapCanvas(props: MindMapCanvasProps) {
@@ -137,20 +151,37 @@ function MindMapCanvasInner({
   ownerNames,
   ownerColors,
   onOwnerSwitch,
+  onDeleteOwner,
+  facilitatorOwnerId,
+  isMultiplayerIdeation,
 }: MindMapCanvasProps) {
   const allMindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const allMindMapEdges = useCanvasStore((state) => state.mindMapEdges);
 
-  // Filter mind map nodes/edges by ownerId when in per-participant mode
+  // Filter mind map nodes/edges by ownerId when in per-participant mode.
+  // In multiplayer, also exclude any stray unowned nodes (created by solo-mode
+  // init race conditions) so they never render.
   const mindMapNodes = useMemo(() => {
-    if (!currentOwnerId) return allMindMapNodes;
-    return allMindMapNodes.filter((n) => n.ownerId === currentOwnerId);
-  }, [allMindMapNodes, currentOwnerId]);
+    let nodes = allMindMapNodes;
+    if (isMultiplayerIdeation) {
+      nodes = nodes.filter((n) => n.ownerId);
+    }
+    if (currentOwnerId) {
+      nodes = nodes.filter((n) => n.ownerId === currentOwnerId);
+    }
+    return nodes;
+  }, [allMindMapNodes, currentOwnerId, isMultiplayerIdeation]);
 
   const mindMapEdges = useMemo(() => {
-    if (!currentOwnerId) return allMindMapEdges;
-    return allMindMapEdges.filter((e) => e.ownerId === currentOwnerId);
-  }, [allMindMapEdges, currentOwnerId]);
+    let edges = allMindMapEdges;
+    if (isMultiplayerIdeation) {
+      edges = edges.filter((e) => e.ownerId);
+    }
+    if (currentOwnerId) {
+      edges = edges.filter((e) => e.ownerId === currentOwnerId);
+    }
+    return edges;
+  }, [allMindMapEdges, currentOwnerId, isMultiplayerIdeation]);
   const addMindMapNode = useCanvasStore((state) => state.addMindMapNode);
   const updateMindMapNode = useCanvasStore((state) => state.updateMindMapNode);
   const updateMindMapNodePosition = useCanvasStore((state) => state.updateMindMapNodePosition);
@@ -184,6 +215,12 @@ function MindMapCanvasInner({
   // Tool mode: 'select' = marquee selection on drag, 'pan' = hand tool (default)
   const [toolMode, setToolMode] = useState<'select' | 'pan'>('pan');
 
+  // Facilitator check — only facilitator can delete participants
+  const { isFacilitator } = useMultiplayerContext();
+
+  // Delete confirmation dialog state
+  const [deleteTarget, setDeleteTarget] = useState<{ ownerId: string; name: string } | null>(null);
+
   // Keyboard shortcuts: V = select, H = hand (standard design tool convention)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -203,12 +240,28 @@ function MindMapCanvasInner({
   // Guard: only create HMW branch nodes once per mount
   const hmwNodesCreated = useRef(false);
 
-  // Initialize root node if canvas is empty (solo mode only).
-  // In multiplayer per-participant mode (currentOwnerId is set), page.tsx seeds
-  // per-owner roots. Creating an unowned root here would race with Liveblocks
-  // recovery and hide all seeded nodes.
+  // Cleanup: purge stray unowned nodes from store in multiplayer mode.
+  // These can be created by solo-mode init racing with Liveblocks sync.
+  // The render filter above hides them immediately; this effect removes them
+  // from Liveblocks Storage so they don't persist.
+  const cleanupRan = useRef(false);
   useEffect(() => {
-    if (currentOwnerId) return; // Multiplayer seeding handled by page.tsx
+    if (!isMultiplayerIdeation || cleanupRan.current) return;
+    const strays = allMindMapNodes.filter((n) => !n.ownerId);
+    if (strays.length > 0) {
+      cleanupRan.current = true;
+      for (const node of strays) {
+        deleteMindMapNode(node.id);
+      }
+    }
+  }, [isMultiplayerIdeation, allMindMapNodes, deleteMindMapNode]);
+
+  // Initialize root node if canvas is empty (solo mode only).
+  // In multiplayer per-participant mode, useIdeationSeeding seeds per-owner roots.
+  // isMultiplayerIdeation is a stable server-derived flag that never changes when
+  // participants are deleted or the view switches to "All".
+  useEffect(() => {
+    if (isMultiplayerIdeation) return; // Multiplayer — skip solo init
     if (mindMapNodes.length === 0) {
       const rootLabel = challengeStatement || hmwStatement || 'How might we...?';
       const rootNode: MindMapNodeState = {
@@ -223,12 +276,12 @@ function MindMapCanvasInner({
       };
       setMindMapState([rootNode], []);
     }
-  }, [mindMapNodes.length, challengeStatement, hmwStatement, setMindMapState, currentOwnerId]);
+  }, [mindMapNodes.length, challengeStatement, hmwStatement, setMindMapState, isMultiplayerIdeation]);
 
   // Pre-populate HMW branch nodes (runs once, even if root already existed).
-  // Skip in multiplayer per-participant mode — page.tsx seeds per-owner HMW branches.
+  // Skip in multiplayer per-participant mode — useIdeationSeeding seeds per-owner HMW branches.
   useEffect(() => {
-    if (currentOwnerId) { hmwNodesCreated.current = true; return; }
+    if (isMultiplayerIdeation) { hmwNodesCreated.current = true; return; }
     if (hmwNodesCreated.current) return;
     if (!hmwGoals || hmwGoals.length === 0) return;
     // Only add if no hmw-* nodes exist yet
@@ -318,11 +371,13 @@ function MindMapCanvasInner({
 
       // Determine theme color
       let themeColor: ThemeColor;
-      if (parentNode.isRoot) {
+      if (parentNode.isRoot && !isMultiplayerIdeation) {
+        // Solo mode: cycle through colors for different branches
         const existingLevel1Nodes = mindMapNodes.filter((n) => n.level === 1);
         const colorIndex = existingLevel1Nodes.length % THEME_COLORS.length;
         themeColor = THEME_COLORS[colorIndex];
       } else {
+        // Multiplayer or non-root: inherit parent's palette color
         const inheritedColor = THEME_COLORS.find(
           (c) => c.id === parentNode.themeColorId
         );
@@ -355,7 +410,7 @@ function MindMapCanvasInner({
 
       addMindMapNode(newNode, newEdge);
     },
-    [mindMapNodes, mindMapEdges, addMindMapNode, currentOwnerId]
+    [mindMapNodes, mindMapEdges, addMindMapNode, currentOwnerId, isMultiplayerIdeation]
   );
 
   // Callback: Delete node with cascade confirmation
@@ -416,15 +471,6 @@ function MindMapCanvasInner({
         ? { x: basePos.x + offset.x, y: basePos.y + offset.y }
         : basePos;
 
-      // In "All" view, color root nodes with participant's hex color
-      let themeColor = nodeState.themeColor;
-      let themeBgColor = nodeState.themeBgColor;
-      if (nodeState.isRoot && nodeState.ownerId && ownerColors?.[nodeState.ownerId]) {
-        const hex = ownerColors[nodeState.ownerId];
-        themeColor = hex;
-        themeBgColor = `${hex}18`; // ~10% opacity hex suffix
-      }
-
       return {
         id: nodeState.id,
         type: 'mindMapNode',
@@ -433,8 +479,8 @@ function MindMapCanvasInner({
         data: {
           label: nodeState.label,
           themeColorId: nodeState.themeColorId,
-          themeColor,
-          themeBgColor,
+          themeColor: nodeState.themeColor,
+          themeBgColor: nodeState.themeBgColor,
           isRoot: nodeState.isRoot,
           isStarred: nodeState.isStarred,
           level: nodeState.level,
@@ -447,7 +493,7 @@ function MindMapCanvasInner({
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions is a ref
-  }, [mindMapNodes, ownerOffsets, ownerColors, handleLabelChange, handleAddChild, handleDelete, handleToggleStar]);
+  }, [mindMapNodes, ownerOffsets, handleLabelChange, handleAddChild, handleDelete, handleToggleStar]);
 
   // Crazy 8s group node — positioned to the right of the mind map
   const crazy8sNode = useMemo<Node | null>(() => {
@@ -515,13 +561,29 @@ function MindMapCanvasInner({
     });
   }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, slotGroups, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded]);
 
+  // Derive owner theme colors from their root node's stored palette color.
+  // Falls back to the canvas palette by index, or neutral gray.
+  const getOwnerTheme = useCallback((oid: string) => {
+    const rootNode = allMindMapNodes.find((n) => n.isRoot && n.ownerId === oid);
+    const tc = rootNode?.themeColorId
+      ? THEME_COLORS.find((c) => c.id === rootNode.themeColorId)
+      : undefined;
+    if (tc) {
+      return { themeColor: tc.color, themeBgColor: tc.bgColor, accentColor: tc.accentColor };
+    }
+    // Fallback: derive from owner index in allOwnerIds
+    const idx = allOwnerIds?.indexOf(oid) ?? 0;
+    const fallback = THEME_COLORS[idx % THEME_COLORS.length];
+    return { themeColor: fallback.color, themeBgColor: fallback.bgColor, accentColor: fallback.accentColor };
+  }, [allMindMapNodes, allOwnerIds]);
+
   // Owner zone nodes — colored background rectangles behind each participant's tree
   const ownerZoneNodes = useMemo<Node[]>(() => {
     if (!allOwnerIds || allOwnerIds.length <= 1) return [];
 
     // Individual view: show zone for the selected participant only (centered at origin)
     if (currentOwnerId) {
-      const color = ownerColors?.[currentOwnerId] || '#6b7280';
+      const { themeColor, themeBgColor } = getOwnerTheme(currentOwnerId);
       return [{
         id: `${ZONE_NODE_PREFIX}${currentOwnerId}`,
         type: 'ownerZoneNode',
@@ -533,7 +595,8 @@ function MindMapCanvasInner({
         zIndex: -1,
         data: {
           ownerName: ownerNames?.[currentOwnerId] || currentOwnerId,
-          ownerColor: color,
+          ownerThemeColor: themeColor,
+          ownerThemeBgColor: themeBgColor,
         },
       }];
     }
@@ -541,7 +604,7 @@ function MindMapCanvasInner({
     // "All" view: show zones for every participant at their offset
     return allOwnerIds.map((oid) => {
       const offset = ownerOffsets[oid] || { x: 0, y: 0 };
-      const color = ownerColors?.[oid] || '#6b7280';
+      const { themeColor, themeBgColor } = getOwnerTheme(oid);
       return {
         id: `${ZONE_NODE_PREFIX}${oid}`,
         type: 'ownerZoneNode',
@@ -553,11 +616,12 @@ function MindMapCanvasInner({
         zIndex: -1,
         data: {
           ownerName: ownerNames?.[oid] || oid,
-          ownerColor: color,
+          ownerThemeColor: themeColor,
+          ownerThemeBgColor: themeBgColor,
         },
       };
     });
-  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, ownerColors]);
+  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme]);
 
   // Combined nodes array: mind map + owner zones + optional crazy 8s + brain rewriting
   const rfNodes = useMemo(() => {
@@ -709,11 +773,23 @@ function MindMapCanvasInner({
 
   // Add a node (level 1 child of root) with radial placement
   const handleAddNode = useCallback(() => {
-    const existingLevel1Nodes = mindMapNodes.filter((n) => n.level === 1);
-    const colorIndex = existingLevel1Nodes.length % THEME_COLORS.length;
-    const themeColor = THEME_COLORS[colorIndex];
+    // Find the root node — in multiplayer, the root id is `${ownerId}-root`
+    const rootNode = mindMapNodes.find((n) => n.isRoot);
+    if (!rootNode) return;
 
-    const position = computeNewNodePosition('root', mindMapNodes, mindMapEdges);
+    let themeColor: ThemeColor;
+    if (isMultiplayerIdeation) {
+      // Multiplayer: inherit root's palette color for tree consistency
+      const inheritedColor = THEME_COLORS.find((c) => c.id === rootNode.themeColorId);
+      themeColor = inheritedColor || THEME_COLORS[0];
+    } else {
+      // Solo: cycle through colors for different branches
+      const existingLevel1Nodes = mindMapNodes.filter((n) => n.level === 1);
+      const colorIndex = existingLevel1Nodes.length % THEME_COLORS.length;
+      themeColor = THEME_COLORS[colorIndex];
+    }
+
+    const position = computeNewNodePosition(rootNode.id, mindMapNodes, mindMapEdges);
 
     const newNodeId = crypto.randomUUID();
     const newNode: MindMapNodeState = {
@@ -724,20 +800,22 @@ function MindMapCanvasInner({
       themeBgColor: themeColor.bgColor,
       isRoot: false,
       level: 1,
-      parentId: 'root',
+      parentId: rootNode.id,
       position,
+      ...(currentOwnerId && { ownerId: currentOwnerId }),
     };
 
     const newEdge: MindMapEdgeState = {
-      id: `root-${newNodeId}`,
-      source: 'root',
+      id: `${rootNode.id}-${newNodeId}`,
+      source: rootNode.id,
       target: newNodeId,
       themeColor: themeColor.color,
+      ...(currentOwnerId && { ownerId: currentOwnerId }),
     };
 
     addMindMapNode(newNode, newEdge);
     setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
-  }, [mindMapNodes, mindMapEdges, addMindMapNode, fitView]);
+  }, [mindMapNodes, mindMapEdges, addMindMapNode, fitView, isMultiplayerIdeation, currentOwnerId]);
 
   // Auto-layout: recompute all positions using radial algorithm
   const handleAutoLayout = useCallback(() => {
@@ -887,21 +965,32 @@ function MindMapCanvasInner({
                 All
               </Button>
               {allOwnerIds.map((oid) => (
-                <Button
-                  key={oid}
-                  size="sm"
-                  variant={currentOwnerId === oid ? 'secondary' : 'ghost'}
-                  className="text-xs h-7 px-2 gap-1.5"
-                  onClick={() => onOwnerSwitch(oid)}
-                >
-                  {ownerColors?.[oid] && (
+                <div key={oid} className="flex items-center">
+                  <Button
+                    size="sm"
+                    variant={currentOwnerId === oid ? 'secondary' : 'ghost'}
+                    className="text-xs h-7 px-2 gap-1.5"
+                    onClick={() => onOwnerSwitch(oid)}
+                  >
                     <span
                       className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: ownerColors[oid] }}
+                      style={{ backgroundColor: getOwnerTheme(oid).accentColor }}
                     />
+                    {ownerNames?.[oid] || oid}
+                  </Button>
+                  {onDeleteOwner && isFacilitator && oid !== facilitatorOwnerId && (
+                    <button
+                      className="ml-0.5 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      title={`Remove ${ownerNames?.[oid] || 'participant'}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget({ ownerId: oid, name: ownerNames?.[oid] || 'this participant' });
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   )}
-                  {ownerNames?.[oid] || oid}
-                </Button>
+                </div>
               ))}
             </div>
           </Panel>
@@ -985,6 +1074,33 @@ function MindMapCanvasInner({
           </div>
         </Panel>
       </ReactFlow>
+
+      {/* Delete participant confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove participant</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-semibold text-foreground">{deleteTarget?.name}</span> and
+              all their canvas content (mind map nodes and sketches). This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (deleteTarget && onDeleteOwner) {
+                  onDeleteOwner(deleteTarget.ownerId);
+                }
+                setDeleteTarget(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

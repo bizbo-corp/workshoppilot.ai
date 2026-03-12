@@ -1,10 +1,11 @@
 import { cookies } from 'next/headers';
-import { eq, sql } from 'drizzle-orm';
+import { auth } from '@clerk/nextjs/server';
+import { eq, and, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { workshopSessions, sessionParticipants } from '@/db/schema';
 import { createPrefixedId } from '@/lib/ids';
 import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
-import { signGuestCookie, COOKIE_NAME } from '@/lib/auth/guest-cookie';
+import { signGuestCookie, verifyGuestCookie, COOKIE_NAME } from '@/lib/auth/guest-cookie';
 
 /**
  * POST /api/guest-join
@@ -70,6 +71,100 @@ export async function POST(request: Request) {
     return Response.json({ error: 'This workshop session has ended' }, { status: 410 });
   }
 
+  // Clerk-first deduplication: cross-device identity for signed-in guests
+  const { userId: clerkUserId } = await auth();
+
+  const cookieStore = await cookies();
+
+  if (clerkUserId) {
+    const clerkParticipant = await db.query.sessionParticipants.findFirst({
+      where: and(
+        eq(sessionParticipants.clerkUserId, clerkUserId),
+        eq(sessionParticipants.sessionId, workshopSession.id)
+      ),
+    });
+
+    if (clerkParticipant && clerkParticipant.status !== 'removed') {
+      // Reuse existing participant — update name if changed
+      if (clerkParticipant.displayName !== trimmedName) {
+        await db
+          .update(sessionParticipants)
+          .set({ displayName: trimmedName })
+          .where(eq(sessionParticipants.id, clerkParticipant.id));
+      }
+      // Refresh the cookie (resets 8-hour expiry)
+      const signedToken = signGuestCookie({
+        participantId: clerkParticipant.id,
+        workshopId: workshopSession.workshopId,
+        iat: Date.now(),
+      });
+      cookieStore.set(COOKIE_NAME, signedToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 8,
+      });
+      return Response.json({
+        ok: true,
+        participantId: clerkParticipant.id,
+        workshopId: workshopSession.workshopId,
+        sessionId: workshopSession.id,
+        displayName: trimmedName,
+        color: clerkParticipant.color,
+      });
+    }
+    // clerkParticipant not found or removed — fall through to cookie dedup / create new
+  }
+
+  // Cookie deduplication: reuse existing participant if cookie is valid
+  const existingCookie = cookieStore.get(COOKIE_NAME);
+  if (existingCookie?.value) {
+    const payload = verifyGuestCookie(existingCookie.value);
+    if (payload && payload.workshopId === workshopSession.workshopId) {
+      const existing = await db.query.sessionParticipants.findFirst({
+        where: eq(sessionParticipants.id, payload.participantId),
+      });
+      if (existing && existing.status !== 'removed' && existing.sessionId === workshopSession.id) {
+        // Update display name if changed; link Clerk account if present and not yet linked
+        const updates: Partial<{ displayName: string; clerkUserId: string }> = {};
+        if (existing.displayName !== trimmedName) {
+          updates.displayName = trimmedName;
+        }
+        if (clerkUserId && !existing.clerkUserId) {
+          updates.clerkUserId = clerkUserId;
+        }
+        if (Object.keys(updates).length > 0) {
+          await db
+            .update(sessionParticipants)
+            .set(updates)
+            .where(eq(sessionParticipants.id, existing.id));
+        }
+        // Refresh the cookie (resets 8-hour expiry)
+        const signedToken = signGuestCookie({
+          participantId: existing.id,
+          workshopId: workshopSession.workshopId,
+          iat: Date.now(),
+        });
+        cookieStore.set(COOKIE_NAME, signedToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60 * 8,
+        });
+        return Response.json({
+          ok: true,
+          participantId: existing.id,
+          workshopId: workshopSession.workshopId,
+          sessionId: workshopSession.id,
+          displayName: trimmedName,
+          color: existing.color,
+        });
+      }
+    }
+  }
+
   // Count existing participants to assign color slot
   const countResult = await db
     .select({ count: sql<number>`count(*)::int` })
@@ -90,7 +185,7 @@ export async function POST(request: Request) {
     .insert(sessionParticipants)
     .values({
       sessionId: workshopSession.id,
-      clerkUserId: null, // guests have no Clerk account
+      clerkUserId: clerkUserId ?? null,
       liveblocksUserId,
       displayName: trimmedName,
       color,
@@ -107,7 +202,6 @@ export async function POST(request: Request) {
   });
 
   // Set the HttpOnly signed cookie
-  const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, signedToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

@@ -33,30 +33,15 @@ Improve the UX of the chat window when it's in collapsed mode.
 
 I need the facilitator to be able to remove participants from a workshop. 
 
-
-
-
-
-
-
-
-
 ## Concept Development
 
 ## Validate
 
-⏺ Now navigate to this URL in your browser:
 
-  http://localhost:3000/workshop/ses_hl5wohytk59ixz4pqeytex1j/capture-snapshots
 
-  It will:
 
-1. Fetch canvas data for all completed steps via the existing canvas-data API
-2. Render each step off-screen and capture as JPEG
-3. Upload each snapshot to the DB
 
-  When it says "DONE", go back to the workshop page, refresh, then expand the
 
-  sidebar (hover or Cmd+B) — eye icons will appear on completed steps.
 
-✻ Crunched for 2m 0s
+
+

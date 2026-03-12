@@ -1849,7 +1849,7 @@ export function StepContainer({
             workshopId={workshopId}
             participantId={participantId}
             displayName={participantDisplayName || "Participant"}
-            participantColor={participantColor || "#6366f1"}
+            participantColor={participantColor || "#608850"}
             initialMessages={localMessages}
           />
         ) : (

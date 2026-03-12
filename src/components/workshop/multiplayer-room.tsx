@@ -287,7 +287,7 @@ export default function MultiplayerRoom({
         id={getRoomId(workshopId)}
         initialPresence={{
           cursor: null,
-          color: "#6366f1",
+          color: "#608850",
           displayName: "",
           editingDrawingNodeId: null,
         }}
