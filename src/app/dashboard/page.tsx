@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { renameWorkshop, updateWorkshopAppearance } from '@/actions/workshop-actions';
 import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
-import { getStepByOrder } from '@/lib/workshop/step-metadata';
+import { getStepByOrder, getStepById } from '@/lib/workshop/step-metadata';
 import { getWorkshopColor } from '@/lib/workshop/workshop-appearance';
 import { WelcomeModal } from '@/components/dashboard/welcome-modal';
 import { AdminResetOnboarding } from '@/components/dashboard/admin-reset-onboarding';
@@ -89,13 +89,19 @@ export default async function DashboardPage() {
 
   // Find the current step for each workshop and detect completion
   const workshopsWithProgress = userWorkshops.map((workshop) => {
+    // Prefer in_progress step; otherwise pick the highest-order step (furthest reached)
     const currentStepData = workshop.steps.find(
       (step) => step.status === 'in_progress'
-    ) || workshop.steps[0];
+    ) || workshop.steps.reduce<(typeof workshop.steps)[number] | undefined>((highest, step) => {
+      const stepOrder = getStepById(step.stepId)?.order || 0;
+      const highestOrder = highest ? (getStepById(highest.stepId)?.order || 0) : 0;
+      return stepOrder > highestOrder ? step : highest;
+    }, undefined);
 
-    const stepMetadata = getStepByOrder(
-      workshop.steps.findIndex((s) => s.id === currentStepData?.id) + 1 || 1
-    );
+    // Look up metadata by stepId instead of array index
+    const stepMetadata = currentStepData?.stepId
+      ? getStepById(currentStepData.stepId)
+      : getStepByOrder(1);
 
     const step10 = workshop.steps.find((s) => s.stepId === 'validate');
     const isCompleted = step10?.status === 'in_progress' || step10?.status === 'complete';
