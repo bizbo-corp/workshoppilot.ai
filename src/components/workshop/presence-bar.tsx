@@ -131,18 +131,23 @@ export function PresenceBar({
     ? [{ ...self, connectionId: -1, isSelf: true }, ...others.map((o) => ({ ...o, isSelf: false }))]
     : others.map((o) => ({ ...o, isSelf: false }));
 
+  // Stable set of online participant IDs — only changes when actual participants join/leave
+  const onlineIdSet = useMemo(() => {
+    const ids = allParticipants.map((p) => p.participantId).filter(Boolean);
+    return ids.sort().join(',');
+  }, [allParticipants]);
+
   // Fetch all DB participants when expanded to show offline ones with rejoin links
   useEffect(() => {
     if (!expanded || !isFacilitator || !workshopSessionId) return;
     fetch(`/api/participant-activity?sessionId=${workshopSessionId}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((data: OfflineParticipant[]) => {
-        // Filter to those not currently in Liveblocks
-        const onlineIds = new Set(allParticipants.map((p) => p.participantId).filter(Boolean));
+        const onlineIds = new Set(onlineIdSet.split(',').filter(Boolean));
         setOfflineParticipants(data.filter((p) => !onlineIds.has(p.participantId) && p.status === 'active'));
       })
       .catch(() => setOfflineParticipants([]));
-  }, [expanded, isFacilitator, workshopSessionId, allParticipants]);
+  }, [expanded, isFacilitator, workshopSessionId, onlineIdSet]);
 
   const handleCopyRejoinLink = useCallback(async (p: OfflineParticipant) => {
     if (!shareToken || !p.rejoinToken) return;

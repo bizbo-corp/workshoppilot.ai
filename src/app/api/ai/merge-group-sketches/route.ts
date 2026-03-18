@@ -1,6 +1,6 @@
 import { google } from '@ai-sdk/google';
 import { generateImage } from 'ai';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { loadWorkshopContext } from '@/lib/ai/workshop-context';
@@ -8,6 +8,7 @@ import { put } from '@vercel/blob';
 import { deleteBlobUrls } from '@/lib/blob/delete-blob-urls';
 import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
 import { checkImageGenerationCap, imageCapExceededResponse } from '@/lib/ai/image-generation-cap';
+import { isAdmin } from '@/lib/auth/roles';
 
 export const maxDuration = 60;
 
@@ -70,12 +71,22 @@ async function describeSketch(imageBase64: string): Promise<string> {
  * - previousImageUrl?: string (for regeneration — old blob to clean up)
  */
 export async function POST(req: Request) {
-  const { userId } = await auth();
+  const { userId, sessionClaims } = await auth();
   if (!userId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
   }
-  const rl = checkRateLimit(getRateLimitId(req, userId), 'image-gen');
-  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+  let adminUser = isAdmin(sessionClaims);
+  if (!adminUser) {
+    const user = await currentUser();
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const userEmail = user?.emailAddresses?.[0]?.emailAddress;
+    adminUser = !!(adminEmail && userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase());
+  }
+
+  if (!adminUser) {
+    const rl = checkRateLimit(getRateLimitId(req, userId), 'image-gen');
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+  }
 
   try {
     const {
@@ -101,9 +112,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check per-item generation cap
+    // Check per-item generation cap (skip for admin)
     const itemId = `merge:${workshopId}:${groupId || groupLabel}`;
-    const capCheck = await checkImageGenerationCap(itemId);
+    const capCheck = adminUser
+      ? { count: 0, remaining: 999, allowed: true }
+      : await checkImageGenerationCap(itemId);
     if (!capCheck.allowed) {
       return imageCapExceededResponse();
     }
@@ -122,7 +135,8 @@ export async function POST(req: Request) {
 
     // Build the merge prompt
     const parts: string[] = [
-      'Professional hand-drawn sketch in black ink on white paper with selective yellow highlighter accents for emphasis.',
+      'Professional hand-drawn sketch using black ink lines and selective yellow highlighter accents on a plain flat white background.',
+      'The background must be completely plain white — no paper texture, no desk, no table, no surface, no pencils, no pens, no props, no shadows, no photographic staging of any kind. The sketch floats on pure white.',
       'Confident, expressive line work — like a skilled illustrator\'s quick concept sketch.',
       `This is a MERGED concept called "${groupLabel}" that combines the following ${slotData.length} individual ideas into ONE unified design:`,
     ];
@@ -151,6 +165,17 @@ export async function POST(req: Request) {
       'Use only three tones: black ink lines, white paper background, and warm yellow highlighter to draw attention to key elements.',
       'No grayscale shading, no gradients, no other colors. Use yellow sparingly for emphasis.',
       'Do NOT include any people, human figures, or stick figures in the sketch.',
+    );
+
+    // Simplicity & composition constraints
+    parts.push(
+      'IMPORTANT: Show ONE single unified screen or scene — do not show multiple separate screens, devices, or viewpoints. Merge all ideas into one cohesive view.',
+      'Do NOT add any decorative elements, ornamentation, floating objects, background embellishments, pencils, pens, stationery, or props around the sketch. No wooden desks, no paper edges, no staged photography.',
+      'Keep the composition focused and minimal — only draw elements that directly communicate the concept. Every element should serve a clear purpose.',
+      'Fill the frame with the single merged concept — no collages, no exploded views, no surrounding vignettes.',
+    );
+
+    parts.push(
       'Basic boxes and lines for UI elements. Include clean labels and annotations where helpful.',
       'No photorealism, no 3D rendering. Keep it looking like a polished concept sketch.',
     );

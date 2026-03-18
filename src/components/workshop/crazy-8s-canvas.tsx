@@ -310,7 +310,7 @@ export function Crazy8sCanvas({ workshopId, stepId, ownerId, votingMode, onVoteS
   /**
    * Handle slot info change from EzyDraw footer
    */
-  const handleSlotInfoChange = useCallback((updates: { title?: string; description?: string }) => {
+  const handleSlotInfoChange = useCallback((updates: { title?: string; description?: string; sketchPrompt?: string }) => {
     if (!ezyDrawState) return;
     updateCrazy8sSlot(ezyDrawState.slotId, updates);
   }, [ezyDrawState, updateCrazy8sSlot]);

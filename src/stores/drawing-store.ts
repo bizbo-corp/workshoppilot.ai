@@ -272,13 +272,14 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
       },
 
       clearAll: () => {
-        set((state) => {
+        set(() => {
           const emptyElements: DrawingElement[] = [];
           history.clear();
-          history.push({ elements: emptyElements, backgroundImageUrl: state.backgroundImageUrl });
+          history.push({ elements: emptyElements, backgroundImageUrl: null });
 
           return {
             elements: emptyElements,
+            backgroundImageUrl: null,
             selectedElementId: null,
             canUndo: history.canUndo,
             canRedo: history.canRedo,

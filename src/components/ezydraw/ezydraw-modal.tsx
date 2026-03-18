@@ -44,7 +44,7 @@ export interface EzyDrawModalProps {
   canvasSize?: { width: number; height: number };
   slotTitle?: string;
   slotDescription?: string;
-  onSlotInfoChange?: (updates: { title?: string; description?: string }) => void;
+  onSlotInfoChange?: (updates: { title?: string; description?: string; sketchPrompt?: string }) => void;
   workshopId?: string;
   iterationPrompt?: string;
   onIterationPromptChange?: (prompt: string) => void;
@@ -73,7 +73,7 @@ function EzyDrawContent({
   onCancel: () => void;
   slotTitle?: string;
   slotDescription?: string;
-  onSlotInfoChange?: (updates: { title?: string; description?: string }) => void;
+  onSlotInfoChange?: (updates: { title?: string; description?: string; sketchPrompt?: string }) => void;
   workshopId?: string;
   iterationPrompt?: string;
   onIterationPromptChange?: (prompt: string) => void;
@@ -120,11 +120,51 @@ function EzyDrawContent({
 
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
-  // Editable prompt — initialized from sketchPrompt or built from title + description
+  // Editable prompt — AI-woven concept prompt that user can edit before generating
   const isGenerateMode = !!(workshopId && !onIterationPromptChange);
   const [editablePrompt, setEditablePrompt] = useState(
-    () => sketchPrompt || [slotTitle, slotDescription].filter(Boolean).join(': ')
+    () => sketchPrompt || ''
   );
+  const [isRewritingPrompt, setIsRewritingPrompt] = useState(false);
+
+  // Auto-generate a woven prompt when modal opens with title but no existing sketchPrompt
+  useEffect(() => {
+    if (!isGenerateMode || !workshopId || !slotTitle || sketchPrompt) return;
+
+    let cancelled = false;
+    setIsRewritingPrompt(true);
+
+    fetch('/api/ai/rewrite-sketch-prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workshopId,
+        ideaTitle: slotTitle,
+        ideaDescription: slotDescription || '',
+      }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.conceptPrompt) {
+          setEditablePrompt(data.conceptPrompt);
+          onSlotInfoChange?.({ sketchPrompt: data.conceptPrompt });
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIsRewritingPrompt(false);
+      });
+
+    return () => { cancelled = true; };
+  // Run once on mount — deps are stable at open time
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist prompt edits back to the slot store
+  const handleEditablePromptChange = useCallback((value: string) => {
+    setEditablePrompt(value);
+    onSlotInfoChange?.({ sketchPrompt: value });
+  }, [onSlotInfoChange]);
 
   // "Use my drawing" checkbox — default true when canvas has content
   const hasCanvasContent = getSnapshot().length > 0 || !!backgroundImageUrl;
@@ -222,7 +262,8 @@ function EzyDrawContent({
         iterationPrompt={iterationPrompt}
         onIterationPromptChange={onIterationPromptChange}
         editablePrompt={isGenerateMode ? editablePrompt : undefined}
-        onEditablePromptChange={isGenerateMode ? setEditablePrompt : undefined}
+        onEditablePromptChange={isGenerateMode ? handleEditablePromptChange : undefined}
+        isRewritingPrompt={isGenerateMode ? isRewritingPrompt : undefined}
         useExistingDrawing={useExistingDrawing}
         onUseExistingDrawingChange={isGenerateMode ? setUseExistingDrawing : undefined}
         hasCanvasContent={hasCanvasContent}

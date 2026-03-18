@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useDrawingStore } from '@/providers/drawing-store-provider';
 import {
@@ -47,6 +47,17 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from '@/components/ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { EmojiPickerTool } from '@/components/ezydraw/tools/emoji-picker-tool';
 import { StampPickerTool } from '@/components/ezydraw/tools/stamp-picker-tool';
@@ -58,13 +69,14 @@ interface EzyDrawFooterProps {
   onCancel: () => void;
   slotTitle?: string;
   slotDescription?: string;
-  onSlotInfoChange?: (updates: { title?: string; description?: string }) => void;
+  onSlotInfoChange?: (updates: { title?: string; description?: string; sketchPrompt?: string }) => void;
   onGenerateImage?: () => void;
   isGeneratingImage?: boolean;
   iterationPrompt?: string;
   onIterationPromptChange?: (prompt: string) => void;
   editablePrompt?: string;
   onEditablePromptChange?: (prompt: string) => void;
+  isRewritingPrompt?: boolean;
   useExistingDrawing?: boolean;
   onUseExistingDrawingChange?: (value: boolean) => void;
   hasCanvasContent?: boolean;
@@ -583,6 +595,7 @@ export function EzyDrawFooter({
   onIterationPromptChange,
   editablePrompt,
   onEditablePromptChange,
+  isRewritingPrompt,
   useExistingDrawing,
   onUseExistingDrawingChange,
   hasCanvasContent,
@@ -596,11 +609,22 @@ export function EzyDrawFooter({
   useHotkeys('mod+z', () => undo(), { enabled: canUndo });
   useHotkeys('mod+shift+z', () => redo(), { enabled: canRedo });
 
-  const handleClearAll = () => {
-    if (window.confirm('Clear entire drawing? This cannot be undone.')) {
-      clearAll();
-    }
-  };
+  const handleClearAll = useCallback(() => {
+    clearAll();
+  }, [clearAll]);
+
+  // Auto-resize textarea refs
+  const descRef = useRef<HTMLTextAreaElement>(null);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResize = useCallback((el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }, []);
+
+  useEffect(() => { autoResize(descRef.current); }, [slotDescription, autoResize]);
+  useEffect(() => { autoResize(promptRef.current); }, [editablePrompt, autoResize]);
 
   return (
     <div className="z-10 shrink-0 border-t bg-card/95 backdrop-blur">
@@ -620,11 +644,12 @@ export function EzyDrawFooter({
           <div className="flex items-start gap-1.5">
             <span className="text-[10px] font-medium text-muted-foreground shrink-0 w-8 pt-0.5">Desc</span>
             <textarea
+              ref={descRef}
               value={slotDescription || ''}
               onChange={(e) => onSlotInfoChange({ description: e.target.value })}
               placeholder="Brief description..."
-              rows={2}
-              className="min-w-0 flex-1 resize-none bg-transparent text-xs outline-none placeholder:text-muted-foreground/40 leading-relaxed"
+              rows={1}
+              className="min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-xs outline-none placeholder:text-muted-foreground/40 leading-relaxed"
             />
           </div>
         </div>
@@ -659,13 +684,18 @@ export function EzyDrawFooter({
             </label>
           )}
           <div className="flex items-start gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500 mt-0.5" />
+            {isRewritingPrompt ? (
+              <Loader2 className="h-3.5 w-3.5 shrink-0 text-amber-500 mt-0.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500 mt-0.5" />
+            )}
             <textarea
+              ref={promptRef}
               value={editablePrompt || ''}
               onChange={(e) => onEditablePromptChange(e.target.value)}
-              placeholder="Describe what to generate..."
-              rows={2}
-              className="min-w-0 flex-1 resize-none bg-transparent text-xs outline-none placeholder:text-amber-400/60 leading-relaxed"
+              placeholder={isRewritingPrompt ? 'Writing concept prompt...' : 'Describe what to generate...'}
+              rows={1}
+              className="min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-xs outline-none placeholder:text-amber-400/60 leading-relaxed"
             />
           </div>
         </div>
@@ -698,15 +728,32 @@ export function EzyDrawFooter({
 
           <div className="mx-1 h-6 w-px bg-border" />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleClearAll}
-            title="Clear all"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="Clear all"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear entire drawing?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will remove all elements and any generated image. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClearAll} variant="destructive">
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         {/* Center: AI generate */}
