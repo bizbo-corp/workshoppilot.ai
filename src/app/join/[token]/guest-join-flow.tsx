@@ -31,6 +31,7 @@ const SESSION_STORAGE_KEY = 'wp_guest_name';
 type StoredGuestName = {
   name: string;
   workshopId: string;
+  rejoinToken?: string;
 };
 
 interface GuestJoinFlowProps {
@@ -43,6 +44,7 @@ interface GuestJoinFlowProps {
   aiSessionId: string | null;
   currentStepOrder: number;
   clerkDisplayName: string | null;
+  rejoinToken?: string;
 }
 
 type FlowState =
@@ -61,6 +63,7 @@ export function GuestJoinFlow({
   aiSessionId,
   currentStepOrder,
   clerkDisplayName,
+  rejoinToken: rejoinTokenProp,
 }: GuestJoinFlowProps) {
   const [state, setState] = useState<FlowState>({ stage: 'loading' });
 
@@ -68,18 +71,41 @@ export function GuestJoinFlow({
     // Priority 1: Clerk user detected server-side — auto-join with Clerk name
     if (clerkDisplayName) {
       setState({ stage: 'auto_rejoining' });
-      autoRejoin(clerkDisplayName);
+      autoRejoin(clerkDisplayName, rejoinTokenProp);
       return;
     }
 
-    // Priority 2: Check sessionStorage for returning guest
+    // Priority 2: Rejoin token from URL — auto-join without name (use placeholder)
+    if (rejoinTokenProp) {
+      // Check sessionStorage for a stored name to use with the rejoin token
+      let storedName: string | undefined;
+      try {
+        const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored) as StoredGuestName;
+          if (parsed.workshopId === workshopId && parsed.name) {
+            storedName = parsed.name;
+          }
+        }
+      } catch { /* ignore */ }
+
+      if (storedName) {
+        setState({ stage: 'auto_rejoining' });
+        autoRejoin(storedName, rejoinTokenProp);
+        return;
+      }
+      // No stored name but have rejoin token — show modal so they can enter name
+      // (the rejoinToken will be passed to the modal for the API call)
+    }
+
+    // Priority 3: Check sessionStorage for returning guest
     try {
       const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as StoredGuestName;
         if (parsed.workshopId === workshopId && parsed.name) {
           setState({ stage: 'auto_rejoining' });
-          autoRejoin(parsed.name);
+          autoRejoin(parsed.name, parsed.rejoinToken);
           return;
         }
       }
@@ -91,12 +117,16 @@ export function GuestJoinFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const autoRejoin = async (name: string) => {
+  const autoRejoin = async (name: string, rToken?: string) => {
     try {
       const response = await fetch('/api/guest-join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shareToken: token, displayName: name }),
+        body: JSON.stringify({
+          shareToken: token,
+          displayName: name,
+          ...(rToken ? { rejoinToken: rToken } : {}),
+        }),
       });
 
       if (!response.ok) {
@@ -105,22 +135,40 @@ export function GuestJoinFlow({
         return;
       }
 
-      const data = await response.json() as GuestJoinResponse;
-      handleJoined(data);
+      const data = await response.json();
+
+      // Name-match detected — fall through to modal so user can confirm
+      if (data.nameMatch) {
+        setState({ stage: 'modal' });
+        return;
+      }
+
+      handleJoined(data as GuestJoinResponse);
     } catch {
       setState({ stage: 'modal' });
     }
   };
 
   const handleJoined = (data: GuestJoinResponse) => {
-    // Persist guest name for page-refresh recovery
+    // Persist guest name + rejoin token for page-refresh recovery
     try {
       sessionStorage.setItem(
         SESSION_STORAGE_KEY,
-        JSON.stringify({ name: data.displayName, workshopId: data.workshopId })
+        JSON.stringify({
+          name: data.displayName,
+          workshopId: data.workshopId,
+          rejoinToken: data.rejoinToken,
+        })
       );
     } catch {
       // sessionStorage unavailable — continue without persistence
+    }
+
+    // Update URL to include rejoin token (no navigation, just updates URL bar)
+    if (data.rejoinToken) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('r', data.rejoinToken);
+      history.replaceState(null, '', url.toString());
     }
 
     setState({ stage: 'joined', guestData: data });
@@ -143,6 +191,7 @@ export function GuestJoinFlow({
         shareToken={token}
         workshopTitle={workshopTitle}
         facilitatorName={facilitatorName}
+        rejoinToken={rejoinTokenProp}
         onJoined={handleJoined}
       />
     );

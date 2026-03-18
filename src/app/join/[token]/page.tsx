@@ -17,6 +17,7 @@
  */
 
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/client';
@@ -25,10 +26,12 @@ import { GuestJoinFlow } from './guest-join-flow';
 
 interface JoinPageProps {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ r?: string }>;
 }
 
-export default async function JoinPage({ params }: JoinPageProps) {
+export default async function JoinPage({ params, searchParams }: JoinPageProps) {
   const { token } = await params;
+  const { r: rejoinToken } = await searchParams;
 
   // Validate share token and fetch session + workshop metadata
   const workshopSession = await db.query.workshopSessions.findFirst({
@@ -90,6 +93,13 @@ export default async function JoinPage({ params }: JoinPageProps) {
   let clerkDisplayName: string | null = null;
   const { userId } = await auth();
   if (userId) {
+    // If this Clerk user is the session owner, redirect to the workshop
+    // instead of creating a duplicate participant
+    if (ownerParticipant?.clerkUserId === userId) {
+      const stepOrder = activeStep?.stepDefinition?.order ?? 1;
+      redirect(`/workshop/${aiSession?.id ?? workshopSession.workshopId}/step/${stepOrder}`);
+    }
+
     const user = await currentUser();
     const raw = user?.fullName ?? user?.username ?? '';
     const trimmed = raw.trim().slice(0, 30);
@@ -110,6 +120,7 @@ export default async function JoinPage({ params }: JoinPageProps) {
         aiSessionId={aiSession?.id ?? null}
         currentStepOrder={activeStep?.stepDefinition?.order ?? 1}
         clerkDisplayName={clerkDisplayName}
+        rejoinToken={rejoinToken}
       />
     </div>
   );

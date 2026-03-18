@@ -58,6 +58,7 @@ export async function GET(req: Request) {
     displayName: p.displayName,
     color: p.color,
     status: p.status,
+    rejoinToken: p.rejoinToken,
     messageCount: countMap.get(p.id)?.count || 0,
     lastActivity: countMap.get(p.id)?.lastActivity || null,
   }));

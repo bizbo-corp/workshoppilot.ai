@@ -59,6 +59,14 @@ function getInitials(name: string): string {
   );
 }
 
+type OfflineParticipant = {
+  participantId: string;
+  displayName: string;
+  color: string;
+  status: string;
+  rejoinToken: string | null;
+};
+
 interface PresenceBarProps {
   shareToken?: string | null;
   workshopSessionId?: string | null;
@@ -87,8 +95,10 @@ export function PresenceBar({
 }: PresenceBarProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedRejoinId, setCopiedRejoinId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null); // participantId pending confirmation
   const [removeLoading, setRemoveLoading] = useState(false);
+  const [offlineParticipants, setOfflineParticipants] = useState<OfflineParticipant[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const idleIds = useIdleStatus();
   const broadcast = useBroadcastEvent();
@@ -120,6 +130,32 @@ export function PresenceBar({
   const allParticipants = self
     ? [{ ...self, connectionId: -1, isSelf: true }, ...others.map((o) => ({ ...o, isSelf: false }))]
     : others.map((o) => ({ ...o, isSelf: false }));
+
+  // Fetch all DB participants when expanded to show offline ones with rejoin links
+  useEffect(() => {
+    if (!expanded || !isFacilitator || !workshopSessionId) return;
+    fetch(`/api/participant-activity?sessionId=${workshopSessionId}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: OfflineParticipant[]) => {
+        // Filter to those not currently in Liveblocks
+        const onlineIds = new Set(allParticipants.map((p) => p.participantId).filter(Boolean));
+        setOfflineParticipants(data.filter((p) => !onlineIds.has(p.participantId) && p.status === 'active'));
+      })
+      .catch(() => setOfflineParticipants([]));
+  }, [expanded, isFacilitator, workshopSessionId, allParticipants]);
+
+  const handleCopyRejoinLink = useCallback(async (p: OfflineParticipant) => {
+    if (!shareToken || !p.rejoinToken) return;
+    const url = `${window.location.origin}/join/${shareToken}?r=${p.rejoinToken}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedRejoinId(p.participantId);
+      toast(`Rejoin link copied for ${p.displayName}`, { duration: 2000 });
+      setTimeout(() => setCopiedRejoinId(null), 2000);
+    } catch {
+      toast.error('Failed to copy link');
+    }
+  }, [shareToken]);
 
   const completedVoterIds = useMemo(() => {
     if (votingSession.status !== 'open') return new Set<string>();
@@ -232,7 +268,7 @@ export function PresenceBar({
       {expanded && (
         <div className="absolute top-full right-0 mt-2 bg-card rounded-xl shadow-lg border border-border p-3 min-w-[240px] max-w-[300px] animate-in fade-in-0 zoom-in-95 duration-150 z-50">
           <div className="text-xs font-medium text-muted-foreground mb-2">
-            Participants ({allParticipants.length})
+            Participants ({allParticipants.length + offlineParticipants.length})
           </div>
 
           {/* Share link — facilitator only */}
@@ -313,6 +349,42 @@ export function PresenceBar({
               </div>
             );
           })}
+
+          {/* Offline participants — not currently connected but in the DB */}
+          {isFacilitator && offlineParticipants.length > 0 && (
+            <>
+              <div className="text-[10px] font-medium text-muted-foreground mt-2 mb-1 uppercase tracking-wide">
+                Offline
+              </div>
+              {offlineParticipants.map((p) => (
+                <div key={p.participantId} className="flex items-center gap-2 py-1.5">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0 opacity-50"
+                    style={{ backgroundColor: p.color }}
+                  >
+                    {getInitials(p.displayName)}
+                  </div>
+                  <span className="text-sm text-muted-foreground flex-1 truncate">
+                    {p.displayName}
+                  </span>
+                  <span className="w-2 h-2 rounded-full shrink-0 bg-muted-foreground/30" />
+                  {shareToken && p.rejoinToken && (
+                    <button
+                      onClick={() => handleCopyRejoinLink(p)}
+                      className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                      title={`Copy rejoin link for ${p.displayName}`}
+                    >
+                      {copiedRejoinId === p.participantId ? (
+                        <Check className="w-3.5 h-3.5 text-green-600" />
+                      ) : (
+                        <Link2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>

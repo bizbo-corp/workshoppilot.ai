@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { cookies } from 'next/headers';
 import { auth } from '@clerk/nextjs/server';
 import { eq, and, sql } from 'drizzle-orm';
@@ -36,7 +37,13 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { shareToken, displayName } = body as Record<string, unknown>;
+  const {
+    shareToken,
+    displayName,
+    rejoinToken: rejoinTokenParam,
+    claimParticipantId,
+    skipNameMatch,
+  } = body as Record<string, unknown>;
 
   // Validate shareToken
   if (!shareToken || typeof shareToken !== 'string') {
@@ -71,11 +78,64 @@ export async function POST(request: Request) {
     return Response.json({ error: 'This workshop session has ended' }, { status: 410 });
   }
 
-  // Clerk-first deduplication: cross-device identity for signed-in guests
   const { userId: clerkUserId } = await auth();
-
   const cookieStore = await cookies();
 
+  // Dedup priority: rejoinToken → Clerk → cookie → name-match → create new
+  // rejoinToken first because it represents explicit intent (facilitator shared
+  // a participant-specific link), overriding ambient Clerk identity.
+
+  // 1. Rejoin-token deduplication: cross-device/browser reconnection via URL param
+  if (rejoinTokenParam && typeof rejoinTokenParam === 'string') {
+    const tokenParticipant = await db.query.sessionParticipants.findFirst({
+      where: and(
+        eq(sessionParticipants.rejoinToken, rejoinTokenParam),
+        eq(sessionParticipants.sessionId, workshopSession.id)
+      ),
+    });
+
+    if (tokenParticipant && tokenParticipant.status !== 'removed') {
+      // Update name if changed; link Clerk account if present
+      const updates: Partial<{ displayName: string; clerkUserId: string }> = {};
+      if (tokenParticipant.displayName !== trimmedName) {
+        updates.displayName = trimmedName;
+      }
+      if (clerkUserId && !tokenParticipant.clerkUserId) {
+        updates.clerkUserId = clerkUserId;
+      }
+      if (Object.keys(updates).length > 0) {
+        await db
+          .update(sessionParticipants)
+          .set(updates)
+          .where(eq(sessionParticipants.id, tokenParticipant.id));
+      }
+      // Set the cookie for this browser
+      const signedToken = signGuestCookie({
+        participantId: tokenParticipant.id,
+        workshopId: workshopSession.workshopId,
+        iat: Date.now(),
+      });
+      cookieStore.set(COOKIE_NAME, signedToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 8,
+      });
+      return Response.json({
+        ok: true,
+        participantId: tokenParticipant.id,
+        workshopId: workshopSession.workshopId,
+        sessionId: workshopSession.id,
+        displayName: trimmedName,
+        color: tokenParticipant.color,
+        rejoinToken: tokenParticipant.rejoinToken,
+      });
+    }
+    // Token not found or participant removed — fall through
+  }
+
+  // 2. Clerk deduplication: cross-device identity for signed-in users
   if (clerkUserId) {
     const clerkParticipant = await db.query.sessionParticipants.findFirst({
       where: and(
@@ -112,9 +172,10 @@ export async function POST(request: Request) {
         sessionId: workshopSession.id,
         displayName: trimmedName,
         color: clerkParticipant.color,
+        rejoinToken: clerkParticipant.rejoinToken,
       });
     }
-    // clerkParticipant not found or removed — fall through to cookie dedup / create new
+    // clerkParticipant not found or removed — fall through
   }
 
   // Cookie deduplication: reuse existing participant if cookie is valid
@@ -160,8 +221,81 @@ export async function POST(request: Request) {
           sessionId: workshopSession.id,
           displayName: trimmedName,
           color: existing.color,
+          rejoinToken: existing.rejoinToken,
         });
       }
+    }
+  }
+
+  // Name-match claim: reclaim a specific participant by ID
+  if (claimParticipantId && typeof claimParticipantId === 'string') {
+    const claimTarget = await db.query.sessionParticipants.findFirst({
+      where: and(
+        eq(sessionParticipants.id, claimParticipantId),
+        eq(sessionParticipants.sessionId, workshopSession.id)
+      ),
+    });
+
+    if (claimTarget && claimTarget.status !== 'removed') {
+      // Update name if changed; link Clerk account if present
+      const updates: Partial<{ displayName: string; clerkUserId: string }> = {};
+      if (claimTarget.displayName !== trimmedName) {
+        updates.displayName = trimmedName;
+      }
+      if (clerkUserId && !claimTarget.clerkUserId) {
+        updates.clerkUserId = clerkUserId;
+      }
+      if (Object.keys(updates).length > 0) {
+        await db
+          .update(sessionParticipants)
+          .set(updates)
+          .where(eq(sessionParticipants.id, claimTarget.id));
+      }
+      const signedToken = signGuestCookie({
+        participantId: claimTarget.id,
+        workshopId: workshopSession.workshopId,
+        iat: Date.now(),
+      });
+      cookieStore.set(COOKIE_NAME, signedToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 8,
+      });
+      return Response.json({
+        ok: true,
+        participantId: claimTarget.id,
+        workshopId: workshopSession.workshopId,
+        sessionId: workshopSession.id,
+        displayName: trimmedName,
+        color: claimTarget.color,
+        rejoinToken: claimTarget.rejoinToken,
+      });
+    }
+    // Claim target not found or removed — fall through to create new
+  }
+
+  // Name-match detection: prompt guest to reclaim if name matches an existing participant
+  if (!skipNameMatch) {
+    const nameMatch = await db.query.sessionParticipants.findFirst({
+      where: and(
+        eq(sessionParticipants.sessionId, workshopSession.id),
+        eq(sessionParticipants.status, 'active'),
+        sql`lower(${sessionParticipants.displayName}) = lower(${trimmedName})`
+      ),
+    });
+
+    if (nameMatch) {
+      return Response.json({
+        ok: false,
+        nameMatch: true,
+        existingParticipant: {
+          id: nameMatch.id,
+          displayName: nameMatch.displayName,
+          color: nameMatch.color,
+        },
+      });
     }
   }
 
@@ -180,6 +314,9 @@ export async function POST(request: Request) {
   // Generate a unique Liveblocks user ID for this guest
   const liveblocksUserId = createPrefixedId('guest');
 
+  // Generate a URL-safe rejoin token for cross-device reconnection
+  const newRejoinToken = randomBytes(12).toString('base64url');
+
   // Insert the session participant record
   const [participant] = await db
     .insert(sessionParticipants)
@@ -191,6 +328,7 @@ export async function POST(request: Request) {
       color,
       role: 'participant',
       status: 'active',
+      rejoinToken: newRejoinToken,
     })
     .returning();
 
@@ -217,5 +355,6 @@ export async function POST(request: Request) {
     sessionId: workshopSession.id,
     displayName: trimmedName,
     color,
+    rejoinToken: participant.rejoinToken,
   });
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronRight, MessageSquare, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, MessageSquare, Loader2, Link2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 
 type ParticipantSummary = {
@@ -10,6 +11,7 @@ type ParticipantSummary = {
   displayName: string;
   color: string;
   status: string;
+  rejoinToken: string | null;
   messageCount: number;
   lastActivity: string | null;
 };
@@ -24,14 +26,16 @@ type ChatMessage = {
 interface ParticipantOverviewProps {
   sessionId: string;
   stepId: string;
+  shareToken?: string;
 }
 
-export function ParticipantOverview({ sessionId, stepId }: ParticipantOverviewProps) {
+export function ParticipantOverview({ sessionId, stepId, shareToken }: ParticipantOverviewProps) {
   const [participants, setParticipants] = React.useState<ParticipantSummary[]>([]);
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [chatHistory, setChatHistory] = React.useState<ChatMessage[]>([]);
   const [loadingChat, setLoadingChat] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
+  const [copiedId, setCopiedId] = React.useState<string | null>(null);
 
   // Fetch participant activity
   const fetchActivity = React.useCallback(async () => {
@@ -53,6 +57,19 @@ export function ParticipantOverview({ sessionId, stepId }: ParticipantOverviewPr
     const interval = setInterval(fetchActivity, 15000); // Poll every 15s
     return () => clearInterval(interval);
   }, [fetchActivity]);
+
+  const handleCopyRejoinLink = React.useCallback(async (p: ParticipantSummary) => {
+    if (!shareToken || !p.rejoinToken) return;
+    const url = `${window.location.origin}/join/${shareToken}?r=${p.rejoinToken}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(p.participantId);
+      toast(`Rejoin link copied for ${p.displayName}`, { duration: 2000 });
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      toast.error("Could not copy link");
+    }
+  }, [shareToken]);
 
   // Load chat history for a participant
   const handleExpand = React.useCallback(async (participantId: string) => {
@@ -111,6 +128,22 @@ export function ParticipantOverview({ sessionId, stepId }: ParticipantOverviewPr
               <MessageSquare className="h-3 w-3" />
               {p.messageCount}
             </span>
+            {shareToken && p.rejoinToken && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyRejoinLink(p);
+                }}
+                className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                title={`Copy rejoin link for ${p.displayName}`}
+              >
+                {copiedId === p.participantId ? (
+                  <Check className="h-3.5 w-3.5 text-green-600" />
+                ) : (
+                  <Link2 className="h-3.5 w-3.5" />
+                )}
+              </button>
+            )}
             {expandedId === p.participantId ? (
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             ) : (

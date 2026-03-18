@@ -2206,7 +2206,7 @@ export function StepContainer({
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <ParticipantOverview sessionId={sessionId} stepId={step.id} />
+              <ParticipantOverview sessionId={sessionId} stepId={step.id} shareToken={shareToken ?? undefined} />
             </div>
           )}
         </>

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { createPrefixedId } from '@/lib/ids';
 import { workshopSessions } from './workshop-sessions';
 
@@ -40,6 +40,8 @@ export const sessionParticipants = pgTable(
       .defaultNow(),
     // Updated on Liveblocks presence events; 'away' triggered after ~30-60s of inactivity
     lastSeenAt: timestamp('last_seen_at', { mode: 'date', precision: 3 }),
+    // Per-participant token for cross-device/browser rejoin via URL param (?r=TOKEN)
+    rejoinToken: text('rejoin_token'),
   },
   (table) => ({
     sessionIdIdx: index('session_participants_session_id_idx').on(table.sessionId),
@@ -47,5 +49,6 @@ export const sessionParticipants = pgTable(
     liveblocksUserIdIdx: index('session_participants_liveblocks_user_id_idx').on(
       table.liveblocksUserId
     ),
+    rejoinTokenIdx: uniqueIndex('session_participants_rejoin_token_idx').on(table.rejoinToken),
   })
 );
