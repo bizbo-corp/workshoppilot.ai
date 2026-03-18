@@ -260,7 +260,7 @@ export function Crazy8sCanvas({ workshopId, stepId, ownerId, votingMode, onVoteS
 
         if (response.success) {
           console.log('[drawing-save] Update success, pngUrl:', response.pngUrl.substring(0, 80));
-          updateCrazy8sSlot(slotId, { imageUrl: response.pngUrl });
+          updateCrazy8sSlot(slotId, { imageUrl: response.pngUrl, isDirty: true });
         } else {
           console.error('[drawing-save] Update failed:', response.error);
         }
@@ -280,6 +280,7 @@ export function Crazy8sCanvas({ workshopId, stepId, ownerId, votingMode, onVoteS
           updateCrazy8sSlot(slotId, {
             drawingId: response.drawingId,
             imageUrl: response.pngUrl,
+            isDirty: true,
           });
         } else {
           console.error('[drawing-save] Save failed:', response.error);
@@ -296,14 +297,14 @@ export function Crazy8sCanvas({ workshopId, stepId, ownerId, votingMode, onVoteS
    * Handle title change in grid
    */
   const handleTitleChange = (slotId: string, title: string) => {
-    updateCrazy8sSlot(slotId, { title });
+    updateCrazy8sSlot(slotId, { title, isDirty: true });
   };
 
   /**
    * Handle description change in grid
    */
   const handleDescriptionChange = (slotId: string, description: string) => {
-    updateCrazy8sSlot(slotId, { description });
+    updateCrazy8sSlot(slotId, { description, isDirty: true });
   };
 
   /**
@@ -402,6 +403,8 @@ export function Crazy8sCanvas({ workshopId, stepId, ownerId, votingMode, onVoteS
           slotDescription={currentSlot?.description}
           onSlotInfoChange={handleSlotInfoChange}
           workshopId={workshopId}
+          slotId={ezyDrawState.slotId}
+          sketchPrompt={currentSlot?.sketchPrompt}
         />
       )}
     </div>

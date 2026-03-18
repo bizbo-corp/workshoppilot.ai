@@ -74,7 +74,7 @@ function buildSketchPrompt(params: {
     'Professional hand-drawn sketch in black ink on white paper with selective yellow highlighter accents for emphasis.',
     'Confident, expressive line work — like a skilled illustrator\'s quick concept sketch. Lines should feel intentional and assured but not rigid, mechanical, or too perfect.',
     `The sketch shows ${usageContext}.`,
-    `Concept: "${ideaTitle}" — ${ideaDescription}.`,
+    ...(ideaTitle ? [`Concept: "${ideaTitle}"${ideaDescription ? ` — ${ideaDescription}` : ''}.`] : []),
   ];
 
   // Add workshop context for richer generation
@@ -150,9 +150,9 @@ export async function POST(req: Request) {
       slotId,
     } = await req.json();
 
-    if (!workshopId || !ideaTitle) {
+    if (!workshopId || (!ideaTitle && !additionalPrompt)) {
       return new Response(
-        JSON.stringify({ error: 'workshopId and ideaTitle are required' }),
+        JSON.stringify({ error: 'workshopId and either ideaTitle or additionalPrompt are required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
     }

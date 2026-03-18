@@ -30,8 +30,8 @@ export type Crazy8sGroupNodeData = {
   onStartMerge?: (groupId: string) => void;
   // Inline results control (multiplayer "All" view keeps grid visible after voting)
   showResultsInline?: boolean;
-  // Sync starred mind map nodes → slot titles
-  onSyncStars?: () => void;
+  // Sync starred mind map nodes → slot titles (may be async for AI enhancement)
+  onSyncStars?: () => void | Promise<void>;
 };
 
 export type Crazy8sGroupNode = Node<Crazy8sGroupNodeData, 'crazy8sGroupNode'>;
@@ -67,6 +67,7 @@ function countSelectionUnits(selectedSlotIds: string[], slotGroups: SlotGroup[])
 export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const allCrazy8sSlots = useCanvasStore((s) => s.crazy8sSlots);
   const slotGroups = useCanvasStore((s) => s.slotGroups);
   const addSlotGroup = useCanvasStore((s) => s.addSlotGroup);
@@ -391,12 +392,16 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
           <div className="flex items-center gap-2">
             {data.onSyncStars && (
               <button
-                onClick={data.onSyncStars}
-                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40 transition-colors"
+                onClick={async () => {
+                  setIsSyncing(true);
+                  try { await data.onSyncStars?.(); } finally { setIsSyncing(false); }
+                }}
+                disabled={isSyncing}
+                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40 transition-colors disabled:opacity-50"
                 title="Update slot titles from starred mind map nodes"
               >
-                <Star className="h-3.5 w-3.5 fill-current" />
-                Sync Stars
+                {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className="h-3.5 w-3.5 fill-current" />}
+                {isSyncing ? 'Syncing...' : 'Sync Stars'}
               </button>
             )}
             {data.onSave && hasDrawings && (

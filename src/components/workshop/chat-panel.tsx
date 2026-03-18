@@ -1240,6 +1240,7 @@ export function ChatPanel({
         const newNode: MindMapNodeState = {
           id: newId,
           label: parsed.label,
+          description: parsed.description,
           themeColorId: parentNode.themeColorId,
           themeColor: parentNode.themeColor,
           themeBgColor: parentNode.themeBgColor,
@@ -1281,6 +1282,7 @@ export function ChatPanel({
         const newNode: MindMapNodeState = {
           id: newId,
           label: parsed.label,
+          description: parsed.description,
           themeColorId: themeColor.id,
           themeColor: themeColor.color,
           themeBgColor: themeColor.bgColor,

@@ -494,7 +494,7 @@ export function assembleMindMapCanvasContext(mindMapNodes: MindMapNodeState[], m
     const ideas = childrenOf.get(branch.id) || [];
     if (ideas.length > 0) {
       for (const idea of ideas) {
-        lines.push(`  - ${idea.label}`);
+        lines.push(`  - ${idea.label}${idea.description ? ` — ${idea.description}` : ''}`);
       }
     } else {
       lines.push(`  (no solution directions yet)`);

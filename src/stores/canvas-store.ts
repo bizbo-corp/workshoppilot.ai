@@ -30,6 +30,7 @@ export type GridColumn = {
 export type MindMapNodeState = {
   id: string;
   label: string;
+  description?: string;   // 1-2 sentence expansion of the label
   themeColorId: string;
   themeColor: string;
   themeBgColor: string;

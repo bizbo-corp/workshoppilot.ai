@@ -7,6 +7,7 @@ import type { MindMapNodeState } from '@/stores/canvas-store';
 
 export type MindMapNodeParsed = {
   label: string;
+  description?: string; // 1-2 sentence expansion of the label
   theme?: string; // Parent theme label (omitted for theme-level nodes)
   isWildCard?: boolean;
 };
@@ -31,10 +32,12 @@ export function parseMindMapNodes(content: string): {
     if (!label) continue;
 
     const themeMatch = attrs.match(/theme\s*=\s*"([^"]+)"/i);
+    const descMatch = attrs.match(/desc\s*=\s*"([^"]+)"/i);
     const isWildCard = /wildcard/i.test(attrs);
 
     nodes.push({
       label,
+      description: descMatch?.[1],
       theme: themeMatch?.[1],
       isWildCard,
     });
@@ -54,6 +57,7 @@ export function parseMindMapNodes(content: string): {
     if (!label) continue;
 
     let theme: string | undefined;
+    let description: string | undefined;
     let isWildCard = false;
 
     for (let i = 1; i < parts.length; i++) {
@@ -61,13 +65,17 @@ export function parseMindMapNodes(content: string): {
       if (theme !== undefined) {
         if (/^wild\s*card$/i.test(part)) {
           isWildCard = true;
+        } else if (/^Desc:\s*/i.test(part)) {
+          description = part.replace(/^Desc:\s*/i, "").trim();
         } else {
           theme += ", " + part;
         }
         continue;
       }
       const themeMatch2 = part.match(/^Theme:\s*(.+)/i);
-      if (themeMatch2) theme = themeMatch2[1].trim();
+      if (themeMatch2) { theme = themeMatch2[1].trim(); continue; }
+      const descMatch2 = part.match(/^Desc:\s*(.+)/i);
+      if (descMatch2) { description = descMatch2[1].trim(); continue; }
       if (/wild\s*card/i.test(part)) isWildCard = true;
     }
 
@@ -78,7 +86,7 @@ export function parseMindMapNodes(content: string): {
       isWildCard = true;
     }
 
-    nodes.push({ label: cleanLabel, theme, isWildCard });
+    nodes.push({ label: cleanLabel, description, theme, isWildCard });
   }
 
   // Clean markup from content
@@ -119,9 +127,10 @@ export function inlineMindMapNodes(content: string): {
       if (!trimmedLabel) return "";
 
       const themeMatch = attrStr.match(/theme\s*=\s*"([^"]+)"/i);
+      const descMatch = attrStr.match(/desc\s*=\s*"([^"]+)"/i);
       const isWildCard = /wildcard/i.test(attrStr);
 
-      nodes.push({ label: trimmedLabel, theme: themeMatch?.[1], isWildCard });
+      nodes.push({ label: trimmedLabel, description: descMatch?.[1], theme: themeMatch?.[1], isWildCard });
       return `\n%%MMNODE_${nodeIndex++}%%\n`;
     },
   );
@@ -136,6 +145,7 @@ export function inlineMindMapNodes(content: string): {
     if (!label) return "";
 
     let theme: string | undefined;
+    let description: string | undefined;
     let isWildCard = false;
 
     for (let i = 1; i < parts.length; i++) {
@@ -143,13 +153,17 @@ export function inlineMindMapNodes(content: string): {
       if (theme !== undefined) {
         if (/^wild\s*card$/i.test(part)) {
           isWildCard = true;
+        } else if (/^Desc:\s*/i.test(part)) {
+          description = part.replace(/^Desc:\s*/i, "").trim();
         } else {
           theme += ", " + part;
         }
         continue;
       }
       const themeMatch = part.match(/^Theme:\s*(.+)/i);
-      if (themeMatch) theme = themeMatch[1].trim();
+      if (themeMatch) { theme = themeMatch[1].trim(); continue; }
+      const descMatch = part.match(/^Desc:\s*(.+)/i);
+      if (descMatch) { description = descMatch[1].trim(); continue; }
       if (/wild\s*card/i.test(part)) isWildCard = true;
     }
 
@@ -159,7 +173,7 @@ export function inlineMindMapNodes(content: string): {
       isWildCard = true;
     }
 
-    nodes.push({ label: cleanLabel, theme, isWildCard });
+    nodes.push({ label: cleanLabel, description, theme, isWildCard });
     return `\n%%MMNODE_${nodeIndex++}%%\n`;
   });
 

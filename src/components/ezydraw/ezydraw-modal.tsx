@@ -25,6 +25,9 @@ const SLOT_INFO_ROW_HEIGHT = 68;
 /** Height for iteration prompt input row */
 const ITERATION_PROMPT_ROW_HEIGHT = 40;
 
+/** Height for editable sketch prompt section (checkbox + textarea) */
+const SKETCH_PROMPT_ROW_HEIGHT = 76;
+
 export type EzyDrawSaveResult = {
   pngDataUrl: string;
   elements: DrawingElement[];
@@ -46,6 +49,7 @@ export interface EzyDrawModalProps {
   iterationPrompt?: string;
   onIterationPromptChange?: (prompt: string) => void;
   slotId?: string;
+  sketchPrompt?: string;
 }
 
 /**
@@ -62,6 +66,7 @@ function EzyDrawContent({
   iterationPrompt,
   onIterationPromptChange,
   slotId,
+  sketchPrompt,
 }: {
   stageRef: React.RefObject<EzyDrawStageHandle | null>;
   onSave: (result: EzyDrawSaveResult) => void;
@@ -73,6 +78,7 @@ function EzyDrawContent({
   iterationPrompt?: string;
   onIterationPromptChange?: (prompt: string) => void;
   slotId?: string;
+  sketchPrompt?: string;
 }) {
   const getSnapshot = useDrawingStore((s) => s.getSnapshot);
   const replaceWithGeneratedImage = useDrawingStore((s) => s.replaceWithGeneratedImage);
@@ -114,6 +120,16 @@ function EzyDrawContent({
 
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
+  // Editable prompt — initialized from sketchPrompt or built from title + description
+  const isGenerateMode = !!(workshopId && !onIterationPromptChange);
+  const [editablePrompt, setEditablePrompt] = useState(
+    () => sketchPrompt || [slotTitle, slotDescription].filter(Boolean).join(': ')
+  );
+
+  // "Use my drawing" checkbox — default true when canvas has content
+  const hasCanvasContent = getSnapshot().length > 0 || !!backgroundImageUrl;
+  const [useExistingDrawing, setUseExistingDrawing] = useState(hasCanvasContent);
+
   const handleSave = () => {
     const stage = stageRef.current?.getStage();
     if (!stage) return;
@@ -133,7 +149,7 @@ function EzyDrawContent({
   };
 
   const handleGenerateImage = useCallback(async () => {
-    if (!workshopId || !slotTitle || isGeneratingImage) return;
+    if (!workshopId || isGeneratingImage) return;
 
     setIsGeneratingImage(true);
     try {
@@ -141,12 +157,16 @@ function EzyDrawContent({
       let existingImageBase64: string | undefined;
       const stage = stageRef.current?.getStage();
       const elements = getSnapshot();
-      if (stage && (elements.length > 0 || backgroundImageUrl)) {
+      if (useExistingDrawing && stage && (elements.length > 0 || backgroundImageUrl)) {
         existingImageBase64 = exportToWebP(stage, { pixelRatio: 1, quality: 0.5 });
       }
 
       // Check if user placed any stickmen/person stamps on the canvas
       const hasPersonStamps = elements.some((el) => el.type === 'stamp');
+
+      // Use editablePrompt as additionalPrompt when in generate mode (Crazy 8s),
+      // otherwise fall back to iterationPrompt (Brain Rewriting)
+      const promptToSend = isGenerateMode ? editablePrompt : iterationPrompt;
 
       const response = await fetch('/api/ai/generate-sketch-image', {
         method: 'POST',
@@ -158,8 +178,8 @@ function EzyDrawContent({
           existingImageBase64,
           hasPersonStamps,
           slotId,
-          ...(iterationPrompt ? { additionalPrompt: iterationPrompt } : {}),
-          ...(backgroundImageUrl?.startsWith('https://') ? { previousImageUrl: backgroundImageUrl } : {}),
+          ...(promptToSend ? { additionalPrompt: promptToSend } : {}),
+          ...(!useExistingDrawing ? {} : backgroundImageUrl?.startsWith('https://') ? { previousImageUrl: backgroundImageUrl } : {}),
         }),
       });
 
@@ -183,7 +203,7 @@ function EzyDrawContent({
     } finally {
       setIsGeneratingImage(false);
     }
-  }, [workshopId, slotTitle, slotDescription, iterationPrompt, isGeneratingImage, getSnapshot, backgroundImageUrl, stageRef, replaceWithGeneratedImage]);
+  }, [workshopId, slotTitle, slotDescription, iterationPrompt, editablePrompt, isGenerateMode, useExistingDrawing, isGeneratingImage, getSnapshot, backgroundImageUrl, stageRef, replaceWithGeneratedImage]);
 
   return (
     <div className="flex h-full flex-col">
@@ -197,10 +217,15 @@ function EzyDrawContent({
         slotTitle={slotTitle}
         slotDescription={slotDescription}
         onSlotInfoChange={onSlotInfoChange}
-        onGenerateImage={workshopId && slotTitle ? handleGenerateImage : undefined}
+        onGenerateImage={workshopId ? handleGenerateImage : undefined}
         isGeneratingImage={isGeneratingImage}
         iterationPrompt={iterationPrompt}
         onIterationPromptChange={onIterationPromptChange}
+        editablePrompt={isGenerateMode ? editablePrompt : undefined}
+        onEditablePromptChange={isGenerateMode ? setEditablePrompt : undefined}
+        useExistingDrawing={useExistingDrawing}
+        onUseExistingDrawingChange={isGenerateMode ? setUseExistingDrawing : undefined}
+        hasCanvasContent={hasCanvasContent}
       />
     </div>
   );
@@ -221,16 +246,19 @@ export function EzyDrawModal({
   iterationPrompt,
   onIterationPromptChange,
   slotId,
+  sketchPrompt,
 }: EzyDrawModalProps) {
   const stageRef = useRef<EzyDrawStageHandle>(null);
 
   const cw = canvasSize?.width ?? DEFAULT_CANVAS_WIDTH;
   const ch = canvasSize?.height ?? DEFAULT_CANVAS_HEIGHT;
 
-  // Add extra height for slot info row and/or iteration prompt row when present
+  // Add extra height for slot info row, iteration prompt, and/or sketch prompt section
+  const isGenerateMode = !!(workshopId && !onIterationPromptChange);
   const chromeHeight = BASE_CHROME_HEIGHT
     + (onSlotInfoChange ? SLOT_INFO_ROW_HEIGHT : 0)
-    + (onIterationPromptChange ? ITERATION_PROMPT_ROW_HEIGHT : 0);
+    + (onIterationPromptChange ? ITERATION_PROMPT_ROW_HEIGHT : 0)
+    + (isGenerateMode ? SKETCH_PROMPT_ROW_HEIGHT : 0);
 
   // Dialog matches the canvas: width = canvas width, height = canvas + chrome
   const dialogW = cw;
@@ -283,6 +311,7 @@ export function EzyDrawModal({
             iterationPrompt={iterationPrompt}
             onIterationPromptChange={onIterationPromptChange}
             slotId={slotId}
+            sketchPrompt={sketchPrompt}
           />
         </DrawingStoreProvider>
       </DialogContent>

@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { saveCanvasState } from '@/actions/canvas-actions';
 import { createEmptyMatrix } from '@/lib/canvas/brain-rewriting-types';
-import { EMPTY_CRAZY_8S_SLOTS } from '@/lib/canvas/crazy-8s-types';
+import { EMPTY_CRAZY_8S_SLOTS, type Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 import { MindMapCanvas } from '@/components/workshop/mind-map-canvas';
 import { VotingHud } from '@/components/workshop/voting-hud';
 import { MergeGroupDialog } from '@/components/workshop/merge-group-dialog';
@@ -219,77 +219,142 @@ export function useIdeationPhases({
     state.markClean();
   }, [workshopId, stepId, canvasStoreApi]);
 
-  // Transition to crazy 8s phase — pre-fill slots with AI-enhanced titles + descriptions
+  // Transition to crazy 8s phase — pre-fill slots with AI-enhanced titles + descriptions + sketch hints
   const handleStartCrazy8s = React.useCallback(async () => {
     const state = canvasStoreApi.getState();
     const isPerParticipant = state.mindMapNodes.some((n) => n.ownerId);
 
-    if (isPerParticipant) {
-      // Multiplayer: iterate over all ownerIds, collect starred nodes per owner
-      const ownerIds = [...new Set(state.mindMapNodes.map((n) => n.ownerId).filter(Boolean))] as string[];
-      const allSlots = [...state.crazy8sSlots];
+    setIsEnhancingIdeas(true);
 
-      for (const ownerId of ownerIds) {
+    if (isPerParticipant) {
+      // Multiplayer: batch all owners' starred ideas into single API call
+      const ownerIds = [...new Set(state.mindMapNodes.map((n) => n.ownerId).filter(Boolean))] as string[];
+
+      const owners = ownerIds.map((ownerId) => {
         const ownerStarred = state.mindMapNodes
           .filter((n) => n.ownerId === ownerId && n.isStarred && !n.isRoot && n.label.trim())
-          .map((n) => n.label.trim())
           .slice(0, 8);
+        return {
+          ownerId,
+          ideas: ownerStarred.map((n) => ({ title: n.label.trim(), description: n.description })),
+        };
+      }).filter((o) => o.ideas.length > 0);
 
-        // Find this owner's existing slots
-        const ownerSlots = allSlots.filter((s) => s.ownerId === ownerId);
-        if (ownerSlots.length > 0 && ownerStarred.length > 0) {
-          ownerSlots.forEach((slot, i) => {
-            slot.title = ownerStarred[i] || slot.title;
-          });
-        }
-      }
-      state.setCrazy8sSlots(allSlots);
-      state.markDirty();
-    } else {
-      // Solo mode: original behavior
-      const starredLabels = state.mindMapNodes
-        .filter((n) => n.isStarred && !n.isRoot && n.label.trim())
-        .map((n) => n.label.trim())
-        .slice(0, 8);
-
-      if (starredLabels.length > 0) {
-        setIsEnhancingIdeas(true);
+      if (owners.length > 0) {
         try {
           const response = await fetch('/api/ai/enhance-sketch-ideas', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ workshopId, ideas: starredLabels }),
+            body: JSON.stringify({ workshopId, owners, totalSlots: 8, generateWildcards: true }),
           });
 
           if (response.ok) {
             const data = await response.json();
-            const aiSlots = data.slots as { title: string; description: string }[];
+            const ownerSlotsMap = data.ownerSlots as Record<string, Array<{ title: string; description: string; sketchHint: string; sketchPrompt?: string; ideaType?: string; isWildcard?: boolean }>>;
+            const allSlots = [...state.crazy8sSlots];
+
+            for (const ownerId of ownerIds) {
+              const aiSlots = ownerSlotsMap?.[ownerId] || [];
+              const ownerSlots = allSlots.filter((s) => s.ownerId === ownerId);
+              ownerSlots.forEach((slot, i) => {
+                if (aiSlots[i]) {
+                  slot.title = aiSlots[i].title || slot.title;
+                  slot.description = aiSlots[i].description || slot.description || '';
+                  slot.sketchHint = aiSlots[i].sketchHint || '';
+                  slot.sketchPrompt = aiSlots[i].sketchPrompt || '';
+                  slot.ideaType = (aiSlots[i].ideaType as Crazy8sSlot['ideaType']) || 'digital_product';
+                  slot.isWildcard = aiSlots[i].isWildcard || false;
+                }
+              });
+            }
+            state.setCrazy8sSlots(allSlots);
+          } else {
+            // Fallback: raw labels
+            const allSlots = [...state.crazy8sSlots];
+            for (const ownerId of ownerIds) {
+              const ownerStarred = state.mindMapNodes
+                .filter((n) => n.ownerId === ownerId && n.isStarred && !n.isRoot && n.label.trim())
+                .map((n) => n.label.trim())
+                .slice(0, 8);
+              const ownerSlots = allSlots.filter((s) => s.ownerId === ownerId);
+              ownerSlots.forEach((slot, i) => {
+                slot.title = ownerStarred[i] || slot.title;
+              });
+            }
+            state.setCrazy8sSlots(allSlots);
+          }
+        } catch {
+          // Fallback: raw labels
+          const allSlots = [...state.crazy8sSlots];
+          for (const ownerId of ownerIds) {
+            const ownerStarred = state.mindMapNodes
+              .filter((n) => n.ownerId === ownerId && n.isStarred && !n.isRoot && n.label.trim())
+              .map((n) => n.label.trim())
+              .slice(0, 8);
+            const ownerSlots = allSlots.filter((s) => s.ownerId === ownerId);
+            ownerSlots.forEach((slot, i) => {
+              slot.title = ownerStarred[i] || slot.title;
+            });
+          }
+          state.setCrazy8sSlots(allSlots);
+        }
+      }
+      state.markDirty();
+    } else {
+      // Solo mode: pass title+description pairs, request wildcards
+      const starredNodes = state.mindMapNodes
+        .filter((n) => n.isStarred && !n.isRoot && n.label.trim())
+        .slice(0, 8);
+
+      if (starredNodes.length > 0) {
+        const ideaObjects = starredNodes.map((n) => ({ title: n.label.trim(), description: n.description }));
+
+        try {
+          const response = await fetch('/api/ai/enhance-sketch-ideas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workshopId,
+              ideas: ideaObjects,
+              totalSlots: 8,
+              generateWildcards: true,
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const aiSlots = data.slots as Array<{ title: string; description: string; sketchHint: string; sketchPrompt?: string; ideaType?: string; isWildcard?: boolean }>;
             const slots = EMPTY_CRAZY_8S_SLOTS.map((slot, i) => ({
               ...slot,
-              title: aiSlots[i]?.title || starredLabels[i] || '',
-              description: aiSlots[i]?.description || '',
+              title: aiSlots[i]?.title || starredNodes[i]?.label.trim() || '',
+              description: aiSlots[i]?.description || starredNodes[i]?.description || '',
+              sketchHint: aiSlots[i]?.sketchHint || '',
+              sketchPrompt: aiSlots[i]?.sketchPrompt || '',
+              ideaType: (aiSlots[i]?.ideaType as Crazy8sSlot['ideaType']) || 'digital_product',
+              isWildcard: aiSlots[i]?.isWildcard || false,
             }));
             state.setCrazy8sSlots(slots);
           } else {
             const slots = EMPTY_CRAZY_8S_SLOTS.map((slot, i) => ({
               ...slot,
-              title: starredLabels[i] || '',
+              title: starredNodes[i]?.label.trim() || '',
+              description: starredNodes[i]?.description || '',
             }));
             state.setCrazy8sSlots(slots);
           }
         } catch {
           const slots = EMPTY_CRAZY_8S_SLOTS.map((slot, i) => ({
             ...slot,
-            title: starredLabels[i] || '',
+            title: starredNodes[i]?.label.trim() || '',
+            description: starredNodes[i]?.description || '',
           }));
           state.setCrazy8sSlots(slots);
-        } finally {
-          setIsEnhancingIdeas(false);
         }
         state.markDirty();
       }
     }
 
+    setIsEnhancingIdeas(false);
     setShowCrazy8s(true);
     setCurrentPhase('crazy-eights');
     setStoreIdeationPhase('crazy-eights');

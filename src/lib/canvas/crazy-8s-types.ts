@@ -4,10 +4,17 @@
  * Used in Step 8b visual ideation
  */
 
+export type IdeaType = 'digital_product' | 'service_interaction' | 'physical_process';
+
 export interface Crazy8sSlot {
   slotId: string;           // 'slot-1' through 'slot-8'
   title: string;            // User-editable title (empty string = untitled)
   description?: string;     // Expanded description of the sketch idea
+  sketchHint?: string;      // Visual instruction for what to draw (1 sentence)
+  sketchPrompt?: string;    // Detailed AI prompt for generating a sketch (1-3 sentences)
+  ideaType?: IdeaType;      // Inferred idea category for sketch style adaptation
+  isDirty?: boolean;        // True when user has manually edited this slot
+  isWildcard?: boolean;     // True for AI-generated bonus ideas (unfilled slots)
   imageUrl?: string;        // PNG URL from Vercel Blob (filled after drawing)
   drawingId?: string;       // Reference to drawing in stepArtifacts.drawings[]
   ownerId?: string;         // participantId or 'facilitator' (multiplayer per-participant ideation)

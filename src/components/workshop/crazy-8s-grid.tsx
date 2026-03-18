@@ -170,10 +170,20 @@ export function Crazy8sGrid({ slots, onSlotClick, onTitleChange, onDescriptionCh
                         {/* Pre-filled title + description as sketch prompt */}
                         <p className="text-xs font-medium text-foreground/80 mt-2 text-center line-clamp-2">
                           {slot.title}
+                          {slot.isWildcard && (
+                            <span className="ml-1 inline-block rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-1.5 py-0 text-[9px] font-semibold align-middle">
+                              Bonus
+                            </span>
+                          )}
                         </p>
                         {slot.description && (
                           <p className="text-[10px] text-muted-foreground mt-0.5 text-center line-clamp-2 max-w-[90%]">
                             {slot.description}
+                          </p>
+                        )}
+                        {slot.sketchHint && (
+                          <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 text-center italic line-clamp-2 max-w-[90%]">
+                            Sketch: {slot.sketchHint}
                           </p>
                         )}
                       </>

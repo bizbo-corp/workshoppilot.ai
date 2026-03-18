@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 
 export type MindMapNodeData = {
   label: string;
+  description?: string;
   themeColorId?: string;
   themeColor: string; // border and text hex
   themeBgColor: string; // background hex
@@ -16,6 +17,7 @@ export type MindMapNodeData = {
   ownerName?: string; // participant name (shown on root nodes in "All" view)
   isNewlyCreated?: boolean; // mount in edit mode with empty label
   onLabelChange?: (id: string, label: string) => void;
+  onDescriptionChange?: (id: string, desc: string) => void;
   onAddChild?: (id: string) => void;
   onAddChildAt?: (id: string, direction: 'top' | 'bottom' | 'left' | 'right') => void;
   onDelete?: (id: string) => void;
@@ -24,26 +26,54 @@ export type MindMapNodeData = {
 
 export type MindMapNode = Node<MindMapNodeData, 'mindMapNode'>;
 
+const TITLE_MAX_LEN = 40;
+
 export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
   // Initialize editing state — newly created nodes start in edit mode immediately
   // so the textarea is in the DOM from the very first render
   const [isEditing, setIsEditing] = useState(!!data.isNewlyCreated);
   const [editLabel, setEditLabel] = useState(data.isNewlyCreated ? '' : data.label);
+  const [editDescription, setEditDescription] = useState(data.description || '');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   const handleLabelClick = useCallback(() => {
     setIsEditing(true);
     setEditLabel(data.label);
-  }, [data.label]);
+    setEditDescription(data.description || '');
+  }, [data.label, data.description]);
 
   const handleSave = useCallback(() => {
     if (editLabel !== data.label) {
       data.onLabelChange?.(id, editLabel);
     }
+    if (editDescription !== (data.description || '')) {
+      data.onDescriptionChange?.(id, editDescription);
+    }
     setIsEditing(false);
-  }, [id, editLabel, data]);
+  }, [id, editLabel, editDescription, data]);
 
   const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        // Move focus to description if it exists
+        if (!data.isRoot && descriptionRef.current) {
+          descriptionRef.current.focus();
+        } else {
+          handleSave();
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setEditLabel(data.label);
+        setEditDescription(data.description || '');
+        setIsEditing(false);
+      }
+    },
+    [data.label, data.description, data.isRoot, handleSave]
+  );
+
+  const handleDescKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -51,10 +81,11 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
       } else if (e.key === 'Escape') {
         e.preventDefault();
         setEditLabel(data.label);
+        setEditDescription(data.description || '');
         setIsEditing(false);
       }
     },
-    [data.label, handleSave]
+    [data.label, data.description, handleSave]
   );
 
   // Auto-resize textarea and focus
@@ -65,6 +96,14 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
       textareaRef.current.focus();
     }
   }, [isEditing, editLabel]);
+
+  // Auto-resize description textarea
+  useEffect(() => {
+    if (isEditing && descriptionRef.current) {
+      descriptionRef.current.style.height = 'auto';
+      descriptionRef.current.style.height = descriptionRef.current.scrollHeight + 'px';
+    }
+  }, [isEditing, editDescription]);
 
   const handleAddChild = useCallback(
     (e: React.MouseEvent) => {
@@ -127,29 +166,74 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
 
       {/* Label with inline editing */}
       {isEditing ? (
-        <textarea
-          ref={textareaRef}
-          value={editLabel}
-          onChange={(e) => setEditLabel(e.target.value)}
-          onBlur={handleSave}
-          onKeyDown={handleKeyDown}
-          className={cn(
-            'nodrag nopan w-full bg-transparent outline-none font-medium border-b-2 resize-none overflow-hidden',
-            isRoot ? 'text-base' : 'text-sm'
+        <div className="space-y-1">
+          <div className="relative">
+            <textarea
+              ref={textareaRef}
+              value={editLabel}
+              onChange={(e) => setEditLabel(e.target.value.slice(0, TITLE_MAX_LEN))}
+              onBlur={() => {
+                // Delay save to allow focus to move to description
+                setTimeout(() => {
+                  if (!descriptionRef.current || document.activeElement !== descriptionRef.current) {
+                    handleSave();
+                  }
+                }, 100);
+              }}
+              onKeyDown={handleKeyDown}
+              className={cn(
+                'nodrag nopan w-full bg-transparent outline-none font-bold border-b-2 resize-none overflow-hidden',
+                isRoot ? 'text-base' : 'text-sm'
+              )}
+              style={{ borderColor: data.themeColor, color: data.themeColor }}
+              rows={1}
+            />
+            {editLabel.length > TITLE_MAX_LEN - 5 && (
+              <span className="absolute right-0 bottom-0 text-[9px] opacity-50" style={{ color: data.themeColor }}>
+                {editLabel.length}/{TITLE_MAX_LEN}
+              </span>
+            )}
+          </div>
+          {!isRoot && (
+            <textarea
+              ref={descriptionRef}
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              onBlur={handleSave}
+              onKeyDown={handleDescKeyDown}
+              placeholder="Add description..."
+              className="nodrag nopan w-full bg-transparent outline-none text-xs resize-none overflow-hidden opacity-80"
+              style={{ color: data.themeColor }}
+              rows={1}
+            />
           )}
-          style={{ borderColor: data.themeColor, color: data.themeColor }}
-          rows={1}
-        />
+        </div>
       ) : (
-        <div
-          onClick={handleLabelClick}
-          className={cn(
-            'cursor-text break-words font-medium',
-            isRoot ? 'text-base' : 'text-sm'
-          )}
-          style={{ color: data.themeColor }}
-        >
-          {data.label || 'Click to edit'}
+        <div onClick={handleLabelClick}>
+          <div
+            className={cn(
+              'cursor-text break-words font-bold',
+              isRoot ? 'text-base' : 'text-sm'
+            )}
+            style={{ color: data.themeColor }}
+          >
+            {data.label || 'Click to edit'}
+          </div>
+          {!isRoot && (data.description ? (
+            <div
+              className="cursor-text break-words text-xs mt-0.5 opacity-70"
+              style={{ color: data.themeColor }}
+            >
+              {data.description}
+            </div>
+          ) : (
+            <div
+              className="cursor-text text-xs mt-0.5 opacity-40 italic"
+              style={{ color: data.themeColor }}
+            >
+              Add description...
+            </div>
+          ))}
         </div>
       )}
 

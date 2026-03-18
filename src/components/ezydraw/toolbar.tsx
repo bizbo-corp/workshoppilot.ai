@@ -63,6 +63,11 @@ interface EzyDrawFooterProps {
   isGeneratingImage?: boolean;
   iterationPrompt?: string;
   onIterationPromptChange?: (prompt: string) => void;
+  editablePrompt?: string;
+  onEditablePromptChange?: (prompt: string) => void;
+  useExistingDrawing?: boolean;
+  onUseExistingDrawingChange?: (value: boolean) => void;
+  hasCanvasContent?: boolean;
 }
 
 // --- Tool section constants ---
@@ -576,6 +581,11 @@ export function EzyDrawFooter({
   isGeneratingImage,
   iterationPrompt,
   onIterationPromptChange,
+  editablePrompt,
+  onEditablePromptChange,
+  useExistingDrawing,
+  onUseExistingDrawingChange,
+  hasCanvasContent,
 }: EzyDrawFooterProps) {
   const canUndo = useDrawingStore((state) => state.canUndo);
   const canRedo = useDrawingStore((state) => state.canRedo);
@@ -631,6 +641,33 @@ export function EzyDrawFooter({
             placeholder="Describe changes for AI generation... (e.g. &quot;add a search bar&quot;)"
             className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-purple-400/60"
           />
+        </div>
+      )}
+
+      {/* Editable sketch prompt (Crazy 8s) */}
+      {onGenerateImage && onEditablePromptChange && (
+        <div className="space-y-1 border-b border-amber-200/50 dark:border-amber-800/50 px-3 py-1.5">
+          {hasCanvasContent && onUseExistingDrawingChange && (
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useExistingDrawing ?? false}
+                onChange={(e) => onUseExistingDrawingChange(e.target.checked)}
+                className="h-3 w-3 rounded border-amber-400 text-amber-600 accent-amber-600"
+              />
+              <span className="text-[10px] text-amber-700 dark:text-amber-400">Use my drawing as starting point</span>
+            </label>
+          )}
+          <div className="flex items-start gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500 mt-0.5" />
+            <textarea
+              value={editablePrompt || ''}
+              onChange={(e) => onEditablePromptChange(e.target.value)}
+              placeholder="Describe what to generate..."
+              rows={2}
+              className="min-w-0 flex-1 resize-none bg-transparent text-xs outline-none placeholder:text-amber-400/60 leading-relaxed"
+            />
+          </div>
         </div>
       )}
 

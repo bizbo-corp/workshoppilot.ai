@@ -35,10 +35,6 @@ Improve the UX of the chat window when it's in collapsed mode.
 
 
 
-I push sync stars; it gives me some unusual ideas pre-generated in the crazy eight board. 
-
-
-
 
 
 ## Concept Development
