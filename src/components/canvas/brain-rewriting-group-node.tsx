@@ -21,18 +21,32 @@ export type BrainRewritingGroupNodeData = {
 export type BrainRewritingGroupNode = Node<BrainRewritingGroupNodeData, 'brainRewritingGroupNode'>;
 
 export const BR_NODE_WIDTH = 580;
-export const BR_NODE_HEIGHT = 620;
+export const BR_NODE_HEIGHT_DEFAULT = 620;
 export const BR_NODE_GAP = 40;
+
+/** Row height (including gap) for each row of cells in the 2-col grid */
+const BR_ROW_HEIGHT = 220;
+const BR_HEADER_AREA = 60; // header + padding above grid
+const BR_FOOTER_AREA = 40; // padding below grid
+
+/** Compute the height of a brain rewriting group node based on cell count */
+export function computeBrNodeHeight(cellCount: number): number {
+  // Total slots = cells + 1 (original), arranged in 2 columns
+  const totalSlots = cellCount + 1;
+  const rows = Math.ceil(totalSlots / 2);
+  return BR_HEADER_AREA + rows * BR_ROW_HEIGHT + BR_FOOTER_AREA;
+}
 
 export const BrainRewritingGroupNode = memo(({ data }: NodeProps<BrainRewritingGroupNode>) => {
   // Default to included when undefined (backwards compat with existing data)
   const isIncluded = data.matrix.includedInConcepts !== false;
   const checkboxId = `include-${data.matrix.slotId}`;
+  const nodeHeight = computeBrNodeHeight(data.matrix.cells.length);
 
   return (
     <div
       className="nodrag nopan cursor-default"
-      style={{ width: BR_NODE_WIDTH, height: BR_NODE_HEIGHT, pointerEvents: 'all' }}
+      style={{ width: BR_NODE_WIDTH, height: nodeHeight, pointerEvents: 'all' }}
     >
       <div className={cn(
         'rounded-xl border-2 bg-background shadow-lg h-full flex flex-col',

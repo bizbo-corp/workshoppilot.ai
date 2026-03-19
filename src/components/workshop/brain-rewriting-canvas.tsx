@@ -12,7 +12,6 @@ import { EzyDrawLoader } from '@/components/ezydraw/ezydraw-loader';
 import { saveDrawing, loadDrawing, updateDrawing } from '@/actions/drawing-actions';
 import { simplifyDrawingElements } from '@/lib/drawing/simplify';
 import {
-  BRAIN_REWRITING_CELL_ORDER,
   type BrainRewritingCellId,
   type BrainRewritingMatrix,
 } from '@/lib/canvas/brain-rewriting-types';
@@ -46,18 +45,15 @@ export function BrainRewritingCanvas({
   const [ezyDrawState, setEzyDrawState] = useState<EzyDrawState | null>(null);
   const updateBrainRewritingCell = useCanvasStore((s) => s.updateBrainRewritingCell);
 
-  // Determine active cell: first cell without imageUrl in order
+  // Determine active cell: first cell without imageUrl in array order
   const activeCellId: BrainRewritingCellId | null =
-    BRAIN_REWRITING_CELL_ORDER.find((cellId) => {
-      const cell = matrix.cells.find((c) => c.cellId === cellId);
-      return !cell?.imageUrl;
-    }) ?? null;
+    matrix.cells.find((c) => !c.imageUrl)?.cellId ?? null;
 
   /** Get the image from the previous iteration to use as background */
   const getPreviousImageUrl = (cellId: BrainRewritingCellId): string | undefined => {
-    if (cellId === 'top-right') return matrix.sourceImageUrl;
-    if (cellId === 'bottom-left') return matrix.cells.find((c) => c.cellId === 'top-right')?.imageUrl;
-    if (cellId === 'bottom-right') return matrix.cells.find((c) => c.cellId === 'bottom-left')?.imageUrl;
+    const cellIndex = matrix.cells.findIndex((c) => c.cellId === cellId);
+    if (cellIndex === 0) return matrix.sourceImageUrl; // First iteration uses original
+    if (cellIndex > 0) return matrix.cells[cellIndex - 1]?.imageUrl;
     return undefined;
   };
 

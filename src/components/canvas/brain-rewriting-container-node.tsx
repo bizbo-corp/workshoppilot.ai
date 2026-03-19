@@ -11,7 +11,7 @@
 import { memo } from 'react';
 import { type NodeProps, type Node } from '@xyflow/react';
 import { GitBranchPlus, ArrowRight } from 'lucide-react';
-import { BR_NODE_WIDTH, BR_NODE_HEIGHT, BR_NODE_GAP } from './brain-rewriting-group-node';
+import { BR_NODE_WIDTH, BR_NODE_HEIGHT_DEFAULT, BR_NODE_GAP, computeBrNodeHeight } from './brain-rewriting-group-node';
 
 export const BR_CONTAINER_PADDING = 20;
 export const BR_CONTAINER_HEADER_HEIGHT = 48;
@@ -26,11 +26,15 @@ export type BrainRewritingContainerNodeData = {
 
 export type BrainRewritingContainerNodeType = Node<BrainRewritingContainerNodeData, 'brainRewritingContainerNode'>;
 
-/** Compute the container dimensions based on how many matrices it holds. */
-export function computeBrainRewritingContainerSize(matrixCount: number) {
+/** Compute the container dimensions based on how many matrices it holds.
+ * @param matrixCount - Number of matrices (columns)
+ * @param cellCountPerMatrix - Number of iteration cells per matrix (for dynamic row height). Defaults to 3 (legacy).
+ */
+export function computeBrainRewritingContainerSize(matrixCount: number, cellCountPerMatrix?: number) {
   const cols = matrixCount;
+  const nodeHeight = cellCountPerMatrix != null ? computeBrNodeHeight(cellCountPerMatrix) : BR_NODE_HEIGHT_DEFAULT;
   const width = BR_CONTAINER_PADDING * 2 + cols * BR_NODE_WIDTH + Math.max(0, cols - 1) * BR_NODE_GAP;
-  const height = BR_CONTAINER_HEADER_HEIGHT + BR_CONTAINER_PADDING * 2 + BR_NODE_HEIGHT + BR_CONTAINER_FOOTER_HEIGHT;
+  const height = BR_CONTAINER_HEADER_HEIGHT + BR_CONTAINER_PADDING * 2 + nodeHeight + BR_CONTAINER_FOOTER_HEIGHT;
   return { width, height };
 }
 

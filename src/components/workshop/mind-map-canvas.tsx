@@ -49,8 +49,8 @@ import {
 import {
   BrainRewritingGroupNode as BrainRewritingGroupNodeComponent,
   BR_NODE_WIDTH,
-  BR_NODE_HEIGHT,
   BR_NODE_GAP,
+  computeBrNodeHeight,
 } from '@/components/canvas/brain-rewriting-group-node';
 import { VotingCardNode, type VotingCardNodeData } from '@/components/canvas/voting-card-node';
 import { VotingGroupNode, type VotingGroupNodeData } from '@/components/canvas/voting-group-node';
@@ -1078,7 +1078,9 @@ function MindMapCanvasInner({
     }
 
     const result: Node[] = [];
-    const containerSize = computeBrainRewritingContainerSize(brainRewritingMatrices.length);
+    // Use the first matrix's cell count for container height (all matrices have the same participant count)
+    const cellCountPerMatrix = brainRewritingMatrices[0]?.cells.length ?? 1;
+    const containerSize = computeBrainRewritingContainerSize(brainRewritingMatrices.length, cellCountPerMatrix);
 
     // Container node FIRST (ReactFlow requirement for parent nodes)
     const containerData: BrainRewritingContainerNodeData = {

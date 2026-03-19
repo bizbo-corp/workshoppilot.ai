@@ -2,14 +2,13 @@
 
 /**
  * Brain Rewriting Grid
- * Pure display component — 2x2 CSS grid for iterating on a selected Crazy 8s sketch
- * Top-left: original (read-only), other 3 cells: EzyDraw-clickable iterations
+ * Dynamic grid display — original sketch + N iteration cells (one per participant).
+ * Solo: original + 1 iteration. Multiplayer: original + (participants - 1) iterations.
  */
 
 import { cn } from '@/lib/utils';
 import { Pencil, Lock, Check } from 'lucide-react';
 import type { BrainRewritingMatrix, BrainRewritingCellId } from '@/lib/canvas/brain-rewriting-types';
-import { BRAIN_REWRITING_CELL_ORDER } from '@/lib/canvas/brain-rewriting-types';
 
 interface BrainRewritingGridProps {
   matrix: BrainRewritingMatrix;
@@ -17,37 +16,43 @@ interface BrainRewritingGridProps {
   activeCellId: BrainRewritingCellId | null;
 }
 
-const CELL_LABELS: Record<string, string> = {
-  'top-right': 'Iteration 1',
-  'bottom-left': 'Iteration 2',
-  'bottom-right': 'Iteration 3',
-};
-
 export function BrainRewritingGrid({
   matrix,
   onCellClick,
   activeCellId,
 }: BrainRewritingGridProps) {
-  // Determine cell states
+  const cells = matrix.cells;
+
+  // Determine cell states using array index
   const getCellState = (cellId: BrainRewritingCellId): 'completed' | 'active' | 'locked' => {
-    const cell = matrix.cells.find((c) => c.cellId === cellId);
+    const cell = cells.find((c) => c.cellId === cellId);
     if (cell?.imageUrl) return 'completed';
 
-    const activeIndex = activeCellId ? BRAIN_REWRITING_CELL_ORDER.indexOf(activeCellId) : -1;
-    const cellIndex = BRAIN_REWRITING_CELL_ORDER.indexOf(cellId);
+    const activeIndex = activeCellId ? cells.findIndex((c) => c.cellId === activeCellId) : -1;
+    const cellIndex = cells.findIndex((c) => c.cellId === cellId);
 
     if (cellId === activeCellId) return 'active';
     if (activeIndex >= 0 && cellIndex > activeIndex) return 'locked';
     return 'active'; // Cells before active can be re-edited
   };
 
+  // Label for the original cell
+  const originalLabel = matrix.creatorName ? `${matrix.creatorName} — Original` : 'Original';
+
+  // Compute grid rows: (cells + 1 for original) / 2 cols
+  const totalSlots = cells.length + 1;
+  const gridRows = Math.ceil(totalSlots / 2);
+
   return (
-    <div className="grid grid-cols-2 grid-rows-2 gap-3 aspect-square max-w-[540px] mx-auto">
-      {/* Top-left: Original sketch (read-only) */}
+    <div
+      className="grid grid-cols-2 gap-3 max-w-[540px] mx-auto"
+      style={{ gridTemplateRows: `repeat(${gridRows}, minmax(200px, 1fr))` }}
+    >
+      {/* Original sketch (read-only) */}
       <div className="relative rounded-lg border-2 border-muted bg-muted/30 overflow-hidden">
         <div className="absolute top-2 left-2 z-10">
           <span className="rounded-md bg-background/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground shadow-sm">
-            Original
+            {originalLabel}
           </span>
         </div>
         <div className="flex h-full items-center justify-center p-2">
@@ -63,16 +68,16 @@ export function BrainRewritingGrid({
         </div>
       </div>
 
-      {/* Iteration cells */}
-      {BRAIN_REWRITING_CELL_ORDER.map((cellId) => {
-        const cell = matrix.cells.find((c) => c.cellId === cellId);
-        const state = getCellState(cellId);
-        const label = CELL_LABELS[cellId];
+      {/* Iteration cells — one per participant (or 1 for solo) */}
+      {cells.map((cell, index) => {
+        const state = getCellState(cell.cellId);
+        // Use assignee name, fall back to "Your Iteration" (solo) or "Iteration N"
+        const label = cell.assigneeName || (cells.length === 1 ? 'Your Iteration' : `Iteration ${index + 1}`);
 
         return (
           <button
-            key={cellId}
-            onClick={() => state !== 'locked' && onCellClick(cellId)}
+            key={cell.cellId}
+            onClick={() => state !== 'locked' && onCellClick(cell.cellId)}
             disabled={state === 'locked'}
             className={cn(
               'relative rounded-lg border-2 transition-all overflow-hidden',
@@ -99,7 +104,7 @@ export function BrainRewritingGrid({
 
             {/* Cell content */}
             <div className="flex h-full items-center justify-center p-2">
-              {cell?.imageUrl ? (
+              {cell.imageUrl ? (
                 <img
                   src={cell.imageUrl}
                   alt={label}

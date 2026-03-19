@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { saveCanvasState } from '@/actions/canvas-actions';
-import { createEmptyMatrix } from '@/lib/canvas/brain-rewriting-types';
+import { createEmptyMatrix, type BrainRewritingParticipant } from '@/lib/canvas/brain-rewriting-types';
 import { EMPTY_CRAZY_8S_SLOTS, type Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 import { MindMapCanvas } from '@/components/workshop/mind-map-canvas';
 import { VotingHud } from '@/components/workshop/voting-hud';
@@ -394,6 +394,35 @@ export function useIdeationPhases({
     setStoreIdeationPhase('crazy-eights');
   }, [setStoreIdeationPhase]);
 
+  // Compute owner IDs, names, and colors from ideationOwners (canonical order)
+  // + mind map nodes (for any late-joined owners not in ideationOwners).
+  // ideationOwners order puts the facilitator first (leftmost in "All" view).
+  const { ownerIdsList, ownerNamesMap, ownerColorsMap } = React.useMemo(() => {
+    const ids: string[] = [];
+    const names: Record<string, string> = {};
+    const colors: Record<string, string> = {};
+    // Start with ideationOwners order (facilitator first, then participants)
+    if (ideationOwners) {
+      for (const o of ideationOwners) {
+        if (!ids.includes(o.ownerId)) {
+          ids.push(o.ownerId);
+          names[o.ownerId] = o.ownerName;
+          if (o.ownerColor) colors[o.ownerId] = o.ownerColor;
+        }
+      }
+    }
+    // Add any additional owners found in mind map nodes (late joiners)
+    for (const n of mindMapNodes) {
+      if (n.ownerId && n.isRoot && !ids.includes(n.ownerId)) {
+        ids.push(n.ownerId);
+        if (n.ownerName) names[n.ownerId] = n.ownerName;
+      }
+    }
+    // Filter out deleted owners
+    const filteredIds = ids.filter((id) => !deletedOwnerIds.has(id));
+    return { ownerIdsList: filteredIds, ownerNamesMap: names, ownerColorsMap: colors };
+  }, [mindMapNodes, ideationOwners, deletedOwnerIds]);
+
   // Build brain rewriting matrices from selection units
   const buildMatricesFromSelection = React.useCallback((selectedIds: string[], state: ReturnType<typeof canvasStoreApi.getState>) => {
     type SelectionUnit = { type: 'slot'; slotId: string } | { type: 'group'; group: typeof state.slotGroups[number] };
@@ -423,24 +452,52 @@ export function useIdeationPhases({
       }
     }
 
+    // Build participant list for brain rewriting cell assignment
+    const hasMultipleOwners = ideationOwners && ideationOwners.length > 1;
+
     return units.map((unit) => {
+      // Determine the creator of this slot/group
+      let creatorOwnerId: string | undefined;
+      let sourceSlot: typeof state.crazy8sSlots[number] | undefined;
+
       if (unit.type === 'group') {
-        const firstSlot = state.crazy8sSlots.find((s) => s.slotId === unit.group.slotIds[0]);
-        const sourceImage = unit.group.mergedImageUrl || firstSlot?.imageUrl;
-        const matrix = createEmptyMatrix(unit.group.slotIds[0], sourceImage);
-        matrix.groupId = unit.group.id;
-        matrix.sourceDescription = firstSlot?.description;
-        matrix.sourceSketchPrompt = firstSlot?.sketchPrompt;
-        return matrix;
+        sourceSlot = state.crazy8sSlots.find((s) => s.slotId === unit.group.slotIds[0]);
       } else {
-        const slot = state.crazy8sSlots.find((s) => s.slotId === unit.slotId);
-        const matrix = createEmptyMatrix(unit.slotId, slot?.imageUrl);
-        matrix.sourceDescription = slot?.description;
-        matrix.sourceSketchPrompt = slot?.sketchPrompt;
-        return matrix;
+        sourceSlot = state.crazy8sSlots.find((s) => s.slotId === unit.slotId);
       }
+      creatorOwnerId = sourceSlot?.ownerId;
+
+      // Build participants array (everyone except creator) for multiplayer
+      let participants: BrainRewritingParticipant[] | undefined;
+      let creatorName: string | undefined;
+      let creatorId: string | undefined;
+
+      if (hasMultipleOwners && creatorOwnerId) {
+        creatorName = ownerNamesMap[creatorOwnerId] || 'Creator';
+        creatorId = creatorOwnerId;
+        participants = ideationOwners!
+          .filter((o) => o.ownerId !== creatorOwnerId)
+          .map((o) => ({ id: o.ownerId, name: o.ownerName }));
+      }
+
+      const sourceImage = unit.type === 'group'
+        ? (unit.group.mergedImageUrl || sourceSlot?.imageUrl)
+        : sourceSlot?.imageUrl;
+
+      const slotId = unit.type === 'group' ? unit.group.slotIds[0] : unit.slotId;
+      const matrix = createEmptyMatrix(slotId, sourceImage, participants);
+
+      if (unit.type === 'group') {
+        matrix.groupId = unit.group.id;
+      }
+      matrix.sourceDescription = sourceSlot?.description;
+      matrix.sourceSketchPrompt = sourceSlot?.sketchPrompt;
+      if (creatorName) matrix.creatorName = creatorName;
+      if (creatorId) matrix.creatorId = creatorId;
+
+      return matrix;
     });
-  }, [canvasStoreApi]);
+  }, [canvasStoreApi, ideationOwners, ownerNamesMap]);
 
   // Confirm selection → brain rewriting (or skip)
   const handleConfirmSelection = React.useCallback(async (skip: boolean) => {
@@ -510,34 +567,6 @@ export function useIdeationPhases({
     state.resetAndOpenVoting(scaledBudget);
   }, [canvasStoreApi]);
 
-  // Compute owner IDs, names, and colors from ideationOwners (canonical order)
-  // + mind map nodes (for any late-joined owners not in ideationOwners).
-  // ideationOwners order puts the facilitator first (leftmost in "All" view).
-  const { ownerIdsList, ownerNamesMap, ownerColorsMap } = React.useMemo(() => {
-    const ids: string[] = [];
-    const names: Record<string, string> = {};
-    const colors: Record<string, string> = {};
-    // Start with ideationOwners order (facilitator first, then participants)
-    if (ideationOwners) {
-      for (const o of ideationOwners) {
-        if (!ids.includes(o.ownerId)) {
-          ids.push(o.ownerId);
-          names[o.ownerId] = o.ownerName;
-          if (o.ownerColor) colors[o.ownerId] = o.ownerColor;
-        }
-      }
-    }
-    // Add any additional owners found in mind map nodes (late joiners)
-    for (const n of mindMapNodes) {
-      if (n.ownerId && n.isRoot && !ids.includes(n.ownerId)) {
-        ids.push(n.ownerId);
-        if (n.ownerName) names[n.ownerId] = n.ownerName;
-      }
-    }
-    // Filter out deleted owners
-    const filteredIds = ids.filter((id) => !deletedOwnerIds.has(id));
-    return { ownerIdsList: filteredIds, ownerNamesMap: names, ownerColorsMap: colors };
-  }, [mindMapNodes, ideationOwners, deletedOwnerIds]);
 
   // Render the canvas area — always MindMapCanvas, with phase-appropriate props
   const renderCanvas = React.useCallback(() => {

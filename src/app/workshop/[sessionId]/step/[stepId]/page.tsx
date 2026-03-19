@@ -20,7 +20,6 @@ import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
 import type { Crazy8sSlot } from "@/lib/canvas/crazy-8s-types";
 import type { BrainRewritingMatrix } from "@/lib/canvas/brain-rewriting-types";
 import type { DotVote, VotingSession } from "@/lib/canvas/voting-types";
-import { BRAIN_REWRITING_CELL_ORDER } from "@/lib/canvas/brain-rewriting-types";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
 import { computeRadialPositions } from "@/lib/canvas/mind-map-layout";
 import { getStepTemplateStickyNotes, guidesToTemplateDefs } from "@/lib/canvas/template-sticky-note-config";
@@ -822,11 +821,10 @@ export default async function StepPage({ params }: StepPageProps) {
         // Check if this slot has a brain rewriting matrix with completed cells
         const matrix = brainMatrices.find((m) => m.slotId === s.slotId);
         if (matrix) {
-          // Find the last completed cell (has imageUrl) in BRAIN_REWRITING_CELL_ORDER
-          for (let i = BRAIN_REWRITING_CELL_ORDER.length - 1; i >= 0; i--) {
-            const cell = matrix.cells.find((c) => c.cellId === BRAIN_REWRITING_CELL_ORDER[i]);
-            if (cell?.imageUrl) {
-              resolvedImageUrl = cell.imageUrl;
+          // Find the last completed cell (has imageUrl) by iterating cells in reverse
+          for (let i = matrix.cells.length - 1; i >= 0; i--) {
+            if (matrix.cells[i]?.imageUrl) {
+              resolvedImageUrl = matrix.cells[i].imageUrl;
               break;
             }
           }
