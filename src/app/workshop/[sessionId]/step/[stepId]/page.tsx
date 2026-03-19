@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, like } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db/client";
-import { sessions, stepArtifacts, chatMessages, sessionParticipants, workshopSessions } from "@/db/schema";
+import { sessions, stepArtifacts, chatMessages, sessionParticipants, workshopSessions, buildPacks } from "@/db/schema";
 import { getStepByOrder, STEPS } from "@/lib/workshop/step-metadata";
 import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
@@ -402,6 +402,8 @@ export default async function StepPage({ params }: StepPageProps) {
   const initialBrainRewritingMatrices: BrainRewritingMatrix[] = canvasData?.brainRewritingMatrices || [];
   const initialDotVotes: DotVote[] = canvasData?.dotVotes || [];
   const initialVotingSession: VotingSession | undefined = canvasData?.votingSession;
+  const initialVotingCardPositions = canvasData?.votingCardPositions;
+  const initialIdeationPhase = canvasData?.ideationPhase;
 
   // Migration: if mind map nodes exist but lack positions, compute radial layout
   if (initialMindMapNodes.length > 0 && !initialMindMapNodes.some((n) => n.position)) {
@@ -963,6 +965,22 @@ export default async function StepPage({ params }: StepPageProps) {
   // Load admin-configured default viewport settings for this step
   const canvasSettings = await loadStepCanvasSettings(step.id);
 
+  // Step 10: check if journey map has been approved (gates prototype generation)
+  let journeyMapApproved = false;
+  if (stepNumber === 10) {
+    const jmRows = await db
+      .select({ content: buildPacks.content })
+      .from(buildPacks)
+      .where(and(eq(buildPacks.workshopId, session.workshop.id), like(buildPacks.title, 'Journey Map:%'), eq(buildPacks.formatType, 'json')))
+      .limit(1);
+    if (jmRows[0]?.content) {
+      try {
+        const state = JSON.parse(jmRows[0].content);
+        journeyMapApproved = state.isApproved === true;
+      } catch { /* invalid JSON */ }
+    }
+  }
+
   return (
     <div className="h-full">
       <CanvasStoreProvider
@@ -984,6 +1002,8 @@ export default async function StepPage({ params }: StepPageProps) {
         initialBrainRewritingMatrices={initialBrainRewritingMatrices}
         initialDotVotes={initialDotVotes}
         initialVotingSession={initialVotingSession}
+        initialVotingCardPositions={initialVotingCardPositions}
+        initialIdeationPhase={initialIdeationPhase}
       >
         {session.workshop.workshopType === 'multiplayer' ? (
           <MultiplayerRoomLoader workshopId={session.workshop.id} sessionId={sessionId}>
@@ -1010,6 +1030,7 @@ export default async function StepPage({ params }: StepPageProps) {
               ideationOwners={ideationOwners}
               shareToken={workshopShareToken}
               workshopSessionId={workshopSessionId}
+              journeyMapApproved={journeyMapApproved}
             />
           </MultiplayerRoomLoader>
         ) : (
@@ -1029,6 +1050,7 @@ export default async function StepPage({ params }: StepPageProps) {
             isAdmin={userIsAdmin}
             canvasGuides={canvasGuides}
             canvasSettings={canvasSettings}
+            journeyMapApproved={journeyMapApproved}
           />
         )}
       </CanvasStoreProvider>

@@ -63,7 +63,7 @@ export function ResultsContent({
             <SynthesisBuildPackSection
               workshopId={workshopId}
               onGeneratePrd={() => setShowPrdDialog(true)}
-              workshopCompleted={true}
+              workshopCompleted
             />
           </div>
         )}

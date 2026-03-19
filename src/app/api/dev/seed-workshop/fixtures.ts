@@ -773,7 +773,7 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
       ],
     },
     summary:
-      '- 2 concepts developed: PawPal Autopilot (AI morning routine) and PawPal At-a-Glance (home screen widget)\n- Autopilot scores highest: Technical 4, Business 4, Desirability 5\n- At-a-Glance is technically simple (5) but weaker on business (3)\n- Billboard Hero tests: "Your Pets Are Cared For. Before You Even Ask." (Autopilot)',
+      '- 2 concepts developed: PawPal Autopilot (AI morning routine) and PawPal At-a-Glance (home screen widget)\n- Autopilot scores highest: Technical 4, Business 4, Desirability 5\n- At-a-Glance is technically simple (5) but weaker on business (3)',
     canvasData: {
       conceptCards: [
         {
@@ -883,14 +883,9 @@ export const PAWPAL_FIXTURES: Record<string, StepFixture> = {
         { stepNumber: 6, stepName: 'Journey Mapping', keyOutputs: ['5-stage journey from awareness to daily use', 'Critical dip: notification fatigue during daily use', 'Opportunity: smart notification timing and home screen widgets'] },
         { stepNumber: 7, stepName: 'Reframe', keyOutputs: ['Shifted from "simplify management" to "intelligently-timed care nudges"', 'Incorporated notification fatigue as key constraint', 'Persona-specific HMW for Sarah Chen'] },
         { stepNumber: 8, stepName: 'Ideation', keyOutputs: ['3 idea clusters with 8+ ideas each', '3 selected: Autopilot, Glanceable Widget, Sitter Share Link', 'Brain writing evolved top ideas with voice and emotional engagement'] },
-        { stepNumber: 9, stepName: 'Concept Development', keyOutputs: ['PawPal Autopilot: AI morning routine engine (T:4, B:4, D:5)', 'PawPal At-a-Glance: home screen widget (T:5, B:3, D:4)', 'Billboard: "Your Pets Are Cared For. Before You Even Ask."'] },
+        { stepNumber: 9, stepName: 'Concept Development', keyOutputs: ['PawPal Autopilot: AI morning routine engine (T:4, B:4, D:5)', 'PawPal At-a-Glance: home screen widget (T:5, B:3, D:4)'] },
         { stepNumber: 10, stepName: 'Validate', keyOutputs: ['Confidence: 7/10 (moderate — synthetic research only)', 'Lead concept: PawPal Autopilot with widget as companion feature', 'Next: real user interviews and prototype testing'] },
       ],
-      billboardHero: {
-        headline: 'Your Pets Are Cared For. Before You Even Ask.',
-        subheadline: 'PawPal combines smart routine automation with at-a-glance status — so busy pet parents like Sarah never miss a feeding, walk, or vet appointment again.',
-        cta: 'Start Your Free Trial',
-      },
       confidenceAssessment: {
         score: 7,
         rationale: 'The concept is well-grounded in logical research synthesis and the persona feels authentic, but all insights come from synthetic interviews — not real users. The journey map dip (notification fatigue) is a genuine risk that the concept acknowledges but hasn\'t tested. Feasibility scores are reasonable but untested with actual technical prototyping. Confidence is moderate: the direction is sound, but real validation is needed.',

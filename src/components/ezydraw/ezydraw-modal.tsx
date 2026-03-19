@@ -246,9 +246,9 @@ function EzyDrawContent({
   }, [workshopId, slotTitle, slotDescription, iterationPrompt, editablePrompt, isGenerateMode, useExistingDrawing, isGeneratingImage, getSnapshot, backgroundImageUrl, stageRef, replaceWithGeneratedImage]);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col" style={{ minHeight: '100%' }}>
       <EzyDrawToolbar />
-      <div className="flex-1 overflow-hidden bg-card">
+      <div className="flex-1 overflow-hidden bg-card" style={{ minHeight: 300 }}>
         <EzyDrawStage ref={stageRef} />
       </div>
       <EzyDrawFooter
@@ -322,7 +322,7 @@ export function EzyDrawModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="p-0 rounded-xl border gap-0 translate-x-[-50%] translate-y-[-50%]"
+        className="p-0 rounded-xl border gap-0 translate-x-[-50%] translate-y-[-50%] overflow-y-auto overflow-x-hidden"
         style={{
           width: `min(${dialogW}px, 95vw)`,
           maxWidth: `min(${dialogW}px, 95vw)`,

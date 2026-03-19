@@ -1029,7 +1029,6 @@ function ConceptFallbackRenderer({ artifact }: { artifact: Record<string, unknow
 // ── Step 10: Validate ─────────────────────────────────────────────────
 export function ValidateRenderer({ data }: { data: StepData }) {
   const a = data.artifact;
-  const billboardHero = a.billboardHero as Record<string, unknown> | undefined;
   const confidenceAssessment = a.confidenceAssessment as Record<string, unknown> | undefined;
   const nextSteps = (a.recommendedNextSteps as string[]) || [];
   const narrativeIntro = (a.narrativeIntro as string) || (a.narrative as string) || '';
@@ -1038,52 +1037,16 @@ export function ValidateRenderer({ data }: { data: StepData }) {
     <CaptureFrame>
       <StepHeader title="Validation & Synthesis" subtitle="Step 10" />
       <div style={{ display: 'flex', gap: 24, padding: '20px 32px' }}>
-        {/* Billboard hero */}
-        {billboardHero && (
-          <div style={{
-            flex: 1,
-            border: '2px solid #3B82F6',
-            borderRadius: 12,
-            padding: 24,
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            minHeight: 200,
-          }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#0F1B33', marginBottom: 8 }}>
-              {billboardHero.headline as string}
-            </div>
-            <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 16 }}>
-              {billboardHero.subheadline as string}
-            </div>
-            {typeof billboardHero.cta === 'string' && billboardHero.cta && (
-              <div style={{
-                display: 'inline-block',
-                backgroundColor: '#3B82F6',
-                color: '#fff',
-                padding: '8px 20px',
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 600,
-                margin: '0 auto',
-              }}>
-                {billboardHero.cta}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Confidence gauge */}
         {confidenceAssessment && (
-          <div style={{ width: billboardHero ? 320 : '100%' }}>
+          <div style={{ width: '100%' }}>
             {renderConfidenceGauge(confidenceAssessment)}
           </div>
         )}
       </div>
 
-      {/* Narrative (if no billboard) */}
-      {!billboardHero && narrativeIntro && (
+      {/* Narrative */}
+      {narrativeIntro && (
         <div style={{ padding: '0 32px', fontSize: 12, color: '#0F1B33', fontStyle: 'italic', lineHeight: 1.5 }}>
           {narrativeIntro}
         </div>

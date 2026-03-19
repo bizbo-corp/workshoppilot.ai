@@ -64,7 +64,7 @@ Build a frontend prototype for "{concept name from artifacts}".
 {Combine pain points from sense-making + HMW statement from reframe. If those steps are missing, derive from challenge + persona pains}
 
 ## The Solution
-{USP from concept} — {billboard headline + subheadline if available}
+{USP from concept} — {elevator pitch from concept}
 
 ## Key Features to Prototype
 {Derive 3-5 features from the concept, each tied to a specific persona pain point. Format as bullet points with feature name + brief description}

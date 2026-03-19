@@ -23,6 +23,7 @@ import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { Crazy8sSlot, SlotGroup } from '@/lib/canvas/crazy-8s-types';
 import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
 import type { DotVote, VotingSession } from '@/lib/canvas/voting-types';
+import type { IdeationPhase } from '@/stores/canvas-store';
 
 type SoloCanvasStoreApi = ReturnType<typeof createCanvasStore>;
 type CanvasStoreApi = SoloCanvasStoreApi | MultiplayerCanvasStoreApi;
@@ -48,6 +49,8 @@ export interface CanvasStoreProviderProps {
   initialBrainRewritingMatrices?: BrainRewritingMatrix[];
   initialDotVotes?: DotVote[];
   initialVotingSession?: VotingSession;
+  initialVotingCardPositions?: Record<string, { x: number; y: number }>;
+  initialIdeationPhase?: IdeationPhase;
 }
 
 export function CanvasStoreProvider({
@@ -69,6 +72,8 @@ export function CanvasStoreProvider({
   initialBrainRewritingMatrices,
   initialDotVotes,
   initialVotingSession,
+  initialVotingCardPositions,
+  initialIdeationPhase,
 }: CanvasStoreProviderProps) {
   const isMultiplayer = workshopType === 'multiplayer';
 
@@ -101,6 +106,8 @@ export function CanvasStoreProvider({
     hmwCards: initialHmwCards || [],
     brainRewritingMatrices: initialBrainRewritingMatrices || [],
     dotVotes: initialDotVotes || [],
+    votingCardPositions: initialVotingCardPositions || {},
+    ideationPhase: initialIdeationPhase || 'mind-mapping',
   });
   // Keep ref fresh across re-renders (e.g. after router.refresh())
   // Filter out deleted owners so stale server props don't resurrect them.
@@ -128,6 +135,8 @@ export function CanvasStoreProvider({
       brainRewritingMatrices: initialBrainRewritingMatrices || [],
       dotVotes: initialDotVotes || [],
       votingSession: initialVotingSession,
+      votingCardPositions: initialVotingCardPositions || {},
+      ideationPhase: initialIdeationPhase,
     };
     if (isMultiplayer) {
       return createMultiplayerCanvasStore(initState);
@@ -220,6 +229,12 @@ export function CanvasStoreProvider({
       }
       if (current.dotVotes.length === 0 && init.dotVotes.length > 0) {
         patch.dotVotes = init.dotVotes;
+      }
+      if (Object.keys(current.votingCardPositions).length === 0 && Object.keys(init.votingCardPositions).length > 0) {
+        patch.votingCardPositions = init.votingCardPositions;
+      }
+      if (current.ideationPhase === 'mind-mapping' && init.ideationPhase !== 'mind-mapping') {
+        patch.ideationPhase = init.ideationPhase;
       }
 
       if (Object.keys(patch).length > 0) {

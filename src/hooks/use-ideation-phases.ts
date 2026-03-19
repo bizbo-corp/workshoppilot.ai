@@ -74,6 +74,20 @@ export function useIdeationPhases({
     const state = canvasStoreApi.getState();
     const isComplete = stepStatus === 'complete';
 
+    // Use persisted ideationPhase as authoritative source when available.
+    // This is the primary resume mechanism — the derivation below is fallback
+    // for sessions that don't yet have ideationPhase saved.
+    const persisted = state.ideationPhase;
+    if (persisted && persisted !== 'mind-mapping') {
+      return {
+        phase: persisted,
+        showCrazy8s: true,
+        selectedSlotIds: state.selectedSlotIds,
+        artifactConfirmed: isComplete && persisted === 'brain-rewriting',
+      };
+    }
+
+    // Fallback derivation for legacy sessions without persisted ideationPhase
     if (state.brainRewritingMatrices.length > 0) {
       return {
         phase: 'brain-rewriting' as IdeationPhase,
@@ -220,6 +234,7 @@ export function useIdeationPhases({
       ...(state.dotVotes.length > 0 ? { dotVotes: state.dotVotes } : {}),
       ...(state.votingSession.status !== 'idle' ? { votingSession: state.votingSession } : {}),
     ...(Object.keys(state.votingCardPositions).length > 0 ? { votingCardPositions: state.votingCardPositions } : {}),
+      ...(state.ideationPhase !== 'mind-mapping' ? { ideationPhase: state.ideationPhase } : {}),
     });
     state.markClean();
   }, [workshopId, stepId, canvasStoreApi]);
@@ -370,12 +385,14 @@ export function useIdeationPhases({
     await flushCanvasState();
     setArtifactConfirmed(false);
     setCurrentPhase('idea-selection');
-  }, [flushCanvasState]);
+    setStoreIdeationPhase('idea-selection');
+  }, [flushCanvasState, setStoreIdeationPhase]);
 
   // Back to drawing mode from idea selection
   const handleBackToDrawing = React.useCallback(() => {
     setCurrentPhase('crazy-eights');
-  }, []);
+    setStoreIdeationPhase('crazy-eights');
+  }, [setStoreIdeationPhase]);
 
   // Build brain rewriting matrices from selection units
   const buildMatricesFromSelection = React.useCallback((selectedIds: string[], state: ReturnType<typeof canvasStoreApi.getState>) => {
@@ -412,10 +429,15 @@ export function useIdeationPhases({
         const sourceImage = unit.group.mergedImageUrl || firstSlot?.imageUrl;
         const matrix = createEmptyMatrix(unit.group.slotIds[0], sourceImage);
         matrix.groupId = unit.group.id;
+        matrix.sourceDescription = firstSlot?.description;
+        matrix.sourceSketchPrompt = firstSlot?.sketchPrompt;
         return matrix;
       } else {
         const slot = state.crazy8sSlots.find((s) => s.slotId === unit.slotId);
-        return createEmptyMatrix(unit.slotId, slot?.imageUrl);
+        const matrix = createEmptyMatrix(unit.slotId, slot?.imageUrl);
+        matrix.sourceDescription = slot?.description;
+        matrix.sourceSketchPrompt = slot?.sketchPrompt;
+        return matrix;
       }
     });
   }, [canvasStoreApi]);
@@ -433,10 +455,11 @@ export function useIdeationPhases({
     } else {
       const matrices = buildMatricesFromSelection(localSelectedSlotIds, state);
       state.setBrainRewritingMatrices(matrices);
+      setStoreIdeationPhase('brain-rewriting');
       await flushCanvasState();
       setCurrentPhase('brain-rewriting');
     }
-  }, [stepId, canvasStoreApi, localSelectedSlotIds, flushCanvasState, buildMatricesFromSelection]);
+  }, [stepId, canvasStoreApi, localSelectedSlotIds, flushCanvasState, buildMatricesFromSelection, setStoreIdeationPhase]);
 
   // Save Brain Rewriting
   const handleSaveBrainRewriting = React.useCallback(async () => {
@@ -471,10 +494,11 @@ export function useIdeationPhases({
 
     const matrices = buildMatricesFromSelection(selectedIds, state);
     state.setBrainRewritingMatrices(matrices);
+    setStoreIdeationPhase('brain-rewriting');
 
     await flushCanvasState();
     setCurrentPhase('brain-rewriting');
-  }, [canvasStoreApi, flushCanvasState, buildMatricesFromSelection]);
+  }, [canvasStoreApi, flushCanvasState, buildMatricesFromSelection, setStoreIdeationPhase]);
 
   // Voting: reset and re-open voting (solo forgiveness + multiplayer "Vote Again")
   const handleReVote = React.useCallback(() => {

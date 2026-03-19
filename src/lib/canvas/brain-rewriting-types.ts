@@ -10,11 +10,16 @@ export interface BrainRewritingCell {
   cellId: BrainRewritingCellId;
   imageUrl?: string;      // PNG from Vercel Blob
   drawingId?: string;     // Reference into stepArtifacts.drawings[]
+  title?: string;         // Sketch title (same as Crazy 8s slots)
+  description?: string;   // Brief description
+  sketchPrompt?: string;  // AI-woven concept prompt for Generate Sketch
 }
 
 export interface BrainRewritingMatrix {
   slotId: string;              // Source Crazy 8s slot ('slot-1', etc.) — or first slot of a group
   sourceImageUrl?: string;     // Read-only copy of original sketch (or merged group image)
+  sourceDescription?: string;  // Carried forward from original Crazy 8s slot
+  sourceSketchPrompt?: string; // Carried forward from original Crazy 8s slot
   cells: BrainRewritingCell[]; // Always 3 cells
   includedInConcepts?: boolean; // Whether to carry forward into concept development (default true)
   groupId?: string;            // When set, this matrix represents a merged group (not an individual slot)

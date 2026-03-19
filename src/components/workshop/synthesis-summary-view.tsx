@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Zap, Megaphone, CheckCircle2 } from 'lucide-react';
+import { Zap, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DeliverableCard } from './deliverable-card';
 
@@ -23,12 +23,6 @@ interface ConfidenceAssessment {
   score: number;
   researchQuality: 'thin' | 'moderate' | 'strong';
   rationale: string;
-}
-
-interface BillboardHero {
-  headline: string;
-  subheadline: string;
-  cta: string;
 }
 
 /**
@@ -74,7 +68,6 @@ export function SynthesisSummaryView({
   workshopCompleted = false,
 }: SynthesisSummaryViewProps) {
   const narrative = (artifact.narrativeIntro || artifact.narrative) as string | undefined;
-  const billboardHero = artifact.billboardHero as BillboardHero | undefined;
   const stepSummaries = (artifact.stepSummaries as StepSummary[]) || [];
   const confidenceAssessment = artifact.confidenceAssessment as ConfidenceAssessment | undefined;
   const recommendedNextSteps = (artifact.recommendedNextSteps as string[]) || [];
@@ -98,27 +91,6 @@ export function SynthesisSummaryView({
           <p className="text-base leading-relaxed" style={{ fontFamily: 'Georgia, serif' }}>
             {narrative}
           </p>
-        </div>
-      )}
-
-      {/* Billboard Hero */}
-      {billboardHero?.headline && (
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Megaphone className="h-5 w-5 text-primary" />
-            <span>The Billboard Test</span>
-          </h3>
-          <div className="rounded-lg border-2 border-primary bg-gradient-to-br from-primary/10 to-primary/5 p-8 text-center">
-            <h3 className="mb-3 text-2xl font-bold">
-              {billboardHero.headline}
-            </h3>
-            <p className="mb-5 text-lg text-muted-foreground">
-              {billboardHero.subheadline}
-            </p>
-            <div className="inline-block rounded-lg bg-primary px-6 py-3 font-semibold text-primary-foreground">
-              {billboardHero.cta}
-            </div>
-          </div>
         </div>
       )}
 
@@ -267,44 +239,32 @@ export function SynthesisSummaryView({
 export function SynthesisBuildPackSection({
   workshopId,
   onGeneratePrd,
-  onGenerateBillboard,
-  hasBillboard,
   workshopCompleted = false,
+  prototypeDisabled = false,
 }: {
   workshopId?: string;
   onGeneratePrd?: () => void;
-  onGenerateBillboard?: () => void;
-  hasBillboard?: boolean;
   workshopCompleted?: boolean;
+  prototypeDisabled?: boolean;
 }) {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold flex items-center gap-2">
-        Prototype & Preview
+        Prototype
         {workshopCompleted && (
           <CheckCircle2 className="h-5 w-5 text-olive-600 dark:text-olive-400" />
         )}
       </h3>
       <p className="text-sm text-muted-foreground">
-        Interactive prototypes and previews generated from your workshop.
+        AI-generated clickable prototype from your workshop.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Billboard Hero */}
-        <DeliverableCard
-          title="Billboard Hero"
-          description="AI-generated billboard headline, subheadline, CTA, and hero image — your product's elevator pitch visualized."
-          icon={<Megaphone className="h-5 w-5" />}
-          disabled={!workshopId}
-          buttonLabel={hasBillboard ? 'View Billboard' : 'Create Billboard'}
-          onDownload={onGenerateBillboard}
-        />
-        {/* V0 Prototype */}
         <DeliverableCard
           title="V0 Prototype"
           description="AI-generated clickable prototype from your workshop — preview in browser or edit in V0."
           icon={<Zap className="h-5 w-5" />}
-          disabled={!workshopId}
-          buttonLabel={workshopId ? 'Generate Prototype' : 'Coming Soon'}
+          disabled={!workshopId || prototypeDisabled}
+          buttonLabel={prototypeDisabled ? 'Complete Journey Map First' : workshopId ? 'Generate Prototype' : 'Coming Soon'}
           onDownload={onGeneratePrd}
         />
       </div>

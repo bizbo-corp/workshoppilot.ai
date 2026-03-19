@@ -6,7 +6,7 @@
  * Follows the same pattern as crazy-8s-canvas.tsx.
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { BrainRewritingGrid } from './brain-rewriting-grid';
 import { EzyDrawLoader } from '@/components/ezydraw/ezydraw-loader';
 import { saveDrawing, loadDrawing, updateDrawing } from '@/actions/drawing-actions';
@@ -18,6 +18,7 @@ import {
 } from '@/lib/canvas/brain-rewriting-types';
 import { CRAZY_8S_CANVAS_SIZE } from '@/lib/canvas/crazy-8s-types';
 import { type DrawingElement, parseVectorJson } from '@/lib/drawing/types';
+import { useCanvasStore } from '@/providers/canvas-store-provider';
 
 interface BrainRewritingCanvasProps {
   matrix: BrainRewritingMatrix;
@@ -43,7 +44,7 @@ export function BrainRewritingCanvas({
   onCellUpdate,
 }: BrainRewritingCanvasProps) {
   const [ezyDrawState, setEzyDrawState] = useState<EzyDrawState | null>(null);
-  const [iterationPrompt, setIterationPrompt] = useState('');
+  const updateBrainRewritingCell = useCanvasStore((s) => s.updateBrainRewritingCell);
 
   // Determine active cell: first cell without imageUrl in order
   const activeCellId: BrainRewritingCellId | null =
@@ -179,6 +180,23 @@ export function BrainRewritingCanvas({
     }
   };
 
+  // Current cell data for EzyDraw modal
+  const currentCell = ezyDrawState
+    ? matrix.cells.find((c) => c.cellId === ezyDrawState.cellId)
+    : null;
+  const cellTitle = currentCell?.title || slotTitle;
+  const cellDescription = currentCell?.description || matrix.sourceDescription || '';
+  const cellSketchPrompt = currentCell?.sketchPrompt || matrix.sourceSketchPrompt || '';
+
+  /** Handle title/description/sketchPrompt changes — same pattern as crazy 8s */
+  const handleSlotInfoChange = useCallback(
+    (updates: { title?: string; description?: string; sketchPrompt?: string }) => {
+      if (!ezyDrawState) return;
+      updateBrainRewritingCell(matrix.slotId, ezyDrawState.cellId, updates);
+    },
+    [ezyDrawState, matrix.slotId, updateBrainRewritingCell],
+  );
+
   return (
     <div className="h-full overflow-auto p-4">
       <BrainRewritingGrid
@@ -190,15 +208,17 @@ export function BrainRewritingCanvas({
       {ezyDrawState?.isOpen && (
         <EzyDrawLoader
           isOpen={true}
-          onClose={() => { setEzyDrawState(null); setIterationPrompt(''); }}
+          onClose={() => setEzyDrawState(null)}
           onSave={handleDrawingSave}
           initialElements={ezyDrawState.initialElements}
           initialBackgroundImageUrl={ezyDrawState.initialBackgroundImageUrl}
           canvasSize={CRAZY_8S_CANVAS_SIZE}
           workshopId={workshopId}
-          slotTitle={slotTitle}
-          iterationPrompt={iterationPrompt}
-          onIterationPromptChange={setIterationPrompt}
+          slotTitle={cellTitle}
+          slotDescription={cellDescription}
+          onSlotInfoChange={handleSlotInfoChange}
+          slotId={`${matrix.slotId}-${ezyDrawState.cellId}`}
+          sketchPrompt={cellSketchPrompt}
         />
       )}
     </div>

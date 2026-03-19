@@ -36,6 +36,7 @@ import type {
   GridColumn,
   MindMapNodeState,
   MindMapEdgeState,
+  IdeationPhase,
 } from './canvas-store';
 import { getCellBounds } from '@/lib/canvas/grid-layout';
 import type { GridConfig } from '@/lib/canvas/grid-layout';
@@ -62,6 +63,8 @@ type InitState = {
   brainRewritingMatrices?: BrainRewritingMatrix[];
   dotVotes?: DotVote[];
   votingSession?: VotingSession;
+  votingCardPositions?: Record<string, { x: number; y: number }>;
+  ideationPhase?: IdeationPhase;
 };
 
 /**
@@ -93,8 +96,8 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
     pendingFitView: false,
     pendingHmwChipSelection: null,
     selectedStickyNoteIds: [],
-    votingCardPositions: {},
-    ideationPhase: 'mind-mapping' as const,
+    votingCardPositions: initState?.votingCardPositions || {},
+    ideationPhase: initState?.ideationPhase || 'mind-mapping',
   };
 
   return createStore<WithLiveblocks<CanvasStore>>()(

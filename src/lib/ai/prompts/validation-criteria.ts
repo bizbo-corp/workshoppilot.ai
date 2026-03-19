@@ -290,11 +290,6 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
         checkPrompt: 'Do the 1-5 feasibility scores (technical, business, user desirability) each include specific reasoning citing prior steps? Are the rationales honest (acknowledging uncertainty where it exists)?'
       },
       {
-        name: 'Billboard Clarity',
-        description: 'Billboard Hero headline communicates value proposition clearly',
-        checkPrompt: 'Does the Billboard Hero headline (6-10 words) communicate a clear benefit? Is it benefit-focused (not feature-focused)? Would the persona stop and pay attention to this billboard?'
-      },
-      {
         name: 'Dip Solution',
         description: 'Concept addresses the journey map dip from Step 6',
         checkPrompt: 'Does the concept clearly address the critical pain point (dip) identified in the journey map from Step 6? Is the connection explicit in the elevator pitch or USP?'

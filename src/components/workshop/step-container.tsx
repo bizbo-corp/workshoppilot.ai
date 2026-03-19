@@ -15,12 +15,7 @@ import { PrdViewerDialog } from "./prd-viewer-dialog";
 import { useIdeationPhases } from "@/hooks/use-ideation-phases";
 import {
   Loader2,
-  Megaphone,
-  ImageIcon,
-  Sparkles,
   ArrowLeft,
-  ChevronDown,
-  X,
   ExternalLink,
   Rocket,
   CheckCircle2,
@@ -28,13 +23,14 @@ import {
   Minimize2,
   Maximize2,
   MessageSquare,
+  X,
 } from "lucide-react";
 import {
   resetStep,
   updateStepStatus,
   completeWorkshop,
 } from "@/actions/workshop-actions";
-import { loadCanvasState, saveCanvasState } from "@/actions/canvas-actions";
+import { saveCanvasState } from "@/actions/canvas-actions";
 import {
   getStepByOrder,
   STEP_CONFIRM_LABELS,
@@ -44,18 +40,7 @@ import {
 import { STEP_CANVAS_CONFIGS } from "@/lib/canvas/step-canvas-config";
 import { fireConfetti } from "@/lib/utils/confetti";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogHeader,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import type { ConceptCardData } from "@/lib/canvas/concept-card-types";
 import { toast } from "sonner";
 import {
   useCanvasStore,
@@ -120,57 +105,6 @@ function StepAdvanceBroadcaster({
   return null;
 }
 
-const BILLBOARD_VISUAL_STYLES = [
-  {
-    value: "vibrant",
-    label: "Bold & Vibrant",
-    prompt:
-      "Bold, vibrant colors with high contrast, energetic gradient backgrounds, eye-catching neon accents",
-  },
-  {
-    value: "minimalist",
-    label: "Clean & Minimalist",
-    prompt:
-      "Minimalist clean design, lots of white space, subtle typography, muted color palette, Swiss design principles",
-  },
-  {
-    value: "corporate",
-    label: "Corporate & Professional",
-    prompt:
-      "Professional corporate aesthetic, navy/gray tones, structured layout, executive boardroom quality",
-  },
-  {
-    value: "playful",
-    label: "Playful & Fun",
-    prompt:
-      "Playful, whimsical design with rounded shapes, bright pastels, hand-drawn feel, friendly and approachable",
-  },
-  {
-    value: "dark",
-    label: "Dark & Moody",
-    prompt:
-      "Dark theme with deep blacks, dramatic lighting, cinematic atmosphere, premium luxury feel",
-  },
-  {
-    value: "retro",
-    label: "Retro & Vintage",
-    prompt:
-      "Retro vintage aesthetic, 1970s/80s color palette, halftone textures, nostalgic warmth",
-  },
-  {
-    value: "futuristic",
-    label: "Futuristic & Tech",
-    prompt:
-      "Futuristic sci-fi aesthetic, holographic elements, circuit patterns, cyber-blue glows, cutting edge technology",
-  },
-  {
-    value: "organic",
-    label: "Organic & Natural",
-    prompt:
-      "Organic natural aesthetic, earth tones, botanical elements, warm textures, sustainable feel",
-  },
-] as const;
-
 interface StepContainerProps {
   stepOrder: number;
   sessionId: string;
@@ -202,6 +136,7 @@ interface StepContainerProps {
   ideationOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string; hmwBranchLabel: string; hmwFullStatement?: string }>;
   shareToken?: string | null;
   workshopSessionId?: string | null;
+  journeyMapApproved?: boolean;
 }
 
 export function StepContainer({
@@ -227,6 +162,7 @@ export function StepContainer({
   ideationOwners,
   shareToken,
   workshopSessionId,
+  journeyMapApproved = false,
 }: StepContainerProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
@@ -354,7 +290,7 @@ export function StepContainer({
 
   // HMW card counts as "content" only when all 4 fields are filled (card is 'filled')
   const hmwCardComplete = hmwCards.some((c) => c.cardState === "filled");
-  // Concept card counts as "content" only when all sections are filled (pitch, USP, SWOT, feasibility, billboard)
+  // Concept card counts as "content" only when all sections are filled (pitch, USP, SWOT, feasibility)
   const conceptCardComplete = conceptCards.some(
     (c) => c.cardState === "filled",
   );
@@ -756,67 +692,6 @@ export function StepContainer({
   );
   const [isCompletingWorkshop, setIsCompletingWorkshop] = React.useState(false);
 
-  // Billboard — concept data from Step 9
-  const [conceptCardsForBillboard, setConceptCardsForBillboard] =
-    React.useState<ConceptCardData[]>([]);
-  const [isLoadingConcepts, setIsLoadingConcepts] = React.useState(false);
-
-  // Billboard detail dialog (2-step flow)
-  const [showBillboardDetail, setShowBillboardDetail] = React.useState(false);
-  const [billboardDialogStep, setBillboardDialogStep] = React.useState<
-    "text" | "image"
-  >("text");
-  const [selectedConceptIndexes, setSelectedConceptIndexes] = React.useState<
-    number[]
-  >([]);
-  const [billboardMode, setBillboardMode] = React.useState<
-    "combined" | "separate"
-  >("combined");
-  const [billboardUserPrompt, setBillboardUserPrompt] = React.useState("");
-  const [billboardVisualStyle, setBillboardVisualStyle] =
-    React.useState("vibrant");
-  const [billboardImagePrompt, setBillboardImagePrompt] = React.useState("");
-
-  // Generated billboards (1 in combined mode, N in separate)
-  const [generatedBillboards, setGeneratedBillboards] = React.useState<
-    Array<{
-      headline: string;
-      subheadline: string;
-      cta: string;
-      conceptName?: string;
-    }>
-  >([]);
-  const [isBillboardTextGenerating, setIsBillboardTextGenerating] =
-    React.useState(false);
-
-  // Editable billboard text fields (keyed by index)
-  const [editedBillboards, setEditedBillboards] = React.useState<
-    Record<number, { headline: string; subheadline: string; cta: string }>
-  >({});
-
-  // Per-billboard image state (keyed by index)
-  const [billboardImages, setBillboardImages] = React.useState<
-    Record<number, string>
-  >({});
-  const [billboardImageGenerating, setBillboardImageGenerating] =
-    React.useState<Record<number, boolean>>({});
-  const [showBillboardImageDialog, setShowBillboardImageDialog] =
-    React.useState<number | null>(null);
-
-  // Step 10: load Step 9 concepts for billboard generator
-  React.useEffect(() => {
-    if (stepOrder !== 10) return;
-    setIsLoadingConcepts(true);
-    loadCanvasState(workshopId, "concept")
-      .then((data) => {
-        const cards =
-          data?.conceptCards?.filter((c) => c.cardState === "filled") || [];
-        setConceptCardsForBillboard(cards);
-        setSelectedConceptIndexes(cards.map((_, i) => i));
-      })
-      .finally(() => setIsLoadingConcepts(false));
-  }, [stepOrder, workshopId]);
-
   // Step 10: extraction handler — extracts synthesis artifact and marks step complete
   const handleStep10Extract = React.useCallback(async () => {
     if (stepOrder !== 10 || !step || isExtracting || step10Artifact) return;
@@ -1005,12 +880,6 @@ export function StepContainer({
       // Clear Step 10 extraction state
       setStep10Artifact(null);
       hasAutoExtracted.current = false;
-      // Clear billboard state
-      setGeneratedBillboards([]);
-      setEditedBillboards({});
-      setBillboardImages({});
-      setConceptCardsForBillboard([]);
-      setBillboardDialogStep("text");
       // Force re-mount of ChatPanel to clear useChat state
       setResetKey((prev) => prev + 1);
       // Clear canvas/whiteboard state AFTER resetKey so the new store mount
@@ -1051,138 +920,7 @@ export function StepContainer({
     setBrainRewritingMatrices,
   ]);
 
-  // Billboard text generation handler
-  const handleGenerateBillboardText = React.useCallback(async () => {
-    const selected = selectedConceptIndexes
-      .map((i) => conceptCardsForBillboard[i])
-      .filter(Boolean);
-    if (selected.length === 0 || isBillboardTextGenerating) return;
-
-    setIsBillboardTextGenerating(true);
-    try {
-      const res = await fetch("/api/ai/generate-billboard-text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workshopId,
-          concepts: selected.map((c) => ({
-            conceptName: c.conceptName,
-            elevatorPitch: c.elevatorPitch,
-            usp: c.usp,
-          })),
-          mode: billboardMode,
-          userPrompt: billboardUserPrompt || undefined,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(
-          (data as { error?: string }).error || `Failed (${res.status})`,
-        );
-      }
-
-      const { billboards } = await res.json();
-      setGeneratedBillboards(billboards);
-      // Populate editable fields from generated text
-      const edited: Record<
-        number,
-        { headline: string; subheadline: string; cta: string }
-      > = {};
-      (
-        billboards as Array<{
-          headline: string;
-          subheadline: string;
-          cta: string;
-        }>
-      ).forEach((bb, i) => {
-        edited[i] = {
-          headline: bb.headline,
-          subheadline: bb.subheadline,
-          cta: bb.cta,
-        };
-      });
-      setEditedBillboards(edited);
-      setBillboardImages({});
-      setBillboardImageGenerating({});
-    } catch (error) {
-      console.error("Billboard text generation failed:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to generate billboard text",
-      );
-    } finally {
-      setIsBillboardTextGenerating(false);
-    }
-  }, [
-    selectedConceptIndexes,
-    conceptCardsForBillboard,
-    billboardMode,
-    billboardUserPrompt,
-    workshopId,
-    isBillboardTextGenerating,
-  ]);
-
-  // Billboard image generation handler (per-billboard index)
-  const handleGenerateBillboardImageForIndex = React.useCallback(
-    async (idx: number) => {
-      const edited = editedBillboards[idx];
-      const billboard = edited || generatedBillboards[idx];
-      if (!billboard || billboardImageGenerating[idx]) return;
-
-      const styleObj = BILLBOARD_VISUAL_STYLES.find(
-        (s) => s.value === billboardVisualStyle,
-      );
-
-      setBillboardImageGenerating((prev) => ({ ...prev, [idx]: true }));
-      try {
-        const res = await fetch("/api/ai/generate-billboard-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            workshopId,
-            headline: billboard.headline,
-            subheadline: billboard.subheadline,
-            cta: billboard.cta,
-            previousImageUrl: billboardImages[idx] || undefined,
-            visualStyle: styleObj?.prompt,
-            userPrompt: billboardImagePrompt || undefined,
-          }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(
-            (data as { error?: string }).error || `Failed (${res.status})`,
-          );
-        }
-
-        const { imageUrl } = await res.json();
-        setBillboardImages((prev) => ({ ...prev, [idx]: imageUrl }));
-      } catch (error) {
-        console.error("Billboard image generation failed:", error);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to generate billboard image",
-        );
-      } finally {
-        setBillboardImageGenerating((prev) => ({ ...prev, [idx]: false }));
-      }
-    },
-    [
-      editedBillboards,
-      generatedBillboards,
-      billboardImages,
-      billboardImageGenerating,
-      workshopId,
-      billboardVisualStyle,
-      billboardImagePrompt,
-    ],
-  );
-
-  // Step 10: render Build Pack deliverable cards + extraction status
+  // Step 10: render validation deliverables — journey map first, then prototype
   // Synthesis summary (narrative, journey, confidence, next steps) lives on the results page
   const renderStep10Content = () => {
     return (
@@ -1216,56 +954,63 @@ export function StepContainer({
             </div>
           )}
 
-          {/* Build Pack deliverables — always available */}
-          <SynthesisBuildPackSection
-            workshopId={workshopId}
-            onGeneratePrd={() => setShowPrdDialog(true)}
-            onGenerateBillboard={() => {
-              // Resume at the right step based on previous progress
-              if (generatedBillboards.length > 0) {
-                setBillboardDialogStep("image");
-              }
-              setShowBillboardDetail(true);
-            }}
-            hasBillboard={generatedBillboards.length > 0}
-            workshopCompleted={workshopCompleted}
-          />
-
-          {/* UX Journey Map — central gatekeeper before prototyping */}
-          <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-5 space-y-3">
+          {/* Step 1: UX Journey Map — must be completed before prototype */}
+          <div className={cn(
+            "rounded-xl border-2 p-5 space-y-3",
+            journeyMapApproved
+              ? "border-green-500/30 bg-green-500/5"
+              : "border-primary/20 bg-primary/5",
+          )}>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-primary"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z" />
-                  <path d="M9 3v15" />
-                  <path d="M15 6v15" />
-                </svg>
+              <div className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                journeyMapApproved ? "bg-green-500/10" : "bg-primary/10",
+              )}>
+                {journeyMapApproved ? (
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-primary"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z" />
+                    <path d="M9 3v15" />
+                    <path d="M15 6v15" />
+                  </svg>
+                )}
               </div>
               <div>
-                <h3 className="text-base font-semibold">UX Journey Map</h3>
+                <h3 className="text-base font-semibold">
+                  {journeyMapApproved ? "Journey Map Approved" : "UX Journey Map"}
+                </h3>
                 <p className="text-xs text-muted-foreground">
-                  Review and approve your journey map before creating a
-                  prototype
+                  {journeyMapApproved
+                    ? "Your journey map has been approved — prototype generation is unlocked"
+                    : "Review and approve your journey map before creating a prototype"}
                 </p>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Your validated concepts are mapped onto user journey stages.
-              Approve the map to unlock prototype generation.
-            </p>
+            {!journeyMapApproved && (
+              <p className="text-sm text-muted-foreground">
+                Your validated concepts are mapped onto user journey stages.
+                Approve the map to unlock prototype generation.
+              </p>
+            )}
             <div className="flex items-center gap-3">
               <a
                 href={`/workshop/${sessionId}/outputs/journey-map`}
-                className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors",
+                  journeyMapApproved
+                    ? "border hover:bg-muted"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90",
+                )}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -1281,13 +1026,23 @@ export function StepContainer({
                   <path d="M9 3v15" />
                   <path d="M15 6v15" />
                 </svg>
-                Open Journey Map
+                {journeyMapApproved ? "View Journey Map" : "Open Journey Map"}
               </a>
-              <span className="text-xs text-muted-foreground">
-                Approve your map to enable prototyping
-              </span>
+              {!journeyMapApproved && (
+                <span className="text-xs text-muted-foreground">
+                  Approve your map to enable prototyping
+                </span>
+              )}
             </div>
           </div>
+
+          {/* Step 2: V0 Prototype — disabled until journey map is approved */}
+          <SynthesisBuildPackSection
+            workshopId={workshopId}
+            onGeneratePrd={() => setShowPrdDialog(true)}
+            workshopCompleted={workshopCompleted}
+            prototypeDisabled={!journeyMapApproved}
+          />
 
           {/* V0 Prototype creation status */}
           {v0Status === "creating" && (
@@ -1401,424 +1156,6 @@ export function StepContainer({
           onOpenChange={setShowPrdDialog}
           workshopId={workshopId}
         />
-
-        {/* Billboard full-size image lightbox — edge-to-edge overlay */}
-        {showBillboardImageDialog !== null &&
-          billboardImages[showBillboardImageDialog] && (
-            <div
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
-              onClick={() => setShowBillboardImageDialog(null)}
-            >
-              <button
-                onClick={() => setShowBillboardImageDialog(null)}
-                className="absolute top-4 right-4 rounded-full bg-background/10 p-2 text-white hover:bg-background/20 transition-colors z-10"
-              >
-                <X className="h-6 w-6" />
-              </button>
-              <img
-                src={billboardImages[showBillboardImageDialog]}
-                alt="Billboard hero visual — full size"
-                className="max-h-[95vh] max-w-[95vw] object-contain"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-          )}
-
-        {/* Billboard Detail Dialog — 2-step flow */}
-        <Dialog
-          open={showBillboardDetail}
-          onOpenChange={setShowBillboardDetail}
-        >
-          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Megaphone className="h-5 w-5 text-primary" />
-                Billboard Hero
-              </DialogTitle>
-              <DialogDescription>
-                {billboardDialogStep === "text"
-                  ? "Generate and edit your billboard copy."
-                  : "Choose a visual style and generate your hero image."}
-              </DialogDescription>
-            </DialogHeader>
-
-            {billboardDialogStep === "text" ? (
-              /* ===== Step 1: Text Generation & Editing ===== */
-              <div className="space-y-5 py-2">
-                {/* Show generated text editing if we have results */}
-                {generatedBillboards.length > 0 ? (
-                  <div className="space-y-5">
-                    {generatedBillboards.map((bb, idx) => {
-                      const edited = editedBillboards[idx] || {
-                        headline: bb.headline,
-                        subheadline: bb.subheadline,
-                        cta: bb.cta,
-                      };
-                      return (
-                        <div key={idx} className="space-y-3">
-                          {generatedBillboards.length > 1 && (
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                              {bb.conceptName || `Billboard ${idx + 1}`}
-                            </p>
-                          )}
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">
-                              Headline
-                            </label>
-                            <input
-                              type="text"
-                              value={edited.headline}
-                              onChange={(e) =>
-                                setEditedBillboards((prev) => ({
-                                  ...prev,
-                                  [idx]: {
-                                    ...edited,
-                                    headline: e.target.value,
-                                  },
-                                }))
-                              }
-                              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">
-                              Subheadline
-                            </label>
-                            <textarea
-                              value={edited.subheadline}
-                              onChange={(e) =>
-                                setEditedBillboards((prev) => ({
-                                  ...prev,
-                                  [idx]: {
-                                    ...edited,
-                                    subheadline: e.target.value,
-                                  },
-                                }))
-                              }
-                              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                              rows={2}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">
-                              Call to Action
-                            </label>
-                            <input
-                              type="text"
-                              value={edited.cta}
-                              onChange={(e) =>
-                                setEditedBillboards((prev) => ({
-                                  ...prev,
-                                  [idx]: { ...edited, cta: e.target.value },
-                                }))
-                              }
-                              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    <DialogFooter className="gap-2 sm:gap-0">
-                      <Button
-                        variant="outline"
-                        onClick={handleGenerateBillboardText}
-                        disabled={isBillboardTextGenerating}
-                        className="gap-2"
-                      >
-                        {isBillboardTextGenerating ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-4 w-4" />
-                        )}
-                        Regenerate Text
-                      </Button>
-                      <Button
-                        onClick={() => setBillboardDialogStep("image")}
-                        className="gap-2"
-                      >
-                        Continue to Image
-                        <ImageIcon className="h-4 w-4" />
-                      </Button>
-                    </DialogFooter>
-                  </div>
-                ) : (
-                  /* --- Text generation form --- */
-                  <div className="space-y-5">
-                    {/* Loading concepts */}
-                    {isLoadingConcepts ? (
-                      <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                        <p className="text-sm text-muted-foreground">
-                          Loading concepts...
-                        </p>
-                      </div>
-                    ) : conceptCardsForBillboard.length === 0 ? (
-                      <div className="rounded-lg border bg-card p-4 text-center">
-                        <p className="text-sm text-muted-foreground">
-                          Complete Step 9 (Concept Development) to unlock the
-                          Billboard Hero.
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        {/* Concept checkboxes */}
-                        <div className="space-y-3">
-                          <p className="text-sm font-medium">Concepts</p>
-                          {conceptCardsForBillboard.map((card, idx) => (
-                            <label
-                              key={card.id}
-                              className="flex items-start gap-3 cursor-pointer group"
-                            >
-                              <Checkbox
-                                checked={selectedConceptIndexes.includes(idx)}
-                                onCheckedChange={(checked) => {
-                                  setSelectedConceptIndexes((prev) =>
-                                    checked
-                                      ? [...prev, idx]
-                                      : prev.filter((i) => i !== idx),
-                                  );
-                                }}
-                                className="mt-0.5"
-                              />
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium group-hover:text-foreground transition-colors">
-                                  {card.conceptName}
-                                </p>
-                                <p className="text-xs text-muted-foreground line-clamp-2">
-                                  {card.elevatorPitch}
-                                </p>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-
-                        {/* Mode toggle — only when 2+ concepts selected */}
-                        {selectedConceptIndexes.length >= 2 && (
-                          <div className="flex items-center justify-between rounded-lg border p-3">
-                            <div>
-                              <p className="text-sm font-medium">
-                                Separate billboards
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                One billboard per concept instead of combined
-                              </p>
-                            </div>
-                            <Switch
-                              checked={billboardMode === "separate"}
-                              onCheckedChange={(checked) =>
-                                setBillboardMode(
-                                  checked ? "separate" : "combined",
-                                )
-                              }
-                            />
-                          </div>
-                        )}
-
-                        {/* Creative direction */}
-                        <div className="space-y-2">
-                          <label
-                            htmlFor="billboard-prompt"
-                            className="text-sm font-medium"
-                          >
-                            Creative direction{" "}
-                            <span className="text-muted-foreground font-normal">
-                              (optional)
-                            </span>
-                          </label>
-                          <textarea
-                            id="billboard-prompt"
-                            value={billboardUserPrompt}
-                            onChange={(e) =>
-                              setBillboardUserPrompt(e.target.value)
-                            }
-                            placeholder="e.g. Make it playful and bold, target Gen Z audience..."
-                            className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                            rows={3}
-                          />
-                        </div>
-
-                        <DialogFooter>
-                          <Button
-                            variant="outline"
-                            onClick={() => setShowBillboardDetail(false)}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            onClick={handleGenerateBillboardText}
-                            disabled={
-                              selectedConceptIndexes.length === 0 ||
-                              isBillboardTextGenerating
-                            }
-                            className="gap-2"
-                          >
-                            {isBillboardTextGenerating ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Generating...
-                              </>
-                            ) : (
-                              <>
-                                <Sparkles className="h-4 w-4" />
-                                Generate Billboard Text
-                              </>
-                            )}
-                          </Button>
-                        </DialogFooter>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* ===== Step 2: Image Generation ===== */
-              <div className="space-y-5 py-2">
-                {/* Editable text + generated image */}
-                {generatedBillboards.map((bb, idx) => {
-                  const edited = editedBillboards[idx] || {
-                    headline: bb.headline,
-                    subheadline: bb.subheadline,
-                    cta: bb.cta,
-                  };
-                  return (
-                    <div key={idx} className="space-y-3">
-                      {generatedBillboards.length > 1 && (
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                          {bb.conceptName || `Billboard ${idx + 1}`}
-                        </p>
-                      )}
-                      <div className="rounded-lg border-2 border-primary bg-gradient-to-br from-primary/10 to-primary/5 p-5 space-y-3">
-                        <input
-                          type="text"
-                          value={edited.headline}
-                          onChange={(e) =>
-                            setEditedBillboards((prev) => ({
-                              ...prev,
-                              [idx]: { ...edited, headline: e.target.value },
-                            }))
-                          }
-                          className="w-full bg-transparent text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-ring rounded px-2 py-1"
-                        />
-                        <textarea
-                          value={edited.subheadline}
-                          onChange={(e) =>
-                            setEditedBillboards((prev) => ({
-                              ...prev,
-                              [idx]: { ...edited, subheadline: e.target.value },
-                            }))
-                          }
-                          className="w-full bg-transparent text-center text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring rounded px-2 py-1 resize-none"
-                          rows={2}
-                        />
-                        <div className="text-center">
-                          <input
-                            type="text"
-                            value={edited.cta}
-                            onChange={(e) =>
-                              setEditedBillboards((prev) => ({
-                                ...prev,
-                                [idx]: { ...edited, cta: e.target.value },
-                              }))
-                            }
-                            className="inline-block bg-primary text-primary-foreground text-center text-sm font-semibold rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Generated image */}
-                      {billboardImages[idx] && (
-                        <button
-                          onClick={() => setShowBillboardImageDialog(idx)}
-                          className="w-full overflow-hidden rounded-lg border-2 border-primary/30 transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                          <img
-                            src={billboardImages[idx]}
-                            alt={`Billboard visual ${idx + 1}`}
-                            className="w-full object-cover"
-                          />
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* Visual style dropdown */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Visual Style</label>
-                  <div className="relative">
-                    <select
-                      value={billboardVisualStyle}
-                      onChange={(e) => setBillboardVisualStyle(e.target.value)}
-                      className="w-full appearance-none rounded-md border bg-background px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      {BILLBOARD_VISUAL_STYLES.map((style) => (
-                        <option key={style.value} value={style.value}>
-                          {style.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  </div>
-                </div>
-
-                {/* Freeform image prompt */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Image direction{" "}
-                    <span className="text-muted-foreground font-normal">
-                      (optional)
-                    </span>
-                  </label>
-                  <textarea
-                    value={billboardImagePrompt}
-                    onChange={(e) => setBillboardImagePrompt(e.target.value)}
-                    placeholder="e.g. Include abstract geometric shapes, use purple and gold tones..."
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                    rows={3}
-                  />
-                </div>
-
-                <DialogFooter className="gap-2 sm:gap-0">
-                  <Button
-                    variant="outline"
-                    onClick={() => setBillboardDialogStep("text")}
-                    className="gap-2"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back
-                  </Button>
-                  {/* Generate image for each billboard */}
-                  <Button
-                    onClick={() => {
-                      generatedBillboards.forEach((_, idx) =>
-                        handleGenerateBillboardImageForIndex(idx),
-                      );
-                    }}
-                    disabled={Object.values(billboardImageGenerating).some(
-                      Boolean,
-                    )}
-                    className="gap-2"
-                  >
-                    {Object.values(billboardImageGenerating).some(Boolean) ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <ImageIcon className="h-4 w-4" />
-                        {Object.keys(billboardImages).length > 0
-                          ? "Regenerate Image"
-                          : "Generate Image"}
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
       </div>
     );
   };

@@ -69,9 +69,8 @@ You MUST return a valid JSON object matching the required schema exactly. Every 
 For the Validate step, you must extract:
 1. narrativeIntro: A 1-2 paragraph story of the journey from vague idea to validated concept
 2. stepSummaries: Array of 3-10 objects with stepNumber (1-10), stepName, and keyOutputs (1-3 strings each). Include summaries for all steps discussed.
-3. billboardHero (optional): headline (6-10 words), subheadline, cta
-4. confidenceAssessment: score (1-10 integer), rationale (string), researchQuality ("thin"|"moderate"|"strong")
-5. recommendedNextSteps: Array of 3-5 concrete next action strings
+3. confidenceAssessment: score (1-10 integer), rationale (string), researchQuality ("thin"|"moderate"|"strong")
+4. recommendedNextSteps: Array of 3-5 concrete next action strings
 
 If the conversation doesn't cover all 10 steps, summarize the ones that were discussed (minimum 3).`;
       }

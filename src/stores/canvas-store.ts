@@ -191,7 +191,7 @@ export type CanvasActions = {
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; slotGroups?: SlotGroup[]; brainRewritingMatrices?: BrainRewritingMatrix[]; dotVotes?: DotVote[]; votingSession?: VotingSession; ideationPhase?: IdeationPhase }) => {
+export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; slotGroups?: SlotGroup[]; brainRewritingMatrices?: BrainRewritingMatrix[]; dotVotes?: DotVote[]; votingSession?: VotingSession; ideationPhase?: IdeationPhase; votingCardPositions?: Record<string, { x: number; y: number }> }) => {
   const DEFAULT_STATE: CanvasState = {
     stickyNotes: initState?.stickyNotes || [],
     drawingNodes: initState?.drawingNodes || [],
@@ -213,7 +213,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
     pendingFitView: false,
     pendingHmwChipSelection: null,
     selectedStickyNoteIds: [],
-    votingCardPositions: {},
+    votingCardPositions: initState?.votingCardPositions || {},
   };
 
   return createStore<CanvasStore>()(

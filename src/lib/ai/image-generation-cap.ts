@@ -36,7 +36,7 @@ export function imageCapExceededResponse(): Response {
   return new Response(
     JSON.stringify({
       error: 'generation_limit_reached',
-      message: `You've used all ${IMAGE_GEN_CAP} generations for this item. Each sketch, persona, or billboard allows ${IMAGE_GEN_CAP} AI generations to encourage thoughtful prompting.`,
+      message: `You've used all ${IMAGE_GEN_CAP} generations for this item. Each sketch or persona allows ${IMAGE_GEN_CAP} AI generations to encourage thoughtful prompting.`,
       remainingGenerations: 0,
       cap: IMAGE_GEN_CAP,
     }),

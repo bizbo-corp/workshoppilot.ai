@@ -20,7 +20,7 @@ import {
   type OnSelectionChangeParams,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, ArrowRight, X, CheckCircle2, Star, Layers } from 'lucide-react';
+import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, X, CheckCircle2, Star, Layers } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { MindMapNode } from '@/components/canvas/mind-map-node';
@@ -55,6 +55,7 @@ import {
 import { VotingCardNode, type VotingCardNodeData } from '@/components/canvas/voting-card-node';
 import { VotingGroupNode, type VotingGroupNodeData } from '@/components/canvas/voting-group-node';
 import { VotingContainerNode, type VotingContainerNodeData } from '@/components/canvas/voting-container-node';
+import { BrainRewritingContainerNode, type BrainRewritingContainerNodeData, computeBrainRewritingContainerSize, BR_CONTAINER_PADDING, BR_CONTAINER_HEADER_HEIGHT } from '@/components/canvas/brain-rewriting-container-node';
 import { VotingResultsSidebar } from '@/components/workshop/voting-results-sidebar';
 import { computeVotingGridLayout, computeVotingContainerSize, VOTING_CARD_WIDTH, VOTING_CARD_HEIGHT, VOTING_GROUP_WIDTH, VOTING_GROUP_HEIGHT, SECTION_GAP, CONTAINER_PADDING, CONTAINER_HEADER_HEIGHT } from '@/lib/canvas/voting-layout';
 import { currentRoundVotes } from '@/lib/canvas/voting-utils';
@@ -82,6 +83,7 @@ const nodeTypes = {
   votingCardNode: VotingCardNode,
   votingGroupNode: VotingGroupNode,
   votingContainerNode: VotingContainerNode,
+  brainRewritingContainerNode: BrainRewritingContainerNode,
 };
 const edgeTypes = { mindMapEdge: MindMapEdge };
 
@@ -91,8 +93,9 @@ function snapToGrid(val: number): number {
   return Math.round(val / SNAP_GRID) * SNAP_GRID;
 }
 
-// Brain rewriting node ID prefix
+// Brain rewriting node ID prefix & container
 const BR_NODE_PREFIX = 'brain-rewriting-';
+const BR_CONTAINER_ID = 'brain-rewriting-container';
 // Owner zone node ID prefix
 const ZONE_NODE_PREFIX = 'owner-zone-';
 // Crazy 8s per-participant node ID prefix
@@ -295,7 +298,9 @@ function MindMapCanvasInner({
   }, []);
 
   // Facilitator check — only facilitator can delete participants
-  const { isFacilitator, participantId: selfParticipantId } = useMultiplayerContext();
+  const { isFacilitator: mpFacilitator, participantId: selfParticipantId } = useMultiplayerContext();
+  // In solo mode, the user is always the facilitator
+  const isFacilitator = mpFacilitator || !isMultiplayerIdeation;
   const { user } = useUser();
   const voterId = user?.id ?? 'solo-anon';
 
@@ -1004,14 +1009,16 @@ function MindMapCanvasInner({
   // Should voting artifacts be visible? (during voting OR persisted into brain-rewriting)
   const showVotingArtifact = (votingMode || (!!brainRewritingMatrices?.length && votingSession.status === 'closed')) && !!isMultiplayerIdeation;
 
+  // Persisted container drag positions (reactive — triggers useMemo recomputation)
+  const persistedVotingContainerPos = votingCardPositions['__container__'];
+  const persistedBrContainerPos = votingCardPositions['__br_container__'];
+
   // Compute voting container position: BELOW all content (owner zones, mind maps, crazy 8s)
   const votingContainerPos = useMemo(() => {
     if (!showVotingArtifact) return { x: 0, y: 0 };
 
     // Check for persisted drag position
-    const state = storeApi.getState();
-    const persisted = state.votingCardPositions['__container__'];
-    if (persisted) return persisted;
+    if (persistedVotingContainerPos) return persistedVotingContainerPos;
 
     // Find the true content bottom across ALL node types:
     // 1. Owner zone bottoms: zones start at (offset.y - 500) and are 1400px tall → bottom = offset.y + 900
@@ -1024,28 +1031,31 @@ function MindMapCanvasInner({
     const allBottoms = [...zoneBottoms, ...c8sBottoms, ...mmBottoms];
     const contentBottom = allBottoms.length > 0 ? Math.max(...allBottoms) : 0;
 
-    // X: align with the leftmost crazy 8s node
-    const c8sXs = crazy8sNodes.map((n) => n.position?.x ?? 900);
-    const containerX = c8sXs.length > 0 ? Math.min(...c8sXs) : 900;
+    // X: align with the leftmost mind map node
+    const mmXs = rfMindMapNodes.map((n) => n.position?.x ?? 0);
+    const containerX = mmXs.length > 0 ? Math.min(...mmXs) : 0;
     const containerY = contentBottom + SECTION_GAP;
 
     return { x: containerX, y: containerY };
-  }, [showVotingArtifact, crazy8sNodes, ownerOffsets, rfMindMapNodes, storeApi]);
+  }, [showVotingArtifact, crazy8sNodes, ownerOffsets, rfMindMapNodes, persistedVotingContainerPos]);
 
-  // Brain rewriting group nodes — positioned below voting container (or below crazy 8s if no voting)
+  // Brain rewriting container + group nodes — positioned below voting container (or below crazy 8s if no voting)
   const brainRewritingNodes = useMemo<Node[]>(() => {
     if (!brainRewritingMatrices || brainRewritingMatrices.length === 0) return [];
 
     const firstCrazy8s = crazy8sNodes[0];
     const c8sX = firstCrazy8s?.position?.x ?? 900;
 
-    let baseX: number;
-    let baseY: number;
+    let containerX: number;
+    let containerY: number;
 
-    if (isMultiplayerIdeation && votingSession.status === 'closed') {
+    // Check for persisted drag position (facilitator may have dragged the container)
+    if (persistedBrContainerPos) {
+      containerX = persistedBrContainerPos.x;
+      containerY = persistedBrContainerPos.y;
+    } else if (isMultiplayerIdeation && votingSession.status === 'closed') {
       // Position below the voting container
-      const state = storeApi.getState();
-      const containerPos = state.votingCardPositions['__container__'] || votingContainerPos;
+      const containerPos = persistedVotingContainerPos || votingContainerPos;
       // Count items for container height
       const groupedIds = new Set(slotGroups.flatMap((g) => g.slotIds));
       const seen = new Set<string>();
@@ -1056,15 +1066,41 @@ function MindMapCanvasInner({
         cCount++;
       }
       const cSize = computeVotingContainerSize(cCount, slotGroups.length);
-      baseX = containerPos.x;
-      baseY = containerPos.y + cSize.height + SECTION_GAP;
+      containerX = containerPos.x;
+      containerY = containerPos.y + cSize.height + SECTION_GAP;
     } else {
-      // Solo / no voting: to the right of crazy 8s (legacy)
-      baseX = c8sX + CRAZY_8S_NODE_WIDTH + 100;
-      baseY = -(BR_NODE_HEIGHT / 2);
+      // Solo / no voting: stack below crazy 8s, left-aligned to mind map
+      const mmXs = rfMindMapNodes.map((n) => n.position?.x ?? 0);
+      containerX = mmXs.length > 0 ? Math.min(...mmXs) : 0;
+      // Position below crazy 8s content
+      const c8sBottom = (firstCrazy8s?.position?.y ?? 0) + CRAZY_8S_NODE_HEIGHT;
+      containerY = c8sBottom + SECTION_GAP;
     }
 
-    return brainRewritingMatrices.map((matrix, index) => {
+    const result: Node[] = [];
+    const containerSize = computeBrainRewritingContainerSize(brainRewritingMatrices.length);
+
+    // Container node FIRST (ReactFlow requirement for parent nodes)
+    const containerData: BrainRewritingContainerNodeData = {
+      title: 'Brain Rewriting',
+      matrixCount: brainRewritingMatrices.length,
+      isActive: true,
+      onDone: onBrainRewritingDone,
+    };
+    result.push({
+      id: BR_CONTAINER_ID,
+      type: 'brainRewritingContainerNode',
+      position: { x: containerX, y: containerY },
+      draggable: isFacilitator,
+      connectable: false,
+      focusable: false,
+      style: { width: containerSize.width, height: containerSize.height },
+      data: containerData,
+    });
+
+    // Child group nodes positioned relative to container
+    for (let index = 0; index < brainRewritingMatrices.length; index++) {
+      const matrix = brainRewritingMatrices[index];
       const slot = crazy8sSlots.find((s) => s.slotId === matrix.slotId);
       const slotNumber = matrix.slotId.split('-slot-').pop() || matrix.slotId.replace('slot-', '');
 
@@ -1075,10 +1111,15 @@ function MindMapCanvasInner({
         if (group) title = group.label;
       }
 
-      return {
+      result.push({
         id: `${BR_NODE_PREFIX}${matrix.slotId}`,
         type: 'brainRewritingGroupNode',
-        position: { x: baseX + index * (BR_NODE_WIDTH + BR_NODE_GAP), y: baseY },
+        position: {
+          x: BR_CONTAINER_PADDING + index * (BR_NODE_WIDTH + BR_NODE_GAP),
+          y: BR_CONTAINER_HEADER_HEIGHT + BR_CONTAINER_PADDING,
+        },
+        parentId: BR_CONTAINER_ID,
+        extent: 'parent' as const,
         draggable: false,
         connectable: false,
         focusable: false,
@@ -1091,9 +1132,11 @@ function MindMapCanvasInner({
           onCellUpdate: onBrainRewritingCellUpdate,
           onToggleIncluded: onBrainRewritingToggleIncluded,
         },
-      };
-    });
-  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, allCrazy8sSlots, slotGroups, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded, crazy8sNodes, isMultiplayerIdeation, votingSession.status, storeApi, votingContainerPos]);
+      });
+    }
+
+    return result;
+  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, allCrazy8sSlots, slotGroups, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded, onBrainRewritingDone, crazy8sNodes, isMultiplayerIdeation, votingSession.status, votingContainerPos, rfMindMapNodes, isFacilitator, persistedBrContainerPos, persistedVotingContainerPos]);
 
   // Owner zone nodes — colored background rectangles behind each participant's tree
   const showDoneButton = !!isMultiplayerIdeation && !showCrazy8s;
@@ -1235,7 +1278,7 @@ function MindMapCanvasInner({
       id: VOTING_CONTAINER_ID,
       type: 'votingContainerNode',
       position: votingContainerPos,
-      draggable: isFacilitator && !isDuringBrainRewriting,
+      draggable: isFacilitator,
       connectable: false,
       focusable: false,
       style: { width: containerSize.width, height: containerSize.height },
@@ -1395,15 +1438,14 @@ function MindMapCanvasInner({
   const prevBrCount = useRef(0);
   useEffect(() => {
     if (brainRewritingNodes.length > 0 && prevBrCount.current === 0) {
-      // Pan to show voting container + all BR nodes
-      const firstC8sId = crazy8sNodes[0]?.id || CRAZY_8S_NODE_ID;
-      const nodeIds = [firstC8sId, VOTING_CONTAINER_ID, ...brainRewritingNodes.map((n) => n.id)];
+      // Pan to show voting container + BR container
+      const nodeIds = [VOTING_CONTAINER_ID, BR_CONTAINER_ID];
       setTimeout(() => {
         fitView({ nodes: nodeIds.map((id) => ({ id })), padding: 0.1, duration: 600 });
       }, 300);
     }
     prevBrCount.current = brainRewritingNodes.length;
-  }, [brainRewritingNodes, crazy8sNodes, fitView]);
+  }, [brainRewritingNodes, fitView]);
 
   // Consume pendingFitView flag set by chat panel when adding nodes
   useEffect(() => {
@@ -1438,8 +1480,16 @@ function MindMapCanvasInner({
       for (const c of changes) {
         if (c.type === 'position') {
           const posChange = c as NodeChange & { id: string; position?: { x: number; y: number }; dragging?: boolean };
-          // Skip non-draggable infrastructure nodes
-          if (isCrazy8sNode(posChange.id) || posChange.id.startsWith(BR_NODE_PREFIX) || posChange.id.startsWith(ZONE_NODE_PREFIX)) continue;
+          // Skip non-draggable infrastructure nodes (but NOT the BR container — it's draggable)
+          if (isCrazy8sNode(posChange.id) || (posChange.id.startsWith(BR_NODE_PREFIX) && posChange.id !== BR_CONTAINER_ID) || posChange.id.startsWith(ZONE_NODE_PREFIX)) continue;
+
+          // Brain rewriting container: persist drag position
+          if (posChange.id === BR_CONTAINER_ID) {
+            if (posChange.dragging === false && posChange.position) {
+              storeApi.getState().setVotingCardPosition('__br_container__', posChange.position);
+            }
+            continue;
+          }
 
           // Voting nodes: persist position to voting store
           if (isVotingNode(posChange.id)) {
@@ -1878,20 +1928,6 @@ function MindMapCanvasInner({
                 All participants are ready
               </span>
             </div>
-          </Panel>
-        )}
-
-        {/* Proceed button when brain rewriting is active */}
-        {brainRewritingMatrices && brainRewritingMatrices.length > 0 && onBrainRewritingDone && (
-          <Panel position="top-right" className="!mt-4 !mr-4">
-            <Button
-              onClick={onBrainRewritingDone}
-              size="sm"
-              className="gap-1.5 shadow-lg bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              <ArrowRight className="h-4 w-4" />
-              Proceed to Concept Development
-            </Button>
           </Panel>
         )}
 

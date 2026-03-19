@@ -60,7 +60,7 @@ const STEP_DEFINITIONS = [
   {
     id: 'ideation' as const,
     name: 'Ideation',
-    description: 'Generate ideas using Mind Mapping, Crazy 8s, Brain Writing, and Billboard Hero',
+    description: 'Generate ideas using Mind Mapping, Crazy 8s, and Brain Writing',
     order: 8,
     promptTemplate: null,
   },

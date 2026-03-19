@@ -10,6 +10,7 @@ import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { DotVote, VotingSession } from '@/lib/canvas/voting-types';
+import type { IdeationPhase } from '@/stores/canvas-store';
 import { unwrapLiveblocksStorage } from '@/lib/liveblocks/unwrap-storage';
 
 /**
@@ -40,6 +41,7 @@ export async function saveCanvasState(
     dotVotes?: DotVote[];
     votingSession?: VotingSession;
     votingCardPositions?: Record<string, { x: number; y: number }>;
+    ideationPhase?: IdeationPhase;
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -304,6 +306,7 @@ export async function loadCanvasState(
   dotVotes?: DotVote[];
   votingSession?: VotingSession;
   votingCardPositions?: Record<string, { x: number; y: number }>;
+  ideationPhase?: IdeationPhase;
 } | null> {
   try {
     // Find the workshopStep record
@@ -365,6 +368,7 @@ export async function loadCanvasState(
         dotVotes?: DotVote[];
         votingSession?: VotingSession;
         votingCardPositions?: Record<string, { x: number; y: number }>;
+        ideationPhase?: IdeationPhase;
       };
       if (canvas?.stickyNotes || canvas?.personaTemplates || canvas?.hmwCards || canvas?.mindMapNodes || canvas?.crazy8sSlots || canvas?.conceptCards || canvas?.selectedSlotIds || canvas?.brainRewritingMatrices || canvas?.dotVotes) {
         return {
@@ -383,6 +387,7 @@ export async function loadCanvasState(
           ...(canvas.dotVotes ? { dotVotes: canvas.dotVotes } : {}),
           ...(canvas.votingSession ? { votingSession: canvas.votingSession } : {}),
           ...(canvas.votingCardPositions ? { votingCardPositions: canvas.votingCardPositions } : {}),
+          ...(canvas.ideationPhase ? { ideationPhase: canvas.ideationPhase } : {}),
         };
       }
     }
