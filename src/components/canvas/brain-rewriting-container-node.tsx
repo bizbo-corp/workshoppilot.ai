@@ -26,15 +26,25 @@ export type BrainRewritingContainerNodeData = {
 
 export type BrainRewritingContainerNodeType = Node<BrainRewritingContainerNodeData, 'brainRewritingContainerNode'>;
 
+/** Max columns before wrapping to a new row */
+export const BR_GRID_MAX_COLS = 3;
+
+/** Compute grid layout (cols, rows) for a given matrix count */
+export function computeBrGridLayout(matrixCount: number) {
+  const cols = Math.min(matrixCount, BR_GRID_MAX_COLS);
+  const rows = Math.ceil(matrixCount / cols);
+  return { cols, rows };
+}
+
 /** Compute the container dimensions based on how many matrices it holds.
- * @param matrixCount - Number of matrices (columns)
+ * @param matrixCount - Number of matrices
  * @param cellCountPerMatrix - Number of iteration cells per matrix (for dynamic row height). Defaults to 3 (legacy).
  */
 export function computeBrainRewritingContainerSize(matrixCount: number, cellCountPerMatrix?: number) {
-  const cols = matrixCount;
+  const { cols, rows } = computeBrGridLayout(matrixCount);
   const nodeHeight = cellCountPerMatrix != null ? computeBrNodeHeight(cellCountPerMatrix) : BR_NODE_HEIGHT_DEFAULT;
   const width = BR_CONTAINER_PADDING * 2 + cols * BR_NODE_WIDTH + Math.max(0, cols - 1) * BR_NODE_GAP;
-  const height = BR_CONTAINER_HEADER_HEIGHT + BR_CONTAINER_PADDING * 2 + nodeHeight + BR_CONTAINER_FOOTER_HEIGHT;
+  const height = BR_CONTAINER_HEADER_HEIGHT + BR_CONTAINER_PADDING * 2 + rows * nodeHeight + Math.max(0, rows - 1) * BR_NODE_GAP + BR_CONTAINER_FOOTER_HEIGHT;
   return { width, height };
 }
 

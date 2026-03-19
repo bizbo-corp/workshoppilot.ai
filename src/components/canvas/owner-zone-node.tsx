@@ -13,6 +13,7 @@ export type OwnerZoneNodeData = {
   showDoneButton?: boolean;  // show the "I'm Done" toggle button
   onToggleReady?: () => void;
   width?: number;            // override default 1600 (e.g. 2600 when crazy 8s visible)
+  height?: number;           // override default 1400 (taller when crazy 8s below)
   starCount?: number;        // number of starred mind map nodes (max 8)
 };
 
@@ -23,7 +24,7 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
     <div
       style={{
         width: data.width || 1600,
-        height: 1400,
+        height: data.height || 1400,
         backgroundColor: `color-mix(in srgb, ${data.ownerThemeBgColor} 30%, transparent)`,
         border: `2px solid color-mix(in srgb, ${data.ownerThemeColor} 12%, transparent)`,
         borderRadius: 16,

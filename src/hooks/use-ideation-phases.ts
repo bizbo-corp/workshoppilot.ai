@@ -205,6 +205,54 @@ export function useIdeationPhases({
   // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to store changes
   }, [storeIdeationPhase]);
 
+  // Reconcile existing brain rewriting matrices against current participant count.
+  // Old persisted data may have 3 fixed cells; rebuild to match actual ideationOwners.
+  React.useEffect(() => {
+    if (!enabled) return;
+    if (!ideationOwners || ideationOwners.length <= 1) return;
+    const state = canvasStoreApi.getState();
+    const matrices = state.brainRewritingMatrices;
+    if (matrices.length === 0) return;
+
+    // Check if any matrix has a stale cell count (doesn't match participants - 1)
+    const expectedCellCount = ideationOwners.length - 1;
+    const needsReconciliation = matrices.some(
+      (m) => m.cells.length !== expectedCellCount || !m.creatorName
+    );
+    if (!needsReconciliation) return;
+
+    const reconciled = matrices.map((m) => {
+      // Determine creator from the slot's ownerId
+      const slot = state.crazy8sSlots.find((s) => s.slotId === m.slotId);
+      const creatorOwnerId = slot?.ownerId;
+      const creatorName = creatorOwnerId ? (ownerNamesMap[creatorOwnerId] || 'Creator') : m.creatorName;
+      const creatorId = creatorOwnerId || m.creatorId;
+
+      // Build new cells for other participants, preserving any existing image data
+      const otherParticipants = ideationOwners.filter((o) => o.ownerId !== creatorOwnerId);
+      const newCells = otherParticipants.map((p, i) => {
+        // Try to preserve existing cell data by index
+        const existing = m.cells[i];
+        return {
+          cellId: `iteration-${i + 1}`,
+          assigneeName: p.ownerName,
+          assigneeId: p.ownerId,
+          ...(existing?.imageUrl ? { imageUrl: existing.imageUrl } : {}),
+          ...(existing?.drawingId ? { drawingId: existing.drawingId } : {}),
+          ...(existing?.title ? { title: existing.title } : {}),
+          ...(existing?.description ? { description: existing.description } : {}),
+          ...(existing?.sketchPrompt ? { sketchPrompt: existing.sketchPrompt } : {}),
+        };
+      });
+
+      return { ...m, cells: newCells, creatorName, creatorId };
+    });
+
+    state.setBrainRewritingMatrices(reconciled);
+    state.markDirty();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when matrices + owners are available
+  }, [enabled, brainRewritingMatrices.length, ideationOwners?.length]);
+
   // Mind map has content when there are level-1 theme nodes
   const mindMapHasThemes = React.useMemo(
     () => mindMapNodes.filter(node => node.level === 1).length > 0,

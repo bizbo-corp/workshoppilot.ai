@@ -4,6 +4,7 @@
  * Brain Rewriting Grid
  * Dynamic grid display — original sketch + N iteration cells (one per participant).
  * Solo: original + 1 iteration. Multiplayer: original + (participants - 1) iterations.
+ * Participant name pills are overlaid ON the card image.
  */
 
 import { cn } from '@/lib/utils';
@@ -36,9 +37,6 @@ export function BrainRewritingGrid({
     return 'active'; // Cells before active can be re-edited
   };
 
-  // Label for the original cell
-  const originalLabel = matrix.creatorName ? `${matrix.creatorName} — Original` : 'Original';
-
   // Compute grid rows: (cells + 1 for original) / 2 cols
   const totalSlots = cells.length + 1;
   const gridRows = Math.ceil(totalSlots / 2);
@@ -50,11 +48,14 @@ export function BrainRewritingGrid({
     >
       {/* Original sketch (read-only) */}
       <div className="relative rounded-lg border-2 border-muted bg-muted/30 overflow-hidden">
-        <div className="absolute top-2 left-2 z-10">
-          <span className="rounded-md bg-background/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground shadow-sm">
-            {originalLabel}
-          </span>
-        </div>
+        {/* Creator name pill */}
+        {matrix.creatorName && (
+          <div className="absolute top-2.5 left-2.5 z-10">
+            <span className="rounded-full bg-amber-500/90 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+              {matrix.creatorName}
+            </span>
+          </div>
+        )}
         <div className="flex h-full items-center justify-center p-2">
           {matrix.sourceImageUrl ? (
             <img
@@ -71,8 +72,8 @@ export function BrainRewritingGrid({
       {/* Iteration cells — one per participant (or 1 for solo) */}
       {cells.map((cell, index) => {
         const state = getCellState(cell.cellId);
-        // Use assignee name, fall back to "Your Iteration" (solo) or "Iteration N"
-        const label = cell.assigneeName || (cells.length === 1 ? 'Your Iteration' : `Iteration ${index + 1}`);
+        const label = cell.assigneeName
+          || (cells.length === 1 ? 'Your Iteration' : `Iteration ${index + 1}`);
 
         return (
           <button
@@ -86,21 +87,20 @@ export function BrainRewritingGrid({
               state === 'locked' && 'border-muted opacity-50 cursor-not-allowed bg-muted/20'
             )}
           >
-            {/* Badge */}
-            <div className="absolute top-2 left-2 z-10">
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide shadow-sm',
-                  state === 'completed' && 'bg-olive-600 text-white',
-                  state === 'active' && 'bg-olive-100 text-olive-800 dark:bg-olive-900 dark:text-olive-200',
-                  state === 'locked' && 'bg-muted text-muted-foreground'
-                )}
-              >
-                {state === 'completed' && <Check className="h-3 w-3" />}
-                {state === 'locked' && <Lock className="h-3 w-3" />}
-                {label}
-              </span>
-            </div>
+            {/* Participant name pill */}
+            {cell.assigneeName && (
+              <div className="absolute top-2.5 left-2.5 z-10">
+                <span className={cn(
+                  'rounded-full px-3 py-1 text-xs font-semibold shadow-sm',
+                  state === 'completed'
+                    ? 'bg-purple-500/90 text-white'
+                    : 'bg-purple-400/80 text-white'
+                )}>
+                  {state === 'completed' && <Check className="inline h-3 w-3 mr-1 -mt-0.5" />}
+                  {cell.assigneeName}
+                </span>
+              </div>
+            )}
 
             {/* Cell content */}
             <div className="flex h-full items-center justify-center p-2">

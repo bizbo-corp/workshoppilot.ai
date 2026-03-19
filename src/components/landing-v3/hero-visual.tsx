@@ -5,10 +5,8 @@ import {
   Code2,
   FileText,
   Map,
-  MousePointerClick,
   Presentation,
   Sparkles,
-  Users as UsersIcon,
 } from "lucide-react";
 import { LightTrails } from "./light-trails";
 
@@ -130,13 +128,6 @@ const deliverables = [
     color: "#6366f1",
   },
   {
-    icon: UsersIcon,
-    label: "User Stories",
-    rotation: "2deg",
-    delay: "1.8s",
-    color: "#6366f1",
-  },
-  {
     icon: Presentation,
     label: "Stakeholder Deck",
     rotation: "-1deg",
@@ -149,13 +140,6 @@ const deliverables = [
     rotation: "1.5deg",
     delay: "3.2s",
     color: "#06b6d4",
-  },
-  {
-    icon: MousePointerClick,
-    label: "Prototype",
-    rotation: "-2deg",
-    delay: "0.6s",
-    color: "#16a34a",
   },
 ];
 

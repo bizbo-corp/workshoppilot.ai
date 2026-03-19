@@ -245,7 +245,7 @@ export default function Home() {
                 step: "03",
                 title: "Walk Away Build-Ready",
                 description:
-                  "Download your Build Pack: PRD, user stories, technical roadmap and more. Hand it to developers or feed it to AI coding tools.",
+                  "Download your Build Pack: PRD, technical roadmap and more. Hand it to developers or feed it to AI coding tools.",
               },
             ].map((item) => (
               <div
