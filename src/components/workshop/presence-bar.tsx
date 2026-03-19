@@ -6,6 +6,7 @@ import { shallow } from '@liveblocks/react';
 import { Crown, Check, Link2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
+import { currentRoundVotes } from '@/lib/canvas/voting-utils';
 
 const IDLE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
@@ -128,8 +129,9 @@ export function PresenceBar({
     crazy8sReady: me.presence?.crazy8sReady ?? false,
   }));
 
-  const dotVotes = useCanvasStore((s) => s.dotVotes);
+  const rawDotVotes = useCanvasStore((s) => s.dotVotes);
   const votingSession = useCanvasStore((s) => s.votingSession);
+  const dotVotes = useMemo(() => currentRoundVotes(rawDotVotes, votingSession), [rawDotVotes, votingSession]);
 
   const allParticipants = self
     ? [{ ...self, connectionId: -1, isSelf: true }, ...others.map((o) => ({ ...o, isSelf: false }))]

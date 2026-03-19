@@ -93,6 +93,7 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
     pendingFitView: false,
     pendingHmwChipSelection: null,
     selectedStickyNoteIds: [],
+    votingCardPositions: {},
     ideationPhase: 'mind-mapping' as const,
   };
 
@@ -676,7 +677,7 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
           set((state) => ({
             dotVotes: [
               ...state.dotVotes,
-              { ...vote, id: crypto.randomUUID() },
+              { ...vote, id: crypto.randomUUID(), round: state.votingSession.votingRound },
             ],
             // isDirty stays false in multiplayer — Liveblocks handles persistence
           })),
@@ -706,9 +707,35 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
           })),
 
         resetVoting: () =>
-          set(() => ({
+          set((state) => ({
             dotVotes: [],
-            votingSession: DEFAULT_VOTING_SESSION,
+            votingSession: { ...DEFAULT_VOTING_SESSION, votingRound: (state.votingSession.votingRound ?? 0) + 1 },
+          })),
+
+        resetAndOpenVoting: (voteBudget) =>
+          set((state) => ({
+            dotVotes: [],
+            votingSession: {
+              status: 'open' as const,
+              voteBudget,
+              results: [],
+              votingRound: (state.votingSession.votingRound ?? 0) + 1,
+            },
+          })),
+
+        setVotingCardPosition: (id, position) =>
+          set((state) => ({
+            votingCardPositions: { ...state.votingCardPositions, [id]: position },
+          })),
+
+        batchSetVotingCardPositions: (positions) =>
+          set(() => ({
+            votingCardPositions: positions,
+          })),
+
+        clearVotingCardPositions: () =>
+          set(() => ({
+            votingCardPositions: {},
           })),
 
         deleteOwnerContent: (ownerId) =>
@@ -755,6 +782,7 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
           dotVotes: true,
           votingSession: true,
           ideationPhase: true,
+          votingCardPositions: true,
         },
         // presenceMapping: omitted — Presence (cursor, color, displayName) is managed
         // directly via useUpdateMyPresence() in Phase 56. No Zustand fields map to Presence.

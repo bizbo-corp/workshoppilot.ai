@@ -39,6 +39,7 @@ export async function saveCanvasState(
     brainRewritingMatrices?: BrainRewritingMatrix[];
     dotVotes?: DotVote[];
     votingSession?: VotingSession;
+    votingCardPositions?: Record<string, { x: number; y: number }>;
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -302,6 +303,7 @@ export async function loadCanvasState(
   brainRewritingMatrices?: BrainRewritingMatrix[];
   dotVotes?: DotVote[];
   votingSession?: VotingSession;
+  votingCardPositions?: Record<string, { x: number; y: number }>;
 } | null> {
   try {
     // Find the workshopStep record
@@ -362,6 +364,7 @@ export async function loadCanvasState(
         brainRewritingMatrices?: BrainRewritingMatrix[];
         dotVotes?: DotVote[];
         votingSession?: VotingSession;
+        votingCardPositions?: Record<string, { x: number; y: number }>;
       };
       if (canvas?.stickyNotes || canvas?.personaTemplates || canvas?.hmwCards || canvas?.mindMapNodes || canvas?.crazy8sSlots || canvas?.conceptCards || canvas?.selectedSlotIds || canvas?.brainRewritingMatrices || canvas?.dotVotes) {
         return {
@@ -379,6 +382,7 @@ export async function loadCanvasState(
           ...(canvas.brainRewritingMatrices ? { brainRewritingMatrices: canvas.brainRewritingMatrices } : {}),
           ...(canvas.dotVotes ? { dotVotes: canvas.dotVotes } : {}),
           ...(canvas.votingSession ? { votingSession: canvas.votingSession } : {}),
+          ...(canvas.votingCardPositions ? { votingCardPositions: canvas.votingCardPositions } : {}),
         };
       }
     }

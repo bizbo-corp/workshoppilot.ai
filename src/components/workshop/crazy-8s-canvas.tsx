@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Crazy8sGrid } from './crazy-8s-grid';
 import { VotingResultsPanel } from './voting-results-panel';
+import { currentRoundVotes } from '@/lib/canvas/voting-utils';
 import { EzyDrawLoader } from '@/components/ezydraw/ezydraw-loader';
 import { saveDrawing, loadDrawing, updateDrawing } from '@/actions/drawing-actions';
 import { simplifyDrawingElements } from '@/lib/drawing/simplify';
@@ -60,8 +61,9 @@ export function Crazy8sCanvas({ workshopId, stepId, ownerId, votingMode, onVoteS
   const storeApi = useCanvasStoreApi();
 
   // Voting store selectors
-  const dotVotes = useCanvasStore((s) => s.dotVotes);
+  const rawDotVotes = useCanvasStore((s) => s.dotVotes);
   const votingSession = useCanvasStore((s) => s.votingSession);
+  const dotVotes = useMemo(() => currentRoundVotes(rawDotVotes, votingSession), [rawDotVotes, votingSession]);
   const castVote = useCanvasStore((s) => s.castVote);
   const retractVote = useCanvasStore((s) => s.retractVote);
 

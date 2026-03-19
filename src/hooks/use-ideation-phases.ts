@@ -219,6 +219,7 @@ export function useIdeationPhases({
       ...(state.brainRewritingMatrices.length > 0 ? { brainRewritingMatrices: state.brainRewritingMatrices } : {}),
       ...(state.dotVotes.length > 0 ? { dotVotes: state.dotVotes } : {}),
       ...(state.votingSession.status !== 'idle' ? { votingSession: state.votingSession } : {}),
+    ...(Object.keys(state.votingCardPositions).length > 0 ? { votingCardPositions: state.votingCardPositions } : {}),
     });
     state.markClean();
   }, [workshopId, stepId, canvasStoreApi]);
@@ -382,15 +383,26 @@ export function useIdeationPhases({
     const units: SelectionUnit[] = [];
     const processedSlotIds = new Set<string>();
 
-    for (const slotId of selectedIds) {
-      if (processedSlotIds.has(slotId)) continue;
-      const group = state.slotGroups.find((g) => g.slotIds.includes(slotId));
+    for (const id of selectedIds) {
+      if (processedSlotIds.has(id)) continue;
+
+      // Check if this is a direct group ID match (from shared voting canvas)
+      const directGroup = state.slotGroups.find((g) => g.id === id);
+      if (directGroup) {
+        units.push({ type: 'group', group: directGroup });
+        directGroup.slotIds.forEach((sid) => processedSlotIds.add(sid));
+        processedSlotIds.add(id);
+        continue;
+      }
+
+      // Check if this slot belongs to a group
+      const group = state.slotGroups.find((g) => g.slotIds.includes(id));
       if (group) {
         units.push({ type: 'group', group });
-        group.slotIds.forEach((id) => processedSlotIds.add(id));
+        group.slotIds.forEach((sid) => processedSlotIds.add(sid));
       } else {
-        units.push({ type: 'slot', slotId });
-        processedSlotIds.add(slotId);
+        units.push({ type: 'slot', slotId: id });
+        processedSlotIds.add(id);
       }
     }
 
@@ -464,11 +476,14 @@ export function useIdeationPhases({
     setCurrentPhase('brain-rewriting');
   }, [canvasStoreApi, flushCanvasState, buildMatricesFromSelection]);
 
-  // Voting: reset and re-open voting (solo forgiveness)
+  // Voting: reset and re-open voting (solo forgiveness + multiplayer "Vote Again")
   const handleReVote = React.useCallback(() => {
     const state = canvasStoreApi.getState();
-    state.resetVoting();
-    state.openVoting();
+    // Compute scaled budget (25% of filled slots, min 2) — same logic as FacilitatorControls
+    const filledSlots = state.crazy8sSlots.filter((s) => s.imageUrl);
+    const scaledBudget = Math.max(5, Math.ceil(filledSlots.length * 0.3));
+    // Atomic reset+open — single CRDT write avoids race where voteBudget:2 wins
+    state.resetAndOpenVoting(scaledBudget);
   }, [canvasStoreApi]);
 
   // Compute owner IDs, names, and colors from ideationOwners (canonical order)
@@ -560,6 +575,7 @@ export function useIdeationPhases({
     handleBrainRewritingToggleIncluded, handleSaveBrainRewriting,
     handleVoteSelectionConfirm, handleReVote, mergeGroupId, mergeGroup, flushCanvasState,
     setMergeGroupId, viewingOwnerId, currentOwnerId, ownerIdsList, ownerNamesMap, ownerColorsMap, handleDeleteOwner,
+    ideationOwners,
   ]);
 
   return {

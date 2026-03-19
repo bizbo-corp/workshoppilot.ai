@@ -8,6 +8,7 @@ import {
   useOthersListener,
   useLostConnectionListener,
   useEventListener,
+  useUpdateMyPresence,
 } from "@liveblocks/react";
 import { LiveMap, LiveObject } from "@liveblocks/client";
 import type { OpaqueClient } from "@liveblocks/core";
@@ -22,12 +23,7 @@ import {
 
 import { CountdownTimer } from "./countdown-timer";
 import { SessionEndedOverlay } from "./session-ended-overlay";
-import {
-  useCanvasStore,
-  useCanvasStoreApi,
-} from "@/providers/canvas-store-provider";
-import type { VotingResult } from "@/lib/canvas/voting-types";
-import { computeVotingResults } from "@/lib/canvas/voting-utils";
+import { useCanvasStore } from "@/providers/canvas-store-provider";
 
 /**
  * MultiplayerContext — provides participant color, multiplayer flag, and
@@ -162,35 +158,40 @@ function SessionEndedListener({
 }
 
 /**
- * VotingEventListener — renderless component that listens for VOTING_OPENED
- * and VOTING_CLOSED broadcast events from the facilitator.
+ * VotingEventListener — renderless component that listens for VOTING_OPENED,
+ * VOTING_CLOSED, and VOTING_RESET broadcast events from the facilitator.
  *
  * Participants receive these events and update their local store + UI state.
  * The facilitator does NOT receive their own broadcasts (Liveblocks design),
  * so the facilitator's store is updated directly in FacilitatorControls.
  *
- * Uses storeApi.getState() for VOTING_CLOSED to read fresh dotVotes at
- * call time, avoiding stale closure (Pitfall 2 from RESEARCH.md).
+ * IMPORTANT: On VOTING_CLOSED, we only call closeVoting() — results are NOT
+ * computed here. The facilitator's setVotingResults() writes to CRDT storage
+ * which syncs to participants automatically. Computing results on both clients
+ * causes duplicate CRDT array insertions (6 unique → 12 duplicated items).
  */
 function VotingEventListener() {
   const openVoting = useCanvasStore((s) => s.openVoting);
   const closeVoting = useCanvasStore((s) => s.closeVoting);
-  const setVotingResults = useCanvasStore((s) => s.setVotingResults);
-  const storeApi = useCanvasStoreApi();
+  const resetAndOpenVoting = useCanvasStore((s) => s.resetAndOpenVoting);
+  const updatePresence = useUpdateMyPresence();
 
   useEventListener(({ event }) => {
     if (event.type === "VOTING_OPENED") {
       openVoting(event.voteBudget);
+      updatePresence({ votingDone: false });
     }
     if (event.type === "VOTING_CLOSED") {
-      // Read fresh state at call time — avoids stale closure (Pitfall 2)
-      const { dotVotes, crazy8sSlots } = storeApi.getState();
-      const results: VotingResult[] = computeVotingResults(
-        dotVotes,
-        crazy8sSlots,
-      );
+      // Only close voting locally — do NOT compute/set results here.
+      // The facilitator already called setVotingResults() and results arrive
+      // via CRDT sync (storageMapping). Computing results on both clients
+      // causes the CRDT to merge duplicate array insertions (6 → 12 items).
       closeVoting();
-      setVotingResults(results);
+    }
+    if (event.type === "VOTING_RESET") {
+      // Atomic reset+open — single CRDT write avoids race where voteBudget:2 wins
+      resetAndOpenVoting(event.voteBudget);
+      updatePresence({ votingDone: false });
     }
   });
 
@@ -298,6 +299,7 @@ export default function MultiplayerRoom({
           editingDrawingNodeId: null,
           mindMapReady: false,
           crazy8sReady: false,
+          votingDone: false,
         }}
         initialStorage={{
           elements: new LiveMap<string, LiveObject<CanvasElementStorable>>(),

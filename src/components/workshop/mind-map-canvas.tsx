@@ -17,13 +17,15 @@ import {
   type EdgeChange,
   type NodeChange,
   type Connection,
+  type OnSelectionChangeParams,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, ArrowRight, X, CheckCircle2, Star } from 'lucide-react';
+import { Plus, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, ArrowRight, X, CheckCircle2, Star, Layers } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { MindMapNode } from '@/components/canvas/mind-map-node';
 import { useMultiplayerContext } from '@/components/workshop/multiplayer-room';
+import { useUser } from '@clerk/nextjs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +52,12 @@ import {
   BR_NODE_HEIGHT,
   BR_NODE_GAP,
 } from '@/components/canvas/brain-rewriting-group-node';
+import { VotingCardNode, type VotingCardNodeData } from '@/components/canvas/voting-card-node';
+import { VotingGroupNode, type VotingGroupNodeData } from '@/components/canvas/voting-group-node';
+import { VotingContainerNode, type VotingContainerNodeData } from '@/components/canvas/voting-container-node';
+import { VotingResultsSidebar } from '@/components/workshop/voting-results-sidebar';
+import { computeVotingGridLayout, computeVotingContainerSize, VOTING_CARD_WIDTH, VOTING_CARD_HEIGHT, VOTING_GROUP_WIDTH, VOTING_GROUP_HEIGHT, SECTION_GAP, CONTAINER_PADDING, CONTAINER_HEADER_HEIGHT } from '@/lib/canvas/voting-layout';
+import { currentRoundVotes } from '@/lib/canvas/voting-utils';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import {
   THEME_COLORS,
@@ -63,6 +71,7 @@ import type {
 } from '@/stores/canvas-store';
 import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 // Define node and edge types outside component to prevent re-renders
 const nodeTypes = {
@@ -70,6 +79,9 @@ const nodeTypes = {
   crazy8sGroupNode: Crazy8sGroupNode,
   brainRewritingGroupNode: BrainRewritingGroupNodeComponent,
   ownerZoneNode: OwnerZoneNode,
+  votingCardNode: VotingCardNode,
+  votingGroupNode: VotingGroupNode,
+  votingContainerNode: VotingContainerNode,
 };
 const edgeTypes = { mindMapEdge: MindMapEdge };
 
@@ -88,6 +100,13 @@ const CRAZY_8S_NODE_PREFIX = 'crazy-8s-group-';
 /** Check if a node ID is a crazy 8s group node (legacy single or per-participant) */
 const isCrazy8sNode = (id: string) =>
   id === CRAZY_8S_NODE_ID || id.startsWith(CRAZY_8S_NODE_PREFIX);
+
+// Voting node ID prefixes (prevent collisions with crazy8s slotId-based nodes)
+const VOTING_CARD_PREFIX = 'vc-';
+const VOTING_GROUP_PREFIX = 'vg-';
+const VOTING_CONTAINER_ID = 'voting-container';
+const isVotingNode = (id: string) =>
+  id === VOTING_CONTAINER_ID || id.startsWith(VOTING_CARD_PREFIX) || id.startsWith(VOTING_GROUP_PREFIX);
 
 export type MindMapCanvasProps = {
   workshopId: string;
@@ -205,6 +224,10 @@ function MindMapCanvasInner({
   const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
   const allCrazy8sSlots = useCanvasStore((state) => state.crazy8sSlots);
   const slotGroups = useCanvasStore((state) => state.slotGroups);
+  const rawDotVotes = useCanvasStore((state) => state.dotVotes);
+  const votingSession = useCanvasStore((state) => state.votingSession);
+  const dotVotes = useMemo(() => currentRoundVotes(rawDotVotes, votingSession), [rawDotVotes, votingSession]);
+  const votingCardPositions = useCanvasStore((state) => state.votingCardPositions);
 
   // Filter crazy 8s slots by ownerId (except during idea-selection which shows all)
   const crazy8sSlots = useMemo(() => {
@@ -273,6 +296,8 @@ function MindMapCanvasInner({
 
   // Facilitator check — only facilitator can delete participants
   const { isFacilitator, participantId: selfParticipantId } = useMultiplayerContext();
+  const { user } = useUser();
+  const voterId = user?.id ?? 'solo-anon';
 
   // Readiness state for "I'm Done" feature (multiplayer ideation only)
   const [readinessMap, setReadinessMap] = useState<ReadinessMap>({});
@@ -294,6 +319,137 @@ function MindMapCanvasInner({
 
   // Node cascade-delete confirmation dialog state
   const [nodeCascadeDelete, setNodeCascadeDelete] = useState<{ nodeId: string; descendantCount: number } | null>(null);
+
+  // ── Voting state (multiplayer idea-selection on same canvas) ──
+  const [votingSelectedIds, setVotingSelectedIds] = useState<string[]>([]);
+  const [resultSelections, setResultSelections] = useState<Set<string>>(new Set());
+  const [groupNameInput, setGroupNameInput] = useState('');
+  const [showGroupPrompt, setShowGroupPrompt] = useState(false);
+
+  // My votes
+  const myVotes = useMemo(
+    () => dotVotes.filter((v) => v.voterId === voterId),
+    [dotVotes, voterId]
+  );
+  const canVote = votingSession.status === 'open' && myVotes.length < votingSession.voteBudget;
+
+  // Vote handlers
+  const handleCastVote = useCallback((targetId: string) => {
+    const state = storeApi.getState();
+    const roundVotes = currentRoundVotes(state.dotVotes, state.votingSession);
+    const currentMyVotes = roundVotes.filter((v) => v.voterId === voterId);
+    if (currentMyVotes.length >= state.votingSession.voteBudget) return;
+    state.castVote({
+      slotId: targetId,
+      voterId,
+      voteIndex: currentMyVotes.length,
+    });
+  }, [storeApi, voterId]);
+
+  const handleRetractVote = useCallback((voteId: string) => {
+    storeApi.getState().retractVote(voteId);
+  }, [storeApi]);
+
+  // Initialize result selections when results appear; clear when voting reopens
+  useEffect(() => {
+    if (votingSession.status === 'closed' && votingSession.results.length > 0) {
+      const voted = votingSession.results
+        .filter((r) => r.totalVotes > 0)
+        .map((r) => r.slotId);
+      setResultSelections(new Set(voted));
+    } else if (votingSession.status !== 'closed') {
+      setResultSelections(new Set());
+    }
+  }, [votingSession.status, votingSession.results]);
+
+  const handleToggleSelect = useCallback((targetId: string) => {
+    setResultSelections((prev) => {
+      const next = new Set(prev);
+      if (next.has(targetId)) next.delete(targetId);
+      else next.add(targetId);
+      return next;
+    });
+  }, []);
+
+  // Voter color map for dots
+  const voterColorMap = useMemo(() => {
+    const map: Record<string, string> = { ...(ownerColors || {}) };
+    return map;
+  }, [ownerColors]);
+
+  const getVoterDots = useCallback((targetId: string): Array<{ voterId: string; color: string }> => {
+    return dotVotes
+      .filter((v) => v.slotId === targetId)
+      .map((v) => ({
+        voterId: v.voterId,
+        color: voterColorMap[v.voterId] ?? '#608850',
+      }));
+  }, [dotVotes, voterColorMap]);
+
+  // Ungroup handler
+  const handleUngroup = useCallback((groupId: string) => {
+    const state = storeApi.getState();
+    const group = state.slotGroups.find((g) => g.id === groupId);
+    if (!group) return;
+    const positions = computeVotingGridLayout(
+      state.crazy8sSlots,
+      state.slotGroups.filter((g) => g.id !== groupId)
+    );
+    state.removeSlotGroup(groupId);
+    // Re-offset positions as container-relative
+    const offsetPositions: Record<string, { x: number; y: number }> = {};
+    // Preserve __container__ key
+    if (state.votingCardPositions['__container__']) {
+      offsetPositions['__container__'] = state.votingCardPositions['__container__'];
+    }
+    for (const [id, pos] of Object.entries(positions)) {
+      offsetPositions[id] = {
+        x: pos.x + CONTAINER_PADDING,
+        y: pos.y + CONTAINER_HEADER_HEIGHT + CONTAINER_PADDING,
+      };
+    }
+    state.batchSetVotingCardPositions(offsetPositions);
+  }, [storeApi]);
+
+  // Group confirm handler
+  const handleConfirmGroup = useCallback(() => {
+    if (votingSelectedIds.length < 2 || !groupNameInput.trim()) return;
+    const state = storeApi.getState();
+    const slotIdsToGroup = votingSelectedIds
+      .map((id) => id.startsWith(VOTING_CARD_PREFIX) ? id.slice(VOTING_CARD_PREFIX.length) : id)
+      .filter((id) => !state.slotGroups.some((g) => g.id === id));
+    if (slotIdsToGroup.length < 2) return;
+
+    const positions = slotIdsToGroup
+      .map((id) => state.votingCardPositions[id])
+      .filter(Boolean);
+    const centroid = positions.length > 0
+      ? {
+          x: positions.reduce((sum, p) => sum + p.x, 0) / positions.length,
+          y: positions.reduce((sum, p) => sum + p.y, 0) / positions.length,
+        }
+      : { x: CONTAINER_PADDING, y: CONTAINER_HEADER_HEIGHT + CONTAINER_PADDING };
+
+    const groupId = crypto.randomUUID();
+    state.addSlotGroup({
+      id: groupId,
+      label: groupNameInput.trim(),
+      slotIds: slotIdsToGroup,
+    });
+
+    const newPositions = { ...state.votingCardPositions };
+    slotIdsToGroup.forEach((id) => delete newPositions[id]);
+    newPositions[groupId] = centroid;
+    state.batchSetVotingCardPositions(newPositions);
+
+    setGroupNameInput('');
+    setShowGroupPrompt(false);
+    setVotingSelectedIds([]);
+  }, [votingSelectedIds, groupNameInput, storeApi]);
+
+  const canGroupVotingCards = isFacilitator
+    && votingSession.status === 'idle'
+    && votingSelectedIds.length >= 2;
 
   // Keyboard shortcuts: V = select, H = hand (standard design tool convention)
   useEffect(() => {
@@ -845,14 +1001,68 @@ function MindMapCanvasInner({
     });
   }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing, votingMode, onVoteSelectionConfirm, onReVote, onStartMerge, syncStarsToSlots, allOwnerIds, currentOwnerId, ownerOffsets, ownerNames, getOwnerTheme, isMultiplayerIdeation, crazy8sReadinessMap, facilitatorOwnerId]);
 
-  // Brain rewriting group nodes — positioned to the right of the first crazy 8s node
+  // Should voting artifacts be visible? (during voting OR persisted into brain-rewriting)
+  const showVotingArtifact = (votingMode || (!!brainRewritingMatrices?.length && votingSession.status === 'closed')) && !!isMultiplayerIdeation;
+
+  // Compute voting container position: BELOW all content (owner zones, mind maps, crazy 8s)
+  const votingContainerPos = useMemo(() => {
+    if (!showVotingArtifact) return { x: 0, y: 0 };
+
+    // Check for persisted drag position
+    const state = storeApi.getState();
+    const persisted = state.votingCardPositions['__container__'];
+    if (persisted) return persisted;
+
+    // Find the true content bottom across ALL node types:
+    // 1. Owner zone bottoms: zones start at (offset.y - 500) and are 1400px tall → bottom = offset.y + 900
+    const zoneBottoms = Object.values(ownerOffsets).map((o) => o.y + 900);
+    // 2. Crazy 8s bottoms
+    const c8sBottoms = crazy8sNodes.map((n) => (n.position?.y ?? 0) + CRAZY_8S_NODE_HEIGHT);
+    // 3. Mind map node bottoms (approximate 60px per node)
+    const mmBottoms = rfMindMapNodes.map((n) => (n.position?.y ?? 0) + 60);
+
+    const allBottoms = [...zoneBottoms, ...c8sBottoms, ...mmBottoms];
+    const contentBottom = allBottoms.length > 0 ? Math.max(...allBottoms) : 0;
+
+    // X: align with the leftmost crazy 8s node
+    const c8sXs = crazy8sNodes.map((n) => n.position?.x ?? 900);
+    const containerX = c8sXs.length > 0 ? Math.min(...c8sXs) : 900;
+    const containerY = contentBottom + SECTION_GAP;
+
+    return { x: containerX, y: containerY };
+  }, [showVotingArtifact, crazy8sNodes, ownerOffsets, rfMindMapNodes, storeApi]);
+
+  // Brain rewriting group nodes — positioned below voting container (or below crazy 8s if no voting)
   const brainRewritingNodes = useMemo<Node[]>(() => {
     if (!brainRewritingMatrices || brainRewritingMatrices.length === 0) return [];
-    // Position relative to the first crazy 8s node (facilitator's card in multiplayer)
+
     const firstCrazy8s = crazy8sNodes[0];
     const c8sX = firstCrazy8s?.position?.x ?? 900;
-    const baseX = c8sX + CRAZY_8S_NODE_WIDTH + 100; // gap after crazy 8s
-    const baseY = -(BR_NODE_HEIGHT / 2);
+
+    let baseX: number;
+    let baseY: number;
+
+    if (isMultiplayerIdeation && votingSession.status === 'closed') {
+      // Position below the voting container
+      const state = storeApi.getState();
+      const containerPos = state.votingCardPositions['__container__'] || votingContainerPos;
+      // Count items for container height
+      const groupedIds = new Set(slotGroups.flatMap((g) => g.slotIds));
+      const seen = new Set<string>();
+      let cCount = 0;
+      for (const s of allCrazy8sSlots) {
+        if (!s.imageUrl || groupedIds.has(s.slotId) || seen.has(s.slotId)) continue;
+        seen.add(s.slotId);
+        cCount++;
+      }
+      const cSize = computeVotingContainerSize(cCount, slotGroups.length);
+      baseX = containerPos.x;
+      baseY = containerPos.y + cSize.height + SECTION_GAP;
+    } else {
+      // Solo / no voting: to the right of crazy 8s (legacy)
+      baseX = c8sX + CRAZY_8S_NODE_WIDTH + 100;
+      baseY = -(BR_NODE_HEIGHT / 2);
+    }
 
     return brainRewritingMatrices.map((matrix, index) => {
       const slot = crazy8sSlots.find((s) => s.slotId === matrix.slotId);
@@ -883,7 +1093,7 @@ function MindMapCanvasInner({
         },
       };
     });
-  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, slotGroups, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded, crazy8sNodes]);
+  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, allCrazy8sSlots, slotGroups, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded, crazy8sNodes, isMultiplayerIdeation, votingSession.status, storeApi, votingContainerPos]);
 
   // Owner zone nodes — colored background rectangles behind each participant's tree
   const showDoneButton = !!isMultiplayerIdeation && !showCrazy8s;
@@ -951,12 +1161,201 @@ function MindMapCanvasInner({
     });
   }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, showCrazy8s, ownerStarCounts]);
 
-  // Combined nodes array: mind map + owner zones + crazy 8s + brain rewriting
+  // ── Voting nodes (multiplayer idea-selection on same canvas) ──
+
+  // Auto-layout voting cards when entering voting phase
+  const votingLayoutInitRef = useRef(false);
+  useEffect(() => {
+    if (!showVotingArtifact) {
+      votingLayoutInitRef.current = false;
+      return;
+    }
+    if (votingLayoutInitRef.current) return;
+    const state = storeApi.getState();
+    // Check for existing container-relative positions (must have __container__ key to be valid)
+    const hasContainer = !!state.votingCardPositions['__container__'];
+    const existingKeys = Object.keys(state.votingCardPositions).filter((k) => k !== '__container__');
+    if (hasContainer && existingKeys.length > 0) {
+      votingLayoutInitRef.current = true;
+      return;
+    }
+    const filledSlots = state.crazy8sSlots.filter((s) => s.imageUrl);
+    if (filledSlots.length === 0) return;
+
+    const rawPositions = computeVotingGridLayout(state.crazy8sSlots, state.slotGroups);
+    // Positions are now container-relative: offset by padding + header
+    const offsetPositions: Record<string, { x: number; y: number }> = {};
+    for (const [id, pos] of Object.entries(rawPositions)) {
+      offsetPositions[id] = {
+        x: pos.x + CONTAINER_PADDING,
+        y: pos.y + CONTAINER_HEADER_HEIGHT + CONTAINER_PADDING,
+      };
+    }
+    // Store the container position
+    offsetPositions['__container__'] = votingContainerPos;
+    state.batchSetVotingCardPositions(offsetPositions);
+    votingLayoutInitRef.current = true;
+
+    requestAnimationFrame(() => {
+      fitView({ padding: 0.15, duration: 400 });
+    });
+  }, [showVotingArtifact, storeApi, votingContainerPos, fitView]);
+
+  // Grouped slot IDs set (for filtering individual cards)
+  const groupedSlotIds = useMemo(
+    () => new Set(slotGroups.flatMap((g) => g.slotIds)),
+    [slotGroups]
+  );
+
+  // Build voting ReactFlow nodes (container + child cards)
+  const votingNodes = useMemo<Node[]>(() => {
+    if (!showVotingArtifact) return [];
+
+    const isDuringBrainRewriting = !!brainRewritingMatrices?.length;
+    const result: Node[] = [];
+
+    // Count items for container sizing
+    const seenForCount = new Set<string>();
+    let cardCount = 0;
+    for (const slot of allCrazy8sSlots) {
+      if (!slot.imageUrl || groupedSlotIds.has(slot.slotId) || seenForCount.has(slot.slotId)) continue;
+      seenForCount.add(slot.slotId);
+      cardCount++;
+    }
+    const containerSize = computeVotingContainerSize(cardCount, slotGroups.length);
+
+    // Container node FIRST (ReactFlow requirement for parent nodes)
+    const containerData: VotingContainerNodeData = {
+      title: 'Voting Results',
+      cardCount: cardCount + slotGroups.length,
+      isActive: !isDuringBrainRewriting,
+      votingStatus: votingSession.status,
+    };
+    result.push({
+      id: VOTING_CONTAINER_ID,
+      type: 'votingContainerNode',
+      position: votingContainerPos,
+      draggable: isFacilitator && !isDuringBrainRewriting,
+      connectable: false,
+      focusable: false,
+      style: { width: containerSize.width, height: containerSize.height },
+      data: containerData,
+    });
+
+    // Per-target vote counts
+    const voteCounts = new Map<string, number>();
+    for (const vote of dotVotes) {
+      voteCounts.set(vote.slotId, (voteCounts.get(vote.slotId) ?? 0) + 1);
+    }
+
+    // Results rank map
+    const rankMap = new Map<string, number>();
+    if (votingSession.status === 'closed') {
+      for (const r of votingSession.results) {
+        rankMap.set(r.slotId, r.rank);
+      }
+    }
+
+    // Default position for cards without a persisted position
+    const defaultCardPos = { x: CONTAINER_PADDING, y: CONTAINER_HEADER_HEIGHT + CONTAINER_PADDING };
+
+    // Individual cards (ungrouped, filled slots — deduplicate by slotId)
+    const seenSlotIds = new Set<string>();
+    for (const slot of allCrazy8sSlots) {
+      if (!slot.imageUrl) continue;
+      if (groupedSlotIds.has(slot.slotId)) continue;
+      if (seenSlotIds.has(slot.slotId)) continue;
+      seenSlotIds.add(slot.slotId);
+
+      const pos = votingCardPositions[slot.slotId] ?? defaultCardPos;
+      const myVoteOnThis = myVotes.find((v) => v.slotId === slot.slotId);
+
+      const nodeData: VotingCardNodeData = {
+        slot: {
+          ...slot,
+          ownerName: slot.ownerName ?? (ownerNames?.[slot.ownerId ?? ''] || 'Unknown'),
+          ownerColor: slot.ownerColor ?? (ownerColors?.[slot.ownerId ?? ''] || '#608850'),
+        },
+        voteCount: voteCounts.get(slot.slotId) ?? 0,
+        rank: rankMap.get(slot.slotId),
+        voterDots: getVoterDots(slot.slotId),
+        myVoteId: myVoteOnThis?.id,
+        canVote: isDuringBrainRewriting ? false : canVote,
+        isFacilitator,
+        isSelected: resultSelections.has(slot.slotId),
+        votingStatus: votingSession.status,
+        onCastVote: handleCastVote,
+        onRetractVote: handleRetractVote,
+        onToggleSelect: handleToggleSelect,
+      };
+
+      result.push({
+        id: `${VOTING_CARD_PREFIX}${slot.slotId}`,
+        type: 'votingCardNode',
+        position: pos,
+        parentId: VOTING_CONTAINER_ID,
+        extent: 'parent' as const,
+        data: nodeData,
+        draggable: !isDuringBrainRewriting && isFacilitator && votingSession.status === 'idle',
+        width: VOTING_CARD_WIDTH,
+        height: VOTING_CARD_HEIGHT,
+      });
+    }
+
+    // Group nodes
+    for (const group of slotGroups) {
+      const pos = votingCardPositions[group.id] ?? defaultCardPos;
+      const memberSlots = allCrazy8sSlots.filter((s) => group.slotIds.includes(s.slotId));
+      const myVoteOnThis = myVotes.find((v) => v.slotId === group.id);
+
+      const nodeData: VotingGroupNodeData = {
+        group,
+        memberSlots,
+        voteCount: voteCounts.get(group.id) ?? 0,
+        rank: rankMap.get(group.id),
+        voterDots: getVoterDots(group.id),
+        myVoteId: myVoteOnThis?.id,
+        canVote: isDuringBrainRewriting ? false : canVote,
+        isFacilitator,
+        isSelected: resultSelections.has(group.id),
+        votingStatus: votingSession.status,
+        hasMergedImage: !!group.mergedImageUrl,
+        onCastVote: handleCastVote,
+        onRetractVote: handleRetractVote,
+        onToggleSelect: handleToggleSelect,
+        onStartMerge: onStartMerge || (() => {}),
+        onUngroup: handleUngroup,
+      };
+
+      result.push({
+        id: `${VOTING_GROUP_PREFIX}${group.id}`,
+        type: 'votingGroupNode',
+        position: pos,
+        parentId: VOTING_CONTAINER_ID,
+        extent: 'parent' as const,
+        data: nodeData,
+        draggable: !isDuringBrainRewriting && isFacilitator && votingSession.status === 'idle',
+        width: VOTING_GROUP_WIDTH,
+        height: VOTING_GROUP_HEIGHT,
+      });
+    }
+
+    return result;
+  }, [
+    showVotingArtifact, brainRewritingMatrices, allCrazy8sSlots, slotGroups, dotVotes,
+    votingSession, votingCardPositions, votingContainerPos, groupedSlotIds, myVotes, canVote,
+    isFacilitator, resultSelections, ownerNames, ownerColors,
+    getVoterDots, handleCastVote, handleRetractVote, handleToggleSelect,
+    onStartMerge, handleUngroup,
+  ]);
+
+  // Combined nodes array: mind map + owner zones + crazy 8s + brain rewriting + voting
   const rfNodes = useMemo(() => {
     const combined = [...ownerZoneNodes, ...rfMindMapNodes, ...crazy8sNodes];
     if (brainRewritingNodes.length > 0) combined.push(...brainRewritingNodes);
+    if (votingNodes.length > 0) combined.push(...votingNodes);
     return combined;
-  }, [rfMindMapNodes, ownerZoneNodes, crazy8sNodes, brainRewritingNodes]);
+  }, [rfMindMapNodes, ownerZoneNodes, crazy8sNodes, brainRewritingNodes, votingNodes]);
 
   // Convert store state to ReactFlow edges
   const rfEdges: Edge[] = useMemo(() => {
@@ -996,9 +1395,9 @@ function MindMapCanvasInner({
   const prevBrCount = useRef(0);
   useEffect(() => {
     if (brainRewritingNodes.length > 0 && prevBrCount.current === 0) {
-      // Pan to show first crazy 8s + all BR nodes
+      // Pan to show voting container + all BR nodes
       const firstC8sId = crazy8sNodes[0]?.id || CRAZY_8S_NODE_ID;
-      const nodeIds = [firstC8sId, ...brainRewritingNodes.map((n) => n.id)];
+      const nodeIds = [firstC8sId, VOTING_CONTAINER_ID, ...brainRewritingNodes.map((n) => n.id)];
       setTimeout(() => {
         fitView({ nodes: nodeIds.map((id) => ({ id })), padding: 0.1, duration: 600 });
       }, 300);
@@ -1039,8 +1438,26 @@ function MindMapCanvasInner({
       for (const c of changes) {
         if (c.type === 'position') {
           const posChange = c as NodeChange & { id: string; position?: { x: number; y: number }; dragging?: boolean };
-          // Skip non-mind-map nodes
+          // Skip non-draggable infrastructure nodes
           if (isCrazy8sNode(posChange.id) || posChange.id.startsWith(BR_NODE_PREFIX) || posChange.id.startsWith(ZONE_NODE_PREFIX)) continue;
+
+          // Voting nodes: persist position to voting store
+          if (isVotingNode(posChange.id)) {
+            if (posChange.dragging === false && posChange.position) {
+              if (posChange.id === VOTING_CONTAINER_ID) {
+                // Container drag: persist under '__container__' key
+                storeApi.getState().setVotingCardPosition('__container__', posChange.position);
+              } else {
+                // Card/group drag within container: persist relative position
+                const storeKey = posChange.id.startsWith(VOTING_CARD_PREFIX)
+                  ? posChange.id.slice(VOTING_CARD_PREFIX.length)
+                  : posChange.id.slice(VOTING_GROUP_PREFIX.length);
+                storeApi.getState().setVotingCardPosition(storeKey, posChange.position);
+              }
+            }
+            continue; // Don't process as mind map node
+          }
+
           if (posChange.dragging && posChange.position) {
             livePositions.current[posChange.id] = posChange.position;
           } else if (posChange.dragging === false) {
@@ -1066,7 +1483,7 @@ function MindMapCanvasInner({
 
       setNodes((nds) => applyNodeChanges(changes, nds));
     },
-    [updateMindMapNodePosition, getNodeOwnerId]
+    [updateMindMapNodePosition, getNodeOwnerId, storeApi]
   );
 
   // Undo/redo handlers (temporal middleware only exists on the solo store, not multiplayer)
@@ -1274,6 +1691,8 @@ function MindMapCanvasInner({
       // Block connections to/from crazy 8s and brain rewriting nodes
       if (isCrazy8sNode(connection.source) || isCrazy8sNode(connection.target)) return false;
       if (connection.source.startsWith(BR_NODE_PREFIX) || connection.target.startsWith(BR_NODE_PREFIX)) return false;
+      // Block connections to/from voting nodes
+      if (isVotingNode(connection.source) || isVotingNode(connection.target)) return false;
       // No duplicate edges
       const exists = mindMapEdges.some(
         (e) =>
@@ -1314,6 +1733,14 @@ function MindMapCanvasInner({
     [mindMapEdges, deleteMindMapEdge]
   );
 
+  // Track voting node selection for grouping
+  const handleSelectionChange = useCallback((params: OnSelectionChangeParams) => {
+    const votingIds = params.nodes
+      .filter((n) => isVotingNode(n.id))
+      .map((n) => n.id);
+    setVotingSelectedIds(votingIds);
+  }, []);
+
   // Compute "All Ready" state — all non-facilitator participants have signaled ready
   const allReady = useMemo(() => {
     if (!isMultiplayerIdeation || !allOwnerIds || allOwnerIds.length <= 1) return false;
@@ -1347,6 +1774,7 @@ function MindMapCanvasInner({
         onConnect={handleConnect}
         onConnectStart={handleConnectStart}
         onConnectEnd={handleConnectEnd}
+        onSelectionChange={handleSelectionChange}
         isValidConnection={isValidConnection}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
@@ -1360,7 +1788,7 @@ function MindMapCanvasInner({
         connectionMode={ConnectionMode.Loose}
         edgesFocusable={true}
         panOnDrag={toolMode === 'pan'}
-        selectionOnDrag={toolMode === 'select'}
+        selectionOnDrag={toolMode === 'select' || (!!votingMode && !!isMultiplayerIdeation && isFacilitator && votingSession.status === 'idle')}
         selectionMode={SelectionMode.Partial}
         selectNodesOnDrag={false}
         snapToGrid={true}
@@ -1373,6 +1801,7 @@ function MindMapCanvasInner({
             if (n.id.startsWith(ZONE_NODE_PREFIX)) return 'transparent';
             if (isCrazy8sNode(n.id)) return (n.data?.ownerColor as string) || '#f59e0b';
             if (n.id.startsWith(BR_NODE_PREFIX)) return '#a855f7';
+            if (isVotingNode(n.id)) return '#3b82f6';
             const color = n.data?.themeColor;
             return typeof color === 'string' ? color : '#6b7280';
           }}
@@ -1380,6 +1809,7 @@ function MindMapCanvasInner({
             if (n.id.startsWith(ZONE_NODE_PREFIX)) return 'transparent';
             if (isCrazy8sNode(n.id)) return (n.data?.ownerColor as string) ? `color-mix(in srgb, ${n.data.ownerColor} 15%, white)` : '#fef3c7';
             if (n.id.startsWith(BR_NODE_PREFIX)) return '#f3e8ff';
+            if (isVotingNode(n.id)) return '#dbeafe';
             const bgColor = n.data?.themeBgColor;
             return typeof bgColor === 'string' ? bgColor : '#f3f4f6';
           }}
@@ -1465,6 +1895,91 @@ function MindMapCanvasInner({
           </Panel>
         )}
 
+        {/* Voting: Group Selected button */}
+        {canGroupVotingCards && !showGroupPrompt && (
+          <Panel position="top-center" className="!mt-4">
+            <Button
+              size="sm"
+              className="gap-1.5 shadow-md"
+              onClick={() => setShowGroupPrompt(true)}
+            >
+              <Layers className="h-3.5 w-3.5" />
+              Group {votingSelectedIds.length} Selected
+            </Button>
+          </Panel>
+        )}
+
+        {/* Voting: Group name prompt */}
+        {showGroupPrompt && (
+          <Panel position="top-center" className="!mt-4">
+            <div className="flex items-center gap-2 bg-background border rounded-lg shadow-md p-2">
+              <Input
+                value={groupNameInput}
+                onChange={(e) => setGroupNameInput(e.target.value)}
+                placeholder="Group name..."
+                className="h-8 w-48 text-sm"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirmGroup();
+                  if (e.key === 'Escape') {
+                    setShowGroupPrompt(false);
+                    setGroupNameInput('');
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                className="h-8"
+                disabled={!groupNameInput.trim()}
+                onClick={handleConfirmGroup}
+              >
+                Create
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8"
+                onClick={() => {
+                  setShowGroupPrompt(false);
+                  setGroupNameInput('');
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </Panel>
+        )}
+
+        {/* Voting: Results sidebar */}
+        {votingMode && isMultiplayerIdeation && votingSession.status === 'closed' && (
+          <Panel position="top-right" className="!mt-4 !mr-4">
+            <VotingResultsSidebar
+              onConfirmSelection={(ids) => onVoteSelectionConfirm?.(ids)}
+              onReVote={() => onReVote?.()}
+              onStartMerge={(groupId) => onStartMerge?.(groupId)}
+            />
+          </Panel>
+        )}
+
+        {/* Voting: Phase status label */}
+        {votingMode && isMultiplayerIdeation && (
+          <Panel position="bottom-center" className="!mb-16">
+            <div className="bg-background/80 backdrop-blur-sm border rounded-full px-4 py-1.5 text-xs text-muted-foreground shadow-sm">
+              {votingSession.status === 'idle' && (
+                isFacilitator
+                  ? 'Arrange cards and group similar ideas, then start the timer to vote'
+                  : 'Facilitator is arranging ideas...'
+              )}
+              {votingSession.status === 'open' && 'Voting in progress — tap cards to vote'}
+              {votingSession.status === 'closed' && (
+                isFacilitator
+                  ? 'Select ideas to continue with'
+                  : 'Waiting for facilitator to select ideas...'
+              )}
+            </div>
+          </Panel>
+        )}
+
         {/* Bottom toolbar */}
         <Panel position="bottom-center" className="!mb-4">
           <div className="flex items-center gap-1 rounded-lg border bg-background p-1.5 shadow-md">
@@ -1487,36 +2002,41 @@ function MindMapCanvasInner({
             >
               <Hand className="h-4 w-4" />
             </Button>
-            <div className="mx-1 h-5 w-px bg-border" />
-            <Button
-              onClick={handleAddNode}
-              size="sm"
-              variant="ghost"
-              className="gap-1.5"
-            >
-              <Plus className="h-4 w-4" />
-              Add Node
-            </Button>
-            <Button
-              onClick={handleAutoLayout}
-              size="sm"
-              variant="ghost"
-              className="gap-1.5"
-              title="Auto-layout (radial)"
-            >
-              <LayoutGrid className="h-4 w-4" />
-              Layout
-            </Button>
-            {/* Star count badge (solo mode or when no owner tabs shown) */}
-            {(!allOwnerIds || allOwnerIds.length <= 1) && (
+            {/* Hide mind-map controls during multiplayer voting */}
+            {!(votingMode && isMultiplayerIdeation) && (
               <>
                 <div className="mx-1 h-5 w-px bg-border" />
-                <div className="flex items-center gap-1 px-2 text-xs text-muted-foreground" title="Starred ideas for Crazy 8s (max 8)">
-                  <Star className={cn('h-3.5 w-3.5', soloStarCount > 0 ? 'fill-amber-500 text-amber-500' : '')} />
-                  <span className={cn('font-medium', soloStarCount > 0 && 'text-amber-600 dark:text-amber-400')}>
-                    {soloStarCount}/8
-                  </span>
-                </div>
+                <Button
+                  onClick={handleAddNode}
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Node
+                </Button>
+                <Button
+                  onClick={handleAutoLayout}
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5"
+                  title="Auto-layout (radial)"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  Layout
+                </Button>
+                {/* Star count badge (solo mode or when no owner tabs shown) */}
+                {(!allOwnerIds || allOwnerIds.length <= 1) && (
+                  <>
+                    <div className="mx-1 h-5 w-px bg-border" />
+                    <div className="flex items-center gap-1 px-2 text-xs text-muted-foreground" title="Starred ideas for Crazy 8s (max 8)">
+                      <Star className={cn('h-3.5 w-3.5', soloStarCount > 0 ? 'fill-amber-500 text-amber-500' : '')} />
+                      <span className={cn('font-medium', soloStarCount > 0 && 'text-amber-600 dark:text-amber-400')}>
+                        {soloStarCount}/8
+                      </span>
+                    </div>
+                  </>
+                )}
               </>
             )}
             <div className="mx-1 h-5 w-px bg-border" />

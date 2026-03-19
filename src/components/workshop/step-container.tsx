@@ -2177,7 +2177,7 @@ export function StepContainer({
           {/* Multiplayer controls — fixed top-right, below header bar on the canvas.
               Styled to match the bottom canvas toolbar (bg-card rounded-xl shadow-md border). */}
           <div className="fixed top-[4.5rem] right-4 z-50 flex items-center gap-0.5 bg-card rounded-xl shadow-md border border-border px-1.5 py-1">
-            <FacilitatorControls workshopId={workshopId} sessionId={sessionId} votingMode={stepOrder === 8 ? brainRewritingMatrices.length === 0 && votingSession.status !== "closed" : undefined} />
+            <FacilitatorControls workshopId={workshopId} sessionId={sessionId} votingMode={stepOrder === 8 ? brainRewritingMatrices.length === 0 : undefined} />
             {isFacilitator && (
               <button
                 onClick={() => setShowParticipantOverview((v) => !v)}

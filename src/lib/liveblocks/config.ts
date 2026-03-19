@@ -122,6 +122,7 @@ declare global {
       editingDrawingNodeId: string | null; // EzyDraw single-editor lock
       mindMapReady: boolean; // participant signals "I'm done" on mind map
       crazy8sReady: boolean; // participant signals "I'm done" on crazy 8s
+      votingDone: boolean; // participant signals "I'm done voting"
     };
 
     /**
@@ -163,6 +164,7 @@ declare global {
       | { type: 'SESSION_ENDED' }
       | { type: 'VOTING_OPENED'; voteBudget: number }
       | { type: 'VOTING_CLOSED' }
+      | { type: 'VOTING_RESET'; voteBudget: number }
       | { type: 'PARTICIPANT_REMOVED'; participantId: string };
   }
 }

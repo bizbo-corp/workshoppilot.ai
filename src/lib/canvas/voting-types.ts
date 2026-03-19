@@ -31,6 +31,12 @@ export type DotVote = {
    * Used for retraction by position when multiple votes exist on a slot.
    */
   voteIndex: number;
+  /**
+   * Voting round this vote belongs to.
+   * Votes from previous rounds are ignored after a reset.
+   * Defaults to 0 for backwards compatibility with existing data.
+   */
+  round?: number;
 };
 
 /**
@@ -73,14 +79,22 @@ export type VotingSession = {
    * Empty array while status is 'idle' or 'open' (VOTE-07).
    */
   results: VotingResult[];
+  /**
+   * Monotonically increasing round counter. Incremented on each vote reset.
+   * Votes with a `round` value less than this are stale and ignored.
+   * Avoids CRDT merge conflicts when clearing the dotVotes array.
+   */
+  votingRound: number;
 };
 
 /**
  * Initial/default voting session state.
- * `voteBudget: 2` is a locked decision from STATE.md (NNGroup 25%-of-options rule).
+ * `voteBudget: 5` — generous default that works for both solo (8 slots) and
+ * multiplayer (16+ slots). Scaled dynamically when voting opens.
  */
 export const DEFAULT_VOTING_SESSION: VotingSession = {
   status: 'idle',
-  voteBudget: 2, // NNGroup 25%-of-options rule: 8 slots x 25% = 2 (STATE.md decision)
+  voteBudget: 5,
   results: [],
+  votingRound: 0,
 };

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useBroadcastEvent } from '@liveblocks/react';
+import { useBroadcastEvent, useOthers, useUpdateMyPresence } from '@liveblocks/react';
+import { shallow } from '@liveblocks/react';
 import { useRouter } from 'next/navigation';
-import { Eye, Timer, Square, Pause, Play, X } from 'lucide-react';
+import { Eye, Timer, Square, Pause, Play, X, RotateCcw, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,7 @@ import { toast } from 'sonner';
 import { useMultiplayerContext } from './multiplayer-room';
 import { endWorkshopSession } from '@/actions/session-actions';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
-import { computeVotingResults } from '@/lib/canvas/voting-utils';
+import { computeVotingResults, getVotableTargetIds, currentRoundVotes } from '@/lib/canvas/voting-utils';
 
 // Timer preset durations in milliseconds
 const TIMER_PRESETS = [
@@ -66,9 +67,19 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
   // Voting store selectors — always called (hooks before early returns)
   const openVoting = useCanvasStore((s) => s.openVoting);
   const closeVoting = useCanvasStore((s) => s.closeVoting);
+  const resetVoting = useCanvasStore((s) => s.resetVoting);
+  const resetAndOpenVoting = useCanvasStore((s) => s.resetAndOpenVoting);
   const setVotingResults = useCanvasStore((s) => s.setVotingResults);
   const votingSession = useCanvasStore((s) => s.votingSession);
   const storeApi = useCanvasStoreApi();
+  const updatePresence = useUpdateMyPresence();
+
+  // Track whether all participants have signalled "Done Voting"
+  const othersVotingDone = useOthers(
+    (others) => others.filter(u => u.info?.role === 'participant').map(u => u.presence.votingDone ?? false),
+    shallow,
+  );
+  const allParticipantsDone = othersVotingDone.length > 0 && othersVotingDone.every(Boolean);
 
   // Ref to avoid stale closures in timer intervals (Pitfall 2 from RESEARCH.md)
   // votingSessionRef always holds the latest votingSession value
@@ -115,11 +126,11 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
     setShowTimerPresets(false);
     broadcast({ type: 'TIMER_UPDATE', state: 'running', remainingMs: ms, totalMs: ms });
 
-    // Open voting when starting timer in votingMode and voting is idle
-    if (votingMode && votingSessionRef.current?.status === 'idle') {
-      // Scale budget by total filled slots across all participants (25%, min 2)
+    // Open voting when starting timer and voting is idle (check store state directly
+    // instead of votingMode prop to avoid false negatives from prop derivation bugs)
+    if (votingSessionRef.current?.status === 'idle') {
       const filledSlots = storeApi.getState().crazy8sSlots.filter((s) => s.imageUrl);
-      const scaledBudget = Math.max(2, Math.ceil(filledSlots.length * 0.25));
+      const scaledBudget = Math.max(5, Math.ceil(filledSlots.length * 0.3));
       broadcast({ type: 'VOTING_OPENED', voteBudget: scaledBudget });
       // Facilitator's own store — useEventListener does NOT fire for the sender
       openVoting(scaledBudget);
@@ -134,11 +145,12 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
           broadcast({ type: 'TIMER_UPDATE', state: 'expired', remainingMs: 0, totalMs: ms });
           playChime();
 
-          // Close voting on timer expiry when votingMode is active
-          if (votingMode && votingSessionRef.current?.status === 'open') {
-            // Read fresh state at call time — avoids stale closure (Pitfall 2)
-            const { dotVotes, crazy8sSlots } = storeApi.getState();
-            const results = computeVotingResults(dotVotes, crazy8sSlots);
+          // Close voting on timer expiry if voting is currently open
+          if (votingSessionRef.current?.status === 'open') {
+            const state = storeApi.getState();
+            const votes = currentRoundVotes(state.dotVotes, state.votingSession);
+            const targetIds = getVotableTargetIds(state.crazy8sSlots, state.slotGroups);
+            const results = computeVotingResults(votes, targetIds);
             broadcast({ type: 'VOTING_CLOSED' });
             closeVoting();
             setVotingResults(results);
@@ -155,7 +167,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
         return next;
       });
     }, 1000);
-  }, [broadcast, votingMode, openVoting, closeVoting, setVotingResults, storeApi]);
+  }, [broadcast, openVoting, closeVoting, setVotingResults, storeApi]);
 
   const pauseTimer = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -178,11 +190,12 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
           broadcast({ type: 'TIMER_UPDATE', state: 'expired', remainingMs: 0, totalMs: currentTotal });
           playChime();
 
-          // Close voting on timer expiry (resume path) when votingMode is active
-          if (votingMode && votingSessionRef.current?.status === 'open') {
-            // Read fresh state at call time — avoids stale closure (Pitfall 2)
-            const { dotVotes, crazy8sSlots } = storeApi.getState();
-            const results = computeVotingResults(dotVotes, crazy8sSlots);
+          // Close voting on timer expiry (resume path) if voting is open
+          if (votingSessionRef.current?.status === 'open') {
+            const state = storeApi.getState();
+            const votes = currentRoundVotes(state.dotVotes, state.votingSession);
+            const targetIds = getVotableTargetIds(state.crazy8sSlots, state.slotGroups);
+            const results = computeVotingResults(votes, targetIds);
             broadcast({ type: 'VOTING_CLOSED' });
             closeVoting();
             setVotingResults(results);
@@ -198,7 +211,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
         return next;
       });
     }, 1000);
-  }, [broadcast, remainingMs, totalMs, votingMode, closeVoting, setVotingResults, storeApi]);
+  }, [broadcast, remainingMs, totalMs, closeVoting, setVotingResults, storeApi]);
 
   const cancelTimer = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -208,14 +221,59 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
     broadcast({ type: 'TIMER_UPDATE', state: 'cancelled', remainingMs: 0, totalMs: 0 });
 
     // Cancelling timer while voting is open also closes voting
-    if (votingMode && votingSessionRef.current?.status === 'open') {
-      const { dotVotes, crazy8sSlots } = storeApi.getState();
-      const results = computeVotingResults(dotVotes, crazy8sSlots);
+    if (votingSessionRef.current?.status === 'open') {
+      const cancelState = storeApi.getState();
+      const cancelVotes = currentRoundVotes(cancelState.dotVotes, cancelState.votingSession);
+      const targetIds = getVotableTargetIds(cancelState.crazy8sSlots, cancelState.slotGroups);
+      const results = computeVotingResults(cancelVotes, targetIds);
       broadcast({ type: 'VOTING_CLOSED' });
       closeVoting();
       setVotingResults(results);
     }
-  }, [broadcast, votingMode, closeVoting, setVotingResults, storeApi]);
+  }, [broadcast, closeVoting, setVotingResults, storeApi]);
+
+  // Reset all votes and re-open voting from scratch
+  const handleResetVotes = useCallback(() => {
+    // Cancel any running timer
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setTimerState('idle');
+    setRemainingMs(0);
+    setTotalMs(0);
+
+    // Compute fresh budget (same logic as startTimer)
+    const filledSlots = storeApi.getState().crazy8sSlots.filter((s) => s.imageUrl);
+    const scaledBudget = Math.max(5, Math.ceil(filledSlots.length * 0.3));
+
+    // Atomic reset+open — single CRDT write avoids race where voteBudget:2 wins
+    resetAndOpenVoting(scaledBudget);
+
+    // Broadcast so participants reset immediately
+    broadcast({ type: 'VOTING_RESET', voteBudget: scaledBudget });
+    broadcast({ type: 'TIMER_UPDATE', state: 'cancelled', remainingMs: 0, totalMs: 0 });
+
+    // Reset votingDone presence for facilitator
+    updatePresence({ votingDone: false });
+
+    toast('All votes have been reset', { duration: 2000 });
+  }, [broadcast, resetAndOpenVoting, storeApi, updatePresence]);
+
+  // Close voting manually (facilitator clicks "Close Voting")
+  const handleCloseVotingManual = useCallback(() => {
+    const state = storeApi.getState();
+    const votes = currentRoundVotes(state.dotVotes, state.votingSession);
+    const targetIds = getVotableTargetIds(state.crazy8sSlots, state.slotGroups);
+    const results = computeVotingResults(votes, targetIds);
+    broadcast({ type: 'VOTING_CLOSED' });
+    closeVoting();
+    setVotingResults(results);
+
+    // Cancel any running timer
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setTimerState('idle');
+    setRemainingMs(0);
+    setTotalMs(0);
+    broadcast({ type: 'TIMER_UPDATE', state: 'cancelled', remainingMs: 0, totalMs: 0 });
+  }, [broadcast, closeVoting, setVotingResults, storeApi]);
 
   const handleCustomTimer = useCallback(() => {
     const mins = parseInt(customMinutes, 10);
@@ -360,6 +418,43 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
               </button>
             )}
           </div>
+        )}
+
+        {/* Close Voting button — visible when voting is open (not gated on votingMode
+            so it shows even if the prop derivation is wrong) */}
+        {votingSession.status === 'open' && (
+          <>
+            <div className="w-px h-5 bg-border mx-0.5" />
+            <button
+              onClick={handleCloseVotingManual}
+              className={cn(
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                allParticipantsDone
+                  ? 'bg-primary text-primary-foreground animate-pulse'
+                  : 'text-primary hover:bg-primary/10',
+              )}
+              title={allParticipantsDone ? 'All participants are done — close voting' : 'Close voting and show results'}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Close Voting
+            </button>
+          </>
+        )}
+
+        {/* Reset Votes button — visible when voting is open or closed (not gated on
+            votingMode so it always shows when voting has been initiated) */}
+        {(votingSession.status === 'open' || votingSession.status === 'closed') && (
+          <>
+            <div className="w-px h-5 bg-border mx-0.5" />
+            <button
+              onClick={handleResetVotes}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              title="Clear all votes and restart voting"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span className="hidden sm:inline">Reset Votes</span>
+            </button>
+          </>
         )}
 
         <div className="w-px h-5 bg-border mx-0.5" />

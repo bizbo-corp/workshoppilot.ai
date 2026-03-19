@@ -107,6 +107,7 @@ export type CanvasState = {
   pendingFitView: boolean;
   pendingHmwChipSelection: PendingHmwChipSelection;
   selectedStickyNoteIds: string[];
+  votingCardPositions: Record<string, { x: number; y: number }>;
 };
 
 export type CanvasActions = {
@@ -178,6 +179,10 @@ export type CanvasActions = {
   closeVoting: () => void;
   setVotingResults: (results: VotingResult[]) => void;
   resetVoting: () => void;
+  resetAndOpenVoting: (voteBudget: number) => void;
+  setVotingCardPosition: (id: string, position: { x: number; y: number }) => void;
+  batchSetVotingCardPositions: (positions: Record<string, { x: number; y: number }>) => void;
+  clearVotingCardPositions: () => void;
   deleteOwnerContent: (ownerId: string) => void;
   setIdeationPhase: (phase: IdeationPhase) => void;
   markClean: () => void;
@@ -208,6 +213,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
     pendingFitView: false,
     pendingHmwChipSelection: null,
     selectedStickyNoteIds: [],
+    votingCardPositions: {},
   };
 
   return createStore<CanvasStore>()(
@@ -932,7 +938,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
           set((state) => ({
             dotVotes: [
               ...state.dotVotes,
-              { ...vote, id: crypto.randomUUID() },
+              { ...vote, id: crypto.randomUUID(), round: state.votingSession.votingRound },
             ],
             isDirty: true,
           })),
@@ -966,9 +972,39 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
           })),
 
         resetVoting: () =>
-          set(() => ({
+          set((state) => ({
             dotVotes: [],
-            votingSession: DEFAULT_VOTING_SESSION,
+            votingSession: { ...DEFAULT_VOTING_SESSION, votingRound: (state.votingSession.votingRound ?? 0) + 1 },
+            isDirty: true,
+          })),
+
+        resetAndOpenVoting: (voteBudget) =>
+          set((state) => ({
+            dotVotes: [],
+            votingSession: {
+              status: 'open' as const,
+              voteBudget,
+              results: [],
+              votingRound: (state.votingSession.votingRound ?? 0) + 1,
+            },
+            isDirty: true,
+          })),
+
+        setVotingCardPosition: (id, position) =>
+          set((state) => ({
+            votingCardPositions: { ...state.votingCardPositions, [id]: position },
+            isDirty: true,
+          })),
+
+        batchSetVotingCardPositions: (positions) =>
+          set(() => ({
+            votingCardPositions: positions,
+            isDirty: true,
+          })),
+
+        clearVotingCardPositions: () =>
+          set(() => ({
+            votingCardPositions: {},
             isDirty: true,
           })),
 

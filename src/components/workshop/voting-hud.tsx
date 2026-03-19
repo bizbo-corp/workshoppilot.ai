@@ -19,9 +19,39 @@
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
-import { CircleDot } from 'lucide-react';
+import { CircleDot, Check } from 'lucide-react';
 import { useMultiplayerContext } from './multiplayer-room';
-import type { VotingResult } from '@/lib/canvas/voting-types';
+import { useUpdateMyPresence, useSelf } from '@liveblocks/react';
+import { computeVotingResults, getVotableTargetIds, currentRoundVotes } from '@/lib/canvas/voting-utils';
+
+/**
+ * VotingDoneButton — inner component that uses Liveblocks hooks.
+ * Must only render inside a RoomProvider (multiplayer path).
+ */
+function VotingDoneButton() {
+  const updatePresence = useUpdateMyPresence();
+  const votingDone = useSelf((me) => me.presence.votingDone);
+
+  if (votingDone) {
+    return (
+      <span className="flex items-center gap-1 text-xs font-medium text-primary">
+        <Check className="h-3.5 w-3.5" />
+        Done
+      </span>
+    );
+  }
+
+  return (
+    <Button
+      variant="default"
+      size="sm"
+      className="rounded-full h-7 text-xs px-3"
+      onClick={() => updatePresence({ votingDone: true })}
+    >
+      Done Voting
+    </Button>
+  );
+}
 
 interface VotingHudProps {
   /** Callback for parent to know voting closed — Plan 02 VotingResultsPanel will use this. */
@@ -36,9 +66,11 @@ export function VotingHud({ onVotingClosed }: VotingHudProps) {
   const { isMultiplayer } = useMultiplayerContext();
 
   // Store selectors
-  const dotVotes = useCanvasStore((state) => state.dotVotes);
+  const rawDotVotes = useCanvasStore((state) => state.dotVotes);
   const votingSession = useCanvasStore((state) => state.votingSession);
+  const dotVotes = currentRoundVotes(rawDotVotes, votingSession);
   const crazy8sSlots = useCanvasStore((state) => state.crazy8sSlots);
+  const slotGroups = useCanvasStore((state) => state.slotGroups);
   const openVoting = useCanvasStore((state) => state.openVoting);
   const closeVoting = useCanvasStore((state) => state.closeVoting);
   const setVotingResults = useCanvasStore((state) => state.setVotingResults);
@@ -52,14 +84,19 @@ export function VotingHud({ onVotingClosed }: VotingHudProps) {
   if (votingSession.status === 'idle') {
     // In multiplayer, voting is started by the facilitator via the timer in FacilitatorControls
     if (isMultiplayer) return null;
-    // Solo: show Start Voting button
+    // Solo: show Start Voting button — compute scaled budget from filled slots
+    const handleStartVoting = () => {
+      const filledSlots = crazy8sSlots.filter((s) => s.imageUrl);
+      const scaledBudget = Math.max(5, Math.ceil(filledSlots.length * 0.3));
+      openVoting(scaledBudget);
+    };
     return (
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30">
         <Button
           variant="default"
           size="sm"
           className="rounded-full shadow-sm gap-1.5"
-          onClick={() => openVoting()}
+          onClick={handleStartVoting}
         >
           <CircleDot className="h-3.5 w-3.5" />
           Start Voting
@@ -75,38 +112,8 @@ export function VotingHud({ onVotingClosed }: VotingHudProps) {
 
   // ── Open: Budget HUD pill ───────────────────────────────────────────────────
   const handleCloseVoting = () => {
-    // Build a Map of slotId -> voteCount from all dotVotes (all voters in the session)
-    const voteCounts = new Map<string, number>();
-    for (const vote of dotVotes) {
-      voteCounts.set(vote.slotId, (voteCounts.get(vote.slotId) ?? 0) + 1);
-    }
-
-    // All 8 slots must appear (including zero-vote slots)
-    const allSlotIds = crazy8sSlots.map((s) => s.slotId);
-    const sortedSlotIds = [...allSlotIds].sort((a, b) => {
-      const countA = voteCounts.get(a) ?? 0;
-      const countB = voteCounts.get(b) ?? 0;
-      return countB - countA; // descending
-    });
-
-    // Assign ranks with tie handling
-    const results: VotingResult[] = [];
-    let currentRank = 1;
-    for (let i = 0; i < sortedSlotIds.length; i++) {
-      const slotId = sortedSlotIds[i];
-      const totalVotes = voteCounts.get(slotId) ?? 0;
-
-      if (i > 0) {
-        const prevVotes = voteCounts.get(sortedSlotIds[i - 1]) ?? 0;
-        if (totalVotes < prevVotes) {
-          currentRank = i + 1; // advance rank only when count changes
-        }
-        // same count = same rank (ties share rank)
-      }
-
-      results.push({ slotId, totalVotes, rank: currentRank });
-    }
-
+    const targetIds = getVotableTargetIds(crazy8sSlots, slotGroups);
+    const results = computeVotingResults(dotVotes, targetIds);
     closeVoting();
     setVotingResults(results);
     onVotingClosed?.();
@@ -130,10 +137,11 @@ export function VotingHud({ onVotingClosed }: VotingHudProps) {
         </div>
 
         {allVotesPlaced ? (
-          <>
-            <span className="text-xs font-medium text-foreground">All votes placed</span>
-            {/* Close Voting: solo only — in multiplayer, facilitator uses FacilitatorControls */}
-            {!isMultiplayer && (
+          isMultiplayer ? (
+            <VotingDoneButton />
+          ) : (
+            <>
+              <span className="text-xs font-medium text-foreground">All votes placed</span>
               <Button
                 variant="default"
                 size="sm"
@@ -142,8 +150,8 @@ export function VotingHud({ onVotingClosed }: VotingHudProps) {
               >
                 Close Voting
               </Button>
-            )}
-          </>
+            </>
+          )
         ) : (
           <span className="text-xs text-muted-foreground">
             {remainingBudget} of {totalBudget} remaining

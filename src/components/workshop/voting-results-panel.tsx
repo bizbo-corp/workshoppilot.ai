@@ -34,6 +34,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useMultiplayerContext } from './multiplayer-room';
 import type { DotVote, VotingResult } from '@/lib/canvas/voting-types';
+import { currentRoundVotes } from '@/lib/canvas/voting-utils';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 
 // ---------------------------------------------------------------------------
@@ -221,7 +222,8 @@ interface VotingResultsPanelProps {
 export function VotingResultsPanel({ onConfirmSelection, onReVote }: VotingResultsPanelProps) {
   const votingSession = useCanvasStore((s) => s.votingSession);
   const crazy8sSlots = useCanvasStore((s) => s.crazy8sSlots);
-  const dotVotes = useCanvasStore((s) => s.dotVotes);
+  const rawDotVotes = useCanvasStore((s) => s.dotVotes);
+  const dotVotes = currentRoundVotes(rawDotVotes, votingSession);
 
   // Multiplayer context — safe in both solo and multiplayer
   const { isMultiplayer, isFacilitator } = useMultiplayerContext();
@@ -232,10 +234,20 @@ export function VotingResultsPanel({ onConfirmSelection, onReVote }: VotingResul
   // Attribution reveal state (facilitator only)
   const [showAttribution, setShowAttribution] = React.useState(false);
 
-  // Sort results by rank (ascending) — same rank = tied
+  // Sort results by rank (ascending) — same rank = tied.
+  // Deduplicate by slotId to guard against CRDT merge duplicates
+  // (when both facilitator and participant wrote results in older sessions).
   const sortedResults = React.useMemo<VotingResult[]>(() => {
     if (!votingSession.results || votingSession.results.length === 0) return [];
-    return [...votingSession.results].sort((a, b) => a.rank - b.rank);
+    const seen = new Set<string>();
+    const deduped: VotingResult[] = [];
+    for (const r of votingSession.results) {
+      if (!seen.has(r.slotId)) {
+        seen.add(r.slotId);
+        deduped.push(r);
+      }
+    }
+    return deduped.sort((a, b) => a.rank - b.rank);
   }, [votingSession.results]);
 
   // Pre-check all slots with at least 1 vote
