@@ -121,6 +121,7 @@ declare global {
       displayName: string;
       editingDrawingNodeId: string | null; // EzyDraw single-editor lock
       mindMapReady: boolean; // participant signals "I'm done" on mind map
+      crazy8sReady: boolean; // participant signals "I'm done" on crazy 8s
     };
 
     /**

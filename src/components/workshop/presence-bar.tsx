@@ -72,6 +72,7 @@ interface PresenceBarProps {
   workshopSessionId?: string | null;
   workshopId?: string;
   isFacilitator?: boolean;
+  currentIdeationPhase?: string;
 }
 
 /**
@@ -92,6 +93,7 @@ export function PresenceBar({
   workshopSessionId,
   workshopId,
   isFacilitator,
+  currentIdeationPhase,
 }: PresenceBarProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -112,6 +114,7 @@ export function PresenceBar({
         color: o.info?.color ?? '#608850',
         role: o.info?.role ?? 'participant',
         participantId: o.info?.participantId ?? null,
+        crazy8sReady: o.presence?.crazy8sReady ?? false,
       })),
     shallow,
   );
@@ -122,6 +125,7 @@ export function PresenceBar({
     color: me.info?.color ?? '#608850',
     role: me.info?.role ?? 'participant',
     participantId: me.info?.participantId ?? null,
+    crazy8sReady: me.presence?.crazy8sReady ?? false,
   }));
 
   const dotVotes = useCanvasStore((s) => s.dotVotes);
@@ -174,6 +178,16 @@ export function PresenceBar({
     });
     return completed;
   }, [dotVotes, votingSession.status, votingSession.voteBudget]);
+
+  // Crazy 8s completion — track who has signaled crazy8sReady
+  const crazy8sCompletedIds = useMemo(() => {
+    if (currentIdeationPhase !== 'crazy-eights') return new Set<string>();
+    const completed = new Set<string>();
+    for (const p of allParticipants) {
+      if (p.crazy8sReady && p.id) completed.add(p.id);
+    }
+    return completed;
+  }, [currentIdeationPhase, allParticipants]);
 
   // Close expanded panel when clicking outside
   useEffect(() => {
@@ -240,6 +254,8 @@ export function PresenceBar({
         {allParticipants.map((p) => {
           const isIdle = !p.isSelf && idleIds.has(p.connectionId);
           const isVoteComplete = votingSession.status === 'open' && !!p.id && completedVoterIds.has(p.id);
+          const isCrazy8sComplete = !!p.id && crazy8sCompletedIds.has(p.id);
+          const showCheckmark = isVoteComplete || isCrazy8sComplete;
           return (
             <div
               key={p.connectionId}
@@ -251,15 +267,15 @@ export function PresenceBar({
               title={p.isSelf ? `${p.name} (you) — Facilitator` : p.role === 'owner' ? `${p.name} — Facilitator` : p.name}
             >
               {getInitials(p.name)}
-              {isIdle && !isVoteComplete && (
+              {isIdle && !showCheckmark && (
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-yellow-400 border-2 border-card" />
               )}
-              {p.role === 'owner' && !isIdle && !isVoteComplete && (
+              {p.role === 'owner' && !isIdle && !showCheckmark && (
                 <span className="absolute -top-1 -left-1 w-3.5 h-3.5">
                   <Crown className="w-3.5 h-3.5 text-amber-500 drop-shadow-sm" />
                 </span>
               )}
-              {isVoteComplete && (
+              {showCheckmark && (
                 <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-card flex items-center justify-center">
                   <Check className="w-2 h-2 text-white" />
                 </span>
@@ -294,6 +310,7 @@ export function PresenceBar({
           {allParticipants.map((p) => {
             const isIdle = !p.isSelf && idleIds.has(p.connectionId);
             const isVoteComplete = votingSession.status === 'open' && !!p.id && completedVoterIds.has(p.id);
+            const isCrazy8sComplete = !!p.id && crazy8sCompletedIds.has(p.id);
             const canRemove = isFacilitator && !p.isSelf && p.role !== 'owner' && p.participantId;
             const isConfirming = removingId === p.participantId;
 
@@ -312,7 +329,7 @@ export function PresenceBar({
                   )}
                 </span>
                 {p.role === 'owner' && <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
-                {isVoteComplete && (
+                {(isVoteComplete || isCrazy8sComplete) && (
                   <span className="flex items-center gap-0.5 text-[10px] text-green-600 font-medium shrink-0">
                     <Check className="w-3 h-3" />
                   </span>

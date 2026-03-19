@@ -297,6 +297,7 @@ export default function MultiplayerRoom({
           displayName: "",
           editingDrawingNodeId: null,
           mindMapReady: false,
+          crazy8sReady: false,
         }}
         initialStorage={{
           elements: new LiveMap<string, LiveObject<CanvasElementStorable>>(),

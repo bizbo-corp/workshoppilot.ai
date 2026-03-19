@@ -75,6 +75,7 @@ import { useBroadcastEvent } from "@liveblocks/react";
 import { FacilitatorControls } from "./facilitator-controls";
 import { PresenceBar } from "./presence-bar";
 import { ParticipantOverview } from "./participant-overview";
+import { Crazy8sProgressPanel, type ParticipantProgress } from "./crazy8s-progress-panel";
 
 const CANVAS_ENABLED_STEPS = [
   "challenge",
@@ -294,6 +295,8 @@ export function StepContainer({
   const setBrainRewritingMatrices = useCanvasStore(
     (s) => s.setBrainRewritingMatrices,
   );
+  // Crazy 8s slots — used for progress panel slot fill counts
+  const crazy8sSlots = useCanvasStore((s) => s.crazy8sSlots);
   // Voting state — used to derive votingMode for FacilitatorControls in Step 8
   const votingSession = useCanvasStore((s) => s.votingSession);
   const brainRewritingMatrices = useCanvasStore(
@@ -2192,8 +2195,29 @@ export function StepContainer({
               workshopSessionId={workshopSessionId}
               workshopId={workshopId}
               isFacilitator={isFacilitator}
+              currentIdeationPhase={stepOrder === 8 ? ideation.currentPhase : undefined}
             />
           </div>
+          {/* Crazy 8s progress panel — facilitator only, during crazy-eights phase */}
+          {isFacilitator && stepOrder === 8 && ideation.currentPhase === 'crazy-eights' && ideation.filteredIdeationOwners.length > 0 && !showParticipantOverview && (
+            <div className="fixed top-[7rem] right-4 z-40">
+              <Crazy8sProgressPanel
+                participants={ideation.filteredIdeationOwners
+                  .filter((o) => o.ownerId !== 'facilitator')
+                  .map((o): ParticipantProgress => {
+                    const ownerSlots = crazy8sSlots.filter((s) => s.ownerId === o.ownerId);
+                    return {
+                      ownerId: o.ownerId,
+                      ownerName: o.ownerName,
+                      ownerColor: o.ownerColor || '#608850',
+                      isCompleted: !!ideation.crazy8sReadinessMap[o.ownerId],
+                      filledSlots: ownerSlots.filter((s) => s.imageUrl).length,
+                      totalSlots: ownerSlots.length || 8,
+                    };
+                  })}
+              />
+            </div>
+          )}
           {/* Participant overview panel */}
           {isFacilitator && showParticipantOverview && step && (
             <div className="fixed top-[7rem] right-4 z-40 w-80 max-h-[60vh] overflow-y-auto rounded-xl bg-card shadow-lg border border-border p-3">

@@ -32,6 +32,11 @@ export type Crazy8sGroupNodeData = {
   showResultsInline?: boolean;
   // Sync starred mind map nodes → slot titles (may be async for AI enhancement)
   onSyncStars?: () => void | Promise<void>;
+  // Multiplayer completion info — shown as waiting overlay after save
+  completionInfo?: {
+    totalParticipants: number;
+    completedCount: number;
+  };
 };
 
 export type Crazy8sGroupNode = Node<Crazy8sGroupNodeData, 'crazy8sGroupNode'>;
@@ -376,7 +381,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
       style={{ width: CRAZY_8S_NODE_WIDTH, height: CRAZY_8S_NODE_HEIGHT, pointerEvents: 'all' }}
     >
       <div
-        className={cn('rounded-xl border-2 bg-background shadow-lg h-full flex flex-col', !borderColor && 'border-amber-400/60')}
+        className={cn('rounded-xl border-2 bg-background shadow-lg h-full flex flex-col relative', !borderColor && 'border-amber-400/60')}
         style={borderColor ? { borderColor: `color-mix(in srgb, ${borderColor} 60%, transparent)` } : undefined}
       >
         <div
@@ -437,6 +442,28 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
             showResultsInline={data.showResultsInline}
           />
         </div>
+        {/* Waiting overlay — shown after save in multiplayer */}
+        {saved && data.completionInfo && (
+          <div className="absolute inset-0 rounded-xl bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-10">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+              <Check className="h-6 w-6 text-green-600" />
+            </div>
+            <div className="text-sm font-semibold text-foreground">Sketches Saved!</div>
+            <div className="text-xs text-muted-foreground">Waiting for other participants...</div>
+            {/* Progress bar */}
+            <div className="w-48 space-y-1">
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-green-500 transition-all duration-500"
+                  style={{ width: `${(data.completionInfo.completedCount / data.completionInfo.totalParticipants) * 100}%` }}
+                />
+              </div>
+              <div className="text-center text-[11px] text-muted-foreground">
+                {data.completionInfo.completedCount}/{data.completionInfo.totalParticipants} ready
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

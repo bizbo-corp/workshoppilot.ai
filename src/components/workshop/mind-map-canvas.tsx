@@ -37,6 +37,7 @@ import {
 import { MindMapEdge } from '@/components/canvas/mind-map-edge';
 import { OwnerZoneNode } from '@/components/canvas/owner-zone-node';
 import { MindMapReadinessSync, type MindMapReadinessSyncHandle, type ReadinessMap } from '@/components/canvas/mind-map-readiness';
+import { Crazy8sReadinessSync, type Crazy8sReadinessSyncHandle, type Crazy8sReadinessMap } from '@/components/canvas/crazy-8s-readiness';
 import {
   Crazy8sGroupNode,
   CRAZY_8S_NODE_ID,
@@ -122,6 +123,7 @@ export type MindMapCanvasProps = {
   onDeleteOwner?: (ownerId: string) => void;
   facilitatorOwnerId?: string; // The facilitator's ownerId (cannot be deleted)
   isMultiplayerIdeation?: boolean; // Stable flag — true when multiplayer ideation context
+  onCrazy8sReadinessChange?: (map: Crazy8sReadinessMap) => void;
 };
 
 export function MindMapCanvas(props: MindMapCanvasProps) {
@@ -161,6 +163,7 @@ function MindMapCanvasInner({
   onDeleteOwner,
   facilitatorOwnerId,
   isMultiplayerIdeation,
+  onCrazy8sReadinessChange,
 }: MindMapCanvasProps) {
   const allMindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const allMindMapEdges = useCanvasStore((state) => state.mindMapEdges);
@@ -277,6 +280,14 @@ function MindMapCanvasInner({
   const handleReadinessChange = useCallback((map: ReadinessMap) => {
     setReadinessMap(map);
   }, []);
+
+  // Crazy 8s readiness state (multiplayer ideation only)
+  const [crazy8sReadinessMap, setCrazy8sReadinessMap] = useState<Crazy8sReadinessMap>({});
+  const crazy8sReadyRef = useRef<Crazy8sReadinessSyncHandle | null>(null);
+  const handleCrazy8sReadinessChange = useCallback((map: Crazy8sReadinessMap) => {
+    setCrazy8sReadinessMap(map);
+    onCrazy8sReadinessChange?.(map);
+  }, [onCrazy8sReadinessChange]);
 
   // Delete confirmation dialog state
   const [deleteTarget, setDeleteTarget] = useState<{ ownerId: string; name: string } | null>(null);
@@ -746,10 +757,26 @@ function MindMapCanvasInner({
   const crazy8sNodes = useMemo<Node[]>(() => {
     if (!showCrazy8s) return [];
 
+    // In multiplayer, wrap onSave to also signal crazy8s readiness
+    const wrappedOnSave = isMultiplayerIdeation && onSaveCrazy8s
+      ? async () => {
+          await onSaveCrazy8s();
+          crazy8sReadyRef.current?.setReady(true);
+        }
+      : onSaveCrazy8s;
+
+    const participantOwnerIds = allOwnerIds?.filter((oid) => oid !== facilitatorOwnerId) ?? [];
+    const completionInfo = isMultiplayerIdeation && participantOwnerIds.length > 0
+      ? {
+          totalParticipants: participantOwnerIds.length,
+          completedCount: Object.entries(crazy8sReadinessMap).filter(([k, v]) => k !== facilitatorOwnerId && v).length,
+        }
+      : undefined;
+
     const baseData = {
       workshopId,
       stepId,
-      onSave: onSaveCrazy8s,
+      onSave: wrappedOnSave,
       selectionMode,
       selectedSlotIds,
       onSelectionChange,
@@ -790,6 +817,7 @@ function MindMapCanvasInner({
           ownerId: currentOwnerId,
           ownerName: ownerNames?.[currentOwnerId] || currentOwnerId,
           ownerColor: accentColor,
+          completionInfo,
         },
       }];
     }
@@ -815,7 +843,7 @@ function MindMapCanvasInner({
         },
       };
     });
-  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing, votingMode, onVoteSelectionConfirm, onReVote, onStartMerge, syncStarsToSlots, allOwnerIds, currentOwnerId, ownerOffsets, ownerNames, getOwnerTheme]);
+  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing, votingMode, onVoteSelectionConfirm, onReVote, onStartMerge, syncStarsToSlots, allOwnerIds, currentOwnerId, ownerOffsets, ownerNames, getOwnerTheme, isMultiplayerIdeation, crazy8sReadinessMap, facilitatorOwnerId]);
 
   // Brain rewriting group nodes — positioned to the right of the first crazy 8s node
   const brainRewritingNodes = useMemo<Node[]>(() => {
@@ -1301,6 +1329,13 @@ function MindMapCanvasInner({
         <MindMapReadinessSync
           ref={toggleReadyRef}
           onReadinessChange={handleReadinessChange}
+        />
+      )}
+      {/* Crazy 8s readiness sync — active during crazy-eights + idea-selection phases */}
+      {isMultiplayerIdeation && showCrazy8s && (
+        <Crazy8sReadinessSync
+          ref={crazy8sReadyRef}
+          onReadinessChange={handleCrazy8sReadinessChange}
         />
       )}
       <ReactFlow

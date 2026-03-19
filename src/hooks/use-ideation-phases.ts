@@ -10,6 +10,7 @@ import { VotingHud } from '@/components/workshop/voting-hud';
 import { MergeGroupDialog } from '@/components/workshop/merge-group-dialog';
 import { useIdeationSeeding, type IdeationOwner } from '@/hooks/use-ideation-seeding';
 import type { IdeationPhase } from '@/stores/canvas-store';
+import type { Crazy8sReadinessMap } from '@/components/canvas/crazy-8s-readiness';
 
 export type { IdeationPhase };
 
@@ -127,6 +128,9 @@ export function useIdeationPhases({
   // Artifact confirmation state
   const [artifactConfirmed, setArtifactConfirmed] = React.useState(initialResumeState.artifactConfirmed);
   const [explicitlyConfirmed, setExplicitlyConfirmed] = React.useState(false);
+
+  // Crazy 8s readiness tracking (multiplayer)
+  const [crazy8sReadinessMap, setCrazy8sReadinessMap] = React.useState<Crazy8sReadinessMap>({});
 
   // Facilitator owner switcher state (for viewing different participants' mind maps)
   // null = "All" (show all owners), undefined = not yet set (falls back to currentOwnerId)
@@ -537,6 +541,7 @@ export function useIdeationPhases({
         onDeleteOwner: handleDeleteOwner,
         facilitatorOwnerId: 'facilitator',
         isMultiplayerIdeation: !!(ideationOwners && ideationOwners.length > 0),
+        onCrazy8sReadinessChange: setCrazy8sReadinessMap,
       }),
       // Merge group dialog
       mergeGroup && React.createElement(MergeGroupDialog, {
@@ -570,5 +575,7 @@ export function useIdeationPhases({
     handleStartCrazy8s,
     flushCanvasState,
     renderCanvas,
+    crazy8sReadinessMap,
+    filteredIdeationOwners,
   };
 }
