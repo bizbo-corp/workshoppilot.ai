@@ -4,6 +4,8 @@ import { memo } from 'react';
 import { CheckCircle2, Star } from 'lucide-react';
 import type { NodeProps, Node } from '@xyflow/react';
 
+export const OWNER_ZONE_HEADER_HEIGHT = 32;
+
 export type OwnerZoneNodeData = {
   ownerName: string;
   ownerThemeColor: string;   // CSS variable e.g. var(--mm-blue) — text/border
@@ -32,51 +34,73 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
         position: 'relative',
       }}
     >
-      {/* Owner name + ready indicator */}
+      {/* Header bar with color badge + participant name */}
       <div
         style={{
           position: 'absolute',
-          top: 12,
+          top: 0,
           left: 0,
           right: 0,
+          height: OWNER_ZONE_HEADER_HEIGHT,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: 6,
-          fontSize: 14,
-          fontWeight: 600,
-          color: data.ownerThemeColor,
-          opacity: data.isReady ? 0.7 : 0.5,
+          justifyContent: 'space-between',
+          padding: '0 12px',
+          borderRadius: '14px 14px 0 0',
+          backgroundColor: `color-mix(in srgb, ${data.ownerThemeBgColor} 40%, transparent)`,
           pointerEvents: 'none',
         }}
       >
-        {data.isReady && (
-          <CheckCircle2
-            style={{ width: 16, height: 16, color: '#16a34a', flexShrink: 0 }}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* Color badge */}
+          <div
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              backgroundColor: data.ownerThemeColor,
+              opacity: 0.7,
+              flexShrink: 0,
+            }}
           />
-        )}
-        {data.ownerName}
-        {data.isReady && (
-          <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 500 }}>
-            Ready
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: data.ownerThemeColor,
+              opacity: data.isReady ? 0.8 : 0.6,
+            }}
+          >
+            {data.ownerName}
           </span>
-        )}
+          {data.isReady && (
+            <>
+              <CheckCircle2
+                style={{ width: 14, height: 14, color: '#16a34a', flexShrink: 0 }}
+              />
+              <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 500 }}>
+                Ready
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Right side: star count */}
         {typeof data.starCount === 'number' && (
           <span
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 3,
-              marginLeft: 8,
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: 500,
               color: data.starCount > 0 ? data.ownerThemeColor : 'rgba(0,0,0,0.3)',
             }}
           >
             <Star
               style={{
-                width: 13,
-                height: 13,
+                width: 12,
+                height: 12,
                 ...(data.starCount > 0 ? { fill: 'currentColor' } : {}),
               }}
             />

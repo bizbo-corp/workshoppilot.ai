@@ -2,6 +2,10 @@
 
 import { memo } from 'react';
 import type { NodeProps, Node } from '@xyflow/react';
+import { PhaseContainerShell, PHASE_ACCENTS, SHELL_HEADER_HEIGHT } from './phase-container-shell';
+
+// Re-export for consumers
+export { PHASE_ACCENTS };
 
 export type PhaseContainerNodeData = {
   stepNumber: number;       // 1-4
@@ -14,18 +18,9 @@ export type PhaseContainerNodeData = {
 
 export type PhaseContainerNodeType = Node<PhaseContainerNodeData, 'phaseContainerNode'>;
 
-// Phase accent colors for active containers
-const PHASE_ACCENTS: Record<number, string> = {
-  1: '#6b7280', // gray — mind mapping
-  2: '#f59e0b', // amber — crazy eights
-  3: '#3b82f6', // blue — voting
-  4: '#8b5cf6', // purple — brain rewriting
-};
-
-const HEADER_HEIGHT = 48;
+const HEADER_HEIGHT = SHELL_HEADER_HEIGHT;
 
 // ── Theme-aware CSS color expressions ─────────────────────────────
-// All colors use CSS variables so they adapt to light/dark mode.
 const C = {
   cardBg:    'color-mix(in srgb, var(--color-card) 60%, transparent)',
   cardBorder:'color-mix(in srgb, var(--color-border) 40%, transparent)',
@@ -335,136 +330,35 @@ function BrainRewritingPlaceholder({ width, height }: { width: number; height: n
   );
 }
 
-// ── Shared header ─────────────────────────────────────────────────
-
-function SkeletonHeader({ stepNumber, title }: { stepNumber: number; title: string }) {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: HEADER_HEIGHT,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 16px',
-        backgroundColor: 'var(--color-card)',
-        borderBottom: '1px solid color-mix(in srgb, var(--color-border) 30%, transparent)',
-        borderRadius: '14px 14px 0 0',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: '50%',
-            backgroundColor: 'var(--color-muted-foreground)',
-            opacity: 0.5,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 11,
-            fontWeight: 700,
-            color: 'var(--color-card)',
-          }}
-        >
-          {stepNumber}
-        </div>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-muted-foreground)' }}>
-          {title}
-        </span>
-      </div>
-      <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-muted-foreground)', opacity: 0.5, fontStyle: 'italic' }}>
-        Coming up
-      </span>
-    </div>
-  );
-}
+// ── Skeleton placeholder map ─────────────────────────────────────
+const SKELETON_MAP: Record<number, (w: number, h: number) => React.ReactNode> = {
+  1: (w, h) => <MindMapPlaceholder width={w} height={h} />,
+  2: (w, h) => <CrazyEightsPlaceholder width={w} height={h} />,
+  3: (w, h) => <VotingPlaceholder width={w} height={h} />,
+  4: (w, h) => <BrainRewritingPlaceholder width={w} height={h} />,
+};
 
 // ── Main component ────────────────────────────────────────────────
 
 function PhaseContainerNodeComponent({ data }: NodeProps<PhaseContainerNodeType>) {
   const { stepNumber, title, isActive, width, height, showPlaceholder } = data;
-  const accent = PHASE_ACCENTS[stepNumber] ?? '#6b7280';
 
-  if (!isActive) {
-    return (
-      <div
-        style={{
-          width,
-          height,
-          border: `1px solid color-mix(in srgb, var(--color-border) 25%, transparent)`,
-          borderRadius: 16,
-          backgroundColor: 'color-mix(in srgb, var(--color-card) 50%, transparent)',
-          pointerEvents: 'none',
-          position: 'relative',
-        }}
-      >
-        <SkeletonHeader stepNumber={stepNumber} title={title} />
-        {stepNumber === 2 && <CrazyEightsPlaceholder width={width} height={height} />}
-        {stepNumber === 3 && <VotingPlaceholder width={width} height={height} />}
-        {stepNumber === 4 && <BrainRewritingPlaceholder width={width} height={height} />}
-      </div>
-    );
-  }
+  const skeletonContent = !isActive
+    ? SKELETON_MAP[stepNumber]?.(width, height)
+    : (stepNumber === 1 && showPlaceholder)
+      ? SKELETON_MAP[1]?.(width, height)
+      : undefined;
 
   return (
-    <div
-      style={{
-        width,
-        height,
-        border: `1.5px solid color-mix(in srgb, ${accent} 20%, transparent)`,
-        borderRadius: 16,
-        backgroundColor: 'color-mix(in srgb, var(--color-card) 50%, transparent)',
-        pointerEvents: 'none',
-        position: 'relative',
-      }}
-    >
-      <div
-        className="phase-drag-handle"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: HEADER_HEIGHT,
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 16px',
-          backgroundColor: 'var(--color-card)',
-          borderBottom: '1px solid color-mix(in srgb, var(--color-border) 15%, transparent)',
-          borderRadius: '14px 14px 0 0',
-          pointerEvents: 'auto',
-          cursor: 'grab',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: '50%',
-              backgroundColor: accent,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 11,
-              fontWeight: 700,
-              color: '#ffffff',
-            }}
-          >
-            {stepNumber}
-          </div>
-          <span style={{ fontSize: 14, fontWeight: 600, opacity: 0.7 }}>
-            {title}
-          </span>
-        </div>
-      </div>
-      {stepNumber === 1 && showPlaceholder && <MindMapPlaceholder width={width} height={height} />}
-    </div>
+    <PhaseContainerShell
+      stepNumber={stepNumber}
+      title={title}
+      isActive={isActive}
+      width={width}
+      height={height}
+      showPlaceholder={stepNumber === 1 && showPlaceholder}
+      placeholderContent={skeletonContent}
+    />
   );
 }
 

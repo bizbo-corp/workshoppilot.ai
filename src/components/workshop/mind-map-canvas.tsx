@@ -7,13 +7,11 @@ import {
   Background,
   Panel,
   useReactFlow,
-  applyNodeChanges,
   SelectionMode,
   ConnectionMode,
   type Node,
   type Edge,
   type EdgeChange,
-  type NodeChange,
   type Connection,
   type OnSelectionChangeParams,
 } from '@xyflow/react';
@@ -71,6 +69,7 @@ import type {
   MindMapEdgeState,
 } from '@/stores/canvas-store';
 import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
+import { usePhaseDrag } from '@/hooks/use-phase-drag';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -423,9 +422,10 @@ function MindMapCanvasInner({
     state.removeSlotGroup(groupId);
     // Re-offset positions as container-relative
     const offsetPositions: Record<string, { x: number; y: number }> = {};
-    // Preserve __container__ key
-    if (state.votingCardPositions['__container__']) {
-      offsetPositions['__container__'] = state.votingCardPositions['__container__'];
+    // Preserve voting container position key (normalized or legacy)
+    const vcPos = state.votingCardPositions['__phase3__'] ?? state.votingCardPositions['__container__'];
+    if (vcPos) {
+      offsetPositions['__phase3__'] = vcPos;
     }
     for (const [id, pos] of Object.entries(positions)) {
       offsetPositions[id] = {
@@ -900,7 +900,7 @@ function MindMapCanvasInner({
         const persistedPos = votingCardPositions[`__phase${phase.step}__`];
         const defaultX = phase.step === 1 ? leftEdgeX - PHASE_CONTENT_PADDING : leftEdgeX;
         const position = persistedPos || { x: defaultX, y: phase.y };
-        const isDraggable = phase.isActive && isFacilitator && (phase.step === 1 || phase.step === 2);
+        const isDraggable = phase.isActive && isFacilitator;
 
         return {
           id: `${PHASE_CONTAINER_PREFIX}${phase.step}`,
@@ -1170,8 +1170,9 @@ function MindMapCanvasInner({
   }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing, votingMode, onVoteSelectionConfirm, onReVote, onStartMerge, syncStarsToSlots, allOwnerIds, currentOwnerId, ownerOffsets, ownerNames, getOwnerTheme, isMultiplayerIdeation, crazy8sReadinessMap, facilitatorOwnerId, phaseLayout, votingCardPositions]);
 
   // Persisted container drag positions (reactive — triggers useMemo recomputation)
-  const persistedVotingContainerPos = votingCardPositions['__container__'];
-  const persistedBrContainerPos = votingCardPositions['__br_container__'];
+  // Normalized keys with legacy fallbacks for backward compatibility
+  const persistedVotingContainerPos = votingCardPositions['__phase3__'] ?? votingCardPositions['__container__'];
+  const persistedBrContainerPos = votingCardPositions['__phase4__'] ?? votingCardPositions['__br_container__'];
 
   // Compute voting container position: uses phaseLayout for sequential positioning
   const votingContainerPos = useMemo(() => {
@@ -1223,8 +1224,11 @@ function MindMapCanvasInner({
       type: 'brainRewritingContainerNode',
       position: { x: containerX, y: containerY },
       draggable: isFacilitator,
+      selectable: isFacilitator,
       connectable: false,
       focusable: false,
+      zIndex: -2,
+      dragHandle: '.phase-drag-handle',
       style: { width: containerSize.width, height: containerSize.height },
       data: containerData,
     });
@@ -1363,9 +1367,9 @@ function MindMapCanvasInner({
     }
     if (votingLayoutInitRef.current) return;
     const state = storeApi.getState();
-    // Check for existing container-relative positions (must have __container__ key to be valid)
-    const hasContainer = !!state.votingCardPositions['__container__'];
-    const existingKeys = Object.keys(state.votingCardPositions).filter((k) => k !== '__container__');
+    // Check for existing container-relative positions (must have container key to be valid)
+    const hasContainer = !!(state.votingCardPositions['__phase3__'] ?? state.votingCardPositions['__container__']);
+    const existingKeys = Object.keys(state.votingCardPositions).filter((k) => k !== '__phase3__' && k !== '__container__');
     if (hasContainer && existingKeys.length > 0) {
       votingLayoutInitRef.current = true;
       return;
@@ -1382,8 +1386,8 @@ function MindMapCanvasInner({
         y: pos.y + CONTAINER_HEADER_HEIGHT + CONTAINER_PADDING,
       };
     }
-    // Store the container position
-    offsetPositions['__container__'] = votingContainerPos;
+    // Store the container position (normalized key)
+    offsetPositions['__phase3__'] = votingContainerPos;
     state.batchSetVotingCardPositions(offsetPositions);
     votingLayoutInitRef.current = true;
 
@@ -1428,8 +1432,11 @@ function MindMapCanvasInner({
       type: 'votingContainerNode',
       position: votingContainerPos,
       draggable: isFacilitator,
+      selectable: isFacilitator,
       connectable: false,
       focusable: false,
+      zIndex: -2,
+      dragHandle: '.phase-drag-handle',
       style: { width: containerSize.width, height: containerSize.height },
       data: containerData,
     });
@@ -1563,25 +1570,39 @@ function MindMapCanvasInner({
       selectable: false,
       connectable: false,
       focusable: false,
-      zIndex: -2,
+      zIndex: -3,
     } as const;
+
+    // Helper: get actual bounding rect for a phase (uses dragged position if available)
+    const getPhaseRect = (step: number) => {
+      const phase = phases[step - 1];
+      const defaultX = step === 1 ? leftEdgeX - PHASE_CONTENT_PADDING : leftEdgeX;
+      // Read persisted drag position (normalized key with legacy fallback)
+      const persisted =
+        step === 3 ? (votingCardPositions['__phase3__'] ?? votingCardPositions['__container__']) :
+        step === 4 ? (votingCardPositions['__phase4__'] ?? votingCardPositions['__br_container__']) :
+        votingCardPositions[`__phase${step}__`];
+      const x = persisted?.x ?? defaultX;
+      const y = persisted?.y ?? phase.y;
+      return { x, y, width: phase.width, height: phase.height };
+    };
 
     // Helper to create a flow band node between two phases
     const createBand = (
       id: string,
-      topPhaseIdx: number,
-      bottomPhaseIdx: number,
+      topStep: number,
+      bottomStep: number,
       variant: 'convergence' | 'continuation' | 'skeleton',
       extraData?: Record<string, unknown>,
     ) => {
-      const topPhase = phases[topPhaseIdx];
-      const bottomPhase = phases[bottomPhaseIdx];
-      const bandTop = topPhase.y + topPhase.height;
-      const bandBottom = bottomPhase.y;
+      const topRect = getPhaseRect(topStep);
+      const bottomRect = getPhaseRect(bottomStep);
+      const bandTop = topRect.y + topRect.height;
+      const bandBottom = bottomRect.y;
       const bandHeight = Math.max(bandBottom - bandTop, 20);
-      const bandWidth = Math.max(topPhase.width, bottomPhase.width) + 80;
-      const bandX = leftEdgeX - 40;
-      const phaseCx = leftEdgeX + topPhase.width / 2;
+      const bandWidth = Math.max(topRect.width, bottomRect.width) + 80;
+      const bandX = Math.min(topRect.x, bottomRect.x) - 40;
+      const topCx = topRect.x + topRect.width / 2;
 
       result.push({
         id: `${FLOW_BAND_PREFIX}${id}`,
@@ -1592,8 +1613,8 @@ function MindMapCanvasInner({
           variant,
           width: bandWidth,
           height: bandHeight,
-          sourceCenterX: phaseCx - bandX,
-          targetCenterXCont: phaseCx - bandX,
+          sourceCenterX: topCx - bandX,
+          targetCenterXCont: topCx - bandX,
           ...(variant === 'skeleton' ? { skeletonColor: '#9ca3af' } : {}),
           ...extraData,
         },
@@ -1603,12 +1624,14 @@ function MindMapCanvasInner({
     // Band 1: Mind Mapping → Crazy Eights
     if (!phases[1].isActive) {
       // Skeleton band to inactive phase
-      createBand('mm-c8s', 0, 1, 'skeleton');
+      createBand('mm-c8s', 1, 2, 'skeleton');
     } else if (crazy8sNodes.length > 0) {
       if (crazy8sNodes.length > 1) {
         // Multiplayer: per-user parallel continuation S-curves (each owner → their own crazy 8s)
-        const bandTop = phases[0].y + phases[0].height;
-        const bandBottom = phases[1].y;
+        const p1 = getPhaseRect(1);
+        const p2 = getPhaseRect(2);
+        const bandTop = p1.y + p1.height;
+        const bandBottom = p2.y;
         const bandHeight = Math.max(bandBottom - bandTop, 20);
         const srcW = 400; // mind map zone visual width
         const dstW = CRAZY_8S_NODE_WIDTH * 0.6; // match c8s→voting band width
@@ -1646,7 +1669,7 @@ function MindMapCanvasInner({
         }
       } else {
         // Solo: single neutral continuation
-        createBand('mm-c8s', 0, 1, 'continuation', {
+        createBand('mm-c8s', 1, 2, 'continuation', {
           sourceWidth: 400,
           targetWidthCont: CRAZY_8S_NODE_WIDTH * 0.6,
           bandColor: '#f59e0b',
@@ -1657,10 +1680,10 @@ function MindMapCanvasInner({
     // Band 2: Crazy Eights → Voting
     if (!phases[1].isActive) {
       // Both phases inactive — skeleton band between skeleton containers
-      createBand('c8s-voting', 1, 2, 'skeleton');
+      createBand('c8s-voting', 2, 3, 'skeleton');
     } else if (!phases[2].isActive) {
       // Crazy 8s active, voting inactive — skeleton band
-      createBand('c8s-voting', 1, 2, 'skeleton');
+      createBand('c8s-voting', 2, 3, 'skeleton');
     } else if (phases[1].isActive && crazy8sNodes.length > 0) {
         // Active convergence: per-user crazy 8s → voting container
         // Use ACTUAL positions (voting container may have persisted position from old layout)
@@ -1711,9 +1734,9 @@ function MindMapCanvasInner({
 
     // Band 3: Voting → Brain Rewriting
     if (!phases[2].isActive) {
-      createBand('voting-br', 2, 3, 'skeleton');
+      createBand('voting-br', 3, 4, 'skeleton');
     } else if (!phases[3].isActive) {
-      createBand('voting-br', 2, 3, 'skeleton');
+      createBand('voting-br', 3, 4, 'skeleton');
     } else {
         const brContainer = brainRewritingNodes.find((n) => n.id === BR_CONTAINER_ID);
         if (brContainer) {
@@ -1753,7 +1776,7 @@ function MindMapCanvasInner({
     }
 
     return result;
-  }, [phaseLayout, leftEdgeX, crazy8sNodes, ownerOffsets, showVotingArtifact, votingContainerPos, votingContainerSize, brainRewritingMatrices, brainRewritingNodes]);
+  }, [phaseLayout, leftEdgeX, crazy8sNodes, ownerOffsets, showVotingArtifact, votingContainerPos, votingContainerSize, brainRewritingMatrices, brainRewritingNodes, votingCardPositions]);
 
   // Combined nodes array: flow bands → phase containers → owner zones → mind map → crazy 8s → voting → brain rewriting
   const rfNodes = useMemo(() => {
@@ -1829,14 +1852,10 @@ function MindMapCanvasInner({
     }
   }, [currentOwnerId, fitView]);
 
-  // Phase container drag tracking ref
-  const containerDragRef = useRef<{ step: number; prevPos: { x: number; y: number } } | null>(null);
-
   // Track current nodes for reading outside of render (avoids "Cannot update while rendering")
   const nodesRef = useRef<Node[]>(nodes);
   nodesRef.current = nodes;
 
-  // Handle node changes (drag, selection)
   // Ref for ownerOffsets so drag handler always has current values without re-creating
   const ownerOffsetsRef = useRef(ownerOffsets);
   ownerOffsetsRef.current = ownerOffsets;
@@ -1846,162 +1865,22 @@ function MindMapCanvasInner({
     return allMindMapNodes.find((n) => n.id === nodeId)?.ownerId;
   }, [allMindMapNodes]);
 
-  const handleNodesChange = useCallback(
-    (changes: NodeChange[]) => {
-      // Track container drag delta for moving children in the same setNodes call
-      let containerDelta: { x: number; y: number } | null = null;
-      let containerStep: number | null = null;
-
-      // Update live positions ref during drag for flicker-free rendering
-      for (const c of changes) {
-        if (c.type === 'position') {
-          const posChange = c as NodeChange & { id: string; position?: { x: number; y: number }; dragging?: boolean };
-          // Skip non-draggable infrastructure nodes (but NOT containers — they're facilitator-draggable)
-          if ((posChange.id.startsWith(BR_NODE_PREFIX) && posChange.id !== BR_CONTAINER_ID) || posChange.id.startsWith(ZONE_NODE_PREFIX) || isFlowBandNode(posChange.id)) continue;
-
-          // Phase container: compute delta for child movement
-          if (isPhaseContainerNode(posChange.id)) {
-            if (containerDragRef.current && posChange.dragging && posChange.position) {
-              const { step, prevPos } = containerDragRef.current;
-              const delta = {
-                x: posChange.position.x - prevPos.x,
-                y: posChange.position.y - prevPos.y,
-              };
-              if (delta.x !== 0 || delta.y !== 0) {
-                containerDragRef.current.prevPos = { ...posChange.position };
-                containerDelta = delta;
-                containerStep = step;
-              }
-            }
-            continue;
-          }
-
-          // Crazy 8s nodes: persist drag position for facilitator
-          if (isCrazy8sNode(posChange.id)) {
-            if (posChange.dragging === false && posChange.position) {
-              storeApi.getState().setVotingCardPosition(`__c8s_${posChange.id}__`, posChange.position);
-            }
-            continue;
-          }
-
-          // Brain rewriting container: persist drag position
-          if (posChange.id === BR_CONTAINER_ID) {
-            if (posChange.dragging === false && posChange.position) {
-              storeApi.getState().setVotingCardPosition('__br_container__', posChange.position);
-            }
-            continue;
-          }
-
-          // Voting nodes: persist position to voting store
-          if (isVotingNode(posChange.id)) {
-            if (posChange.dragging === false && posChange.position) {
-              if (posChange.id === VOTING_CONTAINER_ID) {
-                // Container drag: persist under '__container__' key
-                storeApi.getState().setVotingCardPosition('__container__', posChange.position);
-              } else {
-                // Card/group drag within container: persist relative position
-                const storeKey = posChange.id.startsWith(VOTING_CARD_PREFIX)
-                  ? posChange.id.slice(VOTING_CARD_PREFIX.length)
-                  : posChange.id.slice(VOTING_GROUP_PREFIX.length);
-                storeApi.getState().setVotingCardPosition(storeKey, posChange.position);
-              }
-            }
-            continue; // Don't process as mind map node
-          }
-
-          if (posChange.dragging && posChange.position) {
-            livePositions.current[posChange.id] = posChange.position;
-          } else if (posChange.dragging === false) {
-            // Drag ended — snap to grid and persist to store
-            const finalPos = posChange.position || livePositions.current[posChange.id];
-            if (finalPos) {
-              // Subtract owner offset (if in "All" view) so stored position is owner-relative
-              const oid = getNodeOwnerId(posChange.id);
-              const offset = oid ? ownerOffsetsRef.current[oid] : undefined;
-              const adjusted = offset
-                ? { x: finalPos.x - offset.x, y: finalPos.y - offset.y }
-                : finalPos;
-              const snapped = {
-                x: snapToGrid(adjusted.x),
-                y: snapToGrid(adjusted.y),
-              };
-              updateMindMapNodePosition(posChange.id, snapped);
-            }
-            delete livePositions.current[posChange.id];
-          }
-        }
-      }
-
-      // Apply changes + move children atomically if dragging a phase container
-      setNodes((nds) => {
-        let updated = applyNodeChanges(changes, nds);
-        if (containerDelta && containerStep !== null) {
-          const step = containerStep;
-          const delta = containerDelta;
-          updated = updated.map(n => {
-            const isChild =
-              (step === 1 && (n.type === 'mindMapNode' || n.id.startsWith(ZONE_NODE_PREFIX))) ||
-              (step === 2 && isCrazy8sNode(n.id));
-            if (isChild) {
-              return { ...n, position: { x: n.position.x + delta.x, y: n.position.y + delta.y } };
-            }
-            return n;
-          });
-        }
-        return updated;
-      });
-    },
-    [updateMindMapNodePosition, getNodeOwnerId, storeApi]
-  );
-
-  // Phase container drag handlers — move all children with the container
-  const handleNodeDragStart = useCallback((_event: React.MouseEvent, node: Node) => {
-    if (!isPhaseContainerNode(node.id)) return;
-    const step = parseInt(node.id.slice(PHASE_CONTAINER_PREFIX.length));
-    containerDragRef.current = { step, prevPos: { ...node.position } };
-  }, []);
-
-  // handleNodeDrag is no longer needed — child movement is handled inside handleNodesChange
-
-  const handleNodeDragStop = useCallback((_event: React.MouseEvent, node: Node) => {
-    if (!containerDragRef.current || !isPhaseContainerNode(node.id)) return;
-    const { step } = containerDragRef.current;
-    containerDragRef.current = null;
-
-    // Persist container position
-    storeApi.getState().setVotingCardPosition(`__phase${step}__`, node.position);
-
-    // Persist child positions to store (read from ref, not inside setNodes)
-    const currentNodes = nodesRef.current;
-    if (step === 1) {
-      const updates: Array<{ id: string; position: { x: number; y: number } }> = [];
-      for (const n of currentNodes) {
-        if (n.type === 'mindMapNode') {
-          const oid = getNodeOwnerId(n.id);
-          const offset = oid ? ownerOffsetsRef.current[oid] : undefined;
-          const adjusted = offset
-            ? { x: n.position.x - offset.x, y: n.position.y - offset.y }
-            : n.position;
-          updates.push({
-            id: n.id,
-            position: {
-              x: snapToGrid(adjusted.x),
-              y: snapToGrid(adjusted.y),
-            },
-          });
-        }
-      }
-      if (updates.length > 0) {
-        batchUpdateMindMapNodePositions(updates);
-      }
-    } else if (step === 2) {
-      for (const n of currentNodes) {
-        if (isCrazy8sNode(n.id)) {
-          storeApi.getState().setVotingCardPosition(`__c8s_${n.id}__`, n.position);
-        }
-      }
-    }
-  }, [storeApi, getNodeOwnerId, batchUpdateMindMapNodePositions]);
+  // Extracted drag hook for all phase containers (1-4)
+  const {
+    handleNodesChange,
+    handleNodeDragStart,
+    handleNodeDragStop,
+    containerDragRef,
+  } = usePhaseDrag({
+    storeApi,
+    getNodeOwnerId,
+    ownerOffsetsRef,
+    batchUpdateMindMapNodePositions,
+    updateMindMapNodePosition,
+    nodesRef,
+    setNodes,
+    livePositions,
+  });
 
   // Undo/redo handlers (temporal middleware only exists on the solo store, not multiplayer)
   const handleUndo = useCallback(() => {

@@ -11,6 +11,7 @@
 import { memo } from 'react';
 import { type NodeProps, type Node } from '@xyflow/react';
 import { Vote } from 'lucide-react';
+import { PhaseContainerShell } from './phase-container-shell';
 
 export type VotingContainerNodeData = {
   title: string;
@@ -30,88 +31,45 @@ function VotingContainerNodeComponent({ data }: NodeProps<VotingContainerNodeTyp
     votingStatus === 'closed' ? 'Voting Closed' :
     '';
 
-  return (
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'transparent',
-        border: `1.5px solid color-mix(in srgb, var(--color-border) ${isActive ? '30%' : '20%'}, transparent)`,
-        borderRadius: 16,
-        opacity: isActive ? 1 : 0.7,
-        pointerEvents: 'none',
-        position: 'relative',
-      }}
-    >
-      {/* Header bar */}
-      <div
+  const headerExtra = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <Vote style={{ width: 16, height: 16, opacity: 0.6 }} />
+      <span
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 48,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 16px',
-          backgroundColor: 'var(--color-card)',
-          borderBottom: '1px solid color-mix(in srgb, var(--color-border) 20%, transparent)',
-          borderRadius: '14px 14px 0 0',
-          pointerEvents: 'none',
+          fontSize: 11,
+          fontWeight: 500,
+          opacity: 0.5,
+          backgroundColor: 'color-mix(in srgb, var(--color-muted) 50%, transparent)',
+          padding: '2px 8px',
+          borderRadius: 10,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {stepNumber != null && (
-            <div
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: '50%',
-                backgroundColor: '#3b82f6',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 11,
-                fontWeight: 700,
-                color: '#ffffff',
-                flexShrink: 0,
-              }}
-            >
-              {stepNumber}
-            </div>
-          )}
-          <Vote style={{ width: 16, height: 16, opacity: 0.6 }} />
-          <span style={{ fontSize: 14, fontWeight: 600, opacity: 0.8 }}>
-            {title}
-          </span>
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 500,
-              opacity: 0.5,
-              backgroundColor: 'color-mix(in srgb, var(--color-muted) 50%, transparent)',
-              padding: '2px 8px',
-              borderRadius: 10,
-            }}
-          >
-            {cardCount} idea{cardCount !== 1 ? 's' : ''}
-          </span>
-        </div>
-        {statusLabel && (
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 500,
-              opacity: 0.6,
-              color: votingStatus === 'open' ? '#16a34a' : undefined,
-            }}
-          >
-            {statusLabel}
-          </span>
-        )}
-      </div>
+        {cardCount} idea{cardCount !== 1 ? 's' : ''}
+      </span>
+      {statusLabel && (
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 500,
+            opacity: 0.6,
+            color: votingStatus === 'open' ? '#16a34a' : undefined,
+          }}
+        >
+          {statusLabel}
+        </span>
+      )}
     </div>
+  );
+
+  return (
+    <PhaseContainerShell
+      stepNumber={stepNumber ?? 3}
+      title={title}
+      isActive={isActive}
+      width="100%"
+      height="100%"
+      headerExtra={headerExtra}
+    />
   );
 }
 
