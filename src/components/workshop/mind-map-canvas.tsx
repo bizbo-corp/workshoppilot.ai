@@ -57,6 +57,7 @@ import { VotingGroupNode, type VotingGroupNodeData } from '@/components/canvas/v
 import { VotingContainerNode, type VotingContainerNodeData } from '@/components/canvas/voting-container-node';
 import { BrainRewritingContainerNode, type BrainRewritingContainerNodeData, computeBrainRewritingContainerSize, computeBrGridLayout, BR_CONTAINER_PADDING, BR_CONTAINER_HEADER_HEIGHT } from '@/components/canvas/brain-rewriting-container-node';
 import { FlowBandNode } from '@/components/canvas/flow-band-node';
+import { PhaseContainerNode, type PhaseContainerNodeData } from '@/components/canvas/phase-container-node';
 import { VotingResultsSidebar } from '@/components/workshop/voting-results-sidebar';
 import { computeVotingGridLayout, computeVotingContainerSize, VOTING_CARD_WIDTH, VOTING_CARD_HEIGHT, VOTING_GROUP_WIDTH, VOTING_GROUP_HEIGHT, SECTION_GAP, CONTAINER_PADDING, CONTAINER_HEADER_HEIGHT } from '@/lib/canvas/voting-layout';
 import { currentRoundVotes } from '@/lib/canvas/voting-utils';
@@ -86,6 +87,7 @@ const nodeTypes = {
   votingContainerNode: VotingContainerNode,
   brainRewritingContainerNode: BrainRewritingContainerNode,
   flowBandNode: FlowBandNode,
+  phaseContainerNode: PhaseContainerNode,
 };
 const edgeTypes = { mindMapEdge: MindMapEdge };
 
@@ -109,8 +111,20 @@ const isCrazy8sNode = (id: string) =>
 // Flow band node ID prefix
 const FLOW_BAND_PREFIX = 'flow-band-';
 const isFlowBandNode = (id: string) => id.startsWith(FLOW_BAND_PREFIX);
+// Phase container node ID prefix
+const PHASE_CONTAINER_PREFIX = 'phase-container-';
+const isPhaseContainerNode = (id: string) => id.startsWith(PHASE_CONTAINER_PREFIX);
 // Gap between phases (mind map bottom → crazy 8s top)
 const PHASE_GAP = 80;
+// Phase layout constants
+const PHASE_HEADER = 48;       // title bar height for phase containers
+// Per-step skeleton heights (taller to fit representative content)
+const SKELETON_HEIGHTS: Record<number, number> = {
+  2: 260,  // crazy 8s: 4×2 grid of boxes
+  3: 260,  // voting: 4×2 grid with checkmarks
+  4: 280,  // brain rewriting: 3×2 grid of 2×2 matrices
+};
+const BAND_GAP = 140;          // space for S-curve between phases
 // Voting node ID prefixes (prevent collisions with crazy8s slotId-based nodes)
 const VOTING_CARD_PREFIX = 'vc-';
 const VOTING_GROUP_PREFIX = 'vg-';
@@ -790,6 +804,101 @@ function MindMapCanvasInner({
     return -800; // solo: zone starts at -800
   }, [ownerOffsets]);
 
+  // Right edge X for computing full-width phase containers in "All" view
+  const rightEdgeX = useMemo(() => {
+    if (Object.keys(ownerOffsets).length > 0)
+      return Math.max(...Object.values(ownerOffsets).map((o) => o.x)) + 800;
+    return 800; // solo: zone ends at +800
+  }, [ownerOffsets]);
+
+  // Should voting artifacts be visible? (during voting OR persisted into brain-rewriting)
+  // Hoisted before phaseLayout so it's available for layout computation.
+  const showVotingArtifact = (votingMode || (!!brainRewritingMatrices?.length && votingSession.status === 'closed')) && !!isMultiplayerIdeation;
+
+  // ── Phase layout: sequential positions for all 4 phase containers ──
+  const phaseLayout = useMemo(() => {
+    // Phase container width
+    const phaseWidth = (Object.keys(ownerOffsets).length > 0 && !currentOwnerId)
+      ? rightEdgeX - leftEdgeX
+      : 1600;
+
+    // Phase 1: Mind Mapping — always active
+    const phase1Y = -548; // 48px above mind map area (y=-500) for header
+    const phase1Height = PHASE_HEADER + 1400 + 20; // header + mind map area + padding
+
+    // Phase 2: Crazy Eights
+    const phase2Y = phase1Y + phase1Height + BAND_GAP;
+    const phase2ActiveHeight = PHASE_HEADER + CRAZY_8S_NODE_HEIGHT + 60;
+    const phase2Height = showCrazy8s ? phase2ActiveHeight : SKELETON_HEIGHTS[2];
+
+    // Phase 3: Voting
+    const phase3Y = phase2Y + phase2Height + BAND_GAP;
+    // Use shared container width for voting/BR in "All" view
+    const phase3Width = phaseWidth;
+    // Compute voting container size
+    const groupedIds = new Set(slotGroups.flatMap((g) => g.slotIds));
+    const seen = new Set<string>();
+    let cCount = 0;
+    for (const s of allCrazy8sSlots) {
+      if (!s.imageUrl || groupedIds.has(s.slotId) || seen.has(s.slotId)) continue;
+      seen.add(s.slotId);
+      cCount++;
+    }
+    const votingSize = computeVotingContainerSize(cCount, slotGroups.length);
+    const phase3ActiveHeight = votingSize.height;
+    const phase3Height = showVotingArtifact ? phase3ActiveHeight : SKELETON_HEIGHTS[3];
+
+    // Phase 4: Brain Rewriting
+    const phase4Y = phase3Y + phase3Height + BAND_GAP;
+    const cellCountPerMatrix = brainRewritingMatrices?.[0]?.cells.length ?? 1;
+    const brSize = brainRewritingMatrices?.length
+      ? computeBrainRewritingContainerSize(brainRewritingMatrices.length, cellCountPerMatrix)
+      : { width: 800, height: SKELETON_HEIGHTS[4] };
+    const phase4ActiveHeight = brSize.height;
+    const phase4Height = brainRewritingMatrices?.length ? phase4ActiveHeight : SKELETON_HEIGHTS[4];
+
+    return {
+      phaseWidth,
+      phases: [
+        { step: 1, title: 'Mind Mapping', y: phase1Y, height: phase1Height, width: phaseWidth, isActive: true },
+        { step: 2, title: 'Crazy Eights', y: phase2Y, height: phase2Height, width: phaseWidth, isActive: !!showCrazy8s },
+        { step: 3, title: 'Voting', y: phase3Y, height: phase3Height, width: phase3Width, isActive: !!showVotingArtifact },
+        { step: 4, title: 'Brain Rewriting', y: phase4Y, height: phase4Height, width: phaseWidth, isActive: !!brainRewritingMatrices?.length },
+      ],
+    };
+  }, [leftEdgeX, rightEdgeX, ownerOffsets, currentOwnerId, showCrazy8s, showVotingArtifact, brainRewritingMatrices, allCrazy8sSlots, slotGroups]);
+
+  // Phase container nodes — visual backgrounds for each phase
+  const phaseContainerNodes = useMemo<Node[]>(() => {
+    return phaseLayout.phases
+      .filter((phase) => {
+        // Skip phase 3 when voting is active (VotingContainerNode renders instead)
+        if (phase.step === 3 && phase.isActive) return false;
+        // Skip phase 4 when BR is active (BrainRewritingContainerNode renders instead)
+        if (phase.step === 4 && phase.isActive) return false;
+        return true;
+      })
+      .map((phase) => ({
+        id: `${PHASE_CONTAINER_PREFIX}${phase.step}`,
+        type: 'phaseContainerNode' as const,
+        position: { x: leftEdgeX, y: phase.y },
+        draggable: false,
+        selectable: false,
+        connectable: false,
+        focusable: false,
+        zIndex: -2,
+        data: {
+          stepNumber: phase.step,
+          title: phase.title,
+          isActive: phase.isActive,
+          width: phase.width,
+          height: phase.height,
+          // Step 1: show placeholder scatter only when no mind map nodes exist
+          ...(phase.step === 1 ? { showPlaceholder: mindMapNodes.length === 0 } : {}),
+        } satisfies PhaseContainerNodeData,
+      }));
+  }, [phaseLayout, leftEdgeX, mindMapNodes.length]);
+
   // Convert store state to ReactFlow mind map nodes
   const rfMindMapNodes: Node[] = useMemo(() => {
     return mindMapNodes.map((nodeState) => {
@@ -964,8 +1073,9 @@ function MindMapCanvasInner({
       onSyncStars: syncStarsToSlots,
     };
 
-    // Crazy 8s centered below mind map (mind map zone: y=-500..+900, so crazy8s starts at y=900+PHASE_GAP)
-    const crazy8sY = 900 + PHASE_GAP;
+    // Crazy 8s positioned using phaseLayout — inside Phase 2 container
+    const phase2 = phaseLayout.phases[1];
+    const crazy8sY = phase2.y + PHASE_HEADER + 20; // below phase header + padding
     const crazy8sCenterX = -(CRAZY_8S_NODE_WIDTH / 2);
 
     // Solo mode or single owner — single node, no ownerId filtering
@@ -1022,46 +1132,27 @@ function MindMapCanvasInner({
         },
       };
     });
-  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing, votingMode, onVoteSelectionConfirm, onReVote, onStartMerge, syncStarsToSlots, allOwnerIds, currentOwnerId, ownerOffsets, ownerNames, getOwnerTheme, isMultiplayerIdeation, crazy8sReadinessMap, facilitatorOwnerId]);
-
-  // Should voting artifacts be visible? (during voting OR persisted into brain-rewriting)
-  const showVotingArtifact = (votingMode || (!!brainRewritingMatrices?.length && votingSession.status === 'closed')) && !!isMultiplayerIdeation;
+  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing, votingMode, onVoteSelectionConfirm, onReVote, onStartMerge, syncStarsToSlots, allOwnerIds, currentOwnerId, ownerOffsets, ownerNames, getOwnerTheme, isMultiplayerIdeation, crazy8sReadinessMap, facilitatorOwnerId, phaseLayout]);
 
   // Persisted container drag positions (reactive — triggers useMemo recomputation)
   const persistedVotingContainerPos = votingCardPositions['__container__'];
   const persistedBrContainerPos = votingCardPositions['__br_container__'];
 
-  // Compute voting container position: BELOW all content (owner zones, mind maps, crazy 8s)
+  // Compute voting container position: uses phaseLayout for sequential positioning
   const votingContainerPos = useMemo(() => {
     if (!showVotingArtifact) return { x: 0, y: 0 };
 
     // Check for persisted drag position
     if (persistedVotingContainerPos) return persistedVotingContainerPos;
 
-    // Find the true content bottom across ALL node types:
-    // 1. Crazy 8s bottoms (now below mind map)
-    const c8sBottoms = crazy8sNodes.map((n) => (n.position?.y ?? 0) + CRAZY_8S_NODE_HEIGHT);
-    // 2. Owner zone bottoms (extended when crazy 8s visible)
-    const zoneBottoms = Object.values(ownerOffsets).map((o) => o.y + 900);
-    // 3. Mind map node bottoms (approximate 60px per node)
-    const mmBottoms = rfMindMapNodes.map((n) => (n.position?.y ?? 0) + 60);
+    // Use phase 3 position from layout
+    const phase3 = phaseLayout.phases[2];
+    return { x: leftEdgeX, y: phase3.y };
+  }, [showVotingArtifact, persistedVotingContainerPos, leftEdgeX, phaseLayout]);
 
-    const allBottoms = [...c8sBottoms, ...zoneBottoms, ...mmBottoms];
-    const contentBottom = allBottoms.length > 0 ? Math.max(...allBottoms) : 0;
-
-    // X: align with leftmost owner zone edge
-    const containerX = leftEdgeX;
-    const containerY = contentBottom + SECTION_GAP;
-
-    return { x: containerX, y: containerY };
-  }, [showVotingArtifact, crazy8sNodes, ownerOffsets, rfMindMapNodes, persistedVotingContainerPos, leftEdgeX]);
-
-  // Brain rewriting container + group nodes — positioned below voting container (or below crazy 8s if no voting)
+  // Brain rewriting container + group nodes — positioned using phaseLayout
   const brainRewritingNodes = useMemo<Node[]>(() => {
     if (!brainRewritingMatrices || brainRewritingMatrices.length === 0) return [];
-
-    const firstCrazy8s = crazy8sNodes[0];
-    const c8sX = firstCrazy8s?.position?.x ?? 900;
 
     let containerX: number;
     let containerY: number;
@@ -1070,27 +1161,11 @@ function MindMapCanvasInner({
     if (persistedBrContainerPos) {
       containerX = persistedBrContainerPos.x;
       containerY = persistedBrContainerPos.y;
-    } else if (isMultiplayerIdeation && votingSession.status === 'closed') {
-      // Position below the voting container
-      const containerPos = persistedVotingContainerPos || votingContainerPos;
-      // Count items for container height
-      const groupedIds = new Set(slotGroups.flatMap((g) => g.slotIds));
-      const seen = new Set<string>();
-      let cCount = 0;
-      for (const s of allCrazy8sSlots) {
-        if (!s.imageUrl || groupedIds.has(s.slotId) || seen.has(s.slotId)) continue;
-        seen.add(s.slotId);
-        cCount++;
-      }
-      const cSize = computeVotingContainerSize(cCount, slotGroups.length);
-      containerX = leftEdgeX;
-      containerY = containerPos.y + cSize.height + SECTION_GAP;
     } else {
-      // Solo / no voting: stack below crazy 8s, left-aligned
+      // Use phase 4 position from layout
+      const phase4 = phaseLayout.phases[3];
       containerX = leftEdgeX;
-      // Position below crazy 8s content
-      const c8sBottom = (firstCrazy8s?.position?.y ?? 0) + CRAZY_8S_NODE_HEIGHT;
-      containerY = c8sBottom + SECTION_GAP;
+      containerY = phase4.y;
     }
 
     const result: Node[] = [];
@@ -1106,6 +1181,7 @@ function MindMapCanvasInner({
       matrixCount: brainRewritingMatrices.length,
       isActive: true,
       onDone: onBrainRewritingDone,
+      stepNumber: 4,
     };
     result.push({
       id: BR_CONTAINER_ID,
@@ -1159,7 +1235,7 @@ function MindMapCanvasInner({
     }
 
     return result;
-  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, allCrazy8sSlots, slotGroups, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded, onBrainRewritingDone, crazy8sNodes, isMultiplayerIdeation, votingSession.status, votingContainerPos, rfMindMapNodes, isFacilitator, persistedBrContainerPos, persistedVotingContainerPos, leftEdgeX]);
+  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, slotGroups, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded, onBrainRewritingDone, isFacilitator, persistedBrContainerPos, leftEdgeX, phaseLayout]);
 
   // Owner zone nodes — colored background rectangles behind each participant's tree
   const showDoneButton = !!isMultiplayerIdeation && !showCrazy8s;
@@ -1168,10 +1244,10 @@ function MindMapCanvasInner({
 
     const handleToggle = () => toggleReadyRef.current?.toggleReady();
 
-    // Zone width: always default 1600 (crazy 8s below, not beside)
+    // Zone width: always default 1600 (crazy 8s in separate phase container)
     const zoneWidth = undefined;
-    // Zone height: extend to cover crazy 8s when visible below mind map
-    const zoneHeight = showCrazy8s ? 1400 + PHASE_GAP + CRAZY_8S_NODE_HEIGHT + 100 : undefined;
+    // Zone height: default 1400 (crazy 8s now in Phase 2 container, not owner zone)
+    const zoneHeight = undefined;
 
     // Individual view: show zone for the selected participant only (centered at origin)
     if (currentOwnerId) {
@@ -1229,7 +1305,7 @@ function MindMapCanvasInner({
         },
       };
     });
-  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, showCrazy8s, ownerStarCounts]);
+  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, ownerStarCounts]);
 
   // ── Voting nodes (multiplayer idea-selection on same canvas) ──
 
@@ -1300,6 +1376,7 @@ function MindMapCanvasInner({
       cardCount: cardCount + slotGroups.length,
       isActive: !isDuringBrainRewriting,
       votingStatus: votingSession.status,
+      stepNumber: 3,
     };
     result.push({
       id: VOTING_CONTAINER_ID,
@@ -1434,118 +1511,209 @@ function MindMapCanvasInner({
 
   // Flow band nodes — smooth curved ribbons connecting phases vertically
   const flowBandNodes = useMemo<Node[]>(() => {
-    if (!showCrazy8s) return [];
     const result: Node[] = [];
+    const phases = phaseLayout.phases;
+    const bandBaseProps = {
+      draggable: false,
+      selectable: false,
+      connectable: false,
+      focusable: false,
+      zIndex: -2,
+    } as const;
 
-    // Convergence band: crazy 8s → voting container
-    if (showVotingArtifact && crazy8sNodes.length > 0) {
-      const c8sPositions = crazy8sNodes.map((n) => ({
-        x: n.position?.x ?? 0,
-        y: n.position?.y ?? 0,
-      }));
-      const c8sBottom = Math.max(...c8sPositions.map((p) => p.y + CRAZY_8S_NODE_HEIGHT));
-      const c8sLeft = Math.min(...c8sPositions.map((p) => p.x));
-      const c8sRight = Math.max(...c8sPositions.map((p) => p.x + CRAZY_8S_NODE_WIDTH));
-
-      const votingCx = votingContainerPos.x + votingContainerSize.width / 2;
-      const votingLeft = votingContainerPos.x;
-      const votingRight = votingContainerPos.x + votingContainerSize.width;
-
-      // SVG bounding box must encompass all sources and target
-      const svgLeft = Math.min(c8sLeft, votingLeft) - 40;
-      const svgRight = Math.max(c8sRight, votingRight) + 40;
-      const svgWidth = svgRight - svgLeft;
-
-      const bandTop = c8sBottom + 10;
-      const bandBottom = votingContainerPos.y - 10;
-      const bandHeight = Math.max(bandBottom - bandTop, 40);
-
-      // Per-user bands with center coordinates relative to SVG origin
-      const bands = crazy8sNodes.map((n) => {
-        const ownerColor = (n.data as Record<string, unknown>)?.ownerColor as string | undefined;
-        const nx = n.position?.x ?? 0;
-        return {
-          color: ownerColor ?? '#6b7280',
-          sourceCenterX: nx + CRAZY_8S_NODE_WIDTH / 2 - svgLeft,
-          sourceWidth: CRAZY_8S_NODE_WIDTH * 0.6, // ribbon is 60% of node width for elegance
-        };
-      });
+    // Helper to create a flow band node between two phases
+    const createBand = (
+      id: string,
+      topPhaseIdx: number,
+      bottomPhaseIdx: number,
+      variant: 'convergence' | 'continuation' | 'skeleton',
+      extraData?: Record<string, unknown>,
+    ) => {
+      const topPhase = phases[topPhaseIdx];
+      const bottomPhase = phases[bottomPhaseIdx];
+      const bandTop = topPhase.y + topPhase.height;
+      const bandBottom = bottomPhase.y;
+      const bandHeight = Math.max(bandBottom - bandTop, 20);
+      const bandWidth = Math.max(topPhase.width, bottomPhase.width) + 80;
+      const bandX = leftEdgeX - 40;
+      const phaseCx = leftEdgeX + topPhase.width / 2;
 
       result.push({
-        id: `${FLOW_BAND_PREFIX}convergence`,
+        id: `${FLOW_BAND_PREFIX}${id}`,
         type: 'flowBandNode',
-        position: { x: svgLeft, y: bandTop },
-        draggable: false,
-        selectable: false,
-        connectable: false,
-        focusable: false,
-        zIndex: -2,
+        position: { x: bandX, y: bandTop },
+        ...bandBaseProps,
         data: {
-          variant: 'convergence' as const,
-          width: svgWidth,
+          variant,
+          width: bandWidth,
           height: bandHeight,
-          bands,
-          targetCenterX: votingCx - svgLeft,
-          targetWidth: votingContainerSize.width * 0.8,
+          sourceCenterX: phaseCx - bandX,
+          targetCenterXCont: phaseCx - bandX,
+          ...(variant === 'skeleton' ? { skeletonColor: '#9ca3af' } : {}),
+          ...extraData,
         },
       });
+    };
+
+    // Band 1: Mind Mapping → Crazy Eights
+    if (!phases[1].isActive) {
+      // Skeleton band to inactive phase
+      createBand('mm-c8s', 0, 1, 'skeleton');
+    } else if (crazy8sNodes.length > 0) {
+      if (crazy8sNodes.length > 1) {
+        // Multiplayer: per-user parallel continuation S-curves (each owner → their own crazy 8s)
+        const bandTop = phases[0].y + phases[0].height;
+        const bandBottom = phases[1].y;
+        const bandHeight = Math.max(bandBottom - bandTop, 20);
+
+        for (const n of crazy8sNodes) {
+          const ownerColor = (n.data as Record<string, unknown>)?.ownerColor as string | undefined;
+          const c8sCx = (n.position?.x ?? 0) + CRAZY_8S_NODE_WIDTH / 2;
+          // Owner's mind map center is at their offset X
+          const oid = (n.data as Record<string, unknown>)?.ownerId as string | undefined;
+          const ownerOffset = oid ? ownerOffsets[oid] : undefined;
+          const mmCx = (ownerOffset?.x ?? 0); // owner tree is centered at their offset
+
+          // SVG bounds for this particular band
+          const svgLeft = Math.min(mmCx - 400, c8sCx - CRAZY_8S_NODE_WIDTH * 0.3) - 40;
+          const svgRight = Math.max(mmCx + 400, c8sCx + CRAZY_8S_NODE_WIDTH * 0.3) + 40;
+          const svgWidth = svgRight - svgLeft;
+
+          result.push({
+            id: `${FLOW_BAND_PREFIX}mm-c8s-${oid ?? 'solo'}`,
+            type: 'flowBandNode',
+            position: { x: svgLeft, y: bandTop },
+            ...bandBaseProps,
+            data: {
+              variant: 'continuation' as const,
+              width: svgWidth,
+              height: bandHeight,
+              sourceCenterX: mmCx - svgLeft,
+              sourceWidth: 400,
+              targetCenterXCont: c8sCx - svgLeft,
+              targetWidthCont: CRAZY_8S_NODE_WIDTH * 0.6,
+              bandColor: ownerColor ?? '#f59e0b',
+            },
+          });
+        }
+      } else {
+        // Solo: single neutral continuation
+        createBand('mm-c8s', 0, 1, 'continuation', {
+          sourceWidth: 400,
+          targetWidthCont: CRAZY_8S_NODE_WIDTH * 0.6,
+          bandColor: '#f59e0b',
+        });
+      }
     }
 
-    // Continuation band: voting → brain rewriting
-    if (brainRewritingMatrices?.length && brainRewritingNodes.length > 0) {
-      const brContainer = brainRewritingNodes.find((n) => n.id === BR_CONTAINER_ID);
-      if (brContainer) {
-        const votingBottom = votingContainerPos.y + votingContainerSize.height;
-        const brTop = brContainer.position?.y ?? 0;
-        const brWidth = brContainer.style?.width as number ?? 800;
+    // Band 2: Crazy Eights → Voting
+    if (phases[1].isActive) {
+      if (!phases[2].isActive) {
+        // Skeleton band to inactive voting
+        createBand('c8s-voting', 1, 2, 'skeleton');
+      } else if (crazy8sNodes.length > 0) {
+        // Active convergence: per-user crazy 8s → voting container
+        // Use ACTUAL positions (voting container may have persisted position from old layout)
+        const c8sPositions = crazy8sNodes.map((n) => ({
+          x: n.position?.x ?? 0,
+          y: n.position?.y ?? 0,
+        }));
+        const c8sBottom = Math.max(...c8sPositions.map((p) => p.y + CRAZY_8S_NODE_HEIGHT));
+        const c8sLeft = Math.min(...c8sPositions.map((p) => p.x));
+        const c8sRight = Math.max(...c8sPositions.map((p) => p.x + CRAZY_8S_NODE_WIDTH));
 
         const votingCx = votingContainerPos.x + votingContainerSize.width / 2;
-        const brCx = (brContainer.position?.x ?? 0) + brWidth / 2;
 
-        // SVG bounds
-        const svgLeft = Math.min(votingContainerPos.x, brContainer.position?.x ?? 0) - 40;
-        const svgRight = Math.max(
-          votingContainerPos.x + votingContainerSize.width,
-          (brContainer.position?.x ?? 0) + brWidth,
-        ) + 40;
+        const svgLeft = Math.min(c8sLeft, votingContainerPos.x) - 40;
+        const svgRight = Math.max(c8sRight, votingContainerPos.x + votingContainerSize.width) + 40;
         const svgWidth = svgRight - svgLeft;
 
-        const bandTop = votingBottom + 5;
-        const bandHeight = Math.max(brTop - bandTop - 5, 20);
+        // Span from actual crazy 8s bottom to actual voting container top
+        const bandTop = c8sBottom + 10;
+        const bandBottom = votingContainerPos.y - 10;
+        const bandHeight = Math.max(bandBottom - bandTop, 40);
+
+        const bands = crazy8sNodes.map((n) => {
+          const ownerColor = (n.data as Record<string, unknown>)?.ownerColor as string | undefined;
+          const nx = n.position?.x ?? 0;
+          return {
+            color: ownerColor ?? '#6b7280',
+            sourceCenterX: nx + CRAZY_8S_NODE_WIDTH / 2 - svgLeft,
+            sourceWidth: CRAZY_8S_NODE_WIDTH * 0.6,
+          };
+        });
 
         result.push({
-          id: `${FLOW_BAND_PREFIX}continuation`,
+          id: `${FLOW_BAND_PREFIX}c8s-voting`,
           type: 'flowBandNode',
           position: { x: svgLeft, y: bandTop },
-          draggable: false,
-          selectable: false,
-          connectable: false,
-          focusable: false,
-          zIndex: -2,
+          ...bandBaseProps,
           data: {
-            variant: 'continuation' as const,
+            variant: 'convergence' as const,
             width: svgWidth,
             height: bandHeight,
-            sourceCenterX: votingCx - svgLeft,
-            sourceWidth: votingContainerSize.width * 0.5,
-            targetCenterXCont: brCx - svgLeft,
-            targetWidthCont: brWidth * 0.5,
-            bandColor: '#8b5cf6', // purple to match brain rewriting theme
+            bands,
+            targetCenterX: votingCx - svgLeft,
+            targetWidth: votingContainerSize.width * 0.8,
           },
         });
       }
     }
 
-    return result;
-  }, [showCrazy8s, showVotingArtifact, crazy8sNodes, votingContainerPos, votingContainerSize, brainRewritingMatrices, brainRewritingNodes]);
+    // Band 3: Voting → Brain Rewriting
+    if (phases[2].isActive) {
+      if (!phases[3].isActive) {
+        // Skeleton band to inactive brain rewriting
+        createBand('voting-br', 2, 3, 'skeleton');
+      } else {
+        const brContainer = brainRewritingNodes.find((n) => n.id === BR_CONTAINER_ID);
+        if (brContainer) {
+          const brWidth = brContainer.style?.width as number ?? 800;
+          const votingCx = votingContainerPos.x + votingContainerSize.width / 2;
+          const brCx = (brContainer.position?.x ?? 0) + brWidth / 2;
 
-  // Combined nodes array: mind map + owner zones + flow bands + crazy 8s + brain rewriting + voting
+          const svgLeft = Math.min(votingContainerPos.x, brContainer.position?.x ?? 0) - 40;
+          const svgRight = Math.max(
+            votingContainerPos.x + votingContainerSize.width,
+            (brContainer.position?.x ?? 0) + brWidth,
+          ) + 40;
+          const svgWidth = svgRight - svgLeft;
+
+          // Span from actual voting bottom to actual BR container top
+          const bandTop = votingContainerPos.y + votingContainerSize.height + 10;
+          const brTop = brContainer.position?.y ?? phases[3].y;
+          const bandHeight = Math.max(brTop - bandTop - 10, 40);
+
+          result.push({
+            id: `${FLOW_BAND_PREFIX}voting-br`,
+            type: 'flowBandNode',
+            position: { x: svgLeft, y: bandTop },
+            ...bandBaseProps,
+            data: {
+              variant: 'continuation' as const,
+              width: svgWidth,
+              height: bandHeight,
+              sourceCenterX: votingCx - svgLeft,
+              sourceWidth: votingContainerSize.width * 0.5,
+              targetCenterXCont: brCx - svgLeft,
+              targetWidthCont: brWidth * 0.5,
+              bandColor: '#8b5cf6',
+            },
+          });
+        }
+      }
+    }
+
+    return result;
+  }, [phaseLayout, leftEdgeX, crazy8sNodes, ownerOffsets, showVotingArtifact, votingContainerPos, votingContainerSize, brainRewritingMatrices, brainRewritingNodes]);
+
+  // Combined nodes array: flow bands → phase containers → owner zones → mind map → crazy 8s → voting → brain rewriting
   const rfNodes = useMemo(() => {
-    const combined = [...flowBandNodes, ...ownerZoneNodes, ...rfMindMapNodes, ...crazy8sNodes];
+    const combined = [...flowBandNodes, ...phaseContainerNodes, ...ownerZoneNodes, ...rfMindMapNodes, ...crazy8sNodes];
     if (brainRewritingNodes.length > 0) combined.push(...brainRewritingNodes);
     if (votingNodes.length > 0) combined.push(...votingNodes);
     return combined;
-  }, [rfMindMapNodes, ownerZoneNodes, crazy8sNodes, brainRewritingNodes, votingNodes, flowBandNodes]);
+  }, [rfMindMapNodes, ownerZoneNodes, crazy8sNodes, brainRewritingNodes, votingNodes, flowBandNodes, phaseContainerNodes]);
 
   // Convert store state to ReactFlow edges
   const rfEdges: Edge[] = useMemo(() => {
@@ -1628,7 +1796,7 @@ function MindMapCanvasInner({
         if (c.type === 'position') {
           const posChange = c as NodeChange & { id: string; position?: { x: number; y: number }; dragging?: boolean };
           // Skip non-draggable infrastructure nodes (but NOT the BR container — it's draggable)
-          if (isCrazy8sNode(posChange.id) || (posChange.id.startsWith(BR_NODE_PREFIX) && posChange.id !== BR_CONTAINER_ID) || posChange.id.startsWith(ZONE_NODE_PREFIX) || isFlowBandNode(posChange.id)) continue;
+          if (isCrazy8sNode(posChange.id) || (posChange.id.startsWith(BR_NODE_PREFIX) && posChange.id !== BR_CONTAINER_ID) || posChange.id.startsWith(ZONE_NODE_PREFIX) || isFlowBandNode(posChange.id) || isPhaseContainerNode(posChange.id)) continue;
 
           // Brain rewriting container: persist drag position
           if (posChange.id === BR_CONTAINER_ID) {
@@ -1891,6 +2059,7 @@ function MindMapCanvasInner({
       // Block connections to/from voting nodes and flow bands
       if (isVotingNode(connection.source) || isVotingNode(connection.target)) return false;
       if (isFlowBandNode(connection.source) || isFlowBandNode(connection.target)) return false;
+      if (isPhaseContainerNode(connection.source) || isPhaseContainerNode(connection.target)) return false;
       // No duplicate edges
       const exists = mindMapEdges.some(
         (e) =>
@@ -1996,7 +2165,7 @@ function MindMapCanvasInner({
         <Controls showInteractive={false} />
         <MiniMap
           nodeStrokeColor={(n) => {
-            if (n.id.startsWith(ZONE_NODE_PREFIX) || isFlowBandNode(n.id)) return 'transparent';
+            if (n.id.startsWith(ZONE_NODE_PREFIX) || isFlowBandNode(n.id) || isPhaseContainerNode(n.id)) return 'transparent';
             if (isCrazy8sNode(n.id)) return (n.data?.ownerColor as string) || '#f59e0b';
             if (n.id.startsWith(BR_NODE_PREFIX)) return '#a855f7';
             if (isVotingNode(n.id)) return '#3b82f6';
@@ -2004,7 +2173,7 @@ function MindMapCanvasInner({
             return typeof color === 'string' ? color : '#6b7280';
           }}
           nodeColor={(n) => {
-            if (n.id.startsWith(ZONE_NODE_PREFIX) || isFlowBandNode(n.id)) return 'transparent';
+            if (n.id.startsWith(ZONE_NODE_PREFIX) || isFlowBandNode(n.id) || isPhaseContainerNode(n.id)) return 'transparent';
             if (isCrazy8sNode(n.id)) return (n.data?.ownerColor as string) ? `color-mix(in srgb, ${n.data.ownerColor} 15%, white)` : '#fef3c7';
             if (n.id.startsWith(BR_NODE_PREFIX)) return '#f3e8ff';
             if (isVotingNode(n.id)) return '#dbeafe';

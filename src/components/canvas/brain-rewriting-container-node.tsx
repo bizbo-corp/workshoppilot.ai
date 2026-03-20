@@ -22,6 +22,7 @@ export type BrainRewritingContainerNodeData = {
   matrixCount: number;
   isActive: boolean;
   onDone?: () => void;
+  stepNumber?: number;      // phase step badge (e.g. 4)
 };
 
 export type BrainRewritingContainerNodeType = Node<BrainRewritingContainerNodeData, 'brainRewritingContainerNode'>;
@@ -49,7 +50,7 @@ export function computeBrainRewritingContainerSize(matrixCount: number, cellCoun
 }
 
 function BrainRewritingContainerNodeComponent({ data }: NodeProps<BrainRewritingContainerNodeType>) {
-  const { title, matrixCount, isActive, onDone } = data;
+  const { title, matrixCount, isActive, onDone, stepNumber } = data;
 
   return (
     <div
@@ -82,6 +83,25 @@ function BrainRewritingContainerNodeComponent({ data }: NodeProps<BrainRewriting
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {stepNumber != null && (
+            <div
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                backgroundColor: '#8b5cf6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 11,
+                fontWeight: 700,
+                color: '#ffffff',
+                flexShrink: 0,
+              }}
+            >
+              {stepNumber}
+            </div>
+          )}
           <GitBranchPlus style={{ width: 16, height: 16, color: 'var(--color-primary)', opacity: 0.8 }} />
           <span style={{ fontSize: 14, fontWeight: 600, opacity: 0.8 }}>
             {title}

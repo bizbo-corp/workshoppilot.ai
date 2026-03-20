@@ -17,12 +17,13 @@ export type VotingContainerNodeData = {
   cardCount: number;
   isActive: boolean;        // true during idea-selection
   votingStatus: 'idle' | 'open' | 'closed';
+  stepNumber?: number;      // phase step badge (e.g. 3)
 };
 
 export type VotingContainerNodeType = Node<VotingContainerNodeData, 'votingContainerNode'>;
 
 function VotingContainerNodeComponent({ data }: NodeProps<VotingContainerNodeType>) {
-  const { title, cardCount, isActive, votingStatus } = data;
+  const { title, cardCount, isActive, votingStatus, stepNumber } = data;
 
   const statusLabel =
     votingStatus === 'open' ? 'Voting Open' :
@@ -61,6 +62,25 @@ function VotingContainerNodeComponent({ data }: NodeProps<VotingContainerNodeTyp
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {stepNumber != null && (
+            <div
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                backgroundColor: '#3b82f6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 11,
+                fontWeight: 700,
+                color: '#ffffff',
+                flexShrink: 0,
+              }}
+            >
+              {stepNumber}
+            </div>
+          )}
           <Vote style={{ width: 16, height: 16, opacity: 0.6 }} />
           <span style={{ fontSize: 14, fontWeight: 600, opacity: 0.8 }}>
             {title}

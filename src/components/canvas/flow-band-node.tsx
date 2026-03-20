@@ -4,7 +4,7 @@ import { memo } from 'react';
 import type { NodeProps, Node } from '@xyflow/react';
 
 export type FlowBandNodeData = {
-  variant: 'convergence' | 'continuation';
+  variant: 'convergence' | 'continuation' | 'skeleton';
   width: number;
   height: number;
   // Convergence: per-user curved ribbons from their crazy 8s center → voting container center
@@ -21,6 +21,8 @@ export type FlowBandNodeData = {
   targetCenterXCont?: number;  // center X of BR container (relative)
   targetWidthCont?: number;    // width at bottom
   bandColor?: string;
+  // Skeleton: thin dashed center stroke only (no filled ribbon)
+  skeletonColor?: string;
 };
 
 export type FlowBandNode = Node<FlowBandNodeData, 'flowBandNode'>;
@@ -154,6 +156,38 @@ export const FlowBandNode = memo(({ data }: NodeProps<FlowBandNode>) => {
             strokeOpacity={0.15}
             strokeWidth={1.5}
             strokeDasharray="6 4"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  if (variant === 'skeleton') {
+    const color = data.skeletonColor ?? '#9ca3af';
+    const srcCx = data.sourceCenterX ?? width / 2;
+    const dstCx = data.targetCenterXCont ?? width / 2;
+    const ribbonHalfW = 40; // faint ribbon width
+    const ribbonPath = curvedRibbonPath(srcCx, ribbonHalfW, dstCx, ribbonHalfW, height);
+    const centerPath = curvedCenterPath(srcCx, dstCx, height);
+
+    return (
+      <div style={{ width, height, pointerEvents: 'none' }}>
+        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+          <defs>
+            <linearGradient id="skel-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.06} />
+              <stop offset="50%" stopColor={color} stopOpacity={0.03} />
+              <stop offset="100%" stopColor={color} stopOpacity={0.06} />
+            </linearGradient>
+          </defs>
+          <path d={ribbonPath} fill="url(#skel-grad)" />
+          <path
+            d={centerPath}
+            fill="none"
+            stroke={color}
+            strokeOpacity={0.18}
+            strokeWidth={1}
+            strokeDasharray="4 6"
           />
         </svg>
       </div>
