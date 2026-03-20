@@ -362,7 +362,7 @@ export const ideationArtifactSchema = z.object({
   selectedSketchSlotIds: z
     .array(z.string())
     .min(1)
-    .max(4)
+    .max(8)
     .describe('Slot IDs of Crazy 8s sketches selected for Step 9 concept development (e.g., ["slot-1", "slot-3"])'),
 });
 
@@ -446,8 +446,8 @@ export const conceptArtifactSchema = z.object({
       })
     )
     .min(1)
-    .max(3)
-    .describe('1-3 developed concepts, each from a separate Step 8 selected idea'),
+    .max(8)
+    .describe('1-8 developed concepts, each from a separate Step 8 selected idea'),
 });
 
 export type ConceptArtifact = z.infer<typeof conceptArtifactSchema>;

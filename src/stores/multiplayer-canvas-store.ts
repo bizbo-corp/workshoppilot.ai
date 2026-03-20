@@ -15,7 +15,7 @@
  * - `markClean()` and `markDirty()` are no-ops — Liveblocks handles persistence
  * - `isDirty` is always false — Liveblocks Storage is authoritative
  * - Ephemeral state (isDirty, selectedStickyNoteIds, highlightedCell,
- *   pendingFitView, pendingHmwChipSelection) is NOT in storageMapping —
+ *   pendingFitView, pendingFocusCardId, pendingHmwChipSelection) is NOT in storageMapping —
  *   these are per-client and must not be broadcast to other participants
  *
  * storageMapping (durable fields — synced to Liveblocks Storage):
@@ -94,6 +94,7 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
     isDirty: false,
     highlightedCell: null,
     pendingFitView: false,
+    pendingFocusCardId: null,
     pendingHmwChipSelection: null,
     selectedStickyNoteIds: [],
     votingCardPositions: initState?.votingCardPositions || {},
@@ -387,6 +388,9 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
 
         setPendingFitView: (pending) =>
           set(() => ({ pendingFitView: pending })),
+
+        setPendingFocusCardId: (id) =>
+          set(() => ({ pendingFocusCardId: id })),
 
         setPendingHmwChipSelection: (selection) =>
           set(() => ({ pendingHmwChipSelection: selection })),

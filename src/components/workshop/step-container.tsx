@@ -1480,7 +1480,7 @@ export function StepContainer({
             className="absolute bottom-3 left-3 right-3 z-40 flex"
             style={{ maxWidth: 480, top: "15%" }}
           >
-            <div className="flex w-full flex-col overflow-hidden rounded-2xl border bg-neutral-olive-50/95 shadow-xl backdrop-blur-sm dark:bg-olive-950/95">
+            <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl border bg-neutral-olive-50/95 shadow-xl backdrop-blur-sm dark:bg-olive-950/95">
               {renderContent()}
             </div>
           </div>

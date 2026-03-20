@@ -744,6 +744,7 @@ export function ChatPanel({
     (state) => state.setHighlightedCell,
   );
   const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
+  const setPendingFocusCardId = useCanvasStore((state) => state.setPendingFocusCardId);
   const pendingHmwChipSelection = useCanvasStore(
     (state) => state.pendingHmwChipSelection,
   );
@@ -839,6 +840,7 @@ export function ChatPanel({
   // (before user sends any message). Fires once when isDirty first becomes true
   // after mount — triggered by the skeleton sync in canvas-store-provider.
   const hasInitialFlushed = React.useRef(false);
+  const lastConceptCardIndexRef = React.useRef<number | null>(null);
   React.useEffect(() => {
     if (!hasInitialFlushed.current && isDirty && isCanvasStep) {
       hasInitialFlushed.current = true;
@@ -1719,7 +1721,20 @@ export function ChatPanel({
           latestConceptCards = storeApi.getState().conceptCards;
         }
       }
-      setPendingFitView(true);
+
+      // Only center viewport when a NEW card index starts being edited
+      const lastIndex = conceptCardParsed[conceptCardParsed.length - 1]?.cardIndex ?? 0;
+      if (lastIndex !== lastConceptCardIndexRef.current) {
+        lastConceptCardIndexRef.current = lastIndex;
+        // Find the card ID for the new index and focus on it
+        const focusCard = storeApi.getState().conceptCards.find(
+          (c) => (c.cardIndex ?? 0) === lastIndex,
+        );
+        if (focusCard) {
+          setPendingFocusCardId(focusCard.id);
+        }
+      }
+      // Otherwise: same card being updated — preserve viewport
     }
 
     // Detect [CONCEPT_COMPLETE] — AI signals all concepts are done or user asked to move on
@@ -1773,6 +1788,7 @@ export function ChatPanel({
     storeApi,
     step.id,
     setPendingFitView,
+    setPendingFocusCardId,
     deleteStickyNote,
     updateStickyNote,
     setCluster,

@@ -268,8 +268,8 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
       },
       {
         name: 'Selection Discipline',
-        description: 'User selected 1-4 ideas for concept development',
-        checkPrompt: 'Did the user select 1-4 ideas for concept development (not more)? Did AI enforce the hard limit if the user tried to select too many?'
+        description: 'User selected 1-8 ideas for concept development',
+        checkPrompt: 'Did the user select 1-8 ideas for concept development (not more)? Did AI enforce the hard limit if the user tried to select too many?'
       }
     ],
 
@@ -282,7 +282,7 @@ export function getValidationCriteria(stepId: string): ValidationCriterion[] {
       {
         name: 'SWOT Evidence',
         description: 'SWOT bullets reference prior research and persona',
-        checkPrompt: 'Do the SWOT bullets trace to prior step evidence? Strengths to persona gains, weaknesses to persona pains, opportunities to research context, threats to stakeholder/research challenges? Are there any generic bullets not grounded in research?'
+        checkPrompt: 'Do the SWOT bullets trace to prior step evidence? Strengths to research-identified advantages, weaknesses to user research pain points, opportunities to research context, threats to stakeholder/research challenges? Are there any generic bullets not grounded in research?'
       },
       {
         name: 'Feasibility Rationale',

@@ -105,6 +105,7 @@ export type CanvasState = {
   gridColumns: GridColumn[]; // Dynamic columns, initialized from step config
   highlightedCell: { row: number; col: number } | null;
   pendingFitView: boolean;
+  pendingFocusCardId: string | null;
   pendingHmwChipSelection: PendingHmwChipSelection;
   selectedStickyNoteIds: string[];
   votingCardPositions: Record<string, { x: number; y: number }>;
@@ -144,6 +145,7 @@ export type CanvasActions = {
   rejectPreview: (id: string) => void;
   setHighlightedCell: (cell: { row: number; col: number } | null) => void;
   setPendingFitView: (pending: boolean) => void;
+  setPendingFocusCardId: (id: string | null) => void;
   setPendingHmwChipSelection: (selection: PendingHmwChipSelection) => void;
   batchUpdatePositions: (updates: Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }>) => void;
   setCluster: (ids: string[], clusterName: string) => void;
@@ -211,6 +213,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
     isDirty: false,
     highlightedCell: null,
     pendingFitView: false,
+    pendingFocusCardId: null,
     pendingHmwChipSelection: null,
     selectedStickyNoteIds: [],
     votingCardPositions: initState?.votingCardPositions || {},
@@ -558,6 +561,11 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
         setPendingFitView: (pending) =>
           set(() => ({
             pendingFitView: pending,
+          })),
+
+        setPendingFocusCardId: (id) =>
+          set(() => ({
+            pendingFocusCardId: id,
           })),
 
         setPendingHmwChipSelection: (selection) =>

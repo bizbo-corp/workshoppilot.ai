@@ -139,6 +139,9 @@ function FeasibilityDimension({
   useEffect(() => {
     if (rationaleRef.current && rationaleRef.current !== document.activeElement) {
       rationaleRef.current.value = rationale || '';
+      // Auto-grow after external sync
+      rationaleRef.current.style.height = 'auto';
+      rationaleRef.current.style.height = `${rationaleRef.current.scrollHeight}px`;
     }
   }, [rationale]);
 
@@ -181,6 +184,11 @@ function FeasibilityDimension({
         placeholder="Rationale..."
         defaultValue={rationale}
         onBlur={(e) => onRationaleChange(e.target.value)}
+        onInput={(e) => {
+          const el = e.currentTarget;
+          el.style.height = 'auto';
+          el.style.height = `${el.scrollHeight}px`;
+        }}
       />
     </div>
   );

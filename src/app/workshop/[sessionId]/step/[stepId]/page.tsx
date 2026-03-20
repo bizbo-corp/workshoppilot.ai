@@ -838,7 +838,28 @@ export default async function StepPage({ params }: StepPageProps) {
       });
     }
 
-    // Create skeleton concept cards for selected ideas (one per selection unit, max 4)
+    // Filter out slots excluded from concepts via brain rewriting "Include in concepts" toggle
+    if (step8SelectedSlotIds && step8SelectedSlotIds.length > 0) {
+      const brainMatricesForFilter = step8Canvas?.brainRewritingMatrices || [];
+      const slotGroupsForFilter = step8Canvas?.slotGroups || [];
+
+      // Build set of excluded slot IDs
+      const excludedSlotIds = new Set<string>();
+      for (const matrix of brainMatricesForFilter) {
+        if (matrix.includedInConcepts === false) {
+          excludedSlotIds.add(matrix.slotId);
+          // For group matrices, exclude all member slots
+          if (matrix.groupId) {
+            const group = slotGroupsForFilter.find((g) => g.id === matrix.groupId);
+            if (group) group.slotIds.forEach((id) => excludedSlotIds.add(id));
+          }
+        }
+      }
+
+      step8SelectedSlotIds = step8SelectedSlotIds.filter((id) => !excludedSlotIds.has(id));
+    }
+
+    // Create skeleton concept cards for selected ideas (one per selection unit)
     // Groups of slots count as one selection unit and become one concept card
     if (initialConceptCards.length === 0 && step8SelectedSlotIds && step8SelectedSlotIds.length > 0) {
       const step8SlotGroups = step8Canvas?.slotGroups || [];
@@ -862,7 +883,7 @@ export default async function StepPage({ params }: StepPageProps) {
         }
       }
 
-      initialConceptCards = units.slice(0, 4).map((unit, index) => {
+      initialConceptCards = units.map((unit, index) => {
         if (unit.type === 'group') {
           // Group → one concept card with group label as ideaSource
           // Use merged image if available, otherwise fall back to first slot's image
@@ -932,12 +953,12 @@ export default async function StepPage({ params }: StepPageProps) {
       }
 
       // Add missing skeleton cards if fewer cards exist than selected ideas
-      const maxCards = Math.min(step8SelectedSlotIds.length, 4);
+      const maxCards = step8SelectedSlotIds.length;
       if (initialConceptCards.length < maxCards) {
         const existingSlotIds = new Set(initialConceptCards.map((c) => c.sketchSlotId).filter(Boolean));
         const missingSlotIds = step8SelectedSlotIds.filter((id) => !existingSlotIds.has(id));
         for (const slotId of missingSlotIds) {
-          if (initialConceptCards.length >= 4) break;
+          if (initialConceptCards.length >= maxCards) break;
           const slot = step8Crazy8sSlots?.find((s) => s.slotId === slotId);
           initialConceptCards.push(
             createDefaultConceptCard({

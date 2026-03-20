@@ -238,6 +238,8 @@ function ReactFlowCanvasInner({
   const setHighlightedCell = useCanvasStore((s) => s.setHighlightedCell);
   const pendingFitView = useCanvasStore((s) => s.pendingFitView);
   const setPendingFitView = useCanvasStore((s) => s.setPendingFitView);
+  const pendingFocusCardId = useCanvasStore((s) => s.pendingFocusCardId);
+  const setPendingFocusCardId = useCanvasStore((s) => s.setPendingFocusCardId);
   const setPendingHmwChipSelection = useCanvasStore(
     (s) => s.setPendingHmwChipSelection,
   );
@@ -401,6 +403,7 @@ function ReactFlowCanvasInner({
     zoomOut,
     setViewport,
     getViewport,
+    setCenter,
   } = useReactFlow();
 
   // Expose getViewport and screenToFlowPosition to parent via canvasRef
@@ -2708,7 +2711,8 @@ function ReactFlowCanvasInner({
     if (
       (stickyNotes.length > 0 ||
         personaTemplates.length > 0 ||
-        hmwCards.length > 0) &&
+        hmwCards.length > 0 ||
+        conceptCards.length > 0) &&
       !hasFitView.current
     ) {
       setTimeout(() => {
@@ -2716,7 +2720,7 @@ function ReactFlowCanvasInner({
         hasFitView.current = true;
       }, 100);
     }
-  }, [stickyNotes.length, personaTemplates.length, hmwCards.length, fitViewWithChatOffset]);
+  }, [stickyNotes.length, personaTemplates.length, hmwCards.length, conceptCards.length, fitViewWithChatOffset]);
 
   // Fit grid to viewport when dynamicGridConfig first becomes available (after gridColumns are seeded)
   const hasSetGridViewport = useRef(false);
@@ -2761,6 +2765,29 @@ function ReactFlowCanvasInner({
       return () => clearTimeout(timer);
     }
   }, [pendingFitView, fitViewWithChatOffset, setPendingFitView]);
+
+  // Smoothly center on a specific concept card when the AI moves to a new card
+  useEffect(() => {
+    if (!pendingFocusCardId) return;
+    const card = conceptCards.find((c) => c.id === pendingFocusCardId);
+    if (!card) {
+      setPendingFocusCardId(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      // Center on the card's midpoint, accounting for card dimensions (680×~900)
+      const CARD_WIDTH = 680;
+      const CARD_HEIGHT = 900;
+      const CHAT_OFFSET = 240; // shift left to account for chat panel overlay
+      setCenter(
+        card.position.x + CARD_WIDTH / 2 - CHAT_OFFSET,
+        card.position.y + CARD_HEIGHT / 2,
+        { zoom: 0.55, duration: 500 },
+      );
+      setPendingFocusCardId(null);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [pendingFocusCardId, conceptCards, setCenter, setPendingFocusCardId]);
 
   // Sync local selection to shared store (via effect to avoid setState-during-render)
   useEffect(() => {

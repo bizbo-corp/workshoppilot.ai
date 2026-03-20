@@ -51,7 +51,7 @@ Reference the "Step 8 Ideation Canvas" section in the CANVAS STATE — it contai
 
 If ideas are in a GROUP (shown with [group: "..."] tags or in the "Idea Groups" section), develop the entire group as ONE concept card. The group label becomes the concept's working name, and all grouped ideas are components of that concept.
 
-Reference Persona (Step 5) for SWOT strengths/weaknesses and feasibility user desirability.
+Reference Research (Steps 3-4) for SWOT strengths/weaknesses and feasibility user desirability.
 Reference Journey dip (Step 6) for USP differentiation from current state.
 Reference Research (Steps 3-4) for SWOT evidence and feasibility rationale.
 Reference Reframed HMW (Step 7) to validate concept alignment with the core challenge.`,
@@ -139,8 +139,8 @@ If the user explicitly says they want to move on, skip remaining cards, or finis
 
 EVIDENCE TRACEABILITY (CRITICAL):
 Every SWOT bullet and feasibility score MUST trace to prior steps:
-- Strengths: Reference persona gains or research-identified advantages
-- Weaknesses: Reference persona pains, journey barriers, or known limitations
+- Strengths: Reference research-identified advantages or validated user needs
+- Weaknesses: Reference user research pain points, journey barriers, or known limitations
 - Opportunities: Reference market/domain context from Steps 3-4 research
 - Threats: Reference challenges from stakeholder map (Step 2) or research
 - Feasibility rationale: Cite specific prior step outputs
@@ -194,8 +194,8 @@ Develop a complete concept card for this Crazy 8s sketch. The concept should:
   "elevatorPitch": "2-3 sentence pitch following Problem -> Solution -> Benefit structure",
   "usp": "One sentence: what makes this concept different from current solutions",
   "swot": {
-    "strengths": ["strength 1 citing specific persona gains", "strength 2 citing research evidence", "strength 3"],
-    "weaknesses": ["weakness 1 citing specific persona pains or limitations", "weakness 2", "weakness 3"],
+    "strengths": ["strength 1 citing research-identified advantages", "strength 2 citing validated user needs", "strength 3"],
+    "weaknesses": ["weakness 1 citing user research pain points or limitations", "weakness 2", "weakness 3"],
     "opportunities": ["opportunity 1 from research insights", "opportunity 2 from market context", "opportunity 3"],
     "threats": ["threat 1 from stakeholder challenges", "threat 2", "threat 3"]
   },
@@ -210,14 +210,14 @@ Develop a complete concept card for this Crazy 8s sketch. The concept should:
     },
     "userDesirability": {
       "score": 1-5,
-      "rationale": "Why this score, citing persona pains and gains"
+      "rationale": "Why this score, citing user research and validated needs"
     }
   }
 }
 
 **Evidence Requirements:**
-- SWOT strengths MUST reference persona goals: {personaGoals}
-- SWOT weaknesses MUST reference persona pains: {personaPains}
+- SWOT strengths MUST reference research-identified advantages: {keyInsights}
+- SWOT weaknesses MUST reference user research pain points: {stakeholderChallenges}
 - SWOT opportunities MUST reference research: {keyInsights}
 - SWOT threats MUST reference stakeholder challenges: {stakeholderChallenges}
 - Feasibility rationales MUST cite specific workshop data (not generic reasoning)
