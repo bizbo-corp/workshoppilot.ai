@@ -173,12 +173,12 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
   if (data.selectionMode) {
     return (
       <div
-        className="nodrag nopan cursor-default"
+        className="cursor-default"
         style={{ width: CRAZY_8S_NODE_WIDTH, height: CRAZY_8S_NODE_HEIGHT, pointerEvents: 'all' }}
       >
         <div className="rounded-xl border-2 border-amber-400/60 bg-background shadow-lg h-full flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b bg-amber-50 dark:bg-amber-950/20 px-4 py-2.5 shrink-0 rounded-t-[10px]">
+          {/* Header — acts as drag handle */}
+          <div className="flex items-center justify-between border-b bg-amber-50 dark:bg-amber-950/20 px-4 py-2.5 shrink-0 rounded-t-[10px] cursor-grab active:cursor-grabbing">
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-amber-600" />
               <span className="text-sm font-semibold text-amber-900 dark:text-amber-200">
@@ -188,7 +188,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                 {selectionUnits}/{MAX_SELECTION} selected
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="nodrag nopan flex items-center gap-2">
               {/* Group button — shown when 2+ ungrouped items are selected */}
               {ungroupedSelectedCount >= 2 && !isNamingGroup && (
                 <button
@@ -229,7 +229,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
 
           {/* Group naming bar */}
           {isNamingGroup && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-950/20 border-b">
+            <div className="nodrag nopan flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-950/20 border-b">
               <Link2 className="h-4 w-4 text-blue-600 shrink-0" />
               <span className="text-xs text-blue-700 dark:text-blue-300 shrink-0">Name this group:</span>
               <input
@@ -307,7 +307,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
           )}
 
           {/* Thumbnail selection grid */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4">
+          <div className="nodrag nopan flex-1 min-h-0 overflow-y-auto p-4">
             {filledSlots.length > 0 ? (
               <div className="grid grid-cols-4 gap-3">
                 {filledSlots.map((slot) => {
@@ -377,7 +377,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
   // --- Normal drawing mode ---
   return (
     <div
-      className="nodrag nopan cursor-default"
+      className="cursor-default"
       style={{ width: CRAZY_8S_NODE_WIDTH, height: CRAZY_8S_NODE_HEIGHT, pointerEvents: 'all' }}
     >
       <div
@@ -385,7 +385,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
         style={borderColor ? { borderColor: `color-mix(in srgb, ${borderColor} 60%, transparent)` } : undefined}
       >
         <div
-          className={cn('flex items-center justify-between border-b px-4 py-2.5 shrink-0 rounded-t-[10px]', !borderColor && 'bg-amber-50 dark:bg-amber-950/20')}
+          className={cn('flex items-center justify-between border-b px-4 py-2.5 shrink-0 rounded-t-[10px] cursor-grab active:cursor-grabbing', !borderColor && 'bg-amber-50 dark:bg-amber-950/20')}
           style={borderColor ? { backgroundColor: `color-mix(in srgb, ${borderColor} 10%, transparent)` } : undefined}
         >
           <div className="flex items-center gap-2">
@@ -394,7 +394,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
               {headerTitle}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="nodrag nopan flex items-center gap-2">
             {data.onSyncStars && (
               <button
                 onClick={async () => {
@@ -431,7 +431,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
             )}
           </div>
         </div>
-        <div className="flex-1 min-h-0">
+        <div className="nodrag nopan flex-1 min-h-0">
           <Crazy8sCanvas
             workshopId={data.workshopId}
             stepId={data.stepId}

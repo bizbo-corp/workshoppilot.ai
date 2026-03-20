@@ -22,12 +22,28 @@ const PHASE_ACCENTS: Record<number, string> = {
   4: '#8b5cf6', // purple — brain rewriting
 };
 
-// Grayscale palette for skeleton decorations
-const SKEL_STROKE = '#71717a';   // zinc-500
-const SKEL_FILL = '#a1a1aa';     // zinc-400
-const SKEL_BG = '#d4d4d8';       // zinc-300
+const HEADER_HEIGHT = 48;
 
-// ── Skeleton decorative content per step (all grayscale) ──────────
+// ── Theme-aware CSS color expressions ─────────────────────────────
+// All colors use CSS variables so they adapt to light/dark mode.
+const C = {
+  cardBg:    'color-mix(in srgb, var(--color-card) 60%, transparent)',
+  cardBorder:'color-mix(in srgb, var(--color-border) 40%, transparent)',
+  imgBg:     'color-mix(in srgb, var(--color-muted-foreground) 15%, transparent)',
+  textBar:   'color-mix(in srgb, var(--color-muted-foreground) 18%, transparent)',
+  textBar2:  'color-mix(in srgb, var(--color-muted-foreground) 12%, transparent)',
+  checkStroke:'var(--color-muted-foreground)',
+  nodeFill:  'color-mix(in srgb, var(--color-muted) 40%, transparent)',
+  nodeStroke: 'color-mix(in srgb, var(--color-muted-foreground) 20%, transparent)',
+  lineStroke: 'color-mix(in srgb, var(--color-muted-foreground) 15%, transparent)',
+  miniCardBg:'color-mix(in srgb, var(--color-card) 50%, transparent)',
+  miniCardBorder:'color-mix(in srgb, var(--color-border) 35%, transparent)',
+  miniImgBg: 'color-mix(in srgb, var(--color-muted-foreground) 12%, transparent)',
+  miniText:  'color-mix(in srgb, var(--color-muted-foreground) 14%, transparent)',
+  miniText2: 'color-mix(in srgb, var(--color-muted-foreground) 10%, transparent)',
+};
+
+// ── Skeleton decorative content per step ──────────────────────────
 
 /** Step 1: Faint scattered mind-map nodes with connecting lines */
 function MindMapPlaceholder({ width, height }: { width: number; height: number }) {
@@ -67,8 +83,7 @@ function MindMapPlaceholder({ width, height }: { width: number; height: number }
           key={i}
           x1={pts[f].x} y1={pts[f].y}
           x2={pts[t].x} y2={pts[t].y}
-          stroke={SKEL_STROKE}
-          strokeOpacity={0.18}
+          style={{ stroke: C.lineStroke }}
           strokeWidth={1.5}
         />
       ))}
@@ -78,10 +93,7 @@ function MindMapPlaceholder({ width, height }: { width: number; height: number }
           x={p.x - p.w / 2} y={p.y - p.h / 2}
           width={p.w} height={p.h}
           rx={6}
-          fill={SKEL_BG}
-          fillOpacity={0.15}
-          stroke={SKEL_STROKE}
-          strokeOpacity={0.22}
+          style={{ fill: C.nodeFill, stroke: C.nodeStroke }}
           strokeWidth={1}
         />
       ))}
@@ -89,14 +101,141 @@ function MindMapPlaceholder({ width, height }: { width: number; height: number }
   );
 }
 
-/** Step 2: 4x2 grid of blank boxes */
+/**
+ * Skeleton card: image header area (~55% height) + two text lines below.
+ */
+function SkeletonCard({
+  x, y, w, h,
+  showCheck,
+}: {
+  x: number; y: number; w: number; h: number;
+  showCheck?: boolean;
+}) {
+  const pad = 14;
+  const imgH = (h - pad * 2 - 36) * 0.65;
+  const textTop = y + pad + imgH + 12;
+  const lineH = 7;
+  const lineGap = 7;
+  const line1W = (w - pad * 2) * 0.80;
+  const line2W = (w - pad * 2) * 0.52;
+
+  return (
+    <g>
+      <rect
+        x={x} y={y} width={w} height={h}
+        rx={8}
+        style={{ fill: C.cardBg, stroke: C.cardBorder }}
+        strokeWidth={1}
+      />
+      <rect
+        x={x + pad} y={y + pad}
+        width={w - pad * 2} height={imgH}
+        rx={5}
+        style={{ fill: C.imgBg }}
+      />
+      {showCheck && (
+        <path
+          d={`M ${x + w / 2 - 12} ${y + pad + imgH / 2 + 1} l 8 8 l 14 -14`}
+          fill="none"
+          style={{ stroke: C.checkStroke }}
+          strokeOpacity={0.55}
+          strokeWidth={3}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+      <rect
+        x={x + pad} y={textTop}
+        width={line1W} height={lineH}
+        rx={3}
+        style={{ fill: C.textBar }}
+      />
+      <rect
+        x={x + pad} y={textTop + lineH + lineGap}
+        width={line2W} height={lineH}
+        rx={3}
+        style={{ fill: C.textBar2 }}
+      />
+    </g>
+  );
+}
+
+/**
+ * Brain rewriting skeleton card: 2x2 grid of mini cards,
+ * each mini card has its own image header + two text lines.
+ */
+function BrainRewritingCard({
+  x, y, w, h,
+}: {
+  x: number; y: number; w: number; h: number;
+}) {
+  const outerPad = 10;
+  const gridGap = 8;
+  const cellW = (w - outerPad * 2 - gridGap) / 2;
+  const cellH = (h - outerPad * 2 - gridGap) / 2;
+  const cellPad = 7;
+  const miniImgH = (cellH - cellPad * 2 - 18) * 0.6;
+  const miniLineH = 5;
+  const miniLineGap = 4;
+
+  return (
+    <g>
+      <rect
+        x={x} y={y} width={w} height={h}
+        rx={8}
+        style={{ fill: C.cardBg, stroke: C.cardBorder }}
+        strokeWidth={1}
+      />
+      {[0, 1, 2, 3].map((i) => {
+        const cr = Math.floor(i / 2);
+        const cc = i % 2;
+        const cx = x + outerPad + cc * (cellW + gridGap);
+        const cy = y + outerPad + cr * (cellH + gridGap);
+        const miniTextTop = cy + cellPad + miniImgH + 5;
+        const miniLine1W = (cellW - cellPad * 2) * 0.78;
+        const miniLine2W = (cellW - cellPad * 2) * 0.50;
+
+        return (
+          <g key={`cell-${i}`}>
+            <rect
+              x={cx} y={cy} width={cellW} height={cellH}
+              rx={4}
+              style={{ fill: C.miniCardBg, stroke: C.miniCardBorder }}
+              strokeWidth={0.75}
+            />
+            <rect
+              x={cx + cellPad} y={cy + cellPad}
+              width={cellW - cellPad * 2} height={Math.max(miniImgH, 12)}
+              rx={3}
+              style={{ fill: C.miniImgBg }}
+            />
+            <rect
+              x={cx + cellPad} y={miniTextTop}
+              width={miniLine1W} height={miniLineH}
+              rx={2}
+              style={{ fill: C.miniText }}
+            />
+            <rect
+              x={cx + cellPad} y={miniTextTop + miniLineH + miniLineGap}
+              width={miniLine2W} height={miniLineH}
+              rx={2}
+              style={{ fill: C.miniText2 }}
+            />
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+/** Step 2: 4x2 grid of skeleton cards */
 function CrazyEightsPlaceholder({ width, height }: { width: number; height: number }) {
   const padX = 24;
-  const padTop = 56;
-  const padBottom = 16;
+  const padTop = HEADER_HEIGHT + 16;
+  const padBottom = 20;
   const cols = 4;
   const rows = 2;
-  const gap = 14;
+  const gap = 16;
   const contentW = width - padX * 2;
   const contentH = height - padTop - padBottom;
   const boxW = (contentW - (cols - 1) * gap) / cols;
@@ -110,19 +249,12 @@ function CrazyEightsPlaceholder({ width, height }: { width: number; height: numb
     >
       {Array.from({ length: rows }, (_, r) =>
         Array.from({ length: cols }, (_, c) => (
-          <rect
+          <SkeletonCard
             key={`${r}-${c}`}
             x={padX + c * (boxW + gap)}
             y={padTop + r * (boxH + gap)}
-            width={boxW}
-            height={boxH}
-            rx={8}
-            fill={SKEL_BG}
-            fillOpacity={0.12}
-            stroke={SKEL_STROKE}
-            strokeOpacity={0.28}
-            strokeWidth={1.5}
-            strokeDasharray="6 4"
+            w={boxW}
+            h={boxH}
           />
         )),
       )}
@@ -130,14 +262,14 @@ function CrazyEightsPlaceholder({ width, height }: { width: number; height: numb
   );
 }
 
-/** Step 3: Grid of boxes with checkmarks on a few */
+/** Step 3: 4x2 grid of skeleton cards, some with checkmarks */
 function VotingPlaceholder({ width, height }: { width: number; height: number }) {
   const padX = 24;
-  const padTop = 56;
-  const padBottom = 16;
+  const padTop = HEADER_HEIGHT + 16;
+  const padBottom = 20;
   const cols = 4;
   const rows = 2;
-  const gap = 14;
+  const gap = 16;
   const contentW = width - padX * 2;
   const contentH = height - padTop - padBottom;
   const boxW = (contentW - (cols - 1) * gap) / cols;
@@ -153,34 +285,15 @@ function VotingPlaceholder({ width, height }: { width: number; height: number })
       {Array.from({ length: rows }, (_, r) =>
         Array.from({ length: cols }, (_, c) => {
           const idx = r * cols + c;
-          const bx = padX + c * (boxW + gap);
-          const by = padTop + r * (boxH + gap);
-          const isChecked = checked.has(idx);
           return (
-            <g key={idx}>
-              <rect
-                x={bx} y={by}
-                width={boxW} height={boxH}
-                rx={8}
-                fill={SKEL_BG}
-                fillOpacity={isChecked ? 0.15 : 0.08}
-                stroke={SKEL_STROKE}
-                strokeOpacity={0.28}
-                strokeWidth={1.5}
-                strokeDasharray="6 4"
-              />
-              {isChecked && (
-                <path
-                  d={`M ${bx + boxW / 2 - 10} ${by + boxH / 2 + 1} l 6 6 l 12 -12`}
-                  fill="none"
-                  stroke={SKEL_STROKE}
-                  strokeOpacity={0.45}
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              )}
-            </g>
+            <SkeletonCard
+              key={idx}
+              x={padX + c * (boxW + gap)}
+              y={padTop + r * (boxH + gap)}
+              w={boxW}
+              h={boxH}
+              showCheck={checked.has(idx)}
+            />
           );
         }),
       )}
@@ -188,11 +301,11 @@ function VotingPlaceholder({ width, height }: { width: number; height: number })
   );
 }
 
-/** Step 4: Grid of small 2x2 sub-matrices (brain rewriting) */
+/** Step 4: 3x2 grid of brain rewriting cards (each with 2x2 mini-card grid) */
 function BrainRewritingPlaceholder({ width, height }: { width: number; height: number }) {
   const padX = 24;
-  const padTop = 56;
-  const padBottom = 16;
+  const padTop = HEADER_HEIGHT + 16;
+  const padBottom = 20;
   const cols = 3;
   const rows = 2;
   const gap = 18;
@@ -200,8 +313,6 @@ function BrainRewritingPlaceholder({ width, height }: { width: number; height: n
   const contentH = height - padTop - padBottom;
   const boxW = (contentW - (cols - 1) * gap) / cols;
   const boxH = (contentH - (rows - 1) * gap) / rows;
-  const subGap = 4;
-  const subPad = 5;
 
   return (
     <svg
@@ -210,53 +321,21 @@ function BrainRewritingPlaceholder({ width, height }: { width: number; height: n
       style={{ position: 'absolute', top: 0, left: 0, overflow: 'hidden' }}
     >
       {Array.from({ length: rows }, (_, r) =>
-        Array.from({ length: cols }, (_, c) => {
-          const bx = padX + c * (boxW + gap);
-          const by = padTop + r * (boxH + gap);
-          const innerW = boxW - subPad * 2;
-          const innerH = boxH - subPad * 2;
-          const cellW = (innerW - subGap) / 2;
-          const cellH = (innerH - subGap) / 2;
-          return (
-            <g key={`${r}-${c}`}>
-              <rect
-                x={bx} y={by}
-                width={boxW} height={boxH}
-                rx={8}
-                fill={SKEL_BG}
-                fillOpacity={0.10}
-                stroke={SKEL_STROKE}
-                strokeOpacity={0.25}
-                strokeWidth={1.5}
-                strokeDasharray="6 4"
-              />
-              {[0, 1].map((sr) =>
-                [0, 1].map((sc) => (
-                  <rect
-                    key={`sub-${sr}-${sc}`}
-                    x={bx + subPad + sc * (cellW + subGap)}
-                    y={by + subPad + sr * (cellH + subGap)}
-                    width={cellW}
-                    height={cellH}
-                    rx={4}
-                    fill={SKEL_FILL}
-                    fillOpacity={0.10}
-                    stroke={SKEL_STROKE}
-                    strokeOpacity={0.15}
-                    strokeWidth={0.75}
-                  />
-                )),
-              )}
-            </g>
-          );
-        }),
+        Array.from({ length: cols }, (_, c) => (
+          <BrainRewritingCard
+            key={`${r}-${c}`}
+            x={padX + c * (boxW + gap)}
+            y={padTop + r * (boxH + gap)}
+            w={boxW}
+            h={boxH}
+          />
+        )),
       )}
     </svg>
   );
 }
 
-// Solid header bar shared by skeleton containers
-const HEADER_HEIGHT = 48;
+// ── Shared header ─────────────────────────────────────────────────
 
 function SkeletonHeader({ stepNumber, title }: { stepNumber: number; title: string }) {
   return (
@@ -271,8 +350,8 @@ function SkeletonHeader({ stepNumber, title }: { stepNumber: number; title: stri
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 16px',
-        backgroundColor: 'color-mix(in srgb, var(--color-muted) 60%, transparent)',
-        borderBottom: '1px solid color-mix(in srgb, var(--color-border) 25%, transparent)',
+        backgroundColor: 'var(--color-card)',
+        borderBottom: '1px solid color-mix(in srgb, var(--color-border) 30%, transparent)',
         borderRadius: '14px 14px 0 0',
       }}
     >
@@ -282,23 +361,23 @@ function SkeletonHeader({ stepNumber, title }: { stepNumber: number; title: stri
             width: 22,
             height: 22,
             borderRadius: '50%',
-            backgroundColor: SKEL_STROKE,
+            backgroundColor: 'var(--color-muted-foreground)',
+            opacity: 0.5,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: 11,
             fontWeight: 700,
-            color: '#ffffff',
-            opacity: 0.7,
+            color: 'var(--color-card)',
           }}
         >
           {stepNumber}
         </div>
-        <span style={{ fontSize: 13, fontWeight: 600, color: SKEL_STROKE, opacity: 0.8 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-muted-foreground)' }}>
           {title}
         </span>
       </div>
-      <span style={{ fontSize: 11, fontWeight: 500, opacity: 0.4, fontStyle: 'italic' }}>
+      <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-muted-foreground)', opacity: 0.5, fontStyle: 'italic' }}>
         Coming up
       </span>
     </div>
@@ -312,15 +391,14 @@ function PhaseContainerNodeComponent({ data }: NodeProps<PhaseContainerNodeType>
   const accent = PHASE_ACCENTS[stepNumber] ?? '#6b7280';
 
   if (!isActive) {
-    // Skeleton: solid header, semi-opaque background, grayscale content
     return (
       <div
         style={{
           width,
           height,
-          border: `1.5px solid color-mix(in srgb, var(--color-border) 35%, transparent)`,
+          border: `1px solid color-mix(in srgb, var(--color-border) 25%, transparent)`,
           borderRadius: 16,
-          backgroundColor: 'color-mix(in srgb, var(--color-card) 70%, transparent)',
+          backgroundColor: 'color-mix(in srgb, var(--color-card) 50%, transparent)',
           pointerEvents: 'none',
           position: 'relative',
         }}
@@ -333,20 +411,20 @@ function PhaseContainerNodeComponent({ data }: NodeProps<PhaseContainerNodeType>
     );
   }
 
-  // Active: solid border, colored accent, full-opacity
   return (
     <div
       style={{
         width,
         height,
-        border: `2px solid color-mix(in srgb, ${accent} 25%, transparent)`,
+        border: `1.5px solid color-mix(in srgb, ${accent} 20%, transparent)`,
         borderRadius: 16,
-        backgroundColor: 'color-mix(in srgb, var(--color-card) 85%, transparent)',
+        backgroundColor: 'color-mix(in srgb, var(--color-card) 50%, transparent)',
         pointerEvents: 'none',
         position: 'relative',
       }}
     >
       <div
+        className="phase-drag-handle"
         style={{
           position: 'absolute',
           top: 0,
@@ -356,7 +434,11 @@ function PhaseContainerNodeComponent({ data }: NodeProps<PhaseContainerNodeType>
           display: 'flex',
           alignItems: 'center',
           padding: '0 16px',
+          backgroundColor: 'var(--color-card)',
           borderBottom: '1px solid color-mix(in srgb, var(--color-border) 15%, transparent)',
+          borderRadius: '14px 14px 0 0',
+          pointerEvents: 'auto',
+          cursor: 'grab',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -381,7 +463,6 @@ function PhaseContainerNodeComponent({ data }: NodeProps<PhaseContainerNodeType>
           </span>
         </div>
       </div>
-      {/* Faint mind map scatter for step 1 — hidden once user has nodes */}
       {stepNumber === 1 && showPlaceholder && <MindMapPlaceholder width={width} height={height} />}
     </div>
   );

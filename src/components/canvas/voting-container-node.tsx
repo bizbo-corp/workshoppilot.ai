@@ -35,10 +35,8 @@ function VotingContainerNodeComponent({ data }: NodeProps<VotingContainerNodeTyp
       style={{
         width: '100%',
         height: '100%',
-        backgroundColor: isActive
-          ? 'color-mix(in srgb, var(--color-card) 85%, transparent)'
-          : 'color-mix(in srgb, var(--color-card) 60%, transparent)',
-        border: `2px solid color-mix(in srgb, var(--color-border) ${isActive ? '40%' : '25%'}, transparent)`,
+        backgroundColor: 'transparent',
+        border: `1.5px solid color-mix(in srgb, var(--color-border) ${isActive ? '30%' : '20%'}, transparent)`,
         borderRadius: 16,
         opacity: isActive ? 1 : 0.7,
         pointerEvents: 'none',
@@ -57,7 +55,9 @@ function VotingContainerNodeComponent({ data }: NodeProps<VotingContainerNodeTyp
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 16px',
+          backgroundColor: 'var(--color-card)',
           borderBottom: '1px solid color-mix(in srgb, var(--color-border) 20%, transparent)',
+          borderRadius: '14px 14px 0 0',
           pointerEvents: 'none',
         }}
       >

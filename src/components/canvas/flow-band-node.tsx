@@ -72,7 +72,7 @@ function curvedCenterPath(
   return `M ${srcCx} 0 C ${srcCx} ${cp1y}, ${dstCx} ${cp2y}, ${dstCx} ${height}`;
 }
 
-export const FlowBandNode = memo(({ data }: NodeProps<FlowBandNode>) => {
+export const FlowBandNode = memo(({ id: nodeId, data }: NodeProps<FlowBandNode>) => {
   const { variant, width, height } = data;
 
   if (variant === 'convergence' && data.bands && data.bands.length > 0) {
@@ -89,7 +89,7 @@ export const FlowBandNode = memo(({ data }: NodeProps<FlowBandNode>) => {
             {data.bands.map((band, i) => (
               <linearGradient
                 key={`grad-${i}`}
-                id={`conv-grad-${i}`}
+                id={`conv-grad-${nodeId}-${i}`}
                 x1="0" y1="0" x2="0" y2="1"
               >
                 <stop offset="0%" stopColor={band.color} stopOpacity={0.12} />
@@ -111,7 +111,7 @@ export const FlowBandNode = memo(({ data }: NodeProps<FlowBandNode>) => {
               <g key={i}>
                 <path
                   d={ribbonPath}
-                  fill={`url(#conv-grad-${i})`}
+                  fill={`url(#conv-grad-${nodeId}-${i})`}
                 />
                 <path
                   d={centerPath}
@@ -143,17 +143,17 @@ export const FlowBandNode = memo(({ data }: NodeProps<FlowBandNode>) => {
       <div style={{ width, height, pointerEvents: 'none' }}>
         <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
           <defs>
-            <linearGradient id="cont-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.08} />
-              <stop offset="100%" stopColor={color} stopOpacity={0.04} />
+            <linearGradient id={`cont-grad-${nodeId}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.12} />
+              <stop offset="100%" stopColor={color} stopOpacity={0.06} />
             </linearGradient>
           </defs>
-          <path d={ribbonPath} fill="url(#cont-grad)" />
+          <path d={ribbonPath} fill={`url(#cont-grad-${nodeId})`} />
           <path
             d={centerPath}
             fill="none"
             stroke={color}
-            strokeOpacity={0.15}
+            strokeOpacity={0.3}
             strokeWidth={1.5}
             strokeDasharray="6 4"
           />
@@ -174,19 +174,19 @@ export const FlowBandNode = memo(({ data }: NodeProps<FlowBandNode>) => {
       <div style={{ width, height, pointerEvents: 'none' }}>
         <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
           <defs>
-            <linearGradient id="skel-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.06} />
-              <stop offset="50%" stopColor={color} stopOpacity={0.03} />
-              <stop offset="100%" stopColor={color} stopOpacity={0.06} />
+            <linearGradient id={`skel-grad-${nodeId}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.14} />
+              <stop offset="50%" stopColor={color} stopOpacity={0.07} />
+              <stop offset="100%" stopColor={color} stopOpacity={0.14} />
             </linearGradient>
           </defs>
-          <path d={ribbonPath} fill="url(#skel-grad)" />
+          <path d={ribbonPath} fill={`url(#skel-grad-${nodeId})`} />
           <path
             d={centerPath}
             fill="none"
             stroke={color}
-            strokeOpacity={0.18}
-            strokeWidth={1}
+            strokeOpacity={0.35}
+            strokeWidth={1.5}
             strokeDasharray="4 6"
           />
         </svg>

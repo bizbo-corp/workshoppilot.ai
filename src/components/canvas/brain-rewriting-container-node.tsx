@@ -57,10 +57,8 @@ function BrainRewritingContainerNodeComponent({ data }: NodeProps<BrainRewriting
       style={{
         width: '100%',
         height: '100%',
-        backgroundColor: isActive
-          ? 'color-mix(in srgb, var(--color-card) 85%, transparent)'
-          : 'color-mix(in srgb, var(--color-card) 60%, transparent)',
-        border: `2px solid ${isActive ? 'color-mix(in srgb, var(--color-primary) 35%, transparent)' : 'color-mix(in srgb, var(--color-border) 25%, transparent)'}`,
+        backgroundColor: 'transparent',
+        border: `1.5px solid ${isActive ? 'color-mix(in srgb, var(--color-primary) 25%, transparent)' : 'color-mix(in srgb, var(--color-border) 20%, transparent)'}`,
         borderRadius: 16,
         opacity: isActive ? 1 : 0.7,
         pointerEvents: 'none',
@@ -78,7 +76,9 @@ function BrainRewritingContainerNodeComponent({ data }: NodeProps<BrainRewriting
           display: 'flex',
           alignItems: 'center',
           padding: '0 16px',
+          backgroundColor: 'var(--color-card)',
           borderBottom: '1px solid color-mix(in srgb, var(--color-border) 20%, transparent)',
+          borderRadius: '14px 14px 0 0',
           pointerEvents: 'none',
         }}
       >
