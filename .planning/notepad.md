@@ -31,46 +31,6 @@ Improve the UX of the chat window when it's in collapsed mode.
 
 ## Ideation
 
-  What's fixed:
-
-- Phase 1 container width is now dynamic — it
-
-  computes the actual extent of visible mind map
-
-  nodes and sizes to fit them (minimum 1600px) 
-
-- In individual participant view, it filters to
-
-   only that participant's nodes for sizing
-
-  What may still need tweaking after testing:
-
-- The container X position (defaultX =
-
-  leftEdgeX - PHASE_CONTENT_PADDING) is always
-
-  anchored at -824 in individual view. If nodes
-
-  extend far to the right, the container widens
-
-  rightward but is anchored at the left. You
-
-  might want to also shift defaultX left based on
-
-   minX of the visible nodes to center the
-
-  container around the content.
-
-- The container height is still fixed at 1496px
-
-   — if nodes extend vertically beyond that,
-
-  you'd need similar dynamic height logic.
-
-  Please test the current fix and start a new
-
-  conversation if further adjustments are needed.
-
 ## Concept Development
 
 ## Validate

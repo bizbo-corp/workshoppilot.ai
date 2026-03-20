@@ -17,6 +17,7 @@ export type OwnerZoneNodeData = {
   width?: number;            // override default 1600 (e.g. 2600 when crazy 8s visible)
   height?: number;           // override default 1400 (taller when crazy 8s below)
   starCount?: number;        // number of starred mind map nodes (max 8)
+  isDraggable?: boolean;     // whether the zone can be dragged (facilitator or self)
 };
 
 export type OwnerZoneNode = Node<OwnerZoneNodeData, 'ownerZoneNode'>;
@@ -30,12 +31,13 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
         backgroundColor: `color-mix(in srgb, ${data.ownerThemeBgColor} 30%, transparent)`,
         border: `2px solid color-mix(in srgb, ${data.ownerThemeColor} 12%, transparent)`,
         borderRadius: 16,
-        pointerEvents: 'none',
+        pointerEvents: data.isDraggable ? 'auto' : 'none',
         position: 'relative',
       }}
     >
       {/* Header bar with color badge + participant name */}
       <div
+        className="owner-zone-drag-handle"
         style={{
           position: 'absolute',
           top: 0,
@@ -48,7 +50,8 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
           padding: '0 12px',
           borderRadius: '14px 14px 0 0',
           backgroundColor: `color-mix(in srgb, ${data.ownerThemeBgColor} 40%, transparent)`,
-          pointerEvents: 'none',
+          pointerEvents: data.isDraggable ? 'auto' : 'none',
+          cursor: data.isDraggable ? 'grab' : undefined,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

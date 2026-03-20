@@ -23,6 +23,8 @@ const VOTING_GROUP_PREFIX = 'vg-';
 
 const isPhaseContainerNode = (id: string) => id.startsWith(PHASE_CONTAINER_PREFIX);
 const isFlowBandNode = (id: string) => id.startsWith(FLOW_BAND_PREFIX);
+const isZoneNode = (id: string) => id.startsWith(ZONE_NODE_PREFIX);
+const getZoneOwnerId = (id: string) => id.slice(ZONE_NODE_PREFIX.length);
 const isCrazy8sNode = (id: string) =>
   id === CRAZY_8S_NODE_ID || id.startsWith(CRAZY_8S_NODE_PREFIX);
 const isVotingNode = (id: string) =>
@@ -73,18 +75,39 @@ export function usePhaseDrag(config: PhaseDragConfig) {
 
   /** Track container being dragged */
   const containerDragRef = useRef<{ step: number; prevPos: { x: number; y: number } } | null>(null);
+  /** Track owner zone being dragged */
+  const zoneDragRef = useRef<{ ownerId: string; prevPos: { x: number; y: number } } | null>(null);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       let containerDelta: { x: number; y: number } | null = null;
       let containerStep: number | null = null;
+      let zoneDelta: { x: number; y: number } | null = null;
+      let zoneDragOwnerId: string | null = null;
 
       for (const c of changes) {
         if (c.type === 'position') {
           const posChange = c as NodeChange & { id: string; position?: { x: number; y: number }; dragging?: boolean };
 
-          // Skip non-draggable infrastructure nodes (but NOT containers)
-          if ((posChange.id.startsWith(BR_NODE_PREFIX) && posChange.id !== BR_CONTAINER_ID) || posChange.id.startsWith(ZONE_NODE_PREFIX) || isFlowBandNode(posChange.id)) continue;
+          // Skip non-draggable infrastructure nodes (but NOT containers or zone nodes)
+          if ((posChange.id.startsWith(BR_NODE_PREFIX) && posChange.id !== BR_CONTAINER_ID) || isFlowBandNode(posChange.id)) continue;
+
+          // Owner zone nodes: compute delta for child movement
+          if (isZoneNode(posChange.id)) {
+            if (zoneDragRef.current && posChange.dragging && posChange.position) {
+              const { prevPos } = zoneDragRef.current;
+              const delta = {
+                x: posChange.position.x - prevPos.x,
+                y: posChange.position.y - prevPos.y,
+              };
+              if (delta.x !== 0 || delta.y !== 0) {
+                zoneDragRef.current.prevPos = { ...posChange.position };
+                zoneDelta = delta;
+                zoneDragOwnerId = zoneDragRef.current.ownerId;
+              }
+            }
+            continue;
+          }
 
           // Any container (phase 1-4, voting, BR): compute delta for child movement
           const isContainer = isPhaseContainerNode(posChange.id) || posChange.id === VOTING_CONTAINER_ID || posChange.id === BR_CONTAINER_ID;
@@ -145,7 +168,7 @@ export function usePhaseDrag(config: PhaseDragConfig) {
         }
       }
 
-      // Apply changes + move children atomically if dragging a phase container
+      // Apply changes + move children atomically if dragging a phase container or zone
       setNodes((nds) => {
         let updated = applyNodeChanges(changes, nds);
         if (containerDelta && containerStep !== null) {
@@ -162,6 +185,16 @@ export function usePhaseDrag(config: PhaseDragConfig) {
             return n;
           });
         }
+        if (zoneDelta && zoneDragOwnerId) {
+          const delta = zoneDelta;
+          const oid = zoneDragOwnerId;
+          updated = updated.map(n => {
+            if (n.type === 'mindMapNode' && getNodeOwnerId(n.id) === oid) {
+              return { ...n, position: { x: n.position.x + delta.x, y: n.position.y + delta.y } };
+            }
+            return n;
+          });
+        }
         return updated;
       });
     },
@@ -169,12 +202,42 @@ export function usePhaseDrag(config: PhaseDragConfig) {
   );
 
   const handleNodeDragStart = useCallback((_event: React.MouseEvent, node: Node) => {
+    if (isZoneNode(node.id)) {
+      zoneDragRef.current = { ownerId: getZoneOwnerId(node.id), prevPos: { ...node.position } };
+      return;
+    }
     const step = getContainerStep(node.id);
     if (step === null) return;
     containerDragRef.current = { step, prevPos: { ...node.position } };
   }, []);
 
   const handleNodeDragStop = useCallback((_event: React.MouseEvent, node: Node) => {
+    // Zone drag stop: persist all affected mind map node positions
+    if (isZoneNode(node.id) && zoneDragRef.current) {
+      const oid = zoneDragRef.current.ownerId;
+      zoneDragRef.current = null;
+
+      const currentNodes = nodesRef.current;
+      const updates: Array<{ id: string; position: { x: number; y: number } }> = [];
+      for (const n of currentNodes) {
+        if (n.type === 'mindMapNode' && getNodeOwnerId(n.id) === oid) {
+          const offset = ownerOffsetsRef.current[oid];
+          const adjusted = offset
+            ? { x: n.position.x - offset.x, y: n.position.y - offset.y }
+            : n.position;
+          updates.push({
+            id: n.id,
+            position: { x: snapToGrid(adjusted.x), y: snapToGrid(adjusted.y) },
+          });
+        }
+      }
+      if (updates.length > 0) {
+        batchUpdateMindMapNodePositions(updates);
+      }
+      // Don't persist zone position — it's recomputed from ownerBounds
+      return;
+    }
+
     const step = getContainerStep(node.id);
     if (!containerDragRef.current || step === null) return;
     containerDragRef.current = null;

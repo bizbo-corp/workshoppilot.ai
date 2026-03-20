@@ -1348,6 +1348,7 @@ function MindMapCanvasInner({
     if (currentOwnerId) {
       const { themeColor, themeBgColor } = getOwnerTheme(currentOwnerId);
       const isSelf = !!selfParticipantId && currentOwnerId === selfParticipantId;
+      const isDraggable = isFacilitator || isSelf;
       const ob = ownerBounds[currentOwnerId];
       const dynZoneWidth = ob ? Math.max(ob.width, 1600) : 1600;
       const dynZoneHeight = ob ? Math.max(ob.height, 1400) : 1400;
@@ -1357,8 +1358,9 @@ function MindMapCanvasInner({
         id: `${ZONE_NODE_PREFIX}${currentOwnerId}`,
         type: 'ownerZoneNode',
         position: { x: zoneX, y: zoneY },
-        draggable: false,
-        selectable: false,
+        draggable: isDraggable,
+        selectable: isDraggable,
+        ...(isDraggable ? { dragHandle: '.owner-zone-drag-handle' } : {}),
         connectable: false,
         focusable: false,
         zIndex: -1,
@@ -1367,6 +1369,7 @@ function MindMapCanvasInner({
           ownerThemeColor: themeColor,
           ownerThemeBgColor: themeBgColor,
           isSelf,
+          isDraggable,
           isReady: readinessMap[currentOwnerId] ?? false,
           showDoneButton,
           onToggleReady: handleToggle,
@@ -1382,6 +1385,7 @@ function MindMapCanvasInner({
       const ob = ownerBounds[oid];
       const { themeColor, themeBgColor } = getOwnerTheme(oid);
       const isSelf = !!selfParticipantId && oid === selfParticipantId;
+      const isDraggable = isFacilitator || isSelf;
       const dynZoneWidth = ob ? Math.max(ob.width, 1600) : 1600;
       const dynZoneHeight = ob ? Math.max(ob.height, 1400) : 1400;
       const zoneX = ob ? ob.worldMinX - ZONE_PADDING : (ownerOffsets[oid]?.x ?? 0) - 800;
@@ -1390,8 +1394,9 @@ function MindMapCanvasInner({
         id: `${ZONE_NODE_PREFIX}${oid}`,
         type: 'ownerZoneNode',
         position: { x: zoneX, y: zoneY },
-        draggable: false,
-        selectable: false,
+        draggable: isDraggable,
+        selectable: isDraggable,
+        ...(isDraggable ? { dragHandle: '.owner-zone-drag-handle' } : {}),
         connectable: false,
         focusable: false,
         zIndex: -1,
@@ -1400,6 +1405,7 @@ function MindMapCanvasInner({
           ownerThemeColor: themeColor,
           ownerThemeBgColor: themeBgColor,
           isSelf,
+          isDraggable,
           isReady: readinessMap[oid] ?? false,
           showDoneButton,
           onToggleReady: handleToggle,
@@ -1409,7 +1415,7 @@ function MindMapCanvasInner({
         },
       };
     });
-  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, ownerStarCounts, ownerBounds]);
+  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, ownerStarCounts, ownerBounds, isFacilitator]);
 
   // ── Voting nodes (multiplayer idea-selection on same canvas) ──
 
