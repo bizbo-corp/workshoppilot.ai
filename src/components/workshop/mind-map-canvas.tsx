@@ -796,19 +796,72 @@ function MindMapCanvasInner({
     return offsets;
   }, [currentOwnerId, allOwnerIds]);
 
+  // Compute actual bounding box of each owner's mind map nodes (store-relative + world-space)
+  const NODE_CARD_WIDTH = 280;
+  const NODE_CARD_HEIGHT = 80;
+  const ZONE_PADDING = 120;
+
+  type OwnerBounds = {
+    minX: number; maxX: number; minY: number; maxY: number;
+    worldMinX: number; worldMaxX: number; worldMinY: number; worldMaxY: number;
+    centerX: number; width: number; height: number;
+  };
+
+  const ownerBounds = useMemo<Record<string, OwnerBounds>>(() => {
+    const bounds: Record<string, { minX: number; maxX: number; minY: number; maxY: number }> = {};
+
+    for (const node of allMindMapNodes) {
+      const oid = node.ownerId || '__solo__';
+      const x = node.position?.x ?? 0;
+      const y = node.position?.y ?? 0;
+      if (!bounds[oid]) {
+        bounds[oid] = { minX: x, maxX: x + NODE_CARD_WIDTH, minY: y, maxY: y + NODE_CARD_HEIGHT };
+      } else {
+        bounds[oid].minX = Math.min(bounds[oid].minX, x);
+        bounds[oid].maxX = Math.max(bounds[oid].maxX, x + NODE_CARD_WIDTH);
+        bounds[oid].minY = Math.min(bounds[oid].minY, y);
+        bounds[oid].maxY = Math.max(bounds[oid].maxY, y + NODE_CARD_HEIGHT);
+      }
+    }
+
+    const result: Record<string, OwnerBounds> = {};
+    for (const [oid, b] of Object.entries(bounds)) {
+      const offset = ownerOffsets[oid] || { x: 0, y: 0 };
+      const w = b.maxX - b.minX + 2 * ZONE_PADDING;
+      const h = b.maxY - b.minY + 2 * ZONE_PADDING;
+      result[oid] = {
+        minX: b.minX, maxX: b.maxX, minY: b.minY, maxY: b.maxY,
+        worldMinX: b.minX + offset.x, worldMaxX: b.maxX + offset.x,
+        worldMinY: b.minY + offset.y, worldMaxY: b.maxY + offset.y,
+        centerX: (b.minX + b.maxX) / 2 + offset.x,
+        width: w, height: h,
+      };
+    }
+    return result;
+  }, [allMindMapNodes, ownerOffsets]);
+
   // Left edge X for aligning shared containers (voting, brain rewriting) to the leftmost owner zone
   const leftEdgeX = useMemo(() => {
-    if (Object.keys(ownerOffsets).length > 0)
-      return Math.min(...Object.values(ownerOffsets).map((o) => o.x)) - 800;
-    return -800; // solo: zone starts at -800
-  }, [ownerOffsets]);
+    const bKeys = Object.keys(ownerBounds);
+    if (Object.keys(ownerOffsets).length > 0 && bKeys.length > 0) {
+      return Math.min(...Object.values(ownerBounds).map((ob) => ob.worldMinX - ZONE_PADDING));
+    }
+    // Solo / single-participant: use actual bounds if available
+    const ob = currentOwnerId ? ownerBounds[currentOwnerId] : ownerBounds['__solo__'];
+    if (ob) return ob.minX - ZONE_PADDING;
+    return -800;
+  }, [ownerOffsets, ownerBounds, currentOwnerId]);
 
   // Right edge X for computing full-width phase containers in "All" view
   const rightEdgeX = useMemo(() => {
-    if (Object.keys(ownerOffsets).length > 0)
-      return Math.max(...Object.values(ownerOffsets).map((o) => o.x)) + 800;
-    return 800; // solo: zone ends at +800
-  }, [ownerOffsets]);
+    const bKeys = Object.keys(ownerBounds);
+    if (Object.keys(ownerOffsets).length > 0 && bKeys.length > 0) {
+      return Math.max(...Object.values(ownerBounds).map((ob) => ob.worldMaxX + ZONE_PADDING));
+    }
+    const ob = currentOwnerId ? ownerBounds[currentOwnerId] : ownerBounds['__solo__'];
+    if (ob) return ob.maxX + ZONE_PADDING;
+    return 800;
+  }, [ownerOffsets, ownerBounds, currentOwnerId]);
 
   // Should voting artifacts be visible? (during voting OR persisted into brain-rewriting)
   // Hoisted before phaseLayout so it's available for layout computation.
@@ -819,30 +872,38 @@ function MindMapCanvasInner({
     // Phase container width — dynamic based on actual mind map node extents
     let phaseWidth: number;
     if (Object.keys(ownerOffsets).length > 0 && !currentOwnerId) {
+      // "All" view: span from leftEdgeX to rightEdgeX (already ownerBounds-based)
       phaseWidth = rightEdgeX - leftEdgeX;
     } else {
-      // Solo / individual view: size to fit actual mind map nodes (min 1600)
-      const NODE_CARD_WIDTH = 280; // approximate card width
-      // Use filtered mindMapNodes (only the displayed participant's nodes)
-      const visibleNodes = currentOwnerId
-        ? allMindMapNodes.filter(n => n.ownerId === currentOwnerId)
-        : allMindMapNodes;
-      const nodeXs = visibleNodes.map(n => n.position?.x ?? 0);
-      if (nodeXs.length > 0) {
-        const minX = Math.min(...nodeXs);
-        const maxX = Math.max(...nodeXs) + NODE_CARD_WIDTH;
-        const contentWidth = maxX - minX + 200; // 200px padding
-        // Ensure container covers from leftEdgeX to beyond the rightmost node
-        const rightCoverage = maxX + 100 - leftEdgeX;
-        phaseWidth = Math.max(contentWidth, rightCoverage, 1600);
+      // Solo / individual view: use ownerBounds (min 1600)
+      const ob = currentOwnerId ? ownerBounds[currentOwnerId] : ownerBounds['__solo__'];
+      if (ob) {
+        phaseWidth = Math.max(ob.width + 2 * PHASE_CONTENT_PADDING, 1600);
       } else {
         phaseWidth = 1600;
       }
     }
 
-    // Phase 1: Mind Mapping — always active (with content padding)
-    const phase1Y = -548 - PHASE_CONTENT_PADDING;
-    const phase1Height = PHASE_HEADER + PHASE_CONTENT_PADDING + 1400 + PHASE_CONTENT_PADDING;
+    // Phase 1: Mind Mapping — dynamic Y/height from ownerBounds (with content padding)
+    const DEFAULT_PHASE1_Y = -548 - PHASE_CONTENT_PADDING; // -572
+    const DEFAULT_PHASE1_HEIGHT = PHASE_HEADER + PHASE_CONTENT_PADDING + 1400 + PHASE_CONTENT_PADDING; // 1496
+    const obValues = Object.values(ownerBounds);
+    let phase1Y: number;
+    let phase1Height: number;
+    if (obValues.length > 0) {
+      const unionMinY = Object.keys(ownerOffsets).length > 0 && !currentOwnerId
+        ? Math.min(...obValues.map((ob) => ob.worldMinY))
+        : Math.min(...obValues.map((ob) => ob.minY));
+      const unionMaxY = Object.keys(ownerOffsets).length > 0 && !currentOwnerId
+        ? Math.max(...obValues.map((ob) => ob.worldMaxY))
+        : Math.max(...obValues.map((ob) => ob.maxY));
+      const contentHeight = unionMaxY - unionMinY + 2 * ZONE_PADDING;
+      phase1Y = unionMinY - ZONE_PADDING - PHASE_HEADER - PHASE_CONTENT_PADDING;
+      phase1Height = Math.max(PHASE_HEADER + 2 * PHASE_CONTENT_PADDING + contentHeight, DEFAULT_PHASE1_HEIGHT);
+    } else {
+      phase1Y = DEFAULT_PHASE1_Y;
+      phase1Height = DEFAULT_PHASE1_HEIGHT;
+    }
 
     // Phase 2: Crazy Eights
     const phase2Y = phase1Y + phase1Height + BAND_GAP;
@@ -884,7 +945,7 @@ function MindMapCanvasInner({
         { step: 4, title: 'Brain Rewriting', y: phase4Y, height: phase4Height, width: phaseWidth, isActive: !!brainRewritingMatrices?.length },
       ],
     };
-  }, [leftEdgeX, rightEdgeX, ownerOffsets, currentOwnerId, showCrazy8s, showVotingArtifact, brainRewritingMatrices, allCrazy8sSlots, slotGroups, allMindMapNodes]);
+  }, [leftEdgeX, rightEdgeX, ownerOffsets, currentOwnerId, ownerBounds, showCrazy8s, showVotingArtifact, brainRewritingMatrices, allCrazy8sSlots, slotGroups]);
 
   // Phase container nodes — visual backgrounds for each phase
   const phaseContainerNodes = useMemo<Node[]>(() => {
@@ -1283,29 +1344,19 @@ function MindMapCanvasInner({
 
     const handleToggle = () => toggleReadyRef.current?.toggleReady();
 
-    // Zone width: always default 1600 (crazy 8s in separate phase container)
-    const zoneWidth = undefined;
-    // Zone height: default 1400 (crazy 8s now in Phase 2 container, not owner zone)
-    const zoneHeight = undefined;
-
-    // Compute phase 1 drag delta so owner zones stay aligned with the container
-    const phase1Persisted = votingCardPositions['__phase1__'];
-    const phase1DefaultX = leftEdgeX - PHASE_CONTENT_PADDING;
-    const phase1DefaultY = phaseLayout.phases[0].y;
-    const phase1Delta = phase1Persisted
-      ? { x: phase1Persisted.x - phase1DefaultX, y: phase1Persisted.y - phase1DefaultY }
-      : { x: 0, y: 0 };
-
     // Individual view: show zone for the selected participant only (centered at origin)
     if (currentOwnerId) {
       const { themeColor, themeBgColor } = getOwnerTheme(currentOwnerId);
       const isSelf = !!selfParticipantId && currentOwnerId === selfParticipantId;
-      // Use phaseWidth so the zone covers all nodes (matches phase container width)
-      const dynZoneWidth = Math.max(phaseLayout.phaseWidth, 1600);
+      const ob = ownerBounds[currentOwnerId];
+      const dynZoneWidth = ob ? Math.max(ob.width, 1600) : 1600;
+      const dynZoneHeight = ob ? Math.max(ob.height, 1400) : 1400;
+      const zoneX = ob ? ob.minX - ZONE_PADDING : -800;
+      const zoneY = ob ? ob.minY - ZONE_PADDING : -500;
       return [{
         id: `${ZONE_NODE_PREFIX}${currentOwnerId}`,
         type: 'ownerZoneNode',
-        position: { x: leftEdgeX + phase1Delta.x, y: -500 + phase1Delta.y },
+        position: { x: zoneX, y: zoneY },
         draggable: false,
         selectable: false,
         connectable: false,
@@ -1320,7 +1371,7 @@ function MindMapCanvasInner({
           showDoneButton,
           onToggleReady: handleToggle,
           width: dynZoneWidth,
-          height: zoneHeight,
+          height: dynZoneHeight,
           starCount: ownerStarCounts[currentOwnerId] || 0,
         },
       }];
@@ -1328,13 +1379,17 @@ function MindMapCanvasInner({
 
     // "All" view: show zones for every participant at their offset
     return allOwnerIds.map((oid) => {
-      const offset = ownerOffsets[oid] || { x: 0, y: 0 };
+      const ob = ownerBounds[oid];
       const { themeColor, themeBgColor } = getOwnerTheme(oid);
       const isSelf = !!selfParticipantId && oid === selfParticipantId;
+      const dynZoneWidth = ob ? Math.max(ob.width, 1600) : 1600;
+      const dynZoneHeight = ob ? Math.max(ob.height, 1400) : 1400;
+      const zoneX = ob ? ob.worldMinX - ZONE_PADDING : (ownerOffsets[oid]?.x ?? 0) - 800;
+      const zoneY = ob ? ob.worldMinY - ZONE_PADDING : (ownerOffsets[oid]?.y ?? 0) - 500;
       return {
         id: `${ZONE_NODE_PREFIX}${oid}`,
         type: 'ownerZoneNode',
-        position: { x: offset.x - 800 + phase1Delta.x, y: offset.y - 500 + phase1Delta.y },
+        position: { x: zoneX, y: zoneY },
         draggable: false,
         selectable: false,
         connectable: false,
@@ -1348,13 +1403,13 @@ function MindMapCanvasInner({
           isReady: readinessMap[oid] ?? false,
           showDoneButton,
           onToggleReady: handleToggle,
-          width: zoneWidth,
-          height: zoneHeight,
+          width: dynZoneWidth,
+          height: dynZoneHeight,
           starCount: ownerStarCounts[oid] || 0,
         },
       };
     });
-  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, ownerStarCounts, votingCardPositions, leftEdgeX, phaseLayout]);
+  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, ownerStarCounts, ownerBounds]);
 
   // ── Voting nodes (multiplayer idea-selection on same canvas) ──
 
@@ -1633,16 +1688,17 @@ function MindMapCanvasInner({
         const bandTop = p1.y + p1.height;
         const bandBottom = p2.y;
         const bandHeight = Math.max(bandBottom - bandTop, 20);
-        const srcW = 400; // mind map zone visual width
         const dstW = CRAZY_8S_NODE_WIDTH * 0.6; // match c8s→voting band width
 
         for (const n of crazy8sNodes) {
           const ownerColor = (n.data as Record<string, unknown>)?.ownerColor as string | undefined;
           const c8sCx = (n.position?.x ?? 0) + CRAZY_8S_NODE_WIDTH / 2;
-          // Owner's mind map center is at their offset X
+          // Owner's mind map center — use actual bounds if available, fallback to offset
           const oid = (n.data as Record<string, unknown>)?.ownerId as string | undefined;
+          const ob = oid ? ownerBounds[oid] : undefined;
           const ownerOffset = oid ? ownerOffsets[oid] : undefined;
-          const mmCx = (ownerOffset?.x ?? 0); // owner tree is centered at their offset
+          const mmCx = ob ? ob.centerX : (ownerOffset?.x ?? 0);
+          const srcW = ob ? Math.min(ob.width, 800) : 400;
 
           // SVG bounds — wide enough for the wider source ribbon
           const halfExtent = Math.max(srcW, dstW) / 2 + 40;
@@ -1668,9 +1724,11 @@ function MindMapCanvasInner({
           });
         }
       } else {
-        // Solo: single neutral continuation
+        // Solo: single neutral continuation — use bounds-derived width if available
+        const soloBounds = ownerBounds['__solo__'] || Object.values(ownerBounds)[0];
+        const soloSrcW = soloBounds ? Math.min(soloBounds.width, 800) : 400;
         createBand('mm-c8s', 1, 2, 'continuation', {
-          sourceWidth: 400,
+          sourceWidth: soloSrcW,
           targetWidthCont: CRAZY_8S_NODE_WIDTH * 0.6,
           bandColor: '#f59e0b',
         });
@@ -1776,7 +1834,7 @@ function MindMapCanvasInner({
     }
 
     return result;
-  }, [phaseLayout, leftEdgeX, crazy8sNodes, ownerOffsets, showVotingArtifact, votingContainerPos, votingContainerSize, brainRewritingMatrices, brainRewritingNodes, votingCardPositions]);
+  }, [phaseLayout, leftEdgeX, crazy8sNodes, ownerOffsets, ownerBounds, showVotingArtifact, votingContainerPos, votingContainerSize, brainRewritingMatrices, brainRewritingNodes, votingCardPositions]);
 
   // Combined nodes array: flow bands → phase containers → owner zones → mind map → crazy 8s → voting → brain rewriting
   const rfNodes = useMemo(() => {
