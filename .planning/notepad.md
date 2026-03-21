@@ -37,7 +37,7 @@ Improve the UX of the chat window when it's in collapsed mode.
 
 There is a bug that whenever a concept development card is generated, the view resets to fit to screen.  can the Card that's currently being edited stay positioned in the frame as is? The only exception is if the participant moves to the next step it should pull the next card into focus.
 
-For the feasibility assessment I need the text fields to adapt to be as large as the content height.
+
 
 Throughout the concept development feasibility assessment there's no need to reference back to the personas. 
 

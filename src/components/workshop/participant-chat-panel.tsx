@@ -854,7 +854,7 @@ export function ParticipantChatPanel({
       </div>
 
       {/* Input area — match facilitator */}
-      <div className="border-t bg-background/20 p-4">
+      <div className="shrink-0 border-t bg-background/20 p-4">
         <form onSubmit={(e) => { e.preventDefault(); handleSend(inputValue); }} className="flex gap-2">
           <TextareaAutosize
             minRows={1}

@@ -175,7 +175,18 @@ export function StepContainer({
   // Multiplayer facilitator state — determines whether step navigation is visible
   // and whether STEP_CHANGED broadcasts fire. Both default to false in solo mode
   // (isMultiplayer=false from the default MultiplayerContext value).
-  const { isFacilitator, isMultiplayer } = useMultiplayerContext();
+  const {
+    isFacilitator,
+    isMultiplayer,
+    participantId: contextParticipantId,
+    displayName: contextDisplayName,
+    participantColor: contextParticipantColor,
+  } = useMultiplayerContext();
+
+  // Effective participant values — prefer server-side props, fall back to Liveblocks context
+  const effectiveParticipantId = participantId ?? contextParticipantId;
+  const effectiveDisplayName = participantDisplayName ?? contextDisplayName;
+  const effectiveColor = participantColor ?? contextParticipantColor;
 
   // Broadcast ref — populated by StepAdvanceBroadcaster (only mounted in multiplayer).
   // Allows StepContainer to trigger broadcasts without calling useBroadcastEvent directly
@@ -271,9 +282,9 @@ export function StepContainer({
   const ideationOwnerId = React.useMemo(() => {
     if (!isMultiplayer) return undefined; // Solo: no filtering
     if (isFacilitator) return 'facilitator';
-    if (participantId) return participantId;
+    if (effectiveParticipantId) return effectiveParticipantId;
     return undefined;
-  }, [isMultiplayer, isFacilitator, participantId]);
+  }, [isMultiplayer, isFacilitator, effectiveParticipantId]);
 
   const ideation = useIdeationPhases({
     enabled: stepOrder === 8,
@@ -1181,15 +1192,15 @@ export function StepContainer({
         </div>
       )}
       <div className="min-h-0 flex-1">
-        {isMultiplayer && !isFacilitator && participantId ? (
+        {isMultiplayer && !isFacilitator && effectiveParticipantId ? (
           <ParticipantChatPanel
             key={resetKey}
             stepOrder={stepOrder}
             sessionId={sessionId}
             workshopId={workshopId}
-            participantId={participantId}
-            displayName={participantDisplayName || "Participant"}
-            participantColor={participantColor || "#608850"}
+            participantId={effectiveParticipantId}
+            displayName={effectiveDisplayName || "Participant"}
+            participantColor={effectiveColor || "#608850"}
             initialMessages={localMessages}
           />
         ) : (
