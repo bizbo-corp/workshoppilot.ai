@@ -186,6 +186,7 @@ export interface ReactFlowCanvasProps {
     getViewport: () => { x: number; y: number; zoom: number };
     screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number };
   }>;
+  conceptOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string }>;
 }
 
 function ReactFlowCanvasInner({
@@ -204,6 +205,7 @@ function ReactFlowCanvasInner({
   onTemplateStickyPositionSync,
   onTemplateStickyDelete,
   canvasRef,
+  conceptOwners,
 }: ReactFlowCanvasProps) {
   // Store access
   const stickyNotes = useCanvasStore((s) => s.stickyNotes);
@@ -271,7 +273,7 @@ function ReactFlowCanvasInner({
 
   // Multiplayer context — provides participant color for new sticky notes
   // Returns { isMultiplayer: false, participantColor: null } when not inside RoomProvider (solo mode)
-  const { isMultiplayer, participantColor, isFacilitator } = useMultiplayerContext();
+  const { isMultiplayer, participantColor, isFacilitator, participantId } = useMultiplayerContext();
 
   // Mapping from participant hex color to the closest StickyNoteColor.
   // Matches PARTICIPANT_COLORS order in liveblocks/config.ts.
@@ -838,6 +840,14 @@ function ReactFlowCanvasInner({
     setEditingNodeId(null);
   }, []);
 
+  // Handle concept card reassignment (facilitator only)
+  const handleConceptReassign = useCallback(
+    (cardId: string, ownerId: string, ownerName: string, ownerColor: string) => {
+      updateConceptCard(cardId, { ownerId, ownerName, ownerColor });
+    },
+    [updateConceptCard],
+  );
+
   // Handle concept card field changes
   const handleConceptFieldChange = useCallback(
     (id: string, field: string, value: string) => {
@@ -1135,6 +1145,13 @@ function ReactFlowCanvasInner({
         onFieldChange: handleConceptFieldChange,
         onSWOTChange: handleConceptSWOTChange,
         onFeasibilityChange: handleConceptFeasibilityChange,
+        onReassign: handleConceptReassign,
+        availableOwners: conceptOwners,
+        isFacilitator,
+        isOwner: isMultiplayer && (
+          (isFacilitator && card.ownerId === 'facilitator') ||
+          (!!participantId && card.ownerId === participantId)
+        ),
       },
       style: { width: 680 },
     }));
@@ -3231,6 +3248,7 @@ export function ReactFlowCanvas({
   onTemplateStickyPositionSync,
   onTemplateStickyDelete,
   canvasRef,
+  conceptOwners,
 }: ReactFlowCanvasProps) {
   return (
     <ReactFlowProvider>
@@ -3250,6 +3268,7 @@ export function ReactFlowCanvas({
         onTemplateStickyPositionSync={onTemplateStickyPositionSync}
         onTemplateStickyDelete={onTemplateStickyDelete}
         canvasRef={canvasRef}
+        conceptOwners={conceptOwners}
       />
     </ReactFlowProvider>
   );

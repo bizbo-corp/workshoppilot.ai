@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useRef, useEffect } from 'react';
+import { memo, useRef, useEffect, useState } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import {
   Rocket,
@@ -8,6 +8,7 @@ import {
   Target,
   BarChart3,
   ImageIcon,
+  ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
@@ -21,6 +22,10 @@ export type ConceptCardNodeRendererData = ConceptCardData & {
     score?: number,
     rationale?: string
   ) => void;
+  onReassign?: (cardId: string, ownerId: string, ownerName: string, ownerColor: string) => void;
+  availableOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string }>;
+  isFacilitator?: boolean;
+  isOwner?: boolean;
 };
 
 export type ConceptCardNodeType = Node<ConceptCardNodeRendererData, 'conceptCard'>;
@@ -194,6 +199,71 @@ function FeasibilityDimension({
   );
 }
 
+/**
+ * ReassignDropdown — facilitator-only dropdown to reassign a concept card to another participant
+ */
+function ReassignDropdown({
+  cardId,
+  currentOwnerId,
+  availableOwners,
+  onReassign,
+}: {
+  cardId: string;
+  currentOwnerId?: string;
+  availableOwners: Array<{ ownerId: string; ownerName: string; ownerColor: string }>;
+  onReassign: (cardId: string, ownerId: string, ownerName: string, ownerColor: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as globalThis.Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  const otherOwners = availableOwners.filter((o) => o.ownerId !== currentOwnerId);
+  if (otherOwners.length === 0) return null;
+
+  return (
+    <div ref={ref} className="relative nodrag nopan">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+        className="flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+      >
+        Reassign
+        <ChevronDown className="h-3 w-3" />
+      </button>
+      {open && (
+        <div className="absolute top-full mt-1 right-0 bg-card rounded-lg shadow-lg border border-border p-1 min-w-[160px] z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+          {otherOwners.map((owner) => (
+            <button
+              key={owner.ownerId}
+              onClick={(e) => {
+                e.stopPropagation();
+                onReassign(cardId, owner.ownerId, owner.ownerName, owner.ownerColor);
+                setOpen(false);
+              }}
+              className="flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
+            >
+              <div
+                className="h-2.5 w-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: owner.ownerColor }}
+              />
+              {owner.ownerName}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const ConceptCardNode = memo(
   ({ data, id, selected }: NodeProps<ConceptCardNodeType>) => {
     return (
@@ -204,7 +274,14 @@ export const ConceptCardNode = memo(
           color: 'var(--persona-text-strong)',
           borderWidth: 2,
           borderStyle: 'solid',
-          borderColor: selected ? SAGE.borderSelected : SAGE.border,
+          borderColor: selected
+            ? SAGE.borderSelected
+            : data.isOwner && data.ownerColor
+              ? data.ownerColor
+              : SAGE.border,
+          boxShadow: !selected && data.isOwner && data.ownerColor
+            ? `0 0 0 3px ${data.ownerColor}40, 0 0 20px 4px ${data.ownerColor}30`
+            : undefined,
         }}
       >
         {/* Drag handle grip bar */}
@@ -260,6 +337,32 @@ export const ConceptCardNode = memo(
             </p>
           </div>
         </div>
+
+        {/* ── Owner Band (multiplayer only) ── */}
+        {data.ownerName && (
+          <div
+            className="flex items-center justify-between px-6 py-2.5"
+            style={{ borderBottom: `1px solid ${SAGE.sectionBorder}` }}
+          >
+            <div className="flex items-center gap-2">
+              <div
+                className="h-3 w-3 rounded-full shrink-0"
+                style={{ backgroundColor: data.ownerColor || '#888' }}
+              />
+              <span className="text-sm font-medium" style={{ color: 'var(--persona-text-medium)' }}>
+                {data.ownerName}
+              </span>
+            </div>
+            {data.isFacilitator && data.availableOwners && data.onReassign && (
+              <ReassignDropdown
+                cardId={id}
+                currentOwnerId={data.ownerId}
+                availableOwners={data.availableOwners}
+                onReassign={data.onReassign}
+              />
+            )}
+          </div>
+        )}
 
         {/* ── 2. Elevator Pitch ── */}
         <div

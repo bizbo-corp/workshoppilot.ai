@@ -784,7 +784,7 @@ export default async function StepPage({ params }: StepPageProps) {
 
   // Load Step 8 data for Step 9 (concept)
   let step8SelectedSlotIds: string[] | undefined;
-  let step8Crazy8sSlots: Array<{ slotId: string; title: string; imageUrl?: string }> | undefined;
+  let step8Crazy8sSlots: Array<{ slotId: string; title: string; imageUrl?: string; ownerId?: string; ownerName?: string; ownerColor?: string }> | undefined;
 
   if (step.id === 'concept') {
     // Load Step 8 canvas state for crazy8sSlots and selectedSlotIds
@@ -834,6 +834,9 @@ export default async function StepPage({ params }: StepPageProps) {
           slotId: s.slotId,
           title: s.title,
           imageUrl: resolvedImageUrl,
+          ownerId: s.ownerId,
+          ownerName: s.ownerName,
+          ownerColor: s.ownerColor,
         };
       });
     }
@@ -898,6 +901,9 @@ export default async function StepPage({ params }: StepPageProps) {
             sketchSlotId: unit.group.slotIds[0],
             sketchImageUrl: heroImage,
             sketchGroupId: unit.group.id,
+            ownerId: firstSlot?.ownerId,
+            ownerName: firstSlot?.ownerName,
+            ownerColor: firstSlot?.ownerColor,
             cardState: 'skeleton',
             cardIndex: index,
             position: { x: index * 720, y: 0 },
@@ -909,6 +915,9 @@ export default async function StepPage({ params }: StepPageProps) {
             ideaSource: slot?.title || `Sketch ${unit.slotId}`,
             sketchSlotId: unit.slotId,
             sketchImageUrl: slot?.imageUrl,
+            ownerId: slot?.ownerId,
+            ownerName: slot?.ownerName,
+            ownerColor: slot?.ownerColor,
             cardState: 'skeleton',
             cardIndex: index,
             position: { x: index * 720, y: 0 },
@@ -973,6 +982,93 @@ export default async function StepPage({ params }: StepPageProps) {
         }
       }
     }
+
+    // ── Load-balanced ownership assignment for multiplayer ──
+    // After concept cards are created/repaired, ensure balanced ownership across participants
+    if (session.workshop.workshopType === 'multiplayer' && initialConceptCards.length > 0) {
+      // Load active session participants
+      const [workshopSessionForConcept] = await db
+        .select()
+        .from(workshopSessions)
+        .where(eq(workshopSessions.workshopId, session.workshop.id))
+        .limit(1);
+
+      if (workshopSessionForConcept) {
+        const allConceptParticipants = await db
+          .select()
+          .from(sessionParticipants)
+          .where(eq(sessionParticipants.sessionId, workshopSessionForConcept.id));
+        const activeConceptParticipants = allConceptParticipants.filter((p) => p.status !== 'removed');
+
+        // Include facilitator as potential owner
+        let conceptOwnerParticipant = activeConceptParticipants.find((p) => p.role === 'owner');
+        if (!conceptOwnerParticipant && user) {
+          conceptOwnerParticipant = activeConceptParticipants.find((p) => p.clerkUserId === user.id) || undefined;
+        }
+        const conceptParticipants = activeConceptParticipants.filter((p) => p.role === 'participant');
+
+        // Build participant list: facilitator first, then participants
+        type ConceptOwnerEntry = { ownerId: string; ownerName: string; ownerColor: string };
+        const availableOwners: ConceptOwnerEntry[] = [];
+        if (conceptOwnerParticipant) {
+          availableOwners.push({
+            ownerId: 'facilitator',
+            ownerName: conceptOwnerParticipant.displayName,
+            ownerColor: conceptOwnerParticipant.color,
+          });
+        }
+        for (const p of conceptParticipants) {
+          availableOwners.push({ ownerId: p.id, ownerName: p.displayName, ownerColor: p.color });
+        }
+
+        if (availableOwners.length > 0) {
+          const maxPerOwner = Math.ceil(initialConceptCards.length / availableOwners.length);
+
+          // Count current assignments per owner
+          const ownerCounts = new Map<string, number>();
+          for (const owner of availableOwners) ownerCounts.set(owner.ownerId, 0);
+          for (const card of initialConceptCards) {
+            if (card.ownerId && ownerCounts.has(card.ownerId)) {
+              ownerCounts.set(card.ownerId, (ownerCounts.get(card.ownerId) || 0) + 1);
+            }
+          }
+
+          // Redistribute over-allocated cards (round-robin to least-loaded)
+          const getLeastLoaded = (): ConceptOwnerEntry => {
+            let minCount = Infinity;
+            let minOwner = availableOwners[0];
+            for (const owner of availableOwners) {
+              const count = ownerCounts.get(owner.ownerId) || 0;
+              if (count < minCount) {
+                minCount = count;
+                minOwner = owner;
+              }
+            }
+            return minOwner;
+          };
+
+          initialConceptCards = initialConceptCards.map((card) => {
+            // Card has no owner → assign to least-loaded
+            if (!card.ownerId || !availableOwners.find((o) => o.ownerId === card.ownerId)) {
+              const target = getLeastLoaded();
+              ownerCounts.set(target.ownerId, (ownerCounts.get(target.ownerId) || 0) + 1);
+              return { ...card, ownerId: target.ownerId, ownerName: target.ownerName, ownerColor: target.ownerColor };
+            }
+
+            // Card owner has too many → redistribute excess
+            const currentCount = ownerCounts.get(card.ownerId) || 0;
+            if (currentCount > maxPerOwner) {
+              const target = getLeastLoaded();
+              ownerCounts.set(card.ownerId, currentCount - 1);
+              ownerCounts.set(target.ownerId, (ownerCounts.get(target.ownerId) || 0) + 1);
+              return { ...card, ownerId: target.ownerId, ownerName: target.ownerName, ownerColor: target.ownerColor };
+            }
+
+            return card;
+          });
+        }
+      }
+    }
   }
 
   // Reuse already-loaded canvas guides, falling back to hardcoded defaults
@@ -999,6 +1095,21 @@ export default async function StepPage({ params }: StepPageProps) {
       } catch { /* invalid JSON */ }
     }
   }
+
+  // Build conceptOwners from concept card data for multiplayer
+  const conceptOwners = session.workshop.workshopType === 'multiplayer' && initialConceptCards.length > 0
+    ? (() => {
+        const seen = new Set<string>();
+        const owners: Array<{ ownerId: string; ownerName: string; ownerColor: string }> = [];
+        for (const card of initialConceptCards) {
+          if (card.ownerId && card.ownerName && card.ownerColor && !seen.has(card.ownerId)) {
+            seen.add(card.ownerId);
+            owners.push({ ownerId: card.ownerId, ownerName: card.ownerName, ownerColor: card.ownerColor });
+          }
+        }
+        return owners;
+      })()
+    : undefined;
 
   return (
     <div className="h-full">
@@ -1047,6 +1158,7 @@ export default async function StepPage({ params }: StepPageProps) {
               participantDisplayName={participantDisplayName}
               participantColor={participantColor}
               ideationOwners={ideationOwners}
+              conceptOwners={conceptOwners}
               shareToken={workshopShareToken}
               workshopSessionId={workshopSessionId}
               journeyMapApproved={journeyMapApproved}

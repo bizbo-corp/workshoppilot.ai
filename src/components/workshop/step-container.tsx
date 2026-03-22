@@ -134,6 +134,7 @@ interface StepContainerProps {
   participantDisplayName?: string | null;
   participantColor?: string | null;
   ideationOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string; hmwBranchLabel: string; hmwFullStatement?: string }>;
+  conceptOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string }>;
   shareToken?: string | null;
   workshopSessionId?: string | null;
   journeyMapApproved?: boolean;
@@ -160,6 +161,7 @@ export function StepContainer({
   participantDisplayName,
   participantColor,
   ideationOwners,
+  conceptOwners,
   shareToken,
   workshopSessionId,
   journeyMapApproved = false,
@@ -1281,6 +1283,7 @@ export function StepContainer({
                   }
                   onTemplateStickyDelete={handleTemplateStickyDelete}
                   canvasRef={canvasRef}
+                  conceptOwners={conceptOwners}
                 />
                 {step.id === "concept" && (
                   <ConceptCanvasOverlay
@@ -1422,6 +1425,7 @@ export function StepContainer({
             onTemplateStickyPositionSync={handleTemplateStickyPositionSync}
             onTemplateStickyDelete={handleTemplateStickyDelete}
             canvasRef={canvasRef}
+            conceptOwners={conceptOwners}
           />
           {step.id === "concept" && (
             <ConceptCanvasOverlay
@@ -1525,7 +1529,7 @@ export function StepContainer({
           {/* Multiplayer controls — fixed top-right, below header bar on the canvas.
               Styled to match the bottom canvas toolbar (bg-card rounded-xl shadow-md border). */}
           <div className="fixed top-[4.5rem] right-4 z-50 flex items-center gap-0.5 bg-card rounded-xl shadow-md border border-border px-1.5 py-1">
-            <FacilitatorControls workshopId={workshopId} sessionId={sessionId} votingMode={stepOrder === 8 ? brainRewritingMatrices.length === 0 : undefined} />
+            <FacilitatorControls workshopId={workshopId} sessionId={sessionId} votingMode={stepOrder === 8 ? brainRewritingMatrices.length === 0 : undefined} stepOrder={stepOrder} />
             {isFacilitator && (
               <button
                 onClick={() => setShowParticipantOverview((v) => !v)}

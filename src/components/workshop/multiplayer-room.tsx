@@ -23,7 +23,7 @@ import {
 
 import { CountdownTimer } from "./countdown-timer";
 import { SessionEndedOverlay } from "./session-ended-overlay";
-import { useCanvasStore } from "@/providers/canvas-store-provider";
+import { useCanvasStore, useCanvasStoreApi } from "@/providers/canvas-store-provider";
 
 /**
  * MultiplayerContext — provides participant color, multiplayer flag, and
@@ -226,6 +226,35 @@ function ParticipantRemovedListener() {
 }
 
 /**
+ * ConceptActivityStartedListener — renderless component that listens for
+ * CONCEPT_ACTIVITY_STARTED broadcast events. On receipt, sets the activity flag,
+ * navigates the participant to their owned concept card, and shows a toast.
+ */
+function ConceptActivityStartedListener() {
+  const { isFacilitator, participantId } = useMultiplayerContext();
+  const setConceptActivityStarted = useCanvasStore((s) => s.setConceptActivityStarted);
+  const setPendingFocusCardId = useCanvasStore((s) => s.setPendingFocusCardId);
+  const storeApi = useCanvasStoreApi();
+
+  useEventListener(({ event }) => {
+    if (event.type !== 'CONCEPT_ACTIVITY_STARTED' || isFacilitator) return;
+
+    setConceptActivityStarted(true);
+
+    // Navigate to participant's owned concept card
+    if (participantId) {
+      const cards = storeApi.getState().conceptCards;
+      const myCard = cards.find((c) => c.ownerId === participantId);
+      if (myCard) setPendingFocusCardId(myCard.id);
+    }
+
+    toast('Activity started! Navigate to your concept card.', { duration: 4000 });
+  });
+
+  return null;
+}
+
+/**
  * MultiplayerRoomInner — rendered inside RoomProvider, reads the current
  * participant's color and role from Liveblocks presence and provides them
  * via context. Also renders PresenceBar (fixed overlay), JoinLeaveListener
@@ -259,6 +288,7 @@ function MultiplayerRoomInner({
       <SessionEndedListener sessionId={sessionId} workshopId={workshopId} />
       <VotingEventListener />
       <ParticipantRemovedListener />
+      <ConceptActivityStartedListener />
       <CountdownTimer />
       {children}
     </MultiplayerContext.Provider>

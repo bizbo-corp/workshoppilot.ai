@@ -65,6 +65,7 @@ type InitState = {
   votingSession?: VotingSession;
   votingCardPositions?: Record<string, { x: number; y: number }>;
   ideationPhase?: IdeationPhase;
+  conceptActivityStarted?: boolean;
 };
 
 /**
@@ -99,6 +100,7 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
     selectedStickyNoteIds: [],
     votingCardPositions: initState?.votingCardPositions || {},
     ideationPhase: initState?.ideationPhase || 'mind-mapping',
+    conceptActivityStarted: initState?.conceptActivityStarted || false,
   };
 
   return createStore<WithLiveblocks<CanvasStore>>()(
@@ -763,6 +765,8 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
           set(() => ({ ideationPhase: phase })),
 
         // no-ops in multiplayer — Liveblocks Storage is authoritative, not Neon auto-save
+        setConceptActivityStarted: (started) =>
+          set(() => ({ conceptActivityStarted: started })),
         markClean: () => {},
         markDirty: () => {},
       }),

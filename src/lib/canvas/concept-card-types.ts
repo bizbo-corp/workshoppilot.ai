@@ -8,6 +8,9 @@ export type ConceptCardData = {
   sketchSlotId?: string;       // Crazy 8s slot ID for traceability
   sketchImageUrl?: string;     // Vercel Blob URL from Crazy 8s slot
   sketchGroupId?: string;      // Group ID for traceability (merged group)
+  ownerId?: string;             // participantId or 'facilitator' (multiplayer ownership)
+  ownerName?: string;           // display name shown on card
+  ownerColor?: string;          // hex color for owner indicator dot
   elevatorPitch: string;
   usp: string;
   swot: {
@@ -37,6 +40,9 @@ export function createDefaultConceptCard(
     sketchSlotId: partial?.sketchSlotId,
     sketchImageUrl: partial?.sketchImageUrl,
     sketchGroupId: partial?.sketchGroupId,
+    ownerId: partial?.ownerId,
+    ownerName: partial?.ownerName,
+    ownerColor: partial?.ownerColor,
     elevatorPitch: partial?.elevatorPitch || '',
     usp: partial?.usp || '',
     swot: partial?.swot || {

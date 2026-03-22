@@ -34,6 +34,7 @@ import { ChatSkeleton } from "./chat-skeleton";
 import { toast } from "sonner";
 import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
+import type { ConceptCardData } from "@/lib/canvas/concept-card-types";
 
 /** Parse [PERSONA_TEMPLATE]{...}[/PERSONA_TEMPLATE] blocks from AI content */
 function parsePersonaTemplates(content: string): {
@@ -86,6 +87,36 @@ function parseHmwCards(content: string): {
   return { cleanContent, cards };
 }
 
+/** Parse [CONCEPT_CARD]{...JSON...}[/CONCEPT_CARD] blocks from AI content */
+function parseConceptCards(content: string): {
+  cleanContent: string;
+  cards: (Partial<ConceptCardData> & { cardIndex?: number })[];
+} {
+  const cards: (Partial<ConceptCardData> & { cardIndex?: number })[] = [];
+  const regex = /\[CONCEPT_CARD\]([\s\S]*?)\[\/CONCEPT_CARD\]/g;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1].trim());
+      cards.push(parsed);
+    } catch {
+      // Skip malformed JSON
+    }
+  }
+
+  let cleanContent = content
+    .replace(/\s*\[CONCEPT_CARD\][\s\S]*?\[\/CONCEPT_CARD\]\s*/g, " ")
+    .replace(/\s*\[CONCEPT_COMPLETE\]\s*/g, " ")
+    .trim();
+
+  // Strip incomplete blocks mid-stream
+  if (cleanContent.includes("[CONCEPT_CARD]")) {
+    cleanContent = cleanContent.replace(/\[CONCEPT_CARD\][\s\S]*$/, "").trim();
+  }
+
+  return { cleanContent, cards };
+}
+
 const CANVAS_ENABLED_STEPS = [
   "challenge", "stakeholder-mapping", "user-research", "sense-making",
   "persona", "journey-mapping", "reframe", "ideation", "concept",
@@ -124,6 +155,9 @@ export function ParticipantChatPanel({
   const mindMapNodes = useCanvasStore((s) => s.mindMapNodes);
   const mindMapEdges = useCanvasStore((s) => s.mindMapEdges);
   const setPendingFitView = useCanvasStore((s) => s.setPendingFitView);
+  const updateConceptCard = useCanvasStore((s) => s.updateConceptCard);
+  const addConceptCard = useCanvasStore((s) => s.addConceptCard);
+  const conceptActivityStarted = useCanvasStore((s) => s.conceptActivityStarted);
   const storeApi = useCanvasStoreApi();
 
   const [quickAck, setQuickAck] = React.useState<string | null>(null);
@@ -166,13 +200,15 @@ export function ParticipantChatPanel({
   useAutoSave(sessionId, stepId, messages, participantId);
 
   // Auto-start: send hidden trigger when entering a step with no prior messages
+  // For Step 9 (concept), wait until the facilitator clicks "Start Activity"
   const hasAutoStarted = React.useRef(false);
   React.useEffect(() => {
     if (
       (!initialMessages || initialMessages.length === 0) &&
       messages.length === 0 &&
       status === "ready" &&
-      !hasAutoStarted.current
+      !hasAutoStarted.current &&
+      (stepId !== "concept" || conceptActivityStarted)
     ) {
       hasAutoStarted.current = true;
       setQuickAck(getRandomAck());
@@ -181,7 +217,7 @@ export function ParticipantChatPanel({
         parts: [{ type: "text", text: "__step_start__" }],
       });
     }
-  }, [initialMessages, messages.length, status, sendMessage]);
+  }, [initialMessages, messages.length, status, sendMessage, stepId, conceptActivityStarted]);
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
@@ -495,6 +531,42 @@ export function ParticipantChatPanel({
       }
     }
 
+    // Process concept card blocks (concept step) — ownership-based matching
+    const { cards: conceptCardParsed } = parseConceptCards(content);
+    if (conceptCardParsed.length > 0 && stepId === 'concept') {
+      let latestConceptCards = storeApi.getState().conceptCards;
+
+      for (const parsed of conceptCardParsed) {
+        const targetIndex = parsed.cardIndex ?? 0;
+        // Match by ownerId first (participant's own card), fall back to cardIndex
+        const existing = latestConceptCards.find((c) => c.ownerId === participantId)
+          ?? latestConceptCards.find((c) => (c.cardIndex ?? 0) === targetIndex);
+
+        if (existing) {
+          const updates: Partial<ConceptCardData> = { ...parsed };
+
+          // Transition skeleton → active on first update
+          if (existing.cardState === 'skeleton') {
+            updates.cardState = 'active';
+          }
+
+          // Auto-detect 'filled' state
+          const merged = { ...existing, ...updates };
+          const hasPitch = !!merged.elevatorPitch;
+          const hasUsp = !!merged.usp;
+          const hasSwot = merged.swot?.strengths?.some((s: string) => !!s);
+          const hasFeasibility = merged.feasibility?.technical?.score > 0;
+          if (hasPitch && hasUsp && hasSwot && hasFeasibility) {
+            updates.cardState = 'filled';
+          }
+
+          updateConceptCard(existing.id, updates);
+        }
+        // Refresh reference for subsequent iterations
+        latestConceptCards = storeApi.getState().conceptCards;
+      }
+    }
+
     // Process canvas items (sticky notes)
     const { canvasItems } = parseCanvasItems(content);
     if (canvasItems.length === 0) return;
@@ -509,7 +581,7 @@ export function ParticipantChatPanel({
     if (addedCount > 0) {
       toast.success(`${addedCount} item${addedCount > 1 ? "s" : ""} added to board`);
     }
-  }, [lastAssistantMsg, status, isCanvasStep, stepId, storeApi, addStickyNote, addPersonaTemplate, updatePersonaTemplate, addHmwCard, updateHmwCard, participantId, displayName, participantColor]);
+  }, [lastAssistantMsg, status, isCanvasStep, stepId, storeApi, addStickyNote, addPersonaTemplate, updatePersonaTemplate, addHmwCard, updateHmwCard, updateConceptCard, addConceptCard, participantId, displayName, participantColor]);
 
   // HMW chip selection effect — sends chip selection messages to AI when participant
   // clicks a suggestion chip on their HMW card. Same pattern as facilitator chat panel.
@@ -560,6 +632,11 @@ export function ParticipantChatPanel({
       // Strip [HMW_CARD] markup — rendered on canvas, not in chat
       .replace(/\[HMW_CARD\][\s\S]*?\[\/HMW_CARD\]/g, "")
       .replace(/\[HMW_CARD\][\s\S]*$/g, "")
+      // Strip [CONCEPT_CARD] markup — facilitator-only, rendered on canvas
+      .replace(/\[CONCEPT_CARD\][\s\S]*?\[\/CONCEPT_CARD\]/g, "")
+      .replace(/\[CONCEPT_CARD\][\s\S]*$/g, "")
+      // Strip [CONCEPT_COMPLETE] marker
+      .replace(/\s*\[CONCEPT_COMPLETE\]\s*/g, " ")
       // Strip [MIND_MAP_NODE] markup — rendered as clickable chips below
       .replace(/\[MIND_MAP_NODE(?:\s+[^\]]*?)?\][\s\S]*?\[\/MIND_MAP_NODE\]/g, "")
       .replace(/\[MIND_MAP_NODE:\s*[^\]]+\]/g, "")

@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useBroadcastEvent, useOthers, useUpdateMyPresence } from '@liveblocks/react';
 import { shallow } from '@liveblocks/react';
 import { useRouter } from 'next/navigation';
-import { Eye, Timer, Square, Pause, Play, X, RotateCcw, CheckCircle2 } from 'lucide-react';
+import { Eye, Timer, Square, Pause, Play, X, RotateCcw, CheckCircle2, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -57,9 +57,10 @@ interface FacilitatorControlsProps {
   workshopId: string;
   sessionId: string;
   votingMode?: boolean; // true when in idea-selection phase (Step 8)
+  stepOrder?: number;
 }
 
-export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingMode }: FacilitatorControlsProps) {
+export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingMode, stepOrder }: FacilitatorControlsProps) {
   const { isFacilitator } = useMultiplayerContext();
   const broadcast = useBroadcastEvent();
   const router = useRouter();
@@ -71,6 +72,9 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
   const resetAndOpenVoting = useCanvasStore((s) => s.resetAndOpenVoting);
   const setVotingResults = useCanvasStore((s) => s.setVotingResults);
   const votingSession = useCanvasStore((s) => s.votingSession);
+  const setConceptActivityStarted = useCanvasStore((s) => s.setConceptActivityStarted);
+  const conceptActivityStarted = useCanvasStore((s) => s.conceptActivityStarted);
+  const setPendingFocusCardId = useCanvasStore((s) => s.setPendingFocusCardId);
   const storeApi = useCanvasStoreApi();
   const updatePresence = useUpdateMyPresence();
 
@@ -453,6 +457,29 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
             >
               <RotateCcw className="h-4 w-4" />
               <span className="hidden sm:inline">Reset Votes</span>
+            </button>
+          </>
+        )}
+
+        {/* Start Activity button — Step 9 only */}
+        {stepOrder === 9 && !conceptActivityStarted && (
+          <>
+            <div className="w-px h-5 bg-border mx-0.5" />
+            <button
+              onClick={() => {
+                broadcast({ type: 'CONCEPT_ACTIVITY_STARTED' });
+                setConceptActivityStarted(true);
+                // Focus facilitator on their first owned concept card
+                const cards = storeApi.getState().conceptCards;
+                const myCard = cards.find((c) => c.ownerId === 'facilitator');
+                if (myCard) setPendingFocusCardId(myCard.id);
+                toast('Activity started — participants navigated to their cards', { duration: 3000 });
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              title="Start concept development activity for all participants"
+            >
+              <Rocket className="h-4 w-4" />
+              <span className="hidden sm:inline">Start Activity</span>
             </button>
           </>
         )}

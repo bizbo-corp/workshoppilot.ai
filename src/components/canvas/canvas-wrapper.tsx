@@ -26,9 +26,10 @@ export interface CanvasWrapperProps {
   onTemplateStickyPositionSync?: (templateKey: string, x: number, y: number) => void;
   onTemplateStickyDelete?: (templateKey: string) => void;
   canvasRef?: React.Ref<{ getViewport: () => { x: number; y: number; zoom: number }; screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number } }>;
+  conceptOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string }>;
 }
 
-export function CanvasWrapper({ sessionId, stepId, workshopId, workshopType, canvasGuides, defaultViewportSettings, isAdmin, isAdminEditing, onEditGuide, onAddGuide, onGuidePositionUpdate, onGuideSizeUpdate, onTemplateStickyPositionSync, onTemplateStickyDelete, canvasRef }: CanvasWrapperProps) {
+export function CanvasWrapper({ sessionId, stepId, workshopId, workshopType, canvasGuides, defaultViewportSettings, isAdmin, isAdminEditing, onEditGuide, onAddGuide, onGuidePositionUpdate, onGuideSizeUpdate, onTemplateStickyPositionSync, onTemplateStickyDelete, canvasRef, conceptOwners }: CanvasWrapperProps) {
   return (
     <ReactFlowCanvas
       sessionId={sessionId}
@@ -46,6 +47,7 @@ export function CanvasWrapper({ sessionId, stepId, workshopId, workshopType, can
       onTemplateStickyPositionSync={onTemplateStickyPositionSync}
       onTemplateStickyDelete={onTemplateStickyDelete}
       canvasRef={canvasRef}
+      conceptOwners={conceptOwners}
     />
   );
 }

@@ -213,9 +213,46 @@ Rules:
 STEP COMPLETION: When wrapping up, summarize what was captured, then close with: "Feel free to add and edit things directly on the mind map. Standby for the exercise to end when the facilitator warns you they will move to the next step."`,
 
   concept: `PARTICIPANT GUIDANCE (Concept):
-Help the participant flesh out concept details — value propositions, user flows, key features. Generate items as [CANVAS_ITEM] tags for the concept cards.
+You are guiding a participant through developing THEIR concept card — filling in each section collaboratively.
 
-STEP COMPLETION: When wrapping up, summarize what was captured, then close with: "Feel free to add and edit things directly to the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."`,
+The CANVAS STATE shows ONLY this participant's assigned concept card(s). Develop each card one at a time through the full cycle.
+
+CONVERSATION FLOW:
+Guide naturally — don't announce phases. Fill cards progressively: concept name → elevator pitch & USP → SWOT → feasibility.
+
+1. WELCOME & NAMING:
+Open by acknowledging the idea they're developing (from their sketch). Give it a strong name and send a [CONCEPT_CARD] block with the conceptName. Ask them for their elevator pitch.
+
+2. ELEVATOR PITCH & USP:
+Two paths — user writes their own pitch (refine it) or says "draft it for me" (you write it). Either way, include a [CONCEPT_CARD] block with elevatorPitch and usp.
+
+3. SWOT ANALYSIS:
+Fill all 4 quadrants (exactly 3 items each). Ground each bullet in prior steps. Include a [CONCEPT_CARD] block with the full swot object.
+
+4. FEASIBILITY SCORING:
+Fill all 3 dimensions with scores (1-5) + rationale. Include a [CONCEPT_CARD] block with the full feasibility object.
+
+5. COMPLETION:
+When all assigned cards are filled, celebrate the work. Close with: "Feel free to edit things directly on the card. Standby for the exercise to end when the facilitator warns you they will move to the next step."
+
+[CONCEPT_CARD] FORMAT:
+[CONCEPT_CARD]
+{"cardIndex": 0, "conceptName": "Name Here", "elevatorPitch": "...", "usp": "..."}
+[/CONCEPT_CARD]
+
+Rules:
+- Use the cardIndex shown in CANVAS STATE to target the correct card
+- Send partial updates — only include fields you're filling
+- One [CONCEPT_CARD] block per message max
+- SWOT: "swot": {"strengths": [...], "weaknesses": [...], "opportunities": [...], "threats": [...]} — exactly 3 per quadrant
+- Feasibility: "feasibility": {"technical": {"score": N, "rationale": "..."}, "business": {...}, "userDesirability": {...}}
+
+IMPORTANT:
+- Develop ONLY the cards shown in your CANVAS STATE (these are this participant's assigned cards)
+- Do NOT reference or ask about other participants' cards
+- One question at a time — never stack multiple questions
+- ALWAYS end messages with [SUGGESTIONS] (except completion)
+- Make it feel like collaborative writing, not form filling`,
 
   synthesis: `PARTICIPANT GUIDANCE (Synthesis):
 Help the participant reflect on the workshop journey and identify key takeaways. This is a good time to discuss what resonated most and what they'd want to explore further.
