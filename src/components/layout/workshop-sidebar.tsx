@@ -25,6 +25,7 @@ import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
+  SidebarFooter,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
@@ -187,34 +188,6 @@ export function WorkshopSidebar({
         {state === "collapsed" ? <LogoIcon size="lg" /> : <Logo size="md" />}
       </SidebarHeader>
 
-      {/* Toggle row between logo and steps */}
-      <div className="border-b px-2 py-2">
-        {state === "expanded" ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleTogglePin}
-            className="w-full justify-start hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
-            title={isPinned ? "Collapse sidebar (⌘B)" : "Pin sidebar open (⌘B)"}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="ml-2 text-sm text-muted-foreground">
-              {isPinned ? "Collapse" : "Pin open"} (⌘B)
-            </span>
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleTogglePin}
-            className="mx-auto flex h-8 w-8 hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
-            title="Expand sidebar (⌘B)"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-
       <SidebarContent className="p-2">
         <SidebarMenu>
           {STEPS.map((step) => {
@@ -309,6 +282,33 @@ export function WorkshopSidebar({
           })}
         </SidebarMenu>
       </SidebarContent>
+
+      <SidebarFooter className="border-t px-2 py-2">
+        {state === "expanded" ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleTogglePin}
+            className="w-full justify-start hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
+            title={isPinned ? "Collapse sidebar (⌘B)" : "Pin sidebar open (⌘B)"}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="ml-2 text-sm text-muted-foreground">
+              {isPinned ? "Collapse" : "Pin open"} (⌘B)
+            </span>
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleTogglePin}
+            className="mx-auto flex h-8 w-8 hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
+            title="Expand sidebar (⌘B)"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
+      </SidebarFooter>
 
       {viewingSnapshot && (
         <StepSnapshotDialog

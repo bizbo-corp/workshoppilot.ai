@@ -15,6 +15,7 @@ import {
   UserPlus,
   ArrowRight,
   Rocket,
+  RefreshCw,
 } from "lucide-react";
 import { PersonaInterrupt } from "./persona-interrupt";
 import { getStepByOrder } from "@/lib/workshop/step-metadata";
@@ -45,6 +46,7 @@ import {
   createDefaultConceptCard,
   type ConceptCardData,
 } from "@/lib/canvas/concept-card-types";
+import { computeCardState } from "@/lib/canvas/concept-card-utils";
 import { THEME_COLORS, ROOT_COLOR } from "@/lib/canvas/mind-map-theme-colors";
 import { computeNewNodePosition } from "@/lib/canvas/mind-map-layout";
 import { getStepCanvasConfig } from "@/lib/canvas/step-canvas-config";
@@ -1753,15 +1755,9 @@ export function ChatPanel({
             updates.cardState = "active";
           }
 
-          // Auto-detect 'filled' state: check if all major sections have content
-          const merged = { ...existing, ...updates };
-          const hasPitch = !!merged.elevatorPitch;
-          const hasUsp = !!merged.usp;
-          const hasSwot = merged.swot?.strengths?.some((s) => !!s);
-          const hasFeasibility = merged.feasibility?.technical?.score > 0;
-          if (hasPitch && hasUsp && hasSwot && hasFeasibility) {
-            updates.cardState = "filled";
-          }
+          // Auto-detect card state from merged fields
+          const merged = { ...existing, ...updates } as ConceptCardData;
+          updates.cardState = computeCardState(merged);
 
           updateConceptCard(existing.id, updates);
         } else {
@@ -2197,6 +2193,7 @@ export function ChatPanel({
                         const displayContent = content
                           .replace(/\[STEP_CONFIRMED\]\s*/g, "")
                           .replace(/\[SUGGEST_QUESTIONS\]\s*/g, "")
+                          .replace(/\[CATCH_UP_EDITS\]\s*/g, "")
                           .trim();
                         return (
                           <div
@@ -2800,6 +2797,34 @@ export function ChatPanel({
                         <p className="text-sm font-medium text-foreground pl-1">
                           Your turn — give me your next question.
                         </p>
+                      </div>
+                    )}
+
+                  {/* "Catch up on my edits" — concept step sync button */}
+                  {step.id === "concept" &&
+                    status === "ready" &&
+                    !isLoading && (
+                      <div className="flex justify-center pt-1">
+                        <button
+                          onClick={async () => {
+                            await flushCanvasToDb();
+                            sendMessage({
+                              role: "user",
+                              parts: [
+                                {
+                                  type: "text",
+                                  text: "[CATCH_UP_EDITS] I've been editing the concept cards directly — catch up on my changes and pick up where we left off.",
+                                },
+                              ],
+                            });
+                          }}
+                          className={cn(
+                            "cursor-pointer inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-xs text-muted-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors",
+                          )}
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Catch up on my edits
+                        </button>
                       </div>
                     )}
 

@@ -36,6 +36,8 @@ import { PersonaTemplateNode } from "./persona-template-node";
 import { HmwCardNode } from "./hmw-card-node";
 import { CanvasToolbar } from "./canvas-toolbar";
 import type { ConceptCardData } from "@/lib/canvas/concept-card-types";
+import { hasExistingContent, type ConceptFieldId } from "@/lib/canvas/concept-card-utils";
+import { useConceptCardGenerate } from "@/hooks/use-concept-card-generate";
 import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
 import { ColorPicker } from "./color-picker";
@@ -274,6 +276,9 @@ function ReactFlowCanvasInner({
   // Multiplayer context — provides participant color for new sticky notes
   // Returns { isMultiplayer: false, participantColor: null } when not inside RoomProvider (solo mode)
   const { isMultiplayer, participantColor, isFacilitator, participantId } = useMultiplayerContext();
+
+  // Concept card AI generation hook
+  const { generating: conceptGenerating, generateAll: conceptGenerateAll, generateField: conceptGenerateField, elaborate: conceptElaborate } = useConceptCardGenerate(workshopId);
 
   // Mapping from participant hex color to the closest StickyNoteColor.
   // Matches PARTICIPANT_COLORS order in liveblocks/config.ts.
@@ -1131,31 +1136,50 @@ function ReactFlowCanvasInner({
     });
 
     // Add concept card nodes
-    const conceptCardReactFlowNodes: Node[] = conceptCards.map((card) => ({
-      id: card.id,
-      type: "conceptCard" as const,
-      position: livePositions.current[card.id] || card.position,
-      zIndex: nodeZIndicesRef.current[card.id] || 20,
-      draggable: true,
-      dragHandle: '.card-drag-handle',
-      selectable: true,
-      selected: selectedNodeIds.includes(card.id),
-      data: {
-        ...card,
-        onFieldChange: handleConceptFieldChange,
-        onSWOTChange: handleConceptSWOTChange,
-        onFeasibilityChange: handleConceptFeasibilityChange,
-        onReassign: handleConceptReassign,
-        availableOwners: conceptOwners,
-        isFacilitator,
-        isMultiplayer,
-        isOwner: isMultiplayer && (
-          (isFacilitator && card.ownerId === 'facilitator') ||
-          (!!participantId && card.ownerId === participantId)
-        ),
-      },
-      style: { width: 680 },
-    }));
+    const conceptCardReactFlowNodes: Node[] = conceptCards.map((card) => {
+      const cardIsOwner = isMultiplayer && (
+        (isFacilitator && card.ownerId === 'facilitator') ||
+        (!!participantId && card.ownerId === participantId)
+      );
+      const canAiGenerate = !isMultiplayer || cardIsOwner || isFacilitator;
+
+      return {
+        id: card.id,
+        type: "conceptCard" as const,
+        position: livePositions.current[card.id] || card.position,
+        zIndex: nodeZIndicesRef.current[card.id] || 20,
+        draggable: true,
+        dragHandle: '.card-drag-handle',
+        selectable: true,
+        selected: selectedNodeIds.includes(card.id),
+        data: {
+          ...card,
+          onFieldChange: handleConceptFieldChange,
+          onSWOTChange: handleConceptSWOTChange,
+          onFeasibilityChange: handleConceptFeasibilityChange,
+          onReassign: handleConceptReassign,
+          onGenerateField: canAiGenerate ? (_id: string, field: ConceptFieldId) => {
+            conceptGenerateField(_id, field);
+          } : undefined,
+          onGenerateAll: canAiGenerate ? (_id: string) => {
+            const c = conceptCards.find((cc) => cc.id === _id);
+            if (c && hasExistingContent(c)) {
+              if (!window.confirm('This will overwrite existing content. Continue?')) return;
+            }
+            conceptGenerateAll(_id);
+          } : undefined,
+          onElaborate: canAiGenerate ? (_id: string, field: ConceptFieldId, content: string, instructions: string) => {
+            conceptElaborate(_id, field, content, instructions);
+          } : undefined,
+          generatingState: conceptGenerating[card.id],
+          availableOwners: conceptOwners,
+          isFacilitator,
+          isMultiplayer,
+          isOwner: cardIsOwner,
+        },
+        style: { width: 680 },
+      };
+    });
 
     // Add persona template nodes
     const personaTemplateReactFlowNodes: Node[] = personaTemplates.map(

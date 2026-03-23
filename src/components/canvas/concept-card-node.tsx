@@ -10,9 +10,15 @@ import {
   ImageIcon,
   ChevronDown,
   Check,
+  Wand2,
+  Loader2,
+  RefreshCw,
+  Send,
+  GripHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
+import type { ConceptFieldId } from '@/lib/canvas/concept-card-utils';
 
 export type ConceptCardNodeRendererData = ConceptCardData & {
   onFieldChange?: (id: string, field: string, value: string) => void;
@@ -24,6 +30,10 @@ export type ConceptCardNodeRendererData = ConceptCardData & {
     rationale?: string
   ) => void;
   onReassign?: (cardId: string, ownerId: string, ownerName: string, ownerColor: string) => void;
+  onGenerateField?: (id: string, field: ConceptFieldId) => void;
+  onGenerateAll?: (id: string) => void;
+  onElaborate?: (id: string, field: ConceptFieldId, content: string, instructions: string) => void;
+  generatingState?: Record<string, boolean>;
   availableOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string }>;
   isFacilitator?: boolean;
   isOwner?: boolean;
@@ -132,12 +142,14 @@ function FeasibilityDimension({
   label,
   score,
   rationale,
+  accentColor,
   onScoreChange,
   onRationaleChange,
 }: {
   label: string;
   score: number;
   rationale: string;
+  accentColor?: string;
   onScoreChange: (score: number) => void;
   onRationaleChange: (rationale: string) => void;
 }) {
@@ -152,42 +164,38 @@ function FeasibilityDimension({
     }
   }, [rationale]);
 
-  const getScoreColor = (s: number) => {
-    if (s >= 4) return 'bg-green-500';
-    if (s >= 2) return 'bg-amber-500';
-    if (s >= 1) return 'bg-red-500';
-    return 'bg-muted';
-  };
-
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium" style={{ color: 'var(--persona-text-strong)' }}>{label}</span>
         <div className="flex gap-1">
-          {[1, 2, 3, 4, 5].map((dotScore) => (
-            <button
-              key={dotScore}
-              onClick={(e) => {
-                e.stopPropagation();
-                onScoreChange(dotScore);
-              }}
-              className={cn(
-                'nodrag nopan h-3 w-3 rounded-full transition-colors hover:opacity-80',
-                dotScore <= score ? getScoreColor(score) : 'bg-neutral-olive-300 dark:bg-neutral-olive-700'
-              )}
-              aria-label={`Set ${label} score to ${dotScore}`}
-            />
-          ))}
+          {[1, 2, 3, 4, 5].map((dotScore) => {
+            const filled = dotScore <= score;
+            return (
+              <button
+                key={dotScore}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onScoreChange(dotScore);
+                }}
+                className={cn(
+                  'nodrag nopan h-3 w-3 rounded-full transition-colors hover:opacity-80',
+                  !filled && 'bg-neutral-olive-300 dark:bg-neutral-olive-700',
+                )}
+                style={filled ? { backgroundColor: accentColor || '#608850' } : undefined}
+                aria-label={`Set ${label} score to ${dotScore}`}
+              />
+            );
+          })}
         </div>
       </div>
       <textarea
         ref={rationaleRef}
-        className="nodrag nopan w-full resize-none rounded border bg-transparent px-2 py-1 text-xs outline-none placeholder:text-olive-500/40"
+        className="nodrag nopan w-full resize-none bg-transparent text-xs outline-none transition-colors placeholder:text-olive-500/40 focus:bg-card/60 focus:rounded-md focus:px-2 focus:py-1"
         style={{
-          borderColor: SAGE.sectionBorder,
           color: 'var(--persona-text-muted)',
         }}
-        rows={2}
+        rows={1}
         placeholder="Rationale..."
         defaultValue={rationale}
         onBlur={(e) => onRationaleChange(e.target.value)}
@@ -266,11 +274,153 @@ function ReassignDropdown({
   );
 }
 
+/**
+ * SectionAiButton — small AI wand icon next to section headers.
+ * Empty field: single click generates. Has content: opens popover with Regenerate/Elaborate.
+ */
+function SectionAiButton({
+  field,
+  hasContent,
+  isGenerating,
+  canGenerate,
+  onGenerate,
+  onElaborate,
+}: {
+  field: ConceptFieldId;
+  hasContent: boolean;
+  isGenerating: boolean;
+  canGenerate: boolean;
+  onGenerate: () => void;
+  onElaborate: (instructions: string) => void;
+}) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [showElaborate, setShowElaborate] = useState(false);
+  const [instructions, setInstructions] = useState('');
+  const menuRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as globalThis.Node)) {
+        setShowMenu(false);
+        setShowElaborate(false);
+        setInstructions('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
+
+  useEffect(() => {
+    if (showElaborate && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [showElaborate]);
+
+  if (!canGenerate) return null;
+
+  if (isGenerating) {
+    return (
+      <Loader2 className="h-3 w-3 shrink-0 animate-spin text-olive-500" />
+    );
+  }
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!hasContent) {
+      onGenerate();
+    } else {
+      setShowMenu(!showMenu);
+    }
+  };
+
+  return (
+    <div ref={menuRef} className="relative nodrag nopan">
+      <button
+        onClick={handleClick}
+        className="flex items-center justify-center rounded-md p-0.5 text-olive-500/60 hover:text-olive-600 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+        aria-label={`AI generate ${field}`}
+      >
+        <Wand2 className="h-3 w-3" />
+      </button>
+      {showMenu && (
+        <div className="absolute top-full mt-1 right-0 bg-card rounded-lg shadow-lg border border-border p-1 min-w-[160px] z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onGenerate();
+              setShowMenu(false);
+            }}
+            className="flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
+          >
+            <RefreshCw className="h-3 w-3" />
+            Regenerate
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowElaborate(true);
+            }}
+            className="flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
+          >
+            <Wand2 className="h-3 w-3" />
+            Elaborate
+          </button>
+          {showElaborate && (
+            <div className="mt-1 border-t border-border pt-1">
+              <div className="flex items-center gap-1 px-1">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && instructions.trim()) {
+                      onElaborate(instructions.trim());
+                      setShowMenu(false);
+                      setShowElaborate(false);
+                      setInstructions('');
+                    }
+                  }}
+                  placeholder="How to improve..."
+                  className="flex-1 rounded border border-border bg-transparent px-2 py-1 text-xs outline-none placeholder:text-muted-foreground"
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (instructions.trim()) {
+                      onElaborate(instructions.trim());
+                      setShowMenu(false);
+                      setShowElaborate(false);
+                      setInstructions('');
+                    }
+                  }}
+                  disabled={!instructions.trim()}
+                  className="rounded p-1 hover:bg-accent disabled:opacity-40 transition-colors"
+                >
+                  <Send className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const ConceptCardNode = memo(
   ({ data, id, selected }: NodeProps<ConceptCardNodeType>) => {
     const isFilled = data.cardState === 'filled';
     const isActive = data.cardState === 'active';
     const isNonOwned = data.isMultiplayer && !data.isOwner && !data.isFacilitator;
+
+    // AI generation state
+    const gs = data.generatingState || {};
+    const isGeneratingAll = !!gs['all'];
+    const canGenerate = !data.isMultiplayer || !!data.isOwner || !!data.isFacilitator;
+    const anyGenerating = Object.values(gs).some(Boolean);
 
     // Guard against incomplete data from DB
     const defaultDim = { score: 0, rationale: '' };
@@ -322,74 +472,73 @@ export const ConceptCardNode = memo(
             <Check className="h-5 w-5 text-white" strokeWidth={3} />
           </div>
         )}
-        {/* Drag handle grip bar */}
-        <div className="card-drag-handle flex items-center justify-center w-full h-6 cursor-grab active:cursor-grabbing bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded-t-2xl">
-          <svg width="32" height="4" viewBox="0 0 32 4" fill="currentColor" className="text-neutral-olive-400">
-            <rect x="0" y="0" width="32" height="2" rx="1" />
-          </svg>
+
+        {/* ── Header Top: Drag handle bar — full owner color ── */}
+        <div
+          className="card-drag-handle relative flex items-center justify-center cursor-grab active:cursor-grabbing rounded-t-2xl py-2"
+          style={{
+            backgroundColor: oc || 'var(--persona-header-bg)',
+          }}
+        >
+          <GripHorizontal className="h-4 w-4 text-white/50" />
+
+          {/* Generate All — top-right on drag bar */}
+          {canGenerate && data.onGenerateAll && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                data.onGenerateAll?.(id);
+              }}
+              disabled={anyGenerating}
+              className={cn(
+                'nodrag nopan absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors',
+                'text-white/70 hover:bg-white/15 hover:text-white',
+                'disabled:opacity-40 disabled:cursor-not-allowed',
+              )}
+              aria-label="Generate all fields"
+            >
+              {isGeneratingAll ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Sparkles className="h-3 w-3" />
+              )}
+              {isGeneratingAll ? 'Generating...' : 'Generate All'}
+            </button>
+          )}
         </div>
 
-        <Handle
-          type="target"
-          position={Position.Top}
-          className="!opacity-0 !w-0 !h-0"
-        />
-
-        {/* ── 1. Hero: Sketch Image with gradient overlay + title ── */}
-        <div className="relative w-full overflow-hidden" style={{ height: 480 }}>
-          {/* Background: image or solid color */}
-          {data.sketchImageUrl ? (
-            <img
-              src={data.sketchImageUrl}
-              alt="Concept sketch"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          ) : (
-            <div
-              className="absolute inset-0 flex flex-col items-center justify-center gap-3"
-              style={{ backgroundColor: SAGE.headerBg }}
-            >
-              <ImageIcon className="h-12 w-12 text-white/30" />
-              <span className="text-sm font-medium text-white/40">Awaiting sketch...</span>
-            </div>
-          )}
-
-          {/* Gradient overlay for text readability */}
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3"
-            style={{
-              background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
-            }}
-          />
-
-          {/* Concept name + source overlay — positioned at bottom-left */}
-          <div className="pointer-events-auto absolute inset-x-0 bottom-0 px-6 pb-5">
+        {/* ── Header Bottom: Info section — 20% owner color tint ── */}
+        <div
+          className="relative px-6 pb-4 pt-3"
+          style={{
+            backgroundColor: oc
+              ? `color-mix(in srgb, ${oc} 20%, ${SAGE.bg})`
+              : SAGE.bg,
+          }}
+        >
+          {/* Concept name — editable, dark text for accessibility */}
+          <div style={{ color: 'var(--persona-text-strong)' }}>
             <EditableField
               value={data.conceptName}
               placeholder="Concept Name"
               onBlur={(v) => data.onFieldChange?.(id, 'conceptName', v)}
-              className="text-2xl font-bold text-white placeholder:text-white/40 drop-shadow-md focus:bg-white/10"
+              className="text-2xl font-bold text-inherit placeholder:text-olive-500/40 focus:bg-black/5"
             />
-            <p className="mt-1 text-sm font-medium text-white/80 drop-shadow-md">
-              From: {data.ideaSource || 'Unknown source'}
-            </p>
           </div>
-        </div>
 
-        {/* ── Owner Band (multiplayer only) ── */}
-        {data.ownerName && (
-          <div
-            className="flex items-center justify-between px-6 py-2.5"
-            style={{ borderBottom: `1px solid ${sectionBorder}` }}
-          >
-            <div className="flex items-center gap-2">
-              <div
-                className="h-3 w-3 rounded-full shrink-0"
-                style={{ backgroundColor: data.ownerColor || '#888' }}
-              />
-              <span className="text-sm font-medium" style={{ color: 'var(--persona-text-medium)' }}>
-                {data.ownerName}
-              </span>
+          {/* Owner name + source + Reassign */}
+          <div className="flex items-center justify-between mt-1">
+            <div className="flex flex-col">
+              {data.ownerName && (
+                <span className="text-sm font-medium" style={{ color: 'var(--persona-text-medium)' }}>
+                  {data.ownerName}
+                </span>
+              )}
+              {data.ideaSource && (
+                <span className="text-xs" style={{ color: 'var(--persona-text-muted)' }}>
+                  From: {data.ideaSource}
+                </span>
+              )}
             </div>
             {data.isFacilitator && data.availableOwners && data.onReassign && (
               <ReassignDropdown
@@ -400,6 +549,50 @@ export const ConceptCardNode = memo(
               />
             )}
           </div>
+        </div>
+
+        <Handle
+          type="target"
+          position={Position.Top}
+          className="!opacity-0 !w-0 !h-0"
+        />
+
+        {/* ── 1. Sketch Image — multiply blend onto tinted background ── */}
+        {data.sketchImageUrl ? (
+          <div
+            className="relative w-full overflow-hidden"
+            style={{
+              height: 480,
+              backgroundColor: oc
+                ? `color-mix(in srgb, ${oc} 12%, ${SAGE.bg})`
+                : cardBg,
+            }}
+          >
+            <img
+              src={data.sketchImageUrl}
+              alt="Concept sketch"
+              className="h-full w-full object-cover"
+              style={{ mixBlendMode: 'multiply' }}
+            />
+          </div>
+        ) : (
+          <div
+            className="relative w-full flex flex-col items-center justify-center gap-3"
+            style={{
+              height: 480,
+              backgroundColor: oc
+                ? `color-mix(in srgb, ${oc} 15%, ${SAGE.bg})`
+                : SAGE.headerBg,
+            }}
+          >
+            <ImageIcon className="h-12 w-12" style={{ color: 'var(--persona-text-muted)', opacity: 0.3 }} />
+            <span className="text-sm font-medium" style={{ color: 'var(--persona-text-muted)', opacity: 0.5 }}>Awaiting sketch...</span>
+          </div>
+        )}
+
+        {/* Generate-all shimmer overlay */}
+        {isGeneratingAll && (
+          <div className="absolute inset-0 z-20 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse pointer-events-none" />
         )}
 
         {/* ── 2. Elevator Pitch ── */}
@@ -409,9 +602,17 @@ export const ConceptCardNode = memo(
         >
           <div className="mb-2 flex items-center gap-2">
             <Rocket className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
-            <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
+            <h4 className="flex-1 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               Elevator Pitch
             </h4>
+            <SectionAiButton
+              field="elevatorPitch"
+              hasContent={!!data.elevatorPitch}
+              isGenerating={!!gs['elevatorPitch'] || isGeneratingAll}
+              canGenerate={canGenerate && !!data.onGenerateField}
+              onGenerate={() => data.onGenerateField?.(id, 'elevatorPitch')}
+              onElaborate={(instr) => data.onElaborate?.(id, 'elevatorPitch', data.elevatorPitch || '', instr)}
+            />
           </div>
           <EditableField
             value={data.elevatorPitch}
@@ -431,9 +632,17 @@ export const ConceptCardNode = memo(
         >
           <div className="mb-2 flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
-            <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
+            <h4 className="flex-1 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               Unique Selling Proposition
             </h4>
+            <SectionAiButton
+              field="usp"
+              hasContent={!!data.usp}
+              isGenerating={!!gs['usp'] || isGeneratingAll}
+              canGenerate={canGenerate && !!data.onGenerateField}
+              onGenerate={() => data.onGenerateField?.(id, 'usp')}
+              onElaborate={(instr) => data.onElaborate?.(id, 'usp', data.usp || '', instr)}
+            />
           </div>
           <EditableField
             value={data.usp}
@@ -453,9 +662,17 @@ export const ConceptCardNode = memo(
         >
           <div className="mb-3 flex items-center gap-2">
             <Target className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
-            <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
+            <h4 className="flex-1 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               SWOT Analysis
             </h4>
+            <SectionAiButton
+              field="swot"
+              hasContent={!!swot.strengths?.some((s) => !!s)}
+              isGenerating={!!gs['swot'] || isGeneratingAll}
+              canGenerate={canGenerate && !!data.onGenerateField}
+              onGenerate={() => data.onGenerateField?.(id, 'swot')}
+              onElaborate={() => {/* SWOT elaborate not supported — use regenerate */}}
+            />
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             {/* Strengths */}
@@ -576,15 +793,24 @@ export const ConceptCardNode = memo(
         <div className="px-6 py-5">
           <div className="mb-3 flex items-center gap-2">
             <BarChart3 className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
-            <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
+            <h4 className="flex-1 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               Feasibility Assessment
             </h4>
+            <SectionAiButton
+              field="feasibility"
+              hasContent={feasibility.technical.score > 0}
+              isGenerating={!!gs['feasibility'] || isGeneratingAll}
+              canGenerate={canGenerate && !!data.onGenerateField}
+              onGenerate={() => data.onGenerateField?.(id, 'feasibility')}
+              onElaborate={() => {/* Feasibility elaborate not supported — use regenerate */}}
+            />
           </div>
           <div className="space-y-3">
             <FeasibilityDimension
               label="Technical Feasibility"
               score={feasibility.technical.score}
               rationale={feasibility.technical.rationale}
+              accentColor={oc}
               onScoreChange={(score) =>
                 data.onFeasibilityChange?.(id, 'technical', score, undefined)
               }
@@ -596,6 +822,7 @@ export const ConceptCardNode = memo(
               label="Business Viability"
               score={feasibility.business.score}
               rationale={feasibility.business.rationale}
+              accentColor={oc}
               onScoreChange={(score) =>
                 data.onFeasibilityChange?.(id, 'business', score, undefined)
               }
@@ -607,6 +834,7 @@ export const ConceptCardNode = memo(
               label="User Desirability"
               score={feasibility.userDesirability.score}
               rationale={feasibility.userDesirability.rationale}
+              accentColor={oc}
               onScoreChange={(score) =>
                 data.onFeasibilityChange?.(id, 'userDesirability', score, undefined)
               }
