@@ -46,6 +46,7 @@ export async function assembleStepContext(
   workshopId: string,
   currentStepId: string,
   participantId?: string,
+  conceptOwnerId?: string,
 ): Promise<StepContext> {
   // Tier 2: Query summaries filtered by step dependency map
   const deps = STEP_SUMMARY_DEPS[currentStepId];
@@ -103,9 +104,13 @@ export async function assembleStepContext(
   // else: deps is [] (Step 1) — no summaries needed, skip query
 
   // Tier 4: Query canvas state for this step
+  // For concept step, prefer conceptOwnerId (facilitator scoping) over participantId for filtering
+  const ownerIdForContext = currentStepId === 'concept'
+    ? (conceptOwnerId || participantId)
+    : participantId;
   const canvasState = await loadCanvasState(workshopId, currentStepId);
   let canvasContext = canvasState
-    ? assembleCanvasContextForStep(currentStepId, canvasState.stickyNotes || [], canvasState.gridColumns, canvasState.personaTemplates, canvasState.hmwCards, canvasState.mindMapNodes, canvasState.mindMapEdges, canvasState.conceptCards, participantId)
+    ? assembleCanvasContextForStep(currentStepId, canvasState.stickyNotes || [], canvasState.gridColumns, canvasState.personaTemplates, canvasState.hmwCards, canvasState.mindMapNodes, canvasState.mindMapEdges, canvasState.conceptCards, ownerIdForContext)
     : (currentStepId === 'journey-mapping'
       ? assembleCanvasContextForStep(currentStepId, [])
       : '');
@@ -172,16 +177,39 @@ export async function assembleStepContext(
   if (currentStepId === 'concept') {
     const step8Canvas = await loadCanvasState(workshopId, 'ideation');
     if (step8Canvas?.crazy8sSlots && step8Canvas.crazy8sSlots.length > 0) {
+      // In multiplayer, filter Step 8 ideation to only the slots/groups
+      // relevant to this owner's concept cards (derived from sketchSlotId/sketchGroupId)
+      let relevantSelectedSlotIds = step8Canvas.selectedSlotIds || [];
+      let relevantSlotGroups = step8Canvas.slotGroups;
+
+      if (ownerIdForContext && canvasState?.conceptCards) {
+        const ownerCards = canvasState.conceptCards.filter(c => c.ownerId === ownerIdForContext);
+        if (ownerCards.length > 0) {
+          const relevantSlotIdSet = new Set<string>();
+          for (const card of ownerCards) {
+            if (card.sketchGroupId) {
+              const group = step8Canvas.slotGroups?.find(g => g.id === card.sketchGroupId);
+              if (group) group.slotIds.forEach(id => relevantSlotIdSet.add(id));
+            } else if (card.sketchSlotId) {
+              relevantSlotIdSet.add(card.sketchSlotId);
+            }
+          }
+          relevantSelectedSlotIds = relevantSelectedSlotIds.filter(id => relevantSlotIdSet.has(id));
+          const ownerGroupIds = new Set(ownerCards.map(c => c.sketchGroupId).filter(Boolean));
+          relevantSlotGroups = step8Canvas.slotGroups?.filter(g => ownerGroupIds.has(g.id));
+        }
+      }
+
       const ideationContext = assembleIdeationForConceptContext(
         step8Canvas.crazy8sSlots,
-        step8Canvas.selectedSlotIds || [],
-        step8Canvas.slotGroups,
+        relevantSelectedSlotIds,
+        relevantSlotGroups,
         step8Canvas.mindMapNodes,
       );
       if (ideationContext) {
         canvasContext = canvasContext
-          ? `${canvasContext}\n\nStep 8 Ideation Canvas (GROUND TRUTH — use these titles, not the conversation summary):\n${ideationContext}`
-          : `Step 8 Ideation Canvas (GROUND TRUTH — use these titles, not the conversation summary):\n${ideationContext}`;
+          ? `${canvasContext}\n\nStep 8 Ideation Canvas (reference for sketch origins — use these titles, not the conversation summary):\n${ideationContext}`
+          : `Step 8 Ideation Canvas (reference for sketch origins — use these titles, not the conversation summary):\n${ideationContext}`;
       }
     }
   }

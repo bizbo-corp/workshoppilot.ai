@@ -18,7 +18,7 @@ import {
 } from "@/providers/canvas-store-provider";
 import type { StickyNoteColor, MindMapNodeState, MindMapEdgeState } from "@/stores/canvas-store";
 import { addCanvasItemsToBoard } from "@/lib/canvas/add-canvas-items";
-import { savePersonaCandidates } from "@/actions/canvas-actions";
+import { saveCanvasState, savePersonaCandidates } from "@/actions/canvas-actions";
 import { parseMindMapNodes, findThemeNode, type MindMapNodeParsed } from "@/lib/chat/mind-map-parse-utils";
 import { THEME_COLORS } from "@/lib/canvas/mind-map-theme-colors";
 import { computeNewNodePosition } from "@/lib/canvas/mind-map-layout";
@@ -538,11 +538,16 @@ export function ParticipantChatPanel({
 
       for (const parsed of conceptCardParsed) {
         const targetIndex = parsed.cardIndex ?? 0;
-        // Match by ownerId first (participant's own card), fall back to cardIndex
-        const existing = latestConceptCards.find((c) => c.ownerId === participantId)
-          ?? latestConceptCards.find((c) => (c.cardIndex ?? 0) === targetIndex);
+        // Match by relative index within participant's own cards (no cross-ownership fallback)
+        const ownerCards = latestConceptCards.filter((c) => c.ownerId === participantId);
+        const existing = ownerCards[targetIndex];
 
         if (existing) {
+          // Guard: skip updates to filled cards unless AI explicitly includes cardIndex
+          if (existing.cardState === 'filled' && parsed.cardIndex === undefined) {
+            continue;
+          }
+
           const updates: Partial<ConceptCardData> = { ...parsed };
 
           // Transition skeleton → active on first update
@@ -606,13 +611,34 @@ export function ParticipantChatPanel({
     });
   }, [pendingHmwChipSelection, isLoading, setPendingHmwChipSelection, sendMessage]);
 
-  const handleSend = React.useCallback((text: string) => {
+  // Force-flush canvas state to DB before sending a chat message
+  // Ensures the AI API gets fresh data (e.g. after facilitator reassignment)
+  const flushCanvasToDb = React.useCallback(async () => {
+    if (!isCanvasStep) return;
+    const s = storeApi.getState();
+    if (!s.isDirty) return;
+    await saveCanvasState(workshopId, stepId, {
+      stickyNotes: s.stickyNotes,
+      ...(s.gridColumns.length > 0 ? { gridColumns: s.gridColumns } : {}),
+      ...(s.drawingNodes.length > 0 ? { drawingNodes: s.drawingNodes } : {}),
+      ...(s.mindMapNodes.length > 0 ? { mindMapNodes: s.mindMapNodes } : {}),
+      ...(s.mindMapEdges.length > 0 ? { mindMapEdges: s.mindMapEdges } : {}),
+      ...(s.crazy8sSlots.length > 0 ? { crazy8sSlots: s.crazy8sSlots } : {}),
+      ...(s.conceptCards.length > 0 ? { conceptCards: s.conceptCards } : {}),
+      ...(s.personaTemplates.length > 0 ? { personaTemplates: s.personaTemplates } : {}),
+      ...(s.hmwCards.length > 0 ? { hmwCards: s.hmwCards } : {}),
+    });
+    s.markClean();
+  }, [isCanvasStep, workshopId, stepId, storeApi]);
+
+  const handleSend = React.useCallback(async (text: string) => {
     if (!text.trim() || status === "streaming") return;
     setSuggestions([]);
     setQuickAck(getRandomAck());
     setInputValue("");
+    await flushCanvasToDb();
     sendMessage({ text });
-  }, [status, sendMessage]);
+  }, [status, sendMessage, flushCanvasToDb]);
 
   const renderClean = React.useCallback((content: string) => {
     let { cleanContent } = stripLeakedTags(content);

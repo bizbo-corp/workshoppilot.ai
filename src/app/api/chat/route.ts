@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
   try {
-    const { messages, sessionId, stepId, workshopId, subStep, selectedStickyNoteIds, participantId, participantName } = await req.json();
+    const { messages, sessionId, stepId, workshopId, subStep, selectedStickyNoteIds, participantId, participantName, conceptOwnerId } = await req.json();
 
     // Validate required parameters
     if (!sessionId || !stepId || !workshopId) {
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     }
 
     // Assemble three-tier context for this step
-    const stepContext = await assembleStepContext(workshopId, stepId, participantId);
+    const stepContext = await assembleStepContext(workshopId, stepId, participantId, conceptOwnerId);
 
     // Inject selected canvas items into context if any are selected
     if (Array.isArray(selectedStickyNoteIds) && selectedStickyNoteIds.length > 0) {

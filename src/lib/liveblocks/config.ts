@@ -166,6 +166,7 @@ declare global {
       | { type: 'VOTING_CLOSED' }
       | { type: 'VOTING_RESET'; voteBudget: number }
       | { type: 'PARTICIPANT_REMOVED'; participantId: string }
-      | { type: 'CONCEPT_ACTIVITY_STARTED' };
+      | { type: 'CONCEPT_ACTIVITY_STARTED' }
+      | { type: 'STEP_RESET'; stepOrder: number };
   }
 }

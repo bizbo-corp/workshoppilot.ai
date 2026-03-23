@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Trash2, List, LayoutGrid, Pencil } from 'lucide-react';
+import { Trash2, List, LayoutGrid, Pencil, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -19,6 +19,7 @@ import {
 import { WorkshopCard } from '@/components/dashboard/workshop-card';
 import { WorkshopListItem } from '@/components/dashboard/workshop-list-item';
 import { deleteWorkshops } from '@/actions/workshop-actions';
+import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { cn } from '@/lib/utils';
 
@@ -38,7 +39,6 @@ interface WorkshopData {
   emoji: string | null;
   totalCostCents: number | null;
   workshopType?: 'solo' | 'multiplayer';
-  workshopStatus: 'completed' | 'active' | 'stalled';
   steps: StepStatus[];
 }
 
@@ -194,6 +194,11 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
       {/* Content: list or grid */}
       {viewMode === 'list' ? (
         <div className="space-y-2">
+          {/* New workshop row */}
+          <NewWorkshopButton variant="ghost" className="w-full justify-start gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-muted-foreground hover:text-foreground hover:border-foreground/20">
+            <Plus className="h-4 w-4" />
+            Start New Workshop
+          </NewWorkshopButton>
           {workshops.map((workshop) => (
             <WorkshopListItem
               key={workshop.id}
@@ -205,7 +210,6 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
               updatedAt={workshop.updatedAt}
               color={workshop.color}
               emoji={workshop.emoji}
-              workshopStatus={workshop.workshopStatus}
               steps={workshop.steps}
               editMode={editMode}
               selected={selectedIds.has(workshop.id)}
@@ -217,6 +221,14 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {/* New workshop card */}
+          <NewWorkshopButton
+            variant="ghost"
+            className="new-workshop-card flex h-full flex-col items-center justify-center gap-4 rounded-xl bg-card text-muted-foreground hover:bg-white hover:text-foreground transition-all duration-200 hover:-translate-y-1 hover:shadow-xl dark:hover:bg-neutral-olive-800"
+          >
+            <Plus className="h-24 w-24" strokeWidth={0.8} />
+            <span className="text-lg font-serif">Start New Workshop</span>
+          </NewWorkshopButton>
           {workshops.map((workshop, index) => (
             <WorkshopCard
               key={workshop.id}
@@ -230,7 +242,6 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
               emoji={workshop.emoji}
               totalCostCents={workshop.totalCostCents}
               workshopType={workshop.workshopType}
-              workshopStatus={workshop.workshopStatus}
               steps={workshop.steps}
               onRename={onRename}
               onUpdateAppearance={onUpdateAppearance}

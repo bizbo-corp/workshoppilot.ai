@@ -19,8 +19,7 @@ import { getStepByOrder, getStepById } from '@/lib/workshop/step-metadata';
 import { getWorkshopColor } from '@/lib/workshop/workshop-appearance';
 import { WelcomeModal } from '@/components/dashboard/welcome-modal';
 import { AdminResetOnboarding } from '@/components/dashboard/admin-reset-onboarding';
-import { DashboardIllustration } from '@/components/dashboard/dashboard-illustration';
-import { StepProgressDots } from '@/components/dashboard/step-progress-dots';
+import { Progress } from '@/components/ui/progress';
 
 export default async function DashboardPage() {
   // Defense in depth: verify auth at page level
@@ -106,17 +105,11 @@ export default async function DashboardPage() {
     const step10 = workshop.steps.find((s) => s.stepId === 'validate');
     const isCompleted = step10?.status === 'in_progress' || step10?.status === 'complete';
 
-    const daysSinceUpdate = (Date.now() - new Date(workshop.updatedAt).getTime()) / (1000 * 60 * 60 * 24);
-    const workshopStatus: 'completed' | 'active' | 'stalled' = isCompleted
-      ? 'completed'
-      : daysSinceUpdate > 7
-        ? 'stalled'
-        : 'active';
-
     return {
       id: workshop.id,
       title: workshop.title,
       updatedAt: workshop.updatedAt,
+      lastVisitedAt: workshop.lastVisitedAt,
       color: workshop.color,
       emoji: workshop.emoji,
       workshopType: workshop.workshopType,
@@ -124,7 +117,6 @@ export default async function DashboardPage() {
       currentStepName: stepMetadata?.name || 'Challenge',
       sessionId: workshop.sessions[0]?.id || '',
       isCompleted,
-      workshopStatus,
       stepProgress: workshop.steps.map((s) => ({ stepId: s.stepId, status: s.status })),
     };
   });
@@ -207,11 +199,14 @@ export default async function DashboardPage() {
     }
   }
 
-  // CTA logic
-  const mostRecentActive = activeWorkshops[0];
-  const mostRecentCompleted = completedWorkshops[0];
-  const ctaWorkshop = mostRecentActive || mostRecentCompleted;
-  const ctaIsCompleted = !mostRecentActive && !!mostRecentCompleted;
+  // CTA logic — pick the workshop last visited (falls back to updatedAt)
+  const allByLastVisit = [...workshopsWithProgress].sort((a, b) => {
+    const aTime = (a.lastVisitedAt ?? a.updatedAt).getTime();
+    const bTime = (b.lastVisitedAt ?? b.updatedAt).getTime();
+    return bTime - aTime;
+  });
+  const ctaWorkshop = allByLastVisit[0];
+  const ctaIsCompleted = ctaWorkshop?.isCompleted ?? false;
 
   return (
     <>
@@ -231,7 +226,6 @@ export default async function DashboardPage() {
             Welcome back, {user.firstName || 'there'}!
           </p>
         </div>
-        <DashboardIllustration />
       </div>
 
       {workshopsWithProgress.length === 0 ? (
@@ -270,35 +264,33 @@ export default async function DashboardPage() {
           {ctaWorkshop && (
             <div className="mb-8">
               <div
-                className="rounded-xl border border-olive-200 bg-olive-50 p-6 dark:border-olive-900 dark:bg-olive-950"
-                style={{ borderLeft: `4px solid ${getWorkshopColor(ctaWorkshop.color).hex}` }}
+                className="rounded-xl bg-primary p-6 text-primary-foreground"
               >
-                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-primary-foreground/60">
                   {ctaIsCompleted ? 'Your Latest Output' : 'Continue Where You Left Off'}
                 </p>
-                <h2 className="mb-3 text-xl font-serif text-foreground">
+                <h2 className="mb-3 text-xl font-serif text-primary-foreground">
                   {ctaWorkshop.title}
                 </h2>
                 {!ctaIsCompleted && (
-                  <div className="mb-4 flex items-center gap-3">
-                    <StepProgressDots steps={ctaWorkshop.stepProgress} />
-                    <span className="text-xs text-muted-foreground">
-                      Step {ctaWorkshop.currentStep} of 10
-                    </span>
+                  <div className="mb-4">
+                    <div className="mb-1.5 flex items-baseline justify-between">
+                      <span className="text-sm text-primary-foreground/70">
+                        Step {ctaWorkshop.currentStep}: {ctaWorkshop.currentStepName}
+                      </span>
+                      <span className="text-xs text-primary-foreground/60">{ctaWorkshop.currentStep * 10}%</span>
+                    </div>
+                    <Progress value={ctaWorkshop.currentStep * 10} className="h-1.5 bg-primary-foreground/20 [&>[data-slot=progress-indicator]]:bg-primary-foreground" />
                   </div>
                 )}
                 <div className="flex gap-3">
-                  <Button asChild size="lg" className="btn-lift">
+                  <Button asChild size="lg" variant="secondary" className="btn-lift">
                     <a
                       href={ctaIsCompleted ? `/workshop/${ctaWorkshop.sessionId}/outputs` : `/workshop/${ctaWorkshop.sessionId}/step/${ctaWorkshop.currentStep}`}
                     >
                       {ctaIsCompleted ? 'View Outputs' : 'Continue'}
                     </a>
                   </Button>
-                  <NewWorkshopButton variant="outline" size="lg">
-                    <PlusCircle className="mr-2 h-5 w-5" />
-                    Start New Workshop
-                  </NewWorkshopButton>
                 </div>
               </div>
             </div>
@@ -318,7 +310,6 @@ export default async function DashboardPage() {
                 emoji: w.emoji,
                 totalCostCents: costMap.get(w.id) ?? null,
                 workshopType: w.workshopType,
-                workshopStatus: w.workshopStatus,
                 steps: w.stepProgress,
               }))}
               onRename={renameWorkshop}

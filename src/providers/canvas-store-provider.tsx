@@ -297,6 +297,18 @@ export function CanvasStoreProvider({
         if (!card.sketchImageUrl && serverCard.sketchImageUrl) updates.sketchImageUrl = serverCard.sketchImageUrl;
         if (!card.sketchSlotId && serverCard.sketchSlotId) updates.sketchSlotId = serverCard.sketchSlotId;
         if (!card.ideaSource && serverCard.ideaSource) updates.ideaSource = serverCard.ideaSource;
+        // Patch ownership from SSR rebalancing into existing store cards
+        if (!card.ownerId && serverCard.ownerId) {
+          updates.ownerId = serverCard.ownerId;
+          updates.ownerName = serverCard.ownerName;
+          updates.ownerColor = serverCard.ownerColor;
+        }
+        // Re-assignment: if server says different owner, server wins (SSR rebalanced)
+        if (card.ownerId && serverCard.ownerId && card.ownerId !== serverCard.ownerId) {
+          updates.ownerId = serverCard.ownerId;
+          updates.ownerName = serverCard.ownerName;
+          updates.ownerColor = serverCard.ownerColor;
+        }
         if (Object.keys(updates).length === 0) return card;
         changed = true;
         return { ...card, ...updates };

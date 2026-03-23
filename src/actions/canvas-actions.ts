@@ -281,6 +281,57 @@ export async function loadPersonaCandidates(
 }
 
 /**
+ * Save only the concept card ownership (ownerId, ownerName, ownerColor) to the DB.
+ * Surgically updates the `conceptCards` field within the existing `_canvas` JSONB column,
+ * preserving all other canvas data. Used during SSR to persist rebalanced ownership
+ * before the client loads, so the AI API route reads correct ownership from DB.
+ */
+export async function saveConceptCardOwnership(
+  workshopId: string,
+  stepId: string,
+  conceptCards: ConceptCardData[],
+): Promise<void> {
+  try {
+    const workshopStepRecords = await db
+      .select({ id: workshopSteps.id })
+      .from(workshopSteps)
+      .where(and(eq(workshopSteps.workshopId, workshopId), eq(workshopSteps.stepId, stepId)))
+      .limit(1);
+
+    if (workshopStepRecords.length === 0) return;
+    const workshopStepId = workshopStepRecords[0].id;
+
+    const existing = await db
+      .select({ id: stepArtifacts.id, artifact: stepArtifacts.artifact })
+      .from(stepArtifacts)
+      .where(eq(stepArtifacts.workshopStepId, workshopStepId))
+      .limit(1);
+
+    if (existing.length > 0) {
+      // Merge concept cards into existing artifact's _canvas
+      const existingArtifact = (existing[0].artifact || {}) as Record<string, unknown>;
+      const existingCanvas = (existingArtifact._canvas || {}) as Record<string, unknown>;
+      await db.update(stepArtifacts)
+        .set({
+          artifact: { ...existingArtifact, _canvas: { ...existingCanvas, conceptCards } },
+        })
+        .where(eq(stepArtifacts.id, existing[0].id));
+    } else {
+      // No artifact yet — create with concept cards
+      await db.insert(stepArtifacts).values({
+        workshopStepId,
+        stepId,
+        artifact: { _canvas: { stickyNotes: [], conceptCards } },
+        schemaVersion: 'canvas-1.0',
+        version: 1,
+      });
+    }
+  } catch (error) {
+    console.error('Failed to save concept card ownership:', error);
+  }
+}
+
+/**
  * Load canvas state from stepArtifacts JSONB column
  *
  * @param workshopId - The workshop ID (wks_xxx)

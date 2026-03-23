@@ -15,8 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { getWorkshopColor } from '@/lib/workshop/workshop-appearance';
 import { WorkshopAppearancePicker } from '@/components/dashboard/workshop-appearance-picker';
-import { StepProgressDots } from '@/components/dashboard/step-progress-dots';
-import { WorkshopStatusBadge } from '@/components/dashboard/workshop-status-badge';
+import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 
 interface StepStatus {
@@ -37,7 +36,6 @@ interface WorkshopCardProps {
   totalCostCents?: number | null;
   onUpdateAppearance: (workshopId: string, updates: { color?: string; emoji?: string | null }) => Promise<void>;
   workshopType?: 'solo' | 'multiplayer';
-  workshopStatus: 'completed' | 'active' | 'stalled';
   steps: StepStatus[];
   editMode?: boolean;
   selected?: boolean;
@@ -58,7 +56,6 @@ export function WorkshopCard({
   onRename,
   onUpdateAppearance,
   workshopType,
-  workshopStatus,
   steps,
   editMode = false,
   selected = false,
@@ -101,14 +98,25 @@ export function WorkshopCard({
     }
   };
 
+  // Derive color-keyed styles for white-glove card treatment
+  const hex = workshopColor.hex;
+  const cardStyle: React.CSSProperties = {
+    borderColor: `color-mix(in srgb, ${hex} 40%, transparent)`,
+    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 24px -4px color-mix(in srgb, ${hex} 12%, transparent)`,
+    // ring via box-shadow layering
+    outline: `1px solid color-mix(in srgb, ${hex} 20%, transparent)`,
+    outlineOffset: '0px',
+    backgroundImage: `linear-gradient(to bottom, color-mix(in srgb, ${hex} 8%, var(--card)) 0%, var(--card) 40%)`,
+  };
+
   return (
     <Card
       className={cn(
-        "group relative overflow-hidden border border-border transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg dark:hover:border-neutral-olive-700 pt-0 pb-0 gap-0",
-        selected && "ring-2 ring-primary border-primary",
+        "group relative flex flex-col overflow-hidden border transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg pt-0 pb-0 gap-0",
+        selected && "ring-2 ring-primary !border-primary",
         isHero && "lg:col-span-2"
       )}
-      style={{ borderLeft: `4px solid ${workshopColor.hex}` }}
+      style={cardStyle}
     >
       {editMode && onSelect && (
         <div
@@ -127,8 +135,8 @@ export function WorkshopCard({
         </div>
       )}
 
-      {/* Header */}
-      <div className="px-6 pt-5 pb-4">
+      {/* Header — grows to push progress to bottom */}
+      <div className="flex-1 px-6 pt-5 pb-4">
         <div className={cn("flex items-start gap-2.5", isHero && "lg:flex-row lg:items-center lg:gap-4")}>
           {/* Emoji circle */}
           <WorkshopAppearancePicker
@@ -183,35 +191,33 @@ export function WorkshopCard({
 
       <Link href={`/workshop/${sessionId}/step/${currentStep}`}>
         <CardContent className="px-6 pt-4 pb-6">
-          {/* Current step indicator */}
+          {/* Step progress */}
           <div className="mb-3">
-            <p className="text-sm text-muted-foreground">
-              Step {currentStep}: {currentStepName}
-            </p>
+            <div className="mb-1.5 flex items-baseline justify-between">
+              <p className="text-sm text-muted-foreground">
+                Step {currentStep}: {currentStepName}
+              </p>
+              <span className="text-xs text-muted-foreground">{currentStep * 10}%</span>
+            </div>
+            <Progress
+              value={currentStep * 10}
+              className="h-1.5"
+              style={{ '--progress-color': hex } as React.CSSProperties}
+            />
           </div>
 
-          {/* Step progress dots */}
-          <div className="mb-3">
-            <StepProgressDots steps={steps} />
-          </div>
-
-          {/* Status badge + timestamp row */}
-          <div className="flex items-center gap-3">
-            <WorkshopStatusBadge status={workshopStatus} />
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {/* Timestamp + AI cost row */}
+          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5" />
               <span>
                 {formatDistanceToNow(new Date(updatedAt), { addSuffix: true })}
               </span>
             </div>
+            {totalCostCents != null && totalCostCents > 0 && (
+              <span>AI cost: ${(totalCostCents / 100).toFixed(4)}</span>
+            )}
           </div>
-
-          {/* AI cost (admin only) */}
-          {totalCostCents != null && totalCostCents > 0 && (
-            <div className="mt-1 text-xs text-muted-foreground">
-              AI cost: ${(totalCostCents / 100).toFixed(4)}
-            </div>
-          )}
         </CardContent>
       </Link>
     </Card>

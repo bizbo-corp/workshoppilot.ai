@@ -9,8 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { getWorkshopColor } from '@/lib/workshop/workshop-appearance';
-import { StepProgressDots } from '@/components/dashboard/step-progress-dots';
-import { WorkshopStatusBadge } from '@/components/dashboard/workshop-status-badge';
+import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 
 interface StepStatus {
@@ -27,7 +26,6 @@ interface WorkshopListItemProps {
   updatedAt: Date;
   color: string | null;
   emoji: string | null;
-  workshopStatus: 'completed' | 'active' | 'stalled';
   steps: StepStatus[];
   editMode: boolean;
   selected: boolean;
@@ -45,7 +43,6 @@ export function WorkshopListItem({
   updatedAt,
   color,
   emoji,
-  workshopStatus,
   steps,
   editMode,
   selected,
@@ -138,14 +135,10 @@ export function WorkshopListItem({
         </div>
       </div>
 
-      {/* Progress dots */}
-      <div className="hidden sm:flex shrink-0 px-2">
-        <StepProgressDots steps={steps} compact />
-      </div>
-
-      {/* Status badge */}
-      <div className="hidden md:flex shrink-0 px-2">
-        <WorkshopStatusBadge status={workshopStatus} />
+      {/* Progress bar */}
+      <div className="hidden sm:flex shrink-0 items-center gap-2 px-2 w-28">
+        <Progress value={currentStep * 10} className="h-1.5" />
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{currentStep * 10}%</span>
       </div>
 
       {/* Timestamp */}

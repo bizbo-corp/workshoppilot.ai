@@ -87,11 +87,10 @@ function StepAdvanceBroadcaster({
   broadcastRef,
 }: {
   broadcastRef: React.MutableRefObject<
-    | ((event: {
-        type: "STEP_CHANGED";
-        stepOrder: number;
-        stepName: string;
-      }) => void)
+    | ((event:
+        | { type: "STEP_CHANGED"; stepOrder: number; stepName: string }
+        | { type: "STEP_RESET"; stepOrder: number }
+      ) => void)
     | null
   >;
 }) {
@@ -194,11 +193,10 @@ export function StepContainer({
   // Allows StepContainer to trigger broadcasts without calling useBroadcastEvent directly
   // (which would throw outside RoomProvider in solo mode).
   const broadcastRef = React.useRef<
-    | ((event: {
-        type: "STEP_CHANGED";
-        stepOrder: number;
-        stepName: string;
-      }) => void)
+    | ((event:
+        | { type: "STEP_CHANGED"; stepOrder: number; stepName: string }
+        | { type: "STEP_RESET"; stepOrder: number }
+      ) => void)
     | null
   >(null);
 
@@ -250,6 +248,9 @@ export function StepContainer({
   const votingSession = useCanvasStore((s) => s.votingSession);
   const brainRewritingMatrices = useCanvasStore(
     (s) => s.brainRewritingMatrices,
+  );
+  const setConceptActivityStarted = useCanvasStore(
+    (s) => s.setConceptActivityStarted,
   );
   const storeApi = useCanvasStoreApi();
 
@@ -890,6 +891,8 @@ export function StepContainer({
       setArtifactConfirmed(false);
       setLocalMessages([]);
       setAutoStartFired(false); // Allow auto-start to fire again after reset
+      setConceptActivityStarted(false); // Reset concept activity gate (Step 9)
+      broadcastRef.current?.({ type: 'STEP_RESET', stepOrder });
       // Clear Step 10 extraction state
       setStep10Artifact(null);
       hasAutoExtracted.current = false;
@@ -931,6 +934,7 @@ export function StepContainer({
     setPersonaTemplates,
     setHmwCards,
     setBrainRewritingMatrices,
+    setConceptActivityStarted,
   ]);
 
   // Step 10: render validation deliverables — journey map first, then prototype

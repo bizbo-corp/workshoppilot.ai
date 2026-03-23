@@ -847,3 +847,22 @@ export async function updateWorkshopAppearance(
 
   revalidatePath('/dashboard');
 }
+
+/**
+ * Updates lastVisitedAt on a workshop when the facilitator opens it.
+ * Called from the step page on load.
+ */
+export async function trackWorkshopVisit(workshopId: string): Promise<void> {
+  const userId = await getUserId();
+  if (!userId) return;
+
+  await db
+    .update(workshops)
+    .set({ lastVisitedAt: new Date(), updatedAt: sql`updated_at` })
+    .where(
+      and(
+        eq(workshops.id, workshopId),
+        eq(workshops.clerkUserId, userId)
+      )
+    );
+}

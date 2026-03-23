@@ -519,6 +519,21 @@
   scrollbar-color: var(--neutral-olive-400) transparent;
 }
 
+/* New workshop card — dashed olive border, solid on hover */
+.new-workshop-card {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3e%3crect width='100%25' height='100%25' fill='none' rx='12' ry='12' stroke='%23bfc1ba' stroke-width='2' stroke-dasharray='8%2c 5' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
+  transition: background-image 0.15s;
+}
+.new-workshop-card:hover {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3e%3crect width='100%25' height='100%25' fill='none' rx='12' ry='12' stroke='%23bfc1ba' stroke-width='2'/%3e%3c/svg%3e");
+}
+.dark .new-workshop-card {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3e%3crect width='100%25' height='100%25' fill='none' rx='12' ry='12' stroke='%2362675c' stroke-width='2' stroke-dasharray='8%2c 5' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
+}
+.dark .new-workshop-card:hover {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3e%3crect width='100%25' height='100%25' fill='none' rx='12' ry='12' stroke='%2362675c' stroke-width='2'/%3e%3c/svg%3e");
+}
+
 /* Workshop simulation — cursor drift animations (with pauses) */
 @keyframes cursor-drift-1 {
   0%, 20% { transform: translate(0, 0); }

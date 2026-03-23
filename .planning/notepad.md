@@ -33,16 +33,9 @@ Improve the UX of the chat window when it's in collapsed mode.
 
 ## Concept Development
 
-
-
 There is a bug that whenever a concept development card is generated, the view resets to fit to screen.  can the Card that's currently being edited stay positioned in the frame as is? The only exception is if the participant moves to the next step it should pull the next card into focus.
-
-
 
 Throughout the concept development feasibility assessment there's no need to reference back to the personas. 
 
-When working in multiplayer mode a user or participant needs to be able to only edit the board for which they have been assigned.  come up with a way to make the original creator of the idea assigned the concept card but have some overriding logic that if one user has too many then they get allocated evenly to the other participants.  put the name of the owner on the card and allow the facilitator to reassign this to another participant.  The facilitator should have an activity start button that will activate the ai chat for each participant and uniquely takes them to the Concept card that they own.
-
-
-
 ## Validate
+

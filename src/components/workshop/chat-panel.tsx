@@ -14,6 +14,7 @@ import {
   Sparkles,
   UserPlus,
   ArrowRight,
+  Rocket,
 } from "lucide-react";
 import { PersonaInterrupt } from "./persona-interrupt";
 import { getStepByOrder } from "@/lib/workshop/step-metadata";
@@ -59,6 +60,7 @@ import {
 } from "@/lib/chat/mind-map-parse-utils";
 import { toast } from "sonner";
 import { useMultiplayerContext } from "@/components/workshop/multiplayer-room";
+import { useBroadcastEvent } from "@liveblocks/react";
 
 /** Steps that support canvas item auto-add */
 const CANVAS_ENABLED_STEPS = [
@@ -679,6 +681,46 @@ interface ChatPanelProps {
   hideAvatar?: boolean; // Hide in-body avatar when parent renders it in a card header
 }
 
+/**
+ * Pre-activity UI for the concept step in multiplayer mode.
+ * Rendered inside the Liveblocks RoomProvider so useBroadcastEvent is safe.
+ */
+function ConceptPreActivity() {
+  const broadcast = useBroadcastEvent();
+  const setConceptActivityStarted = useCanvasStore((s) => s.setConceptActivityStarted);
+  const setPendingFocusCardId = useCanvasStore((s) => s.setPendingFocusCardId);
+  const storeApi = useCanvasStoreApi();
+
+  const handleStart = React.useCallback(() => {
+    broadcast({ type: 'CONCEPT_ACTIVITY_STARTED' });
+    setConceptActivityStarted(true);
+    const cards = storeApi.getState().conceptCards;
+    const myCard = cards.find((c) => c.ownerId === 'facilitator');
+    if (myCard) setPendingFocusCardId(myCard.id);
+    toast('Activity started — participants navigated to their cards', { duration: 3000 });
+  }, [broadcast, setConceptActivityStarted, setPendingFocusCardId, storeApi]);
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-6 py-12 text-center">
+      <div className="space-y-3 max-w-sm">
+        <h3 className="text-lg font-semibold">Concept Development</h3>
+        <p className="text-sm text-muted-foreground">
+          Review the concept card assignments on the canvas.
+          You can reassign cards using the dropdown on each card.
+          When everyone is ready, start the activity.
+        </p>
+      </div>
+      <button
+        onClick={handleStart}
+        className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+      >
+        <Rocket className="h-4 w-4" />
+        Start Activity
+      </button>
+    </div>
+  );
+}
+
 export function ChatPanel({
   stepOrder,
   sessionId,
@@ -754,6 +796,7 @@ export function ChatPanel({
   const selectedStickyNoteIds = useCanvasStore(
     (state) => state.selectedStickyNoteIds,
   );
+  const conceptActivityStarted = useCanvasStore((s) => s.conceptActivityStarted);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
@@ -858,9 +901,11 @@ export function ChatPanel({
           workshopId,
           subStep,
           selectedStickyNoteIds,
+          // In multiplayer concept step, scope facilitator to their own cards
+          ...(isMultiplayer && step.id === 'concept' ? { conceptOwnerId: 'facilitator' } : {}),
         },
       }),
-    [sessionId, step.id, workshopId, subStep, selectedStickyNoteIds],
+    [sessionId, step.id, workshopId, subStep, selectedStickyNoteIds, isMultiplayer],
   );
 
   const { messages, sendMessage, status, setMessages } = useChat({
@@ -1684,11 +1729,23 @@ export function ChatPanel({
 
       for (const parsed of conceptCardParsed) {
         const targetIndex = parsed.cardIndex ?? 0;
-        const existing = latestConceptCards.find(
-          (c) => (c.cardIndex ?? 0) === targetIndex,
-        );
+        // In multiplayer: match by relative index within facilitator's own cards
+        // (same indexing the canvas context uses when presenting cards to the AI)
+        let existing: ConceptCardData | undefined;
+        if (isMultiplayer && step.id === 'concept') {
+          const ownerCards = latestConceptCards.filter((c) => c.ownerId === 'facilitator');
+          existing = ownerCards[targetIndex];
+        } else {
+          existing = latestConceptCards.find((c) => (c.cardIndex ?? 0) === targetIndex);
+        }
 
         if (existing) {
+          // Guard: skip updates to filled cards unless AI explicitly includes cardIndex
+          // (deliberate re-targeting via "tweak it" → AI sends specific cardIndex)
+          if (existing.cardState === 'filled' && parsed.cardIndex === undefined) {
+            continue;
+          }
+
           const updates: Partial<ConceptCardData> = { ...parsed };
 
           // Transition skeleton → active on first AI update
@@ -1727,9 +1784,13 @@ export function ChatPanel({
       if (lastIndex !== lastConceptCardIndexRef.current) {
         lastConceptCardIndexRef.current = lastIndex;
         // Find the card ID for the new index and focus on it
-        const focusCard = storeApi.getState().conceptCards.find(
-          (c) => (c.cardIndex ?? 0) === lastIndex,
-        );
+        let focusCard: ConceptCardData | undefined;
+        if (isMultiplayer && step.id === 'concept') {
+          const ownerCards = storeApi.getState().conceptCards.filter((c) => c.ownerId === 'facilitator');
+          focusCard = ownerCards[lastIndex];
+        } else {
+          focusCard = storeApi.getState().conceptCards.find((c) => (c.cardIndex ?? 0) === lastIndex);
+        }
         if (focusCard) {
           setPendingFocusCardId(focusCard.id);
         }
@@ -1924,13 +1985,16 @@ export function ChatPanel({
   React.useEffect(() => {
     // Read-only participants must NOT trigger auto-start — only the facilitator does.
     // skipAutoStart prevents re-triggering when ChatPanel remounts (e.g. after chat toggle).
+    // For concept step in multiplayer, block auto-start until activity is started.
+    // Solo mode and all other steps are unaffected.
     if (
       shouldAutoStart &&
       messages.length === 0 &&
       status === "ready" &&
       !hasAutoStarted.current &&
       !isReadOnly &&
-      !skipAutoStart
+      !skipAutoStart &&
+      (step.id !== "concept" || !isMultiplayer || conceptActivityStarted)
     ) {
       hasAutoStarted.current = true;
       onAutoStarted?.();
@@ -1947,6 +2011,8 @@ export function ChatPanel({
     isReadOnly,
     skipAutoStart,
     onAutoStarted,
+    conceptActivityStarted,
+    isMultiplayer,
   ]);
 
   // Helper: check if user is near bottom of scroll container
@@ -2073,7 +2139,9 @@ export function ChatPanel({
                 </div>
               )}
 
-              {messages.length === 0 ? (
+              {isMultiplayer && step.id === 'concept' && !conceptActivityStarted ? (
+                <ConceptPreActivity />
+              ) : messages.length === 0 ? (
                 // Show greeting + loading indicator while AI auto-starts
                 <div className="space-y-6">
                   {showGreeting && (
@@ -3117,8 +3185,8 @@ export function ChatPanel({
         </div>
       )}
 
-      {/* Input area — hidden for read-only participants in multiplayer mode */}
-      {!isReadOnly && (
+      {/* Input area — hidden for read-only participants and during concept pre-activity */}
+      {!isReadOnly && !(isMultiplayer && step.id === 'concept' && !conceptActivityStarted) && (
         <div className="border-t bg-background/20 p-4">
           <form onSubmit={handleSend} className="flex gap-2">
             <TextareaAutosize

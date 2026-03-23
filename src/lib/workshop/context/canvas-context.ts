@@ -521,11 +521,11 @@ export function assembleConceptCanvasContext(conceptCards: ConceptCardData[], ow
 
   const sections: string[] = [];
 
-  for (const card of cards) {
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
     const state = card.cardState || 'skeleton';
-    const idx = card.cardIndex ?? 0;
     const ownerLabel = card.ownerName ? ` — Owner: ${card.ownerName}` : '';
-    const lines: string[] = [`**Concept Card ${idx + 1} of ${cards.length}** (cardIndex: ${idx}, state: ${state}${ownerLabel}):`];
+    const lines: string[] = [`**Concept Card ${i + 1} of ${cards.length}** (cardIndex: ${i}, state: ${state}${ownerLabel}):`];
 
     lines.push(`  Idea Source: ${card.ideaSource || '(unknown)'}`);
     lines.push(`  Concept Name: ${card.conceptName || '(empty)'}`);
@@ -554,6 +554,11 @@ export function assembleConceptCanvasContext(conceptCards: ConceptCardData[], ow
       .filter(c => c.cardState !== 'filled')
       .map(c => `Card ${(c.cardIndex ?? 0) + 1}${c.conceptName ? ` ("${c.conceptName}")` : ''} [${c.cardState || 'skeleton'}]`);
     progressText = `**Concept Progress:** ${filled} of ${total} concept card${total > 1 ? 's' : ''} filled. Remaining: ${remainingCards.join(', ')}. You MUST develop all ${total} cards before closing.`;
+    const nextUnfilledIndex = cards.findIndex(c => c.cardState !== 'filled');
+    if (nextUnfilledIndex >= 0) {
+      const nextCard = cards[nextUnfilledIndex];
+      progressText += ` **NEXT: develop cardIndex ${nextUnfilledIndex}** ("${nextCard.ideaSource || nextCard.conceptName || 'untitled'}").`;
+    }
   }
   sections.push(progressText);
 

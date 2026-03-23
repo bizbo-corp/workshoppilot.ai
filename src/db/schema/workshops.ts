@@ -49,6 +49,8 @@ export const workshops = pgTable(
       .default('solo')
       .$type<'solo' | 'multiplayer'>(),
     maxParticipants: integer('max_participants'), // null for solo (no limit applies)
+    // Last time the facilitator opened this workshop
+    lastVisitedAt: timestamp('last_visited_at', { mode: 'date', precision: 3 }),
   },
   (table) => ({
     clerkUserIdIdx: index('workshops_clerk_user_id_idx').on(table.clerkUserId),

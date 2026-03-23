@@ -9,7 +9,8 @@ import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
 import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
 import { MultiplayerRoomLoader } from "@/components/workshop/multiplayer-room-loader";
-import { loadCanvasState, saveCanvasState, loadPersonaCandidates, savePersonaCandidates } from "@/actions/canvas-actions";
+import { loadCanvasState, saveCanvasState, loadPersonaCandidates, savePersonaCandidates, saveConceptCardOwnership } from "@/actions/canvas-actions";
+import { trackWorkshopVisit } from "@/actions/workshop-actions";
 import { loadCanvasGuides } from "@/actions/canvas-guide-actions";
 import { loadStepCanvasSettings } from "@/actions/step-canvas-settings-actions";
 import { getDefaultStepCanvasGuides } from "@/lib/canvas/canvas-guide-config";
@@ -71,6 +72,9 @@ export default async function StepPage({ params }: StepPageProps) {
   if (!session) {
     redirect("/dashboard");
   }
+
+  // Track visit (fire-and-forget, don't block render)
+  trackWorkshopVisit(session.workshop.id).catch(() => {});
 
   // Compute admin status: check user email against ADMIN_EMAIL env var
   const user = await currentUser();
@@ -862,6 +866,9 @@ export default async function StepPage({ params }: StepPageProps) {
       step8SelectedSlotIds = step8SelectedSlotIds.filter((id) => !excludedSlotIds.has(id));
     }
 
+    // Track whether concept card ownership was assigned/changed (need DB persistence)
+    let conceptCardsChanged = false;
+
     // Create skeleton concept cards for selected ideas (one per selection unit)
     // Groups of slots count as one selection unit and become one concept card
     if (initialConceptCards.length === 0 && step8SelectedSlotIds && step8SelectedSlotIds.length > 0) {
@@ -924,6 +931,7 @@ export default async function StepPage({ params }: StepPageProps) {
           });
         }
       });
+      conceptCardsChanged = true; // freshly created cards need persistence
     }
 
     // Repair existing concept cards: backfill missing images/titles and add missing cards
@@ -1052,6 +1060,7 @@ export default async function StepPage({ params }: StepPageProps) {
             if (!card.ownerId || !availableOwners.find((o) => o.ownerId === card.ownerId)) {
               const target = getLeastLoaded();
               ownerCounts.set(target.ownerId, (ownerCounts.get(target.ownerId) || 0) + 1);
+              conceptCardsChanged = true;
               return { ...card, ownerId: target.ownerId, ownerName: target.ownerName, ownerColor: target.ownerColor };
             }
 
@@ -1061,6 +1070,7 @@ export default async function StepPage({ params }: StepPageProps) {
               const target = getLeastLoaded();
               ownerCounts.set(card.ownerId, currentCount - 1);
               ownerCounts.set(target.ownerId, (ownerCounts.get(target.ownerId) || 0) + 1);
+              conceptCardsChanged = true;
               return { ...card, ownerId: target.ownerId, ownerName: target.ownerName, ownerColor: target.ownerColor };
             }
 
@@ -1068,6 +1078,11 @@ export default async function StepPage({ params }: StepPageProps) {
           });
         }
       }
+    }
+
+    // Persist concept card ownership to DB so the AI API route reads correct ownership
+    if (conceptCardsChanged && initialConceptCards.length > 0) {
+      await saveConceptCardOwnership(session.workshop.id, step.id, initialConceptCards);
     }
   }
 

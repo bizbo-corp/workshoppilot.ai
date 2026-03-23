@@ -255,6 +255,35 @@ function ConceptActivityStartedListener() {
 }
 
 /**
+ * StepResetListener — renderless component that listens for STEP_RESET
+ * broadcast events from the facilitator. On receipt, resets the concept
+ * activity flag and does a hard navigation to force full teardown of
+ * useChat state, hasAutoStarted ref, and stale messages.
+ *
+ * Hard navigation (window.location.href) is intentional: router.refresh()
+ * doesn't re-mount client components, so useChat and refs would persist.
+ * Step reset is rare, so the brief reload is acceptable.
+ */
+function StepResetListener({ sessionId }: { sessionId: string }) {
+  const { isFacilitator } = useMultiplayerContext();
+  const setConceptActivityStarted = useCanvasStore((s) => s.setConceptActivityStarted);
+
+  useEventListener(({ event }) => {
+    if (event.type !== 'STEP_RESET' || isFacilitator) return;
+
+    setConceptActivityStarted(false);
+    toast('Step has been reset by the facilitator', { duration: 3000 });
+
+    // Hard reload forces full teardown: fresh SSR, new stores, new useChat, refs reset
+    setTimeout(() => {
+      window.location.href = `/workshop/${sessionId}/step/${event.stepOrder}`;
+    }, 500);
+  });
+
+  return null;
+}
+
+/**
  * MultiplayerRoomInner — rendered inside RoomProvider, reads the current
  * participant's color and role from Liveblocks presence and provides them
  * via context. Also renders PresenceBar (fixed overlay), JoinLeaveListener
@@ -289,6 +318,7 @@ function MultiplayerRoomInner({
       <VotingEventListener />
       <ParticipantRemovedListener />
       <ConceptActivityStartedListener />
+      <StepResetListener sessionId={sessionId} />
       <CountdownTimer />
       {children}
     </MultiplayerContext.Provider>
