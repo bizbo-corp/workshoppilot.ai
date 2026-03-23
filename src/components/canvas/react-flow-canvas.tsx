@@ -1148,6 +1148,7 @@ function ReactFlowCanvasInner({
         onReassign: handleConceptReassign,
         availableOwners: conceptOwners,
         isFacilitator,
+        isMultiplayer,
         isOwner: isMultiplayer && (
           (isFacilitator && card.ownerId === 'facilitator') ||
           (!!participantId && card.ownerId === participantId)

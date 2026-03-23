@@ -51,10 +51,10 @@ export function createDefaultConceptCard(
       opportunities: ['', '', ''],
       threats: ['', '', ''],
     },
-    feasibility: partial?.feasibility || {
-      technical: { score: 0, rationale: '' },
-      business: { score: 0, rationale: '' },
-      userDesirability: { score: 0, rationale: '' },
+    feasibility: {
+      technical: { score: 0, rationale: '', ...partial?.feasibility?.technical },
+      business: { score: 0, rationale: '', ...partial?.feasibility?.business },
+      userDesirability: { score: 0, rationale: '', ...partial?.feasibility?.userDesirability },
     },
     cardState: partial?.cardState || 'skeleton',
     cardIndex: partial?.cardIndex,

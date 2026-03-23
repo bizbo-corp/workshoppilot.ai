@@ -576,6 +576,26 @@ div[style*="z-index: 9999"] {
 
 
 
+/* Concept card — active state animated yellow glow */
+@keyframes concept-card-active-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 2px #eab308, 0 0 16px 4px #eab30840;
+  }
+  50% {
+    box-shadow: 0 0 0 2px #eab308, 0 0 24px 8px #eab30860;
+  }
+}
+
+.concept-card-active-glow {
+  animation: concept-card-active-glow 2s ease-in-out infinite;
+}
+
+/* Non-owned cards in multiplayer — dimmed and desaturated */
+.concept-card-non-owned {
+  opacity: 0.55;
+  filter: saturate(0.4);
+}
+
 /* Accessibility — disable light trail animations for reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   .light-trails-svg path {
@@ -585,5 +605,9 @@ div[style*="z-index: 9999"] {
   .light-trails-svg .prism-outer,
   .light-trails-svg .prism-core {
     animation: none !important;
+  }
+  .concept-card-active-glow {
+    animation: none !important;
+    box-shadow: 0 0 0 2px #eab308, 0 0 16px 4px #eab30840;
   }
 }

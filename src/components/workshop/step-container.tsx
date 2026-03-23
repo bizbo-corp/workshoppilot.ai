@@ -941,7 +941,7 @@ export function StepContainer({
   // Synthesis summary (narrative, journey, confidence, next steps) lives on the results page
   const renderStep10Content = () => {
     return (
-      <div className="flex h-full flex-col overflow-y-auto p-6">
+      <div className={cn("flex h-full flex-col overflow-y-auto p-6", !chatCollapsed && !isMobile && "pl-[504px]")}>
         <div className="space-y-8">
           {/* Extraction status banner — non-blocking */}
           {isExtracting && (

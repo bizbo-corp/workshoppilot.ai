@@ -9,6 +9,7 @@ import {
   BarChart3,
   ImageIcon,
   ChevronDown,
+  Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
@@ -26,6 +27,7 @@ export type ConceptCardNodeRendererData = ConceptCardData & {
   availableOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string }>;
   isFacilitator?: boolean;
   isOwner?: boolean;
+  isMultiplayer?: boolean;
 };
 
 export type ConceptCardNodeType = Node<ConceptCardNodeRendererData, 'conceptCard'>;
@@ -266,24 +268,60 @@ function ReassignDropdown({
 
 export const ConceptCardNode = memo(
   ({ data, id, selected }: NodeProps<ConceptCardNodeType>) => {
+    const isFilled = data.cardState === 'filled';
+    const isActive = data.cardState === 'active';
+    const isNonOwned = data.isMultiplayer && !data.isOwner && !data.isFacilitator;
+
+    // Guard against incomplete data from DB
+    const defaultDim = { score: 0, rationale: '' };
+    const feasibility = {
+      technical: data.feasibility?.technical ?? defaultDim,
+      business: data.feasibility?.business ?? defaultDim,
+      userDesirability: data.feasibility?.userDesirability ?? defaultDim,
+    };
+    const emptySwot = { strengths: ['', '', ''], weaknesses: ['', '', ''], opportunities: ['', '', ''], threats: ['', '', ''] };
+    const swot = data.swot ?? emptySwot;
+
+    // Owner color tinting — faint wash across card background + borders
+    const oc = data.ownerColor;
+    const cardBg = oc ? `color-mix(in srgb, ${oc} 6%, ${SAGE.bg})` : SAGE.bg;
+    const cardBorder = oc ? `color-mix(in srgb, ${oc} 30%, ${SAGE.border})` : SAGE.border;
+    const sectionBorder = oc ? `color-mix(in srgb, ${oc} 15%, ${SAGE.sectionBorder})` : SAGE.sectionBorder;
+
+    // State glows layer on top of owner tint
+    let boxShadow: string | undefined;
+    let glowClass = '';
+
+    if (isFilled) {
+      boxShadow = `0 0 0 2px #22c55e, 0 0 16px 4px #22c55e40`;
+    } else if (isActive) {
+      glowClass = 'concept-card-active-glow';
+    } else if (selected) {
+      boxShadow = `0 0 0 2px ${SAGE.borderSelected}`;
+    }
+
     return (
       <div
-        className="persona-card w-[680px] rounded-2xl shadow-xl overflow-hidden"
+        className={cn(
+          'persona-card relative w-[680px] rounded-2xl shadow-xl overflow-hidden',
+          glowClass,
+          isNonOwned && 'concept-card-non-owned',
+        )}
         style={{
-          backgroundColor: SAGE.bg,
+          backgroundColor: cardBg,
           color: 'var(--persona-text-strong)',
-          borderWidth: 2,
+          borderWidth: 1,
           borderStyle: 'solid',
-          borderColor: selected
-            ? SAGE.borderSelected
-            : data.isOwner && data.ownerColor
-              ? data.ownerColor
-              : SAGE.border,
-          boxShadow: !selected && data.isOwner && data.ownerColor
-            ? `0 0 0 3px ${data.ownerColor}40, 0 0 20px 4px ${data.ownerColor}30`
-            : undefined,
+          borderColor: cardBorder,
+          boxShadow,
         }}
       >
+        {/* Filled checkmark badge */}
+        {isFilled && (
+          <div className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-green-500 shadow-md">
+            <Check className="h-5 w-5 text-white" strokeWidth={3} />
+          </div>
+        )}
         {/* Drag handle grip bar */}
         <div className="card-drag-handle flex items-center justify-center w-full h-6 cursor-grab active:cursor-grabbing bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded-t-2xl">
           <svg width="32" height="4" viewBox="0 0 32 4" fill="currentColor" className="text-neutral-olive-400">
@@ -342,7 +380,7 @@ export const ConceptCardNode = memo(
         {data.ownerName && (
           <div
             className="flex items-center justify-between px-6 py-2.5"
-            style={{ borderBottom: `1px solid ${SAGE.sectionBorder}` }}
+            style={{ borderBottom: `1px solid ${sectionBorder}` }}
           >
             <div className="flex items-center gap-2">
               <div
@@ -367,7 +405,7 @@ export const ConceptCardNode = memo(
         {/* ── 2. Elevator Pitch ── */}
         <div
           className="px-6 py-5"
-          style={{ borderBottom: `1px solid ${SAGE.sectionBorder}` }}
+          style={{ borderBottom: `1px solid ${sectionBorder}` }}
         >
           <div className="mb-2 flex items-center gap-2">
             <Rocket className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
@@ -389,7 +427,7 @@ export const ConceptCardNode = memo(
         {/* ── 3. USP ── */}
         <div
           className="px-6 py-5"
-          style={{ borderBottom: `1px solid ${SAGE.sectionBorder}` }}
+          style={{ borderBottom: `1px solid ${sectionBorder}` }}
         >
           <div className="mb-2 flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
@@ -411,7 +449,7 @@ export const ConceptCardNode = memo(
         {/* ── 4. SWOT Analysis ── */}
         <div
           className="px-6 py-5"
-          style={{ borderBottom: `1px solid ${SAGE.sectionBorder}` }}
+          style={{ borderBottom: `1px solid ${sectionBorder}` }}
         >
           <div className="mb-3 flex items-center gap-2">
             <Target className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
@@ -434,7 +472,7 @@ export const ConceptCardNode = memo(
                   Strengths
                 </h5>
               </div>
-              {data.swot.strengths.map((item, idx) => (
+              {swot.strengths.map((item, idx) => (
                 <EditableField
                   key={`s-${idx}`}
                   value={item}
@@ -462,7 +500,7 @@ export const ConceptCardNode = memo(
                   Weaknesses
                 </h5>
               </div>
-              {data.swot.weaknesses.map((item, idx) => (
+              {swot.weaknesses.map((item, idx) => (
                 <EditableField
                   key={`w-${idx}`}
                   value={item}
@@ -490,7 +528,7 @@ export const ConceptCardNode = memo(
                   Opportunities
                 </h5>
               </div>
-              {data.swot.opportunities.map((item, idx) => (
+              {swot.opportunities.map((item, idx) => (
                 <EditableField
                   key={`o-${idx}`}
                   value={item}
@@ -518,7 +556,7 @@ export const ConceptCardNode = memo(
                   Threats
                 </h5>
               </div>
-              {data.swot.threats.map((item, idx) => (
+              {swot.threats.map((item, idx) => (
                 <EditableField
                   key={`t-${idx}`}
                   value={item}
@@ -545,8 +583,8 @@ export const ConceptCardNode = memo(
           <div className="space-y-3">
             <FeasibilityDimension
               label="Technical Feasibility"
-              score={data.feasibility.technical.score}
-              rationale={data.feasibility.technical.rationale}
+              score={feasibility.technical.score}
+              rationale={feasibility.technical.rationale}
               onScoreChange={(score) =>
                 data.onFeasibilityChange?.(id, 'technical', score, undefined)
               }
@@ -556,8 +594,8 @@ export const ConceptCardNode = memo(
             />
             <FeasibilityDimension
               label="Business Viability"
-              score={data.feasibility.business.score}
-              rationale={data.feasibility.business.rationale}
+              score={feasibility.business.score}
+              rationale={feasibility.business.rationale}
               onScoreChange={(score) =>
                 data.onFeasibilityChange?.(id, 'business', score, undefined)
               }
@@ -567,8 +605,8 @@ export const ConceptCardNode = memo(
             />
             <FeasibilityDimension
               label="User Desirability"
-              score={data.feasibility.userDesirability.score}
-              rationale={data.feasibility.userDesirability.rationale}
+              score={feasibility.userDesirability.score}
+              rationale={feasibility.userDesirability.rationale}
               onScoreChange={(score) =>
                 data.onFeasibilityChange?.(id, 'userDesirability', score, undefined)
               }

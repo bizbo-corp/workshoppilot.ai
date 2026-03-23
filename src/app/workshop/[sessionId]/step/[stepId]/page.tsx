@@ -513,7 +513,7 @@ export default async function StepPage({ params }: StepPageProps) {
         ideationOwners.push({
           ownerId: 'facilitator',
           ownerName: ownerForIdeation.displayName,
-          ownerColor: ownerForIdeation.color,
+          ownerColor: PARTICIPANT_COLORS[0],
           hmwBranchLabel: stmt ? extractHmwBranchLabel(stmt) : `${ownerForIdeation.displayName}'s HMW`,
           hmwFullStatement: stmt || undefined,
         });
@@ -695,7 +695,7 @@ export default async function StepPage({ params }: StepPageProps) {
             cardIndex: 0,
             ownerId: 'facilitator',
             ownerName: ownerParticipant.displayName,
-            ownerColor: ownerParticipant.color,
+            ownerColor: PARTICIPANT_COLORS[0],
           });
         }
         for (const p of participants) {
@@ -726,7 +726,7 @@ export default async function StepPage({ params }: StepPageProps) {
             ...initialHmwCards[0],
             ownerId: 'facilitator',
             ownerName: ownerParticipant.displayName,
-            ownerColor: ownerParticipant.color,
+            ownerColor: PARTICIPANT_COLORS[0],
           };
         }
         for (const p of participants) {
@@ -760,7 +760,7 @@ export default async function StepPage({ params }: StepPageProps) {
             cardIndex: 0,
             ownerId: 'facilitator',
             ownerName: ownerParticipant.displayName,
-            ownerColor: ownerParticipant.color,
+            ownerColor: PARTICIPANT_COLORS[0],
           });
         }
         if (participantId && !initialHmwCards.some((c) => c.ownerId === participantId)) {
@@ -1022,7 +1022,7 @@ export default async function StepPage({ params }: StepPageProps) {
           availableOwners.push({
             ownerId: 'facilitator',
             ownerName: conceptOwnerParticipant.displayName,
-            ownerColor: conceptOwnerParticipant.color,
+            ownerColor: PARTICIPANT_COLORS[0],
           });
         }
         for (const p of conceptParticipants) {
@@ -1072,6 +1072,13 @@ export default async function StepPage({ params }: StepPageProps) {
               ownerCounts.set(target.ownerId, (ownerCounts.get(target.ownerId) || 0) + 1);
               conceptCardsChanged = true;
               return { ...card, ownerId: target.ownerId, ownerName: target.ownerName, ownerColor: target.ownerColor };
+            }
+
+            // Reconcile stale ownerColor — ensure card color matches current participant color
+            const matchingOwner = availableOwners.find((o) => o.ownerId === card.ownerId);
+            if (matchingOwner && card.ownerColor !== matchingOwner.ownerColor) {
+              conceptCardsChanged = true;
+              return { ...card, ownerColor: matchingOwner.ownerColor };
             }
 
             return card;
