@@ -1,5 +1,5 @@
-import type { JourneyMapperState, JourneyMapperNode, JourneyStageColumn, UiType } from '@/lib/journey-mapper/types';
-import { normalizeIntent, isMarketingIntent } from '@/lib/journey-mapper/types';
+import type { JourneyMapperState, JourneyMapperNode, JourneyStageColumn, NavigationGroup, UiType } from '@/lib/journey-mapper/types';
+import { normalizeIntent } from '@/lib/journey-mapper/types';
 
 const UI_TYPE_COMPONENT_HINTS: Record<UiType, string> = {
   dashboard: 'dashboard layout with sidebar navigation, key metrics cards, and data visualizations',
@@ -10,6 +10,10 @@ const UI_TYPE_COMPONENT_HINTS: Record<UiType, string> = {
   wizard: 'multi-step wizard with progress indicator, step content, and navigation buttons',
   modal: 'modal dialog with header, body content, and action buttons',
   settings: 'settings page with categorized sections, toggles, and save button',
+  auth: 'authentication page with login/signup form, social login buttons, and terms checkbox',
+  onboarding: 'multi-step onboarding wizard with progress bar, step content, and skip option',
+  search: 'search interface with search bar, filters, and instant results list',
+  error: 'error page with illustration, error message, and recovery navigation',
 };
 
 /**
@@ -49,7 +53,53 @@ function groupNodesByStage(nodes: JourneyMapperNode[], stages: JourneyStageColum
 }
 
 function getConceptNames(nodes: JourneyMapperNode[]): string[] {
-  return [...new Set(nodes.map((n) => n.conceptName))];
+  return [...new Set(nodes.map((n) => n.conceptName).filter((n) => n !== 'System' && n !== 'Site'))];
+}
+
+function getCoreNodes(nodes: JourneyMapperNode[]): JourneyMapperNode[] {
+  return nodes.filter((n) => n.nodeCategory !== 'peripheral');
+}
+
+function getPeripheralNodes(nodes: JourneyMapperNode[]): JourneyMapperNode[] {
+  return nodes.filter((n) => n.nodeCategory === 'peripheral');
+}
+
+function buildNavigationGroupSection(groups: NavigationGroup[], nodes: JourneyMapperNode[]): string[] {
+  if (groups.length === 0) return [];
+
+  const lines: string[] = [];
+  lines.push('');
+  lines.push('NAVIGATION STRUCTURE:');
+
+  for (const group of groups) {
+    const groupNodes = nodes.filter((n) => n.groupId === group.id);
+    if (groupNodes.length === 0) continue;
+    lines.push(`- ${group.label}: ${groupNodes.map((n) => n.featureName).join(', ')}`);
+  }
+
+  lines.push('');
+  return lines;
+}
+
+function buildSupportingScreensSection(peripherals: JourneyMapperNode[]): string[] {
+  if (peripherals.length === 0) return [];
+
+  const lines: string[] = [];
+  lines.push('');
+  lines.push('SUPPORTING SCREENS:');
+  lines.push('These are essential system screens that support the core experience:');
+  lines.push('');
+
+  for (const node of peripherals) {
+    const componentHint = UI_TYPE_COMPONENT_HINTS[node.uiType] || node.uiType;
+    lines.push(`### ${node.featureName}`);
+    lines.push(`- Type: ${componentHint}`);
+    lines.push(`- Description: ${node.featureDescription}`);
+    if (node.uiPatternSuggestion) lines.push(`- Pattern: ${node.uiPatternSuggestion}`);
+    lines.push('');
+  }
+
+  return lines;
 }
 
 // ---------------------------------------------------------------------------
@@ -57,9 +107,11 @@ function getConceptNames(nodes: JourneyMapperNode[]): string[] {
 // ---------------------------------------------------------------------------
 
 function buildBrochureV0Prompt(state: JourneyMapperState): string {
-  const { nodes, stages, personaName } = state;
+  const { nodes, stages, groups, personaName } = state;
+  const coreNodes = getCoreNodes(nodes);
+  const peripherals = getPeripheralNodes(nodes);
   const conceptNames = getConceptNames(nodes);
-  const nodesByStage = groupNodesByStage(nodes, stages);
+  const nodesByStage = groupNodesByStage(coreNodes, stages);
   const lines: string[] = [];
 
   lines.push(`Build a high-conversion multi-section landing page for "${conceptNames.join(' + ')}".`);
@@ -86,6 +138,12 @@ function buildBrochureV0Prompt(state: JourneyMapperState): string {
     lines.push('');
   }
 
+  // Supporting screens (header, footer, 404, etc.)
+  lines.push(...buildSupportingScreensSection(peripherals));
+
+  // Navigation groups
+  lines.push(...buildNavigationGroupSection(groups, nodes));
+
   lines.push('DESIGN REQUIREMENTS:');
   lines.push('- Single-page scrolling layout with smooth anchor navigation');
   lines.push('- Bold hero section above the fold with strong CTA');
@@ -100,9 +158,11 @@ function buildBrochureV0Prompt(state: JourneyMapperState): string {
 // ---------------------------------------------------------------------------
 
 function buildAdminPortalV0Prompt(state: JourneyMapperState): string {
-  const { nodes, edges, stages, personaName } = state;
+  const { nodes, edges, stages, groups, personaName } = state;
+  const coreNodes = getCoreNodes(nodes);
+  const peripherals = getPeripheralNodes(nodes);
   const conceptNames = getConceptNames(nodes);
-  const nodesByStage = groupNodesByStage(nodes, stages);
+  const nodesByStage = groupNodesByStage(coreNodes, stages);
   const lines: string[] = [];
 
   lines.push(`Create an admin portal for "${conceptNames.join(' + ')}".`);
@@ -122,6 +182,9 @@ function buildAdminPortalV0Prompt(state: JourneyMapperState): string {
     }
     lines.push('');
   }
+
+  // Navigation groups
+  lines.push(...buildNavigationGroupSection(groups, nodes));
 
   lines.push('VIEWS AND PAGES:');
   lines.push('');
@@ -144,6 +207,9 @@ function buildAdminPortalV0Prompt(state: JourneyMapperState): string {
     lines.push('');
   }
 
+  // Supporting screens
+  lines.push(...buildSupportingScreensSection(peripherals));
+
   lines.push('DESIGN REQUIREMENTS:');
   lines.push('- Sidebar navigation with collapsible sections');
   lines.push('- Data tables with sorting, filtering, pagination, and bulk actions');
@@ -161,14 +227,19 @@ function buildAdminPortalV0Prompt(state: JourneyMapperState): string {
 // ---------------------------------------------------------------------------
 
 function buildDashboardV0Prompt(state: JourneyMapperState): string {
-  const { nodes, edges, stages, personaName } = state;
+  const { nodes, stages, groups, personaName } = state;
+  const coreNodes = getCoreNodes(nodes);
+  const peripherals = getPeripheralNodes(nodes);
   const conceptNames = getConceptNames(nodes);
-  const nodesByStage = groupNodesByStage(nodes, stages);
+  const nodesByStage = groupNodesByStage(coreNodes, stages);
   const lines: string[] = [];
 
   lines.push(`Create an analytics dashboard for "${conceptNames.join(' + ')}".`);
   lines.push(`The primary user is ${personaName}.`);
   lines.push('');
+
+  // Navigation groups
+  lines.push(...buildNavigationGroupSection(groups, nodes));
 
   lines.push('WIDGETS AND VIEWS:');
   lines.push('');
@@ -191,6 +262,9 @@ function buildDashboardV0Prompt(state: JourneyMapperState): string {
     lines.push('');
   }
 
+  // Supporting screens
+  lines.push(...buildSupportingScreensSection(peripherals));
+
   lines.push('DESIGN REQUIREMENTS:');
   lines.push('- KPI cards at the top with trend indicators (up/down arrows, percentage change)');
   lines.push('- Charts: line charts for trends, bar charts for comparisons, donut charts for distribution');
@@ -209,9 +283,11 @@ function buildDashboardV0Prompt(state: JourneyMapperState): string {
 // ---------------------------------------------------------------------------
 
 function buildToolV0Prompt(state: JourneyMapperState): string {
-  const { nodes, edges, stages, personaName } = state;
+  const { nodes, stages, groups, personaName } = state;
+  const coreNodes = getCoreNodes(nodes);
+  const peripherals = getPeripheralNodes(nodes);
   const conceptNames = getConceptNames(nodes);
-  const nodesByStage = groupNodesByStage(nodes, stages);
+  const nodesByStage = groupNodesByStage(coreNodes, stages);
   const lines: string[] = [];
 
   lines.push(`Create a focused utility tool for "${conceptNames.join(' + ')}".`);
@@ -239,6 +315,12 @@ function buildToolV0Prompt(state: JourneyMapperState): string {
     lines.push('');
   }
 
+  // Supporting screens
+  lines.push(...buildSupportingScreensSection(peripherals));
+
+  // Navigation groups (if any)
+  lines.push(...buildNavigationGroupSection(groups, nodes));
+
   lines.push('DESIGN REQUIREMENTS:');
   lines.push('- Clear input form with smart defaults and placeholder examples');
   lines.push('- Processing state with progress indicator or spinner');
@@ -257,9 +339,11 @@ function buildToolV0Prompt(state: JourneyMapperState): string {
 // ---------------------------------------------------------------------------
 
 function buildAppV0Prompt(state: JourneyMapperState): string {
-  const { nodes, edges, stages, personaName, conceptRelationship } = state;
+  const { nodes, edges, stages, groups, personaName, conceptRelationship } = state;
+  const coreNodes = getCoreNodes(nodes);
+  const peripherals = getPeripheralNodes(nodes);
   const conceptNames = getConceptNames(nodes);
-  const nodesByStage = groupNodesByStage(nodes, stages);
+  const nodesByStage = groupNodesByStage(coreNodes, stages);
   const lines: string[] = [];
 
   // App overview
@@ -288,7 +372,10 @@ function buildAppV0Prompt(state: JourneyMapperState): string {
     lines.push('');
   }
 
-  // Screens grouped by journey stage
+  // Navigation groups
+  lines.push(...buildNavigationGroupSection(groups, nodes));
+
+  // Core screens grouped by journey stage
   lines.push('SCREENS AND PAGES:');
   lines.push('');
 
@@ -323,6 +410,9 @@ function buildAppV0Prompt(state: JourneyMapperState): string {
 
     lines.push('');
   }
+
+  // Supporting screens
+  lines.push(...buildSupportingScreensSection(peripherals));
 
   // Design guidelines
   lines.push('DESIGN REQUIREMENTS:');

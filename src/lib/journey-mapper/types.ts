@@ -12,7 +12,20 @@ export type UiType =
   | 'detail-view'
   | 'wizard'
   | 'modal'
-  | 'settings';
+  | 'settings'
+  | 'auth'
+  | 'onboarding'
+  | 'search'
+  | 'error';
+
+export type NodeCategory = 'core' | 'peripheral';
+
+export interface NavigationGroup {
+  id: string;
+  label: string;
+  icon?: string;
+  description?: string;
+}
 
 export type Priority = 'must-have' | 'should-have' | 'nice-to-have';
 
@@ -78,6 +91,8 @@ export interface JourneyMapperNode {
   addressesPain: string;
   position: { x: number; y: number };
   priority: Priority;
+  nodeCategory?: NodeCategory;
+  groupId?: string;
 }
 
 export interface JourneyMapperEdge {
@@ -102,6 +117,7 @@ export interface JourneyMapperState {
   nodes: JourneyMapperNode[];
   edges: JourneyMapperEdge[];
   stages: JourneyStageColumn[];
+  groups: NavigationGroup[];
   challengeContext: string;
   personaName: string;
   conceptRelationship: ConceptRelationship;
@@ -116,6 +132,7 @@ export interface JourneyMappingResult {
   strategicIntent: StrategicIntent;
   conceptRelationship: ConceptRelationship;
   stages: JourneyStageColumn[];
+  groups?: NavigationGroup[];
   features: Array<{
     conceptIndex: number;
     conceptName: string;
@@ -126,6 +143,8 @@ export interface JourneyMappingResult {
     uiPatternSuggestion: string;
     addressesPain: string;
     priority: Priority;
+    nodeCategory?: NodeCategory;
+    groupId?: string;
   }>;
   edges: Array<{
     sourceFeatureIndex: number;

@@ -4,9 +4,11 @@ import type {
   UiType,
   FlowType,
   StrategicIntent,
+  NavigationGroup,
 } from './types';
 import { normalizeIntent, isMarketingIntent } from './types';
 import { BROCHURE_STAGES, detectStrategicIntent, generateConceptDrivenSections, getDefaultStagesForIntent } from './intent-detection';
+import { selectPeripheralServices, getDefaultGroups, buildPeripheralContext } from './peripheral-services';
 
 const UI_TYPE_KEYWORDS: Record<string, UiType> = {
   list: 'table',
@@ -94,7 +96,7 @@ export function heuristicMap(
   const normalized = normalizeIntent(intent);
 
   if (isMarketingIntent(intent)) {
-    return heuristicMarketingSiteMap(concepts, persona);
+    return heuristicMarketingSiteMap(concepts, persona, challengeContext);
   }
 
   // For non-marketing intents, use provided stages or get defaults
@@ -105,7 +107,8 @@ export function heuristicMap(
 /** Marketing-site mode: generate concept-driven sections mapped to funnel stages */
 function heuristicMarketingSiteMap(
   concepts: ConceptData[],
-  persona?: PersonaData | null
+  persona?: PersonaData | null,
+  challengeContext?: string
 ): JourneyMappingResult {
   const stages = BROCHURE_STAGES;
   const personaPains = persona?.pains || persona?.painPoints || persona?.frustrations || [];
@@ -122,6 +125,8 @@ function heuristicMarketingSiteMap(
     uiPatternSuggestion: section.uiPatternSuggestion,
     addressesPain: section.addressesPain,
     priority: section.priority,
+    nodeCategory: 'core' as const,
+    groupId: 'main',
   }));
 
   // Sequential edges through all sections
@@ -134,10 +139,33 @@ function heuristicMarketingSiteMap(
     });
   }
 
+  // Add peripheral services for marketing site
+  const ctx = buildPeripheralContext(challengeContext || '', null, features.length);
+  const peripherals = selectPeripheralServices('marketing-site', ctx);
+  const groups: NavigationGroup[] = getDefaultGroups('marketing-site');
+
+  for (const p of peripherals) {
+    const matchingStage = stages.find((s) => s.id === p.stageHint) || stages[0];
+    features.push({
+      conceptIndex: 0,
+      conceptName: 'Site',
+      featureName: p.featureName,
+      featureDescription: p.featureDescription,
+      stageId: matchingStage.id,
+      uiType: p.uiType,
+      uiPatternSuggestion: p.uiPatternSuggestion,
+      addressesPain: p.addressesPain,
+      priority: p.priority,
+      nodeCategory: 'peripheral',
+      groupId: p.groupId,
+    });
+  }
+
   return {
     strategicIntent: 'marketing-site',
     conceptRelationship: 'combined',
     stages,
+    groups,
     features,
     edges,
   };
@@ -152,6 +180,12 @@ function heuristicAppMap(
 ): JourneyMappingResult {
   const features: JourneyMappingResult['features'] = [];
   const edges: JourneyMappingResult['edges'] = [];
+
+  // Count total core features for peripheral context
+  let totalCoreFeatures = 0;
+  for (const concept of concepts) {
+    totalCoreFeatures += extractFeatures(concept).length;
+  }
 
   for (let conceptIdx = 0; conceptIdx < concepts.length; conceptIdx++) {
     const concept = concepts[conceptIdx];
@@ -191,6 +225,8 @@ function heuristicAppMap(
         uiPatternSuggestion: `${conceptName} ${feature.name} screen`,
         addressesPain: bestStage.barriers[0] || 'General improvement',
         priority: fi === 0 ? 'must-have' : fi < 3 ? 'should-have' : 'nice-to-have',
+        nodeCategory: 'core',
+        groupId: 'main',
       });
     }
   }
@@ -209,10 +245,37 @@ function heuristicAppMap(
     featureIdx += count;
   }
 
+  // Add peripheral services
+  const ctx = buildPeripheralContext(challengeContext, null, totalCoreFeatures);
+  const peripherals = selectPeripheralServices(intent, ctx);
+  const groups: NavigationGroup[] = getDefaultGroups(intent);
+
+  for (const p of peripherals) {
+    // Find best matching stage for this peripheral's stageHint
+    const matchingStage = stages.find((s) => s.id === p.stageHint)
+      || stages.find((s) => s.name.toLowerCase().includes(p.stageHint))
+      || stages[0];
+
+    features.push({
+      conceptIndex: 0,
+      conceptName: 'System',
+      featureName: p.featureName,
+      featureDescription: p.featureDescription,
+      stageId: matchingStage.id,
+      uiType: p.uiType,
+      uiPatternSuggestion: p.uiPatternSuggestion,
+      addressesPain: p.addressesPain,
+      priority: p.priority,
+      nodeCategory: 'peripheral',
+      groupId: p.groupId,
+    });
+  }
+
   return {
     strategicIntent: intent,
     conceptRelationship: concepts.length > 1 ? 'separate-sections' : 'combined',
     stages,
+    groups,
     features,
     edges,
   };

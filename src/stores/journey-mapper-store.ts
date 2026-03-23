@@ -6,6 +6,7 @@ import type {
   JourneyMapperState,
   ConceptRelationship,
   StrategicIntent,
+  NavigationGroup,
 } from '@/lib/journey-mapper/types';
 
 export type JourneyMapperActions = {
@@ -20,6 +21,7 @@ export type JourneyMapperActions = {
   deleteEdge: (id: string) => void;
 
   setStages: (stages: JourneyStageColumn[]) => void;
+  setGroups: (groups: NavigationGroup[]) => void;
   setConceptRelationship: (rel: ConceptRelationship) => void;
   setChallengeContext: (ctx: string) => void;
   setPersonaName: (name: string) => void;
@@ -38,6 +40,7 @@ const defaultState: JourneyMapperState = {
   nodes: [],
   edges: [],
   stages: [],
+  groups: [],
   challengeContext: '',
   personaName: '',
   conceptRelationship: 'combined',
@@ -94,6 +97,8 @@ export function createJourneyMapperStore(initState?: Partial<JourneyMapperState>
       })),
 
     setStages: (stages) => set({ stages }),
+
+    setGroups: (groups) => set({ groups }),
 
     setConceptRelationship: (conceptRelationship) =>
       set({ conceptRelationship, isDirty: true }),

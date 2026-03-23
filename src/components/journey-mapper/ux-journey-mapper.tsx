@@ -10,7 +10,7 @@ import {
   MiniMap,
   Controls,
   type NodeChange,
-  applyNodeChanges,
+  type Connection,
   type Node,
   type Edge,
 } from '@xyflow/react';
@@ -19,16 +19,18 @@ import '@xyflow/react/dist/style.css';
 import { useJourneyMapperStore, useJourneyMapperStoreApi } from '@/providers/journey-mapper-store-provider';
 import { JourneyFeatureNode, type JourneyFeatureNodeData } from './journey-feature-node';
 import { JourneyStageHeader, type StageHeaderData } from './journey-stage-header';
+import { JourneyGroupBackground, type GroupBackgroundData } from './journey-group-background';
 import { EmotionCurveOverlay } from './emotion-curve-overlay';
-import { JourneyMapperToolbar } from './journey-mapper-toolbar';
+import { JourneyMapperToolbar, type ViewMode } from './journey-mapper-toolbar';
 import { V0PromptPanel } from './v0-prompt-panel';
 import { PrdViewerDialog } from '@/components/workshop/prd-viewer-dialog';
-import { computeJourneyMapLayout, type StageHeaderNode } from '@/lib/journey-mapper/layout';
+import { computeJourneyMapLayout, computeGroupBackgrounds, computeSitemapLayout, type StageHeaderNode } from '@/lib/journey-mapper/layout';
 import type { JourneyMapperNode } from '@/lib/journey-mapper/types';
 
 const nodeTypes = {
   featureNode: JourneyFeatureNode,
   stageHeader: JourneyStageHeader,
+  groupBackground: JourneyGroupBackground,
 };
 
 // Per-concept color palette
@@ -66,11 +68,14 @@ function JourneyMapperInner({
   const nodes = useJourneyMapperStore((s) => s.nodes);
   const edges = useJourneyMapperStore((s) => s.edges);
   const stages = useJourneyMapperStore((s) => s.stages);
+  const groups = useJourneyMapperStore((s) => s.groups);
   const isApproved = useJourneyMapperStore((s) => s.isApproved);
   const strategicIntent = useJourneyMapperStore((s) => s.strategicIntent);
 
   const [v0Prompt, setV0Prompt] = useState<string | null>(null);
   const [v0BuildPackId, setV0BuildPackId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('journey');
+  const [showPeripherals, setShowPeripherals] = useState(true);
 
   // Prototype dialog state
   const [showPrototypeDialog, setShowPrototypeDialog] = useState(false);
@@ -83,9 +88,82 @@ function JourneyMapperInner({
 
   // Build React Flow nodes from store state
   const { rfNodes, rfEdges } = useMemo(() => {
-    // Header nodes
+    // Filter out peripherals if toggle is off
+    const filteredNodes = showPeripherals
+      ? nodes
+      : nodes.filter((n) => n.nodeCategory !== 'peripheral');
+
+    if (viewMode === 'sitemap') {
+      // Sitemap layout
+      const effectiveGroups = groups.length > 0
+        ? groups
+        : [{ id: 'main', label: 'Main', description: 'All features' }];
+
+      const { nodes: sitemapNodes, groupBackgrounds } = computeSitemapLayout(filteredNodes, effectiveGroups);
+
+      // Group background RF nodes
+      const bgRfNodes: Node<GroupBackgroundData>[] = groupBackgrounds.map((bg) => ({
+        id: bg.id,
+        type: 'groupBackground',
+        position: bg.position,
+        draggable: false,
+        selectable: false,
+        zIndex: -1,
+        data: {
+          groupId: bg.groupId,
+          label: bg.label,
+          width: bg.width,
+          height: bg.height,
+        },
+      }));
+
+      // Feature nodes
+      const featureRfNodes: Node<JourneyFeatureNodeData>[] = sitemapNodes.map((node) => ({
+        id: node.id,
+        type: 'featureNode',
+        position: node.position,
+        data: {
+          ...node,
+          conceptColor: CONCEPT_COLORS[node.conceptIndex % CONCEPT_COLORS.length],
+          onFieldChange: isReadOnly
+            ? undefined
+            : (id: string, field: keyof JourneyMapperNode, value: string) => {
+                storeApi.getState().updateNode(id, { [field]: value } as Partial<JourneyMapperNode>);
+              },
+        },
+      }));
+
+      // Filter edges to only include visible nodes
+      const visibleIds = new Set(filteredNodes.map((n) => n.id));
+      const flowEdges: Edge[] = edges
+        .filter((e) => visibleIds.has(e.sourceNodeId) && visibleIds.has(e.targetNodeId))
+        .map((edge) => ({
+          id: edge.id,
+          source: edge.sourceNodeId,
+          target: edge.targetNodeId,
+          label: edge.label,
+          type: 'default',
+          animated: edge.flowType === 'primary',
+          style: {
+            stroke:
+              edge.flowType === 'error'
+                ? 'hsl(0 84% 60%)'
+                : edge.flowType === 'secondary'
+                ? 'hsl(var(--muted-foreground))'
+                : 'hsl(var(--primary))',
+            strokeWidth: edge.flowType === 'primary' ? 2 : 1,
+          },
+        }));
+
+      return {
+        rfNodes: [...bgRfNodes, ...featureRfNodes] as Node[],
+        rfEdges: flowEdges,
+      };
+    }
+
+    // Journey (stage column) layout
     const headerRfNodes: Node<StageHeaderData>[] = [];
-    const { headerNodes } = computeJourneyMapLayout(nodes, stages);
+    const { headerNodes } = computeJourneyMapLayout(filteredNodes, stages);
     for (const h of headerNodes) {
       headerRfNodes.push({
         id: h.id,
@@ -103,8 +181,30 @@ function JourneyMapperInner({
       });
     }
 
+    // Group backgrounds for journey view
+    const groupBgNodes: Node<GroupBackgroundData>[] = [];
+    if (groups.length > 0) {
+      const backgrounds = computeGroupBackgrounds(filteredNodes, groups);
+      for (const bg of backgrounds) {
+        groupBgNodes.push({
+          id: bg.id,
+          type: 'groupBackground',
+          position: bg.position,
+          draggable: false,
+          selectable: false,
+          zIndex: -1,
+          data: {
+            groupId: bg.groupId,
+            label: bg.label,
+            width: bg.width,
+            height: bg.height,
+          },
+        });
+      }
+    }
+
     // Feature nodes
-    const featureRfNodes: Node<JourneyFeatureNodeData>[] = nodes.map((node) => ({
+    const featureRfNodes: Node<JourneyFeatureNodeData>[] = filteredNodes.map((node) => ({
       id: node.id,
       type: 'featureNode',
       position: node.position,
@@ -119,30 +219,33 @@ function JourneyMapperInner({
       },
     }));
 
-    // Edges
-    const flowEdges: Edge[] = edges.map((edge) => ({
-      id: edge.id,
-      source: edge.sourceNodeId,
-      target: edge.targetNodeId,
-      label: edge.label,
-      type: 'default',
-      animated: edge.flowType === 'primary',
-      style: {
-        stroke:
-          edge.flowType === 'error'
-            ? 'hsl(0 84% 60%)'
-            : edge.flowType === 'secondary'
-            ? 'hsl(var(--muted-foreground))'
-            : 'hsl(var(--primary))',
-        strokeWidth: edge.flowType === 'primary' ? 2 : 1,
-      },
-    }));
+    // Edges (filter to visible nodes)
+    const visibleIds = new Set(filteredNodes.map((n) => n.id));
+    const flowEdges: Edge[] = edges
+      .filter((e) => visibleIds.has(e.sourceNodeId) && visibleIds.has(e.targetNodeId))
+      .map((edge) => ({
+        id: edge.id,
+        source: edge.sourceNodeId,
+        target: edge.targetNodeId,
+        label: edge.label,
+        type: 'default',
+        animated: edge.flowType === 'primary',
+        style: {
+          stroke:
+            edge.flowType === 'error'
+              ? 'hsl(0 84% 60%)'
+              : edge.flowType === 'secondary'
+              ? 'hsl(var(--muted-foreground))'
+              : 'hsl(var(--primary))',
+          strokeWidth: edge.flowType === 'primary' ? 2 : 1,
+        },
+      }));
 
     return {
-      rfNodes: [...headerRfNodes, ...featureRfNodes] as Node[],
+      rfNodes: [...groupBgNodes, ...headerRfNodes, ...featureRfNodes] as Node[],
       rfEdges: flowEdges,
     };
-  }, [nodes, edges, stages, isReadOnly, storeApi]);
+  }, [nodes, edges, stages, groups, isReadOnly, storeApi, viewMode, showPeripherals]);
 
   // Handle node position changes (drag)
   const onNodesChange = useCallback(
@@ -157,13 +260,39 @@ function JourneyMapperInner({
     [isReadOnly, storeApi]
   );
 
+  // Manual edge creation via drag between handles
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      if (isReadOnly || !connection.source || !connection.target) return;
+      // Only allow connecting feature nodes
+      if (!connection.source.startsWith('jm-node-') || !connection.target.startsWith('jm-node-')) return;
+
+      const edgeId = `jm-edge-manual-${Date.now()}`;
+      storeApi.getState().addEdge({
+        id: edgeId,
+        sourceNodeId: connection.source,
+        targetNodeId: connection.target,
+        flowType: 'secondary',
+      });
+    },
+    [isReadOnly, storeApi]
+  );
+
   // Auto-layout
   const handleAutoLayout = useCallback(() => {
     const state = storeApi.getState();
-    const { nodes: repositioned } = computeJourneyMapLayout(state.nodes, state.stages);
-    storeApi.getState().setNodes(repositioned);
+    if (viewMode === 'sitemap') {
+      const effectiveGroups = state.groups.length > 0
+        ? state.groups
+        : [{ id: 'main', label: 'Main', description: 'All features' }];
+      const { nodes: repositioned } = computeSitemapLayout(state.nodes, effectiveGroups);
+      storeApi.getState().setNodes(repositioned);
+    } else {
+      const { nodes: repositioned } = computeJourneyMapLayout(state.nodes, state.stages);
+      storeApi.getState().setNodes(repositioned);
+    }
     storeApi.getState().markDirty();
-  }, [storeApi]);
+  }, [storeApi, viewMode]);
 
   // Add feature
   const handleAddFeature = useCallback(() => {
@@ -185,6 +314,8 @@ function JourneyMapperInner({
       addressesPain: '',
       position: { x: 0, y: 400 },
       priority: 'should-have',
+      nodeCategory: 'core',
+      groupId: 'main',
     });
   }, [storeApi]);
 
@@ -251,6 +382,7 @@ function JourneyMapperInner({
         edges={rfEdges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
+        onConnect={onConnect}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.2}
@@ -264,13 +396,16 @@ function JourneyMapperInner({
           nodeStrokeWidth={3}
         />
         <Controls className="!bg-background !border-border" />
-        <EmotionCurveOverlay stages={stages} />
+        {viewMode === 'journey' && <EmotionCurveOverlay stages={stages} />}
         <JourneyMapperToolbar
           sessionId={sessionId}
           isReadOnly={isReadOnly}
           isRegenerating={isRegenerating}
           isApproved={isApproved}
           strategicIntent={strategicIntent}
+          viewMode={viewMode}
+          showPeripherals={showPeripherals}
+          groupCount={groups.length}
           onRegenerate={onRegenerate}
           onAutoLayout={handleAutoLayout}
           onGenerateV0Prompt={handleGenerateV0Prompt}
@@ -279,6 +414,8 @@ function JourneyMapperInner({
           onCreatePrototype={handleCreatePrototype}
           onReset={onReset}
           isResetting={isResetting}
+          onTogglePeripherals={() => setShowPeripherals((p) => !p)}
+          onSetViewMode={setViewMode}
         />
       </ReactFlow>
 

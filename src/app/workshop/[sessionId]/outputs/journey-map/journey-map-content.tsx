@@ -108,6 +108,7 @@ function JourneyMapInner({
         nodes: [],
         edges: [],
         stages: [],
+        groups: [],
         challengeContext: '',
         personaName: '',
         conceptRelationship: 'combined',

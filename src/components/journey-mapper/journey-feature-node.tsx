@@ -2,6 +2,7 @@
 
 import { memo, useRef, useEffect } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { JourneyMapperNode, UiType, Priority } from '@/lib/journey-mapper/types';
 
@@ -22,6 +23,10 @@ const UI_TYPE_LABELS: Record<UiType, string> = {
   wizard: 'Wizard',
   modal: 'Modal',
   settings: 'Settings',
+  auth: 'Auth',
+  onboarding: 'Onboarding',
+  search: 'Search',
+  error: 'Error Page',
 };
 
 const PRIORITY_STYLES: Record<Priority, { dot: string; label: string }> = {
@@ -80,14 +85,16 @@ function InlineEdit({
 export const JourneyFeatureNode = memo(
   ({ data, id, selected }: NodeProps<JourneyFeatureNodeType>) => {
     const priority = PRIORITY_STYLES[data.priority];
+    const isPeripheral = data.nodeCategory === 'peripheral';
 
     return (
       <div
         className={cn(
           'w-[260px] rounded-lg border bg-card shadow-sm transition-shadow',
-          selected && 'ring-2 ring-primary shadow-md'
+          selected && 'ring-2 ring-primary shadow-md',
+          isPeripheral && 'opacity-75'
         )}
-        style={{ borderLeftWidth: 4, borderLeftColor: data.conceptColor }}
+        style={{ borderLeftWidth: 4, borderLeftColor: isPeripheral ? 'hsl(var(--muted-foreground))' : data.conceptColor }}
       >
         {/* Header */}
         <div className="px-3 pt-3 pb-1">
@@ -97,14 +104,21 @@ export const JourneyFeatureNode = memo(
               placeholder="Feature name"
               onBlur={(v) => data.onFieldChange?.(id, 'featureName', v)}
             />
-            <span
-              className={cn(
-                'shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
-                'bg-muted text-muted-foreground'
+            <div className="flex items-center gap-1 shrink-0">
+              {isPeripheral && (
+                <span className="inline-flex items-center rounded-full bg-muted/80 px-1.5 py-0.5" title="Peripheral service">
+                  <Settings2 className="h-2.5 w-2.5 text-muted-foreground" />
+                </span>
               )}
-            >
-              {UI_TYPE_LABELS[data.uiType]}
-            </span>
+              <span
+                className={cn(
+                  'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                  'bg-muted text-muted-foreground'
+                )}
+              >
+                {UI_TYPE_LABELS[data.uiType] || data.uiType}
+              </span>
+            </div>
           </div>
 
           {/* Concept source */}

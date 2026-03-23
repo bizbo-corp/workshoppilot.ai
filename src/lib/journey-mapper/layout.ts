@@ -1,4 +1,4 @@
-import type { JourneyMapperNode, JourneyStageColumn } from './types';
+import type { JourneyMapperNode, JourneyStageColumn, NavigationGroup } from './types';
 
 const COLUMN_WIDTH = 280;
 const COLUMN_GAP = 40;
@@ -25,12 +25,42 @@ export interface StageHeaderNode {
   position: { x: number; y: number };
 }
 
+export interface GroupBackgroundNode {
+  id: string;
+  groupId: string;
+  label: string;
+  position: { x: number; y: number };
+  width: number;
+  height: number;
+}
+
 const PRIORITY_ORDER = { 'must-have': 0, 'should-have': 1, 'nice-to-have': 2 } as const;
+
+/**
+ * Secondary sort: cluster nodes with same groupId together within each stage column.
+ * Core nodes first, then peripherals. Within each category, sorted by priority.
+ */
+function sortStageNodes(nodes: JourneyMapperNode[]): JourneyMapperNode[] {
+  return nodes.slice().sort((a, b) => {
+    // Core before peripheral
+    const catA = a.nodeCategory === 'peripheral' ? 1 : 0;
+    const catB = b.nodeCategory === 'peripheral' ? 1 : 0;
+    if (catA !== catB) return catA - catB;
+
+    // Same category: group by groupId
+    const gA = a.groupId || '';
+    const gB = b.groupId || '';
+    if (gA !== gB) return gA.localeCompare(gB);
+
+    // Same group: sort by priority
+    return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+  });
+}
 
 /**
  * Compute column-based layout for the journey mapper.
  * Stages → columns left-to-right.
- * Nodes within each column stacked vertically, sorted by priority.
+ * Nodes within each column stacked vertically, sorted by priority with group clustering.
  * Stage headers are non-draggable nodes at the top.
  */
 export function computeJourneyMapLayout(
@@ -69,10 +99,8 @@ export function computeJourneyMapLayout(
       position: { x, y: TOP_PADDING },
     });
 
-    // Sort nodes by priority within column
-    const stageNodes = (nodesByStage.get(stage.id) || [])
-      .slice()
-      .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+    // Sort nodes with group clustering
+    const stageNodes = sortStageNodes(nodesByStage.get(stage.id) || []);
 
     stageNodes.forEach((node, nodeIndex) => {
       positionedNodes.push({
@@ -86,6 +114,131 @@ export function computeJourneyMapLayout(
   });
 
   return { nodes: positionedNodes, headerNodes };
+}
+
+/**
+ * Compute bounding-box background nodes for each navigation group.
+ * Returns positioned group backgrounds that surround their member nodes.
+ */
+export function computeGroupBackgrounds(
+  nodes: JourneyMapperNode[],
+  groups: NavigationGroup[]
+): GroupBackgroundNode[] {
+  if (groups.length === 0) return [];
+
+  const backgrounds: GroupBackgroundNode[] = [];
+  const padding = 16;
+  const labelHeight = 28;
+
+  for (const group of groups) {
+    const groupNodes = nodes.filter((n) => n.groupId === group.id);
+    if (groupNodes.length === 0) continue;
+
+    const minX = Math.min(...groupNodes.map((n) => n.position.x));
+    const minY = Math.min(...groupNodes.map((n) => n.position.y));
+    const maxX = Math.max(...groupNodes.map((n) => n.position.x));
+    const maxY = Math.max(...groupNodes.map((n) => n.position.y));
+
+    backgrounds.push({
+      id: `group-bg-${group.id}`,
+      groupId: group.id,
+      label: group.label,
+      position: { x: minX - padding, y: minY - padding - labelHeight },
+      width: (maxX - minX) + COLUMN_WIDTH + padding * 2,
+      height: (maxY - minY) + NODE_HEIGHT + padding * 2 + labelHeight,
+    });
+  }
+
+  return backgrounds;
+}
+
+// ---------------------------------------------------------------------------
+// Sitemap / Tree view layout
+// ---------------------------------------------------------------------------
+
+const SITEMAP_GROUP_GAP = 60;
+const SITEMAP_NODE_WIDTH = 260;
+const SITEMAP_NODE_HEIGHT = 80;
+const SITEMAP_NODE_H_GAP = 20;
+const SITEMAP_NODE_V_GAP = 30;
+const SITEMAP_NODES_PER_ROW = 4;
+
+/**
+ * Compute a sitemap/tree layout: groups as horizontal sections, nodes in rows within each group.
+ * Returns positioned nodes + group backgrounds (no stage headers in sitemap view).
+ */
+export function computeSitemapLayout(
+  nodes: JourneyMapperNode[],
+  groups: NavigationGroup[]
+): { nodes: JourneyMapperNode[]; groupBackgrounds: GroupBackgroundNode[] } {
+  const positionedNodes: JourneyMapperNode[] = [];
+  const groupBackgrounds: GroupBackgroundNode[] = [];
+
+  // Determine group order: 'main' first, then alphabetical
+  const sortedGroups = groups.slice().sort((a, b) => {
+    if (a.id === 'main') return -1;
+    if (b.id === 'main') return 1;
+    return a.label.localeCompare(b.label);
+  });
+
+  // Also handle ungrouped nodes
+  const ungroupedNodes = nodes.filter((n) => !n.groupId || !groups.some((g) => g.id === n.groupId));
+  if (ungroupedNodes.length > 0 && !sortedGroups.some((g) => g.id === 'main')) {
+    sortedGroups.unshift({ id: 'main', label: 'Main', description: 'Core features' });
+  }
+
+  let currentY = TOP_PADDING;
+  const labelHeight = 32;
+  const groupPadding = 20;
+
+  for (const group of sortedGroups) {
+    const groupNodes = nodes.filter((n) => n.groupId === group.id);
+    // Include ungrouped in 'main'
+    if (group.id === 'main') {
+      groupNodes.push(...ungroupedNodes);
+    }
+    if (groupNodes.length === 0) continue;
+
+    // Sort: must-have first
+    groupNodes.sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+
+    const groupStartY = currentY;
+    const contentStartY = groupStartY + labelHeight + groupPadding;
+
+    // Lay out nodes in rows
+    groupNodes.forEach((node, idx) => {
+      const col = idx % SITEMAP_NODES_PER_ROW;
+      const row = Math.floor(idx / SITEMAP_NODES_PER_ROW);
+
+      positionedNodes.push({
+        ...node,
+        position: {
+          x: groupPadding + col * (SITEMAP_NODE_WIDTH + SITEMAP_NODE_H_GAP),
+          y: contentStartY + row * (SITEMAP_NODE_HEIGHT + SITEMAP_NODE_V_GAP),
+        },
+      });
+    });
+
+    const totalRows = Math.ceil(groupNodes.length / SITEMAP_NODES_PER_ROW);
+    const groupContentHeight = totalRows * (SITEMAP_NODE_HEIGHT + SITEMAP_NODE_V_GAP) - SITEMAP_NODE_V_GAP;
+    const groupTotalHeight = labelHeight + groupPadding * 2 + groupContentHeight;
+
+    const groupWidth = Math.min(groupNodes.length, SITEMAP_NODES_PER_ROW)
+      * (SITEMAP_NODE_WIDTH + SITEMAP_NODE_H_GAP) - SITEMAP_NODE_H_GAP + groupPadding * 2;
+
+    groupBackgrounds.push({
+      id: `group-bg-${group.id}`,
+      groupId: group.id,
+      label: group.label,
+      position: { x: 0, y: groupStartY },
+      width: groupWidth,
+      height: groupTotalHeight,
+    });
+
+    currentY += groupTotalHeight + SITEMAP_GROUP_GAP;
+  }
+
+  return { nodes: positionedNodes, groupBackgrounds };
 }
 
 /** Get total canvas dimensions for the layout */

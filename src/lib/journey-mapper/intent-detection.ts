@@ -37,13 +37,56 @@ const INTENT_KEYWORDS: Record<string, string[]> = {
 
 const MIN_SCORE_THRESHOLD = 2;
 
+// ---------------------------------------------------------------------------
+// Verb pattern signals (~20% weight)
+// ---------------------------------------------------------------------------
+
+const VERB_PATTERNS: Record<string, string[]> = {
+  'admin-portal': ['manage', 'administer', 'configure', 'moderate', 'approve', 'assign'],
+  'dashboard': ['track', 'monitor', 'measure', 'analyze', 'report', 'visualize'],
+  'marketing-site': ['sell', 'market', 'promote', 'launch', 'advertise', 'attract'],
+  'tool': ['calculate', 'convert', 'generate', 'validate', 'check', 'scan', 'format'],
+  'web-app': ['build', 'create', 'collaborate', 'automate', 'integrate', 'connect'],
+};
+
+// ---------------------------------------------------------------------------
+// Persona role signals (~20% weight)
+// ---------------------------------------------------------------------------
+
+const PERSONA_ROLE_SIGNALS: Record<string, string[]> = {
+  'admin-portal': ['admin', 'administrator', 'manager', 'moderator', 'operator', 'supervisor'],
+  'dashboard': ['analyst', 'executive', 'director', 'cfo', 'ceo', 'head of', 'vp of'],
+  'marketing-site': ['marketer', 'growth', 'sales', 'customer', 'buyer', 'shopper', 'visitor'],
+  'tool': ['developer', 'engineer', 'designer', 'writer', 'creator'],
+  'web-app': ['user', 'member', 'participant', 'subscriber', 'team'],
+};
+
+// ---------------------------------------------------------------------------
+// Journey stage name signals (~20% weight)
+// ---------------------------------------------------------------------------
+
+const STAGE_NAME_SIGNALS: Record<string, string[]> = {
+  'web-app': ['onboarding', 'active-use', 'active use', 'retention', 'engagement'],
+  'marketing-site': ['awareness', 'consideration', 'decision', 'purchase', 'conversion'],
+  'admin-portal': ['auth', 'manage', 'configure', 'audit'],
+  'dashboard': ['load', 'overview', 'drill-down', 'drill down', 'kpi'],
+  'tool': ['input', 'process', 'result', 'export'],
+};
+
 /**
- * Detect strategic intent using multi-keyword scoring.
- * Highest-scoring intent wins (min threshold of 2, fallback to 'web-app').
+ * Detect strategic intent using weighted multi-signal scoring.
+ * - Keyword matching (~40%)
+ * - Verb patterns (~20%)
+ * - Persona role (~20%)
+ * - Journey stage names (~20%)
+ *
+ * Accepts optional persona and journeyStageNames for enhanced accuracy.
  */
 export function detectStrategicIntent(
   challengeContext: string,
-  concepts: Array<Record<string, unknown>>
+  concepts: Array<Record<string, unknown>>,
+  persona?: string | null,
+  journeyStageNames?: string[]
 ): StrategicIntent {
   const allText = [
     challengeContext,
@@ -53,14 +96,55 @@ export function detectStrategicIntent(
     ].filter(Boolean).join(' ')),
   ].join(' ').toLowerCase();
 
+  const scores: Record<string, number> = {};
+
+  // Signal 1: Keyword matching (~40% weight, up to 2 points per keyword)
+  for (const [intent, keywords] of Object.entries(INTENT_KEYWORDS)) {
+    let kwScore = 0;
+    for (const kw of keywords) {
+      if (allText.includes(kw)) kwScore++;
+    }
+    scores[intent] = (scores[intent] || 0) + kwScore * 0.4;
+  }
+
+  // Signal 2: Verb patterns (~20% weight)
+  for (const [intent, verbs] of Object.entries(VERB_PATTERNS)) {
+    let verbScore = 0;
+    for (const verb of verbs) {
+      if (allText.includes(verb)) verbScore++;
+    }
+    scores[intent] = (scores[intent] || 0) + verbScore * 0.2;
+  }
+
+  // Signal 3: Persona role (~20% weight)
+  if (persona) {
+    const personaLower = persona.toLowerCase();
+    for (const [intent, roles] of Object.entries(PERSONA_ROLE_SIGNALS)) {
+      for (const role of roles) {
+        if (personaLower.includes(role)) {
+          scores[intent] = (scores[intent] || 0) + 1.0;
+          break;
+        }
+      }
+    }
+  }
+
+  // Signal 4: Journey stage name matching (~20% weight)
+  if (journeyStageNames && journeyStageNames.length > 0) {
+    const stageText = journeyStageNames.join(' ').toLowerCase();
+    for (const [intent, stageKeywords] of Object.entries(STAGE_NAME_SIGNALS)) {
+      let stageScore = 0;
+      for (const sk of stageKeywords) {
+        if (stageText.includes(sk)) stageScore++;
+      }
+      scores[intent] = (scores[intent] || 0) + stageScore * 0.2;
+    }
+  }
+
   let bestIntent: StrategicIntent = 'web-app';
   let bestScore = 0;
 
-  for (const [intent, keywords] of Object.entries(INTENT_KEYWORDS)) {
-    let score = 0;
-    for (const kw of keywords) {
-      if (allText.includes(kw)) score++;
-    }
+  for (const [intent, score] of Object.entries(scores)) {
     if (score > bestScore) {
       bestScore = score;
       bestIntent = intent as StrategicIntent;

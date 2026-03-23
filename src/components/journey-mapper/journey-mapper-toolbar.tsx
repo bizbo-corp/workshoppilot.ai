@@ -1,11 +1,13 @@
 'use client';
 
 import { Panel } from '@xyflow/react';
-import { RefreshCw, LayoutGrid, Wand2, Plus, ArrowLeft, Loader2, CheckCircle2, Rocket, Trash2 } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Wand2, Plus, ArrowLeft, Loader2, CheckCircle2, Rocket, Trash2, Eye, EyeOff, Map, Network } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import type { StrategicIntent } from '@/lib/journey-mapper/types';
 import { INTENT_LABELS, INTENT_ADD_LABELS, normalizeIntent } from '@/lib/journey-mapper/types';
+
+export type ViewMode = 'journey' | 'sitemap';
 
 interface JourneyMapperToolbarProps {
   sessionId: string;
@@ -13,6 +15,9 @@ interface JourneyMapperToolbarProps {
   isRegenerating?: boolean;
   isApproved?: boolean;
   strategicIntent?: StrategicIntent;
+  viewMode?: ViewMode;
+  showPeripherals?: boolean;
+  groupCount?: number;
   onRegenerate: () => void;
   onAutoLayout: () => void;
   onGenerateV0Prompt: () => void;
@@ -21,6 +26,8 @@ interface JourneyMapperToolbarProps {
   onCreatePrototype: () => void;
   onReset: () => void;
   isResetting?: boolean;
+  onTogglePeripherals?: () => void;
+  onSetViewMode?: (mode: ViewMode) => void;
 }
 
 export function JourneyMapperToolbar({
@@ -29,6 +36,9 @@ export function JourneyMapperToolbar({
   isRegenerating,
   isApproved,
   strategicIntent,
+  viewMode = 'journey',
+  showPeripherals = true,
+  groupCount = 0,
   onRegenerate,
   onAutoLayout,
   onGenerateV0Prompt,
@@ -37,6 +47,8 @@ export function JourneyMapperToolbar({
   onCreatePrototype,
   onReset,
   isResetting,
+  onTogglePeripherals,
+  onSetViewMode,
 }: JourneyMapperToolbarProps) {
   return (
     <Panel position="top-left" className="flex items-center gap-2 flex-wrap">
@@ -54,6 +66,13 @@ export function JourneyMapperToolbar({
       {strategicIntent && (
         <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground">
           {INTENT_LABELS[strategicIntent]}
+        </span>
+      )}
+
+      {/* Group count badge */}
+      {groupCount > 0 && (
+        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground">
+          {groupCount} groups
         </span>
       )}
 
@@ -94,6 +113,50 @@ export function JourneyMapperToolbar({
             {INTENT_ADD_LABELS[normalizeIntent(strategicIntent ?? 'web-app')]}
           </Button>
         </>
+      )}
+
+      <div className="h-5 w-px bg-border" />
+
+      {/* View mode toggle */}
+      {onSetViewMode && (
+        <div className="inline-flex items-center rounded-md border bg-muted p-0.5">
+          <button
+            onClick={() => onSetViewMode('journey')}
+            className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium transition-colors ${
+              viewMode === 'journey' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Map className="h-3 w-3" />
+            Journey
+          </button>
+          <button
+            onClick={() => onSetViewMode('sitemap')}
+            className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium transition-colors ${
+              viewMode === 'sitemap' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Network className="h-3 w-3" />
+            Sitemap
+          </button>
+        </div>
+      )}
+
+      {/* Toggle peripherals */}
+      {onTogglePeripherals && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onTogglePeripherals}
+          className="h-7 text-xs gap-1.5"
+          title={showPeripherals ? 'Hide peripheral services' : 'Show peripheral services'}
+        >
+          {showPeripherals ? (
+            <Eye className="h-3 w-3" />
+          ) : (
+            <EyeOff className="h-3 w-3" />
+          )}
+          Peripherals
+        </Button>
       )}
 
       <div className="h-5 w-px bg-border" />

@@ -114,6 +114,20 @@ INSTRUCTIONS:
    - Secondary flows (alternative paths)
    - Error flows (recovery/support paths, especially at dip points)
 
+6. GENERATE NAVIGATION GROUPS: Define logical navigation groups for the app type.
+   Each group represents a section of the app's navigation (e.g., main app, auth, settings, support).
+   Every feature MUST belong to a group via groupId.
+   Groups should include at minimum: a "main" group for core features, plus groups for peripheral services.
+
+7. ADD PERIPHERAL SERVICES: Based on the strategic intent, add supporting screens that every real app needs:
+   - For web-app: Auth (login/signup), Onboarding, Profile/Settings, Help, Error pages. Conditionally: Search (if >10 features), Billing (if SaaS), Notifications (if collaborative).
+   - For admin-portal: Auth (SSO), User Management, Audit Log, Settings, Error pages. Conditionally: Import/Export, Notifications.
+   - For dashboard: Auth, Profile/Preferences, Export Center, Error states. Conditionally: Notifications.
+   - For tool: Error handling, Help/FAQ. Conditionally: Auth (if save/share), Settings (if configurable).
+   - For marketing-site: Header Nav, Footer, 404, Privacy. Conditionally: Contact Form, Newsletter, Checkout.
+
+   Mark peripheral services with "nodeCategory": "peripheral". Core concept features use "nodeCategory": "core".
+
 OUTPUT FORMAT - Return ONLY valid JSON matching this exact schema:
 {
   "strategicIntent": "marketing-site" | "admin-portal" | "dashboard" | "tool" | "web-app",
@@ -129,6 +143,13 @@ OUTPUT FORMAT - Return ONLY valid JSON matching this exact schema:
       "opportunities": ["string"]
     }
   ],
+  "groups": [
+    {
+      "id": "string (kebab-case)",
+      "label": "string",
+      "description": "string"
+    }
+  ],
   "features": [
     {
       "conceptIndex": 0,
@@ -136,10 +157,12 @@ OUTPUT FORMAT - Return ONLY valid JSON matching this exact schema:
       "featureName": "string",
       "featureDescription": "string",
       "stageId": "string (must match a stage id)",
-      "uiType": "dashboard" | "landing-page" | "form" | "table" | "detail-view" | "wizard" | "modal" | "settings",
+      "uiType": "dashboard" | "landing-page" | "form" | "table" | "detail-view" | "wizard" | "modal" | "settings" | "auth" | "onboarding" | "search" | "error",
       "uiPatternSuggestion": "string",
       "addressesPain": "string",
-      "priority": "must-have" | "should-have" | "nice-to-have"
+      "priority": "must-have" | "should-have" | "nice-to-have",
+      "nodeCategory": "core" | "peripheral",
+      "groupId": "string (must match a group id)"
     }
   ],
   "edges": [
@@ -155,11 +178,14 @@ OUTPUT FORMAT - Return ONLY valid JSON matching this exact schema:
 CRITICAL RULES:
 - Return ONLY the JSON object. No preamble, no explanation, no markdown fences.
 - Every feature's stageId MUST match one of the stage ids.
+- Every feature's groupId MUST match one of the group ids.
 - Feature indices in edges refer to the position in the features array (0-based).
 - Extract 3-5 features per concept. More for complex concepts, fewer for simple ones.
 - Prioritize features that address journey dip points as "must-have".
 - If Step 6 data is missing or minimal, use the default stages for the detected intent type.
 - Always include at least one "primary" flow edge connecting the main user path.
+- Every app-type intent (web-app, admin-portal, dashboard) MUST include auth, onboarding, profile/settings, and error pages as peripheral services.
+- Do NOT add irrelevant peripheral services (e.g., no checkout for a dashboard, no billing for a free tool).
 - For "marketing-site": Use marketing funnel stages (Awareness, Consideration, Decision, Purchase). Nodes MUST be concept-specific site sections — use actual concept names in section titles (e.g., "How Conversion Catalyst Works", NOT "How It Works"). Use uiType "landing-page". Focus on persuasion goals. Do NOT suggest database schemas, auth flows, or backend logic. Map elevator pitch to Hero, USP to How It Works, SWOT strengths to benefit cards, SWOT threats to FAQ.
 - For "admin-portal": Use admin workflow stages. Focus on CRUD operations, data management, and role-based access. Include bulk actions and audit trails.
 - For "dashboard": Use analytics stages. Focus on KPIs, charts, drill-down, and actionable insights. Include date range selectors and export.

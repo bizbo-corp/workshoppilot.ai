@@ -106,6 +106,10 @@ export async function POST(req: Request) {
     const personaName = (personaArtifact?.name as string) || 'the target user';
     const challengeContext = (artifacts.challenge as Record<string, unknown>)?.challenge as string || '';
 
+    // Extract persona name and journey stage names for enhanced intent detection
+    const personaNameForDetection = (personaArtifact?.name as string) || (personaArtifact?.role as string) || null;
+    const canvasStageNames = buildStagesFromCanvas(journeyCanvasData)?.map((s) => s.name) || [];
+
     // Try LLM mapping first
     let mappingResult: JourneyMappingResult;
     let usedLlm = false;
@@ -139,17 +143,24 @@ export async function POST(req: Request) {
       console.warn('LLM journey mapping failed, falling back to heuristic:', llmError);
 
       // Build stages from canvas data or detect intent-appropriate defaults
-      const detectedIntent = detectStrategicIntent(challengeContext, concepts as Array<Record<string, unknown>>);
+      const detectedIntent = detectStrategicIntent(
+        challengeContext,
+        concepts as Array<Record<string, unknown>>,
+        personaNameForDetection,
+        canvasStageNames
+      );
       const stages = buildStagesFromCanvas(journeyCanvasData) || getDefaultStagesForIntent(detectedIntent) || DEFAULT_STAGES;
       mappingResult = heuristicMap(concepts, stages, challengeContext, personaArtifact);
     }
 
-    // Apply layout positions
+    // Apply layout positions — propagate nodeCategory and groupId
     const nodesWithIds = mappingResult.features.map((f, i) => ({
       id: `jm-node-${i}`,
       ...f,
       stageName: mappingResult.stages.find((s) => s.id === f.stageId)?.name || f.stageId,
       position: { x: 0, y: 0 },
+      nodeCategory: f.nodeCategory,
+      groupId: f.groupId,
     }));
 
     const edgesWithIds = mappingResult.edges.map((e, i) => ({
@@ -171,6 +182,7 @@ export async function POST(req: Request) {
       nodes: positionedNodes,
       edges: edgesWithIds,
       stages: mappingResult.stages,
+      groups: mappingResult.groups || [],
       challengeContext,
       personaName,
       conceptRelationship: mappingResult.conceptRelationship,
