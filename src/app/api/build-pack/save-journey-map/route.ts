@@ -50,6 +50,15 @@ export async function POST(req: Request) {
       );
     }
 
+    // Guard: never save empty state to DB (prevents autosave race after reset)
+    if (!state.nodes || state.nodes.length === 0) {
+      console.warn('[journey-map] save blocked: empty nodes array, skipping DB write');
+      return new Response(
+        JSON.stringify({ saved: false, reason: 'empty-state' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Find existing journey map build pack
     const existingRows = await db
       .select()

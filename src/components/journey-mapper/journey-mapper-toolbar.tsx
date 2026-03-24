@@ -1,10 +1,10 @@
 'use client';
 
 import { Panel } from '@xyflow/react';
-import { RefreshCw, LayoutGrid, Wand2, Plus, ArrowLeft, Loader2, CheckCircle2, Rocket, Trash2, Eye, EyeOff, Map, Network } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Wand2, Plus, ArrowLeft, Loader2, CheckCircle2, Rocket, Trash2, Eye, EyeOff, Map, Network, Lock, Unlock, Sparkles, FolderCog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import type { StrategicIntent } from '@/lib/journey-mapper/types';
+import type { StrategicIntent, LayoutMode } from '@/lib/journey-mapper/types';
 import { INTENT_LABELS, INTENT_ADD_LABELS, normalizeIntent } from '@/lib/journey-mapper/types';
 
 export type ViewMode = 'journey' | 'sitemap';
@@ -16,10 +16,12 @@ interface JourneyMapperToolbarProps {
   isApproved?: boolean;
   strategicIntent?: StrategicIntent;
   viewMode?: ViewMode;
+  layoutMode?: LayoutMode;
   showPeripherals?: boolean;
   groupCount?: number;
   onRegenerate: () => void;
   onAutoLayout: () => void;
+  onAutoTidy?: () => void;
   onGenerateV0Prompt: () => void;
   onAddFeature: () => void;
   onApprove: () => void;
@@ -28,6 +30,8 @@ interface JourneyMapperToolbarProps {
   isResetting?: boolean;
   onTogglePeripherals?: () => void;
   onSetViewMode?: (mode: ViewMode) => void;
+  onSetLayoutMode?: (mode: LayoutMode) => void;
+  onManageGroups?: () => void;
 }
 
 export function JourneyMapperToolbar({
@@ -37,10 +41,12 @@ export function JourneyMapperToolbar({
   isApproved,
   strategicIntent,
   viewMode = 'journey',
+  layoutMode = 'auto',
   showPeripherals = true,
   groupCount = 0,
   onRegenerate,
   onAutoLayout,
+  onAutoTidy,
   onGenerateV0Prompt,
   onAddFeature,
   onApprove,
@@ -49,6 +55,8 @@ export function JourneyMapperToolbar({
   isResetting,
   onTogglePeripherals,
   onSetViewMode,
+  onSetLayoutMode,
+  onManageGroups,
 }: JourneyMapperToolbarProps) {
   return (
     <Panel position="top-left" className="flex items-center gap-2 flex-wrap">
@@ -93,15 +101,27 @@ export function JourneyMapperToolbar({
             Re-generate
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onAutoLayout}
-            className="h-7 text-xs gap-1.5"
-          >
-            <LayoutGrid className="h-3 w-3" />
-            Auto-layout
-          </Button>
+          {layoutMode === 'freeform' ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAutoTidy}
+              className="h-7 text-xs gap-1.5"
+            >
+              <Sparkles className="h-3 w-3" />
+              Auto-tidy
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAutoLayout}
+              className="h-7 text-xs gap-1.5"
+            >
+              <LayoutGrid className="h-3 w-3" />
+              Auto-layout
+            </Button>
+          )}
 
           <Button
             variant="outline"
@@ -112,6 +132,18 @@ export function JourneyMapperToolbar({
             <Plus className="h-3 w-3" />
             {INTENT_ADD_LABELS[normalizeIntent(strategicIntent ?? 'web-app')]}
           </Button>
+
+          {onManageGroups && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onManageGroups}
+              className="h-7 text-xs gap-1.5"
+            >
+              <FolderCog className="h-3 w-3" />
+              Groups
+            </Button>
+          )}
         </>
       )}
 
@@ -137,6 +169,30 @@ export function JourneyMapperToolbar({
           >
             <Network className="h-3 w-3" />
             Sitemap
+          </button>
+        </div>
+      )}
+
+      {/* Layout mode toggle */}
+      {onSetLayoutMode && (
+        <div className="inline-flex items-center rounded-md border bg-muted p-0.5">
+          <button
+            onClick={() => onSetLayoutMode('auto')}
+            className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium transition-colors ${
+              layoutMode === 'auto' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Lock className="h-3 w-3" />
+            Auto
+          </button>
+          <button
+            onClick={() => onSetLayoutMode('freeform')}
+            className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium transition-colors ${
+              layoutMode === 'freeform' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Unlock className="h-3 w-3" />
+            Free-form
           </button>
         </div>
       )}

@@ -22,7 +22,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Plus, Minus, Maximize } from "lucide-react";
+import { CanvasZoomControls } from "./canvas-zoom-controls";
 import { cn } from "@/lib/utils";
 import {
   useCanvasStore,
@@ -406,8 +406,6 @@ function ReactFlowCanvasInner({
   const {
     screenToFlowPosition,
     fitView,
-    zoomIn,
-    zoomOut,
     setViewport,
     getViewport,
     setCenter,
@@ -2921,30 +2919,7 @@ function ReactFlowCanvasInner({
         />
         {/* Live cursors — renders remote participants' cursors in flow coords (multiplayer only) */}
         {workshopType === 'multiplayer' && <LiveCursors />}
-        {/* Zoom controls — styled to match canvas toolbar */}
-        <div className="absolute bottom-4 right-4 z-10 flex flex-col items-center bg-card rounded-xl shadow-md border border-border p-1 gap-0.5">
-          <button
-            onClick={() => zoomIn({ duration: 200 })}
-            title="Zoom in"
-            className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => zoomOut({ duration: 200 })}
-            title="Zoom out"
-            className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-          >
-            <Minus className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => fitViewWithChatOffset({ padding: 0.2, duration: 300 })}
-            title="Fit view"
-            className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-          >
-            <Maximize className="w-4 h-4" />
-          </button>
-        </div>
+        <CanvasZoomControls onFitView={() => fitViewWithChatOffset({ padding: 0.2, duration: 300 })} />
         {stepConfig.hasQuadrants && stepConfig.quadrantConfig && (
           <QuadrantOverlay config={stepConfig.quadrantConfig} />
         )}

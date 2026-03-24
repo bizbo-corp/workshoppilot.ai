@@ -59,9 +59,14 @@ function scoreOverlap(text1: string, text2: string): number {
 
 export interface ConceptData {
   name?: string;
+  title?: string;
   conceptName?: string;
   usp?: string;
+  valueProposition?: string;
   elevatorPitch?: string;
+  description?: string;
+  keyFeatures?: string[];
+  key_features?: string[];
   strengths?: string[];
   swotStrengths?: string[];
   swotOpportunities?: string[];
@@ -285,7 +290,7 @@ function extractFeatures(concept: ConceptData): Array<{ name: string; descriptio
   const features: Array<{ name: string; description: string }> = [];
 
   // Try explicit features array
-  if (concept.features && Array.isArray(concept.features)) {
+  if (concept.features && Array.isArray(concept.features) && concept.features.length > 0) {
     for (const f of concept.features.slice(0, 5)) {
       if (typeof f === 'string') {
         features.push({ name: f, description: f });
@@ -299,27 +304,57 @@ function extractFeatures(concept: ConceptData): Array<{ name: string; descriptio
     }
   }
 
-  // Extract from USP if no features found
-  if (features.length === 0 && concept.usp) {
-    const sentences = concept.usp.split(/[.;]/).filter((s) => s.trim().length > 10);
-    for (const s of sentences.slice(0, 3)) {
-      features.push({ name: s.trim().slice(0, 50), description: s.trim() });
+  // Try keyFeatures / key_features (concept card format — array of strings)
+  if (features.length === 0) {
+    const kf = concept.keyFeatures || concept.key_features;
+    if (Array.isArray(kf) && kf.length > 0) {
+      for (const f of kf.slice(0, 5)) {
+        if (typeof f === 'string') {
+          features.push({ name: f.slice(0, 50), description: f });
+        }
+      }
     }
   }
 
-  // Extract from elevator pitch
-  if (features.length === 0 && concept.elevatorPitch) {
-    features.push({
-      name: 'Core Feature',
-      description: concept.elevatorPitch,
-    });
+  // Extract from USP or valueProposition
+  if (features.length === 0) {
+    const uspText = concept.usp || concept.valueProposition;
+    if (uspText) {
+      const sentences = uspText.split(/[.;]/).filter((s) => s.trim().length > 10);
+      for (const s of sentences.slice(0, 3)) {
+        features.push({ name: s.trim().slice(0, 50), description: s.trim() });
+      }
+    }
   }
 
-  // Fallback
+  // Extract from elevator pitch or description
+  if (features.length === 0) {
+    const pitchText = concept.elevatorPitch || concept.description;
+    if (pitchText) {
+      features.push({
+        name: 'Core Feature',
+        description: pitchText,
+      });
+    }
+  }
+
+  // Try strengths as features
+  if (features.length === 0) {
+    const strengths = concept.strengths || concept.swotStrengths || concept.swot?.strengths;
+    if (Array.isArray(strengths) && strengths.length > 0) {
+      for (const s of strengths.slice(0, 3)) {
+        if (typeof s === 'string') {
+          features.push({ name: s.slice(0, 50), description: s });
+        }
+      }
+    }
+  }
+
+  // Fallback — use concept name/title
   if (features.length === 0) {
     features.push({
-      name: concept.name || concept.conceptName || 'Feature',
-      description: 'Core product feature',
+      name: concept.name || concept.title || concept.conceptName || 'Feature',
+      description: concept.description || 'Core product feature',
     });
   }
 

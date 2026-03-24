@@ -40,11 +40,13 @@ function InlineEdit({
   placeholder,
   onBlur,
   multiline,
+  truncated,
 }: {
   value?: string;
   placeholder: string;
   onBlur: (value: string) => void;
   multiline?: boolean;
+  truncated?: boolean;
 }) {
   const ref = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
@@ -57,6 +59,14 @@ function InlineEdit({
   const sharedClasses =
     'w-full bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground/50 nodrag nopan';
 
+  if (multiline && truncated) {
+    return (
+      <p className={cn(sharedClasses, 'line-clamp-2 cursor-text')} title={value}>
+        {value || <span className="text-muted-foreground/50">{placeholder}</span>}
+      </p>
+    );
+  }
+
   if (multiline) {
     return (
       <textarea
@@ -64,8 +74,13 @@ function InlineEdit({
         defaultValue={value || ''}
         placeholder={placeholder}
         rows={2}
-        className={cn(sharedClasses, 'resize-none')}
+        className={cn(sharedClasses, 'resize-none overflow-hidden')}
         onBlur={(e) => onBlur(e.target.value)}
+        onInput={(e) => {
+          const el = e.currentTarget;
+          el.style.height = 'auto';
+          el.style.height = `${el.scrollHeight}px`;
+        }}
       />
     );
   }
@@ -84,7 +99,7 @@ function InlineEdit({
 
 export const JourneyFeatureNode = memo(
   ({ data, id, selected }: NodeProps<JourneyFeatureNodeType>) => {
-    const priority = PRIORITY_STYLES[data.priority];
+    const priority = PRIORITY_STYLES[data.priority] ?? PRIORITY_STYLES['should-have'];
     const isPeripheral = data.nodeCategory === 'peripheral';
 
     return (
@@ -134,6 +149,7 @@ export const JourneyFeatureNode = memo(
             placeholder="Feature description..."
             onBlur={(v) => data.onFieldChange?.(id, 'featureDescription', v)}
             multiline
+            truncated={!selected}
           />
         </div>
 
@@ -150,9 +166,17 @@ export const JourneyFeatureNode = memo(
           )}
         </div>
 
-        {/* Handles for edges */}
-        <Handle type="target" position={Position.Left} className="!opacity-0 !w-0 !h-0" />
-        <Handle type="source" position={Position.Right} className="!opacity-0 !w-0 !h-0" />
+        {/* Handles for edges — visible circles */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!w-3 !h-3 !rounded-full !border-2 !border-background !bg-muted-foreground/40 hover:!bg-primary hover:!scale-125 transition-all"
+        />
+        <Handle
+          type="source"
+          position={Position.Right}
+          className="!w-3 !h-3 !rounded-full !border-2 !border-background !bg-muted-foreground/40 hover:!bg-primary hover:!scale-125 transition-all"
+        />
       </div>
     );
   }

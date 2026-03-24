@@ -20,11 +20,16 @@ export type UiType =
 
 export type NodeCategory = 'core' | 'peripheral';
 
+export type LayoutMode = 'auto' | 'freeform';
+
 export interface NavigationGroup {
   id: string;
   label: string;
   icon?: string;
   description?: string;
+  position?: { x: number; y: number };
+  width?: number;
+  height?: number;
 }
 
 export type Priority = 'must-have' | 'should-have' | 'nice-to-have';
@@ -122,6 +127,7 @@ export interface JourneyMapperState {
   personaName: string;
   conceptRelationship: ConceptRelationship;
   strategicIntent: StrategicIntent;
+  layoutMode?: LayoutMode;
   isApproved: boolean;
   isDirty: boolean;
   lastGeneratedAt?: string;

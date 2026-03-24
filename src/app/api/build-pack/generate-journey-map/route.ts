@@ -101,7 +101,16 @@ export async function POST(req: Request) {
 
     // Extract concept data for heuristic fallback
     const conceptArtifact = artifacts.concept as Record<string, unknown>;
+
+    // Diagnostic logging
+    console.log('[journey-map] concept artifact keys:', Object.keys(conceptArtifact));
+    console.log('[journey-map] concept artifact preview:', JSON.stringify(conceptArtifact).slice(0, 300));
+
     const concepts = extractConcepts(conceptArtifact);
+    console.log('[journey-map] extractConcepts returned', concepts.length, 'concepts');
+    for (const c of concepts) {
+      console.log('[journey-map]   concept keys:', Object.keys(c), 'name:', c.name || c.conceptName || c.title || '(none)');
+    }
     const personaArtifact = artifacts.persona as Record<string, unknown> | null;
     const personaName = (personaArtifact?.name as string) || 'the target user';
     const challengeContext = (artifacts.challenge as Record<string, unknown>)?.challenge as string || '';
@@ -140,7 +149,7 @@ export async function POST(req: Request) {
       mappingResult = JSON.parse(cleaned) as JourneyMappingResult;
       usedLlm = true;
     } catch (llmError) {
-      console.warn('LLM journey mapping failed, falling back to heuristic:', llmError);
+      console.warn('LLM journey mapping failed, falling back to heuristic:', llmError instanceof Error ? llmError.message : llmError);
 
       // Build stages from canvas data or detect intent-appropriate defaults
       const detectedIntent = detectStrategicIntent(
@@ -153,14 +162,46 @@ export async function POST(req: Request) {
       mappingResult = heuristicMap(concepts, stages, challengeContext, personaArtifact);
     }
 
+    console.log('[journey-map] mapping result: features=%d stages=%d edges=%d', mappingResult.features.length, mappingResult.stages.length, mappingResult.edges.length);
+
+    // Emergency fallback: if both LLM and heuristic produced 0 features, create one per concept
+    if (mappingResult.features.length === 0) {
+      console.warn('[journey-map] Generation produced 0 features, using emergency fallback');
+      const fallbackStageId = mappingResult.stages[0]?.id || DEFAULT_STAGES[0].id;
+      if (mappingResult.stages.length === 0) {
+        mappingResult.stages = DEFAULT_STAGES;
+      }
+      for (let ci = 0; ci < concepts.length; ci++) {
+        const c = concepts[ci];
+        const cName = (c.name as string) || (c.title as string) || (c.conceptName as string) || `Concept ${ci + 1}`;
+        const cDesc = (c.description as string) || (c.elevatorPitch as string) || (c.usp as string) || (c.valueProposition as string) || 'Core product feature';
+        mappingResult.features.push({
+          conceptIndex: ci,
+          conceptName: cName,
+          featureName: cName,
+          featureDescription: cDesc,
+          stageId: fallbackStageId,
+          uiType: 'detail-view',
+          uiPatternSuggestion: `${cName} overview`,
+          addressesPain: 'General improvement',
+          priority: 'must-have',
+          nodeCategory: 'core',
+          groupId: 'main',
+        });
+      }
+    }
+
     // Apply layout positions — propagate nodeCategory and groupId
+    // Ensure required fields have defaults (LLM may omit priority, uiType, etc.)
     const nodesWithIds = mappingResult.features.map((f, i) => ({
       id: `jm-node-${i}`,
       ...f,
       stageName: mappingResult.stages.find((s) => s.id === f.stageId)?.name || f.stageId,
       position: { x: 0, y: 0 },
-      nodeCategory: f.nodeCategory,
-      groupId: f.groupId,
+      priority: f.priority || (i < 3 ? 'must-have' as const : i < 7 ? 'should-have' as const : 'nice-to-have' as const),
+      uiType: f.uiType || ('detail-view' as const),
+      nodeCategory: f.nodeCategory || ('core' as const),
+      groupId: f.groupId || 'main',
     }));
 
     const edgesWithIds = mappingResult.edges.map((e, i) => ({
@@ -310,13 +351,55 @@ function buildStagesFromCanvas(
 
 /** Extract concept data from the concept artifact (handles single or multiple concepts) */
 function extractConcepts(conceptArtifact: Record<string, unknown>): Array<Record<string, unknown>> {
-  // Check for concepts array (multiple concepts)
-  if (Array.isArray(conceptArtifact.concepts)) {
+  // 1. concepts[] — standard multi-concept format
+  if (Array.isArray(conceptArtifact.concepts) && conceptArtifact.concepts.length > 0) {
     return conceptArtifact.concepts as Array<Record<string, unknown>>;
   }
-  if (Array.isArray(conceptArtifact.selectedConcepts)) {
+  // 2. selectedConcepts[] — post-selection format
+  if (Array.isArray(conceptArtifact.selectedConcepts) && conceptArtifact.selectedConcepts.length > 0) {
     return conceptArtifact.selectedConcepts as Array<Record<string, unknown>>;
   }
-  // Single concept — wrap in array
+  // 3. cards[] — concept cards format (Step 9 canvas cards at top level)
+  if (Array.isArray(conceptArtifact.cards) && conceptArtifact.cards.length > 0) {
+    console.log('[journey-map] extractConcepts: found cards[] at top level');
+    return mapConceptCards(conceptArtifact.cards as Array<Record<string, unknown>>);
+  }
+  // 4. _canvas.conceptCards[] — Step 9 canvas artifact shape
+  const canvas = conceptArtifact._canvas as Record<string, unknown> | undefined;
+  if (canvas && Array.isArray(canvas.conceptCards) && canvas.conceptCards.length > 0) {
+    console.log('[journey-map] extractConcepts: found _canvas.conceptCards[]', canvas.conceptCards.length, 'cards');
+    return mapConceptCards(canvas.conceptCards as Array<Record<string, unknown>>);
+  }
+  // 5. concept (singular object)
+  if (conceptArtifact.concept && typeof conceptArtifact.concept === 'object' && !Array.isArray(conceptArtifact.concept)) {
+    return [conceptArtifact.concept as Record<string, unknown>];
+  }
+  // 6. Check for any array value that looks like concept objects (has name/title + description)
+  for (const key of Object.keys(conceptArtifact)) {
+    if (key.startsWith('_')) continue; // skip internal keys like _canvas
+    const val = conceptArtifact[key];
+    if (Array.isArray(val) && val.length > 0) {
+      const first = val[0] as Record<string, unknown>;
+      if (typeof first === 'object' && first !== null && (first.name || first.title || first.conceptName)) {
+        console.log(`[journey-map] extractConcepts: found concept-like array under key "${key}"`);
+        return val as Array<Record<string, unknown>>;
+      }
+    }
+  }
+  // 7. Final fallback: wrap entire artifact, but warn
+  console.warn('[journey-map] extractConcepts: no recognized concept shape, wrapping entire artifact');
   return [conceptArtifact];
+}
+
+/** Map raw concept card objects to a normalized shape with expected field names */
+function mapConceptCards(cards: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return cards.map((card) => ({
+    ...card,
+    name: card.title || card.name || card.conceptName || 'Concept',
+    description: card.description || card.summary || '',
+    usp: card.usp || card.valueProposition || '',
+    elevatorPitch: card.elevatorPitch || card.pitch || card.description || '',
+    features: card.features || card.keyFeatures || card.key_features || [],
+    strengths: card.strengths || card.swotStrengths || [],
+  }));
 }

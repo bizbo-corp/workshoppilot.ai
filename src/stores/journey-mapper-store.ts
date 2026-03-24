@@ -7,6 +7,7 @@ import type {
   ConceptRelationship,
   StrategicIntent,
   NavigationGroup,
+  LayoutMode,
 } from '@/lib/journey-mapper/types';
 
 export type JourneyMapperActions = {
@@ -29,6 +30,13 @@ export type JourneyMapperActions = {
   setStrategicIntent: (intent: StrategicIntent) => void;
   setApproved: (approved: boolean) => void;
 
+  setLayoutMode: (mode: LayoutMode) => void;
+  addGroup: (group: NavigationGroup) => void;
+  updateGroup: (id: string, updates: Partial<NavigationGroup>) => void;
+  deleteGroup: (id: string) => void;
+  moveNodeToGroup: (nodeId: string, groupId: string | undefined) => void;
+  updateEdge: (id: string, updates: Partial<JourneyMapperEdge>) => void;
+
   setState: (state: Partial<JourneyMapperState>) => void;
   markDirty: () => void;
   markClean: () => void;
@@ -45,6 +53,7 @@ const defaultState: JourneyMapperState = {
   personaName: '',
   conceptRelationship: 'combined',
   strategicIntent: 'web-app',
+  layoutMode: 'auto',
   isApproved: false,
   isDirty: false,
   lastGeneratedAt: undefined,
@@ -114,6 +123,41 @@ export function createJourneyMapperStore(initState?: Partial<JourneyMapperState>
 
     setApproved: (isApproved) =>
       set({ isApproved, isDirty: true }),
+
+    setLayoutMode: (layoutMode) =>
+      set({ layoutMode, isDirty: true }),
+
+    addGroup: (group) =>
+      set((state) => ({
+        groups: [...state.groups, group],
+        isDirty: true,
+      })),
+
+    updateGroup: (id, updates) =>
+      set((state) => ({
+        groups: state.groups.map((g) => (g.id === id ? { ...g, ...updates } : g)),
+        isDirty: true,
+      })),
+
+    deleteGroup: (id) =>
+      set((state) => ({
+        groups: state.groups.filter((g) => g.id !== id),
+        // Ungroup child nodes
+        nodes: state.nodes.map((n) => (n.groupId === id ? { ...n, groupId: undefined } : n)),
+        isDirty: true,
+      })),
+
+    moveNodeToGroup: (nodeId, groupId) =>
+      set((state) => ({
+        nodes: state.nodes.map((n) => (n.id === nodeId ? { ...n, groupId } : n)),
+        isDirty: true,
+      })),
+
+    updateEdge: (id, updates) =>
+      set((state) => ({
+        edges: state.edges.map((e) => (e.id === id ? { ...e, ...updates } : e)),
+        isDirty: true,
+      })),
 
     setState: (partial) => set(partial),
 

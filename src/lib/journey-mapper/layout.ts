@@ -113,20 +113,41 @@ export function computeJourneyMapLayout(
     });
   });
 
+  // Catch orphan nodes whose stageId doesn't match any stage —
+  // append them to the first stage column so they're never silently dropped.
+  const positionedIds = new Set(positionedNodes.map((n) => n.id));
+  const orphans = nodes.filter((n) => !positionedIds.has(n.id));
+  if (orphans.length > 0) {
+    const firstStageX = 0;
+    const firstStageCount = positionedNodes.filter(
+      (n) => stages[0] && n.stageId === stages[0].id
+    ).length;
+    orphans.forEach((node, idx) => {
+      positionedNodes.push({
+        ...node,
+        stageId: stages[0]?.id ?? node.stageId,
+        position: {
+          x: firstStageX,
+          y: TOP_PADDING + hdrHeight + (firstStageCount + idx) * (nodeH + nodeGap),
+        },
+      });
+    });
+  }
+
   return { nodes: positionedNodes, headerNodes };
 }
 
 /**
- * Compute bounding-box background nodes for each navigation group.
- * Returns positioned group backgrounds that surround their member nodes.
+ * Compute bounding-box container nodes for each navigation group.
+ * Returns positioned group containers that surround their member nodes.
  */
-export function computeGroupBackgrounds(
+export function computeGroupContainers(
   nodes: JourneyMapperNode[],
   groups: NavigationGroup[]
 ): GroupBackgroundNode[] {
   if (groups.length === 0) return [];
 
-  const backgrounds: GroupBackgroundNode[] = [];
+  const containers: GroupBackgroundNode[] = [];
   const padding = 16;
   const labelHeight = 28;
 
@@ -134,13 +155,26 @@ export function computeGroupBackgrounds(
     const groupNodes = nodes.filter((n) => n.groupId === group.id);
     if (groupNodes.length === 0) continue;
 
+    // Use stored dimensions if available, otherwise compute from bounding box
+    if (group.position && group.width && group.height) {
+      containers.push({
+        id: `group-container-${group.id}`,
+        groupId: group.id,
+        label: group.label,
+        position: group.position,
+        width: group.width,
+        height: group.height,
+      });
+      continue;
+    }
+
     const minX = Math.min(...groupNodes.map((n) => n.position.x));
     const minY = Math.min(...groupNodes.map((n) => n.position.y));
     const maxX = Math.max(...groupNodes.map((n) => n.position.x));
     const maxY = Math.max(...groupNodes.map((n) => n.position.y));
 
-    backgrounds.push({
-      id: `group-bg-${group.id}`,
+    containers.push({
+      id: `group-container-${group.id}`,
       groupId: group.id,
       label: group.label,
       position: { x: minX - padding, y: minY - padding - labelHeight },
@@ -149,7 +183,52 @@ export function computeGroupBackgrounds(
     });
   }
 
-  return backgrounds;
+  return containers;
+}
+
+/** @deprecated Use computeGroupContainers instead */
+export const computeGroupBackgrounds = computeGroupContainers;
+
+/**
+ * Auto-tidy: rearrange child nodes in a grid within each group's current bounds.
+ * Positions are relative to parent origin (for freeform parentId mode).
+ */
+export function autoTidyWithinGroups(
+  nodes: JourneyMapperNode[],
+  groups: NavigationGroup[]
+): JourneyMapperNode[] {
+  const result = [...nodes];
+  const padding = 20;
+  const labelHeight = 32;
+  const nodeW = 260;
+  const nodeH = NODE_HEIGHT;
+  const hGap = 20;
+  const vGap = 20;
+
+  for (const group of groups) {
+    const groupNodeIndices = result
+      .map((n, i) => (n.groupId === group.id ? i : -1))
+      .filter((i) => i >= 0);
+
+    if (groupNodeIndices.length === 0) continue;
+
+    const containerW = group.width || 600;
+    const cols = Math.max(1, Math.floor((containerW - padding * 2 + hGap) / (nodeW + hGap)));
+
+    groupNodeIndices.forEach((idx, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      result[idx] = {
+        ...result[idx],
+        position: {
+          x: padding + col * (nodeW + hGap),
+          y: labelHeight + padding + row * (nodeH + vGap),
+        },
+      };
+    });
+  }
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------

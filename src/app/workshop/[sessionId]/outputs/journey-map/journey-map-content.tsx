@@ -5,6 +5,16 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Map, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
 import { JourneyMapperStoreProvider, useJourneyMapperStore, useJourneyMapperStoreApi } from '@/providers/journey-mapper-store-provider';
@@ -27,11 +37,13 @@ function JourneyMapInner({
 }: Omit<JourneyMapContentProps, 'savedState'>) {
   const router = useRouter();
   const storeApi = useJourneyMapperStoreApi();
-  const hasNodes = useJourneyMapperStore((s) => s.nodes.length > 0);
+  const nodes = useJourneyMapperStore((s) => s.nodes);
+  const hasNodes = nodes.length > 0;
   const isDirty = useJourneyMapperStore((s) => s.isDirty);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const buildPackIdRef = useRef<string | null>(null);
@@ -44,6 +56,8 @@ function JourneyMapInner({
     saveTimerRef.current = setTimeout(async () => {
       try {
         const state = storeApi.getState();
+        // Don't save empty state (could happen if reset raced with this timer)
+        if (state.nodes.length === 0) return;
         const res = await fetch('/api/build-pack/save-journey-map', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -81,8 +95,10 @@ function JourneyMapInner({
       if (data.buildPackId) {
         buildPackIdRef.current = data.buildPackId;
       }
-      storeApi.getState().setState({
-        ...data.state,
+      const incoming = data.state;
+      // Use storeApi.setState directly (Zustand native) to guarantee subscriber notification
+      storeApi.setState({
+        ...incoming,
         isDirty: false,
       });
       toast.success('Journey map generated');
@@ -94,8 +110,13 @@ function JourneyMapInner({
     }
   }, [workshopId, storeApi]);
 
-  const handleReset = useCallback(async () => {
-    if (!confirm('Reset journey map? This will delete the current map so you can regenerate from scratch.')) return;
+  const executeReset = useCallback(async () => {
+    // Kill any pending autosave BEFORE the async delete — prevents
+    // the timer from firing during the await and re-saving empty state to DB.
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
     setIsResetting(true);
     try {
       await fetch('/api/build-pack/delete-journey-map', {
@@ -103,8 +124,8 @@ function JourneyMapInner({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workshopId }),
       });
-      // Clear the store back to empty
-      storeApi.getState().setState({
+      // Clear the store back to empty — use storeApi.setState directly
+      storeApi.setState({
         nodes: [],
         edges: [],
         stages: [],
@@ -113,6 +134,7 @@ function JourneyMapInner({
         personaName: '',
         conceptRelationship: 'combined',
         strategicIntent: 'web-app',
+        layoutMode: 'auto',
         isApproved: false,
         isDirty: false,
         lastGeneratedAt: undefined,
@@ -156,7 +178,7 @@ function JourneyMapInner({
             </p>
           ) : (
             <Button
-              onClick={() => handleGenerate(false)}
+              onClick={() => handleGenerate(true)}
               disabled={isGenerating}
               className="gap-2"
             >
@@ -188,16 +210,42 @@ function JourneyMapInner({
   }
 
   return (
-    <UXJourneyMapper
-      workshopId={workshopId}
-      sessionId={sessionId}
-      isReadOnly={isReadOnly}
-      buildPackIdRef={buildPackIdRef}
-      onRegenerate={() => handleGenerate(true)}
-      isRegenerating={isGenerating}
-      onReset={handleReset}
-      isResetting={isResetting}
-    />
+    <>
+      <UXJourneyMapper
+        workshopId={workshopId}
+        sessionId={sessionId}
+        isReadOnly={isReadOnly}
+        buildPackIdRef={buildPackIdRef}
+        onRegenerate={() => handleGenerate(true)}
+        isRegenerating={isGenerating}
+        onReset={() => setShowResetDialog(true)}
+        isResetting={isResetting}
+      />
+
+      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Journey Map</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete the current map so you can regenerate from scratch.
+              Your concept data from Step 9 will be preserved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                setShowResetDialog(false);
+                executeReset();
+              }}
+            >
+              Reset
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -209,7 +257,7 @@ export function JourneyMapContent({
   isReadOnly,
 }: JourneyMapContentProps) {
   return (
-    <div className="h-screen w-full">
+    <div className="h-full w-full relative">
       <JourneyMapperStoreProvider initialState={savedState ?? undefined}>
         <JourneyMapInner
           sessionId={sessionId}
