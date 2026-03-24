@@ -21,7 +21,10 @@ import { NewWorkshopButton } from "@/components/dialogs/new-workshop-dialog";
 import { GuidedPilotButton } from "@/components/dialogs/guided-pilot-dialog";
 import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/landing/footer";
-import { LazyGlobe, LazyHeroVisual } from "@/components/landing-v3/lazy-hero-visuals";
+import {
+  LazyGlobe,
+  LazyHeroVisual,
+} from "@/components/landing-v3/lazy-hero-visuals";
 import { VideoPlayButton } from "@/components/landing-v3/video-dialog";
 
 export default function Home() {
@@ -112,7 +115,7 @@ export default function Home() {
               size="lg"
               className="min-w-[200px] text-base shadow-lg shadow-olive-600/20"
             >
-              Start Free Workshop
+              Start Workshop
               <ArrowRight className="ml-2 h-4 w-4" />
             </NewWorkshopButton>
 
@@ -156,7 +159,10 @@ export default function Home() {
       </section>
 
       {/* ── Pain Points: "Why Now" ───────────────────────────── */}
-      <section className="py-24 sm:py-32 bg-background border-t border-border" style={{ contentVisibility: "auto", containIntrinsicSize: "0 600px" }}>
+      <section
+        className="py-24 sm:py-32 bg-background border-t border-border"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "0 600px" }}
+      >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Left column — sticky headline */}
@@ -213,7 +219,10 @@ export default function Home() {
       </section>
 
       {/* ── How It Works ─────────────────────────────────────── */}
-      <section className="py-24 sm:py-32 bg-background border-t border-border" style={{ contentVisibility: "auto", containIntrinsicSize: "0 500px" }}>
+      <section
+        className="py-24 sm:py-32 bg-background border-t border-border"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "0 500px" }}
+      >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="max-w-2xl mb-16 sm:mb-20">
@@ -279,7 +288,10 @@ export default function Home() {
         className="relative py-24 sm:py-32 border-t border-border scroll-mt-20 overflow-hidden"
       >
         {/* Decorative blurs for glassmorphic effect */}
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden="true"
+        >
           <div className="absolute top-1/4 -left-32 h-80 w-80 rounded-full bg-olive-400/20 blur-3xl dark:bg-olive-600/15" />
           <div className="absolute bottom-1/4 -right-32 h-96 w-96 rounded-full bg-olive-300/15 blur-3xl dark:bg-olive-500/10" />
         </div>
@@ -392,7 +404,10 @@ export default function Home() {
       </section>
 
       {/* ── Value Comparison ──────────────────────────────────── */}
-      <section className="py-24 sm:py-32 bg-background border-t border-border" style={{ contentVisibility: "auto", containIntrinsicSize: "0 600px" }}>
+      <section
+        className="py-24 sm:py-32 bg-background border-t border-border"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "0 600px" }}
+      >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Left — headline + WorkshopPilot highlight */}
@@ -475,7 +490,10 @@ export default function Home() {
       </section>
 
       {/* ── Testimonials ─────────────────────────────────────── */}
-      <section className="py-24 sm:py-32 bg-background border-t border-border" style={{ contentVisibility: "auto", containIntrinsicSize: "0 700px" }}>
+      <section
+        className="py-24 sm:py-32 bg-background border-t border-border"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "0 700px" }}
+      >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="max-w-2xl mb-16 sm:mb-20">
@@ -811,9 +829,7 @@ export default function Home() {
               <p className="text-xs text-muted-foreground mb-5 border-t border-amber-200/50 dark:border-amber-800/30 pt-4">
                 Best for funded startups and corporate innovation teams.
               </p>
-              <GuidedPilotButton
-                className="w-full rounded-xl py-3.5 px-4 font-semibold text-sm text-center bg-olive-700 text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500 shadow-md shadow-olive-700/20 transition-colors cursor-pointer"
-              >
+              <GuidedPilotButton className="w-full rounded-xl py-3.5 px-4 font-semibold text-sm text-center bg-olive-700 text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500 shadow-md shadow-olive-700/20 transition-colors cursor-pointer">
                 Book a Guided Workshop
               </GuidedPilotButton>
             </div>
@@ -838,7 +854,10 @@ export default function Home() {
       </section>
 
       {/* ── Final CTA ────────────────────────────────────────── */}
-      <section className="py-24 sm:py-32 bg-background border-t border-border" style={{ contentVisibility: "auto", containIntrinsicSize: "0 400px" }}>
+      <section
+        className="py-24 sm:py-32 bg-background border-t border-border"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "0 400px" }}
+      >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left — headline */}

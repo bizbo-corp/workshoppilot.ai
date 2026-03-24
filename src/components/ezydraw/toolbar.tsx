@@ -32,6 +32,8 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  ImageUp,
+  Loader2 as Loader2Icon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -137,7 +139,11 @@ const ACTIVE_TOOL_CLASS =
 /**
  * Header toolbar: 3-section layout (Navigation | Drawing | Stamps)
  */
-export function EzyDrawToolbar() {
+const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/avif';
+
+export function EzyDrawToolbar({ onImageUpload }: { onImageUpload?: (file: File) => void }) {
+  const isUploadingImage = useDrawingStore((state) => state.isUploadingImage);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const activeTool = useDrawingStore((state) => state.activeTool);
   const setActiveTool = useDrawingStore((state) => state.setActiveTool);
   const strokeColor = useDrawingStore((state) => state.strokeColor);
@@ -207,6 +213,13 @@ export function EzyDrawToolbar() {
       setStampAnchorEl(otherStampRef.current);
       setPointerLocked(true);
       setEmojiPickerOpen(false);
+    }
+  });
+
+  // Image upload hotkey (U)
+  useHotkeys('u', () => {
+    if (onImageUpload && !isUploadingImage) {
+      fileInputRef.current?.click();
     }
   });
 
@@ -505,6 +518,39 @@ export function EzyDrawToolbar() {
             </Button>
           ))}
         </div>
+
+        {/* === Section 4: Image Upload === */}
+        {onImageUpload && (
+          <>
+            <div className="w-3" />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={IMAGE_ACCEPT}
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onImageUpload(file);
+                e.target.value = '';
+              }}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingImage}
+              title="Upload Image (U)"
+            >
+              {isUploadingImage ? (
+                <Loader2Icon className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImageUp className="h-4 w-4" />
+              )}
+              Upload
+            </Button>
+          </>
+        )}
 
         {/* Text alignment (visible when text or speechBubble tool is active) */}
         {(activeTool === 'text' || activeTool === 'speechBubble') && (() => {

@@ -11,6 +11,7 @@ import { EzyDrawToolbar, EzyDrawFooter } from './toolbar';
 import { EzyDrawStage, type EzyDrawStageHandle } from './ezydraw-stage';
 import type { DrawingElement } from '@/lib/drawing/types';
 import { exportToWebP } from '@/lib/drawing/export';
+import { validateImageFile, processImageForUpload } from '@/lib/drawing/image-upload';
 
 /** Default canvas size: 4:3 landscape */
 const DEFAULT_CANVAS_WIDTH = 800;
@@ -82,6 +83,7 @@ function EzyDrawContent({
 }) {
   const getSnapshot = useDrawingStore((s) => s.getSnapshot);
   const replaceWithGeneratedImage = useDrawingStore((s) => s.replaceWithGeneratedImage);
+  const setIsUploadingImage = useDrawingStore((s) => s.setIsUploadingImage);
   const backgroundImageUrl = useDrawingStore((s) => s.backgroundImageUrl);
   const selectedElementId = useDrawingStore((s) => s.selectedElementId);
   const deleteElement = useDrawingStore((s) => s.deleteElement);
@@ -245,11 +247,51 @@ function EzyDrawContent({
     }
   }, [workshopId, slotTitle, slotDescription, iterationPrompt, editablePrompt, isGenerateMode, useExistingDrawing, isGeneratingImage, getSnapshot, backgroundImageUrl, stageRef, replaceWithGeneratedImage]);
 
+  const handleImageUpload = useCallback(async (file: File) => {
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      const { toast } = await import('sonner');
+      toast.error(validation.error);
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const webpBlob = await processImageForUpload(file);
+
+      // Upload via existing endpoint
+      const formData = new FormData();
+      formData.append('file', webpBlob, 'upload.webp');
+      if (workshopId) formData.append('workshopId', workshopId);
+
+      const response = await fetch('/api/upload-drawing-png', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      if (data.pngUrl) {
+        replaceWithGeneratedImage(data.pngUrl);
+      }
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      const { toast } = await import('sonner');
+      const message = error instanceof Error ? error.message : 'Failed to upload image. Please try again.';
+      toast.error(message);
+    } finally {
+      setIsUploadingImage(false);
+    }
+  }, [workshopId, setIsUploadingImage, replaceWithGeneratedImage]);
+
   return (
     <div className="flex flex-col" style={{ minHeight: '100%' }}>
-      <EzyDrawToolbar />
+      <EzyDrawToolbar onImageUpload={handleImageUpload} />
       <div className="flex-1 overflow-hidden bg-card" style={{ minHeight: 300 }}>
-        <EzyDrawStage ref={stageRef} />
+        <EzyDrawStage ref={stageRef} onImageUpload={handleImageUpload} />
       </div>
       <EzyDrawFooter
         onSave={handleSave}

@@ -24,6 +24,8 @@ export type DrawingState = {
   canRedo: boolean;
   /** When true, pointer events on the canvas are suppressed (e.g. picker is open) */
   pointerLocked: boolean;
+  /** When true, an image upload is in progress */
+  isUploadingImage: boolean;
 };
 
 export type DrawingActions = {
@@ -48,6 +50,7 @@ export type DrawingActions = {
   clearAll: () => void;
   getSnapshot: () => DrawingElement[];
   replaceWithGeneratedImage: (imageUrl: string) => void;
+  setIsUploadingImage: (uploading: boolean) => void;
 };
 
 export type DrawingStore = DrawingState & DrawingActions;
@@ -65,6 +68,7 @@ const DEFAULT_STATE: DrawingState = {
   canUndo: false,
   canRedo: false,
   pointerLocked: false,
+  isUploadingImage: false,
 };
 
 export const createDrawingStore = (initState?: Partial<DrawingState>) => {
@@ -297,6 +301,10 @@ export const createDrawingStore = (initState?: Partial<DrawingState>) => {
        */
       setPointerLocked: (locked) => {
         set(() => ({ pointerLocked: locked }));
+      },
+
+      setIsUploadingImage: (uploading) => {
+        set(() => ({ isUploadingImage: uploading }));
       },
 
       replaceWithGeneratedImage: (imageUrl) => {

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Stage, Layer, Line, Rect, Ellipse, Arrow, Text, Path, Image as KonvaImage } from 'react-konva';
 import type Konva from 'konva';
+import { Loader2, ImageUp } from 'lucide-react';
 import { useDrawingStore } from '@/providers/drawing-store-provider';
 import { usePencilTool, PencilToolPreview } from '@/components/ezydraw/tools/pencil-tool';
 import { useHighlighterTool, HighlighterToolPreview } from '@/components/ezydraw/tools/highlighter-tool';
@@ -24,7 +25,13 @@ export interface EzyDrawStageHandle {
 
 const SHAPE_TOOLS = ['rectangle', 'circle', 'arrow', 'line', 'diamond'];
 
-export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
+interface EzyDrawStageProps {
+  onImageUpload?: (file: File) => void;
+}
+
+export const EzyDrawStage = forwardRef<EzyDrawStageHandle, EzyDrawStageProps>(({ onImageUpload }, ref) => {
+  const isUploadingImage = useDrawingStore((s) => s.isUploadingImage);
+  const [isDragOver, setIsDragOver] = useState(false);
   const stageRef = useRef<Konva.Stage>(null);
   const drawingLayerRef = useRef<Konva.Layer>(null);
   const uiLayerRef = useRef<Konva.Layer>(null);
@@ -267,12 +274,38 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
     }
   };
 
+  // Drag-and-drop handlers
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    if (!onImageUpload) return;
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setIsDragOver(true);
+  }, [onImageUpload]);
+
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    // Only hide overlay when leaving the container (not entering a child)
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (!onImageUpload) return;
+    const file = e.dataTransfer.files[0];
+    if (file) onImageUpload(file);
+  }, [onImageUpload]);
+
   return (
     <div
       ref={containerRef}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       style={{ touchAction: 'none', cursor: getCursorStyle() }}
       className="flex-1 overflow-hidden bg-neutral-olive-50 relative"
     >
@@ -571,6 +604,26 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle>((_props, ref) => {
           })()}
         </Layer>
       </Stage>
+
+      {/* Drag-and-drop overlay */}
+      {isDragOver && (
+        <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center bg-olive-50/60 border-2 border-dashed border-olive-400 rounded-lg">
+          <div className="flex flex-col items-center gap-2 text-olive-600">
+            <ImageUp className="h-8 w-8" />
+            <span className="text-sm font-medium">Drop image to upload</span>
+          </div>
+        </div>
+      )}
+
+      {/* Upload progress overlay */}
+      {isUploadingImage && (
+        <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center bg-white/60">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="text-sm">Processing image...</span>
+          </div>
+        </div>
+      )}
 
       <TextTool
         editingTextId={editingTextId}
