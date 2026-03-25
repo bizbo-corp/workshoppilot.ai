@@ -28,7 +28,15 @@ async function describeExistingSketch(imageBase64: string): Promise<string> {
           },
           {
             type: 'text',
-            text: `Describe this hand-drawn sketch in 2-3 sentences. Focus on the layout, key UI elements, interactions shown, and overall concept. Be specific about what's depicted so an image generator can recreate and improve it.`,
+            text: `Describe this hand-drawn sketch in 3-4 sentences so an image generator can faithfully recreate it.
+
+IMPORTANT — describe these aspects:
+1. FRAMING: Is the content drawn inside a device frame (phone, tablet, laptop)? Or is it a flat layout with no device border — like a webpage section, poster, or diagram floating on the page? State this explicitly.
+2. LAYOUT: Describe the spatial arrangement — what is at the top, middle, bottom, left, right. Note relative sizes and positions.
+3. CONTENT: List the specific elements — text/headings (quote exact words), buttons, icons, images, charts, logos, decorative elements.
+4. STYLE: Note any visual characteristics — hand-drawn, wireframe, detailed, minimal, etc.
+
+Be precise and literal. Describe what you actually see, not what you think the concept is trying to convey.`,
           },
         ],
       },
@@ -55,12 +63,31 @@ async function rewriteSketchPrompt(params: {
   const challenge = workshopContext.reframedHmw || workshopContext.hmwStatement || workshopContext.problemStatement || workshopContext.originalIdea || '';
 
   try {
-    const result = await generateTextWithRetry({
-      model: google('gemini-2.0-flash'),
-      messages: [
-        {
-          role: 'user',
-          content: `You are an expert at writing image generation prompts for concept sketches shown on a tablet screen.
+    // Use a different prompt strategy depending on whether we have an existing sketch
+    const geminiPrompt = existingSketchDescription
+      ? `You are an expert at writing image generation prompts that faithfully recreate hand-drawn sketches with professional polish.
+
+The user has drawn a sketch and wants an improved version that keeps the SAME layout and composition. Your job is to describe what they drew so an image generator can recreate it faithfully with cleaner lines and better detail.
+
+CRITICAL RULES:
+- Describe the EXACT layout and spatial arrangement from the existing sketch — what is where on the page
+- If the existing sketch does NOT show a device frame (phone, tablet, laptop), do NOT add one. Describe the content as a flat layout.
+- If the existing sketch DOES show a device frame, keep it.
+- Preserve every element the user drew — do not drop or add major elements
+- Use the idea title and description for context about labels and text content
+- Naturally incorporate the user's additional instructions (if any)
+- NEVER mention people, personas, characters, or users by name
+- NEVER wrap content in a device frame that wasn't in the original sketch
+
+IDEA TITLE: ${ideaTitle}
+IDEA DESCRIPTION: ${ideaDescription || 'No description provided'}
+${additionalPrompt ? `USER INSTRUCTIONS: ${additionalPrompt}` : ''}
+EXISTING SKETCH: ${existingSketchDescription}
+
+Respond in exactly this format:
+CLASSIFICATION: <UI|PROCESS>
+PROMPT: <your 2-4 sentence prompt describing the sketch layout to recreate>`
+      : `You are an expert at writing image generation prompts for concept sketches shown on a tablet screen.
 
 Given an idea title, description, and workshop context, do two things:
 
@@ -85,11 +112,17 @@ IDEA TITLE: ${ideaTitle}
 IDEA DESCRIPTION: ${ideaDescription || 'No description provided'}
 WORKSHOP CHALLENGE: ${challenge || 'No challenge context available'}
 ${additionalPrompt ? `USER INSTRUCTIONS: ${additionalPrompt}` : ''}
-${existingSketchDescription ? `EXISTING SKETCH TO IMPROVE: ${existingSketchDescription}` : ''}
 
 Respond in exactly this format:
 CLASSIFICATION: <UI|PROCESS>
-PROMPT: <your 2-4 sentence concept prompt>`,
+PROMPT: <your 2-4 sentence concept prompt>`;
+
+    const result = await generateTextWithRetry({
+      model: google('gemini-2.0-flash'),
+      messages: [
+        {
+          role: 'user',
+          content: geminiPrompt,
         },
       ],
     });
@@ -139,29 +172,38 @@ function buildSketchPrompt(params: {
 }): string {
   const { conceptPrompt, classification, existingSketchDescription, hasPersonStamps } = params;
 
-  // Build usage context based on classification
-  const usageContext =
-    classification === 'UI'
-      ? hasPersonStamps
-        ? 'a person using a mobile app or web interface on their device, showing the screen with the concept visible'
-        : 'a mobile app or web interface screen showing the concept clearly'
-      : hasPersonStamps
-        ? 'a person interacting with this service or product in a real-life setting, showing the physical interaction'
-        : 'this service or product in its real-life setting, showing how it works';
-
-  // Core prompt parts
+  // Core style instructions
   const parts: string[] = [
     'Professional hand-drawn sketch using black ink lines and selective yellow highlighter accents on a plain flat white background.',
     'The background must be completely plain white — no paper texture, no desk, no table, no surface, no pencils, no pens, no props, no shadows, no photographic staging of any kind. The sketch floats on pure white.',
     'Confident, expressive line work — like a skilled illustrator\'s quick concept sketch. Lines should feel intentional and assured but not rigid, mechanical, or too perfect.',
-    `The sketch shows ${usageContext}.`,
-    conceptPrompt,
   ];
 
-  // If there's an existing sketch, reference it for improvement
   if (existingSketchDescription) {
+    // Reference mode: faithfully reproduce the user's drawing with polish
     parts.push(
-      `Improve upon this existing sketch: ${existingSketchDescription}. Keep the same general layout but add more detail and clarity.`,
+      `IMPORTANT — REFERENCE DRAWING MODE: The user drew a sketch and wants a polished version that keeps the SAME composition. Here is what their drawing contains: ${existingSketchDescription}`,
+      'You MUST match the spatial arrangement of the reference drawing. If elements are positioned at the top, keep them at the top. If content fills the frame edge-to-edge, keep it edge-to-edge.',
+      'ABSOLUTELY DO NOT add any device frames, phone bezels, tablet borders, laptop screens, or any device hardware. Do NOT place the content inside a phone or tablet. The content should fill the entire frame directly, exactly as the user drew it.',
+      'Do NOT add hands holding devices. Do NOT add device status bars, home buttons, or notches.',
+      'Keep every element the user drew. Do not drop or significantly rearrange elements.',
+      'Polish with cleaner lines, better typography, and refined details — but the layout and composition must match the reference.',
+      conceptPrompt,
+    );
+  } else {
+    // Fresh generation mode: use device framing based on classification
+    const usageContext =
+      classification === 'UI'
+        ? hasPersonStamps
+          ? 'a person using a mobile app or web interface on their device, showing the screen with the concept visible'
+          : 'a mobile app or web interface screen showing the concept clearly'
+        : hasPersonStamps
+          ? 'a person interacting with this service or product in a real-life setting, showing the physical interaction'
+          : 'this service or product in its real-life setting, showing how it works';
+
+    parts.push(
+      `The sketch shows ${usageContext}.`,
+      conceptPrompt,
     );
   }
 
@@ -235,7 +277,13 @@ export async function POST(req: Request) {
       previousImageUrl,
       hasPersonStamps,
       slotId,
+      imageModel,
     } = await req.json();
+
+    // Only admin users can use the standard model
+    const resolvedModel = (adminUser && imageModel === 'standard')
+      ? 'imagen-4.0-generate-001'
+      : 'imagen-4.0-fast-generate-001';
 
     if (!workshopId || (!ideaTitle && !additionalPrompt)) {
       return new Response(
@@ -280,9 +328,10 @@ export async function POST(req: Request) {
       hasPersonStamps: !!hasPersonStamps,
     });
 
-    // Generate image with Imagen 4 Fast (cheapest available tier)
+    // Generate image with selected Imagen model
+    console.log('[sketch-image] using model:', resolvedModel);
     const result = await generateImage({
-      model: google.image('imagen-4.0-fast-generate-001'),
+      model: google.image(resolvedModel),
       prompt,
       aspectRatio: '4:3',
     });
@@ -292,7 +341,7 @@ export async function POST(req: Request) {
       workshopId,
       stepId: 'ideation',
       operation: 'generate-sketch-image',
-      model: 'imagen-4.0-fast-generate-001',
+      model: resolvedModel,
       imageCount: 1,
       itemId,
     });

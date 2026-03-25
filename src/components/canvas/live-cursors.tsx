@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback } from 'react';
-import { ViewportPortal, useReactFlow } from '@xyflow/react';
+import { useCallback, useMemo } from 'react';
+import { useReactFlow, useStore as useReactFlowStore, type ReactFlowState } from '@xyflow/react';
 import { useUpdateMyPresence, useOthersMapped, shallow } from '@liveblocks/react';
 import { Crown } from 'lucide-react';
 
@@ -91,12 +91,21 @@ export function CursorBroadcaster({ handlersRef }: CursorBroadcasterProps) {
 }
 
 // ---------------------------------------------------------------------------
-// LiveCursors — renders all remote participants' cursors inside ViewportPortal
-// so they pan and zoom correctly with the canvas.
+// LiveCursors — renders all remote participants' cursors as an absolutely-
+// positioned overlay outside ReactFlow, converting flow-space coordinates to
+// screen coordinates via the viewport transform. This ensures cursors render
+// above all canvas overlays (concentric rings, empathy map zones, etc.).
 // Only mounted in multiplayer mode.
 // ---------------------------------------------------------------------------
 
+const viewportSelector = (state: ReactFlowState) => ({
+  x: state.transform[0],
+  y: state.transform[1],
+  zoom: state.transform[2],
+});
+
 export function LiveCursors() {
+  const { x, y, zoom } = useReactFlowStore(viewportSelector);
   const others = useOthersMapped(
     (other) => ({
       cursor: other.presence.cursor,
@@ -107,31 +116,52 @@ export function LiveCursors() {
     shallow,
   );
 
+  // Show first name only; disambiguate duplicates with last initial
+  const displayNames = useMemo(() => {
+    const firstNameCounts = new Map<string, number>();
+    for (const [, data] of others) {
+      const firstName = data.name.split(' ')[0];
+      firstNameCounts.set(firstName, (firstNameCounts.get(firstName) ?? 0) + 1);
+    }
+    const map = new Map<number, string>();
+    for (const [connectionId, data] of others) {
+      const parts = data.name.split(' ');
+      const firstName = parts[0];
+      if ((firstNameCounts.get(firstName) ?? 0) > 1 && parts.length > 1) {
+        map.set(connectionId, `${firstName} ${parts[parts.length - 1][0]}.`);
+      } else {
+        map.set(connectionId, firstName);
+      }
+    }
+    return map;
+  }, [others]);
+
   return (
-    <ViewportPortal>
+    <div className="absolute inset-0 pointer-events-none z-[50]">
       {others.map(([connectionId, data]) => {
         if (!data.cursor) return null;
+        const screenX = data.cursor.x * zoom + x;
+        const screenY = data.cursor.y * zoom + y;
         return (
           <div
             key={connectionId}
             style={{
               position: 'absolute',
-              transform: `translate(${data.cursor.x}px, ${data.cursor.y}px)`,
+              transform: `translate(${screenX}px, ${screenY}px)`,
               pointerEvents: 'none',
               userSelect: 'none',
               transition: 'transform 80ms linear',
-              zIndex: 9999,
             }}
           >
             <CursorArrow color={data.color} />
             <CursorLabel
-              name={data.name}
+              name={displayNames.get(connectionId) ?? data.name}
               color={data.color}
               isFacilitator={data.role === 'owner'}
             />
           </div>
         );
       })}
-    </ViewportPortal>
+    </div>
   );
 }

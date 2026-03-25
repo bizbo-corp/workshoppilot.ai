@@ -795,6 +795,12 @@ export function ChatPanel({
   const setPendingHmwChipSelection = useCanvasStore(
     (state) => state.setPendingHmwChipSelection,
   );
+  const pendingHmwFieldFocus = useCanvasStore(
+    (state) => state.pendingHmwFieldFocus,
+  );
+  const setPendingHmwFieldFocus = useCanvasStore(
+    (state) => state.setPendingHmwFieldFocus,
+  );
   const selectedStickyNoteIds = useCanvasStore(
     (state) => state.selectedStickyNoteIds,
   );
@@ -904,7 +910,7 @@ export function ChatPanel({
           subStep,
           selectedStickyNoteIds,
           // In multiplayer concept step, scope facilitator to their own cards
-          ...(isMultiplayer && step.id === 'concept' ? { conceptOwnerId: 'facilitator' } : {}),
+          ...(isMultiplayer && (step.id === 'concept' || step.id === 'reframe') ? { conceptOwnerId: 'facilitator' } : {}),
         },
       }),
     [sessionId, step.id, workshopId, subStep, selectedStickyNoteIds, isMultiplayer],
@@ -1595,10 +1601,9 @@ export function ChatPanel({
 
       for (const parsed of hmwCardParsed) {
         const targetIndex = parsed.cardIndex ?? 0;
-        // In ownership mode, target facilitator's card first; fall back to cardIndex
+        // In ownership mode, target only facilitator's cards (no fallback to avoid cross-card edits)
         const existing = isOwnershipMode
-          ? latestHmwCards.find((c) => c.ownerId === 'facilitator') ??
-            latestHmwCards.find((c) => (c.cardIndex ?? 0) === targetIndex)
+          ? latestHmwCards.filter((c) => c.ownerId === 'facilitator')[targetIndex]
           : latestHmwCards.find((c) => (c.cardIndex ?? 0) === targetIndex);
 
         if (existing) {
@@ -1922,6 +1927,40 @@ export function ChatPanel({
     pendingHmwChipSelection,
     isLoading,
     setPendingHmwChipSelection,
+    flushCanvasToDb,
+    sendMessage,
+  ]);
+
+  // HMW field focus → trigger AI suggestions for empty field
+  React.useEffect(() => {
+    if (!pendingHmwFieldFocus || isLoading) return;
+    const { field } = pendingHmwFieldFocus;
+    setPendingHmwFieldFocus(null);
+
+    const fieldLabels: Record<string, string> = {
+      givenThat: "Given that",
+      persona: "how might we (help)",
+      immediateGoal: "do/be/feel/achieve",
+      deeperGoal: "So they can",
+    };
+    const fieldLabel = fieldLabels[field] || field;
+
+    setQuickAck(getRandomAck());
+    (async () => {
+      try {
+        await flushCanvasToDb();
+        sendMessage({
+          role: "user",
+          parts: [{ type: "text", text: `I need suggestions for the "${fieldLabel}" field` }],
+        });
+      } catch (err) {
+        console.error("Failed to send HMW field focus request:", err);
+      }
+    })();
+  }, [
+    pendingHmwFieldFocus,
+    isLoading,
+    setPendingHmwFieldFocus,
     flushCanvasToDb,
     sendMessage,
   ]);

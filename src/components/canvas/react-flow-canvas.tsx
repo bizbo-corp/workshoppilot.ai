@@ -247,6 +247,9 @@ function ReactFlowCanvasInner({
   const setPendingHmwChipSelection = useCanvasStore(
     (s) => s.setPendingHmwChipSelection,
   );
+  const setPendingHmwFieldFocus = useCanvasStore(
+    (s) => s.setPendingHmwFieldFocus,
+  );
   const setSelectedStickyNoteIds = useCanvasStore(
     (s) => s.setSelectedStickyNoteIds,
   );
@@ -951,6 +954,14 @@ function ReactFlowCanvasInner({
     [updateHmwCard],
   );
 
+  // Handle HMW field focus — triggers AI suggestion generation for empty fields
+  const handleHmwFieldFocus = useCallback(
+    (id: string, field: string) => {
+      setPendingHmwFieldFocus({ cardId: id, field });
+    },
+    [setPendingHmwFieldFocus],
+  );
+
   // Handle persona avatar generation
   const handleGenerateAvatar = useCallback(
     async (templateId: string): Promise<string | null> => {
@@ -1200,24 +1211,34 @@ function ReactFlowCanvasInner({
     );
 
     // Add HMW card nodes
-    const hmwCardReactFlowNodes: Node[] = hmwCards.map((card) => ({
-      id: card.id,
-      type: "hmwCard" as const,
-      position: livePositions.current[card.id] || card.position,
-      zIndex: nodeZIndicesRef.current[card.id] || 20,
-      draggable: true,
-      dragHandle: '.card-drag-handle',
-      selectable: true,
-      selected: selectedNodeIds.includes(card.id),
-      data: {
-        ...card,
-        onFieldChange: handleHmwFieldChange,
-        onChipSelect: handleHmwChipSelect,
-        onStatementChange: handleHmwStatementChange,
-        onDelete: isFacilitator ? deleteHmwCard : undefined,
-      },
-      style: { width: 700 },
-    }));
+    const hmwCardReactFlowNodes: Node[] = hmwCards.map((card) => {
+      const cardIsOwner = isMultiplayer && (
+        (isFacilitator && card.ownerId === 'facilitator') ||
+        (!!participantId && card.ownerId === participantId)
+      );
+      return {
+        id: card.id,
+        type: "hmwCard" as const,
+        position: livePositions.current[card.id] || card.position,
+        zIndex: nodeZIndicesRef.current[card.id] || 20,
+        draggable: true,
+        dragHandle: '.card-drag-handle',
+        selectable: true,
+        selected: selectedNodeIds.includes(card.id),
+        data: {
+          ...card,
+          isMultiplayer,
+          isFacilitator,
+          isOwner: cardIsOwner,
+          onFieldChange: handleHmwFieldChange,
+          onChipSelect: handleHmwChipSelect,
+          onStatementChange: handleHmwStatementChange,
+          onFieldFocus: handleHmwFieldFocus,
+          onDelete: isFacilitator ? deleteHmwCard : undefined,
+        },
+        style: { width: 700 },
+      };
+    });
 
     // Add on-canvas guide nodes
     // Default dimensions per variant — used when guide has no saved width/height
@@ -1317,6 +1338,7 @@ function ReactFlowCanvasInner({
     handleGenerateAvatar,
     handleHmwFieldChange,
     handleHmwChipSelect,
+    handleHmwFieldFocus,
     dismissGuide,
     isDrawingLockedByOther,
     getLockingUser,
@@ -2917,8 +2939,6 @@ function ReactFlowCanvasInner({
           size={1.5}
           color="var(--canvas-dots)"
         />
-        {/* Live cursors — renders remote participants' cursors in flow coords (multiplayer only) */}
-        {workshopType === 'multiplayer' && <LiveCursors />}
         <CanvasZoomControls onFitView={() => fitViewWithChatOffset({ padding: 0.2, duration: 300 })} />
         {stepConfig.hasQuadrants && stepConfig.quadrantConfig && (
           <QuadrantOverlay config={stepConfig.quadrantConfig} />
@@ -2950,6 +2970,9 @@ function ReactFlowCanvasInner({
 
       {/* Persona frame overlay — visible frames for each persona card (user-research step only) */}
       {stepId === "user-research" && <PersonaFrameOverlay />}
+
+      {/* Live cursors — rendered outside ReactFlow so they appear above all canvas overlays */}
+      {workshopType === 'multiplayer' && <LiveCursors />}
 
       {/* Toolbar */}
       <CanvasToolbar

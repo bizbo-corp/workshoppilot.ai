@@ -18,4 +18,7 @@ export type HmwCardData = {
   ownerId?: string;    // participantId or 'facilitator'
   ownerName?: string;  // display name shown on card
   ownerColor?: string; // hex color for dot indicator
+  isOwner?: boolean;
+  isMultiplayer?: boolean;
+  isFacilitator?: boolean;
 };

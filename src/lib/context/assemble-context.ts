@@ -105,7 +105,7 @@ export async function assembleStepContext(
 
   // Tier 4: Query canvas state for this step
   // For concept step, prefer conceptOwnerId (facilitator scoping) over participantId for filtering
-  const ownerIdForContext = currentStepId === 'concept'
+  const ownerIdForContext = (currentStepId === 'concept' || currentStepId === 'reframe')
     ? (conceptOwnerId || participantId)
     : participantId;
   const canvasState = await loadCanvasState(workshopId, currentStepId);

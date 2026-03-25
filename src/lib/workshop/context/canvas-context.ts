@@ -360,12 +360,19 @@ export function assemblePersonaCanvasContext(personaTemplates: PersonaTemplateDa
  * Assemble HMW card canvas context for Step 7 (Reframe)
  * Formats HMW card data showing current field values and card state
  */
-export function assembleHmwCardCanvasContext(hmwCards: HmwCardData[]): string {
+export function assembleHmwCardCanvasContext(hmwCards: HmwCardData[], ownerId?: string): string {
   if (hmwCards.length === 0) return '';
+
+  // Filter to participant's own cards when ownerId provided
+  const cards = ownerId
+    ? hmwCards.filter(c => c.ownerId === ownerId)
+    : hmwCards;
+
+  if (cards.length === 0) return '';
 
   const sections: string[] = [];
 
-  for (const card of hmwCards) {
+  for (const card of cards) {
     const ownerLabel = card.ownerName ? ` (by ${card.ownerName})` : '';
     const altLabel = card.cardIndex !== undefined && card.cardIndex > 0 ? ` #${card.cardIndex + 1} (Alternative)` : '';
     const lines: string[] = [`**HMW Card${altLabel}${ownerLabel}** (state: ${card.cardState}):`];
@@ -647,7 +654,7 @@ export function assembleCanvasContextForStep(stepId: string, stickyNotes: Sticky
 
   // Reframe step uses HMW cards
   if (stepId === 'reframe' && hmwCards && hmwCards.length > 0) {
-    return assembleHmwCardCanvasContext(hmwCards);
+    return assembleHmwCardCanvasContext(hmwCards, ownerId);
   }
 
   // Persona step uses template cards, not sticky notes — check before filtering

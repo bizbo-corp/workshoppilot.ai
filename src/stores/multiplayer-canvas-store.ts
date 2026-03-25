@@ -97,6 +97,7 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
     pendingFitView: false,
     pendingFocusCardId: null,
     pendingHmwChipSelection: null,
+    pendingHmwFieldFocus: null,
     selectedStickyNoteIds: [],
     votingCardPositions: initState?.votingCardPositions || {},
     ideationPhase: initState?.ideationPhase || 'mind-mapping',
@@ -396,6 +397,9 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
 
         setPendingHmwChipSelection: (selection) =>
           set(() => ({ pendingHmwChipSelection: selection })),
+
+        setPendingHmwFieldFocus: (focus) =>
+          set(() => ({ pendingHmwFieldFocus: focus })),
 
         batchUpdatePositions: (updates) =>
           set((state) => {

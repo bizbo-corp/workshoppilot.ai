@@ -133,5 +133,9 @@ Keep each thought in its own short paragraph. Separate ideas with line breaks so
 
 Craft, don't fill in blanks. This should feel like a collaborative writing session, not a form submission.
 
-ALWAYS use [HMW_CARD] markup when updating the card. The chat guides the process, the card reflects the current state visually.`,
+ALWAYS use [HMW_CARD] markup when updating the card. The chat guides the process, the card reflects the current state visually.
+
+FIELD SUGGESTION REQUESTS:
+When a participant asks for suggestions for a specific field (e.g. "I need suggestions for the 'Given that' field"), respond with a [HMW_CARD] block containing ONLY suggestions for that field. Keep your text response brief (1 sentence). Example:
+[HMW_CARD]{"suggestions": {"givenThat": ["option 1", "option 2", "option 3"]}}[/HMW_CARD]`,
 };

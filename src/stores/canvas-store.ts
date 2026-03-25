@@ -19,6 +19,8 @@ export type PendingHmwChipSelection = {
   value: string;
 } | null;
 
+export type PendingHmwFieldFocus = { cardId: string; field: string } | null;
+
 export type StickyNoteColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange' | 'red';
 
 export type GridColumn = {
@@ -107,6 +109,7 @@ export type CanvasState = {
   pendingFitView: boolean;
   pendingFocusCardId: string | null;
   pendingHmwChipSelection: PendingHmwChipSelection;
+  pendingHmwFieldFocus: PendingHmwFieldFocus;
   selectedStickyNoteIds: string[];
   votingCardPositions: Record<string, { x: number; y: number }>;
   conceptActivityStarted: boolean;
@@ -148,6 +151,7 @@ export type CanvasActions = {
   setPendingFitView: (pending: boolean) => void;
   setPendingFocusCardId: (id: string | null) => void;
   setPendingHmwChipSelection: (selection: PendingHmwChipSelection) => void;
+  setPendingHmwFieldFocus: (focus: PendingHmwFieldFocus) => void;
   batchUpdatePositions: (updates: Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }>) => void;
   setCluster: (ids: string[], clusterName: string) => void;
   clearCluster: (clusterName: string) => void;
@@ -217,6 +221,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
     pendingFitView: false,
     pendingFocusCardId: null,
     pendingHmwChipSelection: null,
+    pendingHmwFieldFocus: null,
     selectedStickyNoteIds: [],
     votingCardPositions: initState?.votingCardPositions || {},
     conceptActivityStarted: initState?.conceptActivityStarted || false,
@@ -574,6 +579,11 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
         setPendingHmwChipSelection: (selection) =>
           set(() => ({
             pendingHmwChipSelection: selection,
+          })),
+
+        setPendingHmwFieldFocus: (focus) =>
+          set(() => ({
+            pendingHmwFieldFocus: focus,
           })),
 
         batchUpdatePositions: (updates) =>

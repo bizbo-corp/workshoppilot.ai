@@ -151,6 +151,8 @@ export function ParticipantChatPanel({
   const updateHmwCard = useCanvasStore((s) => s.updateHmwCard);
   const pendingHmwChipSelection = useCanvasStore((s) => s.pendingHmwChipSelection);
   const setPendingHmwChipSelection = useCanvasStore((s) => s.setPendingHmwChipSelection);
+  const pendingHmwFieldFocus = useCanvasStore((s) => s.pendingHmwFieldFocus);
+  const setPendingHmwFieldFocus = useCanvasStore((s) => s.setPendingHmwFieldFocus);
   const addMindMapNode = useCanvasStore((s) => s.addMindMapNode);
   const mindMapNodes = useCanvasStore((s) => s.mindMapNodes);
   const mindMapEdges = useCanvasStore((s) => s.mindMapEdges);
@@ -493,10 +495,9 @@ export function ParticipantChatPanel({
 
       for (const parsed of hmwCardParsed) {
         const targetIndex = parsed.cardIndex ?? 0;
-        // In ownership mode, target this participant's card first; fall back to cardIndex
+        // In ownership mode, target only this participant's cards (no fallback to avoid cross-card edits)
         const existing = isOwnershipMode
-          ? latestHmwCards.find((c) => c.ownerId === participantId) ??
-            latestHmwCards.find((c) => (c.cardIndex ?? 0) === targetIndex)
+          ? latestHmwCards.filter((c) => c.ownerId === participantId)[targetIndex]
           : latestHmwCards.find((c) => (c.cardIndex ?? 0) === targetIndex);
 
         if (existing) {
@@ -630,6 +631,34 @@ export function ParticipantChatPanel({
     });
     s.markClean();
   }, [isCanvasStep, workshopId, stepId, storeApi]);
+
+  // HMW field focus → trigger AI suggestions for empty field
+  React.useEffect(() => {
+    if (!pendingHmwFieldFocus || isLoading) return;
+    const { field } = pendingHmwFieldFocus;
+    setPendingHmwFieldFocus(null);
+
+    const fieldLabels: Record<string, string> = {
+      givenThat: "Given that",
+      persona: "how might we (help)",
+      immediateGoal: "do/be/feel/achieve",
+      deeperGoal: "So they can",
+    };
+    const fieldLabel = fieldLabels[field] || field;
+
+    setQuickAck(getRandomAck());
+    (async () => {
+      try {
+        await flushCanvasToDb();
+        sendMessage({
+          role: "user",
+          parts: [{ type: "text", text: `I need suggestions for the "${fieldLabel}" field` }],
+        });
+      } catch (err) {
+        console.error("Failed to send HMW field focus request:", err);
+      }
+    })();
+  }, [pendingHmwFieldFocus, isLoading, setPendingHmwFieldFocus, flushCanvasToDb, sendMessage]);
 
   const handleSend = React.useCallback(async (text: string) => {
     if (!text.trim() || status === "streaming") return;

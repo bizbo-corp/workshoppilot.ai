@@ -7,6 +7,7 @@ import { eq, sql } from 'drizzle-orm';
  *
  * gemini-2.0-flash: $0.10 per 1M input tokens, $0.40 per 1M output tokens
  * imagen-4.0-fast-generate-001: $0.02 per image
+ * imagen-4.0-generate-001: $0.04 per image
  */
 const PRICING = {
   'gemini-2.0-flash': {
@@ -15,6 +16,9 @@ const PRICING = {
   },
   'imagen-4.0-fast-generate-001': {
     perImage: 0.02, // dollars
+  },
+  'imagen-4.0-generate-001': {
+    perImage: 0.04, // dollars
   },
 } as const;
 
@@ -38,6 +42,11 @@ export function calculateCostCents(params: {
 
   if (model === 'imagen-4.0-fast-generate-001') {
     const pricing = PRICING['imagen-4.0-fast-generate-001'];
+    return (imageCount || 0) * pricing.perImage * 100; // convert dollars to cents
+  }
+
+  if (model === 'imagen-4.0-generate-001') {
+    const pricing = PRICING['imagen-4.0-generate-001'];
     return (imageCount || 0) * pricing.perImage * 100; // convert dollars to cents
   }
 

@@ -2,7 +2,7 @@
 
 import { memo, useRef, useEffect } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { Lightbulb, X } from 'lucide-react';
+import { Check, Lightbulb, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 
@@ -11,6 +11,7 @@ export type HmwCardNodeRendererData = HmwCardData & {
   onChipSelect?: (id: string, field: string, value: string) => void;
   onStatementChange?: (id: string, value: string) => void;
   onDelete?: (id: string) => void;
+  onFieldFocus?: (id: string, field: string) => void;
 };
 
 export type HmwCardNodeType = Node<HmwCardNodeRendererData, 'hmwCard'>;
@@ -49,12 +50,14 @@ function EditableField({
   value,
   placeholder,
   onBlur,
+  onFocus,
   className,
   disabled,
 }: {
   value?: string;
   placeholder: string;
   onBlur: (value: string) => void;
+  onFocus?: () => void;
   className?: string;
   disabled?: boolean;
 }) {
@@ -80,6 +83,7 @@ function EditableField({
       placeholder={placeholder}
       defaultValue={value || ''}
       onBlur={(e) => onBlur(e.target.value)}
+      onFocus={onFocus}
       disabled={disabled}
     />
   );
@@ -199,6 +203,25 @@ export const HmwCardNode = memo(
   ({ data, id, selected }: NodeProps<HmwCardNodeType>) => {
     const isSkeleton = data.cardState === 'skeleton';
     const isFilled = data.cardState === 'filled';
+    const isActive = data.cardState === 'active';
+    const isNonOwned = data.isMultiplayer && !data.isOwner && !data.isFacilitator;
+
+    // Owner color tinting
+    const oc = data.ownerColor;
+    const cardBg = oc ? `color-mix(in srgb, ${oc} 6%, ${SAGE.bg})` : SAGE.bg;
+    const cardBorder = oc ? `color-mix(in srgb, ${oc} 30%, ${SAGE.border})` : SAGE.border;
+    const sectionBorder = oc ? `color-mix(in srgb, ${oc} 15%, ${SAGE.sectionBorder})` : SAGE.sectionBorder;
+
+    // State glow
+    let boxShadow: string | undefined;
+    let glowClass = '';
+    if (isFilled) {
+      boxShadow = `0 0 0 2px #22c55e, 0 0 16px 4px #22c55e40`;
+    } else if (isActive) {
+      glowClass = 'concept-card-active-glow';
+    } else if (selected) {
+      boxShadow = `0 0 0 2px ${SAGE.borderSelected}`;
+    }
 
     // Check if all 4 fields are filled for statement assembly
     const allFieldsFilled = !!(data.givenThat && data.persona && data.immediateGoal && data.deeperGoal);
@@ -215,17 +238,31 @@ export const HmwCardNode = memo(
 
     return (
       <div
-        className="hmw-card w-[700px] rounded-2xl shadow-xl overflow-hidden"
+        className={cn(
+          'hmw-card w-[700px] rounded-2xl shadow-xl overflow-hidden relative',
+          glowClass,
+          isNonOwned && 'concept-card-non-owned',
+        )}
         style={{
-          backgroundColor: SAGE.bg,
+          backgroundColor: cardBg,
           borderWidth: 2,
           borderStyle: 'solid',
-          borderColor: selected ? SAGE.borderSelected : SAGE.border,
-          opacity: isSkeleton ? 0.7 : 1,
+          borderColor: selected ? SAGE.borderSelected : cardBorder,
+          boxShadow,
         }}
       >
+        {/* Green checkmark badge for filled state */}
+        {isFilled && (
+          <div className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-green-500 shadow-md">
+            <Check className="h-5 w-5 text-white" strokeWidth={3} />
+          </div>
+        )}
+
         {/* Drag handle grip bar */}
-        <div className="card-drag-handle flex items-center justify-center w-full h-6 cursor-grab active:cursor-grabbing bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded-t-2xl">
+        <div
+          className="card-drag-handle flex items-center justify-center w-full h-6 cursor-grab active:cursor-grabbing hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded-t-2xl"
+          style={{ backgroundColor: oc || 'transparent' }}
+        >
           <svg width="32" height="4" viewBox="0 0 32 4" fill="currentColor" className="text-neutral-olive-400">
             <rect x="0" y="0" width="32" height="2" rx="1" />
           </svg>
@@ -275,7 +312,10 @@ export const HmwCardNode = memo(
         {data.ownerName && (
           <div
             className="px-6 py-2 flex items-center gap-2"
-            style={{ backgroundColor: SAGE.sectionBg, borderBottom: `1px solid ${SAGE.sectionBorder}` }}
+            style={{
+              backgroundColor: oc ? `color-mix(in srgb, ${oc} 15%, ${SAGE.sectionBg})` : SAGE.sectionBg,
+              borderBottom: `1px solid ${sectionBorder}`,
+            }}
           >
             <span
               className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
@@ -293,7 +333,7 @@ export const HmwCardNode = memo(
         {/* ── Section bar ── */}
         <div
           className="px-6 py-2.5"
-          style={{ backgroundColor: SAGE.sectionBg, borderBottom: `1px solid ${SAGE.sectionBorder}` }}
+          style={{ backgroundColor: SAGE.sectionBg, borderBottom: `1px solid ${sectionBorder}` }}
         >
           <span
             className="text-[11px] font-bold uppercase tracking-widest"
@@ -322,7 +362,7 @@ export const HmwCardNode = memo(
                 key={key}
                 data-field-row={key}
                 className="space-y-1"
-                style={{ borderBottom: `1px solid ${SAGE.sectionBorder}`, paddingBottom: 16 }}
+                style={{ borderBottom: `1px solid ${sectionBorder}`, paddingBottom: 16 }}
               >
                 {isSkeleton ? (
                   <div className="flex items-center gap-3">
@@ -347,6 +387,11 @@ export const HmwCardNode = memo(
                         value={fieldValue}
                         placeholder={hint}
                         onBlur={(v) => data.onFieldChange?.(id, key, v)}
+                        onFocus={() => {
+                          if (!fieldValue && (!fieldSuggestions || fieldSuggestions.length === 0)) {
+                            data.onFieldFocus?.(id, key);
+                          }
+                        }}
                         className="text-sm font-normal text-[var(--hmw-field-text)]"
                         disabled={isSkeleton}
                       />
@@ -373,7 +418,7 @@ export const HmwCardNode = memo(
         {(assembledStatement || isFilled) && (
           <div
             className="mx-6 mb-5 rounded-xl p-4"
-            style={{ backgroundColor: SAGE.statementBg, border: `1px solid ${SAGE.sectionBorder}` }}
+            style={{ backgroundColor: SAGE.statementBg, border: `1px solid ${sectionBorder}` }}
           >
             <div className="mb-2 flex items-center gap-2">
               <Lightbulb className="h-3.5 w-3.5" style={{ color: SAGE.labelText }} />

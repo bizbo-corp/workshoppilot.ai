@@ -297,6 +297,37 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle, EzyDrawStageProps>(({
     if (file) onImageUpload(file);
   }, [onImageUpload]);
 
+  // Clipboard paste — Cmd+V / Ctrl+V to paste images from Preview, Figma, screenshots, etc.
+  const editingTextIdRef = useRef(editingTextId);
+  editingTextIdRef.current = editingTextId;
+  const onImageUploadRef = useRef(onImageUpload);
+  onImageUploadRef.current = onImageUpload;
+
+  useEffect(() => {
+    const handler = (e: ClipboardEvent) => {
+      if (!onImageUploadRef.current) return;
+      // Don't intercept paste when user is editing text on canvas
+      if (editingTextIdRef.current) return;
+      // Don't intercept paste in input/textarea elements
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) onImageUploadRef.current(file);
+          return;
+        }
+      }
+    };
+    document.addEventListener('paste', handler);
+    return () => document.removeEventListener('paste', handler);
+  }, []);
+
   return (
     <div
       ref={containerRef}
