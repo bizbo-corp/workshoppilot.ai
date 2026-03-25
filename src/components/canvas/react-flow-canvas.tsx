@@ -40,6 +40,8 @@ import { hasExistingContent, type ConceptFieldId } from "@/lib/canvas/concept-ca
 import { useConceptCardGenerate } from "@/hooks/use-concept-card-generate";
 import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
+import { hasExistingHmwContent, type HmwFieldId } from "@/lib/canvas/hmw-card-types";
+import { useHmwCardGenerate } from "@/hooks/use-hmw-card-generate";
 import { ColorPicker } from "./color-picker";
 import { useCanvasAutosave } from "@/hooks/use-canvas-autosave";
 import { usePreventScrollOnCanvas } from "@/hooks/use-prevent-scroll-on-canvas";
@@ -250,6 +252,9 @@ function ReactFlowCanvasInner({
   const setPendingHmwFieldFocus = useCanvasStore(
     (s) => s.setPendingHmwFieldFocus,
   );
+  const setActiveHmwCardId = useCanvasStore(
+    (s) => s.setActiveHmwCardId,
+  );
   const setSelectedStickyNoteIds = useCanvasStore(
     (s) => s.setSelectedStickyNoteIds,
   );
@@ -282,6 +287,9 @@ function ReactFlowCanvasInner({
 
   // Concept card AI generation hook
   const { generating: conceptGenerating, generateAll: conceptGenerateAll, generateField: conceptGenerateField, elaborate: conceptElaborate } = useConceptCardGenerate(workshopId);
+
+  // HMW card AI generation hook
+  const { generating: hmwGenerating, generateAll: hmwGenerateAll, generateField: hmwGenerateField, elaborate: hmwElaborate } = useHmwCardGenerate(workshopId);
 
   // Mapping from participant hex color to the closest StickyNoteColor.
   // Matches PARTICIPANT_COLORS order in liveblocks/config.ts.
@@ -940,10 +948,11 @@ function ReactFlowCanvasInner({
         [field]: value,
         ...(updatedSuggestions ? { suggestions: updatedSuggestions } : {}),
       });
-      // Signal chat-panel to send a message
+      // Signal chat-panel to send a message + track active card for targeting
+      setActiveHmwCardId(id);
       setPendingHmwChipSelection({ cardId: id, field, value });
     },
-    [hmwCards, updateHmwCard, setPendingHmwChipSelection],
+    [hmwCards, updateHmwCard, setPendingHmwChipSelection, setActiveHmwCardId],
   );
 
   // Handle HMW card full statement edit
@@ -957,9 +966,10 @@ function ReactFlowCanvasInner({
   // Handle HMW field focus — triggers AI suggestion generation for empty fields
   const handleHmwFieldFocus = useCallback(
     (id: string, field: string) => {
+      setActiveHmwCardId(id);
       setPendingHmwFieldFocus({ cardId: id, field });
     },
-    [setPendingHmwFieldFocus],
+    [setPendingHmwFieldFocus, setActiveHmwCardId],
   );
 
   // Handle persona avatar generation
@@ -1216,6 +1226,7 @@ function ReactFlowCanvasInner({
         (isFacilitator && card.ownerId === 'facilitator') ||
         (!!participantId && card.ownerId === participantId)
       );
+      const canHmwAiGenerate = !isMultiplayer || cardIsOwner || isFacilitator;
       return {
         id: card.id,
         type: "hmwCard" as const,
@@ -1235,6 +1246,20 @@ function ReactFlowCanvasInner({
           onStatementChange: handleHmwStatementChange,
           onFieldFocus: handleHmwFieldFocus,
           onDelete: isFacilitator ? deleteHmwCard : undefined,
+          onGenerateField: canHmwAiGenerate ? (_id: string, field: string) => {
+            hmwGenerateField(_id, field as HmwFieldId);
+          } : undefined,
+          onGenerateAll: canHmwAiGenerate ? (_id: string) => {
+            const c = hmwCards.find((cc) => cc.id === _id);
+            if (c && hasExistingHmwContent(c)) {
+              if (!window.confirm('This will overwrite existing content. Continue?')) return;
+            }
+            hmwGenerateAll(_id);
+          } : undefined,
+          onElaborate: canHmwAiGenerate ? (_id: string, field: string, content: string, instructions: string) => {
+            hmwElaborate(_id, field as HmwFieldId, content, instructions);
+          } : undefined,
+          generatingState: hmwGenerating[card.id],
         },
         style: { width: 700 },
       };

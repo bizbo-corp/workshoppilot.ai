@@ -1,3 +1,9 @@
+export type HmwFieldId = 'givenThat' | 'persona' | 'immediateGoal' | 'deeperGoal' | 'fullStatement';
+
+export function hasExistingHmwContent(card: HmwCardData): boolean {
+  return !!(card.givenThat || card.persona || card.immediateGoal || card.deeperGoal);
+}
+
 export type HmwCardData = {
   id: string;
   position: { x: number; y: number };

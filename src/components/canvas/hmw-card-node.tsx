@@ -1,8 +1,8 @@
 'use client';
 
-import { memo, useRef, useEffect } from 'react';
+import { memo, useRef, useEffect, useState } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { Check, Lightbulb, X } from 'lucide-react';
+import { Check, Lightbulb, Loader2, RefreshCw, Send, Sparkles, Wand2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 
@@ -12,6 +12,10 @@ export type HmwCardNodeRendererData = HmwCardData & {
   onStatementChange?: (id: string, value: string) => void;
   onDelete?: (id: string) => void;
   onFieldFocus?: (id: string, field: string) => void;
+  onGenerateField?: (id: string, field: string) => void;
+  onGenerateAll?: (id: string) => void;
+  onElaborate?: (id: string, field: string, content: string, instructions: string) => void;
+  generatingState?: Record<string, boolean>;
 };
 
 export type HmwCardNodeType = Node<HmwCardNodeRendererData, 'hmwCard'>;
@@ -43,7 +47,7 @@ const HMW_FIELDS = [
 ] as const;
 
 /**
- * Inline-editable text field — uncontrolled with external sync.
+ * Inline-editable text field — auto-growing textarea.
  * Uses defaultValue + onBlur pattern matching PersonaTemplateNode.
  */
 function EditableField({
@@ -61,20 +65,22 @@ function EditableField({
   className?: string;
   disabled?: boolean;
 }) {
-  const ref = useRef<HTMLInputElement>(null);
+  const ref = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (ref.current && ref.current !== document.activeElement) {
       ref.current.value = value || '';
+      ref.current.style.height = 'auto';
+      ref.current.style.height = ref.current.scrollHeight + 'px';
     }
   }, [value]);
 
   return (
-    <input
+    <textarea
       ref={ref}
-      type="text"
+      rows={1}
       className={cn(
-        'nodrag nopan w-full bg-transparent outline-none transition-colors',
+        'nodrag nopan w-full bg-transparent outline-none transition-colors resize-none',
         'placeholder:text-[var(--hmw-placeholder)]',
         'focus:bg-card/60 focus:rounded-md focus:px-2 focus:py-1',
         disabled && 'pointer-events-none',
@@ -84,6 +90,11 @@ function EditableField({
       defaultValue={value || ''}
       onBlur={(e) => onBlur(e.target.value)}
       onFocus={onFocus}
+      onInput={(e) => {
+        const el = e.currentTarget;
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+      }}
       disabled={disabled}
     />
   );
@@ -129,9 +140,8 @@ function SuggestionChips({
         onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = SAGE.chipBg; }}
         onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
         onClick={() => {
-          // Focus the input field above — find the closest field row's input
           const parent = document.activeElement?.closest('[data-field-row]');
-          const input = parent?.querySelector('input');
+          const input = parent?.querySelector('textarea');
           input?.focus();
         }}
       >
@@ -148,10 +158,12 @@ function EditableStatement({
   value,
   placeholder,
   onBlur,
+  disabled,
 }: {
   value?: string;
   placeholder: string;
   onBlur: (value: string) => void;
+  disabled?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -172,6 +184,7 @@ function EditableStatement({
         'text-sm leading-relaxed font-medium select-text cursor-text',
         'placeholder:text-[var(--hmw-placeholder)]',
         'focus:bg-card/60 focus:rounded-md focus:px-2 focus:py-1',
+        disabled && 'pointer-events-none',
       )}
       style={{ color: SAGE.prefixText }}
       placeholder={placeholder}
@@ -183,6 +196,7 @@ function EditableStatement({
         el.style.height = 'auto';
         el.style.height = el.scrollHeight + 'px';
       }}
+      disabled={disabled}
     />
   );
 }
@@ -199,12 +213,152 @@ function SkeletonBar({ width, className }: { width: string; className?: string }
   );
 }
 
+/**
+ * SectionAiButton — small AI wand icon next to field labels.
+ * Empty field: single click generates. Has content: opens popover with Regenerate/Elaborate.
+ */
+function SectionAiButton({
+  field,
+  hasContent,
+  isGenerating,
+  canGenerate,
+  onGenerate,
+  onElaborate,
+}: {
+  field: string;
+  hasContent: boolean;
+  isGenerating: boolean;
+  canGenerate: boolean;
+  onGenerate: () => void;
+  onElaborate: (instructions: string) => void;
+}) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [showElaborate, setShowElaborate] = useState(false);
+  const [instructions, setInstructions] = useState('');
+  const menuRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as globalThis.Node)) {
+        setShowMenu(false);
+        setShowElaborate(false);
+        setInstructions('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
+
+  useEffect(() => {
+    if (showElaborate && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [showElaborate]);
+
+  if (!canGenerate) return null;
+
+  if (isGenerating) {
+    return (
+      <Loader2 className="h-3 w-3 shrink-0 animate-spin text-olive-500" />
+    );
+  }
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!hasContent) {
+      onGenerate();
+    } else {
+      setShowMenu(!showMenu);
+    }
+  };
+
+  return (
+    <div ref={menuRef} className="relative nodrag nopan">
+      <button
+        onClick={handleClick}
+        className="flex items-center justify-center rounded-md p-0.5 text-olive-500/60 hover:text-olive-600 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+        aria-label={`AI generate ${field}`}
+      >
+        <Wand2 className="h-3 w-3" />
+      </button>
+      {showMenu && (
+        <div className="absolute top-full mt-1 right-0 bg-card rounded-lg shadow-lg border border-border p-1 min-w-[160px] z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onGenerate();
+              setShowMenu(false);
+            }}
+            className="flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
+          >
+            <RefreshCw className="h-3 w-3" />
+            Regenerate
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowElaborate(true);
+            }}
+            className="flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
+          >
+            <Wand2 className="h-3 w-3" />
+            Elaborate
+          </button>
+          {showElaborate && (
+            <div className="mt-1 border-t border-border pt-1">
+              <div className="flex items-center gap-1 px-1">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && instructions.trim()) {
+                      onElaborate(instructions.trim());
+                      setShowMenu(false);
+                      setShowElaborate(false);
+                      setInstructions('');
+                    }
+                  }}
+                  placeholder="How to improve..."
+                  className="flex-1 rounded border border-border bg-transparent px-2 py-1 text-xs outline-none placeholder:text-muted-foreground"
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (instructions.trim()) {
+                      onElaborate(instructions.trim());
+                      setShowMenu(false);
+                      setShowElaborate(false);
+                      setInstructions('');
+                    }
+                  }}
+                  disabled={!instructions.trim()}
+                  className="rounded p-1 hover:bg-accent disabled:opacity-40 transition-colors"
+                >
+                  <Send className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const HmwCardNode = memo(
   ({ data, id, selected }: NodeProps<HmwCardNodeType>) => {
     const isSkeleton = data.cardState === 'skeleton';
     const isFilled = data.cardState === 'filled';
     const isActive = data.cardState === 'active';
     const isNonOwned = data.isMultiplayer && !data.isOwner && !data.isFacilitator;
+
+    const gs = data.generatingState || {};
+    const isGeneratingAll = !!gs['all'];
+    const anyGenerating = Object.values(gs).some(Boolean);
 
     // Owner color tinting
     const oc = data.ownerColor;
@@ -258,14 +412,33 @@ export const HmwCardNode = memo(
           </div>
         )}
 
-        {/* Drag handle grip bar */}
+        {/* Drag handle grip bar + Generate All button */}
         <div
-          className="card-drag-handle flex items-center justify-center w-full h-6 cursor-grab active:cursor-grabbing hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded-t-2xl"
+          className="card-drag-handle flex items-center justify-center w-full h-6 cursor-grab active:cursor-grabbing hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded-t-2xl relative"
           style={{ backgroundColor: oc || 'transparent' }}
         >
           <svg width="32" height="4" viewBox="0 0 32 4" fill="currentColor" className="text-neutral-olive-400">
             <rect x="0" y="0" width="32" height="2" rx="1" />
           </svg>
+          {data.onGenerateAll && !isNonOwned && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                data.onGenerateAll?.(id);
+              }}
+              disabled={anyGenerating}
+              className="nodrag nopan absolute right-2 top-0.5 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold transition-colors bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 disabled:opacity-50"
+              style={{ color: SAGE.headerText }}
+            >
+              {isGeneratingAll ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Sparkles className="h-3 w-3" />
+              )}
+              {isGeneratingAll ? 'Generating...' : 'Generate All'}
+            </button>
+          )}
         </div>
 
         <Handle
@@ -393,7 +566,15 @@ export const HmwCardNode = memo(
                           }
                         }}
                         className="text-sm font-normal text-[var(--hmw-field-text)]"
-                        disabled={isSkeleton}
+                        disabled={isSkeleton || isNonOwned}
+                      />
+                      <SectionAiButton
+                        field={key}
+                        hasContent={!!fieldValue}
+                        isGenerating={!!gs[key] || isGeneratingAll}
+                        canGenerate={!isNonOwned && !!data.onGenerateField}
+                        onGenerate={() => data.onGenerateField?.(id, key)}
+                        onElaborate={(instr) => data.onElaborate?.(id, key, fieldValue || '', instr)}
                       />
                     </div>
                     <div className="pl-0">
@@ -401,7 +582,7 @@ export const HmwCardNode = memo(
                         {hint}
                       </span>
                     </div>
-                    {!fieldValue && (
+                    {!fieldValue && !isNonOwned && (
                       <SuggestionChips
                         suggestions={fieldSuggestions}
                         onSelect={(v) => data.onChipSelect?.(id, key, v)}
@@ -433,6 +614,7 @@ export const HmwCardNode = memo(
               value={data.fullStatement || assembledStatement || ''}
               placeholder="Complete all four fields above to see the assembled statement."
               onBlur={(v) => data.onStatementChange?.(id, v)}
+              disabled={isNonOwned}
             />
           </div>
         )}

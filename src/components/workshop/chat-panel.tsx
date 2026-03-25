@@ -1599,12 +1599,18 @@ export function ChatPanel({
       // Detect ownership mode: if any card has ownerId set, use ownerId-based matching
       const isOwnershipMode = latestHmwCards.some((c) => c.ownerId);
 
+      // If the facilitator interacted with a specific card (chip click / field focus),
+      // prefer targeting that card so updates don't get lost on ownership mismatch.
+      const activeCardId = storeApi.getState().activeHmwCardId;
+
       for (const parsed of hmwCardParsed) {
         const targetIndex = parsed.cardIndex ?? 0;
-        // In ownership mode, target only facilitator's cards (no fallback to avoid cross-card edits)
-        const existing = isOwnershipMode
-          ? latestHmwCards.filter((c) => c.ownerId === 'facilitator')[targetIndex]
-          : latestHmwCards.find((c) => (c.cardIndex ?? 0) === targetIndex);
+        // Prefer the active card (facilitator interacted with it), then fall back to ownership/index matching
+        const existing = activeCardId
+          ? latestHmwCards.find((c) => c.id === activeCardId)
+          : isOwnershipMode
+            ? latestHmwCards.filter((c) => c.ownerId === 'facilitator')[targetIndex]
+            : latestHmwCards.find((c) => (c.cardIndex ?? 0) === targetIndex);
 
         if (existing) {
           const updates: Partial<HmwCardData> = { ...parsed };
@@ -1645,6 +1651,8 @@ export function ChatPanel({
           createdNewHmwCard = true;
         }
       }
+      // Clear active card tracking after processing
+      storeApi.getState().setActiveHmwCardId(null);
       // Only re-fit viewport when a new card appears, not on suggestion/field updates
       if (createdNewHmwCard) {
         setPendingFitView(true);

@@ -17,8 +17,6 @@
 
 ## Persona Development
 
- Give the facilitator the ability to choose the best or combine many into single personas 
-
 ## Journey Mapping
 
 ## Reframing Challenge
