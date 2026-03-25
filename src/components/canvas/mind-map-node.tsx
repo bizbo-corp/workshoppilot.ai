@@ -130,6 +130,8 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
   );
 
   const isRoot = data.isRoot;
+  // Read-only when no edit callbacks are provided (other participants' nodes in "All" view)
+  const isReadOnly = !data.onLabelChange;
 
   // Handle style: progressive reveal
   // Default: tiny & invisible | Node hover: visible connection points | Handle hover: clearly draggable
@@ -209,31 +211,33 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
           )}
         </div>
       ) : (
-        <div onClick={handleLabelClick}>
+        <div onClick={isReadOnly ? undefined : handleLabelClick}>
           <div
             className={cn(
-              'cursor-text break-words font-bold',
+              'break-words font-bold',
+              isReadOnly ? 'cursor-default' : 'cursor-text',
               isRoot ? 'text-base' : 'text-sm'
             )}
             style={{ color: data.themeColor }}
           >
-            {data.label || 'Click to edit'}
+            {data.label || (isReadOnly ? '' : 'Click to edit')}
           </div>
-          {!isRoot && (data.description ? (
+          {!isRoot && data.description && (
             <div
-              className="cursor-text break-words text-xs mt-0.5 opacity-70"
+              className={cn('break-words text-xs mt-0.5 opacity-70', isReadOnly ? 'cursor-default' : 'cursor-text')}
               style={{ color: data.themeColor }}
             >
               {data.description}
             </div>
-          ) : (
+          )}
+          {!isRoot && !data.description && !isReadOnly && (
             <div
               className="cursor-text text-xs mt-0.5 opacity-40 italic"
               style={{ color: data.themeColor }}
             >
               Add description...
             </div>
-          ))}
+          )}
         </div>
       )}
 
@@ -247,42 +251,44 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
         </div>
       )}
 
-      {/* Action buttons row */}
-      <div className="flex gap-1 mt-2 items-center">
-        {/* Star toggle — always visible when starred, hover-only otherwise */}
-        {!isRoot && (
+      {/* Action buttons row — hidden for read-only nodes */}
+      {!isReadOnly && (
+        <div className="flex gap-1 mt-2 items-center">
+          {/* Star toggle — always visible when starred, hover-only otherwise */}
+          {!isRoot && (
+            <button
+              onClick={handleToggleStar}
+              className={cn(
+                'nodrag nopan text-xs px-1.5 py-0.5 rounded hover:bg-neutral-olive-100/50 transition-all',
+                data.isStarred ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              )}
+              style={{ color: data.themeColor }}
+              title={data.isStarred ? 'Unstar idea' : 'Star for Crazy 8s'}
+            >
+              <Star className={cn('h-3.5 w-3.5', data.isStarred && 'fill-current')} />
+            </button>
+          )}
+
+          {/* +Child/+Branch and Delete — hover-only always */}
           <button
-            onClick={handleToggleStar}
-            className={cn(
-              'nodrag nopan text-xs px-1.5 py-0.5 rounded hover:bg-neutral-olive-100/50 transition-all',
-              data.isStarred ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-            )}
+            onClick={handleAddChild}
+            className="nodrag nopan text-xs px-2 py-0.5 rounded hover:bg-neutral-olive-100/50 transition-all opacity-0 group-hover:opacity-100"
             style={{ color: data.themeColor }}
-            title={data.isStarred ? 'Unstar idea' : 'Star for Crazy 8s'}
           >
-            <Star className={cn('h-3.5 w-3.5', data.isStarred && 'fill-current')} />
+            {isRoot ? '+Branch' : '+Child'}
           </button>
-        )}
 
-        {/* +Child/+Branch and Delete — hover-only always */}
-        <button
-          onClick={handleAddChild}
-          className="nodrag nopan text-xs px-2 py-0.5 rounded hover:bg-neutral-olive-100/50 transition-all opacity-0 group-hover:opacity-100"
-          style={{ color: data.themeColor }}
-        >
-          {isRoot ? '+Branch' : '+Child'}
-        </button>
-
-        {!isRoot && (
-          <button
-            onClick={handleDelete}
-            className="nodrag nopan p-1 rounded hover:bg-red-100 text-red-600 transition-all opacity-0 group-hover:opacity-100"
-            title="Delete node"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
+          {!isRoot && (
+            <button
+              onClick={handleDelete}
+              className="nodrag nopan p-1 rounded hover:bg-red-100 text-red-600 transition-all opacity-0 group-hover:opacity-100"
+              title="Delete node"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Hover "+" zones — add child at directional offset */}
       {data.onAddChildAt && (

@@ -1316,16 +1316,22 @@ export function ChatPanel({
         addMindMapNode(newNode, newEdge);
       } else {
         // Theme-level node (level 1, child of root)
-        const facLevel1 = isOwnershipMode
-          ? latestNodes.filter((n) => n.level === 1 && n.ownerId === 'facilitator').length
-          : latestNodes.filter((n) => n.level === 1).length;
-        const colorIndex = facLevel1 % THEME_COLORS.length;
-        const themeColor = THEME_COLORS[colorIndex];
-
         const facRoot = isOwnershipMode
           ? latestNodes.find((n) => n.isRoot && n.ownerId === 'facilitator')
           : undefined;
         const rootId = facRoot?.id || "root";
+
+        // In ownership mode, use the facilitator's root color so all nodes in
+        // their map share the same participant color. In solo mode, cycle colors.
+        let themeColor: (typeof THEME_COLORS)[number];
+        if (isOwnershipMode && facRoot?.themeColorId) {
+          themeColor = THEME_COLORS.find((c) => c.id === facRoot.themeColorId) || THEME_COLORS[0];
+        } else {
+          const level1Count = isOwnershipMode
+            ? latestNodes.filter((n) => n.level === 1 && n.ownerId === 'facilitator').length
+            : latestNodes.filter((n) => n.level === 1).length;
+          themeColor = THEME_COLORS[level1Count % THEME_COLORS.length];
+        }
 
         const position = computeNewNodePosition(
           rootId,

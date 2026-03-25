@@ -16,7 +16,7 @@ import {
   type OnSelectionChangeParams,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Plus, Minus, Maximize, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, X, CheckCircle2, Star, Layers } from 'lucide-react';
+import { Plus, Minus, Maximize, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, X, CheckCircle2, Star, Layers, ArrowRight, Loader2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { MindMapNode } from '@/components/canvas/mind-map-node';
@@ -156,7 +156,8 @@ export type MindMapCanvasProps = {
   // Merge dialog trigger
   onStartMerge?: (groupId: string) => void;
   // Per-participant filtering (multiplayer ideation)
-  currentOwnerId?: string;           // filter canvas to this owner's nodes
+  currentOwnerId?: string;           // filter canvas to this owner's nodes (undefined = show all)
+  selfOwnerId?: string;              // always the current user's ownerId — used for node ownership
   allOwnerIds?: string[];             // for facilitator switcher dropdown
   ownerNames?: Record<string, string>; // ownerId → display name
   ownerColors?: Record<string, string>; // ownerId → hex color (legacy, dots use theme accent)
@@ -165,6 +166,8 @@ export type MindMapCanvasProps = {
   facilitatorOwnerId?: string; // The facilitator's ownerId (cannot be deleted)
   isMultiplayerIdeation?: boolean; // Stable flag — true when multiplayer ideation context
   onCrazy8sReadinessChange?: (map: Crazy8sReadinessMap) => void;
+  onConfirmMindMap?: () => void;
+  isConfirmingMindMap?: boolean;
 };
 
 export function MindMapCanvas(props: MindMapCanvasProps) {
@@ -197,6 +200,7 @@ function MindMapCanvasInner({
   onReVote,
   onStartMerge,
   currentOwnerId,
+  selfOwnerId,
   allOwnerIds,
   ownerNames,
   ownerColors,
@@ -205,7 +209,13 @@ function MindMapCanvasInner({
   facilitatorOwnerId,
   isMultiplayerIdeation,
   onCrazy8sReadinessChange,
+  onConfirmMindMap,
+  isConfirmingMindMap,
 }: MindMapCanvasProps) {
+  // Owner ID to stamp on newly created nodes/edges.
+  // selfOwnerId is stable (always the current user's ID), while currentOwnerId
+  // can be undefined when viewing "All". Fall back to currentOwnerId for compat.
+  const nodeOwnerId = selfOwnerId || currentOwnerId;
   const allMindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const allMindMapEdges = useCanvasStore((state) => state.mindMapEdges);
 
@@ -244,7 +254,16 @@ function MindMapCanvasInner({
   const setMindMapState = useCanvasStore((state) => state.setMindMapState);
   const pendingFitView = useCanvasStore((state) => state.pendingFitView);
   const setPendingFitView = useCanvasStore((state) => state.setPendingFitView);
-  const allCrazy8sSlots = useCanvasStore((state) => state.crazy8sSlots);
+  const rawCrazy8sSlots = useCanvasStore((state) => state.crazy8sSlots);
+  // Deduplicate by slotId — Liveblocks CRDT sync can produce duplicates
+  const allCrazy8sSlots = useMemo(() => {
+    const seen = new Set<string>();
+    return rawCrazy8sSlots.filter((s) => {
+      if (seen.has(s.slotId)) return false;
+      seen.add(s.slotId);
+      return true;
+    });
+  }, [rawCrazy8sSlots]);
   const slotGroups = useCanvasStore((state) => state.slotGroups);
   const rawDotVotes = useCanvasStore((state) => state.dotVotes);
   const votingSession = useCanvasStore((state) => state.votingSession);
@@ -476,18 +495,42 @@ function MindMapCanvasInner({
     && votingSession.status === 'idle'
     && votingSelectedIds.length >= 2;
 
-  // Keyboard shortcuts: V = select, H = hand (standard design tool convention)
+  // Track tool mode before spacebar hold so we can restore it on keyup
+  const toolBeforeSpace = useRef<'select' | 'pan' | null>(null);
+
+  // Keyboard shortcuts: V = select, H = hand, Space (hold) = temporary hand
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore when typing in an input/textarea
+    const isTyping = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
-      if (e.key === 'v' || e.key === 'V') setToolMode('select');
-      if (e.key === 'h' || e.key === 'H') setToolMode('pan');
+      return tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
     };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isTyping(e)) return;
+      if (e.key === 'v' || e.key === 'V') { toolBeforeSpace.current = null; setToolMode('select'); }
+      if (e.key === 'h' || e.key === 'H') { toolBeforeSpace.current = null; setToolMode('pan'); }
+      // Spacebar hold → temporary hand tool
+      if (e.key === ' ' && !e.repeat) {
+        e.preventDefault();
+        toolBeforeSpace.current = toolMode;
+        setToolMode('pan');
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === ' ' && toolBeforeSpace.current !== null) {
+        setToolMode(toolBeforeSpace.current);
+        toolBeforeSpace.current = null;
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [toolMode]);
 
   // Live positions ref — prevents flicker during drag (same pattern as react-flow-canvas.tsx)
   const livePositions = useRef<Record<string, { x: number; y: number }>>({});
@@ -660,7 +703,7 @@ function MindMapCanvasInner({
         level: childLevel,
         parentId,
         position,
-        ...(currentOwnerId && { ownerId: currentOwnerId }),
+        ...(nodeOwnerId && { ownerId: nodeOwnerId }),
       };
 
       const newEdge: MindMapEdgeState = {
@@ -668,14 +711,14 @@ function MindMapCanvasInner({
         source: parentId,
         target: newNodeId,
         themeColor: themeColor.color,
-        ...(currentOwnerId && { ownerId: currentOwnerId }),
+        ...(nodeOwnerId && { ownerId: nodeOwnerId }),
       };
 
       addMindMapNode(newNode, newEdge);
       setAutoFocusNodeId(newNodeId);
       focusNodeTextarea(newNodeId);
     },
-    [mindMapNodes, mindMapEdges, addMindMapNode, currentOwnerId, isMultiplayerIdeation, focusNodeTextarea]
+    [mindMapNodes, mindMapEdges, addMindMapNode, nodeOwnerId, isMultiplayerIdeation, focusNodeTextarea]
   );
 
   // Callback: Delete node with cascade confirmation
@@ -748,7 +791,7 @@ function MindMapCanvasInner({
         level: childLevel,
         parentId,
         position,
-        ...(currentOwnerId && { ownerId: currentOwnerId }),
+        ...(nodeOwnerId && { ownerId: nodeOwnerId }),
       };
 
       const newEdge: MindMapEdgeState = {
@@ -756,14 +799,14 @@ function MindMapCanvasInner({
         source: parentId,
         target: newNodeId,
         themeColor: themeColor.color,
-        ...(currentOwnerId && { ownerId: currentOwnerId }),
+        ...(nodeOwnerId && { ownerId: nodeOwnerId }),
       };
 
       addMindMapNode(newNode, newEdge);
       setAutoFocusNodeId(newNodeId);
       focusNodeTextarea(newNodeId);
     },
-    [mindMapNodes, addMindMapNode, currentOwnerId, focusNodeTextarea]
+    [mindMapNodes, addMindMapNode, nodeOwnerId, focusNodeTextarea]
   );
 
   // Compute per-owner star counts (how many non-root nodes are starred, max 8)
@@ -996,11 +1039,16 @@ function MindMapCanvasInner({
         ? { x: basePos.x + offset.x, y: basePos.y + offset.y }
         : basePos;
 
+      // In "All" view (no currentOwnerId filter), nodes belonging to OTHER
+      // participants are read-only — no editing, adding, deleting, or dragging.
+      const isOwnNode = !nodeOwnerId || !nodeState.ownerId || nodeState.ownerId === nodeOwnerId;
+
       return {
         id: nodeState.id,
         type: 'mindMapNode',
         position,
-        draggable: true,
+        draggable: isOwnNode,
+        selectable: isOwnNode,
         data: {
           label: nodeState.label,
           description: nodeState.description,
@@ -1011,18 +1059,18 @@ function MindMapCanvasInner({
           isStarred: nodeState.isStarred,
           level: nodeState.level,
           ownerName: nodeState.isRoot ? nodeState.ownerName : undefined,
-          isNewlyCreated: autoFocusNodeId === nodeState.id,
-          onLabelChange: handleLabelChange,
-          onDescriptionChange: handleDescriptionChange,
-          onAddChild: handleAddChild,
-          onAddChildAt: handleAddChildAt,
-          onDelete: handleDelete,
-          onToggleStar: handleToggleStar,
+          isNewlyCreated: isOwnNode ? autoFocusNodeId === nodeState.id : false,
+          onLabelChange: isOwnNode ? handleLabelChange : undefined,
+          onDescriptionChange: isOwnNode ? handleDescriptionChange : undefined,
+          onAddChild: isOwnNode ? handleAddChild : undefined,
+          onAddChildAt: isOwnNode ? handleAddChildAt : undefined,
+          onDelete: isOwnNode ? handleDelete : undefined,
+          onToggleStar: isOwnNode ? handleToggleStar : undefined,
         },
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions is a ref
-  }, [mindMapNodes, ownerOffsets, autoFocusNodeId, handleLabelChange, handleDescriptionChange, handleAddChild, handleAddChildAt, handleDelete, handleToggleStar]);
+  }, [mindMapNodes, ownerOffsets, nodeOwnerId, autoFocusNodeId, handleLabelChange, handleDescriptionChange, handleAddChild, handleAddChildAt, handleDelete, handleToggleStar]);
 
   // Derive owner theme colors from their root node's stored palette color.
   // Falls back to the canvas palette by index, or neutral gray.
@@ -1339,6 +1387,7 @@ function MindMapCanvasInner({
 
   // Owner zone nodes — colored background rectangles behind each participant's tree
   const showDoneButton = !!isMultiplayerIdeation && !showCrazy8s;
+  const showConfirmButton = !!onConfirmMindMap && !showCrazy8s && isFacilitator;
   const ownerZoneNodes = useMemo<Node[]>(() => {
     if (!allOwnerIds || allOwnerIds.length <= 1) return [];
 
@@ -1376,6 +1425,9 @@ function MindMapCanvasInner({
           width: dynZoneWidth,
           height: dynZoneHeight,
           starCount: ownerStarCounts[currentOwnerId] || 0,
+          showConfirmButton,
+          onConfirmMindMap,
+          isConfirmingMindMap,
         },
       }];
     }
@@ -1415,7 +1467,7 @@ function MindMapCanvasInner({
         },
       };
     });
-  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, ownerStarCounts, ownerBounds, isFacilitator]);
+  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, ownerStarCounts, ownerBounds, isFacilitator, showConfirmButton, onConfirmMindMap, isConfirmingMindMap]);
 
   // ── Voting nodes (multiplayer idea-selection on same canvas) ──
 
@@ -1847,24 +1899,38 @@ function MindMapCanvasInner({
     const combined = [...flowBandNodes, ...phaseContainerNodes, ...ownerZoneNodes, ...rfMindMapNodes, ...crazy8sNodes];
     if (brainRewritingNodes.length > 0) combined.push(...brainRewritingNodes);
     if (votingNodes.length > 0) combined.push(...votingNodes);
-    return combined;
+    // Deduplicate by node ID — Liveblocks recovery can produce duplicate entries
+    const seen = new Set<string>();
+    return combined.filter((n) => {
+      if (seen.has(n.id)) return false;
+      seen.add(n.id);
+      return true;
+    });
   }, [rfMindMapNodes, ownerZoneNodes, crazy8sNodes, brainRewritingNodes, votingNodes, flowBandNodes, phaseContainerNodes]);
 
   // Convert store state to ReactFlow edges
   const rfEdges: Edge[] = useMemo(() => {
-    return mindMapEdges.map((edgeState) => ({
-      id: edgeState.id,
-      source: edgeState.source,
-      target: edgeState.target,
-      type: 'mindMapEdge',
-      // Secondary edges can be selected and deleted
-      selectable: !!edgeState.isSecondary,
-      deletable: !!edgeState.isSecondary,
-      data: {
-        themeColor: edgeState.themeColor,
-        isSecondary: edgeState.isSecondary,
-      },
-    }));
+    // Deduplicate by edge ID — Liveblocks recovery can produce duplicate entries
+    const seen = new Set<string>();
+    const edges: Edge[] = [];
+    for (const edgeState of mindMapEdges) {
+      if (seen.has(edgeState.id)) continue;
+      seen.add(edgeState.id);
+      edges.push({
+        id: edgeState.id,
+        source: edgeState.source,
+        target: edgeState.target,
+        type: 'mindMapEdge',
+        // Secondary edges can be selected and deleted
+        selectable: !!edgeState.isSecondary,
+        deletable: !!edgeState.isSecondary,
+        data: {
+          themeColor: edgeState.themeColor,
+          isSecondary: edgeState.isSecondary,
+        },
+      });
+    }
+    return edges;
   }, [mindMapEdges]);
 
   // Controlled nodes state for ReactFlow (allows drag to work)
@@ -2007,7 +2073,7 @@ function MindMapCanvasInner({
       level: 1,
       parentId: rootNode.id,
       position,
-      ...(currentOwnerId && { ownerId: currentOwnerId }),
+      ...(nodeOwnerId && { ownerId: nodeOwnerId }),
     };
 
     const newEdge: MindMapEdgeState = {
@@ -2015,14 +2081,14 @@ function MindMapCanvasInner({
       source: rootNode.id,
       target: newNodeId,
       themeColor: themeColor.color,
-      ...(currentOwnerId && { ownerId: currentOwnerId }),
+      ...(nodeOwnerId && { ownerId: nodeOwnerId }),
     };
 
     addMindMapNode(newNode, newEdge);
     setAutoFocusNodeId(newNodeId);
     focusNodeTextarea(newNodeId);
     setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
-  }, [mindMapNodes, mindMapEdges, addMindMapNode, fitView, isMultiplayerIdeation, currentOwnerId, focusNodeTextarea]);
+  }, [mindMapNodes, mindMapEdges, addMindMapNode, fitView, isMultiplayerIdeation, nodeOwnerId, focusNodeTextarea]);
 
   // Auto-layout: recompute all positions using radial algorithm
   const handleAutoLayout = useCallback(() => {
@@ -2101,7 +2167,7 @@ function MindMapCanvasInner({
         level: childLevel,
         parentId: sourceId,
         position: snapped,
-        ...(currentOwnerId && { ownerId: currentOwnerId }),
+        ...(nodeOwnerId && { ownerId: nodeOwnerId }),
       };
 
       const newEdge: MindMapEdgeState = {
@@ -2109,14 +2175,14 @@ function MindMapCanvasInner({
         source: sourceId,
         target: newNodeId,
         themeColor: themeColor.color,
-        ...(currentOwnerId && { ownerId: currentOwnerId }),
+        ...(nodeOwnerId && { ownerId: nodeOwnerId }),
       };
 
       addMindMapNode(newNode, newEdge);
       setAutoFocusNodeId(newNodeId);
       focusNodeTextarea(newNodeId);
     },
-    [mindMapNodes, ownerOffsets, screenToFlowPosition, addMindMapNode, currentOwnerId, focusNodeTextarea]
+    [mindMapNodes, ownerOffsets, screenToFlowPosition, addMindMapNode, nodeOwnerId, focusNodeTextarea]
   );
 
   // Connection handler: create secondary cross-connection edge
@@ -2490,6 +2556,25 @@ function MindMapCanvasInner({
                         {soloStarCount}/8
                       </span>
                     </div>
+                  </>
+                )}
+                {/* Continue to Crazy 8s button — solo mode only (multiplayer uses owner zone button) */}
+                {!showCrazy8s && onConfirmMindMap && (!allOwnerIds || allOwnerIds.length <= 1) && soloStarCount > 0 && (
+                  <>
+                    <div className="mx-1 h-5 w-px bg-border" />
+                    <Button
+                      onClick={onConfirmMindMap}
+                      disabled={isConfirmingMindMap}
+                      size="sm"
+                      className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      {isConfirmingMindMap ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ArrowRight className="h-4 w-4" />
+                      )}
+                      Crazy 8s
+                    </Button>
                   </>
                 )}
               </>

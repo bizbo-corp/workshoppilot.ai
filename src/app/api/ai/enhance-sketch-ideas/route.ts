@@ -198,6 +198,15 @@ ${generateWildcards ? `6. If an owner has fewer than ${totalSlots} ideas, genera
                 ideaType: aiSlots[i].ideaType || 'digital_product',
                 isWildcard: true,
               });
+            } else {
+              // AI didn't generate a wildcard for this slot — push empty placeholder
+              normalized.push({
+                title: '',
+                description: '',
+                sketchHint: '',
+                sketchPrompt: '',
+                isWildcard: true,
+              });
             }
           }
           ownerSlotsResult[owner.ownerId] = normalized;

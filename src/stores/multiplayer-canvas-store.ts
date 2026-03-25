@@ -243,8 +243,16 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
             ),
           })),
 
-        setCrazy8sSlots: (slots) =>
-          set(() => ({ crazy8sSlots: slots })),
+        setCrazy8sSlots: (slots) => {
+          // Deduplicate by slotId — Liveblocks CRDT merge can produce duplicates
+          const seen = new Set<string>();
+          const deduped = slots.filter((s) => {
+            if (seen.has(s.slotId)) return false;
+            seen.add(s.slotId);
+            return true;
+          });
+          set(() => ({ crazy8sSlots: deduped }));
+        },
 
         setGridColumns: (gridColumns) =>
           set(() => ({ gridColumns })),
@@ -482,8 +490,14 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
 
         addMindMapNode: (node, edge) =>
           set((state) => ({
-            mindMapNodes: [...state.mindMapNodes, node],
-            mindMapEdges: edge ? [...state.mindMapEdges, edge] : state.mindMapEdges,
+            mindMapNodes: state.mindMapNodes.some((n) => n.id === node.id)
+              ? state.mindMapNodes
+              : [...state.mindMapNodes, node],
+            mindMapEdges: edge
+              ? state.mindMapEdges.some((e) => e.id === edge.id)
+                ? state.mindMapEdges
+                : [...state.mindMapEdges, edge]
+              : state.mindMapEdges,
           })),
 
         updateMindMapNode: (id, updates) =>
@@ -513,7 +527,9 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
 
         addMindMapEdge: (edge) =>
           set((state) => ({
-            mindMapEdges: [...state.mindMapEdges, edge],
+            mindMapEdges: state.mindMapEdges.some((e) => e.id === edge.id)
+              ? state.mindMapEdges
+              : [...state.mindMapEdges, edge],
           })),
 
         deleteMindMapEdge: (edgeId) =>

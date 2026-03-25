@@ -52,10 +52,17 @@ export function Crazy8sCanvas({ workshopId, stepId, ownerId, votingMode, onVoteS
   // Store selectors
   const allCrazy8sSlots = useCanvasStore((s) => s.crazy8sSlots);
 
-  // Filter slots by ownerId when set (per-participant card)
-  const crazy8sSlots = ownerId
-    ? allCrazy8sSlots.filter((s) => s.ownerId === ownerId)
-    : allCrazy8sSlots;
+  // Deduplicate by slotId (Liveblocks CRDT sync can produce duplicates), then filter by owner
+  const crazy8sSlots = useMemo(() => {
+    const seen = new Set<string>();
+    return allCrazy8sSlots
+      .filter((s) => {
+        if (seen.has(s.slotId)) return false;
+        seen.add(s.slotId);
+        return true;
+      })
+      .filter((s) => !ownerId || s.ownerId === ownerId);
+  }, [allCrazy8sSlots, ownerId]);
   const updateCrazy8sSlot = useCanvasStore((s) => s.updateCrazy8sSlot);
   const setCrazy8sSlots = useCanvasStore((s) => s.setCrazy8sSlots);
   const storeApi = useCanvasStoreApi();

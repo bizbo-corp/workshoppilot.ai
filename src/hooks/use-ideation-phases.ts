@@ -196,6 +196,7 @@ export function useIdeationPhases({
   // Sync store ideationPhase to local state (multiplayer: facilitator changes propagate)
   const storeIdeationPhase = useCanvasStore(state => state.ideationPhase);
   const setStoreIdeationPhase = useCanvasStore(state => state.setIdeationPhase);
+
   React.useEffect(() => {
     if (!enabled) return;
     if (storeIdeationPhase && storeIdeationPhase !== currentPhase) {
@@ -650,6 +651,7 @@ export function useIdeationPhases({
         onStartMerge: setMergeGroupId,
         // Per-participant filtering
         currentOwnerId: effectiveOwnerId,
+        selfOwnerId: currentOwnerId,
         allOwnerIds: ownerIdsList.length > 1 ? ownerIdsList : undefined,
         ownerNames: ownerNamesMap,
         ownerColors: ownerColorsMap,
@@ -658,6 +660,8 @@ export function useIdeationPhases({
         facilitatorOwnerId: 'facilitator',
         isMultiplayerIdeation: !!(ideationOwners && ideationOwners.length > 0),
         onCrazy8sReadinessChange: setCrazy8sReadinessMap,
+        onConfirmMindMap: !showCrazy8s && currentPhase === 'mind-mapping' ? handleStartCrazy8s : undefined,
+        isConfirmingMindMap: isEnhancingIdeas,
       }),
       // Merge group dialog
       mergeGroup && React.createElement(MergeGroupDialog, {
@@ -676,7 +680,7 @@ export function useIdeationPhases({
     handleBrainRewritingToggleIncluded, handleSaveBrainRewriting,
     handleVoteSelectionConfirm, handleReVote, mergeGroupId, mergeGroup, flushCanvasState,
     setMergeGroupId, viewingOwnerId, currentOwnerId, ownerIdsList, ownerNamesMap, ownerColorsMap, handleDeleteOwner,
-    ideationOwners,
+    ideationOwners, handleStartCrazy8s, isEnhancingIdeas,
   ]);
 
   return {

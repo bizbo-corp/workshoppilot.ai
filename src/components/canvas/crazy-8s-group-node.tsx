@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useMemo } from 'react';
 import { type NodeProps, type Node } from '@xyflow/react';
 import { Crazy8sCanvas } from '@/components/workshop/crazy-8s-canvas';
 import { Zap, Save, Check, Loader2, SkipForward, CheckCircle2, Pencil, Link2, Unlink, X, Wand2, Image, Star } from 'lucide-react';
@@ -78,10 +78,17 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
   const addSlotGroup = useCanvasStore((s) => s.addSlotGroup);
   const removeSlotGroup = useCanvasStore((s) => s.removeSlotGroup);
 
-  // Filter slots by ownerId when set (per-participant card)
-  const crazy8sSlots = data.ownerId
-    ? allCrazy8sSlots.filter((s) => s.ownerId === data.ownerId)
-    : allCrazy8sSlots;
+  // Deduplicate by slotId (Liveblocks CRDT sync can produce duplicates), then filter by owner
+  const crazy8sSlots = useMemo(() => {
+    const seen = new Set<string>();
+    return allCrazy8sSlots
+      .filter((s) => {
+        if (seen.has(s.slotId)) return false;
+        seen.add(s.slotId);
+        return true;
+      })
+      .filter((s) => !data.ownerId || s.ownerId === data.ownerId);
+  }, [allCrazy8sSlots, data.ownerId]);
 
   // Owner color overrides — use owner's accent or fallback to amber
   const borderColor = data.ownerColor || undefined; // undefined → use default amber

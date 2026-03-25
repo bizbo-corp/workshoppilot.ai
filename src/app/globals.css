@@ -426,6 +426,15 @@
   cursor: grab !important;
 }
 
+/* Hand tool: let mouse events pass through nodes so dragging anywhere pans the canvas.
+   The descendant selector (*) is needed because some nodes (e.g. owner-zone) set
+   pointer-events:auto on inner elements via inline styles. */
+.react-flow.cursor-hand-tool .react-flow__node,
+.react-flow.cursor-hand-tool .react-flow__node * {
+  pointer-events: none !important;
+  cursor: grab !important;
+}
+
 .react-flow.cursor-dragging,
 .react-flow.cursor-dragging .react-flow__pane,
 .react-flow.cursor-dragging .react-flow__node {

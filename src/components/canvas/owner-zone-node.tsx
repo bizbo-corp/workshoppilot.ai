@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { CheckCircle2, Star } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Loader2, Star } from 'lucide-react';
 import type { NodeProps, Node } from '@xyflow/react';
 
 export const OWNER_ZONE_HEADER_HEIGHT = 32;
@@ -18,6 +18,9 @@ export type OwnerZoneNodeData = {
   height?: number;           // override default 1400 (taller when crazy 8s below)
   starCount?: number;        // number of starred mind map nodes (max 8)
   isDraggable?: boolean;     // whether the zone can be dragged (facilitator or self)
+  showConfirmButton?: boolean; // show "Continue to Crazy 8s" (facilitator only)
+  onConfirmMindMap?: () => void;
+  isConfirmingMindMap?: boolean;
 };
 
 export type OwnerZoneNode = Node<OwnerZoneNodeData, 'ownerZoneNode'>;
@@ -117,7 +120,7 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
         <div
           style={{
             position: 'absolute',
-            bottom: 24,
+            bottom: data.showConfirmButton ? 72 : 24,
             left: 0,
             right: 0,
             display: 'flex',
@@ -147,6 +150,50 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
               <CheckCircle2 style={{ width: 16, height: 16 }} />
             )}
             {data.isReady ? "I'm Done" : "I'm Done"}
+          </button>
+        </div>
+      )}
+
+      {/* "Continue to Crazy 8s" button — facilitator only (isSelf not required, participantId is null for owners) */}
+      {data.showConfirmButton && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 24,
+            left: 0,
+            right: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            pointerEvents: 'auto',
+          }}
+        >
+          <button
+            onClick={data.onConfirmMindMap}
+            disabled={data.isConfirmingMindMap}
+            className="nodrag nopan"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 20px',
+              borderRadius: 9999,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: data.isConfirmingMindMap ? 'wait' : 'pointer',
+              transition: 'all 150ms ease',
+              border: '2px solid #608850',
+              backgroundColor: '#608850',
+              color: '#ffffff',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)',
+              opacity: data.isConfirmingMindMap ? 0.7 : 1,
+            }}
+          >
+            {data.isConfirmingMindMap ? (
+              <Loader2 className="animate-spin" style={{ width: 16, height: 16 }} />
+            ) : (
+              <ArrowRight style={{ width: 16, height: 16 }} />
+            )}
+            {data.isConfirmingMindMap ? 'Enhancing...' : 'Continue to Crazy 8s'}
           </button>
         </div>
       )}

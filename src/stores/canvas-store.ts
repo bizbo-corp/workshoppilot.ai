@@ -398,11 +398,19 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             isDirty: true,
           })),
 
-        setCrazy8sSlots: (slots) =>
+        setCrazy8sSlots: (slots) => {
+          // Deduplicate by slotId — Liveblocks CRDT merge can produce duplicates
+          const seen = new Set<string>();
+          const deduped = slots.filter((s) => {
+            if (seen.has(s.slotId)) return false;
+            seen.add(s.slotId);
+            return true;
+          });
           set(() => ({
-            crazy8sSlots: slots,
+            crazy8sSlots: deduped,
             // NOTE: Does NOT set isDirty — this is for loading from DB
-          })),
+          }));
+        },
 
         setGridColumns: (gridColumns) =>
           set(() => ({
@@ -682,8 +690,14 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
 
         addMindMapNode: (node, edge) =>
           set((state) => ({
-            mindMapNodes: [...state.mindMapNodes, node],
-            mindMapEdges: edge ? [...state.mindMapEdges, edge] : state.mindMapEdges,
+            mindMapNodes: state.mindMapNodes.some((n) => n.id === node.id)
+              ? state.mindMapNodes
+              : [...state.mindMapNodes, node],
+            mindMapEdges: edge
+              ? state.mindMapEdges.some((e) => e.id === edge.id)
+                ? state.mindMapEdges
+                : [...state.mindMapEdges, edge]
+              : state.mindMapEdges,
             isDirty: true,
           })),
 
@@ -717,7 +731,9 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
 
         addMindMapEdge: (edge) =>
           set((state) => ({
-            mindMapEdges: [...state.mindMapEdges, edge],
+            mindMapEdges: state.mindMapEdges.some((e) => e.id === edge.id)
+              ? state.mindMapEdges
+              : [...state.mindMapEdges, edge],
             isDirty: true,
           })),
 
