@@ -920,6 +920,16 @@ function ReactFlowCanvasInner({
     [updatePersonaTemplate],
   );
 
+  // Assemble a complete HMW statement from the 4 field values
+  const assembleHmwStatement = useCallback((merged: {
+    givenThat?: string; persona?: string; immediateGoal?: string; deeperGoal?: string;
+  }): string | undefined => {
+    if (!merged.givenThat || !merged.persona || !merged.immediateGoal || !merged.deeperGoal) return undefined;
+    const strip = (s?: string) => s?.replace(/\.+$/, '') ?? '';
+    const lcFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+    return `Given that ${lcFirst(strip(merged.givenThat))}, how might we help ${lcFirst(strip(merged.persona))} ${lcFirst(strip(merged.immediateGoal))} so they can ${lcFirst(strip(merged.deeperGoal))}?`;
+  }, []);
+
   // Handle HMW card field changes (manual text edits — silent, no chat message)
   // Also clear suggestions for the edited field so chips disappear once user types their own
   const handleHmwFieldChange = useCallback(
@@ -928,12 +938,15 @@ function ReactFlowCanvasInner({
       const updatedSuggestions = card?.suggestions
         ? { ...card.suggestions, [field]: [] }
         : undefined;
+      const merged = { ...card, [field]: value };
+      const fullStatement = assembleHmwStatement(merged);
       updateHmwCard(id, {
         [field]: value,
         ...(updatedSuggestions ? { suggestions: updatedSuggestions } : {}),
+        ...(fullStatement ? { fullStatement } : {}),
       });
     },
-    [hmwCards, updateHmwCard],
+    [hmwCards, updateHmwCard, assembleHmwStatement],
   );
 
   // Handle HMW card chip selection — sets field value, clears that field's suggestions, and signals chat
@@ -944,15 +957,18 @@ function ReactFlowCanvasInner({
       const updatedSuggestions = card?.suggestions
         ? { ...card.suggestions, [field]: [] }
         : undefined;
+      const merged = { ...card, [field]: value };
+      const fullStatement = assembleHmwStatement(merged);
       updateHmwCard(id, {
         [field]: value,
         ...(updatedSuggestions ? { suggestions: updatedSuggestions } : {}),
+        ...(fullStatement ? { fullStatement } : {}),
       });
       // Signal chat-panel to send a message + track active card for targeting
       setActiveHmwCardId(id);
       setPendingHmwChipSelection({ cardId: id, field, value });
     },
-    [hmwCards, updateHmwCard, setPendingHmwChipSelection, setActiveHmwCardId],
+    [hmwCards, updateHmwCard, setPendingHmwChipSelection, setActiveHmwCardId, assembleHmwStatement],
   );
 
   // Handle HMW card full statement edit

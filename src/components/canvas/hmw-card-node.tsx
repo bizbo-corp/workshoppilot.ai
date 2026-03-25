@@ -38,6 +38,20 @@ const SAGE = {
   statementBg: 'var(--hmw-statement-bg)',
 };
 
+/**
+ * Returns 'white' or a dark color based on perceived luminance of a hex color.
+ * Uses the W3C relative luminance formula for WCAG contrast.
+ */
+function contrastText(hex: string): string {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  // Perceived luminance (sRGB)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.55 ? '#1a1a1a' : '#ffffff';
+}
+
 /** Field configuration for the 4-part HMW builder */
 const HMW_FIELDS = [
   { key: 'givenThat', prefix: 'Given that', hint: 'context, situation from journey dip' },
@@ -362,6 +376,8 @@ export const HmwCardNode = memo(
 
     // Owner color tinting
     const oc = data.ownerColor;
+    const headerBg = oc || SAGE.headerBg;
+    const headerText = oc ? contrastText(oc) : SAGE.headerText;
     const cardBg = oc ? `color-mix(in srgb, ${oc} 6%, ${SAGE.bg})` : SAGE.bg;
     const cardBorder = oc ? `color-mix(in srgb, ${oc} 30%, ${SAGE.border})` : SAGE.border;
     const sectionBorder = oc ? `color-mix(in srgb, ${oc} 15%, ${SAGE.sectionBorder})` : SAGE.sectionBorder;
@@ -450,13 +466,13 @@ export const HmwCardNode = memo(
         {/* ── Header band ── */}
         <div
           className="px-6 py-4 flex items-center justify-between"
-          style={{ backgroundColor: SAGE.headerBg }}
+          style={{ backgroundColor: headerBg }}
         >
           <div className="flex items-center gap-3">
-            <Lightbulb className="h-5 w-5" style={{ color: SAGE.headerText, opacity: 0.8 }} />
+            <Lightbulb className="h-5 w-5" style={{ color: headerText, opacity: 0.8 }} />
             <span
               className="text-lg font-bold tracking-wide"
-              style={{ color: SAGE.headerText }}
+              style={{ color: headerText }}
             >
               HOW MIGHT WE CARD
             </span>
@@ -464,7 +480,10 @@ export const HmwCardNode = memo(
           <div className="flex items-center gap-2">
             <span
               className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
-              style={{ backgroundColor: 'var(--hmw-badge-bg)', color: SAGE.headerText }}
+              style={{
+                backgroundColor: oc ? `color-mix(in srgb, ${oc} 70%, black)` : 'var(--hmw-badge-bg)',
+                color: oc ? '#ffffff' : SAGE.headerText,
+              }}
             >
               HMW
             </span>
@@ -475,7 +494,7 @@ export const HmwCardNode = memo(
                 className="nodrag nopan rounded-full p-1 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
                 title="Delete card"
               >
-                <X className="h-4 w-4" style={{ color: SAGE.headerText, opacity: 0.6 }} />
+                <X className="h-4 w-4" style={{ color: headerText, opacity: 0.6 }} />
               </button>
             )}
           </div>

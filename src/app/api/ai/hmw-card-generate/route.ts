@@ -39,13 +39,9 @@ type RequestBody = {
 };
 
 export async function POST(req: Request) {
+  // Auth is optional — anonymous participants (joined via link, not signed in)
+  // are allowed to generate on their own cards. Rate-limit falls back to IP.
   const { userId } = await auth();
-  if (!userId) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
 
   const rl = checkRateLimit(getRateLimitId(req, userId), 'text-gen');
   if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);

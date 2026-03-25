@@ -59,6 +59,10 @@ export function useHmwCardGenerate(workshopId: string) {
     // Recompute cardState
     if (merged.givenThat && merged.persona && merged.immediateGoal && merged.deeperGoal) {
       updates.cardState = 'filled';
+      // Auto-assemble fullStatement from the 4 fields
+      const strip = (s?: string) => s?.replace(/\.+$/, '') ?? '';
+      const lcFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+      updates.fullStatement = `Given that ${lcFirst(strip(merged.givenThat))}, how might we help ${lcFirst(strip(merged.persona))} ${lcFirst(strip(merged.immediateGoal))} so they can ${lcFirst(strip(merged.deeperGoal))}?`;
     } else if (merged.givenThat || merged.persona || merged.immediateGoal || merged.deeperGoal) {
       updates.cardState = 'active';
     }
