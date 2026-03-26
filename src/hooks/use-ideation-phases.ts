@@ -201,7 +201,11 @@ export function useIdeationPhases({
     if (!enabled) return;
     if (storeIdeationPhase && storeIdeationPhase !== currentPhase) {
       setCurrentPhase(storeIdeationPhase);
-      if (storeIdeationPhase !== 'mind-mapping') setShowCrazy8s(true);
+      if (storeIdeationPhase === 'mind-mapping') {
+        setShowCrazy8s(false);
+      } else {
+        setShowCrazy8s(true);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to store changes
   }, [storeIdeationPhase]);
@@ -320,52 +324,66 @@ export function useIdeationPhases({
           if (response.ok) {
             const data = await response.json();
             const ownerSlotsMap = data.ownerSlots as Record<string, Array<{ title: string; description: string; sketchHint: string; sketchPrompt?: string; ideaType?: string; isWildcard?: boolean }>>;
-            const allSlots = [...state.crazy8sSlots];
 
-            for (const ownerId of ownerIds) {
-              const aiSlots = ownerSlotsMap?.[ownerId] || [];
-              const ownerSlots = allSlots.filter((s) => s.ownerId === ownerId);
-              ownerSlots.forEach((slot, i) => {
-                if (aiSlots[i]) {
-                  slot.title = aiSlots[i].title || slot.title;
-                  slot.description = aiSlots[i].description || slot.description || '';
-                  slot.sketchHint = aiSlots[i].sketchHint || '';
-                  slot.sketchPrompt = aiSlots[i].sketchPrompt || '';
-                  slot.ideaType = (aiSlots[i].ideaType as Crazy8sSlot['ideaType']) || 'digital_product';
-                  slot.isWildcard = aiSlots[i].isWildcard || false;
-                }
-              });
-            }
-            state.setCrazy8sSlots(allSlots);
+            // Build per-owner index counters for sequential mapping
+            const ownerSlotCounters: Record<string, number> = {};
+            const updatedSlots = state.crazy8sSlots.map((slot) => {
+              const oid = slot.ownerId || '';
+              const idx = ownerSlotCounters[oid] || 0;
+              ownerSlotCounters[oid] = idx + 1;
+              const aiSlots = ownerSlotsMap?.[oid] || [];
+              const ai = aiSlots[idx];
+              if (!ai) return slot;
+              return {
+                ...slot,
+                title: ai.title || slot.title,
+                description: ai.description || slot.description || '',
+                sketchHint: ai.sketchHint || '',
+                sketchPrompt: ai.sketchPrompt || '',
+                ideaType: (ai.ideaType as Crazy8sSlot['ideaType']) || 'digital_product',
+                isWildcard: ai.isWildcard || false,
+              };
+            });
+            state.setCrazy8sSlots(updatedSlots);
           } else {
-            // Fallback: raw labels
-            const allSlots = [...state.crazy8sSlots];
+            // Fallback: raw labels — immutable map to create new slot objects
+            const ownerStarredMap: Record<string, string[]> = {};
             for (const ownerId of ownerIds) {
-              const ownerStarred = state.mindMapNodes
+              ownerStarredMap[ownerId] = state.mindMapNodes
                 .filter((n) => n.ownerId === ownerId && n.isStarred && !n.isRoot && n.label.trim())
                 .map((n) => n.label.trim())
                 .slice(0, 8);
-              const ownerSlots = allSlots.filter((s) => s.ownerId === ownerId);
-              ownerSlots.forEach((slot, i) => {
-                slot.title = ownerStarred[i] || slot.title;
-              });
             }
-            state.setCrazy8sSlots(allSlots);
+            const ownerSlotCounters: Record<string, number> = {};
+            const updatedSlots = state.crazy8sSlots.map((slot) => {
+              const oid = slot.ownerId || '';
+              const idx = ownerSlotCounters[oid] || 0;
+              ownerSlotCounters[oid] = idx + 1;
+              const starred = ownerStarredMap[oid];
+              if (!starred?.[idx]) return slot;
+              return { ...slot, title: starred[idx] || slot.title };
+            });
+            state.setCrazy8sSlots(updatedSlots);
           }
         } catch {
-          // Fallback: raw labels
-          const allSlots = [...state.crazy8sSlots];
+          // Fallback: raw labels — immutable map to create new slot objects
+          const ownerStarredMap: Record<string, string[]> = {};
           for (const ownerId of ownerIds) {
-            const ownerStarred = state.mindMapNodes
+            ownerStarredMap[ownerId] = state.mindMapNodes
               .filter((n) => n.ownerId === ownerId && n.isStarred && !n.isRoot && n.label.trim())
               .map((n) => n.label.trim())
               .slice(0, 8);
-            const ownerSlots = allSlots.filter((s) => s.ownerId === ownerId);
-            ownerSlots.forEach((slot, i) => {
-              slot.title = ownerStarred[i] || slot.title;
-            });
           }
-          state.setCrazy8sSlots(allSlots);
+          const ownerSlotCounters: Record<string, number> = {};
+          const updatedSlots = state.crazy8sSlots.map((slot) => {
+            const oid = slot.ownerId || '';
+            const idx = ownerSlotCounters[oid] || 0;
+            ownerSlotCounters[oid] = idx + 1;
+            const starred = ownerStarredMap[oid];
+            if (!starred?.[idx]) return slot;
+            return { ...slot, title: starred[idx] || slot.title };
+          });
+          state.setCrazy8sSlots(updatedSlots);
         }
       }
       state.markDirty();
@@ -427,7 +445,11 @@ export function useIdeationPhases({
     setShowCrazy8s(true);
     setCurrentPhase('crazy-eights');
     setStoreIdeationPhase('crazy-eights');
-  }, [canvasStoreApi, workshopId, setStoreIdeationPhase]);
+
+    // Fire-and-forget flush to Neon — persistence safety net so data survives
+    // reloads even before the Liveblocks webhook fires (~60s).
+    flushCanvasState().catch(() => {});
+  }, [canvasStoreApi, workshopId, setStoreIdeationPhase, flushCanvasState]);
 
   // Save Crazy 8s: flush canvas state → transition to idea selection
   const handleSaveCrazy8s = React.useCallback(async () => {
@@ -617,6 +639,53 @@ export function useIdeationPhases({
   }, [canvasStoreApi]);
 
 
+  // Facilitator: navigate back to mind-mapping phase (preserves all data)
+  const handleBackToMindMap = React.useCallback(async () => {
+    setShowCrazy8s(false);
+    setCurrentPhase('mind-mapping');
+    setStoreIdeationPhase('mind-mapping');
+    flushCanvasState().catch(() => {});
+  }, [setStoreIdeationPhase, flushCanvasState]);
+
+  // Facilitator: reset crazy 8s data and return to mind-mapping (preserves mind map)
+  const handleResetCrazy8s = React.useCallback(async () => {
+    const state = canvasStoreApi.getState();
+
+    // Rebuild empty per-owner slots in multiplayer, or EMPTY_CRAZY_8S_SLOTS in solo
+    const ownerIds = [...new Set(state.crazy8sSlots.map((s) => s.ownerId).filter(Boolean))] as string[];
+    if (ownerIds.length > 0) {
+      const emptySlots = ownerIds.flatMap((ownerId) =>
+        Array.from({ length: 8 }, (_, i) => ({
+          slotId: `${ownerId}-slot-${i + 1}`,
+          title: '',
+          ownerId,
+        }))
+      );
+      state.setCrazy8sSlots(emptySlots);
+    } else {
+      state.setCrazy8sSlots(EMPTY_CRAZY_8S_SLOTS.map((s) => ({ ...s })));
+    }
+
+    // Clear downstream data
+    state.setSelectedSlotIds([]);
+    state.setSlotGroups([]);
+    state.setBrainRewritingMatrices([]);
+    state.resetVoting();
+
+    // Reset local state
+    setLocalSelectedSlotIds([]);
+    setArtifactConfirmed(false);
+    setExplicitlyConfirmed(false);
+
+    // Return to mind-mapping phase
+    setShowCrazy8s(false);
+    setCurrentPhase('mind-mapping');
+    setStoreIdeationPhase('mind-mapping');
+
+    state.markDirty();
+    flushCanvasState().catch(() => {});
+  }, [canvasStoreApi, setStoreIdeationPhase, flushCanvasState]);
+
   // Render the canvas area — always MindMapCanvas, with phase-appropriate props
   const renderCanvas = React.useCallback(() => {
     const isVotingActive = currentPhase === 'idea-selection';
@@ -694,6 +763,8 @@ export function useIdeationPhases({
     artifactConfirmed,
     explicitlyConfirmed,
     handleStartCrazy8s,
+    handleBackToMindMap,
+    handleResetCrazy8s,
     flushCanvasState,
     renderCanvas,
     crazy8sReadinessMap,

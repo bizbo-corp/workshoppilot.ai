@@ -1442,6 +1442,8 @@ function MindMapCanvasInner({
       const dynZoneHeight = ob ? Math.max(ob.height, 1400) : 1400;
       const zoneX = ob ? ob.worldMinX - ZONE_PADDING : (ownerOffsets[oid]?.x ?? 0) - 800;
       const zoneY = ob ? ob.worldMinY - ZONE_PADDING : (ownerOffsets[oid]?.y ?? 0) - 500;
+      // Show confirm button on facilitator's zone in "All" view
+      const isFacilitatorZone = oid === facilitatorOwnerId;
       return {
         id: `${ZONE_NODE_PREFIX}${oid}`,
         type: 'ownerZoneNode',
@@ -1464,10 +1466,11 @@ function MindMapCanvasInner({
           width: dynZoneWidth,
           height: dynZoneHeight,
           starCount: ownerStarCounts[oid] || 0,
+          ...(isFacilitatorZone && showConfirmButton ? { showConfirmButton, onConfirmMindMap, isConfirmingMindMap } : {}),
         },
       };
     });
-  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, ownerStarCounts, ownerBounds, isFacilitator, showConfirmButton, onConfirmMindMap, isConfirmingMindMap]);
+  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, ownerStarCounts, ownerBounds, isFacilitator, showConfirmButton, onConfirmMindMap, isConfirmingMindMap, facilitatorOwnerId]);
 
   // ── Voting nodes (multiplayer idea-selection on same canvas) ──
 

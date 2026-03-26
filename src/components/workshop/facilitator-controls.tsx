@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useBroadcastEvent, useOthers, useUpdateMyPresence } from '@liveblocks/react';
 import { shallow } from '@liveblocks/react';
 import { useRouter } from 'next/navigation';
-import { Eye, Timer, Square, Pause, Play, X, RotateCcw, CheckCircle2, Rocket } from 'lucide-react';
+import { Eye, Timer, Square, Pause, Play, X, RotateCcw, CheckCircle2, Rocket, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -58,9 +58,12 @@ interface FacilitatorControlsProps {
   sessionId: string;
   votingMode?: boolean; // true when in idea-selection phase (Step 8)
   stepOrder?: number;
+  ideationPhase?: string; // Current ideation phase (Step 8 only)
+  onBackToMindMap?: () => void; // Navigate back to mind-mapping phase
+  onResetCrazy8s?: () => void; // Reset crazy 8s data and return to mind-mapping
 }
 
-export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingMode, stepOrder }: FacilitatorControlsProps) {
+export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingMode, stepOrder, ideationPhase, onBackToMindMap, onResetCrazy8s }: FacilitatorControlsProps) {
   const { isFacilitator } = useMultiplayerContext();
   const broadcast = useBroadcastEvent();
   const router = useRouter();
@@ -480,6 +483,40 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
             >
               <Rocket className="h-4 w-4" />
               <span className="hidden sm:inline">Start Activity</span>
+            </button>
+          </>
+        )}
+
+        {/* Back to Mind Map — visible in crazy-eights phase (Step 8) */}
+        {ideationPhase === 'crazy-eights' && onBackToMindMap && (
+          <>
+            <div className="w-px h-5 bg-border mx-0.5" />
+            <button
+              onClick={onBackToMindMap}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              title="Go back to mind mapping phase (preserves all data)"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Mind Map</span>
+            </button>
+          </>
+        )}
+
+        {/* Reset Crazy 8s — visible in crazy-eights and idea-selection phases (Step 8) */}
+        {(ideationPhase === 'crazy-eights' || ideationPhase === 'idea-selection') && onResetCrazy8s && (
+          <>
+            <div className="w-px h-5 bg-border mx-0.5" />
+            <button
+              onClick={() => {
+                if (window.confirm('Reset all Crazy 8s sketches and return to mind mapping? Mind map data will be preserved.')) {
+                  onResetCrazy8s();
+                }
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+              title="Clear all Crazy 8s data and return to mind mapping"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span className="hidden sm:inline">Reset Crazy 8s</span>
             </button>
           </>
         )}

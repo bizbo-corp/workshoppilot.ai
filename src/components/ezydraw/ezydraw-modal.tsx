@@ -129,7 +129,7 @@ function EzyDrawContent({
   const userEmail = user?.primaryEmailAddress?.emailAddress;
   const userRoles = (user?.publicMetadata as { roles?: string[] })?.roles ?? [];
   const userIsAdmin = userRoles.includes('admin') || !!(adminEmail && userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase());
-  const [imageModel, setImageModel] = useState<ImageModelTier>('fast');
+  const [imageModel, setImageModel] = useState<ImageModelTier>('standard');
 
   // Editable prompt — AI-woven concept prompt that user can edit before generating
   const isGenerateMode = !!(workshopId && !onIterationPromptChange);
