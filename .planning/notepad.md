@@ -39,4 +39,16 @@ Work solo or with colleagues in multiplayer mode.
 
 Let the AI facilitator take you through 10 activities either in solo or collaborative mode. 
 
-Understand your stakeholders. Interview with users and design solutions and concept that will converge ideas and drive company buy-in. 
+
+
+Understand stakeholders
+
+Interview users
+
+Map their journey
+
+Discover unmet opportunities
+
+Design solutions and concepts together
+
+Ultimately, End up with a build pack and the kit you need to get everyone's buy-in

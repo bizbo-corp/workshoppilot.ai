@@ -4,15 +4,12 @@
  */
 
 export const QUICK_ACKS = [
-  "On it! 🚀",
-  "Love it, let me work with that. 💡",
-  "Great pick! 🔥",
   "Give me a sec to pull this together. 🧠",
   "Roger that! 🫡",
-  "Perfect, let me build this out. 🏗️",
-  "Nice — working on it... 💡",
-  "Got it — let me think about this. 🧠",
-  "Ooh, good one. Let me dig in. 🔍",
+  "Let me dig in. 🔍",
+  "Hmm, let me think on that... 💭",
+  "One moment — gears turning. ⚙️",
+  "Processing... this is a good one. ✨",
 ];
 
 export function getRandomAck() {
