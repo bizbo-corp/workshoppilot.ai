@@ -31,24 +31,23 @@
 
 
 
-Let the AI facilitator flesh out your idea and guide you through 10 simple activities.
+Start workshop under Workshop Pilot.
 
-Work solo or with colleagues in multiplayer mode.
+Cut the UI down to
+
+- Overall screen - Chat and whiteboard
+- Quick summary of steps (flashing images)
+- Personas
+- Drawing
+- Auto complete (image and text refinement)
 
 
 
-Let the AI facilitator take you through 10 activities either in solo or collaborative mode. 
 
 
 
-Understand stakeholders
 
-Interview users
 
-Map their journey
 
-Discover unmet opportunities
 
-Design solutions and concepts together
 
-Ultimately, End up with a build pack and the kit you need to get everyone's buy-in

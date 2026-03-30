@@ -9,6 +9,7 @@ import type {
   NavigationGroup,
   LayoutMode,
 } from '@/lib/journey-mapper/types';
+import { GROUP_COLORS } from '@/lib/journey-mapper/types';
 
 export type JourneyMapperActions = {
   setNodes: (nodes: JourneyMapperNode[]) => void;
@@ -128,10 +129,10 @@ export function createJourneyMapperStore(initState?: Partial<JourneyMapperState>
       set({ layoutMode, isDirty: true }),
 
     addGroup: (group) =>
-      set((state) => ({
-        groups: [...state.groups, group],
-        isDirty: true,
-      })),
+      set((state) => {
+        const color = group.color || GROUP_COLORS[state.groups.length % GROUP_COLORS.length].key;
+        return { groups: [...state.groups, { ...group, color }], isDirty: true };
+      }),
 
     updateGroup: (id, updates) =>
       set((state) => ({

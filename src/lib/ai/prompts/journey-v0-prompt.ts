@@ -177,7 +177,7 @@ function buildAdminPortalV0Prompt(state: JourneyMapperState): string {
       const source = nodes.find((n) => n.id === edge.sourceNodeId);
       const target = nodes.find((n) => n.id === edge.targetNodeId);
       if (source && target) {
-        lines.push(`- ${source.featureName} → ${target.featureName}${edge.label ? ` (${edge.label})` : ''}`);
+        lines.push(`- ${source.featureName} → ${target.featureName}`);
       }
     }
     lines.push('');
@@ -366,7 +366,7 @@ function buildAppV0Prompt(state: JourneyMapperState): string {
       const source = nodes.find((n) => n.id === edge.sourceNodeId);
       const target = nodes.find((n) => n.id === edge.targetNodeId);
       if (source && target) {
-        lines.push(`- ${source.featureName} → ${target.featureName}${edge.label ? ` (${edge.label})` : ''}`);
+        lines.push(`- ${source.featureName} → ${target.featureName}`);
       }
     }
     lines.push('');

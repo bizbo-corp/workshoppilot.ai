@@ -27,9 +27,29 @@ export interface NavigationGroup {
   label: string;
   icon?: string;
   description?: string;
+  color?: string;
   position?: { x: number; y: number };
   width?: number;
   height?: number;
+}
+
+export const GROUP_COLORS = [
+  { key: 'blue',    fill: 'rgba(104,136,160,0.08)', border: 'rgba(104,136,160,0.30)', text: '#6888a0', headerBg: 'rgba(104,136,160,0.70)' },
+  { key: 'green',   fill: 'rgba(96,136,80,0.08)',   border: 'rgba(96,136,80,0.30)',   text: '#608850', headerBg: 'rgba(96,136,80,0.70)' },
+  { key: 'yellow',  fill: 'rgba(196,152,32,0.08)',  border: 'rgba(196,152,32,0.30)',  text: '#c49820', headerBg: 'rgba(196,152,32,0.70)' },
+  { key: 'pink',    fill: 'rgba(176,112,104,0.08)', border: 'rgba(176,112,104,0.30)', text: '#b07068', headerBg: 'rgba(176,112,104,0.70)' },
+  { key: 'orange',  fill: 'rgba(192,128,48,0.08)',  border: 'rgba(192,128,48,0.30)',  text: '#c08030', headerBg: 'rgba(192,128,48,0.70)' },
+  { key: 'red',     fill: 'rgba(168,96,80,0.08)',   border: 'rgba(168,96,80,0.30)',   text: '#a86050', headerBg: 'rgba(168,96,80,0.70)' },
+] as const;
+
+export type GroupColorKey = typeof GROUP_COLORS[number]['key'];
+
+export function getGroupColor(group: NavigationGroup, index: number) {
+  if (group.color) {
+    const match = GROUP_COLORS.find((c) => c.key === group.color);
+    if (match) return match;
+  }
+  return GROUP_COLORS[index % GROUP_COLORS.length];
 }
 
 export type Priority = 'must-have' | 'should-have' | 'nice-to-have';
@@ -104,7 +124,8 @@ export interface JourneyMapperEdge {
   id: string;
   sourceNodeId: string;
   targetNodeId: string;
-  label?: string;
+  sourceHandle?: string;
+  targetHandle?: string;
   flowType: FlowType;
 }
 
@@ -155,7 +176,6 @@ export interface JourneyMappingResult {
   edges: Array<{
     sourceFeatureIndex: number;
     targetFeatureIndex: number;
-    label?: string;
     flowType: FlowType;
   }>;
 }

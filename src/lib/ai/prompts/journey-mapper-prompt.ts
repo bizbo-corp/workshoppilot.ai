@@ -169,7 +169,6 @@ OUTPUT FORMAT - Return ONLY valid JSON matching this exact schema:
     {
       "sourceFeatureIndex": 0,
       "targetFeatureIndex": 1,
-      "label": "optional string",
       "flowType": "primary" | "secondary" | "error"
     }
   ]

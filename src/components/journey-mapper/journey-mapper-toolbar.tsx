@@ -1,11 +1,19 @@
 'use client';
 
 import { Panel } from '@xyflow/react';
-import { RefreshCw, LayoutGrid, Wand2, Plus, ArrowLeft, Loader2, CheckCircle2, Rocket, Trash2, Eye, EyeOff, Map, Network, Lock, Unlock, Sparkles, FolderCog } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Wand2, ArrowLeft, Loader2, CheckCircle2, Rocket, Trash2, Eye, EyeOff, Map, Network, Lock, Unlock, Sparkles, FolderCog, MoreVertical, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
 import type { StrategicIntent, LayoutMode } from '@/lib/journey-mapper/types';
-import { INTENT_LABELS, INTENT_ADD_LABELS, normalizeIntent } from '@/lib/journey-mapper/types';
+import { INTENT_LABELS } from '@/lib/journey-mapper/types';
 
 export type ViewMode = 'journey' | 'sitemap';
 
@@ -23,7 +31,6 @@ interface JourneyMapperToolbarProps {
   onAutoLayout: () => void;
   onAutoTidy?: () => void;
   onGenerateV0Prompt: () => void;
-  onAddFeature: () => void;
   onApprove: () => void;
   onCreatePrototype: () => void;
   onReset: () => void;
@@ -48,7 +55,6 @@ export function JourneyMapperToolbar({
   onAutoLayout,
   onAutoTidy,
   onGenerateV0Prompt,
-  onAddFeature,
   onApprove,
   onCreatePrototype,
   onReset,
@@ -84,67 +90,16 @@ export function JourneyMapperToolbar({
         </span>
       )}
 
-      {!isReadOnly && (
-        <>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRegenerate}
-            disabled={isRegenerating}
-            className="h-7 text-xs gap-1.5"
-          >
-            {isRegenerating ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3 w-3" />
-            )}
-            Re-generate
-          </Button>
-
-          {layoutMode === 'freeform' ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onAutoTidy}
-              className="h-7 text-xs gap-1.5"
-            >
-              <Sparkles className="h-3 w-3" />
-              Auto-tidy
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onAutoLayout}
-              className="h-7 text-xs gap-1.5"
-            >
-              <LayoutGrid className="h-3 w-3" />
-              Auto-layout
-            </Button>
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onAddFeature}
-            className="h-7 text-xs gap-1.5"
-          >
-            <Plus className="h-3 w-3" />
-            {INTENT_ADD_LABELS[normalizeIntent(strategicIntent ?? 'web-app')]}
-          </Button>
-
-          {onManageGroups && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onManageGroups}
-              className="h-7 text-xs gap-1.5"
-            >
-              <FolderCog className="h-3 w-3" />
-              Groups
-            </Button>
-          )}
-        </>
+      {!isReadOnly && onManageGroups && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onManageGroups}
+          className="h-7 text-xs gap-1.5"
+        >
+          <FolderCog className="h-3 w-3" />
+          Groups
+        </Button>
       )}
 
       <div className="h-5 w-px bg-border" />
@@ -197,35 +152,41 @@ export function JourneyMapperToolbar({
         </div>
       )}
 
-      {/* Toggle peripherals */}
-      {onTogglePeripherals && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onTogglePeripherals}
-          className="h-7 text-xs gap-1.5"
-          title={showPeripherals ? 'Hide peripheral services' : 'Show peripheral services'}
-        >
-          {showPeripherals ? (
-            <Eye className="h-3 w-3" />
-          ) : (
-            <EyeOff className="h-3 w-3" />
+      {/* View dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
+            View
+            <ChevronDown className="h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {onTogglePeripherals && (
+            <DropdownMenuCheckboxItem
+              checked={showPeripherals}
+              onCheckedChange={() => onTogglePeripherals()}
+            >
+              {showPeripherals ? (
+                <Eye className="h-3.5 w-3.5 mr-2" />
+              ) : (
+                <EyeOff className="h-3.5 w-3.5 mr-2" />
+              )}
+              Peripherals
+            </DropdownMenuCheckboxItem>
           )}
-          Peripherals
-        </Button>
-      )}
-
-      <div className="h-5 w-px bg-border" />
-
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onGenerateV0Prompt}
-        className="h-7 text-xs gap-1.5"
-      >
-        <Wand2 className="h-3 w-3" />
-        Preview v0 Prompt
-      </Button>
+          {layoutMode === 'freeform' ? (
+            <DropdownMenuItem onClick={onAutoTidy}>
+              <Sparkles className="h-3.5 w-3.5 mr-2" />
+              Auto-tidy
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={onAutoLayout}>
+              <LayoutGrid className="h-3.5 w-3.5 mr-2" />
+              Auto-layout
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Approve / Create Prototype flow */}
       {!isReadOnly && !isApproved && (
@@ -240,36 +201,52 @@ export function JourneyMapperToolbar({
         </Button>
       )}
 
-      {isApproved && (
-        <Button
-          variant="default"
-          size="sm"
-          onClick={onCreatePrototype}
-          className="h-7 text-xs gap-1.5"
-        >
-          <Rocket className="h-3 w-3" />
-          Create Prototype
-        </Button>
-      )}
-
+      {/* More options dropdown */}
       {!isReadOnly && (
-        <>
-          <div className="h-5 w-px bg-border" />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onReset}
-            disabled={isResetting}
-            className="h-7 text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
-          >
-            {isResetting ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <Trash2 className="h-3 w-3" />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+              <MoreVertical className="h-3.5 w-3.5" />
+              <span className="sr-only">More options</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={onRegenerate}
+              disabled={isRegenerating}
+            >
+              {isRegenerating ? (
+                <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5 mr-2" />
+              )}
+              Re-generate
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onGenerateV0Prompt}>
+              <Wand2 className="h-3.5 w-3.5 mr-2" />
+              Preview in v0
+            </DropdownMenuItem>
+            {isApproved && (
+              <DropdownMenuItem onClick={onCreatePrototype}>
+                <Rocket className="h-3.5 w-3.5 mr-2" />
+                Create Prototype
+              </DropdownMenuItem>
             )}
-            Reset
-          </Button>
-        </>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={onReset}
+              disabled={isResetting}
+              className="text-destructive focus:text-destructive"
+            >
+              {isResetting ? (
+                <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5 mr-2" />
+              )}
+              Reset
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
     </Panel>
   );

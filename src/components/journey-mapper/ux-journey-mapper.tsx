@@ -8,11 +8,13 @@ import {
   useReactFlow,
   Background,
   BackgroundVariant,
+  ConnectionMode,
   type NodeChange,
   type EdgeChange,
   type Connection,
   type Node,
   type Edge,
+  type OnReconnect,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -22,6 +24,7 @@ import { JourneyStageHeader, type StageHeaderData } from './journey-stage-header
 import { JourneyGroupContainer, type GroupContainerData } from './journey-group-container';
 import { EmotionCurveOverlay } from './emotion-curve-overlay';
 import { JourneyMapperToolbar, type ViewMode } from './journey-mapper-toolbar';
+import { JourneyCanvasToolbar } from './journey-canvas-toolbar';
 import { V0PromptPanel } from './v0-prompt-panel';
 import { CanvasZoomControls } from '@/components/canvas/canvas-zoom-controls';
 import { PrdViewerDialog } from '@/components/workshop/prd-viewer-dialog';
@@ -44,12 +47,33 @@ import {
   type StageHeaderNode,
 } from '@/lib/journey-mapper/layout';
 import type { JourneyMapperNode, LayoutMode, NavigationGroup } from '@/lib/journey-mapper/types';
+import { getGroupColor } from '@/lib/journey-mapper/types';
 
 const nodeTypes = {
   featureNode: JourneyFeatureNode,
   stageHeader: JourneyStageHeader,
   groupContainer: JourneyGroupContainer,
 };
+
+const NODE_W = 260; // featureNode width
+const NODE_H = 100; // approximate featureNode height
+
+/** Resolve best source/target handle IDs based on relative node positions. */
+function resolveHandles(
+  sourcePos: { x: number; y: number },
+  targetPos: { x: number; y: number },
+): { sourceHandle: string; targetHandle: string } {
+  const dx = (targetPos.x + NODE_W / 2) - (sourcePos.x + NODE_W / 2);
+  const dy = (targetPos.y + NODE_H / 2) - (sourcePos.y + NODE_H / 2);
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return dx >= 0
+      ? { sourceHandle: 'source-right', targetHandle: 'target-left' }
+      : { sourceHandle: 'source-left', targetHandle: 'target-right' };
+  }
+  return dy >= 0
+    ? { sourceHandle: 'source-bottom', targetHandle: 'target-top' }
+    : { sourceHandle: 'source-top', targetHandle: 'target-bottom' };
+}
 
 // Per-concept color palette
 const CONCEPT_COLORS = [
@@ -100,6 +124,7 @@ function JourneyMapperInner({
   const strategicIntent = useJourneyMapperStore((s) => s.strategicIntent);
   const layoutMode = useJourneyMapperStore((s) => s.layoutMode) ?? 'auto';
 
+  const [activeTool, setActiveTool] = useState<'pointer' | 'hand'>('pointer');
   const [v0Prompt, setV0Prompt] = useState<string | null>(null);
   const [v0BuildPackId, setV0BuildPackId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('journey');
@@ -108,7 +133,11 @@ function JourneyMapperInner({
   const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | undefined>(undefined);
   const [pendingDeleteGroupId, setPendingDeleteGroupId] = useState<string | null>(null);
+  const [editModeNodeId, setEditModeNodeId] = useState<string | null>(null);
+  const edgeReconnectSuccessful = useRef(false);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const containerPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const hasEnteredFreeformRef = useRef(layoutMode === 'freeform');
 
   // Prototype dialog state
   const [showPrototypeDialog, setShowPrototypeDialog] = useState(false);
@@ -148,6 +177,75 @@ function JourneyMapperInner({
     }
   }, [storeApi, pendingDeleteGroupId]);
 
+  // Node edit mode & deletion callbacks
+  const handleSetEditMode = useCallback((nodeId: string) => {
+    setEditModeNodeId(nodeId);
+  }, []);
+
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    storeApi.getState().deleteNode(nodeId);
+    setEditModeNodeId(null);
+  }, [storeApi]);
+
+  // Add node at directional offset from an existing node
+  const handleAddNodeAt = useCallback(
+    (parentId: string, direction: 'top' | 'right' | 'bottom' | 'left') => {
+      const state = storeApi.getState();
+      const parent = state.nodes.find((n) => n.id === parentId);
+      if (!parent) return;
+
+      const OFFSETS = {
+        top:    { x: 0,    y: -200 },
+        bottom: { x: 0,    y:  200 },
+        left:   { x: -300, y:  0   },
+        right:  { x:  300, y:  0   },
+      };
+      const offset = OFFSETS[direction];
+      const position = {
+        x: parent.position.x + offset.x,
+        y: parent.position.y + offset.y,
+      };
+
+      const id = `jm-node-${Date.now()}`;
+      storeApi.getState().addNode({
+        id,
+        conceptIndex: parent.conceptIndex,
+        conceptName: parent.conceptName,
+        featureName: 'New Feature',
+        featureDescription: '',
+        stageId: parent.stageId,
+        stageName: parent.stageName,
+        uiType: 'detail-view',
+        uiPatternSuggestion: '',
+        addressesPain: '',
+        position,
+        priority: 'should-have',
+        nodeCategory: 'core',
+        groupId: parent.groupId,
+      });
+
+      // Connect parent → new node
+      storeApi.getState().addEdge({
+        id: `jm-edge-${Date.now()}`,
+        sourceNodeId: parentId,
+        targetNodeId: id,
+        flowType: 'secondary',
+      });
+
+      // Switch to freeform if in auto mode
+      if ((state.layoutMode ?? 'auto') === 'auto') {
+        if (!hasEnteredFreeformRef.current) {
+          const { nodes: computed } = computeJourneyMapLayout(state.nodes, state.stages);
+          storeApi.getState().setNodes(computed);
+          hasEnteredFreeformRef.current = true;
+        }
+        storeApi.getState().setLayoutMode('freeform');
+      }
+      storeApi.getState().markDirty();
+    },
+    [storeApi]
+  );
+
   // ─── Build React Flow nodes from store state ───
   const { rfNodes, rfEdges } = useMemo(() => {
     const filteredNodes = showPeripherals
@@ -155,6 +253,9 @@ function JourneyMapperInner({
       : nodes.filter((n) => n.nodeCategory !== 'peripheral');
 
     const isFreeform = layoutMode === 'freeform';
+
+    // Build group → color map for passing to containers and feature nodes
+    const groupColorMap = new Map(groups.map((g, i) => [g.id, getGroupColor(g, i)]));
 
     if (viewMode === 'sitemap') {
       const effectiveGroups = groups.length > 0
@@ -164,67 +265,83 @@ function JourneyMapperInner({
       const { nodes: sitemapNodes, groupBackgrounds } = computeSitemapLayout(filteredNodes, effectiveGroups);
 
       // Group container RF nodes
-      const containerNodes: Node<GroupContainerData>[] = groupBackgrounds.map((bg) => ({
-        id: bg.id.replace('group-bg-', 'group-container-'),
-        type: 'groupContainer',
-        position: bg.position,
-        draggable: isFreeform,
-        selectable: true,
-        style: { width: bg.width, height: bg.height },
+      const containerNodes: Node<GroupContainerData>[] = groupBackgrounds.map((bg) => {
+        const gc = groupColorMap.get(bg.groupId);
+        return {
+          id: bg.id.replace('group-bg-', 'group-container-'),
+          type: 'groupContainer',
+          position: bg.position,
+          zIndex: -1,
+          draggable: isFreeform,
+          selectable: true,
+          style: { width: bg.width, height: bg.height },
+          data: {
+            groupId: bg.groupId,
+            label: bg.label,
+            width: bg.width,
+            height: bg.height,
+            fillColor: gc?.fill,
+            borderColor: gc?.border,
+            textColor: gc?.text,
+            headerBg: gc?.headerBg,
+            onEdit: isReadOnly ? undefined : handleGroupEdit,
+            onDelete: isReadOnly ? undefined : handleGroupDelete,
+          },
+        };
+      });
+
+      // Feature nodes — always absolute positions (no parentId/extent)
+      const featureRfNodes: Node<JourneyFeatureNodeData>[] = sitemapNodes.map((node) => ({
+        id: node.id,
+        type: 'featureNode' as const,
+        position: node.position,
         data: {
-          groupId: bg.groupId,
-          label: bg.label,
-          width: bg.width,
-          height: bg.height,
-          onEdit: isReadOnly ? undefined : handleGroupEdit,
-          onDelete: isReadOnly ? undefined : handleGroupDelete,
+          ...node,
+          conceptColor: CONCEPT_COLORS[node.conceptIndex % CONCEPT_COLORS.length],
+          groupColor: node.groupId ? groupColorMap.get(node.groupId)?.text : undefined,
+          onFieldChange: isReadOnly
+            ? undefined
+            : (id: string, field: keyof JourneyMapperNode, value: string) => {
+                storeApi.getState().updateNode(id, { [field]: value } as Partial<JourneyMapperNode>);
+              },
+          onDeleteNode: isReadOnly ? undefined : handleDeleteNode,
+          onSetEditMode: isReadOnly ? undefined : handleSetEditMode,
+          onAddNodeAt: isReadOnly ? undefined : handleAddNodeAt,
+          editModeNodeId,
         },
       }));
 
-      // Feature nodes — with parentId in freeform mode
-      const featureRfNodes: Node<JourneyFeatureNodeData>[] = sitemapNodes.map((node) => {
-        const base: Node<JourneyFeatureNodeData> = {
-          id: node.id,
-          type: 'featureNode',
-          position: node.position,
-          data: {
-            ...node,
-            conceptColor: CONCEPT_COLORS[node.conceptIndex % CONCEPT_COLORS.length],
-            onFieldChange: isReadOnly
-              ? undefined
-              : (id: string, field: keyof JourneyMapperNode, value: string) => {
-                  storeApi.getState().updateNode(id, { [field]: value } as Partial<JourneyMapperNode>);
-                },
-          },
-        };
-        if (isFreeform && node.groupId) {
-          base.parentId = `group-container-${node.groupId}`;
-          base.extent = 'parent';
-        }
-        return base;
-      });
-
+      const sitemapPosMap = new Map(sitemapNodes.map((n) => [n.id, n.position]));
       const visibleIds = new Set(filteredNodes.map((n) => n.id));
       const flowEdges: Edge[] = edges
         .filter((e) => visibleIds.has(e.sourceNodeId) && visibleIds.has(e.targetNodeId))
-        .map((edge) => ({
-          id: edge.id,
-          source: edge.sourceNodeId,
-          target: edge.targetNodeId,
-          label: edge.label,
-          type: 'default',
-          animated: edge.flowType === 'primary',
-          interactionWidth: 20,
-          style: {
-            stroke:
-              edge.flowType === 'error'
-                ? 'hsl(0 84% 60%)'
-                : edge.flowType === 'secondary'
-                ? 'hsl(var(--muted-foreground))'
-                : 'hsl(var(--primary))',
-            strokeWidth: edge.flowType === 'primary' ? 2 : 1,
-          },
-        }));
+        .map((edge) => {
+          const handles = edge.sourceHandle && edge.targetHandle
+            ? { sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle }
+            : resolveHandles(
+                sitemapPosMap.get(edge.sourceNodeId) ?? { x: 0, y: 0 },
+                sitemapPosMap.get(edge.targetNodeId) ?? { x: 0, y: 0 },
+              );
+          return {
+            id: edge.id,
+            source: edge.sourceNodeId,
+            target: edge.targetNodeId,
+            sourceHandle: handles.sourceHandle,
+            targetHandle: handles.targetHandle,
+            type: 'default' as const,
+            animated: edge.flowType === 'primary',
+            interactionWidth: 20,
+            style: {
+              stroke:
+                edge.flowType === 'error'
+                  ? 'hsl(0 84% 60%)'
+                  : edge.flowType === 'secondary'
+                  ? 'var(--muted-foreground)'
+                  : 'var(--primary)',
+              strokeWidth: edge.flowType === 'primary' ? 2.5 : 1.5,
+            },
+          };
+        });
 
       // Parents must come before children
       return {
@@ -289,10 +406,12 @@ function JourneyMapperInner({
     if (groups.length > 0) {
       const containers = computeGroupContainers(layoutNodes, groups);
       for (const c of containers) {
+        const gc = groupColorMap.get(c.groupId);
         containerNodes.push({
           id: c.id,
           type: 'groupContainer',
           position: c.position,
+          zIndex: -1,
           draggable: isFreeform,
           selectable: true,
           style: { width: c.width, height: c.height },
@@ -301,6 +420,10 @@ function JourneyMapperInner({
             label: c.label,
             width: c.width,
             height: c.height,
+            fillColor: gc?.fill,
+            borderColor: gc?.border,
+            textColor: gc?.text,
+            headerBg: gc?.headerBg,
             onEdit: isReadOnly ? undefined : handleGroupEdit,
             onDelete: isReadOnly ? undefined : handleGroupDelete,
           },
@@ -308,84 +431,90 @@ function JourneyMapperInner({
       }
     }
 
-    // Feature nodes
-    const featureRfNodes: Node<JourneyFeatureNodeData>[] = layoutNodes.map((node) => {
-      const containerForNode = isFreeform && node.groupId
-        ? containerNodes.find((c) => c.data.groupId === node.groupId)
-        : null;
-
-      let position = node.position;
-      // In freeform with parentId, convert to relative coords
-      if (containerForNode) {
-        position = {
-          x: node.position.x - containerForNode.position.x,
-          y: node.position.y - containerForNode.position.y,
-        };
-      }
-
-      const base: Node<JourneyFeatureNodeData> = {
-        id: node.id,
-        type: 'featureNode',
-        position,
-        data: {
-          ...node,
-          conceptColor: CONCEPT_COLORS[node.conceptIndex % CONCEPT_COLORS.length],
-          onFieldChange: isReadOnly
-            ? undefined
-            : (id: string, field: keyof JourneyMapperNode, value: string) => {
-                storeApi.getState().updateNode(id, { [field]: value } as Partial<JourneyMapperNode>);
-              },
-        },
-      };
-      if (containerForNode) {
-        base.parentId = containerForNode.id;
-        base.extent = 'parent';
-      }
-      return base;
-    });
+    // Feature nodes — always absolute positions (no parentId/extent)
+    const featureRfNodes: Node<JourneyFeatureNodeData>[] = layoutNodes.map((node) => ({
+      id: node.id,
+      type: 'featureNode' as const,
+      position: node.position,
+      data: {
+        ...node,
+        conceptColor: CONCEPT_COLORS[node.conceptIndex % CONCEPT_COLORS.length],
+        groupColor: node.groupId ? groupColorMap.get(node.groupId)?.text : undefined,
+        onFieldChange: isReadOnly
+          ? undefined
+          : (id: string, field: keyof JourneyMapperNode, value: string) => {
+              storeApi.getState().updateNode(id, { [field]: value } as Partial<JourneyMapperNode>);
+            },
+        onDeleteNode: isReadOnly ? undefined : handleDeleteNode,
+        onSetEditMode: isReadOnly ? undefined : handleSetEditMode,
+        onAddNodeAt: isReadOnly ? undefined : handleAddNodeAt,
+        editModeNodeId,
+      },
+    }));
 
     // Edges
+    const journeyPosMap = new Map(layoutNodes.map((n) => [n.id, n.position]));
     const visibleIds = new Set(filteredNodes.map((n) => n.id));
     const flowEdges: Edge[] = edges
       .filter((e) => visibleIds.has(e.sourceNodeId) && visibleIds.has(e.targetNodeId))
-      .map((edge) => ({
-        id: edge.id,
-        source: edge.sourceNodeId,
-        target: edge.targetNodeId,
-        label: edge.label,
-        type: 'default',
-        animated: edge.flowType === 'primary',
-        interactionWidth: 20,
-        style: {
-          stroke:
-            edge.flowType === 'error'
-              ? 'hsl(0 84% 60%)'
-              : edge.flowType === 'secondary'
-              ? 'hsl(var(--muted-foreground))'
-              : 'hsl(var(--primary))',
-          strokeWidth: edge.flowType === 'primary' ? 2 : 1,
-        },
-      }));
+      .map((edge) => {
+        const handles = edge.sourceHandle && edge.targetHandle
+          ? { sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle }
+          : resolveHandles(
+              journeyPosMap.get(edge.sourceNodeId) ?? { x: 0, y: 0 },
+              journeyPosMap.get(edge.targetNodeId) ?? { x: 0, y: 0 },
+            );
+        return {
+          id: edge.id,
+          source: edge.sourceNodeId,
+          target: edge.targetNodeId,
+          sourceHandle: handles.sourceHandle,
+          targetHandle: handles.targetHandle,
+          type: 'default' as const,
+          animated: edge.flowType === 'primary',
+          interactionWidth: 20,
+          style: {
+            stroke:
+              edge.flowType === 'error'
+                ? 'hsl(0 84% 60%)'
+                : edge.flowType === 'secondary'
+                ? 'var(--muted-foreground)'
+                : 'var(--primary)',
+            strokeWidth: edge.flowType === 'primary' ? 2.5 : 1.5,
+          },
+        };
+      });
+
 
     // Parents must come before children in the array
     return {
       rfNodes: [...containerNodes, ...headerRfNodes, ...featureRfNodes] as Node[],
       rfEdges: flowEdges,
     };
-  }, [nodes, edges, stages, groups, isReadOnly, storeApi, viewMode, showPeripherals, layoutMode, handleGroupEdit, handleGroupDelete]);
+  }, [nodes, edges, stages, groups, isReadOnly, storeApi, viewMode, showPeripherals, layoutMode, handleGroupEdit, handleGroupDelete, handleDeleteNode, handleSetEditMode, handleAddNodeAt, editModeNodeId]);
 
-  // Fit viewport when nodes first appear (e.g. after generation into a fresh mount)
+  // Fit viewport once when nodes first appear (e.g. after generation into a fresh mount)
   const { fitView } = useReactFlow();
-  const prevNodeCountRef = useRef(0);
+  const hasFittedRef = useRef(false);
   useEffect(() => {
+    if (hasFittedRef.current) return;
     const featureCount = rfNodes.filter((n) => n.type === 'featureNode').length;
-    if (featureCount > 0 && prevNodeCountRef.current === 0) {
-      // Delay allows ReactFlow to measure custom node components before fitting
-      const timer = setTimeout(() => fitView({ padding: 0.2 }), 200);
-      return () => clearTimeout(timer);
+    if (featureCount > 0) {
+      hasFittedRef.current = true;
+      setTimeout(() => fitView({ padding: 0.2 }), 200);
     }
-    prevNodeCountRef.current = featureCount;
   }, [rfNodes, fitView]);
+
+  // Track container positions for group-drag delta computation
+  useEffect(() => {
+    const map = new Map<string, { x: number; y: number }>();
+    for (const n of rfNodes) {
+      if (n.id.startsWith('group-container-')) {
+        map.set(n.id, n.position);
+      }
+    }
+    containerPositionsRef.current = map;
+  }, [rfNodes]);
 
   // Handle node position changes (drag)
   const onNodesChange = useCallback(
@@ -394,45 +523,38 @@ function JourneyMapperInner({
       for (const change of changes) {
         if (change.type === 'position' && change.position) {
           if (change.id.startsWith('jm-node-')) {
-            // In auto mode, switch to freeform on drag
+            // In auto mode, switch to freeform on first drag
             if (layoutMode === 'auto' && change.dragging) {
-              // Snapshot current layout before switching
-              const state = storeApi.getState();
-              const containers = computeGroupContainers(state.nodes, state.groups);
-              for (const c of containers) {
-                const gid = c.groupId;
-                storeApi.getState().updateGroup(gid, {
-                  position: c.position,
-                  width: c.width,
-                  height: c.height,
-                });
+              if (!hasEnteredFreeformRef.current) {
+                // Snapshot current auto-layout positions so freeform uses them
+                const state = storeApi.getState();
+                const { nodes: computed } = computeJourneyMapLayout(state.nodes, state.stages);
+                storeApi.getState().setNodes(computed);
+                hasEnteredFreeformRef.current = true;
               }
               storeApi.getState().setLayoutMode('freeform');
             }
+            // Free positioning — no collision snapping
             storeApi.getState().moveNode(change.id, change.position);
           } else if (change.id.startsWith('group-container-')) {
+            // Group drag: move all child nodes by the same delta
             const groupId = change.id.replace('group-container-', '');
-            storeApi.getState().updateGroup(groupId, { position: change.position });
-          }
-        }
-        // Handle resize (dimensions change) — only in freeform mode.
-        // In auto mode, container sizes are computed from node bounding boxes;
-        // writing measured dimensions back would create an infinite re-render loop
-        // (updateGroup → new groups ref → useMemo → new container nodes → re-measure → repeat).
-        if (
-          change.type === 'dimensions' &&
-          change.dimensions &&
-          change.id.startsWith('group-container-') &&
-          layoutMode === 'freeform'
-        ) {
-          const groupId = change.id.replace('group-container-', '');
-          const group = storeApi.getState().groups.find((g) => g.id === groupId);
-          // Skip no-op updates to prevent re-render loops even in freeform
-          if (group && (group.width !== change.dimensions.width || group.height !== change.dimensions.height)) {
-            storeApi.getState().updateGroup(groupId, {
-              width: change.dimensions.width,
-              height: change.dimensions.height,
-            });
+            const oldPos = containerPositionsRef.current.get(change.id);
+            if (oldPos) {
+              const dx = change.position.x - oldPos.x;
+              const dy = change.position.y - oldPos.y;
+              if (dx !== 0 || dy !== 0) {
+                const childNodes = storeApi.getState().nodes.filter((n) => n.groupId === groupId);
+                for (const child of childNodes) {
+                  storeApi.getState().moveNode(child.id, {
+                    x: child.position.x + dx,
+                    y: child.position.y + dy,
+                  });
+                }
+                // Update ref so subsequent drag events use the new position
+                containerPositionsRef.current.set(change.id, change.position);
+              }
+            }
           }
         }
       }
@@ -464,10 +586,57 @@ function JourneyMapperInner({
         id: edgeId,
         sourceNodeId: connection.source,
         targetNodeId: connection.target,
+        sourceHandle: connection.sourceHandle ?? undefined,
+        targetHandle: connection.targetHandle ?? undefined,
         flowType: 'secondary',
       });
     },
     [isReadOnly, storeApi]
+  );
+
+  // Validate connections: no self-loops, only jm-node endpoints
+  const isValidConnection = useCallback(
+    (connection: Connection | Edge) => {
+      if (!connection.source || !connection.target) return false;
+      if (connection.source === connection.target) return false;
+      if (!connection.source.startsWith('jm-node-') || !connection.target.startsWith('jm-node-')) return false;
+      return true;
+    },
+    []
+  );
+
+  // ─── Edge reconnection (drag edge to new target or drop to delete) ───
+
+  const onReconnectStart = useCallback(() => {
+    edgeReconnectSuccessful.current = false;
+  }, []);
+
+  const onReconnect: OnReconnect = useCallback(
+    (oldEdge, newConnection) => {
+      edgeReconnectSuccessful.current = true;
+      if (!newConnection.source || !newConnection.target) return;
+      // Delete old edge and create new one
+      storeApi.getState().deleteEdge(oldEdge.id);
+      const edgeId = `jm-edge-reconnect-${Date.now()}`;
+      storeApi.getState().addEdge({
+        id: edgeId,
+        sourceNodeId: newConnection.source,
+        targetNodeId: newConnection.target,
+        sourceHandle: newConnection.sourceHandle ?? undefined,
+        targetHandle: newConnection.targetHandle ?? undefined,
+        flowType: 'secondary',
+      });
+    },
+    [storeApi]
+  );
+
+  const onReconnectEnd = useCallback(
+    (_event: MouseEvent | TouchEvent, edge: Edge) => {
+      if (!edgeReconnectSuccessful.current) {
+        storeApi.getState().deleteEdge(edge.id);
+      }
+    },
+    [storeApi]
   );
 
   // ─── Context menus ───
@@ -493,6 +662,7 @@ function JourneyMapperInner({
 
   const onPaneClick = useCallback(() => {
     setContextMenu(null);
+    setEditModeNodeId(null);
   }, []);
 
   // ─── Layout mode switching ───
@@ -500,28 +670,24 @@ function JourneyMapperInner({
   const handleSetLayoutMode = useCallback((mode: LayoutMode) => {
     const state = storeApi.getState();
     if (mode === 'freeform' && (state.layoutMode ?? 'auto') === 'auto') {
-      // Snapshot current computed positions into groups
-      const containers = computeGroupContainers(state.nodes, state.groups);
-      for (const c of containers) {
-        storeApi.getState().updateGroup(c.groupId, {
-          position: c.position,
-          width: c.width,
-          height: c.height,
-        });
-      }
-    }
-    if (mode === 'auto') {
-      // Clear stored group positions (auto-layout will recompute)
-      for (const g of state.groups) {
-        storeApi.getState().updateGroup(g.id, {
-          position: undefined,
-          width: undefined,
-          height: undefined,
-        });
+      if (!hasEnteredFreeformRef.current) {
+        // Snapshot computed positions so freeform uses what the user was seeing
+        if (viewMode === 'sitemap') {
+          const effectiveGroups = state.groups.length > 0
+            ? state.groups
+            : [{ id: 'main', label: 'Main', description: 'All features' }];
+          const { nodes: computed } = computeSitemapLayout(state.nodes, effectiveGroups);
+          storeApi.getState().setNodes(computed);
+        } else {
+          const { nodes: computed } = computeJourneyMapLayout(state.nodes, state.stages);
+          storeApi.getState().setNodes(computed);
+        }
+        hasEnteredFreeformRef.current = true;
       }
     }
     storeApi.getState().setLayoutMode(mode);
-  }, [storeApi]);
+    storeApi.getState().markDirty();
+  }, [storeApi, viewMode]);
 
   // Auto-layout
   const handleAutoLayout = useCallback(() => {
@@ -536,15 +702,8 @@ function JourneyMapperInner({
       const { nodes: repositioned } = computeJourneyMapLayout(state.nodes, state.stages);
       storeApi.getState().setNodes(repositioned);
     }
-    // Reset to auto mode
     storeApi.getState().setLayoutMode('auto');
-    for (const g of state.groups) {
-      storeApi.getState().updateGroup(g.id, {
-        position: undefined,
-        width: undefined,
-        height: undefined,
-      });
-    }
+    hasEnteredFreeformRef.current = false;
     storeApi.getState().markDirty();
   }, [storeApi, viewMode]);
 
@@ -642,11 +801,18 @@ function JourneyMapperInner({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        connectionMode={ConnectionMode.Loose}
+        edgesReconnectable={!isReadOnly}
+        onReconnectStart={onReconnectStart}
+        onReconnect={onReconnect}
+        onReconnectEnd={onReconnectEnd}
         onNodeContextMenu={onNodeContextMenu}
         onEdgeContextMenu={onEdgeContextMenu}
+        isValidConnection={isValidConnection}
+        nodesConnectable={!isReadOnly}
         onPaneClick={onPaneClick}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
+        panOnDrag={activeTool === 'hand'}
+        selectionOnDrag={activeTool === 'pointer' && !isReadOnly}
         minZoom={0.2}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
@@ -669,7 +835,6 @@ function JourneyMapperInner({
           onAutoLayout={handleAutoLayout}
           onAutoTidy={handleAutoTidy}
           onGenerateV0Prompt={handleGenerateV0Prompt}
-          onAddFeature={handleAddFeature}
           onApprove={handleApprove}
           onCreatePrototype={handleCreatePrototype}
           onReset={onReset}
@@ -680,6 +845,13 @@ function JourneyMapperInner({
           onManageGroups={isReadOnly ? undefined : () => setShowGroupDialog(true)}
         />
       </ReactFlow>
+
+      <JourneyCanvasToolbar
+        activeTool={activeTool}
+        onToolChange={setActiveTool}
+        onAddScreen={handleAddFeature}
+        isReadOnly={isReadOnly}
+      />
 
       {/* Context menu overlay */}
       {contextMenu && (

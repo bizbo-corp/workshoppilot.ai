@@ -208,7 +208,6 @@ export async function POST(req: Request) {
       id: `jm-edge-${i}`,
       sourceNodeId: `jm-node-${e.sourceFeatureIndex}`,
       targetNodeId: `jm-node-${e.targetFeatureIndex}`,
-      label: e.label,
       flowType: e.flowType,
     }));
 

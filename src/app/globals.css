@@ -447,8 +447,9 @@
   transition: none !important;
 }
 
-/* Allow hover "+" buttons to render outside node bounds */
-.react-flow__node-mindMapNode {
+/* Allow hover "+" buttons and handles to render outside node bounds */
+.react-flow__node-mindMapNode,
+.react-flow__node-featureNode {
   overflow: visible !important;
 }
 
@@ -464,10 +465,16 @@
   background-color: var(--canvas-bg);
 }
 
-/* Raise dot grid above base but below grid overlay */
+/* Raise dot grid above base but below edges and nodes */
 .react-flow__background {
   z-index: 2 !important;
   background-color: transparent !important;
+}
+
+/* Edges must render above the background dot grid */
+.react-flow__edges {
+  z-index: 3 !important;
+  pointer-events: none !important;
 }
 
 /* Sonner toast olive theming — success uses olive accent, errors use muted red */

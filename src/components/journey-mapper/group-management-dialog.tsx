@@ -22,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useJourneyMapperStore, useJourneyMapperStoreApi } from '@/providers/journey-mapper-store-provider';
+import { getGroupColor } from '@/lib/journey-mapper/types';
 
 interface GroupManagementDialogProps {
   open: boolean;
@@ -108,13 +109,19 @@ export function GroupManagementDialog({
           {groups.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">No groups yet</p>
           )}
-          {groups.map((group) => (
+          {groups.map((group, index) => {
+            const gc = getGroupColor(group, index);
+            return (
             <div
               key={group.id}
               className="flex items-center gap-2 rounded-md border px-3 py-2"
             >
               {renamingId === group.id ? (
                 <>
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{ backgroundColor: gc.headerBg }}
+                  />
                   <Input
                     value={renameValue}
                     onChange={(e) => setRenameValue(e.target.value)}
@@ -150,6 +157,10 @@ export function GroupManagementDialog({
                 </>
               ) : (
                 <>
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{ backgroundColor: gc.headerBg }}
+                  />
                   <span className="text-sm font-medium flex-1 truncate">{group.label}</span>
                   <span className="text-xs text-muted-foreground shrink-0">
                     {getMemberCount(group.id)} nodes
@@ -176,7 +187,8 @@ export function GroupManagementDialog({
                 </>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Create new group */}

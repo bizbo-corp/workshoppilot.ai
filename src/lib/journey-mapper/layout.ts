@@ -148,26 +148,14 @@ export function computeGroupContainers(
   if (groups.length === 0) return [];
 
   const containers: GroupBackgroundNode[] = [];
-  const padding = 16;
+  const padding = 40;
   const labelHeight = 28;
 
   for (const group of groups) {
     const groupNodes = nodes.filter((n) => n.groupId === group.id);
     if (groupNodes.length === 0) continue;
 
-    // Use stored dimensions if available, otherwise compute from bounding box
-    if (group.position && group.width && group.height) {
-      containers.push({
-        id: `group-container-${group.id}`,
-        groupId: group.id,
-        label: group.label,
-        position: group.position,
-        width: group.width,
-        height: group.height,
-      });
-      continue;
-    }
-
+    // Always compute from node bounding boxes so containers dynamically resize
     const minX = Math.min(...groupNodes.map((n) => n.position.x));
     const minY = Math.min(...groupNodes.map((n) => n.position.y));
     const maxX = Math.max(...groupNodes.map((n) => n.position.x));
@@ -190,20 +178,21 @@ export function computeGroupContainers(
 export const computeGroupBackgrounds = computeGroupContainers;
 
 /**
- * Auto-tidy: rearrange child nodes in a grid within each group's current bounds.
- * Positions are relative to parent origin (for freeform parentId mode).
+ * Auto-tidy: rearrange child nodes in a grid within each group.
+ * Positions are absolute — the grid is offset by the group's current bounding box origin.
  */
 export function autoTidyWithinGroups(
   nodes: JourneyMapperNode[],
   groups: NavigationGroup[]
 ): JourneyMapperNode[] {
   const result = [...nodes];
-  const padding = 20;
+  const padding = 40;
   const labelHeight = 32;
   const nodeW = 260;
   const nodeH = NODE_HEIGHT;
   const hGap = 20;
   const vGap = 20;
+  const cols = 4;
 
   for (const group of groups) {
     const groupNodeIndices = result
@@ -212,8 +201,10 @@ export function autoTidyWithinGroups(
 
     if (groupNodeIndices.length === 0) continue;
 
-    const containerW = group.width || 600;
-    const cols = Math.max(1, Math.floor((containerW - padding * 2 + hGap) / (nodeW + hGap)));
+    // Compute group bounding box origin from current node positions
+    const groupNodes = groupNodeIndices.map((i) => result[i]);
+    const originX = Math.min(...groupNodes.map((n) => n.position.x));
+    const originY = Math.min(...groupNodes.map((n) => n.position.y));
 
     groupNodeIndices.forEach((idx, i) => {
       const col = i % cols;
@@ -221,8 +212,8 @@ export function autoTidyWithinGroups(
       result[idx] = {
         ...result[idx],
         position: {
-          x: padding + col * (nodeW + hGap),
-          y: labelHeight + padding + row * (nodeH + vGap),
+          x: originX + col * (nodeW + hGap),
+          y: originY + row * (nodeH + vGap),
         },
       };
     });

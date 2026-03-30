@@ -70,7 +70,7 @@ export function EmotionCurveOverlay({ stages }: EmotionCurveOverlayProps) {
       <path
         d={pathParts.join(' ')}
         fill="none"
-        stroke="var(--canvas-crosshair, hsl(var(--muted-foreground) / 0.3))"
+        stroke="var(--canvas-crosshair, var(--muted-foreground))"
         strokeWidth={2}
         strokeDasharray="6 3"
         opacity={0.6}
