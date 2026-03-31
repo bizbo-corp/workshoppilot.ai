@@ -870,6 +870,20 @@ function ReactFlowCanvasInner({
     [updateHmwCard],
   );
 
+  // Build HMW owners list from current HMW cards (self-contained, no server prop dependency)
+  const hmwOwners = useMemo(() => {
+    if (!isMultiplayer) return undefined;
+    const seen = new Set<string>();
+    const owners: Array<{ ownerId: string; ownerName: string; ownerColor: string }> = [];
+    for (const card of hmwCards) {
+      if (card.ownerId && card.ownerName && card.ownerColor && !seen.has(card.ownerId)) {
+        seen.add(card.ownerId);
+        owners.push({ ownerId: card.ownerId, ownerName: card.ownerName, ownerColor: card.ownerColor });
+      }
+    }
+    return owners.length > 0 ? owners : undefined;
+  }, [isMultiplayer, hmwCards]);
+
   // Handle concept card field changes
   const handleConceptFieldChange = useCallback(
     (id: string, field: string, value: string) => {
@@ -1271,7 +1285,7 @@ function ReactFlowCanvasInner({
           onFieldFocus: handleHmwFieldFocus,
           onDelete: isFacilitator ? deleteHmwCard : undefined,
           onReassign: isFacilitator ? handleHmwReassign : undefined,
-          availableOwners: isFacilitator ? conceptOwners : undefined,
+          availableOwners: isFacilitator ? hmwOwners : undefined,
           onGenerateField: canHmwAiGenerate ? (_id: string, field: string) => {
             hmwGenerateField(_id, field as HmwFieldId);
           } : undefined,
