@@ -1119,12 +1119,14 @@ export default async function StepPage({ params }: StepPageProps) {
     }
   }
 
-  // Build conceptOwners from concept card data for multiplayer
-  const conceptOwners = session.workshop.workshopType === 'multiplayer' && initialConceptCards.length > 0
+  // Build conceptOwners from concept card or HMW card data for multiplayer
+  const conceptOwners = session.workshop.workshopType === 'multiplayer'
+    && (initialConceptCards.length > 0 || initialHmwCards.length > 0)
     ? (() => {
         const seen = new Set<string>();
         const owners: Array<{ ownerId: string; ownerName: string; ownerColor: string }> = [];
-        for (const card of initialConceptCards) {
+        const allCards = [...initialConceptCards, ...initialHmwCards];
+        for (const card of allCards) {
           if (card.ownerId && card.ownerName && card.ownerColor && !seen.has(card.ownerId)) {
             seen.add(card.ownerId);
             owners.push({ ownerId: card.ownerId, ownerName: card.ownerName, ownerColor: card.ownerColor });
