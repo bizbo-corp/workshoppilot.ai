@@ -72,6 +72,7 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
   const bgColor = COLOR_CLASSES[colorKey];
   const textColor = TEXT_COLOR_CLASSES[colorKey];
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -79,6 +80,23 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
       data.onEditComplete?.(id);
     }
   }, [id, data]);
+
+  // Guarded blur handler: defer edit-complete to distinguish real blur from
+  // transient focus loss caused by React re-renders (e.g. remote CRDT updates).
+  const handleBlur = useCallback(() => {
+    blurTimeoutRef.current = setTimeout(() => {
+      if (textareaRef.current && document.activeElement !== textareaRef.current) {
+        data.onEditComplete?.(id);
+      }
+    }, 100);
+  }, [id, data]);
+
+  // Cleanup blur timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    };
+  }, []);
 
   // Auto-focus textarea when entering edit mode and place cursor at end.
   // setTimeout ensures focus survives ReactFlow's own focus management after node creation.
@@ -210,7 +228,7 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
           maxLength={200}
           className="nodrag nopan bg-transparent border-none outline-none resize-none w-full flex-1 text-sm overflow-y-auto"
           defaultValue={data.text}
-          onBlur={() => data.onEditComplete?.(id)}
+          onBlur={handleBlur}
           onChange={(e) => data.onTextChange?.(id, e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={data.placeholderText || "Type here..."}

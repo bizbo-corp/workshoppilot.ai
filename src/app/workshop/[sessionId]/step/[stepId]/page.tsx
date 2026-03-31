@@ -407,6 +407,7 @@ export default async function StepPage({ params }: StepPageProps) {
   const initialVotingSession: VotingSession | undefined = canvasData?.votingSession;
   const initialVotingCardPositions = canvasData?.votingCardPositions;
   const initialIdeationPhase = canvasData?.ideationPhase;
+  const canvasConfirmed = canvasData?._confirmed === true;
 
   // Migration: if mind map nodes exist but lack positions, compute radial layout
   if (initialMindMapNodes.length > 0 && !initialMindMapNodes.some((n) => n.position)) {
@@ -1184,6 +1185,7 @@ export default async function StepPage({ params }: StepPageProps) {
               shareToken={workshopShareToken}
               workshopSessionId={workshopSessionId}
               journeyMapApproved={journeyMapApproved}
+              canvasConfirmed={canvasConfirmed}
             />
           </MultiplayerRoomLoader>
         ) : (
@@ -1204,6 +1206,7 @@ export default async function StepPage({ params }: StepPageProps) {
             canvasGuides={canvasGuides}
             canvasSettings={canvasSettings}
             journeyMapApproved={journeyMapApproved}
+            canvasConfirmed={canvasConfirmed}
           />
         )}
       </CanvasStoreProvider>

@@ -137,6 +137,7 @@ interface StepContainerProps {
   shareToken?: string | null;
   workshopSessionId?: string | null;
   journeyMapApproved?: boolean;
+  canvasConfirmed?: boolean;
 }
 
 export function StepContainer({
@@ -164,6 +165,7 @@ export function StepContainer({
   shareToken,
   workshopSessionId,
   journeyMapApproved = false,
+  canvasConfirmed = false,
 }: StepContainerProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
@@ -214,8 +216,9 @@ export function StepContainer({
   // Artifact confirmation state
   // For complete steps: pre-set confirmed (artifact was already confirmed)
   // For needs_regeneration: not confirmed (needs re-confirmation after revision)
+  // Also restore from canvas _confirmed flag (survives refresh while step is still in_progress)
   const [artifactConfirmed, setArtifactConfirmed] = React.useState(
-    stepStatus === "complete" && initialArtifact !== null,
+    (stepStatus === "complete" && initialArtifact !== null) || canvasConfirmed,
   );
 
   // Concept step: allow early proceed when user explicitly asks to move on (AI emits [CONCEPT_COMPLETE])
@@ -338,23 +341,17 @@ export function StepContainer({
     step?.id === "user-research"
       ? areAllPersonasInterviewed(stickyNotes)
       : true;
-  // Journey map: require every cell (row × column) to have at least one grid item
+  // Journey map: require every row (swim lane) to have at least one item
+  // Relaxed from requiring every cell (row × column) — the AI may not fill all 35 cells
   const allSwimLanesFilled =
     step?.id === "journey-mapping"
-      ? gridColumns.length > 0 &&
-        (() => {
+      ? (() => {
           const gridRows =
             STEP_CANVAS_CONFIGS["journey-mapping"]?.gridConfig?.rows ?? [];
           return (
             gridRows.length > 0 &&
             gridRows.every((row) =>
-              gridColumns.every((col) =>
-                stickyNotes.some(
-                  (n) =>
-                    n.cellAssignment?.row === row.id &&
-                    n.cellAssignment?.col === col.id,
-                ),
-              ),
+              stickyNotes.some((n) => n.cellAssignment?.row === row.id),
             )
           );
         })()
@@ -1232,7 +1229,30 @@ export function StepContainer({
             onStepConfirm={
               stepOrder === 8
                 ? ideation.handleStartCrazy8s
-                : () => setArtifactConfirmed(true)
+                : () => {
+                    setArtifactConfirmed(true);
+                    // Persist confirmation flag so it survives page refresh
+                    if (step) {
+                      const s = storeApi.getState();
+                      saveCanvasState(workshopId, step.id, {
+                        stickyNotes: s.stickyNotes,
+                        ...(s.gridColumns.length > 0 ? { gridColumns: s.gridColumns } : {}),
+                        ...(s.drawingNodes.length > 0 ? { drawingNodes: s.drawingNodes } : {}),
+                        ...(s.mindMapNodes.length > 0 ? { mindMapNodes: s.mindMapNodes } : {}),
+                        ...(s.mindMapEdges.length > 0 ? { mindMapEdges: s.mindMapEdges } : {}),
+                        ...(s.crazy8sSlots.length > 0 ? { crazy8sSlots: s.crazy8sSlots } : {}),
+                        ...(s.conceptCards.length > 0 ? { conceptCards: s.conceptCards } : {}),
+                        ...(s.personaTemplates.length > 0 ? { personaTemplates: s.personaTemplates } : {}),
+                        ...(s.hmwCards.length > 0 ? { hmwCards: s.hmwCards } : {}),
+                        ...(s.selectedSlotIds.length > 0 ? { selectedSlotIds: s.selectedSlotIds } : {}),
+                        ...(s.slotGroups.length > 0 ? { slotGroups: s.slotGroups } : {}),
+                        ...(s.brainRewritingMatrices.length > 0 ? { brainRewritingMatrices: s.brainRewritingMatrices } : {}),
+                        ...(s.dotVotes.length > 0 ? { dotVotes: s.dotVotes } : {}),
+                        ...(s.votingSession.status !== 'idle' ? { votingSession: s.votingSession } : {}),
+                        _confirmed: true,
+                      });
+                    }
+                  }
             }
             onStepRevise={() => setArtifactConfirmed(false)}
             stepConfirmLabel={
