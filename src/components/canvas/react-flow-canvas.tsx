@@ -862,6 +862,14 @@ function ReactFlowCanvasInner({
     [updateConceptCard],
   );
 
+  // Handle HMW card reassignment (facilitator only)
+  const handleHmwReassign = useCallback(
+    (cardId: string, ownerId: string, ownerName: string, ownerColor: string) => {
+      updateHmwCard(cardId, { ownerId, ownerName, ownerColor });
+    },
+    [updateHmwCard],
+  );
+
   // Handle concept card field changes
   const handleConceptFieldChange = useCallback(
     (id: string, field: string, value: string) => {
@@ -1262,6 +1270,8 @@ function ReactFlowCanvasInner({
           onStatementChange: handleHmwStatementChange,
           onFieldFocus: handleHmwFieldFocus,
           onDelete: isFacilitator ? deleteHmwCard : undefined,
+          onReassign: isFacilitator ? handleHmwReassign : undefined,
+          availableOwners: isFacilitator ? conceptOwners : undefined,
           onGenerateField: canHmwAiGenerate ? (_id: string, field: string) => {
             hmwGenerateField(_id, field as HmwFieldId);
           } : undefined,

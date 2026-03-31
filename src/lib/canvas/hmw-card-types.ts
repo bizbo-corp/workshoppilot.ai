@@ -27,4 +27,6 @@ export type HmwCardData = {
   isOwner?: boolean;
   isMultiplayer?: boolean;
   isFacilitator?: boolean;
+  availableOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string }>;
+  onReassign?: (cardId: string, ownerId: string, ownerName: string, ownerColor: string) => void;
 };

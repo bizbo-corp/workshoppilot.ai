@@ -2,7 +2,7 @@
 
 import { memo, useRef, useEffect, useState } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { Check, Lightbulb, Loader2, RefreshCw, Send, Sparkles, Wand2, X } from 'lucide-react';
+import { Check, ChevronDown, Lightbulb, Loader2, RefreshCw, Send, Sparkles, Wand2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 
@@ -224,6 +224,71 @@ function SkeletonBar({ width, className }: { width: string; className?: string }
       className={cn('h-5 rounded-md animate-pulse', className)}
       style={{ width, backgroundColor: SAGE.sectionBorder }}
     />
+  );
+}
+
+/**
+ * ReassignDropdown — facilitator-only dropdown to reassign card ownership.
+ */
+function ReassignDropdown({
+  cardId,
+  currentOwnerId,
+  availableOwners,
+  onReassign,
+}: {
+  cardId: string;
+  currentOwnerId?: string;
+  availableOwners: Array<{ ownerId: string; ownerName: string; ownerColor: string }>;
+  onReassign: (cardId: string, ownerId: string, ownerName: string, ownerColor: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as globalThis.Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  const otherOwners = availableOwners.filter((o) => o.ownerId !== currentOwnerId);
+  if (otherOwners.length === 0) return null;
+
+  return (
+    <div ref={ref} className="relative nodrag nopan">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+        className="flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+      >
+        Reassign
+        <ChevronDown className="h-3 w-3" />
+      </button>
+      {open && (
+        <div className="absolute top-full mt-1 right-0 bg-card rounded-lg shadow-lg border border-border p-1 min-w-[160px] z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+          {otherOwners.map((owner) => (
+            <button
+              key={owner.ownerId}
+              onClick={(e) => {
+                e.stopPropagation();
+                onReassign(cardId, owner.ownerId, owner.ownerName, owner.ownerColor);
+                setOpen(false);
+              }}
+              className="flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
+            >
+              <div
+                className="h-2.5 w-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: owner.ownerColor }}
+              />
+              {owner.ownerName}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -519,6 +584,14 @@ export const HmwCardNode = memo(
             >
               {data.ownerName}
             </span>
+            {data.isFacilitator && data.availableOwners && data.onReassign && (
+              <ReassignDropdown
+                cardId={id}
+                currentOwnerId={data.ownerId}
+                availableOwners={data.availableOwners}
+                onReassign={data.onReassign}
+              />
+            )}
           </div>
         )}
 
