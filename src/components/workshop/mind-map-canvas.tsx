@@ -703,7 +703,7 @@ function MindMapCanvasInner({
         level: childLevel,
         parentId,
         position,
-        ...(nodeOwnerId && { ownerId: nodeOwnerId }),
+        ...(parentNode.ownerId ? { ownerId: parentNode.ownerId } : nodeOwnerId ? { ownerId: nodeOwnerId } : {}),
       };
 
       const newEdge: MindMapEdgeState = {
@@ -711,7 +711,7 @@ function MindMapCanvasInner({
         source: parentId,
         target: newNodeId,
         themeColor: themeColor.color,
-        ...(nodeOwnerId && { ownerId: nodeOwnerId }),
+        ...(parentNode.ownerId ? { ownerId: parentNode.ownerId } : nodeOwnerId ? { ownerId: nodeOwnerId } : {}),
       };
 
       addMindMapNode(newNode, newEdge);
@@ -791,7 +791,7 @@ function MindMapCanvasInner({
         level: childLevel,
         parentId,
         position,
-        ...(nodeOwnerId && { ownerId: nodeOwnerId }),
+        ...(parentNode.ownerId ? { ownerId: parentNode.ownerId } : nodeOwnerId ? { ownerId: nodeOwnerId } : {}),
       };
 
       const newEdge: MindMapEdgeState = {
@@ -799,7 +799,7 @@ function MindMapCanvasInner({
         source: parentId,
         target: newNodeId,
         themeColor: themeColor.color,
-        ...(nodeOwnerId && { ownerId: nodeOwnerId }),
+        ...(parentNode.ownerId ? { ownerId: parentNode.ownerId } : nodeOwnerId ? { ownerId: nodeOwnerId } : {}),
       };
 
       addMindMapNode(newNode, newEdge);
@@ -1041,7 +1041,7 @@ function MindMapCanvasInner({
 
       // In "All" view (no currentOwnerId filter), nodes belonging to OTHER
       // participants are read-only — no editing, adding, deleting, or dragging.
-      const isOwnNode = !nodeOwnerId || !nodeState.ownerId || nodeState.ownerId === nodeOwnerId;
+      const isOwnNode = isFacilitator || !nodeOwnerId || !nodeState.ownerId || nodeState.ownerId === nodeOwnerId;
 
       return {
         id: nodeState.id,
@@ -1070,7 +1070,7 @@ function MindMapCanvasInner({
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- livePositions is a ref
-  }, [mindMapNodes, ownerOffsets, nodeOwnerId, autoFocusNodeId, handleLabelChange, handleDescriptionChange, handleAddChild, handleAddChildAt, handleDelete, handleToggleStar]);
+  }, [mindMapNodes, ownerOffsets, nodeOwnerId, autoFocusNodeId, handleLabelChange, handleDescriptionChange, handleAddChild, handleAddChildAt, handleDelete, handleToggleStar, isFacilitator]);
 
   // Derive owner theme colors from their root node's stored palette color.
   // Falls back to the canvas palette by index, or neutral gray.
@@ -2076,7 +2076,7 @@ function MindMapCanvasInner({
       level: 1,
       parentId: rootNode.id,
       position,
-      ...(nodeOwnerId && { ownerId: nodeOwnerId }),
+      ...(rootNode.ownerId ? { ownerId: rootNode.ownerId } : nodeOwnerId ? { ownerId: nodeOwnerId } : {}),
     };
 
     const newEdge: MindMapEdgeState = {
@@ -2084,7 +2084,7 @@ function MindMapCanvasInner({
       source: rootNode.id,
       target: newNodeId,
       themeColor: themeColor.color,
-      ...(nodeOwnerId && { ownerId: nodeOwnerId }),
+      ...(rootNode.ownerId ? { ownerId: rootNode.ownerId } : nodeOwnerId ? { ownerId: nodeOwnerId } : {}),
     };
 
     addMindMapNode(newNode, newEdge);
@@ -2170,7 +2170,7 @@ function MindMapCanvasInner({
         level: childLevel,
         parentId: sourceId,
         position: snapped,
-        ...(nodeOwnerId && { ownerId: nodeOwnerId }),
+        ...(sourceNode.ownerId ? { ownerId: sourceNode.ownerId } : nodeOwnerId ? { ownerId: nodeOwnerId } : {}),
       };
 
       const newEdge: MindMapEdgeState = {
@@ -2178,7 +2178,7 @@ function MindMapCanvasInner({
         source: sourceId,
         target: newNodeId,
         themeColor: themeColor.color,
-        ...(nodeOwnerId && { ownerId: nodeOwnerId }),
+        ...(sourceNode.ownerId ? { ownerId: sourceNode.ownerId } : nodeOwnerId ? { ownerId: nodeOwnerId } : {}),
       };
 
       addMindMapNode(newNode, newEdge);
