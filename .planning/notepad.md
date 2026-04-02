@@ -27,10 +27,6 @@
 
 ## Validate
 
-
-
-
-
 Start workshop under Workshop Pilot.
 
 Cut the UI down to
@@ -40,12 +36,6 @@ Cut the UI down to
 - Personas
 - Drawing
 - Auto complete (image and text refinement)
-
-
-
-
-
-
 
 
 

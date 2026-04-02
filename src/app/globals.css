@@ -402,8 +402,10 @@
   cursor: default !important;
 }
 
-.react-flow.cursor-pointer-tool .react-flow__node {
-  cursor: pointer !important;
+.react-flow.cursor-pointer-tool .react-flow__node,
+.react-flow.cursor-pointer-tool .react-flow__edge,
+.react-flow.cursor-pointer-tool .react-flow__handle {
+  cursor: default !important;
 }
 
 
@@ -433,6 +435,10 @@
 .react-flow.cursor-hand-tool .react-flow__node * {
   pointer-events: none !important;
   cursor: grab !important;
+}
+
+.react-flow.cursor-hand-tool .react-flow__edge {
+  pointer-events: none !important;
 }
 
 .react-flow.cursor-dragging,
@@ -474,7 +480,15 @@
 /* Edges must render above the background dot grid */
 .react-flow__edges {
   z-index: 3 !important;
-  pointer-events: none !important;
+}
+
+/* Selected edge styling */
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: hsl(var(--primary)) !important;
+  stroke-width: 3 !important;
+}
+.react-flow__edge.selected .react-flow__edge-interaction {
+  stroke: hsl(var(--primary) / 0.15) !important;
 }
 
 /* Sonner toast olive theming — success uses olive accent, errors use muted red */

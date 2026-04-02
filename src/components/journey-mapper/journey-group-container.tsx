@@ -13,6 +13,8 @@ export type GroupContainerData = {
   borderColor?: string;
   textColor?: string;
   headerBg?: string;
+  isSelected?: boolean;
+  onHeaderClick?: (groupId: string) => void;
   onEdit?: (groupId: string) => void;
   onDelete?: (groupId: string) => void;
   [key: string]: unknown;
@@ -23,10 +25,11 @@ export type JourneyGroupContainerType = Node<GroupContainerData, 'groupContainer
 const HEADER_H = 28;
 
 export const JourneyGroupContainer = memo(
-  ({ data, selected }: NodeProps<JourneyGroupContainerType>) => {
+  ({ data }: NodeProps<JourneyGroupContainerType>) => {
     const fillColor = data.fillColor || 'rgba(120,120,120,0.08)';
     const borderColor = data.borderColor || 'rgba(120,120,120,0.30)';
     const headerBg = data.headerBg || 'rgba(120,120,120,0.70)';
+    const isSelected = data.isSelected ?? false;
 
     return (
       <>
@@ -52,7 +55,9 @@ export const JourneyGroupContainer = memo(
             paddingLeft: 8,
             paddingRight: 8,
             pointerEvents: 'auto',
+            cursor: 'pointer',
           }}
+          onClick={() => data.onHeaderClick?.(data.groupId)}
         >
           {/* Grip dots */}
           <svg width="6" height="10" viewBox="0 0 6 10" fill="white" opacity={0.5} className="flex-shrink-0">
@@ -68,7 +73,7 @@ export const JourneyGroupContainer = memo(
             {data.label}
           </span>
 
-          {selected && (
+          {isSelected && (
             <div className="flex items-center gap-0.5 shrink-0">
               <button
                 className="p-1 rounded hover:bg-white/20 transition-colors"

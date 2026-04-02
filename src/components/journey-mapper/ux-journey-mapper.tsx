@@ -9,6 +9,7 @@ import {
   Background,
   BackgroundVariant,
   ConnectionMode,
+  SelectionMode,
   type NodeChange,
   type EdgeChange,
   type Connection,
@@ -44,10 +45,10 @@ import {
   computeGroupContainers,
   computeSitemapLayout,
   autoTidyWithinGroups,
-  type StageHeaderNode,
 } from '@/lib/journey-mapper/layout';
-import type { JourneyMapperNode, LayoutMode, NavigationGroup } from '@/lib/journey-mapper/types';
+import type { JourneyMapperNode, NavigationGroup } from '@/lib/journey-mapper/types';
 import { getGroupColor } from '@/lib/journey-mapper/types';
+import { cn } from '@/lib/utils';
 
 const nodeTypes = {
   featureNode: JourneyFeatureNode,
@@ -122,7 +123,6 @@ function JourneyMapperInner({
   const groups = useJourneyMapperStore((s) => s.groups);
   const isApproved = useJourneyMapperStore((s) => s.isApproved);
   const strategicIntent = useJourneyMapperStore((s) => s.strategicIntent);
-  const layoutMode = useJourneyMapperStore((s) => s.layoutMode) ?? 'auto';
 
   const [activeTool, setActiveTool] = useState<'pointer' | 'hand'>('pointer');
   const [v0Prompt, setV0Prompt] = useState<string | null>(null);
@@ -134,10 +134,11 @@ function JourneyMapperInner({
   const [editingGroupId, setEditingGroupId] = useState<string | undefined>(undefined);
   const [pendingDeleteGroupId, setPendingDeleteGroupId] = useState<string | null>(null);
   const [editModeNodeId, setEditModeNodeId] = useState<string | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const edgeReconnectSuccessful = useRef(false);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const containerPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
-  const hasEnteredFreeformRef = useRef(layoutMode === 'freeform');
+  const initializedViewsRef = useRef<Set<ViewMode>>(new Set(['journey']));
 
   // Prototype dialog state
   const [showPrototypeDialog, setShowPrototypeDialog] = useState(false);
@@ -160,6 +161,28 @@ function JourneyMapperInner({
     return () => document.removeEventListener('mousedown', handler);
   }, [contextMenu]);
 
+  // Initialize view positions when switching view modes
+  useEffect(() => {
+    if (initializedViewsRef.current.has(viewMode)) return;
+    const state = storeApi.getState();
+    if (state.nodes.length === 0) return;
+
+    initializedViewsRef.current.add(viewMode);
+
+    if (viewMode === 'sitemap') {
+      const effectiveGroups = state.groups.length > 0
+        ? state.groups
+        : [{ id: 'main', label: 'Main', description: 'All features' }];
+      const { nodes: repositioned } = computeSitemapLayout(state.nodes, effectiveGroups);
+      storeApi.getState().setNodes(repositioned);
+      storeApi.getState().markDirty();
+    } else {
+      const { nodes: repositioned } = computeJourneyMapLayout(state.nodes, state.stages);
+      storeApi.getState().setNodes(repositioned);
+      storeApi.getState().markDirty();
+    }
+  }, [viewMode, storeApi]);
+
   // Group container callbacks
   const handleGroupEdit = useCallback((groupId: string) => {
     setEditingGroupId(groupId);
@@ -176,6 +199,10 @@ function JourneyMapperInner({
       setPendingDeleteGroupId(null);
     }
   }, [storeApi, pendingDeleteGroupId]);
+
+  const handleGroupHeaderClick = useCallback((groupId: string) => {
+    setSelectedGroupId((prev) => (prev === groupId ? null : groupId));
+  }, []);
 
   // Node edit mode & deletion callbacks
   const handleSetEditMode = useCallback((nodeId: string) => {
@@ -232,15 +259,6 @@ function JourneyMapperInner({
         flowType: 'secondary',
       });
 
-      // Switch to freeform if in auto mode
-      if ((state.layoutMode ?? 'auto') === 'auto') {
-        if (!hasEnteredFreeformRef.current) {
-          const { nodes: computed } = computeJourneyMapLayout(state.nodes, state.stages);
-          storeApi.getState().setNodes(computed);
-          hasEnteredFreeformRef.current = true;
-        }
-        storeApi.getState().setLayoutMode('freeform');
-      }
       storeApi.getState().markDirty();
     },
     [storeApi]
@@ -252,8 +270,6 @@ function JourneyMapperInner({
       ? nodes
       : nodes.filter((n) => n.nodeCategory !== 'peripheral');
 
-    const isFreeform = layoutMode === 'freeform';
-
     // Build group → color map for passing to containers and feature nodes
     const groupColorMap = new Map(groups.map((g, i) => [g.id, getGroupColor(g, i)]));
 
@@ -262,28 +278,31 @@ function JourneyMapperInner({
         ? groups
         : [{ id: 'main', label: 'Main', description: 'All features' }];
 
-      const { nodes: sitemapNodes, groupBackgrounds } = computeSitemapLayout(filteredNodes, effectiveGroups);
+      // Use stored positions; compute group containers from current node positions
+      const containers = computeGroupContainers(filteredNodes, effectiveGroups);
 
       // Group container RF nodes
-      const containerNodes: Node<GroupContainerData>[] = groupBackgrounds.map((bg) => {
-        const gc = groupColorMap.get(bg.groupId);
+      const containerNodes: Node<GroupContainerData>[] = containers.map((c) => {
+        const gc = groupColorMap.get(c.groupId);
         return {
-          id: bg.id.replace('group-bg-', 'group-container-'),
+          id: c.id,
           type: 'groupContainer',
-          position: bg.position,
+          position: c.position,
           zIndex: -1,
-          draggable: isFreeform,
-          selectable: true,
-          style: { width: bg.width, height: bg.height },
+          draggable: !isReadOnly,
+          selectable: false,
+          style: { width: c.width, height: c.height },
           data: {
-            groupId: bg.groupId,
-            label: bg.label,
-            width: bg.width,
-            height: bg.height,
+            groupId: c.groupId,
+            label: c.label,
+            width: c.width,
+            height: c.height,
             fillColor: gc?.fill,
             borderColor: gc?.border,
             textColor: gc?.text,
             headerBg: gc?.headerBg,
+            isSelected: selectedGroupId === c.groupId,
+            onHeaderClick: isReadOnly ? undefined : handleGroupHeaderClick,
             onEdit: isReadOnly ? undefined : handleGroupEdit,
             onDelete: isReadOnly ? undefined : handleGroupDelete,
           },
@@ -291,7 +310,7 @@ function JourneyMapperInner({
       });
 
       // Feature nodes — always absolute positions (no parentId/extent)
-      const featureRfNodes: Node<JourneyFeatureNodeData>[] = sitemapNodes.map((node) => ({
+      const featureRfNodes: Node<JourneyFeatureNodeData>[] = filteredNodes.map((node) => ({
         id: node.id,
         type: 'featureNode' as const,
         position: node.position,
@@ -311,7 +330,7 @@ function JourneyMapperInner({
         },
       }));
 
-      const sitemapPosMap = new Map(sitemapNodes.map((n) => [n.id, n.position]));
+      const posMap = new Map(filteredNodes.map((n) => [n.id, n.position]));
       const visibleIds = new Set(filteredNodes.map((n) => n.id));
       const flowEdges: Edge[] = edges
         .filter((e) => visibleIds.has(e.sourceNodeId) && visibleIds.has(e.targetNodeId))
@@ -319,8 +338,8 @@ function JourneyMapperInner({
           const handles = edge.sourceHandle && edge.targetHandle
             ? { sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle }
             : resolveHandles(
-                sitemapPosMap.get(edge.sourceNodeId) ?? { x: 0, y: 0 },
-                sitemapPosMap.get(edge.targetNodeId) ?? { x: 0, y: 0 },
+                posMap.get(edge.sourceNodeId) ?? { x: 0, y: 0 },
+                posMap.get(edge.targetNodeId) ?? { x: 0, y: 0 },
               );
           return {
             id: edge.id,
@@ -351,55 +370,24 @@ function JourneyMapperInner({
     }
 
     // ─── Journey (stage column) layout ───
-    const headerRfNodes: Node<StageHeaderData>[] = [];
+    // Always use stored positions; compute stage headers via layout
+    const layoutNodes = filteredNodes;
+    const { headerNodes } = computeJourneyMapLayout(filteredNodes, stages);
 
-    // Compute layout positions (auto mode computes, freeform uses stored)
-    let layoutNodes: JourneyMapperNode[];
-    if (isFreeform) {
-      layoutNodes = filteredNodes;
-    } else {
-      const result = computeJourneyMapLayout(filteredNodes, stages);
-      layoutNodes = result.nodes;
-      for (const h of result.headerNodes) {
-        headerRfNodes.push({
-          id: h.id,
-          type: 'stageHeader',
-          position: h.position,
-          draggable: false,
-          selectable: false,
-          data: {
-            stageId: h.stageId,
-            stageName: h.stageName,
-            description: h.description,
-            emotion: h.emotion,
-            isDip: h.isDip,
-          },
-        });
-      }
-    }
-
-    if (!isFreeform) {
-      // Also add headers from auto layout (already added above in auto mode)
-    } else {
-      // In freeform, still need headers — compute them for positioning
-      const { headerNodes } = computeJourneyMapLayout(filteredNodes, stages);
-      for (const h of headerNodes) {
-        headerRfNodes.push({
-          id: h.id,
-          type: 'stageHeader',
-          position: h.position,
-          draggable: false,
-          selectable: false,
-          data: {
-            stageId: h.stageId,
-            stageName: h.stageName,
-            description: h.description,
-            emotion: h.emotion,
-            isDip: h.isDip,
-          },
-        });
-      }
-    }
+    const headerRfNodes: Node<StageHeaderData>[] = headerNodes.map((h) => ({
+      id: h.id,
+      type: 'stageHeader',
+      position: h.position,
+      draggable: false,
+      selectable: false,
+      data: {
+        stageId: h.stageId,
+        stageName: h.stageName,
+        description: h.description,
+        emotion: h.emotion,
+        isDip: h.isDip,
+      },
+    }));
 
     // Group containers for journey view
     const containerNodes: Node<GroupContainerData>[] = [];
@@ -412,8 +400,8 @@ function JourneyMapperInner({
           type: 'groupContainer',
           position: c.position,
           zIndex: -1,
-          draggable: isFreeform,
-          selectable: true,
+          draggable: !isReadOnly,
+          selectable: false,
           style: { width: c.width, height: c.height },
           data: {
             groupId: c.groupId,
@@ -424,6 +412,8 @@ function JourneyMapperInner({
             borderColor: gc?.border,
             textColor: gc?.text,
             headerBg: gc?.headerBg,
+            isSelected: selectedGroupId === c.groupId,
+            onHeaderClick: isReadOnly ? undefined : handleGroupHeaderClick,
             onEdit: isReadOnly ? undefined : handleGroupEdit,
             onDelete: isReadOnly ? undefined : handleGroupDelete,
           },
@@ -491,7 +481,7 @@ function JourneyMapperInner({
       rfNodes: [...containerNodes, ...headerRfNodes, ...featureRfNodes] as Node[],
       rfEdges: flowEdges,
     };
-  }, [nodes, edges, stages, groups, isReadOnly, storeApi, viewMode, showPeripherals, layoutMode, handleGroupEdit, handleGroupDelete, handleDeleteNode, handleSetEditMode, handleAddNodeAt, editModeNodeId]);
+  }, [nodes, edges, stages, groups, isReadOnly, storeApi, viewMode, showPeripherals, handleGroupEdit, handleGroupDelete, handleGroupHeaderClick, selectedGroupId, handleDeleteNode, handleSetEditMode, handleAddNodeAt, editModeNodeId]);
 
   // Fit viewport once when nodes first appear (e.g. after generation into a fresh mount)
   const { fitView } = useReactFlow();
@@ -523,17 +513,6 @@ function JourneyMapperInner({
       for (const change of changes) {
         if (change.type === 'position' && change.position) {
           if (change.id.startsWith('jm-node-')) {
-            // In auto mode, switch to freeform on first drag
-            if (layoutMode === 'auto' && change.dragging) {
-              if (!hasEnteredFreeformRef.current) {
-                // Snapshot current auto-layout positions so freeform uses them
-                const state = storeApi.getState();
-                const { nodes: computed } = computeJourneyMapLayout(state.nodes, state.stages);
-                storeApi.getState().setNodes(computed);
-                hasEnteredFreeformRef.current = true;
-              }
-              storeApi.getState().setLayoutMode('freeform');
-            }
             // Free positioning — no collision snapping
             storeApi.getState().moveNode(change.id, change.position);
           } else if (change.id.startsWith('group-container-')) {
@@ -559,7 +538,22 @@ function JourneyMapperInner({
         }
       }
     },
-    [isReadOnly, storeApi, layoutMode]
+    [isReadOnly, storeApi]
+  );
+
+  // Handle node deletion via keyboard (Delete/Backspace)
+  const onNodesDelete = useCallback(
+    (deletedNodes: Node[]) => {
+      if (isReadOnly) return;
+      for (const node of deletedNodes) {
+        if (node.id.startsWith('jm-node-')) {
+          storeApi.getState().deleteNode(node.id);
+        }
+        // Group containers are not deletable via keyboard — only via header button
+      }
+      setEditModeNodeId(null);
+    },
+    [isReadOnly, storeApi]
   );
 
   // Handle edge changes (deletion via keyboard)
@@ -663,34 +657,11 @@ function JourneyMapperInner({
   const onPaneClick = useCallback(() => {
     setContextMenu(null);
     setEditModeNodeId(null);
+    setSelectedGroupId(null);
   }, []);
 
-  // ─── Layout mode switching ───
-
-  const handleSetLayoutMode = useCallback((mode: LayoutMode) => {
-    const state = storeApi.getState();
-    if (mode === 'freeform' && (state.layoutMode ?? 'auto') === 'auto') {
-      if (!hasEnteredFreeformRef.current) {
-        // Snapshot computed positions so freeform uses what the user was seeing
-        if (viewMode === 'sitemap') {
-          const effectiveGroups = state.groups.length > 0
-            ? state.groups
-            : [{ id: 'main', label: 'Main', description: 'All features' }];
-          const { nodes: computed } = computeSitemapLayout(state.nodes, effectiveGroups);
-          storeApi.getState().setNodes(computed);
-        } else {
-          const { nodes: computed } = computeJourneyMapLayout(state.nodes, state.stages);
-          storeApi.getState().setNodes(computed);
-        }
-        hasEnteredFreeformRef.current = true;
-      }
-    }
-    storeApi.getState().setLayoutMode(mode);
-    storeApi.getState().markDirty();
-  }, [storeApi, viewMode]);
-
-  // Auto-layout
-  const handleAutoLayout = useCallback(() => {
+  // Auto-tidy (view-mode-aware)
+  const handleAutoTidy = useCallback(() => {
     const state = storeApi.getState();
     if (viewMode === 'sitemap') {
       const effectiveGroups = state.groups.length > 0
@@ -699,21 +670,11 @@ function JourneyMapperInner({
       const { nodes: repositioned } = computeSitemapLayout(state.nodes, effectiveGroups);
       storeApi.getState().setNodes(repositioned);
     } else {
-      const { nodes: repositioned } = computeJourneyMapLayout(state.nodes, state.stages);
-      storeApi.getState().setNodes(repositioned);
+      const tidied = autoTidyWithinGroups(state.nodes, state.groups);
+      storeApi.getState().setNodes(tidied);
     }
-    storeApi.getState().setLayoutMode('auto');
-    hasEnteredFreeformRef.current = false;
     storeApi.getState().markDirty();
   }, [storeApi, viewMode]);
-
-  // Auto-tidy (freeform mode only)
-  const handleAutoTidy = useCallback(() => {
-    const state = storeApi.getState();
-    const tidied = autoTidyWithinGroups(state.nodes, state.groups);
-    storeApi.getState().setNodes(tidied);
-    storeApi.getState().markDirty();
-  }, [storeApi]);
 
   // Add feature
   const handleAddFeature = useCallback(() => {
@@ -795,14 +756,21 @@ function JourneyMapperInner({
   return (
     <div className="w-full h-full relative">
       <ReactFlow
+        className={cn(
+          activeTool === 'hand' ? 'cursor-hand-tool' : 'cursor-pointer-tool'
+        )}
         nodes={rfNodes}
         edges={rfEdges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
+        onNodesDelete={onNodesDelete}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         connectionMode={ConnectionMode.Loose}
+        selectionMode={SelectionMode.Partial}
+        edgesFocusable={true}
         edgesReconnectable={!isReadOnly}
+        nodesDraggable={activeTool !== 'hand'}
         onReconnectStart={onReconnectStart}
         onReconnect={onReconnect}
         onReconnectEnd={onReconnectEnd}
@@ -812,11 +780,13 @@ function JourneyMapperInner({
         nodesConnectable={!isReadOnly}
         onPaneClick={onPaneClick}
         panOnDrag={activeTool === 'hand'}
+        panOnScroll={true}
+        zoomOnScroll={false}
         selectionOnDrag={activeTool === 'pointer' && !isReadOnly}
         minZoom={0.2}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
-        deleteKeyCode={['Backspace', 'Delete']}
+        deleteKeyCode={editModeNodeId ? null : ['Backspace', 'Delete']}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
         <CanvasZoomControls />
@@ -828,11 +798,9 @@ function JourneyMapperInner({
           isApproved={isApproved}
           strategicIntent={strategicIntent}
           viewMode={viewMode}
-          layoutMode={layoutMode}
           showPeripherals={showPeripherals}
           groupCount={groups.length}
           onRegenerate={onRegenerate}
-          onAutoLayout={handleAutoLayout}
           onAutoTidy={handleAutoTidy}
           onGenerateV0Prompt={handleGenerateV0Prompt}
           onApprove={handleApprove}
@@ -841,7 +809,6 @@ function JourneyMapperInner({
           isResetting={isResetting}
           onTogglePeripherals={() => setShowPeripherals((p) => !p)}
           onSetViewMode={setViewMode}
-          onSetLayoutMode={isReadOnly ? undefined : handleSetLayoutMode}
           onManageGroups={isReadOnly ? undefined : () => setShowGroupDialog(true)}
         />
       </ReactFlow>

@@ -134,7 +134,7 @@ function JourneyMapInner({
         personaName: '',
         conceptRelationship: 'combined',
         strategicIntent: 'web-app',
-        layoutMode: 'auto',
+        layoutMode: 'freeform',
         isApproved: false,
         isDirty: false,
         lastGeneratedAt: undefined,

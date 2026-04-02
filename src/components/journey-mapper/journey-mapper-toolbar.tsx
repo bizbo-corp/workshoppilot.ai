@@ -1,7 +1,7 @@
 'use client';
 
 import { Panel } from '@xyflow/react';
-import { RefreshCw, LayoutGrid, Wand2, ArrowLeft, Loader2, CheckCircle2, Rocket, Trash2, Eye, EyeOff, Map, Network, Lock, Unlock, Sparkles, FolderCog, MoreVertical, ChevronDown } from 'lucide-react';
+import { RefreshCw, Wand2, ArrowLeft, Loader2, CheckCircle2, Rocket, Trash2, Eye, EyeOff, Map, Network, Sparkles, FolderCog, MoreVertical, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,7 +12,7 @@ import {
   DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
-import type { StrategicIntent, LayoutMode } from '@/lib/journey-mapper/types';
+import type { StrategicIntent } from '@/lib/journey-mapper/types';
 import { INTENT_LABELS } from '@/lib/journey-mapper/types';
 
 export type ViewMode = 'journey' | 'sitemap';
@@ -24,11 +24,9 @@ interface JourneyMapperToolbarProps {
   isApproved?: boolean;
   strategicIntent?: StrategicIntent;
   viewMode?: ViewMode;
-  layoutMode?: LayoutMode;
   showPeripherals?: boolean;
   groupCount?: number;
   onRegenerate: () => void;
-  onAutoLayout: () => void;
   onAutoTidy?: () => void;
   onGenerateV0Prompt: () => void;
   onApprove: () => void;
@@ -37,7 +35,6 @@ interface JourneyMapperToolbarProps {
   isResetting?: boolean;
   onTogglePeripherals?: () => void;
   onSetViewMode?: (mode: ViewMode) => void;
-  onSetLayoutMode?: (mode: LayoutMode) => void;
   onManageGroups?: () => void;
 }
 
@@ -48,11 +45,9 @@ export function JourneyMapperToolbar({
   isApproved,
   strategicIntent,
   viewMode = 'journey',
-  layoutMode = 'auto',
   showPeripherals = true,
   groupCount = 0,
   onRegenerate,
-  onAutoLayout,
   onAutoTidy,
   onGenerateV0Prompt,
   onApprove,
@@ -61,7 +56,6 @@ export function JourneyMapperToolbar({
   isResetting,
   onTogglePeripherals,
   onSetViewMode,
-  onSetLayoutMode,
   onManageGroups,
 }: JourneyMapperToolbarProps) {
   return (
@@ -128,30 +122,6 @@ export function JourneyMapperToolbar({
         </div>
       )}
 
-      {/* Layout mode toggle */}
-      {onSetLayoutMode && (
-        <div className="inline-flex items-center rounded-md border bg-muted p-0.5">
-          <button
-            onClick={() => onSetLayoutMode('auto')}
-            className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium transition-colors ${
-              layoutMode === 'auto' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Lock className="h-3 w-3" />
-            Auto
-          </button>
-          <button
-            onClick={() => onSetLayoutMode('freeform')}
-            className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium transition-colors ${
-              layoutMode === 'freeform' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Unlock className="h-3 w-3" />
-            Free-form
-          </button>
-        </div>
-      )}
-
       {/* View dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -174,17 +144,10 @@ export function JourneyMapperToolbar({
               Peripherals
             </DropdownMenuCheckboxItem>
           )}
-          {layoutMode === 'freeform' ? (
-            <DropdownMenuItem onClick={onAutoTidy}>
-              <Sparkles className="h-3.5 w-3.5 mr-2" />
-              Auto-tidy
-            </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem onClick={onAutoLayout}>
-              <LayoutGrid className="h-3.5 w-3.5 mr-2" />
-              Auto-layout
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem onClick={onAutoTidy}>
+            <Sparkles className="h-3.5 w-3.5 mr-2" />
+            Auto-tidy
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
