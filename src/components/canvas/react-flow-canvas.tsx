@@ -15,6 +15,7 @@ import {
   Background,
   BackgroundVariant,
   SelectionMode,
+  applyNodeChanges,
   type Node,
   type Edge,
   type NodeChange,
@@ -1125,6 +1126,7 @@ function ReactFlowCanvasInner({
         extent: stickyNote.parentId ? ("parent" as const) : undefined,
         zIndex: nodeZIndicesRef.current[stickyNote.id] || 20,
         draggable: !isPreview,
+        dragHandle: '.card-drag-handle',
         selectable: !isPreview,
         selected: selectedNodeIds.includes(stickyNote.id),
         data: {
@@ -1408,6 +1410,18 @@ function ReactFlowCanvasInner({
     isDrawingLockedByOther,
     getLockingUser,
   ]);
+
+  // Controlled nodes state — mirrors the `nodes` memo but applies position
+  // changes from ReactFlow during drag, enabling smooth visual movement.
+  // Without this, the useMemo-based approach doesn't re-render mid-drag.
+  const [controlledNodes, setControlledNodes] = useState<Node[]>(nodes);
+
+  // Sync computed nodes → controlled state whenever the memo recomputes.
+  // Safe during drag because the memo reads livePositions.current as a
+  // safety net, so recomputed positions stay correct mid-drag.
+  useEffect(() => {
+    setControlledNodes(nodes);
+  }, [nodes]);
 
   // Create sticky note at position and set as editing
   const createStickyNoteAtPosition = useCallback(
@@ -1936,10 +1950,13 @@ function ReactFlowCanvasInner({
   // Handle all node changes (selection, position, removal)
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      // ── Track live positions during drag (ref — no re-renders) ──
-      // ReactFlow handles drag visuals internally. The ref is a safety net so
-      // that IF useMemo recomputes mid-drag (from unrelated state changes), it
-      // reads current positions instead of stale store values.
+      // Apply changes to controlled state — enables smooth visual drag.
+      // Without this, nodes only jump to final position on mouse release.
+      setControlledNodes((nds) => applyNodeChanges(changes, nds));
+
+      // ── Track live positions during drag (ref — safety net) ──
+      // If the nodes useMemo recomputes mid-drag (from unrelated state changes),
+      // the ref ensures it reads current positions instead of stale store values.
       for (const c of changes) {
         if (c.type === "position") {
           const posChange = c as NodeChange & {
@@ -2951,7 +2968,7 @@ function ReactFlowCanvasInner({
               ? "cursor-hand-tool"
               : "cursor-pointer-tool",
         )}
-        nodes={nodes}
+        nodes={controlledNodes}
         edges={clusterEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
