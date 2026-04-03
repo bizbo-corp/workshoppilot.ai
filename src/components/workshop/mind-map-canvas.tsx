@@ -2317,11 +2317,14 @@ function MindMapCanvasInner({
         minZoom={0.1}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
-        nodesDraggable={true}
+        nodesDraggable={toolMode !== 'pan'}
         nodesConnectable={true}
         connectionMode={ConnectionMode.Loose}
         edgesFocusable={true}
+        elementsSelectable={toolMode !== 'pan'}
         panOnDrag={toolMode === 'pan'}
+        zoomOnScroll={toolMode !== 'pan'}
+        panOnScroll={toolMode === 'pan'}
         selectionOnDrag={toolMode === 'select' || (!!votingMode && !!isMultiplayerIdeation && isFacilitator && votingSession.status === 'idle')}
         selectionMode={SelectionMode.Partial}
         selectNodesOnDrag={false}

@@ -115,7 +115,7 @@ export const JourneyFeatureNode = memo(
       <div
         className={cn(
           'w-[260px] rounded-lg border bg-card shadow-sm transition-shadow relative group',
-          selected && 'ring-2 ring-primary shadow-md',
+          selected && 'ring-2 ring-selection shadow-md',
           isPeripheral && 'opacity-75'
         )}
         style={{ borderLeftWidth: 4, borderLeftColor: accentColor }}

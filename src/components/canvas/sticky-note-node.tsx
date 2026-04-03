@@ -184,7 +184,7 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
         !dragging && !selected && 'hover:shadow-lg hover:-translate-y-0.5',
         'cursor-pointer',
         'w-full h-full flex flex-col overflow-hidden',
-        selected && !dragging && 'ring-2 ring-olive-600 ring-offset-1',
+        selected && !dragging && 'ring-2 ring-selection ring-offset-1',
         data.isEditing && 'ring-2 ring-olive-500 ring-offset-1',
         // Miro-like drag: clean shadow lift, subtle scale, no rotation or opacity change
         dragging && 'shadow-2xl scale-[1.02] ring-2 ring-olive-500/40',
@@ -204,8 +204,8 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
         onResizeEnd={(_, { x, y, width, height }) => {
           data.onResizeEnd?.(id, width, height, x, y);
         }}
-        handleClassName="!w-2.5 !h-2.5 !bg-olive-600 !border-olive-600 !rounded-full"
-        lineClassName="!border-olive-500/50"
+        handleClassName="!w-2.5 !h-2.5 !bg-white !border-2 !border-selection !rounded-full"
+        lineClassName="!border-selection/50"
       />
 
       {/* Hidden handles for future edge connections */}

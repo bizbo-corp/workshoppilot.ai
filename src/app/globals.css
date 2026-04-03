@@ -7,6 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-selection: var(--selection);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
@@ -105,6 +106,8 @@
 /* Light mode — sage / olive hue */
 :root {
   --radius: 0.625rem;
+  /* Selection — vibrant blue used for all canvas selection indicators */
+  --selection: #2563eb;
   /* Canvas */
   --canvas-bg: var(--neutral-olive-100);
   --canvas-dots: color-mix(in srgb, var(--foreground) 40%, transparent);
@@ -248,6 +251,7 @@
 
 /* Dark mode — deep green */
 .dark {
+  --selection: #3b82f6;
   /* Canvas */
   --canvas-bg: var(--neutral-olive-950);
   --canvas-dots: color-mix(in srgb, var(--foreground) 50%, transparent);
@@ -405,7 +409,7 @@
 .react-flow.cursor-pointer-tool .react-flow__node,
 .react-flow.cursor-pointer-tool .react-flow__edge,
 .react-flow.cursor-pointer-tool .react-flow__handle {
-  cursor: default !important;
+  cursor: pointer !important;
 }
 
 
@@ -477,18 +481,16 @@
   background-color: transparent !important;
 }
 
-/* Edges must render above the background dot grid */
+/* Edges — ensure click-through works on custom edge interaction paths */
 .react-flow__edges {
-  z-index: 3 !important;
+  pointer-events: none;
 }
 
-/* Selected edge styling */
-.react-flow__edge.selected .react-flow__edge-path {
-  stroke: hsl(var(--primary)) !important;
-  stroke-width: 3 !important;
-}
-.react-flow__edge.selected .react-flow__edge-interaction {
-  stroke: hsl(var(--primary) / 0.15) !important;
+/* Animated edge dash movement */
+@keyframes dashdraw {
+  to {
+    stroke-dashoffset: -10;
+  }
 }
 
 /* Sonner toast olive theming — success uses olive accent, errors use muted red */

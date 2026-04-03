@@ -2991,8 +2991,11 @@ function ReactFlowCanvasInner({
         onNodesDelete={handleNodesDelete}
         // Pan/Zoom (CANV-07) - dynamic based on active tool
         panOnDrag={activeTool === "hand"}
-        zoomOnScroll={true}
+        zoomOnScroll={activeTool !== "hand"}
+        panOnScroll={activeTool === "hand"}
         zoomOnPinch={true}
+        elementsSelectable={activeTool !== "hand"}
+        nodesDraggable={activeTool !== "hand"}
         elevateNodesOnSelect={false}
         proOptions={{ hideAttribution: true }}
         onMouseMove={(e) => cursorHandlersRef.current?.onMouseMove(e)}

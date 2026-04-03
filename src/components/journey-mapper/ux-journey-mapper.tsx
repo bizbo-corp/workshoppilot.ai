@@ -10,6 +10,8 @@ import {
   BackgroundVariant,
   ConnectionMode,
   SelectionMode,
+  applyNodeChanges,
+  applyEdgeChanges,
   type NodeChange,
   type EdgeChange,
   type Connection,
@@ -23,6 +25,7 @@ import { useJourneyMapperStore, useJourneyMapperStoreApi } from '@/providers/jou
 import { JourneyFeatureNode, type JourneyFeatureNodeData } from './journey-feature-node';
 import { JourneyStageHeader, type StageHeaderData } from './journey-stage-header';
 import { JourneyGroupContainer, type GroupContainerData } from './journey-group-container';
+import { JourneyEdge } from './journey-edge';
 import { EmotionCurveOverlay } from './emotion-curve-overlay';
 import { JourneyMapperToolbar, type ViewMode } from './journey-mapper-toolbar';
 import { JourneyCanvasToolbar } from './journey-canvas-toolbar';
@@ -54,6 +57,10 @@ const nodeTypes = {
   featureNode: JourneyFeatureNode,
   stageHeader: JourneyStageHeader,
   groupContainer: JourneyGroupContainer,
+};
+
+const edgeTypes = {
+  journeyEdge: JourneyEdge,
 };
 
 const NODE_W = 260; // featureNode width
@@ -347,7 +354,7 @@ function JourneyMapperInner({
             target: edge.targetNodeId,
             sourceHandle: handles.sourceHandle,
             targetHandle: handles.targetHandle,
-            type: 'default' as const,
+            type: 'journeyEdge' as const,
             animated: edge.flowType === 'primary',
             interactionWidth: 20,
             style: {
@@ -460,7 +467,7 @@ function JourneyMapperInner({
           target: edge.targetNodeId,
           sourceHandle: handles.sourceHandle,
           targetHandle: handles.targetHandle,
-          type: 'default' as const,
+          type: 'journeyEdge' as const,
           animated: edge.flowType === 'primary',
           interactionWidth: 20,
           style: {
@@ -482,6 +489,17 @@ function JourneyMapperInner({
       rfEdges: flowEdges,
     };
   }, [nodes, edges, stages, groups, isReadOnly, storeApi, viewMode, showPeripherals, handleGroupEdit, handleGroupDelete, handleGroupHeaderClick, selectedGroupId, handleDeleteNode, handleSetEditMode, handleAddNodeAt, editModeNodeId]);
+
+  // Maintain local node/edge state so ReactFlow can track selection (select changes)
+  // while the store remains the source of truth for data.
+  const [displayNodes, setDisplayNodes] = useState<Node[]>([]);
+  const [displayEdges, setDisplayEdges] = useState<Edge[]>([]);
+  useEffect(() => {
+    setDisplayNodes(rfNodes);
+  }, [rfNodes]);
+  useEffect(() => {
+    setDisplayEdges(rfEdges);
+  }, [rfEdges]);
 
   // Fit viewport once when nodes first appear (e.g. after generation into a fresh mount)
   const { fitView } = useReactFlow();
@@ -509,6 +527,9 @@ function JourneyMapperInner({
   // Handle node position changes (drag)
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      // Apply all changes (select, position, dimensions, etc.) to local display state
+      setDisplayNodes((prev) => applyNodeChanges(changes, prev));
+
       if (isReadOnly) return;
       for (const change of changes) {
         if (change.type === 'position' && change.position) {
@@ -556,9 +577,12 @@ function JourneyMapperInner({
     [isReadOnly, storeApi]
   );
 
-  // Handle edge changes (deletion via keyboard)
+  // Handle edge changes — apply select changes locally, sync removes to store
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
+      // Apply all changes (select, remove, etc.) to local display state
+      setDisplayEdges((prev) => applyEdgeChanges(changes, prev));
+
       if (isReadOnly) return;
       for (const change of changes) {
         if (change.type === 'remove') {
@@ -759,9 +783,10 @@ function JourneyMapperInner({
         className={cn(
           activeTool === 'hand' ? 'cursor-hand-tool' : 'cursor-pointer-tool'
         )}
-        nodes={rfNodes}
-        edges={rfEdges}
+        nodes={displayNodes}
+        edges={displayEdges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onNodesDelete={onNodesDelete}
         onEdgesChange={onEdgesChange}
@@ -771,6 +796,7 @@ function JourneyMapperInner({
         edgesFocusable={true}
         edgesReconnectable={!isReadOnly}
         nodesDraggable={activeTool !== 'hand'}
+        elementsSelectable={activeTool !== 'hand'}
         onReconnectStart={onReconnectStart}
         onReconnect={onReconnect}
         onReconnectEnd={onReconnectEnd}

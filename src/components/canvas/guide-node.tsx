@@ -231,7 +231,7 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
             ? 'animate-out fade-out-0 zoom-out-95 duration-200 fill-mode-forwards'
             : 'animate-in fade-in-0 zoom-in-95 duration-300',
           guide.isAdminEditing && 'ring-1 ring-olive-400',
-          guide.isAdmin && selected && 'ring-2 ring-olive-600 ring-offset-1',
+          guide.isAdmin && selected && 'ring-2 ring-selection ring-offset-1',
         )}
       >
         <NodeResizer
@@ -281,7 +281,7 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
         isImage && 'p-0',
         // Admin selection indicator
         guide.isAdminEditing && 'ring-1 ring-olive-400',
-        guide.isAdmin && selected && 'ring-2 ring-olive-600 ring-offset-1',
+        guide.isAdmin && selected && 'ring-2 ring-selection ring-offset-1',
       )}
       style={(isCard && hasColor) ? {
         backgroundColor: `${guide.color}cc`,
