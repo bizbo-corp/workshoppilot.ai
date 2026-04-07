@@ -1,4 +1,4 @@
-import type { JourneyMapperNode, JourneyStageColumn, NavigationGroup } from './types';
+import type { JourneyMapperEdge, JourneyMapperNode, JourneyStageColumn, NavigationGroup } from './types';
 
 const COLUMN_WIDTH = 280;
 const COLUMN_GAP = 40;
@@ -233,13 +233,18 @@ const SITEMAP_NODE_H_GAP = 20;
 const SITEMAP_NODE_V_GAP = 30;
 const SITEMAP_NODES_PER_ROW = 4;
 
+const SITEMAP_HUB_MIN_CHILDREN = 3;
+const SITEMAP_HUB_SECTION_GAP = 40;
+
 /**
  * Compute a sitemap/tree layout: groups as horizontal sections, nodes in rows within each group.
+ * Hub nodes (3+ outgoing edges within the group) get their children arranged in rows directly below them.
  * Returns positioned nodes + group backgrounds (no stage headers in sitemap view).
  */
 export function computeSitemapLayout(
   nodes: JourneyMapperNode[],
-  groups: NavigationGroup[]
+  groups: NavigationGroup[],
+  edges: JourneyMapperEdge[] = []
 ): { nodes: JourneyMapperNode[]; groupBackgrounds: GroupBackgroundNode[] } {
   const positionedNodes: JourneyMapperNode[] = [];
   const groupBackgrounds: GroupBackgroundNode[] = [];
@@ -272,11 +277,95 @@ export function computeSitemapLayout(
     // Sort: must-have first
     groupNodes.sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
 
+    const groupNodeIds = new Set(groupNodes.map((n) => n.id));
+
+    // Build adjacency: count outgoing edges per node (only intra-group edges)
+    const childrenOf = new Map<string, string[]>();
+    for (const edge of edges) {
+      if (!groupNodeIds.has(edge.sourceNodeId) || !groupNodeIds.has(edge.targetNodeId)) continue;
+      const existing = childrenOf.get(edge.sourceNodeId) || [];
+      existing.push(edge.targetNodeId);
+      childrenOf.set(edge.sourceNodeId, existing);
+    }
+
+    // Identify hubs: nodes with 3+ children edges
+    // If a node is already a child of another hub, skip it
+    const allChildIds = new Set<string>();
+    const hubOrder: { hubId: string; children: string[] }[] = [];
+
+    // First pass: find candidate hubs sorted by priority then child count
+    const hubCandidates = groupNodes
+      .filter((n) => (childrenOf.get(n.id)?.length ?? 0) >= SITEMAP_HUB_MIN_CHILDREN)
+      .sort((a, b) => {
+        const priDiff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+        if (priDiff !== 0) return priDiff;
+        return (childrenOf.get(b.id)?.length ?? 0) - (childrenOf.get(a.id)?.length ?? 0);
+      });
+
+    // Second pass: skip candidates that are children of an earlier hub
+    for (const hub of hubCandidates) {
+      if (allChildIds.has(hub.id)) continue;
+      const children = (childrenOf.get(hub.id) || []).filter((cid) => !allChildIds.has(cid));
+      hubOrder.push({ hubId: hub.id, children });
+      for (const cid of children) allChildIds.add(cid);
+    }
+
     const groupStartY = currentY;
     const contentStartY = groupStartY + labelHeight + groupPadding;
+    let sectionY = contentStartY;
+    let maxWidth = 0;
 
-    // Lay out nodes in rows
-    groupNodes.forEach((node, idx) => {
+    // Phase A — Hub sections
+    for (const { hubId, children } of hubOrder) {
+      const hubNode = groupNodes.find((n) => n.id === hubId)!;
+
+      // Place hub node left-aligned
+      positionedNodes.push({
+        ...hubNode,
+        position: {
+          x: groupPadding,
+          y: sectionY,
+        },
+      });
+
+      const hubRowWidth = 1 * (SITEMAP_NODE_WIDTH + SITEMAP_NODE_H_GAP) - SITEMAP_NODE_H_GAP;
+      if (hubRowWidth > maxWidth) maxWidth = hubRowWidth;
+
+      sectionY += SITEMAP_NODE_HEIGHT + SITEMAP_NODE_V_GAP;
+
+      // Sort children by priority
+      const sortedChildren = children
+        .map((cid) => groupNodes.find((n) => n.id === cid)!)
+        .filter(Boolean)
+        .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+
+      // Place children in rows below hub
+      sortedChildren.forEach((child, idx) => {
+        const col = idx % SITEMAP_NODES_PER_ROW;
+        const row = Math.floor(idx / SITEMAP_NODES_PER_ROW);
+
+        positionedNodes.push({
+          ...child,
+          position: {
+            x: groupPadding + col * (SITEMAP_NODE_WIDTH + SITEMAP_NODE_H_GAP),
+            y: sectionY + row * (SITEMAP_NODE_HEIGHT + SITEMAP_NODE_V_GAP),
+          },
+        });
+      });
+
+      const childRows = Math.ceil(sortedChildren.length / SITEMAP_NODES_PER_ROW);
+      const childRowWidth = Math.min(sortedChildren.length, SITEMAP_NODES_PER_ROW)
+        * (SITEMAP_NODE_WIDTH + SITEMAP_NODE_H_GAP) - SITEMAP_NODE_H_GAP;
+      if (childRowWidth > maxWidth) maxWidth = childRowWidth;
+
+      sectionY += childRows * (SITEMAP_NODE_HEIGHT + SITEMAP_NODE_V_GAP) + SITEMAP_HUB_SECTION_GAP;
+    }
+
+    // Phase B — Remaining nodes (non-hub, non-child)
+    const hubIds = new Set(hubOrder.map((h) => h.hubId));
+    const remainingNodes = groupNodes.filter((n) => !hubIds.has(n.id) && !allChildIds.has(n.id));
+
+    remainingNodes.forEach((node, idx) => {
       const col = idx % SITEMAP_NODES_PER_ROW;
       const row = Math.floor(idx / SITEMAP_NODES_PER_ROW);
 
@@ -284,17 +373,27 @@ export function computeSitemapLayout(
         ...node,
         position: {
           x: groupPadding + col * (SITEMAP_NODE_WIDTH + SITEMAP_NODE_H_GAP),
-          y: contentStartY + row * (SITEMAP_NODE_HEIGHT + SITEMAP_NODE_V_GAP),
+          y: sectionY + row * (SITEMAP_NODE_HEIGHT + SITEMAP_NODE_V_GAP),
         },
       });
     });
 
-    const totalRows = Math.ceil(groupNodes.length / SITEMAP_NODES_PER_ROW);
-    const groupContentHeight = totalRows * (SITEMAP_NODE_HEIGHT + SITEMAP_NODE_V_GAP) - SITEMAP_NODE_V_GAP;
-    const groupTotalHeight = labelHeight + groupPadding * 2 + groupContentHeight;
+    if (remainingNodes.length > 0) {
+      const remainingRows = Math.ceil(remainingNodes.length / SITEMAP_NODES_PER_ROW);
+      const remainingWidth = Math.min(remainingNodes.length, SITEMAP_NODES_PER_ROW)
+        * (SITEMAP_NODE_WIDTH + SITEMAP_NODE_H_GAP) - SITEMAP_NODE_H_GAP;
+      if (remainingWidth > maxWidth) maxWidth = remainingWidth;
 
-    const groupWidth = Math.min(groupNodes.length, SITEMAP_NODES_PER_ROW)
-      * (SITEMAP_NODE_WIDTH + SITEMAP_NODE_H_GAP) - SITEMAP_NODE_H_GAP + groupPadding * 2;
+      sectionY += remainingRows * (SITEMAP_NODE_HEIGHT + SITEMAP_NODE_V_GAP);
+    }
+
+    // Remove trailing gap for bounding box
+    if (hubOrder.length > 0 && remainingNodes.length === 0) {
+      sectionY -= SITEMAP_HUB_SECTION_GAP;
+    }
+
+    const groupTotalHeight = sectionY - groupStartY;
+    const groupWidth = maxWidth + groupPadding * 2;
 
     groupBackgrounds.push({
       id: `group-bg-${group.id}`,
@@ -305,10 +404,63 @@ export function computeSitemapLayout(
       height: groupTotalHeight,
     });
 
-    currentY += groupTotalHeight + SITEMAP_GROUP_GAP;
+    currentY = sectionY + SITEMAP_GROUP_GAP;
   }
 
   return { nodes: positionedNodes, groupBackgrounds };
+}
+
+// ---------------------------------------------------------------------------
+// Position-map variants (return position maps instead of mutated node arrays)
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute journey-map positions as a map (does not mutate nodes).
+ * Used with per-view state: callers apply positions via setViewPositions().
+ */
+export function computeJourneyMapPositions(
+  nodes: JourneyMapperNode[],
+  stages: JourneyStageColumn[],
+  config?: LayoutConfig
+): { positions: Record<string, { x: number; y: number }>; headerNodes: StageHeaderNode[] } {
+  const { nodes: positionedNodes, headerNodes } = computeJourneyMapLayout(nodes, stages, config);
+  const positions: Record<string, { x: number; y: number }> = {};
+  for (const n of positionedNodes) {
+    positions[n.id] = n.position;
+  }
+  return { positions, headerNodes };
+}
+
+/**
+ * Compute sitemap positions as a map (does not mutate nodes).
+ * Used with per-view state: callers apply positions via setViewPositions().
+ */
+export function computeSitemapPositions(
+  nodes: JourneyMapperNode[],
+  groups: NavigationGroup[],
+  edges: JourneyMapperEdge[] = []
+): { positions: Record<string, { x: number; y: number }>; groupBackgrounds: GroupBackgroundNode[] } {
+  const { nodes: positionedNodes, groupBackgrounds } = computeSitemapLayout(nodes, groups, edges);
+  const positions: Record<string, { x: number; y: number }> = {};
+  for (const n of positionedNodes) {
+    positions[n.id] = n.position;
+  }
+  return { positions, groupBackgrounds };
+}
+
+/**
+ * Auto-tidy within groups, returning a position map.
+ */
+export function autoTidyPositions(
+  nodes: JourneyMapperNode[],
+  groups: NavigationGroup[]
+): Record<string, { x: number; y: number }> {
+  const tidied = autoTidyWithinGroups(nodes, groups);
+  const positions: Record<string, { x: number; y: number }> = {};
+  for (const n of tidied) {
+    positions[n.id] = n.position;
+  }
+  return positions;
 }
 
 /** Get total canvas dimensions for the layout */

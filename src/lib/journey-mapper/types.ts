@@ -139,11 +139,26 @@ export interface JourneyStageColumn {
   opportunities: string[];
 }
 
+export interface ViewState {
+  nodeIds: string[];
+  positions: Record<string, { x: number; y: number }>;
+  edges: JourneyMapperEdge[];
+}
+
+export interface SitemapViewState extends ViewState {
+  groups: NavigationGroup[];
+}
+
 export interface JourneyMapperState {
   nodes: JourneyMapperNode[];
+  /** @deprecated Use journeyView.edges / sitemapView.edges instead. Kept for migration detection. */
   edges: JourneyMapperEdge[];
   stages: JourneyStageColumn[];
+  /** @deprecated Use sitemapView.groups instead. Kept for migration detection. */
   groups: NavigationGroup[];
+  journeyView: ViewState;
+  sitemapView: SitemapViewState;
+  activeView: 'journey' | 'sitemap';
   challengeContext: string;
   personaName: string;
   conceptRelationship: ConceptRelationship;
@@ -152,6 +167,7 @@ export interface JourneyMapperState {
   isApproved: boolean;
   isDirty: boolean;
   lastGeneratedAt?: string;
+  _schemaVersion?: number;
 }
 
 /** Result shape returned by the LLM mapping engine */

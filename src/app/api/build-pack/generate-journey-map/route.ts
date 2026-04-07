@@ -17,10 +17,11 @@ import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
 import { loadAllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifacts';
 import { buildJourneyMapperPrompt } from '@/lib/ai/prompts/journey-mapper-prompt';
 import { heuristicMap } from '@/lib/journey-mapper/heuristic-mapper';
-import { computeJourneyMapLayout } from '@/lib/journey-mapper/layout';
+import { computeJourneyMapLayout, computeSitemapPositions, computeJourneyMapPositions } from '@/lib/journey-mapper/layout';
+import { isLegacyState, migrateToViewState } from '@/lib/journey-mapper/migrate-state';
 import { detectStrategicIntent, getDefaultStagesForIntent } from '@/lib/journey-mapper/intent-detection';
 import { normalizeIntent } from '@/lib/journey-mapper/types';
-import type { JourneyMappingResult, JourneyMapperState, JourneyStageColumn } from '@/lib/journey-mapper/types';
+import type { JourneyMappingResult, JourneyMapperState, JourneyStageColumn, ViewState, SitemapViewState } from '@/lib/journey-mapper/types';
 
 export const maxDuration = 60;
 
@@ -75,7 +76,10 @@ export async function POST(req: Request) {
       const cached = existingRows.find((r) => r.formatType === 'json' && r.content);
       if (cached) {
         try {
-          const state = JSON.parse(cached.content!) as JourneyMapperState;
+          const parsed = JSON.parse(cached.content!);
+          const state = isLegacyState(parsed)
+            ? migrateToViewState(parsed as JourneyMapperState)
+            : (parsed as JourneyMapperState);
           return new Response(
             JSON.stringify({ state, buildPackId: cached.id, cached: true }),
             { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -106,7 +110,7 @@ export async function POST(req: Request) {
     console.log('[journey-map] concept artifact keys:', Object.keys(conceptArtifact));
     console.log('[journey-map] concept artifact preview:', JSON.stringify(conceptArtifact).slice(0, 300));
 
-    const concepts = extractConcepts(conceptArtifact);
+    const { concepts, _debug: extractionDebug } = extractConcepts(conceptArtifact);
     console.log('[journey-map] extractConcepts returned', concepts.length, 'concepts');
     for (const c of concepts) {
       console.log('[journey-map]   concept keys:', Object.keys(c), 'name:', c.name || c.conceptName || c.title || '(none)');
@@ -173,8 +177,8 @@ export async function POST(req: Request) {
       }
       for (let ci = 0; ci < concepts.length; ci++) {
         const c = concepts[ci];
-        const cName = (c.name as string) || (c.title as string) || (c.conceptName as string) || `Concept ${ci + 1}`;
-        const cDesc = (c.description as string) || (c.elevatorPitch as string) || (c.usp as string) || (c.valueProposition as string) || 'Core product feature';
+        const cName = (c.conceptName as string) || (c.name as string) || (c.title as string) || `Concept ${ci + 1}`;
+        const cDesc = (c.elevatorPitch as string) || (c.description as string) || (c.usp as string) || (c.valueProposition as string) || 'Core product feature';
         mappingResult.features.push({
           conceptIndex: ci,
           conceptName: cName,
@@ -188,6 +192,27 @@ export async function POST(req: Request) {
           nodeCategory: 'core',
           groupId: 'main',
         });
+      }
+    }
+
+    // Backfill empty fields from concept data (LLM sometimes omits featureName/description)
+    for (const f of mappingResult.features) {
+      if (f.nodeCategory === 'peripheral') continue;
+      const ci = f.conceptIndex ?? 0;
+      const concept = concepts[ci];
+      if (!concept) continue;
+
+      const cName = (concept.conceptName as string) || (concept.name as string) || (concept.title as string) || '';
+      const cDesc = (concept.elevatorPitch as string) || (concept.description as string) || (concept.usp as string) || (concept.valueProposition as string) || '';
+
+      if (!f.featureName) {
+        f.featureName = cName || `Concept ${ci + 1}`;
+      }
+      if (!f.featureDescription) {
+        f.featureDescription = cDesc;
+      }
+      if (!f.conceptName) {
+        f.conceptName = f.featureName;
       }
     }
 
@@ -218,11 +243,39 @@ export async function POST(req: Request) {
       || detectStrategicIntent(challengeContext, concepts as Array<Record<string, unknown>>);
     const strategicIntent = normalizeIntent(rawIntent);
 
+    // Build per-view state
+    const allNodeIds = positionedNodes.map((n) => n.id);
+    const effectiveGroups = (mappingResult.groups && mappingResult.groups.length > 0)
+      ? mappingResult.groups
+      : [{ id: 'main', label: 'Main', description: 'All features' }];
+
+    // Journey view positions from journey layout
+    const { positions: journeyPositions } = computeJourneyMapPositions(positionedNodes, mappingResult.stages);
+
+    // Sitemap view positions from sitemap layout
+    const { positions: sitemapPositions } = computeSitemapPositions(positionedNodes, effectiveGroups, edgesWithIds);
+
+    const journeyView: ViewState = {
+      nodeIds: [...allNodeIds],
+      positions: journeyPositions,
+      edges: [...edgesWithIds],
+    };
+
+    const sitemapView: SitemapViewState = {
+      nodeIds: [...allNodeIds],
+      positions: sitemapPositions,
+      edges: [...edgesWithIds],
+      groups: effectiveGroups,
+    };
+
     const state: JourneyMapperState = {
       nodes: positionedNodes,
       edges: edgesWithIds,
       stages: mappingResult.stages,
-      groups: mappingResult.groups || [],
+      groups: effectiveGroups,
+      journeyView,
+      sitemapView,
+      activeView: 'journey',
       challengeContext,
       personaName,
       conceptRelationship: mappingResult.conceptRelationship,
@@ -230,6 +283,7 @@ export async function POST(req: Request) {
       isApproved: false,
       isDirty: false,
       lastGeneratedAt: new Date().toISOString(),
+      _schemaVersion: 2,
     };
 
     // Derive title
@@ -260,8 +314,21 @@ export async function POST(req: Request) {
       buildPackId = inserted.id;
     }
 
+    // Build debug payload for Network tab inspection
+    const _debug = {
+      ...extractionDebug,
+      finalFeatureNames: mappingResult.features.map((f, i) => ({
+        index: i,
+        featureName: f.featureName,
+        conceptName: f.conceptName,
+        conceptIndex: f.conceptIndex,
+        nodeCategory: f.nodeCategory,
+      })),
+      usedLlm,
+    };
+
     return new Response(
-      JSON.stringify({ state, buildPackId, cached: false, usedLlm }),
+      JSON.stringify({ state, buildPackId, cached: false, usedLlm, _debug }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
@@ -348,53 +415,146 @@ function buildStagesFromCanvas(
   });
 }
 
+/** Count how many items in an array have a non-empty name-like field */
+function countNamedItems(items: Array<Record<string, unknown>>): number {
+  return items.filter((item) => {
+    const name = (item.conceptName as string) || (item.name as string) || (item.title as string) || '';
+    return name.trim().length > 0;
+  }).length;
+}
+
 /** Extract concept data from the concept artifact (handles single or multiple concepts) */
-function extractConcepts(conceptArtifact: Record<string, unknown>): Array<Record<string, unknown>> {
-  // 1. concepts[] — standard multi-concept format
-  if (Array.isArray(conceptArtifact.concepts) && conceptArtifact.concepts.length > 0) {
-    return conceptArtifact.concepts as Array<Record<string, unknown>>;
-  }
-  // 2. selectedConcepts[] — post-selection format
-  if (Array.isArray(conceptArtifact.selectedConcepts) && conceptArtifact.selectedConcepts.length > 0) {
-    return conceptArtifact.selectedConcepts as Array<Record<string, unknown>>;
-  }
-  // 3. cards[] — concept cards format (Step 9 canvas cards at top level)
-  if (Array.isArray(conceptArtifact.cards) && conceptArtifact.cards.length > 0) {
-    console.log('[journey-map] extractConcepts: found cards[] at top level');
-    return mapConceptCards(conceptArtifact.cards as Array<Record<string, unknown>>);
-  }
-  // 4. _canvas.conceptCards[] — Step 9 canvas artifact shape
+function extractConcepts(conceptArtifact: Record<string, unknown>): { concepts: Array<Record<string, unknown>>; _debug: Record<string, unknown> } {
+  const debug: Record<string, unknown> = { extractionPath: 'unknown', rawSources: {} };
+
+  // Gather candidate sources
   const canvas = conceptArtifact._canvas as Record<string, unknown> | undefined;
-  if (canvas && Array.isArray(canvas.conceptCards) && canvas.conceptCards.length > 0) {
-    console.log('[journey-map] extractConcepts: found _canvas.conceptCards[]', canvas.conceptCards.length, 'cards');
-    return mapConceptCards(canvas.conceptCards as Array<Record<string, unknown>>);
+  const canvasCards = (canvas && Array.isArray(canvas.conceptCards) && canvas.conceptCards.length > 0)
+    ? canvas.conceptCards as Array<Record<string, unknown>>
+    : null;
+  const topCards = (Array.isArray(conceptArtifact.cards) && conceptArtifact.cards.length > 0)
+    ? conceptArtifact.cards as Array<Record<string, unknown>>
+    : null;
+  const conceptsArr = (Array.isArray(conceptArtifact.concepts) && conceptArtifact.concepts.length > 0)
+    ? conceptArtifact.concepts as Array<Record<string, unknown>>
+    : null;
+  const selectedConcepts = (Array.isArray(conceptArtifact.selectedConcepts) && conceptArtifact.selectedConcepts.length > 0)
+    ? conceptArtifact.selectedConcepts as Array<Record<string, unknown>>
+    : null;
+
+  // Score each source by how many items have actual names
+  const sources: Array<{ key: string; items: Array<Record<string, unknown>>; namedCount: number }> = [];
+  if (canvasCards) sources.push({ key: '_canvas.conceptCards', items: canvasCards, namedCount: countNamedItems(canvasCards) });
+  if (topCards) sources.push({ key: 'cards', items: topCards, namedCount: countNamedItems(topCards) });
+  if (conceptsArr) sources.push({ key: 'concepts', items: conceptsArr, namedCount: countNamedItems(conceptsArr) });
+  if (selectedConcepts) sources.push({ key: 'selectedConcepts', items: selectedConcepts, namedCount: countNamedItems(selectedConcepts) });
+
+  debug.rawSources = sources.map((s) => ({ key: s.key, count: s.items.length, namedCount: s.namedCount }));
+
+  let primarySource: Array<Record<string, unknown>> | null = null;
+  let primaryKey = '';
+
+  if (sources.length > 0) {
+    // Pick source with most named items; prefer canvas cards when tied (richer data)
+    sources.sort((a, b) => {
+      if (b.namedCount !== a.namedCount) return b.namedCount - a.namedCount;
+      // Prefer canvas cards when tied
+      if (a.key === '_canvas.conceptCards') return -1;
+      if (b.key === '_canvas.conceptCards') return 1;
+      return 0;
+    });
+    const best = sources[0];
+    primarySource = best.items;
+    primaryKey = best.key;
+    console.log(`[journey-map] extractConcepts: selected "${best.key}" (${best.namedCount}/${best.items.length} named)`);
   }
-  // 5. concept (singular object)
-  if (conceptArtifact.concept && typeof conceptArtifact.concept === 'object' && !Array.isArray(conceptArtifact.concept)) {
-    return [conceptArtifact.concept as Record<string, unknown>];
-  }
-  // 6. Check for any array value that looks like concept objects (has name/title + description)
-  for (const key of Object.keys(conceptArtifact)) {
-    if (key.startsWith('_')) continue; // skip internal keys like _canvas
-    const val = conceptArtifact[key];
-    if (Array.isArray(val) && val.length > 0) {
-      const first = val[0] as Record<string, unknown>;
-      if (typeof first === 'object' && first !== null && (first.name || first.title || first.conceptName)) {
-        console.log(`[journey-map] extractConcepts: found concept-like array under key "${key}"`);
-        return val as Array<Record<string, unknown>>;
+
+  // Fallback paths if no array sources found
+  if (!primarySource) {
+    if (conceptArtifact.concept && typeof conceptArtifact.concept === 'object' && !Array.isArray(conceptArtifact.concept)) {
+      primarySource = [conceptArtifact.concept as Record<string, unknown>];
+      primaryKey = 'concept (singular)';
+    } else {
+      // Check for any array that looks concept-like
+      for (const key of Object.keys(conceptArtifact)) {
+        if (key.startsWith('_')) continue;
+        const val = conceptArtifact[key];
+        if (Array.isArray(val) && val.length > 0) {
+          const first = val[0] as Record<string, unknown>;
+          if (typeof first === 'object' && first !== null && (first.name || first.title || first.conceptName)) {
+            primarySource = val as Array<Record<string, unknown>>;
+            primaryKey = `dynamic key "${key}"`;
+            break;
+          }
+        }
       }
     }
   }
-  // 7. Final fallback: wrap entire artifact, but warn
-  console.warn('[journey-map] extractConcepts: no recognized concept shape, wrapping entire artifact');
-  return [conceptArtifact];
+
+  if (!primarySource) {
+    console.warn('[journey-map] extractConcepts: no recognized concept shape, wrapping entire artifact');
+    primarySource = [conceptArtifact];
+    primaryKey = 'entire artifact (fallback)';
+  }
+
+  debug.extractionPath = primaryKey;
+
+  // Normalize through mapConceptCards
+  const result = mapConceptCards(primarySource);
+
+  // Cross-reference enrichment: fill gaps from ALL other sources
+  const allOtherItems = sources.filter((s) => s.key !== primaryKey).flatMap((s) => s.items);
+  if (allOtherItems.length > 0) {
+    for (let i = 0; i < result.length; i++) {
+      const concept = result[i];
+      const name = concept.name as string;
+      const hasName = name && name !== 'Concept' && name.trim().length > 0;
+      const hasDesc = !!((concept.elevatorPitch as string)?.trim());
+
+      if (hasName && hasDesc) continue; // already good
+
+      // Try to find matching item by index from other sources
+      const matchByIndex = allOtherItems.find((other) => {
+        const otherIdx = (other.cardIndex as number) ?? (other.conceptIndex as number) ?? -1;
+        const thisIdx = (concept.cardIndex as number) ?? (concept.conceptIndex as number) ?? i;
+        return otherIdx === thisIdx;
+      }) || allOtherItems[i]; // fall back to positional match
+
+      if (!matchByIndex) continue;
+
+      if (!hasName) {
+        const otherName = (matchByIndex.name as string) || (matchByIndex.conceptName as string) || (matchByIndex.title as string) || (matchByIndex.ideaSource as string) || '';
+        if (otherName.trim()) {
+          concept.name = otherName;
+          console.log(`[journey-map] enriched concept ${i} name from other source: "${otherName}"`);
+        }
+      }
+      if (!hasDesc) {
+        const otherDesc = (matchByIndex.elevatorPitch as string) || (matchByIndex.description as string) || (matchByIndex.pitch as string) || '';
+        if (otherDesc.trim()) {
+          concept.elevatorPitch = otherDesc;
+          console.log(`[journey-map] enriched concept ${i} elevatorPitch from other source`);
+        }
+      }
+    }
+  }
+
+  debug.postNormalization = result.map((c, i) => ({
+    index: i,
+    name: c.name,
+    conceptName: c.conceptName,
+    ideaSource: c.ideaSource,
+    elevatorPitch: (c.elevatorPitch as string)?.slice(0, 80),
+  }));
+
+  return { concepts: result, _debug: debug };
 }
 
 /** Map raw concept card objects to a normalized shape with expected field names */
 function mapConceptCards(cards: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
   return cards.map((card) => ({
     ...card,
-    name: card.title || card.name || card.conceptName || 'Concept',
+    name: card.conceptName || card.name || card.title || card.ideaSource || 'Concept',
     description: card.description || card.summary || '',
     usp: card.usp || card.valueProposition || '',
     elevatorPitch: card.elevatorPitch || card.pitch || card.description || '',

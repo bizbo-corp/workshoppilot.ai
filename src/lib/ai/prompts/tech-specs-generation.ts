@@ -1,18 +1,40 @@
 import type { AllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifacts';
 import { serializeArtifactsSafe } from './prd-generation';
+import type { FeaturePrioritizationState } from '@/lib/feature-prioritization/types';
+import type { TechSpecsPreferences } from '@/lib/tech-specs-wizard/types';
+import { formatPreferencesForPrompt } from '@/lib/tech-specs-wizard/format-preferences';
 
 /**
  * Build the Technical Specifications generation prompt (Markdown output).
  * Produces a comprehensive Technical Specification document derived from all 10 workshop steps.
  */
-export function buildTechSpecsPrompt(artifacts: AllWorkshopArtifacts): string {
+export function buildTechSpecsPrompt(artifacts: AllWorkshopArtifacts, featurePrioritization?: FeaturePrioritizationState | null, preferences?: TechSpecsPreferences | null): string {
   const workshopData = serializeArtifactsSafe(artifacts as unknown as Record<string, unknown>);
+  const techReqSection = preferences ? (formatPreferencesForPrompt(preferences) ?? '') : '';
+
+  const fpSection = featurePrioritization && featurePrioritization.features.length > 0
+    ? `\n<feature_prioritization>
+${JSON.stringify(featurePrioritization.features.map((f, i) => ({
+  rank: i + 1,
+  name: f.name,
+  description: f.description,
+  category: f.category,
+  priority: f.priority,
+  subfeatures: f.subfeatures.map((sf) => ({ name: sf.name, description: sf.description })),
+})), null, 2)}
+</feature_prioritization>
+
+IMPORTANT: The feature_prioritization section above is the AUTHORITATIVE source for feature names, ordering, and priority. Use these exact feature names when defining functional requirements, data models, API endpoints, and UI specifications. Higher-ranked features should receive more detailed technical specification.
+`
+    : '';
 
   return `You are a senior software architect with expertise in translating product design thinking into actionable technical specifications. Your task is to produce a comprehensive Technical Specifications document in Markdown format, derived from the design thinking workshop outputs below.
 
 <workshop_data>
 ${workshopData}
 </workshop_data>
+${fpSection}
+${techReqSection}
 
 INSTRUCTIONS:
 - Derive all technical requirements from the workshop data — not from generic assumptions
@@ -95,14 +117,33 @@ CRITICAL RULES:
  * Build the Technical Specifications generation prompt (structured JSON output).
  * Same content as buildTechSpecsPrompt but formatted as machine-readable JSON.
  */
-export function buildTechSpecsJsonPrompt(artifacts: AllWorkshopArtifacts): string {
+export function buildTechSpecsJsonPrompt(artifacts: AllWorkshopArtifacts, featurePrioritization?: FeaturePrioritizationState | null, preferences?: TechSpecsPreferences | null): string {
   const workshopData = serializeArtifactsSafe(artifacts as unknown as Record<string, unknown>);
+  const techReqSection = preferences ? (formatPreferencesForPrompt(preferences) ?? '') : '';
+
+  const fpSection = featurePrioritization && featurePrioritization.features.length > 0
+    ? `\n<feature_prioritization>
+${JSON.stringify(featurePrioritization.features.map((f, i) => ({
+  rank: i + 1,
+  name: f.name,
+  description: f.description,
+  category: f.category,
+  priority: f.priority,
+  subfeatures: f.subfeatures.map((sf) => ({ name: sf.name, description: sf.description })),
+})), null, 2)}
+</feature_prioritization>
+
+IMPORTANT: Use the feature_prioritization data above as the AUTHORITATIVE source for functional requirements. Map each prioritized feature to FR entries, data model entities, and API endpoints.
+`
+    : '';
 
   return `You are a senior software architect. Transform the design thinking workshop outputs below into structured Technical Specifications in JSON format.
 
 <workshop_data>
 ${workshopData}
 </workshop_data>
+${fpSection}
+${techReqSection}
 
 Return ONLY valid JSON matching this exact schema — no markdown fences, no commentary, no preamble:
 

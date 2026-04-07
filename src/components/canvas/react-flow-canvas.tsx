@@ -1126,7 +1126,6 @@ function ReactFlowCanvasInner({
         extent: stickyNote.parentId ? ("parent" as const) : undefined,
         zIndex: nodeZIndicesRef.current[stickyNote.id] || 20,
         draggable: !isPreview,
-        dragHandle: '.card-drag-handle',
         selectable: !isPreview,
         selected: selectedNodeIds.includes(stickyNote.id),
         data: {

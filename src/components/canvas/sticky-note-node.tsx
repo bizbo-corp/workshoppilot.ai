@@ -182,7 +182,6 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
         // Smooth shadow transition on hover — no transform to avoid flicker
         !dragging && 'transition-shadow duration-150',
         !dragging && !selected && 'hover:shadow-lg',
-        'card-drag-handle cursor-default',
         'w-full h-full flex flex-col overflow-hidden',
         selected && !dragging && 'ring-2 ring-selection ring-offset-1',
         data.isEditing && 'ring-2 ring-olive-500 ring-offset-1',

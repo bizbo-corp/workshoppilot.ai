@@ -1,5 +1,6 @@
 import type { JourneyMapperState, JourneyMapperNode, JourneyStageColumn, NavigationGroup, UiType } from '@/lib/journey-mapper/types';
 import { normalizeIntent } from '@/lib/journey-mapper/types';
+import { getNodesForView } from '@/lib/journey-mapper/view-selectors';
 
 const UI_TYPE_COMPONENT_HINTS: Record<UiType, string> = {
   dashboard: 'dashboard layout with sidebar navigation, key metrics cards, and data visualizations',
@@ -18,23 +19,38 @@ const UI_TYPE_COMPONENT_HINTS: Record<UiType, string> = {
 
 /**
  * Build a v0-optimized prompt from the journey mapper state.
+ * Uses journey view's curated subset of nodes for the prompt,
+ * and sitemap groups for navigation structure.
  * Dispatches to intent-specific builders using normalized intent.
  */
 export function buildJourneyAwareV0Prompt(state: JourneyMapperState): string {
+  // Resolve journey view nodes (curated subset) and sitemap groups for navigation
+  const journeyNodes = state.journeyView
+    ? getNodesForView(state, 'journey')
+    : state.nodes;
+  const navGroups = state.sitemapView?.groups ?? state.groups;
+
+  // Build a derived state with journey view nodes and sitemap groups
+  const derived: JourneyMapperState = {
+    ...state,
+    nodes: journeyNodes,
+    groups: navGroups,
+  };
+
   const normalized = normalizeIntent(state.strategicIntent);
 
   switch (normalized) {
     case 'marketing-site':
-      return buildBrochureV0Prompt(state);
+      return buildBrochureV0Prompt(derived);
     case 'admin-portal':
-      return buildAdminPortalV0Prompt(state);
+      return buildAdminPortalV0Prompt(derived);
     case 'dashboard':
-      return buildDashboardV0Prompt(state);
+      return buildDashboardV0Prompt(derived);
     case 'tool':
-      return buildToolV0Prompt(state);
+      return buildToolV0Prompt(derived);
     case 'web-app':
     default:
-      return buildAppV0Prompt(state);
+      return buildAppV0Prompt(derived);
   }
 }
 

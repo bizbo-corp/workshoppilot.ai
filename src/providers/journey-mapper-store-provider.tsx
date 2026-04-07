@@ -8,6 +8,7 @@ import {
   type JourneyMapperStoreApi,
 } from '@/stores/journey-mapper-store';
 import type { JourneyMapperState } from '@/lib/journey-mapper/types';
+import { isLegacyState, migrateToViewState } from '@/lib/journey-mapper/migrate-state';
 
 const JourneyMapperStoreContext = createContext<JourneyMapperStoreApi | null>(null);
 
@@ -20,7 +21,10 @@ export function JourneyMapperStoreProvider({
 }) {
   const storeRef = useRef<JourneyMapperStoreApi | null>(null);
   if (!storeRef.current) {
-    storeRef.current = createJourneyMapperStore(initialState);
+    const migrated = initialState && isLegacyState(initialState as Record<string, unknown>)
+      ? migrateToViewState(initialState as JourneyMapperState)
+      : initialState;
+    storeRef.current = createJourneyMapperStore(migrated);
   }
 
   return (

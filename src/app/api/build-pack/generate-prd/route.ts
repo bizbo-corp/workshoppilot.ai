@@ -17,13 +17,19 @@ import { eq, and, like } from 'drizzle-orm';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
 import { loadWorkshopArtifacts, validateRequiredArtifacts, loadAllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifacts';
 import { buildPrdGenerationPrompt, buildV0SystemPrompt, buildFullPrdPrompt, buildFullPrdJsonPrompt } from '@/lib/ai/prompts/prd-generation';
+import type { FeaturePrioritizationState } from '@/lib/feature-prioritization/types';
+import type { TechSpecsPreferences } from '@/lib/tech-specs-wizard/types';
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { workshopId, type } = body;
+    const { workshopId, type, force } = body as {
+      workshopId: string;
+      type?: string;
+      force?: boolean;
+    };
 
     if (!workshopId) {
       return new Response(
@@ -57,7 +63,7 @@ export async function POST(req: Request) {
 
     // Route: full PRD generation (new Build Pack path)
     if (type === 'full-prd') {
-      return await generateFullPrd(workshopId);
+      return await generateFullPrd(workshopId, force);
     }
 
     // Default: V0 prototype prompt (existing behavior, backward compatible)
@@ -73,9 +79,10 @@ export async function POST(req: Request) {
 
 /**
  * Generate full PRD as both Markdown and JSON, stored in build_packs table.
- * Checks cache first — subsequent calls return stored content without re-invoking Gemini.
+ * Checks cache first — subsequent calls return stored content unless force=true.
+ * Loads feature prioritization, tech specs, and tech preferences as context.
  */
-async function generateFullPrd(workshopId: string): Promise<Response> {
+async function generateFullPrd(workshopId: string, force?: boolean): Promise<Response> {
   // Check cache: look for existing PRD rows (both markdown and json)
   const existingRows = await db
     .select()
@@ -85,7 +92,7 @@ async function generateFullPrd(workshopId: string): Promise<Response> {
   const cachedMarkdown = existingRows.find((r) => r.formatType === 'markdown' && r.content);
   const cachedJson = existingRows.find((r) => r.formatType === 'json' && r.content);
 
-  if (cachedMarkdown && cachedJson) {
+  if (cachedMarkdown && cachedJson && !force) {
     let parsedJson: unknown;
     try {
       parsedJson = JSON.parse(cachedJson.content!);
@@ -106,6 +113,43 @@ async function generateFullPrd(workshopId: string): Promise<Response> {
   // Load all 10 step artifacts
   const artifacts = await loadAllWorkshopArtifacts(workshopId);
 
+  // Load feature prioritization (if exists)
+  let featurePrioritization: FeaturePrioritizationState | null = null;
+  const fpRows = await db
+    .select()
+    .from(buildPacks)
+    .where(and(eq(buildPacks.workshopId, workshopId), like(buildPacks.title, 'Feature Prioritization:%')));
+  const fpJson = fpRows.find((r) => r.formatType === 'json' && r.content);
+  if (fpJson) {
+    try {
+      featurePrioritization = JSON.parse(fpJson.content!) as FeaturePrioritizationState;
+    } catch { /* ignore invalid data */ }
+  }
+
+  // Load generated tech specs (if exists)
+  let techSpecsMarkdown: string | null = null;
+  const tsRows = await db
+    .select()
+    .from(buildPacks)
+    .where(and(eq(buildPacks.workshopId, workshopId), like(buildPacks.title, 'Tech Specs:%')));
+  const tsMd = tsRows.find((r) => r.formatType === 'markdown' && r.content);
+  if (tsMd) {
+    techSpecsMarkdown = tsMd.content;
+  }
+
+  // Load tech specs preferences (if exists)
+  let techSpecsPreferences: TechSpecsPreferences | null = null;
+  const tpRows = await db
+    .select()
+    .from(buildPacks)
+    .where(and(eq(buildPacks.workshopId, workshopId), like(buildPacks.title, 'Tech Specs Preferences:%')));
+  const tpJson = tpRows.find((r) => r.formatType === 'json' && r.content);
+  if (tpJson) {
+    try {
+      techSpecsPreferences = JSON.parse(tpJson.content!) as TechSpecsPreferences;
+    } catch { /* ignore invalid data */ }
+  }
+
   // Derive title from concept name
   const concept = artifacts.concept as Record<string, unknown> | null;
   const conceptName = (concept?.name as string) || (concept?.conceptName as string) || 'Product';
@@ -116,12 +160,12 @@ async function generateFullPrd(workshopId: string): Promise<Response> {
     generateTextWithRetry({
       model: google('gemini-2.0-flash'),
       temperature: 0.3,
-      prompt: buildFullPrdPrompt(artifacts),
+      prompt: buildFullPrdPrompt(artifacts, featurePrioritization, techSpecsMarkdown, techSpecsPreferences),
     }),
     generateTextWithRetry({
       model: google('gemini-2.0-flash'),
       temperature: 0.2,
-      prompt: buildFullPrdJsonPrompt(artifacts),
+      prompt: buildFullPrdJsonPrompt(artifacts, featurePrioritization, techSpecsMarkdown, techSpecsPreferences),
     }),
   ]);
 

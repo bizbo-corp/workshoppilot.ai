@@ -130,6 +130,9 @@ function JourneyMapInner({
         edges: [],
         stages: [],
         groups: [],
+        journeyView: { nodeIds: [], positions: {}, edges: [] },
+        sitemapView: { nodeIds: [], positions: {}, edges: [], groups: [] },
+        activeView: 'journey',
         challengeContext: '',
         personaName: '',
         conceptRelationship: 'combined',
@@ -138,6 +141,7 @@ function JourneyMapInner({
         isApproved: false,
         isDirty: false,
         lastGeneratedAt: undefined,
+        _schemaVersion: 2,
       });
       toast.success('Journey map reset');
     } catch (err) {

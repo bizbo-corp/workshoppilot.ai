@@ -60,7 +60,13 @@ export function SignUpModal({
             appearance={{
               elements: {
                 rootBox: 'w-full',
-                card: 'shadow-none border-0',
+                cardBox: { boxShadow: 'none' },
+                card: { boxShadow: 'none', border: 'none' },
+                formButtonPrimary: {
+                  backgroundColor: 'var(--primary)',
+                  color: 'var(--primary-foreground)',
+                  boxShadow: 'none',
+                },
               },
             }}
             fallbackRedirectUrl={redirectUrl}

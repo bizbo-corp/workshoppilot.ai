@@ -7,6 +7,7 @@ import { sessions, buildPacks, stepArtifacts, workshopSteps } from '@/db/schema'
 import { COOKIE_NAME, verifyGuestCookie } from '@/lib/auth/guest-cookie';
 import { JourneyMapContent } from './journey-map-content';
 import type { JourneyMapperState } from '@/lib/journey-mapper/types';
+import { isLegacyState, migrateToViewState } from '@/lib/journey-mapper/migrate-state';
 
 interface JourneyMapPageProps {
   params: Promise<{ sessionId: string }>;
@@ -48,7 +49,10 @@ export default async function JourneyMapPage({ params }: JourneyMapPageProps) {
 
   if (jsonRow) {
     try {
-      savedState = JSON.parse(jsonRow.content!) as JourneyMapperState;
+      const parsed = JSON.parse(jsonRow.content!);
+      savedState = isLegacyState(parsed)
+        ? migrateToViewState(parsed as JourneyMapperState)
+        : (parsed as JourneyMapperState);
     } catch {
       // Invalid JSON, treat as no saved state
     }

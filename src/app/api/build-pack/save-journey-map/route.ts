@@ -66,7 +66,7 @@ export async function POST(req: Request) {
       .where(and(eq(buildPacks.workshopId, workshopId), like(buildPacks.title, 'Journey Map:%')));
 
     const existing = existingRows.find((r) => r.formatType === 'json');
-    const statePayload: Record<string, unknown> = { ...state, isDirty: false };
+    const statePayload: Record<string, unknown> = { ...state, isDirty: false, _schemaVersion: 2 };
     if (v0Prompt) {
       statePayload.prompt = v0Prompt;
     }

@@ -8,7 +8,7 @@ import {
   FileText,
   Code,
   Presentation,
-  Users,
+  ListOrdered,
   Map as MapIcon,
   Rocket,
   ArrowRight,
@@ -89,12 +89,13 @@ const SECTIONS: Section[] = [
         generatable: true,
       },
       {
-        type: 'user-stories',
-        title: 'User Stories',
+        type: 'feature-prioritization',
+        title: 'Feature Prioritization',
         description:
-          'Prioritized user stories with acceptance criteria, mapped to personas and journey stages from your research.',
-        icon: <Users className="h-5 w-5" />,
-        generatable: false,
+          'AI-generated prioritized feature list with drag-and-drop reordering, derived from your journey map and concepts.',
+        icon: <ListOrdered className="h-5 w-5" />,
+        generatable: true,
+        navigateTo: 'feature-prioritization',
       },
     ],
   },
@@ -132,20 +133,22 @@ const SECTIONS: Section[] = [
     iconTextClass: 'text-emerald-500',
     cards: [
       {
-        type: 'prd',
-        title: 'Product Requirements Document',
-        description:
-          'Complete PRD with objectives, target users, core features, success metrics, and technical constraints — ready for development.',
-        icon: <FileText className="h-5 w-5" />,
-        generatable: true,
-      },
-      {
         type: 'tech-specs',
         title: 'Technical Specifications',
         description:
           'Architecture overview, API contracts, data models, and integration requirements derived from your concept.',
         icon: <Code className="h-5 w-5" />,
         generatable: true,
+        navigateTo: 'tech-specs',
+      },
+      {
+        type: 'prd',
+        title: 'Product Requirements Document',
+        description:
+          'The definitive handoff document — combines feature prioritization, technical specifications, and all workshop insights into a complete PRD for coding agents.',
+        icon: <FileText className="h-5 w-5" />,
+        generatable: true,
+        navigateTo: 'prd',
       },
     ],
   },
@@ -160,9 +163,10 @@ export function OutputsContent({
 }: OutputsContentProps) {
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [prdStatus, setPrdStatus] = useState<GenerationStatus>('idle');
-  const [techSpecsStatus, setTechSpecsStatus] = useState<GenerationStatus>('idle');
+  const prdStatus: GenerationStatus = 'idle';
+  const techSpecsStatus: GenerationStatus = 'idle';
   const [journeyMapStatus, setJourneyMapStatus] = useState<GenerationStatus>('idle');
+  const [featurePrioritizationStatus, setFeaturePrioritizationStatus] = useState<GenerationStatus>('idle');
   const [presentationStatus, setPresentationStatus] = useState<GenerationStatus>('idle');
   const [presentationGenerated, setPresentationGenerated] = useState(
     () => deliverables.some((d) => d.type === 'stakeholder-ppt')
@@ -195,77 +199,8 @@ export function OutputsContent({
     ? findDeliverable(selectedType)
     : null;
 
-  const handleGeneratePrd = useCallback(async () => {
-    setPrdStatus('loading');
-    try {
-      const res = await fetch('/api/build-pack/generate-prd', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workshopId, type: 'full-prd' }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'PRD generation failed');
-      }
-      const data = await res.json();
-      // Validate that we actually got content back
-      if (!data.markdown && !data.json) {
-        throw new Error('PRD generation produced no content — please try again');
-      }
-      // Cache locally so card updates immediately (no waiting for router.refresh)
-      const formats: DeliverableFormat[] = [];
-      if (data.markdown) formats.push({ id: 'local-prd-md', formatType: 'markdown', content: data.markdown });
-      if (data.json) formats.push({ id: 'local-prd-json', formatType: 'json', content: typeof data.json === 'string' ? data.json : JSON.stringify(data.json) });
-      setLocalDeliverables(prev => {
-        const next = new Map(prev);
-        next.set('prd', formats);
-        return next;
-      });
-      setPrdStatus('done');
-      toast.success('PRD generated successfully');
-      // Auto-navigate to detail view so user can immediately see the PRD
-      setSelectedType('prd');
-      router.refresh();
-    } catch (err) {
-      setPrdStatus('error');
-      toast.error(err instanceof Error ? err.message : 'PRD generation failed');
-    }
-  }, [workshopId, router]);
-
-  const handleGenerateTechSpecs = useCallback(async () => {
-    setTechSpecsStatus('loading');
-    try {
-      const res = await fetch('/api/build-pack/generate-tech-specs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workshopId }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Tech Specs generation failed');
-      }
-      const data = await res.json();
-      if (!data.markdown && !data.json) {
-        throw new Error('Tech Specs generation produced no content — please try again');
-      }
-      // Cache locally so card updates immediately
-      const formats: DeliverableFormat[] = [];
-      if (data.markdown) formats.push({ id: 'local-ts-md', formatType: 'markdown', content: data.markdown });
-      if (data.json) formats.push({ id: 'local-ts-json', formatType: 'json', content: typeof data.json === 'string' ? data.json : JSON.stringify(data.json) });
-      setLocalDeliverables(prev => {
-        const next = new Map(prev);
-        next.set('tech-specs', formats);
-        return next;
-      });
-      setTechSpecsStatus('done');
-      toast.success('Tech Specs generated successfully');
-      setSelectedType('tech-specs');
-      router.refresh();
-    } catch (err) {
-      setTechSpecsStatus('error');
-      toast.error(err instanceof Error ? err.message : 'Tech Specs generation failed');
-    }
-  }, [workshopId, router]);
+  // PRD generation is now handled by the dedicated page at /outputs/prd
+  // Tech specs generation is now handled by the wizard page at /outputs/tech-specs
 
   const handleGenerateJourneyMap = useCallback(async () => {
     setJourneyMapStatus('loading');
@@ -285,6 +220,27 @@ export function OutputsContent({
     } catch (err) {
       setJourneyMapStatus('error');
       toast.error(err instanceof Error ? err.message : 'Journey map generation failed');
+    }
+  }, [workshopId, sessionId, router]);
+
+  const handleGenerateFeaturePrioritization = useCallback(async () => {
+    setFeaturePrioritizationStatus('loading');
+    try {
+      const res = await fetch('/api/build-pack/generate-feature-prioritization', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workshopId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Feature prioritization generation failed');
+      }
+      setFeaturePrioritizationStatus('done');
+      toast.success('Feature prioritization generated');
+      router.push(`/workshop/${sessionId}/outputs/feature-prioritization`);
+    } catch (err) {
+      setFeaturePrioritizationStatus('error');
+      toast.error(err instanceof Error ? err.message : 'Feature prioritization generation failed');
     }
   }, [workshopId, sessionId, router]);
 
@@ -337,22 +293,24 @@ export function OutputsContent({
     if (type === 'prd') return prdStatus;
     if (type === 'tech-specs') return techSpecsStatus;
     if (type === 'journey-map') return journeyMapStatus;
+    if (type === 'feature-prioritization') return featurePrioritizationStatus;
     if (type === 'stakeholder-ppt') return presentationStatus;
     return 'idle';
   }
 
   function getGenerateHandler(type: string): (() => void) | undefined {
-    if (type === 'prd') return handleGeneratePrd;
-    if (type === 'tech-specs') return handleGenerateTechSpecs;
+    if (type === 'prd') return () => router.push(`/workshop/${sessionId}/outputs/prd`);
+    if (type === 'tech-specs') return () => router.push(`/workshop/${sessionId}/outputs/tech-specs`);
     if (type === 'journey-map') return handleGenerateJourneyMap;
+    if (type === 'feature-prioritization') return handleGenerateFeaturePrioritization;
     if (type === 'stakeholder-ppt') return () => handleGeneratePresentation(false);
     return undefined;
   }
 
   function handleCardClick(card: CardDef) {
     if (card.navigateTo) {
-      if (card.navigateTo === 'journey-map') {
-        router.push(`/workshop/${sessionId}/outputs/journey-map`);
+      if (card.navigateTo === 'journey-map' || card.navigateTo === 'feature-prioritization' || card.navigateTo === 'tech-specs' || card.navigateTo === 'prd') {
+        router.push(`/workshop/${sessionId}/outputs/${card.navigateTo}`);
       } else {
         router.push(`/workshop/${sessionId}/${card.navigateTo}`);
       }
@@ -569,7 +527,9 @@ export function OutputsContent({
                                 handleCardClick(card);
                               }}
                             >
-                              View Details
+                              {card.navigateTo
+                                ? `View ${card.type === 'prd' ? 'PRD' : card.type === 'tech-specs' ? 'Tech Specs' : card.type === 'journey-map' ? 'Journey Map' : card.type === 'feature-prioritization' ? 'Features' : 'Details'}`
+                                : 'View Details'}
                               <ArrowRight className="h-4 w-4" />
                             </Button>
                           </CardFooter>
@@ -613,9 +573,9 @@ export function OutputsContent({
                                   {card.type === 'stakeholder-ppt' && presentationProgress ? presentationProgress : 'Generating...'}
                                 </>
                               ) : status === 'error' ? (
-                                `Retry ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : card.type === 'stakeholder-ppt' ? 'Presentation' : 'Tech Specs'}`
+                                `Retry ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : card.type === 'feature-prioritization' ? 'Features' : card.type === 'stakeholder-ppt' ? 'Presentation' : 'Tech Specs'}`
                               ) : (
-                                `Generate ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : card.type === 'stakeholder-ppt' ? 'Presentation' : 'Tech Specs'}`
+                                `Generate ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : card.type === 'feature-prioritization' ? 'Features' : card.type === 'stakeholder-ppt' ? 'Presentation' : 'Tech Specs'}`
                               )}
                             </Button>
                           )}

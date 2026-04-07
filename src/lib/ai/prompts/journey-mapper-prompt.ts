@@ -3,6 +3,9 @@ import type { AllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifa
 /**
  * Build the Gemini prompt for mapping Step 9 concepts onto Step 6 journey stages.
  * Receives artifacts + raw canvas data for the actual journey template.
+ *
+ * Philosophy: Each concept card from Step 9 IS a core screen/feature.
+ * The LLM designs the app shell around them — it does NOT invent sub-features.
  */
 export function buildJourneyMapperPrompt(
   artifacts: AllWorkshopArtifacts,
@@ -48,83 +51,67 @@ INSTRUCTIONS:
 
 2. ANALYZE CONCEPT RELATIONSHIP: If multiple concepts exist, determine:
    - "combined": concepts merge into a single cohesive product
-   - "separate-sections": concepts become different sections/modules
+   - "separate-sections": concepts become different sections/modules within one app
    - "alternative": concepts are alternative approaches (pick best features from each)
 
-3. EXTRACT FEATURES/SECTIONS based on intent:
+3. MAP CONCEPTS TO CORE NODES — CRITICAL RULES:
 
-   FOR "marketing-site" — CONCEPT-DRIVEN SECTION MAPPING (CRITICAL):
-   Each concept's data maps to specific site sections. You MUST use concept-specific names, NOT generic ones:
+   ★ Each concept card from Step 9 becomes EXACTLY 1 core node. Do NOT invent features that aren't on the concept cards. ★
 
-   a) ELEVATOR PITCH → Hero headline + subheadline
-      - Primary concept (index 0) dominates the Hero section
-      - Use the actual elevator pitch text as the basis for headline copy
-      - Example: "Three Steps to Creativity" → Hero: "Unlock Your Creative Potential in Three Steps"
+   IMPORTANT: In the Step 9 data, concept cards are typically stored in _canvas.conceptCards[]. Each card's name is in the "conceptName" field (NOT "name" or "title"). Use the "conceptName" value as the node's featureName.
 
+   For each concept:
+   - "featureName" = the concept card's "conceptName" value (e.g., "Message to Metaphor Digger")
+   - "featureDescription" = the concept card's "elevatorPitch" or description
+   - "conceptName" = same as featureName for core nodes
+   - "nodeCategory" = "core"
+   - "priority" = "must-have"
+   - Map each concept to whichever journey stage from Step 6 best fits its purpose
+
+   FOR "marketing-site" — CONCEPT-DRIVEN SECTION MAPPING:
+   Each concept's data maps to specific site sections. Use concept-specific names, NOT generic ones:
+   a) ELEVATOR PITCH → Hero headline + subheadline (primary concept dominates Hero)
    b) USP → "How [Concept Name] Works" 3-step breakdown
-      - Each concept with a USP gets its own "How It Works" section
-      - Break the USP into 3 digestible steps with icons
-      - Example: "Conversion Catalyst" → "How Conversion Catalyst Works" section
-
    c) SWOT STRENGTHS → Benefit cards (rewrite to marketing language)
-      - Each concept's strengths become "Why [Concept Name]" benefit grids
-      - Rewrite technical strengths into user-facing benefits
-      - Example: strengths ["Fast processing", "Scalable"] → "Lightning Fast Results", "Grows With You"
-
    d) SWOT OPPORTUNITIES → Social proof themes
-      - Opportunities suggest what testimonials/proof should emphasize
-      - Create social proof sections themed around opportunity areas
-
    e) SWOT THREATS → FAQ questions
-      - Each threat becomes an objection-handling FAQ question
-      - Reframe threats as questions visitors might ask, then answer reassuringly
-
    f) Multiple concepts each contribute sections to the CONSIDERATION stage
-      - Primary concept also owns the Hero (Awareness) and Final CTA (Purchase)
 
-   FOR "admin-portal":
-   - Extract CRUD operations from concept features
-   - Map to admin workflow: data tables, forms, detail views, settings panels
-   - Use uiTypes: "table", "form", "detail-view", "settings", "modal"
+   FOR other intents (web-app, admin-portal, dashboard, tool):
+   - Each concept = 1 core screen representing that concept's primary functionality
+   - Do NOT decompose concepts into sub-features
 
-   FOR "dashboard":
-   - Extract metrics and KPIs from concept data
-   - Map to analytics workflow: metric cards, charts, filters, drill-downs
-   - Use uiTypes: "dashboard", "detail-view", "table", "modal"
+4. ADD DASHBOARD / HOME ENTRY NODE:
+   - If 2 or more concepts exist, add 1 "Dashboard" or "Home" node as the app entry point
+   - This node links to all concept screens and serves as the navigation hub
+   - "nodeCategory" = "core", "priority" = "must-have"
+   - Place it in the earliest journey stage
 
-   FOR "tool":
-   - Extract input/output flows from concept features
-   - Map to tool workflow: input forms, processing views, result displays, export options
-   - Use uiTypes: "form", "detail-view", "wizard", "modal"
-
-   FOR "web-app":
-   - Extract features from USP, elevator pitch, and SWOT strengths
-   - Map to journey stages from Step 6 data
-   - Use any appropriate uiType based on the feature's nature
-
-4. For each feature/section determine:
+5. For each feature/section determine:
    - Which journey stage it best addresses (grounded in that stage's barriers/opportunities)
    - A uiType: "dashboard" | "landing-page" | "form" | "table" | "detail-view" | "wizard" | "modal" | "settings"
    - A uiPatternSuggestion: specific UI pattern description
    - Which pain point it addresses from the journey barriers
-   - Priority: "must-have" (core value / dip points), "should-have" (important), "nice-to-have"
+   - Priority: "must-have" (core concepts), "should-have" (important peripherals), "nice-to-have" (optional)
 
-5. CREATE FLOW EDGES: Define navigation connections between features:
-   - Primary flows (main user path through stages)
-   - Secondary flows (alternative paths)
-   - Error flows (recovery/support paths, especially at dip points)
+6. CREATE FLOW EDGES — HAPPY PATH ONLY:
+   - Primary flows: the main user path through stages (Dashboard → concept screens)
+   - Secondary flows: alternative navigation paths between concept screens
+   - Do NOT create error flow edges
 
-6. GENERATE NAVIGATION GROUPS: Define logical navigation groups for the app type.
+7. GENERATE NAVIGATION GROUPS: Define logical navigation groups for the app type.
    Each group represents a section of the app's navigation (e.g., main app, auth, settings, support).
    Every feature MUST belong to a group via groupId.
    Groups should include at minimum: a "main" group for core features, plus groups for peripheral services.
 
-7. ADD PERIPHERAL SERVICES: Based on the strategic intent, add supporting screens that every real app needs:
-   - For web-app: Auth (login/signup), Onboarding, Profile/Settings, Help, Error pages. Conditionally: Search (if >10 features), Billing (if SaaS), Notifications (if collaborative).
-   - For admin-portal: Auth (SSO), User Management, Audit Log, Settings, Error pages. Conditionally: Import/Export, Notifications.
-   - For dashboard: Auth, Profile/Preferences, Export Center, Error states. Conditionally: Notifications.
-   - For tool: Error handling, Help/FAQ. Conditionally: Auth (if save/share), Settings (if configurable).
-   - For marketing-site: Header Nav, Footer, 404, Privacy. Conditionally: Contact Form, Newsletter, Checkout.
+8. ADD PERIPHERAL SERVICES (optional nice-to-have screens):
+   Based on the strategic intent, optionally add supporting screens:
+   - Auth (Login/Sign Up) — "should-have"
+   - Onboarding Flow — "nice-to-have"
+   - Profile & Settings — "nice-to-have"
+   - Help & Support — "nice-to-have"
+   - Do NOT add error pages, error states, or error handling screens
+   - Do NOT add irrelevant peripheral services (e.g., no checkout for a dashboard, no billing for a free tool)
 
    Mark peripheral services with "nodeCategory": "peripheral". Core concept features use "nodeCategory": "core".
 
@@ -157,7 +144,7 @@ OUTPUT FORMAT - Return ONLY valid JSON matching this exact schema:
       "featureName": "string",
       "featureDescription": "string",
       "stageId": "string (must match a stage id)",
-      "uiType": "dashboard" | "landing-page" | "form" | "table" | "detail-view" | "wizard" | "modal" | "settings" | "auth" | "onboarding" | "search" | "error",
+      "uiType": "dashboard" | "landing-page" | "form" | "table" | "detail-view" | "wizard" | "modal" | "settings" | "auth" | "onboarding" | "search",
       "uiPatternSuggestion": "string",
       "addressesPain": "string",
       "priority": "must-have" | "should-have" | "nice-to-have",
@@ -169,7 +156,7 @@ OUTPUT FORMAT - Return ONLY valid JSON matching this exact schema:
     {
       "sourceFeatureIndex": 0,
       "targetFeatureIndex": 1,
-      "flowType": "primary" | "secondary" | "error"
+      "flowType": "primary" | "secondary"
     }
   ]
 }
@@ -179,15 +166,17 @@ CRITICAL RULES:
 - Every feature's stageId MUST match one of the stage ids.
 - Every feature's groupId MUST match one of the group ids.
 - Feature indices in edges refer to the position in the features array (0-based).
-- Extract 3-5 features per concept. More for complex concepts, fewer for simple ones.
-- Prioritize features that address journey dip points as "must-have".
+- Each concept card = EXACTLY 1 core node. Do NOT invent features that aren't on the concept cards.
+- Add 1 Dashboard/Home entry node when there are 2+ concepts.
+- Peripheral screens (Auth, Onboarding, Settings, Help) are optional nice-to-have nodes.
+- No error pages — focus on happy path only.
+- No error flow edges — only "primary" and "secondary" flowTypes.
+- Prioritize concept nodes as "must-have". Peripherals are "should-have" or "nice-to-have".
 - If Step 6 data is missing or minimal, use the default stages for the detected intent type.
 - Always include at least one "primary" flow edge connecting the main user path.
-- Every app-type intent (web-app, admin-portal, dashboard) MUST include auth, onboarding, profile/settings, and error pages as peripheral services.
-- Do NOT add irrelevant peripheral services (e.g., no checkout for a dashboard, no billing for a free tool).
-- For "marketing-site": Use marketing funnel stages (Awareness, Consideration, Decision, Purchase). Nodes MUST be concept-specific site sections — use actual concept names in section titles (e.g., "How Conversion Catalyst Works", NOT "How It Works"). Use uiType "landing-page". Focus on persuasion goals. Do NOT suggest database schemas, auth flows, or backend logic. Map elevator pitch to Hero, USP to How It Works, SWOT strengths to benefit cards, SWOT threats to FAQ.
-- For "admin-portal": Use admin workflow stages. Focus on CRUD operations, data management, and role-based access. Include bulk actions and audit trails.
-- For "dashboard": Use analytics stages. Focus on KPIs, charts, drill-down, and actionable insights. Include date range selectors and export.
-- For "tool": Use tool stages. Focus on clear input → process → result → export flow. Include progress feedback and error states.
-- For "web-app": Use Step 6 journey stages. Map functional features to appropriate stages.`;
+- For "marketing-site": Use marketing funnel stages (Awareness, Consideration, Decision, Purchase). Nodes MUST be concept-specific site sections — use actual concept names in section titles. Use uiType "landing-page". Focus on persuasion goals.
+- For "admin-portal": Use admin workflow stages. Focus on CRUD operations and data management.
+- For "dashboard": Use analytics stages. Focus on KPIs, charts, drill-down, and actionable insights.
+- For "tool": Use tool stages. Focus on clear input → process → result → export flow.
+- For "web-app": Use Step 6 journey stages. Map concept screens to appropriate stages.`;
 }

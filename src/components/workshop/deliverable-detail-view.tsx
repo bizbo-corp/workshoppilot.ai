@@ -18,6 +18,7 @@ interface DeliverableDetailViewProps {
   type: string;
   formats: DeliverableFormat[];
   onBack: () => void;
+  hideBackButton?: boolean;
 }
 
 function downloadFile(content: string, filename: string, mimeType: string) {
@@ -44,6 +45,7 @@ export function DeliverableDetailView({
   type: _type,
   formats,
   onBack,
+  hideBackButton = false,
 }: DeliverableDetailViewProps) {
   const [copied, setCopied] = useState(false);
 
@@ -76,13 +78,15 @@ export function DeliverableDetailView({
   return (
     <div className="space-y-6">
       {/* Back button */}
-      <button
-        onClick={onBack}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to deliverables
-      </button>
+      {!hideBackButton && (
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to deliverables
+        </button>
+      )}
 
       {/* Title */}
       <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
@@ -136,7 +140,7 @@ export function DeliverableDetailView({
 
           <TabsContent value="rendered" className="p-6">
             {markdownContent ? (
-              <div className="prose prose-sm dark:prose-invert max-w-none">
+              <div className="markdown-body max-w-none">
                 <ReactMarkdown>{markdownContent}</ReactMarkdown>
               </div>
             ) : (
@@ -149,7 +153,7 @@ export function DeliverableDetailView({
           <TabsContent value="json" className="p-6">
             {jsonContent ? (
               <div className="overflow-auto max-h-[60vh]">
-                <pre className="whitespace-pre-wrap break-words text-xs font-mono leading-relaxed">
+                <pre className="whitespace-pre-wrap break-words text-xs font-mono leading-relaxed text-foreground">
                   {(() => {
                     try {
                       return JSON.stringify(JSON.parse(jsonContent), null, 2);

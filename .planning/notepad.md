@@ -37,7 +37,4 @@ Cut the UI down to
 - Drawing
 - Auto complete (image and text refinement)
 
-
-
-
-
+ 

@@ -2,11 +2,12 @@
  * Generate Tech Specs API
  *
  * POST /api/build-pack/generate-tech-specs
- * Body: { workshopId: string }
+ * Body: { workshopId: string, preferences?: TechSpecsPreferences, force?: boolean }
  *
  * Generates Technical Specifications from all 10 workshop step artifacts.
+ * When preferences are provided, they are injected as authoritative technical constraints.
  * Stores results as both Markdown and JSON in the build_packs table.
- * Subsequent calls return cached results without re-invoking Gemini.
+ * Subsequent calls return cached results unless force=true.
  */
 
 import { auth } from '@clerk/nextjs/server';
@@ -18,13 +19,19 @@ import { eq, and, like } from 'drizzle-orm';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
 import { loadAllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifacts';
 import { buildTechSpecsPrompt, buildTechSpecsJsonPrompt } from '@/lib/ai/prompts/tech-specs-generation';
+import type { FeaturePrioritizationState } from '@/lib/feature-prioritization/types';
+import type { TechSpecsPreferences } from '@/lib/tech-specs-wizard/types';
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { workshopId } = body;
+    const { workshopId, preferences, force } = body as {
+      workshopId: string;
+      preferences?: TechSpecsPreferences;
+      force?: boolean;
+    };
 
     if (!workshopId) {
       return new Response(
@@ -65,7 +72,7 @@ export async function POST(req: Request) {
     const cachedMarkdown = existingRows.find((r) => r.formatType === 'markdown' && r.content);
     const cachedJson = existingRows.find((r) => r.formatType === 'json' && r.content);
 
-    if (cachedMarkdown && cachedJson) {
+    if (cachedMarkdown && cachedJson && !force) {
       let parsedJson: unknown;
       try {
         parsedJson = JSON.parse(cachedJson.content!);
@@ -86,6 +93,19 @@ export async function POST(req: Request) {
     // Load all 10 step artifacts
     const artifacts = await loadAllWorkshopArtifacts(workshopId);
 
+    // Load feature prioritization (if exists)
+    let featurePrioritization: FeaturePrioritizationState | null = null;
+    const fpRows = await db
+      .select()
+      .from(buildPacks)
+      .where(and(eq(buildPacks.workshopId, workshopId), like(buildPacks.title, 'Feature Prioritization:%')));
+    const fpJson = fpRows.find((r) => r.formatType === 'json' && r.content);
+    if (fpJson) {
+      try {
+        featurePrioritization = JSON.parse(fpJson.content!) as FeaturePrioritizationState;
+      } catch { /* ignore invalid data */ }
+    }
+
     // Derive title from concept name
     const concept = artifacts.concept as Record<string, unknown> | null;
     const conceptName = (concept?.name as string) || (concept?.conceptName as string) || 'Product';
@@ -96,12 +116,12 @@ export async function POST(req: Request) {
       generateTextWithRetry({
         model: google('gemini-2.0-flash'),
         temperature: 0.3,
-        prompt: buildTechSpecsPrompt(artifacts),
+        prompt: buildTechSpecsPrompt(artifacts, featurePrioritization, preferences),
       }),
       generateTextWithRetry({
         model: google('gemini-2.0-flash'),
         temperature: 0.2,
-        prompt: buildTechSpecsJsonPrompt(artifacts),
+        prompt: buildTechSpecsJsonPrompt(artifacts, featurePrioritization, preferences),
       }),
     ]);
 
@@ -176,6 +196,30 @@ export async function POST(req: Request) {
           title: techSpecsTitle,
           formatType: 'json',
           content: jsonText,
+        });
+      }
+    }
+
+    // Store preferences (if provided) for future re-editing
+    if (preferences) {
+      const prefsTitle = `Tech Specs Preferences: ${conceptName}`;
+      const prefsContent = JSON.stringify(preferences);
+      const existingPrefs = await db
+        .select()
+        .from(buildPacks)
+        .where(and(eq(buildPacks.workshopId, workshopId), like(buildPacks.title, 'Tech Specs Preferences:%')));
+      const existingPrefRow = existingPrefs.find((r) => r.formatType === 'json');
+      if (existingPrefRow) {
+        await db
+          .update(buildPacks)
+          .set({ content: prefsContent, title: prefsTitle })
+          .where(eq(buildPacks.id, existingPrefRow.id));
+      } else {
+        await db.insert(buildPacks).values({
+          workshopId,
+          title: prefsTitle,
+          formatType: 'json',
+          content: prefsContent,
         });
       }
     }

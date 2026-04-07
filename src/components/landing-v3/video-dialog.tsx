@@ -19,12 +19,12 @@ export function VideoPlayButton() {
         <span className="flex items-center justify-center w-7 h-7 rounded-full bg-olive-600 dark:bg-olive-500 shrink-0">
           <Play className="h-3 w-3 text-white fill-white ml-0.5" />
         </span>
-        Learn about WorkshopPilot in 30s
+        WorkshopPilot in under 60s
       </button>
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
           onClick={() => setOpen(false)}
         >
           <div
@@ -37,13 +37,12 @@ export function VideoPlayButton() {
             >
               <X className="h-4 w-4" />
             </button>
-            {/* Replace src with actual video URL */}
-            <div className="flex items-center justify-center h-full text-white/50 text-sm">
-              <div className="text-center">
-                <Play className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p>Video coming soon</p>
-              </div>
-            </div>
+            <iframe
+              src="https://www.youtube.com/embed/mbQmR9rrpjQ?autoplay=1"
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+              className="w-full h-full"
+            />
           </div>
         </div>
       )}

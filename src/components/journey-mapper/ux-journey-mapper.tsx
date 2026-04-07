@@ -26,8 +26,9 @@ import { JourneyFeatureNode, type JourneyFeatureNodeData } from './journey-featu
 import { JourneyStageHeader, type StageHeaderData } from './journey-stage-header';
 import { JourneyGroupContainer, type GroupContainerData } from './journey-group-container';
 import { JourneyEdge } from './journey-edge';
+import { JourneyNodeDetailDialog } from './journey-node-detail-dialog';
 import { EmotionCurveOverlay } from './emotion-curve-overlay';
-import { JourneyMapperToolbar, type ViewMode } from './journey-mapper-toolbar';
+import { JourneyMapperToolbar } from './journey-mapper-toolbar';
 import { JourneyCanvasToolbar } from './journey-canvas-toolbar';
 import { V0PromptPanel } from './v0-prompt-panel';
 import { CanvasZoomControls } from '@/components/canvas/canvas-zoom-controls';
@@ -46,9 +47,15 @@ import {
 import {
   computeJourneyMapLayout,
   computeGroupContainers,
-  computeSitemapLayout,
-  autoTidyWithinGroups,
+  computeSitemapPositions,
+  computeJourneyMapPositions,
+  autoTidyPositions,
 } from '@/lib/journey-mapper/layout';
+import {
+  getNodesForView,
+  getEdgesForView,
+  getGroupsForView,
+} from '@/lib/journey-mapper/view-selectors';
 import type { JourneyMapperNode, NavigationGroup } from '@/lib/journey-mapper/types';
 import { getGroupColor } from '@/lib/journey-mapper/types';
 import { cn } from '@/lib/utils';
@@ -124,28 +131,45 @@ function JourneyMapperInner({
 }: UXJourneyMapperProps) {
   const router = useRouter();
   const storeApi = useJourneyMapperStoreApi();
-  const nodes = useJourneyMapperStore((s) => s.nodes);
-  const edges = useJourneyMapperStore((s) => s.edges);
+
+  // Subscribe to view-relevant slices from the store
+  const masterNodes = useJourneyMapperStore((s) => s.nodes);
   const stages = useJourneyMapperStore((s) => s.stages);
-  const groups = useJourneyMapperStore((s) => s.groups);
   const isApproved = useJourneyMapperStore((s) => s.isApproved);
   const strategicIntent = useJourneyMapperStore((s) => s.strategicIntent);
+  const activeView = useJourneyMapperStore((s) => s.activeView);
+  const journeyView = useJourneyMapperStore((s) => s.journeyView);
+  const sitemapView = useJourneyMapperStore((s) => s.sitemapView);
+
+  // Derive view-resolved data
+  const viewNodes = useMemo(() => {
+    const state = { ...storeApi.getState(), nodes: masterNodes, journeyView, sitemapView };
+    return getNodesForView(state, activeView);
+  }, [masterNodes, activeView, journeyView, sitemapView, storeApi]);
+
+  const viewEdges = useMemo(() => {
+    const state = { ...storeApi.getState(), journeyView, sitemapView };
+    return getEdgesForView(state, activeView);
+  }, [activeView, journeyView, sitemapView, storeApi]);
+
+  const viewGroups = useMemo(() => {
+    const state = { ...storeApi.getState(), sitemapView };
+    return getGroupsForView(state, activeView);
+  }, [activeView, sitemapView, storeApi]);
 
   const [activeTool, setActiveTool] = useState<'pointer' | 'hand'>('pointer');
   const [v0Prompt, setV0Prompt] = useState<string | null>(null);
   const [v0BuildPackId, setV0BuildPackId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('journey');
   const [showPeripherals, setShowPeripherals] = useState(true);
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
   const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | undefined>(undefined);
   const [pendingDeleteGroupId, setPendingDeleteGroupId] = useState<string | null>(null);
-  const [editModeNodeId, setEditModeNodeId] = useState<string | null>(null);
+  const [detailNodeId, setDetailNodeId] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const edgeReconnectSuccessful = useRef(false);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const containerPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
-  const initializedViewsRef = useRef<Set<ViewMode>>(new Set(['journey']));
 
   // Prototype dialog state
   const [showPrototypeDialog, setShowPrototypeDialog] = useState(false);
@@ -168,27 +192,40 @@ function JourneyMapperInner({
     return () => document.removeEventListener('mousedown', handler);
   }, [contextMenu]);
 
-  // Initialize view positions when switching view modes
+  // One-time: compute layout if view positions are empty on first access
+  const layoutInitRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    if (initializedViewsRef.current.has(viewMode)) return;
+    if (layoutInitRef.current.has(activeView)) return;
     const state = storeApi.getState();
     if (state.nodes.length === 0) return;
 
-    initializedViewsRef.current.add(viewMode);
-
-    if (viewMode === 'sitemap') {
-      const effectiveGroups = state.groups.length > 0
-        ? state.groups
-        : [{ id: 'main', label: 'Main', description: 'All features' }];
-      const { nodes: repositioned } = computeSitemapLayout(state.nodes, effectiveGroups);
-      storeApi.getState().setNodes(repositioned);
-      storeApi.getState().markDirty();
-    } else {
-      const { nodes: repositioned } = computeJourneyMapLayout(state.nodes, state.stages);
-      storeApi.getState().setNodes(repositioned);
-      storeApi.getState().markDirty();
+    const viewState = activeView === 'journey' ? state.journeyView : state.sitemapView;
+    const hasPositions = Object.keys(viewState.positions).length > 0;
+    if (hasPositions) {
+      layoutInitRef.current.add(activeView);
+      return;
     }
-  }, [viewMode, storeApi]);
+
+    layoutInitRef.current.add(activeView);
+
+    // Compute and set positions for this view
+    if (activeView === 'sitemap') {
+      const effectiveGroups = state.sitemapView.groups.length > 0
+        ? state.sitemapView.groups
+        : [{ id: 'main', label: 'Main', description: 'All features' }];
+      const { positions } = computeSitemapPositions(state.nodes, effectiveGroups, state.sitemapView.edges);
+      storeApi.getState().setViewPositions('sitemap', positions);
+    } else {
+      const { positions } = computeJourneyMapPositions(state.nodes, state.stages);
+      storeApi.getState().setViewPositions('journey', positions);
+    }
+    storeApi.getState().markDirty();
+  }, [activeView, storeApi]);
+
+  // Handle view mode switch
+  const handleSetViewMode = useCallback((mode: 'journey' | 'sitemap') => {
+    storeApi.getState().setActiveView(mode);
+  }, [storeApi]);
 
   // Group container callbacks
   const handleGroupEdit = useCallback((groupId: string) => {
@@ -211,14 +248,25 @@ function JourneyMapperInner({
     setSelectedGroupId((prev) => (prev === groupId ? null : groupId));
   }, []);
 
-  // Node edit mode & deletion callbacks
-  const handleSetEditMode = useCallback((nodeId: string) => {
-    setEditModeNodeId(nodeId);
+  // Node detail dialog & deletion callbacks
+  const handleOpenDetail = useCallback((nodeId: string) => {
+    setDetailNodeId(nodeId);
   }, []);
+
+  const handleCloseDetail = useCallback(() => {
+    setDetailNodeId(null);
+  }, []);
+
+  const handleFieldChange = useCallback(
+    (id: string, field: keyof JourneyMapperNode, value: string) => {
+      storeApi.getState().updateNode(id, { [field]: value } as Partial<JourneyMapperNode>);
+    },
+    [storeApi]
+  );
 
   const handleDeleteNode = useCallback((nodeId: string) => {
     storeApi.getState().deleteNode(nodeId);
-    setEditModeNodeId(null);
+    setDetailNodeId(null);
   }, [storeApi]);
 
   // Add node at directional offset from an existing node
@@ -228,6 +276,10 @@ function JourneyMapperInner({
       const parent = state.nodes.find((n) => n.id === parentId);
       if (!parent) return;
 
+      // Use view-specific position for the parent
+      const viewState = state.activeView === 'journey' ? state.journeyView : state.sitemapView;
+      const parentPos = viewState.positions[parentId] ?? parent.position;
+
       const OFFSETS = {
         top:    { x: 0,    y: -200 },
         bottom: { x: 0,    y:  200 },
@@ -236,8 +288,8 @@ function JourneyMapperInner({
       };
       const offset = OFFSETS[direction];
       const position = {
-        x: parent.position.x + offset.x,
-        y: parent.position.y + offset.y,
+        x: parentPos.x + offset.x,
+        y: parentPos.y + offset.y,
       };
 
       const id = `jm-node-${Date.now()}`;
@@ -274,15 +326,15 @@ function JourneyMapperInner({
   // ─── Build React Flow nodes from store state ───
   const { rfNodes, rfEdges } = useMemo(() => {
     const filteredNodes = showPeripherals
-      ? nodes
-      : nodes.filter((n) => n.nodeCategory !== 'peripheral');
+      ? viewNodes
+      : viewNodes.filter((n) => n.nodeCategory !== 'peripheral');
 
     // Build group → color map for passing to containers and feature nodes
-    const groupColorMap = new Map(groups.map((g, i) => [g.id, getGroupColor(g, i)]));
+    const groupColorMap = new Map(viewGroups.map((g, i) => [g.id, getGroupColor(g, i)]));
 
-    if (viewMode === 'sitemap') {
-      const effectiveGroups = groups.length > 0
-        ? groups
+    if (activeView === 'sitemap') {
+      const effectiveGroups = viewGroups.length > 0
+        ? viewGroups
         : [{ id: 'main', label: 'Main', description: 'All features' }];
 
       // Use stored positions; compute group containers from current node positions
@@ -316,7 +368,7 @@ function JourneyMapperInner({
         };
       });
 
-      // Feature nodes — always absolute positions (no parentId/extent)
+      // Feature nodes
       const featureRfNodes: Node<JourneyFeatureNodeData>[] = filteredNodes.map((node) => ({
         id: node.id,
         type: 'featureNode' as const,
@@ -325,21 +377,15 @@ function JourneyMapperInner({
           ...node,
           conceptColor: CONCEPT_COLORS[node.conceptIndex % CONCEPT_COLORS.length],
           groupColor: node.groupId ? groupColorMap.get(node.groupId)?.text : undefined,
-          onFieldChange: isReadOnly
-            ? undefined
-            : (id: string, field: keyof JourneyMapperNode, value: string) => {
-                storeApi.getState().updateNode(id, { [field]: value } as Partial<JourneyMapperNode>);
-              },
+          onOpenDetail: isReadOnly ? undefined : handleOpenDetail,
           onDeleteNode: isReadOnly ? undefined : handleDeleteNode,
-          onSetEditMode: isReadOnly ? undefined : handleSetEditMode,
           onAddNodeAt: isReadOnly ? undefined : handleAddNodeAt,
-          editModeNodeId,
         },
       }));
 
       const posMap = new Map(filteredNodes.map((n) => [n.id, n.position]));
       const visibleIds = new Set(filteredNodes.map((n) => n.id));
-      const flowEdges: Edge[] = edges
+      const flowEdges: Edge[] = viewEdges
         .filter((e) => visibleIds.has(e.sourceNodeId) && visibleIds.has(e.targetNodeId))
         .map((edge) => {
           const handles = edge.sourceHandle && edge.targetHandle
@@ -369,7 +415,6 @@ function JourneyMapperInner({
           };
         });
 
-      // Parents must come before children
       return {
         rfNodes: [...containerNodes, ...featureRfNodes] as Node[],
         rfEdges: flowEdges,
@@ -377,7 +422,6 @@ function JourneyMapperInner({
     }
 
     // ─── Journey (stage column) layout ───
-    // Always use stored positions; compute stage headers via layout
     const layoutNodes = filteredNodes;
     const { headerNodes } = computeJourneyMapLayout(filteredNodes, stages);
 
@@ -396,39 +440,9 @@ function JourneyMapperInner({
       },
     }));
 
-    // Group containers for journey view
-    const containerNodes: Node<GroupContainerData>[] = [];
-    if (groups.length > 0) {
-      const containers = computeGroupContainers(layoutNodes, groups);
-      for (const c of containers) {
-        const gc = groupColorMap.get(c.groupId);
-        containerNodes.push({
-          id: c.id,
-          type: 'groupContainer',
-          position: c.position,
-          zIndex: -1,
-          draggable: !isReadOnly,
-          selectable: false,
-          style: { width: c.width, height: c.height },
-          data: {
-            groupId: c.groupId,
-            label: c.label,
-            width: c.width,
-            height: c.height,
-            fillColor: gc?.fill,
-            borderColor: gc?.border,
-            textColor: gc?.text,
-            headerBg: gc?.headerBg,
-            isSelected: selectedGroupId === c.groupId,
-            onHeaderClick: isReadOnly ? undefined : handleGroupHeaderClick,
-            onEdit: isReadOnly ? undefined : handleGroupEdit,
-            onDelete: isReadOnly ? undefined : handleGroupDelete,
-          },
-        });
-      }
-    }
+    // No group containers in journey view (groups are sitemap-only)
 
-    // Feature nodes — always absolute positions (no parentId/extent)
+    // Feature nodes
     const featureRfNodes: Node<JourneyFeatureNodeData>[] = layoutNodes.map((node) => ({
       id: node.id,
       type: 'featureNode' as const,
@@ -436,23 +450,17 @@ function JourneyMapperInner({
       data: {
         ...node,
         conceptColor: CONCEPT_COLORS[node.conceptIndex % CONCEPT_COLORS.length],
-        groupColor: node.groupId ? groupColorMap.get(node.groupId)?.text : undefined,
-        onFieldChange: isReadOnly
-          ? undefined
-          : (id: string, field: keyof JourneyMapperNode, value: string) => {
-              storeApi.getState().updateNode(id, { [field]: value } as Partial<JourneyMapperNode>);
-            },
+        groupColor: undefined, // No group colors in journey view
+        onOpenDetail: isReadOnly ? undefined : handleOpenDetail,
         onDeleteNode: isReadOnly ? undefined : handleDeleteNode,
-        onSetEditMode: isReadOnly ? undefined : handleSetEditMode,
         onAddNodeAt: isReadOnly ? undefined : handleAddNodeAt,
-        editModeNodeId,
       },
     }));
 
     // Edges
     const journeyPosMap = new Map(layoutNodes.map((n) => [n.id, n.position]));
     const visibleIds = new Set(filteredNodes.map((n) => n.id));
-    const flowEdges: Edge[] = edges
+    const flowEdges: Edge[] = viewEdges
       .filter((e) => visibleIds.has(e.sourceNodeId) && visibleIds.has(e.targetNodeId))
       .map((edge) => {
         const handles = edge.sourceHandle && edge.targetHandle
@@ -482,13 +490,11 @@ function JourneyMapperInner({
         };
       });
 
-
-    // Parents must come before children in the array
     return {
-      rfNodes: [...containerNodes, ...headerRfNodes, ...featureRfNodes] as Node[],
+      rfNodes: [...headerRfNodes, ...featureRfNodes] as Node[],
       rfEdges: flowEdges,
     };
-  }, [nodes, edges, stages, groups, isReadOnly, storeApi, viewMode, showPeripherals, handleGroupEdit, handleGroupDelete, handleGroupHeaderClick, selectedGroupId, handleDeleteNode, handleSetEditMode, handleAddNodeAt, editModeNodeId]);
+  }, [viewNodes, viewEdges, viewGroups, stages, isReadOnly, storeApi, activeView, showPeripherals, handleGroupEdit, handleGroupDelete, handleGroupHeaderClick, selectedGroupId, handleDeleteNode, handleOpenDetail, handleAddNodeAt]);
 
   // Maintain local node/edge state so ReactFlow can track selection (select changes)
   // while the store remains the source of truth for data.
@@ -513,6 +519,15 @@ function JourneyMapperInner({
     }
   }, [rfNodes, fitView]);
 
+  // Fit viewport on view switch
+  const prevViewRef = useRef(activeView);
+  useEffect(() => {
+    if (prevViewRef.current !== activeView) {
+      prevViewRef.current = activeView;
+      setTimeout(() => fitView({ padding: 0.2 }), 100);
+    }
+  }, [activeView, fitView]);
+
   // Track container positions for group-drag delta computation
   useEffect(() => {
     const map = new Map<string, { x: number; y: number }>();
@@ -524,17 +539,15 @@ function JourneyMapperInner({
     containerPositionsRef.current = map;
   }, [rfNodes]);
 
-  // Handle node position changes (drag)
+  // Handle node position changes (drag) — moveNode targets activeView via store
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      // Apply all changes (select, position, dimensions, etc.) to local display state
       setDisplayNodes((prev) => applyNodeChanges(changes, prev));
 
       if (isReadOnly) return;
       for (const change of changes) {
         if (change.type === 'position' && change.position) {
           if (change.id.startsWith('jm-node-')) {
-            // Free positioning — no collision snapping
             storeApi.getState().moveNode(change.id, change.position);
           } else if (change.id.startsWith('group-container-')) {
             // Group drag: move all child nodes by the same delta
@@ -544,14 +557,14 @@ function JourneyMapperInner({
               const dx = change.position.x - oldPos.x;
               const dy = change.position.y - oldPos.y;
               if (dx !== 0 || dy !== 0) {
-                const childNodes = storeApi.getState().nodes.filter((n) => n.groupId === groupId);
+                // Use view-resolved nodes for child detection
+                const childNodes = viewNodes.filter((n) => n.groupId === groupId);
                 for (const child of childNodes) {
                   storeApi.getState().moveNode(child.id, {
                     x: child.position.x + dx,
                     y: child.position.y + dy,
                   });
                 }
-                // Update ref so subsequent drag events use the new position
                 containerPositionsRef.current.set(change.id, change.position);
               }
             }
@@ -559,7 +572,7 @@ function JourneyMapperInner({
         }
       }
     },
-    [isReadOnly, storeApi]
+    [isReadOnly, storeApi, viewNodes]
   );
 
   // Handle node deletion via keyboard (Delete/Backspace)
@@ -570,17 +583,15 @@ function JourneyMapperInner({
         if (node.id.startsWith('jm-node-')) {
           storeApi.getState().deleteNode(node.id);
         }
-        // Group containers are not deletable via keyboard — only via header button
       }
-      setEditModeNodeId(null);
+      setDetailNodeId(null);
     },
     [isReadOnly, storeApi]
   );
 
-  // Handle edge changes — apply select changes locally, sync removes to store
+  // Handle edge changes
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      // Apply all changes (select, remove, etc.) to local display state
       setDisplayEdges((prev) => applyEdgeChanges(changes, prev));
 
       if (isReadOnly) return;
@@ -623,7 +634,7 @@ function JourneyMapperInner({
     []
   );
 
-  // ─── Edge reconnection (drag edge to new target or drop to delete) ───
+  // ─── Edge reconnection ───
 
   const onReconnectStart = useCallback(() => {
     edgeReconnectSuccessful.current = false;
@@ -633,7 +644,6 @@ function JourneyMapperInner({
     (oldEdge, newConnection) => {
       edgeReconnectSuccessful.current = true;
       if (!newConnection.source || !newConnection.target) return;
-      // Delete old edge and create new one
       storeApi.getState().deleteEdge(oldEdge.id);
       const edgeId = `jm-edge-reconnect-${Date.now()}`;
       storeApi.getState().addEdge({
@@ -680,25 +690,26 @@ function JourneyMapperInner({
 
   const onPaneClick = useCallback(() => {
     setContextMenu(null);
-    setEditModeNodeId(null);
     setSelectedGroupId(null);
   }, []);
 
-  // Auto-tidy (view-mode-aware)
+  // Auto-tidy — only affects active view's positions
   const handleAutoTidy = useCallback(() => {
     const state = storeApi.getState();
-    if (viewMode === 'sitemap') {
-      const effectiveGroups = state.groups.length > 0
-        ? state.groups
+    if (activeView === 'sitemap') {
+      const effectiveGroups = state.sitemapView.groups.length > 0
+        ? state.sitemapView.groups
         : [{ id: 'main', label: 'Main', description: 'All features' }];
-      const { nodes: repositioned } = computeSitemapLayout(state.nodes, effectiveGroups);
-      storeApi.getState().setNodes(repositioned);
+      const viewNodes = getNodesForView(state, 'sitemap');
+      const { positions } = computeSitemapPositions(viewNodes, effectiveGroups, state.sitemapView.edges);
+      storeApi.getState().setViewPositions('sitemap', positions);
     } else {
-      const tidied = autoTidyWithinGroups(state.nodes, state.groups);
-      storeApi.getState().setNodes(tidied);
+      const viewNodes = getNodesForView(state, 'journey');
+      const { positions } = computeJourneyMapPositions(viewNodes, state.stages);
+      storeApi.getState().setViewPositions('journey', positions);
     }
     storeApi.getState().markDirty();
-  }, [storeApi, viewMode]);
+  }, [storeApi, activeView]);
 
   // Add feature
   const handleAddFeature = useCallback(() => {
@@ -812,20 +823,20 @@ function JourneyMapperInner({
         minZoom={0.2}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
-        deleteKeyCode={editModeNodeId ? null : ['Backspace', 'Delete']}
+        deleteKeyCode={detailNodeId ? null : ['Backspace', 'Delete']}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
         <CanvasZoomControls />
-        {viewMode === 'journey' && <EmotionCurveOverlay stages={stages} />}
+        {activeView === 'journey' && <EmotionCurveOverlay stages={stages} />}
         <JourneyMapperToolbar
           sessionId={sessionId}
           isReadOnly={isReadOnly}
           isRegenerating={isRegenerating}
           isApproved={isApproved}
           strategicIntent={strategicIntent}
-          viewMode={viewMode}
+          viewMode={activeView}
           showPeripherals={showPeripherals}
-          groupCount={groups.length}
+          groupCount={viewGroups.length}
           onRegenerate={onRegenerate}
           onAutoTidy={handleAutoTidy}
           onGenerateV0Prompt={handleGenerateV0Prompt}
@@ -834,8 +845,8 @@ function JourneyMapperInner({
           onReset={onReset}
           isResetting={isResetting}
           onTogglePeripherals={() => setShowPeripherals((p) => !p)}
-          onSetViewMode={setViewMode}
-          onManageGroups={isReadOnly ? undefined : () => setShowGroupDialog(true)}
+          onSetViewMode={handleSetViewMode}
+          onManageGroups={isReadOnly || activeView !== 'sitemap' ? undefined : () => setShowGroupDialog(true)}
         />
       </ReactFlow>
 
@@ -856,7 +867,8 @@ function JourneyMapperInner({
           {contextMenu.type === 'node' && (
             <NodeContextMenuItems
               nodeId={contextMenu.id}
-              groups={groups}
+              groups={viewGroups}
+              activeView={activeView}
               storeApi={storeApi}
               onClose={() => setContextMenu(null)}
               onCreateGroup={() => {
@@ -868,6 +880,7 @@ function JourneyMapperInner({
           {contextMenu.type === 'edge' && (
             <EdgeContextMenuItems
               edgeId={contextMenu.id}
+              activeView={activeView}
               storeApi={storeApi}
               onClose={() => setContextMenu(null)}
             />
@@ -909,6 +922,14 @@ function JourneyMapperInner({
         onEditingGroupIdChange={setEditingGroupId}
       />
 
+      <JourneyNodeDetailDialog
+        open={!!detailNodeId}
+        onOpenChange={(open) => { if (!open) handleCloseDetail(); }}
+        node={detailNodeId ? masterNodes.find((n) => n.id === detailNodeId) ?? null : null}
+        onFieldChange={isReadOnly ? undefined : handleFieldChange}
+        onDeleteNode={isReadOnly ? undefined : handleDeleteNode}
+      />
+
       <AlertDialog open={!!pendingDeleteGroupId} onOpenChange={(open) => { if (!open) setPendingDeleteGroupId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -916,8 +937,8 @@ function JourneyMapperInner({
             <AlertDialogDescription>
               {(() => {
                 if (!pendingDeleteGroupId) return '';
-                const group = groups.find((g) => g.id === pendingDeleteGroupId);
-                const count = nodes.filter((n) => n.groupId === pendingDeleteGroupId).length;
+                const group = viewGroups.find((g) => g.id === pendingDeleteGroupId);
+                const count = masterNodes.filter((n) => n.groupId === pendingDeleteGroupId).length;
                 return `Delete group "${group?.label}"? ${count} node${count !== 1 ? 's' : ''} will become ungrouped.`;
               })()}
             </AlertDialogDescription>
@@ -939,69 +960,74 @@ function JourneyMapperInner({
 function NodeContextMenuItems({
   nodeId,
   groups,
+  activeView,
   storeApi,
   onClose,
   onCreateGroup,
 }: {
   nodeId: string;
   groups: NavigationGroup[];
+  activeView: 'journey' | 'sitemap';
   storeApi: ReturnType<typeof useJourneyMapperStoreApi>;
   onClose: () => void;
   onCreateGroup: () => void;
 }) {
   const node = storeApi.getState().nodes.find((n) => n.id === nodeId);
   const [showMoveSubmenu, setShowMoveSubmenu] = useState(false);
+  const isJourneyView = activeView === 'journey';
 
   return (
     <>
-      {/* Move to Group */}
-      <div className="relative">
-        <button
-          className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-default"
-          onMouseEnter={() => setShowMoveSubmenu(true)}
-          onMouseLeave={() => setShowMoveSubmenu(false)}
-        >
-          Move to Group
-          <span className="ml-auto text-xs text-muted-foreground">&#9656;</span>
-        </button>
-        {showMoveSubmenu && (
-          <div
-            className="absolute left-full top-0 ml-1 min-w-[160px] rounded-md border bg-popover p-1 shadow-md z-10"
+      {/* Move to Group — sitemap view only */}
+      {!isJourneyView && (
+        <div className="relative">
+          <button
+            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-default"
             onMouseEnter={() => setShowMoveSubmenu(true)}
             onMouseLeave={() => setShowMoveSubmenu(false)}
           >
-            {groups.map((g) => (
+            Move to Group
+            <span className="ml-auto text-xs text-muted-foreground">&#9656;</span>
+          </button>
+          {showMoveSubmenu && (
+            <div
+              className="absolute left-full top-0 ml-1 min-w-[160px] rounded-md border bg-popover p-1 shadow-md z-10"
+              onMouseEnter={() => setShowMoveSubmenu(true)}
+              onMouseLeave={() => setShowMoveSubmenu(false)}
+            >
+              {groups.map((g) => (
+                <button
+                  key={g.id}
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                  onClick={() => {
+                    storeApi.getState().moveNodeToGroup(nodeId, g.id);
+                    onClose();
+                  }}
+                >
+                  {g.label}
+                  {node?.groupId === g.id && <span className="ml-auto text-xs text-primary">&#10003;</span>}
+                </button>
+              ))}
+              <div className="h-px bg-border my-1" />
               <button
-                key={g.id}
-                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent text-muted-foreground"
                 onClick={() => {
-                  storeApi.getState().moveNodeToGroup(nodeId, g.id);
+                  storeApi.getState().moveNodeToGroup(nodeId, undefined);
                   onClose();
                 }}
               >
-                {g.label}
-                {node?.groupId === g.id && <span className="ml-auto text-xs text-primary">&#10003;</span>}
+                No Group
               </button>
-            ))}
-            <div className="h-px bg-border my-1" />
-            <button
-              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent text-muted-foreground"
-              onClick={() => {
-                storeApi.getState().moveNodeToGroup(nodeId, undefined);
-                onClose();
-              }}
-            >
-              No Group
-            </button>
-            <button
-              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent text-primary"
-              onClick={onCreateGroup}
-            >
-              + Create New Group...
-            </button>
-          </div>
-        )}
-      </div>
+              <button
+                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent text-primary"
+                onClick={onCreateGroup}
+              >
+                + Create New Group...
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Priority */}
       <div className="h-px bg-border my-1" />
@@ -1022,7 +1048,7 @@ function NodeContextMenuItems({
         </button>
       ))}
 
-      {/* Delete */}
+      {/* Delete — view-aware label */}
       <div className="h-px bg-border my-1" />
       <button
         className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-destructive/10 text-destructive"
@@ -1031,7 +1057,7 @@ function NodeContextMenuItems({
           onClose();
         }}
       >
-        Delete Node
+        {isJourneyView ? 'Remove from Journey' : 'Delete Feature (permanent)'}
       </button>
     </>
   );
@@ -1039,14 +1065,20 @@ function NodeContextMenuItems({
 
 function EdgeContextMenuItems({
   edgeId,
+  activeView,
   storeApi,
   onClose,
 }: {
   edgeId: string;
+  activeView: 'journey' | 'sitemap';
   storeApi: ReturnType<typeof useJourneyMapperStoreApi>;
   onClose: () => void;
 }) {
-  const edge = storeApi.getState().edges.find((e) => e.id === edgeId);
+  // Find edge in the active view's edges
+  const viewState = activeView === 'journey'
+    ? storeApi.getState().journeyView
+    : storeApi.getState().sitemapView;
+  const edge = viewState.edges.find((e) => e.id === edgeId);
 
   return (
     <>

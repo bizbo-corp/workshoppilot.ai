@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import {
   Code2,
   FileText,
+  FlagTriangleRight,
   Map,
   Presentation,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { LightTrails } from "./light-trails";
 
@@ -140,6 +142,20 @@ const deliverables = [
     rotation: "1.5deg",
     delay: "3.2s",
     color: "#06b6d4",
+  },
+  {
+    icon: FlagTriangleRight,
+    label: "Feature Roadmap",
+    rotation: "1deg",
+    delay: "4s",
+    color: "#f59e0b",
+  },
+  {
+    icon: Users,
+    label: "User Stories",
+    rotation: "-1.5deg",
+    delay: "4.8s",
+    color: "#ec4899",
   },
 ];
 
