@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Play, X } from "lucide-react";
 
 export function VideoPlayButton() {
@@ -22,30 +23,32 @@ export function VideoPlayButton() {
         WorkshopPilot in under 60s
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
-          onClick={() => setOpen(false)}
-        >
+      {open &&
+        createPortal(
           <div
-            className="relative w-full max-w-3xl mx-4 aspect-video rounded-2xl bg-black overflow-hidden shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
           >
-            <button
-              onClick={() => setOpen(false)}
-              className="absolute top-3 right-3 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-colors cursor-pointer"
+            <div
+              className="relative w-full max-w-3xl mx-4 aspect-video rounded-2xl bg-black overflow-hidden shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
             >
-              <X className="h-4 w-4" />
-            </button>
-            <iframe
-              src="https://www.youtube.com/embed/mbQmR9rrpjQ?autoplay=1"
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              className="w-full h-full"
-            />
-          </div>
-        </div>
-      )}
+              <button
+                onClick={() => setOpen(false)}
+                className="absolute top-3 right-3 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <iframe
+                src="https://www.youtube.com/embed/mbQmR9rrpjQ?autoplay=1"
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+                className="w-full h-full"
+              />
+            </div>
+          </div>,
+          document.body
+        )}
     </>
   );
 }
