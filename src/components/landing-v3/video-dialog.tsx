@@ -40,7 +40,7 @@ export function VideoPlayButton() {
                 <X className="h-4 w-4" />
               </button>
               <iframe
-                src="https://www.youtube.com/embed/mbQmR9rrpjQ?autoplay=1"
+                src="https://www.youtube.com/embed/etMags6ravA?autoplay=1"
                 allow="autoplay; encrypted-media"
                 allowFullScreen
                 className="w-full h-full"
