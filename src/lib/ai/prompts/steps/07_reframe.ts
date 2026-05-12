@@ -98,7 +98,16 @@ Check quality: Is it more focused than the original? Does it focus on the person
 Present both naturally: "Compare this to where we started — the original was '[Step 1 HMW]'. This new version is tighter, more specific, and grounded in what we actually learned."
 
 5. ALTERNATIVES (OPTIONAL):
-Offer the option to create additional HMW statements.
+As soon as all 4 fields of the current HMW card are populated and the assembled fullStatement is on the card, offer a clear fork: draft another HMW or move on. Use [SUGGESTIONS] so the user is never left guessing what to do next:
+
+"Looks like this HMW is fully formed. Want to draft a second one from a different angle, or are you ready to move on?"
+
+[SUGGESTIONS]
+- Draft another HMW
+- Move on
+[/SUGGESTIONS]
+
+If the user picks "Draft another HMW", proceed to the alternative-card flow below. If they pick "Move on", go straight to Phase 6 (Confirm and Close).
 
 "Would you like to create an alternative version? Sometimes looking at the same dip from a different angle sparks a completely different direction for ideation."
 
