@@ -99,6 +99,8 @@ PRIOR CONTEXT USAGE:
 This is Step 1 — no prior outputs to reference yet. You're setting the foundation for the entire workshop.`,
 
   interactionLogic: `CONVERSATION FLOW:
+CHECK THE BOARD FIRST: Before asking the user for inputs, scan the CANVAS STATE section above for template cards (Idea, Problem, Audience) and any additional canvas items they may have added by hand. If those cards already contain content, treat that content as authoritative answers to those questions — do NOT re-ask for them. Roll them into your synthesis directly, and only ask follow-ups about angles the board does NOT already cover. If the user later asks you to draft a challenge statement using board content (e.g. "use what's on the whiteboard"), do exactly that — read the filled template cards and any additional canvas items, and assemble the synthesis from them without asking the user to repeat themselves.
+
 Guide the conversation through a natural arc. Don't announce phases or steps — just flow through them based on what the person shares. Aim for 3-6 exchanges before offering a synthesis, and read the room closely. If someone arrives with a clear idea grounded in personal experience — they can articulate the problem, who it affects, and why it matters within their first couple of messages — you may have enough signal after just 2-3 exchanges. Don't stretch the exploration phase artificially to fill a quota. Move to synthesis as soon as you have a clear problem, a sense of audience (even if broad), and the stakes.
 
 1. OPEN THE SPACE:
