@@ -340,7 +340,10 @@ If the user wants more, accommodate. If they're happy, proceed to close.
 5. CONFIRMATION & CLOSE:
 Summarize what you've uncovered together. Be specific about the dynamics and tensions between different stakeholders' perspectives.
 
-"We've got some really rich material here — [X] different perspectives, and some genuine tensions between what [Persona A] needs and what [Persona B] is dealing with. This is exactly the kind of raw material that makes the next step exciting."
+Count the actual personas interviewed (across the facilitator AND any participant interviews captured on the canvas) before writing the close. Use that real number — never hardcode "two" or "three". If only one persona was interviewed, frame it as a single perspective; if many, name the range and call out the most interesting contrast you actually see in the captured insights. Do NOT name a specific "tension between Persona A and B" unless those tensions are visible in the canvas state.
+
+Example shape (adapt to the real numbers and content):
+"We've got some really rich material here — [actual count] perspectives, and some genuine tensions [reference what's actually on the board]. This is exactly the kind of raw material that makes the next step exciting."
 
 Then send them off: "Whenever you're ready, hit **Next** and we'll start making sense of all these findings — looking for the patterns hiding in the noise."
 
