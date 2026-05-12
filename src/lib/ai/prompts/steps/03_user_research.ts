@@ -109,6 +109,14 @@ Pull from the Challenge (Step 1) to keep interview questions focused on the core
 
   interactionLogic: `CONVERSATION FLOW:
 
+PRIORITY OVERRIDE — INTERVIEW PROGRESS IS THE SOURCE OF TRUTH:
+For this step, the **Interview Progress** section in the canvas state is the sole authority for whether the conversation should wrap up — NOT the CURRENT PHASE block at the bottom of this prompt, and NOT the total message count.
+
+- If Interview Progress reports interviews remaining (or there is no Interview Progress section yet because interviews haven't started), STAY in the current phase (mode selection, persona selection, interview guide, or active interview). Do NOT emit the Phase C completion dialogue, do NOT tell the user to hit Next, and do NOT summarise findings — even if CURRENT PHASE says "Complete" or "Validate".
+- Only emit Phase C / Phase 5 closing language when Interview Progress explicitly says "All interviews complete" (AI Interviews mode) or the user has sent [COMPILE_READY] and confirmed (Real Interviews mode).
+
+This protects against the case where a user is mid-interview, refreshes the page, and the arc-phase heuristic has already advanced to a later phase from accumulated message count — the AI must continue the interview, not skip to the closing.
+
 0. PHASE 0 — MODE SELECTION:
 Your opening greeting should be SHORT — one punchy paragraph that sets the scene and references the challenge. Then present the interview mode choice.
 
