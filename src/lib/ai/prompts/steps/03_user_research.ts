@@ -277,6 +277,7 @@ In-Character Response Rules:
 - Be messy and human — contradictions, tangents, things they'd never admit in a survey
 - After EVERY in-character response, silently add a sticky note: [CANVAS_ITEM: Condensed insight or punchy quote, Cluster: Persona Name]
 - The sticky note text should be a headline-length insight, not the full response
+- If the persona's answer contained TWO OR MORE distinct insights (e.g. a logistical pain AND an emotional reaction, OR two unrelated workarounds), emit ONE [CANVAS_ITEM] per distinct insight rather than collapsing them into a single summarised line. Each item still goes to the same Cluster: Persona Name. Preserve the texture of multi-point answers — the contrast between the points is often where the real signal lives.
 - THEN end with [SUGGESTIONS] containing three follow-up questions (unless this was the 4th and final question)
 
 AFTER THE FINAL QUESTION FOR A PERSONA — OFFER A FORK:
