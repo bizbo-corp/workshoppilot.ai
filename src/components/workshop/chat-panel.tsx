@@ -2262,8 +2262,8 @@ export function ChatPanel({
                       </div>
                     </div>
                   )}
-                  {messages
-                    .filter((m) => {
+                  {(() => {
+                    const visibleMessages = messages.filter((m) => {
                       if (m.role !== "user") return true;
                       const text =
                         m.parts
@@ -2271,8 +2271,12 @@ export function ChatPanel({
                           .map((p) => p.text)
                           .join("") || "";
                       return text !== "__step_start__";
-                    })
-                    .map((message, index) => {
+                    });
+                    return visibleMessages.map((message, index) => {
+                      const isStreamingThisMessage =
+                        status === "streaming" &&
+                        index === visibleMessages.length - 1 &&
+                        message.role === "assistant";
                       const textParts =
                         message.parts?.filter((part) => part.type === "text") ||
                         [];
@@ -2367,12 +2371,19 @@ export function ChatPanel({
                         ? questionCountMatch[0].trim()
                         : null;
 
-                      // Split transition messages: content before 🎭 intro vs after
-                      // This ensures the PersonaInterrupt banner appears between the outgoing
-                      // persona's final answer and the incoming persona's introduction
+                      // Split transition messages: content before 🎭 intro vs after.
+                      // This ensures the PersonaInterrupt banner appears between the
+                      // outgoing persona's final answer and the incoming persona's
+                      // introduction.
+                      //
+                      // While the message is still streaming, suppress the split so the
+                      // banner / new persona only appear once the previous persona's
+                      // answer has finished rendering — fixes the visual glitch where
+                      // the new persona seemed to swap in before the previous reply
+                      // was complete (df_uuhl0vgqeaiubzvhwncqqy6u).
                       let beforeIntro = contentAfterCount;
                       let afterIntro: string | null = null;
-                      if (personaIntro) {
+                      if (personaIntro && !isStreamingThisMessage) {
                         const emojiIdx = contentAfterCount.indexOf("🎭");
                         if (emojiIdx > 0) {
                           beforeIntro = contentAfterCount
@@ -2761,7 +2772,8 @@ export function ChatPanel({
                           </div>
                         </div>
                       );
-                    })}
+                    });
+                  })()}
 
                   {/* Typing indicator — quick ack + thinking status */}
                   {status === "submitted" && (
