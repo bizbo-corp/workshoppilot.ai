@@ -1098,30 +1098,42 @@ export function ChatPanel({
     }
   }, [messages, step.id]);
 
-  // Detect "All personas look good — let's move on" from user messages (persona step only)
+  // Persona step is "done" when either:
+  // (a) the user explicitly signals completion in chat, OR
+  // (b) every persona template card on the canvas has been filled with a name
+  //     (every skeleton card the user planned to build has actually been built).
+  // Without (b) the Next button could stay disabled even when the canvas is
+  // fully populated — the original cause of df_rpxxs6jwqe1rl0uppiosfroo.
+  const personaDoneRegex =
+    /personas? look good|looks good|let'?s move on|move on|done with personas?|ready to (?:move on|continue)|happy with (?:the )?personas?/i;
   const hasCheckedPersonaDoneHistory = React.useRef(false);
   React.useEffect(() => {
     if (step.id !== "persona" || personasDone) return;
 
-    // Check historical messages on first load
+    // (b) Derive from canvas: every existing template card has a filled name.
+    if (
+      personaTemplates.length > 0 &&
+      personaTemplates.every((t) => !!t.name && t.name.trim().length > 0)
+    ) {
+      setPersonasDone(true);
+      return;
+    }
+
+    // (a) Explicit signal in chat — check historical messages on first load.
     if (!hasCheckedPersonaDoneHistory.current) {
       hasCheckedPersonaDoneHistory.current = true;
       for (const msg of messages) {
         if (msg.role !== "user") continue;
         const textParts = msg.parts?.filter((p) => p.type === "text") || [];
         const content = textParts.map((p) => p.text).join("");
-        if (
-          /personas look good|let'?s move on|done with personas/i.test(
-            content,
-          )
-        ) {
+        if (personaDoneRegex.test(content)) {
           setPersonasDone(true);
           return;
         }
       }
     }
 
-    // Also detect live messages as they come in
+    // (a) Live messages as they come in.
     if (status === "ready" && messages.length > 0) {
       const lastUserMsg = [...messages]
         .reverse()
@@ -1130,16 +1142,12 @@ export function ChatPanel({
         const textParts =
           lastUserMsg.parts?.filter((p) => p.type === "text") || [];
         const content = textParts.map((p) => p.text).join("");
-        if (
-          /personas look good|let'?s move on|done with personas/i.test(
-            content,
-          )
-        ) {
+        if (personaDoneRegex.test(content)) {
           setPersonasDone(true);
         }
       }
     }
-  }, [messages, step.id, status, personasDone]);
+  }, [messages, step.id, status, personasDone, personaTemplates]);
 
   // Initialize addedMessageIds from history — mark ALL historical assistant messages as processed
   // when canvas already has sticky notes (restored from DB). The saved canvas state is the source
