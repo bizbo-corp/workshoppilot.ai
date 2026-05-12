@@ -1224,6 +1224,10 @@ export function ChatPanel({
   ]);
 
   // Handle adding AI-suggested canvas items to the whiteboard
+  // Only auto-fit the viewport when the board is currently empty for this step.
+  // Otherwise, the user's pan/zoom is preserved across chat interactions
+  // (df_qiwa2xew20euor6luc8epw41).
+  const hasAutoFitForStepRef = React.useRef<Set<string>>(new Set());
   const handleAddToWhiteboard = React.useCallback(
     (messageId: string, canvasItems: CanvasItemParsed[]) => {
       if (addedMessageIds.has(messageId)) return;
@@ -1236,6 +1240,10 @@ export function ChatPanel({
           ? { ...baseGridConfig, columns: latestGridColumns }
           : baseGridConfig;
 
+      const boardWasEmpty =
+        storeApi.getState().stickyNotes.length === 0 &&
+        !hasAutoFitForStepRef.current.has(step.id);
+
       addCanvasItemsToBoard({
         stepId: step.id,
         items: canvasItems,
@@ -1243,7 +1251,12 @@ export function ChatPanel({
         addStickyNote,
         gridConfigOverride: dynamicGridConfig,
         onHighlightCell: setHighlightedCell,
-        onRequestFitView: () => setPendingFitView(true),
+        onRequestFitView: boardWasEmpty
+          ? () => {
+              hasAutoFitForStepRef.current.add(step.id);
+              setPendingFitView(true);
+            }
+          : undefined,
       });
 
       setAddedMessageIds((prev) => new Set(prev).add(messageId));
