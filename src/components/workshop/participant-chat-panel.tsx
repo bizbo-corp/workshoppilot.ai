@@ -964,7 +964,7 @@ export function ParticipantChatPanel({
                   </div>
                 )}
                 <p className="text-sm font-medium text-foreground pl-1">
-                  Your turn — give me your next question.
+                  Your turn — use one of the questions above or write your next question.
                 </p>
               </div>
             )}
