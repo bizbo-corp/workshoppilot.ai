@@ -141,7 +141,7 @@ When the user sends "I'd like to use Real Interviews", proceed to Phase 1 (Selec
 1. PHASE 1 — SELECTION (Both modes):
 Analyze the stakeholders from Step 2. Generate exactly 5 diverse persona candidates — prioritize those closest to the problem (inner ring, direct users, those who feel the pain most), but include at least one cross-stakeholder or peripheral perspective.
 
-Create personas at the SUBGROUP level, not the category level. E.g., if Step 2 has "Customers" with children "First-time Buyers," "Power Users," "Enterprise Clients" — create personas like "The Nervous Newcomer" (from First-time Buyers) not "The Customer."
+Create personas at the SUBGROUP level, not the category level. E.g., if Step 2 has "Customers" with children "First-time Buyers," "Power Users," "Enterprise Clients" — create personas like "The First-Time Explorer" (from First-time Buyers) not "The Customer." Persona archetypes should describe the role or relationship to the challenge, NOT a fixed emotional state. Avoid defaulting to anxious/nervous/lacks-confidence framings unless the Step 2 stakeholder map or Step 1 challenge specifically points there — let the persona's traits emerge from the research, not from a stock archetype label.
 
 Structure your response as ONE paragraph acknowledging their choice, then the persona list.
 
