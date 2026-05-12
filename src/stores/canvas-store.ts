@@ -21,6 +21,9 @@ export type PendingHmwChipSelection = {
 
 export type PendingHmwFieldFocus = { cardId: string; field: string } | null;
 
+/** Set when the user fills the last empty HMW field via manual edit (not chip click). */
+export type PendingHmwManualComplete = { cardId: string } | null;
+
 export type StickyNoteColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange' | 'red';
 
 export type GridColumn = {
@@ -110,6 +113,7 @@ export type CanvasState = {
   pendingFocusCardId: string | null;
   pendingHmwChipSelection: PendingHmwChipSelection;
   pendingHmwFieldFocus: PendingHmwFieldFocus;
+  pendingHmwManualComplete: PendingHmwManualComplete;
   activeHmwCardId: string | null;
   selectedStickyNoteIds: string[];
   votingCardPositions: Record<string, { x: number; y: number }>;
@@ -153,6 +157,7 @@ export type CanvasActions = {
   setPendingFocusCardId: (id: string | null) => void;
   setPendingHmwChipSelection: (selection: PendingHmwChipSelection) => void;
   setPendingHmwFieldFocus: (focus: PendingHmwFieldFocus) => void;
+  setPendingHmwManualComplete: (signal: PendingHmwManualComplete) => void;
   setActiveHmwCardId: (id: string | null) => void;
   batchUpdatePositions: (updates: Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }>) => void;
   setCluster: (ids: string[], clusterName: string) => void;
@@ -224,6 +229,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
     pendingFocusCardId: null,
     pendingHmwChipSelection: null,
     pendingHmwFieldFocus: null,
+    pendingHmwManualComplete: null,
     activeHmwCardId: null,
     selectedStickyNoteIds: [],
     votingCardPositions: initState?.votingCardPositions || {},
@@ -595,6 +601,11 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
         setPendingHmwFieldFocus: (focus) =>
           set(() => ({
             pendingHmwFieldFocus: focus,
+          })),
+
+        setPendingHmwManualComplete: (signal) =>
+          set(() => ({
+            pendingHmwManualComplete: signal,
           })),
 
         setActiveHmwCardId: (id) =>

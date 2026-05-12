@@ -795,6 +795,12 @@ export function ChatPanel({
   const setPendingHmwChipSelection = useCanvasStore(
     (state) => state.setPendingHmwChipSelection,
   );
+  const pendingHmwManualComplete = useCanvasStore(
+    (state) => state.pendingHmwManualComplete,
+  );
+  const setPendingHmwManualComplete = useCanvasStore(
+    (state) => state.setPendingHmwManualComplete,
+  );
   const pendingHmwFieldFocus = useCanvasStore(
     (state) => state.pendingHmwFieldFocus,
   );
@@ -1966,6 +1972,35 @@ export function ChatPanel({
     sendMessage,
   ]);
 
+  // HMW manual edit completed all 4 fields → ask AI to surface a confirm/move-on prompt
+  React.useEffect(() => {
+    if (!pendingHmwManualComplete || isLoading) return;
+    setPendingHmwManualComplete(null);
+    setQuickAck(getRandomAck());
+    (async () => {
+      try {
+        await flushCanvasToDb();
+        sendMessage({
+          role: "user",
+          parts: [
+            {
+              type: "text",
+              text: "[HMW_MANUAL_COMPLETE] I've finished filling in the HMW card by hand.",
+            },
+          ],
+        });
+      } catch (err) {
+        console.error("Failed to send HMW manual-complete trigger:", err);
+      }
+    })();
+  }, [
+    pendingHmwManualComplete,
+    isLoading,
+    setPendingHmwManualComplete,
+    flushCanvasToDb,
+    sendMessage,
+  ]);
+
   // HMW field focus → trigger AI suggestions for empty field
   React.useEffect(() => {
     if (!pendingHmwFieldFocus || isLoading) return;
@@ -2290,6 +2325,7 @@ export function ChatPanel({
                           .replace(/\[STEP_CONFIRMED\]\s*/g, "")
                           .replace(/\[SUGGEST_QUESTIONS\]\s*/g, "")
                           .replace(/\[CATCH_UP_EDITS\]\s*/g, "")
+                          .replace(/\[HMW_MANUAL_COMPLETE\]\s*/g, "")
                           .trim();
                         return (
                           <div

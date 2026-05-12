@@ -253,6 +253,9 @@ function ReactFlowCanvasInner({
   const setPendingHmwFieldFocus = useCanvasStore(
     (s) => s.setPendingHmwFieldFocus,
   );
+  const setPendingHmwManualComplete = useCanvasStore(
+    (s) => s.setPendingHmwManualComplete,
+  );
   const setActiveHmwCardId = useCanvasStore(
     (s) => s.setActiveHmwCardId,
   );
@@ -953,8 +956,11 @@ function ReactFlowCanvasInner({
     return `Given that ${lcFirst(strip(merged.givenThat))}, how might we help ${lcFirst(strip(merged.persona))} ${lcFirst(strip(merged.immediateGoal))} so they can ${lcFirst(strip(merged.deeperGoal))}?`;
   }, []);
 
-  // Handle HMW card field changes (manual text edits — silent, no chat message)
-  // Also clear suggestions for the edited field so chips disappear once user types their own
+  // Handle HMW card field changes (manual text edits — silent, no chat message
+  // for the edit itself). When the manual edit fills the LAST empty field of
+  // the card (transitioning the card from incomplete → all 4 filled), fire
+  // pendingHmwManualComplete so chat-panel can ask the AI to surface a
+  // confirm/move-on suggestion (df_dkn6wv4w77drz1l12nku73h6).
   const handleHmwFieldChange = useCallback(
     (id: string, field: string, value: string) => {
       const card = hmwCards.find((c) => c.id === id);
@@ -968,8 +974,22 @@ function ReactFlowCanvasInner({
         ...(updatedSuggestions ? { suggestions: updatedSuggestions } : {}),
         ...(fullStatement ? { fullStatement } : {}),
       });
+
+      const wasIncomplete =
+        !card?.givenThat ||
+        !card?.persona ||
+        !card?.immediateGoal ||
+        !card?.deeperGoal;
+      const nowComplete =
+        !!merged.givenThat &&
+        !!merged.persona &&
+        !!merged.immediateGoal &&
+        !!merged.deeperGoal;
+      if (wasIncomplete && nowComplete) {
+        setPendingHmwManualComplete({ cardId: id });
+      }
     },
-    [hmwCards, updateHmwCard, assembleHmwStatement],
+    [hmwCards, updateHmwCard, assembleHmwStatement, setPendingHmwManualComplete],
   );
 
   // Handle HMW card chip selection — sets field value, clears that field's suggestions, and signals chat

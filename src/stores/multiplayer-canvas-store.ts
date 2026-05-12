@@ -98,6 +98,7 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
     pendingFocusCardId: null,
     pendingHmwChipSelection: null,
     pendingHmwFieldFocus: null,
+    pendingHmwManualComplete: null,
     activeHmwCardId: null,
     selectedStickyNoteIds: [],
     votingCardPositions: initState?.votingCardPositions || {},
@@ -409,6 +410,9 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
 
         setPendingHmwFieldFocus: (focus) =>
           set(() => ({ pendingHmwFieldFocus: focus })),
+
+        setPendingHmwManualComplete: (signal) =>
+          set(() => ({ pendingHmwManualComplete: signal })),
 
         setActiveHmwCardId: (id) =>
           set(() => ({ activeHmwCardId: id })),

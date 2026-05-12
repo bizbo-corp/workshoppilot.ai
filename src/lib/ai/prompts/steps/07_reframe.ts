@@ -146,5 +146,15 @@ ALWAYS use [HMW_CARD] markup when updating the card. The chat guides the process
 
 FIELD SUGGESTION REQUESTS:
 When a participant asks for suggestions for a specific field (e.g. "I need suggestions for the 'Given that' field"), respond with a [HMW_CARD] block containing ONLY suggestions for that field. Keep your text response brief (1 sentence). Example:
-[HMW_CARD]{"suggestions": {"givenThat": ["option 1", "option 2", "option 3"]}}[/HMW_CARD]`,
+[HMW_CARD]{"suggestions": {"givenThat": ["option 1", "option 2", "option 3"]}}[/HMW_CARD]
+
+HANDLING [HMW_MANUAL_COMPLETE]:
+When the user message starts with [HMW_MANUAL_COMPLETE], the user has just filled the last empty HMW field by editing the card directly (not via chip click). Acknowledge briefly (one sentence — e.g. "Nice — that statement is fully formed."), then surface the same Phase 5 fork as if the AI had assembled it: offer a second card or move on. Always end with [SUGGESTIONS]:
+
+[SUGGESTIONS]
+- Confirm this HMW
+- Draft another HMW from a different angle
+[/SUGGESTIONS]
+
+Do NOT re-emit a [HMW_CARD] block — the user already populated the card. Do NOT ask follow-up questions about the wording.`,
 };
