@@ -203,9 +203,9 @@ export function ParticipantChatPanel({
 
   // Auto-start: send hidden trigger when entering a step with no prior messages
   // For Step 9 (concept), wait until the facilitator clicks "Start Activity"
-  // Deterministic messageId (sessionId+stepId+participantId) lets the DB unique
-  // index dedupe repeats — prevents the opener from re-generating on refresh.
-  const stepStartTriggerId = `step-start:${sessionId}:${stepId}:${participantId}`;
+  // Defensive guard: also skip if a __step_start__ trigger is already present
+  // in history (covers React effect re-runs / remounts that reset
+  // hasAutoStarted) — prevents opener regeneration on refresh.
   const hasAutoStarted = React.useRef(false);
   React.useEffect(() => {
     const alreadyHasStepStartTrigger = messages.some(
@@ -228,10 +228,9 @@ export function ParticipantChatPanel({
       sendMessage({
         role: "user",
         parts: [{ type: "text", text: "__step_start__" }],
-        messageId: stepStartTriggerId,
       });
     }
-  }, [initialMessages, messages, messages.length, status, sendMessage, stepId, conceptActivityStarted, stepStartTriggerId]);
+  }, [initialMessages, messages, messages.length, status, sendMessage, stepId, conceptActivityStarted]);
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {

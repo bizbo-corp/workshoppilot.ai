@@ -2081,12 +2081,6 @@ export function ChatPanel({
   // Auto-start: send trigger message when entering a step with no prior messages
   const shouldAutoStart = !initialMessages || initialMessages.length === 0;
 
-  // Deterministic id for the step-start trigger. The chat_messages table has a
-  // unique index on (sessionId, stepId, participantId, messageId), so persisting
-  // the same id twice is a no-op — preventing duplicate opener regenerations
-  // across refreshes / remounts (df_rqxvim5euc455zb1ak2srzn8).
-  const stepStartTriggerId = `step-start:${sessionId}:${step.id}`;
-
   // Fixed greeting shown instantly while AI generates first response
   const stepGreeting = STEP_INITIAL_GREETINGS[step.id];
   const hasAssistantMessage = messages.some((m) => m.role === "assistant");
@@ -2098,6 +2092,10 @@ export function ChatPanel({
     // skipAutoStart prevents re-triggering when ChatPanel remounts (e.g. after chat toggle).
     // For concept step in multiplayer, block auto-start until activity is started.
     // Solo mode and all other steps are unaffected.
+    //
+    // Defensive: also skip if a __step_start__ trigger is already present in
+    // history (covers React effect re-runs / remounts that reset hasAutoStarted).
+    // df_rqxvim5euc455zb1ak2srzn8.
     const alreadyHasStepStartTrigger = messages.some(
       (m) =>
         m.role === "user" &&
@@ -2121,7 +2119,6 @@ export function ChatPanel({
       sendMessage({
         role: "user",
         parts: [{ type: "text", text: "__step_start__" }],
-        messageId: stepStartTriggerId,
       });
     }
   }, [
@@ -2135,7 +2132,6 @@ export function ChatPanel({
     onAutoStarted,
     conceptActivityStarted,
     isMultiplayer,
-    stepStartTriggerId,
   ]);
 
   // Helper: check if user is near bottom of scroll container
