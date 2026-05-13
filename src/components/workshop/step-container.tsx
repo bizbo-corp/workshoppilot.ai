@@ -356,6 +356,20 @@ export function StepContainer({
           );
         })()
       : true;
+  // Challenge step: the Accept button label is "Accept Challenge Statement",
+  // so it must only appear once a challenge-statement sticky has actual text.
+  // Without this, filling any input template card (idea/problem/audience) was
+  // enough to surface the Accept button — surfacing it before the synthesis
+  // exists. df_d3dgmx43wvb48du2pkub1180.
+  const challengeStatementFilled =
+    step?.id === 'challenge'
+      ? stickyNotes.some(
+          (p) =>
+            p.templateKey === 'challenge-statement' &&
+            p.text.trim().length > 0,
+        )
+      : true;
+
   const showConfirm =
     !!confirmLabel &&
     !artifactConfirmed &&
@@ -363,6 +377,7 @@ export function StepContainer({
     canvasItemCount >= minItems &&
     allPersonasInterviewed &&
     allSwimLanesFilled &&
+    challengeStatementFilled &&
     (allConceptCardsFilled || conceptProceedOverride);
 
   // Fire confetti when user clicks Accept (not on auto-confirm from canvas content)
