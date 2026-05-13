@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ChevronDown, ChevronRight, MessageSquare, Loader2, Link2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { copyToClipboard } from "@/lib/clipboard";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 
@@ -61,12 +62,12 @@ export function ParticipantOverview({ sessionId, stepId, shareToken }: Participa
   const handleCopyRejoinLink = React.useCallback(async (p: ParticipantSummary) => {
     if (!shareToken || !p.rejoinToken) return;
     const url = `${window.location.origin}/join/${shareToken}?r=${p.rejoinToken}`;
-    try {
-      await navigator.clipboard.writeText(url);
+    const ok = await copyToClipboard(url);
+    if (ok) {
       setCopiedId(p.participantId);
       toast(`Rejoin link copied for ${p.displayName}`, { duration: 2000 });
       setTimeout(() => setCopiedId(null), 2000);
-    } catch {
+    } else {
       toast.error("Could not copy link");
     }
   }, [shareToken]);

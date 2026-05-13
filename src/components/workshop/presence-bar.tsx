@@ -7,6 +7,7 @@ import { Crown, Check, Link2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { currentRoundVotes } from '@/lib/canvas/voting-utils';
+import { copyToClipboard } from '@/lib/clipboard';
 
 const IDLE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
@@ -158,12 +159,12 @@ export function PresenceBar({
   const handleCopyRejoinLink = useCallback(async (p: OfflineParticipant) => {
     if (!shareToken || !p.rejoinToken) return;
     const url = `${window.location.origin}/join/${shareToken}?r=${p.rejoinToken}`;
-    try {
-      await navigator.clipboard.writeText(url);
+    const ok = await copyToClipboard(url);
+    if (ok) {
       setCopiedRejoinId(p.participantId);
       toast(`Rejoin link copied for ${p.displayName}`, { duration: 2000 });
       setTimeout(() => setCopiedRejoinId(null), 2000);
-    } catch {
+    } else {
       toast.error('Failed to copy link');
     }
   }, [shareToken]);
@@ -208,11 +209,11 @@ export function PresenceBar({
   const handleCopyLink = useCallback(async () => {
     if (!shareToken) return;
     const url = `${window.location.origin}/join/${shareToken}`;
-    try {
-      await navigator.clipboard.writeText(url);
+    const ok = await copyToClipboard(url);
+    if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
+    } else {
       toast.error('Failed to copy link');
     }
   }, [shareToken]);

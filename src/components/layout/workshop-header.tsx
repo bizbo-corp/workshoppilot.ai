@@ -21,6 +21,7 @@ import { getStepByOrder } from "@/lib/workshop/step-metadata";
 import { getWorkshopColor } from "@/lib/workshop/workshop-appearance";
 import { SignInModal } from "@/components/auth/sign-in-modal";
 import { renameWorkshop } from "@/actions/workshop-actions";
+import { copyToClipboard } from "@/lib/clipboard";
 
 interface WorkshopHeaderProps {
   sessionId: string;
@@ -42,13 +43,12 @@ function ShareButton({ shareToken }: { shareToken: string }) {
 
   const handleCopy = async () => {
     const url = `${window.location.origin}/join/${shareToken}`;
-    try {
-      await navigator.clipboard.writeText(url);
+    const ok = await copyToClipboard(url);
+    if (ok) {
       setCopied(true);
       toast('Link copied!', { duration: 2000 });
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard API unavailable — fall back to manual copy prompt
+    } else {
       toast.error('Could not copy link. Please copy the URL manually.');
     }
   };
