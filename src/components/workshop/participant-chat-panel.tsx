@@ -624,11 +624,15 @@ export function ParticipantChatPanel({
   }, [pendingHmwChipSelection, isLoading, setPendingHmwChipSelection, sendMessage]);
 
   // Force-flush canvas state to DB before sending a chat message
-  // Ensures the AI API gets fresh data (e.g. after facilitator reassignment)
+  // Ensures the AI API gets fresh data (e.g. after facilitator reassignment).
+  //
+  // Participants always run in multiplayer, where the canvas store keeps
+  // isDirty=false (Liveblocks owns sync). The AI reads from Postgres, not
+  // Liveblocks, so we must always flush — never short-circuit on isDirty
+  // here. df_d3dgmx43.
   const flushCanvasToDb = React.useCallback(async () => {
     if (!isCanvasStep) return;
     const s = storeApi.getState();
-    if (!s.isDirty) return;
     await saveCanvasState(workshopId, stepId, {
       stickyNotes: s.stickyNotes,
       ...(s.gridColumns.length > 0 ? { gridColumns: s.gridColumns } : {}),

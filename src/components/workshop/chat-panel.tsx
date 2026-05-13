@@ -876,7 +876,12 @@ export function ChatPanel({
   const flushCanvasToDb = React.useCallback(async () => {
     if (!isCanvasStep) return;
     const s = storeApi.getState();
-    if (!s.isDirty) return;
+    // In multiplayer, the canvas store deliberately keeps isDirty=false because
+    // Liveblocks handles its own sync. But the AI reads from Postgres, not from
+    // Liveblocks — so we must always flush in multiplayer regardless of isDirty.
+    // In solo mode, isDirty is reliable and we can short-circuit when nothing
+    // has changed. df_d3dgmx43.
+    if (!isMultiplayer && !s.isDirty) return;
     await saveCanvasState(workshopId, step.id, {
       stickyNotes: s.stickyNotes,
       ...(s.gridColumns.length > 0 ? { gridColumns: s.gridColumns } : {}),
@@ -891,7 +896,7 @@ export function ChatPanel({
       ...(s.hmwCards.length > 0 ? { hmwCards: s.hmwCards } : {}),
     });
     s.markClean();
-  }, [isCanvasStep, workshopId, step.id, storeApi]);
+  }, [isCanvasStep, workshopId, step.id, storeApi, isMultiplayer]);
 
   // One-shot flush: persist skeleton cards to DB immediately on mount
   // (before user sends any message). Fires once when isDirty first becomes true
