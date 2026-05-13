@@ -49,6 +49,14 @@ export async function POST(req: Request) {
     // Assemble three-tier context for this step
     const stepContext = await assembleStepContext(workshopId, stepId, participantId, conceptOwnerId);
 
+    // Dev-only diagnostic for the challenge step — confirms what canvas state
+    // the AI actually receives. Remove once df_d3dgmx43 is verified end-to-end.
+    if (process.env.NODE_ENV !== 'production' && stepId === 'challenge') {
+      console.log(
+        `[challenge-debug] workshop=${workshopId} canvasContext:\n${stepContext.canvasContext || '(empty)'}\n[/challenge-debug]`,
+      );
+    }
+
     // Inject selected canvas items into context if any are selected
     if (Array.isArray(selectedStickyNoteIds) && selectedStickyNoteIds.length > 0) {
       const canvasState = await loadCanvasState(workshopId, stepId);
@@ -89,7 +97,7 @@ export async function POST(req: Request) {
 
     // Build context-aware system prompt with arc phase and step instructions
     const isParticipant = !!participantId;
-    const systemPrompt = buildStepSystemPrompt(
+    let systemPrompt = buildStepSystemPrompt(
       stepId,
       stepName,
       arcPhase,
@@ -103,6 +111,37 @@ export async function POST(req: Request) {
       isParticipant,
       participantName,
     );
+
+    // Per-turn override for the challenge step: when the user is asking the AI
+    // to use the board AND the canvas has filled cards, append a hard directive
+    // at the END of the system prompt (highest-recency = highest weight).
+    // This breaks Gemini out of conversational momentum from earlier turns
+    // where the board was genuinely empty. df_d3dgmx43.
+    if (
+      stepId === 'challenge' &&
+      stepContext.canvasContext?.includes('Filled by user')
+    ) {
+      const lastMsg = Array.isArray(messages) ? messages[messages.length - 1] : null;
+      const lastText =
+        lastMsg?.parts
+          ?.filter((p: { type: string; text?: string }) => p.type === 'text')
+          .map((p: { text?: string }) => p.text || '')
+          .join(' ') || '';
+      const wantsBoard = /\b(board|whiteboard|notes?|cards?|use what|read|draft)\b/i.test(
+        lastText,
+      );
+      if (wantsBoard) {
+        systemPrompt += `\n\nTURN OVERRIDE (highest priority — supersedes all prior context):
+The user's most recent message asks you to use the board content. The CANVAS STATE section above contains a "Filled by user" block with real, current content. Earlier in this conversation you may have said the board was empty — that was before these cards were filled, so it no longer applies. Ignore those earlier statements.
+
+Do this NOW:
+1. Synthesize a "How might we…" challenge statement from the Idea, Problem, and Audience cards in the "Filled by user" block.
+2. Emit it as: [CANVAS_ITEM key="challenge-statement"]How might we…?[/CANVAS_ITEM]
+3. Briefly explain the synthesis in 1-2 sentences.
+
+Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The cards are real and visible to you above.`;
+      }
+    }
 
     // Filter out messages with empty content before conversion.
     // Interrupted streams can leave assistant messages with empty parts in history,
