@@ -662,17 +662,31 @@ export function assembleCanvasContextForStep(stepId: string, stickyNotes: Sticky
     return assemblePersonaCanvasContext(personaTemplates);
   }
 
-  // Challenge step: report template card state so the AI knows which cards are filled
+  // Challenge step: split filled vs empty template cards under explicit headers
+  // so the AI can't miss the difference. Previous flat list ("(key: x, filled)")
+  // was getting misread as "the board is empty" (df_d3dgmx43wvb48du2pkub1180).
   if (stepId === 'challenge') {
     const templateStickyNotes = stickyNotes.filter(p => p.templateKey);
     if (templateStickyNotes.length > 0) {
-      const lines = templateStickyNotes.map(p => {
-        const filled = p.text?.trim().length > 0;
-        const status = filled ? 'filled' : 'empty';
-        const content = filled ? p.text.trim() : '(not yet filled)';
-        return `- [${p.templateLabel || p.templateKey}] (key: ${p.templateKey}, ${status}): ${content}`;
-      });
-      let result = `Template cards:\n${lines.join('\n')}`;
+      const filled = templateStickyNotes.filter(p => p.text?.trim().length > 0);
+      const empty = templateStickyNotes.filter(p => !p.text?.trim().length);
+
+      let result = `Template cards: ${filled.length} of ${templateStickyNotes.length} filled.`;
+
+      if (filled.length > 0) {
+        const filledLines = filled.map(
+          p => `- [${p.templateLabel || p.templateKey}]: ${p.text.trim()}`,
+        );
+        result += `\n\nFilled by user (treat as authoritative input):\n${filledLines.join('\n')}`;
+      }
+
+      if (empty.length > 0) {
+        const emptyLines = empty.map(
+          p => `- [${p.templateLabel || p.templateKey}]`,
+        );
+        result += `\n\nEmpty cards (no content yet):\n${emptyLines.join('\n')}`;
+      }
+
       // Also include any non-template sticky notes (user-added)
       const regularItems = stickyNotes.filter(p => !p.templateKey && (!p.type || p.type === 'stickyNote') && !p.isPreview && p.text?.trim());
       if (regularItems.length > 0) {
