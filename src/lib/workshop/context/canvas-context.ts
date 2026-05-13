@@ -678,6 +678,9 @@ export function assembleCanvasContextForStep(stepId: string, stickyNotes: Sticky
           p => `- [${p.templateLabel || p.templateKey}]: ${p.text.trim()}`,
         );
         result += `\n\nFilled by user (treat as authoritative input):\n${filledLines.join('\n')}`;
+        // In-context directive — embedded with the data so the AI can't read
+        // the cards and still claim emptiness. df_d3dgmx43.
+        result += `\n\nDIRECTIVE: The above cards constitute real, authoritative input from the user. The board is NOT empty. If the user asks you to read/use the board or draft a challenge statement, build directly from this content and emit [CANVAS_ITEM key="challenge-statement"]How might we…?[/CANVAS_ITEM] now. Do not ask the user to re-state what is already shown above.`;
       }
 
       if (empty.length > 0) {
