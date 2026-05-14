@@ -171,6 +171,99 @@ export async function createWorkshopSession(formData?: FormData) {
 }
 
 /**
+ * Converts a solo workshop into a team (facilitator-led, multiplayer) workshop.
+ * Mirrors the multiplayer-creation branch in createWorkshopSession: sets
+ * facilitator_mode='team' + workshop_type='multiplayer', creates the
+ * workshopSessions row (Liveblocks room + share token), and seeds the owner's
+ * sessionParticipants record. Idempotent: returns early if the workshop is
+ * already team-mode.
+ *
+ * Only the workshop owner can convert. Conversion is blocked once the challenge
+ * has been published (challengePublishedAt) because participants may already be
+ * involved.
+ */
+export async function convertToTeamWorkshop(workshopId: string): Promise<void> {
+  const userId = await getUserId();
+  if (!userId) throw new Error('Authentication required');
+
+  const [workshop] = await db
+    .select()
+    .from(workshops)
+    .where(and(eq(workshops.id, workshopId), eq(workshops.clerkUserId, userId)))
+    .limit(1);
+  if (!workshop) throw new Error('Access denied');
+  if (workshop.facilitatorMode === 'team') return; // already converted
+  if (workshop.challengePublishedAt) {
+    throw new Error('Cannot convert after the challenge has been published');
+  }
+
+  await db
+    .update(workshops)
+    .set({ facilitatorMode: 'team', workshopType: 'multiplayer', maxParticipants: 15 })
+    .where(eq(workshops.id, workshopId));
+
+  // Create the Liveblocks-backed session + share token if one doesn't exist yet.
+  const existingSession = await db.query.workshopSessions.findFirst({
+    where: eq(workshopSessions.workshopId, workshopId),
+  });
+
+  let workshopSessionId: string;
+  if (existingSession) {
+    workshopSessionId = existingSession.id;
+  } else {
+    const shareToken = randomBytes(18).toString('base64url');
+    const [created] = await db
+      .insert(workshopSessions)
+      .values({
+        workshopId,
+        liveblocksRoomId: getRoomId(workshopId),
+        shareToken,
+        status: 'waiting',
+        maxParticipants: 15,
+      })
+      .returning();
+    workshopSessionId = created.id;
+  }
+
+  // Seed the owner's participant record if not already present.
+  const ownerParticipant = await db.query.sessionParticipants.findFirst({
+    where: and(
+      eq(sessionParticipants.sessionId, workshopSessionId),
+      eq(sessionParticipants.clerkUserId, userId)
+    ),
+  });
+  if (!ownerParticipant) {
+    const ownerUser = await db.query.users.findFirst({
+      where: eq(users.clerkUserId, userId),
+    });
+    const ownerDisplayName = ownerUser
+      ? [ownerUser.firstName, ownerUser.lastName].filter(Boolean).join(' ') || 'Facilitator'
+      : 'Facilitator';
+    await db.insert(sessionParticipants).values({
+      sessionId: workshopSessionId,
+      clerkUserId: userId,
+      liveblocksUserId: userId,
+      displayName: ownerDisplayName,
+      color: PARTICIPANT_COLORS[0],
+      role: 'owner',
+      status: 'active',
+    });
+  }
+
+  // Resolve the URL session id and revalidate so the step-1 UI re-renders with
+  // the team-mode setup wizard affordance.
+  const [sessionRow] = await db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(eq(sessions.workshopId, workshopId))
+    .limit(1);
+  if (sessionRow) {
+    revalidatePath(`/workshop/${sessionRow.id}/step/1`);
+  }
+  revalidatePath('/dashboard');
+}
+
+/**
  * Renames a workshop
  * Validates name and updates workshop title in database
  */

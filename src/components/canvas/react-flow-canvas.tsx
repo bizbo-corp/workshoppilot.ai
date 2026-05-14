@@ -398,6 +398,10 @@ function ReactFlowCanvasInner({
   // Dragging state - track which node is being dragged for visual feedback
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
 
+  // Tick that forces the `nodes` useMemo to recompute when auto-fit writes new
+  // dimensions to the liveDimensions ref (refs alone don't trigger re-render).
+  const [autoResizeTick, setAutoResizeTick] = useState(0);
+
   // Clear stale guide livePositions when guide data updates (e.g. from edit popover)
   // so that prop positions take precedence over cached drag positions.
   useEffect(() => {
@@ -524,6 +528,19 @@ function ReactFlowCanvasInner({
   const handleResize = useCallback(
     (id: string, width: number, height: number) => {
       liveDimensions.current[id] = { width, height };
+    },
+    [],
+  );
+
+  // Auto-fit text-driven resize from the sticky-note-node measurement effect.
+  // Same liveDimensions storage as manual resize, but bumps a tick so the
+  // nodes useMemo recomputes and the new height flows into ReactFlow.
+  const handleAutoResize = useCallback(
+    (id: string, width: number, height: number) => {
+      const prev = liveDimensions.current[id];
+      if (prev && prev.width === width && prev.height === height) return;
+      liveDimensions.current[id] = { width, height };
+      setAutoResizeTick((t) => t + 1);
     },
     [],
   );
@@ -853,10 +870,16 @@ function ReactFlowCanvasInner({
     [updateStickyNote],
   );
 
-  // Handle edit complete (textarea blur)
+  // Handle edit complete (textarea blur). Persist any auto-fit dimensions so
+  // the grown size sticks across reloads and is visible to other participants.
   const handleEditComplete = useCallback((id: string) => {
     setEditingNodeId(null);
-  }, []);
+    const dims = liveDimensions.current[id];
+    if (dims) {
+      updateStickyNote(id, { width: Math.round(dims.width), height: Math.round(dims.height) });
+      delete liveDimensions.current[id];
+    }
+  }, [updateStickyNote]);
 
   // Handle concept card reassignment (facilitator only)
   const handleConceptReassign = useCallback(
@@ -1156,6 +1179,7 @@ function ReactFlowCanvasInner({
           onEditComplete: handleEditComplete,
           onResize: handleResize,
           onResizeEnd: handleResizeEnd,
+          onAutoResize: handleAutoResize,
           ...(stickyNote.templateKey
             ? {
                 templateKey: stickyNote.templateKey,
@@ -1411,6 +1435,7 @@ function ReactFlowCanvasInner({
     onEditGuide,
     handleGuideResize,
     handleGuideResizeEnd,
+    autoResizeTick,
     handleTextChange,
     handleEditComplete,
     handleResize,
@@ -1965,6 +1990,15 @@ function ReactFlowCanvasInner({
     },
     [bringToFront],
   );
+
+  // Guarantee draggingNodeId is cleared on drag end. The onNodesChange path
+  // can miss this for zero-distance drags, escape-cancelled drags, mouseup
+  // outside the viewport, or when the node is mid-resize. If missed,
+  // `cursor-dragging` stays applied and the canvas shows a grabbing cursor
+  // everywhere.
+  const handleNodeDragStop = useCallback(() => {
+    setDraggingNodeId(null);
+  }, []);
 
   // Handle all node changes (selection, position, removal)
   const handleNodesChange = useCallback(
@@ -2691,9 +2725,19 @@ function ReactFlowCanvasInner({
     dismissAutoGuides();
   }, [dismissAutoGuides]);
 
+  // Reset the pane double-click counter on any node click so a node interaction
+  // can't be mistaken for the second click of a pane double-click sequence.
+  const handleNodeClick = useCallback(() => {
+    lastPaneClickTime.current = 0;
+  }, []);
+
   // Handle node double-click (enter edit mode for stickyNotes, or re-edit for drawings)
   const handleNodeDoubleClick = useCallback(
     async (_event: React.MouseEvent, node: Node) => {
+      // Wipe the pane double-click counter so a stray pane click that arrived
+      // first can't combine with this node double-click to create a new sticky.
+      lastPaneClickTime.current = 0;
+
       // Check if this is a drawing node
       const drawingNode = drawingNodes.find((dn) => dn.id === node.id);
       if (drawingNode) {
@@ -2743,6 +2787,15 @@ function ReactFlowCanvasInner({
   // Handle pane click (double-click detection + deselect)
   const handlePaneClick = useCallback(
     (event: React.MouseEvent) => {
+      // Defensive: if the event target is inside a node, don't treat as a pane
+      // click. Prevents fast double-clicks near a sticky's edge from leaking
+      // through and creating a new sticky on top of the one being edited.
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('.react-flow__node')) {
+        lastPaneClickTime.current = 0;
+        return;
+      }
+
       // Close context menu if open
       setContextMenu(null);
       dismissAutoGuides();
@@ -2992,8 +3045,11 @@ function ReactFlowCanvasInner({
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={handleNodesChange}
+        onNodeClick={handleNodeClick}
         onNodeDrag={handleNodeDrag}
         onNodeDragStart={handleNodeDragStart}
+        onNodeDragStop={handleNodeDragStop}
+        onSelectionDragStop={handleNodeDragStop}
         onNodeDoubleClick={handleNodeDoubleClick}
         onNodeContextMenu={handleNodeContextMenu}
         onPaneClick={handlePaneClick}

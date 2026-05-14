@@ -27,6 +27,7 @@ blob-report/
 # misc
 .DS_Store
 *.pem
+notepad.md
 
 # debug
 npm-debug.log*

@@ -1,10 +1,36 @@
 'use client';
 
-import { memo, useCallback, useRef, useEffect } from 'react';
+import { memo, useCallback, useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { Handle, Position, type NodeProps, type Node, NodeResizer } from '@xyflow/react';
 import { Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StickyNoteColor } from '@/stores/canvas-store';
+
+// Miro-style hybrid text fit: stickies grow vertically up to max, then text
+// shrinks down to a min font-size, then text wraps and scrolls.
+export const STICKY_BASE_FONT_SIZE = 14; // matches Tailwind text-sm
+export const STICKY_MIN_FONT_SIZE = 10;
+export const STICKY_DEFAULT_WIDTH = 120;
+export const STICKY_DEFAULT_HEIGHT = 120;
+export const STICKY_MAX_WIDTH = 280;
+export const STICKY_MAX_HEIGHT = 280;
+const STICKY_PADDING_Y = 24; // matches p-3 (12 top + 12 bottom)
+
+/** Compute the node height and font-size that fits the given natural content height. */
+function fitText(naturalContentHeight: number): { nodeHeight: number; fontSize: number } {
+  const maxContentH = STICKY_MAX_HEIGHT - STICKY_PADDING_Y;
+  if (naturalContentHeight <= maxContentH) {
+    return {
+      nodeHeight: Math.max(STICKY_DEFAULT_HEIGHT, naturalContentHeight + STICKY_PADDING_Y),
+      fontSize: STICKY_BASE_FONT_SIZE,
+    };
+  }
+  // Shrink: font-size scales roughly as sqrt of area ratio. Using linear ratio
+  // is a slight overshoot toward smaller text, which is fine for one pass.
+  const ratio = maxContentH / naturalContentHeight;
+  const fs = Math.max(STICKY_MIN_FONT_SIZE, Math.floor(STICKY_BASE_FONT_SIZE * ratio));
+  return { nodeHeight: STICKY_MAX_HEIGHT, fontSize: fs };
+}
 
 export const COLOR_CLASSES: Record<StickyNoteColor, string> = {
   yellow: 'bg-[var(--sticky-note-yellow)]',
@@ -62,6 +88,8 @@ export type StickyNoteNodeData = {
   onEditComplete?: (id: string) => void;
   onResize?: (id: string, width: number, height: number) => void;
   onResizeEnd?: (id: string, width: number, height: number, x: number, y: number) => void;
+  // Auto-resize from text fit logic — keeps width, updates height.
+  onAutoResize?: (id: string, width: number, height: number) => void;
 };
 
 export type StickyNoteNode = Node<StickyNoteNodeData, 'stickyNote'>;
@@ -72,7 +100,47 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
   const bgColor = COLOR_CLASSES[colorKey];
   const textColor = TEXT_COLOR_CLASSES[colorKey];
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const displayTextRef = useRef<HTMLParagraphElement>(null);
+  const outerRef = useRef<HTMLDivElement>(null);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const [fontSize, setFontSize] = useState<number>(STICKY_BASE_FONT_SIZE);
+
+  // Measure content and apply hybrid grow-then-shrink fit.
+  // Edit mode: textarea (scrollHeight after height:auto reset).
+  // Display mode: p element (scrollHeight directly).
+  useLayoutEffect(() => {
+    if (data.isPreview) return;
+
+    const measureEl = data.isEditing ? textareaRef.current : displayTextRef.current;
+    if (!measureEl) return;
+
+    let naturalHeight: number;
+    if (data.isEditing && textareaRef.current) {
+      // Textarea natural height requires resetting height to auto first.
+      const ta = textareaRef.current;
+      const prevHeight = ta.style.height;
+      ta.style.fontSize = `${STICKY_BASE_FONT_SIZE}px`;
+      ta.style.height = 'auto';
+      naturalHeight = ta.scrollHeight;
+      ta.style.height = prevHeight;
+    } else {
+      // Reset font-size to base for accurate measurement, then we'll set the
+      // computed size below.
+      measureEl.style.fontSize = `${STICKY_BASE_FONT_SIZE}px`;
+      naturalHeight = measureEl.scrollHeight;
+    }
+
+    const { nodeHeight, fontSize: nextFs } = fitText(naturalHeight);
+    setFontSize(nextFs);
+
+    // Report grow-phase height to canvas so the node wrapper resizes.
+    // Width stays at current outer width (or default).
+    const currentWidth = outerRef.current?.clientWidth ?? STICKY_DEFAULT_WIDTH;
+    data.onAutoResize?.(id, currentWidth, nodeHeight);
+    // `onAutoResize` is referentially stable from the parent's useCallback,
+    // so listing it doesn't cause re-runs. Listed explicitly to keep the deps
+    // array size stable across edits (HMR otherwise throws on size changes).
+  }, [data.text, data.isEditing, data.isPreview, id, data.onAutoResize]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -174,11 +242,12 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
 
   return (
     <div
+      ref={outerRef}
       className={cn(
         bgColor,
         textColor,
         'shadow-md rounded-sm p-3',
-        'font-sans text-sm',
+        'font-sans',
         // Smooth shadow transition on hover — no transform to avoid flicker
         !dragging && 'transition-shadow duration-150',
         !dragging && !selected && 'hover:shadow-lg',
@@ -225,7 +294,8 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
         <textarea
           ref={textareaRef}
           maxLength={200}
-          className="nodrag nopan bg-transparent border-none outline-none resize-none w-full flex-1 text-sm overflow-y-auto"
+          className="nodrag nopan bg-transparent border-none outline-none resize-none w-full flex-1 overflow-y-auto"
+          style={{ fontSize: `${fontSize}px`, lineHeight: 1.35 }}
           defaultValue={data.text}
           onBlur={handleBlur}
           onChange={(e) => data.onTextChange?.(id, e.target.value)}
@@ -243,15 +313,23 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
               )}>
                 {personaInitials}
               </div>
-              <p className="break-words whitespace-pre-wrap overflow-hidden flex-1 font-semibold">
+              <p
+                ref={displayTextRef}
+                className="break-words whitespace-pre-wrap overflow-hidden flex-1 font-semibold"
+                style={{ fontSize: `${fontSize}px`, lineHeight: 1.35 }}
+              >
                 {data.text || ''}
               </p>
             </div>
           ) : (
-            <p className={cn(
-              'break-words whitespace-pre-wrap overflow-hidden flex-1',
-              isTemplatePlaceholder && 'text-neutral-olive-500/50 italic text-xs'
-            )}>
+            <p
+              ref={displayTextRef}
+              className={cn(
+                'break-words whitespace-pre-wrap overflow-hidden flex-1',
+                isTemplatePlaceholder && 'text-neutral-olive-500/50 italic'
+              )}
+              style={{ fontSize: `${fontSize}px`, lineHeight: 1.35 }}
+            >
               {data.text || data.placeholderText || ''}
             </p>
           )}

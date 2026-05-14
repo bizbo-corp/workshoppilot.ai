@@ -48,7 +48,8 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
   const [selectedColor, setSelectedColor] = useState<WorkshopColor>(WORKSHOP_COLORS[0]);
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   // 'solo' = just me (old flow). 'team' = facilitator-led with email invites (maps to workshopType=multiplayer).
-  const [facilitatorMode, setFacilitatorMode] = useState<'solo' | 'team'>('solo');
+  // Null until the user explicitly picks — forces a deliberate choice instead of defaulting to solo.
+  const [facilitatorMode, setFacilitatorMode] = useState<'solo' | 'team' | null>(null);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [emojiData, setEmojiData] = useState<any>(null);
   const emojiContainerRef = useRef<HTMLDivElement>(null);
@@ -60,7 +61,7 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
       setTitle('');
       setSelectedColor(WORKSHOP_COLORS[0]);
       setSelectedEmoji(null);
-      setFacilitatorMode('solo');
+      setFacilitatorMode(null);
       setEmojiPickerOpen(false);
     }
   }, [open]);
@@ -103,16 +104,68 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
           {children}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md overflow-visible">
+      <DialogContent className="sm:max-w-lg overflow-visible">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>New Workshop</DialogTitle>
             <DialogDescription>
-              Give your workshop a name to get started.
+              Who&apos;s running this workshop? Pick a mode to get started.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="mt-4 space-y-4">
+          <div className="mt-5 space-y-5">
+            {/* Mode selection — lead with this since it shapes the entire flow.
+                No default selected: the user must pick before Create enables. */}
+            <div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFacilitatorMode('solo')}
+                  aria-pressed={facilitatorMode === 'solo'}
+                  className={cn(
+                    'flex flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    facilitatorMode === 'solo'
+                      ? 'border-primary bg-primary/5 shadow-sm'
+                      : 'border-border bg-background hover:border-muted-foreground/40 hover:bg-accent'
+                  )}
+                >
+                  <div className={cn(
+                    'flex h-10 w-10 items-center justify-center rounded-lg',
+                    facilitatorMode === 'solo' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                  )}>
+                    <MessageSquare className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Just me</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">Solo, AI-guided through all 10 steps.</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFacilitatorMode('team')}
+                  aria-pressed={facilitatorMode === 'team'}
+                  className={cn(
+                    'flex flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    facilitatorMode === 'team'
+                      ? 'border-primary bg-primary/5 shadow-sm'
+                      : 'border-border bg-background hover:border-muted-foreground/40 hover:bg-accent'
+                  )}
+                >
+                  <div className={cn(
+                    'flex h-10 w-10 items-center justify-center rounded-lg',
+                    facilitatorMode === 'team' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                  )}>
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">With my team</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">You facilitate, invite teammates by email.</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             {/* Title input */}
             <div>
               <label htmlFor="workshop-title" className="text-sm font-medium text-foreground">
@@ -125,61 +178,8 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., Pet Care App, Coffee Marketplace"
                 className="mt-1.5"
-                autoFocus
                 maxLength={100}
               />
-            </div>
-
-            {/* Mode selection: Just me vs Workshop with team */}
-            <div>
-              <label className="text-sm font-medium text-foreground">
-                Who&apos;s running this workshop?
-              </label>
-              <div className="mt-1.5 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFacilitatorMode('solo')}
-                  className={cn(
-                    'flex flex-col items-center gap-1.5 rounded-lg border-2 p-3 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    facilitatorMode === 'solo'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border bg-background hover:border-muted-foreground/40 hover:bg-accent'
-                  )}
-                >
-                  <div className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-md',
-                    facilitatorMode === 'solo' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                  )}>
-                    <MessageSquare className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Just me</p>
-                    <p className="text-xs text-muted-foreground">Solo, AI-guided</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFacilitatorMode('team')}
-                  className={cn(
-                    'flex flex-col items-center gap-1.5 rounded-lg border-2 p-3 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    facilitatorMode === 'team'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border bg-background hover:border-muted-foreground/40 hover:bg-accent'
-                  )}
-                >
-                  <div className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-md',
-                    facilitatorMode === 'team' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                  )}>
-                    <Users className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Workshop with team</p>
-                    <p className="text-xs text-muted-foreground">You facilitate, invite by email</p>
-                  </div>
-                </button>
-              </div>
             </div>
 
             {/* Color + Emoji pickers */}
@@ -252,7 +252,7 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
           {/* Hidden inputs for server action */}
           <input type="hidden" name="color" value={selectedColor.id} />
           <input type="hidden" name="emoji" value={selectedEmoji || ''} />
-          <input type="hidden" name="facilitatorMode" value={facilitatorMode} />
+          <input type="hidden" name="facilitatorMode" value={facilitatorMode ?? ''} />
           <input
             type="hidden"
             name="workshopType"
@@ -263,7 +263,7 @@ export function NewWorkshopButton({ variant, size, className, children }: NewWor
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!trimmedTitle || isPending}>
+            <Button type="submit" disabled={!trimmedTitle || !facilitatorMode || isPending}>
               {isPending ? 'Creating...' : 'Create Workshop'}
             </Button>
           </DialogFooter>

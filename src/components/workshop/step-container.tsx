@@ -30,7 +30,19 @@ import {
   resetStep,
   updateStepStatus,
   completeWorkshop,
+  convertToTeamWorkshop,
 } from "@/actions/workshop-actions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Users } from "lucide-react";
 import { saveCanvasState } from "@/actions/canvas-actions";
 import {
   getStepByOrder,
@@ -144,6 +156,10 @@ interface StepContainerProps {
   facilitatorMode?: 'solo' | 'team';
   /** v2.1 — True once the facilitator publishes the challenge (challengePublishedAt is set). */
   challengePublished?: boolean;
+  /** True when the current Clerk user owns the workshop (matches workshops.clerkUserId).
+   *  Distinct from multiplayer-context isFacilitator, which is false in solo mode.
+   *  Used to gate the "Switch to team workshop" affordance on Step 1 for solo owners. */
+  isWorkshopOwner?: boolean;
   /** v2.2 — Challenge fields surfaced in the setup wizard's "Confirm" step. */
   challengeIdea?: string | null;
   challengeProblem?: string | null;
@@ -178,6 +194,7 @@ export function StepContainer({
   canvasConfirmed = false,
   facilitatorMode,
   challengePublished = false,
+  isWorkshopOwner = false,
   challengeIdea,
   challengeProblem,
   challengeAudience,
@@ -709,6 +726,29 @@ export function StepContainer({
   const isTeamModeStepOne =
     stepOrder === 1 && facilitatorMode === 'team' && isFacilitator;
 
+  // Convert solo → team workshop (Step 1, owner only, pre-publish). Affordance for
+  // owners who created a solo workshop but later want to invite teammates.
+  const [showConvertDialog, setShowConvertDialog] = React.useState(false);
+  const [isConverting, setIsConverting] = React.useState(false);
+  const canConvertToTeam =
+    stepOrder === 1 &&
+    facilitatorMode === 'solo' &&
+    isWorkshopOwner &&
+    !challengePublished;
+
+  const handleConvertToTeam = React.useCallback(async () => {
+    setIsConverting(true);
+    try {
+      await convertToTeamWorkshop(workshopId);
+      // ?setup=1 tells the post-refresh render to auto-open the setup wizard.
+      router.replace(`/workshop/${sessionId}/step/1?setup=1`, { scroll: false });
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not switch workshop');
+      setIsConverting(false);
+    }
+  }, [workshopId, sessionId, router]);
+
   // Pull live challenge data from the canvas store so the wizard reflects the
   // facilitator's current sticky notes (not stale server-side artifact). In multiplayer,
   // Liveblocks keeps this in sync; in solo, saveCanvasState writes to it.
@@ -748,6 +788,20 @@ export function StepContainer({
   // V0 prototype creation status (polling from journey map)
   const searchParams = useSearchParams();
   const v0Creating = stepOrder === 10 && searchParams.get("v0") === "creating";
+
+  // After a solo → team conversion the redirect carries ?setup=1. Once the workshop
+  // is team-mode (post-refresh), pop the setup wizard immediately and strip the param
+  // so a manual refresh doesn't re-open it.
+  React.useEffect(() => {
+    if (!isTeamModeStepOne) return;
+    if (searchParams.get('setup') !== '1') return;
+    setShowSetupWizard(true);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('setup');
+    const qs = next.toString();
+    router.replace(`/workshop/${sessionId}/step/1${qs ? `?${qs}` : ''}`, { scroll: false });
+  }, [isTeamModeStepOne, searchParams, router, sessionId]);
+
   const [v0Status, setV0Status] = React.useState<
     "idle" | "creating" | "ready" | "error"
   >(v0Creating ? "creating" : "idle");
@@ -1690,6 +1744,20 @@ export function StepContainer({
           )}
         </>
       )}
+      {/* Solo-mode "Switch to team workshop" pill — top-right, Step 1 owners only.
+          Lives outside the multiplayer block above (which doesn't render in solo). */}
+      {canConvertToTeam && (
+        <div className="fixed top-[4.5rem] right-4 z-50">
+          <button
+            onClick={() => setShowConvertDialog(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-card shadow-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Invite teammates and facilitate together"
+          >
+            <UserPlus className="h-4 w-4" />
+            Invite team
+          </button>
+        </div>
+      )}
       {/* Step navigation — hidden for participants in multiplayer mode */}
       {(!isMultiplayer || isFacilitator) && (
         <StepNavigation
@@ -1724,6 +1792,27 @@ export function StepContainer({
           }
         />
       )}
+      {/* Confirmation dialog for converting a solo workshop into a team workshop. */}
+      <AlertDialog open={showConvertDialog} onOpenChange={(o) => !isConverting && setShowConvertDialog(o)}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Users className="h-5 w-5" />
+            </div>
+            <AlertDialogTitle>Switch to a team workshop?</AlertDialogTitle>
+            <AlertDialogDescription className="text-left">
+              You&apos;ll become the facilitator. Frame the challenge on this step, then invite
+              teammates by email and run the workshop together. This can&apos;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isConverting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConvertToTeam} disabled={isConverting}>
+              {isConverting ? 'Switching…' : 'Switch to team workshop'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <ResetStepDialog
         open={showResetDialog}
         onOpenChange={setShowResetDialog}

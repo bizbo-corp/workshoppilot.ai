@@ -1182,7 +1182,7 @@ export default async function StepPage({ params }: StepPageProps) {
   return (
     <div className="h-full">
       <CanvasStoreProvider
-        key={step.id}
+        key={`${step.id}-${session.workshop.workshopType ?? 'solo'}`}
         workshopType={session.workshop.workshopType ?? 'solo'}
         workshopId={session.workshop.id}
         stepId={step.id}
@@ -1233,6 +1233,7 @@ export default async function StepPage({ params }: StepPageProps) {
               canvasConfirmed={canvasConfirmed}
               facilitatorMode={session.workshop.facilitatorMode}
               challengePublished={!!session.workshop.challengePublishedAt}
+              isWorkshopOwner={isFacilitator}
               challengeIdea={challengeIdea}
               challengeProblem={challengeProblem}
               challengeAudience={challengeAudience}
@@ -1259,6 +1260,7 @@ export default async function StepPage({ params }: StepPageProps) {
             canvasConfirmed={canvasConfirmed}
             facilitatorMode={session.workshop.facilitatorMode}
             challengePublished={!!session.workshop.challengePublishedAt}
+            isWorkshopOwner={isFacilitator}
           />
         )}
       </CanvasStoreProvider>
