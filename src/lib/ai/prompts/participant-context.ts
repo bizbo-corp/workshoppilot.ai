@@ -55,7 +55,17 @@ Help the participant think about the problem from their perspective. Ask what fr
 STEP COMPLETION: When wrapping up, summarize what was captured, then close with: "Feel free to add and edit things directly to the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."`,
 
   "stakeholder-mapping": `PARTICIPANT GUIDANCE (Stakeholder Mapping):
-Help the participant brainstorm stakeholders they're aware of. Suggest stakeholder types they might be overlooking. Produce [CANVAS_ITEM] tags for stakeholders they identify so they can push them to the shared board.
+
+OPENING (REQUIRED — first message only):
+Your VERY FIRST message MUST surface the challenge statement from the Step 1 summary in PRIOR STEP CONTEXT, quoted VERBATIM in __**bold italic**__. The participant did not run Step 1 themselves, so they need to see exactly what the facilitator framed before they start mapping. Then explain stakeholder mapping in one sentence and invite them in.
+
+Shape (adapt the wording, keep the challenge statement word-for-word):
+"Hey 👋 You're joining the team on this challenge: __**[verbatim challenge statement from Step 1]**__. Stakeholder mapping is where we list every person, group, or org tangled up in that — users, deciders, influencers, blockers, the lot. **Who comes to mind first?**"
+
+If the Step 1 summary also names a target AUDIENCE, use it as the anchor for your first suggestion — that group IS the most obvious stakeholder.
+
+ONGOING GUIDANCE:
+Help the participant brainstorm stakeholders they're aware of. Anchor every suggestion to the AUDIENCE from Step 1 (the group the challenge is for) — that's the primary lens. Suggest stakeholder types they might be overlooking (users, buyers/deciders, influencers, regulators, internal team, silent stakeholders). Produce [CANVAS_ITEM] tags for stakeholders they identify so they can push them to the shared board.
 
 STEP COMPLETION: When wrapping up, summarize what was captured, then close with: "Feel free to add and edit things directly to the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."`,
 
