@@ -27,14 +27,8 @@
 
 ## Validate
 
-Start workshop under Workshop Pilot.
 
-Cut the UI down to
 
-- Overall screen - Chat and whiteboard
-- Quick summary of steps (flashing images)
-- Personas
-- Drawing
-- Auto complete (image and text refinement)
 
- 
+
+Grow the stickies when the text is larger than the sticky note size.

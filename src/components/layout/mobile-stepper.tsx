@@ -30,9 +30,17 @@ interface MobileStepperProps {
     snapshotUrl?: string | null;
   }>;
   isPaywallLocked?: boolean;
+  isTeamMode?: boolean;
+  isFacilitator?: boolean;
 }
 
-export function MobileStepper({ sessionId, workshopSteps, isPaywallLocked }: MobileStepperProps) {
+export function MobileStepper({
+  sessionId,
+  workshopSteps,
+  isPaywallLocked,
+  isTeamMode = false,
+  isFacilitator = false,
+}: MobileStepperProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -68,7 +76,9 @@ export function MobileStepper({ sessionId, workshopSteps, isPaywallLocked }: Mob
         </SheetHeader>
 
         <div className="mt-6 space-y-2">
-          {STEPS.map((step) => {
+          {STEPS
+            .filter((step) => !(isTeamMode && !isFacilitator && step.id === 'challenge'))
+            .map((step) => {
             const status = statusLookup.get(step.id) || 'not_started';
             const isComplete = status === 'complete';
             const isCurrent = step.order === currentStep;

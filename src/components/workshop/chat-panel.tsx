@@ -2098,9 +2098,11 @@ export function ChatPanel({
     // For concept step in multiplayer, block auto-start until activity is started.
     // Solo mode and all other steps are unaffected.
     //
-    // Defensive: also skip if a __step_start__ trigger is already present in
-    // history (covers React effect re-runs / remounts that reset hasAutoStarted).
-    // df_rqxvim5euc455zb1ak2srzn8.
+    // Layered guards against duplicate greetings:
+    //   - hasAssistantMessage: never re-trigger if any assistant reply is in state
+    //   - alreadyHasStepStartTrigger: covers remounts that reset hasAutoStarted ref
+    //   - server-side singleton in /api/chat replays the stored greeting if the
+    //     trigger leaks through anyway, so no second AI generation is possible
     const alreadyHasStepStartTrigger = messages.some(
       (m) =>
         m.role === "user" &&
@@ -2112,6 +2114,7 @@ export function ChatPanel({
     if (
       shouldAutoStart &&
       messages.length === 0 &&
+      !hasAssistantMessage &&
       !alreadyHasStepStartTrigger &&
       status === "ready" &&
       !hasAutoStarted.current &&
@@ -2122,6 +2125,7 @@ export function ChatPanel({
       hasAutoStarted.current = true;
       onAutoStarted?.();
       sendMessage({
+        id: `step-start:${sessionId}:${step.id}:fac`,
         role: "user",
         parts: [{ type: "text", text: "__step_start__" }],
       });
@@ -2130,6 +2134,7 @@ export function ChatPanel({
     shouldAutoStart,
     messages,
     messages.length,
+    hasAssistantMessage,
     status,
     sendMessage,
     isReadOnly,
@@ -2137,6 +2142,8 @@ export function ChatPanel({
     onAutoStarted,
     conceptActivityStarted,
     isMultiplayer,
+    sessionId,
+    step.id,
   ]);
 
   // Helper: check if user is near bottom of scroll container

@@ -1,7 +1,7 @@
-import { convertToModelMessages, smoothStream } from 'ai';
+import { convertToModelMessages, smoothStream, createUIMessageStream, createUIMessageStreamResponse } from 'ai';
 import { auth } from '@clerk/nextjs/server';
 import { chatModel, buildStepSystemPrompt } from '@/lib/ai/chat-config';
-import { saveMessages } from '@/lib/ai/message-persistence';
+import { saveMessages, loadFirstAssistantMessage } from '@/lib/ai/message-persistence';
 import { assembleStepContext } from '@/lib/context/assemble-context';
 import { getStepById, STEPS } from '@/lib/workshop/step-metadata';
 import { db } from '@/db/client';
@@ -44,6 +44,39 @@ export async function POST(req: Request) {
         JSON.stringify({ error: 'sessionId, stepId, and workshopId are required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Greeting singleton: if this request is the `__step_start__` auto-start
+    // trigger and an assistant message already exists for this scope, replay
+    // the stored greeting instead of generating a new one. Prevents duplicate
+    // greetings caused by remounts, fast-refresh, Strict Mode, or the
+    // page-mount cleanup racing with an in-flight stream's onFinish.
+    const lastMsg = Array.isArray(messages) ? messages[messages.length - 1] : null;
+    const isStepStartTrigger = !!(
+      lastMsg?.role === 'user' &&
+      lastMsg.parts?.some(
+        (p: { type: string; text?: string }) =>
+          p.type === 'text' && p.text === '__step_start__',
+      )
+    );
+
+    if (isStepStartTrigger) {
+      const existing = await loadFirstAssistantMessage(sessionId, stepId, participantId);
+      if (existing) {
+        const textId = `${existing.messageId}-text`;
+        const stream = createUIMessageStream({
+          execute: ({ writer }) => {
+            writer.write({ type: 'start', messageId: existing.messageId });
+            writer.write({ type: 'start-step' });
+            writer.write({ type: 'text-start', id: textId });
+            writer.write({ type: 'text-delta', id: textId, delta: existing.content });
+            writer.write({ type: 'text-end', id: textId });
+            writer.write({ type: 'finish-step' });
+            writer.write({ type: 'finish' });
+          },
+        });
+        return createUIMessageStreamResponse({ stream });
+      }
     }
 
     // Assemble three-tier context for this step

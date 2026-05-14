@@ -10,9 +10,9 @@
 
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
-import { eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { sessions, workshopSessions } from '@/db/schema';
+import { sessions, workshopSessions, challengeApprovals } from '@/db/schema';
 import { dbWithRetry } from '@/db/with-retry';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { WorkshopSidebar } from '@/components/layout/workshop-sidebar';
@@ -20,6 +20,7 @@ import { WorkshopHeader } from '@/components/layout/workshop-header';
 import { MobileStepper } from '@/components/layout/mobile-stepper';
 import { PAYWALL_CUTOFF_DATE } from '@/lib/billing/paywall-config';
 import { MobileGate } from '@/components/workshop/mobile-gate';
+import { FacilitatorConfirmationModal } from '@/components/dialogs/facilitator-confirmation-modal';
 
 interface WorkshopLayoutProps {
   children: React.ReactNode;
@@ -91,21 +92,57 @@ export default async function WorkshopLayout({
     }
   }
 
+  // Facilitator confirmation modal only renders if the facilitator (workshop owner)
+  // is viewing a team-mode workshop with ?fc=1 in the URL — the modal handles that check.
+  const isTeamMode = session.workshop.facilitatorMode === 'team';
+  const showFacilitatorModal = isFacilitator && isTeamMode;
+
+  // Count pending change requests for the facilitator's sidebar badge
+  let pendingChangeRequests = 0;
+  if (isFacilitator && isTeamMode) {
+    const [row] = await db
+      .select({ value: count() })
+      .from(challengeApprovals)
+      .where(
+        and(
+          eq(challengeApprovals.workshopId, session.workshop.id),
+          eq(challengeApprovals.status, 'change_requested')
+        )
+      );
+    pendingChangeRequests = Number(row?.value ?? 0);
+  }
+
   return (
     <>
       <MobileGate workshopName={session.workshop.title || 'New Workshop'} />
+      {showFacilitatorModal && (
+        <FacilitatorConfirmationModal workshopId={session.workshop.id} />
+      )}
       <SidebarProvider defaultOpen={false}>
       <div className="flex h-screen w-full">
         {/* Desktop: Sidebar */}
         <div className="hidden md:block">
-          <WorkshopSidebar sessionId={sessionId} workshopSteps={workshopSteps} isPaywallLocked={isPaywallLocked} />
+          <WorkshopSidebar
+            sessionId={sessionId}
+            workshopSteps={workshopSteps}
+            isPaywallLocked={isPaywallLocked}
+            isTeamMode={isTeamMode}
+            isFacilitator={isFacilitator}
+            pendingChangeRequests={pendingChangeRequests}
+          />
         </div>
 
         {/* Main content column */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Mobile: Stepper bar */}
           <div className="block md:hidden">
-            <MobileStepper sessionId={sessionId} workshopSteps={workshopSteps} isPaywallLocked={isPaywallLocked} />
+            <MobileStepper
+              sessionId={sessionId}
+              workshopSteps={workshopSteps}
+              isPaywallLocked={isPaywallLocked}
+              isTeamMode={isTeamMode}
+              isFacilitator={isFacilitator}
+            />
           </div>
 
           {/* Workshop header (scrolls with content) */}

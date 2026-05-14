@@ -51,6 +51,27 @@ export const workshops = pgTable(
     maxParticipants: integer('max_participants'), // null for solo (no limit applies)
     // Last time the facilitator opened this workshop
     lastVisitedAt: timestamp('last_visited_at', { mode: 'date', precision: 3 }),
+    // Facilitator-led team flow (v2.1) — distinct from workshopType.
+    // 'team' = creator confirms facilitator role, completes Step 1, then invites participants.
+    // 'solo' = legacy single-user flow (also used for multiplayer workshops created before v2.1).
+    facilitatorMode: text('facilitator_mode', {
+      enum: ['solo', 'team'],
+    })
+      .notNull()
+      .default('solo')
+      .$type<'solo' | 'team'>(),
+    // Stamped when facilitator publishes the challenge and invites go out.
+    challengePublishedAt: timestamp('challenge_published_at', { mode: 'date', precision: 3 }),
+    // Bumped each time the facilitator republishes after a change request — invalidates approvals.
+    challengeRevision: integer('challenge_revision').notNull().default(1),
+    // v2.2 — Workshop scheduling (team mode only). Set when facilitator picks "Schedule for later"
+    // in the Setup Workshop wizard. Null for "Start now" workshops.
+    scheduledStartAt: timestamp('scheduled_start_at', { mode: 'date', precision: 3 }),
+    scheduledDurationMinutes: integer('scheduled_duration_minutes'), // 60 / 90 / 120
+    scheduledTimezone: text('scheduled_timezone'), // IANA TZ, e.g. 'America/Los_Angeles'
+    // v2.2 — Stamped when the facilitator actually kicks off the workshop (either "Start now"
+    // immediately or clicks Start from the lobby). Drives lobby gating + late-joiner routing.
+    workshopStartedAt: timestamp('workshop_started_at', { mode: 'date', precision: 3 }),
   },
   (table) => ({
     clerkUserIdIdx: index('workshops_clerk_user_id_idx').on(table.clerkUserId),

@@ -36,6 +36,7 @@ async function getUserId(): Promise<string | null> {
  */
 export async function createWorkshopSession(formData?: FormData) {
   let sessionId: string;
+  let createdFacilitatorMode: 'solo' | 'team' = 'solo';
 
   try {
     // Get current user (or null for anonymous/BYPASS_AUTH)
@@ -66,10 +67,23 @@ export async function createWorkshopSession(formData?: FormData) {
     const rawEmoji = formData?.get('emoji') as string | null;
     const emoji = rawEmoji || null;
 
-    // Extract workshopType from FormData (defaults to 'solo')
-    const workshopType = (formData?.get('workshopType') as string) === 'multiplayer'
-      ? 'multiplayer' as const
-      : 'solo' as const;
+    // Extract facilitatorMode from FormData. Team mode (facilitator-led + invites)
+    // implies workshopType='multiplayer' regardless of the explicit workshopType field.
+    const rawFacilitatorMode = formData?.get('facilitatorMode') as string | null;
+    let facilitatorMode: 'solo' | 'team' = rawFacilitatorMode === 'team' ? 'team' : 'solo';
+
+    // Anonymous users can't run a team workshop — invites/notifications need an identified facilitator.
+    if (facilitatorMode === 'team' && !userId) {
+      facilitatorMode = 'solo';
+    }
+    createdFacilitatorMode = facilitatorMode;
+
+    // Extract workshopType from FormData (defaults to 'solo'). Team mode forces multiplayer.
+    const rawWorkshopType = formData?.get('workshopType') as string | null;
+    const workshopType: 'solo' | 'multiplayer' =
+      facilitatorMode === 'team' || rawWorkshopType === 'multiplayer'
+        ? 'multiplayer'
+        : 'solo';
 
     // 1. Create workshop record
     const [workshop] = await db
@@ -84,6 +98,7 @@ export async function createWorkshopSession(formData?: FormData) {
         emoji,
         workshopType,
         maxParticipants: workshopType === 'multiplayer' ? 15 : null,
+        facilitatorMode,
       })
       .returning();
 
@@ -148,8 +163,11 @@ export async function createWorkshopSession(formData?: FormData) {
   }
 
   // Redirect outside try/catch — redirect() throws a special NEXT_REDIRECT
-  // error internally, which must not be caught
-  redirect(`/workshop/${sessionId}/step/1`);
+  // error internally, which must not be caught.
+  // Team-mode workshops render a facilitator-confirmation modal on first load (fc=1).
+  redirect(
+    `/workshop/${sessionId}/step/1${createdFacilitatorMode === 'team' ? '?fc=1' : ''}`
+  );
 }
 
 /**

@@ -3,6 +3,11 @@ import { chatMessages } from '@/db/schema';
 import { eq, and, asc, isNull } from 'drizzle-orm';
 import type { UIMessage } from 'ai';
 
+export type StoredAssistantMessage = {
+  messageId: string;
+  content: string;
+};
+
 /**
  * Build the WHERE clause for participant-scoped queries.
  * NULL participantId = facilitator/solo messages.
@@ -115,4 +120,34 @@ export async function loadMessages(
       parts: [{ type: 'text' as const, text: row.content }],
       createdAt: row.createdAt,
     }));
+}
+
+/**
+ * Return the earliest non-empty assistant message for a scope, or null if
+ * none exists. Used by /api/chat to short-circuit duplicate `__step_start__`
+ * triggers and replay the original greeting instead of generating a new one.
+ */
+export async function loadFirstAssistantMessage(
+  sessionId: string,
+  stepId: string,
+  participantId?: string | null,
+): Promise<StoredAssistantMessage | null> {
+  const rows = await db
+    .select({
+      messageId: chatMessages.messageId,
+      content: chatMessages.content,
+    })
+    .from(chatMessages)
+    .where(
+      and(
+        eq(chatMessages.sessionId, sessionId),
+        eq(chatMessages.stepId, stepId),
+        eq(chatMessages.role, 'assistant'),
+        participantFilter(participantId),
+      )
+    )
+    .orderBy(asc(chatMessages.createdAt));
+
+  const first = rows.find((r) => r.content.trim().length > 0);
+  return first ? { messageId: first.messageId, content: first.content } : null;
 }

@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db/client";
 import { sessions, stepArtifacts, chatMessages, sessionParticipants, workshopSessions, buildPacks } from "@/db/schema";
+import { getChallengeArtifact } from "@/lib/workshop/challenge-artifact";
 import { getStepByOrder, STEPS } from "@/lib/workshop/step-metadata";
 import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
@@ -126,6 +127,34 @@ export default async function StepPage({ params }: StepPageProps) {
     }
   }
 
+  // Team-mode gating (v2.1 + v2.2):
+  //  - Participants (non-facilitator) never see Step 1 — they go to /lobby
+  //  - Before the facilitator hits Start, everyone (including the facilitator on step > 1)
+  //    is routed to /lobby. The facilitator may stay on Step 1 to edit the canvas.
+  //  - Once workshopStartedAt is set, the lobby itself redirects late joiners to the
+  //    current in-progress step, so /lobby is the universal pre-start hub.
+  const isTeamMode = session.workshop.facilitatorMode === 'team';
+  const isFacilitator = !!user && user.id === session.workshop.clerkUserId;
+  const workshopStarted = !!session.workshop.workshopStartedAt;
+
+  if (isTeamMode) {
+    if (!isFacilitator) {
+      // Participants never see Step 1
+      if (step.id === 'challenge') {
+        redirect(`/workshop/${sessionId}/lobby`);
+      }
+      // And no later step until the workshop has started
+      if (!workshopStarted) {
+        redirect(`/workshop/${sessionId}/lobby`);
+      }
+    } else {
+      // Facilitator: stay on Step 1 until they hit Start. Any later step pre-start → lobby.
+      if (!workshopStarted && step.id !== 'challenge') {
+        redirect(`/workshop/${sessionId}/lobby`);
+      }
+    }
+  }
+
   // Query workshopSession for multiplayer — used to pass shareToken to PresenceBar
   let workshopShareToken: string | null = null;
   let workshopSessionId: string | null = null;
@@ -139,6 +168,20 @@ export default async function StepPage({ params }: StepPageProps) {
     if (ws) {
       workshopShareToken = ws.shareToken;
       workshopSessionId = ws.id;
+    }
+  }
+
+  // Pre-fetch the challenge artifact for the setup wizard on Step 1 (team-mode facilitator only).
+  // Cheap query — single workshop + single step + single artifact row.
+  let challengeIdea: string | null = null;
+  let challengeProblem: string | null = null;
+  let challengeAudience: string | null = null;
+  if (isTeamMode && isFacilitator && step.id === 'challenge') {
+    const artifact = await getChallengeArtifact(session.workshop.id);
+    if (artifact) {
+      challengeIdea = artifact.idea;
+      challengeProblem = artifact.problem;
+      challengeAudience = artifact.audience;
     }
   }
 
@@ -1188,6 +1231,11 @@ export default async function StepPage({ params }: StepPageProps) {
               workshopSessionId={workshopSessionId}
               journeyMapApproved={journeyMapApproved}
               canvasConfirmed={canvasConfirmed}
+              facilitatorMode={session.workshop.facilitatorMode}
+              challengePublished={!!session.workshop.challengePublishedAt}
+              challengeIdea={challengeIdea}
+              challengeProblem={challengeProblem}
+              challengeAudience={challengeAudience}
             />
           </MultiplayerRoomLoader>
         ) : (
@@ -1209,6 +1257,8 @@ export default async function StepPage({ params }: StepPageProps) {
             canvasSettings={canvasSettings}
             journeyMapApproved={journeyMapApproved}
             canvasConfirmed={canvasConfirmed}
+            facilitatorMode={session.workshop.facilitatorMode}
+            challengePublished={!!session.workshop.challengePublishedAt}
           />
         )}
       </CanvasStoreProvider>

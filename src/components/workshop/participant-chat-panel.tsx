@@ -203,9 +203,12 @@ export function ParticipantChatPanel({
 
   // Auto-start: send hidden trigger when entering a step with no prior messages
   // For Step 9 (concept), wait until the facilitator clicks "Start Activity"
-  // Defensive guard: also skip if a __step_start__ trigger is already present
-  // in history (covers React effect re-runs / remounts that reset
-  // hasAutoStarted) — prevents opener regeneration on refresh.
+  // Layered guards against duplicate greetings:
+  //   - hasAssistantMessage: never re-trigger if any assistant reply is in state
+  //   - alreadyHasStepStartTrigger: covers remounts that reset hasAutoStarted ref
+  //   - deterministic message id: unique constraint blocks duplicate trigger inserts
+  //   - server-side singleton in /api/chat replays the stored greeting if a
+  //     duplicate trigger still leaks through, so no second AI generation happens
   const hasAutoStarted = React.useRef(false);
   React.useEffect(() => {
     const alreadyHasStepStartTrigger = messages.some(
@@ -215,9 +218,11 @@ export function ParticipantChatPanel({
           (p) => p.type === "text" && p.text === "__step_start__",
         ),
     );
+    const hasAssistantMessage = messages.some((m) => m.role === "assistant");
     if (
       (!initialMessages || initialMessages.length === 0) &&
       messages.length === 0 &&
+      !hasAssistantMessage &&
       !alreadyHasStepStartTrigger &&
       status === "ready" &&
       !hasAutoStarted.current &&
@@ -226,11 +231,12 @@ export function ParticipantChatPanel({
       hasAutoStarted.current = true;
       setQuickAck(getRandomAck());
       sendMessage({
+        id: `step-start:${sessionId}:${stepId}:${participantId}`,
         role: "user",
         parts: [{ type: "text", text: "__step_start__" }],
       });
     }
-  }, [initialMessages, messages, messages.length, status, sendMessage, stepId, conceptActivityStarted]);
+  }, [initialMessages, messages, messages.length, status, sendMessage, sessionId, stepId, participantId, conceptActivityStarted]);
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {

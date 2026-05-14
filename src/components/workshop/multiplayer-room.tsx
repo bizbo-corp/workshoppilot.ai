@@ -126,6 +126,10 @@ function StepChangedListener({ sessionId }: { sessionId: string }) {
         router.push(`/workshop/${sessionId}/step/${event.stepOrder}`);
       }, 1000);
     }
+    // v2.2 — Workshop start fans out via the 5s LobbyPoller refresh, not a Liveblocks
+    // broadcast (the lobby isn't inside a Liveblocks room yet). When we wrap the lobby
+    // in MultiplayerRoomLoader (v2.3), add a WORKSHOP_STARTED type to the event union
+    // and listen for it here for the fast path.
   });
 
   return null;

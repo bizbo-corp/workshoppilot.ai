@@ -16,4 +16,6 @@ export * from './workshop-sessions';
 export * from './session-participants';
 export * from './dialogue-feedback';
 export * from './guided-pilot-inquiries';
+export * from './workshop-invitations';
+export * from './challenge-approvals';
 export * from './relations';

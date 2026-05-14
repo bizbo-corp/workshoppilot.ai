@@ -23,6 +23,7 @@ import {
   Minimize2,
   Maximize2,
   MessageSquare,
+  UserPlus,
   X,
 } from "lucide-react";
 import {
@@ -56,6 +57,7 @@ import { StepTransitionWrapper } from "./step-transition-wrapper";
 import type { CanvasGuideData } from "@/lib/canvas/canvas-guide-types";
 import type { StepCanvasSettingsData } from "@/lib/canvas/step-canvas-settings-types";
 import { useMultiplayerContext } from "@/components/workshop/multiplayer-room";
+import { SetupWorkshopWizard } from "@/components/workshop/setup-workshop-wizard";
 import { useBroadcastEvent } from "@liveblocks/react";
 import { FacilitatorControls } from "./facilitator-controls";
 import { PresenceBar } from "./presence-bar";
@@ -138,6 +140,14 @@ interface StepContainerProps {
   workshopSessionId?: string | null;
   journeyMapApproved?: boolean;
   canvasConfirmed?: boolean;
+  /** v2.1 — Workshop in team mode = facilitator frames challenge + invites by email. */
+  facilitatorMode?: 'solo' | 'team';
+  /** v2.1 — True once the facilitator publishes the challenge (challengePublishedAt is set). */
+  challengePublished?: boolean;
+  /** v2.2 — Challenge fields surfaced in the setup wizard's "Confirm" step. */
+  challengeIdea?: string | null;
+  challengeProblem?: string | null;
+  challengeAudience?: string | null;
 }
 
 export function StepContainer({
@@ -166,6 +176,11 @@ export function StepContainer({
   workshopSessionId,
   journeyMapApproved = false,
   canvasConfirmed = false,
+  facilitatorMode,
+  challengePublished = false,
+  challengeIdea,
+  challengeProblem,
+  challengeAudience,
 }: StepContainerProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
@@ -688,6 +703,36 @@ export function StepContainer({
 
   // PRD viewer dialog state
   const [showPrdDialog, setShowPrdDialog] = React.useState(false);
+
+  // v2.2 — Team-mode setup wizard state (Step 1, facilitator only)
+  const [showSetupWizard, setShowSetupWizard] = React.useState(false);
+  const isTeamModeStepOne =
+    stepOrder === 1 && facilitatorMode === 'team' && isFacilitator;
+
+  // Pull live challenge data from the canvas store so the wizard reflects the
+  // facilitator's current sticky notes (not stale server-side artifact). In multiplayer,
+  // Liveblocks keeps this in sync; in solo, saveCanvasState writes to it.
+  const liveChallenge = React.useMemo(() => {
+    if (!isTeamModeStepOne) return null;
+    const find = (key: string) =>
+      stickyNotes.find((n) => n.templateKey === key && (n.text ?? '').trim())?.text?.trim() ??
+      null;
+    return {
+      hmwStatement: find('challenge-statement'),
+      idea: find('idea'),
+      problem: find('problem'),
+      audience: find('audience'),
+    };
+  }, [isTeamModeStepOne, stickyNotes]);
+
+  // The Next button on team-mode Step 1 only enables once the facilitator has filled
+  // in the "How might we" sticky. When enabled, the button reads "Set up workshop"
+  // and opens the wizard instead of advancing. The wizard is the only path through.
+  const challengeReady = !!liveChallenge?.hmwStatement;
+  const nextDisabledReason =
+    isTeamModeStepOne && !challengePublished && !challengeReady
+      ? 'Fill in the challenge statement first, then set up the workshop'
+      : null;
 
   // Step 10: client-side extraction state
   const [step10Artifact, setStep10Artifact] = React.useState<Record<
@@ -1394,6 +1439,13 @@ export function StepContainer({
             canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
             onBeforeAdvance={handleBeforeAdvance}
             onFlushCanvas={flushCanvasToDb}
+            nextDisabledReason={nextDisabledReason}
+            nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Set up workshop' : undefined}
+            nextOnClickOverride={
+              isTeamModeStepOne && !challengePublished
+                ? () => setShowSetupWizard(true)
+                : undefined
+            }
           />
         )}
         <ResetStepDialog
@@ -1569,6 +1621,18 @@ export function StepContainer({
               Styled to match the bottom canvas toolbar (bg-card rounded-xl shadow-md border). */}
           <div className="fixed top-[4.5rem] right-4 z-50 flex items-center gap-0.5 bg-card rounded-xl shadow-md border border-border px-1.5 py-1">
             <FacilitatorControls workshopId={workshopId} sessionId={sessionId} votingMode={stepOrder === 8 ? brainRewritingMatrices.length === 0 : undefined} stepOrder={stepOrder} ideationPhase={stepOrder === 8 ? ideation.currentPhase : undefined} onBackToMindMap={stepOrder === 8 ? ideation.handleBackToMindMap : undefined} onResetCrazy8s={stepOrder === 8 ? ideation.handleResetCrazy8s : undefined} />
+            {/* Post-publish: small "Manage invites" reopens the wizard from the floating bar.
+                Pre-publish, the action lives on the Next button itself (handled below). */}
+            {isTeamModeStepOne && challengePublished && (
+              <button
+                onClick={() => setShowSetupWizard(true)}
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-xs font-medium px-2 flex items-center gap-1"
+                title="Manage invitations or change schedule"
+              >
+                <UserPlus className="h-4 w-4" />
+                Manage invites
+              </button>
+            )}
             {isFacilitator && (
               <button
                 onClick={() => setShowParticipantOverview((v) => !v)}
@@ -1651,6 +1715,13 @@ export function StepContainer({
           canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
           onBeforeAdvance={handleBeforeAdvance}
           onFlushCanvas={flushCanvasToDb}
+          nextDisabledReason={nextDisabledReason}
+          nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Set up workshop' : undefined}
+          nextOnClickOverride={
+            isTeamModeStepOne && !challengePublished
+              ? () => setShowSetupWizard(true)
+              : undefined
+          }
         />
       )}
       <ResetStepDialog
@@ -1660,6 +1731,22 @@ export function StepContainer({
         isResetting={isResetting}
         stepName={getStepByOrder(stepOrder)?.name || `Step ${stepOrder}`}
       />
+      {isTeamModeStepOne && (
+        <SetupWorkshopWizard
+          workshopId={workshopId}
+          open={showSetupWizard}
+          onOpenChange={setShowSetupWizard}
+          challenge={{
+            // Live values from the canvas store take priority over server-rendered
+            // props (which can be stale because multiplayer canvas writes go through
+            // Liveblocks and only land in stepArtifacts on step advance or webhook).
+            hmwStatement: liveChallenge?.hmwStatement ?? hmwStatement ?? null,
+            idea: liveChallenge?.idea ?? challengeIdea ?? null,
+            problem: liveChallenge?.problem ?? challengeProblem ?? null,
+            audience: liveChallenge?.audience ?? challengeAudience ?? null,
+          }}
+        />
+      )}
       {/* Admin guide popover */}
       {isAdmin && editingPopover && (
         <GuideEditPopover

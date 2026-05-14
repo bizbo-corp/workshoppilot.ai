@@ -49,6 +49,22 @@ interface StepNavigationProps {
   onBeforeAdvance?: (nextStepOrder: number, nextStepName: string) => void;
   /** Flush pending canvas changes to DB before navigating away */
   onFlushCanvas?: () => Promise<void>;
+  /**
+   * When set, disables the Next button regardless of artifactConfirmed and shows the
+   * reason as a tooltip. Used by team-mode Step 1 to enforce the invite + schedule wall.
+   */
+  nextDisabledReason?: string | null;
+  /**
+   * Override label for the Next button. When set together with `nextOnClick`, the button
+   * displays this label and calls the override handler instead of `advanceToNextStep`.
+   * Used by team-mode Step 1 to surface the Setup Workshop wizard.
+   */
+  nextLabelOverride?: string;
+  /**
+   * Override click handler for the Next button. When set, replaces the default
+   * advanceToNextStep call. Receives the click event so the caller can stop propagation.
+   */
+  nextOnClickOverride?: () => void;
 }
 
 export function StepNavigation({
@@ -70,6 +86,9 @@ export function StepNavigation({
   canCompleteWorkshop = false,
   onBeforeAdvance,
   onFlushCanvas,
+  nextDisabledReason,
+  nextLabelOverride,
+  nextOnClickOverride,
 }: StepNavigationProps) {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
@@ -307,22 +326,24 @@ export function StepNavigation({
       {/* Right: Next/advance button or forward navigation */}
         {!isLastStep && stepExplicitlyConfirmed ? (
           <Button
-            onClick={handleNext}
-            disabled={isNavigating}
+            onClick={nextOnClickOverride ?? handleNext}
+            disabled={isNavigating || !!nextDisabledReason}
+            title={nextDisabledReason ?? undefined}
             size="lg"
-            className={cn(!isNavigating && 'btn-shimmer')}
+            className={cn(!isNavigating && !nextDisabledReason && 'btn-shimmer')}
           >
-            {isNavigating ? 'Advancing...' : 'Next'}
-            {!isNavigating && <ChevronRight className="ml-2 h-4 w-4" />}
+            {isNavigating ? 'Advancing...' : (nextLabelOverride ?? 'Next')}
+            {!isNavigating && !nextLabelOverride && <ChevronRight className="ml-2 h-4 w-4" />}
           </Button>
         ) : !isLastStep && !isCompleted ? (
           <Button
-            onClick={handleNext}
-            disabled={isNavigating || !artifactConfirmed}
-            variant={artifactConfirmed ? 'default' : 'outline'}
+            onClick={nextOnClickOverride ?? handleNext}
+            disabled={isNavigating || !artifactConfirmed || !!nextDisabledReason}
+            title={nextDisabledReason ?? undefined}
+            variant={artifactConfirmed && !nextDisabledReason ? 'default' : 'outline'}
           >
-            {isNavigating ? 'Advancing...' : 'Next'}
-            {!isNavigating && <ChevronRight className="ml-2 h-4 w-4" />}
+            {isNavigating ? 'Advancing...' : (nextLabelOverride ?? 'Next')}
+            {!isNavigating && !nextLabelOverride && <ChevronRight className="ml-2 h-4 w-4" />}
           </Button>
         ) : isCompleted && !isLastStep ? (
           <Button

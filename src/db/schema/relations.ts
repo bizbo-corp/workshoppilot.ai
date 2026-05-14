@@ -3,6 +3,8 @@ import { users } from './users';
 import { workshops, workshopMembers } from './workshops';
 import { workshopSessions } from './workshop-sessions';
 import { sessionParticipants } from './session-participants';
+import { workshopInvitations } from './workshop-invitations';
+import { challengeApprovals } from './challenge-approvals';
 import { stepDefinitions, workshopSteps } from './steps';
 import { stepArtifacts } from './step-artifacts';
 import { stepSummaries } from './step-summaries';
@@ -39,6 +41,8 @@ export const workshopsRelations = relations(workshops, ({ many }) => ({
   aiUsageEvents: many(aiUsageEvents),
   creditTransactions: many(creditTransactions),
   workshopSessions: many(workshopSessions),
+  invitations: many(workshopInvitations),
+  challengeApprovals: many(challengeApprovals),
 }));
 
 /**
@@ -160,10 +164,40 @@ export const workshopSessionsRelations = relations(workshopSessions, ({ one, man
 /**
  * Session Participants relations
  */
-export const sessionParticipantsRelations = relations(sessionParticipants, ({ one }) => ({
+export const sessionParticipantsRelations = relations(sessionParticipants, ({ one, many }) => ({
   session: one(workshopSessions, {
     fields: [sessionParticipants.sessionId],
     references: [workshopSessions.id],
+  }),
+  challengeApprovals: many(challengeApprovals),
+  invitations: many(workshopInvitations),
+}));
+
+/**
+ * Workshop Invitations relations
+ */
+export const workshopInvitationsRelations = relations(workshopInvitations, ({ one }) => ({
+  workshop: one(workshops, {
+    fields: [workshopInvitations.workshopId],
+    references: [workshops.id],
+  }),
+  sessionParticipant: one(sessionParticipants, {
+    fields: [workshopInvitations.sessionParticipantId],
+    references: [sessionParticipants.id],
+  }),
+}));
+
+/**
+ * Challenge Approvals relations
+ */
+export const challengeApprovalsRelations = relations(challengeApprovals, ({ one }) => ({
+  workshop: one(workshops, {
+    fields: [challengeApprovals.workshopId],
+    references: [workshops.id],
+  }),
+  sessionParticipant: one(sessionParticipants, {
+    fields: [challengeApprovals.sessionParticipantId],
+    references: [sessionParticipants.id],
   }),
 }));
 
