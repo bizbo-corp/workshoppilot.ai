@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
-milestone: null
-milestone_name: null
-status: between_milestones
-last_updated: "2026-03-01"
+milestone: v2.0-hotfix
+milestone_name: "Hotfix: Chat scope leak & duplicate greetings"
+status: in_progress
+last_updated: "2026-05-16"
 progress:
-  total_phases: 62
+  total_phases: 63
   completed_phases: 62
-  total_plans: 155
+  total_plans: 158
   completed_plans: 155
 ---
 
@@ -18,13 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Planning next milestone
+**Current focus:** Phase 62.1 — Hotfix: cross-workshop dialogue leak + duplicate greetings
 
 ## Current Position
 
-Phase: All 62 phases complete
-Status: Between milestones — v2.0 shipped, next milestone TBD
-Last activity: 2026-03-01 — v2.0 Dot Voting & Mobile Gate milestone completed
+Phase: 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings
+Plan: 01 (DIAG-01 observability foundation)
+Status: Paused at Task 4 checkpoint (human-verify: apply migration + smoke test)
+Last activity: 2026-05-16 — Tasks 1-3 of 62.1-01 complete; awaiting Task 4 operator verification
 
 ## Performance Metrics
 
@@ -50,7 +51,11 @@ Last activity: 2026-03-01 — v2.0 Dot Voting & Mobile Gate milestone completed
 
 ### Decisions
 
-(Cleared at milestone boundary — full log in PROJECT.md Key Decisions table)
+- Phase 62.1: hotfix for cross-workshop dialogue leak + duplicate greetings, inserted as decimal patch under v2.0 (precedent: Phase 13.1)
+- DIAG-01: plan A ships fresh-generation logging only; replay logging is Plan B's responsibility
+- hoisted let requestId: string | null = null in /api/chat POST handler so Plan B can reuse same binding for won-greeting fresh-gen path
+- dialogue_feedback table has no sessionId/participantId columns; admin UI reads these from contextSnapshot instead
+- TTL cleanup for chat_request_logs deferred to follow-up cron job (no vercel.json/cron infra in repo)
 
 ### Pending Todos
 
@@ -62,6 +67,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-01
-Stopped at: v2.0 milestone completed and archived
-Resume file: None
+Last session: 2026-05-16
+Stopped at: Phase 62.1 Plan 01 Task 4 checkpoint (human-verify: apply migration + smoke test)
+Resume file: None — continuation agent will be spawned after human approval
