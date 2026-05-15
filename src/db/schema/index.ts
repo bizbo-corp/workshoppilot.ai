@@ -7,6 +7,7 @@ export * from './step-summaries';
 export * from './sessions';
 export * from './build-packs';
 export * from './chat-messages';
+export * from './chat-request-logs';
 export * from './canvas-guides';
 export * from './asset-library';
 export * from './step-canvas-settings';

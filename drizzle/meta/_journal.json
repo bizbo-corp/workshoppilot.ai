@@ -162,6 +162,13 @@
       "when": 1778809095185,
       "tag": "0022_unknown_shooting_star",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1778883764537,
+      "tag": "0023_chat_request_logs",
+      "breakpoints": true
     }
   ]
 }
