@@ -173,6 +173,7 @@ See `milestones/v1.9-ROADMAP.md` for full details.
 - [x] Phase 60: Core Voting UI + Solo Path (2/2 plans) — completed 2026-02-28
 - [x] Phase 61: Multiplayer Voting (2/2 plans) — completed 2026-03-01
 - [x] Phase 62: Mobile Gate (1/1 plan) — completed 2026-03-01
+- [ ] Phase 62.1: Fix Cross-Workshop Dialogue Leak & Duplicate Greetings (INSERTED — hotfix)
 
 See `milestones/v2.0-ROADMAP.md` for full details.
 
