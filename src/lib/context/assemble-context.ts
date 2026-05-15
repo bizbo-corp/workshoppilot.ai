@@ -103,6 +103,20 @@ export async function assembleStepContext(
   }
   // else: deps is [] (Step 1) — no summaries needed, skip query
 
+  // Sentinel injection: if this step DEPENDS on prior summaries (deps non-empty)
+  // but we got nothing back from the DB, emit a hard sentinel so downstream prompts
+  // can detect "no context" deterministically instead of seeing an empty string and
+  // improvising. Without this, models like Gemini will hallucinate context from
+  // surrounding prompt text (root cause of df_iqnkl9ylebansq478qjmweoy).
+  const depsRequireContext = Array.isArray(deps) ? deps.length > 0 : deps === 'all';
+  if (depsRequireContext && summaries === '') {
+    console.warn(
+      `[assembleStepContext] No prior step summaries found for step="${currentStepId}" workshop="${workshopId}" — injecting sentinel. ` +
+      `This is a hard signal that something is wrong with step ordering or summary generation.`
+    );
+    summaries = '⚠️ NO PRIOR STEP CONTEXT AVAILABLE — DO NOT INVENT ONE';
+  }
+
   // Tier 4: Query canvas state for this step
   // For concept step, prefer conceptOwnerId (facilitator scoping) over participantId for filtering
   const ownerIdForContext = (currentStepId === 'concept' || currentStepId === 'reframe')
