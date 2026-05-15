@@ -131,6 +131,14 @@ function FeedbackCard({
   onMutate: () => void;
 }) {
   const [showContext, setShowContext] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [promptLog, setPromptLog] = useState<null | {
+    systemPrompt: string;
+    isReplay: boolean;
+    createdAt: string;
+    requestId: string;
+  }>(null);
+  const [promptLoading, setPromptLoading] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
   const [resolutionNote, setResolutionNote] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -148,6 +156,50 @@ function FeedbackCard({
     });
     if (!res.ok) throw new Error('Failed to update');
     return res.json();
+  };
+
+  const handleTogglePrompt = async () => {
+    if (!showPrompt && promptLog === null) {
+      // Fetch once, cache result. sessionId + participantId extracted from contextSnapshot
+      // (dialogue_feedback table does not have these columns; they live in the snapshot).
+      const snap = entry.contextSnapshot as Record<string, unknown>;
+      const sessionId = typeof snap?.sessionId === 'string' ? snap.sessionId : '';
+      const participantId = typeof snap?.participantId === 'string' ? snap.participantId : '';
+
+      if (!sessionId) {
+        // No sessionId in snapshot — this feedback entry predates observability logging.
+        setPromptLog(null);
+        setShowPrompt(true);
+        return;
+      }
+
+      setPromptLoading(true);
+      try {
+        const params = new URLSearchParams({
+          sessionId,
+          stepId: entry.dialogueStepId,
+          participantId,
+          at: entry.createdAt,
+        });
+        const res = await fetch(`/api/admin/chat-request-log?${params.toString()}`);
+        if (!res.ok) throw new Error('Failed to fetch prompt log');
+        const data = await res.json();
+        if (data.log) {
+          setPromptLog({
+            systemPrompt: data.log.systemPrompt,
+            isReplay: data.log.isReplay,
+            createdAt: data.log.createdAt,
+            requestId: data.log.requestId,
+          });
+        }
+        // null = no log found — stays null, UI shows "no captured log" message
+      } catch {
+        toast.error('Failed to load captured prompt');
+      } finally {
+        setPromptLoading(false);
+      }
+    }
+    setShowPrompt((prev) => !prev);
   };
 
   const handleResolve = async () => {
@@ -315,6 +367,45 @@ function FeedbackCard({
         <pre className="mb-3 max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs">
           {JSON.stringify(entry.contextSnapshot, null, 2)}
         </pre>
+      )}
+
+      {/* Captured AI prompt toggle */}
+      <button
+        onClick={handleTogglePrompt}
+        disabled={promptLoading}
+        className="mb-3 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+      >
+        {promptLoading ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : showPrompt ? (
+          <ChevronUp className="h-3 w-3" />
+        ) : (
+          <ChevronDown className="h-3 w-3" />
+        )}
+        View captured AI prompt
+      </button>
+      {showPrompt && !promptLoading && (
+        <div className="mb-3">
+          {promptLog === null ? (
+            <p className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+              No captured log found for this scope. This feedback may predate observability logging (Plan A / DIAG-01), or the sessionId was not captured in the context snapshot.
+            </p>
+          ) : promptLog.isReplay ? (
+            <p className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+              (replay — original prompt not re-rendered for this row)
+            </p>
+          ) : (
+            <>
+              <p className="mb-1 font-mono text-xs text-muted-foreground">
+                requestId: {promptLog.requestId} &middot; captured:{' '}
+                {new Date(promptLog.createdAt).toLocaleString()}
+              </p>
+              <pre className="whitespace-pre-wrap text-xs bg-muted p-3 rounded max-h-96 overflow-auto">
+                {promptLog.systemPrompt}
+              </pre>
+            </>
+          )}
+        </div>
       )}
 
       {/* Action buttons */}
