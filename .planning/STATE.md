@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0-hotfix
-milestone_name: "Hotfix: Chat scope leak & duplicate greetings"
-status: in_progress
-last_updated: "2026-05-16"
+milestone: v0.5
+milestone_name: milestone
+status: unknown
+last_updated: "2026-05-15T22:27:15.545Z"
 progress:
-  total_phases: 63
-  completed_phases: 62
-  total_plans: 158
-  completed_plans: 155
+  total_phases: 37
+  completed_phases: 36
+  total_plans: 107
+  completed_plans: 105
 ---
 
 # Project State
@@ -46,6 +46,7 @@ Last activity: 2026-05-16 — Tasks 1-3 of 62.1-01 complete; awaiting Task 4 ope
 | v1.9 | 5 | 12 | 3 days |
 | v2.0 | 4 | 7 | 2 days |
 | **Total shipped** | **62** | **155** | **22 days** |
+| Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings P03 | 3 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -56,6 +57,8 @@ Last activity: 2026-05-16 — Tasks 1-3 of 62.1-01 complete; awaiting Task 4 ope
 - hoisted let requestId: string | null = null in /api/chat POST handler so Plan B can reuse same binding for won-greeting fresh-gen path
 - dialogue_feedback table has no sessionId/participantId columns; admin UI reads these from contextSnapshot instead
 - TTL cleanup for chat_request_logs deferred to follow-up cron job (no vercel.json/cron infra in repo)
+- [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: HALL-01: Replace 'recover the closest version' license with ABSENCE PROTOCOL hard stop in stakeholder-mapping prompt — model must output single refusal line when prior context is missing
+- [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: Sentinel string injected at context layer (assembleStepContext) when deps are non-empty but DB returns 0 rows — defense in depth independent of prompt layer
 
 ### Pending Todos
 
