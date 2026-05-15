@@ -5,13 +5,14 @@ import { saveMessages, loadFirstAssistantMessage } from '@/lib/ai/message-persis
 import { assembleStepContext } from '@/lib/context/assemble-context';
 import { getStepById, STEPS } from '@/lib/workshop/step-metadata';
 import { db } from '@/db/client';
-import { workshops } from '@/db/schema';
+import { workshops, chatRequestLogs } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getCurrentArcPhase } from '@/lib/ai/conversation-state';
 import { streamTextWithRetry, isGeminiRateLimitError } from '@/lib/ai/gemini-retry';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { loadCanvasState } from '@/actions/canvas-actions';
 import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
+import { createHash } from 'node:crypto';
 
 /**
  * Increase Vercel serverless timeout for AI responses.
@@ -37,6 +38,12 @@ export async function POST(req: Request) {
 
   try {
     const { messages, sessionId, stepId, workshopId, subStep, selectedStickyNoteIds, participantId, participantName, conceptOwnerId } = await req.json();
+
+    // Hoisted so onFinish can backfill responseMessageId from any fresh-gen path.
+    // Plan A's fresh-gen site (this task) assigns to this.
+    // Plan B's won-greeting fresh-gen path will also assign to this.
+    // Race-loser replay path (Plan B) does NOT use this — it inserts inline with its own crypto.randomUUID().
+    let requestId: string | null = null;
 
     // Validate required parameters
     if (!sessionId || !stepId || !workshopId) {
@@ -187,6 +194,29 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
     // Convert messages to model format
     const modelMessages = await convertToModelMessages(validMessages);
 
+    // Observability: log this fresh-generation request to chat_request_logs before streaming.
+    // Captures verbatim system prompt + sha256 + model messages for admin diagnosis.
+    // NEVER throws — observability must not break the chat request.
+    requestId = crypto.randomUUID();
+    const systemPromptSha = createHash('sha256').update(systemPrompt).digest('hex');
+    try {
+      await db.insert(chatRequestLogs).values({
+        sessionId,
+        stepId,
+        participantId: participantId ?? null,
+        workshopId,
+        requestId,
+        systemPromptSha,
+        systemPrompt,
+        modelMessagesJson: modelMessages,
+        responseMessageId: null, // backfilled in onFinish below
+        isReplay: false,
+      });
+    } catch (err) {
+      console.error('[chat-request-log] fresh-gen insert failed', err);
+      // Observability must never break the chat request. Continue.
+    }
+
     // Stream Gemini response with context-aware prompt and rate limit retry
     const result = await streamTextWithRetry({
       model: chatModel,
@@ -220,6 +250,19 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
       originalMessages: messages,
       onFinish: async ({ messages: responseMessages }) => {
         await saveMessages(sessionId, stepId, responseMessages, participantId);
+
+        // Backfill the response_message_id now that we have the assistant message id.
+        const assistantMsg = [...responseMessages].reverse().find((m) => m.role === 'assistant');
+        const assistantMessageId = assistantMsg?.id ?? '';
+        if (typeof requestId === 'string' && assistantMessageId) {
+          try {
+            await db.update(chatRequestLogs)
+              .set({ responseMessageId: assistantMessageId })
+              .where(eq(chatRequestLogs.requestId, requestId));
+          } catch (err) {
+            console.error('[chat-request-log] backfill failed', err);
+          }
+        }
       },
     });
   } catch (error) {
