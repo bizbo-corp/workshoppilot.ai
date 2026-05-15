@@ -9,6 +9,7 @@ import { startWorkshop } from '@/actions/workshop-setup-actions';
 
 interface StartWorkshopButtonProps {
   workshopId: string;
+  className?: string;
 }
 
 /**
@@ -16,7 +17,7 @@ interface StartWorkshopButtonProps {
  * The matching Liveblocks broadcast is wired in the multiplayer-room listener
  * (separate task) so participants in the lobby follow automatically.
  */
-export function StartWorkshopButton({ workshopId }: StartWorkshopButtonProps) {
+export function StartWorkshopButton({ workshopId, className }: StartWorkshopButtonProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -38,7 +39,7 @@ export function StartWorkshopButton({ workshopId }: StartWorkshopButtonProps) {
   }
 
   return (
-    <Button onClick={handleClick} disabled={isPending} size="lg">
+    <Button onClick={handleClick} disabled={isPending} size="lg" className={className}>
       <Play className="mr-2 h-4 w-4" />
       {isPending ? 'Starting…' : 'Start workshop'}
     </Button>

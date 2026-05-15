@@ -219,6 +219,8 @@ export default async function StepPage({ params }: StepPageProps) {
             sessionId={sessionId}
             workshopId={workshop.id}
             stepNumber={stepNumber}
+            facilitatorMode={workshop.facilitatorMode}
+            tier={workshop.tier}
           />
         </div>
       );
@@ -1232,6 +1234,7 @@ export default async function StepPage({ params }: StepPageProps) {
               journeyMapApproved={journeyMapApproved}
               canvasConfirmed={canvasConfirmed}
               facilitatorMode={session.workshop.facilitatorMode}
+              tier={session.workshop.tier}
               challengePublished={!!session.workshop.challengePublishedAt}
               isWorkshopOwner={isFacilitator}
               challengeIdea={challengeIdea}
@@ -1259,6 +1262,7 @@ export default async function StepPage({ params }: StepPageProps) {
             journeyMapApproved={journeyMapApproved}
             canvasConfirmed={canvasConfirmed}
             facilitatorMode={session.workshop.facilitatorMode}
+            tier={session.workshop.tier}
             challengePublished={!!session.workshop.challengePublishedAt}
             isWorkshopOwner={isFacilitator}
           />

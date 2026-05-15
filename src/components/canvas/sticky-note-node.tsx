@@ -39,6 +39,8 @@ export const COLOR_CLASSES: Record<StickyNoteColor, string> = {
   green: 'bg-[var(--sticky-note-green)]',
   orange: 'bg-[var(--sticky-note-orange)]',
   red: 'bg-[var(--sticky-note-red)]',
+  teal: 'bg-[var(--sticky-note-teal)]',
+  purple: 'bg-[var(--sticky-note-purple)]',
 };
 
 /** Dark text hues matching each pastel background — constant across light/dark mode */
@@ -49,6 +51,8 @@ export const TEXT_COLOR_CLASSES: Record<StickyNoteColor, string> = {
   green: 'text-[var(--sticky-note-green-text)]',
   orange: 'text-[var(--sticky-note-orange-text)]',
   red: 'text-[var(--sticky-note-red-text)]',
+  teal: 'text-[var(--sticky-note-teal-text)]',
+  purple: 'text-[var(--sticky-note-purple-text)]',
 };
 
 /** Darker avatar background colors per sticky note color — muted to match nature palette */
@@ -59,6 +63,8 @@ const AVATAR_BG: Record<StickyNoteColor, string> = {
   green: 'bg-emerald-700',
   orange: 'bg-amber-600',
   red: 'bg-red-700',
+  teal: 'bg-teal-700',
+  purple: 'bg-violet-700',
 };
 
 /** Extract initials from a persona name (first letter of first two words) */
@@ -124,10 +130,20 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
       naturalHeight = ta.scrollHeight;
       ta.style.height = prevHeight;
     } else {
-      // Reset font-size to base for accurate measurement, then we'll set the
-      // computed size below.
+      // Display mode: the <p> is `flex-1 overflow-hidden`, so when the parent
+      // height is constrained (e.g. a template sticky still at its default size
+      // while the AI streams long text into it), scrollHeight reports the
+      // clipped/rendered height — not the natural content height. Break the <p>
+      // out of flex sizing for the measurement, then restore. Both mutations
+      // happen inside useLayoutEffect so no paint occurs in between.
+      const prevFlex = measureEl.style.flex;
+      const prevHeight = measureEl.style.height;
       measureEl.style.fontSize = `${STICKY_BASE_FONT_SIZE}px`;
+      measureEl.style.flex = 'none';
+      measureEl.style.height = 'auto';
       naturalHeight = measureEl.scrollHeight;
+      measureEl.style.flex = prevFlex;
+      measureEl.style.height = prevHeight;
     }
 
     const { nodeHeight, fontSize: nextFs } = fitText(naturalHeight);
@@ -350,7 +366,7 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
         >
           <div
             className="h-2.5 w-2.5 rounded-full border border-white/60"
-            style={{ backgroundColor: data.ownerColor || '#608850' }}
+            style={{ backgroundColor: data.ownerColor || '#b3efbd' }}
           />
           <span className="text-[9px] font-medium text-neutral-olive-500/70 max-w-[60px] truncate">
             {data.ownerName}

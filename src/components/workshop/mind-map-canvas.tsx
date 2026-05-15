@@ -425,7 +425,7 @@ function MindMapCanvasInner({
       .filter((v) => v.slotId === targetId)
       .map((v) => ({
         voterId: v.voterId,
-        color: voterColorMap[v.voterId] ?? '#608850',
+        color: voterColorMap[v.voterId] ?? '#b3efbd',
       }));
   }, [dotVotes, voterColorMap]);
 
@@ -1589,7 +1589,7 @@ function MindMapCanvasInner({
         slot: {
           ...slot,
           ownerName: slot.ownerName ?? (ownerNames?.[slot.ownerId ?? ''] || 'Unknown'),
-          ownerColor: slot.ownerColor ?? (ownerColors?.[slot.ownerId ?? ''] || '#608850'),
+          ownerColor: slot.ownerColor ?? (ownerColors?.[slot.ownerId ?? ''] || '#b3efbd'),
         },
         voteCount: voteCounts.get(slot.slotId) ?? 0,
         rank: rankMap.get(slot.slotId),

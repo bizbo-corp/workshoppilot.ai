@@ -1,56 +1,91 @@
 import 'server-only';
 import { stripe } from '@/lib/billing/stripe';
 import { db } from '@/db/client';
-import { users, creditTransactions } from '@/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { users, creditTransactions, workshops } from '@/db/schema';
+import { eq, sql, and, isNull, or } from 'drizzle-orm';
+import { randomBytes } from 'crypto';
+import { workshopSessions, sessionParticipants } from '@/db/schema';
+import { PARTICIPANT_COLORS, getRoomId } from '@/lib/liveblocks/config';
+import type { Sku } from '@/lib/billing/price-config';
 
 /**
- * Discriminated union result from fulfillCreditPurchase.
- * Callers (webhook handler, success page) should branch on status.
+ * Discriminated union returned by every fulfillment path.
+ * Callers (webhook handler, success page) branch on status.
  */
 export type FulfillResult =
-  | { status: 'fulfilled'; creditQty: number; newBalance: number }
+  | { status: 'fulfilled'; sku: Sku; creditQty: number; newBalance?: number; workshopId?: string }
   | { status: 'already_fulfilled' }
   | { status: 'payment_not_paid' }
-  | { status: 'user_not_found' };
+  | { status: 'user_not_found' }
+  | { status: 'invalid_metadata'; message: string }
+  | { status: 'tier_conflict'; message: string };
 
 /**
- * Shared idempotent credit fulfillment function.
- *
- * Called by both the Stripe webhook handler (Plan 49-02) and the success page
- * (Plan 49-03). The stripeSessionId UNIQUE constraint on credit_transactions is
- * the sole idempotency gate — calling this function twice with the same sessionId
- * results in exactly one credit_transactions row and one creditBalance increment.
- *
- * Design notes (from RESEARCH.md):
- * - Two writes (insert + update + update) are NOT fully atomic.
- *   This is safe because onConflictDoNothing prevents double-counting on retries.
- * - neon-http driver does NOT support interactive multi-statement transactions.
- * - balanceAfter is set from the RETURNING result of the atomic increment,
- *   not from a pre-computed estimate (avoids Pitfall 4 race condition).
+ * SKU dispatcher. Reads session.metadata.sku and routes to the right fulfiller.
+ * Idempotency: every fulfiller writes a row to credit_transactions keyed by
+ * stripeSessionId UNIQUE — duplicate calls return 'already_fulfilled'.
  */
-export async function fulfillCreditPurchase(sessionId: string): Promise<FulfillResult> {
-  // Step 1: Retrieve session from Stripe to verify payment status and extract metadata
+export async function fulfillPurchase(sessionId: string): Promise<FulfillResult> {
   const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-  // Step 2: Guard against deferred payment methods (ACH, etc.) that haven't settled
   if (session.payment_status !== 'paid') {
     return { status: 'payment_not_paid' };
   }
 
-  // Step 3: Extract metadata set during checkout session creation
   const clerkUserId = session.metadata?.clerkUserId;
-  const creditQty = parseInt(session.metadata?.creditQty ?? '0', 10);
+  const sku = (session.metadata?.sku ?? 'solo') as Sku; // legacy sessions default to 'solo'
+  const workshopId = session.metadata?.workshopId ?? null;
 
-  if (!clerkUserId || !creditQty || isNaN(creditQty)) {
-    throw new Error(
-      `fulfillCreditPurchase: missing or invalid metadata on session ${sessionId}. ` +
-        `clerkUserId=${clerkUserId}, creditQty=${session.metadata?.creditQty}`
-    );
+  if (!clerkUserId) {
+    return { status: 'invalid_metadata', message: `missing clerkUserId on session ${sessionId}` };
   }
 
-  // Step 4: Attempt idempotent insert via stripeSessionId UNIQUE constraint
-  // onConflictDoNothing returns empty array if row already exists
+  switch (sku) {
+    case 'solo':
+      return fulfillSoloCredit(sessionId, session, clerkUserId);
+    case 'team':
+      if (!workshopId) {
+        return { status: 'invalid_metadata', message: `team SKU requires workshopId on session ${sessionId}` };
+      }
+      return fulfillTeamWorkshop(sessionId, clerkUserId, workshopId, session);
+    case 'team_upgrade':
+      if (!workshopId) {
+        return { status: 'invalid_metadata', message: `team_upgrade SKU requires workshopId on session ${sessionId}` };
+      }
+      return fulfillTeamUpgrade(sessionId, clerkUserId, workshopId);
+    case 'white_glove':
+      if (!workshopId) {
+        return { status: 'invalid_metadata', message: `white_glove SKU requires workshopId on session ${sessionId}` };
+      }
+      return fulfillWhiteGlove(sessionId, clerkUserId, workshopId);
+    default:
+      return { status: 'invalid_metadata', message: `unknown sku '${sku}' on session ${sessionId}` };
+  }
+}
+
+/**
+ * Backwards-compat alias. Used by older code paths that imported the original name.
+ * New callers should use fulfillPurchase.
+ */
+export async function fulfillCreditPurchase(sessionId: string): Promise<FulfillResult> {
+  return fulfillPurchase(sessionId);
+}
+
+// ─── Solo ────────────────────────────────────────────────────────────────────
+
+async function fulfillSoloCredit(
+  sessionId: string,
+  session: { metadata?: Record<string, string> | null },
+  clerkUserId: string
+): Promise<FulfillResult> {
+  const creditQty = parseInt(session.metadata?.creditQty ?? '0', 10);
+  if (!creditQty || isNaN(creditQty)) {
+    return {
+      status: 'invalid_metadata',
+      message: `solo SKU missing/invalid creditQty on session ${sessionId}`,
+    };
+  }
+
   const inserted = await db
     .insert(creditTransactions)
     .values({
@@ -59,18 +94,17 @@ export async function fulfillCreditPurchase(sessionId: string): Promise<FulfillR
       status: 'completed',
       amount: creditQty,
       balanceAfter: 0, // Placeholder — updated after atomic increment below
-      description: `Purchase: ${session.metadata?.productType ?? 'Workshop credit'}`,
+      description: `Purchase: ${session.metadata?.productType ?? 'Solo Workshop credit'}`,
       stripeSessionId: sessionId,
+      sku: 'solo',
     })
     .onConflictDoNothing({ target: creditTransactions.stripeSessionId })
     .returning({ id: creditTransactions.id });
 
-  // Step 5: No-op check — row already existed, fulfillment already ran
   if (inserted.length === 0) {
     return { status: 'already_fulfilled' };
   }
 
-  // Step 6: Atomically increment creditBalance and retrieve the new balance
   const [updatedUser] = await db
     .update(users)
     .set({ creditBalance: sql`${users.creditBalance} + ${creditQty}` })
@@ -78,21 +112,267 @@ export async function fulfillCreditPurchase(sessionId: string): Promise<FulfillR
     .returning({ creditBalance: users.creditBalance });
 
   if (!updatedUser) {
-    // User exists in Stripe metadata but not in DB — should not happen in practice
     console.error(
-      `fulfillCreditPurchase: user not found in DB for clerkUserId=${clerkUserId} ` +
+      `fulfillSoloCredit: user not found in DB for clerkUserId=${clerkUserId} ` +
         `after successful payment. sessionId=${sessionId}. Manual reconciliation required.`
     );
     return { status: 'user_not_found' };
   }
 
-  // Step 7: Update balanceAfter in the transaction row with the actual post-increment value
-  // This avoids RESEARCH.md Pitfall 4 — balanceAfter reflects real post-increment balance
   await db
     .update(creditTransactions)
     .set({ balanceAfter: updatedUser.creditBalance })
     .where(eq(creditTransactions.id, inserted[0].id));
 
-  // Step 8: Return success with actual new balance
-  return { status: 'fulfilled', creditQty, newBalance: updatedUser.creditBalance };
+  return {
+    status: 'fulfilled',
+    sku: 'solo',
+    creditQty,
+    newBalance: updatedUser.creditBalance,
+  };
+}
+
+// ─── Team (full purchase) ────────────────────────────────────────────────────
+
+async function fulfillTeamWorkshop(
+  sessionId: string,
+  clerkUserId: string,
+  workshopId: string,
+  session: { metadata?: Record<string, string> | null }
+): Promise<FulfillResult> {
+  // Idempotency gate
+  const inserted = await db
+    .insert(creditTransactions)
+    .values({
+      clerkUserId,
+      type: 'purchase',
+      status: 'completed',
+      amount: 0,
+      balanceAfter: 0,
+      description: `Purchase: ${session.metadata?.productType ?? 'Team Workshop'}`,
+      workshopId,
+      stripeSessionId: sessionId,
+      sku: 'team',
+    })
+    .onConflictDoNothing({ target: creditTransactions.stripeSessionId })
+    .returning({ id: creditTransactions.id });
+
+  if (inserted.length === 0) return { status: 'already_fulfilled' };
+
+  // Update workshop tier — only if it's still null or solo (solo is allowed because
+  // a user might have purchased solo, then opted to pay full team via the paywall path
+  // rather than the upgrade path; either way, becoming team is fine).
+  const now = new Date();
+  const [updated] = await db
+    .update(workshops)
+    .set({
+      tier: 'team',
+      tierPaidAt: now,
+      facilitatorMode: 'team',
+      workshopType: 'multiplayer',
+      maxParticipants: 15,
+      // Stamp creditConsumedAt if not already set so Step 7+ unlocks
+      creditConsumedAt: sql`COALESCE(${workshops.creditConsumedAt}, ${now})`,
+    })
+    .where(
+      and(
+        eq(workshops.id, workshopId),
+        eq(workshops.clerkUserId, clerkUserId),
+        or(isNull(workshops.tier), eq(workshops.tier, 'solo'))
+      )
+    )
+    .returning({ id: workshops.id, tier: workshops.tier });
+
+  if (!updated) {
+    console.error(
+      `fulfillTeamWorkshop: workshop ${workshopId} not in expected state ` +
+        `(owner=${clerkUserId}, tier=null|solo). Refund may be required.`
+    );
+    return { status: 'tier_conflict', message: `workshop ${workshopId} already at non-solo tier` };
+  }
+
+  // Ensure Liveblocks session + owner participant exist
+  await ensureTeamSession(workshopId, clerkUserId);
+
+  return { status: 'fulfilled', sku: 'team', creditQty: 0, workshopId };
+}
+
+// ─── Team upgrade (solo → team, $200 diff) ──────────────────────────────────
+
+async function fulfillTeamUpgrade(
+  sessionId: string,
+  clerkUserId: string,
+  workshopId: string
+): Promise<FulfillResult> {
+  const inserted = await db
+    .insert(creditTransactions)
+    .values({
+      clerkUserId,
+      type: 'purchase',
+      status: 'completed',
+      amount: 0,
+      balanceAfter: 0,
+      description: 'Purchase: Solo → Team Upgrade',
+      workshopId,
+      stripeSessionId: sessionId,
+      sku: 'team_upgrade',
+    })
+    .onConflictDoNothing({ target: creditTransactions.stripeSessionId })
+    .returning({ id: creditTransactions.id });
+
+  if (inserted.length === 0) return { status: 'already_fulfilled' };
+
+  // Strict guard: upgrade only valid when current tier is exactly 'solo'.
+  // If the workshop is somehow at a different tier, refuse and log for refund.
+  const [updated] = await db
+    .update(workshops)
+    .set({
+      tier: 'team',
+      tierPaidAt: new Date(),
+      facilitatorMode: 'team',
+      workshopType: 'multiplayer',
+      maxParticipants: 15,
+    })
+    .where(
+      and(
+        eq(workshops.id, workshopId),
+        eq(workshops.clerkUserId, clerkUserId),
+        eq(workshops.tier, 'solo')
+      )
+    )
+    .returning({ id: workshops.id });
+
+  if (!updated) {
+    console.error(
+      `fulfillTeamUpgrade: workshop ${workshopId} not at tier='solo' for owner ${clerkUserId}. ` +
+        `Manual refund required for session ${sessionId}.`
+    );
+    // Mark the transaction as failed so the ledger reflects reality
+    await db
+      .update(creditTransactions)
+      .set({
+        status: 'failed',
+        description: `Purchase rejected: workshop ${workshopId} not at solo tier`,
+      })
+      .where(eq(creditTransactions.id, inserted[0].id));
+    return {
+      status: 'tier_conflict',
+      message: `team_upgrade rejected — workshop ${workshopId} is not at solo tier`,
+    };
+  }
+
+  await ensureTeamSession(workshopId, clerkUserId);
+
+  return { status: 'fulfilled', sku: 'team_upgrade', creditQty: 0, workshopId };
+}
+
+// ─── White Glove ────────────────────────────────────────────────────────────
+
+async function fulfillWhiteGlove(
+  sessionId: string,
+  clerkUserId: string,
+  workshopId: string
+): Promise<FulfillResult> {
+  const inserted = await db
+    .insert(creditTransactions)
+    .values({
+      clerkUserId,
+      type: 'purchase',
+      status: 'completed',
+      amount: 0,
+      balanceAfter: 0,
+      description: 'Purchase: White Glove',
+      workshopId,
+      stripeSessionId: sessionId,
+      sku: 'white_glove',
+    })
+    .onConflictDoNothing({ target: creditTransactions.stripeSessionId })
+    .returning({ id: creditTransactions.id });
+
+  if (inserted.length === 0) return { status: 'already_fulfilled' };
+
+  const now = new Date();
+  const [updated] = await db
+    .update(workshops)
+    .set({
+      tier: 'white_glove',
+      tierPaidAt: now,
+      facilitatorMode: 'team',
+      workshopType: 'multiplayer',
+      maxParticipants: 15,
+      creditConsumedAt: sql`COALESCE(${workshops.creditConsumedAt}, ${now})`,
+    })
+    .where(
+      and(
+        eq(workshops.id, workshopId),
+        eq(workshops.clerkUserId, clerkUserId),
+        or(isNull(workshops.tier), eq(workshops.tier, 'solo'), eq(workshops.tier, 'team'))
+      )
+    )
+    .returning({ id: workshops.id });
+
+  if (!updated) {
+    console.error(
+      `fulfillWhiteGlove: workshop ${workshopId} not in expected state for owner ${clerkUserId}.`
+    );
+    return { status: 'tier_conflict', message: `workshop ${workshopId} could not be upgraded to white_glove` };
+  }
+
+  await ensureTeamSession(workshopId, clerkUserId);
+
+  return { status: 'fulfilled', sku: 'white_glove', creditQty: 0, workshopId };
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Idempotently create the Liveblocks-backed workshop session and seed the owner's
+ * sessionParticipants row. Mirrors the logic in convertToTeamWorkshop().
+ */
+async function ensureTeamSession(workshopId: string, clerkUserId: string): Promise<void> {
+  const existingSession = await db.query.workshopSessions.findFirst({
+    where: eq(workshopSessions.workshopId, workshopId),
+  });
+
+  let workshopSessionId: string;
+  if (existingSession) {
+    workshopSessionId = existingSession.id;
+  } else {
+    const shareToken = randomBytes(18).toString('base64url');
+    const [created] = await db
+      .insert(workshopSessions)
+      .values({
+        workshopId,
+        liveblocksRoomId: getRoomId(workshopId),
+        shareToken,
+        status: 'waiting',
+        maxParticipants: 15,
+      })
+      .returning();
+    workshopSessionId = created.id;
+  }
+
+  const ownerParticipant = await db.query.sessionParticipants.findFirst({
+    where: and(
+      eq(sessionParticipants.sessionId, workshopSessionId),
+      eq(sessionParticipants.clerkUserId, clerkUserId)
+    ),
+  });
+  if (!ownerParticipant) {
+    const ownerUser = await db.query.users.findFirst({
+      where: eq(users.clerkUserId, clerkUserId),
+    });
+    const ownerDisplayName = ownerUser
+      ? [ownerUser.firstName, ownerUser.lastName].filter(Boolean).join(' ') || 'Facilitator'
+      : 'Facilitator';
+    await db.insert(sessionParticipants).values({
+      sessionId: workshopSessionId,
+      clerkUserId,
+      liveblocksUserId: clerkUserId,
+      displayName: ownerDisplayName,
+      color: PARTICIPANT_COLORS[0],
+      role: 'owner',
+      status: 'active',
+    });
+  }
 }

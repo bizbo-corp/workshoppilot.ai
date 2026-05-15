@@ -155,6 +155,13 @@
       "when": 1778738728602,
       "tag": "0021_wise_spyke",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1778809095185,
+      "tag": "0022_unknown_shooting_star",
+      "breakpoints": true
     }
   ]
 }

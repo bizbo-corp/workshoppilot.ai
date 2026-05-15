@@ -50,15 +50,11 @@ export function formatSchedule(
     minute: '2-digit',
     timeZone: tz,
   });
-  const tzFmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: tz,
-    timeZoneName: 'short',
-  });
-
   const date = dateFmt.format(start);
   const timeRange = `${timeFmt.format(start)} – ${timeFmt.format(end)}`;
-  const tzAbbrMatch = tzFmt.formatToParts(start).find((p) => p.type === 'timeZoneName');
-  const timezoneAbbr = tzAbbrMatch?.value ?? '';
+  // Use getTimezoneLabel() so Pacific/Auckland renders as "NZST" rather than
+  // "GMT+12" (Chrome's default for that zone) — and DST-aware where applicable.
+  const timezoneAbbr = tz ? getTimezoneLabel(tz, start).abbr : '';
 
   return {
     date,
@@ -115,6 +111,137 @@ export function detectBrowserTimezone(): string {
     return 'UTC';
   }
 }
+
+/**
+ * Fallback abbreviations for zones whose `Intl.DateTimeFormat({ timeZoneName: 'short' })`
+ * returns a GMT offset rather than a regional code. Chrome (CLDR-driven) tends
+ * to give "GMT+12" for Pacific/Auckland; this map keeps the regional spelling
+ * (NZST / NZDT) that users in those regions actually recognise.
+ */
+const TZ_ABBR_FALLBACK: Record<string, { std: string; dst?: string }> = {
+  'Pacific/Auckland': { std: 'NZST', dst: 'NZDT' },
+  'Pacific/Chatham': { std: 'CHAST', dst: 'CHADT' },
+  'Pacific/Fiji': { std: 'FJT', dst: 'FJST' },
+  'Australia/Sydney': { std: 'AEST', dst: 'AEDT' },
+  'Australia/Melbourne': { std: 'AEST', dst: 'AEDT' },
+  'Australia/Hobart': { std: 'AEST', dst: 'AEDT' },
+  'Australia/Brisbane': { std: 'AEST' },
+  'Australia/Adelaide': { std: 'ACST', dst: 'ACDT' },
+  'Australia/Darwin': { std: 'ACST' },
+  'Australia/Perth': { std: 'AWST' },
+};
+
+function getOffsetMinutes(timeZone: string, date: Date): number {
+  const tzName = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    timeZoneName: 'longOffset',
+    hour: 'numeric',
+  })
+    .formatToParts(date)
+    .find((p) => p.type === 'timeZoneName')?.value ?? 'GMT+00:00';
+  const match = tzName.match(/GMT([+-]\d+)(?::(\d+))?/);
+  if (!match) return 0;
+  const hoursOff = parseInt(match[1], 10);
+  const minsOff = match[2] ? parseInt(match[2], 10) : 0;
+  return hoursOff * 60 + (hoursOff >= 0 ? minsOff : -minsOff);
+}
+
+function isInDst(timeZone: string, date: Date): boolean {
+  const year = date.getUTCFullYear();
+  const janOffset = getOffsetMinutes(timeZone, new Date(Date.UTC(year, 0, 15)));
+  const julOffset = getOffsetMinutes(timeZone, new Date(Date.UTC(year, 6, 15)));
+  if (janOffset === julOffset) return false; // no DST in this zone
+  // DST shifts the wall clock forward, i.e. the larger offset is DST.
+  const dstOffset = Math.max(janOffset, julOffset);
+  return getOffsetMinutes(timeZone, date) === dstOffset;
+}
+
+export interface TimezoneLabel {
+  /** Regional abbreviation like "NZST", "AEST", "PT" — or a GMT offset when none is available. */
+  abbr: string;
+  /** Offset always in the "GMT+12" form, for unambiguous reference. */
+  offset: string;
+  /** City extracted from the IANA path, with underscores replaced ("Los Angeles"). */
+  city: string;
+  /** A combined display label, e.g. "Auckland (NZST, GMT+12)". */
+  friendly: string;
+}
+
+/**
+ * Turn an IANA timezone into a display-friendly label using the user's current
+ * date so DST is reflected. Defaults to the detected browser timezone if the
+ * given one is invalid.
+ */
+export function getTimezoneLabel(timeZone: string, atDate: Date = new Date()): TimezoneLabel {
+  const safeTz = timeZone || 'UTC';
+  const short =
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: safeTz,
+      timeZoneName: 'short',
+      hour: 'numeric',
+    })
+      .formatToParts(atDate)
+      .find((p) => p.type === 'timeZoneName')?.value ?? '';
+  const offset =
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: safeTz,
+      timeZoneName: 'shortOffset',
+      hour: 'numeric',
+    })
+      .formatToParts(atDate)
+      .find((p) => p.type === 'timeZoneName')?.value ?? 'GMT';
+
+  let abbr = short;
+  // If the browser gave us a GMT-offset instead of a regional code, look it up.
+  if (/^GMT/.test(short)) {
+    const fallback = TZ_ABBR_FALLBACK[safeTz];
+    if (fallback) {
+      abbr = isInDst(safeTz, atDate) && fallback.dst ? fallback.dst : fallback.std;
+    } else {
+      abbr = offset; // best we can do for obscure zones
+    }
+  }
+
+  const city = (safeTz.split('/').pop() ?? safeTz).replace(/_/g, ' ');
+  const friendly = abbr === offset ? `${city} (${offset})` : `${city} (${abbr}, ${offset})`;
+  return { abbr, offset, city, friendly };
+}
+
+/**
+ * Curated list of common timezones for the wizard's "Change timezone" picker.
+ * Not exhaustive — power users can stick with the auto-detected zone, which
+ * is always made available even if it isn't in this list.
+ */
+export const COMMON_TIMEZONES: Array<{ tz: string; label: string }> = [
+  { tz: 'Pacific/Auckland', label: 'Auckland' },
+  { tz: 'Pacific/Chatham', label: 'Chatham Islands' },
+  { tz: 'Pacific/Fiji', label: 'Fiji' },
+  { tz: 'Australia/Sydney', label: 'Sydney / Melbourne' },
+  { tz: 'Australia/Brisbane', label: 'Brisbane' },
+  { tz: 'Australia/Adelaide', label: 'Adelaide' },
+  { tz: 'Australia/Perth', label: 'Perth' },
+  { tz: 'Asia/Tokyo', label: 'Tokyo / Seoul' },
+  { tz: 'Asia/Shanghai', label: 'Shanghai / Beijing' },
+  { tz: 'Asia/Singapore', label: 'Singapore / Hong Kong' },
+  { tz: 'Asia/Bangkok', label: 'Bangkok / Jakarta' },
+  { tz: 'Asia/Kolkata', label: 'India' },
+  { tz: 'Asia/Dubai', label: 'Dubai' },
+  { tz: 'Europe/Istanbul', label: 'Istanbul' },
+  { tz: 'Europe/Athens', label: 'Athens / Helsinki' },
+  { tz: 'Europe/Berlin', label: 'Berlin / Paris / Rome' },
+  { tz: 'Europe/London', label: 'London / Dublin / Lisbon' },
+  { tz: 'Africa/Johannesburg', label: 'Johannesburg' },
+  { tz: 'Africa/Cairo', label: 'Cairo' },
+  { tz: 'America/Sao_Paulo', label: 'São Paulo' },
+  { tz: 'America/Argentina/Buenos_Aires', label: 'Buenos Aires' },
+  { tz: 'America/New_York', label: 'New York / Toronto' },
+  { tz: 'America/Chicago', label: 'Chicago / Mexico City' },
+  { tz: 'America/Denver', label: 'Denver' },
+  { tz: 'America/Los_Angeles', label: 'Los Angeles / Vancouver' },
+  { tz: 'America/Anchorage', label: 'Anchorage' },
+  { tz: 'Pacific/Honolulu', label: 'Honolulu' },
+  { tz: 'UTC', label: 'UTC' },
+];
 
 /**
  * Parse the wizard's schedule fields into a normalized payload.

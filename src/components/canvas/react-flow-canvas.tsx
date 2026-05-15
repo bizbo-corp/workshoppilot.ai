@@ -298,13 +298,22 @@ function ReactFlowCanvasInner({
   // Mapping from participant hex color to the closest StickyNoteColor.
   // Matches PARTICIPANT_COLORS order in liveblocks/config.ts.
   const HEX_TO_STICKY_COLOR: Record<string, StickyNoteColor> = {
-    '#608850': 'green',   // facilitator
+    '#b3efbd': 'green',   // facilitator
+    '#ffa8db': 'pink',
+    '#a8daff': 'blue',
+    '#ffd3a8': 'orange',
+    '#ffe299': 'yellow',
+    '#ffafa3': 'red',
+    '#b3f4ef': 'teal',
+    '#d3bdff': 'purple',
+    // Legacy nature palette (pre-Figma migration) — backward compat with stored data
+    '#608850': 'green',
     '#b07068': 'pink',
     '#6888a0': 'blue',
     '#c08030': 'orange',
     '#c49820': 'yellow',
     '#a86050': 'red',
-    // Legacy colors (existing participants may have these stored)
+    // Legacy tailwind palette (further back) — backward compat with older stored data
     '#6366f1': 'blue',
     '#ec4899': 'pink',
     '#14b8a6': 'green',
@@ -316,7 +325,7 @@ function ReactFlowCanvasInner({
   // Participant sticky note color — used when creating new notes in multiplayer mode
   const participantStickyColor: StickyNoteColor | undefined =
     isMultiplayer && participantColor
-      ? (HEX_TO_STICKY_COLOR[participantColor] ?? 'yellow')
+      ? (HEX_TO_STICKY_COLOR[participantColor.toLowerCase()] ?? 'yellow')
       : undefined;
 
   // Client-side template sticky note initialization — ensures templates exist even if

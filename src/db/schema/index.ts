@@ -18,4 +18,5 @@ export * from './dialogue-feedback';
 export * from './guided-pilot-inquiries';
 export * from './workshop-invitations';
 export * from './challenge-approvals';
+export * from './white-glove-bookings';
 export * from './relations';

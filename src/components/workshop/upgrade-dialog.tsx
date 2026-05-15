@@ -22,7 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
 import { consumeCredit, createCheckoutUrl } from '@/actions/billing-actions';
 import { advanceToNextStep } from '@/actions/workshop-actions';
 import { STEPS } from '@/lib/workshop/step-metadata';
@@ -36,6 +35,8 @@ interface UpgradeDialogProps {
   currentStepOrder: number;
   hasCredits: boolean;
   creditBalance: number;
+  /** 'solo' shows credit/$99 path; 'team' shows the $299 team unlock CTA. */
+  facilitatorMode?: 'solo' | 'team';
 }
 
 export function UpgradeDialog({
@@ -46,6 +47,7 @@ export function UpgradeDialog({
   currentStepOrder,
   hasCredits,
   creditBalance,
+  facilitatorMode = 'solo',
 }: UpgradeDialogProps) {
   const [isConsuming, setIsConsuming] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -83,10 +85,14 @@ export function UpgradeDialog({
     }
   }
 
-  async function handleCheckout(tier: 'single' | 'pack') {
+  async function handleCheckout(sku: 'solo' | 'team') {
     setIsCheckingOut(true);
     try {
-      const result = await createCheckoutUrl(tier, `/workshop/${sessionId}/step/8`);
+      const result = await createCheckoutUrl({
+        sku,
+        workshopId: sku === 'solo' ? undefined : workshopId,
+        returnUrl: `/workshop/${sessionId}/step/8`,
+      });
       if ('url' in result) {
         window.location.href = result.url;
       } else {
@@ -172,46 +178,53 @@ export function UpgradeDialog({
             </>
           ) : (
             <>
-              {/* Inline pricing tiers */}
+              {/* Tier CTAs — branch on facilitatorMode. Team workshops skip the solo $99 option;
+                  solo workshops get $99 primary plus a small team upsell link. */}
               <div className="space-y-2.5">
-                {/* Single credit */}
-                <button
-                  onClick={() => handleCheckout('single')}
-                  disabled={isCheckingOut}
-                  className="w-full rounded-lg border p-4 text-left hover:bg-accent transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-wait"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold">1 Workshop Credit</p>
-                      <p className="text-xs text-muted-foreground">Unlock this workshop</p>
+                {facilitatorMode === 'team' ? (
+                  <button
+                    onClick={() => handleCheckout('team')}
+                    disabled={isCheckingOut}
+                    className="w-full rounded-lg border border-olive-500/50 bg-olive-50/30 dark:bg-olive-950/20 p-4 text-left hover:bg-olive-50/60 dark:hover:bg-olive-950/30 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-wait"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">Unlock for your team</p>
+                        <p className="text-xs text-muted-foreground">Up to 15 participants</p>
+                      </div>
+                      <span className="text-lg font-bold">$299</span>
                     </div>
-                    <span className="text-lg font-bold">$99</span>
-                  </div>
-                </button>
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleCheckout('solo')}
+                      disabled={isCheckingOut}
+                      className="w-full rounded-lg border p-4 text-left hover:bg-accent transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-wait"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold">Solo Workshop</p>
+                          <p className="text-xs text-muted-foreground">Unlock this workshop</p>
+                        </div>
+                        <span className="text-lg font-bold">$99</span>
+                      </div>
+                    </button>
 
-                {/* 3-credit pack */}
-                <button
-                  onClick={() => handleCheckout('pack')}
-                  disabled={isCheckingOut}
-                  className="w-full rounded-lg border border-olive-500/50 bg-olive-50/30 dark:bg-olive-950/20 p-4 text-left hover:bg-olive-50/60 dark:hover:bg-olive-950/30 transition-colors relative disabled:opacity-50 cursor-pointer disabled:cursor-wait"
-                >
-                  <span className="absolute -top-2.5 right-3 text-[10px] font-semibold bg-olive-100 dark:bg-olive-900 text-olive-700 dark:text-olive-300 rounded-full px-2 py-0.5">
-                    Save $98
-                  </span>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold">3 Workshop Credits</p>
-                      <p className="text-xs text-muted-foreground">$66 per workshop</p>
-                    </div>
-                    <span className="text-lg font-bold">$199</span>
-                  </div>
-                </button>
+                    <button
+                      onClick={() => handleCheckout('team')}
+                      disabled={isCheckingOut}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors text-center underline w-full cursor-pointer disabled:opacity-50"
+                    >
+                      Need to run with a team? Get the Team Workshop for $299
+                    </button>
+                  </>
+                )}
               </div>
 
-              {/* Trust signal */}
               <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
                 <Shield className="h-3 w-3" />
-                Secure checkout via Stripe · Credits never expire
+                Secure checkout via Stripe
               </div>
             </>
           )}

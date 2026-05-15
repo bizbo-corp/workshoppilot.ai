@@ -37,6 +37,10 @@ export const creditTransactions = pgTable(
     workshopId: text('workshop_id').references(() => workshops.id, { onDelete: 'set null' }),
     // UNIQUE: enforces idempotent Stripe webhook fulfillment. NULL allowed for non-purchase transactions.
     stripeSessionId: text('stripe_session_id').unique(),
+    // v2.3 — Identifies which pricing SKU drove this transaction. Null for legacy rows + consumption.
+    sku: text('sku', {
+      enum: ['solo', 'team', 'team_upgrade', 'white_glove'],
+    }).$type<'solo' | 'team' | 'team_upgrade' | 'white_glove' | null>(),
     createdAt: timestamp('created_at', { mode: 'date', precision: 3 })
       .notNull()
       .defaultNow(),

@@ -20,7 +20,6 @@ import { WorkshopHeader } from '@/components/layout/workshop-header';
 import { MobileStepper } from '@/components/layout/mobile-stepper';
 import { PAYWALL_CUTOFF_DATE } from '@/lib/billing/paywall-config';
 import { MobileGate } from '@/components/workshop/mobile-gate';
-import { FacilitatorConfirmationModal } from '@/components/dialogs/facilitator-confirmation-modal';
 
 interface WorkshopLayoutProps {
   children: React.ReactNode;
@@ -92,10 +91,7 @@ export default async function WorkshopLayout({
     }
   }
 
-  // Facilitator confirmation modal only renders if the facilitator (workshop owner)
-  // is viewing a team-mode workshop with ?fc=1 in the URL — the modal handles that check.
   const isTeamMode = session.workshop.facilitatorMode === 'team';
-  const showFacilitatorModal = isFacilitator && isTeamMode;
 
   // Count pending change requests for the facilitator's sidebar badge
   let pendingChangeRequests = 0;
@@ -115,9 +111,6 @@ export default async function WorkshopLayout({
   return (
     <>
       <MobileGate workshopName={session.workshop.title || 'New Workshop'} />
-      {showFacilitatorModal && (
-        <FacilitatorConfirmationModal workshopId={session.workshop.id} />
-      )}
       <SidebarProvider defaultOpen={false}>
       <div className="flex h-screen w-full">
         {/* Desktop: Sidebar */}

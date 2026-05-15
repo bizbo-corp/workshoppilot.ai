@@ -13,33 +13,32 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
-import Link from 'next/link';
 import { LandingHeader } from '@/components/layout/landing-header';
 import { Footer } from '@/components/landing/footer';
 import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
 
 /**
- * Pricing Page — conversion-optimized with value anchoring
+ * Pricing Page — three-tier conversion-optimized layout
  *
- * - $99 / $199 price points
- * - Consultant comparison anchor pricing
- * - Expanded deliverables detail
- * - FAQ section
- * - Stronger value framing
+ * Solo $99 / Team $299 (highlighted) / White Glove $1,499
  *
- * NOTE: STRIPE_PRICE_SINGLE_FLIGHT and STRIPE_PRICE_SERIAL_ENTREPRENEUR
- * in Stripe must match $99/$199 price points.
+ * Stripe SKUs required:
+ *   STRIPE_PRICE_SOLO_WORKSHOP   ($99)
+ *   STRIPE_PRICE_TEAM_WORKSHOP   ($299)
+ *   STRIPE_PRICE_WHITE_GLOVE     ($1,499)
  */
 
 interface PricingTier {
   name: string;
   price: string;
-  pricePerWorkshop: string;
   period: string;
   description: string;
   features: string[];
   cta: string;
-  priceId: string | undefined;
+  /** When set, the CTA is a form-post to /api/billing/checkout (used by Solo only — no workshopId needed). */
+  priceId?: string;
+  /** When set, the CTA opens NewWorkshopButton with preselectTier (used by Team / White Glove — needs workshopId). */
+  preselectTier?: 'team' | 'white_glove';
   highlighted?: boolean;
   badge?: string;
   savings?: string;
@@ -48,11 +47,10 @@ interface PricingTier {
 function getTiers(): PricingTier[] {
   return [
     {
-      name: 'Single Pilot',
+      name: 'Solo Workshop',
       price: '$99',
-      pricePerWorkshop: '$99',
       period: 'one workshop',
-      description: 'One complete AI-facilitated design thinking workshop. Perfect for validating your next idea.',
+      description: 'AI-facilitated, just you. Validate any idea start to finish in under 90 minutes.',
       features: [
         'Full 10-step design thinking process',
         'AI facilitator guides every step',
@@ -60,31 +58,43 @@ function getTiers(): PricingTier[] {
         'Complete Build Pack output',
         'PRD, user stories & tech specs',
         'Export-ready for dev teams & AI coders',
-        'Credits never expire',
       ],
-      cta: 'Buy 1 Workshop Credit',
-      priceId: process.env.STRIPE_PRICE_SINGLE_FLIGHT,
+      cta: 'Start a Solo Workshop',
+      priceId: process.env.STRIPE_PRICE_SOLO_WORKSHOP,
     },
     {
-      name: 'Serial Entrepreneur',
-      price: '$199',
-      pricePerWorkshop: '$66',
-      period: 'three workshops',
-      description: "For founders who iterate. Your first idea might pivot — and that's the point.",
+      name: 'Team Workshop',
+      price: '$299',
+      period: 'one team workshop',
+      description: 'Run a real workshop with your team — invite by email, schedule a session, build together.',
       features: [
-        'Everything in Single Pilot',
-        '3 workshop credits ($66 each)',
-        'Run workshops for different product ideas',
-        'Compare Build Packs across concepts',
-        'Best value for serial builders',
-        'Perfect for pivots and iterations',
-        'Credits never expire',
+        'Everything in Solo, plus:',
+        'Invite teammates by email',
+        'Real-time multiplayer canvas',
+        'Lobby + scheduled sessions',
+        'Up to 15 participants',
+        'Live cursors, presence, chat',
+        'One unified Build Pack from the team',
       ],
-      cta: 'Buy 3 Workshop Credits',
-      priceId: process.env.STRIPE_PRICE_SERIAL_ENTREPRENEUR,
+      cta: 'Start a Team Workshop',
+      preselectTier: 'team',
       highlighted: true,
-      badge: 'Save $98',
-      savings: 'Save 33% vs buying individually',
+      badge: 'Most Popular',
+    },
+    {
+      name: 'White Glove',
+      price: '$1,499',
+      period: 'one engagement',
+      description: 'Get a real human facilitator to take you through the workshop. Includes Team workshop plus 1:1 setup, custom Build Pack review, and 30-day support.',
+      features: [
+        'Everything in Team, plus:',
+        '1:1 onboarding call with our team',
+        'Custom Build Pack review & polish',
+        'Workshop facilitation guidance',
+        'Direct line to the founders',
+      ],
+      cta: 'Get White Glove',
+      preselectTier: 'white_glove',
     },
   ];
 }
@@ -98,12 +108,22 @@ const FAQ_ITEMS = [
   {
     question: 'What are Steps 1-6 (the free part)?',
     answer:
-      "Steps 1-6 cover the discovery phase: defining your idea, identifying users, mapping pain points, brainstorming solutions, and prioritising features. You'll see real progress and can decide if the full Build Pack is worth unlocking.",
+      "Steps 1-6 cover the discovery phase: defining your idea, identifying users, mapping pain points, brainstorming solutions, and prioritising features. You'll see real progress and can decide if the full Build Pack is worth unlocking — for either Solo or Team.",
+  },
+  {
+    question: 'I started a Solo workshop — can I switch to Team?',
+    answer:
+      "Yes. Open Step 1 of any solo workshop and click \"Switch to team mode\". If you've already paid for the Solo unlock ($99), you only pay the $200 difference. If you're still in the free trial, switching is free and the team price ($299) applies when you unlock the Build Pack.",
+  },
+  {
+    question: 'What does White Glove include?',
+    answer:
+      'Everything in Team, plus a 1:1 onboarding call with our team, custom review and polish of your Build Pack, facilitation guidance, and 30 days of priority support. Best for teams running their first major workshop or shipping something high-stakes.',
   },
   {
     question: 'How long does a workshop take?',
     answer:
-      "Most users complete a full workshop in 45-90 minutes. You can pause and resume anytime — your progress is saved. There's no time limit.",
+      "Solo workshops take 45-90 minutes. Team workshops typically run 60-120 minutes depending on the number of participants. You can pause and resume anytime — progress is saved.",
   },
   {
     question: 'Can I use the Build Pack with AI coding tools?',
@@ -111,14 +131,9 @@ const FAQ_ITEMS = [
       'Absolutely. The Build Pack is specifically structured for handoff to AI coders like Cursor, Claude Code, GitHub Copilot, and others. The PRD and tech specs are designed to be directly usable as context for AI-assisted development.',
   },
   {
-    question: 'Do credits expire?',
-    answer:
-      "No. Workshop credits never expire. Buy them when you're ready, use them when inspiration strikes.",
-  },
-  {
     question: 'What if I need help during the workshop?',
     answer:
-      "The AI facilitator is your guide throughout the entire process. It asks the right questions, challenges assumptions, and keeps you on track. You don't need any design thinking or product management experience.",
+      "The AI facilitator guides every step in Solo and Team. White Glove adds a real human you can reach during business hours.",
   },
 ];
 
@@ -175,8 +190,8 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
 
         {/* ── Pricing Cards ──────────────────────────────────── */}
         <section className="pb-20 sm:pb-24 bg-background">
-          <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-3xl mx-auto">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-5xl mx-auto">
               {tiers.map((tier) => (
                 <div
                   key={tier.name}
@@ -229,7 +244,8 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
                     ))}
                   </ul>
 
-                  {/* CTA */}
+                  {/* CTA — Solo uses form-post (no workshopId needed); Team/White Glove
+                      route through the workshop-creation dialog. */}
                   {tier.priceId ? (
                     <form method="POST" action="/api/billing/checkout">
                       <input type="hidden" name="priceId" value={tier.priceId} />
@@ -240,13 +256,24 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
                         type="submit"
                         className={`w-full rounded-xl py-3.5 px-4 font-semibold text-sm transition-colors cursor-pointer${
                           tier.highlighted
-                            ? ' bg-olive-700 text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500 shadow-md shadow-olive-700/20'
+                            ? ' bg-olive-800 text-white hover:bg-olive-900 dark:bg-olive-700 dark:hover:bg-olive-600 shadow-md shadow-olive-800/30'
                             : ' bg-card border border-border text-foreground hover:bg-accent'
                         }`}
                       >
                         {tier.cta}
                       </button>
                     </form>
+                  ) : tier.preselectTier ? (
+                    <NewWorkshopButton
+                      preselectTier={tier.preselectTier}
+                      className={`w-full rounded-xl py-3.5 px-4 font-semibold text-sm transition-colors cursor-pointer${
+                        tier.highlighted
+                          ? ' bg-olive-800 text-white hover:bg-olive-900 dark:bg-olive-700 dark:hover:bg-olive-600 shadow-md shadow-olive-800/30'
+                          : ' bg-card border border-border text-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {tier.cta}
+                    </NewWorkshopButton>
                   ) : (
                     <button
                       type="button"
@@ -265,14 +292,6 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
                 Secure payment via Stripe
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Credits never expire
-              </div>
-              <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4" />
-                Steps 1-6 always free
               </div>
             </div>
           </div>

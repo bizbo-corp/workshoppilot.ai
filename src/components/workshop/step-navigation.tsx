@@ -27,6 +27,8 @@ interface StepNavigationProps {
   sessionId: string;
   workshopId: string;
   currentStepOrder: number;
+  /** Drives the paywall/upgrade dialog branching: 'solo' shows credit/$99 path, 'team' shows $299 path. */
+  facilitatorMode?: 'solo' | 'team';
   artifactConfirmed?: boolean;
   /** Explicit user confirmation (Accept button click) — controls the shimmer effect */
   stepExplicitlyConfirmed?: boolean;
@@ -71,6 +73,7 @@ export function StepNavigation({
   sessionId,
   workshopId,
   currentStepOrder,
+  facilitatorMode = 'solo',
   artifactConfirmed = false,
   stepExplicitlyConfirmed = false,
   stepStatus,
@@ -397,6 +400,7 @@ export function StepNavigation({
         currentStepOrder={currentStepOrder}
         hasCredits={paywallState.hasCredits}
         creditBalance={paywallState.creditBalance}
+        facilitatorMode={facilitatorMode}
       />
     )}
 

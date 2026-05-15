@@ -182,7 +182,7 @@ function FeasibilityDimension({
                   'nodrag nopan h-3 w-3 rounded-full transition-colors hover:opacity-80',
                   !filled && 'bg-neutral-olive-300 dark:bg-neutral-olive-700',
                 )}
-                style={filled ? { backgroundColor: accentColor || '#608850' } : undefined}
+                style={filled ? { backgroundColor: accentColor || '#b3efbd' } : undefined}
                 aria-label={`Set ${label} score to ${dotScore}`}
               />
             );

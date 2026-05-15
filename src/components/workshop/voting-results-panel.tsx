@@ -57,14 +57,14 @@ function AttributionDots({ dotVotes, slotId }: AttributionDotsProps) {
       others.map((o) => ({
         id: o.id,
         name: o.info?.name ?? 'Unknown',
-        color: o.info?.color ?? '#608850',
+        color: o.info?.color ?? '#b3efbd',
       })),
     shallow,
   );
   const self = useSelf((me) => ({
     id: me.id,
     name: me.info?.name ?? 'You',
-    color: me.info?.color ?? '#608850',
+    color: me.info?.color ?? '#b3efbd',
   }));
 
   const voterMap = React.useMemo(() => {
@@ -85,7 +85,7 @@ function AttributionDots({ dotVotes, slotId }: AttributionDotsProps) {
           <span
             key={v.id}
             className="w-3.5 h-3.5 rounded-full border-2 border-background shadow-sm"
-            style={{ backgroundColor: voter?.color ?? '#608850' }}
+            style={{ backgroundColor: voter?.color ?? '#b3efbd' }}
             title={voter?.name ?? v.voterId}
           />
         );

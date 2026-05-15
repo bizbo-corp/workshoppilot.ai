@@ -121,26 +121,33 @@
   --canvas-highlight-fill: #fef3c7;
   --canvas-tint-opacity: 0.06;
   --canvas-zone-opacity: 0.08;
-  /* Canvas palette — single source of truth for frames, cards, sticky notes */
-  /* Nature palette: desaturated, warm-shifted to harmonise with olive base */
-  --canvas-yellow: #c49820;
-  --canvas-yellow-pastel: #ede0c0;
-  --canvas-yellow-text: #6b5020;
-  --canvas-pink: #b07068;
-  --canvas-pink-pastel: #e8c8c0;
-  --canvas-pink-text: #784040;
-  --canvas-blue: #6888a0;
-  --canvas-blue-pastel: #b8c8d0;
-  --canvas-blue-text: #344858;
-  --canvas-green: #608850;
-  --canvas-green-pastel: #c0d8c0;
-  --canvas-green-text: #344a2c;
-  --canvas-orange: #c08030;
-  --canvas-orange-pastel: #e0d0b8;
-  --canvas-orange-text: #6b4420;
-  --canvas-red: #a86050;
-  --canvas-red-pastel: #d8b8a8;
-  --canvas-red-text: #684038;
+  /* Canvas palette — single source of truth for frames, cards, sticky notes.
+     Vibrant Figma-sticky pastels; the pastel and accent values are equal
+     (avatars/cursors/dots all use the same pastel per design direction). */
+  --canvas-yellow: #ffe299;
+  --canvas-yellow-pastel: #ffe299;
+  --canvas-yellow-text: #3d2a00;
+  --canvas-pink: #ffa8db;
+  --canvas-pink-pastel: #ffa8db;
+  --canvas-pink-text: #5a1438;
+  --canvas-blue: #a8daff;
+  --canvas-blue-pastel: #a8daff;
+  --canvas-blue-text: #0a1f4a;
+  --canvas-green: #b3efbd;
+  --canvas-green-pastel: #b3efbd;
+  --canvas-green-text: #0a3818;
+  --canvas-orange: #ffd3a8;
+  --canvas-orange-pastel: #ffd3a8;
+  --canvas-orange-text: #4a2805;
+  --canvas-red: #ffafa3;
+  --canvas-red-pastel: #ffafa3;
+  --canvas-red-text: #4a1408;
+  --canvas-teal: #b3f4ef;
+  --canvas-teal-pastel: #b3f4ef;
+  --canvas-teal-text: #0a3a35;
+  --canvas-purple: #d3bdff;
+  --canvas-purple-pastel: #d3bdff;
+  --canvas-purple-text: #2a1252;
   --canvas-olive: #b8c9a3;
   --canvas-olive-text: var(--olive-800);
   /* Sticky note colors — aliased from canvas palette */
@@ -150,26 +157,32 @@
   --sticky-note-green: var(--canvas-green-pastel);
   --sticky-note-orange: var(--canvas-orange-pastel);
   --sticky-note-red: var(--canvas-red-pastel);
-  /* Sticky note text — dark hues matching each pastel (constant across light/dark) */
-  --sticky-note-yellow-text: #6b5020;
-  --sticky-note-pink-text: #784040;
-  --sticky-note-blue-text: #344858;
-  --sticky-note-green-text: #344a2c;
-  --sticky-note-orange-text: #6b4420;
-  --sticky-note-red-text: #684038;
+  --sticky-note-teal: var(--canvas-teal-pastel);
+  --sticky-note-purple: var(--canvas-purple-pastel);
+  /* Sticky note text — high-contrast dark hues per pastel (constant across light/dark) */
+  --sticky-note-yellow-text: #3d2a00;
+  --sticky-note-pink-text: #5a1438;
+  --sticky-note-blue-text: #0a1f4a;
+  --sticky-note-green-text: #0a3818;
+  --sticky-note-orange-text: #4a2805;
+  --sticky-note-red-text: #4a1408;
+  --sticky-note-teal-text: #0a3a35;
+  --sticky-note-purple-text: #2a1252;
   /* Mind map branch colors — dark text on canvas pastels, borderless */
-  --mm-blue: #344858;
+  --mm-blue: var(--canvas-blue-text);
   --mm-blue-bg: var(--canvas-blue-pastel);
-  --mm-green: #344a2c;
+  --mm-green: var(--canvas-green-text);
   --mm-green-bg: var(--canvas-green-pastel);
-  --mm-purple: #684038;
-  --mm-purple-bg: var(--canvas-red-pastel);
-  --mm-orange: #6b4420;
+  --mm-purple: var(--canvas-purple-text);
+  --mm-purple-bg: var(--canvas-purple-pastel);
+  --mm-orange: var(--canvas-orange-text);
   --mm-orange-bg: var(--canvas-orange-pastel);
-  --mm-pink: #784040;
+  --mm-pink: var(--canvas-pink-text);
   --mm-pink-bg: var(--canvas-pink-pastel);
-  --mm-yellow: #6b5020;
+  --mm-yellow: var(--canvas-yellow-text);
   --mm-yellow-bg: var(--canvas-yellow-pastel);
+  --mm-teal: var(--canvas-teal-text);
+  --mm-teal-bg: var(--canvas-teal-pastel);
   --mm-root: #3d4b29;
   --mm-root-bg: var(--canvas-olive);
   /* Persona card */
@@ -265,13 +278,10 @@
   --canvas-highlight-fill: #78350f4d;
   --canvas-tint-opacity: 0.12;
   --canvas-zone-opacity: 0.15;
-  /* Canvas palette — dark mode text overrides (light tints for readability) */
-  --canvas-yellow-text: #f0e0a0;
-  --canvas-pink-text: #e8b8b0;
-  --canvas-blue-text: #a0c0d8;
-  --canvas-green-text: #a0d0a0;
-  --canvas-orange-text: #e8c898;
-  --canvas-red-text: #d8a898;
+  /* Canvas palette — dark mode keeps the same vibrant Figma pastels.
+     Pastels are bright enough that the dark text from :root stays legible,
+     so no text overrides are needed (canvas-*-text inherits from :root).
+     Only the olive-text token flips for the dark surface. */
   --canvas-olive-text: var(--olive-200);
   /* Sticky note colors — aliased from canvas palette */
   --sticky-note-yellow: var(--canvas-yellow-pastel);
@@ -280,6 +290,8 @@
   --sticky-note-green: var(--canvas-green-pastel);
   --sticky-note-orange: var(--canvas-orange-pastel);
   --sticky-note-red: var(--canvas-red-pastel);
+  --sticky-note-teal: var(--canvas-teal-pastel);
+  --sticky-note-purple: var(--canvas-purple-pastel);
   /* Mind map branch colors — same canvas palette pastels in dark mode (matches sticky notes) */
   /* Persona card */
   --persona-bg: var(--neutral-olive-950);

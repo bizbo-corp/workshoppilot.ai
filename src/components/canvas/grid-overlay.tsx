@@ -50,13 +50,13 @@ const ROW_ICONS: Record<string, LucideIcon> = {
 
 /** Per-row tint colors for swimlane visual identity — matches sticky note palette */
 const ROW_TINT_COLORS: Record<string, string> = {
-  actions: '#b8c8d0',      // blue  (--canvas-blue-pastel)
-  goals: '#c0d8c0',        // green (--canvas-green-pastel)
-  barriers: '#d8b8a8',     // red   (--canvas-red-pastel)
-  touchpoints: '#e8c8c0',  // pink  (--canvas-pink-pastel)
-  emotions: '#e8c8c0',     // pink  (--canvas-pink-pastel) — matches emotion stickies
-  moments: '#ede0c0',      // yellow(--canvas-yellow-pastel)
-  opportunities: '#e0d0b8', // orange(--canvas-orange-pastel)
+  actions: '#a8daff',      // blue  (--canvas-blue-pastel)
+  goals: '#b3efbd',        // green (--canvas-green-pastel)
+  barriers: '#ffafa3',     // red   (--canvas-red-pastel)
+  touchpoints: '#ffa8db',  // pink  (--canvas-pink-pastel)
+  emotions: '#ffa8db',     // pink  (--canvas-pink-pastel) — matches emotion stickies
+  moments: '#ffe299',      // yellow(--canvas-yellow-pastel)
+  opportunities: '#ffd3a8', // orange(--canvas-orange-pastel)
 };
 
 /** Dark accent colors for row label icons + text (light theme / dark theme) */
@@ -290,7 +290,7 @@ export function GridOverlay({
                     width={bounds.width * zoom}
                     height={bounds.height * zoom}
                     fill="none"
-                    stroke="#c49820"
+                    stroke="var(--canvas-yellow)"
                     strokeWidth={3}
                   />
                 </g>
@@ -479,7 +479,7 @@ export function GridOverlay({
                 y1={topEdge.y}
                 x2={bottomEdge.x}
                 y2={bottomEdge.y}
-                stroke="#6888a0"
+                stroke="var(--canvas-blue)"
                 strokeWidth={2}
                 strokeLinecap="round"
               />

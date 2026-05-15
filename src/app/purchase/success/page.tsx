@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { fulfillCreditPurchase } from '@/lib/billing/fulfill-credit-purchase';
+import { fulfillPurchase } from '@/lib/billing/fulfill-credit-purchase';
 import { db } from '@/db/client';
 import { users, sessions } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -36,17 +36,35 @@ export default async function PurchaseSuccessPage({
   // Validate return_to — prevent open redirect
   const validReturnTo = return_to && return_to.startsWith('/workshop/') ? return_to : null;
 
-  // Call fulfillCreditPurchase — dual-trigger pattern
-  // This is idempotent: if the webhook already fulfilled, returns already_fulfilled
-  const result = await fulfillCreditPurchase(session_id);
+  // Call fulfillPurchase — dual-trigger pattern, dispatches by SKU.
+  // Idempotent: if the webhook already fulfilled, returns already_fulfilled
+  const result = await fulfillPurchase(session_id);
+
+  // ─── White Glove: redirect to post-purchase scheduling ────────────────────
+  // Skip the "credits added" UI — White Glove buyers go straight to scheduling.
+  // We need the workshopId; for fulfilled it's in result, for already_fulfilled
+  // we fetch from the Stripe session metadata.
+  let whiteGloveWorkshopId: string | null = null;
+  if (result.status === 'fulfilled' && result.sku === 'white_glove' && result.workshopId) {
+    whiteGloveWorkshopId = result.workshopId;
+  } else if (result.status === 'already_fulfilled') {
+    const { stripe } = await import('@/lib/billing/stripe');
+    const stripeSession = await stripe.checkout.sessions.retrieve(session_id);
+    if (stripeSession.metadata?.sku === 'white_glove' && stripeSession.metadata?.workshopId) {
+      whiteGloveWorkshopId = stripeSession.metadata.workshopId;
+    }
+  }
+  if (whiteGloveWorkshopId) {
+    redirect(`/purchase/scheduling?workshop_id=${whiteGloveWorkshopId}`);
+  }
 
   // Determine credit info to display based on fulfillment result
   let displayBalance: number | null = null;
   let creditsAdded: number | null = null;
   let isAlreadyFulfilled = false;
 
-  if (result.status === 'fulfilled') {
-    displayBalance = result.newBalance;
+  if (result.status === 'fulfilled' && result.sku === 'solo') {
+    displayBalance = result.newBalance ?? null;
     creditsAdded = result.creditQty;
   } else if (result.status === 'already_fulfilled') {
     // Webhook already processed this — fetch current balance from DB

@@ -74,6 +74,7 @@ import { useBroadcastEvent } from "@liveblocks/react";
 import { FacilitatorControls } from "./facilitator-controls";
 import { PresenceBar } from "./presence-bar";
 import { ParticipantOverview } from "./participant-overview";
+import { usePendingInviteCount } from "@/hooks/use-pending-invite-count";
 import { Crazy8sProgressPanel, type ParticipantProgress } from "./crazy8s-progress-panel";
 
 const CANVAS_ENABLED_STEPS = [
@@ -154,6 +155,8 @@ interface StepContainerProps {
   canvasConfirmed?: boolean;
   /** v2.1 — Workshop in team mode = facilitator frames challenge + invites by email. */
   facilitatorMode?: 'solo' | 'team';
+  /** v2.3 — Pricing tier already purchased for this workshop. Drives upgrade-dialog copy. */
+  tier?: 'solo' | 'team' | 'white_glove' | null;
   /** v2.1 — True once the facilitator publishes the challenge (challengePublishedAt is set). */
   challengePublished?: boolean;
   /** True when the current Clerk user owns the workshop (matches workshops.clerkUserId).
@@ -193,6 +196,7 @@ export function StepContainer({
   journeyMapApproved = false,
   canvasConfirmed = false,
   facilitatorMode,
+  tier = null,
   challengePublished = false,
   isWorkshopOwner = false,
   challengeIdea,
@@ -739,10 +743,25 @@ export function StepContainer({
   const handleConvertToTeam = React.useCallback(async () => {
     setIsConverting(true);
     try {
-      await convertToTeamWorkshop(workshopId);
-      // ?setup=1 tells the post-refresh render to auto-open the setup wizard.
-      router.replace(`/workshop/${sessionId}/step/1?setup=1`, { scroll: false });
-      router.refresh();
+      const result = await convertToTeamWorkshop(workshopId);
+      if (result.status === 'converted' || result.status === 'already_team') {
+        router.replace(`/workshop/${sessionId}/step/1?setup=1`, { scroll: false });
+        router.refresh();
+      } else if (result.status === 'payment_required') {
+        // Tier='solo' workshop → user pays $200 upgrade diff. Hand off to Stripe.
+        window.location.href = result.checkoutUrl;
+      } else if (result.status === 'blocked') {
+        const messages: Record<string, string> = {
+          challenge_published: 'Cannot convert after the challenge has been published',
+          access_denied: 'Access denied',
+          auth_required: 'Sign in required',
+        };
+        toast.error(messages[result.reason] ?? 'Could not switch workshop');
+        setIsConverting(false);
+      } else {
+        toast.error('message' in result ? result.message : 'Could not switch workshop');
+        setIsConverting(false);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not switch workshop');
       setIsConverting(false);
@@ -766,12 +785,12 @@ export function StepContainer({
   }, [isTeamModeStepOne, stickyNotes]);
 
   // The Next button on team-mode Step 1 only enables once the facilitator has filled
-  // in the "How might we" sticky. When enabled, the button reads "Set up workshop"
+  // in the "How might we" sticky. When enabled, the button reads "Next: Invite team"
   // and opens the wizard instead of advancing. The wizard is the only path through.
   const challengeReady = !!liveChallenge?.hmwStatement;
   const nextDisabledReason =
     isTeamModeStepOne && !challengePublished && !challengeReady
-      ? 'Fill in the challenge statement first, then set up the workshop'
+      ? 'Fill in the challenge statement first, then invite your team'
       : null;
 
   // Step 10: client-side extraction state
@@ -968,6 +987,15 @@ export function StepContainer({
   const [showResetDialog, setShowResetDialog] = React.useState(false);
   const [showParticipantOverview, setShowParticipantOverview] = React.useState(false);
   const [isResetting, setIsResetting] = React.useState(false);
+
+  // Pending invite count for the "Manage invites" badge. Only polls when the
+  // facilitator is on team-mode Step 1 and the challenge has been published —
+  // that's when the Manage invites button is shown.
+  const pendingInviteCount = usePendingInviteCount(
+    sessionId,
+    step?.id ?? 'challenge',
+    !!isTeamModeStepOne && !!challengePublished
+  );
 
   // Reset key forces ChatPanel to re-mount (clearing useChat state)
   const [resetKey, setResetKey] = React.useState(0);
@@ -1317,7 +1345,7 @@ export function StepContainer({
             workshopId={workshopId}
             participantId={effectiveParticipantId}
             displayName={effectiveDisplayName || "Participant"}
-            participantColor={effectiveColor || "#608850"}
+            participantColor={effectiveColor || "#b3efbd"}
             initialMessages={localMessages}
           />
         ) : (
@@ -1472,6 +1500,7 @@ export function StepContainer({
             sessionId={sessionId}
             workshopId={workshopId}
             currentStepOrder={stepOrder}
+            facilitatorMode={facilitatorMode}
             artifactConfirmed={effectiveConfirmed}
             stepExplicitlyConfirmed={stepOrder === 8 ? ideation.explicitlyConfirmed : artifactConfirmed}
             stepStatus={stepStatus}
@@ -1494,7 +1523,7 @@ export function StepContainer({
             onBeforeAdvance={handleBeforeAdvance}
             onFlushCanvas={flushCanvasToDb}
             nextDisabledReason={nextDisabledReason}
-            nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Set up workshop' : undefined}
+            nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Next: Invite team' : undefined}
             nextOnClickOverride={
               isTeamModeStepOne && !challengePublished
                 ? () => setShowSetupWizard(true)
@@ -1681,10 +1710,22 @@ export function StepContainer({
               <button
                 onClick={() => setShowSetupWizard(true)}
                 className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-xs font-medium px-2 flex items-center gap-1"
-                title="Manage invitations or change schedule"
+                title={
+                  pendingInviteCount
+                    ? `${pendingInviteCount} pending — manage or nudge`
+                    : 'Manage invitations or change schedule'
+                }
               >
                 <UserPlus className="h-4 w-4" />
                 Manage invites
+                {pendingInviteCount && pendingInviteCount > 0 ? (
+                  <span
+                    aria-label={`${pendingInviteCount} pending invitations`}
+                    className="ml-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-amber-500/15 px-1 text-[10px] font-semibold text-amber-700 dark:text-amber-300"
+                  >
+                    {pendingInviteCount}
+                  </span>
+                ) : null}
               </button>
             )}
             {isFacilitator && (
@@ -1718,7 +1759,7 @@ export function StepContainer({
                     return {
                       ownerId: o.ownerId,
                       ownerName: o.ownerName,
-                      ownerColor: o.ownerColor || '#608850',
+                      ownerColor: o.ownerColor || '#b3efbd',
                       isCompleted: !!ideation.crazy8sReadinessMap[o.ownerId],
                       filledSlots: ownerSlots.filter((s) => s.imageUrl).length,
                       totalSlots: ownerSlots.length || 8,
@@ -1739,7 +1780,7 @@ export function StepContainer({
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <ParticipantOverview sessionId={sessionId} stepId={step.id} shareToken={shareToken ?? undefined} />
+              <ParticipantOverview sessionId={sessionId} stepId={step.id} workshopId={workshopId} shareToken={shareToken ?? undefined} />
             </div>
           )}
         </>
@@ -1764,6 +1805,7 @@ export function StepContainer({
           sessionId={sessionId}
           workshopId={workshopId}
           currentStepOrder={stepOrder}
+          facilitatorMode={facilitatorMode}
           artifactConfirmed={effectiveConfirmed}
           stepExplicitlyConfirmed={stepOrder === 8 ? ideation.explicitlyConfirmed : artifactConfirmed}
           stepStatus={stepStatus}
@@ -1784,7 +1826,7 @@ export function StepContainer({
           onBeforeAdvance={handleBeforeAdvance}
           onFlushCanvas={flushCanvasToDb}
           nextDisabledReason={nextDisabledReason}
-          nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Set up workshop' : undefined}
+          nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Next: Invite team' : undefined}
           nextOnClickOverride={
             isTeamModeStepOne && !challengePublished
               ? () => setShowSetupWizard(true)
@@ -1799,16 +1841,33 @@ export function StepContainer({
             <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Users className="h-5 w-5" />
             </div>
-            <AlertDialogTitle>Switch to a team workshop?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {tier === 'solo' ? 'Upgrade to a team workshop?' : 'Switch to a team workshop?'}
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-left">
-              You&apos;ll become the facilitator. Frame the challenge on this step, then invite
-              teammates by email and run the workshop together. This can&apos;t be undone.
+              {tier === 'solo' ? (
+                <>
+                  You&apos;ve already unlocked this as a solo workshop. Upgrading to team adds invites,
+                  lobby, and real-time canvas for <span className="font-semibold text-foreground">$200</span>
+                  {' '}(the difference between Solo $99 and Team $299). This can&apos;t be undone.
+                </>
+              ) : (
+                <>
+                  You&apos;ll become the facilitator. Frame the challenge on this step, then invite
+                  teammates by email and run the workshop together. Payment ($299) happens when you
+                  unlock the Build Pack — free until then.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isConverting}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConvertToTeam} disabled={isConverting}>
-              {isConverting ? 'Switching…' : 'Switch to team workshop'}
+              {isConverting
+                ? 'Switching…'
+                : tier === 'solo'
+                  ? 'Upgrade to team — $200'
+                  : 'Switch to team workshop'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

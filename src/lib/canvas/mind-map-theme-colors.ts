@@ -15,8 +15,10 @@ export type ThemeColor = {
 };
 
 /**
- * 6-color theme palette for mind map branches.
+ * 8-color theme palette for mind map branches.
  * Order matters for multiplayer: index 0 = facilitator, index 1+ = participants.
+ * MUST stay in lockstep with PARTICIPANT_COLORS in src/lib/liveblocks/config.ts
+ * so that indicator dots, cursors, and mind map nodes share a hue per user.
  * Aliased from the canvas palette (same hues as sticky notes) via globals.css.
  */
 export const THEME_COLORS: readonly ThemeColor[] = [
@@ -56,11 +58,25 @@ export const THEME_COLORS: readonly ThemeColor[] = [
     accentColor: 'var(--canvas-yellow)',
   },
   {
+    id: 'red',
+    label: 'Red',
+    color: 'var(--canvas-red-text)',
+    bgColor: 'var(--canvas-red-pastel)',
+    accentColor: 'var(--canvas-red)',
+  },
+  {
+    id: 'teal',
+    label: 'Teal',
+    color: 'var(--mm-teal)',
+    bgColor: 'var(--mm-teal-bg)',
+    accentColor: 'var(--canvas-teal)',
+  },
+  {
     id: 'purple',
     label: 'Purple',
     color: 'var(--mm-purple)',
     bgColor: 'var(--mm-purple-bg)',
-    accentColor: 'var(--canvas-red)',
+    accentColor: 'var(--canvas-purple)',
   },
 ] as const;
 

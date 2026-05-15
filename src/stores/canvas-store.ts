@@ -24,7 +24,7 @@ export type PendingHmwFieldFocus = { cardId: string; field: string } | null;
 /** Set when the user fills the last empty HMW field via manual edit (not chip click). */
 export type PendingHmwManualComplete = { cardId: string } | null;
 
-export type StickyNoteColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange' | 'red';
+export type StickyNoteColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange' | 'red' | 'teal' | 'purple';
 
 export type GridColumn = {
   id: string;

@@ -6,21 +6,25 @@
  */
 
 const COLOR_MAP: Record<string, string> = {
-  yellow: '#ede0c0',
-  pink: '#e8c8c0',
-  blue: '#b8c8d0',
-  green: '#c0d8c0',
-  orange: '#e0d0b8',
-  red: '#d8b8a8',
+  yellow: '#ffe299',
+  pink: '#ffa8db',
+  blue: '#a8daff',
+  green: '#b3efbd',
+  orange: '#ffd3a8',
+  red: '#ffafa3',
+  teal: '#b3f4ef',
+  purple: '#d3bdff',
 };
 
 const TEXT_COLOR_MAP: Record<string, string> = {
-  yellow: '#6b5020',
-  pink: '#784040',
-  blue: '#344858',
-  green: '#344a2c',
-  orange: '#6b4420',
-  red: '#684038',
+  yellow: '#3d2a00',
+  pink: '#5a1438',
+  blue: '#0a1f4a',
+  green: '#0a3818',
+  orange: '#4a2805',
+  red: '#4a1408',
+  teal: '#0a3a35',
+  purple: '#2a1252',
 };
 
 interface StickyNoteDivProps {

@@ -31,14 +31,16 @@ const EDGE_GRAB = 12;
 /** @deprecated alias kept for export compat */
 const FRAME_WIDTH = MIN_FRAME_WIDTH;
 
-/** Color mapping from StickyNoteColor to frame appearance — nature palette */
+/** Color mapping from StickyNoteColor to frame appearance — vibrant Figma palette */
 const FRAME_COLORS: Record<string, { fill: string; border: string; headerBg: string }> = {
-  pink:   { fill: 'rgba(176, 112, 104, 0.08)', border: 'rgba(176, 112, 104, 0.30)', headerBg: 'rgba(176, 112, 104, 0.70)' },
-  blue:   { fill: 'rgba(104, 136, 160, 0.08)', border: 'rgba(104, 136, 160, 0.30)', headerBg: 'rgba(104, 136, 160, 0.70)' },
-  green:  { fill: 'rgba(96, 136, 80, 0.08)',   border: 'rgba(96, 136, 80, 0.30)',   headerBg: 'rgba(96, 136, 80, 0.70)' },
-  yellow: { fill: 'rgba(196, 152, 32, 0.08)',  border: 'rgba(196, 152, 32, 0.30)',  headerBg: 'rgba(196, 152, 32, 0.70)' },
-  orange: { fill: 'rgba(192, 128, 48, 0.08)',  border: 'rgba(192, 128, 48, 0.30)',  headerBg: 'rgba(192, 128, 48, 0.70)' },
-  red:    { fill: 'rgba(168, 96, 80, 0.08)',   border: 'rgba(168, 96, 80, 0.30)',   headerBg: 'rgba(168, 96, 80, 0.70)' },
+  pink:   { fill: 'rgba(255, 168, 219, 0.10)', border: 'rgba(255, 168, 219, 0.45)', headerBg: 'rgba(255, 168, 219, 0.85)' },
+  blue:   { fill: 'rgba(168, 218, 255, 0.10)', border: 'rgba(168, 218, 255, 0.45)', headerBg: 'rgba(168, 218, 255, 0.85)' },
+  green:  { fill: 'rgba(179, 239, 189, 0.10)', border: 'rgba(179, 239, 189, 0.45)', headerBg: 'rgba(179, 239, 189, 0.85)' },
+  yellow: { fill: 'rgba(255, 226, 153, 0.10)', border: 'rgba(255, 226, 153, 0.45)', headerBg: 'rgba(255, 226, 153, 0.85)' },
+  orange: { fill: 'rgba(255, 211, 168, 0.10)', border: 'rgba(255, 211, 168, 0.45)', headerBg: 'rgba(255, 211, 168, 0.85)' },
+  red:    { fill: 'rgba(255, 175, 163, 0.10)', border: 'rgba(255, 175, 163, 0.45)', headerBg: 'rgba(255, 175, 163, 0.85)' },
+  teal:   { fill: 'rgba(179, 244, 239, 0.10)', border: 'rgba(179, 244, 239, 0.45)', headerBg: 'rgba(179, 244, 239, 0.85)' },
+  purple: { fill: 'rgba(211, 189, 255, 0.10)', border: 'rgba(211, 189, 255, 0.45)', headerBg: 'rgba(211, 189, 255, 0.85)' },
 };
 
 const DEFAULT_FRAME_COLOR = FRAME_COLORS.yellow;

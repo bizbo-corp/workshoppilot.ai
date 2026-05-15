@@ -1,11 +1,25 @@
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db/client';
-import { chatMessages, sessionParticipants } from '@/db/schema';
+import {
+  chatMessages,
+  sessionParticipants,
+  sessions,
+  workshops,
+  workshopInvitations,
+} from '@/db/schema';
 import { eq, and, sql, isNotNull } from 'drizzle-orm';
+import { NUDGE_COOLDOWN_MS } from '@/lib/workshop/nudge-config';
 
 /**
  * GET /api/participant-activity?sessionId=xxx&stepId=xxx
- * Returns per-participant summary for facilitator overview.
+ *
+ * Returns the facilitator's view of the workshop:
+ *   - `active`: participants who have joined the session (existing data)
+ *   - `pending`: invitations that haven't been accepted yet, with cooldown info
+ *     so the client can render Nudge UI
+ *
+ * Facilitator-only: returns 403 if the caller is not the workshop owner.
+ * Pending invites contain participant emails, so ownership must be enforced here.
  */
 export async function GET(req: Request) {
   const { userId } = await auth();
@@ -21,7 +35,25 @@ export async function GET(req: Request) {
     return Response.json({ error: 'sessionId required' }, { status: 400 });
   }
 
-  // Get all participants for this session
+  // Resolve session → workshop → owner, and verify the caller is the owner.
+  const [sessionRow] = await db
+    .select({
+      workshopId: sessions.workshopId,
+      ownerId: workshops.clerkUserId,
+    })
+    .from(sessions)
+    .innerJoin(workshops, eq(sessions.workshopId, workshops.id))
+    .where(eq(sessions.id, sessionId))
+    .limit(1);
+
+  if (!sessionRow) {
+    return Response.json({ error: 'Session not found' }, { status: 404 });
+  }
+  if (sessionRow.ownerId !== userId) {
+    return new Response('Forbidden', { status: 403 });
+  }
+
+  // Active participants (existing behaviour)
   const participants = await db
     .select()
     .from(sessionParticipants)
@@ -32,7 +64,6 @@ export async function GET(req: Request) {
       )
     );
 
-  // Get message counts per participant
   const messageCounts = await db
     .select({
       participantId: chatMessages.participantId,
@@ -53,7 +84,7 @@ export async function GET(req: Request) {
     messageCounts.map((m) => [m.participantId, { count: m.count, lastActivity: m.lastActivity }])
   );
 
-  const result = participants.map((p) => ({
+  const active = participants.map((p) => ({
     participantId: p.id,
     displayName: p.displayName,
     color: p.color,
@@ -63,5 +94,32 @@ export async function GET(req: Request) {
     lastActivity: countMap.get(p.id)?.lastActivity || null,
   }));
 
-  return Response.json(result);
+  // Pending invitations — emails the facilitator can nudge.
+  const pendingRows = await db
+    .select({
+      id: workshopInvitations.id,
+      email: workshopInvitations.email,
+      invitedAt: workshopInvitations.invitedAt,
+    })
+    .from(workshopInvitations)
+    .where(
+      and(
+        eq(workshopInvitations.workshopId, sessionRow.workshopId),
+        eq(workshopInvitations.status, 'pending')
+      )
+    );
+
+  const now = Date.now();
+  const pending = pendingRows.map((r) => {
+    const lastSent = r.invitedAt instanceof Date ? r.invitedAt.getTime() : 0;
+    const elapsed = now - lastSent;
+    return {
+      id: r.id,
+      email: r.email,
+      invitedAt: r.invitedAt instanceof Date ? r.invitedAt.toISOString() : null,
+      cooldownMsRemaining: Math.max(0, NUDGE_COOLDOWN_MS - elapsed),
+    };
+  });
+
+  return Response.json({ active, pending });
 }

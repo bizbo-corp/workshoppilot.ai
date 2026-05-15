@@ -18,8 +18,10 @@ import {
   DURATION_OPTIONS,
   MAX_TEAM_INVITES,
   type DurationMinutes,
+  COMMON_TIMEZONES,
   detectBrowserTimezone,
   formatDuration,
+  getTimezoneLabel,
 } from '@/lib/workshop/workshop-schedule';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -28,16 +30,18 @@ export interface SetupWorkshopWizardProps {
   workshopId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Read-only challenge content surfaced in Step 1 of the wizard. */
+  /** The HMW challenge statement — surfaced prominently in step 1.
+   *  idea/problem/audience are accepted but no longer rendered; kept on the type
+   *  so the callsite doesn't need a separate refactor. */
   challenge: {
     hmwStatement: string | null;
-    idea: string | null;
-    problem: string | null;
-    audience: string | null;
+    idea?: string | null;
+    problem?: string | null;
+    audience?: string | null;
   };
 }
 
-type WizardStep = 'confirm' | 'invite' | 'schedule';
+type WizardStep = 'review' | 'schedule';
 type StartMode = 'start_now' | 'schedule';
 
 function defaultDate(): string {
@@ -63,7 +67,7 @@ function SetupWorkshopWizardBody({
   challenge,
 }: SetupWorkshopWizardProps) {
   const router = useRouter();
-  const [step, setStep] = useState<WizardStep>('confirm');
+  const [step, setStep] = useState<WizardStep>('review');
   const [emails, setEmails] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -72,8 +76,9 @@ function SetupWorkshopWizardBody({
   const [time, setTime] = useState('10:00');
   const [duration, setDuration] = useState<DurationMinutes>(90);
   // Lazy-init from the browser TZ. Server renders with 'UTC' but the component is client-only
-  // (it's gated by `open`), so this only runs in the browser.
-  const [timezone] = useState<string>(() => detectBrowserTimezone());
+  // (it's gated by `open`), so this only runs in the browser. The facilitator can override it
+  // via the picker in the schedule step if the auto-detected zone is wrong.
+  const [timezone, setTimezone] = useState<string>(() => detectBrowserTimezone());
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -131,7 +136,7 @@ function SetupWorkshopWizardBody({
     }
     if (finalEmails.length === 0) {
       setEmailError('Add at least one email');
-      setStep('invite');
+      setStep('review');
       return;
     }
 
@@ -187,26 +192,22 @@ function SetupWorkshopWizardBody({
     });
   }
 
+  const pendingEmailCount =
+    emails.length + (draft.trim() && EMAIL_REGEX.test(draft.trim()) ? 1 : 0);
+
   return (
     <Dialog open={open} onOpenChange={(o) => !isPending && onOpenChange(o)}>
       <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
+        <DialogHeader className="space-y-2">
           <DialogTitle>Set up workshop</DialogTitle>
-          <DialogDescription>
+          <DialogDescription asChild>
             <WizardStepBar current={step} />
           </DialogDescription>
         </DialogHeader>
 
-        {step === 'confirm' && (
-          <ConfirmChallengeStep
+        {step === 'review' && (
+          <ReviewAndInviteStep
             challenge={challenge}
-            onNext={() => setStep('invite')}
-            onCancel={() => onOpenChange(false)}
-          />
-        )}
-
-        {step === 'invite' && (
-          <InviteEmailsStep
             emails={emails}
             draft={draft}
             error={emailError}
@@ -215,8 +216,9 @@ function SetupWorkshopWizardBody({
             onRemove={(email) => setEmails((prev) => prev.filter((e) => e !== email))}
             onKeyDown={handleEmailKey}
             onPaste={handlePaste}
-            onBack={() => setStep('confirm')}
+            onCancel={() => onOpenChange(false)}
             onNext={() => {
+              if (!challenge.hmwStatement) return;
               const ready = emails.length > 0 || (draft.trim() && EMAIL_REGEX.test(draft.trim()));
               if (!ready) {
                 setEmailError('Add at least one email');
@@ -239,10 +241,11 @@ function SetupWorkshopWizardBody({
             duration={duration}
             onDurationChange={setDuration}
             timezone={timezone}
-            emailCount={emails.length + (draft.trim() && EMAIL_REGEX.test(draft.trim()) ? 1 : 0)}
+            onTimezoneChange={setTimezone}
+            emailCount={pendingEmailCount}
             submitError={submitError}
             isSubmitting={isPending}
-            onBack={() => setStep('invite')}
+            onBack={() => setStep('review')}
             onSubmit={handleSubmit}
           />
         )}
@@ -257,86 +260,51 @@ function SetupWorkshopWizardBody({
 
 function WizardStepBar({ current }: { current: WizardStep }) {
   const items: { id: WizardStep; label: string }[] = [
-    { id: 'confirm', label: '1 · Challenge' },
-    { id: 'invite', label: '2 · Invite' },
-    { id: 'schedule', label: '3 · Schedule' },
+    { id: 'review', label: 'Review & invite' },
+    { id: 'schedule', label: 'Schedule' },
   ];
   const currentIdx = items.findIndex((i) => i.id === current);
   return (
-    <span className="mt-1 flex items-center gap-2 text-xs">
+    <span className="flex items-center gap-3 text-xs">
       {items.map((item, idx) => (
-        <span
-          key={item.id}
-          className={cn(
-            'inline-flex items-center gap-1',
-            idx === currentIdx ? 'font-semibold text-foreground' : 'text-muted-foreground',
-            idx < currentIdx && 'text-muted-foreground'
+        <span key={item.id} className="inline-flex items-center gap-3">
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5',
+              idx === currentIdx ? 'font-semibold text-foreground' : 'text-muted-foreground'
+            )}
+          >
+            <span
+              className={cn(
+                'inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-semibold',
+                idx === currentIdx
+                  ? 'bg-foreground text-background'
+                  : idx < currentIdx
+                  ? 'bg-muted text-muted-foreground'
+                  : 'border border-border text-muted-foreground'
+              )}
+            >
+              {idx + 1}
+            </span>
+            {item.label}
+          </span>
+          {idx < items.length - 1 && (
+            <span
+              aria-hidden
+              className={cn(
+                'h-px w-8 transition-colors',
+                idx < currentIdx ? 'bg-foreground' : 'bg-border'
+              )}
+            />
           )}
-        >
-          {item.label}
         </span>
       ))}
     </span>
   );
 }
 
-function ConfirmChallengeStep({
+function ReviewAndInviteStep({
   challenge,
-  onNext,
-  onCancel,
-}: {
-  challenge: SetupWorkshopWizardProps['challenge'];
-  onNext: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Your participants will see this challenge in the email and lobby. Make sure it&apos;s
-        the version you want to ship.
-      </p>
-      <div className="rounded-xl border bg-card p-4 space-y-4">
-        {challenge.hmwStatement ? (
-          <blockquote className="border-l-2 border-amber-500 pl-3 italic text-base">
-            {challenge.hmwStatement}
-          </blockquote>
-        ) : (
-          <p className="text-sm italic text-muted-foreground">
-            No challenge statement yet — go back and fill in the &quot;How might we&quot; sticky.
-          </p>
-        )}
-        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3 text-sm">
-          <Field label="The idea" value={challenge.idea} />
-          <Field label="The problem" value={challenge.problem} />
-          <Field label="The audience" value={challenge.audience} />
-        </dl>
-      </div>
-      <div className="flex justify-between">
-        <Button variant="ghost" onClick={onCancel}>
-          Go back and edit
-        </Button>
-        <Button onClick={onNext} disabled={!challenge.hmwStatement}>
-          Looks good <ArrowRight className="ml-1.5 h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div>
-      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </dt>
-      <dd className="mt-0.5">
-        {value && value.trim() ? value : <span className="italic text-muted-foreground">Not set</span>}
-      </dd>
-    </div>
-  );
-}
-
-function InviteEmailsStep({
   emails,
   draft,
   error,
@@ -345,9 +313,10 @@ function InviteEmailsStep({
   onRemove,
   onKeyDown,
   onPaste,
-  onBack,
+  onCancel,
   onNext,
 }: {
+  challenge: SetupWorkshopWizardProps['challenge'];
   emails: string[];
   draft: string;
   error: string | null;
@@ -356,58 +325,80 @@ function InviteEmailsStep({
   onRemove: (email: string) => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onPaste: (e: React.ClipboardEvent<HTMLInputElement>) => void;
-  onBack: () => void;
+  onCancel: () => void;
   onNext: () => void;
 }) {
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Add up to {MAX_TEAM_INVITES} participants by email. We&apos;ll send each person a magic
-        link — they don&apos;t need an account.
-      </p>
-      <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-input bg-background p-2 focus-within:ring-2 focus-within:ring-ring">
-        {emails.map((email) => (
-          <span
-            key={email}
-            className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground"
-          >
-            {email}
-            <button
-              type="button"
-              onClick={() => onRemove(email)}
-              className="text-muted-foreground hover:text-foreground"
-              aria-label={`Remove ${email}`}
+    <div className="space-y-9 pt-3">
+      {/* Hero challenge — the HMW carries this section on its own; no eyebrow needed. */}
+      <section className="space-y-2.5">
+        {challenge.hmwStatement ? (
+          <blockquote className="border-l-2 border-amber-500/80 pl-5 text-xl leading-relaxed italic text-foreground">
+            {challenge.hmwStatement}
+          </blockquote>
+        ) : (
+          <p className="text-sm italic text-muted-foreground">
+            No challenge statement yet — go back and fill in the &quot;How might we&quot; sticky.
+          </p>
+        )}
+        <p className="pl-5 text-xs text-muted-foreground">
+          Your team will see this in the invite email and the lobby.
+        </p>
+      </section>
+
+      {/* Invite section — single line of helper + a softer input with the counter
+          floating inside on the right. No bottom metadata row. */}
+      <section className="space-y-2.5">
+        <p className="text-sm text-muted-foreground">
+          Invite up to {MAX_TEAM_INVITES} teammates. They&apos;ll get a magic link — no account needed.
+        </p>
+        <div className="relative flex flex-wrap items-center gap-1.5 rounded-lg border border-input/50 bg-muted/30 p-2.5 pr-16 transition-colors focus-within:border-input focus-within:bg-background">
+          {emails.map((email) => (
+            <span
+              key={email}
+              className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground"
             >
-              <X className="h-3 w-3" />
-            </button>
+              {email}
+              <button
+                type="button"
+                onClick={() => onRemove(email)}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label={`Remove ${email}`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          <input
+            type="email"
+            value={draft}
+            onChange={(e) => onDraftChange(e.target.value)}
+            onKeyDown={onKeyDown}
+            onPaste={onPaste}
+            onBlur={() => draft.trim() && onAdd(draft)}
+            placeholder={
+              emails.length === 0
+                ? `Add up to ${MAX_TEAM_INVITES} emails — Enter, comma, or paste`
+                : 'Add another…'
+            }
+            className="min-w-[10rem] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            disabled={emails.length >= MAX_TEAM_INVITES}
+          />
+          <span
+            aria-hidden
+            className="absolute bottom-2 right-2.5 rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground shadow-sm ring-1 ring-border/60"
+          >
+            {emails.length} / {MAX_TEAM_INVITES}
           </span>
-        ))}
-        <input
-          type="email"
-          value={draft}
-          onChange={(e) => onDraftChange(e.target.value)}
-          onKeyDown={onKeyDown}
-          onPaste={onPaste}
-          onBlur={() => draft.trim() && onAdd(draft)}
-          placeholder={emails.length === 0 ? 'jane@example.com' : 'Add another…'}
-          className="min-w-[10rem] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          disabled={emails.length >= MAX_TEAM_INVITES}
-        />
-      </div>
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>
-          {emails.length} / {MAX_TEAM_INVITES} invited
-        </span>
-        <span>
-          Press <kbd className="rounded border bg-muted px-1">Enter</kbd> or paste a list
-        </span>
-      </div>
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      <div className="flex justify-between">
-        <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft className="mr-1.5 h-4 w-4" /> Back
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </section>
+
+      <div className="flex items-center justify-between pt-1">
+        <Button variant="ghost" onClick={onCancel}>
+          Go back and edit
         </Button>
-        <Button onClick={onNext}>
+        <Button onClick={onNext} disabled={!challenge.hmwStatement}>
           Pick a time <ArrowRight className="ml-1.5 h-4 w-4" />
         </Button>
       </div>
@@ -425,6 +416,7 @@ function ScheduleStep({
   duration,
   onDurationChange,
   timezone,
+  onTimezoneChange,
   emailCount,
   submitError,
   isSubmitting,
@@ -440,6 +432,7 @@ function ScheduleStep({
   duration: DurationMinutes;
   onDurationChange: (d: DurationMinutes) => void;
   timezone: string;
+  onTimezoneChange: (tz: string) => void;
   emailCount: number;
   submitError: string | null;
   isSubmitting: boolean;
@@ -447,29 +440,34 @@ function ScheduleStep({
   onSubmit: () => void;
 }) {
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <ModeCard
-          active={mode === 'start_now'}
-          icon={<Zap className="h-5 w-5" />}
-          title="Start now"
-          description="Email goes out immediately. Anyone who clicks the link drops straight into the workshop."
-          onClick={() => onModeChange('start_now')}
-        />
-        <ModeCard
-          active={mode === 'schedule'}
-          icon={<Calendar className="h-5 w-5" />}
-          title="Schedule for later"
-          description="Pick a date and time. Participants wait in the lobby until you click Start."
-          onClick={() => onModeChange('schedule')}
-        />
-      </div>
+    <div className="space-y-6 pt-2">
+      <section className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          When should it start?
+        </h3>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <ModeCard
+            active={mode === 'start_now'}
+            icon={<Zap className="h-5 w-5" />}
+            title="Start now"
+            description="Email goes out immediately. Anyone who clicks the link drops straight into the workshop."
+            onClick={() => onModeChange('start_now')}
+          />
+          <ModeCard
+            active={mode === 'schedule'}
+            icon={<Calendar className="h-5 w-5" />}
+            title="Schedule for later"
+            description="Pick a date and time. Participants wait in the lobby until you click Start."
+            onClick={() => onModeChange('schedule')}
+          />
+        </div>
+      </section>
 
       {mode === 'schedule' && (
-        <div className="rounded-xl border bg-card p-4 space-y-3">
+        <section className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <label className="space-y-1 text-sm">
-              <span className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Date
               </span>
               <input
@@ -480,7 +478,7 @@ function ScheduleStep({
               />
             </label>
             <label className="space-y-1 text-sm">
-              <span className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Time
               </span>
               <input
@@ -492,7 +490,7 @@ function ScheduleStep({
             </label>
           </div>
           <div>
-            <span className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Duration
             </span>
             <div className="flex gap-2">
@@ -513,15 +511,13 @@ function ScheduleStep({
               ))}
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Times shown in <strong>{timezone}</strong> — participants see them in their own timezone.
-          </p>
-        </div>
+          <TimezonePicker timezone={timezone} onTimezoneChange={onTimezoneChange} />
+        </section>
       )}
 
       {submitError && <p className="text-sm text-destructive">{submitError}</p>}
 
-      <div className="flex justify-between">
+      <div className="flex items-center justify-between pt-1">
         <Button variant="ghost" onClick={onBack} disabled={isSubmitting}>
           <ArrowLeft className="mr-1.5 h-4 w-4" /> Back
         </Button>
@@ -577,5 +573,81 @@ function ModeCard({
       <p className="text-sm font-semibold">{title}</p>
       <p className="text-xs text-muted-foreground">{description}</p>
     </button>
+  );
+}
+
+/**
+ * Shows the auto-detected timezone as "Auckland (NZST, GMT+12)" with a "Change"
+ * affordance that reveals a select populated from COMMON_TIMEZONES. The
+ * currently-selected zone is always added to the list (and pre-selected) so a
+ * facilitator whose zone isn't curated still sees it in the dropdown.
+ */
+function TimezonePicker({
+  timezone,
+  onTimezoneChange,
+}: {
+  timezone: string;
+  onTimezoneChange: (tz: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const label = getTimezoneLabel(timezone);
+
+  // Build the picker options. Include the current zone at the top if it's not
+  // in the curated list, so the dropdown is never missing the active value.
+  const options = COMMON_TIMEZONES.some((t) => t.tz === timezone)
+    ? COMMON_TIMEZONES
+    : [{ tz: timezone, label: label.city }, ...COMMON_TIMEZONES];
+
+  return (
+    <div className="rounded-md border bg-muted/30 px-3 py-2.5">
+      {!editing ? (
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{label.friendly}</p>
+            <p className="text-xs text-muted-foreground">
+              Times shown in your timezone. Participants see them in their own.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="shrink-0 text-xs font-semibold text-foreground underline underline-offset-4 hover:text-primary"
+          >
+            Change
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Timezone
+          </span>
+          <select
+            value={timezone}
+            onChange={(e) => {
+              onTimezoneChange(e.target.value);
+              setEditing(false);
+            }}
+            autoFocus
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {options.map((opt) => {
+              const optLabel = getTimezoneLabel(opt.tz);
+              return (
+                <option key={opt.tz} value={opt.tz}>
+                  {opt.label} — {optLabel.abbr} ({optLabel.offset})
+                </option>
+              );
+            })}
+          </select>
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

@@ -36,7 +36,7 @@ async function getUserId(): Promise<string | null> {
  */
 export async function createWorkshopSession(formData?: FormData) {
   let sessionId: string;
-  let createdFacilitatorMode: 'solo' | 'team' = 'solo';
+  let checkoutUrl: string | null = null;
 
   try {
     // Get current user (or null for anonymous/BYPASS_AUTH)
@@ -76,7 +76,6 @@ export async function createWorkshopSession(formData?: FormData) {
     if (facilitatorMode === 'team' && !userId) {
       facilitatorMode = 'solo';
     }
-    createdFacilitatorMode = facilitatorMode;
 
     // Extract workshopType from FormData (defaults to 'solo'). Team mode forces multiplayer.
     const rawWorkshopType = formData?.get('workshopType') as string | null;
@@ -157,6 +156,28 @@ export async function createWorkshopSession(formData?: FormData) {
     }
 
     sessionId = session.id;
+
+    // If a paid tier was preselected ('team' = $299, 'white_glove' = $1,499),
+    // redirect through Stripe checkout. Workshop is already created with tier=null;
+    // fulfillment sets the tier + creditConsumedAt so the user lands Step 1 fully unlocked.
+    const tierToBuyRaw = formData?.get('tierToBuy') as string | null;
+    const tierToBuy: 'team' | 'white_glove' | null =
+      tierToBuyRaw === 'team' || tierToBuyRaw === 'white_glove' ? tierToBuyRaw : null;
+    if (tierToBuy && facilitatorMode === 'team' && userId) {
+      const { createCheckoutUrl } = await import('@/actions/billing-actions');
+      const result = await createCheckoutUrl({
+        sku: tierToBuy,
+        workshopId: workshop.id,
+        returnUrl: `/workshop/${sessionId}/step/1`,
+      });
+      if ('url' in result) {
+        // Hand off the URL through the outer redirect — see comment below.
+        checkoutUrl = result.url;
+      } else {
+        // Fall through to normal Step 1 redirect; user can still pay at the paywall.
+        console.warn(`tierToBuy=${tierToBuy}: createCheckoutUrl failed, falling back to free trial:`, result.error);
+      }
+    }
   } catch (error) {
     console.error('Failed to create workshop session:', error);
     throw new Error('Failed to create workshop session. Please try again.');
@@ -164,10 +185,10 @@ export async function createWorkshopSession(formData?: FormData) {
 
   // Redirect outside try/catch — redirect() throws a special NEXT_REDIRECT
   // error internally, which must not be caught.
-  // Team-mode workshops render a facilitator-confirmation modal on first load (fc=1).
-  redirect(
-    `/workshop/${sessionId}/step/1${createdFacilitatorMode === 'team' ? '?fc=1' : ''}`
-  );
+  if (checkoutUrl) {
+    redirect(checkoutUrl);
+  }
+  redirect(`/workshop/${sessionId}/step/1`);
 }
 
 /**
@@ -182,27 +203,68 @@ export async function createWorkshopSession(formData?: FormData) {
  * has been published (challengePublishedAt) because participants may already be
  * involved.
  */
-export async function convertToTeamWorkshop(workshopId: string): Promise<void> {
+export type ConvertToTeamResult =
+  | { status: 'converted' }
+  | { status: 'payment_required'; checkoutUrl: string; sku: 'team' | 'team_upgrade'; amountCents: number }
+  | { status: 'already_team' }
+  | { status: 'blocked'; reason: 'challenge_published' | 'access_denied' | 'auth_required' }
+  | { status: 'error'; message: string };
+
+export async function convertToTeamWorkshop(workshopId: string): Promise<ConvertToTeamResult> {
   const userId = await getUserId();
-  if (!userId) throw new Error('Authentication required');
+  if (!userId) return { status: 'blocked', reason: 'auth_required' };
 
   const [workshop] = await db
     .select()
     .from(workshops)
     .where(and(eq(workshops.id, workshopId), eq(workshops.clerkUserId, userId)))
     .limit(1);
-  if (!workshop) throw new Error('Access denied');
-  if (workshop.facilitatorMode === 'team') return; // already converted
+  if (!workshop) return { status: 'blocked', reason: 'access_denied' };
+  if (workshop.facilitatorMode === 'team') return { status: 'already_team' };
   if (workshop.challengePublishedAt) {
-    throw new Error('Cannot convert after the challenge has been published');
+    return { status: 'blocked', reason: 'challenge_published' };
   }
 
+  // Payment branching:
+  // - tier === 'solo'  → already paid for solo, charge $200 upgrade diff via team_upgrade SKU.
+  // - tier === null    → still in free trial; flip to team for free, payment happens at Step 7.
+  // - tier === 'team' or 'white_glove' → covered by the already_team / impossible cases above.
+  if (workshop.tier === 'solo') {
+    const { createCheckoutUrl } = await import('@/actions/billing-actions');
+    const { getPriceConfigBySku } = await import('@/lib/billing/price-config');
+    const priceConfig = getPriceConfigBySku('team_upgrade');
+    if (!priceConfig) {
+      return { status: 'error', message: 'team_upgrade SKU not configured' };
+    }
+    const [sessionRow] = await db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.workshopId, workshopId))
+      .limit(1);
+    const returnUrl = sessionRow ? `/workshop/${sessionRow.id}/step/1` : undefined;
+    const result = await createCheckoutUrl({
+      sku: 'team_upgrade',
+      workshopId,
+      returnUrl,
+    });
+    if ('error' in result) {
+      return { status: 'error', message: result.error };
+    }
+    return {
+      status: 'payment_required',
+      checkoutUrl: result.url,
+      sku: 'team_upgrade',
+      amountCents: priceConfig.amountCents,
+    };
+  }
+
+  // Free conversion path (tier === null, still in trial). Flip to team mode and
+  // create the Liveblocks session so invites/lobby become available.
   await db
     .update(workshops)
     .set({ facilitatorMode: 'team', workshopType: 'multiplayer', maxParticipants: 15 })
     .where(eq(workshops.id, workshopId));
 
-  // Create the Liveblocks-backed session + share token if one doesn't exist yet.
   const existingSession = await db.query.workshopSessions.findFirst({
     where: eq(workshopSessions.workshopId, workshopId),
   });
@@ -225,7 +287,6 @@ export async function convertToTeamWorkshop(workshopId: string): Promise<void> {
     workshopSessionId = created.id;
   }
 
-  // Seed the owner's participant record if not already present.
   const ownerParticipant = await db.query.sessionParticipants.findFirst({
     where: and(
       eq(sessionParticipants.sessionId, workshopSessionId),
@@ -250,8 +311,6 @@ export async function convertToTeamWorkshop(workshopId: string): Promise<void> {
     });
   }
 
-  // Resolve the URL session id and revalidate so the step-1 UI re-renders with
-  // the team-mode setup wizard affordance.
   const [sessionRow] = await db
     .select({ id: sessions.id })
     .from(sessions)
@@ -261,6 +320,8 @@ export async function convertToTeamWorkshop(workshopId: string): Promise<void> {
     revalidatePath(`/workshop/${sessionRow.id}/step/1`);
   }
   revalidatePath('/dashboard');
+
+  return { status: 'converted' };
 }
 
 /**

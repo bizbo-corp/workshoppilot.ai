@@ -8,7 +8,7 @@ import { eq, gt, and, isNull, sql } from 'drizzle-orm';
 import { createPrefixedId } from '@/lib/ids';
 import { PAYWALL_CUTOFF_DATE } from '@/lib/billing/paywall-config';
 import { stripe } from '@/lib/billing/stripe';
-import { getPriceConfig } from '@/lib/billing/price-config';
+import { getPriceConfigBySku, type Sku } from '@/lib/billing/price-config';
 
 /**
  * Discriminated union result for consumeCredit().
@@ -124,7 +124,13 @@ export async function consumeCredit(workshopId: string): Promise<ConsumeCreditRe
       }),
       db
         .update(workshops)
-        .set({ creditConsumedAt: new Date() })
+        .set({
+          creditConsumedAt: new Date(),
+          // v2.3 — credit consumption is the solo-tier purchase moment. Only stamp
+          // tier if it isn't already set (e.g. don't downgrade a team workshop).
+          tier: sql`COALESCE(${workshops.tier}, 'solo')`,
+          tierPaidAt: sql`COALESCE(${workshops.tierPaidAt}, NOW())`,
+        })
         .where(eq(workshops.id, workshopId)),
     ]);
   } catch (err) {
@@ -196,73 +202,90 @@ export async function resetOnboarding(): Promise<void> {
 }
 
 /**
- * Create a Stripe Checkout session and return the URL.
+ * Create a Stripe Checkout session for a given SKU and return the URL.
  *
- * Called from the inline pricing UI in the UpgradeDialog / PaywallOverlay
- * so users can purchase credits without leaving the workshop context.
- *
- * @param tier - 'single' ($99, 1 credit) or 'pack' ($199, 3 credits)
- * @param workshopReturnUrl - URL to redirect after purchase (e.g. /workshop/{sessionId}/step/8)
+ * Per-workshop SKUs (team / team_upgrade / white_glove) require `workshopId`
+ * and ownership is verified server-side. Solo SKU adds credits to the user's
+ * balance and does not require a workshopId.
  */
-export async function createCheckoutUrl(
-  tier: 'single' | 'pack',
-  workshopReturnUrl: string,
-): Promise<{ url: string } | { error: string }> {
+export async function createCheckoutUrl(opts: {
+  sku: Sku;
+  workshopId?: string;
+  returnUrl?: string;
+}): Promise<{ url: string } | { error: string }> {
+  const { sku, workshopId, returnUrl } = opts;
+
   const { userId } = await auth();
   if (!userId) return { error: 'Authentication required' };
 
   // Validate return URL — prevent open redirect
-  if (workshopReturnUrl && !workshopReturnUrl.startsWith('/workshop/')) {
-    return { error: 'Invalid return URL' };
-  }
+  const cleanReturnUrl = returnUrl && returnUrl.startsWith('/workshop/') ? returnUrl : null;
 
-  // Resolve price ID from tier
-  const priceId =
-    tier === 'single'
-      ? process.env.STRIPE_PRICE_SINGLE_FLIGHT!
-      : process.env.STRIPE_PRICE_SERIAL_ENTREPRENEUR!;
+  const priceConfig = getPriceConfigBySku(sku);
+  if (!priceConfig) return { error: `Price not configured for sku '${sku}'` };
 
-  const priceConfig = getPriceConfig(priceId);
-  if (!priceConfig) return { error: 'Price not configured' };
-
-  // Get or lazily create Stripe customer
-  const user = await db.query.users.findFirst({
-    where: eq(users.clerkUserId, userId),
-  });
-
-  let stripeCustomerId = user?.stripeCustomerId ?? null;
-  if (!stripeCustomerId) {
-    const customer = await stripe.customers.create({
-      metadata: { clerkUserId: userId },
-      email: user?.email,
+  if (priceConfig.requiresWorkshopId) {
+    if (!workshopId) return { error: `${sku} purchase requires workshopId` };
+    const workshop = await db.query.workshops.findFirst({
+      where: and(eq(workshops.id, workshopId), eq(workshops.clerkUserId, userId)),
+      columns: { id: true, tier: true },
     });
-    stripeCustomerId = customer.id;
-    await db
-      .update(users)
-      .set({ stripeCustomerId })
-      .where(eq(users.clerkUserId, userId));
+    if (!workshop) return { error: 'Workshop not found' };
+    if (sku === 'team_upgrade' && workshop.tier !== 'solo') {
+      return { error: 'Solo→Team upgrade is only valid when the workshop is at solo tier' };
+    }
   }
 
-  // Build success/cancel URLs
-  const origin = (await headers()).get('origin') ?? 'https://workshoppilot.ai';
-  const returnParam = workshopReturnUrl
-    ? `&return_to=${encodeURIComponent(workshopReturnUrl)}`
-    : '';
-  const successUrl = `${origin}/purchase/success?session_id={CHECKOUT_SESSION_ID}${returnParam}`;
+  // Stripe calls run inside try/catch so a network/API failure returns a typed
+  // error to the caller instead of throwing — callers (e.g. createWorkshopSession)
+  // can then fall back to the free-trial path without 500ing the whole flow.
+  try {
+    // Get or lazily create Stripe customer
+    const user = await db.query.users.findFirst({
+      where: eq(users.clerkUserId, userId),
+    });
 
-  const session = await stripe.checkout.sessions.create({
-    customer: stripeCustomerId,
-    mode: 'payment',
-    line_items: [{ price: priceConfig.priceId, quantity: 1 }],
-    success_url: successUrl,
-    cancel_url: `${origin}/purchase/cancel`,
-    metadata: {
+    let stripeCustomerId = user?.stripeCustomerId ?? null;
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        metadata: { clerkUserId: userId },
+        email: user?.email,
+      });
+      stripeCustomerId = customer.id;
+      await db
+        .update(users)
+        .set({ stripeCustomerId })
+        .where(eq(users.clerkUserId, userId));
+    }
+
+    const origin = (await headers()).get('origin') ?? 'https://workshoppilot.ai';
+    const returnParam = cleanReturnUrl ? `&return_to=${encodeURIComponent(cleanReturnUrl)}` : '';
+    const successUrl = `${origin}/purchase/success?session_id={CHECKOUT_SESSION_ID}${returnParam}`;
+
+    const metadata: Record<string, string> = {
       clerkUserId: userId,
+      sku,
       creditQty: String(priceConfig.creditQty),
       productType: priceConfig.label,
-    },
-  });
+    };
+    if (workshopId) metadata.workshopId = workshopId;
 
-  if (!session.url) return { error: 'Failed to create checkout session' };
-  return { url: session.url };
+    const session = await stripe.checkout.sessions.create({
+      customer: stripeCustomerId,
+      mode: 'payment',
+      line_items: [{ price: priceConfig.priceId, quantity: 1 }],
+      success_url: successUrl,
+      cancel_url: `${origin}/purchase/cancel`,
+      metadata,
+    });
+
+    if (!session.url) return { error: 'Stripe returned no checkout URL' };
+    return { url: session.url };
+  } catch (err) {
+    // Surface the real reason in the dev server console for diagnosis, and
+    // return a useful error string the UI can show.
+    console.error(`createCheckoutUrl(${sku}) failed:`, err);
+    const message = err instanceof Error ? err.message : String(err);
+    return { error: `Stripe checkout failed: ${message}` };
+  }
 }

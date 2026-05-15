@@ -72,6 +72,14 @@ export const workshops = pgTable(
     // v2.2 — Stamped when the facilitator actually kicks off the workshop (either "Start now"
     // immediately or clicks Start from the lobby). Drives lobby gating + late-joiner routing.
     workshopStartedAt: timestamp('workshop_started_at', { mode: 'date', precision: 3 }),
+    // v2.3 — Pricing tier purchased for this workshop. Null = still in free trial (Steps 1-6).
+    // Set at fulfillment time. 'solo' may also be set retroactively for grandfathered workshops.
+    tier: text('tier', {
+      enum: ['solo', 'team', 'white_glove'],
+    }).$type<'solo' | 'team' | 'white_glove' | null>(),
+    // v2.3 — When the tier purchase completed. Null for grandfathered workshops where the tier
+    // was backfilled without a corresponding purchase.
+    tierPaidAt: timestamp('tier_paid_at', { mode: 'date', precision: 3 }),
   },
   (table) => ({
     clerkUserIdIdx: index('workshops_clerk_user_id_idx').on(table.clerkUserId),

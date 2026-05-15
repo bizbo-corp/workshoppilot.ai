@@ -25,6 +25,8 @@ const POSTIT_COLOR_CLASSES: Record<string, string> = {
   green: 'bg-[var(--canvas-green-pastel)]',
   orange: 'bg-[var(--canvas-orange-pastel)]',
   red: 'bg-[var(--canvas-red-pastel)]',
+  teal: 'bg-[var(--canvas-teal-pastel)]',
+  purple: 'bg-[var(--canvas-purple-pastel)]',
 };
 
 const POSTIT_TEXT_CLASSES: Record<string, string> = {
@@ -34,13 +36,20 @@ const POSTIT_TEXT_CLASSES: Record<string, string> = {
   green: 'text-[var(--sticky-note-green-text)]',
   orange: 'text-[var(--sticky-note-orange-text)]',
   red: 'text-[var(--sticky-note-red-text)]',
+  teal: 'text-[var(--sticky-note-teal-text)]',
+  purple: 'text-[var(--sticky-note-purple-text)]',
 };
 
-// Hex → canvas color name for adaptive text color lookup (includes legacy + current palette)
+// Hex → canvas color name for adaptive text color lookup (current palette + legacy).
+// Lowercase keys; lookups normalise input to lowercase.
 const HEX_TO_CANVAS_COLOR: Record<string, string> = {
+  '#ffe299': 'yellow', '#ffa8db': 'pink', '#a8daff': 'blue',
+  '#b3efbd': 'green', '#ffd3a8': 'orange', '#ffafa3': 'red',
+  '#b3f4ef': 'teal',  '#d3bdff': 'purple',
+  // Legacy nature palette (pre-Figma migration) — backward compat with stored data
   '#c49820': 'yellow', '#b07068': 'pink', '#6888a0': 'blue',
   '#608850': 'green', '#c08030': 'orange', '#a86050': 'red',
-  // Legacy hex values for backward compat with existing data
+  // Legacy tailwind palette (further back) — backward compat with older stored data
   '#eab308': 'yellow', '#ec4899': 'pink', '#3b82f6': 'blue',
   '#22c55e': 'green', '#f97316': 'orange', '#ef4444': 'red',
 };
@@ -138,7 +147,7 @@ function FrameContent({ guide }: { guide: GuideNodeData }) {
         <span
           className="absolute top-2 left-3 text-[11px] font-semibold uppercase tracking-wide leading-none"
           style={{
-            color: `var(--canvas-${HEX_TO_CANVAS_COLOR[baseColor] || 'olive'}-text)`,
+            color: `var(--canvas-${HEX_TO_CANVAS_COLOR[baseColor.toLowerCase()] || 'olive'}-text)`,
           }}
         >
           {guide.title}

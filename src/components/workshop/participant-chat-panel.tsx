@@ -123,7 +123,7 @@ const CANVAS_ENABLED_STEPS = [
 ];
 
 /** Distinct colors assigned to persona cards (one per persona) */
-const PERSONA_CARD_COLORS: StickyNoteColor[] = ["yellow", "red", "orange", "blue", "green", "pink"];
+const PERSONA_CARD_COLORS: StickyNoteColor[] = ["yellow", "red", "orange", "blue", "green", "pink", "teal", "purple"];
 
 interface ParticipantChatPanelProps {
   stepOrder: number;

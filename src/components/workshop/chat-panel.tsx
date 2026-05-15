@@ -78,7 +78,7 @@ const CANVAS_ENABLED_STEPS = [
 ];
 
 /** Distinct colors assigned to persona cards in user-research step (one per persona) */
-const PERSONA_CARD_COLORS: StickyNoteColor[] = ["yellow", "red", "orange", "blue", "green", "pink"];
+const PERSONA_CARD_COLORS: StickyNoteColor[] = ["yellow", "red", "orange", "blue", "green", "pink", "teal", "purple"];
 
 /** Fixed initial greetings shown instantly while AI generates first response */
 const STEP_INITIAL_GREETINGS: Record<string, string> = {

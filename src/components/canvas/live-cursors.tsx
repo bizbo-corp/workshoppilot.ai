@@ -110,7 +110,7 @@ export function LiveCursors() {
     (other) => ({
       cursor: other.presence.cursor,
       name: other.info?.name ?? 'Unknown',
-      color: other.info?.color ?? '#608850',
+      color: other.info?.color ?? '#b3efbd',
       role: other.info?.role ?? 'participant',
     }),
     shallow,

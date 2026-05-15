@@ -13,8 +13,14 @@ const requiredVars = [
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
   'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
+  // Legacy SKUs (kept so in-flight checkouts still fulfill correctly)
   'STRIPE_PRICE_SINGLE_FLIGHT',
   'STRIPE_PRICE_SERIAL_ENTREPRENEUR',
+  // v2.3 — Three-tier pricing SKUs (Solo / Team / Team Upgrade / White Glove)
+  'STRIPE_PRICE_SOLO_WORKSHOP',
+  'STRIPE_PRICE_TEAM_WORKSHOP',
+  'STRIPE_PRICE_TEAM_UPGRADE',
+  'STRIPE_PRICE_WHITE_GLOVE',
   // Liveblocks
   'LIVEBLOCKS_SECRET_KEY',
   'LIVEBLOCKS_WEBHOOK_SECRET',

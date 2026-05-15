@@ -14,11 +14,9 @@ import {
   Shield,
   Sparkles,
   Star,
-  Zap,
 } from "lucide-react";
 import { LandingHeader } from "@/components/layout/landing-header";
 import { NewWorkshopButton } from "@/components/dialogs/new-workshop-dialog";
-import { GuidedPilotButton } from "@/components/dialogs/guided-pilot-dialog";
 import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/landing/footer";
 import {
@@ -657,15 +655,15 @@ export default function Home() {
             </span>
           </div>
 
-          {/* Pricing tiers */}
+          {/* Pricing tiers — Solo / Team (highlighted) / White Glove */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl">
-            {/* Single Pilot */}
+            {/* ── Solo Workshop — $99 ─────────────────────────── */}
             <div className="rounded-2xl border border-border p-8 flex flex-col">
               <h3 className="text-lg font-semibold text-foreground mb-1">
-                Single Pilot
+                Solo Workshop
               </h3>
               <p className="text-sm text-muted-foreground mb-6">
-                One complete workshop. Perfect for validating your next idea.
+                AI-facilitated, just you. Validate any idea start to finish.
               </p>
               <div className="mb-6">
                 <span className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
@@ -681,7 +679,6 @@ export default function Home() {
                   "AI facilitator guides every step",
                   "Complete Build Pack output",
                   "Export-ready for dev teams and AI coders",
-                  "Credits never expire",
                 ].map((feature) => (
                   <li key={feature} className="flex items-start gap-2.5">
                     <Check className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
@@ -689,66 +686,45 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              {process.env.STRIPE_PRICE_SINGLE_FLIGHT ? (
-                <form method="POST" action="/api/billing/checkout">
-                  <input
-                    type="hidden"
-                    name="priceId"
-                    value={process.env.STRIPE_PRICE_SINGLE_FLIGHT}
-                  />
-                  <button
-                    type="submit"
-                    className="w-full rounded-xl py-3.5 px-4 font-semibold text-sm bg-card border border-border text-foreground hover:bg-accent transition-colors cursor-pointer"
-                  >
-                    Buy 1 Workshop Credit
-                  </button>
-                </form>
-              ) : (
-                <NewWorkshopButton className="w-full">
-                  Start Free Workshop
-                </NewWorkshopButton>
-              )}
+              <NewWorkshopButton variant="secondary" size="lg" className="w-full text-base">
+                Start a Solo Workshop
+              </NewWorkshopButton>
               <p className="text-center text-xs text-muted-foreground mt-4">
-                Enterprise or Team?{" "}
-                <GuidedPilotButton variant="link" className="text-xs">
-                  Book a Guided Workshop
-                </GuidedPilotButton>
+                Free to start — pay $99 at the Build Pack unlock.
               </p>
             </div>
 
-            {/* Serial Entrepreneur */}
+            {/* ── Team Workshop — $299 (highlighted) ──────────── */}
             <div className="rounded-2xl border border-olive-600 dark:border-olive-400 ring-1 ring-olive-600/20 dark:ring-olive-400/20 p-8 flex flex-col">
               <div className="mb-4">
                 <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-olive-700 dark:text-olive-300 bg-olive-100 dark:bg-olive-900 rounded-full px-3 py-1">
                   <Sparkles className="h-3 w-3" />
-                  Save $98
+                  Most Popular
                 </span>
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-1">
-                Serial Entrepreneur
+                Team Workshop
               </h3>
               <p className="text-sm text-muted-foreground mb-6">
-                For founders who iterate. Your first idea might pivot — and
-                that&apos;s the point.
+                Run a real workshop with your team — invite by email, schedule
+                a session, build together.
               </p>
-              <div className="mb-1">
+              <div className="mb-6">
                 <span className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
-                  $199
+                  $299
                 </span>
                 <span className="text-sm text-muted-foreground ml-2">
-                  / three workshops
+                  / one team workshop
                 </span>
               </div>
-              <p className="text-sm font-medium text-olive-600 dark:text-olive-400 mb-6">
-                Save 33% vs. buying individually
-              </p>
               <ul className="space-y-3 flex-1 mb-8">
                 {[
-                  "Everything in Single Pilot",
-                  "3 workshop credits ($66 each)",
-                  "Compare Build Packs across concepts",
-                  "Perfect for pivots and iterations",
-                  "Credits never expire",
+                  "Everything in Solo, plus:",
+                  "Invite teammates by email",
+                  "Real-time multiplayer canvas",
+                  "Lobby + scheduled sessions",
+                  "Up to 15 participants",
+                  "Live cursors, presence, chat",
                 ].map((feature) => (
                   <li key={feature} className="flex items-start gap-2.5">
                     <Check className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
@@ -756,34 +732,19 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              {process.env.STRIPE_PRICE_SERIAL_ENTREPRENEUR ? (
-                <form method="POST" action="/api/billing/checkout">
-                  <input
-                    type="hidden"
-                    name="priceId"
-                    value={process.env.STRIPE_PRICE_SERIAL_ENTREPRENEUR}
-                  />
-                  <button
-                    type="submit"
-                    className="w-full rounded-xl py-3.5 px-4 font-semibold text-sm bg-olive-700 text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500 shadow-md shadow-olive-700/20 transition-colors cursor-pointer"
-                  >
-                    Buy 3 Workshop Credits
-                  </button>
-                </form>
-              ) : (
-                <NewWorkshopButton className="w-full">
-                  Start Free Workshop
-                </NewWorkshopButton>
-              )}
+              <NewWorkshopButton
+                preselectTier="team"
+                size="lg"
+                className="w-full text-base shadow-lg shadow-olive-600/20"
+              >
+                Start a Team Workshop
+              </NewWorkshopButton>
               <p className="text-center text-xs text-muted-foreground mt-4">
-                Enterprise or Team?{" "}
-                <GuidedPilotButton variant="link" className="text-xs">
-                  Book a Guided Workshop
-                </GuidedPilotButton>
+                Already paid for Solo? Upgrade to Team for $200.
               </p>
             </div>
 
-            {/* The Guided Pilot — premium tier */}
+            {/* ── White Glove — $1,499 ────────────────────────── */}
             <div
               id="guided-pilot"
               className="rounded-2xl border border-amber-500/40 dark:border-amber-400/30 ring-1 ring-amber-500/20 dark:ring-amber-400/15 p-8 flex flex-col scroll-mt-28 bg-gradient-to-b from-amber-50/50 via-card to-card dark:from-amber-950/30 dark:via-card dark:to-card"
@@ -799,26 +760,28 @@ export default function Home() {
                 </span>
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-1">
-                The Guided Pilot
+                White Glove
               </h3>
               <p className="text-sm text-muted-foreground mb-6">
-                Expert-led facilitation for teams that need it done right the
-                first time.
+                Get a real human facilitator to take you through the workshop.
+                Includes Team workshop plus 1:1 setup, custom Build Pack
+                review, and 30-day support.
               </p>
               <div className="mb-6">
                 <span className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
-                  $1,100
+                  $1,499
                 </span>
                 <span className="text-sm text-muted-foreground ml-2">
-                  / per workshop
+                  / one engagement
                 </span>
               </div>
               <ul className="space-y-3 flex-1 mb-8">
                 {[
-                  "Full AI Build Pack included",
-                  "1x live 4-hour facilitation session with a Design Thinking pro",
-                  "Expert review — a human PM audits your output for technical gotchas",
-                  "Stakeholder-ready — we help you prep the final deck for investors or leadership",
+                  "Everything in Team, plus:",
+                  "1:1 onboarding call with our team",
+                  "Custom Build Pack review & polish",
+                  "Workshop facilitation guidance",
+                  "Direct line to the founders",
                 ].map((feature) => (
                   <li key={feature} className="flex items-start gap-2.5">
                     <Check className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
@@ -826,12 +789,17 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-muted-foreground mb-5 border-t border-amber-200/50 dark:border-amber-800/30 pt-4">
+              <NewWorkshopButton
+                preselectTier="white_glove"
+                variant="secondary"
+                size="lg"
+                className="w-full text-base"
+              >
+                Get White Glove
+              </NewWorkshopButton>
+              <p className="text-center text-xs text-muted-foreground mt-4">
                 Best for funded startups and corporate innovation teams.
               </p>
-              <GuidedPilotButton className="w-full rounded-xl py-3.5 px-4 font-semibold text-sm text-center bg-olive-700 text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500 shadow-md shadow-olive-700/20 transition-colors cursor-pointer">
-                Book a Guided Workshop
-              </GuidedPilotButton>
             </div>
           </div>
 
@@ -840,14 +808,6 @@ export default function Home() {
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               Secure payment via Stripe
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Credits never expire
-            </div>
-            <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4" />
-              Steps 1–6 always free
             </div>
           </div>
         </div>

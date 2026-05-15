@@ -1,7 +1,7 @@
 import { stripe } from '@/lib/billing/stripe';
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { fulfillCreditPurchase } from '@/lib/billing/fulfill-credit-purchase';
+import { fulfillPurchase } from '@/lib/billing/fulfill-credit-purchase';
 import type Stripe from 'stripe';
 
 /**
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       case 'checkout.session.completed': {
         // Fires immediately when checkout completes for card payments
         const session = event.data.object as Stripe.Checkout.Session;
-        const result = await fulfillCreditPurchase(session.id);
+        const result = await fulfillPurchase(session.id);
         console.log(
           `Stripe webhook fulfillment: session=${session.id} result=${result.status}`
         );
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
         // The payment_status check inside fulfillCreditPurchase guards against
         // fulfilling an unpaid session if checkout.session.completed fires first
         const session = event.data.object as Stripe.Checkout.Session;
-        const result = await fulfillCreditPurchase(session.id);
+        const result = await fulfillPurchase(session.id);
         console.log(
           `Stripe webhook async fulfillment: session=${session.id} result=${result.status}`
         );

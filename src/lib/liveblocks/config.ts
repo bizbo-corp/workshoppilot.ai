@@ -66,12 +66,14 @@ export function getRoomId(workshopId: string): string {
  * Index 0 is the owner/facilitator (green).
  */
 export const PARTICIPANT_COLORS = [
-  '#608850', // green  (facilitator) — matches --canvas-green
-  '#b07068', // pink   (1st participant) — matches --canvas-pink
-  '#6888a0', // blue   — matches --canvas-blue
-  '#c08030', // orange — matches --canvas-orange
-  '#c49820', // yellow — matches --canvas-yellow
-  '#a86050', // red    — matches --canvas-red
+  '#b3efbd', // green  (facilitator) — matches --canvas-green
+  '#ffa8db', // pink   (1st participant) — matches --canvas-pink
+  '#a8daff', // blue   — matches --canvas-blue
+  '#ffd3a8', // orange — matches --canvas-orange
+  '#ffe299', // yellow — matches --canvas-yellow
+  '#ffafa3', // red    — matches --canvas-red
+  '#b3f4ef', // teal   — matches --canvas-teal
+  '#d3bdff', // purple — matches --canvas-purple
 ] as const;
 
 /**

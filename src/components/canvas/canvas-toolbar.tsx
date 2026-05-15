@@ -28,15 +28,20 @@ const POST_IT_COLORS: { value: StickyNoteColor; label: string; bg: string }[] = 
   { value: 'blue', label: 'Blue', bg: 'bg-[var(--sticky-note-blue)]' },
   { value: 'green', label: 'Green', bg: 'bg-[var(--sticky-note-green)]' },
   { value: 'orange', label: 'Orange', bg: 'bg-[var(--sticky-note-orange)]' },
+  { value: 'red', label: 'Red', bg: 'bg-[var(--sticky-note-red)]' },
+  { value: 'teal', label: 'Teal', bg: 'bg-[var(--sticky-note-teal)]' },
+  { value: 'purple', label: 'Purple', bg: 'bg-[var(--sticky-note-purple)]' },
 ];
 
 const COLOR_DOTS: Record<StickyNoteColor, string> = {
-  yellow: 'bg-amber-300',
-  pink: 'bg-pink-300',
-  blue: 'bg-blue-300',
-  green: 'bg-green-300',
-  orange: 'bg-orange-300',
-  red: 'bg-red-300',
+  yellow: 'bg-[var(--canvas-yellow)]',
+  pink: 'bg-[var(--canvas-pink)]',
+  blue: 'bg-[var(--canvas-blue)]',
+  green: 'bg-[var(--canvas-green)]',
+  orange: 'bg-[var(--canvas-orange)]',
+  red: 'bg-[var(--canvas-red)]',
+  teal: 'bg-[var(--canvas-teal)]',
+  purple: 'bg-[var(--canvas-purple)]',
 };
 
 export interface CanvasToolbarProps {

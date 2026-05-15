@@ -34,12 +34,14 @@ export interface NavigationGroup {
 }
 
 export const GROUP_COLORS = [
-  { key: 'blue',    fill: 'rgba(104,136,160,0.08)', border: 'rgba(104,136,160,0.30)', text: '#6888a0', headerBg: 'rgba(104,136,160,0.70)' },
-  { key: 'green',   fill: 'rgba(96,136,80,0.08)',   border: 'rgba(96,136,80,0.30)',   text: '#608850', headerBg: 'rgba(96,136,80,0.70)' },
-  { key: 'yellow',  fill: 'rgba(196,152,32,0.08)',  border: 'rgba(196,152,32,0.30)',  text: '#c49820', headerBg: 'rgba(196,152,32,0.70)' },
-  { key: 'pink',    fill: 'rgba(176,112,104,0.08)', border: 'rgba(176,112,104,0.30)', text: '#b07068', headerBg: 'rgba(176,112,104,0.70)' },
-  { key: 'orange',  fill: 'rgba(192,128,48,0.08)',  border: 'rgba(192,128,48,0.30)',  text: '#c08030', headerBg: 'rgba(192,128,48,0.70)' },
-  { key: 'red',     fill: 'rgba(168,96,80,0.08)',   border: 'rgba(168,96,80,0.30)',   text: '#a86050', headerBg: 'rgba(168,96,80,0.70)' },
+  { key: 'blue',    fill: 'rgba(168,218,255,0.12)', border: 'rgba(168,218,255,0.45)', text: '#0a1f4a', headerBg: 'rgba(168,218,255,0.85)' },
+  { key: 'green',   fill: 'rgba(179,239,189,0.12)', border: 'rgba(179,239,189,0.45)', text: '#0a3818', headerBg: 'rgba(179,239,189,0.85)' },
+  { key: 'yellow',  fill: 'rgba(255,226,153,0.12)', border: 'rgba(255,226,153,0.45)', text: '#3d2a00', headerBg: 'rgba(255,226,153,0.85)' },
+  { key: 'pink',    fill: 'rgba(255,168,219,0.12)', border: 'rgba(255,168,219,0.45)', text: '#5a1438', headerBg: 'rgba(255,168,219,0.85)' },
+  { key: 'orange',  fill: 'rgba(255,211,168,0.12)', border: 'rgba(255,211,168,0.45)', text: '#4a2805', headerBg: 'rgba(255,211,168,0.85)' },
+  { key: 'red',     fill: 'rgba(255,175,163,0.12)', border: 'rgba(255,175,163,0.45)', text: '#4a1408', headerBg: 'rgba(255,175,163,0.85)' },
+  { key: 'teal',    fill: 'rgba(179,244,239,0.12)', border: 'rgba(179,244,239,0.45)', text: '#0a3a35', headerBg: 'rgba(179,244,239,0.85)' },
+  { key: 'purple',  fill: 'rgba(211,189,255,0.12)', border: 'rgba(211,189,255,0.45)', text: '#2a1252', headerBg: 'rgba(211,189,255,0.85)' },
 ] as const;
 
 export type GroupColorKey = typeof GROUP_COLORS[number]['key'];

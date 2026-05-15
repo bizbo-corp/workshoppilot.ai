@@ -55,8 +55,10 @@ function shell(title: string, bodyHtml: string): string {
 </html>`;
 }
 
+// Olive primary button matching the WorkshopPilot brand (olive-600 / olive-700
+// from globals.css). Used for the main CTA across transactional emails.
 function ctaButton(label: string, href: string): string {
-  return `<p style="margin:24px 0;"><a href="${href}" style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600;">${escapeHtml(label)}</a></p>`;
+  return `<p style="margin:24px 0;text-align:center;"><a href="${href}" style="display:inline-block;background:#768364;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:600;font-size:15px;box-shadow:0 1px 2px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.15);">${escapeHtml(label)}</a></p>`;
 }
 
 interface InvitationEmailParams {
@@ -92,35 +94,53 @@ export async function sendInvitationEmail(
     params.scheduledTimezone ?? null
   );
 
-  const challengeBlock = renderChallengeBlock({
-    hmw: params.hmwStatement ?? null,
-    idea: params.idea ?? null,
-    problem: params.problem ?? null,
-    audience: params.audience ?? null,
-  });
+  const hmwBlock = params.hmwStatement
+    ? `<blockquote style="margin:24px 0 16px;padding:20px 24px;background:linear-gradient(135deg,#fdf8ec 0%,#f7efd9 100%);border-left:4px solid #c8a951;border-radius:12px;font-size:17px;line-height:1.5;color:#3a2f12;font-weight:500;">
+         <span style="display:block;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#9a7a2a;margin-bottom:10px;">The Challenge</span>
+         &ldquo;${escapeHtml(params.hmwStatement)}&rdquo;
+       </blockquote>`
+    : '';
 
+  // Schedule gets the same gold/amber treatment as the challenge above, so the
+  // two read as a paired set: what the workshop is, and when it happens.
   const scheduleBlock = schedule
-    ? `<p style="margin:16px 0;padding:12px 16px;background:#f0f4f8;border-radius:8px;font-size:14px;line-height:1.5;">
-         <strong>🗓 ${escapeHtml(schedule.full)}</strong><br/>
-         <span style="color:#6b6b6b;">${escapeHtml(schedule.durationLabel)} workshop · add to your calendar with the attachment</span>
-       </p>`
-    : `<p style="margin:16px 0;padding:12px 16px;background:#ecfdf5;border-radius:8px;font-size:14px;">
-         🟢 <strong>Starts now</strong> — click below to drop into the lobby.
-       </p>`;
+    ? `<div style="margin:16px 0 24px;padding:16px 22px;background:linear-gradient(135deg,#fdf8ec 0%,#f7efd9 100%);border-left:4px solid #c8a951;border-radius:12px;font-size:14px;line-height:1.5;">
+         <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#9a7a2a;margin-bottom:8px;">When</div>
+         <div style="font-size:16px;font-weight:600;color:#3a2f12;">🗓 ${escapeHtml(schedule.full)}</div>
+         <div style="margin-top:4px;color:#6b6b6b;font-size:13px;">${escapeHtml(schedule.durationLabel)} together. Add to your calendar with the attachment.</div>
+       </div>`
+    : `<div style="margin:16px 0 24px;padding:16px 22px;background:#ecfdf5;border-left:4px solid #10b981;border-radius:12px;font-size:14px;line-height:1.5;">
+         <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#047857;margin-bottom:8px;">When</div>
+         <div style="font-size:16px;font-weight:600;color:#064e3b;">🟢 Starts now</div>
+         <div style="margin-top:4px;color:#6b6b6b;font-size:13px;">Click below to drop into the lobby.</div>
+       </div>`;
 
-  const ctaLabel = schedule ? 'Open lobby' : 'Join now';
+  const ctaLabel = schedule ? 'Open the lobby' : 'Join now';
+
+  const facilitator = escapeHtml(params.facilitatorName);
 
   const body = `
-    <p>${escapeHtml(params.facilitatorName)} is running a design-thinking workshop and wants you in it.</p>
-    <p>Here's the challenge they framed:</p>
-    ${challengeBlock}
+    <p style="font-size:16px;line-height:1.6;margin:0 0 16px;color:#1a1a1a;"><strong>${facilitator}</strong> personally invited you to a design-thinking workshop, and they&rsquo;re hoping you&rsquo;ll bring something only you can.</p>
+
+    <p style="font-size:15px;line-height:1.7;color:#3a3a3a;margin:0 0 16px;">Workshops live or die on the people in the room. ${facilitator} wants <em>your</em> perspective, <em>your</em> innovative ideas, and <em>your</em> creative leaps to crack the challenge below. Not consensus, not polish. Just honest thinking from someone they trust.</p>
+
+    ${hmwBlock}
     ${scheduleBlock}
+
     ${ctaButton(ctaLabel, url)}
-    <p style="font-size:13px;color:#6b6b6b;">Or paste this link: ${escapeHtml(url)}</p>
+
+    ${renderJourneyGrid()}
+
+    ${renderVideoCard()}
+
+    <p style="font-size:14px;line-height:1.6;color:#6b6b6b;margin:24px 0 8px;">No prep required. No expertise expected. Just show up curious. That&rsquo;s the whole job.</p>
+
+    <p style="font-size:13px;color:#9a9a9a;margin-top:8px;">Or paste this link: ${escapeHtml(url)}</p>
   `;
 
+  // Em dashes removed from the subject too. Use a colon + bullet separator.
   const subject = schedule
-    ? `${params.facilitatorName} invited you to a workshop — ${schedule.date}, ${schedule.timeRange.split(' – ')[0]} ${schedule.timezoneAbbr}`.trim()
+    ? `${params.facilitatorName} invited you to a workshop: ${schedule.date}, ${schedule.timeRange.split(' – ')[0]} ${schedule.timezoneAbbr}`.trim()
     : `${params.facilitatorName} invited you to a workshop: ${params.workshopTitle}`;
 
   // Build .ics attachment for scheduled workshops only
@@ -155,7 +175,7 @@ export async function sendInvitationEmail(
       from: FROM,
       to: params.to,
       subject,
-      html: shell(`You're invited to "${params.workshopTitle}"`, body),
+      html: shell(`${params.facilitatorName} wants you in "${params.workshopTitle}"`, body),
       attachments,
     });
 
@@ -178,34 +198,74 @@ export async function sendInvitationEmail(
   }
 }
 
-function renderChallengeBlock(params: {
-  hmw: string | null;
-  idea: string | null;
-  problem: string | null;
-  audience: string | null;
-}): string {
-  const fields: string[] = [];
-  if (params.idea) fields.push(field('The idea', params.idea));
-  if (params.problem) fields.push(field('The problem', params.problem));
-  if (params.audience) fields.push(field('The audience', params.audience));
+/**
+ * 9-stage journey grid — a compact, table-based echo of the lobby's
+ * "The journey ahead" section. Uses a 3-col table layout for broad email-client
+ * support (no flex/grid, no media queries). Each cell shows a colored number
+ * badge plus the stage name.
+ */
+function renderJourneyGrid(): string {
+  const stages: Array<{ n: number; name: string; bg: string; fg: string }> = [
+    { n: 1, name: 'Stakeholder Interviews', bg: '#fef3c7', fg: '#b45309' },
+    { n: 2, name: 'User Research',          bg: '#cffafe', fg: '#0e7490' },
+    { n: 3, name: 'Sense Making',           bg: '#ede9fe', fg: '#7c3aed' },
+    { n: 4, name: 'Personas',               bg: '#fce7f3', fg: '#db2777' },
+    { n: 5, name: 'Journey Mapping',        bg: '#d1fae5', fg: '#059669' },
+    { n: 6, name: 'Reframe',                bg: '#fef9c3', fg: '#ca8a04' },
+    { n: 7, name: 'Ideation',               bg: '#ffedd5', fg: '#ea580c' },
+    { n: 8, name: 'Concept Development',    bg: '#e0e7ff', fg: '#4f46e5' },
+    { n: 9, name: 'Validate &amp; Ship',    bg: '#dcfce7', fg: '#16a34a' },
+  ];
 
-  const hmw = params.hmw
-    ? `<blockquote style="margin:16px 0;padding:12px 16px;background:#f3f0ea;border-left:3px solid #c8a951;border-radius:6px;font-style:italic;font-size:16px;">${escapeHtml(params.hmw)}</blockquote>`
-    : '';
+  const cell = (s: { n: number; name: string; bg: string; fg: string }) => `
+    <td valign="top" width="33%" style="padding:6px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#fafafa;border:1px solid #ececec;border-radius:10px;">
+        <tr>
+          <td style="padding:12px 12px 12px 10px;">
+            <table role="presentation" cellpadding="0" cellspacing="0">
+              <tr>
+                <td width="24" style="padding-right:8px;vertical-align:middle;">
+                  <div style="width:22px;height:22px;border-radius:11px;background:${s.bg};color:${s.fg};font-size:11px;font-weight:700;text-align:center;line-height:22px;">${s.n}</div>
+                </td>
+                <td style="font-size:12px;font-weight:600;color:#1a1a1a;line-height:1.25;vertical-align:middle;">${s.name}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>`;
 
-  const grid =
-    fields.length > 0
-      ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:8px 0 16px;border-collapse:collapse;"><tr>${fields.join('')}</tr></table>`
-      : '';
-
-  return hmw + grid;
+  return `
+    <div style="margin:24px 0 16px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#6b6b6b;margin-bottom:4px;">The journey ahead</div>
+      <div style="font-size:17px;font-weight:600;color:#1a1a1a;line-height:1.3;margin-bottom:12px;">Nine stages, one validated build pack</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:separate;">
+        <tr>${cell(stages[0])}${cell(stages[1])}${cell(stages[2])}</tr>
+        <tr>${cell(stages[3])}${cell(stages[4])}${cell(stages[5])}</tr>
+        <tr>${cell(stages[6])}${cell(stages[7])}${cell(stages[8])}</tr>
+      </table>
+    </div>`;
 }
 
-function field(label: string, value: string): string {
-  return `<td valign="top" style="padding:8px;width:33%;">
-    <div style="font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:#6b6b6b;margin-bottom:4px;">${escapeHtml(label)}</div>
-    <div style="font-size:13px;line-height:1.5;color:#2a2a2a;">${escapeHtml(value)}</div>
-  </td>`;
+/**
+ * "While you wait" intro-video card — links straight to the homepage YouTube
+ * clip. Uses the YouTube hqdefault thumbnail wrapped in an anchor so clicking
+ * anywhere on the image opens the video in a new tab.
+ */
+function renderVideoCard(): string {
+  const videoUrl = 'https://www.youtube.com/watch?v=etMags6ravA';
+  const thumb = 'https://i.ytimg.com/vi/etMags6ravA/hqdefault.jpg';
+  return `
+    <a href="${videoUrl}" target="_blank" rel="noopener" style="display:block;margin:24px 0 8px;text-decoration:none;color:inherit;border:1px solid #ececec;border-radius:12px;overflow:hidden;background:#ffffff;">
+      <div style="padding:14px 18px;border-bottom:1px solid #ececec;background:#fafafa;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#6b6b6b;">While you wait · 60 seconds</div>
+        <div style="font-size:15px;font-weight:600;color:#1a1a1a;margin-top:2px;">How a WorkshopPilot session actually flows</div>
+      </div>
+      <div style="position:relative;background:#000;">
+        <img src="${thumb}" alt="" width="100%" style="display:block;width:100%;height:auto;opacity:0.85;" />
+        <div style="padding:10px 18px;background:#1a1a1a;color:#ffffff;font-size:13px;font-weight:500;">▶  Watch on YouTube</div>
+      </div>
+    </a>`;
 }
 
 interface ChangeRequestEmailParams {

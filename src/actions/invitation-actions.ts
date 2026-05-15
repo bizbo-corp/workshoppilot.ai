@@ -15,6 +15,7 @@ import {
 } from '@/db/schema';
 import { getChallengeArtifact } from '@/lib/workshop/challenge-artifact';
 import { MAX_TEAM_INVITES } from '@/lib/workshop/workshop-schedule';
+import { NUDGE_COOLDOWN_MS } from '@/lib/workshop/nudge-config';
 
 /**
  * Minimum gap between Resend sends (ms). Resend free tier allows 2 req/sec — we
@@ -420,6 +421,162 @@ export async function resendInvite(invitationId: string): Promise<void> {
     .update(workshopInvitations)
     .set({ invitedAt: new Date() })
     .where(eq(workshopInvitations.id, invitationId));
+}
+
+export type NudgeResult = {
+  nudged: number;
+  skipped: {
+    email: string;
+    reason: 'cooldown' | 'send-failed' | 'not-pending';
+    /** Free-form error text from Resend when reason === 'send-failed'. */
+    detail?: string;
+    /** ms remaining on cooldown when reason === 'cooldown'. */
+    cooldownMsRemaining?: number;
+  }[];
+};
+
+/**
+ * Sends reminder emails to pending invitees who haven't joined yet. Re-uses the
+ * original invitation email template; the recipient's context (already invited
+ * recently) communicates the urgency.
+ *
+ * - Facilitator-only.
+ * - Skips any invitation whose `invitedAt` is within `NUDGE_COOLDOWN_MS`.
+ * - If `emails` is provided, restricts the action to that subset. Useful for
+ *   per-row "Nudge" buttons. Omit to nudge every pending invite.
+ * - Updates `invitedAt` on successful sends so the cooldown applies on next call.
+ */
+export async function nudgeInvitations(
+  workshopId: string,
+  emails?: string[]
+): Promise<NudgeResult> {
+  const { workshop, userId } = await assertFacilitator(workshopId);
+
+  if (workshop.facilitatorMode !== 'team') {
+    throw new Error('Nudges are only available for team workshops');
+  }
+
+  // Optional subset filter — normalise to lowercase for comparison.
+  const filterSet =
+    emails && emails.length > 0
+      ? new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))
+      : null;
+
+  // Pull pending invitations + the bits we need to assemble each email.
+  const pending = await db
+    .select({
+      id: workshopInvitations.id,
+      email: workshopInvitations.email,
+      inviteToken: workshopInvitations.inviteToken,
+      status: workshopInvitations.status,
+      invitedAt: workshopInvitations.invitedAt,
+    })
+    .from(workshopInvitations)
+    .where(
+      and(
+        eq(workshopInvitations.workshopId, workshopId),
+        eq(workshopInvitations.status, 'pending')
+      )
+    );
+
+  const now = Date.now();
+  const skipped: NudgeResult['skipped'] = [];
+  const eligible: typeof pending = [];
+
+  for (const inv of pending) {
+    if (filterSet && !filterSet.has(inv.email.toLowerCase())) continue;
+    const lastSent = inv.invitedAt instanceof Date ? inv.invitedAt.getTime() : 0;
+    const elapsed = now - lastSent;
+    if (elapsed < NUDGE_COOLDOWN_MS) {
+      skipped.push({
+        email: inv.email,
+        reason: 'cooldown',
+        cooldownMsRemaining: NUDGE_COOLDOWN_MS - elapsed,
+      });
+      continue;
+    }
+    eligible.push(inv);
+  }
+
+  // If the caller asked about specific emails that don't have a pending invite,
+  // surface that so the UI can show a sensible message.
+  if (filterSet) {
+    const pendingEmailSet = new Set(pending.map((p) => p.email.toLowerCase()));
+    for (const email of filterSet) {
+      if (!pendingEmailSet.has(email)) {
+        skipped.push({ email, reason: 'not-pending' });
+      }
+    }
+  }
+
+  if (eligible.length === 0) {
+    return { nudged: 0, skipped };
+  }
+
+  // Shared email payload pieces — same template the original invite used.
+  const facilitatorUser = await db.query.users.findFirst({
+    where: eq(users.clerkUserId, userId),
+  });
+  const facilitatorName =
+    [facilitatorUser?.firstName, facilitatorUser?.lastName].filter(Boolean).join(' ') ||
+    facilitatorUser?.email ||
+    'Your facilitator';
+  const artifact = await getChallengeArtifact(workshopId);
+
+  const commonEmailPayload = {
+    facilitatorName,
+    facilitatorEmail: facilitatorUser?.email ?? null,
+    workshopId,
+    workshopTitle: workshop.title,
+    hmwStatement: artifact?.hmwStatement ?? null,
+    idea: artifact?.idea ?? null,
+    problem: artifact?.problem ?? null,
+    audience: artifact?.audience ?? null,
+    scheduledStartAt: workshop.scheduledStartAt ?? null,
+    scheduledDurationMinutes: workshop.scheduledDurationMinutes ?? null,
+    scheduledTimezone: workshop.scheduledTimezone ?? null,
+  };
+
+  const { sendInvitationEmail } = await import('@/lib/email/invitation-email');
+
+  // Sequential sends with the standard pacing so we stay under Resend's 2/sec cap.
+  const results = await sendSequential(eligible, async (inv) => ({
+    id: inv.id,
+    email: inv.email,
+    ...(await sendInvitationEmail({
+      ...commonEmailPayload,
+      to: inv.email,
+      inviteToken: inv.inviteToken,
+    })),
+  }));
+
+  // Touch invitedAt on the rows that actually went out so the cooldown
+  // applies on the next call. We use individual updates (small N, simpler than
+  // building a CASE statement).
+  let nudged = 0;
+  const touchTime = new Date();
+  for (const r of results) {
+    if (r.ok) {
+      nudged += 1;
+      await db
+        .update(workshopInvitations)
+        .set({ invitedAt: touchTime })
+        .where(eq(workshopInvitations.id, r.id));
+    } else {
+      skipped.push({ email: r.email, reason: 'send-failed', detail: r.error });
+    }
+  }
+
+  // Revalidate the workshop step page so the participant overview's next render
+  // reflects updated invitedAt timestamps.
+  const [sessionRow] = await db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(eq(sessions.workshopId, workshopId))
+    .limit(1);
+  if (sessionRow) revalidatePath(`/workshop/${sessionRow.id}/step/1`);
+
+  return { nudged, skipped };
 }
 
 /**
