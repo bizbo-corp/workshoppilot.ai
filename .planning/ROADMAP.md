@@ -173,7 +173,7 @@ See `milestones/v1.9-ROADMAP.md` for full details.
 - [x] Phase 60: Core Voting UI + Solo Path (2/2 plans) — completed 2026-02-28
 - [x] Phase 61: Multiplayer Voting (2/2 plans) — completed 2026-03-01
 - [x] Phase 62: Mobile Gate (1/1 plan) — completed 2026-03-01
-- [ ] Phase 62.1: Fix Cross-Workshop Dialogue Leak & Duplicate Greetings (INSERTED — hotfix)
+- [x] Phase 62.1: Fix Cross-Workshop Dialogue Leak & Duplicate Greetings (INSERTED — hotfix) — completed 2026-05-16
 
 See `milestones/v2.0-ROADMAP.md` for full details.
 
@@ -195,6 +195,7 @@ See `milestones/v2.0-ROADMAP.md` for full details.
 | 47-53. Onboarding + Payments | v1.8 | 11/11 | Complete | 2026-02-26 |
 | 54-58. Multiplayer Collaboration | v1.9 | 12/12 | Complete | 2026-02-28 |
 | 59-62. Dot Voting & Mobile Gate | v2.0 | 7/7 | Complete | 2026-03-01 |
+| 62.1 Fix Cross-Workshop Dialogue Leak & Duplicate Greetings | hotfix | 3/3 | Complete | 2026-05-16 |
 
 **Total shipped:** 12 milestones, 62 phases, ~155 plans in 22 days
 

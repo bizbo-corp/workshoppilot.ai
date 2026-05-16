@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings
-Plan: 02 (Plan B — duplicate greeting fix + cross-workshop scope enforcement)
-Status: Ready — plan 01 complete; awaiting plan 02 execution
-Last activity: 2026-05-16 — Plan 01 (DIAG-01 observability foundation) complete; Tasks 1-4 done, migration applied, smoke test approved with known limitation documented
+Plan: 03 (all 3 plans complete — phase ready for final verification)
+Status: Phase complete — all plans done (DIAG-01 observability, GREET-01+SCOPE-01 duplicate greeting + scope enforcement, Plan C hallucination hardening)
+Last activity: 2026-05-16 — Plan 02 (GREET-01 + SCOPE-01) complete; migration 0024 applied, regression fix 2489368 landed, all 7 tasks done
 
 ## Performance Metrics
 
@@ -60,6 +60,9 @@ Last activity: 2026-05-16 — Plan 01 (DIAG-01 observability foundation) complet
 - AI SDK v5 generates assistant message id client-side; response_message_id stays null in onFinish — admin UI unaffected (joins by scope+timestamp); fix path: backfill via autoSaveMessages or streamText messageId override
 - [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: HALL-01: Replace 'recover the closest version' license with ABSENCE PROTOCOL hard stop in stakeholder-mapping prompt — model must output single refusal line when prior context is missing
 - [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: Sentinel string injected at context layer (assembleStepContext) when deps are non-empty but DB returns 0 rows — defense in depth independent of prompt layer
+  - [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: Skip abortSignal for __step_start__ (greeting) requests — placeholder already inserted, stream must complete server-side to fill it; consumeStream() added alongside
+  - [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: fillGreetingPlaceholder uses greetingClaim.messageId (deterministic placeholder id) not assistantMessageId — AI SDK v5 returns empty string from onFinish server-side
+  - [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: GREET-01 + SCOPE-01 complete — DB-lock greeting singleton, 409/404 scope assertion, stop() cleanup, composite key, migration 0024 all shipped
 
 ### Pending Todos
 
@@ -72,5 +75,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-05-16
-Stopped at: Completed Phase 62.1 Plan 01 (DIAG-01 observability foundation) — ready for Plan 02
+Stopped at: Completed Phase 62.1 Plan 02 (GREET-01 + SCOPE-01 — duplicate greeting fix + scope assertion) — all 3 plans complete; phase ready for final verification
 Resume file: None
