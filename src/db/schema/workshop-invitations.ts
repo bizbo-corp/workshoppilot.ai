@@ -37,6 +37,14 @@ export const workshopInvitations = pgTable(
       () => sessionParticipants.id,
       { onDelete: 'set null' }
     ),
+    // Resend send observability (added after a silent failure: an invite row was
+    // created but the email never arrived, with no DB trace of the rejection).
+    // resendMessageId is populated when Resend accepts the send; lastSendError
+    // captures the Resend error message when it doesn't. lastSendAt always stamps
+    // the most recent attempt regardless of outcome.
+    resendMessageId: text('resend_message_id'),
+    lastSendError: text('last_send_error'),
+    lastSendAt: timestamp('last_send_at', { mode: 'date', precision: 3 }),
   },
   (table) => ({
     workshopIdIdx: index('workshop_invitations_workshop_id_idx').on(table.workshopId),

@@ -3,10 +3,12 @@ import { cookies } from 'next/headers';
 import { auth } from '@clerk/nextjs/server';
 import { eq, and, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { workshopSessions, sessionParticipants } from '@/db/schema';
+import { workshopSessions, sessionParticipants, sessions, workshopSteps } from '@/db/schema';
 import { createPrefixedId } from '@/lib/ids';
 import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
 import { signGuestCookie, verifyGuestCookie, COOKIE_NAME } from '@/lib/auth/guest-cookie';
+import { prefetchStepStartGreeting } from '@/lib/ai/prefetch-greeting';
+import { after } from 'next/server';
 
 /**
  * POST /api/guest-join
@@ -347,6 +349,42 @@ export async function POST(request: Request) {
     path: '/',
     maxAge: 60 * 60 * 8, // 8 hours — covers a full workshop session
   });
+
+  // Eager greeting prefetch — see invite-claim/route.ts and prefetch-greeting.ts for
+  // rationale and race semantics. Scoped to this new participant on whichever step is
+  // currently in_progress. Fire-and-forget in the post-response queue.
+  try {
+    const [urlSession] = await db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.workshopId, workshopSession.workshopId))
+      .limit(1);
+    const [currentStep] = urlSession
+      ? await db
+          .select({ stepId: workshopSteps.stepId })
+          .from(workshopSteps)
+          .where(
+            and(
+              eq(workshopSteps.workshopId, workshopSession.workshopId),
+              eq(workshopSteps.status, 'in_progress'),
+            ),
+          )
+          .limit(1)
+      : [];
+    if (urlSession && currentStep) {
+      after(() =>
+        prefetchStepStartGreeting({
+          workshopId: workshopSession.workshopId,
+          sessionId: urlSession.id,
+          stepId: currentStep.stepId,
+          participantId: participant.id,
+          participantName: trimmedName,
+        }),
+      );
+    }
+  } catch (err) {
+    console.error('[guest-join] greeting prefetch scheduling failed:', err);
+  }
 
   return Response.json({
     ok: true,

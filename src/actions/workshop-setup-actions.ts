@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { auth } from '@clerk/nextjs/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { workshops, sessions, workshopSteps } from '@/db/schema';
+import { workshops, sessions, workshopSteps, chatMessages, stepSummaries } from '@/db/schema';
 import { sendWorkshopInvites, type SendInvitesResult } from './invitation-actions';
 import {
   parseScheduleInput,
@@ -12,6 +12,12 @@ import {
   type DurationMinutes,
 } from '@/lib/workshop/workshop-schedule';
 import { syncChallengeArtifactFromLiveblocks } from '@/lib/workshop/challenge-artifact';
+import {
+  generateStepSummary,
+  generateChallengeSummaryFromArtifact,
+} from '@/lib/context/generate-summary';
+import { prefetchStepStartGreeting } from '@/lib/ai/prefetch-greeting';
+import { after } from 'next/server';
 
 const STEP_1_ID = 'challenge';
 const STEP_2_ID = 'stakeholder-mapping';
@@ -79,6 +85,19 @@ export async function setupWorkshop(input: SetupWorkshopInput): Promise<SetupWor
     .limit(1);
   if (!sessionRow) throw new Error('Workshop session not found');
 
+  // Pull the latest challenge canvas state from Liveblocks into the artifact BEFORE
+  // any downstream consumers run: advanceFromStepOne (which writes the Step 1 summary
+  // from the artifact) and sendWorkshopInvites (which renders the challenge block into
+  // invitation emails). Idempotent + no-op for solo workshops.
+  try {
+    await syncChallengeArtifactFromLiveblocks(
+      input.workshopId,
+      workshop.workshopType === 'multiplayer'
+    );
+  } catch (err) {
+    console.warn('[setupWorkshop] Challenge artifact sync failed (continuing):', err);
+  }
+
   // Persist the schedule decision BEFORE sending emails, so the invitation
   // email picks up the schedule from the workshop row via sendWorkshopInvites.
   if (input.mode === 'schedule') {
@@ -104,19 +123,8 @@ export async function setupWorkshop(input: SetupWorkshopInput): Promise<SetupWor
         workshopStartedAt: new Date(),
       })
       .where(eq(workshops.id, input.workshopId));
-    await advanceFromStepOne(input.workshopId);
-  }
 
-  // Pull the latest challenge canvas state from Liveblocks into the artifact so the
-  // invitation emails include the up-to-date challenge block (multiplayer canvas writes
-  // otherwise don't land in step_artifacts until step advance or a webhook fires).
-  try {
-    await syncChallengeArtifactFromLiveblocks(
-      input.workshopId,
-      workshop.workshopType === 'multiplayer'
-    );
-  } catch (err) {
-    console.warn('[setupWorkshop] Challenge artifact sync failed (continuing):', err);
+    await advanceFromStepOne(input.workshopId, sessionRow.id);
   }
 
   // Send invitation emails (publishChallenge fires inside sendWorkshopInvites)
@@ -175,7 +183,18 @@ export async function startWorkshop(workshopId: string): Promise<{
     .set({ workshopStartedAt: new Date() })
     .where(eq(workshops.id, workshopId));
 
-  await advanceFromStepOne(workshopId);
+  // Mirror setupWorkshop("start_now"): sync the Liveblocks canvas before advancing so
+  // advanceFromStepOne's summary writer sees the latest sticky-note text. Idempotent.
+  try {
+    await syncChallengeArtifactFromLiveblocks(
+      workshopId,
+      workshop.workshopType === 'multiplayer'
+    );
+  } catch (err) {
+    console.warn('[startWorkshop] Challenge artifact sync failed (continuing):', err);
+  }
+
+  await advanceFromStepOne(workshopId, sessionRow.id);
 
   revalidatePath(`/workshop/${sessionRow.id}/lobby`);
   revalidatePath(`/workshop/${sessionRow.id}/step/2`);
@@ -191,9 +210,26 @@ export async function startWorkshop(workshopId: string): Promise<{
 /**
  * Mark Step 1 complete and Step 2 in_progress. Internal helper, reused by both
  * setupWorkshop("start_now") and startWorkshop.
+ *
+ * Also writes a `step_summaries` row for Step 1 — without this, the stakeholder-mapping
+ * ABSENCE PROTOCOL (added in 62.1 HALL-01) would hard-stop on Step 2 because there is no
+ * downstream summary to satisfy its "challenge confirmed?" check. Prefers a chat-derived
+ * summary if the user actually chatted on Step 1; otherwise synthesizes a deterministic
+ * summary from the challenge artifact (the form-only path's source of truth). Failure to
+ * write the summary is logged but never blocks step advance.
  */
-async function advanceFromStepOne(workshopId: string): Promise<void> {
+async function advanceFromStepOne(workshopId: string, sessionId: string): Promise<void> {
   const now = new Date();
+  // Resolve the workshop_step row id for Step 1 — needed by both the status update and
+  // the summary write. One round-trip avoids a second SELECT inside the summary helper.
+  const [step1Row] = await db
+    .select({ id: workshopSteps.id })
+    .from(workshopSteps)
+    .where(
+      and(eq(workshopSteps.workshopId, workshopId), eq(workshopSteps.stepId, STEP_1_ID))
+    )
+    .limit(1);
+
   await db
     .update(workshopSteps)
     .set({ status: 'complete', completedAt: now })
@@ -212,4 +248,72 @@ async function advanceFromStepOne(workshopId: string): Promise<void> {
         eq(workshopSteps.stepId, STEP_2_ID)
       )
     );
+
+  if (!step1Row) {
+    console.error(
+      `[advanceFromStepOne] Step 1 row not found for workshop=${workshopId} — skipping summary write`
+    );
+    return;
+  }
+
+  try {
+    // Idempotency: if a Step 1 summary already exists, the helper has run before
+    // (or Path A wrote one). Skip — `step_summaries.workshop_step_id` is uniquely
+    // constrained, and re-running would waste a Gemini call only to throw + fall
+    // through to the fallback insert (which also throws). Safe no-op.
+    const existing = await db
+      .select({ id: stepSummaries.id })
+      .from(stepSummaries)
+      .where(eq(stepSummaries.workshopStepId, step1Row.id))
+      .limit(1);
+    if (existing.length > 0) return;
+
+    // If the user actually chatted on Step 1, let generateStepSummary distill the
+    // conversation (parity with advanceToNextStep / Path A). Otherwise synthesize from
+    // the structured challenge artifact so downstream steps still have a usable summary.
+    const hasChat = await db
+      .select({ id: chatMessages.id })
+      .from(chatMessages)
+      .where(
+        and(eq(chatMessages.sessionId, sessionId), eq(chatMessages.stepId, STEP_1_ID))
+      )
+      .limit(1);
+
+    if (hasChat.length > 0) {
+      await generateStepSummary(workshopId, sessionId, step1Row.id, STEP_1_ID, 'Challenge');
+    } else {
+      await generateChallengeSummaryFromArtifact(workshopId, step1Row.id);
+    }
+  } catch (err) {
+    // Never block step advance on summary failure — log + fall through.
+    console.error(
+      `[advanceFromStepOne] Failed to write Step 1 summary for workshop=${workshopId}:`,
+      err
+    );
+  }
+
+  // Eagerly pregenerate the facilitator's Step 2 greeting in the post-response queue,
+  // so by the time setupWorkshop returns and the wizard navigates to /step/2, the chat
+  // panel finds a ready-to-replay greeting via the DB-lock singleton instead of having
+  // to wait the full Gemini round-trip on mount. The client's own __step_start__ trigger
+  // loses the claim race and replays via pollForFilledGreeting. Safe to call from server
+  // actions per Next.js 15+ `after` semantics.
+  try {
+    after(() =>
+      prefetchStepStartGreeting({
+        workshopId,
+        sessionId,
+        stepId: STEP_2_ID,
+        participantId: null,
+      }),
+    );
+  } catch (err) {
+    // `after()` should not throw in normal Next.js runtimes, but if it does (e.g. legacy
+    // edge runtime without the API), don't block step advance — the client's own
+    // __step_start__ will still generate the greeting on mount.
+    console.error(
+      `[advanceFromStepOne] Failed to schedule greeting prefetch for workshop=${workshopId}:`,
+      err,
+    );
+  }
 }

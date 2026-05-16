@@ -2282,50 +2282,57 @@ export function ChatPanel({
 
               {isMultiplayer && step.id === 'concept' && !conceptActivityStarted ? (
                 <ConceptPreActivity />
-              ) : messages.length === 0 ? (
-                // Show greeting + loading indicator while AI auto-starts
-                <div className="space-y-6">
-                  {showGreeting && (
-                    <div className="flex items-start">
-                      <div className="flex-1">
-                        <div className="text-base prose prose-base dark:prose-invert max-w-none">
-                          <ReactMarkdown>{stepGreeting!}</ReactMarkdown>
+              ) : (() => {
+                // Auto-start adds a `__step_start__` user message to `messages` immediately,
+                // before Gemini begins streaming the greeting. Counting raw `messages.length`
+                // here flips us out of the loading branch the instant the trigger is added —
+                // so the user sees a blank panel for the full ~5-50s Gemini latency. Compute
+                // visible (non-trigger) messages once and route off THAT.
+                const visibleMessages = messages.filter((m) => {
+                  if (m.role !== "user") return true;
+                  const text =
+                    m.parts
+                      ?.filter((p) => p.type === "text")
+                      .map((p) => p.text)
+                      .join("") || "";
+                  return text !== "__step_start__";
+                });
+                if (visibleMessages.length === 0) {
+                  return (
+                    <div className="space-y-6">
+                      {showGreeting && (
+                        <div className="flex items-start">
+                          <div className="flex-1">
+                            <div className="text-base prose prose-base dark:prose-invert max-w-none">
+                              <ReactMarkdown>{stepGreeting!}</ReactMarkdown>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-start">
+                        <div className="flex-1">
+                          <div className="text-base text-muted-foreground">
+                            AI is thinking...
+                          </div>
                         </div>
                       </div>
                     </div>
-                  )}
-                  <div className="flex items-start">
-                    <div className="flex-1">
-                      <div className="text-base text-muted-foreground">
-                        AI is thinking...
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                // Render conversation messages (filter out __step_start__ trigger)
-                <div className="space-y-6">
-                  {/* Fixed initial greeting while AI generates first response */}
-                  {showGreeting && (
-                    <div className="flex items-start">
-                      <div className="flex-1">
-                        <div className="text-base prose prose-base dark:prose-invert max-w-none">
-                          <ReactMarkdown>{stepGreeting!}</ReactMarkdown>
+                  );
+                }
+                return (
+                  // Render conversation messages (filter out __step_start__ trigger)
+                  <div className="space-y-6">
+                    {/* Fixed initial greeting while AI generates first response */}
+                    {showGreeting && (
+                      <div className="flex items-start">
+                        <div className="flex-1">
+                          <div className="text-base prose prose-base dark:prose-invert max-w-none">
+                            <ReactMarkdown>{stepGreeting!}</ReactMarkdown>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                  {(() => {
-                    const visibleMessages = messages.filter((m) => {
-                      if (m.role !== "user") return true;
-                      const text =
-                        m.parts
-                          ?.filter((p) => p.type === "text")
-                          .map((p) => p.text)
-                          .join("") || "";
-                      return text !== "__step_start__";
-                    });
-                    return visibleMessages.map((message, index) => {
+                    )}
+                    {visibleMessages.map((message, index) => {
                       const isStreamingThisMessage =
                         status === "streaming" &&
                         index === visibleMessages.length - 1 &&
@@ -2826,8 +2833,7 @@ export function ChatPanel({
                           </div>
                         </div>
                       );
-                    });
-                  })()}
+                    })}
 
                   {/* Typing indicator — quick ack + thinking status */}
                   {status === "submitted" && (
@@ -3354,7 +3360,8 @@ export function ChatPanel({
                   {/* Auto-scroll target */}
                   <div ref={messagesEndRef} />
                 </div>
-              )}
+                );
+              })()}
             </div>
           </>
         )}

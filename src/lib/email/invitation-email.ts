@@ -12,6 +12,9 @@ const FROM = process.env.RESEND_FROM ?? 'WorkshopPilot <notifications@workshoppi
 
 export interface EmailSendResult {
   ok: boolean;
+  /** Resend's email id (uuid). Populated on success so callers can persist it for
+   * deliverability audits later. */
+  messageId?: string;
   error?: string;
 }
 
@@ -190,7 +193,7 @@ export async function sendInvitationEmail(
       return { ok: false, error: errMessage };
     }
 
-    return { ok: true };
+    return { ok: true, messageId: result.data?.id };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error('[Resend] Failed to send workshop invitation:', error);

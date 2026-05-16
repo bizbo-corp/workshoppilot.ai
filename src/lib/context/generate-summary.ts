@@ -1,5 +1,5 @@
 import { db } from '@/db/client';
-import { chatMessages, stepSummaries } from '@/db/schema';
+import { chatMessages, stepArtifacts, stepSummaries, workshops, workshopSteps } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { google } from '@ai-sdk/google';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
@@ -118,4 +118,110 @@ ${formattedConversation}`,
 
     return fallbackSummary;
   }
+}
+
+/**
+ * Synthesize a deterministic Step 1 (Challenge) summary from the structured
+ * challenge artifact (`step_artifacts._canvas.stickyNotes` + `workshops.originalIdea`)
+ * — NOT from chat history.
+ *
+ * Used by `advanceFromStepOne` on the Set-up Workshop / Start Workshop path, where the
+ * user may complete Step 1 via the form-only wizard without ever chatting. In that case
+ * `chat_messages` is empty and `generateStepSummary` would produce a useless summary that
+ * fails the downstream stakeholder-mapping ABSENCE PROTOCOL check (which requires a
+ * recognizable "How might we…?" statement).
+ *
+ * Writes to `step_summaries` with `onConflictDoNothing` so callers can safely invoke this
+ * from idempotent helpers — if a real chat-derived summary already landed, we don't
+ * clobber it.
+ */
+export async function generateChallengeSummaryFromArtifact(
+  workshopId: string,
+  workshopStepId: string
+): Promise<string> {
+  // Inline the challenge-artifact read (instead of calling getChallengeArtifact from
+  // src/lib/workshop/challenge-artifact.ts) so this module has no 'server-only' transitive
+  // import — that lets scripts/backfill-missing-challenge-summaries.ts run under tsx.
+  const [workshopRow] = await db
+    .select({ originalIdea: workshops.originalIdea })
+    .from(workshops)
+    .where(eq(workshops.id, workshopId))
+    .limit(1);
+
+  const [step1Row] = await db
+    .select({ id: workshopSteps.id })
+    .from(workshopSteps)
+    .where(and(eq(workshopSteps.workshopId, workshopId), eq(workshopSteps.stepId, 'challenge')))
+    .limit(1);
+
+  let artifactHmw: string | null = null;
+  let artifactIdea: string | null = null;
+  let artifactProblem: string | null = null;
+  let artifactAudience: string | null = null;
+
+  if (step1Row) {
+    const [artifactRow] = await db
+      .select({ artifact: stepArtifacts.artifact })
+      .from(stepArtifacts)
+      .where(eq(stepArtifacts.workshopStepId, step1Row.id))
+      .limit(1);
+
+    const artifact = (artifactRow?.artifact ?? {}) as Record<string, unknown>;
+    const canvas = (artifact._canvas ?? {}) as Record<string, unknown>;
+    const stickyNotes = Array.isArray(canvas.stickyNotes)
+      ? (canvas.stickyNotes as Array<{ templateKey?: string; text?: string }>)
+      : [];
+
+    const findText = (key: string): string | null => {
+      const note = stickyNotes.find((n) => n.templateKey === key && (n.text ?? '').trim());
+      return note?.text?.trim() ?? null;
+    };
+
+    artifactIdea = findText('idea');
+    artifactProblem = findText('problem');
+    artifactAudience = findText('audience');
+    artifactHmw = findText('challenge-statement');
+    if (!artifactHmw && typeof artifact.hmwStatement === 'string') {
+      artifactHmw = (artifact.hmwStatement as string).trim() || null;
+    }
+  }
+
+  const hmw = artifactHmw?.trim();
+  const audience = artifactAudience?.trim();
+  const problem = artifactProblem?.trim();
+  const originalIdea = workshopRow?.originalIdea?.trim() || null;
+  const idea = artifactIdea?.trim();
+
+  // Compose a "How might we…?" line. If the facilitator wrote an explicit HMW sticky,
+  // use it verbatim. Otherwise synthesize one from audience + problem so the downstream
+  // ABSENCE PROTOCOL check (which looks for "How might we") passes.
+  const hmwLine = hmw
+    ? (/^how might we/i.test(hmw) ? hmw : `How might we ${hmw}`)
+    : audience && problem
+      ? `How might we address ${problem} for ${audience}?`
+      : audience
+        ? `How might we serve ${audience}?`
+        : problem
+          ? `How might we address ${problem}?`
+          : 'How might we deliver on the original idea?';
+
+  const lines = [
+    `- Challenge: ${hmwLine}`,
+    `- Original idea: ${originalIdea || idea || '—'}`,
+    `- Problem framing: ${problem || '—'}`,
+    `- Target audience: ${audience || '—'}`,
+  ];
+  const summary = lines.join('\n');
+
+  await db
+    .insert(stepSummaries)
+    .values({
+      workshopStepId,
+      stepId: 'challenge',
+      summary,
+      tokenCount: null,
+    })
+    .onConflictDoNothing({ target: stepSummaries.workshopStepId });
+
+  return summary;
 }

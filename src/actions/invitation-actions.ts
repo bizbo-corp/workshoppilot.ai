@@ -231,17 +231,28 @@ export async function sendWorkshopInvites(
     toInsert.push({ email, inviteToken: randomBytes(24).toString('base64url') });
   }
 
+  // Insert with returning() so we have the row ids to write the send result back to.
+  // Without the id, we'd need a second SELECT keyed on (workshopId, email) — slower and
+  // also racy with concurrent re-invites.
   let sent = 0;
+  let insertedRows: { id: string; email: string; inviteToken: string }[] = [];
   if (toInsert.length > 0) {
-    await db.insert(workshopInvitations).values(
-      toInsert.map((row) => ({
-        workshopId,
-        email: row.email,
-        inviteToken: row.inviteToken,
-        invitedByClerkUserId: userId,
-      }))
-    );
-    sent += toInsert.length;
+    insertedRows = await db
+      .insert(workshopInvitations)
+      .values(
+        toInsert.map((row) => ({
+          workshopId,
+          email: row.email,
+          inviteToken: row.inviteToken,
+          invitedByClerkUserId: userId,
+        }))
+      )
+      .returning({
+        id: workshopInvitations.id,
+        email: workshopInvitations.email,
+        inviteToken: workshopInvitations.inviteToken,
+      });
+    sent += insertedRows.length;
   }
 
   // Publish challenge once invites go out
@@ -270,7 +281,8 @@ export async function sendWorkshopInvites(
   // Fire emails sequentially with a gap to stay under Resend's 2 req/sec limit.
   // (After DB writes so a Resend hiccup doesn't roll back invitations.)
   const { sendInvitationEmail } = await import('@/lib/email/invitation-email');
-  const freshSendResults = await sendSequential(toInsert, async (row) => ({
+  const freshSendResults = await sendSequential(insertedRows, async (row) => ({
+    invitationId: row.id,
     email: row.email,
     ...(await sendInvitationEmail({
       ...commonEmailPayload,
@@ -279,43 +291,104 @@ export async function sendWorkshopInvites(
     })),
   }));
   // Demote DB-inserted-but-email-failed rows back out of the `sent` count and surface
-  // the Resend error to the caller via skipped[].detail.
+  // the Resend error to the caller via skipped[].detail. Also persist the Resend
+  // message id (or error) onto the invitation row so deliverability audits are possible
+  // without trusting only the in-memory toast.
   let successfulFreshSends = 0;
+  const sendTouchTime = new Date();
   for (const r of freshSendResults) {
     if (r.ok) {
       successfulFreshSends += 1;
+      try {
+        await db
+          .update(workshopInvitations)
+          .set({
+            resendMessageId: r.messageId ?? null,
+            lastSendError: null,
+            lastSendAt: sendTouchTime,
+          })
+          .where(eq(workshopInvitations.id, r.invitationId));
+      } catch (err) {
+        console.error(`[invitation-send-status] failed to record success for ${r.invitationId}:`, err);
+      }
     } else {
       skipped.push({ email: r.email, reason: 'send-failed', detail: r.error });
+      try {
+        await db
+          .update(workshopInvitations)
+          .set({
+            resendMessageId: null,
+            lastSendError: r.error ?? 'unknown error',
+            lastSendAt: sendTouchTime,
+          })
+          .where(eq(workshopInvitations.id, r.invitationId));
+      } catch (err) {
+        console.error(`[invitation-send-status] failed to record failure for ${r.invitationId}:`, err);
+      }
     }
   }
-  // Override the optimistic `sent += toInsert.length` we did at row insert time
+  // Override the optimistic `sent += insertedRows.length` we did at row insert time
   // with the real successful-send count.
-  sent = sent - toInsert.length + successfulFreshSends;
+  sent = sent - insertedRows.length + successfulFreshSends;
 
   // Track resends: emails already pending get a fresh email with the existing token
   if (toResend.length > 0) {
-    const tokens = await db
-      .select({ email: workshopInvitations.email, inviteToken: workshopInvitations.inviteToken })
+    const rows = await db
+      .select({
+        id: workshopInvitations.id,
+        email: workshopInvitations.email,
+        inviteToken: workshopInvitations.inviteToken,
+      })
       .from(workshopInvitations)
       .where(eq(workshopInvitations.workshopId, workshopId));
-    const tokenByEmail = new Map(tokens.map((t) => [t.email.toLowerCase(), t.inviteToken]));
+    const rowByEmail = new Map(rows.map((r) => [r.email.toLowerCase(), r]));
     const resendResults = await sendSequential(toResend, async (email) => {
-      const token = tokenByEmail.get(email);
-      if (!token) return { email, ok: false, error: 'No token on file' } as const;
+      const row = rowByEmail.get(email);
+      if (!row) return { invitationId: null, email, ok: false, error: 'No token on file' } as const;
       return {
+        invitationId: row.id,
         email,
         ...(await sendInvitationEmail({
           ...commonEmailPayload,
           to: email,
-          inviteToken: token,
+          inviteToken: row.inviteToken,
         })),
       };
     });
+    const resendTouchTime = new Date();
     for (const r of resendResults) {
       if (r.ok) {
         sent += 1;
+        if (r.invitationId) {
+          try {
+            await db
+              .update(workshopInvitations)
+              .set({
+                resendMessageId: r.messageId ?? null,
+                lastSendError: null,
+                lastSendAt: resendTouchTime,
+              })
+              .where(eq(workshopInvitations.id, r.invitationId));
+          } catch (err) {
+            console.error(`[invitation-send-status] failed to record resend success for ${r.invitationId}:`, err);
+          }
+        }
       } else {
         skipped.push({ email: r.email, reason: 'send-failed', detail: r.error });
+        if (r.invitationId) {
+          try {
+            await db
+              .update(workshopInvitations)
+              .set({
+                resendMessageId: null,
+                lastSendError: r.error ?? 'unknown error',
+                lastSendAt: resendTouchTime,
+              })
+              .where(eq(workshopInvitations.id, r.invitationId));
+          } catch (err) {
+            console.error(`[invitation-send-status] failed to record resend failure for ${r.invitationId}:`, err);
+          }
+        }
       }
     }
   }
@@ -400,7 +473,7 @@ export async function resendInvite(invitationId: string): Promise<void> {
   const artifact = await getChallengeArtifact(invite.workshopId);
 
   const { sendInvitationEmail } = await import('@/lib/email/invitation-email');
-  await sendInvitationEmail({
+  const result = await sendInvitationEmail({
     to: invite.email,
     inviteToken: invite.inviteToken,
     facilitatorName,
@@ -416,11 +489,33 @@ export async function resendInvite(invitationId: string): Promise<void> {
     scheduledTimezone: invite.scheduledTimezone ?? null,
   });
 
-  // Touch invitedAt so the facilitator can see the most recent send time
-  await db
-    .update(workshopInvitations)
-    .set({ invitedAt: new Date() })
-    .where(eq(workshopInvitations.id, invitationId));
+  // Touch invitedAt + record the Resend outcome so the participant overview / future
+  // audits can tell a delivered invite from a silently-rejected one. Throw on failure
+  // so the caller (a user-initiated resend button) surfaces the error rather than
+  // appearing to succeed.
+  const now = new Date();
+  if (result.ok) {
+    await db
+      .update(workshopInvitations)
+      .set({
+        invitedAt: now,
+        resendMessageId: result.messageId ?? null,
+        lastSendError: null,
+        lastSendAt: now,
+      })
+      .where(eq(workshopInvitations.id, invitationId));
+  } else {
+    await db
+      .update(workshopInvitations)
+      .set({
+        invitedAt: now,
+        resendMessageId: null,
+        lastSendError: result.error ?? 'unknown error',
+        lastSendAt: now,
+      })
+      .where(eq(workshopInvitations.id, invitationId));
+    throw new Error(`Resend rejected the invitation email: ${result.error ?? 'unknown error'}`);
+  }
 }
 
 export type NudgeResult = {
@@ -552,7 +647,8 @@ export async function nudgeInvitations(
 
   // Touch invitedAt on the rows that actually went out so the cooldown
   // applies on the next call. We use individual updates (small N, simpler than
-  // building a CASE statement).
+  // building a CASE statement). Also record the Resend outcome so failed nudges
+  // are visible in audit instead of indistinguishable from a delivered nudge.
   let nudged = 0;
   const touchTime = new Date();
   for (const r of results) {
@@ -560,10 +656,27 @@ export async function nudgeInvitations(
       nudged += 1;
       await db
         .update(workshopInvitations)
-        .set({ invitedAt: touchTime })
+        .set({
+          invitedAt: touchTime,
+          resendMessageId: r.messageId ?? null,
+          lastSendError: null,
+          lastSendAt: touchTime,
+        })
         .where(eq(workshopInvitations.id, r.id));
     } else {
       skipped.push({ email: r.email, reason: 'send-failed', detail: r.error });
+      try {
+        await db
+          .update(workshopInvitations)
+          .set({
+            resendMessageId: null,
+            lastSendError: r.error ?? 'unknown error',
+            lastSendAt: touchTime,
+          })
+          .where(eq(workshopInvitations.id, r.id));
+      } catch (err) {
+        console.error(`[nudge-invitations] failed to record failure for ${r.id}:`, err);
+      }
     }
   }
 

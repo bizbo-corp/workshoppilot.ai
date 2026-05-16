@@ -13,6 +13,9 @@ import { createPrefixedId } from '@/lib/ids';
 import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
 import { COOKIE_NAME, signGuestCookie, verifyGuestCookie } from '@/lib/auth/guest-cookie';
 import { markInvitationAccepted } from '@/actions/invitation-actions';
+import { prefetchStepStartGreeting } from '@/lib/ai/prefetch-greeting';
+import { workshopSteps } from '@/db/schema';
+import { after } from 'next/server';
 
 /**
  * POST /api/invite-claim
@@ -221,6 +224,37 @@ export async function POST(request: Request) {
 
   await markInvitationAccepted(inviteToken, participant.id);
   await refreshGuestCookie(participant.id, wSession.workshopId, cookieStore);
+
+  // Eager greeting prefetch for whichever step is currently in_progress, scoped to this
+  // new participant. By the time the client navigates into the workshop and the chat
+  // panel mounts, the singleton already has the greeting ready to replay. Fire-and-forget
+  // in the post-response queue — the response returns immediately. See
+  // src/lib/ai/prefetch-greeting.ts for race semantics with the client's __step_start__.
+  try {
+    const [currentStep] = await db
+      .select({ stepId: workshopSteps.stepId })
+      .from(workshopSteps)
+      .where(
+        and(
+          eq(workshopSteps.workshopId, wSession.workshopId),
+          eq(workshopSteps.status, 'in_progress'),
+        ),
+      )
+      .limit(1);
+    if (currentStep) {
+      after(() =>
+        prefetchStepStartGreeting({
+          workshopId: wSession.workshopId,
+          sessionId: urlSession.id,
+          stepId: currentStep.stepId,
+          participantId: participant.id,
+          participantName: trimmedName,
+        }),
+      );
+    }
+  } catch (err) {
+    console.error('[invite-claim] greeting prefetch scheduling failed:', err);
+  }
 
   return Response.json({
     ok: true,

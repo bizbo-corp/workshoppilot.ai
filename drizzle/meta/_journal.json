@@ -176,6 +176,13 @@
       "when": 1778891483262,
       "tag": "0024_chat_messages_nonempty_check",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1778907380364,
+      "tag": "0025_shocking_cloak",
+      "breakpoints": true
     }
   ]
 }
