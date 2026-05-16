@@ -1339,7 +1339,7 @@ export function StepContainer({
       <div className="min-h-0 flex-1">
         {isMultiplayer && !isFacilitator && effectiveParticipantId ? (
           <ParticipantChatPanel
-            key={resetKey}
+            key={`${sessionId}:${workshopId}:${step?.id ?? stepOrder}:${resetKey}`}
             stepOrder={stepOrder}
             sessionId={sessionId}
             workshopId={workshopId}
@@ -1350,7 +1350,7 @@ export function StepContainer({
           />
         ) : (
           <ChatPanel
-            key={resetKey}
+            key={`${sessionId}:${workshopId}:${step?.id ?? stepOrder}:${resetKey}`}
             stepOrder={stepOrder}
             sessionId={sessionId}
             workshopId={workshopId}
