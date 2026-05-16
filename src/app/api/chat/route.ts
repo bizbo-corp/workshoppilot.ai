@@ -1,11 +1,11 @@
 import { convertToModelMessages, smoothStream, createUIMessageStream, createUIMessageStreamResponse } from 'ai';
 import { auth } from '@clerk/nextjs/server';
 import { chatModel, buildStepSystemPrompt } from '@/lib/ai/chat-config';
-import { saveMessages, loadFirstAssistantMessage } from '@/lib/ai/message-persistence';
+import { saveMessages, claimGreetingPlaceholder, fillGreetingPlaceholder, pollForFilledGreeting } from '@/lib/ai/message-persistence';
 import { assembleStepContext } from '@/lib/context/assemble-context';
 import { getStepById, STEPS } from '@/lib/workshop/step-metadata';
 import { db } from '@/db/client';
-import { workshops, chatRequestLogs } from '@/db/schema';
+import { workshops, chatRequestLogs, sessions } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getCurrentArcPhase } from '@/lib/ai/conversation-state';
 import { streamTextWithRetry, isGeminiRateLimitError } from '@/lib/ai/gemini-retry';
@@ -53,11 +53,37 @@ export async function POST(req: Request) {
       );
     }
 
-    // Greeting singleton: if this request is the `__step_start__` auto-start
-    // trigger and an assistant message already exists for this scope, replay
-    // the stored greeting instead of generating a new one. Prevents duplicate
-    // greetings caused by remounts, fast-refresh, Strict Mode, or the
-    // page-mount cleanup racing with an in-flight stream's onFinish.
+    // Scope assertion: verify the sessionId belongs to the claimed workshopId.
+    // Returns 404 if session doesn't exist, 409 if workshopId doesn't match.
+    // Writes nothing to chat_messages on rejection.
+    const sessionRow = await db
+      .select({ workshopId: sessions.workshopId })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .limit(1);
+
+    if (sessionRow.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'session_not_found', sessionId }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (sessionRow[0].workshopId !== workshopId) {
+      return new Response(
+        JSON.stringify({
+          error: 'workshop_session_mismatch',
+          sessionId,
+          requestedWorkshopId: workshopId,
+          actualWorkshopId: sessionRow[0].workshopId,
+        }),
+        { status: 409, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // DB-lock greeting singleton: replace read-then-act with atomic INSERT ... ON CONFLICT
+    // DO NOTHING against the existing unique index. Race losers poll briefly for the winner's
+    // content, then replay. This eliminates the duplicate-greeting race condition.
     const lastMsg = Array.isArray(messages) ? messages[messages.length - 1] : null;
     const isStepStartTrigger = !!(
       lastMsg?.role === 'user' &&
@@ -67,22 +93,53 @@ export async function POST(req: Request) {
       )
     );
 
+    let greetingClaim:
+      | { won: true; placeholderRowId: string; messageId: string }
+      | { won: false; messageId: string }
+      | null = null;
+
     if (isStepStartTrigger) {
-      const existing = await loadFirstAssistantMessage(sessionId, stepId, participantId);
-      if (existing) {
-        const textId = `${existing.messageId}-text`;
-        const stream = createUIMessageStream({
-          execute: ({ writer }) => {
-            writer.write({ type: 'start', messageId: existing.messageId });
-            writer.write({ type: 'start-step' });
-            writer.write({ type: 'text-start', id: textId });
-            writer.write({ type: 'text-delta', id: textId, delta: existing.content });
-            writer.write({ type: 'text-end', id: textId });
-            writer.write({ type: 'finish-step' });
-            writer.write({ type: 'finish' });
-          },
-        });
-        return createUIMessageStreamResponse({ stream });
+      greetingClaim = await claimGreetingPlaceholder(sessionId, stepId, participantId);
+
+      if (!greetingClaim.won) {
+        // Lost the race. Poll briefly for the winner to fill the placeholder.
+        const filled = await pollForFilledGreeting(sessionId, stepId, participantId, 3000, 100);
+        if (filled) {
+          const textId = `${filled.messageId}-text`;
+          const stream = createUIMessageStream({
+            execute: ({ writer }) => {
+              writer.write({ type: 'start', messageId: filled.messageId });
+              writer.write({ type: 'start-step' });
+              writer.write({ type: 'text-start', id: textId });
+              writer.write({ type: 'text-delta', id: textId, delta: filled.content });
+              writer.write({ type: 'text-end', id: textId });
+              writer.write({ type: 'finish-step' });
+              writer.write({ type: 'finish' });
+            },
+          });
+          // SOLE replay-logging site. Plan A does NOT log replays. This is the only place
+          // chat_request_logs gets a row with isReplay=true. Uses its own randomUUID — does NOT
+          // touch the hoisted `requestId` (that's reserved for fresh-gen paths).
+          try {
+            await db.insert(chatRequestLogs).values({
+              sessionId,
+              stepId,
+              participantId: participantId ?? null,
+              workshopId,
+              requestId: crypto.randomUUID(),
+              systemPromptSha: '',
+              systemPrompt: '',
+              modelMessagesJson: messages,
+              responseMessageId: filled.messageId,
+              isReplay: true,
+            });
+          } catch (err) {
+            console.error('[chat-request-log] replay insert failed', err);
+          }
+          return createUIMessageStreamResponse({ stream });
+        }
+        // Polling timed out — fall through to fresh-gen path. The unique index still prevents duplicates.
+        greetingClaim = null;
       }
     }
 
@@ -223,6 +280,7 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
       system: systemPrompt,
       messages: modelMessages,
       experimental_transform: smoothStream({ chunking: 'word' }),
+      abortSignal: req.signal,  // end-to-end cancellation
     });
 
     // Consume stream server-side to ensure onFinish fires even if client disconnects
@@ -249,15 +307,29 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
       sendReasoning: false,
       originalMessages: messages,
       onFinish: async ({ messages: responseMessages }) => {
-        await saveMessages(sessionId, stepId, responseMessages, participantId);
+        const assistantMsg = [...responseMessages].reverse().find((m) => m.role === 'assistant');
+        const assistantContent = assistantMsg?.parts?.filter((p) => p.type === 'text').map((p) => (p as { type: 'text'; text: string }).text).join('') ?? '';
+        const assistantMessageId = assistantMsg?.id ?? '';
 
-        // Backfill the response_message_id now that we have the assistant message id.
+        if (greetingClaim && greetingClaim.won && assistantContent.trim().length > 0 && assistantMessageId) {
+          // Won-greeting path: fill the placeholder row with the streamed content + final messageId.
+          try {
+            await fillGreetingPlaceholder(greetingClaim.placeholderRowId, assistantContent, assistantMessageId);
+          } catch (err) {
+            console.error('[greeting-singleton] fill failed; falling back to saveMessages', err);
+            await saveMessages(sessionId, stepId, responseMessages, participantId);
+          }
+        } else {
+          await saveMessages(sessionId, stepId, responseMessages, participantId);
+        }
+
+        // Plan A: backfill chat_request_logs.response_message_id keyed on the hoisted requestId.
+        // This works for BOTH the won-greeting fresh-gen path AND the no-step-start path because
+        // both assign to the same hoisted `requestId` at Plan A's insert site.
         // KNOWN LIMITATION: AI SDK v5 generates the assistant message id client-side,
-        // so responseMessages[last].id is '' here. response_message_id stays null until
+        // so assistantMessageId is '' here. response_message_id stays null until
         // a follow-up wires backfill through autoSaveMessages (which knows the client id).
         // See 62.1-01-SUMMARY.md "Known limitations".
-        const assistantMsg = [...responseMessages].reverse().find((m) => m.role === 'assistant');
-        const assistantMessageId = assistantMsg?.id ?? '';
         if (typeof requestId === 'string' && assistantMessageId) {
           try {
             await db.update(chatRequestLogs)
