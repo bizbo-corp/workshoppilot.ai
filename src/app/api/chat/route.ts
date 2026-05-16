@@ -13,6 +13,7 @@ import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { loadCanvasState } from '@/actions/canvas-actions';
 import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
 import { createHash } from 'node:crypto';
+import { createPrefixedId } from '@/lib/ids';
 
 /**
  * Increase Vercel serverless timeout for AI responses.
@@ -39,11 +40,13 @@ export async function POST(req: Request) {
   try {
     const { messages, sessionId, stepId, workshopId, subStep, selectedStickyNoteIds, participantId, participantName, conceptOwnerId } = await req.json();
 
-    // Hoisted so onFinish can backfill responseMessageId from any fresh-gen path.
-    // Plan A's fresh-gen site (this task) assigns to this.
-    // Plan B's won-greeting fresh-gen path will also assign to this.
-    // Race-loser replay path (Plan B) does NOT use this — it inserts inline with its own crypto.randomUUID().
+    // Hoisted so the fresh-gen path can populate chat_request_logs and pass the
+    // server-generated id to toUIMessageStreamResponse's generateMessageId option.
+    // The same id flows through to onFinish's responseMessage.id (the AI SDK v6
+    // wire-format start chunk carries it to the client; see node_modules/ai/dist/index.mjs:5417-5418, 7488).
+    // Race-loser replay path does NOT use these — it uses filled.messageId directly.
     let requestId: string | null = null;
+    let responseMessageId: string | null = null;
 
     // Validate required parameters
     if (!sessionId || !stepId || !workshopId) {
@@ -255,6 +258,12 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
     // Captures verbatim system prompt + sha256 + model messages for admin diagnosis.
     // NEVER throws — observability must not break the chat request.
     requestId = crypto.randomUUID();
+    // Pre-generate the assistant message id. This same id is (a) stored in
+    // chat_request_logs at insert time (no post-stream backfill), and (b) passed
+    // as generateMessageId to toUIMessageStreamResponse so the AI SDK v6 wire-format
+    // start chunk carries it to the client, where useChat adopts it. Both server's
+    // onFinish and client's useAutoSave then converge on the same id.
+    responseMessageId = createPrefixedId('msg');
     const systemPromptSha = createHash('sha256').update(systemPrompt).digest('hex');
     try {
       await db.insert(chatRequestLogs).values({
@@ -266,7 +275,7 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
         systemPromptSha,
         systemPrompt,
         modelMessagesJson: modelMessages,
-        responseMessageId: null, // backfilled in onFinish below
+        responseMessageId, // populated up-front — no backfill needed
         isReplay: false,
       });
     } catch (err) {
@@ -312,24 +321,27 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
     return result.toUIMessageStreamResponse({
       sendReasoning: false,
       originalMessages: messages,
+      // AI SDK v6: pre-generated id flows through wire-format start chunk to client.
+      // Server's onFinish.responseMessage.id === responseMessageId (no more empty string).
+      // Client's useChat adopts via state.message.id = chunk.messageId.
+      // Requires originalMessages above to apply (see node_modules/ai/dist/index.mjs:4751-4761).
+      generateMessageId: () => responseMessageId!,
       onFinish: async ({ messages: responseMessages }) => {
         const assistantMsg = [...responseMessages].reverse().find((m) => m.role === 'assistant');
         const assistantContent = assistantMsg?.parts?.filter((p) => p.type === 'text').map((p) => (p as { type: 'text'; text: string }).text).join('') ?? '';
-        const assistantMessageId = assistantMsg?.id ?? '';
+        // assistantMsg.id is now the AI SDK-generated id (==responseMessageId), no longer ''.
 
         if (greetingClaim && greetingClaim.won && assistantContent.trim().length > 0) {
-          // Won-greeting path: fill the placeholder row with the streamed content.
-          // Note: assistantMessageId is '' here (AI SDK v5 generates ids client-side),
-          // so we keep the placeholder's deterministic messageId (`greeting:...:fac`).
-          // The client's autoSaveMessages will write a parallel row with the AI-generated id;
-          // pollForFilledGreeting on subsequent mounts finds the filled placeholder via
-          // (session_id, step_id, participant_id, role='assistant', content > 0), so the
-          // dual-row state is benign. loadMessages dedup handles UI display.
+          // Won-greeting path: fill the placeholder row with the streamed content AND
+          // replace the deterministic placeholder messageId with the real AI SDK-generated id.
+          // The client's autoSaveMessages will try to write a parallel row with this same id;
+          // the unique index chat_messages_session_step_participant_message_uniq drops the
+          // second insert via onConflictDoNothing(). Dual-row state from 62.1 is eliminated.
           try {
             await fillGreetingPlaceholder(
               greetingClaim.placeholderRowId,
               assistantContent,
-              greetingClaim.messageId,
+              assistantMsg!.id, // real AI SDK-generated id (not greetingClaim.messageId)
             );
           } catch (err) {
             console.error('[greeting-singleton] fill failed; falling back to saveMessages', err);
@@ -338,23 +350,7 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
         } else {
           await saveMessages(sessionId, stepId, responseMessages, participantId);
         }
-
-        // Plan A: backfill chat_request_logs.response_message_id keyed on the hoisted requestId.
-        // This works for BOTH the won-greeting fresh-gen path AND the no-step-start path because
-        // both assign to the same hoisted `requestId` at Plan A's insert site.
-        // KNOWN LIMITATION: AI SDK v5 generates the assistant message id client-side,
-        // so assistantMessageId is '' here. response_message_id stays null until
-        // a follow-up wires backfill through autoSaveMessages (which knows the client id).
-        // See 62.1-01-SUMMARY.md "Known limitations".
-        if (typeof requestId === 'string' && assistantMessageId) {
-          try {
-            await db.update(chatRequestLogs)
-              .set({ responseMessageId: assistantMessageId })
-              .where(eq(chatRequestLogs.requestId, requestId));
-          } catch (err) {
-            console.error('[chat-request-log] backfill failed', err);
-          }
-        }
+        // chat_request_logs.response_message_id was populated at insert time — no backfill block needed.
       },
     });
   } catch (error) {
