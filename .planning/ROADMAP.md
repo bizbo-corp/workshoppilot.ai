@@ -203,7 +203,7 @@ See `milestones/v2.0-ROADMAP.md` for full details.
 | 54-58. Multiplayer Collaboration | v1.9 | 12/12 | Complete | 2026-02-28 |
 | 59-62. Dot Voting & Mobile Gate | v2.0 | 7/7 | Complete | 2026-03-01 |
 | 62.1 Fix Cross-Workshop Dialogue Leak & Duplicate Greetings | hotfix | 3/3 | Complete | 2026-05-16 |
-| 62.2 AI SDK v5 Message-ID Server-Side Resolution | 2/2 | Complete   | 2026-05-16 | — |
+| 62.2 AI SDK v5 Message-ID Server-Side Resolution | 2/2 | Complete    | 2026-05-16 | — |
 
 **Total shipped:** 12 milestones, 62 phases, ~155 plans in 22 days
 
