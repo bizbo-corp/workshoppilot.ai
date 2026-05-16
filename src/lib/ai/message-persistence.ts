@@ -58,27 +58,24 @@ export async function saveMessages(
     return; // Nothing to insert
   }
 
-  // Insert new messages. Filter rows with empty messageId — AI SDK v5 generates
-  // assistant message ids client-side, so the server's onFinish often sees msg.id===''
-  // for new assistant messages. The client's autoSaveMessages writes those with the
-  // proper id once the stream completes. Without this filter, the chat_messages
-  // CHECK constraint (length(message_id) > 0) rejects the insert and onFinish throws,
-  // surfacing as a 500 / ERR_INCOMPLETE_CHUNKED_ENCODING on the client.
-  const rows = newMessages
-    .map((msg) => {
-      const textParts = msg.parts?.filter((part) => part.type === 'text') || [];
-      const content = textParts.map((part) => part.text).join('\n');
+  // Phase 62.2: AI SDK v6 generateMessageId on the server (see /api/chat route.ts)
+  // ensures every assistant message reaches this site with a non-empty id. The
+  // chat_messages_message_id_nonempty_chk CHECK constraint is the canary: if a
+  // misconfiguration ever lets an empty id slip through, the insert will fail loudly
+  // (surfacing as a 500/ERR_INCOMPLETE_CHUNKED_ENCODING) instead of being silently dropped.
+  const rows = newMessages.map((msg) => {
+    const textParts = msg.parts?.filter((part) => part.type === 'text') || [];
+    const content = textParts.map((part) => part.text).join('\n');
 
-      return {
-        sessionId,
-        stepId,
-        messageId: msg.id,
-        role: msg.role as 'user' | 'assistant' | 'system',
-        content,
-        participantId: participantId || null,
-      };
-    })
-    .filter((row) => row.messageId.length > 0);
+    return {
+      sessionId,
+      stepId,
+      messageId: msg.id,
+      role: msg.role as 'user' | 'assistant' | 'system',
+      content,
+      participantId: participantId || null,
+    };
+  });
 
   if (rows.length === 0) return;
 
