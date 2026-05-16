@@ -927,7 +927,7 @@ export function ChatPanel({
     [sessionId, step.id, workshopId, subStep, selectedStickyNoteIds, isMultiplayer],
   );
 
-  const { messages, sendMessage, status, setMessages } = useChat({
+  const { messages, sendMessage, status, setMessages, stop } = useChat({
     transport,
     messages: initialMessages,
     onError: (error) => {
@@ -967,6 +967,16 @@ export function ChatPanel({
       }
     },
   });
+
+  // Abort any in-flight /api/chat request when scope changes or component unmounts.
+  // Without this, the previous transport's POST runs to completion, onFinish fires
+  // server-side, and the row writes against the OLD scope into the NEW scope's
+  // chat_messages — the cross-workshop leak vector.
+  React.useEffect(() => {
+    return () => {
+      stop();
+    };
+  }, [sessionId, step.id, workshopId, stop]);
 
   const isLoading = status === "streaming" || status === "submitted";
 
