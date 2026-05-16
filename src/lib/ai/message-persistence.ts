@@ -123,9 +123,98 @@ export async function loadMessages(
 }
 
 /**
+ * Deterministic placeholder messageId for the greeting singleton DB lock.
+ * MUST stay stable — it's the conflict key for the unique index.
+ */
+export function greetingPlaceholderMessageId(sessionId: string, stepId: string, participantId?: string | null): string {
+  return `greeting:${sessionId}:${stepId}:${participantId ?? 'fac'}`;
+}
+
+/**
+ * Try to claim the greeting slot by inserting an empty assistant placeholder.
+ * Wins on insert, loses on conflict.
+ * Returns { won: true, placeholderRowId, messageId } if we won (must stream + fill).
+ * Returns { won: false, messageId } if we lost (must poll for winner's content).
+ */
+export async function claimGreetingPlaceholder(
+  sessionId: string,
+  stepId: string,
+  participantId?: string | null,
+): Promise<{ won: true; placeholderRowId: string; messageId: string } | { won: false; messageId: string }> {
+  const messageId = greetingPlaceholderMessageId(sessionId, stepId, participantId);
+  const inserted = await db
+    .insert(chatMessages)
+    .values({
+      sessionId,
+      stepId,
+      messageId,
+      role: 'assistant',
+      content: '',
+      participantId: participantId ?? null,
+    })
+    .onConflictDoNothing({
+      target: [chatMessages.sessionId, chatMessages.stepId, chatMessages.participantId, chatMessages.messageId],
+    })
+    .returning({ id: chatMessages.id });
+
+  if (inserted.length > 0) {
+    return { won: true, placeholderRowId: inserted[0].id, messageId };
+  }
+  return { won: false, messageId };
+}
+
+/**
+ * Winner fills the placeholder row with streamed content + final messageId.
+ * Replaces the placeholder messageId so the row matches the streamed UIMessage.
+ */
+export async function fillGreetingPlaceholder(
+  placeholderRowId: string,
+  content: string,
+  finalMessageId: string,
+): Promise<void> {
+  await db
+    .update(chatMessages)
+    .set({ content, messageId: finalMessageId })
+    .where(eq(chatMessages.id, placeholderRowId));
+}
+
+/**
+ * Race loser polls for the placeholder row to be filled (content non-empty).
+ * Default budget: 3000ms total, 100ms intervals. Returns filled row or null on timeout.
+ * On null, caller should fall through to fresh-generation path.
+ */
+export async function pollForFilledGreeting(
+  sessionId: string,
+  stepId: string,
+  participantId: string | null | undefined,
+  budgetMs: number = 3000,
+  intervalMs: number = 100,
+): Promise<StoredAssistantMessage | null> {
+  const deadline = Date.now() + budgetMs;
+  while (Date.now() < deadline) {
+    const rows = await db
+      .select({ messageId: chatMessages.messageId, content: chatMessages.content })
+      .from(chatMessages)
+      .where(and(
+        eq(chatMessages.sessionId, sessionId),
+        eq(chatMessages.stepId, stepId),
+        eq(chatMessages.role, 'assistant'),
+        participantFilter(participantId),
+      ));
+    const filled = rows.find((r) => r.content.trim().length > 0);
+    if (filled) return { messageId: filled.messageId, content: filled.content };
+    await new Promise((res) => setTimeout(res, intervalMs));
+  }
+  return null;
+}
+
+/**
  * Return the earliest non-empty assistant message for a scope, or null if
- * none exists. Used by /api/chat to short-circuit duplicate `__step_start__`
- * triggers and replay the original greeting instead of generating a new one.
+ * none exists.
+ *
+ * @deprecated Use claimGreetingPlaceholder + pollForFilledGreeting for
+ * the DB-lock greeting singleton pattern (Plan B). This function remains
+ * for any legacy callers outside /api/chat.
  */
 export async function loadFirstAssistantMessage(
   sessionId: string,
