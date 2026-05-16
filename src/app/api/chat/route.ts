@@ -252,6 +252,10 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
         await saveMessages(sessionId, stepId, responseMessages, participantId);
 
         // Backfill the response_message_id now that we have the assistant message id.
+        // KNOWN LIMITATION: AI SDK v5 generates the assistant message id client-side,
+        // so responseMessages[last].id is '' here. response_message_id stays null until
+        // a follow-up wires backfill through autoSaveMessages (which knows the client id).
+        // See 62.1-01-SUMMARY.md "Known limitations".
         const assistantMsg = [...responseMessages].reverse().find((m) => m.role === 'assistant');
         const assistantMessageId = assistantMsg?.id ?? '';
         if (typeof requestId === 'string' && assistantMessageId) {
