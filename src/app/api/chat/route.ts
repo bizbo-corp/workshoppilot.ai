@@ -274,13 +274,19 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
       // Observability must never break the chat request. Continue.
     }
 
-    // Stream Gemini response with context-aware prompt and rate limit retry
+    // Stream Gemini response with context-aware prompt and rate limit retry.
+    // For greeting (__step_start__) requests we deliberately skip abortSignal: the placeholder
+    // row was already inserted by claimGreetingPlaceholder, so the stream MUST complete
+    // server-side to fill it. Without this, a Strict-Mode unmount or quick user navigation
+    // leaves an empty placeholder that blocks future claims and forces a 3s poll → fresh-gen
+    // recovery on every subsequent mount. For user-typed messages, end-to-end cancellation
+    // still saves tokens on abort.
     const result = await streamTextWithRetry({
       model: chatModel,
       system: systemPrompt,
       messages: modelMessages,
       experimental_transform: smoothStream({ chunking: 'word' }),
-      abortSignal: req.signal,  // end-to-end cancellation
+      abortSignal: isStepStartTrigger ? undefined : req.signal,
     });
 
     // Consume stream server-side to ensure onFinish fires even if client disconnects
@@ -311,10 +317,20 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
         const assistantContent = assistantMsg?.parts?.filter((p) => p.type === 'text').map((p) => (p as { type: 'text'; text: string }).text).join('') ?? '';
         const assistantMessageId = assistantMsg?.id ?? '';
 
-        if (greetingClaim && greetingClaim.won && assistantContent.trim().length > 0 && assistantMessageId) {
-          // Won-greeting path: fill the placeholder row with the streamed content + final messageId.
+        if (greetingClaim && greetingClaim.won && assistantContent.trim().length > 0) {
+          // Won-greeting path: fill the placeholder row with the streamed content.
+          // Note: assistantMessageId is '' here (AI SDK v5 generates ids client-side),
+          // so we keep the placeholder's deterministic messageId (`greeting:...:fac`).
+          // The client's autoSaveMessages will write a parallel row with the AI-generated id;
+          // pollForFilledGreeting on subsequent mounts finds the filled placeholder via
+          // (session_id, step_id, participant_id, role='assistant', content > 0), so the
+          // dual-row state is benign. loadMessages dedup handles UI display.
           try {
-            await fillGreetingPlaceholder(greetingClaim.placeholderRowId, assistantContent, assistantMessageId);
+            await fillGreetingPlaceholder(
+              greetingClaim.placeholderRowId,
+              assistantContent,
+              greetingClaim.messageId,
+            );
           } catch (err) {
             console.error('[greeting-singleton] fill failed; falling back to saveMessages', err);
             await saveMessages(sessionId, stepId, responseMessages, participantId);
