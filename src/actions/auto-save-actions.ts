@@ -63,7 +63,10 @@ export async function autoSaveMessages(
           participantId: participantId || null,
         };
       })
-      .filter((row) => row.content.trim().length > 0);
+      .filter((row) => row.content.trim().length > 0)
+      .filter((row) => row.messageId.length > 0);
+
+    if (rows.length === 0) return;
 
     await db.insert(chatMessages).values(rows).onConflictDoNothing();
   } catch (error) {
