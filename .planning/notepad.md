@@ -27,9 +27,9 @@ Change the pricing to be:
 
  investigate which changes need to be made to the gating of the website so that if someone starts as a solo and they haven't paid for the team workshop, we have a paywall that. 
 
-Finish the screens for the lobby and the setup workshop. 
+~~Finish the screens for the lobby and the setup workshop. ~~
 
-Color of sticky notes more vibrant. 
+~~Color of sticky notes more vibrant.~~
 
 Add 30" video instructions
 
@@ -59,3 +59,9 @@ Add 30" video instructions
 ## Validate
 
 Grow the stickies when the text is larger than the sticky note size.
+
+
+
+
+
+❯ yes run db 
