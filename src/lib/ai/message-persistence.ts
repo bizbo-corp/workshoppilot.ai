@@ -185,15 +185,25 @@ export async function fillGreetingPlaceholder(
 
 /**
  * Race loser polls for the placeholder row to be filled (content non-empty).
- * Default budget: 3000ms total, 100ms intervals. Returns filled row or null on timeout.
- * On null, caller should fall through to fresh-generation path.
+ * Default budget: 30000ms total, 250ms intervals. Returns filled row or null on timeout.
+ * On null, caller should run `deleteEmptyGreetingPlaceholder` then fall through to
+ * fresh-generation, otherwise a slow-but-eventually-successful prefetch will fill the
+ * placeholder AFTER the loser's fresh-gen finishes, producing a duplicate assistant row.
+ *
+ * Why 30s (vs the original 3s):
+ * - The prefetch path (lib/ai/prefetch-greeting.ts) calls `generateText` which can take
+ *   5-15s for a typical stakeholder-mapping greeting. With a 3s budget the loser
+ *   reliably timed out (observed: ses_fcrjnajdicsoc1jvg53ikgo7 produced two rows
+ *   1.94s apart, the second from the fall-through fresh-gen).
+ * - The route has maxDuration=60, so 30s is half the request budget — leaves room for
+ *   the fall-through fresh-gen if the prefetch genuinely died.
  */
 export async function pollForFilledGreeting(
   sessionId: string,
   stepId: string,
   participantId: string | null | undefined,
-  budgetMs: number = 3000,
-  intervalMs: number = 100,
+  budgetMs: number = 30000,
+  intervalMs: number = 250,
 ): Promise<StoredAssistantMessage | null> {
   const deadline = Date.now() + budgetMs;
   while (Date.now() < deadline) {
@@ -211,6 +221,40 @@ export async function pollForFilledGreeting(
     await new Promise((res) => setTimeout(res, intervalMs));
   }
   return null;
+}
+
+/**
+ * Atomically delete any empty assistant placeholder rows in this scope. Called by the
+ * /api/chat fall-through path after `pollForFilledGreeting` times out — without this,
+ * a slow prefetch can fill the placeholder AFTER the client's fresh-gen has already
+ * written its own row, producing duplicate assistant messages with different message_ids
+ * (different ids = the chat_messages unique constraint doesn't drop the second insert).
+ *
+ * WHERE content='' is atomic on a single row in Postgres, so the delete races safely:
+ * - If the placeholder is still empty when delete fires → deleted → prefetch's later
+ *   `fillGreetingPlaceholder` UPDATE matches 0 rows. No duplicate.
+ * - If the prefetch filled the placeholder between our last poll check and our delete
+ *   → content non-empty → delete matches 0 rows. Caller should re-poll once more before
+ *   falling through to fresh-gen; if a filled row appears, replay it instead.
+ *
+ * Returns the count of rows deleted (0 or 1 in practice).
+ */
+export async function deleteEmptyGreetingPlaceholder(
+  sessionId: string,
+  stepId: string,
+  participantId?: string | null,
+): Promise<number> {
+  const deleted = await db
+    .delete(chatMessages)
+    .where(and(
+      eq(chatMessages.sessionId, sessionId),
+      eq(chatMessages.stepId, stepId),
+      eq(chatMessages.role, 'assistant'),
+      eq(chatMessages.content, ''),
+      participantFilter(participantId),
+    ))
+    .returning({ id: chatMessages.id });
+  return deleted.length;
 }
 
 /**

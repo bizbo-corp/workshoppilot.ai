@@ -1,7 +1,7 @@
 import { convertToModelMessages, smoothStream, createUIMessageStream, createUIMessageStreamResponse } from 'ai';
 import { auth } from '@clerk/nextjs/server';
 import { chatModel, buildStepSystemPrompt } from '@/lib/ai/chat-config';
-import { saveMessages, claimGreetingPlaceholder, fillGreetingPlaceholder, pollForFilledGreeting } from '@/lib/ai/message-persistence';
+import { saveMessages, claimGreetingPlaceholder, fillGreetingPlaceholder, pollForFilledGreeting, deleteEmptyGreetingPlaceholder } from '@/lib/ai/message-persistence';
 import { assembleStepContext } from '@/lib/context/assemble-context';
 import { getStepById, STEPS } from '@/lib/workshop/step-metadata';
 import { db } from '@/db/client';
@@ -105,8 +105,11 @@ export async function POST(req: Request) {
       greetingClaim = await claimGreetingPlaceholder(sessionId, stepId, participantId);
 
       if (!greetingClaim.won) {
-        // Lost the race. Poll briefly for the winner to fill the placeholder.
-        const filled = await pollForFilledGreeting(sessionId, stepId, participantId, 3000, 100);
+        // Lost the race. Poll for the winner to fill the placeholder. Default 30s budget
+        // catches typical prefetch (5-15s) and slow Gemini cases; on timeout we run the
+        // empty-placeholder cleanup before falling through to fresh-gen to prevent the
+        // race where prefetch fills AFTER fresh-gen has already saved a row of its own.
+        const filled = await pollForFilledGreeting(sessionId, stepId, participantId);
         if (filled) {
           const textId = `${filled.messageId}-text`;
           const stream = createUIMessageStream({
@@ -141,7 +144,48 @@ export async function POST(req: Request) {
           }
           return createUIMessageStreamResponse({ stream });
         }
-        // Polling timed out — fall through to fresh-gen path. The unique index still prevents duplicates.
+        // Polling timed out. Atomically delete the empty placeholder so a slow-but-alive
+        // prefetch's later `fillGreetingPlaceholder` UPDATE matches 0 rows — without this
+        // step, fresh-gen would persist its own row AND the prefetch would persist its
+        // (now-filled) row, with different message_ids → unique constraint can't help,
+        // user sees two greetings (observed: ses_fcrjnajdicsoc1jvg53ikgo7).
+        await deleteEmptyGreetingPlaceholder(sessionId, stepId, participantId);
+        // Re-poll briefly in case the prefetch filled the placeholder in the window
+        // between our last poll check and the atomic delete (DELETE WHERE content=''
+        // would have matched 0 rows in that race — content is now non-empty).
+        const lateFilled = await pollForFilledGreeting(sessionId, stepId, participantId, 500, 50);
+        if (lateFilled) {
+          const textId = `${lateFilled.messageId}-text`;
+          const stream = createUIMessageStream({
+            execute: ({ writer }) => {
+              writer.write({ type: 'start', messageId: lateFilled.messageId });
+              writer.write({ type: 'start-step' });
+              writer.write({ type: 'text-start', id: textId });
+              writer.write({ type: 'text-delta', id: textId, delta: lateFilled.content });
+              writer.write({ type: 'text-end', id: textId });
+              writer.write({ type: 'finish-step' });
+              writer.write({ type: 'finish' });
+            },
+          });
+          try {
+            await db.insert(chatRequestLogs).values({
+              sessionId,
+              stepId,
+              participantId: participantId ?? null,
+              workshopId,
+              requestId: crypto.randomUUID(),
+              systemPromptSha: '',
+              systemPrompt: '',
+              modelMessagesJson: messages,
+              responseMessageId: lateFilled.messageId,
+              isReplay: true,
+            });
+          } catch (err) {
+            console.error('[chat-request-log] late-replay insert failed', err);
+          }
+          return createUIMessageStreamResponse({ stream });
+        }
+        // Confirmed: no live placeholder and no filled content. Proceed to fresh-gen.
         greetingClaim = null;
       }
     }

@@ -11,6 +11,8 @@ import { PAYWALL_CUTOFF_DATE } from '@/lib/billing/paywall-config';
 import { createPrefixedId } from '@/lib/ids';
 import { STEPS, getStepById } from '@/lib/workshop/step-metadata';
 import { generateStepSummary } from '@/lib/context/generate-summary';
+import { prefetchStepStartGreeting } from '@/lib/ai/prefetch-greeting';
+import { after } from 'next/server';
 import { getNextWorkshopColor, WORKSHOP_COLORS } from '@/lib/workshop/workshop-appearance';
 import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
 import { deleteBlobUrls } from '@/lib/blob/delete-blob-urls';
@@ -622,6 +624,33 @@ export async function advanceToNextStep(
     }
 
     nextStepOrder = nextStep.order;
+
+    // Eagerly pregenerate the facilitator's greeting for the step we're advancing into,
+    // mirroring advanceFromStepOne's prefetch for the step 1→2 boundary. Without this,
+    // every "Next" transition relies entirely on the client's auto-start hitting
+    // /api/chat after page load — and if /api/chat fails (observed at user-research
+    // for ses_u9yw80ayadx3sjnj7dy3tubh: trigger persisted by useAutoSave but no
+    // chat_request_logs row, no placeholder), the chat appears permanently empty.
+    // With the prefetch, the singleton in /api/chat has a filled placeholder ready
+    // to replay even if the client's request never completes.
+    //
+    // Participants' greetings still rely on their own client auto-start (their
+    // participantId scope is independent and the facilitator can't generate for them).
+    try {
+      after(() =>
+        prefetchStepStartGreeting({
+          workshopId,
+          sessionId,
+          stepId: nextStepId,
+          participantId: null,
+        }),
+      );
+    } catch (err) {
+      console.error(
+        `[advanceToNextStep] failed to schedule greeting prefetch for ${nextStepId}:`,
+        err,
+      );
+    }
   } catch (error) {
     console.error('Failed to advance to next step:', error);
     throw error;
