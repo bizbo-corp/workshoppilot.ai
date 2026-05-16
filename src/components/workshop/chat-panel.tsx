@@ -186,6 +186,20 @@ function parseInterviewMode(content: string): {
  * Gemini sometimes leaks internal markers (`tool_code`, `artifact`, etc.)
  * that are not part of our markup format.
  */
+// Valid markup tags use UPPERCASE_WITH_UNDERSCORES (optionally prefixed with `/`
+// for closers). Anything else inside [...] in prose is a descriptive
+// placeholder leaked from a prompt example. df_mr5rudfx0fbz9h18f44558v6.
+const KNOWN_MARKUP_TAG_RE = /^\/?[A-Z][A-Z0-9_]*(\s|:|$)/;
+
+function isPlaceholderText(text: string): boolean {
+  const t = text.trim();
+  if (t.length === 0) return true;
+  if (/<<[^<>]+>>/.test(t)) return true;
+  if (/^\[[^\[\]]+\]$/.test(t) && !KNOWN_MARKUP_TAG_RE.test(t.slice(1, -1).trim()))
+    return true;
+  return false;
+}
+
 function stripLeakedTags(content: string): { cleanContent: string } {
   const cleanContent = content
     // [artifact ...] or [/artifact] tags
@@ -195,6 +209,12 @@ function stripLeakedTags(content: string): { cleanContent: string } {
     .replace(/`tool_code`/gi, "")
     // ```tool_code fenced blocks
     .replace(/```tool_code[\s\S]*?```/gi, "")
+    // <<angle-bracket placeholders>> leaked from prompt examples
+    .replace(/<<[^<>\n]{1,300}>>/g, "")
+    // [Descriptive square-bracket placeholders] that aren't markup tags
+    .replace(/\[([^\[\]\n]{1,300})\]/g, (full, inner: string) =>
+      KNOWN_MARKUP_TAG_RE.test(inner.trim()) ? full : "",
+    )
     .trim();
   return { cleanContent };
 }
@@ -332,6 +352,7 @@ function parseCanvasItems(content: string): {
     const attrString = match[2] || "";
     const text = match[3].trim();
     if (text.length === 0) continue;
+    if (isPlaceholderText(text)) continue;
 
     // Parse attributes like quadrant="value" row="value" col="value"
     const attrs: Record<string, string> = {};
@@ -418,7 +439,7 @@ function parseCanvasItems(content: string): {
     }
 
     const text = remaining.trim();
-    if (text.length > 0) {
+    if (text.length > 0 && !isPlaceholderText(text)) {
       items.push({
         text,
         quadrant,

@@ -279,8 +279,8 @@ export async function POST(req: Request) {
 The user's most recent message asks you to use the board content. The CANVAS STATE section above contains a "Filled by user" block with real, current content. Earlier in this conversation you may have said the board was empty — that was before these cards were filled, so it no longer applies. Ignore those earlier statements.
 
 Do this NOW:
-1. Synthesize a "How might we…" challenge statement from the Idea, Problem, and Audience cards in the "Filled by user" block.
-2. Emit it as: [CANVAS_ITEM key="challenge-statement"]How might we…?[/CANVAS_ITEM]
+1. Synthesize a complete "How might we…" challenge statement from the Idea, Problem, and Audience cards in the "Filled by user" block. The sentence must be fully written — not the literal placeholder.
+2. Emit it as: [CANVAS_ITEM key="challenge-statement"]<your full HMW question — e.g. "How might we help first-time managers give honest feedback without damaging trust?">[/CANVAS_ITEM]. NEVER emit the bare string "How might we…?" or "How might we...?" — the payload must always contain real, content-bearing words.
 3. Briefly explain the synthesis in 1-2 sentences.
 
 Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The cards are real and visible to you above.`;

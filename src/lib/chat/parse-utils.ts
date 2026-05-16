@@ -61,14 +61,38 @@ export function detectPersonaIntro(content: string): { personaName: string } | n
   return match ? { personaName: match[1] } : null;
 }
 
+// Valid markup tags use UPPERCASE_WITH_UNDERSCORES (optionally prefixed with `/`
+// for closers) followed by whitespace, a colon, or the closing bracket.
+// Anything else inside [...] in prose is a descriptive placeholder leaked from
+// a prompt example (e.g. "[In-character answer to the 4th question]",
+// "[Persona Name]", "[First Name]"). df_mr5rudfx0fbz9h18f44558v6.
+const KNOWN_MARKUP_TAG_RE = /^\/?[A-Z][A-Z0-9_]*(\s|:|$)/;
+
 export function stripLeakedTags(content: string): { cleanContent: string } {
   const cleanContent = content
     .replace(/\s*\[artifact[^\]]*\]\s*/gi, " ")
     .replace(/\s*\[\/artifact\]\s*/gi, " ")
     .replace(/`tool_code`/gi, "")
     .replace(/```tool_code[\s\S]*?```/gi, "")
+    // Drop angle-bracket placeholders (<<like this>>) that occasionally leak.
+    .replace(/<<[^<>\n]{1,300}>>/g, "")
+    // Drop descriptive square-bracket placeholders that aren't markup tags.
+    .replace(/\[([^\[\]\n]{1,300})\]/g, (full, inner: string) =>
+      KNOWN_MARKUP_TAG_RE.test(inner.trim()) ? full : "",
+    )
     .trim();
   return { cleanContent };
+}
+
+/** True if a string looks like an unfilled placeholder rather than real content. */
+export function isPlaceholderText(text: string): boolean {
+  const t = text.trim();
+  if (t.length === 0) return true;
+  if (/<<[^<>]+>>/.test(t)) return true;
+  // A bracketed descriptive phrase as the entire payload.
+  if (/^\[[^\[\]]+\]$/.test(t) && !KNOWN_MARKUP_TAG_RE.test(t.slice(1, -1).trim()))
+    return true;
+  return false;
 }
 
 /**
@@ -195,6 +219,7 @@ export function parseCanvasItems(content: string): {
       attrs[attrMatch[1]] = attrMatch[2];
     }
 
+    if (isPlaceholderText(text)) continue;
     items.push({
       text,
       quadrant: attrs.quadrant,
@@ -258,7 +283,7 @@ export function parseCanvasItems(content: string): {
     }
 
     const text = remaining.trim();
-    if (text.length > 0) {
+    if (text.length > 0 && !isPlaceholderText(text)) {
       items.push({ text, quadrant, ring, category, cluster, color, templateKey });
     }
   }

@@ -397,13 +397,20 @@ export function StepContainer({
   // Without this, filling any input template card (idea/problem/audience) was
   // enough to surface the Accept button — surfacing it before the synthesis
   // exists. df_d3dgmx43wvb48du2pkub1180.
+  //
+  // Additionally reject the literal placeholder string "How might we...?"
+  // — when the AI emits the worked-example placeholder verbatim, the sticky
+  // is technically non-empty but content-free. df_vm1s6g2mmur3uyhu9mscj7qa.
   const challengeStatementFilled =
     step?.id === 'challenge'
-      ? stickyNotes.some(
-          (p) =>
-            p.templateKey === 'challenge-statement' &&
-            p.text.trim().length > 0,
-        )
+      ? stickyNotes.some((p) => {
+          if (p.templateKey !== 'challenge-statement') return false;
+          const text = p.text.trim();
+          if (text.length < 10) return false;
+          // Reject "How might we...?" / "How might we…?" / "How might we?" etc.
+          // The placeholder has no actual content after the prefix.
+          return !/^how might we[\s.…?!]*$/i.test(text);
+        })
       : true;
 
   const showConfirm =
