@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings
-Plan: 01 (DIAG-01 observability foundation)
-Status: Paused at Task 4 checkpoint (human-verify: apply migration + smoke test)
-Last activity: 2026-05-16 — Tasks 1-3 of 62.1-01 complete; awaiting Task 4 operator verification
+Plan: 02 (Plan B — duplicate greeting fix + cross-workshop scope enforcement)
+Status: Ready — plan 01 complete; awaiting plan 02 execution
+Last activity: 2026-05-16 — Plan 01 (DIAG-01 observability foundation) complete; Tasks 1-4 done, migration applied, smoke test approved with known limitation documented
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Last activity: 2026-05-16 — Tasks 1-3 of 62.1-01 complete; awaiting Task 4 ope
 - hoisted let requestId: string | null = null in /api/chat POST handler so Plan B can reuse same binding for won-greeting fresh-gen path
 - dialogue_feedback table has no sessionId/participantId columns; admin UI reads these from contextSnapshot instead
 - TTL cleanup for chat_request_logs deferred to follow-up cron job (no vercel.json/cron infra in repo)
+- AI SDK v5 generates assistant message id client-side; response_message_id stays null in onFinish — admin UI unaffected (joins by scope+timestamp); fix path: backfill via autoSaveMessages or streamText messageId override
 - [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: HALL-01: Replace 'recover the closest version' license with ABSENCE PROTOCOL hard stop in stakeholder-mapping prompt — model must output single refusal line when prior context is missing
 - [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: Sentinel string injected at context layer (assembleStepContext) when deps are non-empty but DB returns 0 rows — defense in depth independent of prompt layer
 
@@ -71,5 +72,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-05-16
-Stopped at: Phase 62.1 Plan 01 Task 4 checkpoint (human-verify: apply migration + smoke test)
-Resume file: None — continuation agent will be spawned after human approval
+Stopped at: Completed Phase 62.1 Plan 01 (DIAG-01 observability foundation) — ready for Plan 02
+Resume file: None
