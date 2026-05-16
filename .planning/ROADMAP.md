@@ -174,7 +174,13 @@ See `milestones/v1.9-ROADMAP.md` for full details.
 - [x] Phase 61: Multiplayer Voting (2/2 plans) — completed 2026-03-01
 - [x] Phase 62: Mobile Gate (1/1 plan) — completed 2026-03-01
 - [x] Phase 62.1: Fix Cross-Workshop Dialogue Leak & Duplicate Greetings (INSERTED — hotfix) — completed 2026-05-16
-- [ ] Phase 62.2: AI SDK v5 Message-ID Server-Side Resolution (FOLLOW-UP — not planned)
+- [ ] Phase 62.2: AI SDK v5 Message-ID Server-Side Resolution (FOLLOW-UP — planned, 2/2 plans)
+
+  **Goal:** Eliminate three workarounds rooted in AI SDK v6 client-side message-id behavior by adopting `generateMessageId` on `toUIMessageStreamResponse`. Closes 62.1's "Known Limitations" sections (null `response_message_id`, dual-row greeting state, empty-id filter in `saveMessages`).
+
+  **Plans:** 2 plans
+  - [ ] 62.2-01-PLAN.md — Server-side generateMessageId + remove 3 workarounds (sequential, has human-verify checkpoint)
+  - [ ] 62.2-02-PLAN.md — Runnable verification script + close 62.1 Known Limitations sections
 
 See `milestones/v2.0-ROADMAP.md` for full details.
 
@@ -197,9 +203,9 @@ See `milestones/v2.0-ROADMAP.md` for full details.
 | 54-58. Multiplayer Collaboration | v1.9 | 12/12 | Complete | 2026-02-28 |
 | 59-62. Dot Voting & Mobile Gate | v2.0 | 7/7 | Complete | 2026-03-01 |
 | 62.1 Fix Cross-Workshop Dialogue Leak & Duplicate Greetings | hotfix | 3/3 | Complete | 2026-05-16 |
-| 62.2 AI SDK v5 Message-ID Server-Side Resolution | follow-up | 0/0 | Not Planned | — |
+| 62.2 AI SDK v5 Message-ID Server-Side Resolution | follow-up | 0/2 | Planned | — |
 
 **Total shipped:** 12 milestones, 62 phases, ~155 plans in 22 days
 
 ---
-*Last updated: 2026-05-16 — phase 62.1 complete; 62.2 added as follow-up*
+*Last updated: 2026-05-16 — phase 62.2 planned (2 plans, 2 waves)*
