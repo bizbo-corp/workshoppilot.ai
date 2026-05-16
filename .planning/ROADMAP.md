@@ -174,6 +174,7 @@ See `milestones/v1.9-ROADMAP.md` for full details.
 - [x] Phase 61: Multiplayer Voting (2/2 plans) — completed 2026-03-01
 - [x] Phase 62: Mobile Gate (1/1 plan) — completed 2026-03-01
 - [x] Phase 62.1: Fix Cross-Workshop Dialogue Leak & Duplicate Greetings (INSERTED — hotfix) — completed 2026-05-16
+- [ ] Phase 62.2: AI SDK v5 Message-ID Server-Side Resolution (FOLLOW-UP — not planned)
 
 See `milestones/v2.0-ROADMAP.md` for full details.
 
@@ -196,8 +197,9 @@ See `milestones/v2.0-ROADMAP.md` for full details.
 | 54-58. Multiplayer Collaboration | v1.9 | 12/12 | Complete | 2026-02-28 |
 | 59-62. Dot Voting & Mobile Gate | v2.0 | 7/7 | Complete | 2026-03-01 |
 | 62.1 Fix Cross-Workshop Dialogue Leak & Duplicate Greetings | hotfix | 3/3 | Complete | 2026-05-16 |
+| 62.2 AI SDK v5 Message-ID Server-Side Resolution | follow-up | 0/0 | Not Planned | — |
 
 **Total shipped:** 12 milestones, 62 phases, ~155 plans in 22 days
 
 ---
-*Last updated: 2026-03-01 — v2.0 milestone complete*
+*Last updated: 2026-05-16 — phase 62.1 complete; 62.2 added as follow-up*

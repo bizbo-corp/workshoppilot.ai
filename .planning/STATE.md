@@ -64,6 +64,10 @@ Last activity: 2026-05-16 — Plan 02 (GREET-01 + SCOPE-01) complete; migration 
   - [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: fillGreetingPlaceholder uses greetingClaim.messageId (deterministic placeholder id) not assistantMessageId — AI SDK v5 returns empty string from onFinish server-side
   - [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: GREET-01 + SCOPE-01 complete — DB-lock greeting singleton, 409/404 scope assertion, stop() cleanup, composite key, migration 0024 all shipped
 
+### Roadmap Evolution
+
+- Phase 62.2 added: AI SDK v5 Message-ID Server-Side Resolution (follow-up to 62.1; eliminates three workarounds rooted in AI SDK v5 server-side empty-id behavior — see .planning/phases/62.2-ai-sdk-v5-message-id-resolution/62.2-CONTEXT.md)
+
 ### Pending Todos
 
 None.
