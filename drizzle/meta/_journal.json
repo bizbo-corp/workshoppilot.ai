@@ -169,6 +169,13 @@
       "when": 1778883764537,
       "tag": "0023_chat_request_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1778891483262,
+      "tag": "0024_chat_messages_nonempty_check",
+      "breakpoints": true
     }
   ]
 }

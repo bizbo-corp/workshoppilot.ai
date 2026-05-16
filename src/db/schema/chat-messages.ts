@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, index, uniqueIndex, check } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { createPrefixedId } from '@/lib/ids';
 import { sessions } from './sessions';
 
@@ -45,6 +46,10 @@ export const chatMessages = pgTable(
       table.stepId,
       table.participantId,
       table.messageId
+    ),
+    messageIdNonempty: check(
+      'chat_messages_message_id_nonempty_chk',
+      sql`length(${table.messageId}) > 0`
     ),
   })
 );
