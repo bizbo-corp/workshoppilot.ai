@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 62.1 — Hotfix: cross-workshop dialogue leak + duplicate greetings
+**Current focus:** Phase 62.2 — AI SDK v5 Message-ID Server-Side Resolution
 
 ## Current Position
 
-Phase: 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings
-Plan: 03 (all 3 plans complete — phase ready for final verification)
-Status: Phase complete — all plans done (DIAG-01 observability, GREET-01+SCOPE-01 duplicate greeting + scope enforcement, Plan C hallucination hardening)
-Last activity: 2026-05-16 — Plan 02 (GREET-01 + SCOPE-01) complete; migration 0024 applied, regression fix 2489368 landed, all 7 tasks done
+Phase: 62.2-ai-sdk-v5-message-id-resolution
+Plan: 02 (Plan 01 complete — server-side message-id resolved; Plan 02 next)
+Status: In progress — Plan 01 (generateMessageId wiring + empty-id filter removal) verified and committed; Plan 02 (remove Known Limitations from 62.1 SUMMARYs) is next
+Last activity: 2026-05-16 — Plan 01 complete; all 6 ACs verified via live DB assertions; three 62.1 workarounds eliminated
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Last activity: 2026-05-16 — Plan 02 (GREET-01 + SCOPE-01) complete; migration 
   - [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: Skip abortSignal for __step_start__ (greeting) requests — placeholder already inserted, stream must complete server-side to fill it; consumeStream() added alongside
   - [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: fillGreetingPlaceholder uses greetingClaim.messageId (deterministic placeholder id) not assistantMessageId — AI SDK v5 returns empty string from onFinish server-side
   - [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: GREET-01 + SCOPE-01 complete — DB-lock greeting singleton, 409/404 scope assertion, stop() cleanup, composite key, migration 0024 all shipped
+  - [Phase 62.2 Plan 01 complete]: Server-side message-id resolved via AI SDK v6 generateMessageId — three 62.1 workarounds removed (empty-id filter, post-stream backfill, deterministic placeholder as canonical id); chat_request_logs.response_message_id now populated at insert time; all 6 ACs verified
 
 ### Roadmap Evolution
 
@@ -79,5 +80,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-05-16
-Stopped at: Completed Phase 62.1 Plan 02 (GREET-01 + SCOPE-01 — duplicate greeting fix + scope assertion) — all 3 plans complete; phase ready for final verification
+Stopped at: Completed Phase 62.2 Plan 01 (server-side message-id resolution — generateMessageId wiring, empty-id filter removal, verification approved) — Plan 02 next
 Resume file: None
