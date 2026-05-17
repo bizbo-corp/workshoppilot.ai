@@ -990,14 +990,20 @@ export function ChatPanel({
     },
   });
 
-  // Abort any in-flight /api/chat request when scope changes or component unmounts.
-  // Without this, the previous transport's POST runs to completion, onFinish fires
-  // server-side, and the row writes against the OLD scope into the NEW scope's
-  // chat_messages — the cross-workshop leak vector.
+  // Abort any in-flight /api/chat request when scope ACTUALLY changes. We can't use
+  // useEffect cleanup directly because React 19 Strict Mode dev fires a spurious
+  // mount/unmount cycle which would abort the very first auto-start trigger before
+  // it reaches the server — matching the bug where /api/chat never gets hit. Instead
+  // track the scope manually and only stop when it changes mid-component-life.
+  // Cross-scope leaks are still prevented server-side by the scope-assertion check
+  // at /api/chat route.ts:62-85 (404/409 on session/workshop mismatch).
+  const prevScopeRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    return () => {
+    const scope = `${sessionId}:${step.id}:${workshopId}`;
+    if (prevScopeRef.current !== null && prevScopeRef.current !== scope) {
       stop();
-    };
+    }
+    prevScopeRef.current = scope;
   }, [sessionId, step.id, workshopId, stop]);
 
   const isLoading = status === "streaming" || status === "submitted";
