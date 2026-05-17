@@ -1008,11 +1008,6 @@ export function ChatPanel({
 
   const isLoading = status === "streaming" || status === "submitted";
 
-  // Diagnostic: log every status transition so we can see if request hangs in "submitted"
-  React.useEffect(() => {
-    console.log(`[greeting-lifecycle] client(facilitator):status-change scope=(${sessionId},${step.id},NULL) status=${status} msgCount=${messages.length}`);
-  }, [status, sessionId, step.id, messages.length]);
-
   // Stream-empty recovery: the AI SDK v6 sometimes completes the request (status →
   // ready) without delivering the assistant message into client state, even though
   // the server-side onFinish fired and persisted the row. When this happens we pull
@@ -2214,26 +2209,21 @@ export function ChatPanel({
         ),
     );
 
-    const conditions = {
-      shouldAutoStart,
-      messagesEmpty: messages.length === 0,
-      noAssistant: !hasAssistantMessage,
-      noStaleTrigger: !alreadyHasStepStartTrigger,
-      statusReady: status === "ready",
-      notYetStarted: !hasAutoStarted.current,
-      notReadOnly: !isReadOnly,
-      notSkipped: !skipAutoStart,
-      conceptOk: step.id !== "concept" || !isMultiplayer || conceptActivityStarted,
-    };
-    const allOk = Object.values(conditions).every(Boolean);
-    console.log(`[greeting-lifecycle] client(facilitator):auto-start-check scope=(${sessionId},${step.id},NULL) fire=${allOk}`, conditions);
-    if (allOk) {
+    if (
+      shouldAutoStart &&
+      messages.length === 0 &&
+      !hasAssistantMessage &&
+      !alreadyHasStepStartTrigger &&
+      status === "ready" &&
+      !hasAutoStarted.current &&
+      !isReadOnly &&
+      !skipAutoStart &&
+      (step.id !== "concept" || !isMultiplayer || conceptActivityStarted)
+    ) {
       hasAutoStarted.current = true;
       onAutoStarted?.();
-      const triggerId = `step-start:${sessionId}:${step.id}:fac`;
-      console.log(`[greeting-lifecycle] client(facilitator):send-trigger id=${triggerId}`);
       sendMessage({
-        id: triggerId,
+        id: `step-start:${sessionId}:${step.id}:fac`,
         role: "user",
         parts: [{ type: "text", text: "__step_start__" }],
       });

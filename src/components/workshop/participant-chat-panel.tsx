@@ -234,34 +234,24 @@ export function ParticipantChatPanel({
         ),
     );
     const hasAssistantMessage = messages.some((m) => m.role === "assistant");
-    const conditions = {
-      initialEmpty: !initialMessages || initialMessages.length === 0,
-      messagesEmpty: messages.length === 0,
-      noAssistant: !hasAssistantMessage,
-      noStaleTrigger: !alreadyHasStepStartTrigger,
-      statusReady: status === "ready",
-      notYetStarted: !hasAutoStarted.current,
-      conceptOk: stepId !== "concept" || conceptActivityStarted,
-    };
-    const allOk = Object.values(conditions).every(Boolean);
-    console.log(`[greeting-lifecycle] client(participant):auto-start-check scope=(${sessionId},${stepId},${participantId}) fire=${allOk}`, conditions);
-    if (allOk) {
+    if (
+      (!initialMessages || initialMessages.length === 0) &&
+      messages.length === 0 &&
+      !hasAssistantMessage &&
+      !alreadyHasStepStartTrigger &&
+      status === "ready" &&
+      !hasAutoStarted.current &&
+      (stepId !== "concept" || conceptActivityStarted)
+    ) {
       hasAutoStarted.current = true;
       setQuickAck(getRandomAck());
-      const triggerId = `step-start:${sessionId}:${stepId}:${participantId}`;
-      console.log(`[greeting-lifecycle] client(participant):send-trigger id=${triggerId}`);
       sendMessage({
-        id: triggerId,
+        id: `step-start:${sessionId}:${stepId}:${participantId}`,
         role: "user",
         parts: [{ type: "text", text: "__step_start__" }],
       });
     }
   }, [initialMessages, messages, messages.length, status, sendMessage, sessionId, stepId, participantId, conceptActivityStarted]);
-
-  // Diagnostic: log every status transition so we can see if request hangs in "submitted"
-  React.useEffect(() => {
-    console.log(`[greeting-lifecycle] client(participant):status-change scope=(${sessionId},${stepId},${participantId}) status=${status} msgCount=${messages.length}`);
-  }, [status, sessionId, stepId, participantId, messages.length]);
 
   // Stream-empty recovery: the AI SDK v6 sometimes completes the request (status →
   // ready) without delivering the assistant message into client state, even though
