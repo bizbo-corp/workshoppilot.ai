@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { useAutoSave } from "@/hooks/use-auto-save";
+import { refetchStepMessages } from "@/actions/auto-save-actions";
 import {
   useCanvasStore,
   useCanvasStoreApi,
@@ -257,6 +258,41 @@ export function ParticipantChatPanel({
   React.useEffect(() => {
     console.log(`[greeting-lifecycle] client(participant):status-change scope=(${sessionId},${stepId},${participantId}) status=${status} msgCount=${messages.length}`);
   }, [status, sessionId, stepId, participantId, messages.length]);
+
+  // Stream-empty recovery: the AI SDK v6 sometimes completes the request (status →
+  // ready) without delivering the assistant message into client state, even though
+  // the server-side onFinish fired and persisted the row. When this happens we pull
+  // the just-persisted greeting from the DB and inject it directly into useChat's
+  // state. Same effect as a full page reload, no UI flash.
+  const prevStatusRef = React.useRef(status);
+  React.useEffect(() => {
+    const wasWaiting = prevStatusRef.current === "submitted" || prevStatusRef.current === "streaming";
+    const nowReady = status === "ready";
+    prevStatusRef.current = status;
+    if (!wasWaiting || !nowReady) return;
+    const hasAssistantContent = messages.some(
+      (m) => m.role === "assistant" && m.parts?.some((p) => p.type === "text" && p.text.length > 0)
+    );
+    if (hasAssistantContent) return;
+    console.log(`[greeting-lifecycle] client(participant):stream-empty-recovery scope=(${sessionId},${stepId},${participantId})`);
+    // Small delay so any in-flight chunk has a chance to land before we replace state.
+    const t = setTimeout(async () => {
+      try {
+        const fresh = await refetchStepMessages(sessionId, stepId, participantId);
+        const hasContent = fresh.some((m) => m.role === "assistant" && m.parts?.some((p) => p.type === "text" && (p as { text?: string }).text && (p as { text?: string }).text!.length > 0));
+        if (hasContent) {
+          console.log(`[greeting-lifecycle] client(participant):refetch-success count=${fresh.length}`);
+          setMessages(fresh);
+          setQuickAck(null);
+        } else {
+          console.log(`[greeting-lifecycle] client(participant):refetch-empty — no DB content yet`);
+        }
+      } catch (err) {
+        console.error(`[greeting-lifecycle] client(participant):refetch-failed`, err);
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [status, messages, sessionId, stepId, participantId, setMessages]);
 
   // Stuck-state recovery: if status stays in submitted/streaming >45s with no assistant
   // chunks arriving, surface a retry banner. 45s sits between Gemini worst case (~15s)

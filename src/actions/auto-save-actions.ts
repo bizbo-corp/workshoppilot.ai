@@ -4,6 +4,7 @@ import { db } from '@/db/client';
 import { chatMessages } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import type { UIMessage } from 'ai';
+import { loadMessages } from '@/lib/ai/message-persistence';
 
 /**
  * Auto-save messages to database for a given session and step
@@ -73,4 +74,21 @@ export async function autoSaveMessages(
     // Auto-save failures should be silent to avoid disrupting user experience
     console.error('Auto-save failed:', error);
   }
+}
+
+/**
+ * Refetch persisted messages for a scope. Called by the client as a recovery path
+ * when the AI SDK stream completes without delivering the assistant message to
+ * client state (server logs show onFinish:filled-placeholder with content, but
+ * `useChat`'s messages array never gets the assistant row). The greeting IS in
+ * the DB at this point — this lets the client pull it without a full page reload.
+ *
+ * Returns the same shape `loadMessages` returns, deduped + empty-filtered.
+ */
+export async function refetchStepMessages(
+  sessionId: string,
+  stepId: string,
+  participantId?: string | null,
+): Promise<UIMessage[]> {
+  return loadMessages(sessionId, stepId, participantId);
 }
