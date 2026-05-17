@@ -1258,11 +1258,55 @@ export function ChatPanel({
     }
   }, [messages, step.id, status, personasDone, personaTemplates]);
 
-  // Initialize addedMessageIds from history — mark ALL historical assistant messages as processed
-  // when canvas already has sticky notes (restored from DB). The saved canvas state is the source
-  // of truth — we must NOT re-process historical [CANVAS_ITEM], [CLUSTER], or [THEME_SORT]
-  // markers, as that would overwrite user-arranged positions with recalculated layouts.
+  // Initialize addedMessageIds from history — mark historical assistant messages
+  // containing canvas-modifying markup as already processed so they don't re-fire
+  // and clobber the saved layout.
+  //
+  // Two passes with different gating:
+  //
+  // Pass A — `[THEME_SORT]`: ALWAYS mark on mount, regardless of canvas state.
+  // THEME_SORT is purely a layout snap (computeThemeSortPositions overrides every
+  // sticky's position based on cellAssignment). For a multiplayer participant the
+  // canvas is briefly empty while Liveblocks Storage hydrates; if we gated this
+  // pass on canvas-has-content, the auto-process effect could fire THEME_SORT on
+  // an old assistant message before Storage finished loading, snapping the freshly
+  // hydrated stickies into ring slots and destroying manual clusters.
+  //
+  // Pass B — other content-creating markers (`[CANVAS_ITEM]`, `[CLUSTER]`, persona
+  // plans, journey stages, HMW cards, concept cards): gated on canvas-has-content
+  // so a truly empty canvas can still re-create its initial seed items from chat
+  // history (the existing "restore from chat" path).
+  const hasInitializedThemeSortIds = React.useRef(false);
   const hasInitializedAddedIds = React.useRef(false);
+
+  // Pass A: theme-sort init (always runs once per mount)
+  React.useEffect(() => {
+    if (hasInitializedThemeSortIds.current || !isCanvasStep || messages.length === 0) return;
+    hasInitializedThemeSortIds.current = true;
+
+    const themeSortIds = new Set<string>();
+    let hadHistoricalSort = false;
+    for (const msg of messages) {
+      if (msg.role !== "assistant") continue;
+      const textParts = msg.parts?.filter((p) => p.type === "text") || [];
+      const content = textParts.map((p) => p.text).join("\n");
+      const { shouldSort } = parseThemeSortTrigger(content);
+      if (shouldSort) {
+        themeSortIds.add(msg.id);
+        hadHistoricalSort = true;
+      }
+    }
+    if (hadHistoricalSort) setHasThemeSorted(true);
+    if (themeSortIds.size > 0) {
+      setAddedMessageIds((prev) => {
+        const merged = new Set(prev);
+        themeSortIds.forEach((id) => merged.add(id));
+        return merged;
+      });
+    }
+  }, [messages, isCanvasStep]);
+
+  // Pass B: other content-creating markers (gated on canvas-has-content)
   React.useEffect(() => {
     if (
       hasInitializedAddedIds.current ||
@@ -1277,14 +1321,12 @@ export function ChatPanel({
     hasInitializedAddedIds.current = true;
 
     const ids = new Set<string>();
-    let hadHistoricalSort = false;
     for (const msg of messages) {
       if (msg.role !== "assistant") continue;
       const textParts = msg.parts?.filter((p) => p.type === "text") || [];
       const content = textParts.map((p) => p.text).join("\n");
       const { canvasItems } = parseCanvasItems(content);
       const { clusters } = parseClusterSuggestions(content);
-      const { shouldSort } = parseThemeSortTrigger(content);
       const { deleteTexts } = parseCanvasDeletes(content);
       const { templates: personaTemplateParsed } =
         parsePersonaTemplates(content);
@@ -1293,12 +1335,10 @@ export function ChatPanel({
       const { cards: hmwCardParsed } = parseHmwCards(content);
       const { nodes: mindMapNodesParsed } = parseMindMapNodes(content);
       const { cards: conceptCardParsed } = parseConceptCards(content);
-      if (shouldSort) hadHistoricalSort = true;
       // Mark any message that contains canvas-modifying markup as already processed
       if (
         canvasItems.length > 0 ||
         clusters.length > 0 ||
-        shouldSort ||
         deleteTexts.length > 0 ||
         personaTemplateParsed.length > 0 ||
         personaPlanParsed.length > 0 ||
@@ -1309,9 +1349,12 @@ export function ChatPanel({
         ids.add(msg.id);
       }
     }
-    if (hadHistoricalSort) setHasThemeSorted(true);
     if (ids.size > 0) {
-      setAddedMessageIds(ids);
+      setAddedMessageIds((prev) => {
+        const merged = new Set(prev);
+        ids.forEach((id) => merged.add(id));
+        return merged;
+      });
     }
     // Pre-populate addedMindMapLabels from existing mind map nodes (level 2+)
     const existingMindMapLabels = new Set<string>();
@@ -1519,6 +1562,15 @@ export function ChatPanel({
     // Without this guard, on the same render cycle where stickyNotes load from DB,
     // this effect could fire before addedMessageIds is populated, causing
     // historical messages to be re-processed and overwriting saved positions.
+    //
+    // Two gates:
+    //   - hasInitializedThemeSortIds: always required — Pass A marks historical
+    //     [THEME_SORT] on every mount regardless of canvas state. Closes the
+    //     multiplayer-participant race where Liveblocks Storage hasn't hydrated
+    //     yet but the last assistant message contains [THEME_SORT].
+    //   - hasInitializedAddedIds: required once canvas already has content
+    //     (existing guard for [CANVAS_ITEM]/[CLUSTER]/persona/journey/hmw/concept).
+    if (!hasInitializedThemeSortIds.current) return;
     if (
       (stickyNotes.length > 0 ||
         personaTemplates.length > 0 ||
