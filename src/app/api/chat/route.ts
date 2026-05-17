@@ -1,3 +1,6 @@
+// The per-step AI greeting trigger is defended by 7 layers — read
+// .planning/codebase/DEFENSIVE_PATTERNS.md before relaxing any guard in this
+// file, in chat-panel.tsx, participant-chat-panel.tsx, or message-persistence.ts.
 import { convertToModelMessages, smoothStream, createUIMessageStream, createUIMessageStreamResponse } from 'ai';
 import { auth } from '@clerk/nextjs/server';
 import { chatModel, buildStepSystemPrompt } from '@/lib/ai/chat-config';

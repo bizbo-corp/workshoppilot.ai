@@ -19,6 +19,7 @@ Living architecture docs, regenerated with `/gsd:map-codebase`. Read the relevan
 - `.planning/codebase/INTEGRATIONS.md` — Clerk / Neon / Liveblocks / Gemini / Stripe wiring
 - `.planning/codebase/CONCERNS.md` — known footguns and tech debt
 - `.planning/codebase/TESTING.md` — test strategy
+- `.planning/codebase/DEFENSIVE_PATTERNS.md` — regression-critical fixes; read before touching the chat greeting flow
 
 Project state docs:
 
