@@ -102,10 +102,7 @@ function StepAdvanceBroadcaster({
   broadcastRef,
 }: {
   broadcastRef: React.MutableRefObject<
-    | ((event:
-        | { type: "STEP_CHANGED"; stepOrder: number; stepName: string }
-        | { type: "STEP_RESET"; stepOrder: number }
-      ) => void)
+    | ((event: { type: "STEP_RESET"; stepOrder: number }) => void)
     | null
   >;
 }) {
@@ -229,25 +226,13 @@ export function StepContainer({
 
   // Broadcast ref — populated by StepAdvanceBroadcaster (only mounted in multiplayer).
   // Allows StepContainer to trigger broadcasts without calling useBroadcastEvent directly
-  // (which would throw outside RoomProvider in solo mode).
+  // (which would throw outside RoomProvider in solo mode). STEP_CHANGED is broadcast
+  // server-side from advanceToNextStep; this ref carries other client-initiated events
+  // like STEP_RESET that have no server-action equivalent.
   const broadcastRef = React.useRef<
-    | ((event:
-        | { type: "STEP_CHANGED"; stepOrder: number; stepName: string }
-        | { type: "STEP_RESET"; stepOrder: number }
-      ) => void)
+    | ((event: { type: "STEP_RESET"; stepOrder: number }) => void)
     | null
   >(null);
-
-  const handleBeforeAdvance = React.useCallback(
-    (nextStepOrder: number, nextStepName: string) => {
-      broadcastRef.current?.({
-        type: "STEP_CHANGED",
-        stepOrder: nextStepOrder,
-        stepName: nextStepName,
-      });
-    },
-    [],
-  );
 
   // Artifact confirmation state
   // For complete steps: pre-set confirmed (artifact was already confirmed)
@@ -1527,7 +1512,6 @@ export function StepContainer({
             isCompletingWorkshop={isCompletingWorkshop}
             workshopCompleted={workshopCompleted}
             canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
-            onBeforeAdvance={handleBeforeAdvance}
             onFlushCanvas={flushCanvasToDb}
             nextDisabledReason={nextDisabledReason}
             nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Next: Invite team' : undefined}
@@ -1830,7 +1814,6 @@ export function StepContainer({
           isCompletingWorkshop={isCompletingWorkshop}
           workshopCompleted={workshopCompleted}
           canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
-          onBeforeAdvance={handleBeforeAdvance}
           onFlushCanvas={flushCanvasToDb}
           nextDisabledReason={nextDisabledReason}
           nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Next: Invite team' : undefined}

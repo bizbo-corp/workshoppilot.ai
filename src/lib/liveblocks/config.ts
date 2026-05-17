@@ -77,6 +77,59 @@ export const PARTICIPANT_COLORS = [
 ] as const;
 
 /**
+ * Dark text/foreground color for each pastel in PARTICIPANT_COLORS.
+ * Same hex values as --sticky-note-{color}-text in src/app/globals.css —
+ * keeps presence UI (cursors, avatars) visually consistent with sticky notes.
+ * Index order MUST mirror PARTICIPANT_COLORS exactly.
+ */
+export const PARTICIPANT_TEXT_COLORS = [
+  '#0a3818', // green   (facilitator)
+  '#5a1438', // pink
+  '#0a1f4a', // blue
+  '#4a2805', // orange
+  '#3d2a00', // yellow
+  '#4a1408', // red
+  '#0a3a35', // teal
+  '#2a1252', // purple
+] as const;
+
+/**
+ * Maps a participant pastel hex to its paired dark text hue.
+ * Falls back to dark green if the input isn't in the palette
+ * (matches the existing `#b3efbd` fallback used in presence consumers).
+ */
+export function getParticipantTextColor(bgColor: string): string {
+  const idx = PARTICIPANT_COLORS.indexOf(bgColor as (typeof PARTICIPANT_COLORS)[number]);
+  return idx >= 0 ? PARTICIPANT_TEXT_COLORS[idx] : '#0a3818';
+}
+
+/**
+ * Deeper / more saturated variant of each pastel — used as the background
+ * for avatars and cursors (badge + pointer) so they read as "the same hue,
+ * but more present" than the soft sticky-note pastels. Same hue family,
+ * lower lightness, higher saturation. Index order mirrors PARTICIPANT_COLORS.
+ */
+export const PARTICIPANT_DEEP_COLORS = [
+  '#73d18b', // green   (facilitator)
+  '#f870c6', // pink
+  '#5db4f9', // blue
+  '#fdb061', // orange
+  '#fbcc3f', // yellow
+  '#f87a6a', // red
+  '#54d6cd', // teal
+  '#b69bf0', // purple
+] as const;
+
+/**
+ * Maps a participant pastel hex to its deeper avatar/cursor variant.
+ * Falls back to the deeper green if the input isn't in the palette.
+ */
+export function getParticipantDeepColor(bgColor: string): string {
+  const idx = PARTICIPANT_COLORS.indexOf(bgColor as (typeof PARTICIPANT_COLORS)[number]);
+  return idx >= 0 ? PARTICIPANT_DEEP_COLORS[idx] : '#73d18b';
+}
+
+/**
  * A JSON-safe, Liveblocks-storable representation of a canvas element.
  * This is the subset stored in Liveblocks Storage; the full canvas element
  * type (with React refs, derived state, etc.) is kept in the local Zustand store.

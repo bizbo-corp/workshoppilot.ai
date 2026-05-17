@@ -44,11 +44,6 @@ interface StepNavigationProps {
   isCompletingWorkshop?: boolean;
   workshopCompleted?: boolean;
   canCompleteWorkshop?: boolean;
-  /**
-   * Called BEFORE advanceToNextStep — used by multiplayer to broadcast
-   * STEP_CHANGED to participants. Receives the next step order and name.
-   */
-  onBeforeAdvance?: (nextStepOrder: number, nextStepName: string) => void;
   /** Flush pending canvas changes to DB before navigating away */
   onFlushCanvas?: () => Promise<void>;
   /**
@@ -87,7 +82,6 @@ export function StepNavigation({
   isCompletingWorkshop = false,
   workshopCompleted = false,
   canCompleteWorkshop = false,
-  onBeforeAdvance,
   onFlushCanvas,
   nextDisabledReason,
   nextLabelOverride,
@@ -154,11 +148,11 @@ export function StepNavigation({
         return;
       }
 
-      // Broadcast step change to participants before server-side navigation.
-      // This fires before redirect() so participants receive the event in time.
-      if (onBeforeAdvance) {
-        onBeforeAdvance(nextStep.order, nextStep.name);
-      }
+      // STEP_CHANGED broadcast to participants happens server-side inside
+      // advanceToNextStep, after the DB status writes commit. Sending it from
+      // the client before the action runs lost the race against slow Neon
+      // cold starts — participants would arrive while the next step was still
+      // `not_started` and bounce off sequential enforcement.
 
       // Atomically mark current complete, next in_progress, then redirect.
       // advanceToNextStep either calls redirect() (throws NEXT_REDIRECT) for normal

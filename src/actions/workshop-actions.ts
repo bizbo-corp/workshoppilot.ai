@@ -565,13 +565,51 @@ export async function advanceToNextStep(
     }
 
     // Mark current step complete and next step in_progress BEFORE summary generation.
-    // This order is critical for multiplayer: the facilitator broadcasts STEP_CHANGED
-    // before this server action runs, so participants may navigate to the next step
-    // within ~1 second. If the next step is still "not_started" when they arrive,
-    // sequential enforcement redirects them back. By updating both statuses first,
-    // the DB is ready for participant navigation before the slow summary generation.
+    // Statuses must be committed before the STEP_CHANGED broadcast below: participants
+    // navigate on the broadcast, and the destination page's sequential-enforcement check
+    // (src/app/workshop/[sessionId]/step/[stepId]/page.tsx) redirects back if the target
+    // step is still "not_started".
     await updateStepStatus(workshopId, currentStepId, 'complete', sessionId);
     await updateStepStatus(workshopId, nextStepId, 'in_progress', sessionId);
+
+    const nextStep = STEPS.find((s) => s.id === nextStepId);
+    if (!nextStep) {
+      throw new Error(`Step ${nextStepId} not found in STEPS array`);
+    }
+    nextStepOrder = nextStep.order;
+
+    // Server-side STEP_CHANGED broadcast. Sent from here (post-DB-commit) rather than
+    // from the client BEFORE the action ran — the client-side path could outrace the
+    // DB write under network jitter or cold starts, leaving participants stranded.
+    // Broadcast failure must not block step advance; participants will catch up on
+    // their next interaction (page nav, refresh).
+    if (isMultiplayer) {
+      try {
+        const broadcastRoomId = getRoomId(workshopId);
+        const res = await fetch(
+          `https://api.liveblocks.io/v2/rooms/${encodeURIComponent(broadcastRoomId)}/broadcast-event`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${process.env.LIVEBLOCKS_SECRET_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              type: 'STEP_CHANGED',
+              stepOrder: nextStep.order,
+              stepName: nextStep.name,
+            }),
+          },
+        );
+        if (!res.ok) {
+          console.warn(
+            `[advanceToNextStep] STEP_CHANGED broadcast failed room=${broadcastRoomId} status=${res.status}`,
+          );
+        }
+      } catch (broadcastErr) {
+        console.warn('[advanceToNextStep] STEP_CHANGED broadcast error:', broadcastErr);
+      }
+    }
 
     // Extract structured data from canvas on step completion.
     // For multiplayer: fetches latest from Liveblocks REST API (source of truth).
@@ -616,14 +654,6 @@ export async function advanceToNextStep(
       // Log error but continue with step advance (per Phase 7 decision)
       console.error(`Failed to generate summary for step ${currentStepId}:`, summaryError);
     }
-
-    // Find next step's order number from STEPS array
-    const nextStep = STEPS.find((s) => s.id === nextStepId);
-    if (!nextStep) {
-      throw new Error(`Step ${nextStepId} not found in STEPS array`);
-    }
-
-    nextStepOrder = nextStep.order;
 
     // Eagerly pregenerate the facilitator's greeting for the step we're advancing into,
     // mirroring advanceFromStepOne's prefetch for the step 1→2 boundary. Without this,
