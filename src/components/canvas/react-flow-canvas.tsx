@@ -529,14 +529,24 @@ function ReactFlowCanvasInner({
   const livePositions = useRef<Record<string, { x: number; y: number }>>({});
 
   // Live dimensions during resize — same ref strategy as positions.
+  // Note: this is *also* written by handleAutoResize for every rendered sticky
+  // (grow-to-fit text), so presence in this map does NOT mean "actively
+  // resizing." Use activelyResizingIds for that — see handleNodesChange.
   const liveDimensions = useRef<
     Record<string, { width: number; height: number }>
   >({});
+
+  // Ids currently mid-drag of a NodeResizer handle. Distinct from
+  // liveDimensions because that map also caches auto-fit dimensions for every
+  // sticky. handleNodesChange uses this to skip the stray position events
+  // NodeResizer emits when the top/left handles drag the node.
+  const activelyResizingIds = useRef<Set<string>>(new Set());
 
   // Continuous resize handler — updates ref only, no re-renders
   const handleResize = useCallback(
     (id: string, width: number, height: number) => {
       liveDimensions.current[id] = { width, height };
+      activelyResizingIds.current.add(id);
     },
     [],
   );
@@ -559,6 +569,7 @@ function ReactFlowCanvasInner({
   const handleResizeEnd = useCallback(
     (id: string, width: number, height: number, x: number, y: number) => {
       delete liveDimensions.current[id];
+      activelyResizingIds.current.delete(id);
       updateStickyNote(id, {
         width: Math.round(width),
         height: Math.round(height),
@@ -2118,7 +2129,7 @@ function ReactFlowCanvasInner({
           // Skip position updates for nodes being actively resized — NodeResizer
           // dispatches position changes when resizing from top/left edges and
           // processing them mid-resize would snap the position causing jitter.
-          if (liveDimensions.current[change.id]) return;
+          if (activelyResizingIds.current.has(change.id)) return;
 
           // Clear dragging state
           setDraggingNodeId(null);
