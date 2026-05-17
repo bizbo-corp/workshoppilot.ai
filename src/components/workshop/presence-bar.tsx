@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { currentRoundVotes } from '@/lib/canvas/voting-utils';
 import { copyToClipboard } from '@/lib/clipboard';
+import { getParticipantTextColor, getParticipantDeepColor } from '@/lib/liveblocks/config';
 
 const IDLE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
@@ -262,9 +263,10 @@ export function PresenceBar({
           return (
             <div
               key={p.connectionId}
-              className="relative w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-semibold ring-2 ring-card"
+              className="relative w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold ring-2 ring-card"
               style={{
-                backgroundColor: p.color,
+                backgroundColor: getParticipantDeepColor(p.color),
+                color: getParticipantTextColor(p.color),
                 opacity: isIdle ? 0.5 : 1,
               }}
               title={p.isSelf ? `${p.name} (you) — Facilitator` : p.role === 'owner' ? `${p.name} — Facilitator` : p.name}
@@ -320,8 +322,8 @@ export function PresenceBar({
             return (
               <div key={p.connectionId} className="flex items-center gap-2 py-1.5">
                 <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0"
-                  style={{ backgroundColor: p.color, opacity: isIdle ? 0.5 : 1 }}
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0"
+                  style={{ backgroundColor: getParticipantDeepColor(p.color), color: getParticipantTextColor(p.color), opacity: isIdle ? 0.5 : 1 }}
                 >
                   {getInitials(p.name)}
                 </div>
@@ -384,8 +386,8 @@ export function PresenceBar({
               {offlineParticipants.map((p) => (
                 <div key={p.participantId} className="flex items-center gap-2 py-1.5">
                   <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0 opacity-50"
-                    style={{ backgroundColor: p.color }}
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0 opacity-50"
+                    style={{ backgroundColor: getParticipantDeepColor(p.color), color: getParticipantTextColor(p.color) }}
                   >
                     {getInitials(p.displayName)}
                   </div>

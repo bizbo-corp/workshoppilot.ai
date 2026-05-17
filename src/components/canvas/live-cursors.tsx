@@ -4,6 +4,7 @@ import { useCallback, useMemo } from 'react';
 import { useReactFlow, useStore as useReactFlowStore, type ReactFlowState } from '@xyflow/react';
 import { useUpdateMyPresence, useOthersMapped, shallow } from '@liveblocks/react';
 import { Crown } from 'lucide-react';
+import { getParticipantTextColor, getParticipantDeepColor } from '@/lib/liveblocks/config';
 
 // ---------------------------------------------------------------------------
 // CursorArrow — SVG arrow cursor in the participant's assigned color
@@ -21,9 +22,9 @@ function CursorArrow({ color }: { color: string }) {
     >
       <path
         d="M3 2L17 10L10 11L7 18L3 2Z"
-        fill={color}
+        fill={getParticipantDeepColor(color)}
         stroke="white"
-        strokeWidth="1.5"
+        strokeWidth="0.5"
         strokeLinejoin="round"
       />
     </svg>
@@ -45,8 +46,8 @@ function CursorLabel({
 }) {
   return (
     <div
-      className="ml-4 -mt-1 flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-white whitespace-nowrap shadow-sm"
-      style={{ backgroundColor: color }}
+      className="ml-4 -mt-1 flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap shadow-sm"
+      style={{ backgroundColor: getParticipantDeepColor(color), color: getParticipantTextColor(color) }}
     >
       {isFacilitator && <Crown className="w-3 h-3" />}
       {name}
