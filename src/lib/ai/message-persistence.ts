@@ -1,6 +1,6 @@
 import { db } from '@/db/client';
 import { chatMessages } from '@/db/schema';
-import { eq, and, asc, isNull } from 'drizzle-orm';
+import { eq, and, asc, isNull, lt } from 'drizzle-orm';
 import type { UIMessage } from 'ai';
 
 export type StoredAssistantMessage = {
@@ -136,6 +136,38 @@ export function greetingPlaceholderMessageId(sessionId: string, stepId: string, 
 }
 
 /**
+ * Sweep stale empty placeholder rows for this scope. An "orphan" is an empty
+ * assistant row left behind when a previous generation crashed/timed out (the
+ * prefetch died silently, the route's onFinish never fired, etc.). Without this
+ * sweep, the unique-index conflict blocks every future claim — users see the
+ * "AI is thinking..." spinner forever because the singleton is permanently locked.
+ *
+ * Called at the top of `claimGreetingPlaceholder` so the new request always has
+ * a clean slate after `maxAgeMs`. Default 60s = matches /api/chat maxDuration
+ * (anything older than the Vercel function lifetime is definitively dead).
+ */
+export async function deleteStaleEmptyPlaceholders(
+  sessionId: string,
+  stepId: string,
+  participantId: string | null | undefined,
+  maxAgeMs: number = 60_000,
+): Promise<number> {
+  const cutoff = new Date(Date.now() - maxAgeMs);
+  const deleted = await db
+    .delete(chatMessages)
+    .where(and(
+      eq(chatMessages.sessionId, sessionId),
+      eq(chatMessages.stepId, stepId),
+      eq(chatMessages.role, 'assistant'),
+      eq(chatMessages.content, ''),
+      lt(chatMessages.createdAt, cutoff),
+      participantFilter(participantId),
+    ))
+    .returning({ id: chatMessages.id });
+  return deleted.length;
+}
+
+/**
  * Try to claim the greeting slot by inserting an empty assistant placeholder.
  * Wins on insert, loses on conflict.
  * Returns { won: true, placeholderRowId, messageId } if we won (must stream + fill).
@@ -146,6 +178,17 @@ export async function claimGreetingPlaceholder(
   stepId: string,
   participantId?: string | null,
 ): Promise<{ won: true; placeholderRowId: string; messageId: string } | { won: false; messageId: string }> {
+  // Sweep stale orphans before claiming — see deleteStaleEmptyPlaceholders for rationale.
+  // Failure here is non-fatal: log and proceed (the INSERT may still succeed if no orphan exists).
+  try {
+    const swept = await deleteStaleEmptyPlaceholders(sessionId, stepId, participantId);
+    if (swept > 0) {
+      console.log(`[greeting-lifecycle] claim:swept-stale scope=(${sessionId},${stepId},${participantId ?? 'NULL'}) count=${swept}`);
+    }
+  } catch (err) {
+    console.error(`[greeting-lifecycle] claim:sweep-failed scope=(${sessionId},${stepId},${participantId ?? 'NULL'}):`, err);
+  }
+
   const messageId = greetingPlaceholderMessageId(sessionId, stepId, participantId);
   const inserted = await db
     .insert(chatMessages)

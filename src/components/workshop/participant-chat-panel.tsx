@@ -185,7 +185,7 @@ export function ParticipantChatPanel({
     [sessionId, stepId, workshopId, participantId, displayName],
   );
 
-  const { messages, sendMessage, status, stop } = useChat({
+  const { messages, sendMessage, status, setMessages, stop } = useChat({
     transport,
     messages: initialMessages || [],
     onError: (error) => {
@@ -229,24 +229,62 @@ export function ParticipantChatPanel({
         ),
     );
     const hasAssistantMessage = messages.some((m) => m.role === "assistant");
-    if (
-      (!initialMessages || initialMessages.length === 0) &&
-      messages.length === 0 &&
-      !hasAssistantMessage &&
-      !alreadyHasStepStartTrigger &&
-      status === "ready" &&
-      !hasAutoStarted.current &&
-      (stepId !== "concept" || conceptActivityStarted)
-    ) {
+    const conditions = {
+      initialEmpty: !initialMessages || initialMessages.length === 0,
+      messagesEmpty: messages.length === 0,
+      noAssistant: !hasAssistantMessage,
+      noStaleTrigger: !alreadyHasStepStartTrigger,
+      statusReady: status === "ready",
+      notYetStarted: !hasAutoStarted.current,
+      conceptOk: stepId !== "concept" || conceptActivityStarted,
+    };
+    const allOk = Object.values(conditions).every(Boolean);
+    console.log(`[greeting-lifecycle] client(participant):auto-start-check scope=(${sessionId},${stepId},${participantId}) fire=${allOk}`, conditions);
+    if (allOk) {
       hasAutoStarted.current = true;
       setQuickAck(getRandomAck());
+      const triggerId = `step-start:${sessionId}:${stepId}:${participantId}`;
+      console.log(`[greeting-lifecycle] client(participant):send-trigger id=${triggerId}`);
       sendMessage({
-        id: `step-start:${sessionId}:${stepId}:${participantId}`,
+        id: triggerId,
         role: "user",
         parts: [{ type: "text", text: "__step_start__" }],
       });
     }
   }, [initialMessages, messages, messages.length, status, sendMessage, sessionId, stepId, participantId, conceptActivityStarted]);
+
+  // Diagnostic: log every status transition so we can see if request hangs in "submitted"
+  React.useEffect(() => {
+    console.log(`[greeting-lifecycle] client(participant):status-change scope=(${sessionId},${stepId},${participantId}) status=${status} msgCount=${messages.length}`);
+  }, [status, sessionId, stepId, participantId, messages.length]);
+
+  // Stuck-state recovery: if status stays in submitted/streaming >45s with no assistant
+  // chunks arriving, surface a retry banner. 45s sits between Gemini worst case (~15s)
+  // and Vercel maxDuration (60s) so we recover before the function dies.
+  const retryStepStart = React.useCallback(() => {
+    stop();
+    setMessages([]);
+    hasAutoStarted.current = false;
+    setQuickAck(null);
+    console.log(`[greeting-lifecycle] client(participant):manual-retry scope=(${sessionId},${stepId},${participantId})`);
+  }, [stop, setMessages, sessionId, stepId, participantId]);
+
+  React.useEffect(() => {
+    const isWaiting = status === "submitted" || status === "streaming";
+    const hasAssistantContent = messages.some(
+      (m) => m.role === "assistant" && m.parts?.some((p) => p.type === "text" && p.text.length > 0)
+    );
+    if (!isWaiting || hasAssistantContent) return;
+    const timer = setTimeout(() => {
+      toast("The AI is taking longer than usual.", {
+        id: "ai-stuck-retry",
+        description: "Want to retry?",
+        action: { label: "Retry", onClick: retryStepStart },
+        duration: Infinity,
+      });
+    }, 45_000);
+    return () => clearTimeout(timer);
+  }, [status, messages, retryStepStart]);
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {

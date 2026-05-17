@@ -44,14 +44,18 @@ export async function prefetchStepStartGreeting(params: {
 }): Promise<void> {
   const { workshopId, sessionId, stepId, participantId, participantName } = params;
   const scope = `(${sessionId},${stepId},${participantId ?? 'NULL'})`;
+  const t0 = Date.now();
+  console.log(`[greeting-lifecycle] prefetch:start scope=${scope}`);
 
   let claim: Awaited<ReturnType<typeof claimGreetingPlaceholder>>;
   try {
     claim = await claimGreetingPlaceholder(sessionId, stepId, participantId);
   } catch (err) {
-    console.error(`[prefetch-greeting] claim failed for scope=${scope}:`, err);
+    console.error(`[greeting-lifecycle] prefetch:claim-error scope=${scope}:`, err);
     return;
   }
+
+  console.log(`[greeting-lifecycle] prefetch:claim-result scope=${scope} won=${claim.won} elapsedMs=${Date.now() - t0}`);
 
   if (!claim.won) {
     // A client (or another prefetch) already claimed this scope. They will fill it.
@@ -94,11 +98,14 @@ export async function prefetchStepStartGreeting(params: {
     };
     const modelMessages = await convertToModelMessages([triggerMessage]);
 
+    const tGemini = Date.now();
+    console.log(`[greeting-lifecycle] prefetch:gemini-start scope=${scope}`);
     const result = await generateTextWithRetry({
       model: chatModel,
       system: systemPrompt,
       messages: modelMessages,
     });
+    console.log(`[greeting-lifecycle] prefetch:gemini-end scope=${scope} elapsedMs=${Date.now() - tGemini} textLen=${result.text?.length ?? 0}`);
 
     const text = result.text?.trim() ?? '';
     if (text.length === 0) {
@@ -107,6 +114,7 @@ export async function prefetchStepStartGreeting(params: {
 
     const finalMessageId = createPrefixedId('msg');
     await fillGreetingPlaceholder(claim.placeholderRowId, text, finalMessageId);
+    console.log(`[greeting-lifecycle] prefetch:filled scope=${scope} messageId=${finalMessageId} totalElapsedMs=${Date.now() - t0}`);
 
     if (result.usage) {
       recordUsageEvent({
@@ -119,14 +127,15 @@ export async function prefetchStepStartGreeting(params: {
       });
     }
   } catch (err) {
-    console.error(`[prefetch-greeting] generation failed for scope=${scope}:`, err);
+    console.error(`[greeting-lifecycle] prefetch:generation-failed scope=${scope} elapsedMs=${Date.now() - t0}:`, err);
     // Delete the empty placeholder we just claimed — leaving it would force every
     // subsequent request into pollForFilledGreeting's 3s timeout + fresh-gen recovery.
     try {
       await db.delete(chatMessages).where(eq(chatMessages.id, claim.placeholderRowId));
+      console.log(`[greeting-lifecycle] prefetch:cleanup-deleted scope=${scope}`);
     } catch (cleanupErr) {
       console.error(
-        `[prefetch-greeting] failed to clean up empty placeholder for scope=${scope}:`,
+        `[greeting-lifecycle] prefetch:cleanup-failed scope=${scope}:`,
         cleanupErr,
       );
     }

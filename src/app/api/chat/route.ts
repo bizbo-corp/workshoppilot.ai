@@ -101,15 +101,22 @@ export async function POST(req: Request) {
       | { won: false; messageId: string }
       | null = null;
 
+    const lifecycleScope = `(${sessionId},${stepId},${participantId ?? 'NULL'})`;
     if (isStepStartTrigger) {
+      const tClaim = Date.now();
+      console.log(`[greeting-lifecycle] route:trigger-received scope=${lifecycleScope}`);
       greetingClaim = await claimGreetingPlaceholder(sessionId, stepId, participantId);
+      console.log(`[greeting-lifecycle] route:claim-result scope=${lifecycleScope} won=${greetingClaim.won} elapsedMs=${Date.now() - tClaim}`);
 
       if (!greetingClaim.won) {
         // Lost the race. Poll for the winner to fill the placeholder. Default 30s budget
         // catches typical prefetch (5-15s) and slow Gemini cases; on timeout we run the
         // empty-placeholder cleanup before falling through to fresh-gen to prevent the
         // race where prefetch fills AFTER fresh-gen has already saved a row of its own.
+        const tPoll = Date.now();
+        console.log(`[greeting-lifecycle] route:poll-start scope=${lifecycleScope}`);
         const filled = await pollForFilledGreeting(sessionId, stepId, participantId);
+        console.log(`[greeting-lifecycle] route:poll-end scope=${lifecycleScope} found=${!!filled} elapsedMs=${Date.now() - tPoll}`);
         if (filled) {
           const textId = `${filled.messageId}-text`;
           const stream = createUIMessageStream({
@@ -149,11 +156,14 @@ export async function POST(req: Request) {
         // step, fresh-gen would persist its own row AND the prefetch would persist its
         // (now-filled) row, with different message_ids → unique constraint can't help,
         // user sees two greetings (observed: ses_fcrjnajdicsoc1jvg53ikgo7).
-        await deleteEmptyGreetingPlaceholder(sessionId, stepId, participantId);
+        const deletedCount = await deleteEmptyGreetingPlaceholder(sessionId, stepId, participantId);
+        console.log(`[greeting-lifecycle] route:empty-delete scope=${lifecycleScope} deleted=${deletedCount}`);
         // Re-poll briefly in case the prefetch filled the placeholder in the window
         // between our last poll check and the atomic delete (DELETE WHERE content=''
         // would have matched 0 rows in that race — content is now non-empty).
+        const tLate = Date.now();
         const lateFilled = await pollForFilledGreeting(sessionId, stepId, participantId, 500, 50);
+        console.log(`[greeting-lifecycle] route:late-poll-end scope=${lifecycleScope} found=${!!lateFilled} elapsedMs=${Date.now() - tLate}`);
         if (lateFilled) {
           const textId = `${lateFilled.messageId}-text`;
           const stream = createUIMessageStream({
@@ -186,6 +196,7 @@ export async function POST(req: Request) {
           return createUIMessageStreamResponse({ stream });
         }
         // Confirmed: no live placeholder and no filled content. Proceed to fresh-gen.
+        console.log(`[greeting-lifecycle] route:fallthrough-to-fresh-gen scope=${lifecycleScope}`);
         greetingClaim = null;
       }
     }
@@ -334,6 +345,8 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
     // leaves an empty placeholder that blocks future claims and forces a 3s poll → fresh-gen
     // recovery on every subsequent mount. For user-typed messages, end-to-end cancellation
     // still saves tokens on abort.
+    const tStream = Date.now();
+    console.log(`[greeting-lifecycle] route:stream-start scope=${lifecycleScope} isStepStart=${isStepStartTrigger} responseMessageId=${responseMessageId}`);
     const result = await streamTextWithRetry({
       model: chatModel,
       system: systemPrompt,
@@ -341,6 +354,7 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
       experimental_transform: smoothStream({ chunking: 'word' }),
       abortSignal: isStepStartTrigger ? undefined : req.signal,
     });
+    console.log(`[greeting-lifecycle] route:stream-returned scope=${lifecycleScope} elapsedMs=${Date.now() - tStream}`);
 
     // Consume stream server-side to ensure onFinish fires even if client disconnects
     result.consumeStream();
@@ -374,6 +388,7 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
         const assistantMsg = [...responseMessages].reverse().find((m) => m.role === 'assistant');
         const assistantContent = assistantMsg?.parts?.filter((p) => p.type === 'text').map((p) => (p as { type: 'text'; text: string }).text).join('') ?? '';
         // assistantMsg.id is now the AI SDK-generated id (==responseMessageId), no longer ''.
+        console.log(`[greeting-lifecycle] route:onFinish scope=${lifecycleScope} contentLen=${assistantContent.length} wonGreeting=${!!(greetingClaim && greetingClaim.won)} totalStreamMs=${Date.now() - tStream}`);
 
         if (greetingClaim && greetingClaim.won && assistantContent.trim().length > 0) {
           // Won-greeting path: fill the placeholder row with the streamed content AND
@@ -387,11 +402,13 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
               assistantContent,
               assistantMsg!.id, // real AI SDK-generated id (not greetingClaim.messageId)
             );
+            console.log(`[greeting-lifecycle] route:onFinish:filled-placeholder scope=${lifecycleScope} messageId=${assistantMsg!.id}`);
           } catch (err) {
-            console.error('[greeting-singleton] fill failed; falling back to saveMessages', err);
+            console.error(`[greeting-lifecycle] route:onFinish:fill-failed scope=${lifecycleScope}; falling back to saveMessages`, err);
             await saveMessages(sessionId, stepId, responseMessages, participantId);
           }
         } else {
+          console.log(`[greeting-lifecycle] route:onFinish:saveMessages scope=${lifecycleScope} reason=${!greetingClaim ? 'no-claim' : !greetingClaim.won ? 'lost-claim' : 'empty-content'}`);
           await saveMessages(sessionId, stepId, responseMessages, participantId);
         }
         // chat_request_logs.response_message_id was populated at insert time — no backfill block needed.

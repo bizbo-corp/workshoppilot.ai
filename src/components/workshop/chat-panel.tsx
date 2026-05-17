@@ -1001,6 +1001,38 @@ export function ChatPanel({
 
   const isLoading = status === "streaming" || status === "submitted";
 
+  // Diagnostic: log every status transition so we can see if request hangs in "submitted"
+  React.useEffect(() => {
+    console.log(`[greeting-lifecycle] client(facilitator):status-change scope=(${sessionId},${step.id},NULL) status=${status} msgCount=${messages.length}`);
+  }, [status, sessionId, step.id, messages.length]);
+
+  // Stuck-state recovery: if status stays in submitted/streaming >45s with no assistant
+  // chunks arriving, surface a retry toast. 45s sits between Gemini worst case (~15s) and
+  // Vercel maxDuration (60s) so we recover before the function dies.
+  const retryStepStart = React.useCallback(() => {
+    stop();
+    setMessages([]);
+    hasAutoStarted.current = false;
+    console.log(`[greeting-lifecycle] client(facilitator):manual-retry scope=(${sessionId},${step.id},NULL)`);
+  }, [stop, setMessages, sessionId, step.id]);
+
+  React.useEffect(() => {
+    const isWaiting = status === "submitted" || status === "streaming";
+    const hasAssistantContent = messages.some(
+      (m) => m.role === "assistant" && m.parts?.some((p) => p.type === "text" && p.text.length > 0)
+    );
+    if (!isWaiting || hasAssistantContent) return;
+    const timer = setTimeout(() => {
+      toast("The AI is taking longer than usual.", {
+        id: "ai-stuck-retry",
+        description: "Want to retry?",
+        action: { label: "Retry", onClick: retryStepStart },
+        duration: Infinity,
+      });
+    }, 45_000);
+    return () => clearTimeout(timer);
+  }, [status, messages, retryStepStart]);
+
   // Auto-save messages every 2 seconds (debounced) with 10s maxWait
   useAutoSave(sessionId, step.id, messages);
 
@@ -2142,21 +2174,26 @@ export function ChatPanel({
         ),
     );
 
-    if (
-      shouldAutoStart &&
-      messages.length === 0 &&
-      !hasAssistantMessage &&
-      !alreadyHasStepStartTrigger &&
-      status === "ready" &&
-      !hasAutoStarted.current &&
-      !isReadOnly &&
-      !skipAutoStart &&
-      (step.id !== "concept" || !isMultiplayer || conceptActivityStarted)
-    ) {
+    const conditions = {
+      shouldAutoStart,
+      messagesEmpty: messages.length === 0,
+      noAssistant: !hasAssistantMessage,
+      noStaleTrigger: !alreadyHasStepStartTrigger,
+      statusReady: status === "ready",
+      notYetStarted: !hasAutoStarted.current,
+      notReadOnly: !isReadOnly,
+      notSkipped: !skipAutoStart,
+      conceptOk: step.id !== "concept" || !isMultiplayer || conceptActivityStarted,
+    };
+    const allOk = Object.values(conditions).every(Boolean);
+    console.log(`[greeting-lifecycle] client(facilitator):auto-start-check scope=(${sessionId},${step.id},NULL) fire=${allOk}`, conditions);
+    if (allOk) {
       hasAutoStarted.current = true;
       onAutoStarted?.();
+      const triggerId = `step-start:${sessionId}:${step.id}:fac`;
+      console.log(`[greeting-lifecycle] client(facilitator):send-trigger id=${triggerId}`);
       sendMessage({
-        id: `step-start:${sessionId}:${step.id}:fac`,
+        id: triggerId,
         role: "user",
         parts: [{ type: "text", text: "__step_start__" }],
       });
