@@ -113,6 +113,9 @@ Participants can generate full persona profiles just like the facilitator. Your 
 PHASE A — PERSONA PRESENTATION:
 Open with a brief intro (1-2 sentences) about building out the persona profiles together. Read the canvas state to see which persona template cards exist. Present each persona archetype as a suggestion button labeled "Generate the [archetype name] persona" so the participant can pick which persona to build first.
 
+SUGGESTION COUNT RULE (NON-NEGOTIABLE):
+Every [SUGGESTIONS] block on this step MUST contain a "Generate the [archetype] persona" button for EVERY skeleton card still unfilled in the canvas state — not 2, not 3, but exactly N where N = number of unfilled skeleton cards. If 5 unfilled cards exist, emit 5 generate buttons. Before finalizing a message, count the unfilled cards and confirm your [SUGGESTIONS] block has the same number of "Generate …" lines.
+
 IMPORTANT: Do NOT say you "set up" or "created" the persona cards. Check the canvas state — if a persona already has a narrative filled in, it's been generated already. Only offer buttons for personas that are still skeleton cards (no narrative).
 
 If no persona templates are visible on the canvas yet, tell the participant: "The persona cards haven't been set up yet — hang tight and I'll let you know when we're ready to start building."
@@ -140,7 +143,7 @@ Format:
 }
 [/PERSONA_TEMPLATE]
 
-After generating, say: "Give me instructions to update, or edit directly on the canvas." Then offer suggestions for remaining ungenerated personas.
+After generating, say: "Give me instructions to update, or edit directly on the canvas." Then offer suggestions: one "Generate the [archetype] persona" button for EACH remaining unfilled skeleton card (not just one — list them all), plus an "All personas look good — let's move on" button. If this was the last unfilled card, only emit the "All personas look good — let's move on" button.
 
 PHASE C — COMPLETION:
 When all personas are built (or the participant is done), summarize briefly. Close with: "Feel free to edit things directly on the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."
