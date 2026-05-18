@@ -59,6 +59,7 @@ export function buildStepSystemPrompt(
   isParticipant?: boolean,
   participantName?: string,
   interviewMode?: 'synthetic' | 'real' | null,
+  lockedJourneyTemplate?: { templateId: string; templateName: string } | null,
 ): string {
   // Base role for this step (step instructions may override personality)
   let prompt = `You are guiding the user through Step: ${stepName}.`;
@@ -81,7 +82,10 @@ Your role: Help them think through this step and generate ideas they can contrib
 - When you suggest items for the canvas, use [CANVAS_ITEM] tags as usual — the participant will review and push them to the shared board.`;
 
     // Add per-step participant guidance
-    const guidance = getParticipantGuidance(stepId, { interviewMode });
+    const guidance = getParticipantGuidance(stepId, {
+      interviewMode,
+      lockedJourneyTemplate,
+    });
     if (guidance) {
       prompt += `\n\n${guidance}`;
     }
@@ -441,6 +445,14 @@ When the user sends a message like 'For "Given that": [value]' or 'For "how migh
   // Journey-mapping instructions — always injected regardless of arc phase
   // (Journey maps need 30-50+ items populated across the full conversation lifecycle)
   if (stepId === "journey-mapping") {
+    if (lockedJourneyTemplate) {
+      prompt += `\n\nJOURNEY TEMPLATE LOCKED:
+The team has locked their journey template via the multiplayer poll: **${lockedJourneyTemplate.templateName}**.
+
+Skip the "recommend templates" phase entirely. Do NOT present options, do NOT emit [JOURNEY_POLL_OPTIONS], do NOT ask the user to pick a template — that decision is done.
+
+Your next move is to emit [JOURNEY_STAGES] using this template's default stages (from the catalog) and immediately begin populating row 1 (Actions). Then continue row-by-row through Goals, Barriers, Touchpoints, Emotions, Moments of Truth, and Opportunities as described in the step instructions.`;
+    }
     prompt += `\n\nCANVAS ACTIONS (Journey Map Grid):
 
 STAGE SETUP — Use [JOURNEY_STAGES] to set the grid columns when the user confirms their journey stages.

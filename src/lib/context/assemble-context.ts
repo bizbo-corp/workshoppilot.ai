@@ -239,12 +239,27 @@ export async function assembleStepContext(
       ? (canvasState as { interviewMode: 'synthetic' | 'real' }).interviewMode
       : null;
 
+  const journeyPollRaw = (canvasState as { journeyPoll?: unknown } | null)?.journeyPoll as
+    | { lockedTemplate?: { templateId?: unknown; templateName?: unknown } | null }
+    | null
+    | undefined;
+  const lockedJourneyTemplate: { templateId: string; templateName: string } | null =
+    journeyPollRaw?.lockedTemplate &&
+    typeof journeyPollRaw.lockedTemplate.templateId === 'string' &&
+    typeof journeyPollRaw.lockedTemplate.templateName === 'string'
+      ? {
+          templateId: journeyPollRaw.lockedTemplate.templateId,
+          templateName: journeyPollRaw.lockedTemplate.templateName,
+        }
+      : null;
+
   return {
     persistentContext: '',
     summaries,
     canvasContext,
     existingItemNames,
     interviewMode,
+    lockedJourneyTemplate,
     messages: [],
   };
 }

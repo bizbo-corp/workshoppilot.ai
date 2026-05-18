@@ -125,6 +125,17 @@ export default async function StepPage({ params }: StepPageProps) {
         participantColor = participant.color;
       }
     }
+
+    // Auth redirect — if this is a multiplayer step page and the caller is
+    // neither the workshop owner nor a known participant (no Clerk match, no
+    // valid wp_guest cookie), bounce to the lobby. Otherwise the page renders
+    // with participantId=null and Liveblocks auth throws "Authentication
+    // failed after retries" in the participant's console, which is a confusing
+    // failure mode for someone who pasted a step URL without joining first.
+    const isWorkshopOwner = !!user && user.id === session.workshop.clerkUserId;
+    if (!isWorkshopOwner && !participantId) {
+      redirect(`/workshop/${sessionId}/lobby`);
+    }
   }
 
   // Team-mode gating (v2.1 + v2.2):

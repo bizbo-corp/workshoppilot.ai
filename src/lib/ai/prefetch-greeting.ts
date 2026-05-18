@@ -90,6 +90,7 @@ export async function prefetchStepStartGreeting(params: {
       isParticipant,
       participantName ?? undefined,
       stepContext.interviewMode,
+      stepContext.lockedJourneyTemplate,
     );
 
     const triggerMessage: UIMessage = {

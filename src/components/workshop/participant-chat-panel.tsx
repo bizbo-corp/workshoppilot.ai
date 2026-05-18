@@ -162,6 +162,7 @@ export function ParticipantChatPanel({
   const addConceptCard = useCanvasStore((s) => s.addConceptCard);
   const conceptActivityStarted = useCanvasStore((s) => s.conceptActivityStarted);
   const interviewMode = useCanvasStore((s) => s.interviewMode);
+  const journeyPoll = useCanvasStore((s) => s.journeyPoll);
   const storeApi = useCanvasStoreApi();
 
   const [quickAck, setQuickAck] = React.useState<string | null>(null);
@@ -248,7 +249,11 @@ export function ParticipantChatPanel({
       // participant's greeting fires immediately on step entry and Gemini
       // leaks the interview-mode framing in prose even though the
       // [INTERVIEW_MODE] markup is stripped client-side.
-      (stepId !== "user-research" || interviewMode !== null)
+      (stepId !== "user-research" || interviewMode !== null) &&
+      // Step 6 hold: same idea — don't auto-start journey-mapping until the
+      // team has locked a journey template via the poll. Greeting would
+      // otherwise reference template options the participant can't act on.
+      (stepId !== "journey-mapping" || !!journeyPoll?.lockedTemplate)
     ) {
       hasAutoStarted.current = true;
       setQuickAck(getRandomAck());
@@ -258,7 +263,7 @@ export function ParticipantChatPanel({
         parts: [{ type: "text", text: "__step_start__" }],
       });
     }
-  }, [initialMessages, messages, messages.length, status, sendMessage, sessionId, stepId, participantId, conceptActivityStarted, interviewMode]);
+  }, [initialMessages, messages, messages.length, status, sendMessage, sessionId, stepId, participantId, conceptActivityStarted, interviewMode, journeyPoll?.lockedTemplate]);
 
   // Stream-empty recovery: the AI SDK v6 sometimes completes the request (status →
   // ready) without delivering the assistant message into client state, even though
@@ -784,6 +789,14 @@ export function ParticipantChatPanel({
     cleanContent = cleanContent
       .replace(/\[INTERVIEW_MODE\][\s\S]*?\[\/INTERVIEW_MODE\]/, "")
       .replace(/\[INTERVIEW_MODE\][\s\S]*$/, "")
+      // Strip [JOURNEY_POLL_OPTIONS] markup — facilitator-only (rendered as the
+      // template poll card in the participant's right panel, not in chat)
+      .replace(/\[JOURNEY_POLL_OPTIONS\][\s\S]*?\[\/JOURNEY_POLL_OPTIONS\]/g, "")
+      .replace(/\[JOURNEY_POLL_OPTIONS\][\s\S]*$/g, "")
+      // Strip [JOURNEY_STAGES] markup — emitted by facilitator AI after the
+      // poll locks; the grid columns update via canvas store, not chat display
+      .replace(/\[JOURNEY_STAGES\][\s\S]*?\[\/JOURNEY_STAGES\]/g, "")
+      .replace(/\[JOURNEY_STAGES\][\s\S]*$/g, "")
       // Strip [PERSONA_PLAN] markup — facilitator only
       .replace(/\[PERSONA_PLAN\][\s\S]*?\[\/PERSONA_PLAN\]/g, "")
       .replace(/\[PERSONA_PLAN\][\s\S]*$/g, "")
@@ -841,6 +854,29 @@ export function ParticipantChatPanel({
           </h3>
           <p className="text-sm text-muted-foreground">
             Your facilitator is choosing how we&apos;ll run interviews. Hang tight — we&apos;ll start in a moment.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 6 hold card — shown while the team is voting on a journey template
+  // and the facilitator hasn't locked the team's choice yet. The poll itself
+  // is rendered in the right panel (canvas side); this just keeps the chat
+  // quiet so the AI greeting doesn't fire until the template is settled.
+  if (
+    stepId === "journey-mapping" &&
+    (!journeyPoll || !journeyPoll.lockedTemplate)
+  ) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+        <div className="max-w-sm space-y-3">
+          <div className="text-3xl">🗺️</div>
+          <h3 className="text-lg font-semibold text-foreground">
+            Choosing a journey template
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Your team is voting on which journey to map. Cast your vote on the canvas — we&apos;ll start as soon as the facilitator locks the choice.
           </p>
         </div>
       </div>

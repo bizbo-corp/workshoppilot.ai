@@ -750,6 +750,12 @@ interface ChatPanelProps {
   /** Multiplayer-only — called when facilitator picks the step-3 interview mode.
    *  Parent (step-container) wraps a Liveblocks broadcast; left undefined in solo. */
   onInterviewModeBroadcast?: (mode: 'synthetic' | 'real') => void;
+  /** Multiplayer-only — called when the facilitator's AI emits the step-6
+   *  [JOURNEY_POLL_OPTIONS] marker so participants get the same poll. Parent
+   *  (step-container) wraps a Liveblocks broadcast; left undefined in solo. */
+  onJourneyPollOpenBroadcast?: (
+    options: import("@/lib/canvas/journey-poll-types").JourneyPollOption[],
+  ) => void;
 }
 
 /**
@@ -812,6 +818,7 @@ export function ChatPanel({
   onLastAssistantMessage,
   hideAvatar,
   onInterviewModeBroadcast,
+  onJourneyPollOpenBroadcast,
 }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
 
@@ -838,6 +845,8 @@ export function ChatPanel({
   // `setInterviewMode` useState below — that one tracks chip-UI visibility;
   // this one persists the choice + drives the participant hold-card gate.
   const persistInterviewMode = useCanvasStore((state) => state.setInterviewMode);
+  const journeyPoll = useCanvasStore((state) => state.journeyPoll);
+  const openJourneyPoll = useCanvasStore((state) => state.openJourneyPoll);
   const drawingNodes = useCanvasStore((state) => state.drawingNodes);
   const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
@@ -1239,6 +1248,41 @@ export function ChatPanel({
       }
     }
   }, [status, messages, step.id, interviewMode]);
+
+  // Step 6 — when the facilitator's AI emits [JOURNEY_POLL_OPTIONS], open the
+  // template-vote poll in the canvas store. In multiplayer this fires once per
+  // message (broadcasted to participants); in solo it's gated off since no poll
+  // UI is rendered (right-panel guards on workshopType === 'multiplayer'). Once
+  // a lockedTemplate is set the AI's prompt branch stops re-emitting the marker,
+  // so this guard primarily protects against accidental re-emit before lock.
+  const [journeyPollMessageId, setJourneyPollMessageId] = React.useState<
+    string | null
+  >(null);
+  React.useEffect(() => {
+    if (step.id !== "journey-mapping" || !isMultiplayer || !isFacilitator) return;
+    if (journeyPoll?.lockedTemplate) return;
+    if (status !== "ready" || messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role !== "assistant") return;
+    if (journeyPollMessageId === lastMsg.id) return;
+    const textParts = lastMsg.parts?.filter((p) => p.type === "text") || [];
+    const content = textParts.map((p) => p.text).join("\n");
+    const { options } = parseJourneyPollOptions(content);
+    if (options.length === 0) return;
+    openJourneyPoll(options);
+    onJourneyPollOpenBroadcast?.(options);
+    setJourneyPollMessageId(lastMsg.id);
+  }, [
+    status,
+    messages,
+    step.id,
+    isMultiplayer,
+    isFacilitator,
+    journeyPoll?.lockedTemplate,
+    journeyPollMessageId,
+    openJourneyPoll,
+    onJourneyPollOpenBroadcast,
+  ]);
 
   // Detect confirmed persona selection + interview mode from historical messages (persistence across refresh)
   const hasCheckedPersonaHistory = React.useRef(false);
@@ -2594,8 +2638,10 @@ export function ChatPanel({
                         parsePersonaPlan(noPersonaTemplates);
                       const { cleanContent: noJourneyStages } =
                         parseJourneyStages(noPersonaPlan);
+                      const { cleanContent: noJourneyPoll } =
+                        parseJourneyPollOptions(noJourneyStages);
                       const { cleanContent: noHmwCards } =
-                        parseHmwCards(noJourneyStages);
+                        parseHmwCards(noJourneyPoll);
                       // For ideation, replace mind map tags with inline placeholders (not strip)
                       let noMindMapContent: string;
                       let mindMapNodesParsed: MindMapNodeParsed[];

@@ -44,6 +44,9 @@ export interface StepContext {
   /** Step-3 interview mode chosen by the facilitator ('synthetic' = AI personas,
    *  'real' = real-world interviews). null until selected. Only meaningful for user-research. */
   interviewMode: 'synthetic' | 'real' | null;
+  /** Step-6 journey template locked by the team via the multiplayer poll.
+   *  null until the facilitator hits "Lock template". Only meaningful for journey-mapping. */
+  lockedJourneyTemplate: { templateId: string; templateName: string } | null;
   messages: Array<{
     role: string;
     content: string;

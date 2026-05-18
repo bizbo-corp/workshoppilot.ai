@@ -54,7 +54,23 @@ export function JourneyTemplatePoll() {
   const voterName = displayName ?? (isFacilitator ? "Facilitator" : "You");
   const voterColor = participantColor ?? "#b3efbd";
 
-  const myVote = journeyPoll.votes.find((v) => v.voterId === voterId);
+  // Dedupe votes by voterId, keeping the most recent (latest votedAt). Local
+  // mutations replace-on-revote, but Liveblocks Storage CRDT can merge
+  // concurrent writes from two tabs/sessions of the same voter and leave
+  // duplicate entries in the synced array — that breaks React keys and
+  // double-renders avatars. Render-time dedupe is the safest place to fix
+  // this since it covers every race regardless of how the array got that way.
+  const dedupedVotes = Array.from(
+    journeyPoll.votes
+      .reduce((acc, v) => {
+        const existing = acc.get(v.voterId);
+        if (!existing || v.votedAt > existing.votedAt) acc.set(v.voterId, v);
+        return acc;
+      }, new Map<string, (typeof journeyPoll.votes)[number]>())
+      .values(),
+  );
+
+  const myVote = dedupedVotes.find((v) => v.voterId === voterId);
 
   const handleVote = (templateId: string) => {
     // Toggle off if clicking the same option again.
@@ -90,7 +106,7 @@ export function JourneyTemplatePoll() {
   const handleLock = () => {
     // Tally votes; pick the most-voted option, break ties by earliest voted.
     const counts = new Map<string, { count: number; firstVoteAt: number }>();
-    for (const v of journeyPoll.votes) {
+    for (const v of dedupedVotes) {
       const c = counts.get(v.templateId);
       if (c) {
         c.count += 1;
@@ -125,7 +141,7 @@ export function JourneyTemplatePoll() {
     toast.success(`Locked: ${templateName}`);
   };
 
-  const totalVotes = journeyPoll.votes.length;
+  const totalVotes = dedupedVotes.length;
 
   return (
     <div className="mb-4 rounded-xl border border-olive-200 bg-card p-5 shadow-sm dark:border-neutral-olive-800">
@@ -146,7 +162,7 @@ export function JourneyTemplatePoll() {
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {journeyPoll.options.map((option) => {
           const isSelected = myVote?.templateId === option.templateId;
-          const voters = journeyPoll.votes.filter(
+          const voters = dedupedVotes.filter(
             (v) => v.templateId === option.templateId,
           );
           // Prefer the template's actual stages from the catalog when present;

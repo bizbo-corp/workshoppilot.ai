@@ -105,6 +105,10 @@ function StepAdvanceBroadcaster({
     | ((event:
         | { type: "STEP_RESET"; stepOrder: number }
         | { type: "INTERVIEW_MODE_SELECTED"; interviewMode: "synthetic" | "real" }
+        | {
+            type: "JOURNEY_POLL_OPENED";
+            options: import("@/lib/canvas/journey-poll-types").JourneyPollOption[];
+          }
       ) => void)
     | null
   >;
@@ -234,10 +238,15 @@ export function StepContainer({
   // other client-initiated events that have no server-action equivalent:
   //   - STEP_RESET — facilitator resets the current step
   //   - INTERVIEW_MODE_SELECTED — facilitator picks AI vs Real interviews on step 3
+  //   - JOURNEY_POLL_OPENED — facilitator AI emits step-6 template poll options
   const broadcastRef = React.useRef<
     | ((event:
         | { type: "STEP_RESET"; stepOrder: number }
         | { type: "INTERVIEW_MODE_SELECTED"; interviewMode: "synthetic" | "real" }
+        | {
+            type: "JOURNEY_POLL_OPENED";
+            options: import("@/lib/canvas/journey-poll-types").JourneyPollOption[];
+          }
       ) => void)
     | null
   >(null);
@@ -274,6 +283,7 @@ export function StepContainer({
   const setBrainRewritingMatrices = useCanvasStore(
     (s) => s.setBrainRewritingMatrices,
   );
+  const clearJourneyPoll = useCanvasStore((s) => s.clearJourneyPoll);
   // Crazy 8s slots — used for progress panel slot fill counts
   const crazy8sSlots = useCanvasStore((s) => s.crazy8sSlots);
   // Voting state — used to derive votingMode for FacilitatorControls in Step 8
@@ -1052,6 +1062,10 @@ export function StepContainer({
         setPersonaTemplates([]);
         setHmwCards([]);
         setBrainRewritingMatrices([]);
+        // Step 6: wipe the team's template poll so the AI's fresh greeting
+        // re-emits [JOURNEY_POLL_OPTIONS] and participants don't see stale
+        // votes or a stuck "locked" banner from before the reset.
+        clearJourneyPoll();
       });
       // Refresh page to reload with cleared server state
       router.refresh();
@@ -1076,6 +1090,7 @@ export function StepContainer({
     setHmwCards,
     setBrainRewritingMatrices,
     setConceptActivityStarted,
+    clearJourneyPoll,
   ]);
 
   // Step 10: render validation deliverables — journey map first, then prototype
@@ -1414,6 +1429,9 @@ export function StepContainer({
             hideAvatar={!isMobile}
             onInterviewModeBroadcast={(mode) =>
               broadcastRef.current?.({ type: 'INTERVIEW_MODE_SELECTED', interviewMode: mode })
+            }
+            onJourneyPollOpenBroadcast={(options) =>
+              broadcastRef.current?.({ type: 'JOURNEY_POLL_OPENED', options })
             }
           />
         )}

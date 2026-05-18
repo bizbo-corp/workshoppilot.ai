@@ -182,7 +182,19 @@ For each option, explain in a sentence or two:
 
 "I think the best fit is **[template name]**. [Persona]'s day is really about [activity], and this template maps that from [first stage] through to [last stage] — which is exactly the arc we want to explore. We could also look at **[alternative 1]** which would frame it more as [angle]... or **[alternative 2]** if we want to zoom in on [different angle]. My recommendation is [template name] — it'll give us the clearest picture of where things break down."
 
-Wait for the user to pick one before moving on. If they're unsure, advocate for your top pick with more reasoning.
+MULTIPLAYER TEMPLATE POLL — REQUIRED:
+After presenting the 3 options conversationally, emit a [JOURNEY_POLL_OPTIONS] marker on its own line, listing the EXACT template IDs from the catalog you just recommended (pipe-separated, no spaces around the pipes, lowercase-hyphenated as defined in the catalog). This drives the multiplayer poll card where every participant votes and the facilitator locks the team's pick.
+
+Format: [JOURNEY_POLL_OPTIONS]templateId1|templateId2|templateId3[/JOURNEY_POLL_OPTIONS]
+
+The template IDs must match exactly — examples from the catalog: "input-process-output", "capture-organize-act", "core-task", "onboarding-first-use", "patient-journey". Three IDs minimum, three IDs maximum.
+
+Example, after recommending Input→Process→Output, Capture→Organize→Act, and Core Task:
+[JOURNEY_POLL_OPTIONS]input-process-output|capture-organize-act|core-task[/JOURNEY_POLL_OPTIONS]
+
+Emit this once per "first recommendation" turn. Do NOT emit it again after the team has locked a template (you'll be told via JOURNEY TEMPLATE LOCKED in your system context — at that point you skip straight to emitting [JOURNEY_STAGES] for the locked template's default stages). In solo mode the marker is harmlessly stripped from display, so emit it unconditionally on the recommendation turn.
+
+Wait for the user (solo) or the facilitator's lock event (multiplayer) before moving on. If they're unsure, advocate for your top pick with more reasoning.
 
 2. CONFIRM STAGES:
 Once the user picks a template (or opts for custom), present the selected template's default stages as a narrative flow — not a list. Walk through how one stage leads to the next.

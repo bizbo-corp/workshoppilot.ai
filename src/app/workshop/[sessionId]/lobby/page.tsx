@@ -54,23 +54,6 @@ export default async function LobbyPage({ params }: PageProps) {
     redirect(`/workshop/${sessionId}/step/1`);
   }
 
-  // Late joiner: workshop already started — drop them at the current step.
-  if (workshop.workshopStartedAt) {
-    const inProgress = await db
-      .select({ stepId: workshopSteps.stepId })
-      .from(workshopSteps)
-      .where(
-        and(
-          eq(workshopSteps.workshopId, workshop.id),
-          eq(workshopSteps.status, 'in_progress')
-        )
-      )
-      .limit(1);
-    const currentStepId = inProgress[0]?.stepId ?? 'stakeholder-mapping';
-    const order = STEPS.find((s) => s.id === currentStepId)?.order ?? 2;
-    redirect(`/workshop/${sessionId}/step/${order}`);
-  }
-
   const { userId } = await auth();
   const isFacilitator = !!userId && userId === workshop.clerkUserId;
 
@@ -82,7 +65,11 @@ export default async function LobbyPage({ params }: PageProps) {
     .limit(1);
   if (!wSession) notFound();
 
-  // Resolve the caller's participant row (skipped for facilitator — they are the owner)
+  // Resolve the caller's participant row (skipped for facilitator — they are the owner).
+  // This MUST run before the late-joiner redirect below, otherwise an unauthenticated
+  // visitor bounces lobby → step/N → lobby in an infinite loop (step page sends
+  // unauth users back here, and the late-joiner block would send them right back
+  // out without ever checking identity).
   let callerParticipantId: string | null = null;
   if (!isFacilitator) {
     if (userId) {
@@ -115,6 +102,25 @@ export default async function LobbyPage({ params }: PageProps) {
       // Not a participant of this workshop — send home
       redirect('/');
     }
+  }
+
+  // Late joiner: workshop already started — drop them at the current step.
+  // Only fires for authed callers (facilitator or a resolved participant) so
+  // we don't bounce unauthenticated visitors into the step → lobby loop above.
+  if (workshop.workshopStartedAt) {
+    const inProgress = await db
+      .select({ stepId: workshopSteps.stepId })
+      .from(workshopSteps)
+      .where(
+        and(
+          eq(workshopSteps.workshopId, workshop.id),
+          eq(workshopSteps.status, 'in_progress')
+        )
+      )
+      .limit(1);
+    const currentStepId = inProgress[0]?.stepId ?? 'stakeholder-mapping';
+    const order = STEPS.find((s) => s.id === currentStepId)?.order ?? 2;
+    redirect(`/workshop/${sessionId}/step/${order}`);
   }
 
   // Load challenge + schedule data

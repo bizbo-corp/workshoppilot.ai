@@ -269,6 +269,7 @@ export async function POST(req: Request) {
       isParticipant,
       participantName,
       stepContext.interviewMode,
+      stepContext.lockedJourneyTemplate,
     );
 
     // Per-turn override for the challenge step: when the user is asking the AI

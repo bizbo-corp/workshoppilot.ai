@@ -291,7 +291,10 @@ STEP COMPLETION: When wrapping up, summarize what was captured, then close with:
  */
 export function getParticipantGuidance(
   stepId: string,
-  ctx?: { interviewMode?: 'synthetic' | 'real' | null },
+  ctx?: {
+    interviewMode?: 'synthetic' | 'real' | null;
+    lockedJourneyTemplate?: { templateId: string; templateName: string } | null;
+  },
 ): string | undefined {
   const guidance = PARTICIPANT_GUIDANCE[stepId];
   if (!guidance) return undefined;
@@ -312,6 +315,14 @@ export function getParticipantGuidance(
       result = `INTERVIEW MODE (facilitator decided): The team is running ${modeLabel}. Begin with PHASE A — PERSONA SELECTION immediately. Do NOT ask about or restate the interview mode choice.\n\n${result}`;
     }
     return result;
+  }
+
+  // Journey-mapping participants only ever engage with the AI AFTER the team
+  // has locked a template (the chat is gated by a hold card before then), so
+  // when we see a locked template, anchor the participant's contributions on
+  // that specific journey type instead of generic prompting.
+  if (stepId === "journey-mapping" && ctx?.lockedJourneyTemplate) {
+    return `LOCKED JOURNEY TEMPLATE (team decision): The team voted to map a **${ctx.lockedJourneyTemplate.templateName}** journey. Anchor every contribution to this template — when you suggest [CANVAS_ITEM] or [GRID_ITEM] entries, frame them in terms of this specific journey arc and its stages. Do NOT suggest a different journey type, and do NOT ask the participant to re-pick a template.\n\n${guidance}`;
   }
 
   return guidance;
