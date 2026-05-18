@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
+import type { cookies } from 'next/headers';
 
 /**
  * Guest Cookie Utility
@@ -9,7 +10,8 @@ import { createHmac, timingSafeEqual } from 'crypto';
  *   for this simple sign/verify pattern. Avoids package bloat per research decision.
  * - `timingSafeEqual` prevents timing attacks on signature comparison.
  * - base64url encoding produces URL-safe tokens without padding.
- * - Cookie lifetime: 8 hours (covers a full workshop session).
+ * - Cookie lifetime: 7-day base, slid forward on every Liveblocks token refresh
+ *   (~hourly) — an active guest never expires; an idle one drops after 7 days.
  * - sameSite: 'lax' (NOT 'strict') — 'strict' would drop the cookie on initial
  *   navigation from the join link, breaking first-load auth.
  */
@@ -21,6 +23,23 @@ function getSecret(): string {
 }
 
 export const COOKIE_NAME = 'wp_guest';
+export const GUEST_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+
+type CookieStore = Awaited<ReturnType<typeof cookies>>;
+
+/**
+ * Write the signed guest token with the canonical cookie flags. Centralizes flag
+ * config so issue, refresh, and rejoin call sites can't drift apart.
+ */
+export function setGuestCookie(cookieStore: CookieStore, signedToken: string): void {
+  cookieStore.set(COOKIE_NAME, signedToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: GUEST_COOKIE_MAX_AGE,
+  });
+}
 
 export type GuestCookiePayload = {
   participantId: string; // spar_xxx

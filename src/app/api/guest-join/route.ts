@@ -6,7 +6,7 @@ import { db } from '@/db/client';
 import { workshopSessions, sessionParticipants, sessions, workshopSteps } from '@/db/schema';
 import { createPrefixedId } from '@/lib/ids';
 import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
-import { signGuestCookie, verifyGuestCookie, COOKIE_NAME } from '@/lib/auth/guest-cookie';
+import { signGuestCookie, verifyGuestCookie, setGuestCookie, COOKIE_NAME } from '@/lib/auth/guest-cookie';
 import { prefetchStepStartGreeting } from '@/lib/ai/prefetch-greeting';
 import { after } from 'next/server';
 
@@ -22,7 +22,8 @@ import { after } from 'next/server';
  * - HttpOnly cookie prevents XSS access to the token.
  * - sameSite: 'lax' (NOT 'strict') — 'strict' drops the cookie on navigation
  *   from external links (the share link scenario), breaking first-load auth.
- * - 8-hour maxAge covers a full workshop session.
+ * - maxAge: 7 days, slid forward on each Liveblocks token refresh (see
+ *   /api/liveblocks-auth) — keeps active guests authed indefinitely.
  * - Color assigned by slot: index 0 = owner indigo, guests start at index 1.
  * - liveblocksUserId prefixed with 'guest' — distinguishable from Clerk user IDs
  *   in the Liveblocks dashboard and session_participants table.
@@ -117,13 +118,7 @@ export async function POST(request: Request) {
         workshopId: workshopSession.workshopId,
         iat: Date.now(),
       });
-      cookieStore.set(COOKIE_NAME, signedToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 8,
-      });
+      setGuestCookie(cookieStore, signedToken);
       return Response.json({
         ok: true,
         participantId: tokenParticipant.id,
@@ -154,19 +149,13 @@ export async function POST(request: Request) {
           .set({ displayName: trimmedName })
           .where(eq(sessionParticipants.id, clerkParticipant.id));
       }
-      // Refresh the cookie (resets 8-hour expiry)
+      // Refresh the cookie (resets the rolling expiry)
       const signedToken = signGuestCookie({
         participantId: clerkParticipant.id,
         workshopId: workshopSession.workshopId,
         iat: Date.now(),
       });
-      cookieStore.set(COOKIE_NAME, signedToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 8,
-      });
+      setGuestCookie(cookieStore, signedToken);
       return Response.json({
         ok: true,
         participantId: clerkParticipant.id,
@@ -203,19 +192,13 @@ export async function POST(request: Request) {
             .set(updates)
             .where(eq(sessionParticipants.id, existing.id));
         }
-        // Refresh the cookie (resets 8-hour expiry)
+        // Refresh the cookie (resets the rolling expiry)
         const signedToken = signGuestCookie({
           participantId: existing.id,
           workshopId: workshopSession.workshopId,
           iat: Date.now(),
         });
-        cookieStore.set(COOKIE_NAME, signedToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          path: '/',
-          maxAge: 60 * 60 * 8,
-        });
+        setGuestCookie(cookieStore, signedToken);
         return Response.json({
           ok: true,
           participantId: existing.id,
@@ -258,13 +241,7 @@ export async function POST(request: Request) {
         workshopId: workshopSession.workshopId,
         iat: Date.now(),
       });
-      cookieStore.set(COOKIE_NAME, signedToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 8,
-      });
+      setGuestCookie(cookieStore, signedToken);
       return Response.json({
         ok: true,
         participantId: claimTarget.id,
@@ -341,14 +318,9 @@ export async function POST(request: Request) {
     iat: Date.now(),
   });
 
-  // Set the HttpOnly signed cookie
-  cookieStore.set(COOKIE_NAME, signedToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax', // 'lax' required — 'strict' drops cookie on navigation from share link
-    path: '/',
-    maxAge: 60 * 60 * 8, // 8 hours — covers a full workshop session
-  });
+  // Set the HttpOnly signed cookie (7-day rolling expiry — slid forward by
+  // /api/liveblocks-auth on every token refresh while the guest is active).
+  setGuestCookie(cookieStore, signedToken);
 
   // Eager greeting prefetch — see invite-claim/route.ts and prefetch-greeting.ts for
   // rationale and race semantics. Scoped to this new participant on whichever step is

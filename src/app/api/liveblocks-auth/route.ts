@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { Liveblocks } from '@liveblocks/node';
 import { eq, and } from 'drizzle-orm';
 import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
-import { verifyGuestCookie, COOKIE_NAME } from '@/lib/auth/guest-cookie';
+import { verifyGuestCookie, setGuestCookie, COOKIE_NAME } from '@/lib/auth/guest-cookie';
 import { db } from '@/db/client';
 import { sessionParticipants, workshopSessions } from '@/db/schema';
 
@@ -19,6 +19,11 @@ import { sessionParticipants, workshopSessions } from '@/db/schema';
  *   be called once. Both Clerk and guest paths share the already-parsed `room` value.
  * - Guest path reads the HttpOnly `wp_guest` cookie, verifies HMAC-SHA256 signature,
  *   looks up the sessionParticipants record, and issues a token with `role: 'participant'`.
+ *   On success it also re-issues the guest cookie with a fresh maxAge — Liveblocks
+ *   refreshes its own JWT ~hourly, so this gives the cookie a sliding-window expiry
+ *   that keeps active guests authed indefinitely (idle guests still time out per
+ *   GUEST_COOKIE_MAX_AGE). Fixes the "Authentication failed after retries" error
+ *   that previously occurred when the original cookie hit its hard maxAge.
  * - FULL_ACCESS granted for all authenticated users — room-level authorization relies
  *   on the Liveblocks room ID being unpredictable (derived from workshopId UUID).
  *
@@ -91,6 +96,12 @@ export async function POST(request: Request) {
     if (participant.status === 'removed') {
       return new Response('Removed from session', { status: 403 });
     }
+
+    // Slide the guest cookie forward — Liveblocks calls this endpoint on every
+    // JWT refresh (~hourly), so an active guest's cookie never decays toward expiry.
+    // Re-uses the existing signed token (same payload + signature) — only the
+    // browser-side maxAge resets.
+    setGuestCookie(cookieStore, raw!);
 
     // Issue Liveblocks token for the guest participant
     const liveblocks = getLiveblocksClient();
