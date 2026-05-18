@@ -20,6 +20,19 @@ import { extractBlobUrlsFromArtifact } from '@/lib/blob/extract-urls';
 import { dbWithRetry } from '@/db/with-retry';
 import { unwrapLiveblocksStorage } from '@/lib/liveblocks/unwrap-storage';
 import { getRoomId } from '@/lib/liveblocks/config';
+import { Liveblocks } from '@liveblocks/node';
+
+// Lazily initialized Liveblocks server client — mirrors the pattern in
+// /api/liveblocks-auth/route.ts. The constructor validates the secret key
+// at instantiation, so we defer it to request time to avoid build-time
+// failure when LIVEBLOCKS_SECRET_KEY is unset.
+let _liveblocksServer: Liveblocks | null = null;
+function getLiveblocksServer(): Liveblocks {
+  if (!_liveblocksServer) {
+    _liveblocksServer = new Liveblocks({ secret: process.env.LIVEBLOCKS_SECRET_KEY! });
+  }
+  return _liveblocksServer;
+}
 
 /**
  * Get user ID from Clerk auth.
@@ -578,36 +591,35 @@ export async function advanceToNextStep(
     }
     nextStepOrder = nextStep.order;
 
-    // Server-side STEP_CHANGED broadcast. Sent from here (post-DB-commit) rather than
-    // from the client BEFORE the action ran — the client-side path could outrace the
-    // DB write under network jitter or cold starts, leaving participants stranded.
-    // Broadcast failure must not block step advance; participants will catch up on
-    // their next interaction (page nav, refresh).
+    // Server-side STEP_CHANGED broadcast. Sent from here (post-DB-commit) rather
+    // than from the client BEFORE the action ran — the client-side path could
+    // outrace the DB write under network jitter or cold starts, leaving
+    // participants stranded.
+    //
+    // Use the @liveblocks/node SDK rather than raw fetch. The REST broadcast-
+    // event endpoint returns 404 unless the room has been explicitly registered
+    // (a WebSocket-only connection does not register the room for REST
+    // operations). getOrCreateRoom is idempotent and makes the broadcast robust
+    // against this race — empty defaultAccesses preserves the existing security
+    // model where access is granted exclusively via /api/liveblocks-auth tokens.
+    //
+    // Broadcast failure must not block step advance; participants will catch up
+    // on their next interaction (page nav, refresh).
     if (isMultiplayer) {
+      const broadcastRoomId = getRoomId(workshopId);
       try {
-        const broadcastRoomId = getRoomId(workshopId);
-        const res = await fetch(
-          `https://api.liveblocks.io/v2/rooms/${encodeURIComponent(broadcastRoomId)}/broadcast-event`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${process.env.LIVEBLOCKS_SECRET_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              type: 'STEP_CHANGED',
-              stepOrder: nextStep.order,
-              stepName: nextStep.name,
-            }),
-          },
-        );
-        if (!res.ok) {
-          console.warn(
-            `[advanceToNextStep] STEP_CHANGED broadcast failed room=${broadcastRoomId} status=${res.status}`,
-          );
-        }
+        const liveblocks = getLiveblocksServer();
+        await liveblocks.getOrCreateRoom(broadcastRoomId, { defaultAccesses: [] });
+        await liveblocks.broadcastEvent(broadcastRoomId, {
+          type: 'STEP_CHANGED',
+          stepOrder: nextStep.order,
+          stepName: nextStep.name,
+        });
       } catch (broadcastErr) {
-        console.warn('[advanceToNextStep] STEP_CHANGED broadcast error:', broadcastErr);
+        console.warn(
+          `[advanceToNextStep] STEP_CHANGED broadcast failed room=${broadcastRoomId}:`,
+          broadcastErr,
+        );
       }
     }
 
