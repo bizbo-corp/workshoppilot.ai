@@ -1,11 +1,11 @@
 import { google } from '@ai-sdk/google';
-import { auth } from '@clerk/nextjs/server';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { db } from '@/db/client';
 import { workshops, workshopSteps, stepArtifacts } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
+import { checkRateLimit, rateLimitResponse } from '@/lib/ai/rate-limiter';
+import { authenticateWorkshopRequest, unauthorizedResponse } from '@/lib/auth/workshop-request-auth';
 
 /**
  * Increase Vercel serverless timeout for AI responses
@@ -21,22 +21,30 @@ export const maxDuration = 30;
  * - themes?: string[] - Optional mind map themes to incorporate
  */
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  // Parse body before auth so we can scope guest cookie verification to workshopId.
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== 'object') {
+    return new Response(
+      JSON.stringify({ error: 'Invalid request body' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
   }
-  const rl = checkRateLimit(getRateLimitId(req, userId), 'text-gen');
+  const { workshopId, themes } = body as { workshopId?: string; themes?: string[] };
+
+  if (!workshopId) {
+    return new Response(
+      JSON.stringify({ error: 'workshopId is required' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const authResult = await authenticateWorkshopRequest(workshopId);
+  if (!authResult) return unauthorizedResponse();
+
+  const rl = checkRateLimit(authResult.rateLimitKey, 'text-gen');
   if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
   try {
-    const { workshopId, themes } = await req.json();
-
-    if (!workshopId) {
-      return new Response(
-        JSON.stringify({ error: 'workshopId is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Load workshop context (HMW statement, persona)
     const workshop = await db

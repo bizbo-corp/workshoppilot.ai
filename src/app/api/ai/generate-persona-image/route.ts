@@ -1,16 +1,11 @@
 import { generateImage } from "ai";
 import { google } from "@ai-sdk/google";
-import { auth } from "@clerk/nextjs/server";
-import { cookies } from "next/headers";
 import { put } from "@vercel/blob";
-import { eq } from "drizzle-orm";
-import { db } from "@/db/client";
-import { sessionParticipants } from "@/db/schema";
-import { verifyGuestCookie, COOKIE_NAME } from "@/lib/auth/guest-cookie";
 import { deleteBlobUrls } from "@/lib/blob/delete-blob-urls";
 import { recordUsageEvent } from "@/lib/ai/usage-tracking";
-import { checkRateLimit, rateLimitResponse, getRateLimitId } from "@/lib/ai/rate-limiter";
+import { checkRateLimit, rateLimitResponse } from "@/lib/ai/rate-limiter";
 import { checkImageGenerationCap, imageCapExceededResponse } from "@/lib/ai/image-generation-cap";
+import { authenticateWorkshopRequest, unauthorizedResponse } from "@/lib/auth/workshop-request-auth";
 
 /**
  * Increase Vercel serverless timeout for image generation
@@ -111,38 +106,13 @@ export async function POST(req: Request) {
     );
   }
 
-  // Auth: Clerk session (facilitator/owner) OR signed guest cookie scoped to
-  // this workshop (participant). Mirrors the dual-auth pattern in
-  // /api/liveblocks-auth/route.ts so guest participants can generate avatars
-  // for personas on their own canvas.
-  const { userId } = await auth();
-  let rateLimitKey: string | null = userId ? `user:${userId}` : null;
+  // Dual-auth: Clerk session (facilitator/owner) OR signed guest cookie scoped
+  // to this workshop. Shared with the sketch-image endpoints so guest
+  // participants can generate persona avatars on their own canvas.
+  const authResult = await authenticateWorkshopRequest(workshopId);
+  if (!authResult) return unauthorizedResponse();
 
-  if (!userId) {
-    const cookieStore = await cookies();
-    const raw = cookieStore.get(COOKIE_NAME)?.value;
-    const payload = raw ? verifyGuestCookie(raw) : null;
-    if (!payload || payload.workshopId !== workshopId) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json" } },
-      );
-    }
-    const [participant] = await db
-      .select({ id: sessionParticipants.id, status: sessionParticipants.status })
-      .from(sessionParticipants)
-      .where(eq(sessionParticipants.id, payload.participantId))
-      .limit(1);
-    if (!participant || participant.status === "removed") {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json" } },
-      );
-    }
-    rateLimitKey = `guest:${payload.participantId}`;
-  }
-
-  const rl = checkRateLimit(rateLimitKey ?? getRateLimitId(req, null), "image-gen");
+  const rl = checkRateLimit(authResult.rateLimitKey, "image-gen");
   if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
   try {

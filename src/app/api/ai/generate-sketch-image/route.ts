@@ -1,14 +1,13 @@
 import { google } from '@ai-sdk/google';
 import { generateImage } from 'ai';
-import { auth, currentUser } from '@clerk/nextjs/server';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { loadWorkshopContext, type WorkshopContext } from '@/lib/ai/workshop-context';
 import { put } from '@vercel/blob';
 import { deleteBlobUrls } from '@/lib/blob/delete-blob-urls';
-import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
+import { checkRateLimit, rateLimitResponse } from '@/lib/ai/rate-limiter';
 import { checkImageGenerationCap, imageCapExceededResponse } from '@/lib/ai/image-generation-cap';
-import { isAdmin } from '@/lib/auth/roles';
+import { authenticateWorkshopRequest, unauthorizedResponse } from '@/lib/auth/workshop-request-auth';
 
 export const maxDuration = 60;
 
@@ -250,51 +249,73 @@ function buildSketchPrompt(params: {
  * - existingImageBase64?: string (data URL or raw base64)
  */
 export async function POST(req: Request) {
-  const { userId, sessionClaims } = await auth();
-  if (!userId) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  // Parse body first so we can scope dual-auth to the requested workshop.
+  // Mirrors the pattern in generate-persona-image so guest participants can
+  // generate sketches inside a workshop they joined via a guest link.
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== 'object') {
+    return new Response(
+      JSON.stringify({ error: 'Invalid request body' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
   }
-  let adminUser = isAdmin(sessionClaims);
-  if (!adminUser) {
-    const user = await currentUser();
-    const adminEmail = process.env.ADMIN_EMAIL;
-    const userEmail = user?.emailAddresses?.[0]?.emailAddress;
-    adminUser = !!(adminEmail && userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase());
+  const {
+    workshopId,
+    ideaTitle,
+    ideaDescription,
+    additionalPrompt,
+    existingImageBase64,
+    previousImageUrl,
+    hasPersonStamps,
+    slotId,
+    imageModel,
+  } = body as {
+    workshopId?: string;
+    ideaTitle?: string;
+    ideaDescription?: string;
+    additionalPrompt?: string;
+    existingImageBase64?: string;
+    previousImageUrl?: string;
+    hasPersonStamps?: boolean;
+    slotId?: string;
+    imageModel?: string;
+  };
+
+  if (!workshopId || (!ideaTitle && !additionalPrompt)) {
+    return new Response(
+      JSON.stringify({ error: 'workshopId and either ideaTitle or additionalPrompt are required' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 
-  if (!adminUser) {
-    const rl = checkRateLimit(getRateLimitId(req, userId), 'image-gen');
+  const authResult = await authenticateWorkshopRequest(workshopId);
+  if (!authResult) return unauthorizedResponse();
+
+  const isAdminUser = authResult.kind === 'user' && authResult.isAdmin;
+
+  // Resolve Imagen model:
+  // - Admin honors their explicit toggle (the only role that sees it in the UI).
+  // - Guest participants default to standard for better output quality (their
+  //   sketches are the bulk of generations during a live workshop).
+  // - Non-admin facilitators (no toggle exposed) stay on fast.
+  // The per-item generation cap below still applies to guests, so cost is bounded.
+  const resolvedModel: string = isAdminUser
+    ? imageModel === 'standard'
+      ? 'imagen-4.0-generate-001'
+      : 'imagen-4.0-fast-generate-001'
+    : authResult.kind === 'guest'
+      ? 'imagen-4.0-generate-001'
+      : 'imagen-4.0-fast-generate-001';
+
+  if (!isAdminUser) {
+    const rl = checkRateLimit(authResult.rateLimitKey, 'image-gen');
     if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
   }
 
   try {
-    const {
-      workshopId,
-      ideaTitle,
-      ideaDescription,
-      additionalPrompt,
-      existingImageBase64,
-      previousImageUrl,
-      hasPersonStamps,
-      slotId,
-      imageModel,
-    } = await req.json();
-
-    // Only admin users can use the standard model
-    const resolvedModel = (adminUser && imageModel === 'standard')
-      ? 'imagen-4.0-generate-001'
-      : 'imagen-4.0-fast-generate-001';
-
-    if (!workshopId || (!ideaTitle && !additionalPrompt)) {
-      return new Response(
-        JSON.stringify({ error: 'workshopId and either ideaTitle or additionalPrompt are required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
-    }
-
     // Check per-item generation cap (skip for admin)
     const itemId = slotId ? `sketch:${workshopId}:${slotId}` : `sketch:${workshopId}:unknown`;
-    const capCheck = adminUser
+    const capCheck = isAdminUser
       ? { count: 0, remaining: 999, allowed: true }
       : await checkImageGenerationCap(itemId);
     if (!capCheck.allowed) {
@@ -309,9 +330,12 @@ export async function POST(req: Request) {
         : Promise.resolve(undefined),
     ]);
 
-    // Rewrite the prompt with Gemini Flash for coherent concept framing
+    // Rewrite the prompt with Gemini Flash for coherent concept framing.
+    // ideaTitle is guaranteed non-empty by the validation above (ideaTitle || additionalPrompt),
+    // but when only additionalPrompt was supplied we pass an empty string so the
+    // rewriter falls back to additionalPrompt-only generation.
     const { conceptPrompt, classification } = await rewriteSketchPrompt({
-      ideaTitle,
+      ideaTitle: ideaTitle || '',
       ideaDescription: ideaDescription || '',
       additionalPrompt,
       workshopContext,

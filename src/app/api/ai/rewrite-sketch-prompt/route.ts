@@ -7,35 +7,42 @@
  */
 
 import { google } from '@ai-sdk/google';
-import { auth } from '@clerk/nextjs/server';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
 import { loadWorkshopContext } from '@/lib/ai/workshop-context';
-import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
+import { checkRateLimit, rateLimitResponse } from '@/lib/ai/rate-limiter';
+import { authenticateWorkshopRequest, unauthorizedResponse } from '@/lib/auth/workshop-request-auth';
 
 export const maxDuration = 15;
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  // Parse body before auth so we can scope guest cookie verification to workshopId.
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== 'object') {
+    return new Response(
+      JSON.stringify({ error: 'Invalid request body' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+  const { workshopId, ideaTitle, ideaDescription } = body as {
+    workshopId?: string;
+    ideaTitle?: string;
+    ideaDescription?: string;
+  };
+
+  if (!workshopId || !ideaTitle) {
+    return new Response(
+      JSON.stringify({ error: 'workshopId and ideaTitle are required' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 
-  const rl = checkRateLimit(getRateLimitId(req, userId), 'text-gen');
+  const authResult = await authenticateWorkshopRequest(workshopId);
+  if (!authResult) return unauthorizedResponse();
+
+  const rl = checkRateLimit(authResult.rateLimitKey, 'text-gen');
   if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
   try {
-    const { workshopId, ideaTitle, ideaDescription } = await req.json();
-
-    if (!workshopId || !ideaTitle) {
-      return new Response(
-        JSON.stringify({ error: 'workshopId and ideaTitle are required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
-    }
-
     const workshopContext = await loadWorkshopContext(workshopId);
     const challenge =
       workshopContext.reframedHmw ||

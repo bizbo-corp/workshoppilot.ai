@@ -154,14 +154,21 @@ function EzyDrawContent({
         ideaDescription: slotDescription || '',
       }),
     })
-      .then((r) => (r.ok ? r.json() : null))
+      .then(async (r) => {
+        if (r.ok) return r.json();
+        // Log non-OK so guest-auth regressions don't silently leave the prompt blank.
+        console.warn(`[ezydraw] prompt rewrite failed: HTTP ${r.status}`);
+        return null;
+      })
       .then((data) => {
         if (!cancelled && data?.conceptPrompt) {
           setEditablePrompt(data.conceptPrompt);
           onSlotInfoChange?.({ sketchPrompt: data.conceptPrompt });
         }
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.warn('[ezydraw] prompt rewrite errored:', err);
+      })
       .finally(() => {
         if (!cancelled) setIsRewritingPrompt(false);
       });
@@ -242,7 +249,7 @@ function EzyDrawContent({
           toast.error(errData.message);
           return;
         }
-        throw new Error(errData.error || 'Failed to generate sketch');
+        throw new Error(errData.error || `Failed to generate sketch (HTTP ${response.status})`);
       }
 
       const data = await response.json();
@@ -252,10 +259,14 @@ function EzyDrawContent({
       }
     } catch (error) {
       console.error('Failed to generate sketch:', error);
+      // Surface failure so the user knows the Generate button didn't silently no-op.
+      // Without this, guest participants saw the spinner stop and nothing else.
+      const { toast } = await import('sonner');
+      toast.error(error instanceof Error ? error.message : 'Failed to generate sketch');
     } finally {
       setIsGeneratingImage(false);
     }
-  }, [workshopId, slotTitle, slotDescription, iterationPrompt, editablePrompt, isGenerateMode, useExistingDrawing, isGeneratingImage, getSnapshot, backgroundImageUrl, stageRef, replaceWithGeneratedImage, imageModel]);
+  }, [workshopId, slotTitle, slotDescription, iterationPrompt, editablePrompt, isGenerateMode, useExistingDrawing, isGeneratingImage, getSnapshot, backgroundImageUrl, stageRef, replaceWithGeneratedImage, imageModel, slotId]);
 
   const handleImageUpload = useCallback(async (file: File) => {
     const validation = validateImageFile(file);
