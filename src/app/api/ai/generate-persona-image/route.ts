@@ -1,7 +1,12 @@
 import { generateImage } from "ai";
 import { google } from "@ai-sdk/google";
 import { auth } from "@clerk/nextjs/server";
+import { cookies } from "next/headers";
 import { put } from "@vercel/blob";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { sessionParticipants } from "@/db/schema";
+import { verifyGuestCookie, COOKIE_NAME } from "@/lib/auth/guest-cookie";
 import { deleteBlobUrls } from "@/lib/blob/delete-blob-urls";
 import { recordUsageEvent } from "@/lib/ai/usage-tracking";
 import { checkRateLimit, rateLimitResponse, getRateLimitId } from "@/lib/ai/rate-limiter";
@@ -63,36 +68,84 @@ function buildImagePrompt(persona: {
  * - name, age, job, archetype, archetypeRole, empathyPains, empathyGains, narrative, quote
  */
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+  // Parse body first so we can scope guest auth to the requested workshop.
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return new Response(
+      JSON.stringify({ error: "Invalid request body" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
   }
-  const rl = checkRateLimit(getRateLimitId(req, userId), "image-gen");
+  const {
+    workshopId,
+    templateId,
+    name,
+    age,
+    job,
+    archetype,
+    archetypeRole,
+    empathyPains,
+    empathyGains,
+    narrative,
+    quote,
+    previousAvatarUrl,
+  } = body as {
+    workshopId?: string;
+    templateId?: string;
+    name?: string;
+    age?: number;
+    job?: string;
+    archetype?: string;
+    archetypeRole?: string;
+    empathyPains?: string;
+    empathyGains?: string;
+    narrative?: string;
+    quote?: string;
+    previousAvatarUrl?: string;
+  };
+
+  if (!workshopId || !templateId) {
+    return new Response(
+      JSON.stringify({ error: "workshopId and templateId are required" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // Auth: Clerk session (facilitator/owner) OR signed guest cookie scoped to
+  // this workshop (participant). Mirrors the dual-auth pattern in
+  // /api/liveblocks-auth/route.ts so guest participants can generate avatars
+  // for personas on their own canvas.
+  const { userId } = await auth();
+  let rateLimitKey: string | null = userId ? `user:${userId}` : null;
+
+  if (!userId) {
+    const cookieStore = await cookies();
+    const raw = cookieStore.get(COOKIE_NAME)?.value;
+    const payload = raw ? verifyGuestCookie(raw) : null;
+    if (!payload || payload.workshopId !== workshopId) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    const [participant] = await db
+      .select({ id: sessionParticipants.id, status: sessionParticipants.status })
+      .from(sessionParticipants)
+      .where(eq(sessionParticipants.id, payload.participantId))
+      .limit(1);
+    if (!participant || participant.status === "removed") {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    rateLimitKey = `guest:${payload.participantId}`;
+  }
+
+  const rl = checkRateLimit(rateLimitKey ?? getRateLimitId(req, null), "image-gen");
   if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
   try {
-    const {
-      workshopId,
-      templateId,
-      name,
-      age,
-      job,
-      archetype,
-      archetypeRole,
-      empathyPains,
-      empathyGains,
-      narrative,
-      quote,
-      previousAvatarUrl,
-    } = await req.json();
-
-    if (!workshopId || !templateId) {
-      return new Response(
-        JSON.stringify({ error: "workshopId and templateId are required" }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
     // Check per-item generation cap
     const itemId = `persona:${workshopId}:${templateId}`;
     const capCheck = await checkImageGenerationCap(itemId);
