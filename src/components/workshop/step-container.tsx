@@ -308,6 +308,7 @@ export function StepContainer({
       ...(s.brainRewritingMatrices.length > 0 ? { brainRewritingMatrices: s.brainRewritingMatrices } : {}),
       ...(s.dotVotes.length > 0 ? { dotVotes: s.dotVotes } : {}),
       ...(s.votingSession.status !== 'idle' ? { votingSession: s.votingSession } : {}),
+      ...(s.interviewMode ? { interviewMode: s.interviewMode } : {}),
     });
     s.markClean();
   }, [isCanvasStep, workshopId, step, storeApi]);

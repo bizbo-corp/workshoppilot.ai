@@ -137,8 +137,19 @@ Keep it to 2-3 short sentences max. Do NOT ask any follow-up questions — the s
 
   // Step-specific instructions — these are the authority for personality, tone,
   // format, and interaction style. They override GENERAL DEFAULTS above.
+  //
+  // Participants on user-research get NO step instructions — the facilitator's
+  // step-3 prompt contains the literal "[INTERVIEW_MODE]" mode-selection text
+  // ("First — how do you want to run these interviews? AI interviews are great
+  // for…"), and Gemini recites it in prose even when the PARTICIPANT OVERRIDES
+  // below forbid the markup. The PARTICIPANT GUIDANCE preamble above is a
+  // complete script for the participant's flow (persona selection → AI
+  // interviews → completion), so an empty stepInstructions here is the
+  // deterministic fix.
   const stepInstructions =
-    instructionsOverride || getStepSpecificInstructions(stepId);
+    isParticipant && stepId === 'user-research'
+      ? ''
+      : (instructionsOverride || getStepSpecificInstructions(stepId));
   if (stepInstructions) {
     prompt += `\n\nSTEP INSTRUCTIONS (override any defaults above):
 ${stepInstructions}`;

@@ -924,6 +924,10 @@ export function ChatPanel({
         ? { personaTemplates: s.personaTemplates }
         : {}),
       ...(s.hmwCards.length > 0 ? { hmwCards: s.hmwCards } : {}),
+      // Persist the step-3 interview-mode choice so the participant's
+      // server-side greeting prompt sees it via assembleStepContext —
+      // multiplayer autosave is disabled, so this flush is the only DB write path.
+      ...(s.interviewMode ? { interviewMode: s.interviewMode } : {}),
     });
     s.markClean();
   }, [isCanvasStep, workshopId, step.id, storeApi, isMultiplayer]);
