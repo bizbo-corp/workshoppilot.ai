@@ -10,6 +10,7 @@ import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { DotVote, VotingSession } from '@/lib/canvas/voting-types';
+import type { JourneyPoll } from '@/lib/canvas/journey-poll-types';
 import type { IdeationPhase } from '@/stores/canvas-store';
 import { unwrapLiveblocksStorage } from '@/lib/liveblocks/unwrap-storage';
 
@@ -43,6 +44,7 @@ export async function saveCanvasState(
     votingCardPositions?: Record<string, { x: number; y: number }>;
     ideationPhase?: IdeationPhase;
     interviewMode?: 'synthetic' | 'real' | null;
+    journeyPoll?: JourneyPoll | null;
     _confirmed?: boolean;
   }
 ): Promise<{ success: boolean; error?: string }> {
@@ -361,6 +363,7 @@ export async function loadCanvasState(
   votingCardPositions?: Record<string, { x: number; y: number }>;
   ideationPhase?: IdeationPhase;
   interviewMode?: 'synthetic' | 'real' | null;
+  journeyPoll?: JourneyPoll | null;
   _confirmed?: boolean;
 } | null> {
   try {
@@ -425,6 +428,7 @@ export async function loadCanvasState(
         votingCardPositions?: Record<string, { x: number; y: number }>;
         ideationPhase?: IdeationPhase;
         interviewMode?: 'synthetic' | 'real' | null;
+        journeyPoll?: JourneyPoll | null;
         _confirmed?: boolean;
       };
       if (canvas?.stickyNotes || canvas?.personaTemplates || canvas?.hmwCards || canvas?.mindMapNodes || canvas?.crazy8sSlots || canvas?.conceptCards || canvas?.selectedSlotIds || canvas?.brainRewritingMatrices || canvas?.dotVotes) {
@@ -448,6 +452,7 @@ export async function loadCanvasState(
           ...(canvas.interviewMode === 'synthetic' || canvas.interviewMode === 'real'
             ? { interviewMode: canvas.interviewMode }
             : {}),
+          ...(canvas.journeyPoll ? { journeyPoll: canvas.journeyPoll } : {}),
           ...(canvas._confirmed ? { _confirmed: canvas._confirmed } : {}),
         };
       }

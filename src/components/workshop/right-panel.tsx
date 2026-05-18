@@ -5,6 +5,7 @@ import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
 import type { StepCanvasSettingsData } from '@/lib/canvas/step-canvas-settings-types';
+import { JourneyTemplatePoll } from './journey-template-poll';
 
 interface RightPanelProps {
   stepOrder: number;
@@ -42,9 +43,21 @@ export function RightPanel({
   canvasRef,
 }: RightPanelProps) {
   const stepMeta = getStepByOrder(stepOrder);
+  const isJourneyMapping = stepMeta?.id === 'journey-mapping';
+  const isMultiplayer = workshopType === 'multiplayer';
 
   return (
     <div className="flex h-full flex-col relative overflow-hidden">
+      {/* Step-6 journey template poll — multiplayer-only overlay above the
+          canvas. The component returns null when there's no open poll or when
+          a template is already locked. Gated on isMultiplayer so we don't
+          mount useBroadcastEvent outside a RoomProvider. */}
+      {isJourneyMapping && isMultiplayer && (
+        <div className="shrink-0 px-4 pt-4">
+          <JourneyTemplatePoll />
+        </div>
+      )}
+
       {/* Canvas section - full height */}
       <div className="min-h-0 flex-1 overflow-hidden">
         <CanvasWrapper

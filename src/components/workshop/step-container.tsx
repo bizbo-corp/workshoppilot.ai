@@ -309,6 +309,7 @@ export function StepContainer({
       ...(s.dotVotes.length > 0 ? { dotVotes: s.dotVotes } : {}),
       ...(s.votingSession.status !== 'idle' ? { votingSession: s.votingSession } : {}),
       ...(s.interviewMode ? { interviewMode: s.interviewMode } : {}),
+      ...(s.journeyPoll ? { journeyPoll: s.journeyPoll } : {}),
     });
     s.markClean();
   }, [isCanvasStep, workshopId, step, storeApi]);

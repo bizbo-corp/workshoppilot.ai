@@ -47,6 +47,7 @@ import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { DotVote, VotingSession, VotingResult } from '@/lib/canvas/voting-types';
 import { DEFAULT_VOTING_SESSION } from '@/lib/canvas/voting-types';
+import type { JourneyPoll } from '@/lib/canvas/journey-poll-types';
 
 type InitState = {
   stickyNotes: StickyNote[];
@@ -67,6 +68,7 @@ type InitState = {
   ideationPhase?: IdeationPhase;
   conceptActivityStarted?: boolean;
   interviewMode?: 'synthetic' | 'real' | null;
+  journeyPoll?: JourneyPoll | null;
 };
 
 /**
@@ -106,6 +108,7 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
     ideationPhase: initState?.ideationPhase || 'mind-mapping',
     conceptActivityStarted: initState?.conceptActivityStarted || false,
     interviewMode: initState?.interviewMode ?? null,
+    journeyPoll: initState?.journeyPoll ?? null,
   };
 
   return createStore<WithLiveblocks<CanvasStore>>()(
@@ -799,6 +802,52 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
           set(() => ({ conceptActivityStarted: started })),
         setInterviewMode: (mode) =>
           set(() => ({ interviewMode: mode })),
+        openJourneyPoll: (options) =>
+          set(() => ({
+            journeyPoll: {
+              options,
+              votes: [],
+              lockedTemplate: null,
+              openedAt: Date.now(),
+            },
+          })),
+        castJourneyVote: (vote) =>
+          set((state) => {
+            if (!state.journeyPoll) return state;
+            const others = state.journeyPoll.votes.filter(
+              (v) => v.voterId !== vote.voterId,
+            );
+            return {
+              journeyPoll: {
+                ...state.journeyPoll,
+                votes: [...others, vote],
+              },
+            };
+          }),
+        retractJourneyVote: (voterId) =>
+          set((state) => {
+            if (!state.journeyPoll) return state;
+            return {
+              journeyPoll: {
+                ...state.journeyPoll,
+                votes: state.journeyPoll.votes.filter(
+                  (v) => v.voterId !== voterId,
+                ),
+              },
+            };
+          }),
+        lockJourneyTemplate: (templateId, templateName) =>
+          set((state) => {
+            if (!state.journeyPoll) return state;
+            return {
+              journeyPoll: {
+                ...state.journeyPoll,
+                lockedTemplate: { templateId, templateName },
+              },
+            };
+          }),
+        clearJourneyPoll: () =>
+          set(() => ({ journeyPoll: null })),
         markClean: () => {},
         markDirty: () => {},
       }),
@@ -826,6 +875,10 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
           votingSession: true,
           ideationPhase: true,
           votingCardPositions: true,
+          // Journey-template poll: must sync via Storage so participants see
+          // live vote tallies and the locked-template state. Mirrors how
+          // dotVotes/votingSession persist for the step-8 voting flow.
+          journeyPoll: true,
         },
         // presenceMapping: omitted — Presence (cursor, color, displayName) is managed
         // directly via useUpdateMyPresence() in Phase 56. No Zustand fields map to Presence.

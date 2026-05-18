@@ -55,6 +55,7 @@ import { addCanvasItemsToBoard } from "@/lib/canvas/add-canvas-items";
 import { saveCanvasState, savePersonaCandidates } from "@/actions/canvas-actions";
 import { ChatSkeleton } from "./chat-skeleton";
 import { parsePersonaSelect, detectPersonaIntro } from "@/lib/chat/parse-utils";
+import { getTemplateById } from "@/lib/workshop/journeyTemplates";
 import {
   parseMindMapNodes,
   inlineMindMapNodes,
@@ -616,6 +617,49 @@ function parseJourneyStages(content: string): {
 }
 
 /**
+ * Parse [JOURNEY_POLL_OPTIONS]templateId1|templateId2|templateId3[/JOURNEY_POLL_OPTIONS]
+ * from AI content. The AI picks 3 template IDs from the journeyTemplates catalog;
+ * we look up name/description/stages from the catalog ourselves.
+ *
+ * Returns clean content (markup removed for display) and the resolved option
+ * list. Unknown template IDs are silently dropped — defensive against AI typos.
+ */
+function parseJourneyPollOptions(content: string): {
+  cleanContent: string;
+  options: import("@/lib/canvas/journey-poll-types").JourneyPollOption[];
+} {
+  const match = content.match(
+    /\[JOURNEY_POLL_OPTIONS\]([\s\S]*?)\[\/JOURNEY_POLL_OPTIONS\]/,
+  );
+  let cleanContent = content
+    .replace(/\s*\[JOURNEY_POLL_OPTIONS\][\s\S]*?\[\/JOURNEY_POLL_OPTIONS\]\s*/g, " ")
+    .trim();
+  if (cleanContent.includes("[JOURNEY_POLL_OPTIONS]")) {
+    cleanContent = cleanContent
+      .replace(/\[JOURNEY_POLL_OPTIONS\][\s\S]*$/, "")
+      .trim();
+  }
+  if (!match) return { cleanContent, options: [] };
+  const ids = match[1]
+    .split("|")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  const options: import("@/lib/canvas/journey-poll-types").JourneyPollOption[] =
+    [];
+  for (const id of ids) {
+    const template = getTemplateById(id);
+    if (!template) continue;
+    options.push({
+      templateId: template.id,
+      templateName: template.name,
+      description: template.description,
+      stagePreview: template.stages.slice(0, 3).map((s) => s.name),
+    });
+  }
+  return { cleanContent, options };
+}
+
+/**
  * Parse [HMW_CARD]{...JSON...}[/HMW_CARD] blocks from AI content.
  * Returns clean content (markup removed) and extracted HMW card data.
  */
@@ -928,6 +972,8 @@ export function ChatPanel({
       // server-side greeting prompt sees it via assembleStepContext —
       // multiplayer autosave is disabled, so this flush is the only DB write path.
       ...(s.interviewMode ? { interviewMode: s.interviewMode } : {}),
+      // Same reasoning for step-6 journey poll — persist for cross-tab reads.
+      ...(s.journeyPoll ? { journeyPoll: s.journeyPoll } : {}),
     });
     s.markClean();
   }, [isCanvasStep, workshopId, step.id, storeApi, isMultiplayer]);

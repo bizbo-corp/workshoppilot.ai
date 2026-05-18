@@ -281,6 +281,51 @@ function InterviewModeSelectedListener() {
 }
 
 /**
+ * JourneyPollListener — listens for the 3 journey-poll events on step 6:
+ *   - JOURNEY_POLL_OPENED  → seed local store with the option set
+ *   - JOURNEY_POLL_VOTE_CAST → apply (or retract) a vote in local store
+ *   - JOURNEY_POLL_LOCKED  → set lockedTemplate
+ *
+ * Self-broadcasts are filtered by Liveblocks (sender doesn't receive), so the
+ * local-store mutations the originator performs are preserved by these
+ * listeners only running for other participants.
+ */
+function JourneyPollListener() {
+  const openJourneyPoll = useCanvasStore((s) => s.openJourneyPoll);
+  const castJourneyVote = useCanvasStore((s) => s.castJourneyVote);
+  const retractJourneyVote = useCanvasStore((s) => s.retractJourneyVote);
+  const lockJourneyTemplate = useCanvasStore((s) => s.lockJourneyTemplate);
+
+  useEventListener(({ event }) => {
+    if (event.type === "JOURNEY_POLL_OPENED") {
+      openJourneyPoll(event.options);
+      return;
+    }
+    if (event.type === "JOURNEY_POLL_VOTE_CAST") {
+      if (event.retract) {
+        retractJourneyVote(event.voterId);
+      } else {
+        castJourneyVote({
+          voterId: event.voterId,
+          voterName: event.voterName,
+          voterColor: event.voterColor,
+          templateId: event.templateId,
+          votedAt: Date.now(),
+        });
+      }
+      return;
+    }
+    if (event.type === "JOURNEY_POLL_LOCKED") {
+      lockJourneyTemplate(event.templateId, event.templateName);
+      toast(`Template locked: ${event.templateName}`, { duration: 3000 });
+      return;
+    }
+  });
+
+  return null;
+}
+
+/**
  * StepResetListener — renderless component that listens for STEP_RESET
  * broadcast events from the facilitator. On receipt, resets the concept
  * activity flag and does a hard navigation to force full teardown of
@@ -345,6 +390,7 @@ function MultiplayerRoomInner({
       <ParticipantRemovedListener />
       <ConceptActivityStartedListener />
       <InterviewModeSelectedListener />
+      <JourneyPollListener />
       <StepResetListener sessionId={sessionId} />
       <CountdownTimer />
       {children}

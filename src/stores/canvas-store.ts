@@ -10,6 +10,7 @@ import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { DotVote, VotingSession, VotingResult } from '@/lib/canvas/voting-types';
 import { DEFAULT_VOTING_SESSION } from '@/lib/canvas/voting-types';
+import type { JourneyPoll, JourneyPollOption, JourneyPollVote } from '@/lib/canvas/journey-poll-types';
 
 export type IdeationPhase = 'mind-mapping' | 'crazy-eights' | 'idea-selection' | 'brain-rewriting';
 
@@ -124,6 +125,15 @@ export type CanvasState = {
    * this being non-null. Synced via Liveblocks Storage in multiplayer.
    */
   interviewMode: 'synthetic' | 'real' | null;
+  /**
+   * Step 6 (journey-mapping) template poll. `null` until the facilitator's AI
+   * emits [JOURNEY_POLL_OPTIONS] (which calls openJourneyPoll). While open,
+   * participants vote; the facilitator hits "Lock template" to commit. After
+   * lock, the AI on both sides switches to "populate stages" mode and the
+   * grid columns are seeded from the locked template's stages[].
+   * Synced via Liveblocks Storage in multiplayer.
+   */
+  journeyPoll: JourneyPoll | null;
 };
 
 export type CanvasActions = {
@@ -206,6 +216,20 @@ export type CanvasActions = {
   deleteOwnerContent: (ownerId: string) => void;
   setConceptActivityStarted: (started: boolean) => void;
   setInterviewMode: (mode: 'synthetic' | 'real' | null) => void;
+  /** Open the step-6 template poll with a fixed set of options. Replaces any
+   *  existing poll (e.g. when the facilitator resets the step). */
+  openJourneyPoll: (options: JourneyPollOption[]) => void;
+  /** Cast (or re-cast) a vote. One vote per voterId — re-vote replaces the
+   *  prior choice. */
+  castJourneyVote: (vote: JourneyPollVote) => void;
+  /** Remove this voter's vote (toggle-off pattern when they click their own
+   *  selected option). */
+  retractJourneyVote: (voterId: string) => void;
+  /** Lock the team's pick. After this fires, the AI on both sides shifts to
+   *  "populate stages" mode. */
+  lockJourneyTemplate: (templateId: string, templateName: string) => void;
+  /** Wipe the poll entirely. Currently unused but exposed for step-reset flows. */
+  clearJourneyPoll: () => void;
   setIdeationPhase: (phase: IdeationPhase) => void;
   markClean: () => void;
   markDirty: () => void;
@@ -213,7 +237,7 @@ export type CanvasActions = {
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; slotGroups?: SlotGroup[]; brainRewritingMatrices?: BrainRewritingMatrix[]; dotVotes?: DotVote[]; votingSession?: VotingSession; ideationPhase?: IdeationPhase; votingCardPositions?: Record<string, { x: number; y: number }>; conceptActivityStarted?: boolean; interviewMode?: 'synthetic' | 'real' | null }) => {
+export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; slotGroups?: SlotGroup[]; brainRewritingMatrices?: BrainRewritingMatrix[]; dotVotes?: DotVote[]; votingSession?: VotingSession; ideationPhase?: IdeationPhase; votingCardPositions?: Record<string, { x: number; y: number }>; conceptActivityStarted?: boolean; interviewMode?: 'synthetic' | 'real' | null; journeyPoll?: JourneyPoll | null }) => {
   const DEFAULT_STATE: CanvasState = {
     stickyNotes: initState?.stickyNotes || [],
     drawingNodes: initState?.drawingNodes || [],
@@ -242,6 +266,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
     votingCardPositions: initState?.votingCardPositions || {},
     conceptActivityStarted: initState?.conceptActivityStarted || false,
     interviewMode: initState?.interviewMode ?? null,
+    journeyPoll: initState?.journeyPoll ?? null,
   };
 
   return createStore<CanvasStore>()(
@@ -1099,6 +1124,64 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             isDirty: true,
           })),
 
+        openJourneyPoll: (options) =>
+          set(() => ({
+            journeyPoll: {
+              options,
+              votes: [],
+              lockedTemplate: null,
+              openedAt: Date.now(),
+            },
+            isDirty: true,
+          })),
+
+        castJourneyVote: (vote) =>
+          set((state) => {
+            if (!state.journeyPoll) return state;
+            const others = state.journeyPoll.votes.filter(
+              (v) => v.voterId !== vote.voterId,
+            );
+            return {
+              journeyPoll: {
+                ...state.journeyPoll,
+                votes: [...others, vote],
+              },
+              isDirty: true,
+            };
+          }),
+
+        retractJourneyVote: (voterId) =>
+          set((state) => {
+            if (!state.journeyPoll) return state;
+            return {
+              journeyPoll: {
+                ...state.journeyPoll,
+                votes: state.journeyPoll.votes.filter(
+                  (v) => v.voterId !== voterId,
+                ),
+              },
+              isDirty: true,
+            };
+          }),
+
+        lockJourneyTemplate: (templateId, templateName) =>
+          set((state) => {
+            if (!state.journeyPoll) return state;
+            return {
+              journeyPoll: {
+                ...state.journeyPoll,
+                lockedTemplate: { templateId, templateName },
+              },
+              isDirty: true,
+            };
+          }),
+
+        clearJourneyPoll: () =>
+          set(() => ({
+            journeyPoll: null,
+            isDirty: true,
+          })),
+
         setIdeationPhase: (phase) =>
           set(() => ({
             ideationPhase: phase,
@@ -1134,6 +1217,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
           ideationPhase: state.ideationPhase,
           conceptActivityStarted: state.conceptActivityStarted,
           interviewMode: state.interviewMode,
+          journeyPoll: state.journeyPoll,
         }),
         limit: 50,
         equality: (pastState, currentState) =>

@@ -1,4 +1,5 @@
 import { createClient, LiveMap, LiveObject, type JsonObject } from "@liveblocks/client";
+import type { JourneyPollOption } from "@/lib/canvas/journey-poll-types";
 
 /**
  * Liveblocks client — auth endpoint wires to /api/liveblocks-auth (Phase 56)
@@ -223,6 +224,21 @@ declare global {
       | { type: 'PARTICIPANT_REMOVED'; participantId: string }
       | { type: 'CONCEPT_ACTIVITY_STARTED' }
       | { type: 'INTERVIEW_MODE_SELECTED'; interviewMode: 'synthetic' | 'real' }
+      | { type: 'JOURNEY_POLL_OPENED'; options: JourneyPollOption[] }
+      | {
+          type: 'JOURNEY_POLL_VOTE_CAST';
+          voterId: string;
+          voterName: string;
+          voterColor: string;
+          templateId: string;
+          /** When set, the cast is a toggle-off (retract) instead of a vote. */
+          retract?: boolean;
+        }
+      | {
+          type: 'JOURNEY_POLL_LOCKED';
+          templateId: string;
+          templateName: string;
+        }
       | { type: 'STEP_RESET'; stepOrder: number };
   }
 }

@@ -23,6 +23,7 @@ import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { Crazy8sSlot, SlotGroup } from '@/lib/canvas/crazy-8s-types';
 import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
 import type { DotVote, VotingSession } from '@/lib/canvas/voting-types';
+import type { JourneyPoll } from '@/lib/canvas/journey-poll-types';
 import type { IdeationPhase } from '@/stores/canvas-store';
 
 type SoloCanvasStoreApi = ReturnType<typeof createCanvasStore>;
@@ -53,6 +54,7 @@ export interface CanvasStoreProviderProps {
   initialIdeationPhase?: IdeationPhase;
   initialConceptActivityStarted?: boolean;
   initialInterviewMode?: 'synthetic' | 'real' | null;
+  initialJourneyPoll?: JourneyPoll | null;
 }
 
 export function CanvasStoreProvider({
@@ -78,6 +80,7 @@ export function CanvasStoreProvider({
   initialIdeationPhase,
   initialConceptActivityStarted,
   initialInterviewMode,
+  initialJourneyPoll,
 }: CanvasStoreProviderProps) {
   const isMultiplayer = workshopType === 'multiplayer';
 
@@ -143,6 +146,7 @@ export function CanvasStoreProvider({
       ideationPhase: initialIdeationPhase,
       conceptActivityStarted: initialConceptActivityStarted,
       interviewMode: initialInterviewMode ?? null,
+      journeyPoll: initialJourneyPoll ?? null,
     };
     if (isMultiplayer) {
       return createMultiplayerCanvasStore(initState);
