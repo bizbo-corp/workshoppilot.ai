@@ -260,11 +260,29 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
           set(() => ({ crazy8sSlots: deduped }));
         },
 
-        setGridColumns: (gridColumns) =>
-          set(() => ({ gridColumns })),
+        setGridColumns: (gridColumns) => {
+          // Dedupe by id — Liveblocks Storage CRDT sync arrives via this
+          // setter and concurrent writes can leave duplicates. See
+          // canvas-store.ts:setGridColumns for the broader rationale.
+          const seen = new Set<string>();
+          const deduped = gridColumns.filter((col) => {
+            if (seen.has(col.id)) return false;
+            seen.add(col.id);
+            return true;
+          });
+          set(() => ({ gridColumns: deduped }));
+        },
 
-        replaceGridColumns: (gridColumns) =>
-          set(() => ({ gridColumns })),
+        replaceGridColumns: (gridColumns) => {
+          // Dedupe by id — see canvas-store.ts:replaceGridColumns comment.
+          const seen = new Set<string>();
+          const deduped = gridColumns.filter((col) => {
+            if (seen.has(col.id)) return false;
+            seen.add(col.id);
+            return true;
+          });
+          set(() => ({ gridColumns: deduped }));
+        },
 
         addGridColumn: (label) =>
           set((state) => ({

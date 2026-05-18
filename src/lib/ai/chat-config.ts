@@ -451,7 +451,14 @@ The team has locked their journey template via the multiplayer poll: **${lockedJ
 
 Skip the "recommend templates" phase entirely. Do NOT present options, do NOT emit [JOURNEY_POLL_OPTIONS], do NOT ask the user to pick a template — that decision is done.
 
-Your next move is to emit [JOURNEY_STAGES] using this template's default stages (from the catalog) and immediately begin populating row 1 (Actions). Then continue row-by-row through Goals, Barriers, Touchpoints, Emotions, Moments of Truth, and Opportunities as described in the step instructions.`;
+TRIGGER: When the user message is exactly \`__journey_template_locked__:<id>\` or starts with that prefix, this is the system signal that the lock just happened. Respond with a single message containing all of:
+1. ONE short conversational sentence (max 20 words) acknowledging the locked template by name — warm, not robotic. No question.
+2. The [JOURNEY_STAGES] tag with the template's default stage names piped together.
+3. A one-line transition into the Actions row (e.g. "First up — **Actions**: what they actually do at each stage.").
+4. EXACTLY ONE [GRID_ITEM row="actions" col="<col-id>"] per stage in the locked template. The col values MUST be the lowercase-hyphenated versions of the stage names you just emitted in [JOURNEY_STAGES]. Do NOT repeat a cell. Do NOT skip a cell. The count of Actions [GRID_ITEM] tags must equal the count of stages.
+5. The row follow-up prompt: "Ready for **Goals**? Say 'next' or adjust anything above."
+
+After this single response, return to the standard row-by-row populate flow described in the step instructions.`;
     }
     prompt += `\n\nCANVAS ACTIONS (Journey Map Grid):
 

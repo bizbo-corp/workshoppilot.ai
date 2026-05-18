@@ -13,7 +13,7 @@
  * which blocks pointer events on anything below it.
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import {
   useStore as useReactFlowStore,
   type ReactFlowState,
@@ -115,9 +115,20 @@ export function GridOverlay({
   const updateGridColumn = useCanvasStore((s) => s.updateGridColumn);
   const addGridColumn = useCanvasStore((s) => s.addGridColumn);
 
-  // Use gridColumns from store if available, otherwise fall back to config.columns
-  const effectiveColumns =
-    gridColumns.length > 0 ? gridColumns : config.columns;
+  // Use gridColumns from store if available, otherwise fall back to config.columns.
+  // Render-time dedupe by id: stores dedupe on write but live Liveblocks Storage
+  // already in the wild may contain duplicate IDs from before that fix, plus
+  // SSR hydration could deliver duplicates on first paint. Dedupe here so the
+  // <rect key={...}> + <div key={col.id}> children never collide.
+  const effectiveColumns = useMemo(() => {
+    const source = gridColumns.length > 0 ? gridColumns : config.columns;
+    const seen = new Set<string>();
+    return source.filter((col) => {
+      if (seen.has(col.id)) return false;
+      seen.add(col.id);
+      return true;
+    });
+  }, [gridColumns, config.columns]);
 
   // --- Drag state for column reorder ---
   const [dragState, setDragState] = useState<{

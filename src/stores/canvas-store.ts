@@ -451,17 +451,37 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
           }));
         },
 
-        setGridColumns: (gridColumns) =>
+        setGridColumns: (gridColumns) => {
+          // Dedupe by id — see replaceGridColumns. setGridColumns is the
+          // hydration path (DB load, seed effect, store hydration) — dupes
+          // here would survive every render and break React keys.
+          const seen = new Set<string>();
+          const deduped = gridColumns.filter((col) => {
+            if (seen.has(col.id)) return false;
+            seen.add(col.id);
+            return true;
+          });
           set(() => ({
-            gridColumns,
+            gridColumns: deduped,
             // NOTE: Does NOT set isDirty — this is for loading from DB
-          })),
+          }));
+        },
 
-        replaceGridColumns: (gridColumns) =>
+        replaceGridColumns: (gridColumns) => {
+          // Dedupe by id — keep first occurrence. Defensive: prevents
+          // duplicate React keys downstream if upstream code (AI parsing,
+          // safety nets, hydration race) produces overlapping IDs.
+          const seen = new Set<string>();
+          const deduped = gridColumns.filter((col) => {
+            if (seen.has(col.id)) return false;
+            seen.add(col.id);
+            return true;
+          });
           set(() => ({
-            gridColumns,
+            gridColumns: deduped,
             isDirty: true,
-          })),
+          }));
+        },
 
         addGridColumn: (label) =>
           set((state) => ({

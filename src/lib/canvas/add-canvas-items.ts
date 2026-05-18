@@ -46,6 +46,12 @@ export function addCanvasItemsToBoard(options: {
     };
   };
   addStickyNote: (note: Omit<StickyNote, "id">) => void;
+  /** Optional — when provided, grid items dedupe by (row, col): if a sticky
+   *  already occupies the target cell, its text is updated in place rather
+   *  than a duplicate being created. Without this, AI re-emits (streaming
+   *  retries, hallucinated dupes, history replay) pile multiple stickies
+   *  into the same cell — historically the journey-mapping "pile" footgun. */
+  updateStickyNote?: (id: string, updates: Partial<StickyNote>) => void;
   owner?: { ownerId: string; ownerName: string; ownerColor: string };
   gridConfigOverride?: GridConfig;
   onHighlightCell?: (cell: { row: number; col: number }) => void;
@@ -56,6 +62,7 @@ export function addCanvasItemsToBoard(options: {
     items,
     storeApi,
     addStickyNote,
+    updateStickyNote,
     owner,
     gridConfigOverride,
     onHighlightCell,
@@ -81,6 +88,26 @@ export function addCanvasItemsToBoard(options: {
   let addedCount = 0;
 
   for (const item of items) {
+    // Grid-item (row, col) dedupe: if a sticky already occupies the target
+    // cell, update its text in place instead of stacking a new one on top.
+    // Only kicks in when updateStickyNote is provided AND the parsed item
+    // names both row and col — otherwise we fall through to the legacy
+    // text-based duplicate check below.
+    if (item.isGridItem && item.row && item.col && updateStickyNote) {
+      const existingInCell = currentStickyNotes.find(
+        (p) =>
+          (!p.type || p.type === "stickyNote") &&
+          p.cellAssignment?.row === item.row &&
+          p.cellAssignment?.col === item.col,
+      );
+      if (existingInCell) {
+        if (existingInCell.text.trim() !== item.text.trim()) {
+          updateStickyNote(existingInCell.id, { text: item.text });
+        }
+        continue;
+      }
+    }
+
     // Duplicate guard: skip if same text already exists
     const normalizedText = item.text.trim().toLowerCase();
     const alreadyExists = currentStickyNotes.some(

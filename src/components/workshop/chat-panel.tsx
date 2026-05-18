@@ -1284,6 +1284,96 @@ export function ChatPanel({
     onJourneyPollOpenBroadcast,
   ]);
 
+  // Step 6 — once the facilitator locks a template, send a hidden synthetic
+  // user message so the AI gets a turn to act on the new "JOURNEY TEMPLATE
+  // LOCKED" directive in its system prompt. Without this, the facilitator
+  // sees the lock banner appear but the chat sits silent (the prior greeting
+  // already fired pre-lock and there's nothing else to trigger a response).
+  //
+  // Edge-transition guard via `prevLockedTemplateIdRef`: this effect ONLY
+  // fires when the locked template transitions from null → set during the
+  // current chat-panel mount. On first run after mount, we just snapshot
+  // the current value and return — this prevents firing when handleReset
+  // re-mounts the panel with a still-stale store (the rAF clear hasn't
+  // landed yet) and journeyPoll.lockedTemplate appears truthy at mount
+  // time even though the workshop step has just been wiped on the server.
+  //
+  // Message-history check is the secondary guard for refresh-mid-flow: if
+  // the chat already contains a __journey_template_locked__ user message
+  // followed by an assistant reply, the lock turn ran in a previous session
+  // and we should not re-fire even if the prev-value ref hasn't snapshotted.
+  const prevLockedTemplateIdRef = React.useRef<string | null | undefined>(
+    undefined,
+  );
+  const hasFiredLockMessage = React.useRef(false);
+  React.useEffect(() => {
+    if (step.id !== "journey-mapping") return;
+    if (!isMultiplayer || !isFacilitator) return;
+    const currentLockedId = journeyPoll?.lockedTemplate?.templateId ?? null;
+    const previousLockedId = prevLockedTemplateIdRef.current;
+    prevLockedTemplateIdRef.current = currentLockedId;
+    // First effect run on this mount: snapshot only, never fire. This is the
+    // critical guard against stale-store-on-remount after step reset.
+    if (previousLockedId === undefined) return;
+    // Only act on a true null → set transition. Any other shape (set → set,
+    // set → null, null → null) is not a fresh lock.
+    if (previousLockedId !== null) return;
+    if (!currentLockedId) return;
+    if (!journeyPoll?.lockedTemplate) return;
+    if (status !== "ready") return;
+    if (hasFiredLockMessage.current) return;
+    const lockMarker = "__journey_template_locked__";
+    // Secondary guard: if a prior session already fired the lock turn and
+    // the AI responded, don't re-fire on refresh.
+    let foundLockUser = false;
+    let foundAssistantAfter = false;
+    for (const msg of messages) {
+      const content =
+        msg.parts?.filter((p) => p.type === "text").map((p) => p.text).join("") ?? "";
+      if (msg.role === "user" && content.startsWith(lockMarker)) {
+        foundLockUser = true;
+        continue;
+      }
+      if (foundLockUser && msg.role === "assistant") {
+        foundAssistantAfter = true;
+        break;
+      }
+    }
+    if (foundAssistantAfter) {
+      hasFiredLockMessage.current = true;
+      return;
+    }
+    hasFiredLockMessage.current = true;
+    const lockedTemplate = journeyPoll.lockedTemplate;
+    void (async () => {
+      // Persist the locked template to Postgres BEFORE the AI request fires.
+      // The chat route reads lockedJourneyTemplate via assembleStepContext
+      // (DB-backed), not from the live Zustand store, so an AI request that
+      // races ahead of the flush will see lockedJourneyTemplate=null and
+      // re-emit the recommendation flow instead of jumping to stages.
+      await flushCanvasToDb();
+      sendMessage({
+        role: "user",
+        parts: [
+          {
+            type: "text",
+            text: `${lockMarker}:${lockedTemplate.templateId}`,
+          },
+        ],
+      });
+    })();
+  }, [
+    step.id,
+    isMultiplayer,
+    isFacilitator,
+    journeyPoll?.lockedTemplate,
+    journeyPoll,
+    status,
+    messages,
+    flushCanvasToDb,
+    sendMessage,
+  ]);
+
   // Detect confirmed persona selection + interview mode from historical messages (persistence across refresh)
   const hasCheckedPersonaHistory = React.useRef(false);
   React.useEffect(() => {
@@ -1503,6 +1593,7 @@ export function ChatPanel({
         items: canvasItems,
         storeApi,
         addStickyNote,
+        updateStickyNote,
         gridConfigOverride: dynamicGridConfig,
         onHighlightCell: setHighlightedCell,
         onRequestFitView: boardWasEmpty
@@ -1520,6 +1611,7 @@ export function ChatPanel({
       step.id,
       storeApi,
       addStickyNote,
+      updateStickyNote,
       setHighlightedCell,
       setPendingFitView,
     ],
@@ -1727,17 +1819,29 @@ export function ChatPanel({
       }
     }
 
-    // Process journey stage replacements — update grid columns to match template
+    // Process journey stage replacements — update grid columns to match template.
+    // Dedupe id collisions defensively before handing to the store: the AI
+    // sometimes emits placeholder stage names ("Stage 1|Stage 2|...") which
+    // are visually distinct but kebab to identical IDs, or repeats the same
+    // stage name twice. replaceGridColumns dedupes too, but guarding here
+    // means the column count we end up with matches the unique-stage count
+    // the AI actually offered.
     if (journeyStages.length >= 3 && step.id === "journey-mapping") {
-      const newColumns = journeyStages.map((label) => ({
-        id: label
+      const seenIds = new Set<string>();
+      const newColumns: { id: string; label: string; width: number }[] = [];
+      for (const label of journeyStages) {
+        const id = label
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)/g, ""),
-        label,
-        width: 240,
-      }));
-      replaceGridColumns(newColumns);
+          .replace(/(^-|-$)/g, "");
+        if (!id) continue;
+        if (seenIds.has(id)) continue;
+        seenIds.add(id);
+        newColumns.push({ id, label, width: 240 });
+      }
+      if (newColumns.length >= 3) {
+        replaceGridColumns(newColumns);
+      }
     }
 
     // Template-targeted items: update existing template sticky notes by key
@@ -1770,7 +1874,7 @@ export function ChatPanel({
             "— creating regular sticky note",
           );
           // Template not found (user deleted it) — fall through to normal add
-          addCanvasItemsToBoard({ stepId: step.id, items: [item], storeApi, addStickyNote });
+          addCanvasItemsToBoard({ stepId: step.id, items: [item], storeApi, addStickyNote, updateStickyNote });
         }
       }
     }
@@ -2537,7 +2641,10 @@ export function ChatPanel({
                       ?.filter((p) => p.type === "text")
                       .map((p) => p.text)
                       .join("") || "";
-                  return text !== "__step_start__";
+                  return (
+                    text !== "__step_start__" &&
+                    !text.startsWith("__journey_template_locked__")
+                  );
                 });
                 if (visibleMessages.length === 0) {
                   return (
@@ -3047,6 +3154,7 @@ export function ChatPanel({
                                             items: personaItems,
                                             storeApi,
                                             addStickyNote,
+                                            updateStickyNote,
                                           });
                                           setPersonaSelectConfirmed(true);
                                           setQuickAck(getRandomAck());

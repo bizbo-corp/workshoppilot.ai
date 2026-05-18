@@ -1047,6 +1047,15 @@ export function StepContainer({
       // Clear Step 10 extraction state
       setStep10Artifact(null);
       hasAutoExtracted.current = false;
+      // Step 6: wipe the team's template poll SYNCHRONOUSLY, BEFORE the
+      // ChatPanel re-mounts via resetKey. The chat-panel's lock effect reads
+      // journeyPoll on mount — if the rAF clear below ran first instead,
+      // ChatPanel would observe the stale lockedTemplate, fire a synthetic
+      // __journey_template_locked__ user message, and the AI would respond
+      // with [JOURNEY_STAGES] + [GRID_ITEM] tags against an already-reset
+      // step. Other store wipes can stay in rAF because no effect reads them
+      // on mount.
+      clearJourneyPoll();
       // Force re-mount of ChatPanel to clear useChat state
       setResetKey((prev) => prev + 1);
       // Clear canvas/whiteboard state AFTER resetKey so the new store mount
@@ -1062,10 +1071,6 @@ export function StepContainer({
         setPersonaTemplates([]);
         setHmwCards([]);
         setBrainRewritingMatrices([]);
-        // Step 6: wipe the team's template poll so the AI's fresh greeting
-        // re-emits [JOURNEY_POLL_OPTIONS] and participants don't see stale
-        // votes or a stuck "locked" banner from before the reset.
-        clearJourneyPoll();
       });
       // Refresh page to reload with cleared server state
       router.refresh();

@@ -145,6 +145,7 @@ export function ParticipantChatPanel({
   const isCanvasStep = CANVAS_ENABLED_STEPS.includes(stepId);
 
   const addStickyNote = useCanvasStore((s) => s.addStickyNote);
+  const updateStickyNote = useCanvasStore((s) => s.updateStickyNote);
   const stickyNotes = useCanvasStore((s) => s.stickyNotes);
   const addPersonaTemplate = useCanvasStore((s) => s.addPersonaTemplate);
   const updatePersonaTemplate = useCanvasStore((s) => s.updatePersonaTemplate);
@@ -411,6 +412,7 @@ export function ParticipantChatPanel({
       items: personaItems,
       storeApi,
       addStickyNote,
+      updateStickyNote,
       owner: { ownerId: participantId, ownerName: displayName, ownerColor: participantColor },
     });
 
@@ -430,7 +432,7 @@ export function ParticipantChatPanel({
       role: "user",
       parts: [{ type: "text", text: `I'd like to interview these personas: ${selectedNames.join(", ")}` }],
     });
-  }, [personaSelections, personaOptions, stepId, workshopId, storeApi, addStickyNote, participantId, displayName, participantColor, sendMessage]);
+  }, [personaSelections, personaOptions, stepId, workshopId, storeApi, addStickyNote, updateStickyNote, participantId, displayName, participantColor, sendMessage]);
 
   // Add a single mind map node to the canvas (click-to-add from chat chip)
   const handleAddMindMapNode = React.useCallback(
@@ -689,12 +691,13 @@ export function ParticipantChatPanel({
       items: canvasItems,
       storeApi,
       addStickyNote,
+      updateStickyNote,
       owner: { ownerId: participantId, ownerName: displayName, ownerColor: participantColor },
     });
     if (addedCount > 0) {
       toast.success(`${addedCount} item${addedCount > 1 ? "s" : ""} added to board`);
     }
-  }, [lastAssistantMsg, status, isCanvasStep, stepId, storeApi, addStickyNote, addPersonaTemplate, updatePersonaTemplate, addHmwCard, updateHmwCard, updateConceptCard, addConceptCard, participantId, displayName, participantColor]);
+  }, [lastAssistantMsg, status, isCanvasStep, stepId, storeApi, addStickyNote, updateStickyNote, addPersonaTemplate, updatePersonaTemplate, addHmwCard, updateHmwCard, updateConceptCard, addConceptCard, participantId, displayName, participantColor]);
 
   // HMW chip selection effect — sends chip selection messages to AI when participant
   // clicks a suggestion chip on their HMW card. Same pattern as facilitator chat panel.
@@ -904,7 +907,10 @@ export function ParticipantChatPanel({
           <div className="space-y-6">
             {messages.filter((msg) => {
               const text = msg.parts?.filter((p) => p.type === "text").map((p) => p.text).join("") || "";
-              return text !== "__step_start__";
+              return (
+                text !== "__step_start__" &&
+                !text.startsWith("__journey_template_locked__")
+              );
             }).map((msg) => {
               const content = msg.parts?.filter((p) => p.type === "text").map((p) => p.text).join("\n") || "";
               if (!content.trim()) return null;
