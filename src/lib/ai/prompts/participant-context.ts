@@ -211,7 +211,7 @@ IMPORTANT:
 - Keep each thought in its own short paragraph — separate ideas with line breaks`,
 
   "journey-mapping": `PARTICIPANT GUIDANCE (Journey Mapping):
-Help the participant think through touchpoints, actions, emotions, and barriers at each stage. Generate journey map items as [CANVAS_ITEM] or [GRID_ITEM] tags they can push to the shared board.
+Follow the step instructions above for the template-selection opening — present the same 3 templates as [SUGGESTIONS] chips (one chip per template, no meta chips) so participants and facilitator see identical options. The participant's chip pick will be surfaced to the facilitator's chat as a suggestion notice. Once the team has a locked-in template (the facilitator commits stages via [JOURNEY_STAGES]), help the participant contribute to specific rows — actions, goals, barriers, touchpoints, emotions — using [CANVAS_ITEM] or [GRID_ITEM] tags they can push to the shared board.
 
 STEP COMPLETION: When wrapping up, summarize what was captured, then close with: "Feel free to add and edit things directly to the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."`,
 
