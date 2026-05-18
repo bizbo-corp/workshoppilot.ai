@@ -58,6 +58,7 @@ export function buildStepSystemPrompt(
   existingItemNames?: string[],
   isParticipant?: boolean,
   participantName?: string,
+  interviewMode?: 'synthetic' | 'real' | null,
 ): string {
   // Base role for this step (step instructions may override personality)
   let prompt = `You are guiding the user through Step: ${stepName}.`;
@@ -80,7 +81,7 @@ Your role: Help them think through this step and generate ideas they can contrib
 - When you suggest items for the canvas, use [CANVAS_ITEM] tags as usual — the participant will review and push them to the shared board.`;
 
     // Add per-step participant guidance
-    const guidance = getParticipantGuidance(stepId);
+    const guidance = getParticipantGuidance(stepId, { interviewMode });
     if (guidance) {
       prompt += `\n\n${guidance}`;
     }

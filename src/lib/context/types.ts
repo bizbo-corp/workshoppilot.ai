@@ -41,6 +41,9 @@ export interface StepContext {
   summaries: string; // AI-generated summaries
   canvasContext: string; // Canvas state formatted for AI prompt
   existingItemNames: string[]; // Flat list of sticky note names on the board (for dedup blocklist)
+  /** Step-3 interview mode chosen by the facilitator ('synthetic' = AI personas,
+   *  'real' = real-world interviews). null until selected. Only meaningful for user-research. */
+  interviewMode: 'synthetic' | 'real' | null;
   messages: Array<{
     role: string;
     content: string;

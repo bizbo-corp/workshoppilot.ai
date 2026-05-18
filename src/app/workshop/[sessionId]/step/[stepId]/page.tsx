@@ -452,6 +452,10 @@ export default async function StepPage({ params }: StepPageProps) {
   const initialVotingSession: VotingSession | undefined = canvasData?.votingSession;
   const initialVotingCardPositions = canvasData?.votingCardPositions;
   const initialIdeationPhase = canvasData?.ideationPhase;
+  const initialInterviewMode: 'synthetic' | 'real' | null =
+    canvasData?.interviewMode === 'synthetic' || canvasData?.interviewMode === 'real'
+      ? canvasData.interviewMode
+      : null;
   const canvasConfirmed = canvasData?._confirmed === true;
 
   // Migration: if mind map nodes exist but lack positions, compute radial layout
@@ -1204,6 +1208,7 @@ export default async function StepPage({ params }: StepPageProps) {
         initialVotingSession={initialVotingSession}
         initialVotingCardPositions={initialVotingCardPositions}
         initialIdeationPhase={initialIdeationPhase}
+        initialInterviewMode={initialInterviewMode}
       >
         {session.workshop.workshopType === 'multiplayer' ? (
           <MultiplayerRoomLoader workshopId={session.workshop.id} sessionId={sessionId}>

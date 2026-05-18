@@ -161,6 +161,7 @@ export function ParticipantChatPanel({
   const updateConceptCard = useCanvasStore((s) => s.updateConceptCard);
   const addConceptCard = useCanvasStore((s) => s.addConceptCard);
   const conceptActivityStarted = useCanvasStore((s) => s.conceptActivityStarted);
+  const interviewMode = useCanvasStore((s) => s.interviewMode);
   const storeApi = useCanvasStoreApi();
 
   const [quickAck, setQuickAck] = React.useState<string | null>(null);
@@ -241,7 +242,13 @@ export function ParticipantChatPanel({
       !alreadyHasStepStartTrigger &&
       status === "ready" &&
       !hasAutoStarted.current &&
-      (stepId !== "concept" || conceptActivityStarted)
+      (stepId !== "concept" || conceptActivityStarted) &&
+      // Step 3 hold: don't auto-start the participant's chat until the
+      // facilitator has picked AI vs Real interviews. Without this gate the
+      // participant's greeting fires immediately on step entry and Gemini
+      // leaks the interview-mode framing in prose even though the
+      // [INTERVIEW_MODE] markup is stripped client-side.
+      (stepId !== "user-research" || interviewMode !== null)
     ) {
       hasAutoStarted.current = true;
       setQuickAck(getRandomAck());
@@ -251,7 +258,7 @@ export function ParticipantChatPanel({
         parts: [{ type: "text", text: "__step_start__" }],
       });
     }
-  }, [initialMessages, messages, messages.length, status, sendMessage, sessionId, stepId, participantId, conceptActivityStarted]);
+  }, [initialMessages, messages, messages.length, status, sendMessage, sessionId, stepId, participantId, conceptActivityStarted, interviewMode]);
 
   // Stream-empty recovery: the AI SDK v6 sometimes completes the request (status →
   // ready) without delivering the assistant message into client state, even though
@@ -820,6 +827,25 @@ export function ParticipantChatPanel({
   if (!step) return null;
 
   const oliveButtonClass = "cursor-pointer rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+
+  // Step 3 hold card — shown while the facilitator is picking AI vs Real
+  // interviews. Suppresses the chat scaffold entirely so no skeleton, no
+  // greeting, no input UI flashes before the choice is broadcast.
+  if (stepId === "user-research" && interviewMode === null) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+        <div className="max-w-sm space-y-3">
+          <div className="text-3xl">🎤</div>
+          <h3 className="text-lg font-semibold text-foreground">
+            Setting up interviews
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Your facilitator is choosing how we&apos;ll run interviews. Hang tight — we&apos;ll start in a moment.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">

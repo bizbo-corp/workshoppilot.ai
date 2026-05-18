@@ -283,21 +283,32 @@ STEP COMPLETION: When wrapping up, summarize what was captured, then close with:
  * Get participant-specific guidance for a step.
  * Returns undefined if no guidance is defined for the step.
  * For user-research, injects randomized example names so each participant
- * session gets different persona name suggestions.
+ * session gets different persona name suggestions, and (when set) a leading
+ * sentence acknowledging the facilitator's interview-mode choice.
  */
-export function getParticipantGuidance(stepId: string): string | undefined {
+export function getParticipantGuidance(
+  stepId: string,
+  ctx?: { interviewMode?: 'synthetic' | 'real' | null },
+): string | undefined {
   const guidance = PARTICIPANT_GUIDANCE[stepId];
   if (!guidance) return undefined;
 
-  // Inject random names into the user-research template
+  // Inject random names + interview-mode preamble into the user-research template
   if (stepId === "user-research") {
     const names = pickRandomNames(5);
-    return guidance
+    let result = guidance
       .replace("{{NAME_1}}", names[0])
       .replace("{{NAME_2}}", names[1])
       .replace("{{NAME_3}}", names[2])
       .replace("{{NAME_4}}", names[3])
       .replace("{{NAME_5}}", names[4]);
+    if (ctx?.interviewMode) {
+      const modeLabel = ctx.interviewMode === 'synthetic'
+        ? 'AI persona interviews'
+        : 'real-world interviews';
+      result = `INTERVIEW MODE (facilitator decided): The team is running ${modeLabel}. Begin with PHASE A — PERSONA SELECTION immediately. Do NOT ask about or restate the interview mode choice.\n\n${result}`;
+    }
+    return result;
   }
 
   return guidance;

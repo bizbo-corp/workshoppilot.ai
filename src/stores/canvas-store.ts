@@ -118,6 +118,12 @@ export type CanvasState = {
   selectedStickyNoteIds: string[];
   votingCardPositions: Record<string, { x: number; y: number }>;
   conceptActivityStarted: boolean;
+  /**
+   * Step 3 (user-research) interview mode. `null` until the facilitator picks
+   * via the [INTERVIEW_MODE] chip. Participants' chat auto-start is gated on
+   * this being non-null. Synced via Liveblocks Storage in multiplayer.
+   */
+  interviewMode: 'synthetic' | 'real' | null;
 };
 
 export type CanvasActions = {
@@ -199,6 +205,7 @@ export type CanvasActions = {
   clearVotingCardPositions: () => void;
   deleteOwnerContent: (ownerId: string) => void;
   setConceptActivityStarted: (started: boolean) => void;
+  setInterviewMode: (mode: 'synthetic' | 'real' | null) => void;
   setIdeationPhase: (phase: IdeationPhase) => void;
   markClean: () => void;
   markDirty: () => void;
@@ -206,7 +213,7 @@ export type CanvasActions = {
 
 export type CanvasStore = CanvasState & CanvasActions;
 
-export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; slotGroups?: SlotGroup[]; brainRewritingMatrices?: BrainRewritingMatrix[]; dotVotes?: DotVote[]; votingSession?: VotingSession; ideationPhase?: IdeationPhase; votingCardPositions?: Record<string, { x: number; y: number }>; conceptActivityStarted?: boolean }) => {
+export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridColumns?: GridColumn[]; drawingNodes?: DrawingNode[]; crazy8sSlots?: Crazy8sSlot[]; mindMapNodes?: MindMapNodeState[]; mindMapEdges?: MindMapEdgeState[]; conceptCards?: ConceptCardData[]; personaTemplates?: PersonaTemplateData[]; hmwCards?: HmwCardData[]; selectedSlotIds?: string[]; slotGroups?: SlotGroup[]; brainRewritingMatrices?: BrainRewritingMatrix[]; dotVotes?: DotVote[]; votingSession?: VotingSession; ideationPhase?: IdeationPhase; votingCardPositions?: Record<string, { x: number; y: number }>; conceptActivityStarted?: boolean; interviewMode?: 'synthetic' | 'real' | null }) => {
   const DEFAULT_STATE: CanvasState = {
     stickyNotes: initState?.stickyNotes || [],
     drawingNodes: initState?.drawingNodes || [],
@@ -234,6 +241,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
     selectedStickyNoteIds: [],
     votingCardPositions: initState?.votingCardPositions || {},
     conceptActivityStarted: initState?.conceptActivityStarted || false,
+    interviewMode: initState?.interviewMode ?? null,
   };
 
   return createStore<CanvasStore>()(
@@ -1085,6 +1093,12 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             isDirty: true,
           })),
 
+        setInterviewMode: (mode) =>
+          set(() => ({
+            interviewMode: mode,
+            isDirty: true,
+          })),
+
         setIdeationPhase: (phase) =>
           set(() => ({
             ideationPhase: phase,
@@ -1119,6 +1133,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
           votingSession: state.votingSession,
           ideationPhase: state.ideationPhase,
           conceptActivityStarted: state.conceptActivityStarted,
+          interviewMode: state.interviewMode,
         }),
         limit: 50,
         equality: (pastState, currentState) =>

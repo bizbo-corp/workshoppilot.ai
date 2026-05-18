@@ -48,6 +48,7 @@ export function useCanvasAutosave(workshopId: string, stepId: string, enabled = 
   const votingSession = useCanvasStore((s) => s.votingSession);
   const votingCardPositions = useCanvasStore((s) => s.votingCardPositions);
   const ideationPhase = useCanvasStore((s) => s.ideationPhase);
+  const interviewMode = useCanvasStore((s) => s.interviewMode);
   const isDirty = useCanvasStore((s) => s.isDirty);
   const markClean = useCanvasStore((s) => s.markClean);
 
@@ -92,6 +93,7 @@ export function useCanvasAutosave(workshopId: string, stepId: string, enabled = 
         ...(votingSession.status !== 'idle' ? { votingSession } : {}),
         ...(Object.keys(votingCardPositions).length > 0 ? { votingCardPositions } : {}),
         ...(ideationPhase !== 'mind-mapping' ? { ideationPhase } : {}),
+        ...(interviewMode ? { interviewMode } : {}),
       });
 
       if (result.success) {
@@ -141,7 +143,7 @@ export function useCanvasAutosave(workshopId: string, stepId: string, enabled = 
       dirtyVersionRef.current++;
       debouncedSave();
     }
-  }, [stickyNotes, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, personaTemplates, hmwCards, selectedSlotIds, slotGroups, brainRewritingMatrices, dotVotes, votingSession, votingCardPositions, ideationPhase, isDirty, debouncedSave, enabled]);
+  }, [stickyNotes, gridColumns, drawingNodes, mindMapNodes, mindMapEdges, crazy8sSlots, conceptCards, personaTemplates, hmwCards, selectedSlotIds, slotGroups, brainRewritingMatrices, dotVotes, votingSession, votingCardPositions, ideationPhase, interviewMode, isDirty, debouncedSave, enabled]);
 
   // Force-save on component unmount
   useEffect(() => {

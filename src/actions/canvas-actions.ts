@@ -42,6 +42,7 @@ export async function saveCanvasState(
     votingSession?: VotingSession;
     votingCardPositions?: Record<string, { x: number; y: number }>;
     ideationPhase?: IdeationPhase;
+    interviewMode?: 'synthetic' | 'real' | null;
     _confirmed?: boolean;
   }
 ): Promise<{ success: boolean; error?: string }> {
@@ -359,6 +360,7 @@ export async function loadCanvasState(
   votingSession?: VotingSession;
   votingCardPositions?: Record<string, { x: number; y: number }>;
   ideationPhase?: IdeationPhase;
+  interviewMode?: 'synthetic' | 'real' | null;
   _confirmed?: boolean;
 } | null> {
   try {
@@ -422,6 +424,7 @@ export async function loadCanvasState(
         votingSession?: VotingSession;
         votingCardPositions?: Record<string, { x: number; y: number }>;
         ideationPhase?: IdeationPhase;
+        interviewMode?: 'synthetic' | 'real' | null;
         _confirmed?: boolean;
       };
       if (canvas?.stickyNotes || canvas?.personaTemplates || canvas?.hmwCards || canvas?.mindMapNodes || canvas?.crazy8sSlots || canvas?.conceptCards || canvas?.selectedSlotIds || canvas?.brainRewritingMatrices || canvas?.dotVotes) {
@@ -442,6 +445,9 @@ export async function loadCanvasState(
           ...(canvas.votingSession ? { votingSession: canvas.votingSession } : {}),
           ...(canvas.votingCardPositions ? { votingCardPositions: canvas.votingCardPositions } : {}),
           ...(canvas.ideationPhase ? { ideationPhase: canvas.ideationPhase } : {}),
+          ...(canvas.interviewMode === 'synthetic' || canvas.interviewMode === 'real'
+            ? { interviewMode: canvas.interviewMode }
+            : {}),
           ...(canvas._confirmed ? { _confirmed: canvas._confirmed } : {}),
         };
       }

@@ -233,11 +233,18 @@ export async function assembleStepContext(
     ?.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview && p.text.trim())
     .map(p => p.text.trim()) || [];
 
+  const interviewMode: 'synthetic' | 'real' | null =
+    (canvasState as { interviewMode?: unknown } | null)?.interviewMode === 'synthetic'
+      || (canvasState as { interviewMode?: unknown } | null)?.interviewMode === 'real'
+      ? (canvasState as { interviewMode: 'synthetic' | 'real' }).interviewMode
+      : null;
+
   return {
     persistentContext: '',
     summaries,
     canvasContext,
     existingItemNames,
+    interviewMode,
     messages: [],
   };
 }

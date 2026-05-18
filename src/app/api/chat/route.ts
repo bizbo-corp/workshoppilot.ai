@@ -268,6 +268,7 @@ export async function POST(req: Request) {
       stepContext.existingItemNames,
       isParticipant,
       participantName,
+      stepContext.interviewMode,
     );
 
     // Per-turn override for the challenge step: when the user is asking the AI

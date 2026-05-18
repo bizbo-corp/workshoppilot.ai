@@ -102,7 +102,10 @@ function StepAdvanceBroadcaster({
   broadcastRef,
 }: {
   broadcastRef: React.MutableRefObject<
-    | ((event: { type: "STEP_RESET"; stepOrder: number }) => void)
+    | ((event:
+        | { type: "STEP_RESET"; stepOrder: number }
+        | { type: "INTERVIEW_MODE_SELECTED"; interviewMode: "synthetic" | "real" }
+      ) => void)
     | null
   >;
 }) {
@@ -225,12 +228,17 @@ export function StepContainer({
   const effectiveColor = participantColor ?? contextParticipantColor;
 
   // Broadcast ref — populated by StepAdvanceBroadcaster (only mounted in multiplayer).
-  // Allows StepContainer to trigger broadcasts without calling useBroadcastEvent directly
-  // (which would throw outside RoomProvider in solo mode). STEP_CHANGED is broadcast
-  // server-side from advanceToNextStep; this ref carries other client-initiated events
-  // like STEP_RESET that have no server-action equivalent.
+  // Allows StepContainer + descendants to trigger broadcasts without calling
+  // useBroadcastEvent directly (which would throw outside RoomProvider in solo mode).
+  // STEP_CHANGED is broadcast server-side from advanceToNextStep; this ref carries
+  // other client-initiated events that have no server-action equivalent:
+  //   - STEP_RESET — facilitator resets the current step
+  //   - INTERVIEW_MODE_SELECTED — facilitator picks AI vs Real interviews on step 3
   const broadcastRef = React.useRef<
-    | ((event: { type: "STEP_RESET"; stepOrder: number }) => void)
+    | ((event:
+        | { type: "STEP_RESET"; stepOrder: number }
+        | { type: "INTERVIEW_MODE_SELECTED"; interviewMode: "synthetic" | "real" }
+      ) => void)
     | null
   >(null);
 
@@ -1402,6 +1410,9 @@ export function StepContainer({
             onAutoStarted={handleAutoStarted}
             onLastAssistantMessage={setLastAiMessage}
             hideAvatar={!isMobile}
+            onInterviewModeBroadcast={(mode) =>
+              broadcastRef.current?.({ type: 'INTERVIEW_MODE_SELECTED', interviewMode: mode })
+            }
           />
         )}
       </div>

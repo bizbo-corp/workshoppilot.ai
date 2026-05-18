@@ -52,6 +52,7 @@ export interface CanvasStoreProviderProps {
   initialVotingCardPositions?: Record<string, { x: number; y: number }>;
   initialIdeationPhase?: IdeationPhase;
   initialConceptActivityStarted?: boolean;
+  initialInterviewMode?: 'synthetic' | 'real' | null;
 }
 
 export function CanvasStoreProvider({
@@ -76,6 +77,7 @@ export function CanvasStoreProvider({
   initialVotingCardPositions,
   initialIdeationPhase,
   initialConceptActivityStarted,
+  initialInterviewMode,
 }: CanvasStoreProviderProps) {
   const isMultiplayer = workshopType === 'multiplayer';
 
@@ -140,6 +142,7 @@ export function CanvasStoreProvider({
       votingCardPositions: initialVotingCardPositions || {},
       ideationPhase: initialIdeationPhase,
       conceptActivityStarted: initialConceptActivityStarted,
+      interviewMode: initialInterviewMode ?? null,
     };
     if (isMultiplayer) {
       return createMultiplayerCanvasStore(initState);

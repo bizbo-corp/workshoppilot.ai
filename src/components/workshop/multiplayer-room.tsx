@@ -259,6 +259,28 @@ function ConceptActivityStartedListener() {
 }
 
 /**
+ * InterviewModeSelectedListener — renderless component that listens for
+ * INTERVIEW_MODE_SELECTED broadcast events on step 3 (user-research).
+ * On receipt, sets the canvas-store interviewMode flag, which unblocks
+ * the participant's chat-panel auto-start gate. The participant's
+ * greeting then fires through the normal __step_start__ path with the
+ * chosen mode already in their AI prompt context.
+ */
+function InterviewModeSelectedListener() {
+  const { isFacilitator } = useMultiplayerContext();
+  const setInterviewMode = useCanvasStore((s) => s.setInterviewMode);
+
+  useEventListener(({ event }) => {
+    if (event.type !== 'INTERVIEW_MODE_SELECTED' || isFacilitator) return;
+
+    setInterviewMode(event.interviewMode);
+    toast('Starting interviews…', { duration: 3000 });
+  });
+
+  return null;
+}
+
+/**
  * StepResetListener — renderless component that listens for STEP_RESET
  * broadcast events from the facilitator. On receipt, resets the concept
  * activity flag and does a hard navigation to force full teardown of
@@ -322,6 +344,7 @@ function MultiplayerRoomInner({
       <VotingEventListener />
       <ParticipantRemovedListener />
       <ConceptActivityStartedListener />
+      <InterviewModeSelectedListener />
       <StepResetListener sessionId={sessionId} />
       <CountdownTimer />
       {children}

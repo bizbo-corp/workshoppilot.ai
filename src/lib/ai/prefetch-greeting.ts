@@ -89,6 +89,7 @@ export async function prefetchStepStartGreeting(params: {
       stepContext.existingItemNames,
       isParticipant,
       participantName ?? undefined,
+      stepContext.interviewMode,
     );
 
     const triggerMessage: UIMessage = {

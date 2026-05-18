@@ -703,6 +703,9 @@ interface ChatPanelProps {
   onAutoStarted?: () => void; // Callback to notify parent that auto-start was triggered
   onLastAssistantMessage?: (text: string) => void; // Reports last assistant message text for collapsed preview
   hideAvatar?: boolean; // Hide in-body avatar when parent renders it in a card header
+  /** Multiplayer-only — called when facilitator picks the step-3 interview mode.
+   *  Parent (step-container) wraps a Liveblocks broadcast; left undefined in solo. */
+  onInterviewModeBroadcast?: (mode: 'synthetic' | 'real') => void;
 }
 
 /**
@@ -764,6 +767,7 @@ export function ChatPanel({
   onAutoStarted,
   onLastAssistantMessage,
   hideAvatar,
+  onInterviewModeBroadcast,
 }: ChatPanelProps) {
   const step = getStepByOrder(stepOrder);
 
@@ -786,6 +790,10 @@ export function ChatPanel({
   const replaceGridColumns = useCanvasStore(
     (state) => state.replaceGridColumns,
   );
+  // Persistent interview-mode setter (canvas store). Distinct from the local
+  // `setInterviewMode` useState below — that one tracks chip-UI visibility;
+  // this one persists the choice + drives the participant hold-card gate.
+  const persistInterviewMode = useCanvasStore((state) => state.setInterviewMode);
   const drawingNodes = useCanvasStore((state) => state.drawingNodes);
   const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
@@ -2741,6 +2749,11 @@ export function ChatPanel({
                                           disabled={isLoading}
                                           onClick={async () => {
                                             setInterviewMode(option.id);
+                                            // Persist to canvas store so the participant
+                                            // hold-card gate flips; the multiplayer broadcast
+                                            // below pushes the same flip to other clients.
+                                            persistInterviewMode(option.id);
+                                            onInterviewModeBroadcast?.(option.id);
                                             setQuickAck(getRandomAck());
                                             await flushCanvasToDb();
                                             sendMessage({

@@ -222,6 +222,7 @@ declare global {
       | { type: 'VOTING_RESET'; voteBudget: number }
       | { type: 'PARTICIPANT_REMOVED'; participantId: string }
       | { type: 'CONCEPT_ACTIVITY_STARTED' }
+      | { type: 'INTERVIEW_MODE_SELECTED'; interviewMode: 'synthetic' | 'real' }
       | { type: 'STEP_RESET'; stepOrder: number };
   }
 }
