@@ -63,6 +63,8 @@ import {
 } from "@/lib/chat/mind-map-parse-utils";
 import { toast } from "sonner";
 import { useMultiplayerContext } from "@/components/workshop/multiplayer-room";
+import { useParticipantSuggestions } from "./participant-suggestions-context";
+import { ParticipantSuggestionCard } from "./participant-suggestion-card";
 import { useBroadcastEvent } from "@liveblocks/react";
 
 /** Steps that support canvas item auto-add */
@@ -776,6 +778,14 @@ export function ChatPanel({
   // false for solo workshops. No behavioral change for solo users.
   const { isFacilitator, isMultiplayer } = useMultiplayerContext();
   const isReadOnly = isMultiplayer && !isFacilitator;
+
+  // Step-6 participant suggestions — populated by JourneyTemplateSuggestionListener
+  // in multiplayer-room.tsx when other participants pick a journey template.
+  // No-op default values in solo mode (provider not mounted).
+  const {
+    suggestions: participantSuggestions,
+    markAllResolved: markSuggestionsResolved,
+  } = useParticipantSuggestions();
 
   const storeApi = useCanvasStoreApi();
   const addStickyNote = useCanvasStore((state) => state.addStickyNote);
@@ -1648,6 +1658,10 @@ export function ChatPanel({
         width: 240,
       }));
       replaceGridColumns(newColumns);
+      // Fade out any participant template-suggestion notices once the team
+      // has actually committed a structure. They stay visible (so the chat
+      // reads coherently after the fact) but render as resolved.
+      markSuggestionsResolved();
     }
 
     // Template-targeted items: update existing template sticky notes by key
@@ -3513,6 +3527,25 @@ export function ChatPanel({
                       </button>
                     </div>
                   )}
+
+                  {/* Step-6 participant-suggestion notices — surfaced when
+                      a participant picks a journey template in their chat.
+                      Distinct visual treatment so the facilitator can scan
+                      "who suggested what" without confusing it for AI output. */}
+                  {step?.id === "journey-mapping" &&
+                    participantSuggestions.length > 0 && (
+                      <div className="space-y-2 pt-1">
+                        {participantSuggestions
+                          .slice()
+                          .sort((a, b) => a.createdAt - b.createdAt)
+                          .map((s) => (
+                            <ParticipantSuggestionCard
+                              key={s.id}
+                              suggestion={s}
+                            />
+                          ))}
+                      </div>
+                    )}
 
                   {/* Auto-scroll target */}
                   <div ref={messagesEndRef} />

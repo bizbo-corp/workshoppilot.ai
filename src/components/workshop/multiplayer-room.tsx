@@ -24,6 +24,10 @@ import {
 import { CountdownTimer } from "./countdown-timer";
 import { SessionEndedOverlay } from "./session-ended-overlay";
 import { useCanvasStore, useCanvasStoreApi } from "@/providers/canvas-store-provider";
+import {
+  ParticipantSuggestionsProvider,
+  useParticipantSuggestions,
+} from "./participant-suggestions-context";
 
 /**
  * MultiplayerContext — provides participant color, multiplayer flag, and
@@ -281,6 +285,34 @@ function InterviewModeSelectedListener() {
 }
 
 /**
+ * JourneyTemplateSuggestionListener — renderless component that listens for
+ * JOURNEY_TEMPLATE_SUGGESTED broadcasts on step 6 (journey-mapping). When a
+ * participant picks a journey template chip (or types its name), this event
+ * fires and we surface a system-notice card in the facilitator's chat via
+ * the participant-suggestions context. Facilitator-only consumer — the
+ * participants' chats don't render each other's suggestions.
+ */
+function JourneyTemplateSuggestionListener() {
+  const { isFacilitator } = useMultiplayerContext();
+  const { addSuggestion } = useParticipantSuggestions();
+
+  useEventListener(({ event }) => {
+    if (event.type !== "JOURNEY_TEMPLATE_SUGGESTED" || !isFacilitator) return;
+    addSuggestion({
+      id: `journey:${event.participantId}:${event.templateId}:${Date.now()}`,
+      participantId: event.participantId,
+      participantName: event.participantName,
+      participantColor: event.participantColor,
+      label: event.templateName,
+      verb: "suggests",
+      createdAt: Date.now(),
+    });
+  });
+
+  return null;
+}
+
+/**
  * StepResetListener — renderless component that listens for STEP_RESET
  * broadcast events from the facilitator. On receipt, resets the concept
  * activity flag and does a hard navigation to force full teardown of
@@ -337,17 +369,20 @@ function MultiplayerRoomInner({
         displayName: self?.info?.name ?? null,
       }}
     >
-      <JoinLeaveListener />
-      <ReconnectionListener />
-      <StepChangedListener sessionId={sessionId} />
-      <SessionEndedListener sessionId={sessionId} workshopId={workshopId} />
-      <VotingEventListener />
-      <ParticipantRemovedListener />
-      <ConceptActivityStartedListener />
-      <InterviewModeSelectedListener />
-      <StepResetListener sessionId={sessionId} />
-      <CountdownTimer />
-      {children}
+      <ParticipantSuggestionsProvider>
+        <JoinLeaveListener />
+        <ReconnectionListener />
+        <StepChangedListener sessionId={sessionId} />
+        <SessionEndedListener sessionId={sessionId} workshopId={workshopId} />
+        <VotingEventListener />
+        <ParticipantRemovedListener />
+        <ConceptActivityStartedListener />
+        <InterviewModeSelectedListener />
+        <JourneyTemplateSuggestionListener />
+        <StepResetListener sessionId={sessionId} />
+        <CountdownTimer />
+        {children}
+      </ParticipantSuggestionsProvider>
     </MultiplayerContext.Provider>
   );
 }

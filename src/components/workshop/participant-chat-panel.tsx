@@ -33,6 +33,8 @@ import {
 } from "@/lib/chat/parse-utils";
 import { ChatSkeleton } from "./chat-skeleton";
 import { toast } from "sonner";
+import { useBroadcastEvent } from "@liveblocks/react";
+import { allJourneyTemplates } from "@/lib/workshop/journeyTemplates";
 import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
 import type { ConceptCardData } from "@/lib/canvas/concept-card-types";
@@ -766,14 +768,51 @@ export function ParticipantChatPanel({
     })();
   }, [pendingHmwFieldFocus, isLoading, setPendingHmwFieldFocus, flushCanvasToDb, sendMessage]);
 
+  // Broadcast hook for sending participant intents to the facilitator (and other
+  // participants). useBroadcastEvent is safe here because ParticipantChatPanel
+  // is only mounted inside RoomProvider (multiplayer mode).
+  const broadcast = useBroadcastEvent();
+
+  /**
+   * Step-6 journey-mapping coordination: when the participant picks a journey
+   * template (via chip click or by typing the template's name), broadcast the
+   * pick so the facilitator's chat can show it as a system notice. The
+   * facilitator still makes the final call — this is advisory.
+   */
+  const broadcastJourneyTemplateIfMatched = React.useCallback(
+    (text: string) => {
+      if (stepId !== "journey-mapping") return;
+      const lower = text.toLowerCase();
+      // Find the template whose full name appears in the text. Longest first
+      // so "Awareness → Purchase" wins over a hypothetical shorter prefix.
+      const match = [...allJourneyTemplates]
+        .sort((a, b) => b.name.length - a.name.length)
+        .find((t) => lower.includes(t.name.toLowerCase()));
+      if (!match) return;
+      broadcast({
+        type: "JOURNEY_TEMPLATE_SUGGESTED",
+        participantId,
+        participantName: displayName,
+        participantColor,
+        templateId: match.id,
+        templateName: match.name,
+      });
+    },
+    [stepId, broadcast, participantId, displayName, participantColor],
+  );
+
   const handleSend = React.useCallback(async (text: string) => {
     if (!text.trim() || status === "streaming") return;
     setSuggestions([]);
     setQuickAck(getRandomAck());
     setInputValue("");
     await flushCanvasToDb();
+    // Step-6 coordination: surface this pick on the facilitator's chat. Fires
+    // for chip clicks AND typed messages so participants who type freely still
+    // contribute to the team picture.
+    broadcastJourneyTemplateIfMatched(text);
     sendMessage({ text });
-  }, [status, sendMessage, flushCanvasToDb]);
+  }, [status, sendMessage, flushCanvasToDb, broadcastJourneyTemplateIfMatched]);
 
   const renderClean = React.useCallback((content: string) => {
     let { cleanContent } = stripLeakedTags(content);

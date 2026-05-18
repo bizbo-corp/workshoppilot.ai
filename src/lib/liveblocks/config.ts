@@ -223,6 +223,14 @@ declare global {
       | { type: 'PARTICIPANT_REMOVED'; participantId: string }
       | { type: 'CONCEPT_ACTIVITY_STARTED' }
       | { type: 'INTERVIEW_MODE_SELECTED'; interviewMode: 'synthetic' | 'real' }
+      | {
+          type: 'JOURNEY_TEMPLATE_SUGGESTED';
+          participantId: string;
+          participantName: string;
+          participantColor: string;
+          templateId: string;
+          templateName: string;
+        }
       | { type: 'STEP_RESET'; stepOrder: number };
   }
 }
