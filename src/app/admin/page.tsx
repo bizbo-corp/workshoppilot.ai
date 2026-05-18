@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { isAdmin } from '@/lib/auth/roles';
 import { AdminResetOnboarding } from '@/components/dashboard/admin-reset-onboarding';
+import { AdminGrants } from '@/components/dashboard/admin-grants';
 
 export default async function AdminPage() {
   // Defense in depth: verify auth AND role at page level
@@ -90,6 +91,16 @@ export default async function AdminPage() {
               </p>
               <AdminResetOnboarding />
             </div>
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <div className="rounded-lg bg-card p-6 shadow">
+            <h2 className="text-lg font-semibold text-foreground">Free Credits & Tier Bypass</h2>
+            <p className="mt-1 mb-5 text-sm text-muted-foreground">
+              Comp solo credits or flip a workshop to team / white_glove without Stripe.
+            </p>
+            <AdminGrants />
           </div>
         </div>
       </div>

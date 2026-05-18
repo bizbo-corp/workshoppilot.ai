@@ -3,9 +3,7 @@ import { stripe } from '@/lib/billing/stripe';
 import { db } from '@/db/client';
 import { users, creditTransactions, workshops } from '@/db/schema';
 import { eq, sql, and, isNull, or } from 'drizzle-orm';
-import { randomBytes } from 'crypto';
-import { workshopSessions, sessionParticipants } from '@/db/schema';
-import { PARTICIPANT_COLORS, getRoomId } from '@/lib/liveblocks/config';
+import { ensureTeamSession } from '@/lib/billing/ensure-team-session';
 import type { Sku } from '@/lib/billing/price-config';
 
 /**
@@ -323,56 +321,3 @@ async function fulfillWhiteGlove(
   return { status: 'fulfilled', sku: 'white_glove', creditQty: 0, workshopId };
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-/**
- * Idempotently create the Liveblocks-backed workshop session and seed the owner's
- * sessionParticipants row. Mirrors the logic in convertToTeamWorkshop().
- */
-async function ensureTeamSession(workshopId: string, clerkUserId: string): Promise<void> {
-  const existingSession = await db.query.workshopSessions.findFirst({
-    where: eq(workshopSessions.workshopId, workshopId),
-  });
-
-  let workshopSessionId: string;
-  if (existingSession) {
-    workshopSessionId = existingSession.id;
-  } else {
-    const shareToken = randomBytes(18).toString('base64url');
-    const [created] = await db
-      .insert(workshopSessions)
-      .values({
-        workshopId,
-        liveblocksRoomId: getRoomId(workshopId),
-        shareToken,
-        status: 'waiting',
-        maxParticipants: 15,
-      })
-      .returning();
-    workshopSessionId = created.id;
-  }
-
-  const ownerParticipant = await db.query.sessionParticipants.findFirst({
-    where: and(
-      eq(sessionParticipants.sessionId, workshopSessionId),
-      eq(sessionParticipants.clerkUserId, clerkUserId)
-    ),
-  });
-  if (!ownerParticipant) {
-    const ownerUser = await db.query.users.findFirst({
-      where: eq(users.clerkUserId, clerkUserId),
-    });
-    const ownerDisplayName = ownerUser
-      ? [ownerUser.firstName, ownerUser.lastName].filter(Boolean).join(' ') || 'Facilitator'
-      : 'Facilitator';
-    await db.insert(sessionParticipants).values({
-      sessionId: workshopSessionId,
-      clerkUserId,
-      liveblocksUserId: clerkUserId,
-      displayName: ownerDisplayName,
-      color: PARTICIPANT_COLORS[0],
-      role: 'owner',
-      status: 'active',
-    });
-  }
-}
