@@ -782,12 +782,22 @@ export function ParticipantChatPanel({
   const broadcastJourneyTemplateIfMatched = React.useCallback(
     (text: string) => {
       if (stepId !== "journey-mapping") return;
-      const lower = text.toLowerCase();
-      // Find the template whose full name appears in the text. Longest first
-      // so "Awareness → Purchase" wins over a hypothetical shorter prefix.
+      // Normalize for cross-format matching: the catalog uses arrows ("Input →
+      // Process → Output"), but suggestion chips spell them out ("Input to
+      // Process to Output"). Unify everything to plain-token form before the
+      // substring check.
+      const normalize = (s: string) =>
+        s
+          .toLowerCase()
+          .replace(/→|->|–|—/g, " to ")
+          .replace(/[^a-z0-9 ]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      const haystack = normalize(text);
+      // Longest first so "Awareness → Purchase" wins over a shorter prefix.
       const match = [...allJourneyTemplates]
         .sort((a, b) => b.name.length - a.name.length)
-        .find((t) => lower.includes(t.name.toLowerCase()));
+        .find((t) => haystack.includes(normalize(t.name)));
       if (!match) return;
       broadcast({
         type: "JOURNEY_TEMPLATE_SUGGESTED",
