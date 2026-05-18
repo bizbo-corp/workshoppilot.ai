@@ -20,7 +20,7 @@ export function WorktreeBadge() {
   const colorClass = WORKTREE_COLORS[name] ?? "bg-zinc-700";
   return (
     <div
-      className={`fixed bottom-2 right-2 z-[9999] flex items-center gap-1 rounded-full ${colorClass} px-2.5 py-1 font-mono text-[11px] font-semibold text-white shadow-lg`}
+      className={`fixed bottom-2 left-2 z-[9999] flex items-center gap-1 rounded-full ${colorClass} px-2.5 py-1 font-mono text-[11px] font-semibold text-white shadow-lg`}
     >
       {name}
     </div>
