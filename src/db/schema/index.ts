@@ -20,4 +20,5 @@ export * from './guided-pilot-inquiries';
 export * from './workshop-invitations';
 export * from './challenge-approvals';
 export * from './white-glove-bookings';
+export * from './workshop-step-narration';
 export * from './relations';

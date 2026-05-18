@@ -18,6 +18,7 @@ import {
   useCanvasStoreApi,
 } from "@/providers/canvas-store-provider";
 import type { StickyNoteColor, MindMapNodeState, MindMapEdgeState } from "@/stores/canvas-store";
+import { WorkshopPulseCard } from "@/components/workshop/workshop-pulse-card";
 import { addCanvasItemsToBoard } from "@/lib/canvas/add-canvas-items";
 import { saveCanvasState, savePersonaCandidates } from "@/actions/canvas-actions";
 import { parseMindMapNodes, findThemeNode, type MindMapNodeParsed } from "@/lib/chat/mind-map-parse-utils";
@@ -134,11 +135,17 @@ interface ParticipantChatPanelProps {
   displayName: string;
   participantColor: string;
   initialMessages?: UIMessage[];
+  /** SSR-hydrated latest workshop-pulse narration for this (workshop, step).
+   *  Drives the pinned WorkshopPulseCard above the participant's chat so
+   *  refreshers and late joiners see the current facilitator narration
+   *  without waiting for the next live broadcast. Null when there is no
+   *  narration yet for the step. */
+  initialPulse?: import("./workshop-pulse-card").WorkshopPulseSnapshot | null;
 }
 
 export function ParticipantChatPanel({
   stepOrder, sessionId, workshopId,
-  participantId, displayName, participantColor, initialMessages,
+  participantId, displayName, participantColor, initialMessages, initialPulse,
 }: ParticipantChatPanelProps) {
   const step = getStepByOrder(stepOrder);
   const stepId = step?.id || "";
@@ -888,6 +895,10 @@ export function ParticipantChatPanel({
 
   return (
     <div className="flex h-full flex-col">
+      {/* Workshop pulse — pinned awareness of the facilitator's AI narration.
+          Read-only by design. Renders nothing when there is no narration yet
+          for this step. */}
+      <WorkshopPulseCard stepId={stepId} initial={initialPulse ?? null} />
       {/* Messages area */}
       <div className="relative flex-1 min-h-0">
         <div

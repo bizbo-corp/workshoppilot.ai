@@ -183,6 +183,13 @@
       "when": 1778907380364,
       "tag": "0025_shocking_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1779087133087,
+      "tag": "0026_slimy_gamma_corps",
+      "breakpoints": true
     }
   ]
 }

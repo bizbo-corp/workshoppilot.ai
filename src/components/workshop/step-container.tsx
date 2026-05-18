@@ -171,6 +171,10 @@ interface StepContainerProps {
   challengeIdea?: string | null;
   challengeProblem?: string | null;
   challengeAudience?: string | null;
+  /** SSR-hydrated latest workshop-pulse narration for this (workshop, step).
+   *  Passed straight through to ParticipantChatPanel. Null when no narration
+   *  exists yet for the step or this is a solo workshop. */
+  initialPulse?: import("./workshop-pulse-card").WorkshopPulseSnapshot | null;
 }
 
 export function StepContainer({
@@ -206,6 +210,7 @@ export function StepContainer({
   challengeIdea,
   challengeProblem,
   challengeAudience,
+  initialPulse,
 }: StepContainerProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = React.useState(false);
@@ -1369,6 +1374,7 @@ export function StepContainer({
             displayName={effectiveDisplayName || "Participant"}
             participantColor={effectiveColor || "#b3efbd"}
             initialMessages={localMessages}
+            initialPulse={initialPulse}
           />
         ) : (
           <ChatPanel

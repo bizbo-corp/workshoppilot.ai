@@ -12,6 +12,11 @@ import { workshops, chatRequestLogs, sessions } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getCurrentArcPhase } from '@/lib/ai/conversation-state';
 import { streamTextWithRetry, isGeminiRateLimitError } from '@/lib/ai/gemini-retry';
+import {
+  extractNarration,
+  stepHasNarrationExtractor,
+} from '@/lib/ai/narration';
+import { persistAndBroadcastNarration } from '@/lib/ai/narration/persist';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { loadCanvasState } from '@/actions/canvas-actions';
 import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
@@ -417,6 +422,47 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
           await saveMessages(sessionId, stepId, responseMessages, participantId);
         }
         // chat_request_logs.response_message_id was populated at insert time — no backfill block needed.
+
+        // Workshop pulse narration — only fires for the facilitator's chat on
+        // steps that have a registered extractor. Persists to
+        // workshop_step_narration + broadcasts FACILITATOR_NARRATION so every
+        // participant's pulse card updates in real time. Non-blocking — failure
+        // here must not affect the facilitator's chat experience.
+        const isFacilitatorMessage = !participantId;
+        if (
+          isFacilitatorMessage &&
+          assistantContent.trim().length > 0 &&
+          stepHasNarrationExtractor(stepId) &&
+          assistantMsg
+        ) {
+          try {
+            // Re-read canvas state so the progress label reflects items that
+            // were just added by THIS message (the AI's [GRID_ITEM] tags were
+            // already parsed + persisted client-side by the time onFinish fires
+            // for the next request, but for this same-turn extraction we need
+            // a fresh read). For first-cell items the autosave debounce may not
+            // have landed yet — that's fine, we degrade to "Setting up" label.
+            const canvasState = await loadCanvasState(workshopId, stepId);
+            const stickyNotes = canvasState?.stickyNotes ?? [];
+            const payload = extractNarration(assistantContent, {
+              stepId,
+              stickyNotes,
+            });
+            if (payload) {
+              await persistAndBroadcastNarration({
+                workshopId,
+                stepId,
+                messageId: assistantMsg.id,
+                payload,
+              });
+            }
+          } catch (narrationErr) {
+            console.warn(
+              `[narration] extraction/persist failed scope=${lifecycleScope}:`,
+              narrationErr,
+            );
+          }
+        }
       },
     });
   } catch (error) {

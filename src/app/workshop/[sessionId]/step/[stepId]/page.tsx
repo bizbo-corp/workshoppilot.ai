@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
-import { eq, and, isNull, like } from "drizzle-orm";
+import { eq, and, isNull, like, desc } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db/client";
-import { sessions, stepArtifacts, chatMessages, sessionParticipants, workshopSessions, buildPacks } from "@/db/schema";
+import { sessions, stepArtifacts, chatMessages, sessionParticipants, workshopSessions, buildPacks, workshopStepNarration } from "@/db/schema";
+import type { WorkshopPulseSnapshot } from "@/components/workshop/workshop-pulse-card";
 import { getChallengeArtifact } from "@/lib/workshop/challenge-artifact";
 import { getStepByOrder, STEPS } from "@/lib/workshop/step-metadata";
 import { loadMessages } from "@/lib/ai/message-persistence";
@@ -170,6 +171,13 @@ export default async function StepPage({ params }: StepPageProps) {
   let workshopShareToken: string | null = null;
   let workshopSessionId: string | null = null;
 
+  // Latest workshop-pulse narration for this step — drives the read-only
+  // pulse card pinned above the participant's chat so refreshers / late
+  // joiners see the current facilitator narration on cold load (the live
+  // FACILITATOR_NARRATION broadcast only catches them post-mount). Cheap:
+  // single indexed row, fetched only in multiplayer.
+  let initialPulse: WorkshopPulseSnapshot | null = null;
+
   if (session.workshop.workshopType === 'multiplayer') {
     const [ws] = await db
       .select({ id: workshopSessions.id, shareToken: workshopSessions.shareToken })
@@ -179,6 +187,32 @@ export default async function StepPage({ params }: StepPageProps) {
     if (ws) {
       workshopShareToken = ws.shareToken;
       workshopSessionId = ws.id;
+    }
+    const [latestNarration] = await db
+      .select({
+        id: workshopStepNarration.id,
+        content: workshopStepNarration.content,
+        cta: workshopStepNarration.cta,
+        rowId: workshopStepNarration.rowId,
+        progressLabel: workshopStepNarration.progressLabel,
+      })
+      .from(workshopStepNarration)
+      .where(
+        and(
+          eq(workshopStepNarration.workshopId, session.workshop.id),
+          eq(workshopStepNarration.stepId, step.id),
+        )
+      )
+      .orderBy(desc(workshopStepNarration.createdAt))
+      .limit(1);
+    if (latestNarration) {
+      initialPulse = {
+        narrationId: latestNarration.id,
+        content: latestNarration.content,
+        cta: latestNarration.cta,
+        rowId: latestNarration.rowId,
+        progressLabel: latestNarration.progressLabel,
+      };
     }
   }
 
@@ -1258,6 +1292,7 @@ export default async function StepPage({ params }: StepPageProps) {
               challengeIdea={challengeIdea}
               challengeProblem={challengeProblem}
               challengeAudience={challengeAudience}
+              initialPulse={initialPulse}
             />
           </MultiplayerRoomLoader>
         ) : (

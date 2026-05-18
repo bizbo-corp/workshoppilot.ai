@@ -239,6 +239,21 @@ declare global {
           templateId: string;
           templateName: string;
         }
+      /** Broadcast when the facilitator's AI produces a message worth surfacing
+       *  to all participants — drives the "workshop pulse" card. Fired by the
+       *  chat API onFinish hook, not from a participant tab. Late joiners
+       *  hydrate from the workshop_step_narration table on page load. */
+      | {
+          type: 'FACILITATOR_NARRATION';
+          stepId: string;
+          /** workshop_step_narration.id — lets the client dedupe if the event
+           *  arrives before SSR hydration completes or vice versa. */
+          narrationId: string;
+          content: string;
+          cta: string | null;
+          rowId: string | null;
+          progressLabel: string | null;
+        }
       | { type: 'STEP_RESET'; stepOrder: number };
   }
 }

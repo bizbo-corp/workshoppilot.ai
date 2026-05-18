@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db/client';
-import { workshops, sessions, workshopSteps, chatMessages, stepArtifacts, stepSummaries, users, workshopSessions, sessionParticipants } from '@/db/schema';
+import { workshops, sessions, workshopSteps, chatMessages, stepArtifacts, stepSummaries, users, workshopSessions, sessionParticipants, workshopStepNarration } from '@/db/schema';
 import { randomBytes } from 'crypto';
 import { eq, and, isNull, inArray, sql, gt } from 'drizzle-orm';
 import { PAYWALL_CUTOFF_DATE } from '@/lib/billing/paywall-config';
@@ -895,6 +895,19 @@ export async function resetStep(
           )
         );
     }
+
+    // Delete workshop-pulse narration for all forward steps. Without this,
+    // participants would see the pre-reset narration pinned in their pulse
+    // card after the facilitator resets the step — the SSR-hydrated initial
+    // state would still find the stale row until a new AI message landed.
+    await db
+      .delete(workshopStepNarration)
+      .where(
+        and(
+          eq(workshopStepNarration.workshopId, workshopId),
+          inArray(workshopStepNarration.stepId, forwardStepIds)
+        )
+      );
 
     // Extract blob URLs from artifacts before deleting
     const artifacts = await db
