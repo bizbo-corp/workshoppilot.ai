@@ -1,27 +1,24 @@
 /**
- * /join/[token] — Guest Join Page
- * React Server Component that validates the share token and renders the
- * guest join flow for multiplayer workshop participants.
+ * /join/[token] — Participant Join Page
+ * React Server Component that validates the share token and routes the visitor
+ * into the multiplayer workshop. All participants must be Clerk-authenticated.
  *
  * Flow:
- * 1. RSC validates shareToken against workshopSessions table
- * 2. If invalid: renders an error card with link to home
- * 3. If valid: renders GuestJoinFlow client component with session metadata
- *
- * Design decisions:
- * - Server-side token validation prevents leaking workshop details to invalid links.
- * - GuestJoinFlow checks sessionStorage on mount for returning guests (avoids
- *   re-showing the modal on page refresh within the same browser session).
- * - The AI session ID and current step order are fetched server-side so GuestLobby
- *   can navigate directly to the canvas URL without an extra client-side lookup.
+ * 1. RSC validates shareToken against workshopSessions table.
+ * 2. If invalid: renders an error card with link to home.
+ * 3. If signed out: renders the passwordless sign-in gate, returning here after.
+ * 4. If the signed-in user owns the session: redirect into the workshop.
+ * 5. Otherwise: render GuestJoinFlow, which joins via /api/guest-join (identity
+ *    derived from the Clerk account) and shows the lobby.
  */
 
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { workshopSessions, sessionParticipants, workshops, sessions, workshopSteps } from '@/db/schema';
+import { workshopSessions, sessionParticipants, sessions, workshopSteps } from '@/db/schema';
+import { ParticipantSignInGate } from '@/components/auth/participant-sign-in-gate';
 import { GuestJoinFlow } from './guest-join-flow';
 
 interface JoinPageProps {
@@ -89,23 +86,21 @@ export default async function JoinPage({ params, searchParams }: JoinPageProps) 
   const facilitatorName = ownerParticipant?.displayName ?? null;
   const workshopTitle = workshopSession.workshop.title;
 
-  // Detect signed-in Clerk user — derive display name for auto-join
-  let clerkDisplayName: string | null = null;
+  // Require authentication. Preserve any ?r= rejoin token through the sign-in
+  // round-trip so the user lands back on this exact join URL.
   const { userId } = await auth();
-  if (userId) {
-    // If this Clerk user is the session owner, redirect to the workshop
-    // instead of creating a duplicate participant
-    if (ownerParticipant?.clerkUserId === userId) {
-      const stepOrder = activeStep?.stepDefinition?.order ?? 1;
-      redirect(`/workshop/${aiSession?.id ?? workshopSession.workshopId}/step/${stepOrder}`);
-    }
+  if (!userId) {
+    const redirectUrl = rejoinToken
+      ? `/join/${token}?r=${encodeURIComponent(rejoinToken)}`
+      : `/join/${token}`;
+    return <ParticipantSignInGate redirectUrl={redirectUrl} workshopTitle={workshopTitle} />;
+  }
 
-    const user = await currentUser();
-    const raw = user?.fullName ?? user?.username ?? '';
-    const trimmed = raw.trim().slice(0, 30);
-    if (trimmed.length >= 2) {
-      clerkDisplayName = trimmed;
-    }
+  // If this Clerk user owns the session, send them into the workshop instead of
+  // creating a duplicate participant.
+  if (ownerParticipant?.clerkUserId === userId) {
+    const stepOrder = activeStep?.stepDefinition?.order ?? 1;
+    redirect(`/workshop/${aiSession?.id ?? workshopSession.workshopId}/step/${stepOrder}`);
   }
 
   return (
@@ -119,8 +114,6 @@ export default async function JoinPage({ params, searchParams }: JoinPageProps) 
         sessionId={workshopSession.id}
         aiSessionId={aiSession?.id ?? null}
         currentStepOrder={activeStep?.stepDefinition?.order ?? 1}
-        clerkDisplayName={clerkDisplayName}
-        rejoinToken={rejoinToken}
       />
     </div>
   );

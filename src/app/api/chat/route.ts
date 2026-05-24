@@ -2,7 +2,6 @@
 // .planning/codebase/DEFENSIVE_PATTERNS.md before relaxing any guard in this
 // file, in chat-panel.tsx, participant-chat-panel.tsx, or message-persistence.ts.
 import { convertToModelMessages, smoothStream, createUIMessageStream, createUIMessageStreamResponse } from 'ai';
-import { auth } from '@clerk/nextjs/server';
 import { chatModel, buildStepSystemPrompt } from '@/lib/ai/chat-config';
 import { saveMessages, claimGreetingPlaceholder, fillGreetingPlaceholder, pollForFilledGreeting, deleteEmptyGreetingPlaceholder } from '@/lib/ai/message-persistence';
 import { assembleStepContext } from '@/lib/context/assemble-context';
@@ -19,7 +18,8 @@ import {
 import { persistAndBroadcastNarration } from '@/lib/ai/narration/persist';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { loadCanvasState } from '@/actions/canvas-actions';
-import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
+import { checkRateLimit, rateLimitResponse } from '@/lib/ai/rate-limiter';
+import { authenticateWorkshopRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/workshop-request-auth';
 import { createHash } from 'node:crypto';
 import { createPrefixedId } from '@/lib/ids';
 
@@ -40,11 +40,6 @@ export const maxDuration = 60;
  * - workshopId: string - The workshop ID (wks_xxx)
  */
 export async function POST(req: Request) {
-  // Soft auth: allow guests for multiplayer, use IP-based rate limiting for them
-  const { userId } = await auth();
-  const rl = checkRateLimit(getRateLimitId(req, userId), 'chat');
-  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
-
   try {
     const { messages, sessionId, stepId, workshopId, subStep, selectedStickyNoteIds, participantId, participantName, conceptOwnerId } = await req.json();
 
@@ -63,6 +58,21 @@ export async function POST(req: Request) {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    // Require a Clerk session AND membership of this workshop (owner or
+    // participant). Closes the token-burn hole: only people who joined this
+    // workshop can drive its chat. A participant may only act as their own
+    // participantId — a mismatch means impersonation, so reject it. This runs
+    // BEFORE any greeting/persistence logic; do not move it past the guards.
+    const authResult = await authenticateWorkshopRequest(workshopId);
+    if (!authResult) return unauthorizedResponse();
+    if (authResult.kind === 'participant' && participantId !== authResult.participantId) {
+      return forbiddenResponse();
+    }
+
+    // Per-caller rate limit (survives cold starts better than per-IP).
+    const rl = checkRateLimit(authResult.rateLimitKey, 'chat');
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
     // Scope assertion: verify the sessionId belongs to the claimed workshopId.
     // Returns 404 if session doesn't exist, 409 if workshopId doesn't match.

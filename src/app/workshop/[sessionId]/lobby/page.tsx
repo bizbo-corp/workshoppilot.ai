@@ -9,7 +9,6 @@
  */
 
 import { notFound, redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import { auth } from '@clerk/nextjs/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
@@ -21,7 +20,7 @@ import {
   challengeApprovals,
   workshopSteps,
 } from '@/db/schema';
-import { COOKIE_NAME, verifyGuestCookie } from '@/lib/auth/guest-cookie';
+import { resolveClerkParticipant } from '@/lib/auth/resolve-participant';
 import { getChallengeArtifact } from '@/lib/workshop/challenge-artifact';
 import { formatSchedule } from '@/lib/workshop/workshop-schedule';
 import { STEPS } from '@/lib/workshop/step-metadata';
@@ -72,36 +71,12 @@ export default async function LobbyPage({ params }: PageProps) {
   // out without ever checking identity).
   let callerParticipantId: string | null = null;
   if (!isFacilitator) {
-    if (userId) {
-      const [p] = await db
-        .select({ id: sessionParticipants.id })
-        .from(sessionParticipants)
-        .where(
-          and(
-            eq(sessionParticipants.sessionId, wSession.id),
-            eq(sessionParticipants.clerkUserId, userId)
-          )
-        )
-        .limit(1);
-      if (p) callerParticipantId = p.id;
-    }
-    if (!callerParticipantId) {
-      const cookieStore = await cookies();
-      const raw = cookieStore.get(COOKIE_NAME)?.value;
-      const payload = raw ? verifyGuestCookie(raw) : null;
-      if (payload && payload.workshopId === workshop.id) {
-        const [p] = await db
-          .select({ id: sessionParticipants.id, sessionId: sessionParticipants.sessionId })
-          .from(sessionParticipants)
-          .where(eq(sessionParticipants.id, payload.participantId))
-          .limit(1);
-        if (p && p.sessionId === wSession.id) callerParticipantId = p.id;
-      }
-    }
-    if (!callerParticipantId) {
-      // Not a participant of this workshop — send home
+    const caller = await resolveClerkParticipant(workshop.id);
+    if (!caller) {
+      // Not an authenticated participant of this workshop — send home.
       redirect('/');
     }
+    callerParticipantId = caller.participantId;
   }
 
   // Late joiner: workshop already started — drop them at the current step.

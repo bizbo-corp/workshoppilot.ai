@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { pgTable, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { createPrefixedId } from '@/lib/ids';
 import { workshopSessions } from './workshop-sessions';
@@ -5,7 +6,9 @@ import { workshopSessions } from './workshop-sessions';
 /**
  * Session Participants table
  * Tracks each participant in a multiplayer workshop session.
- * Supports both authenticated Clerk users and unauthenticated guests.
+ * All participants are Clerk-authenticated; `clerkUserId` is nullable only for
+ * legacy rows created before auth was required. Identity is keyed on
+ * (sessionId, clerkUserId) — see the partial unique index below.
  */
 export const sessionParticipants = pgTable(
   'session_participants',
@@ -16,9 +19,10 @@ export const sessionParticipants = pgTable(
     sessionId: text('session_id')
       .notNull()
       .references(() => workshopSessions.id, { onDelete: 'cascade' }),
-    // Nullable — guests have no Clerk account
+    // Nullable only for legacy guest rows; new participants always set it.
     clerkUserId: text('clerk_user_id'),
-    // ID used in Liveblocks prepareSession: Clerk ID for owners, prefixed CUID2 for guests
+    // ID used in Liveblocks prepareSession: the Clerk userId for all current
+    // participants. Legacy rows may carry a prefixed `guest_` CUID2.
     liveblocksUserId: text('liveblocks_user_id').notNull(),
     displayName: text('display_name').notNull(),
     // Assigned deterministically per session slot (hex)
@@ -50,5 +54,10 @@ export const sessionParticipants = pgTable(
       table.liveblocksUserId
     ),
     rejoinTokenIdx: uniqueIndex('session_participants_rejoin_token_idx').on(table.rejoinToken),
+    // One participant row per Clerk identity per session. Partial so legacy
+    // guest rows (clerkUserId NULL) are excluded and never collide.
+    sessionClerkUnique: uniqueIndex('session_participants_session_clerk_unique')
+      .on(table.sessionId, table.clerkUserId)
+      .where(sql`${table.clerkUserId} IS NOT NULL`),
   })
 );

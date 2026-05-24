@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "session_participants_session_clerk_unique" ON "session_participants" USING btree ("session_id","clerk_user_id") WHERE "session_participants"."clerk_user_id" IS NOT NULL;

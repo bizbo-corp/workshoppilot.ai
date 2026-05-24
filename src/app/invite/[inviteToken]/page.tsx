@@ -1,10 +1,10 @@
 /**
  * /invite/[inviteToken] — Workshop Invitation Landing
  *
- * Validates the invitation token, then routes the invitee to challenge-review.
- * If the user is already a session participant (Clerk userId match or valid cookie),
- * the invitation is auto-claimed via /api/invite-claim and the user is redirected.
- * Otherwise the InviteClaimFlow client component captures a display name and POSTs.
+ * Validates the invitation token, then routes the invitee in. The invite is
+ * LOCKED to the email it was sent to: the user must be signed in as that exact
+ * address. Signed out → passwordless sign-in gate. Signed in as a different
+ * email → mismatch screen. Signed in as the invited email → auto-claim.
  */
 
 import Link from 'next/link';
@@ -18,7 +18,10 @@ import {
   sessions,
   sessionParticipants,
 } from '@/db/schema';
+import { getPrimaryEmail } from '@/lib/auth/participant-name';
+import { ParticipantSignInGate } from '@/components/auth/participant-sign-in-gate';
 import { InviteClaimFlow } from './invite-claim-flow';
+import { InviteEmailMismatch } from './invite-email-mismatch';
 
 interface InvitePageProps {
   params: Promise<{ inviteToken: string }>;
@@ -73,14 +76,33 @@ export default async function InvitePage({ params }: InvitePageProps) {
   const facilitatorName =
     ownerParticipant?.role === 'owner' ? ownerParticipant.displayName : null;
 
-  // Auto-claim path for signed-in Clerk users
+  const invitedEmail = invitation.email.toLowerCase();
+  const inviteUrl = `/invite/${inviteToken}`;
+
+  // Require authentication, returning here afterwards.
   const { userId } = await auth();
-  let clerkDisplayName: string | null = null;
-  if (userId) {
-    const user = await currentUser();
-    const raw = user?.fullName ?? user?.username ?? '';
-    const trimmed = raw.trim().slice(0, 30);
-    if (trimmed.length >= 2) clerkDisplayName = trimmed;
+  if (!userId) {
+    return (
+      <ParticipantSignInGate
+        redirectUrl={inviteUrl}
+        workshopTitle={workshop.title}
+        subtitle={`You've been invited as ${invitation.email}. Sign in with that email to join.`}
+      />
+    );
+  }
+
+  // Email lock: the signed-in account's verified primary email must match the
+  // address the invite was sent to.
+  const user = await currentUser();
+  const signedInEmail = getPrimaryEmail(user);
+  if (!signedInEmail || signedInEmail !== invitedEmail) {
+    return (
+      <InviteEmailMismatch
+        invitedEmail={invitation.email}
+        signedInEmail={signedInEmail ?? 'an unknown address'}
+        inviteUrl={inviteUrl}
+      />
+    );
   }
 
   return (
@@ -90,7 +112,6 @@ export default async function InvitePage({ params }: InvitePageProps) {
         workshopTitle={workshop.title}
         facilitatorName={facilitatorName}
         urlSessionId={urlSession.id}
-        clerkDisplayName={clerkDisplayName}
       />
     </div>
   );

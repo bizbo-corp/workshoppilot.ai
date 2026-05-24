@@ -1,75 +1,68 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
-import { cookies } from 'next/headers';
-import { eq } from 'drizzle-orm';
-import { db } from '@/db/client';
-import { sessionParticipants } from '@/db/schema';
-import { verifyGuestCookie, COOKIE_NAME } from './guest-cookie';
 import { isAdmin } from './roles';
+import { resolveClerkParticipant, isWorkshopOwner } from './resolve-participant';
 
 /**
- * Dual-auth result for workshop-scoped API routes.
+ * Auth result for workshop-scoped API routes.
  *
- * `user` covers Clerk-authenticated facilitators/owners. `guest` covers
- * participants who joined via a join link and hold a signed `wp_guest` cookie
- * scoped to the same workshopId.
+ * Every caller is now a Clerk-authenticated user. `owner` covers the workshop
+ * facilitator (and admins); `participant` covers an authenticated participant
+ * who has joined this specific workshop. A signed-in user who is neither owner
+ * nor participant of `workshopId` gets `null` (401) — this is the membership
+ * check that stops anyone-with-a-link from burning the facilitator's AI tokens.
  *
- * `rateLimitKey` is pre-baked (`user:<id>` or `guest:<participantId>`) so
- * routes don't accidentally fall through to IP-based limiting for an
- * identified caller.
+ * `rateLimitKey` is pre-baked (`user:<id>` or `participant:<id>`) so routes
+ * never fall through to IP-based limiting for an identified caller.
  */
 export type WorkshopRequestAuth =
-  | { kind: 'user'; userId: string; isAdmin: boolean; rateLimitKey: string }
-  | { kind: 'guest'; participantId: string; rateLimitKey: string };
+  | { kind: 'owner'; userId: string; isAdmin: boolean; rateLimitKey: string }
+  | { kind: 'participant'; userId: string; participantId: string; rateLimitKey: string };
 
 /**
- * Authenticate a workshop-scoped API request as either a Clerk user or a
- * guest participant of `workshopId`.
+ * Authenticate a workshop-scoped API request. Requires a Clerk session AND
+ * membership of `workshopId` (as owner or participant). Returns null on
+ * failure — caller is responsible for emitting the 401 response.
  *
- * Returns null on failure. Caller is responsible for emitting the 401 response.
- *
- * Admin detection: prefers session claims (fast). Falls back to `ADMIN_EMAIL`
+ * Admin detection: prefers session claims (fast), falls back to `ADMIN_EMAIL`
  * env match on `currentUser()` for accounts whose roles haven't been
- * initialized yet — same pattern as the existing inline check in
- * generate-sketch-image.
+ * initialized yet.
  */
 export async function authenticateWorkshopRequest(
   workshopId: string,
 ): Promise<WorkshopRequestAuth | null> {
   const { userId, sessionClaims } = await auth();
+  if (!userId) return null;
 
-  if (userId) {
-    let admin = isAdmin(sessionClaims);
+  // Owner / admin path. Admins (by claims) are treated as owners of any
+  // workshop. Resolve ownership before the email fallback so participant calls
+  // (the high-frequency path) never pay for a currentUser() round-trip.
+  const adminByClaims = isAdmin(sessionClaims);
+  if (adminByClaims || (await isWorkshopOwner(workshopId, userId))) {
+    let admin = adminByClaims;
     if (!admin) {
+      // Email fallback for an owner whose admin role hasn't been initialized.
       const user = await currentUser();
       const adminEmail = process.env.ADMIN_EMAIL;
       const userEmail = user?.emailAddresses?.[0]?.emailAddress;
       admin = !!(adminEmail && userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase());
     }
     return {
-      kind: 'user',
+      kind: 'owner',
       userId,
       isAdmin: admin,
       rateLimitKey: `user:${userId}`,
     };
   }
 
-  const cookieStore = await cookies();
-  const raw = cookieStore.get(COOKIE_NAME)?.value;
-  const payload = raw ? verifyGuestCookie(raw) : null;
-  if (!payload || payload.workshopId !== workshopId) return null;
-
-  const [participant] = await db
-    .select({ id: sessionParticipants.id, status: sessionParticipants.status })
-    .from(sessionParticipants)
-    .where(eq(sessionParticipants.id, payload.participantId))
-    .limit(1);
-
-  if (!participant || participant.status === 'removed') return null;
+  // Participant path — must be an active participant of this workshop.
+  const participant = await resolveClerkParticipant(workshopId);
+  if (!participant) return null;
 
   return {
-    kind: 'guest',
-    participantId: payload.participantId,
-    rateLimitKey: `guest:${payload.participantId}`,
+    kind: 'participant',
+    userId,
+    participantId: participant.participantId,
+    rateLimitKey: `participant:${participant.participantId}`,
   };
 }
 
@@ -79,6 +72,17 @@ export async function authenticateWorkshopRequest(
 export function unauthorizedResponse(): Response {
   return new Response(JSON.stringify({ error: 'Unauthorized' }), {
     status: 401,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+/**
+ * Canonical 403 response for an authenticated caller acting outside their
+ * own identity (e.g. a participant claiming someone else's participantId).
+ */
+export function forbiddenResponse(): Response {
+  return new Response(JSON.stringify({ error: 'Forbidden' }), {
+    status: 403,
     headers: { 'Content-Type': 'application/json' },
   });
 }

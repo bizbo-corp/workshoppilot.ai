@@ -1,10 +1,9 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { sessions, buildPacks } from '@/db/schema';
-import { COOKIE_NAME, verifyGuestCookie } from '@/lib/auth/guest-cookie';
+import { resolveClerkParticipant } from '@/lib/auth/resolve-participant';
 import { OutputsContent } from './outputs-content';
 
 interface OutputsPageProps {
@@ -49,25 +48,20 @@ export default async function OutputsPage({ params }: OutputsPageProps) {
 
   const { workshop } = session;
 
-  // Auth: signed-in users proceed normally; guests need valid cookie
+  // Auth: the owner gets full access; a participant of this workshop views
+  // read-only. Everyone else (signed out, or signed in but not a member) is
+  // sent home.
   const { userId } = await auth();
-  let isReadOnly = false;
-
   if (!userId) {
-    // Guest path: verify wp_guest cookie matches this workshop
-    const cookieStore = await cookies();
-    const guestToken = cookieStore.get(COOKIE_NAME)?.value;
+    redirect('/');
+  }
 
-    if (!guestToken) {
+  let isReadOnly = false;
+  if (workshop.clerkUserId !== userId) {
+    const participant = await resolveClerkParticipant(workshop.id);
+    if (!participant) {
       redirect('/');
     }
-
-    const payload = verifyGuestCookie(guestToken);
-
-    if (!payload || payload.workshopId !== workshop.id) {
-      redirect('/');
-    }
-
     isReadOnly = true;
   }
 

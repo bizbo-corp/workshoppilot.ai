@@ -20,13 +20,12 @@ const isPublicRoute = createRouteMatcher([
   '/workshop/:path*/step/1',
   '/workshop/:path*/step/2',
   '/workshop/:path*/step/3',
-  // Guest join flow — no Clerk session required
+  // Join + invite PAGES stay public so the passwordless sign-in gate can render
+  // to signed-out visitors. The claim APIs below them require a Clerk session
+  // (see isProtectedRoute) — joining a workshop now always requires auth.
   '/join(.*)',          // /join/[token] page
-  '/api/guest-join',   // Guest name submission endpoint
-  '/api/session-status(.*)', // Lobby status polling (Plan 02)
-  // Email invitation flow — invitee may be unauthenticated and join as a guest
+  '/api/session-status(.*)', // Lobby status polling (status-only, no PII)
   '/invite(.*)',        // /invite/[inviteToken] page
-  '/api/invite-claim', // Invitation claim endpoint (creates participant + sets cookie)
   // Multiplayer guest canvas access — all workshop step pages are public for guests.
   // The workshop page itself requires a valid session ID (redirects to /dashboard if not found).
   // Liveblocks room access requires a valid token (issued only to verified Clerk users or guests).
@@ -41,6 +40,8 @@ const isProtectedRoute = createRouteMatcher([
   '/dashboard(.*)',
   '/api/workshops(.*)',
   '/api/sessions(.*)',
+  '/api/guest-join',    // Join via share link — Clerk session required
+  '/api/invite-claim',  // Claim an invite — Clerk session required
   '/workshop/:path*/step/4',
   '/workshop/:path*/step/5',
   '/workshop/:path*/step/6',

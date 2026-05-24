@@ -1,10 +1,9 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
 import { eq, and, like } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { sessions, buildPacks, stepArtifacts, workshopSteps } from '@/db/schema';
-import { COOKIE_NAME, verifyGuestCookie } from '@/lib/auth/guest-cookie';
+import { resolveClerkParticipant } from '@/lib/auth/resolve-participant';
 import { FeaturePrioritizationContent } from './feature-prioritization-content';
 import type { FeaturePrioritizationState } from '@/lib/feature-prioritization/types';
 
@@ -26,14 +25,13 @@ export default async function FeaturePrioritizationPage({ params }: FeaturePrior
 
   // Auth check
   const { userId } = await auth();
-  let isReadOnly = false;
+  if (!userId) redirect('/');
 
-  if (!userId) {
-    const cookieStore = await cookies();
-    const guestToken = cookieStore.get(COOKIE_NAME)?.value;
-    if (!guestToken) redirect('/');
-    const payload = verifyGuestCookie(guestToken);
-    if (!payload || payload.workshopId !== workshop.id) redirect('/');
+  // Owner gets full access; a participant of this workshop views read-only.
+  let isReadOnly = false;
+  if (workshop.clerkUserId !== userId) {
+    const participant = await resolveClerkParticipant(workshop.id);
+    if (!participant) redirect('/');
     isReadOnly = true;
   }
 

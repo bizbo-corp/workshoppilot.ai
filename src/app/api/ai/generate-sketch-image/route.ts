@@ -291,19 +291,19 @@ export async function POST(req: Request) {
   const authResult = await authenticateWorkshopRequest(workshopId);
   if (!authResult) return unauthorizedResponse();
 
-  const isAdminUser = authResult.kind === 'user' && authResult.isAdmin;
+  const isAdminUser = authResult.kind === 'owner' && authResult.isAdmin;
 
   // Resolve Imagen model:
   // - Admin honors their explicit toggle (the only role that sees it in the UI).
-  // - Guest participants default to standard for better output quality (their
+  // - Participants default to standard for better output quality (their
   //   sketches are the bulk of generations during a live workshop).
   // - Non-admin facilitators (no toggle exposed) stay on fast.
-  // The per-item generation cap below still applies to guests, so cost is bounded.
+  // The per-item generation cap below still applies, so cost is bounded.
   const resolvedModel: string = isAdminUser
     ? imageModel === 'standard'
       ? 'imagen-4.0-generate-001'
       : 'imagen-4.0-fast-generate-001'
-    : authResult.kind === 'guest'
+    : authResult.kind === 'participant'
       ? 'imagen-4.0-generate-001'
       : 'imagen-4.0-fast-generate-001';
 

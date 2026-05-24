@@ -106,8 +106,8 @@ export async function POST(req: Request) {
     );
   }
 
-  // Dual-auth: Clerk session (facilitator/owner) OR signed guest cookie scoped
-  // to this workshop. Shared with the sketch-image endpoints so guest
+  // Requires a Clerk session AND membership of this workshop (owner or
+  // participant). Shared with the sketch-image endpoints so authenticated
   // participants can generate persona avatars on their own canvas.
   const authResult = await authenticateWorkshopRequest(workshopId);
   if (!authResult) return unauthorizedResponse();

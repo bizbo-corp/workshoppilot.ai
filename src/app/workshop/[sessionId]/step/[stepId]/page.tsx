@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { eq, and, isNull, like, desc } from "drizzle-orm";
-import { cookies } from "next/headers";
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db/client";
 import { sessions, stepArtifacts, chatMessages, sessionParticipants, workshopSessions, buildPacks, workshopStepNarration } from "@/db/schema";
@@ -29,7 +28,7 @@ import { getStepTemplateStickyNotes, guidesToTemplateDefs } from "@/lib/canvas/t
 import { dbWithRetry } from "@/db/with-retry";
 import { PAYWALL_CUTOFF_DATE } from "@/lib/billing/paywall-config";
 import { PaywallOverlay } from "@/components/workshop/paywall-overlay";
-import { verifyGuestCookie, COOKIE_NAME } from "@/lib/auth/guest-cookie";
+import { resolveClerkParticipant } from "@/lib/auth/resolve-participant";
 import { PARTICIPANT_COLORS } from "@/lib/liveblocks/config";
 
 interface StepPageProps {
@@ -90,49 +89,21 @@ export default async function StepPage({ params }: StepPageProps) {
   let participantColor: string | null = null;
 
   if (session.workshop.workshopType === 'multiplayer') {
-    if (!user) {
-      // Guest path: read wp_guest cookie
-      const cookieStore = await cookies();
-      const raw = cookieStore.get(COOKIE_NAME)?.value;
-      const payload = raw ? verifyGuestCookie(raw) : null;
-      if (payload) {
-        const [participant] = await db
-          .select()
-          .from(sessionParticipants)
-          .where(eq(sessionParticipants.id, payload.participantId))
-          .limit(1);
-        if (participant && participant.role === 'participant') {
-          participantId = participant.id;
-          participantDisplayName = participant.displayName;
-          participantColor = participant.color;
-        }
-      }
-    } else {
-      // Clerk user: check if they're a participant (not owner)
-      const [participant] = await db
-        .select()
-        .from(sessionParticipants)
-        .where(
-          and(
-            eq(sessionParticipants.sessionId, session.id),
-            eq(sessionParticipants.clerkUserId, user.id),
-            eq(sessionParticipants.role, 'participant'),
-          )
-        )
-        .limit(1);
-      if (participant) {
-        participantId = participant.id;
-        participantDisplayName = participant.displayName;
-        participantColor = participant.color;
-      }
+    // All participants are Clerk-authenticated. Resolve the caller's row by
+    // (workshopSession, clerkUserId) via the shared helper — owners are handled
+    // separately by the isWorkshopOwner check below.
+    const caller = await resolveClerkParticipant(session.workshop.id);
+    if (caller && caller.role === 'participant') {
+      participantId = caller.participantId;
+      participantDisplayName = caller.displayName;
+      participantColor = caller.color;
     }
 
-    // Auth redirect — if this is a multiplayer step page and the caller is
-    // neither the workshop owner nor a known participant (no Clerk match, no
-    // valid wp_guest cookie), bounce to the lobby. Otherwise the page renders
-    // with participantId=null and Liveblocks auth throws "Authentication
-    // failed after retries" in the participant's console, which is a confusing
-    // failure mode for someone who pasted a step URL without joining first.
+    // Auth redirect — if the caller is neither the workshop owner nor a known
+    // participant, bounce to the lobby. Otherwise the page would render with
+    // participantId=null and Liveblocks auth throws "Authentication failed
+    // after retries" — a confusing failure for someone who pasted a step URL
+    // without joining (or signing in) first.
     const isWorkshopOwner = !!user && user.id === session.workshop.clerkUserId;
     if (!isWorkshopOwner && !participantId) {
       redirect(`/workshop/${sessionId}/lobby`);

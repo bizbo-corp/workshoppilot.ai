@@ -1,6 +1,5 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { auth, clerkClient } from '@clerk/nextjs/server';
@@ -9,82 +8,28 @@ import { db } from '@/db/client';
 import {
   workshops,
   sessions,
-  workshopSessions,
-  sessionParticipants,
   challengeApprovals,
+  sessionParticipants,
   users,
 } from '@/db/schema';
-import { COOKIE_NAME, verifyGuestCookie } from '@/lib/auth/guest-cookie';
+import { resolveClerkParticipant } from '@/lib/auth/resolve-participant';
 
 /**
  * Resolve the caller's session participant row for a given workshop.
- * Returns null if the caller isn't a participant in this workshop.
+ * Returns null if the caller isn't an (authenticated) participant.
  */
 async function resolveCallerParticipant(workshopId: string): Promise<{
   participantId: string;
   sessionId: string;
   participantName: string;
 } | null> {
-  // Find the workshop session for this workshop
-  const [wSession] = await db
-    .select({ id: workshopSessions.id })
-    .from(workshopSessions)
-    .where(eq(workshopSessions.workshopId, workshopId))
-    .limit(1);
-  if (!wSession) return null;
-
-  // 1. Try Clerk
-  const { userId } = await auth();
-  if (userId) {
-    const [participant] = await db
-      .select({
-        id: sessionParticipants.id,
-        sessionId: sessionParticipants.sessionId,
-        displayName: sessionParticipants.displayName,
-      })
-      .from(sessionParticipants)
-      .where(
-        and(
-          eq(sessionParticipants.sessionId, wSession.id),
-          eq(sessionParticipants.clerkUserId, userId)
-        )
-      )
-      .limit(1);
-    if (participant) {
-      return {
-        participantId: participant.id,
-        sessionId: participant.sessionId,
-        participantName: participant.displayName,
-      };
-    }
-  }
-
-  // 2. Try guest cookie
-  const cookieStore = await cookies();
-  const c = cookieStore.get(COOKIE_NAME);
-  if (c?.value) {
-    const payload = verifyGuestCookie(c.value);
-    if (payload && payload.workshopId === workshopId) {
-      const [participant] = await db
-        .select({
-          id: sessionParticipants.id,
-          sessionId: sessionParticipants.sessionId,
-          displayName: sessionParticipants.displayName,
-        })
-        .from(sessionParticipants)
-        .where(eq(sessionParticipants.id, payload.participantId))
-        .limit(1);
-      if (participant && participant.sessionId === wSession.id) {
-        return {
-          participantId: participant.id,
-          sessionId: participant.sessionId,
-          participantName: participant.displayName,
-        };
-      }
-    }
-  }
-
-  return null;
+  const participant = await resolveClerkParticipant(workshopId);
+  if (!participant) return null;
+  return {
+    participantId: participant.participantId,
+    sessionId: participant.sessionId,
+    participantName: participant.displayName,
+  };
 }
 
 /**
