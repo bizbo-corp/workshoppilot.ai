@@ -82,7 +82,7 @@ export function WorkshopListItem({
   return (
     <div
       className={cn(
-        'group relative flex items-center overflow-hidden rounded-lg border transition-all hover:shadow-sm',
+        'group relative flex items-center overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-md',
         selected && 'ring-2 ring-primary border-primary'
       )}
     >
