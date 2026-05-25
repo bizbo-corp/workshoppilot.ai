@@ -58,6 +58,7 @@
   --color-neutral-olive-800: var(--neutral-olive-800);
   --color-neutral-olive-900: var(--neutral-olive-900);
   --color-neutral-olive-950: var(--neutral-olive-950);
+  --color-neutral-olive-975: var(--neutral-olive-975);
 
   /* Olive palette */
   --color-olive-50: var(--olive-50);
@@ -86,6 +87,8 @@
   --neutral-olive-800: #4b5144;
   --neutral-olive-900: #343b2c;
   --neutral-olive-950: #293021;
+  /* One step darker than the canvas (-950); used for the recessed dark-mode chat panel */
+  --neutral-olive-975: #1e2516;
 }
 
 /* Olive palette */
