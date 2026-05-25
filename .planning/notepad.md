@@ -44,13 +44,27 @@ Add 30" video instructions
 
 ## Stakeholder Mapping
 
+Show confetti and more feedback when facilitator is ready to move on. Maybe emojjis of encouragement?
+
 ## Research Sense Making
+
+Allow participant to add pains and gains to Empathy Map
 
 ## Persona Development
 
+Ensure persona gender matches name
+
 ## Journey Mapping
 
+Journey mapping coordination
+
 ## Reframing Challenge
+
+
+
+ after the re-framing challenge, the paywall asked me to use one credit when it should be three for a team workshop
+
+
 
 ## Ideation
 
@@ -58,10 +72,14 @@ Add 30" video instructions
 
 ## Validate
 
+Ensure there is a way to complete the workshop from within the last stage. 
+
+
+
+
+
+
+
 Grow the stickies when the text is larger than the sticky note size.
-
-
-
-
 
 ❯ yes run db 
