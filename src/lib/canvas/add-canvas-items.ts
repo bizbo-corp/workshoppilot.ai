@@ -33,6 +33,9 @@ const VALID_COLORS = new Set<string>([
   "green",
   "orange",
   "red",
+  "teal",
+  "purple",
+  "white",
 ]);
 
 export function addCanvasItemsToBoard(options: {

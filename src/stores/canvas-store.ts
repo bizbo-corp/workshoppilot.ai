@@ -170,6 +170,8 @@ export type CanvasActions = {
   rejectPreview: (id: string) => void;
   confirmAllPreviews: () => void;
   rejectAllPreviews: () => void;
+  confirmPreviewsByOwner: (ownerId: string) => void;
+  rejectPreviewsByOwner: (ownerId: string) => void;
   setHighlightedCell: (cell: { row: number; col: number } | null) => void;
   setPendingFitView: (pending: boolean) => void;
   setPendingFocusCardId: (id: string | null) => void;
@@ -646,6 +648,24 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
         rejectAllPreviews: () =>
           set((state) => ({
             stickyNotes: state.stickyNotes.filter((stickyNote) => !stickyNote.isPreview),
+            isDirty: true,
+          })),
+
+        confirmPreviewsByOwner: (ownerId) =>
+          set((state) => ({
+            stickyNotes: state.stickyNotes.map((stickyNote) =>
+              stickyNote.isPreview && stickyNote.ownerId === ownerId
+                ? { ...stickyNote, isPreview: false, previewReason: undefined }
+                : stickyNote
+            ),
+            isDirty: true,
+          })),
+
+        rejectPreviewsByOwner: (ownerId) =>
+          set((state) => ({
+            stickyNotes: state.stickyNotes.filter(
+              (stickyNote) => !(stickyNote.isPreview && stickyNote.ownerId === ownerId)
+            ),
             isDirty: true,
           })),
 

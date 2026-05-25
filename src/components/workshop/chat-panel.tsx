@@ -56,6 +56,7 @@ import { addCanvasItemsToBoard } from "@/lib/canvas/add-canvas-items";
 import { saveCanvasState, savePersonaCandidates, loadCanvasState } from "@/actions/canvas-actions";
 import { ChatSkeleton } from "./chat-skeleton";
 import { ResearchUploadDialog } from "./research-upload-dialog";
+import type { ContributionType } from "@/lib/ai/prompts/research-analysis-prompts";
 import { isPersonaCardForCluster } from "@/lib/canvas/canvas-position";
 import { parsePersonaSelect, detectPersonaIntro } from "@/lib/chat/parse-utils";
 import { getTemplateById } from "@/lib/workshop/journeyTemplates";
@@ -1328,7 +1329,7 @@ export function ChatPanel({
 
   // Step 3 — analyze an uploaded research transcript into preview personas + insights.
   const handleAnalyzeResearch = React.useCallback(
-    async (transcript: string) => {
+    async (transcript: string, contributionType: ContributionType) => {
       setAnalyzingResearch(true);
       try {
         const existingNotes = storeApi.getState().stickyNotes;
@@ -1343,7 +1344,7 @@ export function ChatPanel({
         const res = await fetch("/api/ai/analyze-research", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ workshopId, transcript, existingPersonaNames }),
+          body: JSON.stringify({ workshopId, transcript, existingPersonaNames, contributionType }),
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -1352,14 +1353,16 @@ export function ChatPanel({
         }
         const { data } = (await res.json()) as {
           data: {
-            personas: { name: string; archetype: string; summary: string }[];
+            personas: { name: string; role?: string; archetype: string; summary: string }[];
             insights: { personaName: string; text: string }[];
+            synthesized?: { text: string }[];
           };
         };
         const personas = data?.personas || [];
         const insights = data?.insights || [];
-        if (personas.length === 0 && insights.length === 0) {
-          toast.error("I couldn't find any people or insights in that text.");
+        const synthesized = data?.synthesized || [];
+        if (personas.length === 0 && insights.length === 0 && synthesized.length === 0) {
+          toast.error("I couldn't find any insights in that text.");
           return;
         }
 
@@ -1371,8 +1374,10 @@ export function ChatPanel({
               isPersonaCardForCluster(card, p.name),
             ),
         );
+        const personaCardText = (p: { name: string; role?: string; summary: string }) =>
+          [p.name, p.role, p.summary].filter((s) => s && s.trim()).join(" — ");
         const personaItems = newPersonas.map((p, i) => ({
-          text: p.summary ? `${p.name} — ${p.summary}` : p.name,
+          text: personaCardText(p),
           color:
             PERSONA_CARD_COLORS[
               (existingCount + i) % PERSONA_CARD_COLORS.length
@@ -1406,6 +1411,25 @@ export function ChatPanel({
           });
         }
 
+        // 3) Synthesized "general vibes" insights → white cards. The reserved
+        //    "Synthesized" cluster keeps them out of the persona list and carries
+        //    them downstream (summary + Step 4 seed) without faking an interviewee.
+        const synthItems = synthesized.map((s) => ({
+          text: s.text,
+          cluster: "Synthesized",
+          color: "white" as StickyNoteColor,
+        }));
+        if (synthItems.length > 0) {
+          addCanvasItemsToBoard({
+            stepId: step.id,
+            items: synthItems,
+            storeApi,
+            addStickyNote,
+            updateStickyNote,
+            preview: { previewReason: "Synthesized from your research" },
+          });
+        }
+
         // Lock step-3 into 'real' mode if it isn't already, and satisfy the
         // persona-select gate so downstream affordances behave normally.
         if (storeApi.getState().interviewMode === null) {
@@ -1418,10 +1442,10 @@ export function ChatPanel({
 
         setPendingResearch({
           personaCount: newPersonas.length,
-          insightCount: insightItems.length,
+          insightCount: insightItems.length + synthItems.length,
           newPersonaCandidates: newPersonas.map((p) => ({
             name: p.name,
-            archetype: p.archetype,
+            archetype: p.role || p.archetype,
             description: p.summary,
           })),
         });

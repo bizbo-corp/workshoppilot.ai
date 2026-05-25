@@ -367,25 +367,30 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
           (body-text) color. Persona-attributed insights show the persona name;
           synthesized (white) insights show a "Synthesized" marker. Hidden for
           persona cards and cluster parents. */}
-      {!isPersonaCard && !data.clusterLabel && (data.cluster || data.color === 'white') && (
-        <div
-          className="absolute bottom-1 left-1.5 flex items-center gap-1 opacity-75"
-          style={{ color: `var(--sticky-note-${data.color || 'yellow'}-text)` }}
-          title={data.cluster ? `From ${data.cluster}` : 'Synthesized insight'}
-        >
-          {data.cluster ? (
-            <span
-              className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: `var(--sticky-note-${data.color || 'yellow'}-text)` }}
-            />
-          ) : (
-            <Sparkles className="h-2.5 w-2.5" />
-          )}
-          <span className="text-[9px] font-medium max-w-[90px] truncate">
-            {data.cluster ? data.cluster : 'Synthesized'}
-          </span>
-        </div>
-      )}
+      {!isPersonaCard && !data.clusterLabel && (data.cluster || data.color === 'white') && (() => {
+        // White cards are synthesized (no single source) → Sparkles "Synthesized".
+        // Coloured cards with a cluster show the source persona's name.
+        const isSynth = data.color === 'white';
+        return (
+          <div
+            className="absolute bottom-1 left-1.5 flex items-center gap-1 opacity-75"
+            style={{ color: `var(--sticky-note-${data.color || 'yellow'}-text)` }}
+            title={isSynth ? 'Synthesized insight' : `From ${data.cluster}`}
+          >
+            {isSynth ? (
+              <Sparkles className="h-2.5 w-2.5" />
+            ) : (
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: `var(--sticky-note-${data.color || 'yellow'}-text)` }}
+              />
+            )}
+            <span className="text-[9px] font-medium max-w-[90px] truncate">
+              {isSynth ? 'Synthesized' : data.cluster}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* Provenance indicator for participant-contributed items */}
       {data.ownerId && (
