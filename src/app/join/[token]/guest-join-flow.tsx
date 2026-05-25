@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { GuestLobby } from '@/components/guest/guest-lobby';
 
 interface JoinResponse {
@@ -44,6 +45,7 @@ export function GuestJoinFlow({
   aiSessionId,
   currentStepOrder,
 }: GuestJoinFlowProps) {
+  const router = useRouter();
   const [state, setState] = useState<FlowState>({ stage: 'joining' });
   const startedRef = useRef(false);
 
@@ -65,6 +67,12 @@ export function GuestJoinFlow({
       }
       const data = (await response.json()) as JoinResponse;
       setState({ stage: 'joined', data });
+      // Land everyone on the shared lobby for context. The lobby resolves the
+      // (now-created) participant row and shows the adaptive begin/nudge CTA.
+      // Falls back to the inline GuestLobby below if there's no AI session id.
+      if (aiSessionId) {
+        router.replace(`/workshop/${aiSessionId}/lobby`);
+      }
     } catch {
       setState({ stage: 'error', message: 'Network error. Please try again.' });
     }
@@ -109,6 +117,21 @@ export function GuestJoinFlow({
   }
 
   const { data } = state;
+
+  // Joined with an AI session → we've kicked off a redirect to the lobby; show
+  // a brief transitional spinner so there's no flash of the old guest lobby.
+  if (aiSessionId) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          <p className="text-sm">Entering lobby...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No AI session id — fall back to the legacy inline guest lobby.
   return (
     <GuestLobby
       token={token}

@@ -18,12 +18,12 @@ import {
   sessionParticipants,
   workshopInvitations,
   challengeApprovals,
-  workshopSteps,
 } from '@/db/schema';
 import { resolveClerkParticipant } from '@/lib/auth/resolve-participant';
 import { getChallengeArtifact } from '@/lib/workshop/challenge-artifact';
 import { formatSchedule } from '@/lib/workshop/workshop-schedule';
-import { STEPS } from '@/lib/workshop/step-metadata';
+import { getCurrentStep } from '@/lib/workshop/lobby-state';
+import { LobbyParticipantCta } from '@/components/workshop/lobby-participant-cta';
 import { LobbyPoller } from './lobby-poller';
 import { LobbyCountdown } from './lobby-countdown';
 import { LobbyIntroVideo } from './lobby-intro-video';
@@ -79,24 +79,19 @@ export default async function LobbyPage({ params }: PageProps) {
     callerParticipantId = caller.participantId;
   }
 
-  // Late joiner: workshop already started — drop them at the current step.
-  // Only fires for authed callers (facilitator or a resolved participant) so
-  // we don't bounce unauthenticated visitors into the step → lobby loop above.
-  if (workshop.workshopStartedAt) {
-    const inProgress = await db
-      .select({ stepId: workshopSteps.stepId })
-      .from(workshopSteps)
-      .where(
-        and(
-          eq(workshopSteps.workshopId, workshop.id),
-          eq(workshopSteps.status, 'in_progress')
-        )
-      )
-      .limit(1);
-    const currentStepId = inProgress[0]?.stepId ?? 'stakeholder-mapping';
-    const order = STEPS.find((s) => s.id === currentStepId)?.order ?? 2;
-    redirect(`/workshop/${sessionId}/step/${order}`);
+  // Late joiner: workshop already started.
+  //  - Facilitator → drop straight into the current step (they're running it).
+  //  - Participant → stay in the lobby for context; the LobbyParticipantCta
+  //    lets them click into the step when the facilitator is online (or nudge
+  //    them if not). This is the whole point of routing joiners through here.
+  if (workshop.workshopStartedAt && isFacilitator) {
+    const step = await getCurrentStep(workshop.id);
+    redirect(`/workshop/${sessionId}/step/${step.order}`);
   }
+
+  // Step the participant CTA would enter (current in-progress step, or
+  // Stakeholder Mapping before anything is in progress).
+  const ctaStep = await getCurrentStep(workshop.id);
 
   // Load challenge + schedule data
   const artifact = await getChallengeArtifact(workshop.id);
@@ -323,17 +318,24 @@ export default async function LobbyPage({ params }: PageProps) {
         {/* Walk-out — full width at the very bottom on every breakpoint. */}
         {walkOutBlock}
 
-        {/* Footer — participant-only actions (facilitator Start is now inside the countdown). */}
+        {/* Footer — participant-only. Adaptive CTA (begin / waiting+nudge) on top,
+            the change-request affordance below it. */}
         {!isFacilitator && (
-          <section className="flex flex-col items-end gap-3 pb-4">
-            <p className="text-sm text-muted-foreground">
-              Waiting for the facilitator to begin…
-            </p>
-            <LobbyParticipantActions
+          <section className="mx-auto flex w-full max-w-xl flex-col gap-3 pb-4">
+            <LobbyParticipantCta
+              sessionId={sessionId}
               workshopId={workshop.id}
-              isWaiting={callerIsWaiting}
-              existingNote={callerApproval?.note ?? null}
+              initialStarted={!!workshop.workshopStartedAt}
+              initialStepOrder={ctaStep.order}
+              initialStepName={ctaStep.name}
             />
+            <div className="flex flex-col items-end gap-2">
+              <LobbyParticipantActions
+                workshopId={workshop.id}
+                isWaiting={callerIsWaiting}
+                existingNote={callerApproval?.note ?? null}
+              />
+            </div>
           </section>
         )}
       </div>

@@ -6,7 +6,7 @@
  * anti-abuse (not billing) purposes.
  */
 
-type RateLimitCategory = 'chat' | 'image-gen' | 'text-gen' | 'build-pack';
+type RateLimitCategory = 'chat' | 'image-gen' | 'text-gen' | 'build-pack' | 'nudge';
 
 interface RateLimitConfig {
   maxRequests: number;
@@ -18,6 +18,8 @@ const RATE_LIMITS: Record<RateLimitCategory, RateLimitConfig> = {
   'image-gen':  { maxRequests: 10, windowMs: 60_000 },
   'text-gen':   { maxRequests: 30, windowMs: 60_000 },
   'build-pack': { maxRequests: 5,  windowMs: 60_000 },
+  // Facilitator nudge from the lobby — one email per key per 5 minutes.
+  'nudge':      { maxRequests: 1,  windowMs: 5 * 60_000 },
 };
 
 // Per-category maps to isolate memory
