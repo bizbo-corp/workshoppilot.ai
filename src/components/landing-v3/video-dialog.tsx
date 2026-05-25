@@ -11,16 +11,16 @@ export function VideoPlayButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2.5 rounded-full bg-card/90 border border-foreground/[0.08] px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+        className="inline-flex items-center justify-center gap-2 rounded-md h-10 bg-card/90 border border-foreground/[0.08] px-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
         style={{
           boxShadow:
             "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.08), 0 2px 8px -2px rgba(0,0,0,0.12)",
         }}
       >
-        <span className="flex items-center justify-center w-7 h-7 rounded-full bg-olive-600 dark:bg-olive-500 shrink-0">
+        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-olive-600 dark:bg-olive-500 shrink-0">
           <Play className="h-3 w-3 text-white fill-white ml-0.5" />
         </span>
-        WorkshopPilot in under 60s
+        WorkshopPilot in 60s
       </button>
 
       {open &&

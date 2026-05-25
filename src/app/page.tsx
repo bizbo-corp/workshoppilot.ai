@@ -31,7 +31,7 @@ export default function Home() {
       <LandingHeader />
 
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="relative min-h-[calc(100vh-64px)] flex flex-col items-center justify-start pt-16 md:pt-24 overflow-hidden px-4">
+      <section className="relative lg:min-h-[calc(100vh-64px)] flex flex-col items-center justify-start pt-12 pb-16 sm:pt-16 sm:pb-20 md:pt-20 lg:pt-24 lg:pb-0 overflow-hidden px-4">
         {/* Decorative background */}
         <div
           className="pointer-events-none absolute inset-0"
@@ -108,10 +108,10 @@ export default function Home() {
           </p>
 
           {/* CTA Buttons */}
-          <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <div className="mt-10 flex flex-row flex-wrap items-center justify-center gap-2 sm:gap-3">
             <NewWorkshopButton
               size="lg"
-              className="min-w-[200px] text-base shadow-lg shadow-olive-600/20"
+              className="px-4 text-base shadow-lg shadow-olive-600/20"
             >
               Start Workshop
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -122,18 +122,30 @@ export default function Home() {
         </div>
 
         {/* Visual area — flows below CTA buttons */}
-        <div className="relative w-full flex-1">
+        <div className="relative w-full flex-1 mt-10 min-h-[280px] sm:min-h-[360px] lg:mt-0 lg:min-h-0">
           {/* Social proof — glassmorphic pill, top-center of visual area */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 px-6 py-2.5">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex w-full max-w-xs sm:max-w-none flex-col items-center gap-2 px-6 py-2.5">
             <div className="flex gap-0.5">
+              {/* Gradient fill for the stars — light white → pale yellow */}
+              <svg width="0" height="0" aria-hidden="true" className="absolute">
+                <defs>
+                  <linearGradient id="star-gold" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="55%" stopColor="#fef3c7" />
+                    <stop offset="100%" stopColor="#fde68a" />
+                  </linearGradient>
+                </defs>
+              </svg>
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
                   key={i}
-                  className="h-4 w-4 fill-olive-500 text-olive-500 dark:fill-olive-400 dark:text-olive-400"
+                  fill="url(#star-gold)"
+                  strokeWidth={0.5}
+                  className="h-4 w-4 text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.45)]"
                 />
               ))}
             </div>
-            <p className="text-sm text-foreground whitespace-nowrap">
+            <p className="text-sm text-foreground text-center">
               Trusted by indie founders, product teams and innovators like you.
             </p>
           </div>

@@ -264,27 +264,27 @@ export default async function DashboardPage() {
           {ctaWorkshop && (
             <div className="mb-8">
               <div
-                className="rounded-xl bg-primary p-6 text-primary-foreground"
+                className="rounded-xl border border-border bg-card p-6 shadow-sm"
               >
-                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-primary-foreground/60">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   {ctaIsCompleted ? 'Your Latest Output' : 'Continue Where You Left Off'}
                 </p>
-                <h2 className="mb-3 text-xl font-serif text-primary-foreground">
+                <h2 className="mb-3 text-xl font-serif text-foreground">
                   {ctaWorkshop.title}
                 </h2>
                 {!ctaIsCompleted && (
                   <div className="mb-4">
                     <div className="mb-1.5 flex items-baseline justify-between">
-                      <span className="text-sm text-primary-foreground/70">
+                      <span className="text-sm text-muted-foreground">
                         Step {ctaWorkshop.currentStep}: {ctaWorkshop.currentStepName}
                       </span>
-                      <span className="text-xs text-primary-foreground/60">{ctaWorkshop.currentStep * 10}%</span>
+                      <span className="text-xs text-muted-foreground">{ctaWorkshop.currentStep * 10}%</span>
                     </div>
-                    <Progress value={ctaWorkshop.currentStep * 10} className="h-1.5 bg-primary-foreground/20 [&>[data-slot=progress-indicator]]:bg-primary-foreground" />
+                    <Progress value={ctaWorkshop.currentStep * 10} className="h-1.5" />
                   </div>
                 )}
                 <div className="flex gap-3">
-                  <Button asChild size="lg" variant="secondary" className="btn-lift">
+                  <Button asChild size="lg" className="btn-lift">
                     <a
                       href={ctaIsCompleted ? `/workshop/${ctaWorkshop.sessionId}/outputs` : `/workshop/${ctaWorkshop.sessionId}/step/${ctaWorkshop.currentStep}`}
                     >

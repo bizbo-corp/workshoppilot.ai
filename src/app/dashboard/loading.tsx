@@ -1,23 +1,25 @@
-import { WorkshopGridSkeleton } from '@/components/dashboard/workshop-grid-skeleton';
+import { Loader2 } from 'lucide-react';
 
 /**
  * Dashboard loading state — shown while the dashboard page fetches data.
- * Uses static gray skeleton blocks (no shimmer/pulse per user decision).
+ * Static header (matches the real page) + a single spinner; no skeleton blocks.
  */
 export default function DashboardLoading() {
   return (
     <>
-      {/* Page header skeleton — serif-sized title */}
-      <div className="mb-8 flex items-end justify-between">
-        <div>
-          <div className="h-12 w-64 rounded-md bg-accent animate-none" />
-          <div className="mt-2 h-5 w-44 rounded-md bg-accent animate-none" />
-        </div>
-        <div className="hidden sm:block h-20 w-40 rounded-md bg-accent/30 animate-none" />
+      {/* Page header — matches the real dashboard header */}
+      <div className="mb-8">
+        <h1 className="text-4xl sm:text-5xl font-serif leading-[1.1] tracking-tight text-foreground">
+          Your Workshops
+        </h1>
+        <p className="mt-2 text-lg text-muted-foreground">
+          Loading your workshops…
+        </p>
       </div>
 
-      {/* Workshop grid skeleton */}
-      <WorkshopGridSkeleton />
+      <div className="flex justify-center py-24">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     </>
   );
 }

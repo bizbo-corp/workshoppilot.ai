@@ -197,7 +197,7 @@ export function HeroVisual() {
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 pointer-events-none overflow-hidden bg-red-500/0"
+      className="hidden xl:block absolute inset-0 pointer-events-none overflow-hidden bg-red-500/0"
       aria-hidden="true"
     >
       {/* ── Light trails (lg+) ── */}
