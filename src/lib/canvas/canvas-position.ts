@@ -48,6 +48,35 @@ export function computeStickyNoteSize(text: string): { width: number; height: nu
   return { width: 360, height: 200 };
 }
 
+/**
+ * Estimate the rendered height of a sticky note at a given width, matching the
+ * node's text-fit constants (14px base font, 1.35 line-height, p-3 padding —
+ * see sticky-note-node.tsx). Clamped to the node's [default, max] height range.
+ *
+ * Used to LOCK auto-generated notes to a height that fits their text, so the
+ * packed layout positions (computed assuming these heights) don't overlap once
+ * the notes render. Kept in sync with STICKY_BASE_FONT_SIZE / STICKY_MAX_HEIGHT.
+ */
+export function estimateStickyHeight(
+  text: string,
+  width: number,
+  hasBadge = false,
+): number {
+  const FONT = 14; // STICKY_BASE_FONT_SIZE
+  const LINE_H = FONT * 1.35;
+  const PAD = 24; // p-3 → 12 + 12 on each axis
+  const AVG_CHAR_W = FONT * 0.52; // rough average glyph advance
+  const usable = Math.max(40, width - PAD);
+  const perLine = Math.max(1, Math.floor(usable / AVG_CHAR_W));
+  let lines = 0;
+  for (const para of (text || '').split('\n')) {
+    lines += Math.max(1, Math.ceil(para.length / perLine));
+  }
+  const badge = hasBadge ? 16 : 0; // bottom provenance badge ("Synthesized"/persona)
+  const h = Math.ceil(PAD + lines * LINE_H + badge);
+  return Math.min(280, Math.max(100, h)); // [≈POST_IT_HEIGHT, STICKY_MAX_HEIGHT]
+}
+
 /** Columns per row in cluster layout */
 const CLUSTER_COLS = 3;
 /** Gap between items in cluster layout */

@@ -69,6 +69,11 @@ import { ConcentricRingsOverlay } from "./concentric-rings-overlay";
 import { EmpathyMapOverlay } from "./empathy-map-overlay";
 import { detectRing } from "@/lib/canvas/ring-layout";
 import { getZoneForPosition } from "@/lib/canvas/empathy-zones";
+import type { EmpathyZoneConfig } from "@/lib/canvas/empathy-zones";
+import {
+  empathyBoundsFromNotes,
+  withDynamicRowHeightsFromNotes,
+} from "@/lib/canvas/pack-layout";
 import { EzyDrawLoader } from "@/components/ezydraw/ezydraw-loader";
 import { simplifyDrawingElements } from "@/lib/drawing/simplify";
 import {
@@ -722,15 +727,40 @@ function ReactFlowCanvasInner({
     }
   }, [stepConfig, gridColumns.length, setGridColumns]);
 
-  // Build dynamic gridConfig from store columns (fall back to static config for first render)
+  // Build dynamic gridConfig from store columns (fall back to static config for
+  // first render), then grow each row's height to fit its packed notes so cells
+  // never overflow (journey map). Columns keep their user-managed widths.
   const dynamicGridConfig = useMemo<GridConfig | undefined>(() => {
     if (!stepConfig.hasGrid || !stepConfig.gridConfig)
       return undefined;
-    return {
+    const base = {
       ...stepConfig.gridConfig,
       columns: gridColumns.length > 0 ? gridColumns : stepConfig.gridConfig.columns,
     };
-  }, [stepConfig, gridColumns]);
+    return withDynamicRowHeightsFromNotes(base, stickyNotes);
+  }, [stepConfig, gridColumns, stickyNotes]);
+
+  // Empathy map: derive zone bounds from the current notes so containers grow +
+  // stay aligned (see pack-layout.ts). Falls back to the static config bounds.
+  const dynamicEmpathyConfig = useMemo<EmpathyZoneConfig | undefined>(() => {
+    if (!stepConfig.hasEmpathyZones || !stepConfig.empathyZoneConfig)
+      return undefined;
+    const bounds = empathyBoundsFromNotes(stickyNotes);
+    const staticZones = stepConfig.empathyZoneConfig.zones;
+    const zones = {} as EmpathyZoneConfig["zones"];
+    (Object.keys(staticZones) as Array<keyof typeof staticZones>).forEach((z) => {
+      zones[z] = { ...staticZones[z], bounds: bounds[z] };
+    });
+    return { zones };
+  }, [stepConfig, stickyNotes]);
+
+  // Latest-value ref so the (deps-stable) create/drag callbacks detect zones
+  // against the grown bounds without needing the memo in their dep arrays.
+  const empathyConfigRef = useRef<EmpathyZoneConfig | undefined>(
+    stepConfig.empathyZoneConfig,
+  );
+  empathyConfigRef.current =
+    dynamicEmpathyConfig ?? stepConfig.empathyZoneConfig;
 
   // Derive cluster edges from sticky notes
   const clusterEdges = useMemo<Edge[]>(() => {
@@ -1214,6 +1244,7 @@ function ReactFlowCanvasInner({
               }
             : {}),
           ...(stickyNote.cluster ? { cluster: stickyNote.cluster } : {}),
+          ...(stickyNote.lockSize ? { lockSize: true } : {}),
           ...(isPreview
             ? {
                 isPreview: true,
@@ -1513,7 +1544,7 @@ function ReactFlowCanvasInner({
         const snappedPosition = snapToGrid(flowPosition);
         const zone = getZoneForPosition(
           { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
-          stepConfig.empathyZoneConfig,
+          empathyConfigRef.current ?? stepConfig.empathyZoneConfig,
         );
         createAndEditStickyNote({
           text: "",
@@ -1610,7 +1641,7 @@ function ReactFlowCanvasInner({
         const snappedPosition = snapToGrid(position);
         const zone = getZoneForPosition(
           { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
-          stepConfig.empathyZoneConfig,
+          empathyConfigRef.current ?? stepConfig.empathyZoneConfig,
         );
         createAndEditStickyNote({
           text: "",
@@ -1706,7 +1737,7 @@ function ReactFlowCanvasInner({
         const snappedPosition = snapToGrid(position);
         const zone = getZoneForPosition(
           { x: snappedPosition.x + 60, y: snappedPosition.y + 50 },
-          stepConfig.empathyZoneConfig,
+          empathyConfigRef.current ?? stepConfig.empathyZoneConfig,
         );
         createAndEditStickyNote({
           text: emoji,
@@ -2221,7 +2252,7 @@ function ReactFlowCanvasInner({
             const snappedPosition = snapToGrid(change.position);
             const zone = getZoneForPosition(
               { x: snappedPosition.x + 60, y: snappedPosition.y + 50 }, // card center
-              stepConfig.empathyZoneConfig,
+              empathyConfigRef.current ?? stepConfig.empathyZoneConfig,
             );
             updateStickyNote(change.id, {
               position: snappedPosition,
@@ -3129,7 +3160,9 @@ function ReactFlowCanvasInner({
           <ConcentricRingsOverlay config={stepConfig.ringConfig} />
         )}
         {stepConfig.hasEmpathyZones && stepConfig.empathyZoneConfig && (
-          <EmpathyMapOverlay config={stepConfig.empathyZoneConfig} />
+          <EmpathyMapOverlay
+            config={dynamicEmpathyConfig ?? stepConfig.empathyZoneConfig}
+          />
         )}
         {stepConfig.hasGrid && dynamicGridConfig && (
           <GridOverlay

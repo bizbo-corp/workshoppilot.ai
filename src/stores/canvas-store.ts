@@ -85,6 +85,13 @@ export type StickyNote = {
     col: string; // Column ID from GridConfig (e.g., 'awareness', 'consideration')
   };
   cluster?: string; // Parent label for hierarchical clustering (stakeholder mapping)
+  /**
+   * When true, the node renders at its stored width/height and does NOT auto-grow
+   * to fit text (it shrinks font instead). Set by the cell/grid layout pass so
+   * auto-generated notes keep the exact size their packed positions assume —
+   * preventing the post-render grow that used to make them overlap.
+   */
+  lockSize?: boolean;
   isPreview?: boolean; // When true, indicates AI-suggested preview node awaiting confirmation
   previewReason?: string; // Optional AI explanation for why this placement was suggested
   templateKey?: string;       // Unique key for AI targeting (e.g., 'idea', 'problem')

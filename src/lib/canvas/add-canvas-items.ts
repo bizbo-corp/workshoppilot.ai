@@ -9,11 +9,29 @@ import type { GridConfig } from "@/lib/canvas/grid-layout";
 import {
   computeCanvasPosition,
   computeStickyNoteSize,
+  estimateStickyHeight,
   CATEGORY_COLORS,
   ZONE_COLORS,
   isPersonaCardForCluster,
 } from "@/lib/canvas/canvas-position";
 import { getStepCanvasConfig } from "@/lib/canvas/step-canvas-config";
+import {
+  layoutEmpathy,
+  layoutGrid,
+  cellKey,
+  EMPATHY_NOTE_WIDTH,
+  type PackItem,
+} from "@/lib/canvas/pack-layout";
+import type { EmpathyZone } from "@/lib/canvas/empathy-zones";
+
+const EMPATHY_ZONE_IDS = new Set<string>([
+  "says",
+  "thinks",
+  "feels",
+  "does",
+  "pains",
+  "gains",
+]);
 
 /** Row-based sticky note colors for journey map swimlanes */
 export const GRID_ROW_COLORS: Record<string, StickyNoteColor> = {
@@ -38,6 +56,247 @@ const VALID_COLORS = new Set<string>([
   "white",
 ]);
 
+/** Resolve a sticky color from item metadata + step rules (shared by both paths). */
+function resolveItemColor(
+  item: CanvasItemParsed,
+  stepId: string,
+  currentStickyNotes: StickyNote[],
+  personaColorMap?: Record<string, StickyNoteColor>,
+): StickyNoteColor {
+  let color: StickyNoteColor =
+    (item.color && VALID_COLORS.has(item.color)
+      ? (item.color as StickyNoteColor)
+      : null) ||
+    (item.category && CATEGORY_COLORS[item.category]) ||
+    (item.quadrant && ZONE_COLORS[item.quadrant]) ||
+    (item.isGridItem ? GRID_ROW_COLORS[item.row || ""] || "green" : "yellow");
+
+  if (stepId === "user-research" && item.cluster) {
+    const personaCard = currentStickyNotes.find((p) =>
+      isPersonaCardForCluster(p, item.cluster!),
+    );
+    if (personaCard?.color) color = personaCard.color;
+  }
+
+  if (stepId === "sense-making") {
+    const key = item.cluster?.trim().toLowerCase();
+    color = (key && personaColorMap?.[key]) || "white";
+  }
+
+  return color;
+}
+
+/**
+ * Generation path for bounded cell/grid steps (empathy map zones, journey-map
+ * grid cells). Builds new notes with a locked size, then runs the deterministic
+ * pack layout over ALL placed notes so nothing overlaps and the containers grow
+ * to fit. Container bounds aren't persisted — they're re-derived at render from
+ * these same notes (identical sizes + order ⇒ identical layout).
+ */
+function layoutAndAddCellGridItems(params: {
+  stepId: string;
+  items: CanvasItemParsed[];
+  currentStickyNotes: StickyNote[];
+  gridConfig?: GridConfig;
+  addStickyNote: (note: Omit<StickyNote, "id"> & { id?: string }) => void;
+  updateStickyNote?: (id: string, updates: Partial<StickyNote>) => void;
+  owner?: { ownerId: string; ownerName: string; ownerColor: string };
+  personaColorMap?: Record<string, StickyNoteColor>;
+  hasEmpathyZones: boolean;
+  onRequestFitView?: () => void;
+}): { addedCount: number } {
+  const {
+    stepId,
+    items,
+    gridConfig,
+    addStickyNote,
+    updateStickyNote,
+    owner,
+    personaColorMap,
+    hasEmpathyZones,
+    onRequestFitView,
+  } = params;
+
+  const cellPadding = gridConfig?.cellPadding ?? 12;
+
+  type NewSpec = {
+    id: string;
+    text: string;
+    color: StickyNoteColor;
+    width: number;
+    height: number;
+    cellAssignment: { row: string; col: string };
+    cluster?: string;
+  };
+  const newSpecs: NewSpec[] = [];
+
+  // Running view of the board so dedupe + grouping order match what the render
+  // pass will see (existing notes first, then newly added in insertion order).
+  const working: StickyNote[] = [...params.currentStickyNotes];
+
+  for (const item of items) {
+    const text = item.text?.trim();
+    if (!text) continue;
+
+    // Resolve container assignment.
+    let cellAssignment: { row: string; col: string } | null = null;
+    if (hasEmpathyZones) {
+      const zone =
+        item.quadrant && EMPATHY_ZONE_IDS.has(item.quadrant)
+          ? item.quadrant
+          : "says";
+      cellAssignment = { row: zone, col: "" };
+    } else if (gridConfig && item.row && item.col) {
+      const rowOk = gridConfig.rows.some((r) => r.id === item.row);
+      const colOk = gridConfig.columns.some((c) => c.id === item.col);
+      if (rowOk && colOk) cellAssignment = { row: item.row, col: item.col };
+    }
+    if (!cellAssignment) continue; // unplaceable in this step — skip
+
+    // Grid cell dedupe: update text in place if the target cell is occupied.
+    if (!hasEmpathyZones && updateStickyNote) {
+      const occupant = working.find(
+        (p) =>
+          (!p.type || p.type === "stickyNote") &&
+          !p.isPreview &&
+          p.cellAssignment?.row === cellAssignment!.row &&
+          p.cellAssignment?.col === cellAssignment!.col,
+      );
+      if (occupant) {
+        if (occupant.text.trim() !== text) updateStickyNote(occupant.id, { text });
+        continue;
+      }
+    }
+
+    // Text dedupe.
+    const normalized = text.toLowerCase();
+    if (
+      working.some(
+        (p) =>
+          (!p.type || p.type === "stickyNote") &&
+          p.text.trim().toLowerCase() === normalized,
+      )
+    ) {
+      continue;
+    }
+
+    const color = resolveItemColor(item, stepId, working, personaColorMap);
+
+    // Size: empathy uses a uniform width (aligned columns); grid notes fit the
+    // column width. Height is estimated so the locked node won't grow + overlap.
+    let width: number;
+    if (hasEmpathyZones) {
+      width = EMPATHY_NOTE_WIDTH;
+    } else {
+      const col = gridConfig!.columns.find((c) => c.id === cellAssignment!.col);
+      width = Math.max(120, Math.min(280, (col?.width ?? 240) - cellPadding * 2));
+    }
+    const hasBadge = hasEmpathyZones && (!!item.cluster || color === "white");
+    const height = estimateStickyHeight(text, width, hasBadge);
+
+    const id =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `sticky_${Math.random().toString(36).slice(2)}`;
+
+    newSpecs.push({
+      id,
+      text,
+      color,
+      width,
+      height,
+      cellAssignment,
+      ...(item.cluster ? { cluster: item.cluster } : {}),
+    });
+
+    working.push({
+      id,
+      text,
+      position: { x: 0, y: 0 },
+      width,
+      height,
+      color,
+      cellAssignment,
+      lockSize: true,
+      ...(item.cluster ? { cluster: item.cluster } : {}),
+    } as StickyNote);
+  }
+
+  if (newSpecs.length === 0) return { addedCount: 0 };
+
+  // Pack ALL placed notes (existing + new) into their containers.
+  const realNotes = working.filter(
+    (p) => (!p.type || p.type === "stickyNote") && !p.isPreview && p.cellAssignment,
+  );
+
+  let positions: Map<string, { x: number; y: number }>;
+  if (hasEmpathyZones) {
+    const byZone: Record<EmpathyZone, PackItem[]> = {
+      says: [],
+      thinks: [],
+      feels: [],
+      does: [],
+      pains: [],
+      gains: [],
+    };
+    for (const p of realNotes) {
+      const zone = p.cellAssignment!.row as EmpathyZone;
+      if (byZone[zone]) {
+        byZone[zone].push({ id: p.id, width: p.width, height: p.height });
+      }
+    }
+    positions = layoutEmpathy(byZone).positions;
+  } else {
+    const byCell = new Map<string, PackItem[]>();
+    for (const p of realNotes) {
+      const key = cellKey(p.cellAssignment!.row, p.cellAssignment!.col);
+      if (!byCell.has(key)) byCell.set(key, []);
+      byCell.get(key)!.push({ id: p.id, width: p.width, height: p.height });
+    }
+    positions = layoutGrid(byCell, gridConfig!).positions;
+  }
+
+  // Add new notes at their packed positions, locked.
+  const newIds = new Set(newSpecs.map((s) => s.id));
+  for (const spec of newSpecs) {
+    const pos = positions.get(spec.id) ?? { x: 0, y: 0 };
+    addStickyNote({
+      id: spec.id,
+      text: spec.text,
+      position: pos,
+      width: spec.width,
+      height: spec.height,
+      color: spec.color,
+      cellAssignment: spec.cellAssignment,
+      lockSize: true,
+      ...(spec.cluster ? { cluster: spec.cluster } : {}),
+      ...(owner
+        ? {
+            ownerId: owner.ownerId,
+            ownerName: owner.ownerName,
+            ownerColor: owner.ownerColor,
+          }
+        : {}),
+    });
+  }
+
+  // Re-tidy + lock pre-existing notes the layout moved (only when we can update).
+  if (updateStickyNote) {
+    for (const p of realNotes) {
+      if (newIds.has(p.id)) continue;
+      const pos = positions.get(p.id);
+      if (!pos) continue;
+      if (pos.x !== p.position.x || pos.y !== p.position.y || !p.lockSize) {
+        updateStickyNote(p.id, { position: pos, lockSize: true });
+      }
+    }
+  }
+
+  if (onRequestFitView) onRequestFitView();
+
+  return { addedCount: newSpecs.length };
+}
+
 export function addCanvasItemsToBoard(options: {
   stepId: string;
   items: CanvasItemParsed[];
@@ -48,7 +307,7 @@ export function addCanvasItemsToBoard(options: {
       personaTemplates?: Array<{ archetype?: string; position: { x: number; y: number } }>;
     };
   };
-  addStickyNote: (note: Omit<StickyNote, "id">) => void;
+  addStickyNote: (note: Omit<StickyNote, "id"> & { id?: string }) => void;
   /** Optional — when provided, grid items dedupe by (row, col): if a sticky
    *  already occupies the target cell, its text is updated in place rather
    *  than a duplicate being created. Without this, AI re-emits (streaming
@@ -96,6 +355,30 @@ export function addCanvasItemsToBoard(options: {
         ? { ...base, columns: latestCols }
         : base;
     })();
+
+  // Bounded cell/grid steps (empathy map, journey grid): pack auto-generated
+  // items without overlap and grow the containers to fit. Preview items keep
+  // the legacy per-item path so they don't disturb committed layout until
+  // confirmed.
+  const stepConfigForLayout = getStepCanvasConfig(stepId);
+  if (
+    !preview &&
+    (stepConfigForLayout.hasEmpathyZones ||
+      (stepConfigForLayout.hasGrid && gridConfig))
+  ) {
+    return layoutAndAddCellGridItems({
+      stepId,
+      items,
+      currentStickyNotes,
+      gridConfig,
+      addStickyNote,
+      updateStickyNote,
+      owner,
+      personaColorMap,
+      hasEmpathyZones: !!stepConfigForLayout.hasEmpathyZones,
+      onRequestFitView,
+    });
+  }
 
   let addedCount = 0;
 

@@ -32,6 +32,28 @@ function fitText(naturalContentHeight: number): { nodeHeight: number; fontSize: 
   return { nodeHeight: STICKY_MAX_HEIGHT, fontSize: fs };
 }
 
+/**
+ * Fit the node for the measured content. When `lockedHeight` is provided
+ * (layout-packed notes), keep that fixed height and only shrink the font so the
+ * text fits — the node never grows, so packed positions can't overlap.
+ * Otherwise defer to the grow-then-shrink `fitText`.
+ */
+function computeFit(
+  naturalContentHeight: number,
+  lockedHeight?: number,
+): { nodeHeight: number; fontSize: number } {
+  if (lockedHeight == null) return fitText(naturalContentHeight);
+  const lockedContentH = lockedHeight - STICKY_PADDING_Y;
+  const fontSize =
+    lockedContentH > 0 && naturalContentHeight > lockedContentH
+      ? Math.max(
+          STICKY_MIN_FONT_SIZE,
+          Math.floor(STICKY_BASE_FONT_SIZE * (lockedContentH / naturalContentHeight)),
+        )
+      : STICKY_BASE_FONT_SIZE;
+  return { nodeHeight: lockedHeight, fontSize };
+}
+
 export const COLOR_CLASSES: Record<StickyNoteColor, string> = {
   yellow: 'bg-[var(--sticky-note-yellow)]',
   pink: 'bg-[var(--sticky-note-pink)]',
@@ -82,6 +104,9 @@ export type StickyNoteNodeData = {
   color: StickyNoteColor;
   isEditing: boolean;
   isPreview?: boolean;
+  /** When true, keep the node's current height and only shrink font to fit
+   *  (no auto-grow). Set for layout-packed generated notes. */
+  lockSize?: boolean;
   previewReason?: string;
   clusterLabel?: string;
   clusterChildCount?: number;
@@ -151,17 +176,24 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
       measureEl.style.height = prevHeight;
     }
 
-    const { nodeHeight, fontSize: nextFs } = fitText(naturalHeight);
+    // Locked notes (layout-packed) keep their stored height — computeFit shrinks
+    // the font to that fixed box instead of growing the node, so packed
+    // positions never overlap. Unlocked notes grow to fit (Miro-style).
+    const lockedHeight = data.lockSize
+      ? outerRef.current?.clientHeight ?? STICKY_DEFAULT_HEIGHT
+      : undefined;
+    const { nodeHeight, fontSize: nextFs } = computeFit(naturalHeight, lockedHeight);
     setFontSize(nextFs);
 
-    // Report grow-phase height to canvas so the node wrapper resizes.
+    // Report height to canvas so the node wrapper stays in sync. For locked
+    // notes this reports the unchanged locked height (a no-op in handleAutoResize).
     // Width stays at current outer width (or default).
     const currentWidth = outerRef.current?.clientWidth ?? STICKY_DEFAULT_WIDTH;
     data.onAutoResize?.(id, currentWidth, nodeHeight);
     // `onAutoResize` is referentially stable from the parent's useCallback,
     // so listing it doesn't cause re-runs. Listed explicitly to keep the deps
     // array size stable across edits (HMR otherwise throws on size changes).
-  }, [data.text, data.isEditing, data.isPreview, id, data.onAutoResize]);
+  }, [data.text, data.isEditing, data.isPreview, data.lockSize, id, data.onAutoResize]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
