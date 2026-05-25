@@ -19,15 +19,18 @@ export const researchAnalysisSchema = z.object({
         name: z
           .string()
           .describe("Working first name or short label for this interviewee, e.g. 'Maria'"),
+        role: z
+          .string()
+          .describe("The interviewee's job title / position, e.g. 'Frontline Nurse', 'Procurement Lead'. Empty string if not stated."),
         archetype: z
           .string()
-          .describe("Short role label describing their relationship to the challenge, e.g. 'The Frontline Nurse'"),
+          .describe("Short label describing their relationship to the challenge, e.g. 'The Frontline Nurse'"),
         summary: z
           .string()
           .describe('One concise line describing who they are and why they matter to the challenge'),
       }),
     )
-    .describe('Distinct people / voices found in the research. Prefer 2-5; never invent people not present.'),
+    .describe('Distinct, identifiable people / voices found in the research. Never invent people not present.'),
   insights: z
     .array(
       z.object({
@@ -39,10 +42,20 @@ export const researchAnalysisSchema = z.object({
           .describe('A headline-length insight or a short verbatim quote — never a paragraph'),
       }),
     )
-    .describe('Headline-length insights, each attributed to one persona by name'),
+    .describe('Headline-length insights, each attributed to one identifiable persona by name'),
+  synthesized: z
+    .array(
+      z.object({
+        text: z
+          .string()
+          .describe('A headline-length insight that is NOT attributable to one identifiable person — a cross-interviewee pattern, theme, or an overall impression'),
+      }),
+    )
+    .describe('Insights with no single identifiable source — these become neutral "synthesized" cards.'),
 });
 
 export type ResearchAnalysis = z.infer<typeof researchAnalysisSchema>;
+export type ContributionType = 'per-interviewee' | 'synthesized';
 
 // ── Prompt Builder ──────────────────────────────────────────────────
 
@@ -53,25 +66,37 @@ export function buildResearchAnalysisPrompt(opts: {
   transcript: string;
   /** Persona names/labels already on the board, so we reuse rather than duplicate. */
   existingPersonaNames: string[];
+  /** How the contributor framed their research. Defaults to per-interviewee. */
+  contributionType?: ContributionType;
 }): string {
-  const { contextPreamble, transcript, existingPersonaNames } = opts;
+  const { contextPreamble, transcript, existingPersonaNames, contributionType = 'per-interviewee' } = opts;
 
   const existingBlock =
     existingPersonaNames.length > 0
       ? `\nPERSONAS ALREADY ON THE BOARD (reuse the EXACT name when a person in the research clearly maps to one of these — do not create a near-duplicate):\n${existingPersonaNames.map((n) => `- ${n}`).join('\n')}\n`
       : '';
 
+  const modeBlock =
+    contributionType === 'synthesized'
+      ? `MODE — OVERALL IMPRESSIONS (SYNTHESIZED):
+The contributor is giving consolidated impressions across several interviews, NOT a per-person breakdown. Return an EMPTY personas array and an EMPTY insights array. Put every takeaway into "synthesized" as headline-length cards. Do NOT invent individual interviewees or attach names.`
+      : `MODE — PER-INTERVIEWEE:
+Create one persona ONLY for each clearly identifiable interviewee (a distinct person you can name or pseudonymously label, with a discernible role). Attribute their points to them via insights[].personaName.
+- Capture each persona's role/position in the "role" field when the research states it.
+- Any takeaway that is NOT tied to one identifiable person — a cross-interviewee pattern, an overall theme, or a vibe — goes in "synthesized" (no name), NOT a fabricated persona.`;
+
   return `${contextPreamble}
 
-You are a design-thinking research analyst. The user has uploaded existing research (interview transcripts, survey responses, or notes). Read it and synthesise it into personas and insights for the User Research step of the workshop.
+You are a design-thinking research analyst. The contributor has provided existing research (interview transcripts, survey responses, or notes). Read it and structure it for the User Research step of the workshop.
 ${existingBlock}
+${modeBlock}
+
 RULES:
-- Identify the DISTINCT people / voices in the research and turn each into one persona. If the research is anonymous or about a single group, create a small number of representative personas grounded in what the text actually says.
-- For each persona, extract their key insights as HEADLINE-LENGTH sticky notes — a punchy insight or a short verbatim quote, never a paragraph. Think "headline", not "summary".
+- Insights are HEADLINE-LENGTH — a punchy insight or a short verbatim quote, never a paragraph. Think "headline", not "summary".
 - Emit ONE insight per distinct point. If a person made two distinct points (e.g. a logistical pain AND an emotional reaction), emit two insights.
 - Every insight MUST bear directly on the workshop challenge. Drop side comments, tangents, and off-topic remarks — even if memorable.
 - Each insight's personaName MUST exactly match one of your personas[].name.
-- NEVER fabricate. Only synthesise what is actually present in the research. If the research is thin, return fewer personas/insights rather than inventing detail.
+- NEVER fabricate. Only structure what is actually present in the research. If you cannot tell who said something, it is "synthesized", not a made-up person. If the research is thin, return fewer items rather than inventing detail.
 - When a person in the research clearly maps to a persona already on the board, reuse that exact name.
 
 RESEARCH TO ANALYSE:

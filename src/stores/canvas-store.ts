@@ -27,6 +27,9 @@ export type PendingHmwManualComplete = { cardId: string } | null;
 
 export type StickyNoteColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange' | 'red' | 'teal' | 'purple' | 'white';
 
+/** A participant's "research submitted" marker during async Fieldwork (Step 3). */
+export type FieldworkSubmission = { name: string; color: string; submittedAt: number };
+
 export type GridColumn = {
   id: string;
   label: string;
@@ -125,6 +128,10 @@ export type CanvasState = {
    * this being non-null. Synced via Liveblocks Storage in multiplayer.
    */
   interviewMode: 'synthetic' | 'real' | null;
+  /** Step 3 Fieldwork (multiplayer): facilitator-controlled async research window. */
+  fieldworkOpen: boolean;
+  /** Per-participant "research submitted" markers, keyed by participantId. */
+  fieldworkSubmissions: Record<string, FieldworkSubmission>;
   /**
    * Step 6 (journey-mapping) template poll. `null` until the facilitator's AI
    * emits [JOURNEY_POLL_OPTIONS] (which calls openJourneyPoll). While open,
@@ -170,6 +177,8 @@ export type CanvasActions = {
   rejectPreview: (id: string) => void;
   confirmAllPreviews: () => void;
   rejectAllPreviews: () => void;
+  confirmPreviewsByOwner: (ownerId: string) => void;
+  rejectPreviewsByOwner: (ownerId: string) => void;
   setHighlightedCell: (cell: { row: number; col: number } | null) => void;
   setPendingFitView: (pending: boolean) => void;
   setPendingFocusCardId: (id: string | null) => void;
@@ -218,6 +227,8 @@ export type CanvasActions = {
   deleteOwnerContent: (ownerId: string) => void;
   setConceptActivityStarted: (started: boolean) => void;
   setInterviewMode: (mode: 'synthetic' | 'real' | null) => void;
+  setFieldworkOpen: (open: boolean) => void;
+  setFieldworkSubmission: (participantId: string, submission: FieldworkSubmission | null) => void;
   /** Open the step-6 template poll with a fixed set of options. Replaces any
    *  existing poll (e.g. when the facilitator resets the step). */
   openJourneyPoll: (options: JourneyPollOption[]) => void;
@@ -268,6 +279,8 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
     votingCardPositions: initState?.votingCardPositions || {},
     conceptActivityStarted: initState?.conceptActivityStarted || false,
     interviewMode: initState?.interviewMode ?? null,
+    fieldworkOpen: false,
+    fieldworkSubmissions: {},
     journeyPoll: initState?.journeyPoll ?? null,
   };
 
@@ -646,6 +659,24 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
         rejectAllPreviews: () =>
           set((state) => ({
             stickyNotes: state.stickyNotes.filter((stickyNote) => !stickyNote.isPreview),
+            isDirty: true,
+          })),
+
+        confirmPreviewsByOwner: (ownerId) =>
+          set((state) => ({
+            stickyNotes: state.stickyNotes.map((stickyNote) =>
+              stickyNote.isPreview && stickyNote.ownerId === ownerId
+                ? { ...stickyNote, isPreview: false, previewReason: undefined }
+                : stickyNote
+            ),
+            isDirty: true,
+          })),
+
+        rejectPreviewsByOwner: (ownerId) =>
+          set((state) => ({
+            stickyNotes: state.stickyNotes.filter(
+              (stickyNote) => !(stickyNote.isPreview && stickyNote.ownerId === ownerId)
+            ),
             isDirty: true,
           })),
 
@@ -1161,6 +1192,17 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             interviewMode: mode,
             isDirty: true,
           })),
+
+        setFieldworkOpen: (open) =>
+          set(() => ({ fieldworkOpen: open, isDirty: true })),
+
+        setFieldworkSubmission: (participantId, submission) =>
+          set((state) => {
+            const next = { ...state.fieldworkSubmissions };
+            if (submission) next[participantId] = submission;
+            else delete next[participantId];
+            return { fieldworkSubmissions: next, isDirty: true };
+          }),
 
         openJourneyPoll: (options) =>
           set(() => ({

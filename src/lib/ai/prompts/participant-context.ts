@@ -48,6 +48,29 @@ function pickRandomNames(count: number): string[] {
   return shuffled.slice(0, count);
 }
 
+/**
+ * Participant guidance for Step 3 when the facilitator chose REAL interviews.
+ * Real research is async fieldwork — the participant talks to actual people and
+ * brings findings back via the Add research button. There is NO persona picker
+ * and NO AI roleplay in this mode, so this replaces the AI-interview guidance
+ * entirely (rather than prepending a contradictory preamble to it).
+ */
+const REAL_RESEARCH_PARTICIPANT_GUIDANCE = `PARTICIPANT GUIDANCE (User Research — Real Interviews):
+The team is running REAL interviews: everyone goes and talks to actual people, then brings their findings back here. You are NOT roleplaying personas and you are NOT running a persona picker — those belong to AI-interview mode only.
+
+YOUR OPENING (greeting / "__step_start__"):
+Keep it to 2-3 short, warm sentences. Welcome them, name what's happening (the team is gathering real interviews for this challenge), and give ONE clear action: hit the **Add research** button below the chat to paste a transcript or their notes from a conversation — you'll pull out the people they spoke to and the insights automatically. They can also drop insights straight onto the board as sticky notes. If the CANVAS STATE already shows persona cards or insights, acknowledge what's there and invite them to add more.
+- Do NOT emit [PERSONA_SELECT], [INTERVIEW_MODE], or [RESEARCH_SOURCE].
+- Do NOT roleplay a persona or invent interviewees — real people and their names come only from the research the participant actually brings back.
+- Do NOT emit a [SUGGESTIONS] block on the opening greeting.
+
+ONGOING:
+- If they ask how to interview well, who to talk to, or what to ask, help them — practical, specific tips and example questions grounded in the challenge and the Step 2 stakeholder map. Suggest stakeholder TYPES, never specific named people.
+- If they paste raw notes directly into the chat instead of using the button, gently point them at **Add research** so it gets analyzed and placed on the board properly.
+- Never fabricate quotes, names, or insights. A sparse-but-real finding beats a rich invented one.
+
+STEP COMPLETION: When wrapping up, close with: "Feel free to add and edit things directly on the board. Standby for the exercise to end when the facilitator warns you they will move to the next step."`;
+
 const PARTICIPANT_GUIDANCE: Record<string, string> = {
   challenge: `PARTICIPANT GUIDANCE (Challenge Step):
 Help the participant think about the problem from their perspective. Ask what frustrates them or their users. Help them articulate pain points that the facilitator can incorporate into the challenge statement.
@@ -301,6 +324,14 @@ export function getParticipantGuidance(
 
   // Inject random names + interview-mode preamble into the user-research template
   if (stepId === "user-research") {
+    // Real interviews: participants do real-world fieldwork and bring findings
+    // back — they do NOT do AI persona interviews. The persona-selection /
+    // roleplay guidance below is wrong for this mode, so swap in a dedicated
+    // contribution script that points them at the Add research button.
+    if (ctx?.interviewMode === 'real') {
+      return REAL_RESEARCH_PARTICIPANT_GUIDANCE;
+    }
+
     const names = pickRandomNames(5);
     let result = guidance
       .replace("{{NAME_1}}", names[0])
@@ -308,11 +339,8 @@ export function getParticipantGuidance(
       .replace("{{NAME_3}}", names[2])
       .replace("{{NAME_4}}", names[3])
       .replace("{{NAME_5}}", names[4]);
-    if (ctx?.interviewMode) {
-      const modeLabel = ctx.interviewMode === 'synthetic'
-        ? 'AI persona interviews'
-        : 'real-world interviews';
-      result = `INTERVIEW MODE (facilitator decided): The team is running ${modeLabel}. Begin with PHASE A — PERSONA SELECTION immediately. Do NOT ask about or restate the interview mode choice.\n\n${result}`;
+    if (ctx?.interviewMode === 'synthetic') {
+      result = `INTERVIEW MODE (facilitator decided): The team is running AI persona interviews. Begin with PHASE A — PERSONA SELECTION immediately. Do NOT ask about or restate the interview mode choice.\n\n${result}`;
     }
     return result;
   }

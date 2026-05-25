@@ -5,8 +5,13 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import TextareaAutosize from "react-textarea-autosize";
 import ReactMarkdown from "react-markdown";
-import { Send, Loader2, Sparkles } from "lucide-react";
+import { Send, Loader2, Sparkles, FileText, CheckCircle2 } from "lucide-react";
 import { PersonaInterrupt } from "./persona-interrupt";
+import { ResearchUploadDialog } from "./research-upload-dialog";
+import { FieldworkRoster } from "./fieldwork-roster";
+import { isPersonaCardForCluster } from "@/lib/canvas/canvas-position";
+import { recordResearchSubmission } from "@/actions/research-actions";
+import type { ContributionType } from "@/lib/ai/prompts/research-analysis-prompts";
 import { getStepByOrder } from "@/lib/workshop/step-metadata";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -172,6 +177,157 @@ export function ParticipantChatPanel({
   const interviewMode = useCanvasStore((s) => s.interviewMode);
   const journeyPoll = useCanvasStore((s) => s.journeyPoll);
   const storeApi = useCanvasStoreApi();
+  const confirmPreviewsByOwner = useCanvasStore((s) => s.confirmPreviewsByOwner);
+  const rejectPreviewsByOwner = useCanvasStore((s) => s.rejectPreviewsByOwner);
+  const fieldworkOpen = useCanvasStore((s) => s.fieldworkOpen);
+  const fieldworkSubmissions = useCanvasStore((s) => s.fieldworkSubmissions);
+  const setFieldworkSubmission = useCanvasStore((s) => s.setFieldworkSubmission);
+  const hasSubmittedResearch = !!fieldworkSubmissions[participantId];
+  // Participant research contribution (Step 3): paste/upload → preview (owned) → confirm.
+  const [uploadOpen, setUploadOpen] = React.useState(false);
+  const [analyzingResearch, setAnalyzingResearch] = React.useState(false);
+  const [pendingResearch, setPendingResearch] = React.useState<{
+    personaCount: number;
+    insightCount: number;
+  } | null>(null);
+
+  // Analyze this participant's research and place it as preview stickies OWNED
+  // by them (so the board shows who contributed). No facilitator-only effects
+  // (no interviewMode/compile) — the participant just confirms their own batch.
+  const handleAnalyzeResearch = React.useCallback(
+    async (transcript: string, contributionType: ContributionType) => {
+      setAnalyzingResearch(true);
+      try {
+        const existingPersonaCards = storeApi
+          .getState()
+          .stickyNotes.filter(
+            (n) =>
+              (!n.type || n.type === "stickyNote") &&
+              !n.cluster &&
+              n.text.includes(" — "),
+          );
+        const existingPersonaNames = existingPersonaCards.map((n) => n.text);
+
+        const res = await fetch("/api/ai/analyze-research", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workshopId, transcript, existingPersonaNames, contributionType }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err?.error || "Couldn't analyze that research — try again.");
+          return;
+        }
+        const { data } = (await res.json()) as {
+          data: {
+            personas: { name: string; role?: string; archetype: string; summary: string }[];
+            insights: { personaName: string; text: string }[];
+            synthesized?: { text: string }[];
+          };
+        };
+        const personas = data?.personas || [];
+        const insights = data?.insights || [];
+        const synthesized = data?.synthesized || [];
+        if (personas.length === 0 && insights.length === 0 && synthesized.length === 0) {
+          toast.error("I couldn't find any insights in that text.");
+          return;
+        }
+
+        const owner = {
+          ownerId: participantId,
+          ownerName: displayName,
+          ownerColor: participantColor,
+        };
+        const reason = `From ${displayName}'s research`;
+        const existingCount = existingPersonaCards.length;
+        const newPersonas = personas.filter(
+          (p) =>
+            !existingPersonaCards.some((card) => isPersonaCardForCluster(card, p.name)),
+        );
+        const personaCardText = (p: { name: string; role?: string; summary: string }) =>
+          [p.name, p.role, p.summary].filter((s) => s && s.trim()).join(" — ");
+        const personaItems = newPersonas.map((p, i) => ({
+          text: personaCardText(p),
+          color: PERSONA_CARD_COLORS[(existingCount + i) % PERSONA_CARD_COLORS.length],
+        }));
+        if (personaItems.length > 0) {
+          addCanvasItemsToBoard({
+            stepId,
+            items: personaItems,
+            storeApi,
+            addStickyNote,
+            updateStickyNote,
+            owner,
+            preview: { previewReason: reason },
+          });
+        }
+
+        const insightItems = insights.map((ins) => ({
+          text: ins.text,
+          cluster: ins.personaName,
+        }));
+        if (insightItems.length > 0) {
+          addCanvasItemsToBoard({
+            stepId,
+            items: insightItems,
+            storeApi,
+            addStickyNote,
+            updateStickyNote,
+            owner,
+            preview: { previewReason: reason },
+          });
+        }
+
+        const synthItems = synthesized.map((s) => ({
+          text: s.text,
+          cluster: "Synthesized",
+          color: "white" as StickyNoteColor,
+        }));
+        if (synthItems.length > 0) {
+          addCanvasItemsToBoard({
+            stepId,
+            items: synthItems,
+            storeApi,
+            addStickyNote,
+            updateStickyNote,
+            owner,
+            preview: { previewReason: `Synthesized from ${displayName}'s research` },
+          });
+        }
+
+        setPendingResearch({
+          personaCount: newPersonas.length,
+          insightCount: insightItems.length + synthItems.length,
+        });
+        setUploadOpen(false);
+      } catch (e) {
+        console.error("participant analyze-research failed:", e);
+        toast.error("Something went wrong analyzing your research.");
+      } finally {
+        setAnalyzingResearch(false);
+      }
+    },
+    [
+      workshopId,
+      stepId,
+      storeApi,
+      addStickyNote,
+      updateStickyNote,
+      participantId,
+      displayName,
+      participantColor,
+    ],
+  );
+
+  const handleConfirmResearch = React.useCallback(() => {
+    confirmPreviewsByOwner(participantId);
+    setPendingResearch(null);
+  }, [confirmPreviewsByOwner, participantId]);
+
+  const handleDiscardResearch = React.useCallback(() => {
+    rejectPreviewsByOwner(participantId);
+    setPendingResearch(null);
+  }, [rejectPreviewsByOwner, participantId]);
 
   const [quickAck, setQuickAck] = React.useState<string | null>(null);
   const [inputValue, setInputValue] = React.useState("");
@@ -1163,8 +1319,90 @@ export function ParticipantChatPanel({
         </div>
       </div>
 
+      {/* Research contribution: review-and-confirm bar for this participant's batch */}
+      {stepId === "user-research" && pendingResearch && (
+        <div className="mx-4 mb-2 rounded-xl border border-olive-200 bg-olive-50/60 p-3 text-center dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <p className="text-sm text-foreground mb-2">
+            Added{" "}
+            <strong>
+              {pendingResearch.insightCount} insight
+              {pendingResearch.insightCount === 1 ? "" : "s"}
+            </strong>
+            {pendingResearch.personaCount > 0 && (
+              <>
+                {" "}across{" "}
+                <strong>
+                  {pendingResearch.personaCount}{" "}
+                  {pendingResearch.personaCount === 1 ? "interviewee" : "interviewees"}
+                </strong>
+              </>
+            )}{" "}
+            — review on the board, then add them.
+          </p>
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={handleConfirmResearch}
+              className="inline-flex items-center gap-1.5 rounded-full bg-olive-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Add to board
+            </button>
+            <button
+              onClick={handleDiscardResearch}
+              className="inline-flex items-center rounded-full border border-olive-300 bg-card px-4 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground dark:border-neutral-olive-700 dark:bg-neutral-olive-800"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Input area — match facilitator */}
       <div className="shrink-0 border-t bg-background/20 p-4">
+        {stepId === "user-research" && interviewMode === "real" && (
+          <>
+            {fieldworkOpen && (
+              <div className="mb-2">
+                <FieldworkRoster submissions={fieldworkSubmissions} />
+              </div>
+            )}
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setUploadOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-xs font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 dark:border-neutral-olive-700 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Add your research
+              </button>
+              {fieldworkOpen && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nowSubmitted = !hasSubmittedResearch;
+                    setFieldworkSubmission(
+                      participantId,
+                      nowSubmitted
+                        ? { name: displayName, color: participantColor, submittedAt: Date.now() }
+                        : null,
+                    );
+                    // Mirror to the DB so the dashboard/reminders can read it.
+                    void recordResearchSubmission(workshopId, participantId, stepId, nowSubmitted);
+                  }}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium shadow-sm transition-all",
+                    hasSubmittedResearch
+                      ? "bg-olive-700 text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
+                      : "border border-olive-300 bg-card text-olive-800 hover:bg-olive-100 dark:border-neutral-olive-700 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700",
+                  )}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {hasSubmittedResearch ? "Research submitted" : "Mark my research done"}
+                </button>
+              )}
+            </div>
+          </>
+        )}
         <form onSubmit={(e) => { e.preventDefault(); handleSend(inputValue); }} className="flex gap-2">
           <TextareaAutosize
             minRows={1}
@@ -1191,6 +1429,15 @@ export function ParticipantChatPanel({
           </Button>
         </form>
       </div>
+
+      {stepId === "user-research" && (
+        <ResearchUploadDialog
+          open={uploadOpen}
+          onOpenChange={setUploadOpen}
+          onAnalyze={handleAnalyzeResearch}
+          analyzing={analyzingResearch}
+        />
+      )}
     </div>
   );
 }

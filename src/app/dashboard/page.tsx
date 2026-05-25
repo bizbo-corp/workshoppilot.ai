@@ -4,7 +4,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { db } from '@/db/client';
-import { users, workshops, workshopSteps, stepArtifacts, buildPacks, aiUsageEvents } from '@/db/schema';
+import { users, workshops, workshopSteps, stepArtifacts, buildPacks, aiUsageEvents, participantResearchContributions } from '@/db/schema';
 import { eq, desc, isNull, and, inArray, sql } from 'drizzle-orm';
 import { isAdmin } from '@/lib/auth/roles';
 import { MigrationCheck } from '@/components/auth/migration-check';
@@ -115,11 +115,33 @@ export default async function DashboardPage() {
       workshopType: workshop.workshopType,
       currentStep: stepMetadata?.order || 1,
       currentStepName: stepMetadata?.name || 'Challenge',
+      currentStepId: currentStepData?.stepId ?? null,
       sessionId: workshop.sessions[0]?.id || '',
       isCompleted,
       stepProgress: workshop.steps.map((s) => ({ stepId: s.stepId, status: s.status })),
     };
   });
+
+  // "Awaiting research" status: count submitted contributions for multiplayer
+  // workshops currently on the User Research step (read from the DB mirror).
+  const researchActiveIds = workshopsWithProgress
+    .filter((w) => w.currentStepId === 'user-research' && w.workshopType !== 'solo')
+    .map((w) => w.id);
+  const researchCountMap = new Map<string, number>();
+  if (researchActiveIds.length > 0) {
+    const researchRows = await db
+      .select({ workshopId: participantResearchContributions.workshopId })
+      .from(participantResearchContributions)
+      .where(
+        and(
+          inArray(participantResearchContributions.workshopId, researchActiveIds),
+          eq(participantResearchContributions.stepId, 'user-research'),
+        ),
+      );
+    for (const r of researchRows) {
+      researchCountMap.set(r.workshopId, (researchCountMap.get(r.workshopId) ?? 0) + 1);
+    }
+  }
 
   // Split into active vs completed
   const activeWorkshops = workshopsWithProgress.filter((w) => !w.isCompleted);
@@ -311,6 +333,10 @@ export default async function DashboardPage() {
                 totalCostCents: costMap.get(w.id) ?? null,
                 workshopType: w.workshopType,
                 steps: w.stepProgress,
+                researchSubmitted:
+                  w.currentStepId === 'user-research' && w.workshopType !== 'solo'
+                    ? (researchCountMap.get(w.id) ?? 0)
+                    : undefined,
               }))}
               onRename={renameWorkshop}
               onUpdateAppearance={updateWorkshopAppearance}

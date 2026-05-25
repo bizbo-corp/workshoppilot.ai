@@ -39,6 +39,7 @@ interface WorkshopData {
   emoji: string | null;
   totalCostCents: number | null;
   workshopType?: 'solo' | 'multiplayer';
+  researchSubmitted?: number;
   steps: StepStatus[];
 }
 
@@ -242,6 +243,7 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
               emoji={workshop.emoji}
               totalCostCents={workshop.totalCostCents}
               workshopType={workshop.workshopType}
+              researchSubmitted={workshop.researchSubmitted}
               steps={workshop.steps}
               onRename={onRename}
               onUpdateAppearance={onUpdateAppearance}

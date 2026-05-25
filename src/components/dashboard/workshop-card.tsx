@@ -36,6 +36,8 @@ interface WorkshopCardProps {
   totalCostCents?: number | null;
   onUpdateAppearance: (workshopId: string, updates: { color?: string; emoji?: string | null }) => Promise<void>;
   workshopType?: 'solo' | 'multiplayer';
+  /** Count of participants who've submitted research (set only while on User Research). */
+  researchSubmitted?: number;
   steps: StepStatus[];
   editMode?: boolean;
   selected?: boolean;
@@ -56,6 +58,7 @@ export function WorkshopCard({
   onRename,
   onUpdateAppearance,
   workshopType,
+  researchSubmitted,
   steps,
   editMode = false,
   selected = false,
@@ -247,6 +250,17 @@ export function WorkshopCard({
               <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-black/10 px-2 py-0.5 dark:bg-white/15">
                 <Users className="h-3 w-3 text-foreground/60" />
                 <span className="text-xs text-foreground/60">Multiplayer</span>
+              </div>
+            )}
+
+            {/* Awaiting-research chip — shown only while on the User Research step */}
+            {researchSubmitted !== undefined && (
+              <div className="mt-1 ml-1 inline-flex items-center gap-1 rounded-full bg-olive-100 px-2 py-0.5 dark:bg-olive-900/40">
+                <span className="text-xs font-medium text-olive-800 dark:text-olive-300">
+                  {researchSubmitted === 0
+                    ? 'Awaiting research'
+                    : `Research · ${researchSubmitted} submitted`}
+                </span>
               </div>
             )}
           </div>

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import type { ContributionType } from "@/lib/ai/prompts/research-analysis-prompts";
 
 const MAX_CHARS = 100_000;
 const ACCEPTED = ".txt,.md,text/plain,text/markdown";
@@ -22,7 +23,7 @@ interface ResearchUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Run the analysis. Should resolve once personas/insights are placed. */
-  onAnalyze: (transcript: string) => Promise<void>;
+  onAnalyze: (transcript: string, contributionType: ContributionType) => Promise<void>;
   analyzing: boolean;
 }
 
@@ -34,11 +35,16 @@ export function ResearchUploadDialog({
 }: ResearchUploadDialogProps) {
   const [text, setText] = React.useState("");
   const [isDragging, setIsDragging] = React.useState(false);
+  const [contributionType, setContributionType] =
+    React.useState<ContributionType>("per-interviewee");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Reset the textarea whenever the dialog is freshly opened.
   React.useEffect(() => {
-    if (open) setText("");
+    if (open) {
+      setText("");
+      setContributionType("per-interviewee");
+    }
   }, [open]);
 
   const readFiles = React.useCallback(async (files: FileList | File[]) => {
@@ -72,7 +78,7 @@ export function ResearchUploadDialog({
 
   const handleAnalyze = async () => {
     if (!trimmed || analyzing) return;
-    await onAnalyze(text.slice(0, MAX_CHARS));
+    await onAnalyze(text.slice(0, MAX_CHARS), contributionType);
   };
 
   return (
@@ -85,10 +91,55 @@ export function ResearchUploadDialog({
           </DialogTitle>
           <DialogDescription>
             Paste interview transcripts, survey responses, or notes — or drop in
-            a .txt / .md file. I&apos;ll pull out the people and their key
-            insights and place them on the canvas for you to review.
+            a .txt / .md file. I&apos;ll pull out the insights and place them on
+            the canvas for you to review.
           </DialogDescription>
         </DialogHeader>
+
+        {/* How did the research come back? */}
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              {
+                id: "per-interviewee" as const,
+                label: "Per interviewee",
+                hint: "I have notes/quotes from specific people",
+              },
+              {
+                id: "synthesized" as const,
+                label: "Overall impressions",
+                hint: "Consolidated vibes across several interviews",
+              },
+            ]
+          ).map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              disabled={analyzing}
+              onClick={() => setContributionType(opt.id)}
+              className={cn(
+                "rounded-lg border p-2.5 text-left transition-colors disabled:opacity-50",
+                contributionType === opt.id
+                  ? "border-olive-400 bg-olive-100/70 dark:border-olive-600 dark:bg-olive-900/40"
+                  : "border-olive-200 hover:border-olive-300 dark:border-neutral-olive-700 dark:hover:border-neutral-olive-600",
+              )}
+            >
+              <span className="block text-sm font-medium text-foreground">
+                {opt.label}
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                {opt.hint}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {contributionType === "per-interviewee" && (
+          <p className="text-xs text-muted-foreground">
+            🔒 I&apos;ll capture each interviewee&apos;s name and role. Use
+            initials or an alias if you don&apos;t have consent to share names.
+          </p>
+        )}
 
         <div
           onDrop={handleDrop}

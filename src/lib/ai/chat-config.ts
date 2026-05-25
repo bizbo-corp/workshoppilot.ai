@@ -166,11 +166,32 @@ Keep it to 2-3 short sentences max. Do NOT ask any follow-up questions — the s
 ${stepInstructions}`;
   }
 
+  // Resuming signal for Step 3 real-interview fieldwork. The interview mode is
+  // only ever 'real' AFTER the facilitator chose it in a prior turn — so if it's
+  // already set when we (re)build the prompt, whoever we're greeting is RETURNING
+  // mid-fieldwork (e.g. a participant clicking a reminder email), not arriving
+  // fresh. Without this, the step prompt re-runs its first-time Phase 0/1 intro
+  // (mode selection / persona picker), which is exactly wrong for someone coming
+  // back to drop off their research. Applies to facilitator AND participant.
+  if (stepId === 'user-research' && interviewMode === 'real') {
+    prompt += `\n\nRESEARCH SESSION STATE — REAL INTERVIEWS ALREADY CHOSEN:
+The interview mode for this step is already set to **Real Interviews** — the facilitator locked this in earlier. Whoever you are talking to now is RESUMING an in-progress research step, not starting it.
+- Do NOT present the interview-mode choice again (no [INTERVIEW_MODE]).
+- Do NOT present the research-source fork again (no [RESEARCH_SOURCE]).
+- Do NOT present persona selection (no [PERSONA_SELECT]) — in real-interview mode the people and their names come from the research that gets brought back, never from a picker.
+
+When you receive a "__step_start__" greeting trigger in this state, this is a RESUMING greeting. Keep it to 2-3 short sentences, warm and oriented toward action:
+1. A brief welcome-back that names what's happening — the team is gathering real interviews for this challenge.
+2. The one clear action: hit the **Add research** button below the chat to paste a transcript or notes from a conversation, and you'll pull out the people and their insights for them. They can also add insights directly as sticky notes.
+3. If the CANVAS STATE already shows persona cards or insights, acknowledge what's there ("I can see findings from N already…") and invite them to add more or review.
+Do NOT re-introduce the step from scratch, do NOT list questions to ask, do NOT emit a [SUGGESTIONS] block in this resuming greeting.`;
+  }
+
   // Strip facilitator-only features for participants
   if (isParticipant) {
     prompt += `\n\nPARTICIPANT OVERRIDES (take precedence over any step instructions above):
 - Do NOT use or output [INTERVIEW_MODE] markup. Do NOT present interview mode choices (AI vs Real interviews) — participants do not control this.
-${stepId === 'user-research' ? '- You MAY use [PERSONA_SELECT] markup for this step — follow the participant guidance above for persona selection and AI interview flow.' : '- Do NOT use or output [PERSONA_SELECT] markup. Do NOT present persona selection choices.'}
+${stepId === 'user-research' && interviewMode !== 'real' ? '- You MAY use [PERSONA_SELECT] markup for this step — follow the participant guidance above for persona selection and AI interview flow.' : '- Do NOT use or output [PERSONA_SELECT] markup. Do NOT present persona selection choices.'}
 ${stepId === 'reframe' ? '- You MAY use [HMW_CARD] markup for this step — follow the participant guidance above for the HMW card building flow.' : '- Do NOT use or output [HMW_CARD] markup. The HMW card is controlled by the facilitator only.'}
 ${stepId === 'concept'
   ? '- You MAY use [CONCEPT_CARD] markup for this step — follow the participant guidance above for developing concept cards.'
