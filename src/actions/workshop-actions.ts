@@ -13,7 +13,7 @@ import { STEPS, getStepById } from '@/lib/workshop/step-metadata';
 import { generateStepSummary } from '@/lib/context/generate-summary';
 import { prefetchStepStartGreeting } from '@/lib/ai/prefetch-greeting';
 import { after } from 'next/server';
-import { getNextWorkshopColor, WORKSHOP_COLORS } from '@/lib/workshop/workshop-appearance';
+import { getNextWorkshopColor, getRandomWorkshopEmoji, WORKSHOP_COLORS } from '@/lib/workshop/workshop-appearance';
 import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
 import { deleteBlobUrls } from '@/lib/blob/delete-blob-urls';
 import { extractBlobUrlsFromArtifact } from '@/lib/blob/extract-urls';
@@ -78,9 +78,10 @@ export async function createWorkshopSession(formData?: FormData) {
       color = getNextWorkshopColor(existingWorkshops.length);
     }
 
-    // Extract emoji from FormData (use if provided, otherwise null)
+    // Extract emoji from FormData (use if provided, otherwise pick a random one
+    // so workshops created outside the dialog still get a cheerful default)
     const rawEmoji = formData?.get('emoji') as string | null;
-    const emoji = rawEmoji || null;
+    const emoji = rawEmoji || getRandomWorkshopEmoji();
 
     // Extract facilitatorMode from FormData. Team mode (facilitator-led + invites)
     // implies workshopType='multiplayer' regardless of the explicit workshopType field.
