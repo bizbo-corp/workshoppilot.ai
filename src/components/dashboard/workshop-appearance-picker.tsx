@@ -28,6 +28,8 @@ interface WorkshopAppearancePickerProps {
   color: string | null;
   emoji: string | null;
   onUpdate: (workshopId: string, updates: { color?: string; emoji?: string | null }) => Promise<void>;
+  /** When false, renders a static (non-interactive) circle — editing is gated behind the card's Edit button. */
+  editable?: boolean;
 }
 
 export function WorkshopAppearancePicker({
@@ -35,6 +37,7 @@ export function WorkshopAppearancePicker({
   color,
   emoji,
   onUpdate,
+  editable = true,
 }: WorkshopAppearancePickerProps) {
   const currentColor = getWorkshopColor(color);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -75,6 +78,23 @@ export function WorkshopAppearancePicker({
       .catch(() => toast.error('Failed to update appearance', { duration: 4000 }));
     setEmojiPickerOpen(false);
   };
+
+  // Static display when not editable — clicks fall through to the card (launch workshop).
+  if (!editable) {
+    return (
+      <div
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+        style={{ backgroundColor: currentColor.hex + '33' }}
+        aria-hidden="true"
+      >
+        {emoji ? (
+          <span className="text-base leading-none">{emoji}</span>
+        ) : (
+          <Smile className="h-4 w-4 text-muted-foreground" />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
