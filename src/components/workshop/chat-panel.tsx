@@ -4009,10 +4009,13 @@ export function ChatPanel({
                   )}
 
                   {/* Multiplayer Fieldwork: open an async research window, watch the
-                      roster, then close & synthesize. Replaces the solo compile button. */}
+                      roster, then close & synthesize. Replaces the solo compile button.
+                      Hidden until a research source is chosen from the fork, so it
+                      doesn't compete with the "upload vs conduct" choice. */}
                   {step.id === "user-research" &&
                     isMultiplayer &&
                     interviewMode === "real" &&
+                    researchSourceChosen &&
                     !readyToCompile &&
                     !pendingResearch &&
                     status === "ready" &&
@@ -4055,28 +4058,38 @@ export function ChatPanel({
                           >
                             Remind stragglers
                           </button>
-                          <button
-                            onClick={async () => {
-                              setFieldworkOpen(false);
-                              setReadyToCompile(true);
-                              setQuickAck(getRandomAck());
-                              await flushCanvasToDb();
-                              sendMessage({
-                                role: "user",
-                                parts: [
-                                  {
-                                    type: "text",
-                                    text: "[COMPILE_READY] Fieldwork is closed — please compile everyone's research insights.",
-                                  },
-                                ],
-                              });
-                            }}
-                            className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
-                          >
-                            <Sparkles className="h-3.5 w-3.5" />
-                            Close fieldwork &amp; synthesize
-                          </button>
+                          {(hasRealResearchInsights ||
+                            Object.keys(fieldworkSubmissions).length > 0) && (
+                            <button
+                              onClick={async () => {
+                                setFieldworkOpen(false);
+                                setReadyToCompile(true);
+                                setQuickAck(getRandomAck());
+                                await flushCanvasToDb();
+                                sendMessage({
+                                  role: "user",
+                                  parts: [
+                                    {
+                                      type: "text",
+                                      text: "[COMPILE_READY] Fieldwork is closed — please compile everyone's research insights.",
+                                    },
+                                  ],
+                                });
+                              }}
+                              className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
+                            >
+                              <Sparkles className="h-3.5 w-3.5" />
+                              Close fieldwork &amp; synthesize
+                            </button>
+                          )}
                         </div>
+                        {!hasRealResearchInsights &&
+                          Object.keys(fieldworkSubmissions).length === 0 && (
+                            <p className="text-center text-xs text-muted-foreground">
+                              Add your own research below, or wait for the team — the
+                              synthesize button appears once findings are in.
+                            </p>
+                          )}
                       </div>
                     ))}
 
