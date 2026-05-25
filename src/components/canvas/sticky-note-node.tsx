@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { Handle, Position, type NodeProps, type Node, NodeResizer } from '@xyflow/react';
-import { Layers } from 'lucide-react';
+import { Layers, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StickyNoteColor } from '@/stores/canvas-store';
 
@@ -41,6 +41,7 @@ export const COLOR_CLASSES: Record<StickyNoteColor, string> = {
   red: 'bg-[var(--sticky-note-red)]',
   teal: 'bg-[var(--sticky-note-teal)]',
   purple: 'bg-[var(--sticky-note-purple)]',
+  white: 'bg-[var(--sticky-note-white)]',
 };
 
 /** Dark text hues matching each pastel background — constant across light/dark mode */
@@ -53,6 +54,7 @@ export const TEXT_COLOR_CLASSES: Record<StickyNoteColor, string> = {
   red: 'text-[var(--sticky-note-red-text)]',
   teal: 'text-[var(--sticky-note-teal-text)]',
   purple: 'text-[var(--sticky-note-purple-text)]',
+  white: 'text-[var(--sticky-note-white-text)]',
 };
 
 /** Darker avatar background colors per sticky note color — muted to match nature palette */
@@ -65,6 +67,7 @@ const AVATAR_BG: Record<StickyNoteColor, string> = {
   red: 'bg-red-700',
   teal: 'bg-teal-700',
   purple: 'bg-violet-700',
+  white: 'bg-neutral-400',
 };
 
 /** Extract initials from a persona name (first letter of first two words) */
@@ -82,6 +85,8 @@ export type StickyNoteNodeData = {
   previewReason?: string;
   clusterLabel?: string;
   clusterChildCount?: number;
+  /** Persona this insight is attributed to (shows a name+color provenance badge). */
+  cluster?: string;
   templateKey?: string;
   templateLabel?: string;
   placeholderText?: string;
@@ -356,6 +361,30 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
             </span>
           )}
         </>
+      )}
+
+      {/* Bottom-left provenance badge, tinted in the sticky's own darkened
+          (body-text) color. Persona-attributed insights show the persona name;
+          synthesized (white) insights show a "Synthesized" marker. Hidden for
+          persona cards and cluster parents. */}
+      {!isPersonaCard && !data.clusterLabel && (data.cluster || data.color === 'white') && (
+        <div
+          className="absolute bottom-1 left-1.5 flex items-center gap-1 opacity-75"
+          style={{ color: `var(--sticky-note-${data.color || 'yellow'}-text)` }}
+          title={data.cluster ? `From ${data.cluster}` : 'Synthesized insight'}
+        >
+          {data.cluster ? (
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: `var(--sticky-note-${data.color || 'yellow'}-text)` }}
+            />
+          ) : (
+            <Sparkles className="h-2.5 w-2.5" />
+          )}
+          <span className="text-[9px] font-medium max-w-[90px] truncate">
+            {data.cluster ? data.cluster : 'Synthesized'}
+          </span>
+        </div>
       )}
 
       {/* Provenance indicator for participant-contributed items */}

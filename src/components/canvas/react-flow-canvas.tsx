@@ -1213,6 +1213,7 @@ function ReactFlowCanvasInner({
                 clusterChildCount: clusterInfo.count,
               }
             : {}),
+          ...(stickyNote.cluster ? { cluster: stickyNote.cluster } : {}),
           ...(isPreview
             ? {
                 isPreview: true,

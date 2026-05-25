@@ -25,7 +25,7 @@ export type PendingHmwFieldFocus = { cardId: string; field: string } | null;
 /** Set when the user fills the last empty HMW field via manual edit (not chip click). */
 export type PendingHmwManualComplete = { cardId: string } | null;
 
-export type StickyNoteColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange' | 'red' | 'teal' | 'purple';
+export type StickyNoteColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange' | 'red' | 'teal' | 'purple' | 'white';
 
 export type GridColumn = {
   id: string;
@@ -168,6 +168,8 @@ export type CanvasActions = {
   moveGridColumn: (id: string, toIndex: number, gridConfig: GridConfig) => void;
   confirmPreview: (id: string) => void;
   rejectPreview: (id: string) => void;
+  confirmAllPreviews: () => void;
+  rejectAllPreviews: () => void;
   setHighlightedCell: (cell: { row: number; col: number } | null) => void;
   setPendingFitView: (pending: boolean) => void;
   setPendingFocusCardId: (id: string | null) => void;
@@ -628,6 +630,22 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
         rejectPreview: (id) =>
           set((state) => ({
             stickyNotes: state.stickyNotes.filter((stickyNote) => stickyNote.id !== id),
+            isDirty: true,
+          })),
+
+        confirmAllPreviews: () =>
+          set((state) => ({
+            stickyNotes: state.stickyNotes.map((stickyNote) =>
+              stickyNote.isPreview
+                ? { ...stickyNote, isPreview: false, previewReason: undefined }
+                : stickyNote
+            ),
+            isDirty: true,
+          })),
+
+        rejectAllPreviews: () =>
+          set((state) => ({
+            stickyNotes: state.stickyNotes.filter((stickyNote) => !stickyNote.isPreview),
             isDirty: true,
           })),
 

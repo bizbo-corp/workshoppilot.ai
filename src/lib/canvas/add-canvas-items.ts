@@ -53,6 +53,13 @@ export function addCanvasItemsToBoard(options: {
    *  into the same cell — historically the journey-mapping "pile" footgun. */
   updateStickyNote?: (id: string, updates: Partial<StickyNote>) => void;
   owner?: { ownerId: string; ownerName: string; ownerColor: string };
+  /** When provided, items land as preview stickies (faded, with accept/reject
+   *  controls on the canvas) awaiting confirmation via confirmAllPreviews(). */
+  preview?: { previewReason?: string };
+  /** Sense-making (Step 4): maps a source persona name → its Step 3 color, so an
+   *  empathy item attributed to a persona inherits that persona's color. Items
+   *  with no cluster (synthesized) render white. Keys should be lowercased. */
+  personaColorMap?: Record<string, StickyNoteColor>;
   gridConfigOverride?: GridConfig;
   onHighlightCell?: (cell: { row: number; col: number }) => void;
   onRequestFitView?: () => void;
@@ -64,6 +71,8 @@ export function addCanvasItemsToBoard(options: {
     addStickyNote,
     updateStickyNote,
     owner,
+    preview,
+    personaColorMap,
     gridConfigOverride,
     onHighlightCell,
     onRequestFitView,
@@ -151,6 +160,13 @@ export function addCanvasItemsToBoard(options: {
       if (personaCard?.color) color = personaCard.color;
     }
 
+    // For sense-making: color by the source persona (Step 3 color map); items
+    // with no resolvable persona are synthesized → white.
+    if (stepId === "sense-making") {
+      const key = item.cluster?.trim().toLowerCase();
+      color = (key && personaColorMap?.[key]) || "white";
+    }
+
     const { width: itemWidth, height: itemHeight } = computeStickyNoteSize(
       item.text,
     );
@@ -171,6 +187,7 @@ export function addCanvasItemsToBoard(options: {
             ownerColor: owner.ownerColor,
           }
         : {}),
+      ...(preview ? { isPreview: true, previewReason: preview.previewReason } : {}),
     };
 
     addStickyNote(newStickyNote);

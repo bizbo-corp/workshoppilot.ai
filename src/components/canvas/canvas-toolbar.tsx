@@ -31,6 +31,7 @@ const POST_IT_COLORS: { value: StickyNoteColor; label: string; bg: string }[] = 
   { value: 'red', label: 'Red', bg: 'bg-[var(--sticky-note-red)]' },
   { value: 'teal', label: 'Teal', bg: 'bg-[var(--sticky-note-teal)]' },
   { value: 'purple', label: 'Purple', bg: 'bg-[var(--sticky-note-purple)]' },
+  { value: 'white', label: 'White', bg: 'bg-[var(--sticky-note-white)]' },
 ];
 
 const COLOR_DOTS: Record<StickyNoteColor, string> = {
@@ -42,6 +43,7 @@ const COLOR_DOTS: Record<StickyNoteColor, string> = {
   red: 'bg-[var(--canvas-red)]',
   teal: 'bg-[var(--canvas-teal)]',
   purple: 'bg-[var(--canvas-purple)]',
+  white: 'bg-[var(--sticky-note-white)] border border-neutral-olive-300',
 };
 
 export interface CanvasToolbarProps {

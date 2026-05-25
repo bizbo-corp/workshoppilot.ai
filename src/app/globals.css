@@ -159,6 +159,8 @@
   --sticky-note-red: var(--canvas-red-pastel);
   --sticky-note-teal: var(--canvas-teal-pastel);
   --sticky-note-purple: var(--canvas-purple-pastel);
+  /* Neutral "white" — used for synthesized insights (not from a single person) */
+  --sticky-note-white: #f6f5f1;
   /* Sticky note text — high-contrast dark hues per pastel (constant across light/dark) */
   --sticky-note-yellow-text: #3d2a00;
   --sticky-note-pink-text: #5a1438;
@@ -168,6 +170,7 @@
   --sticky-note-red-text: #4a1408;
   --sticky-note-teal-text: #0a3a35;
   --sticky-note-purple-text: #2a1252;
+  --sticky-note-white-text: #2b2b28;
   /* Mind map branch colors — dark text on canvas pastels, borderless */
   --mm-blue: var(--canvas-blue-text);
   --mm-blue-bg: var(--canvas-blue-pastel);
@@ -292,6 +295,8 @@
   --sticky-note-red: var(--canvas-red-pastel);
   --sticky-note-teal: var(--canvas-teal-pastel);
   --sticky-note-purple: var(--canvas-purple-pastel);
+  /* Neutral "white" — kept light in dark mode so synthesized notes read as neutral */
+  --sticky-note-white: #ededea;
   /* Mind map branch colors — same canvas palette pastels in dark mode (matches sticky notes) */
   /* Persona card */
   --persona-bg: var(--neutral-olive-950);

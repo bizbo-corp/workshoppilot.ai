@@ -28,6 +28,23 @@ export async function generateStepSummary(
   stepId: string,
   stepName: string
 ): Promise<string> {
+  // User Research (Step 3): derive the summary from the CANVAS, not chat.
+  // Uploaded/pasted research and AI-interview insights all live on the board as
+  // persona cards + clustered insights. The chat transcript can carry stale
+  // AI-interview persona names (e.g. from an abandoned persona-select), which is
+  // exactly what made Step 4 fabricate against the wrong people. A deterministic
+  // canvas dump keeps downstream steps grounded in the real research — synthesis
+  // is Step 4's job, not the summary's.
+  if (stepId === 'user-research') {
+    try {
+      const canvasSummary = await buildUserResearchCanvasSummary(workshopId, workshopStepId);
+      if (canvasSummary) return canvasSummary;
+      // Board empty / read failed → fall through to the chat-based summary below.
+    } catch (canvasErr) {
+      console.error('[generateStepSummary] user-research canvas summary failed, falling back to chat:', canvasErr);
+    }
+  }
+
   try {
     // Load all messages for this session+step
     const messageRows = await db
@@ -118,6 +135,63 @@ ${formattedConversation}`,
 
     return fallbackSummary;
   }
+}
+
+/**
+ * Build a deterministic Step 3 (User Research) summary from the canvas:
+ * persona cards + their clustered insights, quoted verbatim. Returns the summary
+ * string (and persists it), or null if the board has no research yet.
+ *
+ * Uses `loadCanvasState` via a lazy import so this module's top-level import graph
+ * stays free of `server-only` transitive deps (so `generateChallengeSummaryFromArtifact`
+ * can still run under tsx in scripts).
+ */
+async function buildUserResearchCanvasSummary(
+  workshopId: string,
+  workshopStepId: string
+): Promise<string | null> {
+  const { loadCanvasState } = await import('@/actions/canvas-actions');
+  const canvas = await loadCanvasState(workshopId, 'user-research');
+
+  const notes = (canvas?.stickyNotes || []).filter(
+    (n) => (!n.type || n.type === 'stickyNote') && !n.isPreview
+  );
+  if (notes.length === 0) return null;
+
+  // Persona cards have no cluster ("Name — description"); insights carry cluster = persona name.
+  const personaCards = notes.filter((n) => !n.cluster);
+  const insightsByPersona = new Map<string, string[]>();
+  for (const n of notes) {
+    if (!n.cluster) continue;
+    if (!insightsByPersona.has(n.cluster)) insightsByPersona.set(n.cluster, []);
+    insightsByPersona.get(n.cluster)!.push(n.text.trim());
+  }
+
+  // Need at least one insight to be a useful research summary.
+  if (insightsByPersona.size === 0) return null;
+
+  const lines: string[] = [];
+  if (personaCards.length > 0) {
+    lines.push(
+      `Personas researched (${personaCards.length}): ${personaCards.map((p) => p.text.trim()).join(' | ')}`
+    );
+  }
+  for (const [persona, insights] of insightsByPersona) {
+    lines.push(`\n${persona} — ${insights.length} insight${insights.length > 1 ? 's' : ''}:`);
+    for (const t of insights) lines.push(`- ${t}`);
+  }
+  const summary = lines.join('\n');
+
+  // Upsert so re-completing the step refreshes the summary to match the latest board.
+  await db
+    .insert(stepSummaries)
+    .values({ workshopStepId, stepId: 'user-research', summary, tokenCount: null })
+    .onConflictDoUpdate({
+      target: stepSummaries.workshopStepId,
+      set: { summary, tokenCount: null },
+    });
+
+  return summary;
 }
 
 /**

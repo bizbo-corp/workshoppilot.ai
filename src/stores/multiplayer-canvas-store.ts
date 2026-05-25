@@ -419,6 +419,20 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
             stickyNotes: state.stickyNotes.filter((stickyNote) => stickyNote.id !== id),
           })),
 
+        confirmAllPreviews: () =>
+          set((state) => ({
+            stickyNotes: state.stickyNotes.map((stickyNote) =>
+              stickyNote.isPreview
+                ? { ...stickyNote, isPreview: false, previewReason: undefined }
+                : stickyNote
+            ),
+          })),
+
+        rejectAllPreviews: () =>
+          set((state) => ({
+            stickyNotes: state.stickyNotes.filter((stickyNote) => !stickyNote.isPreview),
+          })),
+
         setHighlightedCell: (cell) =>
           set(() => ({ highlightedCell: cell })),
 

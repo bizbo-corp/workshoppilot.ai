@@ -16,6 +16,7 @@ import {
   ArrowRight,
   Rocket,
   RefreshCw,
+  FileText,
 } from "lucide-react";
 import { PersonaInterrupt } from "./persona-interrupt";
 import { getStepByOrder } from "@/lib/workshop/step-metadata";
@@ -52,8 +53,10 @@ import { THEME_COLORS, ROOT_COLOR } from "@/lib/canvas/mind-map-theme-colors";
 import { computeNewNodePosition } from "@/lib/canvas/mind-map-layout";
 import { getStepCanvasConfig } from "@/lib/canvas/step-canvas-config";
 import { addCanvasItemsToBoard } from "@/lib/canvas/add-canvas-items";
-import { saveCanvasState, savePersonaCandidates } from "@/actions/canvas-actions";
+import { saveCanvasState, savePersonaCandidates, loadCanvasState } from "@/actions/canvas-actions";
 import { ChatSkeleton } from "./chat-skeleton";
+import { ResearchUploadDialog } from "./research-upload-dialog";
+import { isPersonaCardForCluster } from "@/lib/canvas/canvas-position";
 import { parsePersonaSelect, detectPersonaIntro } from "@/lib/chat/parse-utils";
 import { getTemplateById } from "@/lib/workshop/journeyTemplates";
 import {
@@ -181,6 +184,56 @@ function parseInterviewMode(content: string): {
   }
 
   return { cleanContent: content, modeOptions: [] };
+}
+
+/**
+ * Parse [RESEARCH_SOURCE]...[/RESEARCH_SOURCE] block from AI content (Step 3,
+ * Real Interviews fork). Returns clean content (block removed) and the two
+ * source options: "upload" (user already has research) vs "conduct" (user will
+ * run interviews — proceeds to the existing persona-select flow).
+ */
+function parseResearchSource(content: string): {
+  cleanContent: string;
+  sourceOptions: {
+    id: "upload" | "conduct";
+    label: string;
+    description: string;
+  }[];
+} {
+  const match = content.match(
+    /\[RESEARCH_SOURCE\]([\s\S]*?)\[\/RESEARCH_SOURCE\]/,
+  );
+  if (match) {
+    const cleanContent = content
+      .replace(/\[RESEARCH_SOURCE\][\s\S]*?\[\/RESEARCH_SOURCE\]/, "")
+      .trim();
+    const sourceOptions = match[1]
+      .split("\n")
+      .map((line) => line.replace(/^[-*•\d.]\s*/, "").trim())
+      .filter((line) => line.length > 0)
+      .map((line) => {
+        const dashMatch = line.match(/^(.+?)\s*[—–-]\s*(.+)$/);
+        const label = dashMatch ? dashMatch[1].trim() : line;
+        const description = dashMatch ? dashMatch[2].trim() : "";
+        const id: "upload" | "conduct" = /already|have my|upload|analyse|analyze/i.test(
+          label,
+        )
+          ? "upload"
+          : "conduct";
+        return { id, label, description };
+      });
+    return { cleanContent, sourceOptions };
+  }
+
+  // Incomplete block (mid-stream): strip from [RESEARCH_SOURCE] to end
+  if (content.includes("[RESEARCH_SOURCE]")) {
+    const cleanContent = content
+      .replace(/\[RESEARCH_SOURCE\][\s\S]*$/, "")
+      .trim();
+    return { cleanContent, sourceOptions: [] };
+  }
+
+  return { cleanContent: content, sourceOptions: [] };
 }
 
 /**
@@ -833,6 +886,8 @@ export function ChatPanel({
   const updateStickyNote = useCanvasStore((state) => state.updateStickyNote);
   const deleteStickyNote = useCanvasStore((state) => state.deleteStickyNote);
   const setCluster = useCanvasStore((state) => state.setCluster);
+  const confirmAllPreviews = useCanvasStore((state) => state.confirmAllPreviews);
+  const rejectAllPreviews = useCanvasStore((state) => state.rejectAllPreviews);
   const batchUpdatePositions = useCanvasStore(
     (state) => state.batchUpdatePositions,
   );
@@ -938,6 +993,28 @@ export function ChatPanel({
   >(null);
   const [readyToCompile, setReadyToCompile] = React.useState(false);
   const [personasDone, setPersonasDone] = React.useState(false);
+  // Step 3 bulk research upload: dialog visibility, in-flight analysis, the
+  // [RESEARCH_SOURCE] fork message, and the pending preview batch awaiting confirm.
+  const [uploadOpen, setUploadOpen] = React.useState(false);
+  const [analyzingResearch, setAnalyzingResearch] = React.useState(false);
+  const [researchSourceMessageId, setResearchSourceMessageId] = React.useState<
+    string | null
+  >(null);
+  const [researchSourceChosen, setResearchSourceChosen] = React.useState(false);
+  const [pendingResearch, setPendingResearch] = React.useState<{
+    personaCount: number;
+    insightCount: number;
+    newPersonaCandidates: { name: string; archetype: string; description: string }[];
+  } | null>(null);
+  // Step 4 (sense-making): map of Step 3 persona name (lowercased) → that persona's
+  // color, so empathy items attributed to a persona inherit their color.
+  const [personaColorMap, setPersonaColorMap] = React.useState<
+    Record<string, StickyNoteColor>
+  >({});
+  // Gates the Step 4 auto-start greeting until the deterministic empathy-map seed
+  // has populated + flushed the board, so the AI narrates the full board instead
+  // of racing to (incompletely) populate it itself.
+  const [seedComplete, setSeedComplete] = React.useState(false);
   // Show skeleton on mount before JS hydration completes; hide once component is mounted
   const [isMountLoading, setIsMountLoading] = React.useState(true);
   React.useEffect(() => {
@@ -1232,6 +1309,242 @@ export function ChatPanel({
     }
   }, [status, messages, step.id, personaSelectConfirmed, personaSelectMessageId]);
 
+  // Step 3 — analyze an uploaded research transcript into preview personas + insights.
+  const handleAnalyzeResearch = React.useCallback(
+    async (transcript: string) => {
+      setAnalyzingResearch(true);
+      try {
+        const existingNotes = storeApi.getState().stickyNotes;
+        const existingPersonaCards = existingNotes.filter(
+          (n) =>
+            (!n.type || n.type === "stickyNote") &&
+            !n.cluster &&
+            n.text.includes(" — "),
+        );
+        const existingPersonaNames = existingPersonaCards.map((n) => n.text);
+
+        const res = await fetch("/api/ai/analyze-research", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workshopId, transcript, existingPersonaNames }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err?.error || "Couldn't analyze that research — try again.");
+          return;
+        }
+        const { data } = (await res.json()) as {
+          data: {
+            personas: { name: string; archetype: string; summary: string }[];
+            insights: { personaName: string; text: string }[];
+          };
+        };
+        const personas = data?.personas || [];
+        const insights = data?.insights || [];
+        if (personas.length === 0 && insights.length === 0) {
+          toast.error("I couldn't find any people or insights in that text.");
+          return;
+        }
+
+        // 1) Persona cards for people not already on the board (preview).
+        const existingCount = existingPersonaCards.length;
+        const newPersonas = personas.filter(
+          (p) =>
+            !existingPersonaCards.some((card) =>
+              isPersonaCardForCluster(card, p.name),
+            ),
+        );
+        const personaItems = newPersonas.map((p, i) => ({
+          text: p.summary ? `${p.name} — ${p.summary}` : p.name,
+          color:
+            PERSONA_CARD_COLORS[
+              (existingCount + i) % PERSONA_CARD_COLORS.length
+            ],
+        }));
+        if (personaItems.length > 0) {
+          addCanvasItemsToBoard({
+            stepId: step.id,
+            items: personaItems,
+            storeApi,
+            addStickyNote,
+            updateStickyNote,
+            preview: { previewReason: "From your uploaded research" },
+          });
+        }
+
+        // 2) Insight stickies (preview), clustered to their persona. Color
+        //    auto-inherits from the persona card (user-research branch).
+        const insightItems = insights.map((ins) => ({
+          text: ins.text,
+          cluster: ins.personaName,
+        }));
+        if (insightItems.length > 0) {
+          addCanvasItemsToBoard({
+            stepId: step.id,
+            items: insightItems,
+            storeApi,
+            addStickyNote,
+            updateStickyNote,
+            preview: { previewReason: "From your uploaded research" },
+          });
+        }
+
+        // Lock step-3 into 'real' mode if it isn't already, and satisfy the
+        // persona-select gate so downstream affordances behave normally.
+        if (storeApi.getState().interviewMode === null) {
+          setInterviewMode("real");
+          persistInterviewMode("real");
+          onInterviewModeBroadcast?.("real");
+        }
+        setPersonaSelectConfirmed(true);
+        setResearchSourceChosen(true);
+
+        setPendingResearch({
+          personaCount: newPersonas.length,
+          insightCount: insightItems.length,
+          newPersonaCandidates: newPersonas.map((p) => ({
+            name: p.name,
+            archetype: p.archetype,
+            description: p.summary,
+          })),
+        });
+        setUploadOpen(false);
+      } catch (e) {
+        console.error("analyze-research failed:", e);
+        toast.error("Something went wrong analyzing your research.");
+      } finally {
+        setAnalyzingResearch(false);
+      }
+    },
+    [
+      workshopId,
+      step.id,
+      storeApi,
+      addStickyNote,
+      updateStickyNote,
+      persistInterviewMode,
+      onInterviewModeBroadcast,
+    ],
+  );
+
+  // Confirm the preview batch onto the board, persist persona candidates for
+  // Step 5, then auto-run the compile synthesis (real mode only).
+  const handleConfirmResearch = React.useCallback(async () => {
+    confirmAllPreviews();
+    const candidates = pendingResearch?.newPersonaCandidates || [];
+    setPendingResearch(null);
+    if (candidates.length > 0) {
+      await savePersonaCandidates(workshopId, step.id, candidates);
+    }
+    await flushCanvasToDb();
+    if (storeApi.getState().interviewMode === "real") {
+      setReadyToCompile(true);
+      setQuickAck(getRandomAck());
+      sendMessage({
+        role: "user",
+        parts: [
+          {
+            type: "text",
+            text: "[COMPILE_READY] I uploaded my research — please compile the insights.",
+          },
+        ],
+      });
+    }
+  }, [
+    confirmAllPreviews,
+    pendingResearch,
+    workshopId,
+    step.id,
+    flushCanvasToDb,
+    storeApi,
+    sendMessage,
+  ]);
+
+  const handleDiscardResearch = React.useCallback(async () => {
+    rejectAllPreviews();
+    setPendingResearch(null);
+    await flushCanvasToDb();
+  }, [rejectAllPreviews, flushCanvasToDb]);
+
+  // Step 4 — build the Step 3 persona→color map (so empathy items inherit their
+  // source persona's color), then deterministically SEED the empathy map: a
+  // structured call classifies every Step 3 insight into a zone and the client
+  // places them all (persona-colored + badged; synthesized ones white). This is
+  // the reliable carry-over — the chat model over-consolidates on its own.
+  React.useEffect(() => {
+    if (step.id !== "sense-making") return;
+    let cancelled = false;
+    (async () => {
+      const canvas = await loadCanvasState(workshopId, "user-research");
+      if (cancelled) return;
+      const notes = canvas?.stickyNotes || [];
+
+      // Persona → color map from Step 3 persona cards ("Name — description", no cluster).
+      const map: Record<string, StickyNoteColor> = {};
+      for (const n of notes) {
+        if ((n.type && n.type !== "stickyNote") || n.cluster || !n.text.includes(" — ")) continue;
+        const name = n.text.split(/\s*[—–]\s*/)[0].trim().toLowerCase();
+        if (name && n.color) map[name] = n.color;
+      }
+      setPersonaColorMap(map);
+
+      // Seed once: only when this board is empty and Step 3 actually has insights.
+      const boardItems = storeApi
+        .getState()
+        .stickyNotes.filter((n) => (!n.type || n.type === "stickyNote") && !n.isPreview);
+      const hasResearch = notes.some((n) => n.cluster);
+      if (boardItems.length > 0 || !hasResearch) {
+        if (!cancelled) setSeedComplete(true);
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/ai/sense-making-seed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workshopId }),
+        });
+        if (!cancelled && res.ok) {
+          const { data } = (await res.json()) as {
+            data: {
+              items: { persona: string; zone: string; text: string }[];
+              synthesized: { zone: string; text: string }[];
+            };
+          };
+          const personaItems = (data.items || []).map((it) => ({
+            text: it.text,
+            quadrant: it.zone,
+            cluster: it.persona,
+          }));
+          const synthItems = (data.synthesized || []).map((s) => ({
+            text: s.text,
+            quadrant: s.zone,
+          }));
+          const allItems = [...personaItems, ...synthItems];
+          if (allItems.length > 0) {
+            addCanvasItemsToBoard({
+              stepId: "sense-making",
+              items: allItems,
+              storeApi,
+              addStickyNote,
+              updateStickyNote,
+              personaColorMap: map,
+            });
+            await flushCanvasToDb();
+          }
+        }
+      } catch (e) {
+        console.error("sense-making seed failed:", e);
+      } finally {
+        if (!cancelled) setSeedComplete(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step.id, workshopId]);
+
   // Extract interview mode options from last assistant message (Step 3 only, before mode is chosen)
   React.useEffect(() => {
     if (step.id !== "user-research" || interviewMode !== null) return;
@@ -1248,6 +1561,24 @@ export function ChatPanel({
       }
     }
   }, [status, messages, step.id, interviewMode]);
+
+  // Extract the [RESEARCH_SOURCE] fork (Step 3, Real Interviews — before a
+  // source is chosen). Records which message carries the fork so we render the
+  // two buttons on it.
+  React.useEffect(() => {
+    if (step.id !== "user-research" || researchSourceChosen) return;
+    if (status === "ready" && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.role === "assistant") {
+        const textParts = lastMsg.parts?.filter((p) => p.type === "text") || [];
+        const content = textParts.map((p) => p.text).join("\n");
+        const { sourceOptions } = parseResearchSource(content);
+        if (sourceOptions.length > 0) {
+          setResearchSourceMessageId(lastMsg.id);
+        }
+      }
+    }
+  }, [status, messages, step.id, researchSourceChosen]);
 
   // Step 6 — when the facilitator's AI emits [JOURNEY_POLL_OPTIONS], open the
   // template-vote poll in the canvas store. In multiplayer this fires once per
@@ -1595,6 +1926,7 @@ export function ChatPanel({
         addStickyNote,
         updateStickyNote,
         gridConfigOverride: dynamicGridConfig,
+        ...(step.id === "sense-making" ? { personaColorMap } : {}),
         onHighlightCell: setHighlightedCell,
         onRequestFitView: boardWasEmpty
           ? () => {
@@ -1612,6 +1944,7 @@ export function ChatPanel({
       storeApi,
       addStickyNote,
       updateStickyNote,
+      personaColorMap,
       setHighlightedCell,
       setPendingFitView,
     ],
@@ -2476,7 +2809,10 @@ export function ChatPanel({
       !hasAutoStarted.current &&
       !isReadOnly &&
       !skipAutoStart &&
-      (step.id !== "concept" || !isMultiplayer || conceptActivityStarted)
+      (step.id !== "concept" || !isMultiplayer || conceptActivityStarted) &&
+      // Step 4: wait for the deterministic empathy-map seed to populate + flush
+      // before greeting, so the AI narrates the full board (and doesn't re-add).
+      (step.id !== "sense-making" || seedComplete)
     ) {
       hasAutoStarted.current = true;
       onAutoStarted?.();
@@ -2500,6 +2836,7 @@ export function ChatPanel({
     isMultiplayer,
     sessionId,
     step.id,
+    seedComplete,
   ]);
 
   // Helper: check if user is near bottom of scroll container
@@ -2731,8 +3068,10 @@ export function ChatPanel({
                         parseSuggestions(content);
                       const { cleanContent: noInterviewMode } =
                         parseInterviewMode(noSuggestions);
+                      const { cleanContent: noResearchSource } =
+                        parseResearchSource(noInterviewMode);
                       const { cleanContent: noPersonaSelect } =
-                        parsePersonaSelect(noInterviewMode);
+                        parsePersonaSelect(noResearchSource);
                       const { cleanContent: noThemeSort } =
                         parseThemeSortTrigger(noPersonaSelect);
                       const { cleanContent: noDeletes } =
@@ -2771,6 +3110,8 @@ export function ChatPanel({
                         message.id === personaSelectMessageId;
                       const isInterviewModeMessage =
                         message.id === interviewModeMessageId;
+                      const isResearchSourceMessage =
+                        message.id === researchSourceMessageId;
                       const personaIntro = detectPersonaIntro(content);
                       // Separate "X down, Y to go" counter from persona answer body
                       const questionCountMatch = finalContent.match(
@@ -2972,6 +3313,57 @@ export function ChatPanel({
                                           className="cursor-pointer rounded-xl border border-olive-300 bg-card p-4 text-left shadow-sm transition-all hover:border-olive-500 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:border-olive-500"
                                         >
                                           <span className="text-sm font-semibold text-foreground">
+                                            {option.label}
+                                          </span>
+                                          {option.description && (
+                                            <p className="mt-1 text-xs text-muted-foreground">
+                                              {option.description}
+                                            </p>
+                                          )}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  );
+                                })()}
+                              {/* Research-source fork (Step 3 — Real Interviews, before persona select) */}
+                              {isResearchSourceMessage &&
+                                !researchSourceChosen &&
+                                !pendingResearch &&
+                                (() => {
+                                  const { sourceOptions } =
+                                    parseResearchSource(content);
+                                  if (sourceOptions.length === 0) return null;
+                                  return (
+                                    <div className="mt-3 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                      {sourceOptions.map((option) => (
+                                        <button
+                                          key={option.id}
+                                          disabled={isLoading}
+                                          onClick={async () => {
+                                            if (option.id === "upload") {
+                                              setUploadOpen(true);
+                                              return;
+                                            }
+                                            // "I need to conduct my interviews" →
+                                            // continue to the existing persona-select flow.
+                                            setResearchSourceChosen(true);
+                                            setQuickAck(getRandomAck());
+                                            sendMessage({
+                                              role: "user",
+                                              parts: [
+                                                {
+                                                  type: "text",
+                                                  text: option.label,
+                                                },
+                                              ],
+                                            });
+                                          }}
+                                          className="cursor-pointer rounded-xl border border-olive-300 bg-card p-4 text-left shadow-sm transition-all hover:border-olive-500 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:border-olive-500"
+                                        >
+                                          <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                                            {option.id === "upload" && (
+                                              <FileText className="h-4 w-4 text-olive-600 dark:text-olive-400" />
+                                            )}
                                             {option.label}
                                           </span>
                                           {option.description && (
@@ -3516,11 +3908,56 @@ export function ChatPanel({
                       </div>
                     )}
 
+                  {/* Research upload: review-and-confirm batch bar */}
+                  {step.id === "user-research" && pendingResearch && (
+                    <div className="mx-auto max-w-sm rounded-xl border border-olive-200 bg-olive-50/60 p-4 text-center dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                      <p className="text-sm text-foreground mb-1">
+                        I read your research and pulled out{" "}
+                        <strong>
+                          {pendingResearch.insightCount} insight
+                          {pendingResearch.insightCount === 1 ? "" : "s"}
+                        </strong>
+                        {pendingResearch.personaCount > 0 && (
+                          <>
+                            {" "}across{" "}
+                            <strong>
+                              {pendingResearch.personaCount} new{" "}
+                              {pendingResearch.personaCount === 1
+                                ? "person"
+                                : "people"}
+                            </strong>
+                          </>
+                        )}
+                        .
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        They&apos;re on the canvas as previews — reject any that
+                        don&apos;t fit, then add them to the board.
+                      </p>
+                      <div className="flex justify-center gap-2">
+                        <button
+                          onClick={handleConfirmResearch}
+                          className="inline-flex items-center gap-2 rounded-full bg-olive-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Add to board
+                        </button>
+                        <button
+                          onClick={handleDiscardResearch}
+                          className="inline-flex items-center gap-2 rounded-full border border-olive-300 bg-card px-4 py-2 text-sm font-medium text-muted-foreground transition-all hover:bg-olive-50 hover:text-foreground dark:border-neutral-olive-700 dark:bg-neutral-olive-800 dark:hover:bg-neutral-olive-700"
+                        >
+                          Discard
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Real interviews: "I'm ready to compile" button */}
                   {step.id === "user-research" &&
                     interviewMode === "real" &&
                     personaSelectConfirmed &&
                     !readyToCompile &&
+                    !pendingResearch &&
                     status === "ready" && (
                       <div className="mx-auto max-w-sm rounded-xl border border-olive-200 bg-olive-50/60 p-4 text-center dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30 animate-in fade-in slide-in-from-bottom-2 duration-500">
                         <p className="text-sm text-muted-foreground mb-3">
@@ -3735,6 +4172,19 @@ export function ChatPanel({
       {/* Input area — hidden for read-only participants and during concept pre-activity */}
       {!isReadOnly && !(isMultiplayer && step.id === 'concept' && !conceptActivityStarted) && (
         <div className="border-t bg-background/20 p-4">
+          {/* Persistent bulk-research entry point (Step 3, facilitator) */}
+          {step.id === "user-research" && (
+            <div className="mb-2 flex justify-start">
+              <button
+                type="button"
+                onClick={() => setUploadOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-xs font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 dark:border-neutral-olive-700 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Add research
+              </button>
+            </div>
+          )}
           <form onSubmit={handleSend} className="flex gap-2">
             <TextareaAutosize
               ref={inputRef}
@@ -3767,6 +4217,15 @@ export function ChatPanel({
             </Button>
           </form>
         </div>
+      )}
+
+      {step.id === "user-research" && (
+        <ResearchUploadDialog
+          open={uploadOpen}
+          onOpenChange={setUploadOpen}
+          onAnalyze={handleAnalyzeResearch}
+          analyzing={analyzingResearch}
+        />
       )}
     </div>
   );
