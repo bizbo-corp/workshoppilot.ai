@@ -31,16 +31,20 @@ const EDGE_GRAB = 12;
 /** @deprecated alias kept for export compat */
 const FRAME_WIDTH = MIN_FRAME_WIDTH;
 
-/** Color mapping from StickyNoteColor to frame appearance — vibrant Figma palette */
-const FRAME_COLORS: Record<string, { fill: string; border: string; headerBg: string }> = {
-  pink:   { fill: 'rgba(255, 168, 219, 0.10)', border: 'rgba(255, 168, 219, 0.45)', headerBg: 'rgba(255, 168, 219, 0.85)' },
-  blue:   { fill: 'rgba(168, 218, 255, 0.10)', border: 'rgba(168, 218, 255, 0.45)', headerBg: 'rgba(168, 218, 255, 0.85)' },
-  green:  { fill: 'rgba(179, 239, 189, 0.10)', border: 'rgba(179, 239, 189, 0.45)', headerBg: 'rgba(179, 239, 189, 0.85)' },
-  yellow: { fill: 'rgba(255, 226, 153, 0.10)', border: 'rgba(255, 226, 153, 0.45)', headerBg: 'rgba(255, 226, 153, 0.85)' },
-  orange: { fill: 'rgba(255, 211, 168, 0.10)', border: 'rgba(255, 211, 168, 0.45)', headerBg: 'rgba(255, 211, 168, 0.85)' },
-  red:    { fill: 'rgba(255, 175, 163, 0.10)', border: 'rgba(255, 175, 163, 0.45)', headerBg: 'rgba(255, 175, 163, 0.85)' },
-  teal:   { fill: 'rgba(179, 244, 239, 0.10)', border: 'rgba(179, 244, 239, 0.45)', headerBg: 'rgba(179, 244, 239, 0.85)' },
-  purple: { fill: 'rgba(211, 189, 255, 0.10)', border: 'rgba(211, 189, 255, 0.45)', headerBg: 'rgba(211, 189, 255, 0.85)' },
+/**
+ * Color mapping from StickyNoteColor to frame appearance — vibrant Figma palette.
+ * `text` matches the dark sticky-note body-text shade for each color so the header
+ * label reads as a dark tint of its own hue (same treatment as sticky note text).
+ */
+const FRAME_COLORS: Record<string, { fill: string; border: string; headerBg: string; text: string }> = {
+  pink:   { fill: 'rgba(255, 168, 219, 0.10)', border: 'rgba(255, 168, 219, 0.45)', headerBg: 'rgba(255, 168, 219, 0.85)', text: '#5a1438' },
+  blue:   { fill: 'rgba(168, 218, 255, 0.10)', border: 'rgba(168, 218, 255, 0.45)', headerBg: 'rgba(168, 218, 255, 0.85)', text: '#0a1f4a' },
+  green:  { fill: 'rgba(179, 239, 189, 0.10)', border: 'rgba(179, 239, 189, 0.45)', headerBg: 'rgba(179, 239, 189, 0.85)', text: '#0a3818' },
+  yellow: { fill: 'rgba(255, 226, 153, 0.10)', border: 'rgba(255, 226, 153, 0.45)', headerBg: 'rgba(255, 226, 153, 0.85)', text: '#3d2a00' },
+  orange: { fill: 'rgba(255, 211, 168, 0.10)', border: 'rgba(255, 211, 168, 0.45)', headerBg: 'rgba(255, 211, 168, 0.85)', text: '#4a2805' },
+  red:    { fill: 'rgba(255, 175, 163, 0.10)', border: 'rgba(255, 175, 163, 0.45)', headerBg: 'rgba(255, 175, 163, 0.85)', text: '#4a1408' },
+  teal:   { fill: 'rgba(179, 244, 239, 0.10)', border: 'rgba(179, 244, 239, 0.45)', headerBg: 'rgba(179, 244, 239, 0.85)', text: '#0a3a35' },
+  purple: { fill: 'rgba(211, 189, 255, 0.10)', border: 'rgba(211, 189, 255, 0.45)', headerBg: 'rgba(211, 189, 255, 0.85)', text: '#2a1252' },
 };
 
 const DEFAULT_FRAME_COLOR = FRAME_COLORS.yellow;
@@ -239,7 +243,7 @@ export function PersonaFrameOverlay() {
               onMouseDown={(e) => startDrag(e, frame)}
             >
               {/* Grip dots */}
-              <svg width="6" height="10" viewBox="0 0 6 10" fill="white" opacity={0.5} className="flex-shrink-0">
+              <svg width="6" height="10" viewBox="0 0 6 10" fill={colors.text} opacity={0.5} className="flex-shrink-0">
                 <circle cx="1" cy="1" r="1" />
                 <circle cx="5" cy="1" r="1" />
                 <circle cx="1" cy="5" r="1" />
@@ -249,7 +253,10 @@ export function PersonaFrameOverlay() {
               </svg>
 
               {/* Persona name */}
-              <span className="text-[11px] font-semibold text-white whitespace-nowrap overflow-hidden text-ellipsis">
+              <span
+                className="text-[11px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis"
+                style={{ color: colors.text }}
+              >
                 {frame.name}
               </span>
             </div>

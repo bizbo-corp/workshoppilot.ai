@@ -69,7 +69,10 @@ export const JourneyGroupContainer = memo(
             <circle cx="5" cy="9" r="1" />
           </svg>
 
-          <span className="text-[11px] font-semibold text-white whitespace-nowrap overflow-hidden text-ellipsis flex-1">
+          <span
+            className="text-[11px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis flex-1"
+            style={{ color: data.textColor || 'white' }}
+          >
             {data.label}
           </span>
 
