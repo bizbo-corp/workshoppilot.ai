@@ -3090,11 +3090,12 @@ function ReactFlowCanvasInner({
         // Multi-select (CANV-06)
         selectionKeyCode="Shift"
         multiSelectionKeyCode={null}
-        // Disable selection-on-drag when admin is editing guides so the Pane's
-        // always-active selection mode doesn't interfere with node dragging.
-        // selectionOnDrag + panOnDrag=false makes isSelecting=true ALWAYS,
-        // which can block d3-drag's mousedown handler on nodes.
-        selectionOnDrag={activeTool === "pointer" && !isAdminEditing}
+        // Marquee selection follows the pointer tool, including while an admin is
+        // editing guides — admins still need to box-select and delete leftover
+        // cards. Node dragging (sticky notes, guide stickies) coexists with this:
+        // mousedown on a node drags it, mousedown on the pane draws the selection
+        // box (proven by normal pointer mode, which is always selectionOnDrag).
+        selectionOnDrag={activeTool === "pointer"}
         selectionMode={SelectionMode.Partial}
         // v12 default is 1px — set to 0 to eliminate drag dead-zone
         nodeDragThreshold={0}
