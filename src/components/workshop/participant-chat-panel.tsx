@@ -10,6 +10,7 @@ import { PersonaInterrupt } from "./persona-interrupt";
 import { ResearchUploadDialog } from "./research-upload-dialog";
 import { FieldworkRoster } from "./fieldwork-roster";
 import { isPersonaCardForCluster } from "@/lib/canvas/canvas-position";
+import { recordResearchSubmission } from "@/actions/research-actions";
 import type { ContributionType } from "@/lib/ai/prompts/research-analysis-prompts";
 import { getStepByOrder } from "@/lib/workshop/step-metadata";
 import { Button } from "@/components/ui/button";
@@ -1377,14 +1378,17 @@ export function ParticipantChatPanel({
               {fieldworkOpen && (
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
+                    const nowSubmitted = !hasSubmittedResearch;
                     setFieldworkSubmission(
                       participantId,
-                      hasSubmittedResearch
-                        ? null
-                        : { name: displayName, color: participantColor, submittedAt: Date.now() },
-                    )
-                  }
+                      nowSubmitted
+                        ? { name: displayName, color: participantColor, submittedAt: Date.now() }
+                        : null,
+                    );
+                    // Mirror to the DB so the dashboard/reminders can read it.
+                    void recordResearchSubmission(workshopId, participantId, stepId, nowSubmitted);
+                  }}
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium shadow-sm transition-all",
                     hasSubmittedResearch
