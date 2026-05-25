@@ -1152,6 +1152,23 @@ export function ChatPanel({
 
   const isLoading = status === "streaming" || status === "submitted";
 
+  // Real interviews: is there actually research on the board to compile? True
+  // once the user has brought back insights (uploaded or added as stickies) —
+  // excludes preview items, templates, and persona cards ("Name — desc"). Gates
+  // the "I'm ready to compile" button so it can't be triggered before any
+  // research exists (which previously caused the AI to fabricate a compilation).
+  const hasRealResearchInsights = React.useMemo(
+    () =>
+      stickyNotes.some(
+        (n) =>
+          (!n.type || n.type === "stickyNote") &&
+          !n.isPreview &&
+          !n.templateKey &&
+          !(!n.cluster && n.text.includes(" — ")),
+      ),
+    [stickyNotes],
+  );
+
   // Stream-empty recovery: the AI SDK v6 sometimes completes the request (status →
   // ready) without delivering the assistant message into client state, even though
   // the server-side onFinish fired and persisted the row. When this happens we pull
@@ -3344,8 +3361,14 @@ export function ChatPanel({
                                               setUploadOpen(true);
                                               return;
                                             }
-                                            // "I need to conduct my interviews" →
-                                            // continue to the existing persona-select flow.
+                                            // "I need to conduct my interviews" → the AI
+                                            // returns a stakeholder-type interview guide (no
+                                            // persona-select, no named personas). Do NOT mark
+                                            // persona-select confirmed here — the compile
+                                            // affordance is gated on real research actually
+                                            // being on the board (see hasRealResearchInsights),
+                                            // so it can't be triggered before the user has
+                                            // gathered anything.
                                             setResearchSourceChosen(true);
                                             setQuickAck(getRandomAck());
                                             sendMessage({
@@ -3952,10 +3975,12 @@ export function ChatPanel({
                     </div>
                   )}
 
-                  {/* Real interviews: "I'm ready to compile" button */}
+                  {/* Real interviews: "I'm ready to compile" button — only once
+                      actual research is on the board, so it can't be triggered
+                      while the user is still out conducting interviews. */}
                   {step.id === "user-research" &&
                     interviewMode === "real" &&
-                    personaSelectConfirmed &&
+                    hasRealResearchInsights &&
                     !readyToCompile &&
                     !pendingResearch &&
                     status === "ready" && (
