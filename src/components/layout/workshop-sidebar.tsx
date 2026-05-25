@@ -322,13 +322,12 @@ export function WorkshopSidebar({
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter className="border-t px-2 py-2">
+      <SidebarFooter className="border-t px-2 py-4">
         {state === "expanded" ? (
           <Button
             variant="ghost"
-            size="sm"
             onClick={handleTogglePin}
-            className="w-full justify-start hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
+            className="h-9 w-full justify-start hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
             title={isPinned ? "Collapse sidebar (⌘B)" : "Pin sidebar open (⌘B)"}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -341,7 +340,7 @@ export function WorkshopSidebar({
             variant="ghost"
             size="icon"
             onClick={handleTogglePin}
-            className="mx-auto flex h-8 w-8 hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
+            className="mx-auto flex h-9 w-9 hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
             title="Expand sidebar (⌘B)"
           >
             <ChevronRight className="h-4 w-4" />
