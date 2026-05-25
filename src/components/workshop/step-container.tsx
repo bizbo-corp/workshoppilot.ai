@@ -469,9 +469,6 @@ export function StepContainer({
     prevConfirmed.current = artifactConfirmed;
   }, [artifactConfirmed]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Last AI message text — shown in collapsed chat strip preview
-  const [lastAiMessage, setLastAiMessage] = React.useState("");
-
   // Local messages state — allows clearing before ChatPanel re-mounts on reset
   const [localMessages, setLocalMessages] = React.useState(initialMessages);
 
@@ -1107,7 +1104,7 @@ export function StepContainer({
   // Synthesis summary (narrative, journey, confidence, next steps) lives on the results page
   const renderStep10Content = () => {
     return (
-      <div className={cn("flex h-full flex-col overflow-y-auto p-6", !chatCollapsed && !isMobile && "pl-[504px]")}>
+      <div className="flex h-full flex-col overflow-y-auto p-6">
         <div className="space-y-8">
           {/* Extraction status banner — non-blocking */}
           {isExtracting && (
@@ -1436,7 +1433,6 @@ export function StepContainer({
             onConceptComplete={() => setConceptProceedOverride(true)}
             skipAutoStart={autoStartFired}
             onAutoStarted={handleAutoStarted}
-            onLastAssistantMessage={setLastAiMessage}
             hideAvatar={!isMobile}
             onInterviewModeBroadcast={(mode) =>
               broadcastRef.current?.({ type: 'INTERVIEW_MODE_SELECTED', interviewMode: mode })
@@ -1680,53 +1676,44 @@ export function StepContainer({
     );
   };
 
-  // Bubble text: last AI message or a helpful default
-  const collapsedBubbleText =
-    lastAiMessage ||
-    "Stuck? Let me help you with anything — tips, ideas and sorting items";
-
-  // Desktop: canvas always full-width, chat floats over it
+  // Desktop: chat docked as a left column, canvas fills the rest
   return (
     <div className="flex h-full flex-col">
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        <StepTransitionWrapper stepId={step?.id ?? String(stepOrder)}>
-          <div className="flex h-full overflow-hidden">
-            {/* Canvas — always takes full width */}
-            <div className="flex-1 overflow-hidden">{renderCanvasPanel()}</div>
-          </div>
-        </StepTransitionWrapper>
-
-        {/* Floating chat panel — expands from bottom-left, overlays the canvas */}
-        {!chatCollapsed ? (
+        <div className="flex h-full overflow-hidden">
+          {/* Chat dock — left column. Always mounted to preserve chat state;
+              width + body visibility toggle on collapse. */}
           <div
-            className="absolute bottom-3 left-3 right-3 z-40 flex"
-            style={{ maxWidth: 480, top: "15%" }}
+            className={cn(
+              "flex shrink-0 flex-col border-r bg-neutral-olive-50 transition-[width] duration-200 dark:bg-neutral-olive-975",
+              chatCollapsed ? "w-12" : "w-[400px]"
+            )}
           >
-            <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl border bg-neutral-olive-50/95 shadow-xl backdrop-blur-sm dark:bg-neutral-olive-975/95">
+            {chatCollapsed && (
+              /* Thin rail — AI avatar + expand button */
+              <div className="flex flex-col items-center gap-2 py-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+                  AI
+                </div>
+                <button
+                  onClick={() => setChatCollapsed(false)}
+                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  title="Expand chat"
+                >
+                  <Maximize2 className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            <div className={chatCollapsed ? "hidden" : "min-h-0 flex-1"}>
               {renderContent()}
             </div>
           </div>
-        ) : (
-          /* Hidden render to keep React state alive */
-          <div className="hidden">{renderContent()}</div>
-        )}
 
-        {/* Floating AI bubble — bottom-left when chat is collapsed */}
-        {chatCollapsed && (
-          <button
-            onClick={() => setChatCollapsed(false)}
-            className="group absolute bottom-3 left-3 z-40 flex max-w-md items-center gap-2.5 rounded-full border bg-neutral-olive-50/90 py-2 pl-2 pr-4 shadow-lg backdrop-blur-sm transition-all hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-            title="Open chat"
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-              AI
-            </div>
-            <span className="truncate text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-              {collapsedBubbleText}
-            </span>
-            <Maximize2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
-          </button>
-        )}
+          {/* Canvas — fills remaining width */}
+          <StepTransitionWrapper stepId={step?.id ?? String(stepOrder)}>
+            <div className="flex-1 overflow-hidden">{renderCanvasPanel()}</div>
+          </StepTransitionWrapper>
+        </div>
       </div>
       {/* StepAdvanceBroadcaster — only mounted in multiplayer (inside RoomProvider).
           Captures useBroadcastEvent and exposes it via ref for handleBeforeAdvance. */}
