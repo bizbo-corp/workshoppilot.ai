@@ -7,11 +7,11 @@ import {
   participantResearchContributions,
   workshops,
   workshopInvitations,
-  sessions,
+  workshopSessions,
 } from '@/db/schema';
 import {
   sendResearchReminderEmail,
-  researchStepUrl,
+  researchJoinUrl,
 } from '@/lib/email/research-reminder-email';
 
 /**
@@ -74,12 +74,15 @@ export async function sendResearchReminders(
     });
     if (!workshop) return { success: false, error: 'Only the facilitator can send reminders' };
 
-    const [session] = await db
-      .select({ id: sessions.id })
-      .from(sessions)
-      .where(eq(sessions.workshopId, workshopId))
+    // Link recipients through the join flow (public + sign-in gate + participant
+    // resolution), not a bare step URL — see researchJoinUrl. Needs the
+    // multiplayer workshopSession's shareToken.
+    const [wSession] = await db
+      .select({ shareToken: workshopSessions.shareToken })
+      .from(workshopSessions)
+      .where(eq(workshopSessions.workshopId, workshopId))
       .limit(1);
-    if (!session) return { success: false, error: 'No session found for this workshop' };
+    if (!wSession) return { success: false, error: 'No multiplayer session found for this workshop' };
 
     const submittedRows = await db
       .select({ participantId: participantResearchContributions.participantId })
@@ -108,7 +111,7 @@ export async function sendResearchReminders(
     );
     if (targets.length === 0) return { success: true, sent: 0 };
 
-    const link = researchStepUrl(session.id);
+    const link = researchJoinUrl(wSession.shareToken);
     let sent = 0;
     for (const t of targets) {
       const r = await sendResearchReminderEmail({

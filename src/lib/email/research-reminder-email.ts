@@ -14,9 +14,18 @@ function baseUrl(): string {
   return 'https://workshoppilot.ai';
 }
 
-/** Personal deep-link into the User Research (step 3) contribution surface. */
-export function researchStepUrl(sessionId: string): string {
-  return `${baseUrl()}/workshop/${sessionId}/step/3`;
+/**
+ * Deep-link into the User Research contribution surface via the join flow.
+ *
+ * We deliberately link to `/join/{shareToken}` rather than the bare
+ * `/workshop/{sessionId}/step/3` URL: the join page is public and runs the
+ * passwordless sign-in gate, then resolves (or creates) the caller's
+ * participant row before dropping them into the workshop. A bare step URL
+ * assumes an already-resolved participant — a signed-out recipient (the common
+ * case when opening an email link) gets bounced step → lobby → `/`.
+ */
+export function researchJoinUrl(shareToken: string): string {
+  return `${baseUrl()}/join/${shareToken}`;
 }
 
 const strip = (s: string) => s.replace(/[<>&]/g, '');
