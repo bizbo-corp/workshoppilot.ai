@@ -740,11 +740,12 @@
 
 
 
-/* Liveblocks "powered by" badge (SDK auto-injects it with inline z-index:9999).
-   Anchor it bottom-left, then shift right 80px so it clears the worktree/dev badge. */
-div[style*="z-index: 9999"] {
-  right: auto !important;
-  transform: translateX(80px) !important;
+/* Liveblocks "powered by" badge (SDK auto-injects it).
+   Push it off-screen and behind everything so it's invisible to users. */
+#liveblocks-badge {
+  z-index: -9999 !important;
+  bottom: -9999px !important;
+  pointer-events: none !important;
 }
 
 

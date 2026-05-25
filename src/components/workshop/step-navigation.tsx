@@ -22,6 +22,7 @@ import { STEPS } from '@/lib/workshop/step-metadata';
 import { toast } from 'sonner';
 import { UpgradeDialog } from '@/components/workshop/upgrade-dialog';
 import { DialogueFeedbackDialog } from '@/components/workshop/dialogue-feedback-dialog';
+import { WorktreeBadge } from '@/components/dev/worktree-badge';
 
 interface StepNavigationProps {
   sessionId: string;
@@ -201,19 +202,17 @@ export function StepNavigation({
   return (
     <>
     <div className="relative flex items-center border-t bg-background px-6 py-4">
-      {/* Left: Back button */}
-      <div className="flex items-center">
+      {/* Left: Back button + Admin controls */}
+      <div className="flex items-center gap-3">
         {!isFirstStep && (
           <Button variant="ghost" onClick={handleBack} disabled={isNavigating}>
             <ChevronLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
         )}
-      </div>
 
-      {/* Center: Admin controls */}
       {isAdmin && onToggleGuideEditor && (
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Switch
               id="admin-controls"
@@ -308,7 +307,7 @@ export function StepNavigation({
                 Feedback
               </Button>
               {usage && (
-                <span className="ml-2 font-mono text-xs text-amber-600 dark:text-amber-400">
+                <span className="ml-2 whitespace-nowrap font-mono text-xs text-amber-600 dark:text-amber-400">
                   {usage.callCount} calls · {usage.totalInputTokens.toLocaleString()}↑ {usage.totalOutputTokens.toLocaleString()}↓ · ${usage.totalCostDollars.toFixed(4)}
                 </span>
               )}
@@ -316,9 +315,11 @@ export function StepNavigation({
           )}
         </div>
       )}
+      </div>
 
       {/* Right: Next button */}
-      <div className="ml-auto flex items-center">
+      <div className="ml-auto flex items-center gap-3">
+        <WorktreeBadge />
 
       {/* Right: Next/advance button or forward navigation */}
         {!isLastStep && stepExplicitlyConfirmed ? (
