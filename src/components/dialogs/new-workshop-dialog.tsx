@@ -21,7 +21,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createWorkshopSession } from '@/actions/workshop-actions';
-import { WORKSHOP_COLORS, type WorkshopColor } from '@/lib/workshop/workshop-appearance';
+import {
+  WORKSHOP_COLORS,
+  getRandomWorkshopColor,
+  getRandomWorkshopEmoji,
+  type WorkshopColor,
+} from '@/lib/workshop/workshop-appearance';
 import { toast } from 'sonner';
 
 // Lazy-load emoji picker (~200KB only when opened)
@@ -70,12 +75,13 @@ export function NewWorkshopButton({ variant, size, className, children, preselec
   const emojiContainerRef = useRef<HTMLDivElement>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Reset state when dialog opens
+  // Reset state when dialog opens. Color/emoji get a fresh random pick each open
+  // (done here, not in useState, to avoid an SSR/client hydration mismatch).
   useEffect(() => {
     if (open) {
       setTitle('');
-      setSelectedColor(WORKSHOP_COLORS[0]);
-      setSelectedEmoji(null);
+      setSelectedColor(getRandomWorkshopColor());
+      setSelectedEmoji(getRandomWorkshopEmoji());
       setFacilitatorMode(preselectTier ? 'team' : null);
       setTierToBuy(preselectTier ?? null);
       setEmojiPickerOpen(false);

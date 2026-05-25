@@ -37,3 +37,31 @@ export function getWorkshopColor(colorId: string | null | undefined): WorkshopCo
 export function getNextWorkshopColor(count: number): string {
   return WORKSHOP_COLORS[count % WORKSHOP_COLORS.length].id;
 }
+
+/** Returns a random color from the palette (used as the new-workshop default) */
+export function getRandomWorkshopColor(): WorkshopColor {
+  return WORKSHOP_COLORS[Math.floor(Math.random() * WORKSHOP_COLORS.length)];
+}
+
+// Curated set of cheerful, everyday emojis for new-workshop defaults.
+// Vehicles, fruit/food, space & stars, nature, friendly animals, fun objects.
+// Deliberately no flags, faces, or anything that could read as loaded.
+export const WORKSHOP_EMOJIS: string[] = [
+  // Vehicles & travel
+  '🚀', '🚗', '🚙', '🚌', '🚲', '🛵', '🏍️', '✈️', '🚁', '⛵', '🚤', '🚂', '🚜', '🛸', '🪂', '🎈',
+  // Fruit & food
+  '🍎', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍒', '🍑', '🥭', '🍍', '🥝', '🥑', '🌽', '🥕', '🍄', '🍕', '🌮', '🍔', '🍦', '🍩', '🍪', '🎂', '🍫', '🍿',
+  // Space, sky & weather
+  '⭐', '🌟', '✨', '🌙', '☀️', '🌈', '⚡', '🔥', '❄️', '🌊', '☁️', '🪐', '🌍',
+  // Nature & plants
+  '🌸', '🌻', '🌵', '🌴', '🍀', '🌲', '🍁', '🌷', '🌺',
+  // Friendly animals
+  '🐶', '🐱', '🦊', '🐻', '🐼', '🐸', '🐝', '🦋', '🐢', '🐙', '🐳', '🦁', '🦉', '🦄', '🐬',
+  // Fun objects
+  '🎁', '🎨', '🎸', '🎯', '🧩', '🔑', '💡', '🔮', '🎲', '🧭', '📦', '⚓', '🪁', '🎪', '🏆', '💎', '🔔', '🧲',
+];
+
+/** Returns a random emoji from the curated set (used as the new-workshop default) */
+export function getRandomWorkshopEmoji(): string {
+  return WORKSHOP_EMOJIS[Math.floor(Math.random() * WORKSHOP_EMOJIS.length)];
+}
