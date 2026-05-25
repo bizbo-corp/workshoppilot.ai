@@ -20,8 +20,8 @@ import {
   Rocket,
   CheckCircle2,
   FileCode2,
-  Minimize2,
-  Maximize2,
+  PanelLeftClose,
+  PanelLeftOpen,
   MessageSquare,
   UserPlus,
   X,
@@ -53,6 +53,8 @@ import {
 import { STEP_CANVAS_CONFIGS } from "@/lib/canvas/step-canvas-config";
 import { fireConfetti } from "@/lib/utils/confetti";
 import { cn } from "@/lib/utils";
+import { FACILITATOR } from "@/lib/ai/facilitator";
+import { getWorkshopColor } from "@/lib/workshop/workshop-appearance";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -128,6 +130,7 @@ interface StepContainerProps {
   sessionId: string;
   workshopId: string;
   workshopType?: "solo" | "multiplayer";
+  workshopColor?: string | null;
   initialMessages?: UIMessage[];
   initialArtifact?: Record<string, unknown> | null;
   stepStatus?:
@@ -182,6 +185,7 @@ export function StepContainer({
   sessionId,
   workshopId,
   workshopType,
+  workshopColor,
   initialMessages,
   initialArtifact,
   stepStatus,
@@ -1346,17 +1350,20 @@ export function StepContainer({
       {!isMobile && (
         <div className="flex items-center justify-between border-b px-3 py-2.5">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-              AI
+            <div
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base leading-none"
+              style={{ backgroundColor: getWorkshopColor(workshopColor).bgHex }}
+            >
+              {FACILITATOR.emoji}
             </div>
-            <span className="text-sm font-medium">Workshop Pilot</span>
+            <span className="text-sm font-medium">{FACILITATOR.name}</span>
           </div>
           <button
             onClick={() => setChatCollapsed(true)}
             className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            title="Minimize chat"
+            title="Collapse chat"
           >
-            <Minimize2 className="h-4 w-4" />
+            <PanelLeftClose className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -1690,17 +1697,20 @@ export function StepContainer({
             )}
           >
             {chatCollapsed && (
-              /* Thin rail — AI avatar + expand button */
+              /* Thin rail — facilitator avatar + expand button */
               <div className="flex flex-col items-center gap-2 py-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-                  AI
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-base leading-none"
+                  style={{ backgroundColor: getWorkshopColor(workshopColor).bgHex }}
+                >
+                  {FACILITATOR.emoji}
                 </div>
                 <button
                   onClick={() => setChatCollapsed(false)}
                   className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   title="Expand chat"
                 >
-                  <Maximize2 className="h-4 w-4" />
+                  <PanelLeftOpen className="h-4 w-4" />
                 </button>
               </div>
             )}

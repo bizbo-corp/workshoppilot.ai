@@ -1235,6 +1235,7 @@ export default async function StepPage({ params }: StepPageProps) {
               sessionId={sessionId}
               workshopId={session.workshop.id}
               workshopType={session.workshop.workshopType}
+              workshopColor={session.workshop.color}
               initialMessages={initialMessages}
               initialArtifact={initialArtifact}
               stepStatus={stepRecord?.status}
@@ -1271,6 +1272,7 @@ export default async function StepPage({ params }: StepPageProps) {
             stepOrder={stepNumber}
             sessionId={sessionId}
             workshopId={session.workshop.id}
+            workshopColor={session.workshop.color}
             initialMessages={initialMessages}
             initialArtifact={initialArtifact}
             stepStatus={stepRecord?.status}
