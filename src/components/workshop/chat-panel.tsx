@@ -55,6 +55,7 @@ import { computeNewNodePosition } from "@/lib/canvas/mind-map-layout";
 import { getStepCanvasConfig } from "@/lib/canvas/step-canvas-config";
 import { addCanvasItemsToBoard } from "@/lib/canvas/add-canvas-items";
 import { saveCanvasState, savePersonaCandidates, loadCanvasState } from "@/actions/canvas-actions";
+import { sendResearchReminders } from "@/actions/research-actions";
 import { ChatSkeleton } from "./chat-skeleton";
 import { ResearchUploadDialog } from "./research-upload-dialog";
 import { FieldworkRoster } from "./fieldwork-roster";
@@ -4036,7 +4037,24 @@ export function ChatPanel({
                     ) : (
                       <div className="mx-auto max-w-sm space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
                         <FieldworkRoster submissions={fieldworkSubmissions} />
-                        <div className="text-center">
+                        <div className="flex flex-wrap justify-center gap-2">
+                          <button
+                            onClick={async () => {
+                              const res = await sendResearchReminders(workshopId);
+                              if (res.success) {
+                                toast.success(
+                                  res.sent
+                                    ? `Reminder sent to ${res.sent} ${res.sent === 1 ? "person" : "people"}.`
+                                    : "Everyone's already submitted — no reminders needed.",
+                                );
+                              } else {
+                                toast.error(res.error || "Couldn't send reminders.");
+                              }
+                            }}
+                            className="inline-flex items-center gap-2 rounded-full border border-olive-300 bg-card px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-all hover:bg-olive-50 hover:text-foreground dark:border-neutral-olive-700 dark:bg-neutral-olive-800 dark:hover:bg-neutral-olive-700"
+                          >
+                            Remind stragglers
+                          </button>
                           <button
                             onClick={async () => {
                               setFieldworkOpen(false);
