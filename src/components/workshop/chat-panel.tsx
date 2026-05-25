@@ -3383,10 +3383,7 @@ export function ChatPanel({
                                           }}
                                           className="cursor-pointer rounded-xl border border-olive-300 bg-card p-4 text-left shadow-sm transition-all hover:border-olive-500 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:border-olive-500"
                                         >
-                                          <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                                            {option.id === "upload" && (
-                                              <FileText className="h-4 w-4 text-olive-600 dark:text-olive-400" />
-                                            )}
+                                          <span className="text-sm font-semibold text-foreground">
                                             {option.label}
                                           </span>
                                           {option.description && (
@@ -3767,6 +3764,12 @@ export function ChatPanel({
                   {/* Suggestion pills — inline after last AI response (non-interview mode) */}
                   {suggestions.length > 0 &&
                     !(step.id === "user-research" && personaSelectConfirmed) &&
+                    // While the interview-mode or research-source fork cards are
+                    // on screen and unanswered, those cards ARE the choices —
+                    // suppress duplicate suggestion pills if the AI also emitted a
+                    // [SUGGESTIONS] block.
+                    !(interviewModeMessageId && !interviewMode) &&
+                    !(researchSourceMessageId && !researchSourceChosen) &&
                     (() => {
                       // Separate "Next" suggestion from others for journey mapping
                       const isNextSuggestion = (s: string) =>
