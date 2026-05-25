@@ -8,6 +8,7 @@ import ReactMarkdown from "react-markdown";
 import { Send, Loader2, Sparkles, FileText, CheckCircle2 } from "lucide-react";
 import { PersonaInterrupt } from "./persona-interrupt";
 import { ResearchUploadDialog } from "./research-upload-dialog";
+import { FieldworkRoster } from "./fieldwork-roster";
 import { isPersonaCardForCluster } from "@/lib/canvas/canvas-position";
 import type { ContributionType } from "@/lib/ai/prompts/research-analysis-prompts";
 import { getStepByOrder } from "@/lib/workshop/step-metadata";
@@ -177,6 +178,10 @@ export function ParticipantChatPanel({
   const storeApi = useCanvasStoreApi();
   const confirmPreviewsByOwner = useCanvasStore((s) => s.confirmPreviewsByOwner);
   const rejectPreviewsByOwner = useCanvasStore((s) => s.rejectPreviewsByOwner);
+  const fieldworkOpen = useCanvasStore((s) => s.fieldworkOpen);
+  const fieldworkSubmissions = useCanvasStore((s) => s.fieldworkSubmissions);
+  const setFieldworkSubmission = useCanvasStore((s) => s.setFieldworkSubmission);
+  const hasSubmittedResearch = !!fieldworkSubmissions[participantId];
   // Participant research contribution (Step 3): paste/upload → preview (owned) → confirm.
   const [uploadOpen, setUploadOpen] = React.useState(false);
   const [analyzingResearch, setAnalyzingResearch] = React.useState(false);
@@ -1354,16 +1359,45 @@ export function ParticipantChatPanel({
       {/* Input area — match facilitator */}
       <div className="shrink-0 border-t bg-background/20 p-4">
         {stepId === "user-research" && interviewMode === "real" && (
-          <div className="mb-2 flex justify-start">
-            <button
-              type="button"
-              onClick={() => setUploadOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-xs font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 dark:border-neutral-olive-700 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
-            >
-              <FileText className="h-3.5 w-3.5" />
-              Add your research
-            </button>
-          </div>
+          <>
+            {fieldworkOpen && (
+              <div className="mb-2">
+                <FieldworkRoster submissions={fieldworkSubmissions} />
+              </div>
+            )}
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setUploadOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-xs font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 dark:border-neutral-olive-700 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Add your research
+              </button>
+              {fieldworkOpen && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFieldworkSubmission(
+                      participantId,
+                      hasSubmittedResearch
+                        ? null
+                        : { name: displayName, color: participantColor, submittedAt: Date.now() },
+                    )
+                  }
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium shadow-sm transition-all",
+                    hasSubmittedResearch
+                      ? "bg-olive-700 text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
+                      : "border border-olive-300 bg-card text-olive-800 hover:bg-olive-100 dark:border-neutral-olive-700 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700",
+                  )}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {hasSubmittedResearch ? "Research submitted" : "Mark my research done"}
+                </button>
+              )}
+            </div>
+          </>
         )}
         <form onSubmit={(e) => { e.preventDefault(); handleSend(inputValue); }} className="flex gap-2">
           <TextareaAutosize

@@ -17,6 +17,7 @@ import {
   Rocket,
   RefreshCw,
   FileText,
+  Users,
 } from "lucide-react";
 import { PersonaInterrupt } from "./persona-interrupt";
 import { getStepByOrder } from "@/lib/workshop/step-metadata";
@@ -56,6 +57,7 @@ import { addCanvasItemsToBoard } from "@/lib/canvas/add-canvas-items";
 import { saveCanvasState, savePersonaCandidates, loadCanvasState } from "@/actions/canvas-actions";
 import { ChatSkeleton } from "./chat-skeleton";
 import { ResearchUploadDialog } from "./research-upload-dialog";
+import { FieldworkRoster } from "./fieldwork-roster";
 import type { ContributionType } from "@/lib/ai/prompts/research-analysis-prompts";
 import { isPersonaCardForCluster } from "@/lib/canvas/canvas-position";
 import { parsePersonaSelect, detectPersonaIntro } from "@/lib/chat/parse-utils";
@@ -889,6 +891,9 @@ export function ChatPanel({
   const setCluster = useCanvasStore((state) => state.setCluster);
   const confirmAllPreviews = useCanvasStore((state) => state.confirmAllPreviews);
   const rejectAllPreviews = useCanvasStore((state) => state.rejectAllPreviews);
+  const fieldworkOpen = useCanvasStore((state) => state.fieldworkOpen);
+  const fieldworkSubmissions = useCanvasStore((state) => state.fieldworkSubmissions);
+  const setFieldworkOpen = useCanvasStore((state) => state.setFieldworkOpen);
   const batchUpdatePositions = useCanvasStore(
     (state) => state.batchUpdatePositions,
   );
@@ -4002,10 +4007,66 @@ export function ChatPanel({
                     </div>
                   )}
 
-                  {/* Real interviews: "I'm ready to compile" button — only once
+                  {/* Multiplayer Fieldwork: open an async research window, watch the
+                      roster, then close & synthesize. Replaces the solo compile button. */}
+                  {step.id === "user-research" &&
+                    isMultiplayer &&
+                    interviewMode === "real" &&
+                    !readyToCompile &&
+                    !pendingResearch &&
+                    status === "ready" &&
+                    (!fieldworkOpen ? (
+                      <div className="mx-auto max-w-sm rounded-xl border border-olive-200 bg-olive-50/60 p-4 text-center dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Ready for the team to go interview? Open fieldwork so
+                          everyone can add their research on their own time — even
+                          across days.
+                        </p>
+                        <button
+                          onClick={async () => {
+                            setFieldworkOpen(true);
+                            await flushCanvasToDb();
+                          }}
+                          className="inline-flex items-center gap-2 rounded-full bg-olive-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
+                        >
+                          <Users className="h-3.5 w-3.5" />
+                          Open fieldwork
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mx-auto max-w-sm space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <FieldworkRoster submissions={fieldworkSubmissions} />
+                        <div className="text-center">
+                          <button
+                            onClick={async () => {
+                              setFieldworkOpen(false);
+                              setReadyToCompile(true);
+                              setQuickAck(getRandomAck());
+                              await flushCanvasToDb();
+                              sendMessage({
+                                role: "user",
+                                parts: [
+                                  {
+                                    type: "text",
+                                    text: "[COMPILE_READY] Fieldwork is closed — please compile everyone's research insights.",
+                                  },
+                                ],
+                              });
+                            }}
+                            className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Close fieldwork &amp; synthesize
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                  {/* Solo real interviews: "I'm ready to compile" button — only once
                       actual research is on the board, so it can't be triggered
                       while the user is still out conducting interviews. */}
                   {step.id === "user-research" &&
+                    !isMultiplayer &&
                     interviewMode === "real" &&
                     hasRealResearchInsights &&
                     !readyToCompile &&

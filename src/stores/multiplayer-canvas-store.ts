@@ -37,6 +37,7 @@ import type {
   MindMapNodeState,
   MindMapEdgeState,
   IdeationPhase,
+  FieldworkSubmission,
 } from './canvas-store';
 import { getCellBounds } from '@/lib/canvas/grid-layout';
 import type { GridConfig } from '@/lib/canvas/grid-layout';
@@ -109,6 +110,8 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
     conceptActivityStarted: initState?.conceptActivityStarted || false,
     interviewMode: initState?.interviewMode ?? null,
     journeyPoll: initState?.journeyPoll ?? null,
+    fieldworkOpen: false,
+    fieldworkSubmissions: {},
   };
 
   return createStore<WithLiveblocks<CanvasStore>>()(
@@ -850,6 +853,17 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
           set(() => ({ conceptActivityStarted: started })),
         setInterviewMode: (mode) =>
           set(() => ({ interviewMode: mode })),
+
+        setFieldworkOpen: (open) =>
+          set(() => ({ fieldworkOpen: open })),
+
+        setFieldworkSubmission: (participantId, submission) =>
+          set((state) => {
+            const next = { ...state.fieldworkSubmissions };
+            if (submission) next[participantId] = submission;
+            else delete next[participantId];
+            return { fieldworkSubmissions: next };
+          }),
         openJourneyPoll: (options) =>
           set(() => ({
             journeyPoll: {
@@ -927,6 +941,11 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
           // live vote tallies and the locked-template state. Mirrors how
           // dotVotes/votingSession persist for the step-8 voting flow.
           journeyPoll: true,
+          // Fieldwork (Step 3 async research): the open flag + per-participant
+          // submitted roster sync via Storage so everyone sees live status and it
+          // survives reloads / multi-day pauses.
+          fieldworkOpen: true,
+          fieldworkSubmissions: true,
         },
         // presenceMapping: omitted — Presence (cursor, color, displayName) is managed
         // directly via useUpdateMyPresence() in Phase 56. No Zustand fields map to Presence.
