@@ -946,6 +946,12 @@ export function ChatPanel({
   const setPendingHmwManualComplete = useCanvasStore(
     (state) => state.setPendingHmwManualComplete,
   );
+  const pendingSetupGenerate = useCanvasStore(
+    (state) => state.pendingSetupGenerate,
+  );
+  const setPendingSetupGenerate = useCanvasStore(
+    (state) => state.setPendingSetupGenerate,
+  );
   const pendingHmwFieldFocus = useCanvasStore(
     (state) => state.pendingHmwFieldFocus,
   );
@@ -2738,6 +2744,37 @@ export function ChatPanel({
     pendingHmwManualComplete,
     isLoading,
     setPendingHmwManualComplete,
+    flushCanvasToDb,
+    sendMessage,
+  ]);
+
+  // Step 1 "I'm done" → ask Wanda to draft the challenge statement from the
+  // board. Routes into the 01_challenge prompt's "Read the board" handler,
+  // which synthesizes and emits [CANVAS_ITEM key="challenge-statement"].
+  React.useEffect(() => {
+    if (!pendingSetupGenerate || isLoading) return;
+    if (step.id !== "challenge") {
+      setPendingSetupGenerate(false);
+      return;
+    }
+    setPendingSetupGenerate(false);
+    setQuickAck(getRandomAck());
+    (async () => {
+      try {
+        await flushCanvasToDb();
+        sendMessage({
+          role: "user",
+          parts: [{ type: "text", text: "Read the board and continue" }],
+        });
+      } catch (err) {
+        console.error("Failed to send setup-generate trigger:", err);
+      }
+    })();
+  }, [
+    pendingSetupGenerate,
+    isLoading,
+    step.id,
+    setPendingSetupGenerate,
     flushCanvasToDb,
     sendMessage,
   ]);
