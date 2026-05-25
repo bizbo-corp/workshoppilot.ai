@@ -29,6 +29,9 @@ blob-report/
 *.pem
 notepad.md
 
+# editor
+.vscode/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
