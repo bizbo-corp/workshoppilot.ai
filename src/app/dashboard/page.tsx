@@ -81,6 +81,7 @@ export default async function DashboardPage() {
         limit: 1,
       },
       steps: {
+        columns: { stepId: true, status: true, createdAt: true },
         orderBy: (workshopSteps, { asc }) => [asc(workshopSteps.createdAt)],
       },
     },
