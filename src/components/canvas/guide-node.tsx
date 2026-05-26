@@ -267,6 +267,10 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
   const isImage = guide.variant === 'image';
   const isCard = guide.variant === 'card';
   const hasColor = !!guide.color;
+  // Titled cards are artifact headers (e.g. "Research Insights") pinned top-left.
+  // They render bare with a large serif heading, matching the workshop-setup hero.
+  // Untitled cards are instructional hint bubbles that keep their card background.
+  const isHeader = isCard && !!guide.title;
 
   return (
     <div
@@ -277,22 +281,24 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
         guide.isExiting
           ? 'animate-out fade-out-0 zoom-out-95 duration-200 fill-mode-forwards'
           : 'animate-in fade-in-0 zoom-in-95 duration-300',
-        // Card variant — shared shape
-        isCard && 'rounded-xl px-4 py-3 backdrop-blur-sm',
+        // Hint-bubble cards (no title) — rounded chrome + background for legibility
+        isCard && !isHeader && 'rounded-xl px-4 py-3 backdrop-blur-sm',
         // Default (no color): olive/sage semi-transparent, theme text colors
-        isCard && !hasColor && [
+        isCard && !isHeader && !hasColor && [
           'bg-olive-100/70 dark:bg-olive-900/70',
           'text-foreground',
           'shadow-sm',
         ],
         // With color: tinted semi-transparent, theme text colors
-        isCard && hasColor && 'shadow-sm backdrop-blur-sm text-foreground',
+        isCard && !isHeader && hasColor && 'shadow-sm backdrop-blur-sm text-foreground',
+        // Titled artifact headers — bare, no background (matches workshop-setup hero)
+        isCard && isHeader && 'text-foreground',
         isImage && 'p-0',
         // Admin selection indicator
         guide.isAdminEditing && 'ring-1 ring-olive-400',
         guide.isAdmin && selected && 'ring-2 ring-selection ring-offset-1',
       )}
-      style={(isCard && hasColor) ? {
+      style={(isCard && !isHeader && hasColor) ? {
         backgroundColor: `${guide.color}cc`,
       } : undefined}
     >
@@ -348,11 +354,16 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
       ) : (
         <div className="min-w-0">
           {guide.title && (
-            <p className="text-base font-bold leading-tight mb-1">
+            <p className="font-serif text-3xl leading-[1.1] tracking-tight text-foreground mb-1.5">
               {guide.title}
             </p>
           )}
-          <div className="prose prose-sm max-w-none [&_p]:m-0 [&_p]:leading-snug [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0 text-foreground/80 [&_strong]:text-foreground [&_strong]:font-bold">
+          <div className={cn(
+            'prose prose-sm max-w-none [&_p]:m-0 [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0',
+            isHeader
+              ? '[&_p]:leading-relaxed text-muted-foreground [&_strong]:text-foreground [&_strong]:font-semibold'
+              : '[&_p]:leading-snug text-foreground/80 [&_strong]:text-foreground [&_strong]:font-bold',
+          )}>
             <ReactMarkdown rehypePlugins={[rehypeRaw]}>{guide.body}</ReactMarkdown>
           </div>
         </div>

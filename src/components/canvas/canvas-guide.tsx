@@ -49,6 +49,10 @@ export function CanvasGuide({ guide, onDismiss, isExiting, isAdminEditing, onEdi
   const isImage = guide.variant === 'image';
   const isCard = guide.variant === 'card';
   const hasColor = !!guide.color;
+  // Titled cards are artifact headers (e.g. "User Research") pinned top-left.
+  // They render bare with a large serif heading, matching the workshop-setup hero.
+  // Untitled cards are instructional hint bubbles that keep their card background.
+  const isHeader = isCard && !!guide.title;
   // Prefer explicit prop, fall back to server-joined data on the guide
   const asset = linkedAssetProp ?? guide.linkedAsset;
 
@@ -57,24 +61,27 @@ export function CanvasGuide({ guide, onDismiss, isExiting, isAdminEditing, onEdi
   return (
     <div
       className={cn(
-        'absolute pointer-events-auto max-w-xs group/guide',
+        'absolute pointer-events-auto group/guide',
+        isHeader ? 'max-w-sm' : 'max-w-xs',
         positionClass,
         // Entry/exit animations
         isExiting
           ? 'animate-out fade-out-0 zoom-out-95 duration-200 fill-mode-forwards'
           : 'animate-in fade-in-0 zoom-in-95 duration-300',
-        // Card variant — semi-transparent with backdrop blur
-        isCard && 'rounded-xl px-4 py-3 backdrop-blur-sm',
-        isCard && !hasColor && [
+        // Hint-bubble cards (no title) — rounded chrome + background for legibility
+        isCard && !isHeader && 'rounded-xl px-4 py-3 backdrop-blur-sm',
+        isCard && !isHeader && !hasColor && [
           'bg-olive-100/70 dark:bg-olive-900/70',
           'text-foreground',
           'shadow-sm',
         ],
-        isCard && hasColor && 'shadow-sm text-foreground',
+        isCard && !isHeader && hasColor && 'shadow-sm text-foreground',
+        // Titled artifact headers — bare, no background (matches workshop-setup hero)
+        isCard && isHeader && 'text-foreground',
         // Image variant: transparent, no bg/border/shadow
         isImage && 'p-0',
       )}
-      style={(isCard && hasColor) ? {
+      style={(isCard && !isHeader && hasColor) ? {
         backgroundColor: `${guide.color}cc`,
       } : undefined}
     >
@@ -129,11 +136,16 @@ export function CanvasGuide({ guide, onDismiss, isExiting, isAdminEditing, onEdi
       ) : (
         <div className="min-w-0">
           {guide.title && (
-            <p className="text-base font-bold leading-tight mb-1">
+            <p className="font-serif text-3xl leading-[1.1] tracking-tight text-foreground mb-1.5">
               {guide.title}
             </p>
           )}
-          <div className="prose prose-sm max-w-none [&_p]:m-0 [&_p]:leading-snug [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0 text-foreground/80">
+          <div className={cn(
+            'prose prose-sm max-w-none [&_p]:m-0 [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0',
+            isHeader
+              ? '[&_p]:leading-relaxed text-muted-foreground [&_strong]:text-foreground [&_strong]:font-semibold'
+              : '[&_p]:leading-snug text-foreground/80',
+          )}>
             <ReactMarkdown rehypePlugins={[rehypeRaw]}>{guide.body}</ReactMarkdown>
           </div>
         </div>
