@@ -95,21 +95,54 @@ const STEP_INITIAL_GREETINGS: Record<string, string> = {
     "Time to map the journey! 🗺️ We're going to walk in your persona's shoes and trace their current experience — every action, emotion, and friction point. I'm pulling together what we've learned so far to recommend the best journey template...",
 };
 
-/** Client-side quick acknowledgments shown instantly while AI thinks (before streaming begins) */
-const QUICK_ACKS = [
-  "On it! 🚀",
-  "Love it, let me work with that. 💡",
-  "Great pick! 🔥",
-  "Give me a sec to pull this together. 🧠",
-  "Roger that! 🫡",
-  "Perfect, let me build this out. 🏗️",
-  "Nice — working on it... 💡",
-  "Got it — let me think about this. 🧠",
-  "Ooh, good one. Let me dig in. 🔍",
+/** Rotating "thinking" phrases shown in sage while the AI works, before streaming begins. */
+const THINKING_PHRASES = [
+  "Contemplating…",
+  "Considering the options…",
+  "Connecting the dots…",
+  "Mulling it over…",
+  "Pondering…",
+  "Mapping it out…",
+  "Gathering my thoughts…",
+  "Weighing the possibilities…",
+  "Sketching this out…",
+  "Thinking it through…",
+  "Untangling the threads…",
+  "Synthesizing…",
+  "Percolating…",
+  "Lining up the pieces…",
+  "Working the angles…",
 ];
 
-function getRandomAck() {
-  return QUICK_ACKS[Math.floor(Math.random() * QUICK_ACKS.length)];
+/**
+ * Sage "thinking" indicator: rotates through THINKING_PHRASES every ~1.8s while
+ * mounted, fading between phrases. Mounted only during the `submitted` window,
+ * so it unmounts (and disappears) the moment the real response streams in.
+ */
+function ThinkingIndicator() {
+  // Random start so it doesn't always open on the same phrase.
+  const [i, setI] = React.useState(() =>
+    Math.floor(Math.random() * THINKING_PHRASES.length),
+  );
+  React.useEffect(() => {
+    const id = setInterval(
+      () => setI((n) => (n + 1) % THINKING_PHRASES.length),
+      1800,
+    );
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="flex items-start">
+      <div className="flex-1">
+        <div
+          key={i}
+          className="text-base text-olive-500 dark:text-olive-300 animate-in fade-in duration-500"
+        >
+          {THINKING_PHRASES[i]}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -971,7 +1004,6 @@ export function ChatPanel({
     retryAfter: number;
   } | null>(null);
   const [streamError, setStreamError] = React.useState(false);
-  const [quickAck, setQuickAck] = React.useState<string | null>(null);
   const [addedMessageIds, setAddedMessageIds] = React.useState<Set<string>>(
     () => new Set(),
   );
@@ -1487,7 +1519,6 @@ export function ChatPanel({
     await flushCanvasToDb();
     if (storeApi.getState().interviewMode === "real") {
       setReadyToCompile(true);
-      setQuickAck(getRandomAck());
       sendMessage({
         role: "user",
         parts: [
@@ -2693,7 +2724,6 @@ export function ChatPanel({
     };
     const fieldLabel = fieldLabels[field] || field;
 
-    setQuickAck(getRandomAck());
 
     (async () => {
       try {
@@ -2718,7 +2748,6 @@ export function ChatPanel({
   React.useEffect(() => {
     if (!pendingHmwManualComplete || isLoading) return;
     setPendingHmwManualComplete(null);
-    setQuickAck(getRandomAck());
     (async () => {
       try {
         await flushCanvasToDb();
@@ -2768,7 +2797,6 @@ export function ChatPanel({
     };
     const fieldLabel = fieldLabels[field] || field;
 
-    setQuickAck(getRandomAck());
     (async () => {
       try {
         await flushCanvasToDb();
@@ -2944,7 +2972,6 @@ export function ChatPanel({
     if (!inputValue.trim() || isLoading) return;
 
     // Show instant acknowledgment while AI thinks
-    setQuickAck(getRandomAck());
 
     // Flush canvas to DB so the AI sees the latest board state
     await flushCanvasToDb();
@@ -3357,7 +3384,6 @@ export function ChatPanel({
                                             // below pushes the same flip to other clients.
                                             persistInterviewMode(option.id);
                                             onInterviewModeBroadcast?.(option.id);
-                                            setQuickAck(getRandomAck());
                                             await flushCanvasToDb();
                                             sendMessage({
                                               role: "user",
@@ -3412,7 +3438,6 @@ export function ChatPanel({
                                             // so it can't be triggered before the user has
                                             // gathered anything.
                                             setResearchSourceChosen(true);
-                                            setQuickAck(getRandomAck());
                                             sendMessage({
                                               role: "user",
                                               parts: [
@@ -3611,7 +3636,6 @@ export function ChatPanel({
                                             updateStickyNote,
                                           });
                                           setPersonaSelectConfirmed(true);
-                                          setQuickAck(getRandomAck());
                                           await flushCanvasToDb();
                                           // Save structured persona candidates for Step 5 pre-seeding
                                           const candidatesToSave = selectedNames.map((personaName) => {
@@ -3646,25 +3670,8 @@ export function ChatPanel({
                       );
                     })}
 
-                  {/* Typing indicator — quick ack + thinking status */}
-                  {status === "submitted" && (
-                    <>
-                      {quickAck && (
-                        <div className="flex items-start">
-                          <div className="flex-1">
-                            <div className="text-base">{quickAck}</div>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-start">
-                        <div className="flex-1">
-                          <div className="text-base text-muted-foreground">
-                            AI is thinking...
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  {/* Typing indicator — rotating sage "thinking" phrase */}
+                  {status === "submitted" && <ThinkingIndicator />}
 
                   {/* Stream error recovery */}
                   {streamError && !isLoading && (
@@ -3688,7 +3695,6 @@ export function ChatPanel({
                                   setMessages(messages.slice(0, -1));
                                 }
                                 // Resend last user message
-                                setQuickAck(getRandomAck());
                                 sendMessage({
                                   role: "user",
                                   parts: lastUserMsg.parts || [],
@@ -3724,7 +3730,6 @@ export function ChatPanel({
                                 onClick={async () => {
                                   setSuggestions([]);
                                   setSuggestionsExpanded(false);
-                                  setQuickAck(getRandomAck());
                                   await flushCanvasToDb();
                                   sendMessage({
                                     role: "user",
@@ -3747,7 +3752,6 @@ export function ChatPanel({
                             <button
                               disabled={isLoading}
                               onClick={async () => {
-                                setQuickAck(getRandomAck());
                                 await flushCanvasToDb();
                                 sendMessage({
                                   role: "user",
@@ -3865,7 +3869,6 @@ export function ChatPanel({
                                   disabled={isLoading}
                                   onClick={async () => {
                                     setSuggestions([]);
-                                    setQuickAck(getRandomAck());
                                     await flushCanvasToDb();
                                     sendMessage({
                                       role: "user",
@@ -3889,7 +3892,6 @@ export function ChatPanel({
                               disabled={isLoading}
                               onClick={async () => {
                                 setSuggestions([]);
-                                setQuickAck(getRandomAck());
                                 await flushCanvasToDb();
                                 sendMessage({
                                   role: "user",
@@ -3912,7 +3914,6 @@ export function ChatPanel({
                               disabled={isLoading}
                               onClick={async () => {
                                 setSuggestions([]);
-                                setQuickAck(getRandomAck());
                                 await flushCanvasToDb();
                                 sendMessage({
                                   role: "user",
@@ -3953,7 +3954,6 @@ export function ChatPanel({
                         <button
                           disabled={isLoading}
                           onClick={async () => {
-                            setQuickAck(getRandomAck());
                             await flushCanvasToDb();
                             sendMessage({
                               role: "user",
@@ -4076,7 +4076,6 @@ export function ChatPanel({
                               onClick={async () => {
                                 setFieldworkOpen(false);
                                 setReadyToCompile(true);
-                                setQuickAck(getRandomAck());
                                 await flushCanvasToDb();
                                 sendMessage({
                                   role: "user",
@@ -4124,7 +4123,6 @@ export function ChatPanel({
                           disabled={isLoading}
                           onClick={async () => {
                             setReadyToCompile(true);
-                            setQuickAck(getRandomAck());
                             await flushCanvasToDb();
                             sendMessage({
                               role: "user",
@@ -4288,7 +4286,6 @@ export function ChatPanel({
                             stickyNotes: [],
                           });
                           state.markClean();
-                          setQuickAck(getRandomAck());
                           sendMessage({
                             role: "user",
                             parts: [
