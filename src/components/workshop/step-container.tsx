@@ -7,6 +7,7 @@ import type { UIMessage } from "ai";
 import { ChatPanel } from "./chat-panel";
 import { ParticipantChatPanel } from "./participant-chat-panel";
 import { RightPanel } from "./right-panel";
+import { WorkshopSetup } from "./setup/workshop-setup";
 import { SynthesisBuildPackSection } from "./synthesis-summary-view";
 import { MobileTabBar } from "./mobile-tab-bar";
 import { StepNavigation } from "./step-navigation";
@@ -1614,6 +1615,17 @@ export function StepContainer({
 
   // Canvas panel renderer — shared between resizable and full-width layouts
   const renderCanvasPanel = () => {
+    // Step 1 uses a bespoke "Set up your workshop" panel instead of the free
+    // canvas. Data still lives in the sticky-note store (idea/problem/audience/
+    // challenge-statement template keys), so the AI generation + persistence
+    // machinery is unchanged — only the rendering differs.
+    if (step?.id === "challenge") {
+      return (
+        <div className="h-full relative overflow-hidden">
+          <WorkshopSetup workshopId={workshopId} workshopType={workshopType} />
+        </div>
+      );
+    }
     if (step && CANVAS_ONLY_STEPS.includes(step.id)) {
       return (
         <div className="h-full relative overflow-hidden">

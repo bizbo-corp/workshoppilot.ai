@@ -125,6 +125,10 @@ export type CanvasState = {
   pendingHmwChipSelection: PendingHmwChipSelection;
   pendingHmwFieldFocus: PendingHmwFieldFocus;
   pendingHmwManualComplete: PendingHmwManualComplete;
+  /** Step 1 (challenge): set true when the user clicks "I'm done" on the setup
+   *  panel. Watched by chat-panel, which asks the AI to draft the challenge
+   *  statement from the board, then resets it to false. Ephemeral (not synced). */
+  pendingSetupGenerate: boolean;
   activeHmwCardId: string | null;
   selectedStickyNoteIds: string[];
   votingCardPositions: Record<string, { x: number; y: number }>;
@@ -192,6 +196,7 @@ export type CanvasActions = {
   setPendingHmwChipSelection: (selection: PendingHmwChipSelection) => void;
   setPendingHmwFieldFocus: (focus: PendingHmwFieldFocus) => void;
   setPendingHmwManualComplete: (signal: PendingHmwManualComplete) => void;
+  setPendingSetupGenerate: (pending: boolean) => void;
   setActiveHmwCardId: (id: string | null) => void;
   batchUpdatePositions: (updates: Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }>) => void;
   setCluster: (ids: string[], clusterName: string) => void;
@@ -281,6 +286,7 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
     pendingHmwChipSelection: null,
     pendingHmwFieldFocus: null,
     pendingHmwManualComplete: null,
+    pendingSetupGenerate: false,
     activeHmwCardId: null,
     selectedStickyNoteIds: [],
     votingCardPositions: initState?.votingCardPositions || {},
@@ -715,6 +721,11 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
         setPendingHmwManualComplete: (signal) =>
           set(() => ({
             pendingHmwManualComplete: signal,
+          })),
+
+        setPendingSetupGenerate: (pending) =>
+          set(() => ({
+            pendingSetupGenerate: pending,
           })),
 
         setActiveHmwCardId: (id) =>
