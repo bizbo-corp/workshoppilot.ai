@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { UpgradeDialog } from '@/components/workshop/upgrade-dialog';
 import { DialogueFeedbackDialog } from '@/components/workshop/dialogue-feedback-dialog';
 import { WorktreeBadge } from '@/components/dev/worktree-badge';
+import { BreakpointIndicator } from '@/components/dev/breakpoint-indicator';
 
 interface StepNavigationProps {
   sessionId: string;
@@ -319,6 +320,7 @@ export function StepNavigation({
       {/* Right: Next button */}
       <div className="ml-auto flex items-center gap-3">
         <WorktreeBadge />
+        <BreakpointIndicator />
 
       {/* Right: Next/advance button or forward navigation */}
         {!isLastStep && stepExplicitlyConfirmed ? (

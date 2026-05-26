@@ -36,7 +36,7 @@ function getWorktreeLabel(): string {
 const WORKTREE_COLORS: Record<string, string> = {
   main: 'bg-emerald-600',
   wt1: 'bg-sky-600',
-  wt2: 'bg-orange-600',
+  wt2: 'bg-slate-600',
 };
 
 /**

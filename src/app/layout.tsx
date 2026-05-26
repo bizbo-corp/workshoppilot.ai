@@ -5,7 +5,6 @@ import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "sonner";
-import { BreakpointIndicator } from "@/components/dev/breakpoint-indicator";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -64,7 +63,6 @@ export default function RootLayout({
           <Analytics />
           <SpeedInsights />
           <Toaster richColors position="bottom-right" />
-          <BreakpointIndicator />
         </ThemeProvider>
       </body>
     </html>
