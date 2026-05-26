@@ -126,7 +126,7 @@ function seedOwner(
   ownerIndex: number = 0,
 ) {
   const state = storeApi.getState();
-  const rootLabel = challengeStatement || hmwStatement || 'How might we...?';
+  const rootLabel = challengeStatement || hmwStatement || 'Your challenge statement…';
   const rootId = `${owner.ownerId}-root`;
   // Each participant gets a unique theme color based on their index.
   // Root node uses the SAME palette color as the HMW child for visual harmony.

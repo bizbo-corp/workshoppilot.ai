@@ -51,7 +51,7 @@ const STEP_TEMPLATE_POSTITS: Record<string, TemplateStickyNoteDefinition[]> = {
     {
       key: 'challenge-statement',
       label: 'Challenge Statement',
-      placeholderText: 'How might we...?',
+      placeholderText: 'Your challenge statement…',
       color: 'green',
       position: { x: 260, y: 200 },
       width: 220,

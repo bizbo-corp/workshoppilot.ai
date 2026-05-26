@@ -422,9 +422,12 @@ export function StepContainer({
           if (p.templateKey !== 'challenge-statement') return false;
           const text = p.text.trim();
           if (text.length < 10) return false;
-          // Reject "How might we...?" / "How might we…?" / "How might we?" etc.
-          // The placeholder has no actual content after the prefix.
-          return !/^how might we[\s.…?!]*$/i.test(text);
+          // Reject bare opener stubs with no content after the prefix —
+          // "How might we...?", "What if we...?", "Imagine...", etc. The
+          // statement can open any way now, so we guard the known openers.
+          return !/^(how might we|what if we(?: could)?|imagine(?: a world where)?)[\s.…?!]*$/i.test(
+            text
+          );
         })
       : true;
 
@@ -437,6 +440,35 @@ export function StepContainer({
     allSwimLanesFilled &&
     challengeStatementFilled &&
     (allConceptCardsFilled || conceptProceedOverride);
+
+  // Lock in the current step's artifact: flip local state + persist the
+  // _confirmed flag so it survives refresh. Shared by the chat confirm button
+  // and the on-board confirm button (e.g. WorkshopSetup's challenge step).
+  const persistStepConfirmation = React.useCallback(() => {
+    setArtifactConfirmed(true);
+    if (step) {
+      const s = storeApi.getState();
+      saveCanvasState(workshopId, step.id, {
+        stickyNotes: s.stickyNotes,
+        ...(s.gridColumns.length > 0 ? { gridColumns: s.gridColumns } : {}),
+        ...(s.drawingNodes.length > 0 ? { drawingNodes: s.drawingNodes } : {}),
+        ...(s.mindMapNodes.length > 0 ? { mindMapNodes: s.mindMapNodes } : {}),
+        ...(s.mindMapEdges.length > 0 ? { mindMapEdges: s.mindMapEdges } : {}),
+        ...(s.crazy8sSlots.length > 0 ? { crazy8sSlots: s.crazy8sSlots } : {}),
+        ...(s.conceptCards.length > 0 ? { conceptCards: s.conceptCards } : {}),
+        ...(s.personaTemplates.length > 0 ? { personaTemplates: s.personaTemplates } : {}),
+        ...(s.hmwCards.length > 0 ? { hmwCards: s.hmwCards } : {}),
+        ...(s.selectedSlotIds.length > 0 ? { selectedSlotIds: s.selectedSlotIds } : {}),
+        ...(s.slotGroups.length > 0 ? { slotGroups: s.slotGroups } : {}),
+        ...(s.brainRewritingMatrices.length > 0
+          ? { brainRewritingMatrices: s.brainRewritingMatrices }
+          : {}),
+        ...(s.dotVotes.length > 0 ? { dotVotes: s.dotVotes } : {}),
+        ...(s.votingSession.status !== 'idle' ? { votingSession: s.votingSession } : {}),
+        _confirmed: true,
+      });
+    }
+  }, [step, storeApi, workshopId]);
 
   // Fire confetti when user clicks Accept (not on auto-confirm from canvas content)
   // Also fire-and-forget snapshot capture for visual reference in sidebar
@@ -1402,32 +1434,7 @@ export function StepContainer({
                 : showConfirm
             }
             onStepConfirm={
-              stepOrder === 8
-                ? ideation.handleStartCrazy8s
-                : () => {
-                    setArtifactConfirmed(true);
-                    // Persist confirmation flag so it survives page refresh
-                    if (step) {
-                      const s = storeApi.getState();
-                      saveCanvasState(workshopId, step.id, {
-                        stickyNotes: s.stickyNotes,
-                        ...(s.gridColumns.length > 0 ? { gridColumns: s.gridColumns } : {}),
-                        ...(s.drawingNodes.length > 0 ? { drawingNodes: s.drawingNodes } : {}),
-                        ...(s.mindMapNodes.length > 0 ? { mindMapNodes: s.mindMapNodes } : {}),
-                        ...(s.mindMapEdges.length > 0 ? { mindMapEdges: s.mindMapEdges } : {}),
-                        ...(s.crazy8sSlots.length > 0 ? { crazy8sSlots: s.crazy8sSlots } : {}),
-                        ...(s.conceptCards.length > 0 ? { conceptCards: s.conceptCards } : {}),
-                        ...(s.personaTemplates.length > 0 ? { personaTemplates: s.personaTemplates } : {}),
-                        ...(s.hmwCards.length > 0 ? { hmwCards: s.hmwCards } : {}),
-                        ...(s.selectedSlotIds.length > 0 ? { selectedSlotIds: s.selectedSlotIds } : {}),
-                        ...(s.slotGroups.length > 0 ? { slotGroups: s.slotGroups } : {}),
-                        ...(s.brainRewritingMatrices.length > 0 ? { brainRewritingMatrices: s.brainRewritingMatrices } : {}),
-                        ...(s.dotVotes.length > 0 ? { dotVotes: s.dotVotes } : {}),
-                        ...(s.votingSession.status !== 'idle' ? { votingSession: s.votingSession } : {}),
-                        _confirmed: true,
-                      });
-                    }
-                  }
+              stepOrder === 8 ? ideation.handleStartCrazy8s : persistStepConfirmation
             }
             onStepRevise={() => setArtifactConfirmed(false)}
             stepConfirmLabel={
@@ -1622,7 +1629,14 @@ export function StepContainer({
     if (step?.id === "challenge") {
       return (
         <div className="h-full relative overflow-hidden">
-          <WorkshopSetup workshopId={workshopId} workshopType={workshopType} />
+          <WorkshopSetup
+            workshopId={workshopId}
+            workshopType={workshopType}
+            confirmLabel={confirmLabel}
+            canConfirm={showConfirm}
+            confirmed={artifactConfirmed}
+            onConfirm={persistStepConfirmation}
+          />
         </div>
       );
     }

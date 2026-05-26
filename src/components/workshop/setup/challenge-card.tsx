@@ -22,7 +22,7 @@ function ToolButton({
       disabled={disabled}
       title={label}
       aria-label={label}
-      className="rounded-md p-1 opacity-70 transition-colors hover:bg-black/10 hover:opacity-100 disabled:opacity-40"
+      className="rounded-md p-1 opacity-70 transition-colors hover:bg-foreground/10 hover:opacity-100 disabled:opacity-40"
     >
       <Icon className="h-3.5 w-3.5" />
     </button>
@@ -54,6 +54,9 @@ export function ChallengeCard({
   onRegenerate?: () => void;
 }) {
   const hasText = value.trim().length > 0;
+  // Before anything is generated, show a faint dashed outline so it's clear
+  // this is the slot the three cards above feed into.
+  const isPlaceholder = !generating && !hasText;
   const [elaborateOpen, setElaborateOpen] = useState(false);
   const [elaborateText, setElaborateText] = useState('');
 
@@ -68,8 +71,10 @@ export function ChallengeCard({
   return (
     <div
       className={cn(
-        'group relative rounded-lg p-5 shadow-md',
-        'bg-[var(--sticky-note-green)] text-[var(--sticky-note-green-text)]',
+        'group relative rounded-lg p-5 transition-colors',
+        isPlaceholder
+          ? 'border-2 border-dashed border-border bg-card/40 text-muted-foreground'
+          : 'border border-border bg-card text-card-foreground shadow-md',
       )}
     >
       {/* Action toolbar — top-right, on hover (shown only once a challenge exists). */}
@@ -102,24 +107,31 @@ export function ChallengeCard({
         </div>
       )}
 
-      <span className="mb-3 block font-serif text-xl leading-tight tracking-tight sm:text-2xl">
+      <span className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide opacity-80">
+        <span aria-hidden>📌</span>
         Workshop Challenge
       </span>
 
       {generating ? (
-        <div className="space-y-2" aria-live="polite">
+        <div className="space-y-2.5" aria-live="polite">
           <span className="sr-only">Drafting your challenge statement…</span>
-          <span className="block h-4 w-11/12 animate-pulse rounded bg-black/10" />
-          <span className="block h-4 w-4/5 animate-pulse rounded bg-black/10" />
-          <span className="block h-4 w-2/3 animate-pulse rounded bg-black/10" />
+          <span className="block h-6 w-11/12 animate-pulse rounded bg-foreground/10" />
+          <span className="block h-6 w-4/5 animate-pulse rounded bg-foreground/10" />
+          <span className="block h-6 w-2/3 animate-pulse rounded bg-foreground/10" />
         </div>
-      ) : (
+      ) : hasText ? (
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           rows={3}
-          className="w-full resize-none bg-transparent text-lg leading-snug outline-none"
+          className="w-full resize-none bg-transparent font-serif text-xl leading-snug outline-none sm:text-2xl"
         />
+      ) : (
+        <div className="space-y-2.5" aria-hidden>
+          <span className="block h-6 w-11/12 rounded bg-foreground/10" />
+          <span className="block h-6 w-4/5 rounded bg-foreground/10" />
+          <span className="block h-6 w-2/3 rounded bg-foreground/10" />
+        </div>
       )}
 
       {/* Inline "elaborate" steer field */}

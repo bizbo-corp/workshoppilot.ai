@@ -13,6 +13,7 @@ import {
 } from '@/lib/canvas/setup-suggestions-config';
 import type { StickyNoteColor } from '@/stores/canvas-store';
 import { Button } from '@/components/ui/button';
+import { CheckCircle2 } from 'lucide-react';
 import { SetupCard } from './setup-card';
 import { SuggestionChips } from './suggestion-chips';
 import { ChallengeCard } from './challenge-card';
@@ -80,9 +81,21 @@ function toggleAudienceGroup(text: string, group: string): string {
 export function WorkshopSetup({
   workshopId,
   workshopType,
+  confirmLabel,
+  canConfirm = false,
+  confirmed = false,
+  onConfirm,
 }: {
   workshopId: string;
   workshopType?: 'solo' | 'multiplayer';
+  /** Label for the accept button, e.g. "Accept Challenge Statement". */
+  confirmLabel?: string;
+  /** Whether the challenge is ready to accept (mirrors the chat confirm gate). */
+  canConfirm?: boolean;
+  /** Whether the challenge has already been accepted. */
+  confirmed?: boolean;
+  /** Locks in the challenge — same handler the chat confirm button uses. */
+  onConfirm?: () => void;
 }) {
   const stickyNotes = useCanvasStore((s) => s.stickyNotes);
   const addStickyNote = useCanvasStore((s) => s.addStickyNote);
@@ -274,7 +287,6 @@ export function WorkshopSetup({
   // pipeline — so it returns in ~1s instead of waiting on a full streamed reply.
   const challengeExists = challengeText.trim().length > 0;
   const challengeBusy = busyField === 'challenge-statement';
-  const showChallenge = challengeBusy || challengeExists;
 
   const generateChallenge = useCallback(() => {
     setBoardAdvancedAt(Date.now());
@@ -385,22 +397,44 @@ export function WorkshopSetup({
           </p>
         </div>
 
-        {/* Generated challenge */}
-        {showChallenge && (
-          <div className="mx-auto mt-8 max-w-2xl">
-            <ChallengeCard
-              value={challengeText}
-              generating={challengeBusy && !challengeExists}
-              busy={challengeBusy && challengeExists}
-              onChange={(text) => setField('challenge-statement', text)}
-              onPolish={() => runCardAction('challenge-statement', 'polish')}
-              onElaborate={(instructions) =>
-                runCardAction('challenge-statement', 'elaborate', instructions)
-              }
-              onRegenerate={() => runCardAction('challenge-statement', 'regenerate')}
-            />
-          </div>
-        )}
+        {/* Generated challenge — always visible (spans the full width of the
+            three cards above); shows a faint placeholder until the user
+            generates, so it's clear what the cards above feed into. */}
+        <div className="mt-8">
+          <ChallengeCard
+            value={challengeText}
+            generating={challengeBusy && !challengeExists}
+            busy={challengeBusy && challengeExists}
+            onChange={(text) => setField('challenge-statement', text)}
+            onPolish={() => runCardAction('challenge-statement', 'polish')}
+            onElaborate={(instructions) =>
+              runCardAction('challenge-statement', 'elaborate', instructions)
+            }
+            onRegenerate={() => runCardAction('challenge-statement', 'regenerate')}
+          />
+
+          {/* Accept the challenge right here on the board — mirrors the confirm
+              button in the chat panel so users don't have to switch over to
+              the chat to lock it in. Shows once the statement is ready. */}
+          {confirmLabel && (confirmed || canConfirm) && (
+            <div className="mt-4 flex justify-center">
+              {confirmed ? (
+                <span className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-olive-50 px-4 py-2 text-sm font-medium text-olive-800 dark:border-olive-700 dark:bg-olive-950/30 dark:text-olive-300">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Challenge accepted
+                </span>
+              ) : (
+                <button
+                  onClick={onConfirm}
+                  className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-olive-50 px-5 py-2.5 text-sm font-medium text-olive-800 transition-colors hover:bg-olive-100 dark:border-olive-700 dark:bg-olive-950/30 dark:text-olive-300 dark:hover:bg-olive-900/40"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {confirmLabel}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

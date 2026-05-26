@@ -11,7 +11,13 @@ test('test', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Type your message...' }).click();
   await page.getByRole('textbox', { name: 'Type your message...' }).fill('Hitting goals and career progression');
   await page.getByRole('button', { name: 'Send message' }).click();
-  await page.locator('span').filter({ hasText: 'How might we equip people' }).click();
+  // The challenge statement opener now varies (How might we… / What if we could… /
+  // Imagine… / a declarative mission), so match any of them rather than a fixed string.
+  await page
+    .locator('span')
+    .filter({ hasText: /how might we|what if we|imagine a world|^make /i })
+    .first()
+    .click();
   await page.getByRole('button', { name: 'Add to Whiteboard' }).click();
   await page.getByRole('button', { name: 'Next', exact: true }).click();
   await page.goto('http://localhost:3000/workshop/ses_ht39el9rhv9rz6rrdo9cd8z6/step/2');

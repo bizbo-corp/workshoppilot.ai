@@ -30,7 +30,7 @@ export const challengeArtifactSchema = z.object({
   hmwStatement: z
     .string()
     .describe(
-      'Complete How Might We statement: How might we [action] for [who] so that [outcome]?'
+      'The complete challenge statement (the workshop north star). One short, aspirational sentence. The opener varies — it may begin with "How might we…", "What if we could…", "Imagine…", or read as a bold declarative mission.'
     ),
   altitude: z
     .enum(['specific', 'balanced', 'broad'])
