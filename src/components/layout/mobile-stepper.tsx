@@ -163,7 +163,7 @@ export function MobileStepper({
               <div
                 key={step.id}
                 className={cn(
-                  'flex items-start gap-3 rounded-lg border p-4 cursor-not-allowed opacity-50'
+                  'flex items-start gap-3 rounded-lg border p-4 cursor-not-allowed opacity-75'
                 )}
               >
                 {content}

@@ -295,7 +295,7 @@ export function WorkshopSidebar({
                       {content}
                     </Link>
                   ) : (
-                    <div className="flex items-center gap-2 cursor-not-allowed opacity-50">
+                    <div className="flex items-center gap-2 cursor-not-allowed opacity-75">
                       {content}
                     </div>
                   )}
