@@ -138,17 +138,20 @@ export default async function WorkshopLayout({
             />
           </div>
 
-          {/* Workshop header (scrolls with content) */}
-          <WorkshopHeader
-            sessionId={sessionId}
-            workshopId={session.workshop.id}
-            workshopName={session.workshop.title || 'New Workshop'}
-            workshopColor={session.workshop.color}
-            workshopEmoji={session.workshop.emoji}
-            workshopType={session.workshop.workshopType ?? 'solo'}
-            shareToken={workshopSession?.shareToken}
-            isFacilitator={isFacilitator}
-          />
+          {/* Workshop header — mobile only. On desktop the header is rendered
+              inside StepContainer's canvas column so the chat can span full height. */}
+          <div className="md:hidden">
+            <WorkshopHeader
+              sessionId={sessionId}
+              workshopId={session.workshop.id}
+              workshopName={session.workshop.title || 'New Workshop'}
+              workshopColor={session.workshop.color}
+              workshopEmoji={session.workshop.emoji}
+              workshopType={session.workshop.workshopType ?? 'solo'}
+              shareToken={workshopSession?.shareToken}
+              isFacilitator={isFacilitator}
+            />
+          </div>
 
           {/* Main content area (full width) */}
           <main className="flex-1 overflow-hidden">{children}</main>
