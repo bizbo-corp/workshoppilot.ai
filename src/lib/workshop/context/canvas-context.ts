@@ -668,19 +668,37 @@ export function assembleCanvasContextForStep(stepId: string, stickyNotes: Sticky
   if (stepId === 'challenge') {
     const templateStickyNotes = stickyNotes.filter(p => p.templateKey);
     if (templateStickyNotes.length > 0) {
-      const filled = templateStickyNotes.filter(p => p.text?.trim().length > 0);
-      const empty = templateStickyNotes.filter(p => !p.text?.trim().length);
+      // The challenge-statement card is the OUTPUT of this step, not an input.
+      // Keep it separate from the Idea/Problem/Audience inputs so the AI can tell
+      // whether the challenge has already been drafted — otherwise it lumps the
+      // finished statement in with the inputs and keeps offering to synthesize a
+      // fresh one (two-steps-behind bug, df_hi0b03ki).
+      const CHALLENGE_KEY = 'challenge-statement';
+      const inputCards = templateStickyNotes.filter(p => p.templateKey !== CHALLENGE_KEY);
+      const challengeCard = templateStickyNotes.find(p => p.templateKey === CHALLENGE_KEY);
+      const challengeDrafted = !!challengeCard?.text?.trim().length;
 
-      let result = `Template cards: ${filled.length} of ${templateStickyNotes.length} filled.`;
+      const filled = inputCards.filter(p => p.text?.trim().length > 0);
+      const empty = inputCards.filter(p => !p.text?.trim().length);
+
+      let result = `Template cards: ${filled.length} of ${inputCards.length} filled. Challenge statement: ${challengeDrafted ? 'ALREADY DRAFTED (shown below)' : 'not yet drafted'}.`;
 
       if (filled.length > 0) {
         const filledLines = filled.map(
           p => `- [${p.templateLabel || p.templateKey}]: ${p.text.trim()}`,
         );
         result += `\n\nFilled by user (treat as authoritative input):\n${filledLines.join('\n')}`;
+      }
+
+      if (challengeDrafted) {
+        // A challenge statement already exists — it is the live working artifact.
+        // Tell the AI to ACT ON IT directly rather than re-synthesizing. df_hi0b03ki.
+        result += `\n\nCurrent challenge statement (ALREADY DRAFTED — this is the live artifact on the canvas):\n- [${challengeCard!.templateLabel || 'Challenge Statement'}]: ${challengeCard!.text.trim()}`;
+        result += `\n\nDIRECTIVE: A challenge statement already exists on the canvas (shown directly above) — the synthesis step is DONE. Do NOT offer to "weave the idea and problem into a challenge statement" or ask whether to refine the inputs first; that framing is two steps behind. If the user asks you to change, shorten, sharpen, reframe, or otherwise act on the challenge, edit THAT existing statement directly and emit the revised version as [CANVAS_ITEM key="challenge-statement"]<full revised challenge sentence>[/CANVAS_ITEM]. Only fall back to synthesizing from the Idea/Problem/Audience inputs if the user explicitly asks to start the challenge over from scratch.`;
+      } else if (filled.length > 0) {
         // In-context directive — embedded with the data so the AI can't read
         // the cards and still claim emptiness. df_d3dgmx43.
-        result += `\n\nDIRECTIVE: The above cards constitute real, authoritative input from the user. The board is NOT empty. If the user asks you to read/use the board or draft a challenge statement, synthesize the FULL How-might-we sentence from the Idea/Problem/Audience content above and emit it as [CANVAS_ITEM key="challenge-statement"]<your fully-written HMW question>[/CANVAS_ITEM] — NEVER the bare literal "How might we...?" placeholder. Do not ask the user to re-state what is already shown above.`;
+        result += `\n\nDIRECTIVE: The above cards constitute real, authoritative input from the user. The board is NOT empty. If the user asks you to read/use the board or draft a challenge statement, synthesize the FULL challenge sentence from the Idea/Problem/Audience content above and emit it as [CANVAS_ITEM key="challenge-statement"]<your fully-written challenge statement>[/CANVAS_ITEM] — NEVER a bare opener like "How might we...?" placeholder. Do not ask the user to re-state what is already shown above.`;
       }
 
       if (empty.length > 0) {
