@@ -30,8 +30,6 @@ import {
   useCanvasStoreApi,
 } from "@/providers/canvas-store-provider";
 import {
-  computeCanvasPosition,
-  computeStickyNoteSize,
   computeThemeSortPositions,
   computeClusterChildPositions,
   POST_IT_WIDTH,
@@ -3004,22 +3002,6 @@ export function ChatPanel({
     }
   };
 
-  // Handle adding user message to canvas as a sticky note
-  const handleAddUserMessageToCanvas = React.useCallback(
-    (text: string) => {
-      const { position } = computeCanvasPosition(step.id, {}, stickyNotes);
-      const { width, height } = computeStickyNoteSize(text);
-      addStickyNote({
-        text,
-        position,
-        width,
-        height,
-        color: "yellow",
-      });
-    },
-    [addStickyNote, stickyNotes, step.id],
-  );
-
   return (
     <div className="flex h-full flex-col">
       {/* Messages area */}
@@ -3127,19 +3109,8 @@ export function ChatPanel({
                             className="group flex items-start justify-end"
                           >
                             <div className="max-w-[80%]">
-                              <div className="relative rounded-2xl bg-neutral-olive-50 shadow-sm dark:bg-neutral-olive-800 p-3 px-4 text-base text-foreground">
+                              <div className="relative rounded-2xl bg-neutral-olive-100 dark:bg-neutral-olive-800 p-3 px-4 text-base text-foreground">
                                 {displayContent}
-                                {isCanvasStep && (
-                                  <button
-                                    onClick={() =>
-                                      handleAddUserMessageToCanvas(content)
-                                    }
-                                    className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-1 bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                                    aria-label="Add to canvas"
-                                  >
-                                    <Plus className="h-3.5 w-3.5" />
-                                  </button>
-                                )}
                               </div>
                             </div>
                           </div>
