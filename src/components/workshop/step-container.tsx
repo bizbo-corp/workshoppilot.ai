@@ -1442,18 +1442,24 @@ export function StepContainer({
 
   // Render content section
   const renderContent = () => (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="relative flex h-full min-h-0 flex-col">
       {!isMobile && (
-        <div className="flex h-16 items-center border-b px-3">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base leading-none"
-              style={{ backgroundColor: getWorkshopColor(workshopColor).bgHex }}
-            >
-              {FACILITATOR.emoji}
-            </div>
-            <span className="text-sm font-medium">{FACILITATOR.name}</span>
+        // Frosted-glass header — sits over the scroll area so messages blur
+        // behind it as they pass under. Same olive hue as the body; soft shadow
+        // gives it a floating, neumorphic feel (no hard divider).
+        <div className="absolute inset-x-0 top-0 z-20 flex h-16 items-center gap-2.5 px-3 bg-neutral-olive-200/70 backdrop-blur-md shadow-[0_2px_12px_-6px_rgba(0,0,0,0.25)] dark:bg-neutral-olive-950/70">
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base leading-none"
+            style={{ backgroundColor: getWorkshopColor(workshopColor).bgHex }}
+          >
+            {FACILITATOR.emoji}
           </div>
+          <span className="text-sm font-medium">
+            {FACILITATOR.name} - your AI{" "}
+            {facilitatorMode === "team" || workshopType === "multiplayer"
+              ? "assistant"
+              : "facilitator"}
+          </span>
         </div>
       )}
       <div className="min-h-0 flex-1">
@@ -1468,6 +1474,7 @@ export function StepContainer({
             participantColor={effectiveColor || "#b3efbd"}
             initialMessages={localMessages}
             initialPulse={initialPulse}
+            headerInset={!isMobile}
           />
         ) : (
           <ChatPanel
@@ -1775,7 +1782,9 @@ export function StepContainer({
       <div
         style={chatCollapsed ? undefined : { width: effectiveChatWidth }}
         className={cn(
-          "relative flex shrink-0 flex-col border-r bg-neutral-olive-50 dark:bg-neutral-olive-975",
+          // Workspace stack: canvas (50/900) → chat (200/950) → sidebar (300/975).
+          // Translucent + blur gives the chat a frosted, neumorphic glass feel.
+          "relative flex shrink-0 flex-col border-r bg-neutral-olive-200/80 backdrop-blur-xl dark:bg-neutral-olive-950/80",
           chatCollapsed ? "w-14" : undefined,
           isResizingChat ? undefined : "transition-[width] duration-200"
         )}

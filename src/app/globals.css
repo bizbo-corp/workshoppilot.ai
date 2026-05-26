@@ -111,8 +111,9 @@
   --radius: 0.625rem;
   /* Selection — vibrant blue used for all canvas selection indicators */
   --selection: #2563eb;
-  /* Canvas */
-  --canvas-bg: var(--neutral-olive-100);
+  /* Canvas (light) — lightest surface of the workspace stack: canvas (50) →
+     sidebar (200) → chat (300). */
+  --canvas-bg: var(--neutral-olive-50);
   --canvas-dots: color-mix(in srgb, var(--foreground) 40%, transparent);
   --canvas-grid-line: var(--neutral-olive-300);
   --canvas-grid-line-light: var(--neutral-olive-200);
@@ -258,7 +259,8 @@
   --chart-3: rgba(22, 78, 99, 1);
   --chart-4: rgba(251, 191, 36, 1);
   --chart-5: rgba(245, 158, 11, 1);
-  --sidebar: var(--neutral-olive-100);
+  /* Workspace stack (light): canvas (50) → chat (200) → sidebar (300) */
+  --sidebar: var(--neutral-olive-300);
   --sidebar-foreground: var(--neutral-olive-950);
   --sidebar-primary: var(--neutral-olive-900);
   --sidebar-primary-foreground: var(--neutral-olive-50);
@@ -271,8 +273,8 @@
 /* Dark mode — deep green */
 .dark {
   --selection: #3b82f6;
-  /* Canvas */
-  --canvas-bg: var(--neutral-olive-950);
+  /* Canvas (dark) — workspace stack: canvas (900) → sidebar (950) → chat (975) */
+  --canvas-bg: var(--neutral-olive-900);
   --canvas-dots: color-mix(in srgb, var(--foreground) 50%, transparent);
   --canvas-grid-line: var(--neutral-olive-800);
   --canvas-grid-line-light: var(--neutral-olive-900);
@@ -368,7 +370,8 @@
   --chart-3: #f59e0b;
   --chart-4: #a855f7;
   --chart-5: #f43f5e;
-  --sidebar: var(--neutral-olive-900);
+  /* Workspace stack (dark): canvas (900) → chat (950) → sidebar (975) */
+  --sidebar: var(--neutral-olive-975);
   --sidebar-foreground: var(--neutral-olive-50);
   --sidebar-primary: var(--neutral-olive-100);
   --sidebar-primary-foreground: var(--neutral-olive-900);

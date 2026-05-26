@@ -235,7 +235,7 @@ export function WorkshopSidebar({
                     isLocked &&
                       !isComplete &&
                       !isCurrent &&
-                      "border bg-background text-muted-foreground opacity-60",
+                      "border bg-background text-muted-foreground",
                   )}
                 >
                   {isLocked ? (
@@ -252,8 +252,10 @@ export function WorkshopSidebar({
                   <span
                     className={cn(
                       "flex-1 truncate text-base",
-                      isCurrent && "font-semibold text-primary",
-                      !isCurrent && "text-foreground",
+                      // Completed = bold + full foreground; incomplete = regular @ 80%.
+                      isComplete
+                        ? "font-bold text-foreground"
+                        : "font-normal text-foreground/80",
                     )}
                   >
                     {step.name}
@@ -288,14 +290,19 @@ export function WorkshopSidebar({
                   isActive={isCurrent}
                   tooltip={state === "collapsed" ? step.name : undefined}
                   disabled={!isAccessible}
-                  className="hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
+                  className={cn(
+                    // Disabled (locked / not-started) steps stay ~90% visible.
+                    // Hover = foreground @ 24%; current step = foreground @ 20%.
+                    "transition-colors duration-150 disabled:opacity-90 hover:bg-foreground/24",
+                    isCurrent && "bg-foreground/20 data-[active=true]:bg-foreground/20",
+                  )}
                 >
                   {isAccessible ? (
                     <Link href={`/workshop/${sessionId}/step/${step.order}`}>
                       {content}
                     </Link>
                   ) : (
-                    <div className="flex items-center gap-2 cursor-not-allowed opacity-50">
+                    <div className="flex items-center gap-2 cursor-not-allowed">
                       {content}
                     </div>
                   )}
