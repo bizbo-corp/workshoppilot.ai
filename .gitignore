@@ -51,3 +51,6 @@ next-env.d.ts
 
 # per-worktree dev badge label (see src/components/dev/worktree-badge.tsx)
 .worktree-label
+
+# worktree-fleet dev tooling (local dev-server logs)
+.fleet/
