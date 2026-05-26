@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useDebouncedCallback } from 'use-debounce';
 import {
   useCanvasStore,
   useCanvasStoreApi,
@@ -45,6 +44,38 @@ const FIELD_META: Record<
 };
 
 type FilledMap = Record<SetupField, string>;
+
+/** Split an audience sentence into list items (on commas and "and"). */
+function parseAudienceList(text: string): string[] {
+  return text
+    .trim()
+    .replace(/\.+$/, '')
+    .split(/\s*,\s*|\s+and\s+/i)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** Compose audience items into a grammatical sentence (leading cap + period). */
+function formatAudienceSentence(items: string[]): string {
+  const cleaned = items.map((s) => s.trim()).filter(Boolean);
+  if (cleaned.length === 0) return '';
+  let joined: string;
+  if (cleaned.length === 1) joined = cleaned[0];
+  else if (cleaned.length === 2) joined = `${cleaned[0]} and ${cleaned[1]}`;
+  else
+    joined = `${cleaned.slice(0, -1).join(', ')} and ${cleaned[cleaned.length - 1]}`;
+  return joined.charAt(0).toUpperCase() + joined.slice(1) + '.';
+}
+
+/** Toggle a group phrase in/out of the audience list (case-insensitive). */
+function toggleAudienceGroup(text: string, group: string): string {
+  const items = parseAudienceList(text);
+  const lower = group.trim().toLowerCase();
+  const idx = items.findIndex((i) => i.toLowerCase() === lower);
+  if (idx >= 0) items.splice(idx, 1);
+  else items.push(group.trim());
+  return formatAudienceSentence(items);
+}
 
 export function WorkshopSetup({
   workshopId,
@@ -109,18 +140,39 @@ export function WorkshopSetup({
   const filledCount = FIELDS.filter((f) => values[f].trim().length > 0).length;
   const canGenerate = filledCount >= 2;
 
-  // Write a field's value back to its sticky note.
+  // Write a field's value back to its sticky note. If the template sticky is
+  // missing (e.g. a seeding race in multiplayer), create it on the spot so the
+  // user can always free-type — typed input is never silently swallowed.
   const setField = useCallback(
     (field: SetupField | 'challenge-statement', text: string) => {
       const note = storeApi
         .getState()
         .stickyNotes.find((s) => s.templateKey === field);
-      if (note) updateStickyNote(note.id, { text });
+      if (note) {
+        updateStickyNote(note.id, { text });
+        return;
+      }
+      const def = getStepTemplateStickyNotes('challenge').find(
+        (d) => d.key === field,
+      );
+      addStickyNote({
+        id: crypto.randomUUID(),
+        text,
+        position: def?.position ?? { x: 0, y: 0 },
+        width: def?.width ?? 220,
+        height: def?.height ?? 160,
+        color: def?.color ?? 'yellow',
+        type: 'stickyNote',
+        templateKey: field,
+        templateLabel: def?.label,
+        placeholderText: def?.placeholderText,
+      });
     },
-    [storeApi, updateStickyNote],
+    [storeApi, updateStickyNote, addStickyNote],
   );
 
-  // ---- Contextual suggestion chips -------------------------------------------
+  // ---- Suggestion chips ------------------------------------------------------
+  // Start with instant static "canned" suggestions (no AI call, no spinner).
   const [suggestions, setSuggestions] = useState<Record<SetupField, string[]>>(
     () => ({
       idea: getRandomStaticSuggestions('idea'),
@@ -128,47 +180,93 @@ export function WorkshopSetup({
       audience: getRandomStaticSuggestions('audience'),
     }),
   );
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  // Fields currently regenerating — only ever set by an explicit Confirm click.
+  const [regenerating, setRegenerating] = useState<Set<SetupField>>(new Set());
 
-  const refreshSuggestions = useDebouncedCallback(async () => {
-    const current = storeApi.getState().stickyNotes;
-    const filled: Partial<Record<SetupField, string>> = {};
-    for (const f of FIELDS) {
-      const v = current.find((s) => s.templateKey === f)?.text?.trim();
-      if (v) filled[f] = v;
-    }
-    // Cold start (nothing filled) keeps the static suggestions.
-    if (Object.keys(filled).length === 0) return;
-
-    setLoadingSuggestions(true);
-    try {
-      const res = await fetch('/api/ai/setup-suggestions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workshopId, filled }),
-      });
-      if (res.ok) {
-        const { data } = await res.json();
-        setSuggestions((prev) => ({
-          idea: filled.idea ? [] : data.idea?.length ? data.idea : prev.idea,
-          problem: filled.problem
-            ? []
-            : data.problem?.length
-              ? data.problem
-              : prev.problem,
-          audience: filled.audience
-            ? []
-            : data.audience?.length
-              ? data.audience
-              : prev.audience,
-        }));
+  // Regenerate suggestions for the given fields from the current board state.
+  // Triggered ONLY by the per-card Confirm button — never by typing or blur — so
+  // the user can free-type without the other cards "thinking" until they're ready.
+  const regenerateFor = useCallback(
+    async (loadingFields: SetupField[]) => {
+      if (loadingFields.length === 0) return;
+      const current = storeApi.getState().stickyNotes;
+      const filled: Partial<Record<SetupField, string>> = {};
+      for (const f of FIELDS) {
+        const v = current.find((s) => s.templateKey === f)?.text?.trim();
+        if (v) filled[f] = v;
       }
-    } catch (err) {
-      console.error('setup-suggestions fetch failed:', err);
-    } finally {
-      setLoadingSuggestions(false);
-    }
-  }, 600);
+      setRegenerating(new Set(loadingFields));
+      try {
+        const res = await fetch('/api/ai/setup-suggestions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workshopId, filled }),
+        });
+        if (res.ok) {
+          const { data } = await res.json();
+          // Keep previous chips for any field the endpoint returns empty for.
+          setSuggestions((prev) => ({
+            idea: data.idea?.length ? data.idea : prev.idea,
+            problem: data.problem?.length ? data.problem : prev.problem,
+            audience: data.audience?.length ? data.audience : prev.audience,
+          }));
+        }
+      } catch (err) {
+        console.error('setup-suggestions fetch failed:', err);
+      } finally {
+        setRegenerating(new Set());
+      }
+    },
+    [storeApi, workshopId],
+  );
+
+  // Confirm a card → regenerate suggestions for the OTHER still-empty cards.
+  const handleConfirm = useCallback(
+    (confirmedField: SetupField) => {
+      const notes = storeApi.getState().stickyNotes;
+      const targets = FIELDS.filter(
+        (f) =>
+          f !== confirmedField &&
+          (notes.find((s) => s.templateKey === f)?.text?.trim() ?? '') === '',
+      );
+      regenerateFor(targets);
+    },
+    [storeApi, regenerateFor],
+  );
+
+  // ---- Per-card actions (polish / elaborate / regenerate) --------------------
+  const [busyField, setBusyField] = useState<SetupField | null>(null);
+
+  const runCardAction = useCallback(
+    async (
+      field: SetupField,
+      action: 'polish' | 'elaborate' | 'regenerate',
+      instructions?: string,
+    ) => {
+      const currentText =
+        storeApi.getState().stickyNotes.find((s) => s.templateKey === field)
+          ?.text ?? '';
+      setBusyField(field);
+      try {
+        const res = await fetch('/api/ai/setup-card-action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workshopId, field, action, currentText, instructions }),
+        });
+        if (res.ok) {
+          const { data } = await res.json();
+          if (data?.text) setField(field, data.text);
+        } else {
+          console.error('setup-card-action failed:', await res.text());
+        }
+      } catch (err) {
+        console.error('setup-card-action error:', err);
+      } finally {
+        setBusyField(null);
+      }
+    },
+    [storeApi, workshopId, setField],
+  );
 
   // ---- Generation ------------------------------------------------------------
   const [generating, setGenerating] = useState(false);
@@ -220,6 +318,12 @@ export function WorkshopSetup({
           {FIELDS.map((field) => {
             const meta = FIELD_META[field];
             const filled = values[field].trim().length > 0;
+
+            // Audience is multi-select: pills stay visible and compose a
+            // sentence as you toggle groups on/off. Idea/problem are single-pick
+            // and their chips disappear once the card has content.
+            const isAudience = field === 'audience';
+
             return (
               <SetupCard
                 key={field}
@@ -228,19 +332,39 @@ export function WorkshopSetup({
                 label={meta.label}
                 value={values[field]}
                 placeholder={meta.placeholder}
+                busy={busyField === field}
                 onChange={(text) => setField(field, text)}
-                onCommit={refreshSuggestions}
+                onConfirm={() => handleConfirm(field)}
+                onPolish={() => runCardAction(field, 'polish')}
+                onElaborate={(instructions) =>
+                  runCardAction(field, 'elaborate', instructions)
+                }
+                onRegenerate={() => runCardAction(field, 'regenerate')}
+                onReset={() => setField(field, '')}
               >
-                {/* Chips only while the card is empty. */}
-                {!filled && (
+                {isAudience ? (
                   <SuggestionChips
-                    suggestions={suggestions[field]}
-                    loading={loadingSuggestions}
-                    onPick={(text) => {
-                      setField(field, text);
-                      refreshSuggestions();
-                    }}
+                    suggestions={suggestions.audience}
+                    loading={regenerating.has('audience')}
+                    variant="inline"
+                    label="Who's it for? Pick any that apply"
+                    selected={parseAudienceList(values.audience)}
+                    onPick={(group) =>
+                      setField(
+                        'audience',
+                        toggleAudienceGroup(values.audience, group),
+                      )
+                    }
                   />
+                ) : (
+                  !filled && (
+                    <SuggestionChips
+                      suggestions={suggestions[field]}
+                      loading={regenerating.has(field)}
+                      variant="stack"
+                      onPick={(text) => setField(field, text)}
+                    />
+                  )
                 )}
               </SetupCard>
             );

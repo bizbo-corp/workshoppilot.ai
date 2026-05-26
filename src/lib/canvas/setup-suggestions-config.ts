@@ -26,13 +26,15 @@ export const STATIC_SETUP_SUGGESTIONS: Record<SetupField, string[]> = {
     'New hires feel lost and unsupported in their first month',
     'Managing money feels stressful and confusing',
   ],
+  // Short group labels — these render as multi-select pills that compose into a
+  // sentence, so they read well both alone and combined ("Dog walkers and CEOs").
   audience: [
-    'Busy pet owners in big cities',
-    'First-time founders pitching investors',
-    'Remote freelancers and solo workers',
-    'Curious shoppers who value craft over hype',
-    'New employees at fast-growing teams',
-    'Young professionals starting to invest',
+    'Busy pet owners',
+    'Small business owners',
+    'Remote freelancers',
+    'Marketing teams',
+    'New employees',
+    'Work-from-home professionals',
   ],
 };
 

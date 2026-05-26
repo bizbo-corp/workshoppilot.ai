@@ -8,6 +8,7 @@ import { workshops, workshopSteps, stepArtifacts } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export type WorkshopContext = {
+  title?: string;
   originalIdea?: string;
   problemStatement?: string;
   hmwStatement?: string;
@@ -22,12 +23,13 @@ export async function loadWorkshopContext(workshopId: string): Promise<WorkshopC
 
   // Load workshop original idea
   const [workshop] = await db
-    .select({ originalIdea: workshops.originalIdea })
+    .select({ title: workshops.title, originalIdea: workshops.originalIdea })
     .from(workshops)
     .where(eq(workshops.id, workshopId))
     .limit(1);
 
   if (workshop) {
+    context.title = workshop.title;
     context.originalIdea = workshop.originalIdea;
   }
 
