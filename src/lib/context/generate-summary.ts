@@ -45,6 +45,21 @@ export async function generateStepSummary(
     }
   }
 
+  // Challenge (Step 1): derive the summary from the BOARD, not chat. With the
+  // board-first "Set up your workshop" panel, the challenge statement, idea,
+  // problem and audience all live on the canvas — a user can complete Step 1 with
+  // little or no chat (e.g. generate + Accept on the board). A chat-only summary
+  // would then miss the challenge entirely and trip Step 2's ABSENCE PROTOCOL
+  // ("Step 1 hasn't been confirmed yet"). The artifact summary is deterministic
+  // and always carries the actual challenge statement.
+  if (stepId === 'challenge') {
+    try {
+      return await generateChallengeSummaryFromArtifact(workshopId, workshopStepId);
+    } catch (artifactErr) {
+      console.error('[generateStepSummary] challenge artifact summary failed, falling back to chat:', artifactErr);
+    }
+  }
+
   try {
     // Load all messages for this session+step
     const messageRows = await db
@@ -199,15 +214,14 @@ async function buildUserResearchCanvasSummary(
  * challenge artifact (`step_artifacts._canvas.stickyNotes` + `workshops.originalIdea`)
  * — NOT from chat history.
  *
- * Used by `advanceFromStepOne` on the Set-up Workshop / Start Workshop path, where the
- * user may complete Step 1 via the form-only wizard without ever chatting. In that case
- * `chat_messages` is empty and `generateStepSummary` would produce a useless summary that
- * fails the downstream stakeholder-mapping ABSENCE PROTOCOL check (which requires a
- * recognizable "How might we…?" statement).
+ * This is the canonical Step 1 summary path: `generateStepSummary` routes the
+ * challenge step here, and `advanceFromStepOne` calls it directly on the Set-up /
+ * Start Workshop path. The board (not chat) is the source of truth — the challenge
+ * lives on the canvas, so a user can complete Step 1 with little or no chat. A
+ * chat-only summary would miss the challenge and trip Step 2's ABSENCE PROTOCOL.
  *
- * Writes to `step_summaries` with `onConflictDoNothing` so callers can safely invoke this
- * from idempotent helpers — if a real chat-derived summary already landed, we don't
- * clobber it.
+ * Writes to `step_summaries` with `onConflictDoUpdate` so re-advancing Step 1 after
+ * editing the statement refreshes the summary (and repairs stale chat-only rows).
  */
 export async function generateChallengeSummaryFromArtifact(
   workshopId: string,
@@ -266,11 +280,13 @@ export async function generateChallengeSummaryFromArtifact(
   const originalIdea = workshopRow?.originalIdea?.trim() || null;
   const idea = artifactIdea?.trim();
 
-  // Compose a "How might we…?" line. If the facilitator wrote an explicit HMW sticky,
-  // use it verbatim. Otherwise synthesize one from audience + problem so the downstream
-  // ABSENCE PROTOCOL check (which looks for "How might we") passes.
-  const hmwLine = hmw
-    ? (/^how might we/i.test(hmw) ? hmw : `How might we ${hmw}`)
+  // Compose the challenge line. If the facilitator's challenge-statement sticky has
+  // content, use it VERBATIM — challenge statements now vary their opener (How might
+  // we… / What if we could… / Imagine… / a declarative mission), so never prepend
+  // "How might we". Only when there's no explicit statement do we synthesize a
+  // fallback from audience + problem so a challenge is always present downstream.
+  const challengeLine = hmw
+    ? hmw
     : audience && problem
       ? `How might we address ${problem} for ${audience}?`
       : audience
@@ -280,13 +296,16 @@ export async function generateChallengeSummaryFromArtifact(
           : 'How might we deliver on the original idea?';
 
   const lines = [
-    `- Challenge: ${hmwLine}`,
+    `- Challenge: ${challengeLine}`,
     `- Original idea: ${originalIdea || idea || '—'}`,
     `- Problem framing: ${problem || '—'}`,
     `- Target audience: ${audience || '—'}`,
   ];
   const summary = lines.join('\n');
 
+  // Upsert (not DoNothing): the board is the source of truth for the challenge, so
+  // re-advancing Step 1 after editing the statement refreshes the summary — and
+  // repairs any stale chat-only summary written before this path existed.
   await db
     .insert(stepSummaries)
     .values({
@@ -295,7 +314,10 @@ export async function generateChallengeSummaryFromArtifact(
       summary,
       tokenCount: null,
     })
-    .onConflictDoNothing({ target: stepSummaries.workshopStepId });
+    .onConflictDoUpdate({
+      target: stepSummaries.workshopStepId,
+      set: { summary, tokenCount: null },
+    });
 
   return summary;
 }
