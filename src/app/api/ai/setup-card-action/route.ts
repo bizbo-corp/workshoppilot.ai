@@ -47,7 +47,7 @@ const FIELD_BRIEF: Record<Field, string> = {
   audience:
     'who this is for — a single short sentence that may name more than one group (e.g. "Small business owners and marketing teams.")',
   'challenge-statement':
-    'a single aspirational challenge statement that reads like a rallying cry — one sentence, under 25 words, focused on the people and the outcome, with NO baked-in solution, method, or tool. VARY the opener: it may begin with "How might we…", "What if we could…", "Imagine a world where…", or read as a bold declarative mission ("Make X effortless for Y."). Do NOT default to "How might we" every time',
+    'a single user-centered challenge statement that reads like a rallying cry — one sentence, under 25 words, focused on the people and the outcome, with NO baked-in solution, method, or tool. Lead with a question opener: "How might we…", "How do we help [person] to…", "How do we design for…", "What\'s the best way to…", or "What if we could…". Vary which question opener you use. Use a bold declarative mission ("Make X effortless for Y.") only rarely, when a question feels forced',
 };
 
 const GENERIC_TITLES = new Set(['', 'new workshop', 'untitled', 'untitled workshop']);
@@ -143,7 +143,7 @@ Return ONLY the new card text — plain text, no quotes, no field label, no prea
       field === 'audience'
         ? ' For audience, write it as a single sentence (it may list multiple groups).'
         : field === 'challenge-statement'
-          ? ' Write it as a single aspirational sentence, under 25 words. VARY the opener — pick from "How might we…", "What if we could…", "Imagine a world where…", or a bold declarative mission ("Make X effortless for Y."). Do NOT default to "How might we". Keep it ambitious and anchored to the people and the outcome, with no solution, method, or tool baked in (e.g. not "…through AI").'
+          ? ' Write it as a single user-centered sentence, under 25 words. Lead with a question opener — vary among "How might we…", "How do we help [person] to…", "How do we design for…", "What\'s the best way to…", "What if we could…". Use a bold declarative mission ("Make X effortless for Y.") only rarely, when a question feels forced. Keep it ambitious and anchored to the people and the outcome, with no solution, method, or tool baked in (e.g. not "…through AI").'
           : ''
     }`;
 

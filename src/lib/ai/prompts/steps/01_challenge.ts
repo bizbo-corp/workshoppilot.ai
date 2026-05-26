@@ -85,22 +85,24 @@ Once the lens is settled, write the statement from that vantage point. The build
 CHALLENGE STATEMENT FORMAT:
 The challenge statement is the workshop's north star, so make it count. SHORT — one sentence, under 25 words — and aspirational enough that participants want to drop everything and solve it. Ambitious, a little audacious. Aim high; this is the line that should make the room believe the work is worth their best thinking.
 
-VARY THE OPENING. Do NOT reach for "How might we..." every single time — it's a perfectly good format, but using it for every challenge makes statements feel cookie-cutter and flat. Choose the opener that fits the ambition and energy of THIS challenge. A palette to draw from:
-- "How might we..." — classic, open-ended, action-oriented. Still great; just not automatic.
-- "What if we could..." — invites possibility, provokes the imagination.
-- "Imagine a world where..." — paints the aspirational end-state.
-- A bold declarative mission — "Make X effortless for Y." / "Turn every Z into a W." — confident and direct.
-Pick whichever makes the statement land hardest. If you're unsure, draft it two ways and keep the more inspiring one.
+LEAD WITH A USER-CENTERED QUESTION. The challenge lands hardest framed as an open question about the people you're designing for — it keeps the solution space wide and the audience at the center. This is the most user-centered design-thinking framing, so default to a question opener; reach for a declarative mission only when a question genuinely feels forced. A palette to draw from, in rough order of preference:
+- "How might we..." — the classic design-thinking opener; open-ended, action-oriented, user-centered.
+- "How do we help [person] to..." — names the people directly and the change they want.
+- "How do we design for..." — frames the challenge around the need or context you're designing for.
+- "What's the best way to..." — concrete and outcome-focused while staying open.
+- "What if we could..." / "Imagine a world where..." — invite possibility and paint the aspirational end-state.
+- A bold declarative mission — "Make X effortless for Y." — confident and direct, but use SPARINGLY, only when no question lands as well.
+Vary the question opener so statements don't feel cookie-cutter — but keep the framing a user-centered question. If you're unsure, draft it two ways and keep the more inspiring one.
 
 Whatever the opener, stay anchored to the PROBLEM and the AUDIENCE's real need — ambition is not vagueness. The statement should capture the gap between where people are and where they want to be, and evoke the tension: the frustration, what's at stake, what success feels like.
 
-GOOD examples (notice the variety of openers and the lift in ambition):
+GOOD examples (notice the variety of QUESTION openers and the lift in ambition):
 - "How might we let freight carriers and operations teams trust every handoff, so nothing ever slips through the cracks?"
-- "What if first-time managers could give honest feedback that deepens trust instead of risking it?"
-- "Make pet health so effortless that multi-pet households never miss a beat." (declarative mission)
-- "Imagine a world where every small business communicates its value so clearly that size stops being a disadvantage." (branding/communication challenge)
+- "How do we help first-time managers give honest feedback that deepens trust instead of risking it?"
+- "What's the best way to keep multi-pet households on top of their pets' health without it becoming a chore?"
+- "How do we design for small businesses to communicate their value so clearly that size stops being a disadvantage?" (branding/communication challenge)
 - "What if new clients felt genuinely supported from day one — without burning out the team behind them?" (service/process challenge)
-- "Make sustainable packaging feel like an upgrade, not a sacrifice." (physical product challenge)
+- "Make sustainable packaging feel like an upgrade, not a sacrifice." (declarative mission — the rare fallback, used here only because no question framed it as cleanly)
 
 BAD examples (too wordy, too mechanical, solution-baked, wrong type, or just flat):
 - "Enable seamless visibility and communication between freight carriers and internal operations teams, by replacing unreliable manual processes (phone calls, spreadsheets) with timely, accurate delivery updates." (too long, reads like a spec, bakes in a solution)
