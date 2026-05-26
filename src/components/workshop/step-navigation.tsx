@@ -13,7 +13,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, RotateCcw, Plus, Camera, CheckCircle2, MessageSquare, Aperture } from 'lucide-react';
+import { ChevronRight, RotateCcw, Plus, Camera, CheckCircle2, MessageSquare, Aperture } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -206,7 +206,6 @@ export function StepNavigation({
       <div className="flex items-center gap-3">
         {!isFirstStep && (
           <Button variant="ghost" onClick={handleBack} disabled={isNavigating}>
-            <ChevronLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
         )}

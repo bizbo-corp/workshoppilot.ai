@@ -6,7 +6,6 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import TextareaAutosize from "react-textarea-autosize";
 import ReactMarkdown from "react-markdown";
 import {
-  Send,
   Loader2,
   Plus,
   CheckCircle2,
@@ -3030,15 +3029,13 @@ export function ChatPanel({
         ) : (
           <>
             <div
-              className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12"
-              style={{
-                background:
-                  "linear-gradient(to bottom, var(--background), transparent)",
-              }}
-            />
-            <div
               ref={scrollContainerRef}
-              className="chat-scroll h-full overflow-y-auto p-4"
+              className={cn(
+                "chat-scroll h-full overflow-y-auto px-4 pb-4",
+                // On desktop the frosted header overlays the top, so start
+                // content below it (and let it scroll under the blur).
+                hideAvatar ? "pt-20" : "pt-4"
+              )}
             >
               {/* Centered AI avatar at top - scrolls off screen (hidden when parent renders header avatar) */}
               {!hideAvatar && (
@@ -3130,7 +3127,7 @@ export function ChatPanel({
                             className="group flex items-start justify-end"
                           >
                             <div className="max-w-[80%]">
-                              <div className="relative rounded-2xl bg-neutral-olive-200/60 dark:bg-olive-800/50 p-3 px-4 text-base text-foreground">
+                              <div className="relative rounded-2xl bg-neutral-olive-50 shadow-sm dark:bg-neutral-olive-800 p-3 px-4 text-base text-foreground">
                                 {displayContent}
                                 {isCanvasStep && (
                                   <button
@@ -4338,7 +4335,7 @@ export function ChatPanel({
               </button>
             </div>
           )}
-          <form onSubmit={handleSend} className="flex gap-2">
+          <form onSubmit={handleSend} className="relative">
             <TextareaAutosize
               ref={inputRef}
               minRows={1}
@@ -4353,7 +4350,7 @@ export function ChatPanel({
               }
               disabled={isLoading || !!rateLimitInfo}
               className={cn(
-                "flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs outline-none transition-[color,box-shadow]",
+                "w-full resize-none rounded-md border border-input bg-neutral-olive-50 py-2 pl-3 pr-12 text-base shadow-xs outline-none transition-[color,box-shadow] dark:bg-neutral-olive-975",
                 "placeholder:text-muted-foreground",
                 "disabled:cursor-not-allowed disabled:opacity-50",
                 "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
@@ -4365,8 +4362,12 @@ export function ChatPanel({
               size="icon"
               variant="default"
               aria-label="Send message"
+              // Square 32px button (size-8 overrides the icon variant's size-9),
+              // vertically centered in the field so it's height-independent.
+              // disabled:opacity-100 keeps it solid (not faint) when empty.
+              className="absolute right-[6px] top-1/2 size-8 -mt-0.5 -translate-y-1/2 rounded-md disabled:opacity-100"
             >
-              <Send />
+              <ArrowRight className="h-4 w-4" />
             </Button>
           </form>
         </div>

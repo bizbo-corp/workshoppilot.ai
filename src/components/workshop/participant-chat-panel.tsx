@@ -146,11 +146,15 @@ interface ParticipantChatPanelProps {
    *  without waiting for the next live broadcast. Null when there is no
    *  narration yet for the step. */
   initialPulse?: import("./workshop-pulse-card").WorkshopPulseSnapshot | null;
+  /** Desktop only: the parent renders a frosted header overlay above this
+   *  panel, so inset the content below it. */
+  headerInset?: boolean;
 }
 
 export function ParticipantChatPanel({
   stepOrder, sessionId, workshopId,
   participantId, displayName, participantColor, initialMessages, initialPulse,
+  headerInset,
 }: ParticipantChatPanelProps) {
   const step = getStepByOrder(stepOrder);
   const stepId = step?.id || "";
@@ -1050,20 +1054,13 @@ export function ParticipantChatPanel({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className={cn("flex h-full flex-col", headerInset && "pt-16")}>
       {/* Workshop pulse — pinned awareness of the facilitator's AI narration.
           Read-only by design. Renders nothing when there is no narration yet
           for this step. */}
       <WorkshopPulseCard stepId={stepId} initial={initialPulse ?? null} />
       {/* Messages area */}
       <div className="relative flex-1 min-h-0">
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12"
-          style={{
-            background:
-              "linear-gradient(to bottom, var(--background), transparent)",
-          }}
-        />
         <div
           ref={scrollContainerRef}
           className="chat-scroll h-full overflow-y-auto p-4"

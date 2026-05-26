@@ -141,7 +141,7 @@ export function WorkshopHeader({
           <div className="hidden md:flex md:items-center md:gap-2">
             {workshopEmoji && (
               <span
-                className="flex h-6 w-6 items-center justify-center rounded-full text-sm leading-none"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-base leading-none"
                 style={{ backgroundColor: getWorkshopColor(workshopColor).bgHex }}
               >
                 {workshopEmoji}

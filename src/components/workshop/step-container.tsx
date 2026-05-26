@@ -21,8 +21,8 @@ import {
   Rocket,
   CheckCircle2,
   FileCode2,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
   MessageSquare,
   UserPlus,
   X,
@@ -67,7 +67,8 @@ import { ConceptCanvasOverlay } from "./concept-canvas-overlay";
 import { GuideEditPopover } from "@/components/canvas/guide-edit-popover";
 import { AssetDrawer } from "@/components/canvas/asset-drawer";
 import { useAdminGuides } from "@/hooks/use-admin-guides";
-import { usePanelLayout } from "@/hooks/use-panel-layout";
+import { usePanelLayout, clampChatWidth } from "@/hooks/use-panel-layout";
+import { WorkshopHeader } from "@/components/layout/workshop-header";
 import { StepTransitionWrapper } from "./step-transition-wrapper";
 import type { CanvasGuideData } from "@/lib/canvas/canvas-guide-types";
 import type { StepCanvasSettingsData } from "@/lib/canvas/step-canvas-settings-types";
@@ -132,6 +133,9 @@ interface StepContainerProps {
   workshopId: string;
   workshopType?: "solo" | "multiplayer";
   workshopColor?: string | null;
+  /** Workshop title + emoji — rendered in the desktop canvas-column header. */
+  workshopName?: string;
+  workshopEmoji?: string | null;
   initialMessages?: UIMessage[];
   initialArtifact?: Record<string, unknown> | null;
   stepStatus?:
@@ -187,6 +191,8 @@ export function StepContainer({
   workshopId,
   workshopType,
   workshopColor,
+  workshopName = 'New Workshop',
+  workshopEmoji,
   initialMessages,
   initialArtifact,
   stepStatus,
@@ -223,7 +229,64 @@ export function StepContainer({
   const {
     chatCollapsed,
     setChatCollapsed,
+    chatWidth,
+    setChatWidth,
   } = usePanelLayout();
+
+  // Drag-to-resize for the full-height chat column (desktop). While dragging we
+  // track a live width locally to avoid thrashing localStorage; the committed
+  // value persists on pointer-up. transition-[width] is disabled mid-drag.
+  const [isResizingChat, setIsResizingChat] = React.useState(false);
+  const [liveChatWidth, setLiveChatWidth] = React.useState<number | null>(null);
+  const resizeStartRef = React.useRef<{ x: number; width: number } | null>(null);
+  // Mirror of liveChatWidth so pointer-up can read the final value without a
+  // setState updater (calling setChatWidth inside an updater would fire the
+  // external store's subscribers during render — an illegal setState-in-render).
+  const liveWidthRef = React.useRef<number | null>(null);
+
+  const handleChatResizeStart = React.useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      resizeStartRef.current = { x: e.clientX, width: chatWidth };
+      liveWidthRef.current = chatWidth;
+      setLiveChatWidth(chatWidth);
+      setIsResizingChat(true);
+    },
+    [chatWidth]
+  );
+
+  React.useEffect(() => {
+    if (!isResizingChat) return;
+    const handleMove = (e: PointerEvent) => {
+      const start = resizeStartRef.current;
+      if (!start) return;
+      const next = clampChatWidth(start.width + (e.clientX - start.x));
+      liveWidthRef.current = next;
+      setLiveChatWidth(next);
+    };
+    const handleUp = () => {
+      if (liveWidthRef.current != null) setChatWidth(liveWidthRef.current);
+      liveWidthRef.current = null;
+      resizeStartRef.current = null;
+      setLiveChatWidth(null);
+      setIsResizingChat(false);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    // Avoid text selection / canvas grabbing while dragging the divider.
+    const prevUserSelect = document.body.style.userSelect;
+    const prevCursor = document.body.style.cursor;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      document.body.style.userSelect = prevUserSelect;
+      document.body.style.cursor = prevCursor;
+    };
+  }, [isResizingChat, setChatWidth]);
+
+  const effectiveChatWidth = liveChatWidth ?? chatWidth;
 
   // Multiplayer facilitator state — determines whether step navigation is visible
   // and whether STEP_CHANGED broadcasts fire. Both default to false in solo mode
@@ -1379,25 +1442,24 @@ export function StepContainer({
 
   // Render content section
   const renderContent = () => (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="relative flex h-full min-h-0 flex-col">
       {!isMobile && (
-        <div className="flex items-center justify-between border-b px-3 py-2.5">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base leading-none"
-              style={{ backgroundColor: getWorkshopColor(workshopColor).bgHex }}
-            >
-              {FACILITATOR.emoji}
-            </div>
-            <span className="text-sm font-medium">{FACILITATOR.name}</span>
-          </div>
-          <button
-            onClick={() => setChatCollapsed(true)}
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            title="Collapse chat"
+        // Frosted-glass header — sits over the scroll area so messages blur
+        // behind it as they pass under. Same olive hue as the body; soft shadow
+        // gives it a floating, neumorphic feel (no hard divider).
+        <div className="absolute inset-x-0 top-0 z-20 flex h-16 items-center gap-2.5 px-3 bg-neutral-olive-200/70 backdrop-blur-md shadow-[0_2px_12px_-6px_rgba(0,0,0,0.25)] dark:bg-neutral-olive-950/70">
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base leading-none"
+            style={{ backgroundColor: getWorkshopColor(workshopColor).bgHex }}
           >
-            <PanelLeftClose className="h-4 w-4" />
-          </button>
+            {FACILITATOR.emoji}
+          </div>
+          <span className="text-sm font-medium">
+            {FACILITATOR.name} - your AI{" "}
+            {facilitatorMode === "team" || workshopType === "multiplayer"
+              ? "assistant"
+              : "facilitator"}
+          </span>
         </div>
       )}
       <div className="min-h-0 flex-1">
@@ -1412,6 +1474,7 @@ export function StepContainer({
             participantColor={effectiveColor || "#b3efbd"}
             initialMessages={localMessages}
             initialPulse={initialPulse}
+            headerInset={!isMobile}
           />
         ) : (
           <ChatPanel
@@ -1709,47 +1772,148 @@ export function StepContainer({
     );
   };
 
-  // Desktop: chat docked as a left column, canvas fills the rest
+  // Desktop: chat is a full-height left column (beside the sidebar); the canvas
+  // column to its right owns the workshop header and the step-navigation footer.
   return (
-    <div className="flex h-full flex-col">
-      <div className="relative min-h-0 flex-1 overflow-hidden">
-        <div className="flex h-full overflow-hidden">
-          {/* Chat dock — left column. Always mounted to preserve chat state;
-              width + body visibility toggle on collapse. */}
-          <div
+    <div className="flex h-full w-full overflow-hidden">
+      {/* Chat dock — full-height left column. Always mounted to preserve chat
+          state; width + body visibility toggle on collapse, and the width is
+          drag-resizable when expanded. */}
+      <div
+        style={chatCollapsed ? undefined : { width: effectiveChatWidth }}
+        className={cn(
+          // Workspace stack: canvas (50/900) → chat (200/950) → sidebar (300/975).
+          // Translucent + blur gives the chat a frosted, neumorphic glass feel.
+          "relative flex shrink-0 flex-col border-r bg-neutral-olive-200/80 backdrop-blur-xl dark:bg-neutral-olive-950/80",
+          chatCollapsed ? "w-14" : undefined,
+          isResizingChat ? undefined : "transition-[width] duration-200"
+        )}
+      >
+        {chatCollapsed ? (
+          /* Collapsed: the whole rail is one big button that expands the chat.
+             Avatar sits in an h-16 header band to align with the sidebar logo
+             + canvas header. The toggle also lives in the shared footer below. */
+          <button
+            type="button"
+            onClick={() => setChatCollapsed(false)}
+            title="Expand chat"
+            className="group flex min-h-0 flex-1 flex-col items-stretch text-left transition-colors hover:bg-olive-100/50 dark:hover:bg-olive-900/20"
+          >
+            <div className="flex h-16 items-center justify-center border-b">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-full text-base leading-none"
+                style={{ backgroundColor: getWorkshopColor(workshopColor).bgHex }}
+              >
+                {FACILITATOR.emoji}
+              </div>
+            </div>
+          </button>
+        ) : (
+          <div className="min-h-0 flex-1">{renderContent()}</div>
+        )}
+
+        {/* Persistent footer — collapse / expand toggle, mirrors the sidebar's
+            footer toggle so both panels collapse from the same spot. */}
+        <div
+          className={cn(
+            "flex items-center border-t px-2 py-4",
+            chatCollapsed ? "justify-center" : "justify-start"
+          )}
+        >
+          <button
+            type="button"
+            onClick={() => setChatCollapsed(!chatCollapsed)}
+            title={chatCollapsed ? "Expand chat" : "Collapse chat"}
             className={cn(
-              "flex shrink-0 flex-col border-r bg-neutral-olive-50 transition-[width] duration-200 dark:bg-neutral-olive-975",
-              chatCollapsed ? "w-12" : "w-[400px]"
+              "flex h-9 items-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-olive-100 hover:text-foreground dark:hover:bg-olive-900/30",
+              chatCollapsed ? "w-9 justify-center" : "w-full justify-start px-2"
             )}
           >
-            {chatCollapsed && (
-              /* Thin rail — facilitator avatar + expand button */
-              <div className="flex flex-col items-center gap-2 py-3">
-                <div
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-base leading-none"
-                  style={{ backgroundColor: getWorkshopColor(workshopColor).bgHex }}
-                >
-                  {FACILITATOR.emoji}
-                </div>
-                <button
-                  onClick={() => setChatCollapsed(false)}
-                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  title="Expand chat"
-                >
-                  <PanelLeftOpen className="h-4 w-4" />
-                </button>
-              </div>
+            {chatCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <>
+                <ChevronLeft className="h-4 w-4" />
+                <span className="ml-2 text-sm">Collapse</span>
+              </>
             )}
-            <div className={chatCollapsed ? "hidden" : "min-h-0 flex-1"}>
-              {renderContent()}
-            </div>
-          </div>
+          </button>
+        </div>
 
-          {/* Canvas — fills remaining width */}
+        {/* Resize handle — sits on the chat's right edge, hidden when collapsed */}
+        {!chatCollapsed && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize chat panel"
+            onPointerDown={handleChatResizeStart}
+            className={cn(
+              "group absolute -right-1 top-0 z-20 h-full w-2 cursor-col-resize touch-none",
+            )}
+          >
+            <div
+              className={cn(
+                "mx-auto h-full w-px bg-transparent transition-colors group-hover:bg-primary/60",
+                isResizingChat && "bg-primary"
+              )}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Canvas column — header, canvas, and footer span the canvas only */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <WorkshopHeader
+          sessionId={sessionId}
+          workshopId={workshopId}
+          workshopName={workshopName}
+          workshopColor={workshopColor}
+          workshopEmoji={workshopEmoji}
+          workshopType={workshopType ?? "solo"}
+          shareToken={shareToken ?? undefined}
+          isFacilitator={isFacilitator}
+        />
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          {/* Canvas — fills remaining height */}
           <StepTransitionWrapper stepId={step?.id ?? String(stepOrder)}>
-            <div className="flex-1 overflow-hidden">{renderCanvasPanel()}</div>
+            <div className="h-full overflow-hidden">{renderCanvasPanel()}</div>
           </StepTransitionWrapper>
         </div>
+        {/* Step navigation — footer spans the canvas column only.
+            Hidden for participants in multiplayer mode. */}
+        {(!isMultiplayer || isFacilitator) && (
+          <StepNavigation
+            sessionId={sessionId}
+            workshopId={workshopId}
+            currentStepOrder={stepOrder}
+            facilitatorMode={facilitatorMode}
+            artifactConfirmed={effectiveConfirmed}
+            stepExplicitlyConfirmed={stepOrder === 8 ? ideation.explicitlyConfirmed : artifactConfirmed}
+            stepStatus={stepStatus}
+            isAdmin={isAdmin}
+            onReset={() => setShowResetDialog(true)}
+            onToggleGuideEditor={
+              isCanvasStep || isAdmin ? handleToggleGuideEditor : undefined
+            }
+            isGuideEditing={isGuideEditing}
+            onAddGuide={isGuideEditing ? handleAddGuide : undefined}
+            onSaveDefaultView={isGuideEditing ? handleSaveDefaultView : undefined}
+            onCompleteWorkshop={
+              stepOrder === 10 ? handleCompleteWorkshop : undefined
+            }
+            isCompletingWorkshop={isCompletingWorkshop}
+            workshopCompleted={workshopCompleted}
+            canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
+            onFlushCanvas={flushCanvasToDb}
+            nextDisabledReason={nextDisabledReason}
+            nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Next: Invite team' : undefined}
+            nextOnClickOverride={
+              isTeamModeStepOne && !challengePublished
+                ? () => setShowSetupWizard(true)
+                : undefined
+            }
+          />
+        )}
       </div>
       {/* StepAdvanceBroadcaster — only mounted in multiplayer (inside RoomProvider).
           Captures useBroadcastEvent and exposes it via ref for handleBeforeAdvance. */}
@@ -1854,40 +2018,6 @@ export function StepContainer({
             Invite team
           </button>
         </div>
-      )}
-      {/* Step navigation — hidden for participants in multiplayer mode */}
-      {(!isMultiplayer || isFacilitator) && (
-        <StepNavigation
-          sessionId={sessionId}
-          workshopId={workshopId}
-          currentStepOrder={stepOrder}
-          facilitatorMode={facilitatorMode}
-          artifactConfirmed={effectiveConfirmed}
-          stepExplicitlyConfirmed={stepOrder === 8 ? ideation.explicitlyConfirmed : artifactConfirmed}
-          stepStatus={stepStatus}
-          isAdmin={isAdmin}
-          onReset={() => setShowResetDialog(true)}
-          onToggleGuideEditor={
-            isCanvasStep || isAdmin ? handleToggleGuideEditor : undefined
-          }
-          isGuideEditing={isGuideEditing}
-          onAddGuide={isGuideEditing ? handleAddGuide : undefined}
-          onSaveDefaultView={isGuideEditing ? handleSaveDefaultView : undefined}
-          onCompleteWorkshop={
-            stepOrder === 10 ? handleCompleteWorkshop : undefined
-          }
-          isCompletingWorkshop={isCompletingWorkshop}
-          workshopCompleted={workshopCompleted}
-          canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
-          onFlushCanvas={flushCanvasToDb}
-          nextDisabledReason={nextDisabledReason}
-          nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Next: Invite team' : undefined}
-          nextOnClickOverride={
-            isTeamModeStepOne && !challengePublished
-              ? () => setShowSetupWizard(true)
-              : undefined
-          }
-        />
       )}
       {/* Confirmation dialog for converting a solo workshop into a team workshop. */}
       <AlertDialog open={showConvertDialog} onOpenChange={(o) => !isConverting && setShowConvertDialog(o)}>
