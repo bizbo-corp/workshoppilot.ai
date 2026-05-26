@@ -442,6 +442,7 @@ function ReactFlowCanvasInner({
     setViewport,
     getViewport,
     setCenter,
+    getNodes,
   } = useReactFlow();
 
   // Expose getViewport and screenToFlowPosition to parent via canvasRef
@@ -863,6 +864,24 @@ function ReactFlowCanvasInner({
     (e) => {
       e.preventDefault();
       handleRedo();
+    },
+    { enableOnFormTags: false },
+  );
+
+  // Enter → edit the selected sticky note. Only fires when not already editing
+  // and exactly one sticky note is selected (so it doesn't fight multi-select or
+  // other node types). Escape-to-exit is handled by the textarea's own onKeyDown.
+  useHotkeys(
+    "enter",
+    (e) => {
+      if (editingNodeId) return;
+      const selectedStickies = getNodes().filter(
+        (n) => n.type === "stickyNote" && n.selected,
+      );
+      if (selectedStickies.length === 1) {
+        e.preventDefault();
+        setEditingNodeId(selectedStickies[0].id);
+      }
     },
     { enableOnFormTags: false },
   );
