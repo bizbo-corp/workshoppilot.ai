@@ -946,12 +946,7 @@ export function ChatPanel({
   const setPendingHmwManualComplete = useCanvasStore(
     (state) => state.setPendingHmwManualComplete,
   );
-  const pendingSetupGenerate = useCanvasStore(
-    (state) => state.pendingSetupGenerate,
-  );
-  const setPendingSetupGenerate = useCanvasStore(
-    (state) => state.setPendingSetupGenerate,
-  );
+  const boardAdvancedAt = useCanvasStore((state) => state.boardAdvancedAt);
   const pendingHmwFieldFocus = useCanvasStore(
     (state) => state.pendingHmwFieldFocus,
   );
@@ -2748,36 +2743,16 @@ export function ChatPanel({
     sendMessage,
   ]);
 
-  // Step 1 "I'm done" → ask Wanda to draft the challenge statement from the
-  // board. Routes into the 01_challenge prompt's "Read the board" handler,
-  // which synthesizes and emits [CANVAS_ITEM key="challenge-statement"].
+  // Step 1: when the user advances the board directly (confirms a setup card or
+  // generates the challenge), silently clear the now-stale in-chat suggestion
+  // buttons — they tend to offer steps the user has already done on the board.
+  // No new message is posted; Wanda's next reply is already board-aware via the
+  // CANVAS STATE injected each turn.
   React.useEffect(() => {
-    if (!pendingSetupGenerate || isLoading) return;
-    if (step.id !== "challenge") {
-      setPendingSetupGenerate(false);
-      return;
-    }
-    setPendingSetupGenerate(false);
-    setQuickAck(getRandomAck());
-    (async () => {
-      try {
-        await flushCanvasToDb();
-        sendMessage({
-          role: "user",
-          parts: [{ type: "text", text: "Read the board and continue" }],
-        });
-      } catch (err) {
-        console.error("Failed to send setup-generate trigger:", err);
-      }
-    })();
-  }, [
-    pendingSetupGenerate,
-    isLoading,
-    step.id,
-    setPendingSetupGenerate,
-    flushCanvasToDb,
-    sendMessage,
-  ]);
+    if (!boardAdvancedAt) return;
+    setSuggestions((prev) => (prev.length > 0 ? [] : prev));
+    setSuggestionsExpanded(false);
+  }, [boardAdvancedAt]);
 
   // HMW field focus → trigger AI suggestions for empty field
   React.useEffect(() => {

@@ -869,15 +869,17 @@ export async function resetStep(
     const forwardStepIds = forwardStepDefs.map(s => s.id);
 
     // Find all workshop step records for forward steps
-    const workshopStepRecords = await db
-      .select({ id: workshopSteps.id, stepId: workshopSteps.stepId, snapshotUrl: workshopSteps.snapshotUrl })
-      .from(workshopSteps)
-      .where(
-        and(
-          eq(workshopSteps.workshopId, workshopId),
-          inArray(workshopSteps.stepId, forwardStepIds)
+    const workshopStepRecords = await dbWithRetry(() =>
+      db
+        .select({ id: workshopSteps.id, stepId: workshopSteps.stepId, snapshotUrl: workshopSteps.snapshotUrl })
+        .from(workshopSteps)
+        .where(
+          and(
+            eq(workshopSteps.workshopId, workshopId),
+            inArray(workshopSteps.stepId, forwardStepIds)
+          )
         )
-      );
+    );
 
     if (workshopStepRecords.length === 0) {
       throw new Error(`No workshop steps found for reset`);
@@ -885,36 +887,40 @@ export async function resetStep(
 
     const workshopStepIds = workshopStepRecords.map(r => r.id);
 
-    // Delete chat messages for all forward steps
-    for (const fwdStepId of forwardStepIds) {
-      await db
+    // Delete chat messages for all forward steps (single query)
+    await dbWithRetry(() =>
+      db
         .delete(chatMessages)
         .where(
           and(
             eq(chatMessages.sessionId, sessionId),
-            eq(chatMessages.stepId, fwdStepId)
+            inArray(chatMessages.stepId, forwardStepIds)
           )
-        );
-    }
+        )
+    );
 
     // Delete workshop-pulse narration for all forward steps. Without this,
     // participants would see the pre-reset narration pinned in their pulse
     // card after the facilitator resets the step — the SSR-hydrated initial
     // state would still find the stale row until a new AI message landed.
-    await db
-      .delete(workshopStepNarration)
-      .where(
-        and(
-          eq(workshopStepNarration.workshopId, workshopId),
-          inArray(workshopStepNarration.stepId, forwardStepIds)
+    await dbWithRetry(() =>
+      db
+        .delete(workshopStepNarration)
+        .where(
+          and(
+            eq(workshopStepNarration.workshopId, workshopId),
+            inArray(workshopStepNarration.stepId, forwardStepIds)
+          )
         )
-      );
+    );
 
     // Extract blob URLs from artifacts before deleting
-    const artifacts = await db
-      .select({ artifact: stepArtifacts.artifact })
-      .from(stepArtifacts)
-      .where(inArray(stepArtifacts.workshopStepId, workshopStepIds));
+    const artifacts = await dbWithRetry(() =>
+      db
+        .select({ artifact: stepArtifacts.artifact })
+        .from(stepArtifacts)
+        .where(inArray(stepArtifacts.workshopStepId, workshopStepIds))
+    );
 
     const blobUrls = artifacts.flatMap((a) =>
       extractBlobUrlsFromArtifact((a.artifact || {}) as Record<string, unknown>)
@@ -931,9 +937,11 @@ export async function resetStep(
     }
 
     // Batch-delete step artifacts for all forward steps
-    await db
-      .delete(stepArtifacts)
-      .where(inArray(stepArtifacts.workshopStepId, workshopStepIds));
+    await dbWithRetry(() =>
+      db
+        .delete(stepArtifacts)
+        .where(inArray(stepArtifacts.workshopStepId, workshopStepIds))
+    );
 
     // Fire-and-forget blob cleanup
     if (blobUrls.length > 0) {
@@ -941,26 +949,30 @@ export async function resetStep(
     }
 
     // Batch-delete step summaries for all forward steps
-    await db
-      .delete(stepSummaries)
-      .where(inArray(stepSummaries.workshopStepId, workshopStepIds));
+    await dbWithRetry(() =>
+      db
+        .delete(stepSummaries)
+        .where(inArray(stepSummaries.workshopStepId, workshopStepIds))
+    );
 
     // Reset current step to in_progress
-    await db
-      .update(workshopSteps)
-      .set({
-        status: 'in_progress',
-        arcPhase: 'orient',
-        startedAt: new Date(),
-        completedAt: null,
-        snapshotUrl: null,
-      })
-      .where(
-        and(
-          eq(workshopSteps.workshopId, workshopId),
-          eq(workshopSteps.stepId, stepId)
+    await dbWithRetry(() =>
+      db
+        .update(workshopSteps)
+        .set({
+          status: 'in_progress',
+          arcPhase: 'orient',
+          startedAt: new Date(),
+          completedAt: null,
+          snapshotUrl: null,
+        })
+        .where(
+          and(
+            eq(workshopSteps.workshopId, workshopId),
+            eq(workshopSteps.stepId, stepId)
+          )
         )
-      );
+    );
 
     // Reset all downstream steps (after current) to not_started
     const downstreamStepIds = forwardStepDefs
@@ -968,21 +980,23 @@ export async function resetStep(
       .map(s => s.id);
 
     if (downstreamStepIds.length > 0) {
-      await db
-        .update(workshopSteps)
-        .set({
-          status: 'not_started',
-          arcPhase: 'orient',
-          startedAt: null,
-          completedAt: null,
-          snapshotUrl: null,
-        })
-        .where(
-          and(
-            eq(workshopSteps.workshopId, workshopId),
-            inArray(workshopSteps.stepId, downstreamStepIds)
+      await dbWithRetry(() =>
+        db
+          .update(workshopSteps)
+          .set({
+            status: 'not_started',
+            arcPhase: 'orient',
+            startedAt: null,
+            completedAt: null,
+            snapshotUrl: null,
+          })
+          .where(
+            and(
+              eq(workshopSteps.workshopId, workshopId),
+              inArray(workshopSteps.stepId, downstreamStepIds)
+            )
           )
-        );
+      );
     }
 
     // Revalidate workshop layout to refresh sidebar and step status

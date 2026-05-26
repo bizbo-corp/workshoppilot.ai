@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   useCanvasStore,
   useCanvasStoreApi,
@@ -87,27 +87,23 @@ export function WorkshopSetup({
   const stickyNotes = useCanvasStore((s) => s.stickyNotes);
   const addStickyNote = useCanvasStore((s) => s.addStickyNote);
   const updateStickyNote = useCanvasStore((s) => s.updateStickyNote);
-  const setPendingSetupGenerate = useCanvasStore((s) => s.setPendingSetupGenerate);
+  const setBoardAdvancedAt = useCanvasStore((s) => s.setBoardAdvancedAt);
   const storeApi = useCanvasStoreApi();
 
   // Persist solo edits to Neon (multiplayer persists via Liveblocks Storage).
   useCanvasAutosave(workshopId, 'challenge', workshopType !== 'multiplayer');
 
-  // Seed the four template sticky notes if they don't exist yet. Mirrors the
-  // client-side seeding in react-flow-canvas.tsx — the canvas isn't mounted on
-  // this step, so WorkshopSetup owns it. Data stays in the sticky-note store so
-  // the AI prompt's CANVAS STATE + the [CANVAS_ITEM] generation path keep working.
-  const seededRef = useRef(false);
+  // Seed the four template sticky notes whenever none exist — on first mount AND
+  // after an admin Reset wipes the board, so the page returns to its pristine
+  // seeded state. The canvas isn't mounted on this step, so WorkshopSetup owns
+  // this. Data lives in the sticky-note store so the AI prompt's CANVAS STATE +
+  // the [CANVAS_ITEM] generation path keep working. (These template cards can't
+  // be deleted individually, so re-seeding when none exist is safe.)
+  const hasTemplates = stickyNotes.some((s) => s.templateKey);
   useEffect(() => {
-    if (seededRef.current) return;
-    const current = storeApi.getState().stickyNotes;
-    if (current.some((s) => s.templateKey)) {
-      seededRef.current = true;
-      return;
-    }
+    if (hasTemplates) return;
     const defs = getStepTemplateStickyNotes('challenge');
     if (defs.length === 0) return;
-    seededRef.current = true;
     for (const def of defs) {
       addStickyNote({
         id: crypto.randomUUID(),
@@ -122,7 +118,7 @@ export function WorkshopSetup({
         placeholderText: def.placeholderText,
       });
     }
-  }, [storeApi, addStickyNote]);
+  }, [hasTemplates, addStickyNote]);
 
   // Index the template sticky notes by their key.
   const byKey = useMemo(() => {
@@ -230,16 +226,20 @@ export function WorkshopSetup({
           (notes.find((s) => s.templateKey === f)?.text?.trim() ?? '') === '',
       );
       regenerateFor(targets);
+      // Board advanced directly → let the chat clear any now-stale suggestions.
+      setBoardAdvancedAt(Date.now());
     },
-    [storeApi, regenerateFor],
+    [storeApi, regenerateFor, setBoardAdvancedAt],
   );
 
   // ---- Per-card actions (polish / elaborate / regenerate) --------------------
-  const [busyField, setBusyField] = useState<SetupField | null>(null);
+  const [busyField, setBusyField] = useState<
+    SetupField | 'challenge-statement' | null
+  >(null);
 
   const runCardAction = useCallback(
     async (
-      field: SetupField,
+      field: SetupField | 'challenge-statement',
       action: 'polish' | 'elaborate' | 'regenerate',
       instructions?: string,
     ) => {
@@ -269,26 +269,17 @@ export function WorkshopSetup({
   );
 
   // ---- Generation ------------------------------------------------------------
-  const [generating, setGenerating] = useState(false);
+  // The challenge is generated through the SAME fast structured endpoint as the
+  // per-card actions (runCardAction → /api/ai/setup-card-action), not the chat
+  // pipeline — so it returns in ~1s instead of waiting on a full streamed reply.
+  const challengeExists = challengeText.trim().length > 0;
+  const challengeBusy = busyField === 'challenge-statement';
+  const showChallenge = challengeBusy || challengeExists;
 
-  const handleDone = useCallback(() => {
-    setGenerating(true);
-    setPendingSetupGenerate(true); // chat-panel asks Wanda to draft from the board
-  }, [setPendingSetupGenerate]);
-
-  // Clear the loading state once the challenge statement lands on the board.
-  useEffect(() => {
-    if (challengeText.trim().length > 0) setGenerating(false);
-  }, [challengeText]);
-
-  // Safety net: don't spin forever if the model never emits a CANVAS_ITEM.
-  useEffect(() => {
-    if (!generating) return;
-    const t = setTimeout(() => setGenerating(false), 45000);
-    return () => clearTimeout(t);
-  }, [generating]);
-
-  const showChallenge = generating || challengeText.trim().length > 0;
+  const generateChallenge = useCallback(() => {
+    setBoardAdvancedAt(Date.now());
+    return runCardAction('challenge-statement', 'regenerate');
+  }, [runCardAction, setBoardAdvancedAt]);
 
   const statusText =
     filledCount >= 2
@@ -371,17 +362,27 @@ export function WorkshopSetup({
           })}
         </div>
 
-        {/* Status + Done */}
+        {/* Status + Generate */}
         <div className="mt-6 flex flex-col items-center gap-2">
-          <p className="text-xs text-muted-foreground">{statusText}</p>
+          {!canGenerate && (
+            <p className="text-xs text-muted-foreground">{statusText}</p>
+          )}
           <Button
             size="lg"
-            disabled={!canGenerate || generating}
-            onClick={handleDone}
-            className={canGenerate && !generating ? 'animate-in fade-in' : ''}
+            disabled={!canGenerate || challengeBusy}
+            onClick={generateChallenge}
+            className={canGenerate && !challengeBusy ? 'animate-in fade-in' : ''}
           >
-            {generating ? 'Drafting…' : "I'm done"}
+            {challengeBusy
+              ? 'Drafting…'
+              : challengeExists
+                ? 'Regenerate Workshop Challenge'
+                : 'Generate Workshop Challenge'}
           </Button>
+          <p className="max-w-sm text-center text-xs text-muted-foreground">
+            Takes the idea, problem, and audience above and{' '}
+            {challengeExists ? 'redrafts' : 'drafts'} your workshop challenge.
+          </p>
         </div>
 
         {/* Generated challenge */}
@@ -389,9 +390,14 @@ export function WorkshopSetup({
           <div className="mx-auto mt-8 max-w-2xl">
             <ChallengeCard
               value={challengeText}
-              generating={generating}
+              generating={challengeBusy && !challengeExists}
+              busy={challengeBusy && challengeExists}
               onChange={(text) => setField('challenge-statement', text)}
-              onRegenerate={handleDone}
+              onPolish={() => runCardAction('challenge-statement', 'polish')}
+              onElaborate={(instructions) =>
+                runCardAction('challenge-statement', 'elaborate', instructions)
+              }
+              onRegenerate={() => runCardAction('challenge-statement', 'regenerate')}
             />
           </div>
         )}

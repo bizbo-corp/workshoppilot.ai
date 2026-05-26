@@ -22,7 +22,10 @@ import { loadCanvasState } from '@/actions/canvas-actions';
 
 export const maxDuration = 30;
 
-const FIELDS = ['idea', 'problem', 'audience'] as const;
+/** Input cards used as context for one another. */
+const INPUT_FIELDS = ['idea', 'problem', 'audience'] as const;
+/** All cards an action can target — includes the generated challenge statement. */
+const FIELDS = ['idea', 'problem', 'audience', 'challenge-statement'] as const;
 type Field = (typeof FIELDS)[number];
 const ACTIONS = ['polish', 'elaborate', 'regenerate'] as const;
 type Action = (typeof ACTIONS)[number];
@@ -31,11 +34,20 @@ const resultSchema = z.object({
   text: z.string().describe('The new card content — plain text, no quotes or labels'),
 });
 
+const FIELD_LABEL: Record<Field, string> = {
+  idea: 'Idea',
+  problem: 'Problem',
+  audience: 'Audience',
+  'challenge-statement': 'workshop challenge',
+};
+
 const FIELD_BRIEF: Record<Field, string> = {
   idea: 'the idea or opportunity to explore — a short phrase or a couple of sentences',
   problem: 'the underlying problem or tension — one to three short sentences',
   audience:
     'who this is for — a single short sentence that may name more than one group (e.g. "Small business owners and marketing teams.")',
+  'challenge-statement':
+    'a single "How might we…" challenge statement — one sentence, under 25 words, focused on the people and the outcome, with NO baked-in solution or method',
 };
 
 const GENERIC_TITLES = new Set(['', 'new workshop', 'untitled', 'untitled workshop']);
@@ -99,7 +111,7 @@ export async function POST(req: Request) {
         (n) =>
           n.templateKey &&
           n.templateKey !== field &&
-          (FIELDS as readonly string[]).includes(n.templateKey) &&
+          (INPUT_FIELDS as readonly string[]).includes(n.templateKey) &&
           (n.text || '').trim(),
       )
       .map((n) => `- ${n.templateKey}: ${n.text.trim()}`)
@@ -113,13 +125,14 @@ export async function POST(req: Request) {
       .filter(Boolean)
       .join('\n');
 
+    const label = FIELD_LABEL[field];
     let task: string;
     if (action === 'polish') {
-      task = `Polish the "${field}" card below: tighten and clarify the wording, fix any awkward phrasing, keep the SAME meaning and roughly the same length. Do not add new ideas.\n\nCurrent "${field}":\n${current}`;
+      task = `Polish the ${label} below: tighten and clarify the wording, fix any awkward phrasing, keep the SAME meaning and roughly the same length. Do not add new ideas. It should remain ${FIELD_BRIEF[field]}.\n\nCurrent ${label}:\n${current}`;
     } else if (action === 'elaborate') {
-      task = `Revise the "${field}" card below in this direction: "${instructions!.trim()}". Keep what still fits; apply the requested change. It should remain ${FIELD_BRIEF[field]}.\n\nCurrent "${field}":\n${current}`;
+      task = `Revise the ${label} below in this direction: "${instructions!.trim()}". Keep what still fits; apply the requested change. It should remain ${FIELD_BRIEF[field]}.\n\nCurrent ${label}:\n${current}`;
     } else {
-      task = `Write a brand-new "${field}" for this workshop — ${FIELD_BRIEF[field]}. Ignore any previous text; produce a fresh, specific, plausible option${hasTitle ? ` that fits the workshop name` : ''}. Make it coherent with the other cards if present.`;
+      task = `Write a brand-new ${label} for this workshop — ${FIELD_BRIEF[field]}. Ignore any previous text; produce a fresh, specific, plausible option${hasTitle ? ` that fits the workshop name` : ''}. Make it coherent with the other cards if present.`;
     }
 
     const prompt = `You are helping someone frame a design-thinking workshop with three cards: Idea, Problem, Audience.
@@ -129,7 +142,9 @@ ${task}
 Return ONLY the new card text — plain text, no quotes, no field label, no preamble.${
       field === 'audience'
         ? ' For audience, write it as a single sentence (it may list multiple groups).'
-        : ''
+        : field === 'challenge-statement'
+          ? ' Write it as a single "How might we…" sentence, under 25 words, with no solution baked in.'
+          : ''
     }`;
 
     const result = await generateObject({
