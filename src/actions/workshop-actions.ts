@@ -21,6 +21,8 @@ import { dbWithRetry } from '@/db/with-retry';
 import { unwrapLiveblocksStorage } from '@/lib/liveblocks/unwrap-storage';
 import { getRoomId } from '@/lib/liveblocks/config';
 import { Liveblocks } from '@liveblocks/node';
+import { getStepTemplateStickyNotes, guidesToTemplateDefs } from '@/lib/canvas/template-sticky-note-config';
+import { loadCanvasGuides } from '@/actions/canvas-guide-actions';
 
 // Lazily initialized Liveblocks server client — mirrors the pattern in
 // /api/liveblocks-auth/route.ts. The constructor validates the secret key
@@ -997,6 +999,52 @@ export async function resetStep(
             )
           )
       );
+    }
+
+    // Re-seed the reset step's empty template sticky notes (e.g. Step 1's
+    // idea/problem/audience/challenge cards) so the board returns to its pristine
+    // SEEDED state, not an absent artifact. This makes reset authoritative: the
+    // regenerated greeting reads a board that explicitly shows "0 of N filled"
+    // rather than relying on a later page load to re-seed. Mirrors the seed-on-load
+    // logic in the step page (guides-first, then hardcoded defaults) so any
+    // admin-configured template positions/labels survive the reset. Best-effort —
+    // the page re-seeds on load if this fails.
+    try {
+      const currentWorkshopStepId = workshopStepRecords.find(
+        (r) => r.stepId === stepId
+      )?.id;
+      if (currentWorkshopStepId) {
+        const guides = await loadCanvasGuides(stepId);
+        let templateDefs = guidesToTemplateDefs(guides);
+        if (templateDefs.length === 0) {
+          templateDefs = getStepTemplateStickyNotes(stepId);
+        }
+        if (templateDefs.length > 0) {
+          const seededStickyNotes = templateDefs.map((def) => ({
+            id: crypto.randomUUID(),
+            text: '',
+            position: def.position,
+            width: def.width,
+            height: def.height,
+            color: def.color,
+            type: 'stickyNote' as const,
+            templateKey: def.key,
+            templateLabel: def.label,
+            placeholderText: def.placeholderText,
+          }));
+          await dbWithRetry(() =>
+            db.insert(stepArtifacts).values({
+              workshopStepId: currentWorkshopStepId,
+              stepId,
+              artifact: { _canvas: { stickyNotes: seededStickyNotes } },
+              schemaVersion: 'canvas-1.0',
+              version: 1,
+            })
+          );
+        }
+      }
+    } catch (seedErr) {
+      console.warn('[resetStep] template re-seed failed (page will re-seed on load):', seedErr);
     }
 
     // Revalidate workshop layout to refresh sidebar and step status

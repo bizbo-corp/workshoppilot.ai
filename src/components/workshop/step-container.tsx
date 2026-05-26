@@ -1131,13 +1131,18 @@ export function StepContainer({
 
   // Handle reset (clear data and full forward wipe)
   const handleReset = React.useCallback(async () => {
+    const step = getStepByOrder(stepOrder);
+    if (!step) {
+      console.error("Step not found for reset");
+      toast.error("Couldn't reset — step not found.");
+      return;
+    }
     try {
       setIsResetting(true);
-      const step = getStepByOrder(stepOrder);
-      if (!step) {
-        console.error("Step not found for reset");
-        return;
-      }
+      // Server wipe (chat, artifacts, summaries, narration) + deterministic
+      // empty-template re-seed for this step. Awaited first so the rest only runs
+      // on success — on failure we leave both client and server untouched and
+      // surface an error, rather than silently diverging.
       await resetStep(workshopId, step.id, sessionId);
       setShowResetDialog(false);
       // Reset local state
@@ -1149,35 +1154,36 @@ export function StepContainer({
       // Clear Step 10 extraction state
       setStep10Artifact(null);
       hasAutoExtracted.current = false;
-      // Step 6: wipe the team's template poll SYNCHRONOUSLY, BEFORE the
-      // ChatPanel re-mounts via resetKey. The chat-panel's lock effect reads
-      // journeyPoll on mount — if the rAF clear below ran first instead,
-      // ChatPanel would observe the stale lockedTemplate, fire a synthetic
-      // __journey_template_locked__ user message, and the AI would respond
-      // with [JOURNEY_STAGES] + [GRID_ITEM] tags against an already-reset
-      // step. Other store wipes can stay in rAF because no effect reads them
-      // on mount.
+      // Clear ALL canvas/whiteboard state SYNCHRONOUSLY, before the ChatPanel
+      // re-mounts via resetKey. This was previously deferred in a
+      // requestAnimationFrame AFTER resetKey, which left a window where the canvas
+      // autosave could flush the OLD sticky notes back into _canvas after the
+      // server wipe — and the regenerated greeting then read them as "already
+      // filled" (the stale-context-after-reset bug). Clearing now + markClean()
+      // means the autosave has nothing stale to persist; resetStep already wrote
+      // the pristine seeded board server-side. (clearJourneyPoll must also run
+      // before resetKey — ChatPanel's lock effect reads journeyPoll on mount.)
       clearJourneyPoll();
-      // Force re-mount of ChatPanel to clear useChat state
+      setStickyNotes([]);
+      setDrawingNodes([]);
+      setCrazy8sSlots([]);
+      setMindMapState([], []);
+      setConceptCards([]);
+      setGridColumns([]);
+      setSelectedSlotIds([]);
+      setPersonaTemplates([]);
+      setHmwCards([]);
+      setBrainRewritingMatrices([]);
+      storeApi.getState().markClean();
+      // Force re-mount of ChatPanel to clear useChat state and regenerate the
+      // greeting against the now-empty board.
       setResetKey((prev) => prev + 1);
-      // Clear canvas/whiteboard state AFTER resetKey so the new store mount
-      // gets overwritten with empty state (resetKey re-creates store from stale server props)
-      requestAnimationFrame(() => {
-        setStickyNotes([]);
-        setDrawingNodes([]);
-        setCrazy8sSlots([]);
-        setMindMapState([], []);
-        setConceptCards([]);
-        setGridColumns([]);
-        setSelectedSlotIds([]);
-        setPersonaTemplates([]);
-        setHmwCards([]);
-        setBrainRewritingMatrices([]);
-      });
       // Refresh page to reload with cleared server state
       router.refresh();
+      toast.success(`${step.name} reset.`);
     } catch (error) {
       console.error("Failed to reset step:", error);
+      toast.error("Reset failed — your step wasn't cleared. Please try again.");
     } finally {
       setIsResetting(false);
     }
@@ -1198,6 +1204,7 @@ export function StepContainer({
     setBrainRewritingMatrices,
     setConceptActivityStarted,
     clearJourneyPoll,
+    storeApi,
   ]);
 
   // Step 10: render validation deliverables — journey map first, then prototype
