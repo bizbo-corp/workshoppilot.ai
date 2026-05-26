@@ -182,6 +182,7 @@ function HeroSection({
   nodeId: string;
 }) {
   const hasImage = !!avatarUrl;
+  const firstName = name?.trim().split(/\s+/)[0] ?? "";
 
   return (
     <div
@@ -257,19 +258,29 @@ function HeroSection({
         }}
       />
 
-      {/* Archetype title overlay — positioned at bottom-left */}
+      {/* Identity overlay — archetype eyebrow above the first name, then a wrapping description */}
       <div className="pointer-events-auto absolute inset-x-0 bottom-0 px-6 pb-5">
-        <EditableField
-          value={archetype}
-          placeholder="Archetype Title"
-          onBlur={(v) => onFieldChange?.(nodeId, "archetype", v)}
-          className="text-2xl font-bold text-white placeholder:text-white/40 drop-shadow-md focus:bg-white/10"
-        />
+        <div>
+          <EditableField
+            value={archetype}
+            placeholder="Archetype"
+            onBlur={(v) => onFieldChange?.(nodeId, "archetype", v)}
+            className="text-[11px] font-bold uppercase tracking-widest text-white/70 placeholder:text-white/30 drop-shadow-md focus:bg-white/10"
+            autoWidth
+            minWidth={80}
+          />
+        </div>
+        {/* First name only — full name stays editable in the profile bar below */}
+        <h3 className="text-2xl font-bold leading-tight text-white drop-shadow-md">
+          {firstName || <span className="text-white/40">Name</span>}
+        </h3>
         <EditableField
           value={archetypeRole}
-          placeholder="Role / Tagline"
+          placeholder="Short description"
           onBlur={(v) => onFieldChange?.(nodeId, "archetypeRole", v)}
-          className="text-sm font-medium text-white/80 placeholder:text-white/30 drop-shadow-md focus:bg-white/10"
+          className="mt-0.5 text-sm font-medium text-white/85 placeholder:text-white/30 drop-shadow-md focus:bg-white/10"
+          multiline
+          autoResize
         />
       </div>
     </div>
