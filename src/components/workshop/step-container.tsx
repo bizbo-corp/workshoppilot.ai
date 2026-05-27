@@ -1480,13 +1480,10 @@ export function StepContainer({
         // behind it as they pass under. Same olive hue as the body; soft shadow
         // gives it a floating, neumorphic feel (no hard divider).
         <div className="panel-header absolute inset-x-0 top-0 z-20 flex h-16 items-center gap-2.5 px-3 bg-olive-100/70 backdrop-blur-md dark:bg-neutral-olive-950/70">
-          <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base leading-none"
-            style={{ backgroundColor: getWorkshopColor(workshopColor).bgHex }}
-          >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center text-base leading-none">
             {FACILITATOR.emoji}
           </div>
-          <span className="text-sm font-medium">
+          <span className="text-sm font-bold">
             {FACILITATOR.name} - your AI{" "}
             {facilitatorMode === "team" || workshopType === "multiplayer"
               ? "assistant"
