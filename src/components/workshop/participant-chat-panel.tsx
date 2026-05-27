@@ -597,7 +597,10 @@ export function ParticipantChatPanel({
     setQuickAck(getRandomAck());
     sendMessage({
       role: "user",
-      parts: [{ type: "text", text: `I'd like to interview these personas: ${selectedNames.join(", ")}` }],
+      // Quote + ";"-separate: persona names contain commas, so a comma-joined list
+      // is ambiguous and the AI mis-splits it into invented personas (feedback
+      // df_kll7qoc2w9s3a9uaapyxj3jk).
+      parts: [{ type: "text", text: `I'd like to interview these personas: ${selectedNames.map((n) => `"${n}"`).join("; ")}` }],
     });
   }, [personaSelections, personaOptions, stepId, workshopId, storeApi, addStickyNote, updateStickyNote, participantId, displayName, participantColor, sendMessage]);
 

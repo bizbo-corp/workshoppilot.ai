@@ -11,6 +11,7 @@ import type { PersonaTemplateData } from '@/lib/canvas/persona-template-types';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { Crazy8sSlot, SlotGroup } from '@/lib/canvas/crazy-8s-types';
+import { isPersonaCardForCluster } from '@/lib/canvas/canvas-position';
 
 /** Ring display order and labels */
 const RING_ORDER = ['inner', 'middle', 'outer'] as const;
@@ -441,23 +442,35 @@ export function assembleUserResearchCanvasContext(stickyNotes: StickyNote[]): st
     sections.push(`**${persona}** (${insights.length} insight${insights.length > 1 ? 's' : ''}):\n${insightList}`);
   }
 
-  // Interview progress tracking — helps the AI know when all personas are done
+  // Interview progress tracking — helps the AI know when all personas are done.
+  // A persona counts as "interviewed" once at least one insight is clustered to it.
+  // Match cards to clusters with the SAME fuzzy logic used everywhere else
+  // (isPersonaCardForCluster) — persona card text is "Name, Archetype — desc" or
+  // (for a custom-typed persona) just "Name", while the cluster key the AI emits is
+  // the bare first name. Exact-string comparison never matched, so the old "Remaining"
+  // list wrongly named every persona and the count could drift. See dialogue feedback
+  // df_ogbk4xa9dgoty657zosxv6d5 / df_cdieb2rf1oy3wfnhqffokijg.
   if (personaCards.length > 0) {
     const totalPersonas = personaCards.length;
-    const interviewedPersonas = insightsByPersona.size;
-    const remaining = totalPersonas - interviewedPersonas;
+    const clusterKeys = [...insightsByPersona.keys()];
 
-    // Build list of persona names that haven't been interviewed yet
-    const interviewedNames = new Set(insightsByPersona.keys());
-    const remainingNames = personaCards
-      .map(p => p.text)
-      .filter(name => !interviewedNames.has(name));
+    const isInterviewed = (card: StickyNote) =>
+      clusterKeys.some(key => isPersonaCardForCluster(card, key));
+
+    const remainingCards = personaCards.filter(card => !isInterviewed(card));
+    const interviewedCount = totalPersonas - remainingCards.length;
 
     let progressText: string;
-    if (remaining <= 0) {
-      progressText = `**Interview Progress:** ${interviewedPersonas} of ${totalPersonas} persona${totalPersonas > 1 ? 's' : ''} interviewed. All interviews complete — proceed to Phase C (Completion).`;
+    if (remainingCards.length === 0) {
+      // Keep the literal "All interviews complete" phrase — the step prompt keys off
+      // it — but make explicit that it only UNLOCKS wrap-up, never triggers it.
+      progressText = `**Interview Progress:** ${interviewedCount} of ${totalPersonas} persona${totalPersonas > 1 ? 's' : ''} interviewed. All interviews complete (every selected persona has at least one captured insight). NOTE: this only UNLOCKS the wrap-up option — it does NOT mean you should wrap up. Keep answering the current persona's questions and only move to Phase C when the user explicitly chooses to.`;
     } else {
-      progressText = `**Interview Progress:** ${interviewedPersonas} of ${totalPersonas} persona${totalPersonas > 1 ? 's' : ''} interviewed. Remaining: ${remainingNames.join(', ')}.`;
+      // Show the persona label (leading segment before the em-dash, original case),
+      // not the full card text, and separate with "; " since persona names
+      // themselves contain commas.
+      const remainingNames = remainingCards.map(c => c.text.split(/\s*[—–]\s*/)[0].trim());
+      progressText = `**Interview Progress:** ${interviewedCount} of ${totalPersonas} persona${totalPersonas > 1 ? 's' : ''} interviewed. Not yet interviewed: ${remainingNames.join('; ')}.`;
     }
     sections.push(progressText);
   }

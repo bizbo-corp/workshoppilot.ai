@@ -3668,7 +3668,13 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                                             parts: [
                                               {
                                                 type: "text",
-                                                text: `I'd like to interview these personas: ${selectedNames.join(", ")}`,
+                                                // Quote each name and separate with ";" — persona names
+                                                // contain commas ("Aaliya, The Sales Agency Owner"), so a
+                                                // comma-joined list is ambiguous and the AI would mis-split
+                                                // it into invented personas (feedback df_kll7qoc2w9s3a9uaapyxj3jk).
+                                                text: `I'd like to interview these personas: ${selectedNames
+                                                  .map((n) => `"${n}"`)
+                                                  .join("; ")}`,
                                               },
                                             ],
                                           });
