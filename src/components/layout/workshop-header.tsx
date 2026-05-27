@@ -135,7 +135,7 @@ export function WorkshopHeader({
 
   return (
     <>
-      <header className="flex min-h-16 items-center justify-between border-b bg-background px-6 py-2">
+      <header className="panel-header flex min-h-16 items-center justify-between bg-background px-6 py-2">
         {/* Left section: Logo + workshop name + step indicator */}
         <div className="flex items-center">
           <div className="hidden md:flex md:items-center md:gap-2">

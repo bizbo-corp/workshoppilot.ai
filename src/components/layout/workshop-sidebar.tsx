@@ -190,7 +190,7 @@ export function WorkshopSidebar({
       {/* Logo */}
       <SidebarHeader
         className={cn(
-          "flex h-16 flex-row items-center border-b",
+          "panel-header flex h-16 flex-row items-center",
           state === "collapsed" ? "justify-center px-2" : "justify-start px-4",
         )}
       >

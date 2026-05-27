@@ -94,7 +94,7 @@
 /* Olive palette */
 :root {
   --olive-50: #f9fbf6;
-  --olive-100: #e8eae2;
+  --olive-100: #e1e5d9;
   --olive-200: #c9d0bc;
   --olive-300: #b1bca0;
   --olive-400: #9ea88d;
@@ -260,8 +260,10 @@
   --chart-3: rgba(22, 78, 99, 1);
   --chart-4: rgba(251, 191, 36, 1);
   --chart-5: rgba(245, 158, 11, 1);
-  /* Workspace stack (light): canvas (50) → chat (200) → sidebar (300) */
-  --sidebar: var(--neutral-olive-300);
+  /* Workspace stack (light): canvas (neutral-olive-50, lightest) → chat
+     (olive-100) → sidebar (olive-200, deepest). Sage-tinted to match the canvas
+     hue while stepping down in tone; canvas itself is unchanged. */
+  --sidebar: var(--olive-200);
   --sidebar-foreground: var(--neutral-olive-950);
   --sidebar-primary: var(--neutral-olive-900);
   --sidebar-primary-foreground: var(--neutral-olive-50);
@@ -695,6 +697,40 @@
 }
 .chat-scroll.is-scrolling {
   scrollbar-color: var(--neutral-olive-400) transparent;
+}
+
+/* Shared header treatment for the three workspace panels (sidebar / chat /
+   canvas): one consistent bottom divider + soft floating shadow, so they match
+   in style. Background shade is set per-panel and intentionally differs. */
+.panel-header {
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 12px -6px rgba(0, 0, 0, 0.25);
+}
+
+/* AI chat messages — theme the typography plugin to the app's olive --foreground
+   at ~85% so the panel's sage hue shows through the body text. Bold/headings
+   stay full-strength for emphasis. Works in light and dark (--foreground flips,
+   and the invert vars used by dark:prose-invert resolve to the same values). */
+.chat-prose {
+  --tw-prose-body: color-mix(in srgb, var(--foreground) 85%, transparent);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-lead: color-mix(in srgb, var(--foreground) 85%, transparent);
+  --tw-prose-links: var(--foreground);
+  --tw-prose-quotes: color-mix(in srgb, var(--foreground) 85%, transparent);
+  --tw-prose-counters: color-mix(in srgb, var(--foreground) 70%, transparent);
+  --tw-prose-bullets: color-mix(in srgb, var(--foreground) 45%, transparent);
+  --tw-prose-hr: color-mix(in srgb, var(--foreground) 20%, transparent);
+  --tw-prose-quote-borders: color-mix(in srgb, var(--foreground) 30%, transparent);
+
+  --tw-prose-invert-body: color-mix(in srgb, var(--foreground) 85%, transparent);
+  --tw-prose-invert-headings: var(--foreground);
+  --tw-prose-invert-bold: var(--foreground);
+  --tw-prose-invert-lead: color-mix(in srgb, var(--foreground) 85%, transparent);
+  --tw-prose-invert-links: var(--foreground);
+  --tw-prose-invert-quotes: color-mix(in srgb, var(--foreground) 85%, transparent);
+  --tw-prose-invert-counters: color-mix(in srgb, var(--foreground) 70%, transparent);
+  --tw-prose-invert-bullets: color-mix(in srgb, var(--foreground) 45%, transparent);
 }
 
 /* New workshop card — dashed olive border, solid on hover */

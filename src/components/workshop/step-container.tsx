@@ -1454,7 +1454,7 @@ export function StepContainer({
         // Frosted-glass header — sits over the scroll area so messages blur
         // behind it as they pass under. Same olive hue as the body; soft shadow
         // gives it a floating, neumorphic feel (no hard divider).
-        <div className="absolute inset-x-0 top-0 z-20 flex h-16 items-center gap-2.5 px-3 bg-neutral-olive-200/70 backdrop-blur-md shadow-[0_2px_12px_-6px_rgba(0,0,0,0.25)] dark:bg-neutral-olive-950/70">
+        <div className="panel-header absolute inset-x-0 top-0 z-20 flex h-16 items-center gap-2.5 px-3 bg-olive-100/70 backdrop-blur-md dark:bg-neutral-olive-950/70">
           <div
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base leading-none"
             style={{ backgroundColor: getWorkshopColor(workshopColor).bgHex }}
@@ -1789,9 +1789,11 @@ export function StepContainer({
       <div
         style={chatCollapsed ? undefined : { width: effectiveChatWidth }}
         className={cn(
-          // Workspace stack: canvas (50/900) → chat (200/950) → sidebar (300/975).
+          // Workspace stack: canvas (lightest) → chat → sidebar (deepest).
+          // Light: olive-100 chat sits a step below the canvas, above the
+          // olive-200 sidebar. Dark keeps the neutral-olive deep step.
           // Translucent + blur gives the chat a frosted, neumorphic glass feel.
-          "relative flex shrink-0 flex-col border-r bg-neutral-olive-200/80 backdrop-blur-xl dark:bg-neutral-olive-950/80",
+          "relative flex shrink-0 flex-col border-r bg-olive-100/80 backdrop-blur-xl dark:bg-neutral-olive-950/80",
           chatCollapsed ? "w-14" : undefined,
           isResizingChat ? undefined : "transition-[width] duration-200"
         )}
@@ -1854,16 +1856,26 @@ export function StepContainer({
             aria-orientation="vertical"
             aria-label="Resize chat panel"
             onPointerDown={handleChatResizeStart}
-            className={cn(
-              "group absolute -right-1 top-0 z-20 h-full w-2 cursor-col-resize touch-none",
-            )}
+            className="group absolute -right-1.5 top-0 z-20 flex h-full w-3 cursor-col-resize touch-none items-center justify-center"
           >
+            {/* Full-height guide line — brightens to olive on hover / while dragging */}
             <div
               className={cn(
-                "mx-auto h-full w-px bg-transparent transition-colors group-hover:bg-primary/60",
-                isResizingChat && "bg-primary"
+                "absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent transition-colors group-hover:bg-olive-600/60",
+                isResizingChat && "bg-olive-600"
               )}
             />
+            {/* Gripper handle — olive pill that fades in on hover so the edge reads as resizable */}
+            <div
+              className={cn(
+                "relative flex flex-col items-center gap-1 rounded-md bg-olive-600 px-1 py-2 shadow-sm opacity-0 transition-opacity duration-150 group-hover:opacity-100",
+                isResizingChat && "opacity-100"
+              )}
+            >
+              <span className="h-1 w-1 rounded-full bg-olive-50" />
+              <span className="h-1 w-1 rounded-full bg-olive-50" />
+              <span className="h-1 w-1 rounded-full bg-olive-50" />
+            </div>
           </div>
         )}
       </div>

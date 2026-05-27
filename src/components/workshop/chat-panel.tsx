@@ -3054,7 +3054,7 @@ export function ChatPanel({
                       {showGreeting && (
                         <div className="flex items-start">
                           <div className="flex-1">
-                            <div className="text-base prose prose-base dark:prose-invert max-w-none">
+                            <div className="text-base prose prose-base dark:prose-invert max-w-none chat-prose">
                               <ReactMarkdown>{stepGreeting!}</ReactMarkdown>
                             </div>
                           </div>
@@ -3077,7 +3077,7 @@ export function ChatPanel({
                     {showGreeting && (
                       <div className="flex items-start">
                         <div className="flex-1">
-                          <div className="text-base prose prose-base dark:prose-invert max-w-none">
+                          <div className="text-base prose prose-base dark:prose-invert max-w-none chat-prose">
                             <ReactMarkdown>{stepGreeting!}</ReactMarkdown>
                           </div>
                         </div>
@@ -3109,7 +3109,7 @@ export function ChatPanel({
                             className="group flex items-start justify-end"
                           >
                             <div className="max-w-[80%]">
-                              <div className="relative rounded-2xl bg-neutral-olive-100 dark:bg-neutral-olive-800 p-3 px-4 text-base text-foreground">
+                              <div className="relative rounded-2xl bg-neutral-olive-50 dark:bg-neutral-olive-800 p-3 px-4 text-base text-foreground">
                                 {displayContent}
                               </div>
                             </div>
@@ -3313,7 +3313,7 @@ export function ChatPanel({
                           )}
                           <div className="flex items-start">
                             <div className="flex-1">
-                              <div className="text-base prose prose-base dark:prose-invert max-w-none">
+                              <div className="text-base prose prose-base dark:prose-invert max-w-none chat-prose">
                                 {renderMindMapContent(beforeIntro)}
                               </div>
                               {questionCountLine && (
@@ -3327,7 +3327,7 @@ export function ChatPanel({
                                   <PersonaInterrupt
                                     personaName={personaIntro.personaName}
                                   />
-                                  <div className="text-base prose prose-base dark:prose-invert max-w-none">
+                                  <div className="text-base prose prose-base dark:prose-invert max-w-none chat-prose">
                                     {renderMindMapContent(afterIntro)}
                                   </div>
                                 </>
