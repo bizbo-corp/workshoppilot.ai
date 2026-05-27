@@ -109,8 +109,9 @@
 /* Light mode — sage / olive hue */
 :root {
   --radius: 0.625rem;
-  /* Selection — lime brand color used for all canvas selection indicators */
-  --selection: #65a30d;
+  /* Selection — olive (brand), matches the cluster group header (olive-600).
+     Used for all canvas selection indicators. */
+  --selection: var(--olive-600);
   /* Canvas (light) — lightest surface of the workspace stack: canvas (50) →
      sidebar (200) → chat (300). */
   --canvas-bg: var(--neutral-olive-50);
@@ -272,7 +273,9 @@
 
 /* Dark mode — deep green */
 .dark {
-  --selection: #a3e635;
+  /* Lighter olive in dark mode so selection rings + resize handles stay visible
+     against the dark canvas (light mode uses olive-600 to match the group header). */
+  --selection: var(--olive-400);
   /* Canvas (dark) — workspace stack: canvas (900) → sidebar (950) → chat (975) */
   --canvas-bg: var(--neutral-olive-900);
   --canvas-dots: color-mix(in srgb, var(--foreground) 50%, transparent);

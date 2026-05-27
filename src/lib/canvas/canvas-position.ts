@@ -212,8 +212,42 @@ export function computeCanvasPosition(
   quadrant?: Quadrant;
   cellAssignment?: { row: string; col: string };
 } {
-  // --- Ring-based steps (2: stakeholder-mapping with rings) ---
   const stepConfig = STEP_CANVAS_CONFIGS[stepId];
+
+  // --- Cluster children (ring-based steps, e.g. 2: stakeholder-mapping) ---
+  // Children carry only a `cluster` (the parent's label) and no ring of their
+  // own, so without this they'd fall through to the diagonal fallback stagger.
+  // Instead, tuck them into a tidy grid directly below their parent card. The
+  // grid is centered on the parent and indexed by sibling count, so each child's
+  // slot is stable as more arrive (no re-centering drift). Scoped to ring steps
+  // so the persona-cluster logic in user-research / sense-making is untouched.
+  if (stepConfig?.hasRings && metadata.cluster) {
+    const clusterKey = metadata.cluster.toLowerCase().trim();
+    const parent = existingStickyNotes.find(
+      (p) =>
+        (!p.type || p.type === 'stickyNote') &&
+        !p.cluster &&
+        p.text.toLowerCase().trim() === clusterKey,
+    );
+    if (parent) {
+      const siblingCount = existingStickyNotes.filter(
+        (p) => p.cluster && p.cluster.toLowerCase().trim() === clusterKey,
+      ).length;
+      const col = siblingCount % CLUSTER_COLS;
+      const row = Math.floor(siblingCount / CLUSTER_COLS);
+      const gridWidth = CLUSTER_COLS * POST_IT_WIDTH + (CLUSTER_COLS - 1) * CLUSTER_GAP;
+      const startX = parent.position.x + parent.width / 2 - gridWidth / 2;
+      return {
+        position: {
+          x: startX + col * (POST_IT_WIDTH + CLUSTER_GAP),
+          y: parent.position.y + parent.height + CLUSTER_GAP + row * (POST_IT_HEIGHT + CLUSTER_GAP),
+        },
+        cellAssignment: { row: clusterKey, col: '' },
+      };
+    }
+  }
+
+  // --- Ring-based steps (2: stakeholder-mapping with rings) ---
   const ringId = metadata.ring || metadata.quadrant;
   if (stepConfig?.hasRings && ringId) {
     const ringConfig = stepConfig.ringConfig as RingConfig;

@@ -20,13 +20,16 @@ const viewportSelector = (state: ReactFlowState) => ({
   zoom: state.transform[2],
 });
 
+// Brand sage-green hull, used for every cluster. White header text + grip dots
+// (set in the render below) sit on the olive-600 sage header for contrast.
 const HULL_COLORS = [
-  { fill: 'rgba(168, 218, 255, 0.12)', border: 'rgba(168, 218, 255, 0.45)', text: '#0a1f4a', activeFill: 'rgba(168, 218, 255, 0.22)', headerBg: 'rgba(168, 218, 255, 0.85)' },
-  { fill: 'rgba(179, 239, 189, 0.12)', border: 'rgba(179, 239, 189, 0.45)', text: '#0a3818', activeFill: 'rgba(179, 239, 189, 0.22)', headerBg: 'rgba(179, 239, 189, 0.85)' },
-  { fill: 'rgba(255, 226, 153, 0.12)', border: 'rgba(255, 226, 153, 0.45)', text: '#3d2a00', activeFill: 'rgba(255, 226, 153, 0.22)', headerBg: 'rgba(255, 226, 153, 0.85)' },
-  { fill: 'rgba(255, 175, 163, 0.12)', border: 'rgba(255, 175, 163, 0.45)', text: '#4a1408', activeFill: 'rgba(255, 175, 163, 0.22)', headerBg: 'rgba(255, 175, 163, 0.85)' },
-  { fill: 'rgba(211, 189, 255, 0.12)', border: 'rgba(211, 189, 255, 0.45)', text: '#2a1252', activeFill: 'rgba(211, 189, 255, 0.22)', headerBg: 'rgba(211, 189, 255, 0.85)' },
-  { fill: 'rgba(179, 244, 239, 0.12)', border: 'rgba(179, 244, 239, 0.45)', text: '#0a3a35', activeFill: 'rgba(179, 244, 239, 0.22)', headerBg: 'rgba(179, 244, 239, 0.85)' },
+  {
+    fill: 'rgba(139, 150, 121, 0.12)',   // olive-500 tint
+    border: 'rgba(118, 131, 100, 0.5)',  // olive-600
+    text: '#ffffff',
+    activeFill: 'rgba(139, 150, 121, 0.2)',
+    headerBg: '#768364',                  // olive-600 — brand sage green
+  },
 ];
 
 export type ClusterHullData = {
