@@ -3,46 +3,11 @@
  * Supports two modes: AI Interviews (synthetic roleplay) and Real Interviews (user-conducted).
  */
 
-/**
- * Facilitator name pool — distinct from participant pool so both sides
- * always get different persona names. Shuffled at call time.
- */
-const FACILITATOR_NAME_POOL = [
-  "Marta",
-  "Tariq",
-  "Lila",
-  "Tāne",
-  "Jin",
-  "Suki",
-  "Rafael",
-  "Olga",
-  "Kenji",
-  "Petra",
-  "Idris",
-  "Anika",
-  "Mateo",
-  "Leila",
-  "Kofi",
-  "Esme",
-  "Ravi",
-  "Niamh",
-  "Dmitri",
-  "Aaliya",
-  "Oscar",
-  "Fatou",
-  "Hiroshi",
-  "Solange",
-  "Anders",
-  "Priya",
-  "Ezra",
-  "Linnea",
-  "Kwame",
-  "Thalia",
-];
+import { FACILITATOR_NAME_POOL } from "@/lib/ai/persona-name-pools";
 
 function pickRandomFacilitatorNames(count: number): string[] {
   const shuffled = [...FACILITATOR_NAME_POOL].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
+  return shuffled.slice(0, count).map((entry) => entry.name);
 }
 
 /**

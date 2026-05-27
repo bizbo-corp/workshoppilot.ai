@@ -6,6 +6,7 @@ import { recordUsageEvent } from "@/lib/ai/usage-tracking";
 import { checkRateLimit, rateLimitResponse } from "@/lib/ai/rate-limiter";
 import { checkImageGenerationCap, imageCapExceededResponse } from "@/lib/ai/image-generation-cap";
 import { authenticateWorkshopRequest, unauthorizedResponse } from "@/lib/auth/workshop-request-auth";
+import { genderForPoolName } from "@/lib/ai/persona-name-pools";
 
 /**
  * Increase Vercel serverless timeout for image generation
@@ -63,6 +64,11 @@ const FEMALE_NAMES = new Set([
 ]);
 
 function inferGenderNoun(name: string | undefined, seed: number): "man" | "woman" {
+  // Names from our persona pools carry a declared gender — authoritative, and
+  // covers Māori / non-English names the lookup sets below miss (otherwise they
+  // coin-flip and the portrait gender drifts between regenerations).
+  const fromPool = genderForPoolName(name);
+  if (fromPool) return fromPool;
   const first = (name || "").trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, "");
   if (first && MALE_NAMES.has(first)) return "man";
   if (first && FEMALE_NAMES.has(first)) return "woman";
