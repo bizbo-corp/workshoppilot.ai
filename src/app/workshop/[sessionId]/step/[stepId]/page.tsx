@@ -1262,6 +1262,7 @@ export default async function StepPage({ params }: StepPageProps) {
               facilitatorMode={session.workshop.facilitatorMode}
               tier={session.workshop.tier}
               challengePublished={!!session.workshop.challengePublishedAt}
+              workshopStarted={workshopStarted}
               isWorkshopOwner={isFacilitator}
               challengeIdea={challengeIdea}
               challengeProblem={challengeProblem}
@@ -1294,6 +1295,7 @@ export default async function StepPage({ params }: StepPageProps) {
             facilitatorMode={session.workshop.facilitatorMode}
             tier={session.workshop.tier}
             challengePublished={!!session.workshop.challengePublishedAt}
+            workshopStarted={workshopStarted}
             isWorkshopOwner={isFacilitator}
           />
         )}

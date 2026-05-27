@@ -172,6 +172,9 @@ interface StepContainerProps {
   tier?: 'solo' | 'team' | 'white_glove' | null;
   /** v2.1 — True once the facilitator publishes the challenge (challengePublishedAt is set). */
   challengePublished?: boolean;
+  /** v2.2 — True once the workshop has actually started (workshopStartedAt set).
+   *  Locks inline challenge editing in the settings dialog for running multiplayer sessions. */
+  workshopStarted?: boolean;
   /** True when the current Clerk user owns the workshop (matches workshops.clerkUserId).
    *  Distinct from multiplayer-context isFacilitator, which is false in solo mode.
    *  Used to gate the "Switch to team workshop" affordance on Step 1 for solo owners. */
@@ -218,6 +221,7 @@ export function StepContainer({
   facilitatorMode,
   tier = null,
   challengePublished = false,
+  workshopStarted = false,
   isWorkshopOwner = false,
   challengeIdea,
   challengeProblem,
@@ -1932,6 +1936,9 @@ export function StepContainer({
           workshopType={workshopType ?? "solo"}
           shareToken={shareToken ?? undefined}
           isFacilitator={isFacilitator}
+          isWorkshopOwner={isWorkshopOwner}
+          isAdmin={isAdmin}
+          workshopStarted={workshopStarted}
         />
         <div className="relative min-h-0 flex-1 overflow-hidden">
           {/* Canvas — fills remaining height */}

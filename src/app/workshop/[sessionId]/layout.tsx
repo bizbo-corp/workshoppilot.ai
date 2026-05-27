@@ -8,11 +8,11 @@
  * - Layout persists across step navigation
  */
 
-import { notFound, redirect } from 'next/navigation';
-import { auth } from '@clerk/nextjs/server';
-import { and, count, eq } from 'drizzle-orm';
+import { redirect } from 'next/navigation';
+import { auth, currentUser } from '@clerk/nextjs/server';
+import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { sessions, workshopSessions, challengeApprovals } from '@/db/schema';
+import { sessions, workshopSessions } from '@/db/schema';
 import { dbWithRetry } from '@/db/with-retry';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { WorkshopSidebar } from '@/components/layout/workshop-sidebar';
@@ -52,9 +52,17 @@ export default async function WorkshopLayout({
     redirect('/');
   }
 
-  // Determine if current user is the facilitator (workshop owner)
+  // Determine if current user is the facilitator (workshop owner) or admin
   const { userId } = await auth();
   const isFacilitator = !!userId && userId === session.workshop.clerkUserId;
+
+  const adminEmail = process.env.ADMIN_EMAIL;
+  let isAdmin = false;
+  if (adminEmail) {
+    const user = await currentUser();
+    const userEmail = user?.emailAddresses?.[0]?.emailAddress;
+    isAdmin = !!userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase();
+  }
 
   // Serialize step data for client components
   // Convert to plain serializable array (no Map objects for RSC)
@@ -91,23 +99,6 @@ export default async function WorkshopLayout({
     }
   }
 
-  const isTeamMode = session.workshop.facilitatorMode === 'team';
-
-  // Count pending change requests for the facilitator's sidebar badge
-  let pendingChangeRequests = 0;
-  if (isFacilitator && isTeamMode) {
-    const [row] = await db
-      .select({ value: count() })
-      .from(challengeApprovals)
-      .where(
-        and(
-          eq(challengeApprovals.workshopId, session.workshop.id),
-          eq(challengeApprovals.status, 'change_requested')
-        )
-      );
-    pendingChangeRequests = Number(row?.value ?? 0);
-  }
-
   return (
     <>
       <MobileGate workshopName={session.workshop.title || 'New Workshop'} />
@@ -119,9 +110,6 @@ export default async function WorkshopLayout({
             sessionId={sessionId}
             workshopSteps={workshopSteps}
             isPaywallLocked={isPaywallLocked}
-            isTeamMode={isTeamMode}
-            isFacilitator={isFacilitator}
-            pendingChangeRequests={pendingChangeRequests}
           />
         </div>
 
@@ -133,8 +121,6 @@ export default async function WorkshopLayout({
               sessionId={sessionId}
               workshopSteps={workshopSteps}
               isPaywallLocked={isPaywallLocked}
-              isTeamMode={isTeamMode}
-              isFacilitator={isFacilitator}
             />
           </div>
 
@@ -150,6 +136,9 @@ export default async function WorkshopLayout({
               workshopType={session.workshop.workshopType ?? 'solo'}
               shareToken={workshopSession?.shareToken}
               isFacilitator={isFacilitator}
+              isWorkshopOwner={isFacilitator}
+              isAdmin={isAdmin}
+              workshopStarted={!!session.workshop.workshopStartedAt}
             />
           </div>
 

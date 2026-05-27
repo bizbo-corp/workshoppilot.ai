@@ -102,7 +102,11 @@ export function StepNavigation({
     totalImages: number;
     totalCostDollars: number;
   } | null>(null);
-  const isFirstStep = currentStepOrder === 1;
+  // Challenge (order 1) is facilitator-only setup, not a stepper step — so the
+  // first navigable step is Stakeholder Mapping (order 2). Treat <= 2 as "first"
+  // to keep Back from landing on the hidden challenge step (and bouncing team
+  // participants to the lobby).
+  const isFirstStep = currentStepOrder <= 2;
   const isLastStep = currentStepOrder === STEPS.length;
   const isCompleted = stepStatus === 'complete';
 
