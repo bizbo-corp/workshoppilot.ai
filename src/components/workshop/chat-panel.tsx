@@ -9,7 +9,6 @@ import {
   Loader2,
   Plus,
   CheckCircle2,
-  Pencil,
   Sparkles,
   UserPlus,
   ArrowRight,
@@ -833,9 +832,8 @@ interface ChatPanelProps {
     | "brain-rewriting";
   showStepConfirm?: boolean;
   onStepConfirm?: () => void;
-  onStepRevise?: () => void;
   stepConfirmLabel?: string;
-  stepConfirmIsTransition?: boolean; // If true, don't send [STEP_CONFIRMED] or show revise button
+  stepConfirmIsTransition?: boolean; // If true, don't send [STEP_CONFIRMED] (sub-step transition, not a final confirm)
   stepConfirmDisabled?: boolean; // Disable the confirm button (e.g. during AI processing)
   stepAlreadyConfirmed?: boolean; // Whether the step has already been confirmed (artifact locked)
   onConceptComplete?: () => void; // Fired when AI signals all concepts are done or user asks to move on
@@ -908,7 +906,6 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
   subStep,
   showStepConfirm,
   onStepConfirm,
-  onStepRevise,
   stepConfirmLabel,
   stepConfirmIsTransition,
   stepConfirmDisabled,
@@ -4255,44 +4252,6 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                         />
                       </div>
                     )}
-                  {justConfirmed && !isReadOnly && (
-                    <div className="flex justify-center pt-2 animate-in fade-in duration-500">
-                      <button
-                        onClick={async () => {
-                          setJustConfirmed(false);
-                          onStepRevise?.();
-                          // Clear existing canvas items so the revised version replaces them
-                          const state = storeApi.getState();
-                          state.setStickyNotes([]);
-                          if (state.personaTemplates.length > 0) {
-                            state.setPersonaTemplates([]);
-                          }
-                          if (state.hmwCards.length > 0) {
-                            state.setHmwCards([]);
-                          }
-                          // Save cleared state directly to DB (bypass stale flushCanvasToDb closure)
-                          await saveCanvasState(workshopId, step.id, {
-                            stickyNotes: [],
-                          });
-                          state.markClean();
-                          sendMessage({
-                            role: "user",
-                            parts: [
-                              {
-                                type: "text",
-                                text: "I'd like to revise and improve the current output. Please suggest a better version.",
-                              },
-                            ],
-                          });
-                        }}
-                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <Pencil className="h-3 w-3" />
-                        Edit
-                      </button>
-                    </div>
-                  )}
-
                   {/* Auto-scroll target */}
                   <div ref={messagesEndRef} />
                 </div>
