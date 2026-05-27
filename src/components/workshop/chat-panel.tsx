@@ -199,7 +199,11 @@ function parseInterviewMode(content: string): {
       .map((line) => line.replace(/^[-*•\d.]\s*/, "").trim())
       .filter((line) => line.length > 0)
       .map((line) => {
-        const dashMatch = line.match(/^(.+?)\s*[—–-]\s*(.+)$/);
+        // Prefer the em/en dash; only treat a plain hyphen as separator when
+        // spaced, so hyphenated words aren't split mid-word.
+        const dashMatch =
+          line.match(/^(.+?)\s*[—–]\s*(.+)$/) ||
+          line.match(/^(.+?)\s+-\s+(.+)$/);
         const label = dashMatch ? dashMatch[1].trim() : line;
         const description = dashMatch ? dashMatch[2].trim() : "";
         const id: "synthetic" | "real" = /real/i.test(label)
@@ -247,7 +251,11 @@ function parseResearchSource(content: string): {
       .map((line) => line.replace(/^[-*•\d.]\s*/, "").trim())
       .filter((line) => line.length > 0)
       .map((line) => {
-        const dashMatch = line.match(/^(.+?)\s*[—–-]\s*(.+)$/);
+        // Prefer the em/en dash; only treat a plain hyphen as separator when
+        // spaced, so hyphenated words aren't split mid-word.
+        const dashMatch =
+          line.match(/^(.+?)\s*[—–]\s*(.+)$/) ||
+          line.match(/^(.+?)\s+-\s+(.+)$/);
         const label = dashMatch ? dashMatch[1].trim() : line;
         const description = dashMatch ? dashMatch[2].trim() : "";
         const id: "upload" | "conduct" = /already|have my|upload|analyse|analyze/i.test(

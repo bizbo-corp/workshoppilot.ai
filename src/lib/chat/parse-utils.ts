@@ -116,8 +116,13 @@ export function parsePersonaSelect(content: string): {
       .map((line) => line.replace(/^[-*•\d.]\s*/, "").trim())
       .filter((line) => line.length > 0)
       .map((line) => {
-        // Parse "Name — description" or "Name - description"
-        const dashMatch = line.match(/^(.+?)\s*[—–-]\s*(.+)$/);
+        // Parse "Name — description" or "Name - description".
+        // Prefer the em/en dash (never appears inside words); only treat a
+        // plain hyphen as the separator when it's spaced, so hyphenated
+        // names like "The E-commerce Manager" aren't split mid-word.
+        const dashMatch =
+          line.match(/^(.+?)\s*[—–]\s*(.+)$/) ||
+          line.match(/^(.+?)\s+-\s+(.+)$/);
         if (dashMatch) {
           return {
             name: dashMatch[1].trim(),
