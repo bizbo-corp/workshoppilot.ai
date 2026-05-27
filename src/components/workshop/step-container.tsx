@@ -1548,7 +1548,6 @@ export function StepContainer({
             onStepConfirm={
               stepOrder === 8 ? ideation.handleStartCrazy8s : persistStepConfirmation
             }
-            onStepRevise={() => setArtifactConfirmed(false)}
             stepConfirmLabel={
               stepOrder === 8
                 ? (ideation.isEnhancingIdeas ? 'Enhancing ideas...' : 'Confirm Mind Map')
