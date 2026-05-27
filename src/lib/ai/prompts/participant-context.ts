@@ -5,47 +5,11 @@
  * Each step has specific guidance for what a participant can contribute.
  */
 
-/**
- * Name pool for participant persona examples — distinct from facilitator names
- * so different sessions naturally diverge. Shuffled at call time so each
- * participant gets a unique set of example names.
- */
-const PARTICIPANT_NAME_POOL = [
-  "Rewa",
-  "Davi",
-  "Sara",
-  "Odin",
-  "Amara",
-  "Felix",
-  "Ingrid",
-  "Conor",
-  "Yuki",
-  "Sam",
-  "Clara",
-  "Ren",
-  "Farah",
-  "Elio",
-  "Ngaire",
-  "Tomás",
-  "Ayo",
-  "Mei",
-  "Nora",
-  "Zara",
-  "Luca",
-  "Isla",
-  "Rohan",
-  "Cleo",
-  "Hana",
-  "Marcus",
-  "Sofia",
-  "Jake",
-  "Aroha",
-  "Nico",
-];
+import { PARTICIPANT_NAME_POOL } from "@/lib/ai/persona-name-pools";
 
 function pickRandomNames(count: number): string[] {
   const shuffled = [...PARTICIPANT_NAME_POOL].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
+  return shuffled.slice(0, count).map((entry) => entry.name);
 }
 
 /**

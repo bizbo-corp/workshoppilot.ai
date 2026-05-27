@@ -1599,7 +1599,16 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
       const map: Record<string, StickyNoteColor> = {};
       for (const n of notes) {
         if ((n.type && n.type !== "stickyNote") || n.cluster || !n.text.includes(" — ")) continue;
-        const name = n.text.split(/\s*[—–]\s*/)[0].trim().toLowerCase();
+        // Key by FIRST name only. Step 3 insight clusters are first names (e.g.
+        // "Anaru"), but the persona card text is "Anaru, The Department Heads —
+        // …" — keying off the whole pre-em-dash segment never matches the
+        // cluster, so every card fell through to white ("Synthesized").
+        const name = n.text
+          .split(/\s*[—–]\s*/)[0]
+          .split(",")[0]
+          .trim()
+          .split(/\s+/)[0]
+          .toLowerCase();
         if (name && n.color) map[name] = n.color;
       }
       setPersonaColorMap(map);

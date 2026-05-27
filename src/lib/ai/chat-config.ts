@@ -187,6 +187,26 @@ When you receive a "__step_start__" greeting trigger in this state, this is a RE
 Do NOT re-introduce the step from scratch, do NOT list questions to ask, do NOT emit a [SUGGESTIONS] block in this resuming greeting.`;
   }
 
+  // Symmetric resume signal for Step 3 AI-interview sessions (facilitator). Once
+  // the facilitator picks AI Interviews the mode is 'synthetic' on every later
+  // prompt build, so a fresh "__step_start__" here — e.g. a page refresh midway
+  // through an interview — is a RESUME, not a first arrival. Without this guard
+  // the step prompt re-runs Phase 0 mode selection ([INTERVIEW_MODE]) and asks
+  // "AI or real interviews?" again, dropping the user out of an active interview.
+  // (Participants never see [INTERVIEW_MODE] — the PARTICIPANT OVERRIDES below
+  // already strip it — so this only needs to cover the facilitator.)
+  if (stepId === 'user-research' && interviewMode === 'synthetic' && !isParticipant) {
+    prompt += `\n\nRESEARCH SESSION STATE — AI INTERVIEWS ALREADY CHOSEN:
+The interview mode for this step is already set to **AI Interviews** — it was locked in earlier. Whoever you are talking to now is RESUMING an in-progress research step, not starting it.
+- NEVER present the interview-mode choice again (no [INTERVIEW_MODE]) under any circumstances.
+- Do NOT present the research-source fork (no [RESEARCH_SOURCE]).
+
+When you receive a "__step_start__" greeting trigger in this state, treat it as a RESUMING greeting, not a first-time arrival. Read the CANVAS STATE and the **Interview Progress** section and pick up exactly where things left off:
+- If persona cards exist and interviews are still in progress (Interview Progress shows personas remaining or partially interviewed): give a SHORT welcome-back (1-2 sentences), then step straight back into the persona currently being interviewed and end with a [SUGGESTIONS] block of three fresh, on-topic questions for that persona. Do NOT re-introduce the step, do NOT re-list personas, do NOT present [PERSONA_SELECT].
+- If persona cards exist and Interview Progress says "All interviews complete": do NOT reopen mode or persona selection — follow the Phase C completion guidance (briefly recap and offer to review or wrap up).
+- If AI mode is chosen but NO persona cards exist yet (the user picked AI Interviews but hasn't selected personas): present Phase 1 persona selection ([PERSONA_SELECT]) as described in the step instructions — but NEVER fall back to Phase 0 mode selection.`;
+  }
+
   // Strip facilitator-only features for participants
   if (isParticipant) {
     prompt += `\n\nPARTICIPANT OVERRIDES (take precedence over any step instructions above):
