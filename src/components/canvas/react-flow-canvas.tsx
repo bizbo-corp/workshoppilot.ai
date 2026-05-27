@@ -85,6 +85,7 @@ import { saveCanvasState } from "@/actions/canvas-actions";
 import { type DrawingElement, parseVectorJson } from "@/lib/drawing/types";
 import { ClusterEdge } from "./cluster-edge";
 import { ClusterHullsOverlay } from "./cluster-hulls-overlay";
+import { ResearchSkeletonOverlay } from "./research-skeleton-overlay";
 import {
   PersonaFrameOverlay,
   FRAME_WIDTH,
@@ -3204,6 +3205,9 @@ function ReactFlowCanvasInner({
 
       {/* Persona frame overlay — visible frames for each persona card (user-research step only) */}
       {stepId === "user-research" && <PersonaFrameOverlay />}
+
+      {/* Skeleton empty-state — placeholder persona rows shown while the user-research canvas is empty */}
+      {stepId === "user-research" && <ResearchSkeletonOverlay />}
 
       {/* Live cursors — rendered outside ReactFlow so they appear above all canvas overlays */}
       {workshopType === 'multiplayer' && <LiveCursors />}
