@@ -32,22 +32,17 @@ const EDGE_GRAB = 12;
 const FRAME_WIDTH = MIN_FRAME_WIDTH;
 
 /**
- * Color mapping from StickyNoteColor to frame appearance — vibrant Figma palette.
- * `text` matches the dark sticky-note body-text shade for each color so the header
- * label reads as a dark tint of its own hue (same treatment as sticky note text).
+ * Olive sage frame appearance — identical to the cluster-hull containers used in
+ * the Stakeholder Mapping step (see cluster-hulls-overlay.tsx HULL_COLORS), so the
+ * group containers read consistently across steps. White header text + grip dots
+ * sit on the olive-600 sage header for contrast.
  */
-const FRAME_COLORS: Record<string, { fill: string; border: string; headerBg: string; text: string }> = {
-  pink:   { fill: 'rgba(255, 168, 219, 0.10)', border: 'rgba(255, 168, 219, 0.45)', headerBg: 'rgba(255, 168, 219, 0.85)', text: '#5a1438' },
-  blue:   { fill: 'rgba(168, 218, 255, 0.10)', border: 'rgba(168, 218, 255, 0.45)', headerBg: 'rgba(168, 218, 255, 0.85)', text: '#0a1f4a' },
-  green:  { fill: 'rgba(179, 239, 189, 0.10)', border: 'rgba(179, 239, 189, 0.45)', headerBg: 'rgba(179, 239, 189, 0.85)', text: '#0a3818' },
-  yellow: { fill: 'rgba(255, 226, 153, 0.10)', border: 'rgba(255, 226, 153, 0.45)', headerBg: 'rgba(255, 226, 153, 0.85)', text: '#3d2a00' },
-  orange: { fill: 'rgba(255, 211, 168, 0.10)', border: 'rgba(255, 211, 168, 0.45)', headerBg: 'rgba(255, 211, 168, 0.85)', text: '#4a2805' },
-  red:    { fill: 'rgba(255, 175, 163, 0.10)', border: 'rgba(255, 175, 163, 0.45)', headerBg: 'rgba(255, 175, 163, 0.85)', text: '#4a1408' },
-  teal:   { fill: 'rgba(179, 244, 239, 0.10)', border: 'rgba(179, 244, 239, 0.45)', headerBg: 'rgba(179, 244, 239, 0.85)', text: '#0a3a35' },
-  purple: { fill: 'rgba(211, 189, 255, 0.10)', border: 'rgba(211, 189, 255, 0.45)', headerBg: 'rgba(211, 189, 255, 0.85)', text: '#2a1252' },
+const OLIVE_FRAME = {
+  fill: 'rgba(139, 150, 121, 0.12)',   // olive-500 tint
+  border: 'rgba(118, 131, 100, 0.5)',  // olive-600
+  headerBg: '#768364',                  // olive-600 — brand sage green
+  text: '#ffffff',
 };
-
-const DEFAULT_FRAME_COLOR = FRAME_COLORS.yellow;
 
 export type PersonaFrameData = {
   cardId: string;
@@ -193,7 +188,7 @@ export function PersonaFrameOverlay() {
   return (
     <>
       {frames.map((frame) => {
-        const colors = FRAME_COLORS[frame.color] || DEFAULT_FRAME_COLOR;
+        const colors = OLIVE_FRAME;
 
         // Convert canvas-space frame bounds → screen-space
         const sx = frame.bounds.x * zoom + x;
