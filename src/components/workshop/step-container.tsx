@@ -495,6 +495,24 @@ export function StepContainer({
         })
       : true;
 
+  // Sense-making: the empathy map's Pains and Gains zones must each hold at
+  // least one sticky with text before the user can confirm. Without this gate,
+  // Confirm Sense Making surfaced as soon as the Says/Thinks/Feels/Does
+  // quadrants were populated — i.e. before pains & gains exist, which is the
+  // second half of the exercise. Stickies (AI-generated or manually dropped)
+  // carry their zone in cellAssignment.row.
+  const senseMakingPainsAndGainsFilled =
+    step?.id === "sense-making"
+      ? stickyNotes.some(
+          (n) =>
+            n.cellAssignment?.row === "pains" && n.text.trim().length > 0,
+        ) &&
+        stickyNotes.some(
+          (n) =>
+            n.cellAssignment?.row === "gains" && n.text.trim().length > 0,
+        )
+      : true;
+
   const showConfirm =
     !!confirmLabel &&
     !artifactConfirmed &&
@@ -503,6 +521,7 @@ export function StepContainer({
     allPersonasInterviewed &&
     allSwimLanesFilled &&
     challengeStatementFilled &&
+    senseMakingPainsAndGainsFilled &&
     (allConceptCardsFilled || conceptProceedOverride);
 
   // Floating canvas confirm — mirrors the in-chat confirm's availability so the
