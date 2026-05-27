@@ -33,7 +33,7 @@ const FIELD_META: Record<
   problem: {
     emoji: '🔥',
     label: 'The Problem',
-    color: 'pink',
+    color: 'red',
     placeholder: 'What underlying problem or tension exists?',
   },
   audience: {

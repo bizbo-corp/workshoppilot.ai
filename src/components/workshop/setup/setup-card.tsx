@@ -19,12 +19,14 @@ const CARD_BG: Partial<Record<StickyNoteColor, string>> = {
   pink: 'bg-[var(--sticky-note-pink)]',
   blue: 'bg-[var(--sticky-note-blue)]',
   green: 'bg-[var(--sticky-note-green)]',
+  red: 'bg-[var(--sticky-note-red)]',
 };
 const CARD_TEXT: Partial<Record<StickyNoteColor, string>> = {
   yellow: 'text-[var(--sticky-note-yellow-text)]',
   pink: 'text-[var(--sticky-note-pink-text)]',
   blue: 'text-[var(--sticky-note-blue-text)]',
   green: 'text-[var(--sticky-note-green-text)]',
+  red: 'text-[var(--sticky-note-red-text)]',
 };
 
 function ToolButton({
