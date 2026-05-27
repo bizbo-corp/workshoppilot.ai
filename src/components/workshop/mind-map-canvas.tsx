@@ -105,6 +105,13 @@ const CRAZY_8S_NODE_PREFIX = 'crazy-8s-group-';
 const isCrazy8sNode = (id: string) =>
   id === CRAZY_8S_NODE_ID || id.startsWith(CRAZY_8S_NODE_PREFIX);
 
+// Mind map node card dimensions + zone padding (module-scope so lane-width math can use them)
+const NODE_CARD_WIDTH = 280;
+const NODE_CARD_HEIGHT = 80;
+const ZONE_PADDING = 120;
+// Horizontal gap between adjacent participant lanes
+const LANE_GAP = 400;
+
 // Flow band node ID prefix
 const FLOW_BAND_PREFIX = 'flow-band-';
 const isFlowBandNode = (id: string) => id.startsWith(FLOW_BAND_PREFIX);
@@ -222,27 +229,18 @@ function MindMapCanvasInner({
   // Filter mind map nodes/edges by ownerId when in per-participant mode.
   // In multiplayer, also exclude any stray unowned nodes (created by solo-mode
   // init race conditions) so they never render.
+  // All owners' nodes always render as side-by-side lanes; the toggle only moves the
+  // camera (see owner-switch fitView effect). In multiplayer, still drop stray unowned
+  // nodes from solo-mode init races so they never appear.
   const mindMapNodes = useMemo(() => {
-    let nodes = allMindMapNodes;
-    if (isMultiplayerIdeation) {
-      nodes = nodes.filter((n) => n.ownerId);
-    }
-    if (currentOwnerId) {
-      nodes = nodes.filter((n) => n.ownerId === currentOwnerId);
-    }
-    return nodes;
-  }, [allMindMapNodes, currentOwnerId, isMultiplayerIdeation]);
+    if (isMultiplayerIdeation) return allMindMapNodes.filter((n) => n.ownerId);
+    return allMindMapNodes;
+  }, [allMindMapNodes, isMultiplayerIdeation]);
 
   const mindMapEdges = useMemo(() => {
-    let edges = allMindMapEdges;
-    if (isMultiplayerIdeation) {
-      edges = edges.filter((e) => e.ownerId);
-    }
-    if (currentOwnerId) {
-      edges = edges.filter((e) => e.ownerId === currentOwnerId);
-    }
-    return edges;
-  }, [allMindMapEdges, currentOwnerId, isMultiplayerIdeation]);
+    if (isMultiplayerIdeation) return allMindMapEdges.filter((e) => e.ownerId);
+    return allMindMapEdges;
+  }, [allMindMapEdges, isMultiplayerIdeation]);
   const addMindMapNode = useCanvasStore((state) => state.addMindMapNode);
   const updateMindMapNode = useCanvasStore((state) => state.updateMindMapNode);
   const updateMindMapNodePosition = useCanvasStore((state) => state.updateMindMapNodePosition);
@@ -270,13 +268,10 @@ function MindMapCanvasInner({
   const dotVotes = useMemo(() => currentRoundVotes(rawDotVotes, votingSession), [rawDotVotes, votingSession]);
   const votingCardPositions = useCanvasStore((state) => state.votingCardPositions);
 
-  // Filter crazy 8s slots by ownerId (except during idea-selection which shows all)
-  const crazy8sSlots = useMemo(() => {
-    if (!currentOwnerId) return allCrazy8sSlots;
-    // During idea-selection/voting, show ALL participants' slots
-    if (votingMode) return allCrazy8sSlots;
-    return allCrazy8sSlots.filter((s) => s.ownerId === currentOwnerId);
-  }, [allCrazy8sSlots, currentOwnerId, votingMode]);
+  // All slots are always available; each per-owner crazy 8s node filters to its own
+  // slots internally via data.ownerId. Shared lookups (voting, brain-rewriting source
+  // sketches) need the full set.
+  const crazy8sSlots = allCrazy8sSlots;
 
   const { fitView, zoomIn, zoomOut, screenToFlowPosition } = useReactFlow();
 
@@ -827,23 +822,40 @@ function MindMapCanvasInner({
     return ownerStarCounts['__solo__'] || Object.values(ownerStarCounts).reduce((a, b) => a + b, 0);
   }, [ownerStarCounts, allOwnerIds]);
 
-  // Compute per-owner horizontal offsets for "All" view so trees don't overlap
+  // Per-participant vertical lanes: one fixed-width column per owner, always laid out
+  // (the owner toggle moves the camera to a lane — it no longer filters nodes in/out).
+  // laneWidth is the widest owner's mind-map span, floored at the crazy 8s node width,
+  // so the 4×2 grid stacked below each mind map always fits inside its lane. LANE_GAP
+  // is the empty space between adjacent lane frames.
+  const laneWidth = useMemo(() => {
+    if (!allOwnerIds || allOwnerIds.length <= 1) return 0;
+    let maxContentWidth = CRAZY_8S_NODE_WIDTH; // crazy 8s grid sits below the mind map
+    for (const oid of allOwnerIds) {
+      let minX = Infinity;
+      let maxX = -Infinity;
+      for (const n of allMindMapNodes) {
+        if (n.ownerId !== oid) continue;
+        const x = n.position?.x ?? 0;
+        if (x < minX) minX = x;
+        if (x + NODE_CARD_WIDTH > maxX) maxX = x + NODE_CARD_WIDTH;
+      }
+      if (maxX > minX) maxContentWidth = Math.max(maxContentWidth, maxX - minX);
+    }
+    // content + internal padding (each side) + the empty gap to the next lane
+    return maxContentWidth + 2 * ZONE_PADDING + LANE_GAP;
+  }, [allOwnerIds, allMindMapNodes]);
+
   const ownerOffsets = useMemo(() => {
     const offsets: Record<string, { x: number; y: number }> = {};
-    if (currentOwnerId || !allOwnerIds || allOwnerIds.length <= 1) return offsets;
-    const TREE_SPACING = 1800; // crazy 8s below, not beside
-    const totalWidth = (allOwnerIds.length - 1) * TREE_SPACING;
+    if (!allOwnerIds || allOwnerIds.length <= 1 || laneWidth <= 0) return offsets;
+    const totalWidth = (allOwnerIds.length - 1) * laneWidth;
     allOwnerIds.forEach((oid, i) => {
-      offsets[oid] = { x: i * TREE_SPACING - totalWidth / 2, y: 0 };
+      offsets[oid] = { x: i * laneWidth - totalWidth / 2, y: 0 };
     });
     return offsets;
-  }, [currentOwnerId, allOwnerIds]);
+  }, [allOwnerIds, laneWidth]);
 
   // Compute actual bounding box of each owner's mind map nodes (store-relative + world-space)
-  const NODE_CARD_WIDTH = 280;
-  const NODE_CARD_HEIGHT = 80;
-  const ZONE_PADDING = 120;
-
   type OwnerBounds = {
     minX: number; maxX: number; minY: number; maxY: number;
     worldMinX: number; worldMaxX: number; worldMinY: number; worldMaxY: number;
@@ -890,21 +902,21 @@ function MindMapCanvasInner({
       return Math.min(...Object.values(ownerBounds).map((ob) => ob.worldMinX - ZONE_PADDING));
     }
     // Solo / single-participant: use actual bounds if available
-    const ob = currentOwnerId ? ownerBounds[currentOwnerId] : ownerBounds['__solo__'];
+    const ob = ownerBounds['__solo__'];
     if (ob) return ob.minX - ZONE_PADDING;
     return -800;
-  }, [ownerOffsets, ownerBounds, currentOwnerId]);
+  }, [ownerOffsets, ownerBounds]);
 
-  // Right edge X for computing full-width phase containers in "All" view
+  // Right edge X for computing full-width phase containers across all lanes
   const rightEdgeX = useMemo(() => {
     const bKeys = Object.keys(ownerBounds);
     if (Object.keys(ownerOffsets).length > 0 && bKeys.length > 0) {
       return Math.max(...Object.values(ownerBounds).map((ob) => ob.worldMaxX + ZONE_PADDING));
     }
-    const ob = currentOwnerId ? ownerBounds[currentOwnerId] : ownerBounds['__solo__'];
+    const ob = ownerBounds['__solo__'];
     if (ob) return ob.maxX + ZONE_PADDING;
     return 800;
-  }, [ownerOffsets, ownerBounds, currentOwnerId]);
+  }, [ownerOffsets, ownerBounds]);
 
   // Should voting artifacts be visible? (during voting OR persisted into brain-rewriting)
   // Hoisted before phaseLayout so it's available for layout computation.
@@ -914,12 +926,12 @@ function MindMapCanvasInner({
   const phaseLayout = useMemo(() => {
     // Phase container width — dynamic based on actual mind map node extents
     let phaseWidth: number;
-    if (Object.keys(ownerOffsets).length > 0 && !currentOwnerId) {
-      // "All" view: span from leftEdgeX to rightEdgeX (already ownerBounds-based)
+    if (Object.keys(ownerOffsets).length > 0) {
+      // Multiplayer lanes: span from leftEdgeX to rightEdgeX (ownerBounds-based)
       phaseWidth = rightEdgeX - leftEdgeX;
     } else {
-      // Solo / individual view: use ownerBounds (min 1600)
-      const ob = currentOwnerId ? ownerBounds[currentOwnerId] : ownerBounds['__solo__'];
+      // Solo: use ownerBounds (min 1600)
+      const ob = ownerBounds['__solo__'];
       if (ob) {
         phaseWidth = Math.max(ob.width + 2 * PHASE_CONTENT_PADDING, 1600);
       } else {
@@ -934,10 +946,10 @@ function MindMapCanvasInner({
     let phase1Y: number;
     let phase1Height: number;
     if (obValues.length > 0) {
-      const unionMinY = Object.keys(ownerOffsets).length > 0 && !currentOwnerId
+      const unionMinY = Object.keys(ownerOffsets).length > 0
         ? Math.min(...obValues.map((ob) => ob.worldMinY))
         : Math.min(...obValues.map((ob) => ob.minY));
-      const unionMaxY = Object.keys(ownerOffsets).length > 0 && !currentOwnerId
+      const unionMaxY = Object.keys(ownerOffsets).length > 0
         ? Math.max(...obValues.map((ob) => ob.worldMaxY))
         : Math.max(...obValues.map((ob) => ob.maxY));
       const contentHeight = unionMaxY - unionMinY + 2 * ZONE_PADDING;
@@ -988,12 +1000,16 @@ function MindMapCanvasInner({
         { step: 4, title: 'Brain Rewriting', y: phase4Y, height: phase4Height, width: phaseWidth, isActive: !!brainRewritingMatrices?.length },
       ],
     };
-  }, [leftEdgeX, rightEdgeX, ownerOffsets, currentOwnerId, ownerBounds, showCrazy8s, showVotingArtifact, brainRewritingMatrices, allCrazy8sSlots, slotGroups]);
+  }, [leftEdgeX, rightEdgeX, ownerOffsets, ownerBounds, showCrazy8s, showVotingArtifact, brainRewritingMatrices, allCrazy8sSlots, slotGroups]);
 
   // Phase container nodes — visual backgrounds for each phase
+  const inLaneMode = Object.keys(ownerOffsets).length > 0;
   const phaseContainerNodes = useMemo<Node[]>(() => {
     return phaseLayout.phases
       .filter((phase) => {
+        // In multiplayer lane mode the per-participant lane frames wrap the diverge
+        // phases (mind map + crazy 8s), so the full-width band backgrounds are dropped.
+        if (inLaneMode && (phase.step === 1 || phase.step === 2)) return false;
         // Skip phase 3 when voting is active (VotingContainerNode renders instead)
         if (phase.step === 3 && phase.isActive) return false;
         // Skip phase 4 when BR is active (BrainRewritingContainerNode renders instead)
@@ -1028,7 +1044,7 @@ function MindMapCanvasInner({
           } satisfies PhaseContainerNodeData,
         };
       });
-  }, [phaseLayout, leftEdgeX, allMindMapNodes, votingCardPositions, isFacilitator]);
+  }, [phaseLayout, leftEdgeX, allMindMapNodes, votingCardPositions, isFacilitator, inLaneMode]);
 
   // Convert store state to ReactFlow mind map nodes
   const rfMindMapNodes: Node[] = useMemo(() => {
@@ -1233,28 +1249,7 @@ function MindMapCanvasInner({
       }];
     }
 
-    // Individual view — single node for the selected owner
-    if (currentOwnerId) {
-      const nodeId = `${CRAZY_8S_NODE_PREFIX}${currentOwnerId}`;
-      const { accentColor } = getOwnerTheme(currentOwnerId);
-      return [{
-        id: nodeId,
-        type: 'crazy8sGroupNode',
-        position: getC8sPos(nodeId, { x: defaultC8sCenterX, y: defaultC8sY }),
-        draggable: isFacilitator,
-        connectable: false,
-        focusable: false,
-        data: {
-          ...baseData,
-          ownerId: currentOwnerId,
-          ownerName: ownerNames?.[currentOwnerId] || currentOwnerId,
-          ownerColor: accentColor,
-          completionInfo,
-        },
-      }];
-    }
-
-    // "All" view — one node per owner, centered below their mind map
+    // One crazy 8s node per owner, centered below their mind map within their lane.
     return allOwnerIds.map((oid) => {
       const nodeId = `${CRAZY_8S_NODE_PREFIX}${oid}`;
       const offset = ownerOffsets[oid] || { x: 0, y: 0 };
@@ -1271,12 +1266,14 @@ function MindMapCanvasInner({
           ownerId: oid,
           ownerName: ownerNames?.[oid] || oid,
           ownerColor: accentColor,
-          // In "All" view, keep grid visible after voting closes (results shown in separate node)
+          // Keep grid visible after voting closes (results shown in separate node)
           showResultsInline: false,
+          // Show the "waiting for others" overlay only on the viewing participant's own lane
+          ...(oid === selfParticipantId ? { completionInfo } : {}),
         },
       };
     });
-  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing, votingMode, onVoteSelectionConfirm, onReVote, onStartMerge, syncStarsToSlots, allOwnerIds, currentOwnerId, ownerOffsets, ownerNames, getOwnerTheme, isMultiplayerIdeation, crazy8sReadinessMap, facilitatorOwnerId, phaseLayout, votingCardPositions]);
+  }, [showCrazy8s, workshopId, stepId, onSaveCrazy8s, selectionMode, selectedSlotIds, onSelectionChange, onConfirmSelection, onBackToDrawing, votingMode, onVoteSelectionConfirm, onReVote, onStartMerge, syncStarsToSlots, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, isMultiplayerIdeation, crazy8sReadinessMap, facilitatorOwnerId, phaseLayout, votingCardPositions, selfParticipantId]);
 
   // Persisted container drag positions (reactive — triggers useMemo recomputation)
   // Normalized keys with legacy fallbacks for backward compatibility
@@ -1393,64 +1390,40 @@ function MindMapCanvasInner({
 
     const handleToggle = () => toggleReadyRef.current?.toggleReady();
 
-    // Individual view: show zone for the selected participant only (centered at origin)
-    if (currentOwnerId) {
-      const { themeColor, themeBgColor } = getOwnerTheme(currentOwnerId);
-      const isSelf = !!selfParticipantId && currentOwnerId === selfParticipantId;
-      const isDraggable = isFacilitator || isSelf;
-      const ob = ownerBounds[currentOwnerId];
-      const dynZoneWidth = ob ? Math.max(ob.width, 1600) : 1600;
-      const dynZoneHeight = ob ? Math.max(ob.height, 1400) : 1400;
-      const zoneX = ob ? ob.minX - ZONE_PADDING : -800;
-      const zoneY = ob ? ob.minY - ZONE_PADDING : -500;
-      return [{
-        id: `${ZONE_NODE_PREFIX}${currentOwnerId}`,
-        type: 'ownerZoneNode',
-        position: { x: zoneX, y: zoneY },
-        draggable: isDraggable,
-        selectable: isDraggable,
-        ...(isDraggable ? { dragHandle: '.owner-zone-drag-handle' } : {}),
-        connectable: false,
-        focusable: false,
-        zIndex: -1,
-        data: {
-          ownerName: ownerNames?.[currentOwnerId] || currentOwnerId,
-          ownerThemeColor: themeColor,
-          ownerThemeBgColor: themeBgColor,
-          isSelf,
-          isDraggable,
-          isReady: readinessMap[currentOwnerId] ?? false,
-          showDoneButton,
-          onToggleReady: handleToggle,
-          width: dynZoneWidth,
-          height: dynZoneHeight,
-          starCount: ownerStarCounts[currentOwnerId] || 0,
-          showConfirmButton,
-          onConfirmMindMap,
-          isConfirmingMindMap,
-        },
-      }];
-    }
+    // Each lane frame wraps one participant's mind map and (once started) their crazy 8s
+    // grid below it. It's a visual container only — nodes inside stay individually
+    // draggable, so the frame itself isn't draggable (dragging it would desync the map
+    // from the crazy 8s). The frame is derived from the owner's ACTUAL mind-map world
+    // bounds (then extended to cover the crazy 8s), so it always surrounds the content.
+    const phase2 = phaseLayout.phases[1];
+    const c8sTopY = phase2.y + PHASE_HEADER + 20; // matches crazy8sNodes positioning
+    const c8sHalf = CRAZY_8S_NODE_WIDTH / 2;
 
-    // "All" view: show zones for every participant at their offset
     return allOwnerIds.map((oid) => {
-      const ob = ownerBounds[oid];
       const { themeColor, themeBgColor } = getOwnerTheme(oid);
       const isSelf = !!selfParticipantId && oid === selfParticipantId;
-      const isDraggable = isFacilitator || isSelf;
-      const dynZoneWidth = ob ? Math.max(ob.width, 1600) : 1600;
-      const dynZoneHeight = ob ? Math.max(ob.height, 1400) : 1400;
-      const zoneX = ob ? ob.worldMinX - ZONE_PADDING : (ownerOffsets[oid]?.x ?? 0) - 800;
-      const zoneY = ob ? ob.worldMinY - ZONE_PADDING : (ownerOffsets[oid]?.y ?? 0) - 500;
-      // Show confirm button on facilitator's zone in "All" view
+      const offset = ownerOffsets[oid] || { x: 0, y: 0 };
+      const ob = ownerBounds[oid];
+
+      let left = ob ? ob.worldMinX : offset.x - c8sHalf;
+      let right = ob ? ob.worldMaxX : offset.x + c8sHalf;
+      const top = ob ? ob.worldMinY : c8sTopY;
+      let bottom = ob ? ob.worldMaxY : c8sTopY;
+      if (showCrazy8s) {
+        // crazy 8s grid is centered on the lane offset, directly below the mind map
+        left = Math.min(left, offset.x - c8sHalf);
+        right = Math.max(right, offset.x + c8sHalf);
+        bottom = Math.max(bottom, c8sTopY + CRAZY_8S_NODE_HEIGHT);
+      }
+
+      // Show confirm button on the facilitator's lane
       const isFacilitatorZone = oid === facilitatorOwnerId;
       return {
         id: `${ZONE_NODE_PREFIX}${oid}`,
         type: 'ownerZoneNode',
-        position: { x: zoneX, y: zoneY },
-        draggable: isDraggable,
-        selectable: isDraggable,
-        ...(isDraggable ? { dragHandle: '.owner-zone-drag-handle' } : {}),
+        position: { x: left - ZONE_PADDING, y: top - ZONE_PADDING },
+        draggable: false,
+        selectable: false,
         connectable: false,
         focusable: false,
         zIndex: -1,
@@ -1459,18 +1432,18 @@ function MindMapCanvasInner({
           ownerThemeColor: themeColor,
           ownerThemeBgColor: themeBgColor,
           isSelf,
-          isDraggable,
+          isDraggable: false,
           isReady: readinessMap[oid] ?? false,
           showDoneButton,
           onToggleReady: handleToggle,
-          width: dynZoneWidth,
-          height: dynZoneHeight,
+          width: right - left + 2 * ZONE_PADDING,
+          height: bottom - top + 2 * ZONE_PADDING,
           starCount: ownerStarCounts[oid] || 0,
           ...(isFacilitatorZone && showConfirmButton ? { showConfirmButton, onConfirmMindMap, isConfirmingMindMap } : {}),
         },
       };
     });
-  }, [currentOwnerId, allOwnerIds, ownerOffsets, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, ownerStarCounts, ownerBounds, isFacilitator, showConfirmButton, onConfirmMindMap, isConfirmingMindMap, facilitatorOwnerId]);
+  }, [allOwnerIds, ownerOffsets, ownerBounds, ownerNames, getOwnerTheme, selfParticipantId, readinessMap, showDoneButton, ownerStarCounts, showConfirmButton, onConfirmMindMap, isConfirmingMindMap, facilitatorOwnerId, phaseLayout, showCrazy8s]);
 
   // ── Voting nodes (multiplayer idea-selection on same canvas) ──
 
@@ -1738,7 +1711,10 @@ function MindMapCanvasInner({
     };
 
     // Band 1: Mind Mapping → Crazy Eights
-    if (!phases[1].isActive) {
+    if (inLaneMode) {
+      // Lane frames already group each participant's mind map + crazy 8s, so the
+      // funnel between them would just clutter the inside of the lane — skip it.
+    } else if (!phases[1].isActive) {
       // Skeleton band to inactive phase
       createBand('mm-c8s', 1, 2, 'skeleton');
     } else if (crazy8sNodes.length > 0) {
@@ -1895,7 +1871,7 @@ function MindMapCanvasInner({
     }
 
     return result;
-  }, [phaseLayout, leftEdgeX, crazy8sNodes, ownerOffsets, ownerBounds, showVotingArtifact, votingContainerPos, votingContainerSize, brainRewritingMatrices, brainRewritingNodes, votingCardPositions]);
+  }, [phaseLayout, leftEdgeX, crazy8sNodes, ownerOffsets, ownerBounds, showVotingArtifact, votingContainerPos, votingContainerSize, brainRewritingMatrices, brainRewritingNodes, votingCardPositions, inLaneMode]);
 
   // Combined nodes array: flow bands → phase containers → owner zones → mind map → crazy 8s → voting → brain rewriting
   const rfNodes = useMemo(() => {
@@ -1976,13 +1952,27 @@ function MindMapCanvasInner({
     }
   }, [pendingFitView, fitView, setPendingFitView]);
 
-  // Fit view when switching between participants / "All" view
+  // Owner toggle is camera-only: all lanes stay mounted, switching just moves the
+  // viewport. Focusing a participant fits their lane (zone + crazy 8s below it);
+  // "All" fits every lane.
   const prevOwnerId = useRef(currentOwnerId);
   useEffect(() => {
-    if (prevOwnerId.current !== currentOwnerId) {
-      prevOwnerId.current = currentOwnerId;
-      setTimeout(() => fitView({ padding: 0.3, duration: 400 }), 100);
-    }
+    if (prevOwnerId.current === currentOwnerId) return;
+    prevOwnerId.current = currentOwnerId;
+    setTimeout(() => {
+      if (currentOwnerId) {
+        fitView({
+          nodes: [
+            { id: `${ZONE_NODE_PREFIX}${currentOwnerId}` },
+            { id: `${CRAZY_8S_NODE_PREFIX}${currentOwnerId}` },
+          ],
+          padding: 0.2,
+          duration: 400,
+        });
+      } else {
+        fitView({ padding: 0.3, duration: 400 });
+      }
+    }, 100);
   }, [currentOwnerId, fitView]);
 
   // Track current nodes for reading outside of render (avoids "Cannot update while rendering")

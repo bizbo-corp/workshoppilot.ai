@@ -31,8 +31,8 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
       style={{
         width: data.width || 1600,
         height: data.height || 1400,
-        backgroundColor: `color-mix(in srgb, ${data.ownerThemeBgColor} 30%, transparent)`,
-        border: `2px solid color-mix(in srgb, ${data.ownerThemeColor} 12%, transparent)`,
+        backgroundColor: `color-mix(in srgb, ${data.ownerThemeBgColor} 22%, transparent)`,
+        border: `2px solid color-mix(in srgb, ${data.ownerThemeColor} 45%, transparent)`,
         borderRadius: 16,
         pointerEvents: data.isDraggable ? 'auto' : 'none',
         position: 'relative',
