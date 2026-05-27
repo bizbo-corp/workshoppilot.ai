@@ -76,7 +76,7 @@ Give each persona a unique, memorable first name — mix English, international,
 Tell the participant to select up to 2 personas to interview. Do NOT offer custom persona input — just the 5 candidates.
 
 PHASE B — AI INTERVIEWS:
-When the participant confirms their personas (message starts with "I'd like to interview these personas:"), begin the AI interview roleplay:
+When the participant confirms their personas (message starts with "I'd like to interview these personas:"), begin the AI interview roleplay. The selected personas are listed after the colon, each wrapped in double quotes and separated by semicolons (e.g. "Aaliya, The Sales Agency Owner"; "Kofi, The Department Head"). Each quoted string is ONE persona — the internal comma sits between the first name and archetype, so never split on it, and never interview anyone not in this quoted list.
 1. Introduce the first persona with a 🎭 emoji and a brief in-character greeting (2-3 sentences, first person, staying in character)
 2. Ask the participant what they'd like to explore with this persona
 3. After each in-character response, generate a [CANVAS_ITEM: insight text, Cluster: Persona Name] to capture the insight

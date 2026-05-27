@@ -77,23 +77,34 @@ export function PersonaFrameOverlay() {
   const frames = useMemo<PersonaFrameData[]>(() => {
     const items = stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview);
 
-    // Find persona cards: unclustered sticky notes with em-dash in text
-    const personaCards = items.filter(p => !p.cluster && p.text.includes(' — '));
-    if (personaCards.length === 0) return [];
-
-    return personaCards.map(card => {
-      const personaName = card.text.split(/\s*[—–]\s*/)[0].trim();
-      const color = card.color || 'yellow';
-
-      // Find clustered children for this persona (robust matching)
-      const personaNameLower = personaName.toLowerCase();
-      const children = items.filter(
+    // Find clustered children for a candidate persona card (robust matching).
+    const childrenFor = (card: StickyNote) => {
+      const personaNameLower = card.text.split(/\s*[—–]\s*/)[0].trim().toLowerCase();
+      return items.filter(
         p => p.cluster && p.id !== card.id && (
           p.cluster.toLowerCase() === personaNameLower
           || extractPersonaName(p.cluster) === personaNameLower
           || personaNameLower.startsWith(p.cluster.toLowerCase())
         )
       );
+    };
+
+    // Persona cards are unclustered sticky notes. Canned personas always carry an
+    // em-dash ("Name, Archetype — description"), but a CUSTOM-typed persona's card
+    // is often just "Name" (or "Name, Role") with no em-dash — so also treat any
+    // unclustered note that has insights clustered to it as a persona card. Without
+    // this, custom personas never got a swimlane frame (dialogue feedback
+    // df_ogbk4xa9dgoty657zosxv6d5).
+    const personaCards = items.filter(
+      p => !p.cluster && (p.text.includes(' — ') || childrenFor(p).length > 0)
+    );
+    if (personaCards.length === 0) return [];
+
+    return personaCards.map(card => {
+      const personaName = card.text.split(/\s*[—–]\s*/)[0].trim();
+      const color = card.color || 'yellow';
+
+      const children = childrenFor(card);
 
       // Frame wraps the entire horizontal row: persona card + children to its right
       const frameX = card.position.x - FRAME_PADDING;
