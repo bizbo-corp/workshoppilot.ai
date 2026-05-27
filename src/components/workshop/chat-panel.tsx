@@ -4255,26 +4255,40 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                         onClick={async () => {
                           setJustConfirmed(false);
                           onStepRevise?.();
-                          // Clear existing canvas items so the revised version replaces them
-                          const state = storeApi.getState();
-                          state.setStickyNotes([]);
-                          if (state.personaTemplates.length > 0) {
-                            state.setPersonaTemplates([]);
+                          // Sense-making's board is the deterministic Step-3
+                          // carry-over (the empathy-map seed), not chat-model
+                          // output — and that seed only runs once, on mount,
+                          // when the board is empty. Wiping it here would lose
+                          // the interview map for good (the chat model can't
+                          // reliably rebuild it — that's why the seed exists).
+                          // So keep the board and just reopen it for edits;
+                          // the user can tweak cards on canvas or ask the AI to
+                          // adjust. df_g8lqxbtnhtvomkyxybtcuzpe.
+                          if (step.id !== "sense-making") {
+                            // Clear existing canvas items so the revised version replaces them
+                            const state = storeApi.getState();
+                            state.setStickyNotes([]);
+                            if (state.personaTemplates.length > 0) {
+                              state.setPersonaTemplates([]);
+                            }
+                            if (state.hmwCards.length > 0) {
+                              state.setHmwCards([]);
+                            }
+                            // Save cleared state directly to DB (bypass stale flushCanvasToDb closure)
+                            await saveCanvasState(workshopId, step.id, {
+                              stickyNotes: [],
+                            });
+                            state.markClean();
                           }
-                          if (state.hmwCards.length > 0) {
-                            state.setHmwCards([]);
-                          }
-                          // Save cleared state directly to DB (bypass stale flushCanvasToDb closure)
-                          await saveCanvasState(workshopId, step.id, {
-                            stickyNotes: [],
-                          });
-                          state.markClean();
                           sendMessage({
                             role: "user",
                             parts: [
                               {
                                 type: "text",
-                                text: "I'd like to revise and improve the current output. Please suggest a better version.",
+                                text:
+                                  step.id === "sense-making"
+                                    ? "I'd like to revise the empathy map — let's keep what's on the board and adjust from there."
+                                    : "I'd like to revise and improve the current output. Please suggest a better version.",
                               },
                             ],
                           });
