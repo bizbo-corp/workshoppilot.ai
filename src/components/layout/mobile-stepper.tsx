@@ -30,16 +30,12 @@ interface MobileStepperProps {
     snapshotUrl?: string | null;
   }>;
   isPaywallLocked?: boolean;
-  isTeamMode?: boolean;
-  isFacilitator?: boolean;
 }
 
 export function MobileStepper({
   sessionId,
   workshopSteps,
   isPaywallLocked,
-  isTeamMode = false,
-  isFacilitator = false,
 }: MobileStepperProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -47,6 +43,8 @@ export function MobileStepper({
   // Determine current step from pathname
   const stepMatch = pathname.match(/\/workshop\/[^/]+\/step\/(\d+)/);
   const currentStep = stepMatch ? parseInt(stepMatch[1], 10) : 1;
+  // Challenge (order 1) is facilitator-only setup — shown as "Setup", not a numbered step.
+  const onChallenge = currentStep === 1;
 
   // Create status lookup map
   const statusLookup = new Map(workshopSteps.map(s => [s.stepId, s.status]));
@@ -60,11 +58,13 @@ export function MobileStepper({
         <button suppressHydrationWarning className="flex w-full items-center justify-between border-b bg-background px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="text-base font-medium">
-              Step {currentStep} of {STEPS.length}
+              {onChallenge ? 'Workshop Setup' : `Step ${currentStep - 1} of 9`}
             </span>
-            <span className="text-sm text-muted-foreground">
-              {STEPS[currentStep - 1]?.name}
-            </span>
+            {!onChallenge && (
+              <span className="text-sm text-muted-foreground">
+                {STEPS[currentStep - 1]?.name}
+              </span>
+            )}
           </div>
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </button>
@@ -77,7 +77,7 @@ export function MobileStepper({
 
         <div className="mt-6 space-y-2">
           {STEPS
-            .filter((step) => !(isTeamMode && !isFacilitator && step.id === 'challenge'))
+            .filter((step) => step.id !== 'challenge')
             .map((step) => {
             const status = statusLookup.get(step.id) || 'not_started';
             const isComplete = status === 'complete';
@@ -108,7 +108,7 @@ export function MobileStepper({
                   ) : isComplete ? (
                     <Check className="h-3 w-3" />
                   ) : (
-                    step.order
+                    step.order - 1
                   )}
                 </div>
 

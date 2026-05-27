@@ -12,15 +12,18 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
-import { LogOut, Share2, Check } from "lucide-react";
+import { LogOut, Share2, Check, Settings, Target } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ExitWorkshopDialog } from "@/components/dialogs/exit-workshop-dialog";
+import { WorkshopSettingsDialog } from "@/components/dialogs/workshop-settings-dialog";
+import { ChallengeViewDialog } from "@/components/dialogs/challenge-view-dialog";
 import { getStepByOrder } from "@/lib/workshop/step-metadata";
 import { getWorkshopColor } from "@/lib/workshop/workshop-appearance";
 import { SignInModal } from "@/components/auth/sign-in-modal";
 import { renameWorkshop } from "@/actions/workshop-actions";
+import { getPendingChangeRequestCount } from "@/actions/challenge-actions";
 import { copyToClipboard } from "@/lib/clipboard";
 
 interface WorkshopHeaderProps {
@@ -32,6 +35,12 @@ interface WorkshopHeaderProps {
   shareToken?: string | null;
   workshopType?: 'solo' | 'multiplayer';
   isFacilitator?: boolean;
+  /** Workshop owner (true in solo too — distinct from multiplayer-context isFacilitator). */
+  isWorkshopOwner?: boolean;
+  /** Configured admin viewing any workshop. */
+  isAdmin?: boolean;
+  /** True once the multiplayer session has started (locks challenge editing). */
+  workshopStarted?: boolean;
 }
 
 /**
@@ -80,14 +89,38 @@ export function WorkshopHeader({
   shareToken,
   workshopType,
   isFacilitator,
+  isWorkshopOwner,
+  isAdmin,
+  workshopStarted,
 }: WorkshopHeaderProps) {
   const pathname = usePathname();
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [challengeOpen, setChallengeOpen] = useState(false);
+  const [changeRequests, setChangeRequests] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState(workshopName);
   const [editValue, setEditValue] = useState(workshopName);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Owner (incl. solo), facilitator, or admin can manage settings; everyone else
+  // gets the read-only challenge view.
+  const canManage = !!(isWorkshopOwner || isFacilitator || isAdmin);
+
+  // Pending change-request badge on the Settings button (multiplayer only).
+  useEffect(() => {
+    if (!canManage || workshopType !== 'multiplayer') return;
+    let cancelled = false;
+    getPendingChangeRequestCount(workshopId)
+      .then((n) => {
+        if (!cancelled) setChangeRequests(n);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [canManage, workshopType, workshopId]);
 
   // Focus input when entering edit mode
   useEffect(() => {
@@ -169,13 +202,22 @@ export function WorkshopHeader({
             {currentStep && (
               <>
                 <span className="text-base text-muted-foreground">/</span>
-                <span className="text-base text-muted-foreground">
-                  Step {currentStep.order}
-                </span>
-                <span className="text-base text-muted-foreground">/</span>
-                <span className="text-base font-medium text-foreground">
-                  {currentStep.name}
-                </span>
+                {currentStep.id === 'challenge' ? (
+                  // Challenge is facilitator-only setup, not a numbered step.
+                  <span className="text-base font-medium text-foreground">
+                    Workshop Setup
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-base text-muted-foreground">
+                      Step {currentStep.order - 1}
+                    </span>
+                    <span className="text-base text-muted-foreground">/</span>
+                    <span className="text-base font-medium text-foreground">
+                      {currentStep.name}
+                    </span>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -190,6 +232,38 @@ export function WorkshopHeader({
           )}
 
           <ThemeToggle />
+
+          {canManage ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSettingsOpen(true)}
+              className="relative gap-2"
+              title="Workshop settings"
+            >
+              <Settings className="h-4 w-4" />
+              <span className="hidden sm:inline">Settings</span>
+              {changeRequests > 0 && (
+                <span
+                  className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground"
+                  aria-label={`${changeRequests} change request${changeRequests === 1 ? '' : 's'}`}
+                >
+                  {changeRequests}
+                </span>
+              )}
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setChallengeOpen(true)}
+              className="gap-2"
+              title="View the challenge"
+            >
+              <Target className="h-4 w-4" />
+              <span className="hidden sm:inline">Challenge</span>
+            </Button>
+          )}
 
           <Button
             variant="ghost"
@@ -218,6 +292,27 @@ export function WorkshopHeader({
         open={exitDialogOpen}
         onOpenChange={setExitDialogOpen}
       />
+
+      {/* Facilitator/admin settings, or read-only challenge view for participants */}
+      {canManage ? (
+        <WorkshopSettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          workshopId={workshopId}
+          sessionId={sessionId}
+          workshopName={displayName ?? "New Workshop"}
+          workshopColor={workshopColor}
+          workshopEmoji={workshopEmoji}
+          workshopType={workshopType ?? 'solo'}
+          workshopStarted={!!workshopStarted}
+        />
+      ) : (
+        <ChallengeViewDialog
+          open={challengeOpen}
+          onOpenChange={setChallengeOpen}
+          workshopId={workshopId}
+        />
+      )}
 
       {/* Sign-in modal for signed-out users */}
       <SignInModal

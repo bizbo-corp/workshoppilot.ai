@@ -48,21 +48,12 @@ interface WorkshopSidebarProps {
     snapshotUrl?: string | null;
   }>;
   isPaywallLocked?: boolean;
-  /** True when the workshop is in team mode (facilitator-led + invites). */
-  isTeamMode?: boolean;
-  /** True when the current viewer is the workshop facilitator. */
-  isFacilitator?: boolean;
-  /** Number of participants who have requested a change to the challenge. */
-  pendingChangeRequests?: number;
 }
 
 export function WorkshopSidebar({
   sessionId,
   workshopSteps,
   isPaywallLocked,
-  isTeamMode = false,
-  isFacilitator = false,
-  pendingChangeRequests = 0,
 }: WorkshopSidebarProps) {
   const pathname = usePathname();
   const { state, setOpen } = useSidebar();
@@ -172,7 +163,7 @@ export function WorkshopSidebar({
         </SidebarHeader>
         <SidebarContent className="p-4">
           <div className="space-y-2">
-            {Array.from({ length: 10 }).map((_, i) => (
+            {Array.from({ length: 9 }).map((_, i) => (
               <Skeleton key={i} className="h-10 w-full" />
             ))}
           </div>
@@ -200,24 +191,15 @@ export function WorkshopSidebar({
       <SidebarContent className="p-2">
         <SidebarMenu>
           {STEPS
-            .filter((step) => {
-              // In team mode, participants never see Step 1 (challenge framing)
-              if (isTeamMode && !isFacilitator && step.id === 'challenge') {
-                return false;
-              }
-              return true;
-            })
+            // Challenge (order 1) is facilitator-only setup, surfaced via the
+            // header settings control — never shown as a numbered stepper row.
+            .filter((step) => step.id !== 'challenge')
             .map((step) => {
             const status = statusLookup.get(step.id) || "not_started";
             const isComplete = status === "complete";
             const isCurrent = step.order === currentStepNumber;
             const isAccessible = status !== "not_started";
             const isLocked = isPaywallLocked && step.order >= 8;
-            const showChangeRequestBadge =
-              isFacilitator &&
-              isTeamMode &&
-              step.id === 'challenge' &&
-              pendingChangeRequests > 0;
 
             const content = (
               <>
@@ -243,7 +225,9 @@ export function WorkshopSidebar({
                   ) : isComplete ? (
                     <Check className="h-3 w-3" />
                   ) : (
-                    step.order
+                    // Display number is offset by 1 — challenge (order 1) is hidden,
+                    // so Stakeholder Mapping (order 2) reads as step 1, etc.
+                    step.order - 1
                   )}
                 </div>
 
@@ -262,22 +246,6 @@ export function WorkshopSidebar({
                   </span>
                 )}
 
-                {/* Change request badge for facilitator on Step 1 */}
-                {showChangeRequestBadge && state === "expanded" && (
-                  <span
-                    title={`${pendingChangeRequests} change request${pendingChangeRequests === 1 ? '' : 's'}`}
-                    className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-semibold text-destructive-foreground"
-                    aria-label={`${pendingChangeRequests} change request${pendingChangeRequests === 1 ? '' : 's'}`}
-                  >
-                    {pendingChangeRequests}
-                  </span>
-                )}
-                {showChangeRequestBadge && state === "collapsed" && (
-                  <span
-                    aria-hidden
-                    className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-background bg-destructive"
-                  />
-                )}
               </>
             );
 
