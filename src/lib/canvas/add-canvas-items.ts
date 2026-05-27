@@ -449,7 +449,9 @@ export function addCanvasItemsToBoard(options: {
     // For sense-making: color by the source persona (Step 3 color map); items
     // with no resolvable persona are synthesized → white.
     if (stepId === "sense-making") {
-      const key = item.cluster?.trim().toLowerCase();
+      // Match on first name (the persona color map is keyed the same way), so a
+      // cluster of "Anaru" or "Anaru, The Department Heads" both resolve.
+      const key = item.cluster?.trim().toLowerCase().split(",")[0].split(/\s+/)[0];
       color = (key && personaColorMap?.[key]) || "white";
     }
 

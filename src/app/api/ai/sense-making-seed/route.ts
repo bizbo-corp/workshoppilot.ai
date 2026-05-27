@@ -39,7 +39,8 @@ const seedSchema = z.object({
         text: z.string().describe('A cross-cutting theme/value that spans multiple people — headline length'),
       }),
     )
-    .describe('A few (2-5) synthesized cross-cutting themes/values, not attributable to one person'),
+    .max(2)
+    .describe('AT MOST 2 synthesized cross-cutting themes that genuinely span multiple people — fewer is better, and omit entirely if nothing clearly spans multiple people. Not attributable to one person.'),
 });
 
 type RequestBody = { workshopId: string };
@@ -93,7 +94,7 @@ Classify EVERY insight below into the single best-fit zone:
 RULES:
 - Return exactly one "mapped" entry for EVERY index 0 through ${insights.length - 1}. Do NOT skip, merge, or drop any insight — completeness is mandatory.
 - Keep each insight's meaning; you may lightly reword to fit the zone's voice, but never invent content that isn't in the source.
-- Then add 2-5 "synthesized" cards: cross-cutting themes or shared values that span multiple people (these are not attributed to one person).
+- Then add AT MOST 2 "synthesized" cards: only genuinely strong cross-cutting themes or shared values that span multiple people (not attributed to one person). Fewer is better — omit them entirely if nothing clearly spans multiple people. Do NOT pad the board with restated single-person insights.
 
 INSIGHTS (index. [persona] text):
 ${numbered}`;
