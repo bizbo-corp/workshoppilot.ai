@@ -54,6 +54,7 @@ import { addCanvasItemsToBoard } from "@/lib/canvas/add-canvas-items";
 import { saveCanvasState, savePersonaCandidates, loadCanvasState } from "@/actions/canvas-actions";
 import { sendResearchReminders } from "@/actions/research-actions";
 import { ChatSkeleton } from "./chat-skeleton";
+import { StepConfirmButton } from "./step-confirm-button";
 import { ResearchUploadDialog } from "./research-upload-dialog";
 import { FieldworkRoster } from "./fieldwork-roster";
 import type { ContributionType } from "@/lib/ai/prompts/research-analysis-prompts";
@@ -885,7 +886,12 @@ function ConceptPreActivity() {
   );
 }
 
-export function ChatPanel({
+export interface ChatPanelHandle {
+  /** Trigger the step-confirm flow (identical to the in-chat confirm button). */
+  confirmStep: () => void;
+}
+
+export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatPanel({
   stepOrder,
   sessionId,
   workshopId,
@@ -906,7 +912,7 @@ export function ChatPanel({
   hideAvatar,
   onInterviewModeBroadcast,
   onJourneyPollOpenBroadcast,
-}: ChatPanelProps) {
+}: ChatPanelProps, ref) {
   const step = getStepByOrder(stepOrder);
 
   // Multiplayer read-only mode — participants see conversation history only (no input, no actions).
@@ -1170,6 +1176,32 @@ export function ChatPanel({
       }
     },
   });
+
+  // Run the step-confirm action — shared by the in-chat confirm buttons and the
+  // floating canvas confirm button (via the imperative handle below). Mirrors the
+  // in-chat button exactly: lock the artifact, then (unless this is a sub-step
+  // transition) fire the AI wrap-up message and reveal the revise affordance.
+  const handleStepConfirm = React.useCallback(() => {
+    if (stepConfirmDisabled) return;
+    onStepConfirm?.();
+    if (stepConfirmIsTransition) return;
+    setJustConfirmed(true);
+    sendMessage({
+      role: "user",
+      parts: [
+        {
+          type: "text",
+          text: "[STEP_CONFIRMED] I'm happy with this — wrap it up!",
+        },
+      ],
+    });
+  }, [stepConfirmDisabled, onStepConfirm, stepConfirmIsTransition, sendMessage]);
+
+  // Expose confirmStep() so the canvas-overlay confirm button (step-container)
+  // triggers the exact same flow as the in-chat confirm.
+  React.useImperativeHandle(ref, () => ({ confirmStep: handleStepConfirm }), [
+    handleStepConfirm,
+  ]);
 
   // Abort any in-flight /api/chat request when scope ACTUALLY changes. We can't use
   // useEffect cleanup directly because React 19 Strict Mode dev fires a spurious
@@ -4167,28 +4199,11 @@ export function ChatPanel({
                         !stepAlreadyConfirmed &&
                         !isReadOnly && (
                           <div className="mt-3 pt-3 border-t border-olive-200 dark:border-neutral-olive-700 flex justify-center">
-                            <button
-                              onClick={() => {
-                                if (stepConfirmDisabled) return;
-                                onStepConfirm?.();
-                                if (stepConfirmIsTransition) return;
-                                setJustConfirmed(true);
-                                sendMessage({
-                                  role: "user",
-                                  parts: [
-                                    {
-                                      type: "text",
-                                      text: "[STEP_CONFIRMED] I'm happy with this — wrap it up!",
-                                    },
-                                  ],
-                                });
-                              }}
+                            <StepConfirmButton
+                              label={stepConfirmLabel}
+                              onClick={handleStepConfirm}
                               disabled={stepConfirmDisabled}
-                              className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
-                            >
-                              <CheckCircle2 className="h-4 w-4" />
-                              {stepConfirmLabel}
-                            </button>
+                            />
                           </div>
                         )}
                     </div>
@@ -4196,6 +4211,7 @@ export function ChatPanel({
 
                   {/* In-chat accept / edit buttons — hidden when sort instructions card already shows the confirm button, and hidden for read-only participants */}
                   {showStepConfirm &&
+                    stepConfirmLabel &&
                     status === "ready" &&
                     !justConfirmed &&
                     !(step.id === "persona" && !personasDone) &&
@@ -4209,29 +4225,11 @@ export function ChatPanel({
                             on the canvas.
                           </p>
                         )}
-                        <button
-                          onClick={() => {
-                            if (stepConfirmDisabled) return;
-                            onStepConfirm?.();
-                            if (stepConfirmIsTransition) return; // Sub-step transition — no AI message or revise flow
-                            setJustConfirmed(true);
-                            // Trigger AI congratulatory close by sending a hidden confirm message
-                            sendMessage({
-                              role: "user",
-                              parts: [
-                                {
-                                  type: "text",
-                                  text: "[STEP_CONFIRMED] I'm happy with this — wrap it up!",
-                                },
-                              ],
-                            });
-                          }}
+                        <StepConfirmButton
+                          label={stepConfirmLabel}
+                          onClick={handleStepConfirm}
                           disabled={stepConfirmDisabled}
-                          className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-olive-50 px-4 py-2 text-sm font-medium text-olive-800 transition-colors hover:bg-olive-100 disabled:opacity-50 disabled:cursor-not-allowed dark:border-olive-700 dark:bg-olive-950/30 dark:text-olive-300 dark:hover:bg-olive-900/40"
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                          {stepConfirmLabel}
-                        </button>
+                        />
                       </div>
                     )}
                   {justConfirmed && !isReadOnly && (
@@ -4354,4 +4352,6 @@ export function ChatPanel({
       )}
     </div>
   );
-}
+});
+
+ChatPanel.displayName = "ChatPanel";

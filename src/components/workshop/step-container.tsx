@@ -4,7 +4,8 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import type { UIMessage } from "ai";
-import { ChatPanel } from "./chat-panel";
+import { ChatPanel, type ChatPanelHandle } from "./chat-panel";
+import { StepConfirmButton } from "./step-confirm-button";
 import { ParticipantChatPanel } from "./participant-chat-panel";
 import { RightPanel } from "./right-panel";
 import { WorkshopSetup } from "./setup/workshop-setup";
@@ -504,6 +505,28 @@ export function StepContainer({
     challengeStatementFilled &&
     (allConceptCardsFilled || conceptProceedOverride);
 
+  // Floating canvas confirm — mirrors the in-chat confirm's availability so the
+  // user/facilitator can confirm directly over the board (e.g. with the chat
+  // collapsed). Routed through ChatPanel's imperative handle so the behaviour
+  // (artifact lock + AI wrap-up / step-8 transition) is identical to the chat
+  // button. Hidden for read-only participants, same as in chat.
+  const canvasConfirmVisible =
+    (!isMultiplayer || isFacilitator) &&
+    (stepOrder === 8
+      ? ideation.currentPhase === "mind-mapping" &&
+        !ideation.showCrazy8s &&
+        ideation.hasEnoughMessages &&
+        ideation.mindMapHasThemes
+      : showConfirm);
+  const canvasConfirmLabel =
+    stepOrder === 8
+      ? ideation.isEnhancingIdeas
+        ? "Enhancing ideas..."
+        : "Confirm Mind Map"
+      : confirmLabel;
+  const canvasConfirmDisabled =
+    stepOrder === 8 ? ideation.isEnhancingIdeas : false;
+
   // Lock in the current step's artifact: flip local state + persist the
   // _confirmed flag so it survives refresh. Shared by the chat confirm button
   // and the on-board confirm button (e.g. WorkshopSetup's challenge step).
@@ -750,6 +773,8 @@ export function StepContainer({
       y: number;
     };
   }>(null);
+  // Lets the floating canvas confirm button trigger the chat's confirm flow.
+  const chatPanelRef = React.useRef<ChatPanelHandle>(null);
 
   // Handle "Save Default View" — reads current viewport, converts to center-offset, saves via API
   const handleSaveDefaultView = React.useCallback(async () => {
@@ -1485,6 +1510,7 @@ export function StepContainer({
           />
         ) : (
           <ChatPanel
+            ref={chatPanelRef}
             key={`${sessionId}:${workshopId}:${step?.id ?? stepOrder}:${resetKey}`}
             stepOrder={stepOrder}
             sessionId={sessionId}
@@ -1897,6 +1923,19 @@ export function StepContainer({
           <StepTransitionWrapper stepId={step?.id ?? String(stepOrder)}>
             <div className="h-full overflow-hidden">{renderCanvasPanel()}</div>
           </StepTransitionWrapper>
+
+          {/* Floating confirm — mirrors the in-chat confirm so the step can be
+              confirmed straight from the canvas (e.g. with the chat collapsed).
+              Offset to the left of the bottom-right zoom controls (bottom-4
+              right-4, ~40px wide) so they never overlap; clears the centered toolbar. */}
+          {canvasConfirmVisible && canvasConfirmLabel && (
+            <StepConfirmButton
+              label={canvasConfirmLabel}
+              onClick={() => chatPanelRef.current?.confirmStep()}
+              disabled={canvasConfirmDisabled}
+              className="absolute bottom-6 right-20 z-20 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300"
+            />
+          )}
         </div>
         {/* Step navigation — footer spans the canvas column only.
             Hidden for participants in multiplayer mode. */}
