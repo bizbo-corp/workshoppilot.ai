@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { saveCanvasState } from '@/actions/canvas-actions';
-import { createEmptyMatrix, type BrainRewritingParticipant } from '@/lib/canvas/brain-rewriting-types';
 import { EMPTY_CRAZY_8S_SLOTS, type Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 import { MindMapCanvas } from '@/components/workshop/mind-map-canvas';
 import { VotingHud } from '@/components/workshop/voting-hud';
@@ -494,100 +493,17 @@ export function useIdeationPhases({
     return { ownerIdsList: filteredIds, ownerNamesMap: names, ownerColorsMap: colors };
   }, [mindMapNodes, ideationOwners, deletedOwnerIds]);
 
-  // Build brain rewriting matrices from selection units
-  const buildMatricesFromSelection = React.useCallback((selectedIds: string[], state: ReturnType<typeof canvasStoreApi.getState>) => {
-    type SelectionUnit = { type: 'slot'; slotId: string } | { type: 'group'; group: typeof state.slotGroups[number] };
-    const units: SelectionUnit[] = [];
-    const processedSlotIds = new Set<string>();
-
-    for (const id of selectedIds) {
-      if (processedSlotIds.has(id)) continue;
-
-      // Check if this is a direct group ID match (from shared voting canvas)
-      const directGroup = state.slotGroups.find((g) => g.id === id);
-      if (directGroup) {
-        units.push({ type: 'group', group: directGroup });
-        directGroup.slotIds.forEach((sid) => processedSlotIds.add(sid));
-        processedSlotIds.add(id);
-        continue;
-      }
-
-      // Check if this slot belongs to a group
-      const group = state.slotGroups.find((g) => g.slotIds.includes(id));
-      if (group) {
-        units.push({ type: 'group', group });
-        group.slotIds.forEach((sid) => processedSlotIds.add(sid));
-      } else {
-        units.push({ type: 'slot', slotId: id });
-        processedSlotIds.add(id);
-      }
-    }
-
-    // Build participant list for brain rewriting cell assignment
-    const hasMultipleOwners = ideationOwners && ideationOwners.length > 1;
-
-    return units.map((unit) => {
-      // Determine the creator of this slot/group
-      let creatorOwnerId: string | undefined;
-      let sourceSlot: typeof state.crazy8sSlots[number] | undefined;
-
-      if (unit.type === 'group') {
-        sourceSlot = state.crazy8sSlots.find((s) => s.slotId === unit.group.slotIds[0]);
-      } else {
-        sourceSlot = state.crazy8sSlots.find((s) => s.slotId === unit.slotId);
-      }
-      creatorOwnerId = sourceSlot?.ownerId;
-
-      // Build participants array (everyone except creator) for multiplayer
-      let participants: BrainRewritingParticipant[] | undefined;
-      let creatorName: string | undefined;
-      let creatorId: string | undefined;
-
-      if (hasMultipleOwners && creatorOwnerId) {
-        creatorName = ownerNamesMap[creatorOwnerId] || 'Creator';
-        creatorId = creatorOwnerId;
-        participants = ideationOwners!
-          .filter((o) => o.ownerId !== creatorOwnerId)
-          .map((o) => ({ id: o.ownerId, name: o.ownerName }));
-      }
-
-      const sourceImage = unit.type === 'group'
-        ? (unit.group.mergedImageUrl || sourceSlot?.imageUrl)
-        : sourceSlot?.imageUrl;
-
-      const slotId = unit.type === 'group' ? unit.group.slotIds[0] : unit.slotId;
-      const matrix = createEmptyMatrix(slotId, sourceImage, participants);
-
-      if (unit.type === 'group') {
-        matrix.groupId = unit.group.id;
-      }
-      matrix.sourceDescription = sourceSlot?.description;
-      matrix.sourceSketchPrompt = sourceSlot?.sketchPrompt;
-      if (creatorName) matrix.creatorName = creatorName;
-      if (creatorId) matrix.creatorId = creatorId;
-
-      return matrix;
-    });
-  }, [canvasStoreApi, ideationOwners, ownerNamesMap]);
-
-  // Confirm selection → brain rewriting (or skip)
-  const handleConfirmSelection = React.useCallback(async (skip: boolean) => {
+  // Confirm selection → end of Ideation. Brain Writing is now its own step (it seeds
+  // from the selection persisted here), so confirming just locks the selection and marks
+  // the step ready to advance — the matrices are built on the Brain Writing step.
+  const handleConfirmSelection = React.useCallback(async (_skip: boolean) => {
     if (!stepId) return;
     const state = canvasStoreApi.getState();
     state.setSelectedSlotIds(localSelectedSlotIds);
-
-    if (skip) {
-      await flushCanvasState();
-      setArtifactConfirmed(true);
-      setExplicitlyConfirmed(true);
-    } else {
-      const matrices = buildMatricesFromSelection(localSelectedSlotIds, state);
-      state.setBrainRewritingMatrices(matrices);
-      setStoreIdeationPhase('brain-rewriting');
-      await flushCanvasState();
-      setCurrentPhase('brain-rewriting');
-    }
-  }, [stepId, canvasStoreApi, localSelectedSlotIds, flushCanvasState, buildMatricesFromSelection, setStoreIdeationPhase]);
+    await flushCanvasState();
+    setArtifactConfirmed(true);
+    setExplicitlyConfirmed(true);
+  }, [stepId, canvasStoreApi, localSelectedSlotIds, flushCanvasState]);
 
   // Save Brain Rewriting
   const handleSaveBrainRewriting = React.useCallback(async () => {
@@ -614,19 +530,16 @@ export function useIdeationPhases({
     [canvasStoreApi]
   );
 
-  // Voting: confirm selected ideas from voting results → brain rewriting
+  // Voting: confirm selected ideas from voting results → end of Ideation.
+  // The selection carries to the Brain Writing step, which builds the matrices.
   const handleVoteSelectionConfirm = React.useCallback(async (selectedIds: string[]) => {
     setLocalSelectedSlotIds(selectedIds);
     const state = canvasStoreApi.getState();
     state.setSelectedSlotIds(selectedIds);
-
-    const matrices = buildMatricesFromSelection(selectedIds, state);
-    state.setBrainRewritingMatrices(matrices);
-    setStoreIdeationPhase('brain-rewriting');
-
     await flushCanvasState();
-    setCurrentPhase('brain-rewriting');
-  }, [canvasStoreApi, flushCanvasState, buildMatricesFromSelection, setStoreIdeationPhase]);
+    setArtifactConfirmed(true);
+    setExplicitlyConfirmed(true);
+  }, [canvasStoreApi, flushCanvasState]);
 
   // Voting: reset and re-open voting (solo forgiveness + multiplayer "Vote Again")
   const handleReVote = React.useCallback(() => {

@@ -54,6 +54,7 @@ import { VotingContainerNode, type VotingContainerNodeData } from '@/components/
 import { BrainRewritingContainerNode, type BrainRewritingContainerNodeData, computeBrainRewritingContainerSize, computeBrGridLayout, BR_CONTAINER_PADDING, BR_CONTAINER_HEADER_HEIGHT } from '@/components/canvas/brain-rewriting-container-node';
 import { FlowBandNode } from '@/components/canvas/flow-band-node';
 import { PhaseContainerNode, type PhaseContainerNodeData } from '@/components/canvas/phase-container-node';
+import { IdeationTableOverlay, type IdeationTableRow } from '@/components/canvas/ideation-table-overlay';
 import { VotingResultsSidebar } from '@/components/workshop/voting-results-sidebar';
 import { computeVotingGridLayout, computeVotingContainerSize, VOTING_CARD_WIDTH, VOTING_CARD_HEIGHT, VOTING_GROUP_WIDTH, VOTING_GROUP_HEIGHT, SECTION_GAP, CONTAINER_PADDING, CONTAINER_HEADER_HEIGHT } from '@/lib/canvas/voting-layout';
 import { currentRoundVotes } from '@/lib/canvas/voting-utils';
@@ -64,6 +65,12 @@ import {
   type ThemeColor,
 } from '@/lib/canvas/mind-map-theme-colors';
 import { computeRadialLayout, computeNewNodePosition } from '@/lib/canvas/mind-map-layout';
+import {
+  IDEATION_CELL_WIDTH,
+  IDEATION_MIND_MAP_TOP,
+  IDEATION_MIND_MAP_BOTTOM,
+  computeColumnCenters,
+} from '@/lib/canvas/ideation-table-layout';
 import type {
   MindMapNodeState,
   MindMapEdgeState,
@@ -105,12 +112,9 @@ const CRAZY_8S_NODE_PREFIX = 'crazy-8s-group-';
 const isCrazy8sNode = (id: string) =>
   id === CRAZY_8S_NODE_ID || id.startsWith(CRAZY_8S_NODE_PREFIX);
 
-// Mind map node card dimensions + zone padding (module-scope so lane-width math can use them)
-const NODE_CARD_WIDTH = 280;
-const NODE_CARD_HEIGHT = 80;
+// Internal padding between a column's content and its owner-zone border.
+// Kept in sync with IDEATION_CELL_PADDING in ideation-table-layout.ts.
 const ZONE_PADDING = 120;
-// Horizontal gap between adjacent participant lanes
-const LANE_GAP = 400;
 
 // Flow band node ID prefix
 const FLOW_BAND_PREFIX = 'flow-band-';
@@ -175,6 +179,12 @@ export type MindMapCanvasProps = {
   onCrazy8sReadinessChange?: (map: Crazy8sReadinessMap) => void;
   onConfirmMindMap?: () => void;
   isConfirmingMindMap?: boolean;
+  /**
+   * Brain-writing-only mode (the dedicated Brain Writing step). Renders ONLY the
+   * brain-rewriting matrices, centered — no mind map, Crazy 8s, voting, owner zones,
+   * phase bands, or table overlay.
+   */
+  brainWritingOnly?: boolean;
 };
 
 export function MindMapCanvas(props: MindMapCanvasProps) {
@@ -218,6 +228,7 @@ function MindMapCanvasInner({
   onCrazy8sReadinessChange,
   onConfirmMindMap,
   isConfirmingMindMap,
+  brainWritingOnly,
 }: MindMapCanvasProps) {
   // Owner ID to stamp on newly created nodes/edges.
   // selfOwnerId is stable (always the current user's ID), while currentOwnerId
@@ -554,6 +565,7 @@ function MindMapCanvasInner({
   // isMultiplayerIdeation is a stable server-derived flag that never changes when
   // participants are deleted or the view switches to "All".
   useEffect(() => {
+    if (brainWritingOnly) return; // Brain Writing step has no mind map
     if (isMultiplayerIdeation) return; // Multiplayer — skip solo init
     if (mindMapNodes.length === 0) {
       const rootLabel = challengeStatement || hmwStatement || 'How might we...?';
@@ -569,11 +581,12 @@ function MindMapCanvasInner({
       };
       setMindMapState([rootNode], []);
     }
-  }, [mindMapNodes.length, challengeStatement, hmwStatement, setMindMapState, isMultiplayerIdeation]);
+  }, [mindMapNodes.length, challengeStatement, hmwStatement, setMindMapState, isMultiplayerIdeation, brainWritingOnly]);
 
   // Pre-populate HMW branch nodes (runs once, even if root already existed).
   // Skip in multiplayer per-participant mode — useIdeationSeeding seeds per-owner HMW branches.
   useEffect(() => {
+    if (brainWritingOnly) { hmwNodesCreated.current = true; return; } // Brain Writing step has no mind map
     if (isMultiplayerIdeation) { hmwNodesCreated.current = true; return; }
     if (hmwNodesCreated.current) return;
     if (!hmwGoals || hmwGoals.length === 0) return;
@@ -623,7 +636,7 @@ function MindMapCanvasInner({
     hmwNodesCreated.current = true;
 
     setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
-  }, [mindMapNodes, hmwGoals, addMindMapNode, fitView, currentOwnerId]);
+  }, [mindMapNodes, hmwGoals, addMindMapNode, fitView, currentOwnerId, brainWritingOnly]);
 
   // Update root node labels to use challenge statement (handles existing canvases + multiplayer)
   const rootLabelUpdated = useRef(false);
@@ -822,38 +835,19 @@ function MindMapCanvasInner({
     return ownerStarCounts['__solo__'] || Object.values(ownerStarCounts).reduce((a, b) => a + b, 0);
   }, [ownerStarCounts, allOwnerIds]);
 
-  // Per-participant vertical lanes: one fixed-width column per owner, always laid out
-  // (the owner toggle moves the camera to a lane — it no longer filters nodes in/out).
-  // laneWidth is the widest owner's mind-map span, floored at the crazy 8s node width,
-  // so the 4×2 grid stacked below each mind map always fits inside its lane. LANE_GAP
-  // is the empty space between adjacent lane frames.
-  const laneWidth = useMemo(() => {
-    if (!allOwnerIds || allOwnerIds.length <= 1) return 0;
-    let maxContentWidth = CRAZY_8S_NODE_WIDTH; // crazy 8s grid sits below the mind map
-    for (const oid of allOwnerIds) {
-      let minX = Infinity;
-      let maxX = -Infinity;
-      for (const n of allMindMapNodes) {
-        if (n.ownerId !== oid) continue;
-        const x = n.position?.x ?? 0;
-        if (x < minX) minX = x;
-        if (x + NODE_CARD_WIDTH > maxX) maxX = x + NODE_CARD_WIDTH;
-      }
-      if (maxX > minX) maxContentWidth = Math.max(maxContentWidth, maxX - minX);
-    }
-    // content + internal padding (each side) + the empty gap to the next lane
-    return maxContentWidth + 2 * ZONE_PADDING + LANE_GAP;
-  }, [allOwnerIds, allMindMapNodes]);
-
+  // Per-participant table columns: one FIXED-width column per owner (the owner toggle
+  // moves the camera to a column — it never filters nodes in/out). The column pitch is
+  // a constant so columns stay edge-aligned no matter how the mind map inside grows;
+  // content that overflows a column simply overflows visually (no reflow).
   const ownerOffsets = useMemo(() => {
     const offsets: Record<string, { x: number; y: number }> = {};
-    if (!allOwnerIds || allOwnerIds.length <= 1 || laneWidth <= 0) return offsets;
-    const totalWidth = (allOwnerIds.length - 1) * laneWidth;
+    if (!allOwnerIds || allOwnerIds.length <= 1) return offsets;
+    const centers = computeColumnCenters(allOwnerIds.length);
     allOwnerIds.forEach((oid, i) => {
-      offsets[oid] = { x: i * laneWidth - totalWidth / 2, y: 0 };
+      offsets[oid] = { x: centers[i], y: 0 };
     });
     return offsets;
-  }, [allOwnerIds, laneWidth]);
+  }, [allOwnerIds]);
 
   // Compute actual bounding box of each owner's mind map nodes (store-relative + world-space)
   type OwnerBounds = {
@@ -862,38 +856,34 @@ function MindMapCanvasInner({
     centerX: number; width: number; height: number;
   };
 
+  // FIXED column bounds: each owner's mind-map cell is a constant rectangle centered on
+  // its column offset, NOT derived from node positions. This is what keeps columns
+  // aligned and stops the "container resizes when I move a node" drift. One entry per
+  // owner in lane mode, or a single '__solo__' column centered at 0.
   const ownerBounds = useMemo<Record<string, OwnerBounds>>(() => {
-    const bounds: Record<string, { minX: number; maxX: number; minY: number; maxY: number }> = {};
+    const halfW = IDEATION_CELL_WIDTH / 2;
+    const minY = IDEATION_MIND_MAP_TOP;
+    const maxY = IDEATION_MIND_MAP_BOTTOM;
 
-    for (const node of allMindMapNodes) {
-      const oid = node.ownerId || '__solo__';
-      const x = node.position?.x ?? 0;
-      const y = node.position?.y ?? 0;
-      if (!bounds[oid]) {
-        bounds[oid] = { minX: x, maxX: x + NODE_CARD_WIDTH, minY: y, maxY: y + NODE_CARD_HEIGHT };
-      } else {
-        bounds[oid].minX = Math.min(bounds[oid].minX, x);
-        bounds[oid].maxX = Math.max(bounds[oid].maxX, x + NODE_CARD_WIDTH);
-        bounds[oid].minY = Math.min(bounds[oid].minY, y);
-        bounds[oid].maxY = Math.max(bounds[oid].maxY, y + NODE_CARD_HEIGHT);
-      }
-    }
+    const makeBounds = (offset: { x: number; y: number }): OwnerBounds => ({
+      minX: -halfW, maxX: halfW, minY, maxY,
+      worldMinX: -halfW + offset.x, worldMaxX: halfW + offset.x,
+      worldMinY: minY + offset.y, worldMaxY: maxY + offset.y,
+      centerX: offset.x,
+      width: 2 * halfW + 2 * ZONE_PADDING,
+      height: maxY - minY + 2 * ZONE_PADDING,
+    });
 
     const result: Record<string, OwnerBounds> = {};
-    for (const [oid, b] of Object.entries(bounds)) {
-      const offset = ownerOffsets[oid] || { x: 0, y: 0 };
-      const w = b.maxX - b.minX + 2 * ZONE_PADDING;
-      const h = b.maxY - b.minY + 2 * ZONE_PADDING;
-      result[oid] = {
-        minX: b.minX, maxX: b.maxX, minY: b.minY, maxY: b.maxY,
-        worldMinX: b.minX + offset.x, worldMaxX: b.maxX + offset.x,
-        worldMinY: b.minY + offset.y, worldMaxY: b.maxY + offset.y,
-        centerX: (b.minX + b.maxX) / 2 + offset.x,
-        width: w, height: h,
-      };
+    if (allOwnerIds && allOwnerIds.length > 1) {
+      for (const oid of allOwnerIds) {
+        result[oid] = makeBounds(ownerOffsets[oid] || { x: 0, y: 0 });
+      }
+    } else {
+      result['__solo__'] = makeBounds({ x: 0, y: 0 });
     }
     return result;
-  }, [allMindMapNodes, ownerOffsets]);
+  }, [allOwnerIds, ownerOffsets]);
 
   // Left edge X for aligning shared containers (voting, brain rewriting) to the leftmost owner zone
   const leftEdgeX = useMemo(() => {
@@ -1004,6 +994,21 @@ function MindMapCanvasInner({
 
   // Phase container nodes — visual backgrounds for each phase
   const inLaneMode = Object.keys(ownerOffsets).length > 0;
+
+  // Row bands for the table overlay (multiplayer lane mode only — solo keeps its own
+  // labelled phase-container bands). Mind Map is always present; Crazy 8s / Voting appear
+  // as their phases activate. Row tops/heights come from the fixed phaseLayout.
+  const ideationTableRows = useMemo<IdeationTableRow[]>(() => {
+    if (!inLaneMode || brainWritingOnly) return [];
+    const [p1, p2, p3] = phaseLayout.phases;
+    const rows: IdeationTableRow[] = [
+      { key: 'mind-map', label: 'Mind Map', top: p1.y, height: p1.height },
+    ];
+    if (showCrazy8s) rows.push({ key: 'crazy-8s', label: 'Crazy 8s', top: p2.y, height: p2.height });
+    if (showVotingArtifact) rows.push({ key: 'voting', label: 'Voting', top: p3.y, height: p3.height });
+    return rows;
+  }, [inLaneMode, phaseLayout, showCrazy8s, showVotingArtifact, brainWritingOnly]);
+
   const phaseContainerNodes = useMemo<Node[]>(() => {
     return phaseLayout.phases
       .filter((phase) => {
@@ -1287,10 +1292,22 @@ function MindMapCanvasInner({
     // Check for persisted drag position
     if (persistedVotingContainerPos) return persistedVotingContainerPos;
 
-    // Use phase 3 position from layout
+    // Use phase 3 position from layout, centered across the full table width so the
+    // shared voting/convergence activity sits perfectly centered in the bottom row.
     const phase3 = phaseLayout.phases[2];
-    return { x: leftEdgeX, y: phase3.y };
-  }, [showVotingArtifact, persistedVotingContainerPos, leftEdgeX, phaseLayout]);
+    const cCount = new Set(slotGroups.flatMap((g) => g.slotIds));
+    const seen = new Set<string>();
+    let cardCount = 0;
+    for (const s of allCrazy8sSlots) {
+      if (!s.imageUrl || cCount.has(s.slotId) || seen.has(s.slotId)) continue;
+      seen.add(s.slotId);
+      cardCount++;
+    }
+    const votingSize = computeVotingContainerSize(cardCount, slotGroups.length);
+    const tableWidth = rightEdgeX - leftEdgeX;
+    const centeredX = leftEdgeX + Math.max(0, (tableWidth - votingSize.width) / 2);
+    return { x: centeredX, y: phase3.y };
+  }, [showVotingArtifact, persistedVotingContainerPos, leftEdgeX, rightEdgeX, phaseLayout, slotGroups, allCrazy8sSlots]);
 
   // Brain rewriting container + group nodes — positioned using phaseLayout
   const brainRewritingNodes = useMemo<Node[]>(() => {
@@ -1303,6 +1320,12 @@ function MindMapCanvasInner({
     if (persistedBrContainerPos) {
       containerX = persistedBrContainerPos.x;
       containerY = persistedBrContainerPos.y;
+    } else if (brainWritingOnly) {
+      // Dedicated Brain Writing step: center the container at the origin (no phase bands).
+      const cellCount = brainRewritingMatrices[0]?.cells.length ?? 1;
+      const size = computeBrainRewritingContainerSize(brainRewritingMatrices.length, cellCount);
+      containerX = -size.width / 2;
+      containerY = -size.height / 2;
     } else {
       // Use phase 4 position from layout
       const phase4 = phaseLayout.phases[3];
@@ -1380,7 +1403,7 @@ function MindMapCanvasInner({
     }
 
     return result;
-  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, slotGroups, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded, onBrainRewritingDone, isFacilitator, persistedBrContainerPos, leftEdgeX, phaseLayout]);
+  }, [brainRewritingMatrices, workshopId, stepId, crazy8sSlots, slotGroups, onBrainRewritingCellUpdate, onBrainRewritingToggleIncluded, onBrainRewritingDone, isFacilitator, persistedBrContainerPos, leftEdgeX, phaseLayout, brainWritingOnly]);
 
   // Owner zone nodes — colored background rectangles behind each participant's tree
   const showDoneButton = !!isMultiplayerIdeation && !showCrazy8s;
@@ -1875,9 +1898,12 @@ function MindMapCanvasInner({
 
   // Combined nodes array: flow bands → phase containers → owner zones → mind map → crazy 8s → voting → brain rewriting
   const rfNodes = useMemo(() => {
-    const combined = [...flowBandNodes, ...phaseContainerNodes, ...ownerZoneNodes, ...rfMindMapNodes, ...crazy8sNodes];
-    if (brainRewritingNodes.length > 0) combined.push(...brainRewritingNodes);
-    if (votingNodes.length > 0) combined.push(...votingNodes);
+    // Dedicated Brain Writing step: render ONLY the brain-rewriting matrices.
+    const combined = brainWritingOnly
+      ? [...brainRewritingNodes]
+      : [...flowBandNodes, ...phaseContainerNodes, ...ownerZoneNodes, ...rfMindMapNodes, ...crazy8sNodes];
+    if (!brainWritingOnly && brainRewritingNodes.length > 0) combined.push(...brainRewritingNodes);
+    if (!brainWritingOnly && votingNodes.length > 0) combined.push(...votingNodes);
     // Deduplicate by node ID — Liveblocks recovery can produce duplicate entries
     const seen = new Set<string>();
     return combined.filter((n) => {
@@ -1885,7 +1911,7 @@ function MindMapCanvasInner({
       seen.add(n.id);
       return true;
     });
-  }, [rfMindMapNodes, ownerZoneNodes, crazy8sNodes, brainRewritingNodes, votingNodes, flowBandNodes, phaseContainerNodes]);
+  }, [rfMindMapNodes, ownerZoneNodes, crazy8sNodes, brainRewritingNodes, votingNodes, flowBandNodes, phaseContainerNodes, brainWritingOnly]);
 
   // Convert store state to ReactFlow edges
   const rfEdges: Edge[] = useMemo(() => {
@@ -2322,6 +2348,14 @@ function MindMapCanvasInner({
         snapGrid={[SNAP_GRID, SNAP_GRID]}
       >
         <Background color="#e5e7eb" gap={20} />
+        {/* Table frame + row labels for the multiplayer ideation grid */}
+        {ideationTableRows.length > 0 && (
+          <IdeationTableOverlay
+            leftX={leftEdgeX}
+            rightX={rightEdgeX}
+            rows={ideationTableRows}
+          />
+        )}
         {/* Zoom controls — matches react-flow-canvas pattern */}
         <div className="absolute bottom-4 right-4 z-10 flex flex-col items-center bg-card rounded-xl shadow-md border border-border p-1 gap-0.5">
           <button
