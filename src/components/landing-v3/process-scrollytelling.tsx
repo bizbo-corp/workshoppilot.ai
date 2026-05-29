@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImageIcon, MessageSquare, Package, Sparkles } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import {
+  DemoStage,
+  MockWorkshop,
+} from "@/components/marketing/product-demo/demo-stage";
+import { MockBuildPack } from "@/components/marketing/product-demo/mock-build-pack";
+import { MockIdea } from "@/components/marketing/product-demo/mock-idea";
 
 type Step = {
   num: string;
   title: string;
   description: string;
-  icon: typeof MessageSquare;
 };
 
 const STEPS: Step[] = [
@@ -18,44 +22,26 @@ const STEPS: Step[] = [
     title: "Describe Your Idea",
     description:
       'Even if it\'s just a sentence. "I want to build an app that helps dog walkers find clients" is enough to start.',
-    icon: MessageSquare,
   },
   {
     num: "02",
     title: "AI Runs the Workshop",
     description:
       "Our AI facilitator walks you through a structured 10-step Design Thinking process — the same framework consultants charge $5,000+ for.",
-    icon: Sparkles,
   },
   {
     num: "03",
     title: "Walk Away Build-Ready",
     description:
       "Download your Build Pack: PRD, technical roadmap and more. Hand it to developers or feed it to AI coding tools.",
-    icon: Package,
   },
 ];
 
-/** Neutral, olive-tinted placeholder standing in for per-step concept art. */
-function StepPlaceholder({ step }: { step: Step }) {
-  const Icon = step.icon;
-  return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-5 rounded-2xl border border-dashed border-border bg-muted/40">
-      <Icon className="h-14 w-14 text-olive-600/40 dark:text-olive-400/40" />
-      <div className="text-center">
-        <p className="font-mono text-xs uppercase tracking-widest text-olive-600/70 dark:text-olive-400/70">
-          Step {step.num}
-        </p>
-        <p className="mt-1 text-sm font-medium text-muted-foreground">
-          {step.title}
-        </p>
-      </div>
-      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/50">
-        <ImageIcon className="h-3.5 w-3.5" />
-        Placeholder
-      </span>
-    </div>
-  );
+/** The matching mock for each step, used in the static mobile fallback. */
+function MockForStep({ index }: { index: number }) {
+  if (index === 0) return <MockIdea play={false} />;
+  if (index === 1) return <MockWorkshop play={false} />;
+  return <MockBuildPack play={false} />;
 }
 
 function Header() {
@@ -91,8 +77,8 @@ export function ProcessScrollytelling() {
           const st = ScrollTrigger.create({
             trigger: panelRef.current,
             start: "top top",
-            // One viewport of scroll per step keeps each concept on screen
-            // long enough to read before the next slides in.
+            // One viewport of scroll per step keeps each phase on screen long
+            // enough to read before the next slides in.
             end: () => "+=" + STEPS.length * window.innerHeight,
             pin: true,
             pinSpacing: true,
@@ -121,7 +107,7 @@ export function ProcessScrollytelling() {
 
   return (
     <>
-      {/* ── Desktop: pinned scroll-driven panel ─────────────────── */}
+      {/* ── Desktop: pinned scroll-driven product demo ──────────── */}
       <section
         ref={trackRef}
         aria-label="How it works"
@@ -135,23 +121,8 @@ export function ProcessScrollytelling() {
             <Header />
 
             <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
-              {/* Left — crossfading placeholder image */}
-              <div className="relative aspect-[4/3] w-full">
-                {STEPS.map((step, i) => (
-                  <div
-                    key={step.num}
-                    className="absolute inset-0 transition-opacity duration-500 ease-out"
-                    style={{ opacity: activeStep === i ? 1 : 0 }}
-                    aria-hidden={activeStep !== i}
-                  >
-                    <StepPlaceholder step={step} />
-                  </div>
-                ))}
-              </div>
-
-              {/* Right — three steps, active one emphasized */}
+              {/* Left — the three steps, active one emphasized */}
               <div className="relative">
-                {/* progress rail */}
                 <div className="absolute left-0 top-0 h-full w-px bg-border" />
                 <div
                   ref={progressFillRef}
@@ -182,6 +153,9 @@ export function ProcessScrollytelling() {
                   })}
                 </ol>
               </div>
+
+              {/* Right — animated lookalike product UI */}
+              <DemoStage activeStep={activeStep} />
             </div>
           </div>
         </div>
@@ -191,15 +165,15 @@ export function ProcessScrollytelling() {
       <section
         aria-label="How it works"
         className="border-t border-border bg-background py-24 md:hidden"
-        style={{ contentVisibility: "auto", containIntrinsicSize: "0 800px" }}
+        style={{ contentVisibility: "auto", containIntrinsicSize: "0 1200px" }}
       >
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <Header />
           <div className="space-y-16">
-            {STEPS.map((step) => (
+            {STEPS.map((step, i) => (
               <div key={step.num} className="space-y-5">
                 <div className="aspect-[4/3] w-full">
-                  <StepPlaceholder step={step} />
+                  <MockForStep index={i} />
                 </div>
                 <div>
                   <span className="font-mono text-sm text-olive-600 dark:text-olive-400">
