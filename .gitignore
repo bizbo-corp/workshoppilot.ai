@@ -54,3 +54,6 @@ next-env.d.ts
 
 # worktree-fleet dev tooling (local dev-server logs)
 .fleet/
+
+# Claude Code harness scheduled-task lock
+.claude/scheduled_tasks.lock
