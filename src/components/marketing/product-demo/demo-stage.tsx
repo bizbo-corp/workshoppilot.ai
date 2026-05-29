@@ -2,24 +2,8 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { MockBuildPack } from "./mock-build-pack";
-import { MockCanvas } from "./mock-canvas";
-import { MockChat } from "./mock-chat";
 import { MockIdea } from "./mock-idea";
-
-/**
- * Step 2 composed: the canvas filling up with a floating AI-facilitator chat
- * card. Exported so the static (mobile / reduced-motion) layout can reuse it.
- */
-export function MockWorkshop({ play = true }: { play?: boolean }) {
-  return (
-    <div className="relative h-full w-full">
-      <MockCanvas play={play} />
-      <div className="absolute bottom-3 left-3">
-        <MockChat play={play} />
-      </div>
-    </div>
-  );
-}
+import { MockWorkshop } from "./mock-workshop";
 
 /**
  * The animated demo surface for the scroll-driven Process section. `activeStep`

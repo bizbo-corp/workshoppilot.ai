@@ -11,9 +11,9 @@ import {
  * the real app shown in the homepage "Process" section). All copy lives here
  * so it's easy to tweak without touching the animation code.
  *
- * NOTE: this is a faux, non-interactive demo — no real canvas / chat / AI SDK.
- * Sticky colors mirror the real `sticky-note-node.tsx` palette via the same
- * `--sticky-note-*` CSS vars, so they read as genuine product UI.
+ * NOTE: this is a faux, non-interactive demo — no real canvas / chat / model
+ * calls. Sticky colors mirror the real `sticky-note-node.tsx` palette via the
+ * same `--sticky-note-*` CSS vars, so they read as genuine product UI.
  */
 
 export type StickyColor =
@@ -52,7 +52,7 @@ export const IDEA_SUGGESTIONS = [
   "A redesign of how new hires get onboarded",
 ];
 
-// ── Step 2: the AI workshop ───────────────────────────────────────────────
+// ── Generic chat (used by the standalone MockChat) ────────────────────────
 export type ChatMessage = { role: "ai" | "user"; text: string };
 
 export const CHAT_MESSAGES: ChatMessage[] = [
@@ -63,6 +63,7 @@ export const CHAT_MESSAGES: ChatMessage[] = [
   },
 ];
 
+// ── Stakeholder canvas (used by the standalone MockCanvas) ─────────────────
 export type StakeholderSticky = {
   label: string;
   color: StickyColor;
@@ -93,3 +94,53 @@ export const BUILD_PACK_ITEMS: BuildPackItem[] = [
   { title: "Journey Map", format: ".md", icon: Route },
   { title: "Feature Priorities", format: ".json", icon: FlagTriangleRight },
 ];
+
+// ── Step 2 (scripted): stakeholder mapping — stuck -> suggest -> group ─────
+// All positions are % of the WHOLE demo box. The chat panel is the left ~40%,
+// so canvas notes live in the right ~58%. All stakeholder notes are yellow.
+export type WorkshopNote = { label: string; x: number; y: number; rotate: number };
+
+/** Standalone stakeholder notes already on the board. */
+export const WORKSHOP_STICKIES: WorkshopNote[] = [
+  { label: "Pet Owners", x: 62, y: 3, rotate: -2 },
+  { label: "Suppliers", x: 86, y: 14, rotate: 2 },
+  { label: "Insurance companies", x: 64, y: 82, rotate: -1 },
+];
+
+/** Internal notes that the VET PRACTICE container ends up wrapping. */
+export const GROUP_NOTES_BASE: WorkshopNote[] = [
+  { label: "Vet practice", x: 56, y: 31, rotate: -1 },
+  { label: "Owner", x: 70, y: 47, rotate: 2 },
+];
+
+/** The note added when the user accepts the AI's suggestion chip. */
+export const GROUP_NOTE_ADDED: WorkshopNote = {
+  label: "Practice Manager",
+  x: 54,
+  y: 50,
+  rotate: -2,
+};
+
+/** The titled container drawn around the three internal notes. */
+export const WORKSHOP_GROUP = { label: "Vet Practice", x: 50, y: 26, w: 40, h: 42 };
+
+/** AI-suggested stakeholders, shown as chips with a + to add to the board. */
+export const SUGGESTION_CHIPS: string[] = ["Practice Manager", "Reception"];
+
+export const WORKSHOP_CHAT = {
+  prompt:
+    "Now let's get into your stakeholders. Who touches this product? Who does it affect? Jot down everything, or hit “I'm stuck” for a suggestion.",
+  stuckLabel: "I'm stuck",
+  suggestion:
+    "Perhaps break the vet practice into the internal people who touch it day to day, like the reception or practice manager.",
+  placeholder: "Add a stakeholder…",
+};
+
+/** Fake-cursor waypoints, % of the whole demo box. */
+export const CURSOR_WAYPOINTS = {
+  start: { x: 22, y: 34 },
+  button: { x: 18, y: 44 },
+  chip: { x: 24, y: 70 },
+  lasso: { x: 54, y: 28 },
+  lassoEnd: { x: 72, y: 52 },
+};

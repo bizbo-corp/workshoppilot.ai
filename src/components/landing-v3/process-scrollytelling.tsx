@@ -3,10 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import {
-  DemoStage,
-  MockWorkshop,
-} from "@/components/marketing/product-demo/demo-stage";
+import { DemoStage } from "@/components/marketing/product-demo/demo-stage";
+import { MockWorkshop } from "@/components/marketing/product-demo/mock-workshop";
 import { MockBuildPack } from "@/components/marketing/product-demo/mock-build-pack";
 import { MockIdea } from "@/components/marketing/product-demo/mock-idea";
 

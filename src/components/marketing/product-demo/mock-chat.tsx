@@ -49,7 +49,7 @@ export function MockChat({ play = true }: { play?: boolean }) {
   );
 }
 
-function Bubble({
+export function Bubble({
   role,
   children,
 }: {
