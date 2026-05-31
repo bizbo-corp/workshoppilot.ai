@@ -95,37 +95,66 @@ export const BUILD_PACK_ITEMS: BuildPackItem[] = [
   { title: "Feature Priorities", format: ".json", icon: FlagTriangleRight },
 ];
 
+/** Step 3 output: a markdown Build Pack file ready to hand to a coding agent. */
+export const BUILD_PACK_FILENAME = "vetclinic-prd.md";
+export const HANDOFF_AGENTS = ["Cursor", "Claude", "Gemini", "Codex"];
+
+export type MdLine = {
+  kind: "h1" | "h2" | "li" | "p" | "blank";
+  text?: string;
+};
+
+export const BUILD_PACK_MD: MdLine[] = [
+  { kind: "h1", text: "# VetClinic — Build Pack" },
+  { kind: "blank" },
+  { kind: "h2", text: "## Overview" },
+  {
+    kind: "p",
+    text: "A web app for vet clinics — appointment scheduling, records & client comms.",
+  },
+  { kind: "blank" },
+  { kind: "h2", text: "## Tech Stack" },
+  { kind: "li", text: "- Next.js (App Router) · React · TypeScript" },
+  { kind: "li", text: "- Tailwind CSS · shadcn/ui" },
+  { kind: "li", text: "- Neon Postgres · Drizzle ORM" },
+  { kind: "li", text: "- Auth: Clerk · Payments: Stripe" },
+  { kind: "blank" },
+  { kind: "h2", text: "## System Requirements" },
+  { kind: "li", text: "- Roles: vet · reception · pet owner" },
+  { kind: "li", text: "- Online booking + automated reminders" },
+  { kind: "li", text: "- Audit log on every record change" },
+];
+
 // ── Step 2 (scripted): stakeholder mapping — stuck -> suggest -> group ─────
 // Positions are % of the FRAMED box (the contained "main area"). The dotted
 // board + rings render in a separate layer that bleeds beyond this box.
 export type WorkshopNote = { label: string; x: number; y: number; rotate: number };
 
-/** Standalone stakeholder notes already on the board. */
+/** Loose notes outside the focus area (above + to the right; they bleed out). */
 export const WORKSHOP_STICKIES: WorkshopNote[] = [
-  { label: "Pet Owners", x: 61, y: 5, rotate: -2 },
-  { label: "Suppliers", x: 85, y: 16, rotate: 2 },
-  { label: "Insurance companies", x: 63, y: 80, rotate: -1 },
+  { label: "Pet Owners", x: 90, y: -26, rotate: 0 },
+  { label: "Insurers", x: 110, y: 10, rotate: 0 },
 ];
 
-/** Internal notes that the VET PRACTICE container ends up wrapping. */
+/** Group members already on the board (rotation 0 — clean squares). */
 export const GROUP_NOTES_BASE: WorkshopNote[] = [
-  { label: "Vet practice", x: 54, y: 34, rotate: -1 },
-  { label: "Owner", x: 71, y: 50, rotate: 2 },
+  { label: "Practice Manager", x: 45, y: 22, rotate: 0 },
+  { label: "Owners", x: 70, y: 17, rotate: 0 },
 ];
 
-/** The note added when the user accepts the AI's suggestion chip. */
+/** The card added when the user accepts the AI's suggestion chip. */
 export const GROUP_NOTE_ADDED: WorkshopNote = {
-  label: "Practice Manager",
-  x: 52,
-  y: 54,
-  rotate: -2,
+  label: "Reception Staff",
+  x: 57,
+  y: 55,
+  rotate: 0,
 };
 
-/** The dashed container drawn around the three internal notes. */
-export const WORKSHOP_GROUP = { label: "Vet Practice", x: 47, y: 28, w: 39, h: 44 };
+/** The titled "Vet Practice" container drawn around the three cards. */
+export const WORKSHOP_GROUP = { label: "Vet Practice", x: 41, y: 9, w: 57, h: 80 };
 
-/** AI-suggested stakeholders, shown as chips with a + to add to the board. */
-export const SUGGESTION_CHIPS: string[] = ["Practice Manager", "Reception"];
+/** AI-suggested cards, shown as chips with a + to add to the board. */
+export const SUGGESTION_CHIPS: string[] = ["Reception Staff", "Suppliers"];
 
 export const WORKSHOP_CHAT = {
   prompt:
@@ -138,9 +167,9 @@ export const WORKSHOP_CHAT = {
 
 /** Fake-cursor waypoints, % of the framed box. */
 export const CURSOR_WAYPOINTS = {
-  start: { x: 25, y: 42 },
-  button: { x: 24, y: 30 },
-  chip: { x: 27, y: 60 },
-  lasso: { x: 52, y: 30 },
-  lassoEnd: { x: 69, y: 54 },
+  start: { x: 25, y: 40 },
+  button: { x: 24, y: 28 },
+  chip: { x: 27, y: 58 },
+  lasso: { x: 46, y: 16 },
+  lassoEnd: { x: 82, y: 74 },
 };

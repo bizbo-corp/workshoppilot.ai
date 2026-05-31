@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, MousePointer2, Paperclip, Plus, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  GripVertical,
+  MousePointer2,
+  Paperclip,
+  Plus,
+  Sparkles,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTypewriter } from "./use-typewriter";
 import {
@@ -17,21 +25,11 @@ import {
 } from "./demo-data";
 
 /**
- * Step 2 — "AI Runs the Workshop".
- *
- * The dotted board + concentric rings render in a layer that BLEEDS beyond the
- * framed "main area": it stretches past the top/bottom and runs off the right
- * to the viewport edge (`right: calc(50% - 50vw)`). It isn't clipped by the box
- * — only by the viewport-wide pinned panel (desktop) or the mobile wrapper's
- * `overflow-hidden`. So on wide screens more of the board/rings shows on the
- * right; on narrow screens it simply crops. The chat + stickies stay contained
- * in the framed box, positioned in % of that box.
- *
- * A scripted, non-interactive story plays on scroll-in:
- *   prompt → cursor clicks "I'm stuck" → AI types a suggestion → suggestion
- *   chips appear → cursor adds "Practice Manager" → cursor lassos the three
- *   internal notes → a dashed "VET PRACTICE" container (real group-node style)
- *   wraps them.
+ * Step 2 — "AI Runs the Workshop". A simulated chat panel (left) drives a faux
+ * canvas where, on scroll-in: the cursor clicks "I'm stuck" → the AI types a
+ * suggestion → a chip adds "Reception Staff" → the cursor drags a marquee
+ * selection around the three cards (olive selection + corner handles) → a
+ * titled "Vet Practice" container wraps them (real cluster-group style).
  *
  * `play={false}` (mobile / reduced-motion) renders the final grouped end-state.
  */
@@ -50,15 +48,46 @@ const PHASES = [
 type Phase = (typeof PHASES)[number];
 const at = (p: Phase) => PHASES.indexOf(p);
 
-/** Square sticky note (real notes are square). All stakeholder notes are yellow. */
-function Note({ label, x, y, rotate }: WorkshopNote) {
+const CORNERS = [
+  "-left-1 -top-1",
+  "-right-1 -top-1",
+  "-left-1 -bottom-1",
+  "-right-1 -bottom-1",
+];
+
+/** Square sticky note — 2× size, same `rounded-md` corners. All notes yellow. */
+function Note({
+  label,
+  x,
+  y,
+  rotate,
+  selected = false,
+  land = false,
+  animate = false,
+}: WorkshopNote & { selected?: boolean; land?: boolean; animate?: boolean }) {
   return (
-    <div
+    <motion.div
+      initial={land && animate ? { opacity: 0, y: -16, scale: 0.8 } : false}
+      animate={land ? { opacity: 1, y: 0, scale: 1 } : undefined}
+      transition={land ? { type: "spring", stiffness: 240, damping: 18 } : undefined}
       style={{ left: `${x}%`, top: `${y}%`, rotate: `${rotate}deg` }}
-      className="absolute z-10 flex size-16 flex-col justify-center rounded-md bg-[var(--sticky-note-yellow)] p-2 text-[9px] font-medium leading-tight text-[var(--sticky-note-yellow-text)] shadow-md shadow-black/10"
+      className={cn(
+        "absolute size-32 rounded-md bg-[var(--sticky-note-yellow)] p-3 text-[13px] font-medium leading-snug text-[var(--sticky-note-yellow-text)] shadow-md shadow-black/10",
+        selected ? "z-20 ring-2 ring-selection" : "z-10",
+      )}
     >
       {label}
-    </div>
+      {selected &&
+        CORNERS.map((pos) => (
+          <span
+            key={pos}
+            className={cn(
+              "absolute size-2.5 rounded-[2px] border-2 border-selection bg-background",
+              pos,
+            )}
+          />
+        ))}
+    </motion.div>
   );
 }
 
@@ -80,12 +109,10 @@ function useElementSize<T extends HTMLElement>(ref: React.RefObject<T | null>) {
 export function MockWorkshop({ play = true }: { play?: boolean }) {
   const reduced = useReducedMotion();
   const animate = play && !reduced;
-  // animate is stable for a mount, so initial state is correct — no synchronous
-  // setState in an effect.
   const [phase, setPhase] = useState<Phase>(animate ? "idle" : "grouped");
   const idx = at(phase);
 
-  const boxRef = useRef<HTMLDivElement>(null); // framed box → cursor coords
+  const boxRef = useRef<HTMLDivElement>(null);
   const box = useElementSize(boxRef);
 
   useEffect(() => {
@@ -98,7 +125,7 @@ export function MockWorkshop({ play = true }: { play?: boolean }) {
       setTimeout(() => setPhase("toChip"), 3850),
       setTimeout(() => setPhase("added"), 4500),
       setTimeout(() => setPhase("lasso"), 5200),
-      setTimeout(() => setPhase("grouped"), 6000),
+      setTimeout(() => setPhase("grouped"), 6200),
     ];
     return () => timers.forEach(clearTimeout);
   }, [animate]);
@@ -106,6 +133,7 @@ export function MockWorkshop({ play = true }: { play?: boolean }) {
   const suggestionShown = idx >= at("typing");
   const chipsShown = idx >= at("chips");
   const pmAdded = idx >= at("added");
+  const selecting = phase === "lasso";
   const grouped = idx >= at("grouped");
 
   const { shown: aiTyped, done: aiDone } = useTypewriter(
@@ -127,46 +155,57 @@ export function MockWorkshop({ play = true }: { play?: boolean }) {
 
   return (
     <div ref={boxRef} className="relative h-full w-full">
-      {/* VET PRACTICE group container — real group-node style (dashed, label above) */}
+      {/* "Vet Practice" group container (real cluster-group style) — behind cards */}
       {grouped && (
         <motion.div
-          initial={animate ? { opacity: 0, scale: 0.94 } : false}
+          initial={animate ? { opacity: 0, scale: 0.96 } : false}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: "spring", stiffness: 220, damping: 22 }}
+          transition={{ type: "spring", stiffness: 220, damping: 24 }}
           style={{
             left: `${WORKSHOP_GROUP.x}%`,
             top: `${WORKSHOP_GROUP.y}%`,
             width: `${WORKSHOP_GROUP.w}%`,
             height: `${WORKSHOP_GROUP.h}%`,
           }}
-          className="absolute z-[5] rounded-lg border-2 border-dashed border-neutral-olive-300 bg-neutral-olive-100/70 dark:border-neutral-olive-600 dark:bg-neutral-olive-800/70"
+          className="absolute z-[5] flex flex-col rounded-xl shadow-sm"
         >
-          <span className="absolute -top-5 left-0 text-[10px] font-semibold uppercase tracking-wide text-neutral-olive-600 dark:text-neutral-olive-300">
-            {WORKSHOP_GROUP.label}
-          </span>
+          <div className="flex items-center gap-1.5 rounded-t-xl bg-olive-600 px-2.5 py-1.5 dark:bg-olive-500">
+            <GripVertical className="h-3.5 w-3.5 text-olive-50/70" />
+            <span className="text-[11px] font-semibold text-olive-50">
+              {WORKSHOP_GROUP.label}
+            </span>
+          </div>
+          <div className="flex-1 rounded-b-xl border-2 border-t-0 border-dashed border-olive-600/40 bg-olive-600/[0.06] dark:border-olive-400/40 dark:bg-olive-500/10" />
         </motion.div>
       )}
 
-      {/* Standalone + base internal notes */}
-      {[...WORKSHOP_STICKIES, ...GROUP_NOTES_BASE].map((s) => (
+      {/* Marquee selection rectangle (during the lasso drag) */}
+      {selecting && (
+        <motion.div
+          aria-hidden
+          initial={animate ? { opacity: 0 } : false}
+          animate={{ opacity: 1 }}
+          style={{
+            left: `${WORKSHOP_GROUP.x}%`,
+            top: `${WORKSHOP_GROUP.y}%`,
+            width: `${WORKSHOP_GROUP.w}%`,
+            height: `${WORKSHOP_GROUP.h}%`,
+          }}
+          className="absolute z-[15] rounded-[3px] border-2 border-dashed border-selection bg-selection/10"
+        />
+      )}
+
+      {/* Loose notes (none by default) */}
+      {WORKSHOP_STICKIES.map((s) => (
         <Note key={s.label} {...s} />
       ))}
 
-      {/* The accepted suggestion lands as a note */}
+      {/* Group members */}
+      {GROUP_NOTES_BASE.map((s) => (
+        <Note key={s.label} {...s} selected={selecting} />
+      ))}
       {pmAdded && (
-        <motion.div
-          initial={animate ? { opacity: 0, y: -16, scale: 0.8 } : false}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: "spring", stiffness: 240, damping: 18 }}
-          style={{
-            left: `${GROUP_NOTE_ADDED.x}%`,
-            top: `${GROUP_NOTE_ADDED.y}%`,
-            rotate: `${GROUP_NOTE_ADDED.rotate}deg`,
-          }}
-          className="absolute z-10 flex size-16 flex-col justify-center rounded-md bg-[var(--sticky-note-yellow)] p-2 text-[9px] font-medium leading-tight text-[var(--sticky-note-yellow-text)] shadow-md shadow-black/10 ring-2 ring-olive-500/50"
-        >
-          {GROUP_NOTE_ADDED.label}
-        </motion.div>
+        <Note {...GROUP_NOTE_ADDED} land animate={animate} selected={selecting} />
       )}
 
       {/* Simulated chat panel — overhangs the board's left edge */}
@@ -196,21 +235,31 @@ export function MockWorkshop({ play = true }: { play?: boolean }) {
           )}
 
           {chipsShown &&
-            SUGGESTION_CHIPS.map((chip, i) => (
-              <motion.div
-                key={chip}
-                initial={animate ? { opacity: 0, y: 6 } : false}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: animate ? i * 0.12 : 0 }}
-                className={cn(
-                  "flex items-center justify-between rounded-md bg-[var(--sticky-note-yellow)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--sticky-note-yellow-text)] transition-transform",
-                  i === 0 && phase === "added" && "scale-95",
-                )}
-              >
-                {chip}
-                <Plus className="h-3.5 w-3.5 opacity-70" />
-              </motion.div>
-            ))}
+            SUGGESTION_CHIPS.map((chip, i) => {
+              const isAdded = i === 0 && pmAdded;
+              return (
+                <motion.div
+                  key={chip}
+                  initial={animate ? { opacity: 0, y: 6 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: animate ? i * 0.12 : 0 }}
+                  className={cn(
+                    "flex items-center justify-between rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-transform",
+                    isAdded
+                      ? "bg-neutral-olive-200 text-neutral-olive-600 dark:bg-neutral-olive-800 dark:text-neutral-olive-300"
+                      : "bg-[var(--sticky-note-yellow)] text-[var(--sticky-note-yellow-text)]",
+                    i === 0 && phase === "added" && "scale-95",
+                  )}
+                >
+                  {chip}
+                  {isAdded ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />
+                  ) : (
+                    <Plus className="h-3.5 w-3.5 opacity-70" />
+                  )}
+                </motion.div>
+              );
+            })}
         </div>
 
         {/* Faux input */}
@@ -227,7 +276,7 @@ export function MockWorkshop({ play = true }: { play?: boolean }) {
         </div>
       </div>
 
-      {/* Fake cursor (framed-box coordinate space) */}
+      {/* Fake cursor */}
       {animate && box.w > 0 && (
         <motion.div
           aria-hidden
