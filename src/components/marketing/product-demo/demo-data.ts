@@ -96,33 +96,33 @@ export const BUILD_PACK_ITEMS: BuildPackItem[] = [
 ];
 
 // ── Step 2 (scripted): stakeholder mapping — stuck -> suggest -> group ─────
-// All positions are % of the WHOLE demo box. The chat panel is the left ~40%,
-// so canvas notes live in the right ~58%. All stakeholder notes are yellow.
+// Positions are % of the CANVAS (the dotted area on the right). The chat panel
+// overhangs the canvas's left edge, so notes live from canvas x ~44% rightward.
 export type WorkshopNote = { label: string; x: number; y: number; rotate: number };
 
 /** Standalone stakeholder notes already on the board. */
 export const WORKSHOP_STICKIES: WorkshopNote[] = [
-  { label: "Pet Owners", x: 62, y: 3, rotate: -2 },
-  { label: "Suppliers", x: 86, y: 14, rotate: 2 },
-  { label: "Insurance companies", x: 64, y: 82, rotate: -1 },
+  { label: "Pet Owners", x: 54, y: 5, rotate: -2 },
+  { label: "Suppliers", x: 82, y: 16, rotate: 2 },
+  { label: "Insurance companies", x: 56, y: 80, rotate: -1 },
 ];
 
 /** Internal notes that the VET PRACTICE container ends up wrapping. */
 export const GROUP_NOTES_BASE: WorkshopNote[] = [
-  { label: "Vet practice", x: 56, y: 31, rotate: -1 },
-  { label: "Owner", x: 70, y: 47, rotate: 2 },
+  { label: "Vet practice", x: 46, y: 34, rotate: -1 },
+  { label: "Owner", x: 66, y: 50, rotate: 2 },
 ];
 
 /** The note added when the user accepts the AI's suggestion chip. */
 export const GROUP_NOTE_ADDED: WorkshopNote = {
   label: "Practice Manager",
-  x: 54,
-  y: 50,
+  x: 44,
+  y: 54,
   rotate: -2,
 };
 
-/** The titled container drawn around the three internal notes. */
-export const WORKSHOP_GROUP = { label: "Vet Practice", x: 50, y: 26, w: 40, h: 42 };
+/** The dashed container drawn around the three internal notes. */
+export const WORKSHOP_GROUP = { label: "Vet Practice", x: 38, y: 28, w: 46, h: 44 };
 
 /** AI-suggested stakeholders, shown as chips with a + to add to the board. */
 export const SUGGESTION_CHIPS: string[] = ["Practice Manager", "Reception"];
@@ -136,11 +136,11 @@ export const WORKSHOP_CHAT = {
   placeholder: "Add a stakeholder…",
 };
 
-/** Fake-cursor waypoints, % of the whole demo box. */
+/** Fake-cursor waypoints, % of the CANVAS. */
 export const CURSOR_WAYPOINTS = {
-  start: { x: 22, y: 34 },
-  button: { x: 18, y: 44 },
-  chip: { x: 24, y: 70 },
-  lasso: { x: 54, y: 28 },
-  lassoEnd: { x: 72, y: 52 },
+  start: { x: 12, y: 42 },
+  button: { x: 11, y: 30 },
+  chip: { x: 14, y: 60 },
+  lasso: { x: 44, y: 30 },
+  lassoEnd: { x: 64, y: 54 },
 };

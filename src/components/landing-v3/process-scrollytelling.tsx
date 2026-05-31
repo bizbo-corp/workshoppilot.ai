@@ -118,9 +118,9 @@ export function ProcessScrollytelling() {
           <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
             <Header />
 
-            <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
+            <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-12 lg:gap-12">
               {/* Left — the three steps, active one emphasized */}
-              <div className="relative">
+              <div className="relative lg:col-span-4">
                 <div className="absolute left-0 top-0 h-full w-px bg-border" />
                 <div
                   ref={progressFillRef}
@@ -152,8 +152,10 @@ export function ProcessScrollytelling() {
                 </ol>
               </div>
 
-              {/* Right — animated lookalike product UI */}
-              <DemoStage activeStep={activeStep} />
+              {/* Right — animated lookalike product UI (larger) */}
+              <div className="lg:col-span-8">
+                <DemoStage activeStep={activeStep} />
+              </div>
             </div>
           </div>
         </div>

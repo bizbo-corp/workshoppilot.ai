@@ -2,14 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import {
-  ArrowRight,
-  Frame,
-  MousePointer2,
-  Paperclip,
-  Plus,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, MousePointer2, Paperclip, Plus, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTypewriter } from "./use-typewriter";
 import {
@@ -24,12 +17,14 @@ import {
 } from "./demo-data";
 
 /**
- * Step 2 — "AI Runs the Workshop". Matches Figma frame 112-358: a simulated
- * chat panel (left) and a faux stakeholder canvas (right). A scripted,
- * non-interactive story plays when the frame scrolls into view:
+ * Step 2 — "AI Runs the Workshop". A faux stakeholder canvas (dotted, with
+ * concentric rings) on the right, and a simulated chat panel that overhangs —
+ * "comes out of" — the canvas's left edge. A scripted, non-interactive story
+ * plays on scroll-in:
  *   prompt → cursor clicks "I'm stuck" → AI types a suggestion → suggestion
  *   chips appear → cursor adds "Practice Manager" → cursor lassos the three
- *   internal notes → the titled "VET PRACTICE" container wraps them.
+ *   internal notes → a dashed "VET PRACTICE" container (real group-node style)
+ *   wraps them.
  *
  * `play={false}` (mobile / reduced-motion) renders the final grouped end-state.
  */
@@ -48,11 +43,12 @@ const PHASES = [
 type Phase = (typeof PHASES)[number];
 const at = (p: Phase) => PHASES.indexOf(p);
 
+/** Square sticky note (real notes are square). All stakeholder notes are yellow. */
 function Note({ label, x, y, rotate }: WorkshopNote) {
   return (
     <div
       style={{ left: `${x}%`, top: `${y}%`, rotate: `${rotate}deg` }}
-      className="absolute z-10 w-20 rounded-md bg-[var(--sticky-note-yellow)] px-2 py-2 text-[10px] font-medium leading-tight text-[var(--sticky-note-yellow-text)] shadow-md shadow-black/10"
+      className="absolute z-10 flex size-16 flex-col justify-center rounded-md bg-[var(--sticky-note-yellow)] p-2 text-[9px] font-medium leading-tight text-[var(--sticky-note-yellow-text)] shadow-md shadow-black/10"
     >
       {label}
     </div>
@@ -62,16 +58,16 @@ function Note({ label, x, y, rotate }: WorkshopNote) {
 export function MockWorkshop({ play = true }: { play?: boolean }) {
   const reduced = useReducedMotion();
   const animate = play && !reduced;
-  // animate is stable for a mount (play is fixed per AnimatePresence mount), so
-  // the initial value is correct and we never setState synchronously in effect.
+  // animate is stable for a mount, so initial state is correct — no synchronous
+  // setState in an effect.
   const [phase, setPhase] = useState<Phase>(animate ? "idle" : "grouped");
   const idx = at(phase);
 
-  // Measure the box so the fake cursor / rings can be sized in px from %.
-  const boxRef = useRef<HTMLDivElement>(null);
+  // Measure the CANVAS so the fake cursor / rings can be sized in px from %.
+  const canvasRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   useEffect(() => {
-    const el = boxRef.current;
+    const el = canvasRef.current;
     if (!el) return;
     const measure = () => setSize({ w: el.clientWidth, h: el.clientHeight });
     measure();
@@ -118,79 +114,92 @@ export function MockWorkshop({ play = true }: { play?: boolean }) {
             : CURSOR_WAYPOINTS.lassoEnd;
 
   return (
-    <div
-      ref={boxRef}
-      className="relative h-full w-full overflow-hidden rounded-2xl border border-border bg-muted/30"
-      style={{
-        backgroundImage:
-          "radial-gradient(circle, var(--border) 1px, transparent 1px)",
-        backgroundSize: "16px 16px",
-      }}
-    >
-      {/* Faint concentric stakeholder rings, centered on the canvas area */}
-      {size.h > 0 &&
-        [1.25, 0.82].map((k) => (
-          <div
-            key={k}
-            aria-hidden
-            className="pointer-events-none absolute rounded-full border border-border/50"
-            style={{
-              width: size.h * k,
-              height: size.h * k,
-              left: size.w * 0.72,
-              top: size.h * 0.5,
-              transform: "translate(-50%, -50%)",
-            }}
-          />
-        ))}
+    <div className="relative h-full w-full">
+      {/* Dotted canvas — inset from the left so the chat can overhang it */}
+      <div
+        ref={canvasRef}
+        className="absolute inset-y-0 right-0 left-[15%] overflow-hidden rounded-2xl border border-border bg-muted/30"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, var(--border) 1px, transparent 1px)",
+          backgroundSize: "18px 18px",
+        }}
+      >
+        {/* Concentric stakeholder rings (real concentric-rings-overlay style) */}
+        {size.h > 0 &&
+          [1.5, 1.0, 0.55].map((k) => (
+            <div
+              key={k}
+              aria-hidden
+              className="pointer-events-none absolute rounded-full border border-neutral-olive-300/50 dark:border-neutral-olive-700/50"
+              style={{
+                width: size.h * k,
+                height: size.h * k,
+                left: size.w * 0.62,
+                top: size.h * 0.5,
+                transform: "translate(-50%, -50%)",
+              }}
+            />
+          ))}
 
-      {/* VET PRACTICE group container — behind its notes */}
-      {grouped && (
-        <motion.div
-          initial={animate ? { opacity: 0, scale: 0.92 } : false}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: "spring", stiffness: 220, damping: 22 }}
-          style={{
-            left: `${WORKSHOP_GROUP.x}%`,
-            top: `${WORKSHOP_GROUP.y}%`,
-            width: `${WORKSHOP_GROUP.w}%`,
-            height: `${WORKSHOP_GROUP.h}%`,
-          }}
-          className="absolute z-0 overflow-hidden rounded-lg border border-olive-500/50 bg-card/60 shadow-sm dark:border-olive-400/40"
-        >
-          <div className="flex items-center gap-1 border-b border-border bg-muted px-2 py-1">
-            <Frame className="h-2.5 w-2.5 text-muted-foreground" />
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {/* VET PRACTICE group container — real group-node style (dashed, label above) */}
+        {grouped && (
+          <motion.div
+            initial={animate ? { opacity: 0, scale: 0.94 } : false}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 220, damping: 22 }}
+            style={{
+              left: `${WORKSHOP_GROUP.x}%`,
+              top: `${WORKSHOP_GROUP.y}%`,
+              width: `${WORKSHOP_GROUP.w}%`,
+              height: `${WORKSHOP_GROUP.h}%`,
+            }}
+            className="absolute z-0 rounded-lg border-2 border-dashed border-neutral-olive-300 bg-neutral-olive-100/70 dark:border-neutral-olive-600 dark:bg-neutral-olive-800/70"
+          >
+            <span className="absolute -top-5 left-0 text-[10px] font-semibold uppercase tracking-wide text-neutral-olive-600 dark:text-neutral-olive-300">
               {WORKSHOP_GROUP.label}
             </span>
-          </div>
-        </motion.div>
-      )}
+          </motion.div>
+        )}
 
-      {/* Standalone + base internal notes */}
-      {[...WORKSHOP_STICKIES, ...GROUP_NOTES_BASE].map((s) => (
-        <Note key={s.label} {...s} />
-      ))}
+        {/* Standalone + base internal notes */}
+        {[...WORKSHOP_STICKIES, ...GROUP_NOTES_BASE].map((s) => (
+          <Note key={s.label} {...s} />
+        ))}
 
-      {/* The accepted suggestion lands as a note */}
-      {pmAdded && (
-        <motion.div
-          initial={animate ? { opacity: 0, y: -16, scale: 0.8 } : false}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: "spring", stiffness: 240, damping: 18 }}
-          style={{
-            left: `${GROUP_NOTE_ADDED.x}%`,
-            top: `${GROUP_NOTE_ADDED.y}%`,
-            rotate: `${GROUP_NOTE_ADDED.rotate}deg`,
-          }}
-          className="absolute z-10 w-20 rounded-md bg-[var(--sticky-note-yellow)] px-2 py-2 text-[10px] font-medium leading-tight text-[var(--sticky-note-yellow-text)] shadow-md shadow-black/10 ring-2 ring-olive-500/50"
-        >
-          {GROUP_NOTE_ADDED.label}
-        </motion.div>
-      )}
+        {/* The accepted suggestion lands as a note */}
+        {pmAdded && (
+          <motion.div
+            initial={animate ? { opacity: 0, y: -16, scale: 0.8 } : false}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: "spring", stiffness: 240, damping: 18 }}
+            style={{
+              left: `${GROUP_NOTE_ADDED.x}%`,
+              top: `${GROUP_NOTE_ADDED.y}%`,
+              rotate: `${GROUP_NOTE_ADDED.rotate}deg`,
+            }}
+            className="absolute z-10 flex size-16 flex-col justify-center rounded-md bg-[var(--sticky-note-yellow)] p-2 text-[9px] font-medium leading-tight text-[var(--sticky-note-yellow-text)] shadow-md shadow-black/10 ring-2 ring-olive-500/50"
+          >
+            {GROUP_NOTE_ADDED.label}
+          </motion.div>
+        )}
 
-      {/* Simulated chat panel (left) */}
-      <div className="absolute bottom-3 left-3 top-3 z-30 flex w-[40%] max-w-[230px] flex-col rounded-xl bg-neutral-olive-100/95 p-3 shadow-xl shadow-black/10 backdrop-blur dark:bg-neutral-olive-900/90">
+        {/* Fake cursor (lives in the canvas coordinate space) */}
+        {animate && size.w > 0 && (
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute left-0 top-0 z-40"
+            initial={false}
+            animate={{ x: (wp.x / 100) * size.w, y: (wp.y / 100) * size.h }}
+            transition={{ type: "spring", stiffness: 120, damping: 20 }}
+          >
+            <MousePointer2 className="h-5 w-5 fill-foreground text-background" />
+          </motion.div>
+        )}
+      </div>
+
+      {/* Simulated chat panel — overhangs the canvas's left edge */}
+      <div className="absolute bottom-[8%] left-0 top-[8%] z-30 flex w-[42%] max-w-[240px] flex-col rounded-xl border border-border bg-neutral-olive-100/95 p-3 shadow-2xl shadow-black/20 backdrop-blur dark:bg-neutral-olive-900/95">
         <div className="flex-1 space-y-2 overflow-hidden">
           <p className="text-[11px] leading-relaxed text-foreground/75">
             {WORKSHOP_CHAT.prompt}
@@ -246,19 +255,6 @@ export function MockWorkshop({ play = true }: { play?: boolean }) {
           </div>
         </div>
       </div>
-
-      {/* Fake cursor */}
-      {animate && size.w > 0 && (
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute left-0 top-0 z-40"
-          initial={false}
-          animate={{ x: (wp.x / 100) * size.w, y: (wp.y / 100) * size.h }}
-          transition={{ type: "spring", stiffness: 120, damping: 20 }}
-        >
-          <MousePointer2 className="h-5 w-5 fill-foreground text-background" />
-        </motion.div>
-      )}
     </div>
   );
 }

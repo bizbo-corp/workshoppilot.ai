@@ -12,7 +12,7 @@ import { MockWorkshop } from "./mock-workshop";
  */
 export function DemoStage({ activeStep }: { activeStep: number }) {
   return (
-    <div className="relative aspect-[4/3] w-full">
+    <div className="relative aspect-[16/10] w-full">
       <AnimatePresence mode="popLayout">
         <motion.div
           key={activeStep}
