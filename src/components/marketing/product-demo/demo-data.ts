@@ -96,33 +96,33 @@ export const BUILD_PACK_ITEMS: BuildPackItem[] = [
 ];
 
 // ── Step 2 (scripted): stakeholder mapping — stuck -> suggest -> group ─────
-// Positions are % of the CANVAS (the dotted area on the right). The chat panel
-// overhangs the canvas's left edge, so notes live from canvas x ~44% rightward.
+// Positions are % of the FRAMED box (the contained "main area"). The dotted
+// board + rings render in a separate layer that bleeds beyond this box.
 export type WorkshopNote = { label: string; x: number; y: number; rotate: number };
 
 /** Standalone stakeholder notes already on the board. */
 export const WORKSHOP_STICKIES: WorkshopNote[] = [
-  { label: "Pet Owners", x: 54, y: 5, rotate: -2 },
-  { label: "Suppliers", x: 82, y: 16, rotate: 2 },
-  { label: "Insurance companies", x: 56, y: 80, rotate: -1 },
+  { label: "Pet Owners", x: 61, y: 5, rotate: -2 },
+  { label: "Suppliers", x: 85, y: 16, rotate: 2 },
+  { label: "Insurance companies", x: 63, y: 80, rotate: -1 },
 ];
 
 /** Internal notes that the VET PRACTICE container ends up wrapping. */
 export const GROUP_NOTES_BASE: WorkshopNote[] = [
-  { label: "Vet practice", x: 46, y: 34, rotate: -1 },
-  { label: "Owner", x: 66, y: 50, rotate: 2 },
+  { label: "Vet practice", x: 54, y: 34, rotate: -1 },
+  { label: "Owner", x: 71, y: 50, rotate: 2 },
 ];
 
 /** The note added when the user accepts the AI's suggestion chip. */
 export const GROUP_NOTE_ADDED: WorkshopNote = {
   label: "Practice Manager",
-  x: 44,
+  x: 52,
   y: 54,
   rotate: -2,
 };
 
 /** The dashed container drawn around the three internal notes. */
-export const WORKSHOP_GROUP = { label: "Vet Practice", x: 38, y: 28, w: 46, h: 44 };
+export const WORKSHOP_GROUP = { label: "Vet Practice", x: 47, y: 28, w: 39, h: 44 };
 
 /** AI-suggested stakeholders, shown as chips with a + to add to the board. */
 export const SUGGESTION_CHIPS: string[] = ["Practice Manager", "Reception"];
@@ -136,11 +136,11 @@ export const WORKSHOP_CHAT = {
   placeholder: "Add a stakeholder…",
 };
 
-/** Fake-cursor waypoints, % of the CANVAS. */
+/** Fake-cursor waypoints, % of the framed box. */
 export const CURSOR_WAYPOINTS = {
-  start: { x: 12, y: 42 },
-  button: { x: 11, y: 30 },
-  chip: { x: 14, y: 60 },
-  lasso: { x: 44, y: 30 },
-  lassoEnd: { x: 64, y: 54 },
+  start: { x: 25, y: 42 },
+  button: { x: 24, y: 30 },
+  chip: { x: 27, y: 60 },
+  lasso: { x: 52, y: 30 },
+  lassoEnd: { x: 69, y: 54 },
 };

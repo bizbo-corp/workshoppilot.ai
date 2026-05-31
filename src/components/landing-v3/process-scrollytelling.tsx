@@ -3,6 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import {
+  DemoBoard,
+  DemoRings,
+  DOTTED_BG,
+} from "@/components/marketing/product-demo/demo-board";
 import { DemoStage } from "@/components/marketing/product-demo/demo-stage";
 import { MockWorkshop } from "@/components/marketing/product-demo/mock-workshop";
 import { MockBuildPack } from "@/components/marketing/product-demo/mock-build-pack";
@@ -113,9 +118,13 @@ export function ProcessScrollytelling() {
       >
         <div
           ref={panelRef}
-          className="flex h-screen flex-col justify-center overflow-hidden py-16"
+          className="relative flex h-screen flex-col justify-center overflow-hidden py-16"
         >
-          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+          {/* Section-wide dotted board (behind all three steps), bleeds right */}
+          <DemoBoard />
+          {/* Concentric rings — step 2 only, span the section top↔bottom */}
+          <DemoRings active={activeStep === 1} />
+          <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
             <Header />
 
             <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-12 lg:gap-12">
@@ -152,8 +161,8 @@ export function ProcessScrollytelling() {
                 </ol>
               </div>
 
-              {/* Right — animated lookalike product UI (larger) */}
-              <div className="lg:col-span-8">
+              {/* Right — animated lookalike product UI (larger; board bleeds right) */}
+              <div className="lg:col-span-8 h-[clamp(360px,56vh,600px)]">
                 <DemoStage activeStep={activeStep} />
               </div>
             </div>
@@ -172,7 +181,10 @@ export function ProcessScrollytelling() {
           <div className="space-y-16">
             {STEPS.map((step, i) => (
               <div key={step.num} className="space-y-5">
-                <div className="aspect-[4/3] w-full">
+                <div
+                  className="aspect-[4/3] w-full overflow-hidden rounded-2xl"
+                  style={DOTTED_BG}
+                >
                   <MockForStep index={i} />
                 </div>
                 <div>

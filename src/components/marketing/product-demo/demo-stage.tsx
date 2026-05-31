@@ -12,7 +12,9 @@ import { MockWorkshop } from "./mock-workshop";
  */
 export function DemoStage({ activeStep }: { activeStep: number }) {
   return (
-    <div className="relative aspect-[16/10] w-full">
+    // TEMP: fuchsia tint to visualize the framed "main area" — remove later.
+    // overflow-visible so the workshop board/rings can bleed beyond this box.
+    <div className="relative h-full w-full rounded-2xl bg-fuchsia-500/20 ring-2 ring-fuchsia-500/50">
       <AnimatePresence mode="popLayout">
         <motion.div
           key={activeStep}
