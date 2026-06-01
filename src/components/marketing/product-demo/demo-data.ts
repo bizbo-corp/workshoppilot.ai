@@ -116,13 +116,77 @@ export const BUILD_PACK_MD: MdLine[] = [
   { kind: "h2", text: "## Tech Stack" },
   { kind: "li", text: "- Next.js (App Router) · React · TypeScript" },
   { kind: "li", text: "- Tailwind CSS · shadcn/ui" },
-  { kind: "li", text: "- Neon Postgres · Drizzle ORM" },
+  { kind: "li", text: "- PostgreSQL · Drizzle ORM · Zod" },
   { kind: "li", text: "- Auth: Clerk · Payments: Stripe" },
+  { kind: "blank" },
+  { kind: "h2", text: "## Platform" },
+  { kind: "li", text: "- Google Cloud — Cloud Run (containerised app)" },
+  { kind: "li", text: "- Cloud SQL (PostgreSQL) · Cloud Storage" },
+  { kind: "li", text: "- Pub/Sub + Cloud Scheduler (reminders)" },
+  { kind: "li", text: "- CDN + Cloud Armor at the edge" },
+  { kind: "blank" },
+  { kind: "h2", text: "## Database" },
+  { kind: "li", text: "- users — vet · reception · owner (RBAC)" },
+  { kind: "li", text: "- pets · owners · appointments" },
+  { kind: "li", text: "- invoices · payments · audit_log" },
+  { kind: "li", text: "- soft-delete + row-level history" },
   { kind: "blank" },
   { kind: "h2", text: "## System Requirements" },
   { kind: "li", text: "- Roles: vet · reception · pet owner" },
   { kind: "li", text: "- Online booking + automated reminders" },
   { kind: "li", text: "- Audit log on every record change" },
+  { kind: "li", text: "- 99.9% uptime · nightly encrypted backups" },
+];
+
+/** Step 3: stakeholder slide deck ("Concepts"). */
+export const BUILD_PACK_DECK_TITLE = "VetPro Workshop";
+export type DeckSlide = { n: number; title: string; sub: string };
+export const BUILD_PACK_SLIDES: DeckSlide[] = [
+  { n: 1, title: "Problem", sub: "Why clinics lose hours" },
+  { n: 2, title: "Personas", sub: "Vet, reception, owner" },
+  { n: 3, title: "Journey Map", sub: "Book to follow-up" },
+  { n: 4, title: "Solution", sub: "One scheduling hub" },
+  { n: 5, title: "Concepts", sub: "Shortlisted directions" },
+  { n: 6, title: "Roadmap", sub: "Phase 1 to launch" },
+];
+
+/** Step 3: feature-prioritisation roadmap (draggable). */
+export type RoadmapFeature = {
+  n: number;
+  title: string;
+  priority: string;
+  desc: string;
+  sub: number;
+};
+export const BUILD_PACK_FEATURES: RoadmapFeature[] = [
+  {
+    n: 1,
+    title: "Appointment Booking",
+    priority: "Must-have",
+    desc: "Self-serve scheduling with live clinic availability.",
+    sub: 3,
+  },
+  {
+    n: 2,
+    title: "Client & Pet Records",
+    priority: "Must-have",
+    desc: "One shared history for every patient.",
+    sub: 4,
+  },
+  {
+    n: 3,
+    title: "Automated Reminders",
+    priority: "Should-have",
+    desc: "SMS + email nudges that cut no-shows.",
+    sub: 2,
+  },
+  {
+    n: 4,
+    title: "Billing & Invoices",
+    priority: "Nice-to-have",
+    desc: "Take payment and reconcile at checkout.",
+    sub: 3,
+  },
 ];
 
 // ── Step 2 (scripted): stakeholder mapping — stuck -> suggest -> group ─────
@@ -133,7 +197,7 @@ export type WorkshopNote = { label: string; x: number; y: number; rotate: number
 /** Loose notes outside the focus area (above + to the right; they bleed out). */
 export const WORKSHOP_STICKIES: WorkshopNote[] = [
   { label: "Pet Owners", x: 90, y: -26, rotate: 0 },
-  { label: "Insurers", x: 110, y: 10, rotate: 0 },
+  { label: "Insurers", x: 110, y: 78, rotate: 0 },
 ];
 
 /** Group members already on the board (rotation 0 — clean squares). */
