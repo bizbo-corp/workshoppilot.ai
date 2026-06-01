@@ -9,6 +9,7 @@ import {
   STICKY_BG,
   STICKY_TEXT,
 } from "./demo-data";
+import { LightStreak } from "./light-streak";
 import { useTypewriter } from "./use-typewriter";
 
 /**
@@ -26,59 +27,9 @@ export function MockIdea({ play = true }: { play?: boolean }) {
   return (
     <div className="flex h-full w-full items-center justify-center p-2">
       <div className="relative w-full max-w-sm">
-        {/* Light guide line + travelling comet streak (hero-style), concentric
-            8px outside the card's rounded-2xl (16px) corners → rx = 16 + 8. */}
-        {animate && (
-          <svg
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2 overflow-visible"
-            style={{ width: "calc(100% + 16px)", height: "calc(100% + 16px)" }}
-          >
-            <defs>
-              <filter id="ideaStreakGlow">
-                <feGaussianBlur stdDeviation="2.5" />
-              </filter>
-            </defs>
-
-            {/* Faint resting guide line the streak rides along */}
-            <rect
-              width="100%"
-              height="100%"
-              rx="24"
-              ry="24"
-              fill="none"
-              stroke="var(--olive-300)"
-              strokeWidth="0.5"
-              opacity={0.5}
-            />
-
-            {/* Comet streak — three layers sharing a leading edge: blurred glow,
-                mid, and a bright sharp core (graduated dash lengths). */}
-            {[
-              { len: 42, width: 7, opacity: 0.2, color: "var(--olive-200)", glow: true },
-              { len: 22, width: 3.5, opacity: 0.4, color: "var(--olive-300)" },
-              { len: 8, width: 1.5, opacity: 0.9, color: "var(--olive-200)" },
-            ].map((l) => (
-              <motion.rect
-                key={l.len}
-                width="100%"
-                height="100%"
-                rx="24"
-                ry="24"
-                fill="none"
-                stroke={l.color}
-                strokeWidth={l.width}
-                strokeOpacity={l.opacity}
-                strokeLinecap="round"
-                filter={l.glow ? "url(#ideaStreakGlow)" : undefined}
-                pathLength={100}
-                strokeDasharray={`${l.len} ${100 - l.len}`}
-                animate={{ strokeDashoffset: [l.len, l.len - 100] }}
-                transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
-              />
-            ))}
-          </svg>
-        )}
+        {/* Light guide line + travelling comet streak, concentric 8px outside
+            the card's rounded-2xl (16px) corners. */}
+        {animate && <LightStreak radius={16} />}
 
         {/* Lightbulb — centered above the card; the streak passes behind it */}
         <motion.span

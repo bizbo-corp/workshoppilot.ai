@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LightStreak } from "./light-streak";
 import { useTypewriter } from "./use-typewriter";
 import {
   CURSOR_WAYPOINTS,
@@ -209,7 +210,10 @@ export function MockWorkshop({ play = true }: { play?: boolean }) {
       )}
 
       {/* Simulated chat panel — overhangs the board's left edge */}
-      <div className="absolute bottom-[8%] left-0 top-[8%] z-30 flex w-[42%] max-w-[240px] flex-col rounded-xl border border-border bg-neutral-olive-100/95 p-3 shadow-2xl shadow-black/20 backdrop-blur dark:bg-neutral-olive-900/95">
+      <div className="absolute bottom-[8%] left-0 top-[8%] z-30 w-[42%] max-w-[240px]">
+        {/* Light streak, offset from the chat box edge (rounded-xl/12 → rx 20) */}
+        {animate && <LightStreak radius={12} />}
+        <div className="relative z-10 flex h-full w-full flex-col rounded-xl border border-border bg-neutral-olive-100/95 p-3 shadow-2xl shadow-black/20 backdrop-blur dark:bg-neutral-olive-900/95">
         <div className="flex-1 space-y-2 overflow-hidden">
           <p className="text-[11px] leading-relaxed text-foreground/75">
             {WORKSHOP_CHAT.prompt}
@@ -273,6 +277,7 @@ export function MockWorkshop({ play = true }: { play?: boolean }) {
               <ArrowRight className="h-3 w-3" />
             </span>
           </div>
+        </div>
         </div>
       </div>
 
