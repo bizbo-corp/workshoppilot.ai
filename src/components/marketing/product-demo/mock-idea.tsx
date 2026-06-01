@@ -24,29 +24,29 @@ export function MockIdea({ play = true }: { play?: boolean }) {
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 220, damping: 22 }}
         className={cn(
-          "w-full max-w-sm rounded-2xl p-5 shadow-xl shadow-black/10",
+          "relative w-full max-w-sm rounded-2xl p-5 shadow-xl shadow-black/10",
           STICKY_BG.yellow,
           STICKY_TEXT.yellow,
         )}
       >
-        {/* Eyebrow — the bulb (top-left) flickers while the idea types */}
-        <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest opacity-70">
-          <motion.span
-            aria-hidden
-            className="text-sm leading-none"
-            animate={
-              flicker
-                ? { opacity: [1, 0.3, 1], scale: [1, 1.2, 1] }
-                : { opacity: 1, scale: 1 }
-            }
-            transition={
-              flicker
-                ? { repeat: Infinity, duration: 0.7, ease: "easeInOut" }
-                : { duration: 0.2 }
-            }
-          >
-            💡
-          </motion.span>
+        {/* Large bulb, offset over the sticky's top-left edge; flickers while typing */}
+        <motion.span
+          aria-hidden
+          className="absolute -left-4 -top-6 text-4xl leading-none drop-shadow-[0_3px_8px_rgba(0,0,0,0.18)]"
+          animate={
+            flicker
+              ? { opacity: [1, 0.35, 1], scale: [1, 1.12, 1] }
+              : { opacity: 1, scale: 1 }
+          }
+          transition={
+            flicker
+              ? { repeat: Infinity, duration: 0.7, ease: "easeInOut" }
+              : { duration: 0.2 }
+          }
+        >
+          💡
+        </motion.span>
+        <p className="text-[10px] font-semibold uppercase tracking-widest opacity-70">
           The Idea
         </p>
 
