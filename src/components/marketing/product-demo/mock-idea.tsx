@@ -1,113 +1,84 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Check } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  IDEA_SUGGESTIONS,
-  IDEA_TEXT,
-  STICKY_BG,
-  STICKY_TEXT,
-} from "./demo-data";
+import { IDEA_TEXT, STICKY_BG, STICKY_TEXT } from "./demo-data";
 import { useTypewriter } from "./use-typewriter";
 
 /**
- * Step 1 — "Describe Your Idea". A lightbulb blinks in first, then the yellow
- * sticky note appears and the idea types itself out with starter suggestions.
+ * Step 1 — "Describe Your Idea". The idea types itself onto a yellow sticky.
+ * The 💡 in the (top-left) eyebrow flickers while it "thinks" (types) and
+ * settles once done; the Confirm button activates with a green tick on finish.
  */
 export function MockIdea({ play = true }: { play?: boolean }) {
   const reduced = useReducedMotion();
   const animate = play && !reduced;
-  const [showCard, setShowCard] = useState(!animate);
-
-  useEffect(() => {
-    if (!animate) return;
-    const t = setTimeout(() => setShowCard(true), 950);
-    return () => clearTimeout(t);
-  }, [animate]);
-
-  const { shown, done } = useTypewriter(IDEA_TEXT, showCard && animate, 16);
+  const { shown, done } = useTypewriter(IDEA_TEXT, animate, 16);
+  const flicker = animate && !done;
 
   return (
     <div className="flex h-full w-full items-center justify-center p-2">
-      <AnimatePresence mode="wait">
-        {!showCard ? (
-          <motion.div
-            key="bulb"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.85 }}
-            transition={{ duration: 0.45, ease: "easeOut" }}
-            className="relative flex items-center justify-center"
+      <motion.div
+        initial={animate ? { scale: 0.92, opacity: 0, y: 10 } : false}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 220, damping: 22 }}
+        className={cn(
+          "w-full max-w-sm rounded-2xl p-5 shadow-xl shadow-black/10",
+          STICKY_BG.yellow,
+          STICKY_TEXT.yellow,
+        )}
+      >
+        {/* Eyebrow — the bulb (top-left) flickers while the idea types */}
+        <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest opacity-70">
+          <motion.span
+            aria-hidden
+            className="text-sm leading-none"
+            animate={
+              flicker
+                ? { opacity: [1, 0.3, 1], scale: [1, 1.2, 1] }
+                : { opacity: 1, scale: 1 }
+            }
+            transition={
+              flicker
+                ? { repeat: Infinity, duration: 0.7, ease: "easeInOut" }
+                : { duration: 0.2 }
+            }
           >
-            {/* big glow — a single flash */}
-            <motion.span
-              aria-hidden
-              initial={{ opacity: 0, scale: 0.4 }}
-              animate={{ opacity: [0, 0.9, 0], scale: [0.4, 1.7, 2] }}
-              transition={{ duration: 0.8, times: [0, 0.35, 1], ease: "easeOut" }}
-              className="absolute h-24 w-24 rounded-full bg-amber-300/60 blur-2xl"
-            />
-            <span className="relative text-6xl" role="img" aria-label="idea">
-              💡
-            </span>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="card"
-            initial={animate ? { scale: 0.92, opacity: 0, y: 10 } : false}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 220, damping: 22 }}
+            💡
+          </motion.span>
+          The Idea
+        </p>
+
+        <p className="mt-3 min-h-[4rem] text-sm font-medium leading-relaxed">
+          {shown}
+          {flicker && (
+            <span className="ml-0.5 inline-block h-4 w-px translate-y-0.5 animate-pulse bg-current align-middle" />
+          )}
+        </p>
+
+        {/* Confirm — inactive while typing, activates (green tick) when done */}
+        <motion.div
+          initial={animate ? { opacity: 0 } : false}
+          animate={{ opacity: 1 }}
+          transition={{ delay: animate ? 0.4 : 0 }}
+          className="mt-4 flex justify-end"
+        >
+          <span
             className={cn(
-              "w-full max-w-sm rounded-2xl p-5 shadow-xl shadow-black/10",
-              STICKY_BG.yellow,
-              STICKY_TEXT.yellow,
+              "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+              done
+                ? "bg-neutral-olive-200 text-neutral-olive-700 dark:bg-neutral-olive-800 dark:text-neutral-olive-200"
+                : "bg-[var(--sticky-note-yellow-text)]/[0.1] text-[var(--sticky-note-yellow-text)]/60",
             )}
           >
-            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest opacity-70">
-              <span aria-hidden>💡</span>
-              The Idea
-            </p>
-
-            <p className="mt-3 min-h-[4rem] text-sm font-medium leading-relaxed">
-              {shown}
-              {animate && !done && (
-                <span className="ml-0.5 inline-block h-4 w-px translate-y-0.5 animate-pulse bg-current align-middle" />
-              )}
-            </p>
-
-            <p className="mt-4 text-[10px] font-semibold uppercase tracking-widest opacity-60">
-              Need a starting point?
-            </p>
-            <div className="mt-2 space-y-1.5">
-              {IDEA_SUGGESTIONS.map((s, i) => (
-                <motion.div
-                  key={s}
-                  initial={animate ? { opacity: 0, x: -6 } : false}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: animate ? 0.25 + i * 0.1 : 0 }}
-                  className="rounded-md bg-[var(--sticky-note-yellow-text)]/[0.07] px-2.5 py-1.5 text-xs"
-                >
-                  {s}
-                </motion.div>
-              ))}
-            </div>
-
-            <motion.div
-              initial={animate ? { opacity: 0 } : false}
-              animate={{ opacity: 1 }}
-              transition={{ delay: animate ? 0.7 : 0 }}
-              className="mt-4 flex justify-end"
-            >
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--sticky-note-yellow-text)]/[0.12] px-3 py-1.5 text-xs font-semibold">
-                <Check className="h-3.5 w-3.5" />
-                Confirm
-              </span>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {done && (
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />
+            )}
+            Confirm
+          </span>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
