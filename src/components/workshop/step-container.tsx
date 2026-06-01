@@ -15,6 +15,7 @@ import { StepNavigation } from "./step-navigation";
 import { ResetStepDialog } from "@/components/dialogs/reset-step-dialog";
 import { PrdViewerDialog } from "./prd-viewer-dialog";
 import { useIdeationPhases } from "@/hooks/use-ideation-phases";
+import { useBrainwritingPhase, type BrainwritingSeed } from "@/hooks/use-brainwriting-phase";
 import {
   Loader2,
   ArrowLeft,
@@ -91,6 +92,7 @@ const CANVAS_ENABLED_STEPS = [
   "journey-mapping",
   "reframe",
   "ideation",
+  "brainwriting",
   "concept",
 ];
 const CANVAS_ONLY_STEPS = ["stakeholder-mapping", "sense-making", "concept"];
@@ -162,6 +164,8 @@ interface StepContainerProps {
   participantColor?: string | null;
   ideationOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string; hmwBranchLabel: string; hmwFullStatement?: string }>;
   conceptOwners?: Array<{ ownerId: string; ownerName: string; ownerColor: string }>;
+  /** Seed data for the dedicated Brain Writing step — the sketches selected in Ideation. */
+  brainwritingSeed?: BrainwritingSeed;
   shareToken?: string | null;
   workshopSessionId?: string | null;
   journeyMapApproved?: boolean;
@@ -214,6 +218,7 @@ export function StepContainer({
   participantColor,
   ideationOwners,
   conceptOwners,
+  brainwritingSeed,
   shareToken,
   workshopSessionId,
   journeyMapApproved = false,
@@ -412,7 +417,7 @@ export function StepContainer({
   }, [isMultiplayer, isFacilitator, effectiveParticipantId]);
 
   const ideation = useIdeationPhases({
-    enabled: stepOrder === 8,
+    enabled: step?.id === 'ideation',
     workshopId,
     stepId: step?.id || '',
     stepStatus,
@@ -422,6 +427,20 @@ export function StepContainer({
     hmwGoals,
     currentOwnerId: ideationOwnerId,
     ideationOwners,
+  });
+
+  // Dedicated Brain Writing step — seeds from Ideation's selected sketches.
+  // onDone routes through the generic step-confirm flow (persistStepConfirmation,
+  // defined below); a ref breaks the declaration-order cycle.
+  const brainwritingDoneRef = React.useRef<() => void>(() => {});
+  const stableBrainwritingDone = React.useCallback(() => brainwritingDoneRef.current?.(), []);
+  const brainwriting = useBrainwritingPhase({
+    enabled: step?.id === 'brainwriting',
+    workshopId,
+    stepId: step?.id || '',
+    seed: brainwritingSeed,
+    owners: ideationOwners?.map((o) => ({ ownerId: o.ownerId, ownerName: o.ownerName })),
+    onDone: stableBrainwritingDone,
   });
 
   // HMW card counts as "content" only when all 4 fields are filled (card is 'filled')
@@ -443,7 +462,7 @@ export function StepContainer({
     personaTemplates.some((t) => !!t.name);
 
   // Next button requires explicit confirmation (e.g. "Confirm Research Insights") for all steps
-  const effectiveConfirmed = stepOrder === 8 ? ideation.artifactConfirmed : artifactConfirmed;
+  const effectiveConfirmed = step?.id === 'ideation' ? ideation.artifactConfirmed : artifactConfirmed;
 
   // In-chat accept button: show when step has a confirm label, canvas has enough content, and user hasn't clicked Accept yet
   const confirmLabel = step ? STEP_CONFIRM_LABELS[step.id] : undefined;
@@ -535,20 +554,20 @@ export function StepContainer({
   // button. Hidden for read-only participants, same as in chat.
   const canvasConfirmVisible =
     (!isMultiplayer || isFacilitator) &&
-    (stepOrder === 8
+    (step?.id === 'ideation'
       ? ideation.currentPhase === "mind-mapping" &&
         !ideation.showCrazy8s &&
         ideation.hasEnoughMessages &&
         ideation.mindMapHasThemes
       : showConfirm);
   const canvasConfirmLabel =
-    stepOrder === 8
+    step?.id === 'ideation'
       ? ideation.isEnhancingIdeas
         ? "Enhancing ideas..."
         : "Confirm Mind Map"
       : confirmLabel;
   const canvasConfirmDisabled =
-    stepOrder === 8 ? ideation.isEnhancingIdeas : false;
+    step?.id === 'ideation' ? ideation.isEnhancingIdeas : false;
 
   // Lock in the current step's artifact: flip local state + persist the
   // _confirmed flag so it survives refresh. Shared by the chat confirm button
@@ -578,6 +597,9 @@ export function StepContainer({
       });
     }
   }, [step, storeApi, workshopId]);
+
+  // Route the Brain Writing "Done" button through the generic step-confirm flow.
+  brainwritingDoneRef.current = persistStepConfirmation;
 
   // Fire confetti when user clicks Accept (not on auto-confirm from canvas content)
   // Also fire-and-forget snapshot capture for visual reference in sidebar
@@ -959,7 +981,7 @@ export function StepContainer({
   const [step10Artifact, setStep10Artifact] = React.useState<Record<
     string,
     unknown
-  > | null>(stepOrder === 10 ? initialArtifact || null : null);
+  > | null>(step?.id === 'validate' ? initialArtifact || null : null);
   const [isExtracting, setIsExtracting] = React.useState(false);
   const [extractionError, setExtractionError] = React.useState<string | null>(
     null,
@@ -968,7 +990,7 @@ export function StepContainer({
 
   // V0 prototype creation status (polling from journey map)
   const searchParams = useSearchParams();
-  const v0Creating = stepOrder === 10 && searchParams.get("v0") === "creating";
+  const v0Creating = step?.id === 'validate' && searchParams.get("v0") === "creating";
 
   // After a solo → team conversion the redirect carries ?setup=1. Once the workshop
   // is team-mode (post-refresh), pop the setup wizard immediately and strip the param
@@ -1000,7 +1022,7 @@ export function StepContainer({
 
   // Step 10: extraction handler — extracts synthesis artifact and marks step complete
   const handleStep10Extract = React.useCallback(async () => {
-    if (stepOrder !== 10 || !step || isExtracting || step10Artifact) return;
+    if (step?.id !== 'validate' || !step || isExtracting || step10Artifact) return;
 
     setIsExtracting(true);
     setExtractionError(null);
@@ -1071,7 +1093,7 @@ export function StepContainer({
   const hasAutoExtracted = React.useRef(false);
   React.useEffect(() => {
     if (
-      stepOrder === 10 &&
+      step?.id === 'validate' &&
       !step10Artifact &&
       !isExtracting &&
       !hasAutoExtracted.current
@@ -1537,29 +1559,29 @@ export function StepContainer({
             workshopId={workshopId}
             initialMessages={localMessages}
             onMessageCountChange={
-              stepOrder === 8
+              step?.id === 'ideation'
                 ? ideation.setLiveMessageCount
-                : stepOrder === 10
+                : step?.id === 'validate'
                   ? setStep10MessageCount
                   : undefined
             }
-            subStep={stepOrder === 8 ? ideation.currentPhase : undefined}
+            subStep={step?.id === 'ideation' ? ideation.currentPhase : undefined}
             showStepConfirm={
-              stepOrder === 8
+              step?.id === 'ideation'
                 ? ideation.currentPhase === 'mind-mapping' && !ideation.showCrazy8s && ideation.hasEnoughMessages && ideation.mindMapHasThemes
                 : showConfirm
             }
             onStepConfirm={
-              stepOrder === 8 ? ideation.handleStartCrazy8s : persistStepConfirmation
+              step?.id === 'ideation' ? ideation.handleStartCrazy8s : persistStepConfirmation
             }
             stepConfirmLabel={
-              stepOrder === 8
+              step?.id === 'ideation'
                 ? (ideation.isEnhancingIdeas ? 'Enhancing ideas...' : 'Confirm Mind Map')
                 : confirmLabel
             }
-            stepConfirmIsTransition={stepOrder === 8 ? true : undefined}
-            stepConfirmDisabled={stepOrder === 8 ? ideation.isEnhancingIdeas : undefined}
-            stepAlreadyConfirmed={stepOrder === 8 ? undefined : artifactConfirmed}
+            stepConfirmIsTransition={step?.id === 'ideation' ? true : undefined}
+            stepConfirmDisabled={step?.id === 'ideation' ? ideation.isEnhancingIdeas : undefined}
+            stepAlreadyConfirmed={step?.id === 'ideation' ? undefined : artifactConfirmed}
             onConceptComplete={() => setConceptProceedOverride(true)}
             skipAutoStart={autoStartFired}
             onAutoStarted={handleAutoStarted}
@@ -1620,11 +1642,11 @@ export function StepContainer({
                   />
                 )}
               </div>
-            ) : stepOrder === 8 ? (
+            ) : step?.id === 'ideation' ? (
               <div className="h-full relative">
                 {ideation.renderCanvas()}
               </div>
-            ) : stepOrder === 10 ? (
+            ) : step?.id === 'validate' ? (
               renderStep10Content()
             ) : (
               <RightPanel
@@ -1662,7 +1684,7 @@ export function StepContainer({
             currentStepOrder={stepOrder}
             facilitatorMode={facilitatorMode}
             artifactConfirmed={effectiveConfirmed}
-            stepExplicitlyConfirmed={stepOrder === 8 ? ideation.explicitlyConfirmed : artifactConfirmed}
+            stepExplicitlyConfirmed={step?.id === 'ideation' ? ideation.explicitlyConfirmed : artifactConfirmed}
             stepStatus={stepStatus}
             isAdmin={isAdmin}
             onReset={() => setShowResetDialog(true)}
@@ -1675,11 +1697,11 @@ export function StepContainer({
               isGuideEditing ? handleSaveDefaultView : undefined
             }
             onCompleteWorkshop={
-              stepOrder === 10 ? handleCompleteWorkshop : undefined
+              step?.id === 'validate' ? handleCompleteWorkshop : undefined
             }
             isCompletingWorkshop={isCompletingWorkshop}
             workshopCompleted={workshopCompleted}
-            canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
+            canCompleteWorkshop={step?.id === 'validate' && !!step10Artifact}
             onFlushCanvas={flushCanvasToDb}
             nextDisabledReason={nextDisabledReason}
             nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Next: Invite team' : undefined}
@@ -1789,14 +1811,21 @@ export function StepContainer({
         </div>
       );
     }
-    if (stepOrder === 8) {
+    if (step?.id === 'ideation') {
       return (
         <div className="h-full relative">
           {ideation.renderCanvas()}
         </div>
       );
     }
-    if (stepOrder === 10) {
+    if (step?.id === 'brainwriting') {
+      return (
+        <div className="h-full relative">
+          {brainwriting.renderCanvas()}
+        </div>
+      );
+    }
+    if (step?.id === 'validate') {
       return (
         <div className="h-full relative">
           {renderStep10Content()}
@@ -1968,7 +1997,7 @@ export function StepContainer({
             currentStepOrder={stepOrder}
             facilitatorMode={facilitatorMode}
             artifactConfirmed={effectiveConfirmed}
-            stepExplicitlyConfirmed={stepOrder === 8 ? ideation.explicitlyConfirmed : artifactConfirmed}
+            stepExplicitlyConfirmed={step?.id === 'ideation' ? ideation.explicitlyConfirmed : artifactConfirmed}
             stepStatus={stepStatus}
             isAdmin={isAdmin}
             onReset={() => setShowResetDialog(true)}
@@ -1979,11 +2008,11 @@ export function StepContainer({
             onAddGuide={isGuideEditing ? handleAddGuide : undefined}
             onSaveDefaultView={isGuideEditing ? handleSaveDefaultView : undefined}
             onCompleteWorkshop={
-              stepOrder === 10 ? handleCompleteWorkshop : undefined
+              step?.id === 'validate' ? handleCompleteWorkshop : undefined
             }
             isCompletingWorkshop={isCompletingWorkshop}
             workshopCompleted={workshopCompleted}
-            canCompleteWorkshop={stepOrder === 10 && !!step10Artifact}
+            canCompleteWorkshop={step?.id === 'validate' && !!step10Artifact}
             onFlushCanvas={flushCanvasToDb}
             nextDisabledReason={nextDisabledReason}
             nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Next: Invite team' : undefined}
@@ -2003,7 +2032,7 @@ export function StepContainer({
           {/* Multiplayer controls — fixed top-right, below header bar on the canvas.
               Styled to match the bottom canvas toolbar (bg-card rounded-xl shadow-md border). */}
           <div className="fixed top-[4.5rem] right-4 z-50 flex items-center gap-0.5 bg-card rounded-xl shadow-md border border-border px-1.5 py-1">
-            <FacilitatorControls workshopId={workshopId} sessionId={sessionId} votingMode={stepOrder === 8 ? brainRewritingMatrices.length === 0 : undefined} stepOrder={stepOrder} ideationPhase={stepOrder === 8 ? ideation.currentPhase : undefined} onBackToMindMap={stepOrder === 8 ? ideation.handleBackToMindMap : undefined} onResetCrazy8s={stepOrder === 8 ? ideation.handleResetCrazy8s : undefined} />
+            <FacilitatorControls workshopId={workshopId} sessionId={sessionId} votingMode={step?.id === 'ideation' ? brainRewritingMatrices.length === 0 : undefined} stepOrder={stepOrder} ideationPhase={step?.id === 'ideation' ? ideation.currentPhase : undefined} onBackToMindMap={step?.id === 'ideation' ? ideation.handleBackToMindMap : undefined} onResetCrazy8s={step?.id === 'ideation' ? ideation.handleResetCrazy8s : undefined} />
             {/* Post-publish: small "Manage invites" reopens the wizard from the floating bar.
                 Pre-publish, the action lives on the Next button itself (handled below). */}
             {isTeamModeStepOne && challengePublished && (
@@ -2045,11 +2074,11 @@ export function StepContainer({
               workshopSessionId={workshopSessionId}
               workshopId={workshopId}
               isFacilitator={isFacilitator}
-              currentIdeationPhase={stepOrder === 8 ? ideation.currentPhase : undefined}
+              currentIdeationPhase={step?.id === 'ideation' ? ideation.currentPhase : undefined}
             />
           </div>
           {/* Crazy 8s progress panel — facilitator only, during crazy-eights phase */}
-          {isFacilitator && stepOrder === 8 && ideation.currentPhase === 'crazy-eights' && ideation.filteredIdeationOwners.length > 0 && !showParticipantOverview && (
+          {isFacilitator && step?.id === 'ideation' && ideation.currentPhase === 'crazy-eights' && ideation.filteredIdeationOwners.length > 0 && !showParticipantOverview && (
             <div className="fixed top-[7rem] right-4 z-40">
               <Crazy8sProgressPanel
                 participants={ideation.filteredIdeationOwners

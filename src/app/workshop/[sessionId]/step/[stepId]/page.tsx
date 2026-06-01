@@ -4,7 +4,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db/client";
 import { sessions, stepArtifacts, chatMessages, sessionParticipants, workshopSessions, buildPacks, workshopStepNarration } from "@/db/schema";
 import type { WorkshopPulseSnapshot } from "@/components/workshop/workshop-pulse-card";
-import { getChallengeArtifact } from "@/lib/workshop/challenge-artifact";
+import { getChallengeArtifact, syncChallengeArtifactFromLiveblocks } from "@/lib/workshop/challenge-artifact";
 import { getStepByOrder, STEPS } from "@/lib/workshop/step-metadata";
 import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
@@ -19,7 +19,8 @@ import type { StickyNote, GridColumn, DrawingNode, MindMapNodeState, MindMapEdge
 import { type ConceptCardData, createDefaultConceptCard } from "@/lib/canvas/concept-card-types";
 import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 import type { HmwCardData } from "@/lib/canvas/hmw-card-types";
-import type { Crazy8sSlot } from "@/lib/canvas/crazy-8s-types";
+import type { Crazy8sSlot, SlotGroup } from "@/lib/canvas/crazy-8s-types";
+import type { BrainwritingSeed } from "@/hooks/use-brainwriting-phase";
 import type { BrainRewritingMatrix } from "@/lib/canvas/brain-rewriting-types";
 import type { DotVote, VotingSession } from "@/lib/canvas/voting-types";
 import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canvas/migration-helpers";
@@ -44,8 +45,8 @@ export default async function StepPage({ params }: StepPageProps) {
   // Parse step number
   const stepNumber = parseInt(stepId, 10);
 
-  // Validate step number (1-10)
-  if (isNaN(stepNumber) || stepNumber < 1 || stepNumber > 10) {
+  // Validate step number (1-11)
+  if (isNaN(stepNumber) || stepNumber < 1 || stepNumber > 11) {
     redirect(`/workshop/${sessionId}/step/1`);
   }
 
@@ -341,44 +342,43 @@ export default async function StepPage({ params }: StepPageProps) {
   let hmwGoals: Array<{ label: string; fullStatement: string }> = [];
 
   if (step.id === 'ideation') {
-    // Load original HMW statement from Step 1 (used as mind map root node)
+    // Load the challenge statement (used as each mind map's root node).
     const challengeStep = session.workshop.steps.find((s) => s.stepId === 'challenge');
     if (challengeStep) {
-      // Try 1: Extracted artifact — use hmwStatement (the original "How might we...")
-      const challengeArtifactRecord = await db
-        .select()
-        .from(stepArtifacts)
-        .where(eq(stepArtifacts.workshopStepId, challengeStep.id))
-        .limit(1);
+      const isMultiplayer = session.workshop.workshopType === 'multiplayer';
 
-      if (challengeArtifactRecord.length > 0) {
-        const challengeArtifact = challengeArtifactRecord[0].artifact as Record<string, unknown>;
-        challengeStatement = challengeArtifact.hmwStatement as string | undefined;
-        if (!hmwStatement) {
-          hmwStatement = challengeStatement;
-        }
+      // Canonical read: prefers the "challenge-statement" sticky, falls back to the
+      // extracted `hmwStatement` field — one place, consistent with the rest of the app.
+      let challengeArtifact = await getChallengeArtifact(session.workshop.id);
+      challengeStatement = challengeArtifact?.hmwStatement?.trim() || undefined;
+
+      // Multiplayer: the challenge sticky lives in Liveblocks and Neon's `_canvas` mirror
+      // can lag (it's only written on save/advance). If we came up empty, freshen it from
+      // Liveblocks and re-read before falling through.
+      if (!challengeStatement && isMultiplayer) {
+        await syncChallengeArtifactFromLiveblocks(session.workshop.id, true);
+        challengeArtifact = await getChallengeArtifact(session.workshop.id);
+        challengeStatement = challengeArtifact?.hmwStatement?.trim() || undefined;
       }
 
-      // Try 2: Canvas "challenge-statement" template sticky note
-      if (!challengeStatement) {
-        const challengeCanvas = await loadCanvasState(session.workshop.id, 'challenge');
-        const stickyNotes = challengeCanvas?.stickyNotes as Array<{ templateKey?: string; text?: string }> | undefined;
-        if (stickyNotes) {
-          const hmwNote = stickyNotes.find((n) => n.templateKey === 'challenge-statement' && n.text);
-          if (hmwNote?.text) {
-            challengeStatement = hmwNote.text;
-          }
-        }
-      }
-
-      // Try 3: Load from workshop context (same source the AI uses)
+      // Final fallback: the workshop context the AI uses (also covers originalIdea).
       if (!challengeStatement) {
         const { loadWorkshopContext } = await import('@/lib/ai/workshop-context');
         const ctx = await loadWorkshopContext(session.workshop.id);
-        challengeStatement = ctx.hmwStatement || undefined;
+        challengeStatement = ctx.hmwStatement || challengeArtifact?.originalIdea || undefined;
         if (!hmwStatement && ctx.reframedHmw) {
           hmwStatement = ctx.reframedHmw;
         }
+      }
+
+      // Seed the HMW fallback from the challenge until the reframe block (below) overrides it.
+      if (!hmwStatement) hmwStatement = challengeStatement;
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(
+          '[ideation-seed] challengeStatement:',
+          challengeStatement ? `"${challengeStatement.slice(0, 70)}…"` : '(empty)'
+        );
       }
     }
 
@@ -486,7 +486,7 @@ export default async function StepPage({ params }: StepPageProps) {
   // INSIDE the Liveblocks-connected store so data flows with Liveblocks, not against it.
   type IdeationOwnerEntry = { ownerId: string; ownerName: string; ownerColor: string; hmwBranchLabel: string; hmwFullStatement?: string };
   let ideationOwners: IdeationOwnerEntry[] = [];
-  if (step.id === 'ideation' && session.workshop.workshopType === 'multiplayer') {
+  if ((step.id === 'ideation' || step.id === 'brainwriting') && session.workshop.workshopType === 'multiplayer') {
     const [workshopSessionForIdeation] = await db
       .select()
       .from(workshopSessions)
@@ -858,9 +858,12 @@ export default async function StepPage({ params }: StepPageProps) {
   let step8Crazy8sSlots: Array<{ slotId: string; title: string; imageUrl?: string; ownerId?: string; ownerName?: string; ownerColor?: string }> | undefined;
 
   if (step.id === 'concept') {
-    // Load Step 8 canvas state for crazy8sSlots and selectedSlotIds
-    // Canvas state is the primary source — it's saved directly by the UI when user confirms selection
+    // Load Ideation canvas for crazy8sSlots + selectedSlotIds + slotGroups (primary source —
+    // saved by the UI when the user confirms their selection). Brain Writing now lives in its
+    // OWN step/room, so the iterated sketches (brainRewritingMatrices) come from there.
     const step8Canvas = await loadCanvasState(session.workshop.id, 'ideation');
+    const brainwritingCanvas = await loadCanvasState(session.workshop.id, 'brainwriting');
+    const brainMatricesFromStep = brainwritingCanvas?.brainRewritingMatrices || [];
 
     if (step8Canvas?.selectedSlotIds && step8Canvas.selectedSlotIds.length > 0) {
       step8SelectedSlotIds = step8Canvas.selectedSlotIds;
@@ -883,7 +886,7 @@ export default async function StepPage({ params }: StepPageProps) {
     }
 
     if (step8Canvas?.crazy8sSlots) {
-      const brainMatrices = step8Canvas.brainRewritingMatrices || [];
+      const brainMatrices = brainMatricesFromStep;
 
       // Resolve final sketch image per slot: use last brain rewriting iteration, or fall back to original
       step8Crazy8sSlots = step8Canvas.crazy8sSlots.map((s) => {
@@ -914,7 +917,7 @@ export default async function StepPage({ params }: StepPageProps) {
 
     // Filter out slots excluded from concepts via brain rewriting "Include in concepts" toggle
     if (step8SelectedSlotIds && step8SelectedSlotIds.length > 0) {
-      const brainMatricesForFilter = step8Canvas?.brainRewritingMatrices || [];
+      const brainMatricesForFilter = brainMatricesFromStep;
       const slotGroupsForFilter = step8Canvas?.slotGroups || [];
 
       // Build set of excluded slot IDs
@@ -1169,9 +1172,9 @@ export default async function StepPage({ params }: StepPageProps) {
   // Load admin-configured default viewport settings for this step
   const canvasSettings = await loadStepCanvasSettings(step.id);
 
-  // Step 10: check if journey map has been approved (gates prototype generation)
+  // Validate step: check if journey map has been approved (gates prototype generation)
   let journeyMapApproved = false;
-  if (stepNumber === 10) {
+  if (step.id === 'validate') {
     const jmRows = await db
       .select({ content: buildPacks.content })
       .from(buildPacks)
@@ -1183,6 +1186,25 @@ export default async function StepPage({ params }: StepPageProps) {
         journeyMapApproved = state.isApproved === true;
       } catch { /* invalid JSON */ }
     }
+  }
+
+  // ── Brain Writing step: seed from the sketches selected at the end of Ideation ──
+  let brainwritingSeed: BrainwritingSeed | undefined;
+  if (step.id === 'brainwriting') {
+    const ideaCanvas = await loadCanvasState(session.workshop.id, 'ideation');
+    const crazy8sSlots = (ideaCanvas?.crazy8sSlots || []) as Crazy8sSlot[];
+    const slotGroups = (ideaCanvas?.slotGroups || []) as SlotGroup[];
+    let selectedSlotIds = (ideaCanvas?.selectedSlotIds || []) as string[];
+    // Fallbacks when no explicit selection was persisted: voting results, then filled slots.
+    if (selectedSlotIds.length === 0) {
+      const results = ideaCanvas?.votingSession?.results as Array<{ slotId: string }> | undefined;
+      if (results && results.length > 0) {
+        selectedSlotIds = results.map((r) => r.slotId);
+      } else {
+        selectedSlotIds = crazy8sSlots.filter((s) => s.imageUrl).map((s) => s.slotId);
+      }
+    }
+    brainwritingSeed = { crazy8sSlots, slotGroups, selectedSlotIds };
   }
 
   // Build conceptOwners from concept card or HMW card data for multiplayer
@@ -1255,6 +1277,7 @@ export default async function StepPage({ params }: StepPageProps) {
               participantColor={participantColor}
               ideationOwners={ideationOwners}
               conceptOwners={conceptOwners}
+              brainwritingSeed={brainwritingSeed}
               shareToken={workshopShareToken}
               workshopSessionId={workshopSessionId}
               journeyMapApproved={journeyMapApproved}
@@ -1287,6 +1310,7 @@ export default async function StepPage({ params }: StepPageProps) {
             hmwGoals={hmwGoals}
             step8SelectedSlotIds={step8SelectedSlotIds}
             step8Crazy8sSlots={step8Crazy8sSlots}
+            brainwritingSeed={brainwritingSeed}
             isAdmin={userIsAdmin}
             canvasGuides={canvasGuides}
             canvasSettings={canvasSettings}
