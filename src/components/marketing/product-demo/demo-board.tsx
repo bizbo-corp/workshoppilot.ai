@@ -3,25 +3,26 @@ import { cn } from "@/lib/utils";
 
 /**
  * The dotted-grid background shared by the demo "board" (all three steps).
- * Transparent base (no fill) with slightly-darker dots than the hairline border.
+ * Transparent base (no fill) with dots tinted via `--demo-dot` (darker in
+ * light mode, lighter in dark — see globals.css).
  */
 export const DOTTED_BG: CSSProperties = {
   backgroundImage:
-    "radial-gradient(circle, color-mix(in oklab, var(--foreground) 18%, transparent) 1px, transparent 1px)",
+    "radial-gradient(circle, var(--demo-dot) 1px, transparent 1px)",
   backgroundSize: "18px 18px",
 };
 
 /**
- * Section-level dotted board: spans the full height of the pinned panel and
- * bleeds off the right viewport edge. Sits behind all three demo frames and is
- * clipped only by the panel's `overflow-hidden`. No background fill — dots only.
+ * Section-level dotted board: spans the FULL width and height of the pinned
+ * panel. Sits behind all three demo frames and is clipped only by the panel's
+ * `overflow-hidden`. No background fill — dots only.
  */
 export function DemoBoard() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-y-0 left-[34%] z-0"
-      style={{ right: "calc(50% - 50vw)", ...DOTTED_BG }}
+      className="pointer-events-none absolute inset-0 z-0"
+      style={DOTTED_BG}
     />
   );
 }

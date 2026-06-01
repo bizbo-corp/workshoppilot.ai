@@ -238,6 +238,8 @@
   --hmw-placeholder: rgba(145, 148, 139, 0.4);
   --background: var(--neutral-olive-100);
   --foreground: var(--neutral-olive-800);
+  /* Dotted-grid background for the marketing product demo (darker in light mode) */
+  --demo-dot: color-mix(in oklab, var(--foreground) 28%, transparent);
   --card: var(--neutral-olive-50);
   --card-foreground: var(--neutral-olive-950);
   --popover: var(--neutral-olive-50);
@@ -353,6 +355,8 @@
   --hmw-placeholder: rgba(168, 170, 163, 0.4);
   --background: var(--neutral-olive-950);
   --foreground: var(--neutral-olive-200);
+  /* Dark mode keeps the original (lighter) dot strength */
+  --demo-dot: color-mix(in oklab, var(--foreground) 18%, transparent);
   --card: var(--neutral-olive-900);
   --card-foreground: var(--neutral-olive-50);
   --popover: var(--neutral-olive-800);
