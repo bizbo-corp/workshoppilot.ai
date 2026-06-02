@@ -34,7 +34,9 @@ export function MockIdea({ play = true }: { play?: boolean }) {
           aria-hidden
           className={cn(
             "pointer-events-none absolute inset-0 -z-10 translate-x-[18%] translate-y-[calc(-10%-20px)] rounded-2xl p-5 shadow-xl shadow-black/10",
-            "bg-[var(--olive-100)] text-[var(--olive-900)]",
+            // Semi-opaque neutral-olive so the dotted background shows through;
+            // blends over the page in both light and dark mode.
+            "bg-neutral-olive-200/30 text-foreground dark:bg-neutral-olive-700/40",
           )}
         >
           <p className="text-[10px] font-semibold uppercase tracking-widest opacity-70">
@@ -109,7 +111,7 @@ export function MockIdea({ play = true }: { play?: boolean }) {
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors",
                 done
-                  ? "border-green-500 text-green-700 dark:border-green-500/70 dark:text-green-400"
+                  ? "border-green-500 text-[var(--sticky-note-yellow-text)] dark:border-green-500/70"
                   : "border-[var(--sticky-note-yellow-text)]/20 text-[var(--sticky-note-yellow-text)]/40",
               )}
             >
