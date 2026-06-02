@@ -217,7 +217,7 @@ export default function LandingV4() {
                   { phase: "Expert facilitated workshop", when: "1 day", cost: "$5–9k", height: "70%" },
                   { phase: "PRD, specs & stories", when: "Weeks 1–2", cost: "$2k", height: "20%" },
                   { phase: "Developer prototype", when: "Weeks 3–6", cost: "$10k", height: "100%" },
-                  { phase: "Revisions & re-align", when: "Ongoing", cost: "$1k", height: "10%" },
+                  { phase: "Product team deck", when: "Weeks 6–8", cost: "$3k", height: "30%" },
                 ].map((s) => (
                   <div
                     key={s.phase}
@@ -242,7 +242,7 @@ export default function LandingV4() {
                   { phase: "Expert facilitated workshop", when: "1 day" },
                   { phase: "PRD, specs & stories", when: "Weeks 1–2" },
                   { phase: "Developer prototype", when: "Weeks 3–6" },
-                  { phase: "Revisions & re-align", when: "Ongoing" },
+                  { phase: "Product team deck", when: "Weeks 6–8" },
                 ].map((s) => (
                   <div
                     key={s.phase}
@@ -258,41 +258,39 @@ export default function LandingV4() {
                 ))}
               </div>
 
-              {/* Running total */}
-              <div className="mt-6 flex items-baseline justify-between border-t border-border pt-5">
-                <span className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
-                  Total
-                </span>
-                <span className="text-right">
-                  <span className="mb-0.5 block text-sm text-muted-foreground">
-                    ~3 months
-                  </span>
-                  <span className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground tabular-nums">
-                    $18,000+
-                  </span>
-                </span>
-              </div>
-
               {/* Bridge */}
               <div className="my-6 flex justify-center">
                 <ArrowDown className="h-5 w-5 text-olive-500 dark:text-olive-400" />
               </div>
 
-              {/* WorkshopPilot — the short row */}
-              <div className="rounded-2xl border border-olive-300 bg-olive-50 p-5 dark:border-olive-700 dark:bg-olive-950/40">
-                <div className="flex items-baseline justify-between gap-4 mb-2">
-                  <span className="text-sm font-semibold uppercase tracking-widest text-olive-700 dark:text-olive-300">
-                    WorkshopPilot
+              {/* WorkshopPilot — the big contrast callout */}
+              <div className="rounded-2xl border border-olive-300 bg-olive-50 p-6 dark:border-olive-700 dark:bg-olive-950/40">
+                <span className="text-sm font-semibold uppercase tracking-widest text-olive-700 dark:text-olive-300">
+                  WorkshopPilot
+                </span>
+
+                {/* Time: 2 hours vs 6+ weeks */}
+                <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+                    2 hours
                   </span>
-                  <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
-                    ~2 hours ·{" "}
-                    <span className="font-bold text-foreground">from $99</span>
+                  <span className="text-base text-muted-foreground">vs</span>
+                  <span className="text-2xl font-bold tracking-tight text-muted-foreground/50 line-through decoration-2 sm:text-3xl">
+                    6+ weeks
                   </span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-olive-200/60 dark:bg-olive-800/40">
-                  <div className="h-full w-[3%] rounded-full bg-olive-500 dark:bg-olive-400" />
+
+                {/* Cost: $99–$299 vs $20,000+ */}
+                <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="text-4xl font-bold tracking-tight tabular-nums text-foreground sm:text-5xl">
+                    $99–$299
+                  </span>
+                  <span className="text-xl font-bold tabular-nums text-muted-foreground/50 line-through decoration-2">
+                    $20,000+
+                  </span>
                 </div>
-                <p className="mt-3 flex items-center gap-1.5 text-sm text-foreground">
+
+                <p className="mt-5 flex items-center gap-1.5 text-sm text-foreground">
                   <Check className="h-4 w-4 shrink-0 text-olive-600 dark:text-olive-400" />
                   The same developer-ready Build Pack.
                 </p>
