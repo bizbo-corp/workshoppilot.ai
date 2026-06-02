@@ -176,131 +176,70 @@ export default function LandingV4() {
 
       {/* ── Pain Points: "Why Now" ───────────────────────────── */}
       <section
-        className="py-24 sm:py-32 bg-background border-t border-border overflow-hidden"
-        style={{ contentVisibility: "auto", containIntrinsicSize: "0 800px" }}
+        className="py-24 sm:py-32 bg-background border-t border-border"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "0 600px" }}
       >
-        {/* Header — headline left, WorkshopPilot contrast card top-right */}
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-            <div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+            {/* Left column — sticky headline + intro */}
+            <div className="lg:sticky lg:top-32 lg:self-start">
               <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-serif leading-[1.1] tracking-tight text-foreground mb-6">
                 Most projects fail
                 <br /> before the first
                 <br /> line of code
               </h2>
               <p className="text-muted-foreground text-lg max-w-md leading-relaxed">
-                Not from bad developers. From building the wrong thing. The
-                usual fix — workshops, research, a stack of specs — burns weeks
-                and thousands of dollars, and still ships ambiguity.
-                WorkshopPilot gets you the same clarity in a single session.
+                Not from bad engineers — from building the wrong thing. Most
+                teams pour weeks and tens of thousands of dollars into planning,
+                specs and prototypes before they ever test whether the idea
+                holds up. WorkshopPilot gets you to a validated, build-ready
+                plan in a single session — so the money goes to the right thing.
               </p>
             </div>
 
-            {/* WorkshopPilot — three-point contrast callout, top-right */}
-            <div className="w-full lg:max-w-md lg:justify-self-end rounded-2xl border border-olive-300 bg-olive-50 p-6 dark:border-olive-700 dark:bg-olive-950/40">
-              <span className="text-sm font-semibold uppercase tracking-widest text-olive-700 dark:text-olive-300">
-                WorkshopPilot
-              </span>
-
-              <div className="mt-5 space-y-5">
-                {/* Time */}
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground/70">
-                    Time
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                      2 hours
-                    </span>
-                    <span className="text-base text-muted-foreground">vs</span>
-                    <span className="text-xl font-bold tracking-tight text-muted-foreground/50 line-through decoration-2 sm:text-2xl">
-                      6+ weeks
-                    </span>
-                  </div>
-                </div>
-
-                {/* Cost */}
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground/70">
-                    Cost
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-3xl font-bold tracking-tight tabular-nums text-foreground sm:text-4xl">
-                      $99–$299
-                    </span>
-                    <span className="text-base text-muted-foreground">vs</span>
-                    <span className="text-xl font-bold tabular-nums text-muted-foreground/50 line-through decoration-2 sm:text-2xl">
-                      $20,000+
-                    </span>
-                  </div>
-                </div>
-
-                {/* Investor sign-off */}
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground/70">
-                    Investor sign-off
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                      Evidence-backed go
-                    </span>
-                    <span className="text-base text-muted-foreground">vs</span>
-                    <span className="text-lg font-bold tracking-tight text-muted-foreground/50 line-through decoration-2">
-                      Inconclusive
-                    </span>
-                  </div>
-                </div>
+            {/* Right column — three fear-driven pain points
+                (cost · time · validation). No WorkshopPilot pricing here —
+                this section is the problem, not the price.
+                NOTE: figures are illustrative; verify the 42% / CB Insights
+                stat before relying on it. */}
+            <div className="space-y-10">
+              {/* Cost */}
+              <div className="border-l-2 border-olive-300 dark:border-olive-600 pl-6">
+                <p className="text-4xl sm:text-5xl font-bold text-foreground mb-2 tracking-tight tabular-nums">
+                  $20,000+
+                </p>
+                <p className="text-muted-foreground leading-relaxed">
+                  is what &ldquo;doing discovery properly&rdquo; runs the old way
+                  — facilitated workshops, a PRD, a throwaway prototype, a
+                  stakeholder deck. You pay it all up front, before a single
+                  assumption is tested.
+                </p>
               </div>
 
-              <p className="mt-6 flex items-center gap-1.5 text-sm text-foreground">
-                <Check className="h-4 w-4 shrink-0 text-olive-600 dark:text-olive-400" />
-                The same developer-ready Build Pack.
-              </p>
+              {/* Time */}
+              <div className="border-l-2 border-olive-300 dark:border-olive-600 pl-6">
+                <p className="text-4xl sm:text-5xl font-bold text-foreground mb-2 tracking-tight">
+                  6+ weeks
+                </p>
+                <p className="text-muted-foreground leading-relaxed">
+                  disappear into planning docs, meetings and revision rounds —
+                  and at the end you still only have an educated guess about
+                  what&apos;s worth building.
+                </p>
+              </div>
+
+              {/* Validation */}
+              <div className="border-l-2 border-olive-300 dark:border-olive-600 pl-6">
+                <p className="text-4xl sm:text-5xl font-bold text-foreground mb-2 tracking-tight tabular-nums">
+                  42%
+                </p>
+                <p className="text-muted-foreground leading-relaxed">
+                  of startups fail for one reason: they built something nobody
+                  needed. Skip validation and you&apos;re not just risking the
+                  build — you&apos;re betting the runway.
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* The traditional way — itemized cost factors (no timeline).
-            NOTE: figures are illustrative placeholders — tune to real
-            benchmarks before relying on them. */}
-        <div className="mx-auto mt-16 sm:mt-20 max-w-6xl px-4 sm:px-6 lg:px-8">
-          <p className="mb-8 text-sm font-medium uppercase tracking-widest text-muted-foreground/70">
-            The traditional way
-          </p>
-
-          <div className="grid grid-cols-2 gap-x-6 gap-y-8 lg:grid-cols-4">
-            {[
-              { cost: "$5–9k", label: "Expert facilitated workshop", when: "1 day" },
-              { cost: "$2k", label: "PRD, specs & user stories", when: "Weeks 1–2" },
-              { cost: "$10k", label: "Developer prototype", when: "Weeks 3–6" },
-              { cost: "$3k", label: "Product team deck", when: "Weeks 6–8" },
-            ].map((f) => (
-              <div
-                key={f.label}
-                className="border-l-2 border-olive-300 pl-4 dark:border-olive-600"
-              >
-                <p className="text-2xl font-bold tabular-nums tracking-tight text-foreground sm:text-3xl">
-                  {f.cost}
-                </p>
-                <p className="mt-1 text-sm font-medium leading-snug text-foreground">
-                  {f.label}
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{f.when}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-10 flex flex-wrap items-baseline gap-x-4 gap-y-2 border-t border-border pt-6">
-            <span className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
-              Total
-            </span>
-            <span className="text-3xl font-bold tabular-nums tracking-tight text-foreground sm:text-4xl">
-              $20,000+
-            </span>
-            <span className="text-lg text-muted-foreground">· 6+ weeks</span>
-            <span className="text-lg text-muted-foreground">
-              — and still no clear investor sign-off.
-            </span>
           </div>
         </div>
       </section>
