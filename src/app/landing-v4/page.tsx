@@ -196,34 +196,63 @@ export default function LandingV4() {
               </p>
             </div>
 
-            {/* WorkshopPilot — the big contrast callout, top-right */}
+            {/* WorkshopPilot — three-point contrast callout, top-right */}
             <div className="w-full lg:max-w-md lg:justify-self-end rounded-2xl border border-olive-300 bg-olive-50 p-6 dark:border-olive-700 dark:bg-olive-950/40">
               <span className="text-sm font-semibold uppercase tracking-widest text-olive-700 dark:text-olive-300">
                 WorkshopPilot
               </span>
 
-              {/* Time: 2 hours vs 6+ weeks */}
-              <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-                  2 hours
-                </span>
-                <span className="text-base text-muted-foreground">vs</span>
-                <span className="text-2xl font-bold tracking-tight text-muted-foreground/50 line-through decoration-2 sm:text-3xl">
-                  6+ weeks
-                </span>
+              <div className="mt-5 space-y-5">
+                {/* Time */}
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground/70">
+                    Time
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                      2 hours
+                    </span>
+                    <span className="text-base text-muted-foreground">vs</span>
+                    <span className="text-xl font-bold tracking-tight text-muted-foreground/50 line-through decoration-2 sm:text-2xl">
+                      6+ weeks
+                    </span>
+                  </div>
+                </div>
+
+                {/* Cost */}
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground/70">
+                    Cost
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span className="text-3xl font-bold tracking-tight tabular-nums text-foreground sm:text-4xl">
+                      $99–$299
+                    </span>
+                    <span className="text-base text-muted-foreground">vs</span>
+                    <span className="text-xl font-bold tabular-nums text-muted-foreground/50 line-through decoration-2 sm:text-2xl">
+                      $20,000+
+                    </span>
+                  </div>
+                </div>
+
+                {/* Investor sign-off */}
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground/70">
+                    Investor sign-off
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                      Evidence-backed go
+                    </span>
+                    <span className="text-base text-muted-foreground">vs</span>
+                    <span className="text-lg font-bold tracking-tight text-muted-foreground/50 line-through decoration-2">
+                      Inconclusive
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* Cost: $99–$299 vs $20,000+ */}
-              <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="text-4xl font-bold tracking-tight tabular-nums text-foreground sm:text-5xl">
-                  $99–$299
-                </span>
-                <span className="text-xl font-bold tabular-nums text-muted-foreground/50 line-through decoration-2">
-                  $20,000+
-                </span>
-              </div>
-
-              <p className="mt-5 flex items-center gap-1.5 text-sm text-foreground">
+              <p className="mt-6 flex items-center gap-1.5 text-sm text-foreground">
                 <Check className="h-4 w-4 shrink-0 text-olive-600 dark:text-olive-400" />
                 The same developer-ready Build Pack.
               </p>
@@ -231,70 +260,47 @@ export default function LandingV4() {
           </div>
         </div>
 
-        {/* Full-width timeline — the traditional path as cost spikes positioned
-            along ~6+ weeks. NOTE: figures are illustrative placeholders — tune
-            to real benchmarks before relying on them. WorkshopPilot = $99. */}
-        <div className="mt-20 sm:mt-28 w-full px-6 sm:px-10 lg:px-16">
-          <div className="flex items-baseline justify-between mb-2">
-            <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground/70">
-              The traditional way
-            </p>
-            <p className="text-sm text-muted-foreground">cost over time →</p>
+        {/* The traditional way — itemized cost factors (no timeline).
+            NOTE: figures are illustrative placeholders — tune to real
+            benchmarks before relying on them. */}
+        <div className="mx-auto mt-16 sm:mt-20 max-w-6xl px-4 sm:px-6 lg:px-8">
+          <p className="mb-8 text-sm font-medium uppercase tracking-widest text-muted-foreground/70">
+            The traditional way
+          </p>
+
+          <div className="grid grid-cols-2 gap-x-6 gap-y-8 lg:grid-cols-4">
+            {[
+              { cost: "$5–9k", label: "Expert facilitated workshop", when: "1 day" },
+              { cost: "$2k", label: "PRD, specs & user stories", when: "Weeks 1–2" },
+              { cost: "$10k", label: "Developer prototype", when: "Weeks 3–6" },
+              { cost: "$3k", label: "Product team deck", when: "Weeks 6–8" },
+            ].map((f) => (
+              <div
+                key={f.label}
+                className="border-l-2 border-olive-300 pl-4 dark:border-olive-600"
+              >
+                <p className="text-2xl font-bold tabular-nums tracking-tight text-foreground sm:text-3xl">
+                  {f.cost}
+                </p>
+                <p className="mt-1 text-sm font-medium leading-snug text-foreground">
+                  {f.label}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{f.when}</p>
+              </div>
+            ))}
           </div>
 
-          {/* Chart: spikes anchored to a baseline axis; week notches below */}
-          <div className="relative h-72 sm:h-80">
-            {/* baseline axis */}
-            <div className="absolute inset-x-0 bottom-8 border-t-2 border-border" />
-
-            {/* week notches + ticks */}
-            {[
-              { label: "Wk 1", x: 16 },
-              { label: "Wk 2", x: 30 },
-              { label: "Wk 3", x: 43 },
-              { label: "Wk 4", x: 57 },
-              { label: "Wk 5", x: 70 },
-              { label: "Wk 6", x: 84 },
-              { label: "6+", x: 97 },
-            ].map((n) => (
-              <div key={n.label}>
-                <div
-                  className="absolute bottom-[26px] h-2 w-px -translate-x-1/2 bg-border"
-                  style={{ left: `${n.x}%` }}
-                />
-                <span
-                  className="absolute bottom-1 -translate-x-1/2 text-[11px] text-muted-foreground"
-                  style={{ left: `${n.x}%` }}
-                >
-                  {n.label}
-                </span>
-              </div>
-            ))}
-
-            {/* cost spikes, positioned by when the work happens */}
-            {[
-              { phase: "Expert facilitated workshop", cost: "$5–9k", x: 6, bar: 132 },
-              { phase: "PRD, specs & stories", cost: "$2k", x: 26, bar: 40 },
-              { phase: "Developer prototype", cost: "$10k", x: 60, bar: 190 },
-              { phase: "Product team deck", cost: "$3k", x: 90, bar: 58 },
-            ].map((s) => (
-              <div
-                key={s.phase}
-                className="absolute bottom-8 flex -translate-x-1/2 flex-col items-center"
-                style={{ left: `${s.x}%` }}
-              >
-                <span className="mb-1 w-24 text-center text-[11px] font-medium leading-tight text-foreground">
-                  {s.phase}
-                </span>
-                <span className="mb-1.5 text-sm font-bold tabular-nums text-foreground">
-                  {s.cost}
-                </span>
-                <div
-                  className="w-12 rounded-t-md bg-gradient-to-t from-olive-400/40 to-olive-500/80 sm:w-16 dark:from-olive-700/50 dark:to-olive-400/70"
-                  style={{ height: `${s.bar}px` }}
-                />
-              </div>
-            ))}
+          <div className="mt-10 flex flex-wrap items-baseline gap-x-4 gap-y-2 border-t border-border pt-6">
+            <span className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
+              Total
+            </span>
+            <span className="text-3xl font-bold tabular-nums tracking-tight text-foreground sm:text-4xl">
+              $20,000+
+            </span>
+            <span className="text-lg text-muted-foreground">· 6+ weeks</span>
+            <span className="text-lg text-muted-foreground">
+              — and still no clear investor sign-off.
+            </span>
           </div>
         </div>
       </section>
