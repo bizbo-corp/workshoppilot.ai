@@ -197,39 +197,63 @@ export default function LandingV4() {
               </p>
             </div>
 
-            {/* Right column — the traditional way "stacks up" (time + cost).
-                NOTE: figures below are illustrative placeholders — tune to real
-                benchmarks before relying on them. WorkshopPilot price = $99. */}
+            {/* Right column — the traditional path as a TIMELINE with cost
+                spikes (x = time left→right, y = cost). NOTE: figures are
+                illustrative placeholders — tune to real benchmarks before
+                relying on them. WorkshopPilot price = $99. */}
             <div className="lg:pt-2">
-              <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground/70 mb-6">
-                The traditional way
-              </p>
+              <div className="flex items-baseline justify-between mb-6">
+                <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground/70">
+                  The traditional way
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  cost over time →
+                </p>
+              </div>
 
-              <div className="space-y-5">
+              {/* Cost-spike chart */}
+              <div className="flex h-56 items-end gap-2 pt-7 sm:gap-3">
                 {[
-                  { label: "Facilitated workshop", time: "1 wk", cost: "$5,000", width: "100%" },
-                  { label: "User research & synthesis", time: "1 wk", cost: "$1,500", width: "30%" },
-                  { label: "PRD, specs & user stories", time: "2 wk", cost: "$2,000", width: "40%" },
-                  { label: "Revisions & re-alignment", time: "ongoing", cost: "$1,000", width: "20%" },
-                ].map((row) => (
-                  <div key={row.label}>
-                    <div className="flex items-baseline justify-between gap-4 mb-1.5">
-                      <span className="text-sm sm:text-base text-foreground">
-                        {row.label}
-                      </span>
-                      <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
-                        {row.time} ·{" "}
-                        <span className="font-semibold text-foreground">
-                          {row.cost}
-                        </span>
+                  { phase: "Expert facilitated workshop", when: "1 day", cost: "$5–9k", height: "70%" },
+                  { phase: "PRD, specs & stories", when: "Weeks 1–2", cost: "$2k", height: "20%" },
+                  { phase: "Developer prototype", when: "Weeks 3–6", cost: "$10k", height: "100%" },
+                  { phase: "Revisions & re-align", when: "Ongoing", cost: "$1k", height: "10%" },
+                ].map((s) => (
+                  <div
+                    key={s.phase}
+                    className="flex h-full flex-1 flex-col justify-end"
+                  >
+                    <div
+                      className="relative w-full rounded-t-md bg-gradient-to-t from-olive-400/40 to-olive-500/80 dark:from-olive-700/50 dark:to-olive-400/70"
+                      style={{ height: s.height }}
+                    >
+                      <span className="absolute -top-6 inset-x-0 text-center text-sm font-bold tabular-nums text-foreground">
+                        {s.cost}
                       </span>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-olive-100 dark:bg-olive-900/40">
-                      <div
-                        className="h-full rounded-full bg-olive-400/70 dark:bg-olive-500/50"
-                        style={{ width: row.width }}
-                      />
-                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Timeline axis + phase labels */}
+              <div className="border-t-2 border-border" />
+              <div className="flex gap-2 pt-3 sm:gap-3">
+                {[
+                  { phase: "Expert facilitated workshop", when: "1 day" },
+                  { phase: "PRD, specs & stories", when: "Weeks 1–2" },
+                  { phase: "Developer prototype", when: "Weeks 3–6" },
+                  { phase: "Revisions & re-align", when: "Ongoing" },
+                ].map((s) => (
+                  <div
+                    key={s.phase}
+                    className="flex flex-1 flex-col items-center text-center"
+                  >
+                    <span className="text-[11px] font-medium leading-tight text-foreground sm:text-xs">
+                      {s.phase}
+                    </span>
+                    <span className="mt-0.5 text-[11px] text-muted-foreground">
+                      {s.when}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -241,10 +265,10 @@ export default function LandingV4() {
                 </span>
                 <span className="text-right">
                   <span className="mb-0.5 block text-sm text-muted-foreground">
-                    ~5 weeks
+                    ~3 months
                   </span>
                   <span className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground tabular-nums">
-                    $9,000+
+                    $18,000+
                   </span>
                 </span>
               </div>
