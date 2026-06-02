@@ -2,18 +2,20 @@ export const dynamic = "force-dynamic";
 
 import {
   ArrowRight,
+  Briefcase,
   Check,
   ChevronDown,
-  Clock,
   Code2,
   FileText,
   FlagTriangleRight,
+  Lightbulb,
   MousePointerClick,
   Package,
   Route,
   Shield,
   Sparkles,
   Star,
+  Timer,
 } from "lucide-react";
 import { LandingHeader } from "@/components/layout/landing-header";
 import { NewWorkshopButton } from "@/components/dialogs/new-workshop-dialog";
@@ -64,12 +66,6 @@ export default function LandingV4() {
         </div>
 
         <div className="relative mx-auto max-w-4xl text-center z-10">
-          {/* Eyebrow */}
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-olive-300/50 bg-olive-50/80 px-4 py-1.5 text-sm font-medium text-olive-700 dark:border-olive-700/50 dark:bg-olive-950/50 dark:text-olive-300">
-            <Clock className="h-4 w-4" />
-            Save weeks of planning in one session
-          </div>
-
           {/* Headline */}
           <h1 className="text-3xl font-serif leading-[1.08] tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl">
             Go from{" "}
@@ -77,12 +73,12 @@ export default function LandingV4() {
               <span className="text-olive-600 dark:text-olive-400">
                 &ldquo;Vague Idea&rdquo;
               </span>
-            </span>
-            <br className="hidden sm:block" /> to{" "}
+            </span>{" "}
+            to
+            <br className="hidden sm:block" />{" "}
             <span className="text-olive-600 dark:text-olive-400">
               &ldquo;Developer-Ready&rdquo;
-            </span>
-            <br className="hidden xl:block" />{" "}
+            </span>{" "}
             <span className="relative inline-block">
               in 2 hours.
               <svg
@@ -109,12 +105,24 @@ export default function LandingV4() {
               Build Pack
             </strong>{" "}
             - the ultimate tool to align stakeholders, win over investors and
-            hand off directly to an AI coding agent. <br />
-            <br />
-            <span className="text-foreground font-semibold">
-              No experience required. Just bring your ideas and creativity.
-            </span>
+            hand off directly to an AI coding agent.
           </p>
+
+          {/* Reassurance — speed + zero barrier to entry */}
+          <div className="mx-auto mt-6 flex max-w-3xl flex-col items-start gap-x-6 gap-y-2 text-sm font-normal text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+              <Timer className="h-4 w-4 text-olive-600 dark:text-olive-400" />
+              Save time and money on planning
+            </span>
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+              <Briefcase className="h-4 w-4 text-olive-600 dark:text-olive-400" />
+              No experience required
+            </span>
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+              <Lightbulb className="h-4 w-4 text-olive-600 dark:text-olive-400" />
+              Just bring your ideas and creativity
+            </span>
+          </div>
 
           {/* CTA Buttons */}
           <div className="mt-10 flex flex-row flex-wrap items-center justify-center gap-2 sm:gap-3">
@@ -135,22 +143,11 @@ export default function LandingV4() {
           {/* Social proof — glassmorphic pill, top-center of visual area */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex w-full max-w-xs sm:max-w-none flex-col items-center gap-2 px-6 py-2.5">
             <div className="flex gap-0.5">
-              {/* Gradient fill for the stars — light white → pale yellow */}
-              <svg width="0" height="0" aria-hidden="true" className="absolute">
-                <defs>
-                  <linearGradient id="star-gold" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ffffff" />
-                    <stop offset="55%" stopColor="#fef3c7" />
-                    <stop offset="100%" stopColor="#fde68a" />
-                  </linearGradient>
-                </defs>
-              </svg>
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
                   key={i}
-                  fill="url(#star-gold)"
-                  strokeWidth={0.5}
-                  className="h-4 w-4 text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.45)]"
+                  strokeWidth={1.5}
+                  className="h-4 w-4 fill-[#fffaf0] text-amber-400 dark:fill-[#fdf6e8]"
                 />
               ))}
             </div>
