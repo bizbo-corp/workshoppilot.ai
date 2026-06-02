@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ReactNode, SVGProps } from "react";
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Copy, FileCode, GripVertical } from "lucide-react";
@@ -57,15 +57,147 @@ function Caption({
   );
 }
 
+/** Shared props for the tiny per-slide thumbnail graphics. */
+const GRAPHIC_PROPS: SVGProps<SVGSVGElement> = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.6,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: "h-6 w-6",
+};
+
+/** Sticky-note colour assigned to each slide thumbnail's icon. */
+const SLIDE_COLOR: Record<string, string> = {
+  Problem: "yellow",
+  Personas: "blue",
+  "Journey Map": "green",
+  Solution: "orange",
+  Concepts: "purple",
+  Roadmap: "red",
+};
+
+/**
+ * Icon stroke colour per sticky-note hue — a mid tint of each sticky colour
+ * (between the pale pastel and the dark text variant). Fixed across light and
+ * dark mode so the thumbnails read the same either way.
+ */
+const SLIDE_ICON_COLOR: Record<string, string> = {
+  yellow: "#d9a521",
+  blue: "#3f86c9",
+  green: "#3aa55c",
+  orange: "#db8334",
+  purple: "#8259cf",
+  red: "#db5240",
+};
+
+/**
+ * Super-simple, PowerPoint-thumbnail-style line graphic for each deck slide.
+ * Monochrome (currentColor) so it themes cleanly in light/dark.
+ */
+function SlideGraphic({ title }: { title: string }) {
+  switch (title) {
+    // Problem — a light bulb (the spark of the idea).
+    case "Problem":
+      return (
+        <svg {...GRAPHIC_PROPS}>
+          <path d="M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .8 1.6v.5h5.4v-.5c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z" />
+          <line x1="9.5" y1="18" x2="14.5" y2="18" />
+          <line x1="10.5" y1="20.5" x2="13.5" y2="20.5" />
+        </svg>
+      );
+    // Personas — a profile card: avatar + a couple of detail lines.
+    case "Personas":
+      return (
+        <svg {...GRAPHIC_PROPS}>
+          <circle cx="8" cy="8.5" r="3" />
+          <path d="M3.5 18c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4" />
+          <line x1="16" y1="8" x2="21" y2="8" />
+          <line x1="16" y1="12" x2="20" y2="12" />
+        </svg>
+      );
+    // Journey Map — three connected steps in a flow diagram.
+    case "Journey Map":
+      return (
+        <svg {...GRAPHIC_PROPS}>
+          <rect x="2.5" y="9.5" width="5" height="5" rx="1" />
+          <rect x="9.5" y="9.5" width="5" height="5" rx="1" />
+          <rect x="16.5" y="9.5" width="5" height="5" rx="1" />
+          <path d="M7.5 12h2M14.5 12h2" />
+        </svg>
+      );
+    // Solution — a concept sheet: header block over body lines.
+    case "Solution":
+      return (
+        <svg {...GRAPHIC_PROPS}>
+          <rect x="5" y="3" width="14" height="18" rx="1.5" />
+          <rect
+            x="8"
+            y="6.5"
+            width="8"
+            height="2.5"
+            rx="0.75"
+            fill="currentColor"
+            stroke="none"
+          />
+          <line x1="8" y1="12.5" x2="16" y2="12.5" />
+          <line x1="8" y1="15.5" x2="13.5" y2="15.5" />
+        </svg>
+      );
+    // Concepts — a quick prototype: a wireframe app window.
+    case "Concepts":
+      return (
+        <svg {...GRAPHIC_PROPS}>
+          <rect x="3" y="4.5" width="18" height="15" rx="1.5" />
+          <line x1="3" y1="8.5" x2="21" y2="8.5" />
+          <circle cx="5.5" cy="6.5" r="0.5" fill="currentColor" stroke="none" />
+          <circle cx="7.5" cy="6.5" r="0.5" fill="currentColor" stroke="none" />
+          <rect x="6" y="11" width="5" height="5.5" rx="1" />
+          <line x1="13.5" y1="11.5" x2="18" y2="11.5" />
+          <line x1="13.5" y1="14" x2="18" y2="14" />
+          <line x1="13.5" y1="16.5" x2="16" y2="16.5" />
+        </svg>
+      );
+    // Roadmap — a Gantt chart: staggered horizontal bars.
+    case "Roadmap":
+      return (
+        <svg {...GRAPHIC_PROPS} stroke="none">
+          <rect x="3" y="5" width="9" height="3" rx="1.5" fill="currentColor" />
+          <rect
+            x="7"
+            y="10.5"
+            width="10"
+            height="3"
+            rx="1.5"
+            fill="currentColor"
+            opacity="0.7"
+          />
+          <rect
+            x="11"
+            y="16"
+            width="8"
+            height="3"
+            rx="1.5"
+            fill="currentColor"
+            opacity="0.45"
+          />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
 /** Stakeholder presentation deck. */
 function SlideDeck({ animate }: { animate: boolean }) {
   return (
     <motion.div
       {...panelMotion(animate, 0.05)}
-      style={{ left: "0%", top: "2%", width: "48%", height: "42%" }}
-      className={cn(PANEL_BASE, "z-10 shadow-xl shadow-black/10")}
+      style={{ left: "4%", top: "2%", width: "48%" }}
+      className={cn(PANEL_BASE, "z-10 rounded-md shadow-xl shadow-black/10")}
     >
-      <div className="h-2 w-full bg-foreground" />
+      <div className="h-1.5 w-full bg-muted-foreground/20" />
       <div className="p-3">
         <p className="font-serif text-sm text-foreground">
           {BUILD_PACK_DECK_TITLE}
@@ -74,18 +206,21 @@ function SlideDeck({ animate }: { animate: boolean }) {
           {BUILD_PACK_SLIDES.map((s) => (
             <div
               key={s.n}
-              className="rounded-md border border-border bg-background p-1.5"
+              className="relative rounded-md border border-border bg-background p-1.5"
             >
-              <span className="text-[7px] font-medium text-muted-foreground">
+              <span className="absolute left-1 top-0.5 z-10 text-[7px] font-medium text-muted-foreground">
                 {s.n}
               </span>
-              <div className="mt-0.5 h-7 rounded bg-muted" />
+              <div
+                className="flex h-11 items-center justify-center"
+                style={{ color: SLIDE_ICON_COLOR[SLIDE_COLOR[s.title]] }}
+              >
+                <SlideGraphic title={s.title} />
+              </div>
               <p className="mt-1 truncate text-[7px] font-semibold text-foreground">
                 {s.title}
               </p>
-              <p className="truncate text-[6px] text-muted-foreground">
-                {s.sub}
-              </p>
+              <div className="mt-1 h-1 w-3/4 rounded-full bg-muted-foreground/20" />
             </div>
           ))}
         </div>
@@ -264,7 +399,7 @@ export function MockBuildPack({ play = true }: { play?: boolean }) {
       <Roadmap animate={animate} />
       <MdFile animate={animate} />
 
-      <Caption style={{ left: "0%", top: "46%" }}>
+      <Caption style={{ left: "4%", top: "46%" }}>
         Workshop slide deck for investor buy-in
       </Caption>
       <Caption style={{ right: "0%", top: "92%", textAlign: "right" }}>
