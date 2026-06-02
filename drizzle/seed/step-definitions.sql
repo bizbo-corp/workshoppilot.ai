@@ -1,4 +1,4 @@
--- Seed step definitions for all 10 design thinking steps
+-- Seed step definitions for all 11 design thinking steps
 -- IDs MUST match step-metadata.ts STEPS[].id values
 -- Uses ON CONFLICT to make this script idempotent (safe to run multiple times)
 
@@ -63,8 +63,16 @@ VALUES
   (
     'ideation',
     'Ideation',
-    'Generate ideas using Mind Mapping, Crazy 8s, Brain Writing, and Billboard Hero',
+    'Generate ideas using Mind Mapping and Crazy 8s sketching, then select top ideas',
     8,
+    NULL,
+    NOW()
+  ),
+  (
+    'brainwriting',
+    'Brain Writing',
+    'Iterate on the selected sketches — build on each idea to push it further',
+    9,
     NULL,
     NOW()
   ),
@@ -72,7 +80,7 @@ VALUES
     'concept',
     'Concept Development',
     'Develop concept sheets with SWOT analysis, feasibility, and elevator pitch',
-    9,
+    10,
     NULL,
     NOW()
   ),
@@ -80,7 +88,7 @@ VALUES
     'validate',
     'Validate',
     'Create flow diagrams, prototyping, PRD generation, and Build Pack export',
-    10,
+    11,
     NULL,
     NOW()
   )

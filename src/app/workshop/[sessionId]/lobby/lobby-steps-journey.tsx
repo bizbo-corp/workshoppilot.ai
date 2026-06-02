@@ -1,8 +1,8 @@
 /**
  * LobbyStepsJourney
  *
- * Illustrated preview of the 9 design-thinking stages the participant will move
- * through (steps 2–10, since the challenge is already framed before the lobby).
+ * Illustrated preview of the 10 design-thinking stages the participant will move
+ * through (steps 2–11, since the challenge is already framed before the lobby).
  *
  * Each card has a hand-drawn-feeling SVG that emulates the sketchy, amber-toned
  * style of the paywall/ideation visuals — to make the workshop feel like the
@@ -87,6 +87,15 @@ const STEP_CARDS: StepCard[] = [
   },
   {
     order: 9,
+    name: 'Brain Writing',
+    description:
+      'Take the ideas you picked and push each one further — draw variations until the strongest version reveals itself.',
+    illustration: <BrainWritingIllustration />,
+    badgeBg: 'bg-rose-100 dark:bg-rose-900/50',
+    badgeText: 'text-rose-700 dark:text-rose-300',
+  },
+  {
+    order: 10,
     name: 'Concept Development',
     description:
       'Pressure-test the strongest ideas with SWOT, feasibility, and an elevator pitch a five-year-old could repeat.',
@@ -95,7 +104,7 @@ const STEP_CARDS: StepCard[] = [
     badgeText: 'text-indigo-700 dark:text-indigo-300',
   },
   {
-    order: 10,
+    order: 11,
     name: 'Validate & Ship',
     description:
       'Flow diagrams, PRD, user stories — your validated Build Pack, ready to hand to an AI coder or a real one.',
@@ -114,7 +123,7 @@ export function LobbyStepsJourney() {
             The journey ahead
           </p>
           <h2 className="mt-1 text-2xl font-semibold leading-tight sm:text-3xl">
-            Nine stages, one validated build pack
+            Ten stages, one validated build pack
           </h2>
         </div>
         <p className="text-sm text-muted-foreground sm:max-w-xs sm:text-right">
@@ -338,6 +347,31 @@ function IdeationIllustration() {
         <line x1="86" y1="39" x2="114" y2="39" />
         <line x1="86" y1="54.5" x2="114" y2="54.5" />
         <line x1="100" y1="8" x2="100" y2="70" />
+      </g>
+    </svg>
+  );
+}
+
+function BrainWritingIllustration() {
+  // One original sketch + three variations branching off — divergent iteration.
+  return (
+    <svg viewBox="0 0 120 80" className="h-full w-auto">
+      <g className="text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" strokeWidth="0.9">
+        {/* Original */}
+        <rect x="8" y="30" width="22" height="20" rx="2" fill="currentColor" fillOpacity="0.28" opacity="0.85" />
+        <circle cx="19" cy="40" r="4" fill="currentColor" fillOpacity="0.5" stroke="none" />
+        {/* Variations */}
+        <rect x="60" y="8" width="22" height="18" rx="2" fill="currentColor" fillOpacity="0.16" opacity="0.7" />
+        <rect x="60" y="31" width="22" height="18" rx="2" fill="currentColor" fillOpacity="0.16" opacity="0.7" />
+        <rect x="60" y="54" width="22" height="18" rx="2" fill="currentColor" fillOpacity="0.16" opacity="0.7" />
+        {/* Arrows */}
+        <path d="M30 36 L 60 18" strokeWidth="0.8" opacity="0.55" />
+        <path d="M30 40 L 60 40" strokeWidth="0.8" opacity="0.55" />
+        <path d="M30 44 L 60 62" strokeWidth="0.8" opacity="0.55" />
+      </g>
+      <g className="text-rose-500 dark:text-rose-300" fill="currentColor" opacity="0.7">
+        <path d="M98 14 l1.4 3.5 l3.5 1.4 l-3.5 1.4 l-1.4 3.5 l-1.4 -3.5 l-3.5 -1.4 l3.5 -1.4 z" />
+        <path d="M100 56 l1.1 2.8 l2.8 1.1 l-2.8 1.1 l-1.1 2.8 l-1.1 -2.8 l-2.8 -1.1 l2.8 -1.1 z" opacity="0.6" />
       </g>
     </svg>
   );

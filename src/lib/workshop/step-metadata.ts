@@ -206,6 +206,26 @@ Top Ideas:
   },
   {
     order: 9,
+    id: "brainwriting",
+    slug: "brainwriting",
+    name: "Brain Writing",
+    description:
+      "Iterate on the selected sketches — build on each idea to push it further",
+    mockOutputType: "Brain Writing Matrix",
+    mockOutputContent: `Brain Writing Matrix:
+
+Selected Idea: [Idea title]
+- Build 1: [Variation or improvement]
+- Build 2: [Variation or improvement]
+- Build 3: [Variation or improvement]
+
+Selected Idea: [Idea title]
+- Build 1: [Variation or improvement]
+- Build 2: [Variation or improvement]
+- Build 3: [Variation or improvement]`,
+  },
+  {
+    order: 10,
     id: "concept",
     slug: "concept",
     name: "Concept Development",
@@ -237,7 +257,7 @@ Next Steps:
 - [Action item 2]`,
   },
   {
-    order: 10,
+    order: 11,
     id: "validate",
     slug: "validate",
     name: "Validate",
@@ -269,10 +289,10 @@ Build Pack Status:
 /**
  * Total number of steps in the WorkshopPilot process
  */
-export const TOTAL_STEPS = 10;
+export const TOTAL_STEPS = 11;
 
 /**
- * Get step by order number (1-10)
+ * Get step by order number (1-11)
  */
 export function getStepByOrder(order: number): StepDefinition | undefined {
   return STEPS.find((step) => step.order === order);
@@ -287,6 +307,7 @@ export const STEP_CONFIRM_LABELS: Record<string, string> = {
   'persona': 'Confirm Persona',
   'journey-mapping': 'Confirm Journey Map',
   'reframe': 'Confirm HMW Statement',
+  'brainwriting': 'Complete Brain Writing',
   'concept': 'Complete Concept Development',
 };
 

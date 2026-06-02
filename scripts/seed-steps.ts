@@ -1,6 +1,6 @@
 /**
  * Seed script for step_definitions table
- * Inserts all 10 design thinking step definitions
+ * Inserts all 11 design thinking step definitions
  * Safe to run multiple times (uses onConflictDoUpdate)
  */
 
@@ -60,22 +60,29 @@ const STEP_DEFINITIONS = [
   {
     id: 'ideation' as const,
     name: 'Ideation',
-    description: 'Generate ideas using Mind Mapping, Crazy 8s, and Brain Writing',
+    description: 'Generate ideas using Mind Mapping and Crazy 8s sketching, then select top ideas',
     order: 8,
+    promptTemplate: null,
+  },
+  {
+    id: 'brainwriting' as const,
+    name: 'Brain Writing',
+    description: 'Iterate on the selected sketches — build on each idea to push it further',
+    order: 9,
     promptTemplate: null,
   },
   {
     id: 'concept' as const,
     name: 'Concept Development',
     description: 'Develop concept sheets with SWOT analysis, feasibility, and elevator pitch',
-    order: 9,
+    order: 10,
     promptTemplate: null,
   },
   {
     id: 'validate' as const,
     name: 'Validate',
     description: 'Create flow diagrams, prototyping, PRD generation, and Build Pack export',
-    order: 10,
+    order: 11,
     promptTemplate: null,
   },
 ];
@@ -101,7 +108,7 @@ async function seedStepDefinitions() {
       console.log(`✓ Seeded: ${step.id} - ${step.name}`);
     }
 
-    console.log('\n✅ Successfully seeded all 10 step definitions');
+    console.log('\n✅ Successfully seeded all 11 step definitions');
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding step definitions:', error);

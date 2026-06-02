@@ -229,8 +229,8 @@ export function OutputPanel({
       );
     }
 
-    // Step-specific rendering for Ideation & Validation steps (8-10)
-    if (stepOrder === 8) {
+    // Step-specific rendering for Ideation, Concept & Validate steps
+    if (step.id === 'ideation') {
       return (
         <div className="flex h-full flex-col overflow-y-auto p-6">
           <div className="mb-4">
@@ -249,7 +249,7 @@ export function OutputPanel({
       );
     }
 
-    if (stepOrder === 9) {
+    if (step.id === 'concept') {
       return (
         <div className="flex h-full flex-col overflow-y-auto p-6">
           <div className="mb-4">
@@ -268,7 +268,7 @@ export function OutputPanel({
       );
     }
 
-    if (stepOrder === 10) {
+    if (step.id === 'validate') {
       return (
         <div className="flex h-full flex-col overflow-y-auto p-6">
           <div className="mb-4">

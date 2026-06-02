@@ -464,8 +464,8 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
           </>
         )}
 
-        {/* Start Activity button — Step 9 only */}
-        {stepOrder === 9 && !conceptActivityStarted && (
+        {/* Start Activity button — Concept Development (step order 10; Brain Writing was inserted at 9) */}
+        {stepOrder === 10 && !conceptActivityStarted && (
           <>
             <div className="w-px h-5 bg-border mx-0.5" />
             <button

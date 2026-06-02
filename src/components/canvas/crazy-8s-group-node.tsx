@@ -90,11 +90,8 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
       .filter((s) => !data.ownerId || s.ownerId === data.ownerId);
   }, [allCrazy8sSlots, data.ownerId]);
 
-  // Owner color overrides — use owner's accent or fallback to amber
-  const borderColor = data.ownerColor || undefined; // undefined → use default amber
-  const headerTitle = data.ownerName
-    ? `${data.ownerName} — Rapid Sketching`
-    : 'Crazy 8s — Rapid Sketching';
+  // Olive header bar; the participant's color lives in a subtle name badge.
+  const headerTitle = data.ownerName ? 'Rapid Sketching' : 'Crazy 8s — Rapid Sketching';
 
   // Group creation state
   const [isNamingGroup, setIsNamingGroup] = useState(false);
@@ -387,19 +384,22 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
       className="cursor-default"
       style={{ width: CRAZY_8S_NODE_WIDTH, height: CRAZY_8S_NODE_HEIGHT, pointerEvents: 'all' }}
     >
-      <div
-        className={cn('rounded-xl border-2 bg-background shadow-lg h-full flex flex-col relative', !borderColor && 'border-amber-400/60')}
-        style={borderColor ? { borderColor: `color-mix(in srgb, ${borderColor} 60%, transparent)` } : undefined}
-      >
-        <div
-          className={cn('flex items-center justify-between border-b px-4 py-2.5 shrink-0 rounded-t-[10px] cursor-grab active:cursor-grabbing', !borderColor && 'bg-amber-50 dark:bg-amber-950/20')}
-          style={borderColor ? { backgroundColor: `color-mix(in srgb, ${borderColor} 10%, transparent)` } : undefined}
-        >
-          <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4" style={{ color: borderColor || '#d97706' }} />
-            <span className="text-sm font-semibold" style={{ color: borderColor || undefined }}>
+      <div className="rounded-xl border-2 border-[var(--olive-600)]/60 bg-background shadow-lg h-full flex flex-col relative">
+        <div className="flex items-center justify-between border-b border-black/10 px-4 py-2.5 shrink-0 rounded-t-[10px] cursor-grab active:cursor-grabbing bg-[var(--olive-600)]">
+          <div className="flex items-center gap-2.5">
+            <Zap className="h-4 w-4 text-white" />
+            <span className="text-sm font-semibold text-white">
               {headerTitle}
             </span>
+            {data.ownerName && (
+              <span className="flex items-center gap-1.5 rounded-full bg-white/15 py-0.5 pl-1.5 pr-2.5 text-xs font-medium text-white">
+                <span
+                  className="h-2 w-2 rounded-full ring-1 ring-white/40"
+                  style={{ backgroundColor: data.ownerColor || '#ffffff' }}
+                />
+                {data.ownerName}
+              </span>
+            )}
           </div>
           <div className="nodrag nopan flex items-center gap-2">
             {data.onSyncStars && (
@@ -409,7 +409,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                   try { await data.onSyncStars?.(); } finally { setIsSyncing(false); }
                 }}
                 disabled={isSyncing}
-                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-white/90 hover:bg-white/15 transition-colors disabled:opacity-50"
                 title="Update slot titles from starred mind map nodes"
               >
                 {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className="h-3.5 w-3.5 fill-current" />}

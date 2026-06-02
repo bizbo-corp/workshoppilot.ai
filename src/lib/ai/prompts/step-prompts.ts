@@ -13,6 +13,7 @@ import { personaStep } from './steps/05_persona';
 import { journeyMappingStep } from './steps/06_journey_mapping';
 import { reframeStep } from './steps/07_reframe';
 import { ideationStep } from './steps/08_ideation';
+import { brainwritingStep } from './steps/brainwriting';
 import { conceptStep } from './steps/09_concept';
 import { validateStep } from './steps/10_validate';
 
@@ -25,6 +26,7 @@ const steps: Record<string, { contentStructure: string; interactionLogic: string
   'journey-mapping': journeyMappingStep,
   'reframe': reframeStep,
   'ideation': ideationStep,
+  'brainwriting': brainwritingStep,
   'concept': conceptStep,
   'validate': validateStep,
 };
