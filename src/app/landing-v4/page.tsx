@@ -27,6 +27,7 @@ import {
 } from "@/components/landing-v3/lazy-hero-visuals";
 import { VideoPlayButton } from "@/components/landing-v3/video-dialog";
 import { ProcessScrollytelling } from "@/components/landing-v3/process-scrollytelling";
+import { PainCostCurve } from "@/components/landing-v4/pain-cost-curve";
 
 /**
  * Landing Page V4
@@ -175,11 +176,11 @@ export default function LandingV4() {
       </section>
 
       {/* ── Pain Points: "Why Now" ───────────────────────────── */}
-      <section
-        className="py-24 sm:py-32 bg-background border-t border-border"
-        style={{ contentVisibility: "auto", containIntrinsicSize: "0 600px" }}
-      >
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <section className="relative flex min-h-screen items-center overflow-hidden border-t border-border bg-background py-24 sm:py-32">
+        {/* Cost-vs-time chart (eye candy, behind the copy, hoverable) */}
+        <PainCostCurve />
+
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Left column — sticky headline + intro */}
             <div className="lg:sticky lg:top-32 lg:self-start">
@@ -188,55 +189,73 @@ export default function LandingV4() {
                 <br /> before the first
                 <br /> line of code
               </h2>
-              <p className="text-muted-foreground text-lg max-w-md leading-relaxed">
-                Not from bad engineers — from building the wrong thing. Most
+              <p className="text-foreground text-lg max-w-md leading-relaxed">
+                Not from bad engineers, but from building the wrong thing. Most
                 teams pour weeks and tens of thousands of dollars into planning,
                 specs and prototypes before they ever test whether the idea
                 holds up. WorkshopPilot gets you to a validated, build-ready
-                plan in a single session — so the money goes to the right thing.
+                plan in a single session, so the money goes to the right thing.
               </p>
+
+              {/* Ties the copy to the olive bar at Week 0 on the chart below —
+                  same olive accent + mini-bar glyph make the link read visually. */}
+              <div className="mt-7 flex items-center gap-3.5">
+                <span
+                  aria-hidden="true"
+                  className="h-9 w-[3px] shrink-0 rounded-full bg-olive-500 shadow-[0_0_10px_2px_var(--neutral-olive-50),0_0_4px_1px_var(--neutral-olive-50)] dark:shadow-[0_0_14px_3px_var(--olive-500),0_0_5px_1px_var(--olive-400)]"
+                />
+                <p className="max-w-xs text-sm leading-snug">
+                  <span className="font-semibold text-olive-700 dark:text-olive-400">
+                    WorkshopPilot
+                  </span>
+                  <span className="text-muted-foreground">
+                    : a validated, build-ready plan for{" "}
+                    <span className="font-medium text-foreground">$299</span>, in
+                    one workshop team session.
+                  </span>
+                </p>
+              </div>
             </div>
 
-            {/* Right column — three fear-driven pain points
-                (cost · time · validation). No WorkshopPilot pricing here —
-                this section is the problem, not the price.
-                NOTE: figures are illustrative; verify the 42% / CB Insights
-                stat before relying on it. */}
+            {/* Right column — three fear-driven pain points, labelled by
+                angle (cost · time · validation) instead of fabricated figures.
+                No WorkshopPilot pricing here — this section is the problem,
+                not the price. */}
             <div className="space-y-10">
               {/* Cost */}
-              <div className="border-l-2 border-olive-300 dark:border-olive-600 pl-6">
-                <p className="text-4xl sm:text-5xl font-bold text-foreground mb-2 tracking-tight tabular-nums">
-                  $20,000+
+              <div className="border-l border-neutral-olive-400/80 pl-6 dark:border-neutral-olive-500/70">
+                <p className="mb-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  Expensive
                 </p>
-                <p className="text-muted-foreground leading-relaxed">
-                  is what &ldquo;doing discovery properly&rdquo; runs the old way
-                  — facilitated workshops, a PRD, a throwaway prototype, a
-                  stakeholder deck. You pay it all up front, before a single
+                <p className="leading-relaxed text-muted-foreground">
+                  &ldquo;Doing discovery properly&rdquo; the old way means
+                  facilitated workshops, a PRD, a throwaway prototype, a
+                  stakeholder deck. It burns real money up front, before a single
                   assumption is tested.
                 </p>
               </div>
 
               {/* Time */}
-              <div className="border-l-2 border-olive-300 dark:border-olive-600 pl-6">
-                <p className="text-4xl sm:text-5xl font-bold text-foreground mb-2 tracking-tight">
-                  6+ weeks
+              <div className="border-l border-neutral-olive-400/80 pl-6 dark:border-neutral-olive-500/70">
+                <p className="mb-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  Time-consuming
                 </p>
-                <p className="text-muted-foreground leading-relaxed">
-                  disappear into planning docs, meetings and revision rounds —
-                  and at the end you still only have an educated guess about
-                  what&apos;s worth building.
+                <p className="leading-relaxed text-muted-foreground">
+                  Weeks disappear into planning docs, meetings and revision
+                  rounds, and at the end you still only have an educated guess
+                  about what&apos;s worth building.
                 </p>
               </div>
 
-              {/* Validation */}
-              <div className="border-l-2 border-olive-300 dark:border-olive-600 pl-6">
-                <p className="text-4xl sm:text-5xl font-bold text-foreground mb-2 tracking-tight tabular-nums">
-                  42%
+              {/* Unvalidated */}
+              <div className="border-l border-neutral-olive-400/80 pl-6 dark:border-neutral-olive-500/70">
+                <p className="mb-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  Unvalidated
                 </p>
-                <p className="text-muted-foreground leading-relaxed">
-                  of startups fail for one reason: they built something nobody
-                  needed. Skip validation and you&apos;re not just risking the
-                  build — you&apos;re betting the runway.
+                <p className="leading-relaxed text-muted-foreground">
+                  Most projects that fail built something nobody needed. Skip
+                  validation and you&apos;re not just risking the build.
+                  You&apos;re betting the runway.
                 </p>
               </div>
             </div>
