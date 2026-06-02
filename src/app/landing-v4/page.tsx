@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 
 import {
-  ArrowDown,
   ArrowRight,
   Briefcase,
   Check,
@@ -177,13 +176,13 @@ export default function LandingV4() {
 
       {/* ── Pain Points: "Why Now" ───────────────────────────── */}
       <section
-        className="py-24 sm:py-32 bg-background border-t border-border"
-        style={{ contentVisibility: "auto", containIntrinsicSize: "0 600px" }}
+        className="py-24 sm:py-32 bg-background border-t border-border overflow-hidden"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "0 800px" }}
       >
+        {/* Header — headline left, WorkshopPilot contrast card top-right */}
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-            {/* Left column — sticky headline */}
-            <div className="lg:sticky lg:top-32 lg:self-start">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+            <div>
               <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-serif leading-[1.1] tracking-tight text-foreground mb-6">
                 Most projects fail
                 <br /> before the first
@@ -197,105 +196,105 @@ export default function LandingV4() {
               </p>
             </div>
 
-            {/* Right column — the traditional path as a TIMELINE with cost
-                spikes (x = time left→right, y = cost). NOTE: figures are
-                illustrative placeholders — tune to real benchmarks before
-                relying on them. WorkshopPilot price = $99. */}
-            <div className="lg:pt-2">
-              <div className="flex items-baseline justify-between mb-6">
-                <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground/70">
-                  The traditional way
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  cost over time →
-                </p>
-              </div>
+            {/* WorkshopPilot — the big contrast callout, top-right */}
+            <div className="w-full lg:max-w-md lg:justify-self-end rounded-2xl border border-olive-300 bg-olive-50 p-6 dark:border-olive-700 dark:bg-olive-950/40">
+              <span className="text-sm font-semibold uppercase tracking-widest text-olive-700 dark:text-olive-300">
+                WorkshopPilot
+              </span>
 
-              {/* Cost-spike chart */}
-              <div className="flex h-56 items-end gap-2 pt-7 sm:gap-3">
-                {[
-                  { phase: "Expert facilitated workshop", when: "1 day", cost: "$5–9k", height: "70%" },
-                  { phase: "PRD, specs & stories", when: "Weeks 1–2", cost: "$2k", height: "20%" },
-                  { phase: "Developer prototype", when: "Weeks 3–6", cost: "$10k", height: "100%" },
-                  { phase: "Product team deck", when: "Weeks 6–8", cost: "$3k", height: "30%" },
-                ].map((s) => (
-                  <div
-                    key={s.phase}
-                    className="flex h-full flex-1 flex-col justify-end"
-                  >
-                    <div
-                      className="relative w-full rounded-t-md bg-gradient-to-t from-olive-400/40 to-olive-500/80 dark:from-olive-700/50 dark:to-olive-400/70"
-                      style={{ height: s.height }}
-                    >
-                      <span className="absolute -top-6 inset-x-0 text-center text-sm font-bold tabular-nums text-foreground">
-                        {s.cost}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Timeline axis + phase labels */}
-              <div className="border-t-2 border-border" />
-              <div className="flex gap-2 pt-3 sm:gap-3">
-                {[
-                  { phase: "Expert facilitated workshop", when: "1 day" },
-                  { phase: "PRD, specs & stories", when: "Weeks 1–2" },
-                  { phase: "Developer prototype", when: "Weeks 3–6" },
-                  { phase: "Product team deck", when: "Weeks 6–8" },
-                ].map((s) => (
-                  <div
-                    key={s.phase}
-                    className="flex flex-1 flex-col items-center text-center"
-                  >
-                    <span className="text-[11px] font-medium leading-tight text-foreground sm:text-xs">
-                      {s.phase}
-                    </span>
-                    <span className="mt-0.5 text-[11px] text-muted-foreground">
-                      {s.when}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Bridge */}
-              <div className="my-6 flex justify-center">
-                <ArrowDown className="h-5 w-5 text-olive-500 dark:text-olive-400" />
-              </div>
-
-              {/* WorkshopPilot — the big contrast callout */}
-              <div className="rounded-2xl border border-olive-300 bg-olive-50 p-6 dark:border-olive-700 dark:bg-olive-950/40">
-                <span className="text-sm font-semibold uppercase tracking-widest text-olive-700 dark:text-olive-300">
-                  WorkshopPilot
+              {/* Time: 2 hours vs 6+ weeks */}
+              <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+                  2 hours
                 </span>
-
-                {/* Time: 2 hours vs 6+ weeks */}
-                <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-                    2 hours
-                  </span>
-                  <span className="text-base text-muted-foreground">vs</span>
-                  <span className="text-2xl font-bold tracking-tight text-muted-foreground/50 line-through decoration-2 sm:text-3xl">
-                    6+ weeks
-                  </span>
-                </div>
-
-                {/* Cost: $99–$299 vs $20,000+ */}
-                <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="text-4xl font-bold tracking-tight tabular-nums text-foreground sm:text-5xl">
-                    $99–$299
-                  </span>
-                  <span className="text-xl font-bold tabular-nums text-muted-foreground/50 line-through decoration-2">
-                    $20,000+
-                  </span>
-                </div>
-
-                <p className="mt-5 flex items-center gap-1.5 text-sm text-foreground">
-                  <Check className="h-4 w-4 shrink-0 text-olive-600 dark:text-olive-400" />
-                  The same developer-ready Build Pack.
-                </p>
+                <span className="text-base text-muted-foreground">vs</span>
+                <span className="text-2xl font-bold tracking-tight text-muted-foreground/50 line-through decoration-2 sm:text-3xl">
+                  6+ weeks
+                </span>
               </div>
+
+              {/* Cost: $99–$299 vs $20,000+ */}
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="text-4xl font-bold tracking-tight tabular-nums text-foreground sm:text-5xl">
+                  $99–$299
+                </span>
+                <span className="text-xl font-bold tabular-nums text-muted-foreground/50 line-through decoration-2">
+                  $20,000+
+                </span>
+              </div>
+
+              <p className="mt-5 flex items-center gap-1.5 text-sm text-foreground">
+                <Check className="h-4 w-4 shrink-0 text-olive-600 dark:text-olive-400" />
+                The same developer-ready Build Pack.
+              </p>
             </div>
+          </div>
+        </div>
+
+        {/* Full-width timeline — the traditional path as cost spikes positioned
+            along ~6+ weeks. NOTE: figures are illustrative placeholders — tune
+            to real benchmarks before relying on them. WorkshopPilot = $99. */}
+        <div className="mt-20 sm:mt-28 w-full px-6 sm:px-10 lg:px-16">
+          <div className="flex items-baseline justify-between mb-2">
+            <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground/70">
+              The traditional way
+            </p>
+            <p className="text-sm text-muted-foreground">cost over time →</p>
+          </div>
+
+          {/* Chart: spikes anchored to a baseline axis; week notches below */}
+          <div className="relative h-72 sm:h-80">
+            {/* baseline axis */}
+            <div className="absolute inset-x-0 bottom-8 border-t-2 border-border" />
+
+            {/* week notches + ticks */}
+            {[
+              { label: "Wk 1", x: 16 },
+              { label: "Wk 2", x: 30 },
+              { label: "Wk 3", x: 43 },
+              { label: "Wk 4", x: 57 },
+              { label: "Wk 5", x: 70 },
+              { label: "Wk 6", x: 84 },
+              { label: "6+", x: 97 },
+            ].map((n) => (
+              <div key={n.label}>
+                <div
+                  className="absolute bottom-[26px] h-2 w-px -translate-x-1/2 bg-border"
+                  style={{ left: `${n.x}%` }}
+                />
+                <span
+                  className="absolute bottom-1 -translate-x-1/2 text-[11px] text-muted-foreground"
+                  style={{ left: `${n.x}%` }}
+                >
+                  {n.label}
+                </span>
+              </div>
+            ))}
+
+            {/* cost spikes, positioned by when the work happens */}
+            {[
+              { phase: "Expert facilitated workshop", cost: "$5–9k", x: 6, bar: 132 },
+              { phase: "PRD, specs & stories", cost: "$2k", x: 26, bar: 40 },
+              { phase: "Developer prototype", cost: "$10k", x: 60, bar: 190 },
+              { phase: "Product team deck", cost: "$3k", x: 90, bar: 58 },
+            ].map((s) => (
+              <div
+                key={s.phase}
+                className="absolute bottom-8 flex -translate-x-1/2 flex-col items-center"
+                style={{ left: `${s.x}%` }}
+              >
+                <span className="mb-1 w-24 text-center text-[11px] font-medium leading-tight text-foreground">
+                  {s.phase}
+                </span>
+                <span className="mb-1.5 text-sm font-bold tabular-nums text-foreground">
+                  {s.cost}
+                </span>
+                <div
+                  className="w-12 rounded-t-md bg-gradient-to-t from-olive-400/40 to-olive-500/80 sm:w-16 dark:from-olive-700/50 dark:to-olive-400/70"
+                  style={{ height: `${s.bar}px` }}
+                />
+              </div>
+            ))}
           </div>
         </div>
       </section>
