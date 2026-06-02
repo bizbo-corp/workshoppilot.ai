@@ -26,7 +26,23 @@ export function MockIdea({ play = true }: { play?: boolean }) {
 
   return (
     <div className="flex h-full w-full items-center justify-center p-2">
-      <div className="relative w-full max-w-sm">
+      <div className="relative isolate w-full max-w-sm">
+        {/* The problem card — sits behind the idea sticky, peeking out top-right.
+            Decorative only (not interactive); `-z-10` keeps it below the light
+            streak so the streak passes in front of it. */}
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-0 -z-10 translate-x-[18%] translate-y-[calc(-10%-20px)] rounded-2xl p-5 shadow-xl shadow-black/10",
+            STICKY_BG.orange,
+            STICKY_TEXT.orange,
+          )}
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-widest opacity-70">
+            The Problem
+          </p>
+        </div>
+
         {/* Light guide line + travelling comet streak, concentric 8px outside
             the card's rounded-2xl (16px) corners. */}
         {animate && <LightStreak radius={16} />}

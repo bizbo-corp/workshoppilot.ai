@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { cn } from "@/lib/utils";
 import {
   DemoBoard,
   DemoRings,
@@ -65,6 +66,7 @@ export function ProcessScrollytelling() {
   const trackRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const progressFillRef = useRef<HTMLDivElement>(null);
+  const stRef = useRef<ScrollTrigger | null>(null);
   const [activeStep, setActiveStep] = useState(0);
 
   useEffect(() => {
@@ -99,14 +101,30 @@ export function ProcessScrollytelling() {
               setActiveStep((prev) => (prev === idx ? prev : idx));
             },
           });
+          stRef.current = st;
 
-          return () => st.kill();
+          return () => {
+            st.kill();
+            stRef.current = null;
+          };
         },
       );
     }, trackRef);
 
     return () => ctx.revert();
   }, []);
+
+  // Clicking a step jumps to the middle of that step's scroll range; the
+  // scrubbed pin then plays its animation as the page scrolls into place.
+  const goToStep = (i: number) => {
+    const st = stRef.current;
+    if (!st) return;
+    const target = (i + 0.5) / STEPS.length;
+    window.scrollTo({
+      top: st.start + target * (st.end - st.start),
+      behavior: "smooth",
+    });
+  };
 
   return (
     <>
@@ -143,18 +161,27 @@ export function ProcessScrollytelling() {
                     return (
                       <li
                         key={step.num}
-                        className="transition-opacity duration-500 ease-out"
-                        style={{ opacity: active ? 1 : 0.3 }}
+                        className={cn(
+                          "transition-opacity duration-500 ease-out",
+                          active ? "opacity-100" : "opacity-30 hover:opacity-60",
+                        )}
                       >
-                        <span className="font-mono text-sm text-olive-600 dark:text-olive-400">
-                          {step.num}
-                        </span>
-                        <h3 className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                          {step.title}
-                        </h3>
-                        <p className="mt-2 max-w-lg leading-relaxed text-muted-foreground">
-                          {step.description}
-                        </p>
+                        <button
+                          type="button"
+                          onClick={() => goToStep(i)}
+                          aria-current={active ? "step" : undefined}
+                          className="block w-full cursor-pointer rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <span className="font-mono text-sm text-olive-600 dark:text-olive-400">
+                            {step.num}
+                          </span>
+                          <h3 className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                            {step.title}
+                          </h3>
+                          <p className="mt-2 max-w-lg leading-relaxed text-muted-foreground">
+                            {step.description}
+                          </p>
+                        </button>
                       </li>
                     );
                   })}
