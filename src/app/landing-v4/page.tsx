@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import {
+  ArrowDown,
   ArrowRight,
   Briefcase,
   Check,
@@ -189,44 +190,87 @@ export default function LandingV4() {
                 <br /> line of code
               </h2>
               <p className="text-muted-foreground text-lg max-w-md leading-relaxed">
-                Not from bad developers. From building the wrong thing.
-                WorkshopPilot replaces weeks of scattered planning with a single
-                structured session — so you ship with clarity, not guesswork.
+                Not from bad developers. From building the wrong thing. The
+                usual fix — workshops, research, a stack of specs — burns weeks
+                and thousands of dollars, and still ships ambiguity.
+                WorkshopPilot gets you the same clarity in a single session.
               </p>
             </div>
 
-            {/* Right column — stacked pain points */}
-            <div className="space-y-10">
-              {/* Pain 1 */}
-              <div className="border-l-2 border-olive-300 dark:border-olive-600 pl-6">
-                <p className="text-4xl sm:text-5xl font-bold text-foreground mb-2 tracking-tight">
-                  70%
-                </p>
-                <p className="text-muted-foreground leading-relaxed">
-                  of software waste traces back to bad requirements. It&apos;s a
-                  clarity problem, not a coding one.
-                </p>
+            {/* Right column — the traditional way "stacks up" (time + cost).
+                NOTE: figures below are illustrative placeholders — tune to real
+                benchmarks before relying on them. WorkshopPilot price = $99. */}
+            <div className="lg:pt-2">
+              <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground/70 mb-6">
+                The traditional way
+              </p>
+
+              <div className="space-y-5">
+                {[
+                  { label: "Facilitated workshop", time: "1 wk", cost: "$5,000", width: "100%" },
+                  { label: "User research & synthesis", time: "1 wk", cost: "$1,500", width: "30%" },
+                  { label: "PRD, specs & user stories", time: "2 wk", cost: "$2,000", width: "40%" },
+                  { label: "Revisions & re-alignment", time: "ongoing", cost: "$1,000", width: "20%" },
+                ].map((row) => (
+                  <div key={row.label}>
+                    <div className="flex items-baseline justify-between gap-4 mb-1.5">
+                      <span className="text-sm sm:text-base text-foreground">
+                        {row.label}
+                      </span>
+                      <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
+                        {row.time} ·{" "}
+                        <span className="font-semibold text-foreground">
+                          {row.cost}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-olive-100 dark:bg-olive-900/40">
+                      <div
+                        className="h-full rounded-full bg-olive-400/70 dark:bg-olive-500/50"
+                        style={{ width: row.width }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              {/* Pain 2 */}
-              <div className="border-l-2 border-olive-300 dark:border-olive-600 pl-6">
-                <p className="text-4xl sm:text-5xl font-bold text-foreground mb-2 tracking-tight">
-                  3 weeks
-                </p>
-                <p className="text-muted-foreground leading-relaxed">
-                  is the average time spent writing PRDs, user stories and specs
-                  that still miss the mark.
-                </p>
+              {/* Running total */}
+              <div className="mt-6 flex items-baseline justify-between border-t border-border pt-5">
+                <span className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
+                  Total
+                </span>
+                <span className="text-right">
+                  <span className="mb-0.5 block text-sm text-muted-foreground">
+                    ~5 weeks
+                  </span>
+                  <span className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground tabular-nums">
+                    $9,000+
+                  </span>
+                </span>
               </div>
 
-              {/* Pain 3 */}
-              <div className="border-l-2 border-olive-300 dark:border-olive-600 pl-6">
-                <p className="text-4xl sm:text-5xl font-bold text-foreground mb-2 tracking-tight">
-                  &ldquo;Just build it&rdquo;
-                </p>
-                <p className="text-muted-foreground leading-relaxed">
-                  is the most expensive advice in tech. Two hours of structure
-                  beats six months of guessing.
+              {/* Bridge */}
+              <div className="my-6 flex justify-center">
+                <ArrowDown className="h-5 w-5 text-olive-500 dark:text-olive-400" />
+              </div>
+
+              {/* WorkshopPilot — the short row */}
+              <div className="rounded-2xl border border-olive-300 bg-olive-50 p-5 dark:border-olive-700 dark:bg-olive-950/40">
+                <div className="flex items-baseline justify-between gap-4 mb-2">
+                  <span className="text-sm font-semibold uppercase tracking-widest text-olive-700 dark:text-olive-300">
+                    WorkshopPilot
+                  </span>
+                  <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
+                    ~2 hours ·{" "}
+                    <span className="font-bold text-foreground">from $99</span>
+                  </span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-olive-200/60 dark:bg-olive-800/40">
+                  <div className="h-full w-[3%] rounded-full bg-olive-500 dark:bg-olive-400" />
+                </div>
+                <p className="mt-3 flex items-center gap-1.5 text-sm text-foreground">
+                  <Check className="h-4 w-4 shrink-0 text-olive-600 dark:text-olive-400" />
+                  The same developer-ready Build Pack.
                 </p>
               </div>
             </div>
