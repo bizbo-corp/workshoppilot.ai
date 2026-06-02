@@ -34,8 +34,7 @@ export function MockIdea({ play = true }: { play?: boolean }) {
           aria-hidden
           className={cn(
             "pointer-events-none absolute inset-0 -z-10 translate-x-[18%] translate-y-[calc(-10%-20px)] rounded-2xl p-5 shadow-xl shadow-black/10",
-            STICKY_BG.orange,
-            STICKY_TEXT.orange,
+            "bg-[var(--olive-100)] text-[var(--olive-900)]",
           )}
         >
           <p className="text-[10px] font-semibold uppercase tracking-widest opacity-70">
