@@ -72,13 +72,13 @@ export default function LandingV4() {
             Go from{" "}
             <span className="relative">
               <span className="text-olive-600 dark:text-olive-400">
-                &ldquo;Vague Idea&rdquo;
+                Vague Idea
               </span>
             </span>{" "}
             to
             <br className="hidden sm:block" />{" "}
             <span className="text-olive-600 dark:text-olive-400">
-              &ldquo;Developer-Ready&rdquo;
+              Developer-Ready
             </span>{" "}
             <span className="relative inline-block">
               in 2 hours.

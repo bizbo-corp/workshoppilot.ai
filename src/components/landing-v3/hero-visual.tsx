@@ -34,7 +34,7 @@ function StickyNote({
   return (
     <div
       data-trail-source={trailIndex}
-      className="group/note absolute pointer-events-auto rounded-xl bg-card/80 border border-white/[0.08] w-[90px] h-[90px] flex items-center justify-center transition-all duration-300 ease-out hover:bg-amber-100/80 hover:dark:bg-amber-200/80 hover:rounded-md cursor-default"
+      className="group/note absolute pointer-events-auto rounded-md bg-[var(--sticky-note-yellow)] w-[90px] h-[90px] flex items-center justify-center transition-all duration-300 ease-out cursor-default"
       /* glassmorphic lighting is applied via style.boxShadow below */
       style={
         {
@@ -48,7 +48,7 @@ function StickyNote({
         } as React.CSSProperties
       }
     >
-      <p className="text-xs font-medium text-center leading-tight text-foreground group-hover/note:text-amber-900/80 group-hover/note:font-semibold px-1.5 transition-colors duration-300">
+      <p className="text-xs font-medium text-center leading-tight text-[var(--sticky-note-yellow-text)] px-1.5">
         {text}
       </p>
     </div>
@@ -339,9 +339,12 @@ export function HeroVisual() {
             >
               <div
                 className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center shrink-0"
-                style={{ backgroundColor: color }}
+                style={{ backgroundColor: `${color}24` }}
               >
-                <Icon className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5 text-white" />
+                <Icon
+                  className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5"
+                  style={{ color }}
+                />
               </div>
               <span className="text-[10px] sm:text-[11px] md:text-[12px] font-medium text-foreground whitespace-nowrap">
                 {label}
