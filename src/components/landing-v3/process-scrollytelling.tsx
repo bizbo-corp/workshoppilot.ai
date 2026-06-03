@@ -6,6 +6,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { cn } from "@/lib/utils";
 import {
   DemoBoard,
+  DemoBulb,
+  DemoFlow,
   DemoRings,
   DOTTED_BG,
 } from "@/components/marketing/product-demo/demo-board";
@@ -48,9 +50,17 @@ function MockForStep({ index }: { index: number }) {
   return <MockBuildPack play={false} />;
 }
 
-function Header() {
+function Header({ framed = false }: { framed?: boolean }) {
   return (
-    <div className="mb-10 max-w-2xl lg:mb-12">
+    <div
+      className={cn(
+        "mb-10 max-w-2xl lg:mb-12",
+        // Frosted backdrop (desktop) so the orbiting graphic behind stays
+        // blurred and the title reads cleanly.
+        framed &&
+          "w-fit rounded-2xl bg-background/55 px-6 py-5 backdrop-blur-md",
+      )}
+    >
       <p className="mb-4 text-sm font-medium uppercase tracking-widest text-olive-600 dark:text-olive-400">
         Process
       </p>
@@ -140,10 +150,13 @@ export function ProcessScrollytelling() {
         >
           {/* Section-wide dotted board (behind all three steps), bleeds right */}
           <DemoBoard />
+          {/* Faint per-step line art, fades in with its step (eye candy) */}
+          <DemoBulb active={activeStep === 0} />
           {/* Concentric rings — step 2 only, span the section top↔bottom */}
           <DemoRings active={activeStep === 1} />
+          <DemoFlow active={activeStep === 2} />
           <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-            <Header />
+            <Header framed />
 
             <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-12 lg:gap-12">
               {/* Left — the three steps, active one emphasized */}
@@ -155,7 +168,7 @@ export function ProcessScrollytelling() {
                   style={{ transform: "scaleY(0)" }}
                 />
 
-                <ol className="space-y-8 pl-8">
+                <ol className="space-y-8 rounded-2xl bg-background/55 py-6 pl-8 pr-5 backdrop-blur-md">
                   {STEPS.map((step, i) => {
                     const active = activeStep === i;
                     return (

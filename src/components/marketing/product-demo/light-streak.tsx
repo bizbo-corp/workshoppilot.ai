@@ -74,3 +74,59 @@ export function LightStreak({ radius = 16 }: { radius?: number }) {
     </svg>
   );
 }
+
+/**
+ * Circle variant of {@link LightStreak} — same comet (faint resting guide +
+ * three synced layers sharing a leading edge) but orbiting a full circle that
+ * fills its parent box. Uses `pathLength={100}` so a single dash maps to the
+ * whole circumference (one comet, not a repeating dash pattern). Place it as a
+ * sibling behind the foreground (give the foreground a higher z-index).
+ */
+export function CircleStreak({ duration = 6 }: { duration?: number }) {
+  const rawId = useId();
+  const glowId = `circle-streak-glow-${rawId.replace(/[:]/g, "")}`;
+
+  return (
+    <svg
+      aria-hidden
+      className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+    >
+      <defs>
+        <filter id={glowId}>
+          <feGaussianBlur stdDeviation="2.5" />
+        </filter>
+      </defs>
+
+      {/* Faint resting guide circle the streak rides along */}
+      <circle
+        cx="50%"
+        cy="50%"
+        r="50%"
+        fill="none"
+        stroke="var(--olive-300)"
+        strokeWidth="0.5"
+        opacity={0.5}
+      />
+
+      {/* Comet streak — three layers sharing a leading edge, orbiting */}
+      {LAYERS.map((l) => (
+        <motion.circle
+          key={l.len}
+          cx="50%"
+          cy="50%"
+          r="50%"
+          fill="none"
+          stroke={l.color}
+          strokeWidth={l.width}
+          strokeOpacity={l.opacity}
+          strokeLinecap="round"
+          filter={l.glow ? `url(#${glowId})` : undefined}
+          pathLength={100}
+          strokeDasharray={`${l.len} ${100 - l.len}`}
+          animate={{ strokeDashoffset: [l.len, l.len - 100] }}
+          transition={{ repeat: Infinity, duration, ease: "linear" }}
+        />
+      ))}
+    </svg>
+  );
+}

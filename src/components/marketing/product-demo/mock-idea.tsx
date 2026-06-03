@@ -111,12 +111,12 @@ export function MockIdea({ play = true }: { play?: boolean }) {
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors",
                 done
-                  ? "border-green-500 text-[var(--sticky-note-yellow-text)] dark:border-green-500/70"
+                  ? "border-[var(--sticky-note-yellow-text)]/30 bg-[var(--sticky-note-yellow-text)]/[0.06] text-[var(--sticky-note-yellow-text)]"
                   : "border-[var(--sticky-note-yellow-text)]/20 text-[var(--sticky-note-yellow-text)]/40",
               )}
             >
               {done && (
-                <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-[var(--sticky-note-yellow-text)]" />
               )}
               Confirm
             </span>
