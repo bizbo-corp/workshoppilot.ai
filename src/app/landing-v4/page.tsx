@@ -544,7 +544,8 @@ export default function LandingV4() {
             ))}
           </div>
 
-          {/* Secondary testimonials — compact ruled rows */}
+          {/* Secondary testimonials — hidden for now; add back later. */}
+          {/*
           <div className="divide-y divide-border mt-16 pt-16 border-t border-border">
             {[
               {
@@ -602,6 +603,7 @@ export default function LandingV4() {
               </div>
             ))}
           </div>
+          */}
         </div>
       </section>
 

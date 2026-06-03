@@ -50,22 +50,15 @@ function MockForStep({ index }: { index: number }) {
   return <MockBuildPack play={false} />;
 }
 
-function Header({ framed = false }: { framed?: boolean }) {
+function Header() {
   return (
-    <div
-      className={cn(
-        "mb-10 max-w-2xl lg:mb-12",
-        // Frosted backdrop (desktop) so the orbiting graphic behind stays
-        // blurred and the title reads cleanly.
-        framed &&
-          "w-fit rounded-2xl bg-background/55 px-6 py-5 backdrop-blur-md",
-      )}
-    >
+    <div className="mb-10 max-w-2xl lg:mb-12">
       <p className="mb-4 text-sm font-medium uppercase tracking-widest text-olive-600 dark:text-olive-400">
         Process
       </p>
-      <h2 className="font-serif text-3xl leading-[1.1] tracking-tight text-foreground sm:text-4xl md:text-5xl">
-        Three steps. One session.
+      <h2 className="font-serif text-3xl leading-[1.1] tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-4xl">
+        Three steps.
+        <br /> One session.
         <br /> A complete blueprint.
       </h2>
     </div>
@@ -156,19 +149,21 @@ export function ProcessScrollytelling() {
           <DemoRings active={activeStep === 1} />
           <DemoFlow active={activeStep === 2} />
           <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-            <Header framed />
-
             <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-12 lg:gap-12">
-              {/* Left — the three steps, active one emphasized */}
-              <div className="relative lg:col-span-4">
-                <div className="absolute left-0 top-0 h-full w-px bg-border" />
-                <div
-                  ref={progressFillRef}
-                  className="absolute left-0 top-0 h-full w-px origin-top bg-olive-600 dark:bg-olive-400"
-                  style={{ transform: "scaleY(0)" }}
-                />
+              {/* Left — title + steps share one frosted panel (no dotted gap
+                  between them; the graphic behind stays blurred + legible) */}
+              <div className="lg:col-span-5">
+                <div className="rounded-[2rem] bg-background/20 p-5">
+                  <Header />
+                  <div className="relative mt-2">
+                    <div className="absolute left-0 top-0 h-full w-px bg-border" />
+                    <div
+                      ref={progressFillRef}
+                      className="absolute left-0 top-0 h-full w-px origin-top bg-olive-600 dark:bg-olive-400"
+                      style={{ transform: "scaleY(0)" }}
+                    />
 
-                <ol className="space-y-8 rounded-2xl bg-background/55 py-6 pl-8 pr-5 backdrop-blur-md">
+                    <ol className="space-y-8 pl-8">
                   {STEPS.map((step, i) => {
                     const active = activeStep === i;
                     return (
@@ -198,11 +193,13 @@ export function ProcessScrollytelling() {
                       </li>
                     );
                   })}
-                </ol>
+                    </ol>
+                  </div>
+                </div>
               </div>
 
-              {/* Right — animated lookalike product UI (larger; board bleeds right) */}
-              <div className="lg:col-span-8 h-[clamp(360px,56vh,600px)]">
+              {/* Right — animated lookalike product UI (board bleeds right) */}
+              <div className="lg:col-span-7 h-[clamp(360px,56vh,600px)]">
                 <DemoStage activeStep={activeStep} />
               </div>
             </div>

@@ -22,6 +22,20 @@ const LAYERS = [
   { len: 8, width: 1.5, opacity: 0.9, color: "var(--olive-200)", glow: false },
 ];
 
+/**
+ * Shorter comet for the circular track ({@link CircleStreak}): a tight bright
+ * core and second layer, with an incrementally longer faint tail.
+ */
+/**
+ * Shorter comet for the circular track ({@link CircleStreak}): a tight bright
+ * core and second layer, with an incrementally longer faint tail.
+ */
+const CIRCLE_LAYERS = [
+  { len: 46, width: 7, opacity: 0.18, color: "var(--olive-200)", glow: true },
+  { len: 9, width: 3.5, opacity: 0.4, color: "var(--olive-300)", glow: false },
+  { len: 3, width: 1.5, opacity: 0.95, color: "var(--olive-200)", glow: false },
+];
+
 export function LightStreak({ radius = 16 }: { radius?: number }) {
   const rawId = useId();
   const glowId = `streak-glow-${rawId.replace(/[:]/g, "")}`;
@@ -109,7 +123,7 @@ export function CircleStreak({ duration = 6 }: { duration?: number }) {
       />
 
       {/* Comet streak — three layers sharing a leading edge, orbiting */}
-      {LAYERS.map((l) => (
+      {CIRCLE_LAYERS.map((l) => (
         <motion.circle
           key={l.len}
           cx="50%"

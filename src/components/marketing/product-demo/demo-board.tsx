@@ -94,7 +94,7 @@ export function DemoBulb({ active }: { active: boolean }) {
           "M9 18h6",
           "M10 22h4",
         ].map((d) => (
-          <path key={d} d={d} strokeWidth={0.5} vectorEffect="non-scaling-stroke" />
+          <path key={d} d={d} strokeWidth={0.75} vectorEffect="non-scaling-stroke" />
         ))}
       </svg>
     </div>
@@ -107,11 +107,13 @@ export function DemoBulb({ active }: { active: boolean }) {
  * manager → developer. Faint line art, centered like the rings, fades with
  * `active`.
  */
-/** Node pills sitting on the circle at 12 / 3 / 6 o'clock. */
+/** Simple badges sitting on the RIGHT half of the circle (top & bottom points
+ * are fine, never the left — that side sits behind the step text). */
 const FLOW_NODES = [
-  { pos: "left-1/2 top-0", title: "Product", sub: "Feature prioritisation and roadmap" },
-  { pos: "left-full top-1/2", title: "Stakeholders", sub: "C-suite or investor buy-in" },
-  { pos: "left-1/2 top-full", title: "Development", sub: "PRDs for project scope and handoff" },
+  { pos: "left-1/2 top-0", label: "Investor buy-in" }, // top
+  { pos: "left-[93%] top-[25%]", label: "Feature prioritisation" }, // upper-right
+  { pos: "left-[93%] top-[75%]", label: "Project scope" }, // lower-right
+  { pos: "left-1/2 top-full", label: "Developer handoff" }, // bottom
 ] as const;
 
 export function DemoFlow({ active }: { active: boolean }) {
@@ -125,22 +127,16 @@ export function DemoFlow({ active }: { active: boolean }) {
     >
       <div className="absolute left-[60%] top-1/2 h-[84vh] w-[84vh] -translate-x-1/2 -translate-y-1/2">
         {/* Faint circle + single orbiting comet (same mechanism as step 2) */}
-        <CircleStreak duration={6} />
+        <CircleStreak duration={8} />
 
-        {/* Node pills on the circle */}
+        {/* Simple badges on the circle */}
         {FLOW_NODES.map((n) => (
           <div
-            key={n.title}
-            className={cn(
-              "absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center",
-              n.pos,
-            )}
+            key={n.label}
+            className={cn("absolute -translate-x-1/2 -translate-y-1/2", n.pos)}
           >
-            <span className="rounded-md border border-border bg-neutral-olive-100 px-2.5 py-0.5 text-[13px] font-semibold text-foreground/80 dark:bg-neutral-olive-800">
-              {n.title}
-            </span>
-            <span className="mt-1 whitespace-nowrap text-[13px] text-muted-foreground">
-              {n.sub}
+            <span className="inline-block whitespace-nowrap rounded-md border border-border/50 bg-neutral-olive-100/40 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground shadow-sm backdrop-blur-lg dark:bg-neutral-olive-800/40">
+              {n.label}
             </span>
           </div>
         ))}
