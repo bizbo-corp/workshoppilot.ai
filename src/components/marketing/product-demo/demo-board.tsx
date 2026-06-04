@@ -45,18 +45,19 @@ export function DemoRings({ active }: { active: boolean }) {
       )}
     >
       {/* Ring center — near the sticky-note cluster. Same faint stroke as the
-          step 1 / step 3 line art (var(--olive-300) @ 0.5) for consistency. */}
+          step 1 / step 3 line art (var(--olive-300), var(--demo-line-opacity),
+          0.5px) for consistency. */}
       <div className="absolute left-[62%] top-1/2">
         {[112, 72, 38].map((vh) => (
           <div
             key={vh}
-            className="absolute rounded-full border"
+            className="absolute rounded-full border-[0.5px]"
             style={{
               width: `${vh}vh`,
               height: `${vh}vh`,
               transform: "translate(-50%, -50%)",
               borderColor: "var(--olive-300)",
-              opacity: 0.5,
+              opacity: "var(--demo-line-opacity)",
             }}
           />
         ))}
@@ -109,7 +110,7 @@ export function DemoNodes({ active }: { active: boolean }) {
             stroke="var(--olive-300)"
             strokeWidth={0.5}
             vectorEffect="non-scaling-stroke"
-            opacity={0.5}
+            style={{ opacity: "var(--demo-line-opacity)" }}
           />
         ))}
       </svg>
@@ -123,13 +124,16 @@ export function DemoNodes({ active }: { active: boolean }) {
  * manager → developer. Faint line art, centered like the rings, fades with
  * `active`.
  */
-/** Simple badges sitting on the RIGHT half of the circle (top & bottom points
- * are fine, never the left — that side sits behind the step text). */
+/** Badges sitting on the RIGHT half of the circle (top & bottom points are
+ * fine, never the left — that side sits behind the step text). `angle` is in
+ * degrees, clockwise from 3 o'clock; FLOW_ROTATION nudges them all CCW so they
+ * don't sit on the cardinal 0/90/180/270 — feels more organic. */
+const FLOW_ROTATION = -10; // degrees CCW
 const FLOW_NODES = [
-  { pos: "left-1/2 top-0", label: "Investor buy-in" }, // top
-  { pos: "left-[93%] top-[25%]", label: "Feature prioritisation" }, // upper-right
-  { pos: "left-[93%] top-[75%]", label: "Project scope" }, // lower-right
-  { pos: "left-1/2 top-full", label: "Developer handoff" }, // bottom
+  { angle: 270, label: "Investor buy-in" }, // top
+  { angle: 330, label: "Feature prioritisation" }, // upper-right
+  { angle: 30, label: "Project scope" }, // lower-right
+  { angle: 90, label: "Developer handoff" }, // bottom
 ] as const;
 
 export function DemoFlow({ active }: { active: boolean }) {
@@ -143,19 +147,26 @@ export function DemoFlow({ active }: { active: boolean }) {
     >
       <div className="absolute left-[60%] top-1/2 h-[84vh] w-[84vh] -translate-x-1/2 -translate-y-1/2">
         {/* Faint circle + single orbiting comet (same mechanism as step 2) */}
-        <CircleStreak duration={8} />
+        <CircleStreak duration={8} guideOpacity="var(--demo-line-opacity)" />
 
-        {/* Simple badges on the circle */}
-        {FLOW_NODES.map((n) => (
-          <div
-            key={n.label}
-            className={cn("absolute -translate-x-1/2 -translate-y-1/2", n.pos)}
-          >
-            <span className="inline-block whitespace-nowrap rounded-md border border-border/50 bg-neutral-olive-100/40 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground shadow-sm backdrop-blur-lg dark:bg-neutral-olive-800/40">
-              {n.label}
-            </span>
-          </div>
-        ))}
+        {/* Simple badges on the circle, positioned from their angle */}
+        {FLOW_NODES.map((n) => {
+          const a = ((n.angle + FLOW_ROTATION) * Math.PI) / 180;
+          return (
+            <div
+              key={n.label}
+              className="absolute -translate-x-1/2 -translate-y-1/2"
+              style={{
+                left: `${50 + 50 * Math.cos(a)}%`,
+                top: `${50 + 50 * Math.sin(a)}%`,
+              }}
+            >
+              <span className="inline-block whitespace-nowrap rounded-md border border-border/50 bg-neutral-olive-100/40 px-2 py-0.5 text-[10px] font-normal uppercase tracking-wide text-muted-foreground backdrop-blur-lg dark:bg-neutral-olive-800/40">
+                {n.label}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

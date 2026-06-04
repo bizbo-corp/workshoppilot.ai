@@ -155,7 +155,7 @@ export function ProcessScrollytelling() {
               {/* Left — title + steps share one frosted panel (no dotted gap
                   between them; the graphic behind stays blurred + legible) */}
               <div className="lg:col-span-5">
-                <div className="rounded-[2rem] bg-background/50 p-5 backdrop-blur-sm">
+                <div className="rounded-[2rem] bg-background/35 p-5">
                   <Header />
                   <div className="relative mt-2">
                     <div className="absolute left-0 top-0 h-full w-px bg-border" />

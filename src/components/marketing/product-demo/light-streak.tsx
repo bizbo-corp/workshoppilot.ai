@@ -96,7 +96,15 @@ export function LightStreak({ radius = 16 }: { radius?: number }) {
  * whole circumference (one comet, not a repeating dash pattern). Place it as a
  * sibling behind the foreground (give the foreground a higher z-index).
  */
-export function CircleStreak({ duration = 6 }: { duration?: number }) {
+export function CircleStreak({
+  duration = 6,
+  guideOpacity = 0.5,
+}: {
+  duration?: number;
+  /** Opacity of the faint resting guide circle the comet rides along. Accepts a
+      number or a CSS value (e.g. a theme-aware `var(--…)`). */
+  guideOpacity?: number | string;
+}) {
   const rawId = useId();
   const glowId = `circle-streak-glow-${rawId.replace(/[:]/g, "")}`;
 
@@ -119,7 +127,7 @@ export function CircleStreak({ duration = 6 }: { duration?: number }) {
         fill="none"
         stroke="var(--olive-300)"
         strokeWidth="0.5"
-        opacity={0.5}
+        style={{ opacity: guideOpacity }}
       />
 
       {/* Comet streak — three layers sharing a leading edge, orbiting */}
