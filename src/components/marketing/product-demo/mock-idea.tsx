@@ -27,6 +27,22 @@ export function MockIdea({ play = true }: { play?: boolean }) {
   return (
     <div className="flex h-full w-full items-center justify-center p-2">
       <div className="relative isolate w-full max-w-sm">
+        {/* The audience card — sits furthest back, peeking out beyond the
+            problem card. Same offset cadence (doubled), `-z-20` keeps it behind
+            the problem card, and it's a touch more opaque. */}
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-0 -z-20 translate-x-[36%] translate-y-[calc(-20%-40px)] rounded-2xl p-5 shadow-xl shadow-black/10",
+            // Darkest + most opaque of the stack (furthest back = in shadow).
+            "bg-neutral-olive-600/25 text-foreground backdrop-blur-sm dark:bg-neutral-olive-300/25",
+          )}
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-widest opacity-70">
+            The Audience
+          </p>
+        </div>
+
         {/* The problem card — sits behind the idea sticky, peeking out top-right.
             Decorative only (not interactive); `-z-10` keeps it below the light
             streak so the streak passes in front of it. */}
@@ -34,9 +50,9 @@ export function MockIdea({ play = true }: { play?: boolean }) {
           aria-hidden
           className={cn(
             "pointer-events-none absolute inset-0 -z-10 translate-x-[18%] translate-y-[calc(-10%-20px)] rounded-2xl p-5 shadow-xl shadow-black/10",
-            // Semi-opaque neutral-olive so the dotted background shows through;
-            // blends over the page in both light and dark mode.
-            "bg-neutral-olive-200/30 text-foreground dark:bg-neutral-olive-700/40",
+            // Lightest + least opaque of the stack (nearest the lit idea card),
+            // so colour darkens and opacity rises as the cards recede.
+            "bg-neutral-olive-700/50 text-foreground backdrop-blur-sm dark:bg-neutral-olive-200/50",
           )}
         >
           <p className="text-[10px] font-semibold uppercase tracking-widest opacity-70">
