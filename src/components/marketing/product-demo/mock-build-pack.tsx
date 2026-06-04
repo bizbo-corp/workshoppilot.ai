@@ -389,7 +389,15 @@ function MdFile({ animate }: { animate: boolean }) {
   );
 }
 
-export function MockBuildPack({ play = true }: { play?: boolean }) {
+export function MockBuildPack({
+  play = true,
+  showCaptions = true,
+}: {
+  play?: boolean;
+  /** Floating audience annotations. Hidden on mobile, where the tight frame
+      makes them overlap the panels. */
+  showCaptions?: boolean;
+}) {
   const reduced = useReducedMotion();
   const animate = play && !reduced;
 
@@ -399,15 +407,19 @@ export function MockBuildPack({ play = true }: { play?: boolean }) {
       <Roadmap animate={animate} />
       <MdFile animate={animate} />
 
-      <Caption style={{ left: "4%", top: "46%" }}>
-        Workshop slide deck for investor buy-in
-      </Caption>
-      <Caption style={{ right: "0%", top: "92%", textAlign: "right" }}>
-        Build pack for development
-      </Caption>
-      <Caption style={{ left: "0%", top: "98%" }}>
-        Feature prioritisation for product teams
-      </Caption>
+      {showCaptions && (
+        <>
+          <Caption style={{ left: "4%", top: "46%" }}>
+            Workshop slide deck for investor buy-in
+          </Caption>
+          <Caption style={{ right: "0%", top: "92%", textAlign: "right" }}>
+            Build pack for development
+          </Caption>
+          <Caption style={{ left: "0%", top: "98%" }}>
+            Feature prioritisation for product teams
+          </Caption>
+        </>
+      )}
     </div>
   );
 }

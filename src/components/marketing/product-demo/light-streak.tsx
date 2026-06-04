@@ -30,7 +30,7 @@ const LAYERS = [
  * Shorter comet for the circular track ({@link CircleStreak}): a tight bright
  * core and second layer, with an incrementally longer faint tail.
  */
-const CIRCLE_LAYERS = [
+export const CIRCLE_LAYERS = [
   { len: 46, width: 7, opacity: 0.18, color: "var(--olive-200)", glow: true },
   { len: 9, width: 3.5, opacity: 0.4, color: "var(--olive-300)", glow: false },
   { len: 3, width: 1.5, opacity: 0.95, color: "var(--olive-200)", glow: false },

@@ -107,7 +107,15 @@ function useElementSize<T extends HTMLElement>(ref: React.RefObject<T | null>) {
   return size;
 }
 
-export function MockWorkshop({ play = true }: { play?: boolean }) {
+export function MockWorkshop({
+  play = true,
+  showLooseNotes = true,
+}: {
+  play?: boolean;
+  /** "Pet Owners" / "Insurers" notes that bleed outside the focus area.
+      Hidden on mobile, where the tight frame makes them overlap the board. */
+  showLooseNotes?: boolean;
+}) {
   const reduced = useReducedMotion();
   const animate = play && !reduced;
   const [phase, setPhase] = useState<Phase>(animate ? "idle" : "grouped");
@@ -196,10 +204,9 @@ export function MockWorkshop({ play = true }: { play?: boolean }) {
         />
       )}
 
-      {/* Loose notes (none by default) */}
-      {WORKSHOP_STICKIES.map((s) => (
-        <Note key={s.label} {...s} />
-      ))}
+      {/* Loose notes that bleed outside the focus area (hidden on mobile) */}
+      {showLooseNotes &&
+        WORKSHOP_STICKIES.map((s) => <Note key={s.label} {...s} />)}
 
       {/* Group members */}
       {GROUP_NOTES_BASE.map((s) => (

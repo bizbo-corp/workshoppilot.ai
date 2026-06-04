@@ -1,3 +1,5 @@
+"use client";
+
 import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import { CircleStreak } from "./light-streak";
@@ -42,16 +44,19 @@ export function DemoRings({ active }: { active: boolean }) {
         active ? "opacity-100" : "opacity-0",
       )}
     >
-      {/* Ring center — near the sticky-note cluster */}
+      {/* Ring center — near the sticky-note cluster. Same faint stroke as the
+          step 1 / step 3 line art (var(--olive-300) @ 0.5) for consistency. */}
       <div className="absolute left-[62%] top-1/2">
         {[112, 72, 38].map((vh) => (
           <div
             key={vh}
-            className="absolute rounded-full border border-neutral-olive-300/60 dark:border-neutral-olive-600/50"
+            className="absolute rounded-full border"
             style={{
               width: `${vh}vh`,
               height: `${vh}vh`,
               transform: "translate(-50%, -50%)",
+              borderColor: "var(--olive-300)",
+              opacity: 0.5,
             }}
           />
         ))}
@@ -60,16 +65,26 @@ export function DemoRings({ active }: { active: boolean }) {
   );
 }
 
-/** Shared faint stroke colour for the step background line art. */
-const LINE_COLOR =
-  "text-neutral-olive-300/55 dark:text-neutral-olive-600/45";
-
 /**
- * Large single-line lightbulb — STEP 1 ONLY. A faint 0.5px (non-scaling)
- * outline echoing the "idea" of step 1, centered like the rings and sized in
- * `vh` so it bleeds past the panel edges. Fades with `active`.
+ * Overlapping-circles line art — STEP 1 ONLY. Three equal circles whose centres
+ * form an equilateral triangle (a symmetric Venn): every pair overlaps by the
+ * same amount and the three-way overlap is centred on the idea card. Clipped to
+ * the panel by `overflow-hidden`. Strokes are as faint as step 3's circular
+ * guide (`var(--olive-300)`, 0.5 opacity, 0.5px). Fades with `active`.
+ *
+ * Centres = card centre (≈1292,553 in the 1946×1105 art space) ± an equilateral
+ * triangle of circumradius R/√3, with R = the centre-to-centre distance, so
+ * each circle passes through the other two centres (classic 3-circle Venn).
  */
-export function DemoBulb({ active }: { active: boolean }) {
+type Circle = { cx: number; cy: number; r: number };
+
+const OVERLAP_CIRCLES: Circle[] = [
+  { cx: 1292, cy: 33, r: 900 }, // top
+  { cx: 842, cy: 813, r: 900 }, // lower-left
+  { cx: 1742, cy: 813, r: 900 }, // lower-right
+];
+
+export function DemoNodes({ active }: { active: boolean }) {
   return (
     <div
       aria-hidden
@@ -79,22 +94,23 @@ export function DemoBulb({ active }: { active: boolean }) {
       )}
     >
       <svg
-        viewBox="0 0 24 24"
+        viewBox="0 0 1946 1105"
         fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={cn(
-          "absolute left-[62%] top-1/2 h-[78vh] w-[78vh] -translate-x-1/2 -translate-y-1/2",
-          LINE_COLOR,
-        )}
+        preserveAspectRatio="xMidYMid slice"
+        className="absolute inset-0 h-full w-full"
       >
-        {[
-          "M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5",
-          "M9 18h6",
-          "M10 22h4",
-        ].map((d) => (
-          <path key={d} d={d} strokeWidth={0.75} vectorEffect="non-scaling-stroke" />
+        {/* Equal overlapping circles — faint, like step 3's circular guide */}
+        {OVERLAP_CIRCLES.map((c, i) => (
+          <circle
+            key={i}
+            cx={c.cx}
+            cy={c.cy}
+            r={c.r}
+            stroke="var(--olive-300)"
+            strokeWidth={0.5}
+            vectorEffect="non-scaling-stroke"
+            opacity={0.5}
+          />
         ))}
       </svg>
     </div>

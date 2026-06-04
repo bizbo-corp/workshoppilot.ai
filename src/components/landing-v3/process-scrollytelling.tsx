@@ -6,7 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { cn } from "@/lib/utils";
 import {
   DemoBoard,
-  DemoBulb,
+  DemoNodes,
   DemoFlow,
   DemoRings,
   DOTTED_BG,
@@ -46,8 +46,10 @@ const STEPS: Step[] = [
 /** The matching mock for each step, used in the static mobile fallback. */
 function MockForStep({ index }: { index: number }) {
   if (index === 0) return <MockIdea play={false} />;
-  if (index === 1) return <MockWorkshop play={false} />;
-  return <MockBuildPack play={false} />;
+  // Loose "Pet Owners"/"Insurers" notes hidden on mobile — they overlap the board.
+  if (index === 1) return <MockWorkshop play={false} showLooseNotes={false} />;
+  // Captions are hidden on mobile — they overlap the panels in the tight frame.
+  return <MockBuildPack play={false} showCaptions={false} />;
 }
 
 function Header() {
@@ -144,7 +146,7 @@ export function ProcessScrollytelling() {
           {/* Section-wide dotted board (behind all three steps), bleeds right */}
           <DemoBoard />
           {/* Faint per-step line art, fades in with its step (eye candy) */}
-          <DemoBulb active={activeStep === 0} />
+          <DemoNodes active={activeStep === 0} />
           {/* Concentric rings — step 2 only, span the section top↔bottom */}
           <DemoRings active={activeStep === 1} />
           <DemoFlow active={activeStep === 2} />
@@ -153,7 +155,7 @@ export function ProcessScrollytelling() {
               {/* Left — title + steps share one frosted panel (no dotted gap
                   between them; the graphic behind stays blurred + legible) */}
               <div className="lg:col-span-5">
-                <div className="rounded-[2rem] bg-background/20 p-5">
+                <div className="rounded-[2rem] bg-background/50 p-5 backdrop-blur-sm">
                   <Header />
                   <div className="relative mt-2">
                     <div className="absolute left-0 top-0 h-full w-px bg-border" />
@@ -170,8 +172,12 @@ export function ProcessScrollytelling() {
                       <li
                         key={step.num}
                         className={cn(
-                          "transition-opacity duration-500 ease-out",
-                          active ? "opacity-100" : "opacity-30 hover:opacity-60",
+                          // Active reads at full strength; inactive stay clearly
+                          // legible (not disabled) and lift toward full on hover.
+                          "transition-all duration-300 ease-out",
+                          active
+                            ? "opacity-100"
+                            : "opacity-60 hover:translate-x-0.5 hover:opacity-90",
                         )}
                       >
                         <button
@@ -218,12 +224,7 @@ export function ProcessScrollytelling() {
           <div className="space-y-16">
             {STEPS.map((step, i) => (
               <div key={step.num} className="space-y-5">
-                <div
-                  className="aspect-[4/3] w-full overflow-hidden rounded-2xl"
-                  style={DOTTED_BG}
-                >
-                  <MockForStep index={i} />
-                </div>
+                {/* Text first on mobile, then the graphic below it */}
                 <div>
                   <span className="font-mono text-sm text-olive-600 dark:text-olive-400">
                     {step.num}
@@ -234,6 +235,15 @@ export function ProcessScrollytelling() {
                   <p className="mt-2 leading-relaxed text-muted-foreground">
                     {step.description}
                   </p>
+                </div>
+                {/* Graphic held in a contained, bordered "preview" frame so any
+                    decorative bleed clips cleanly at the rounded edge instead of
+                    spilling over the page. Tinted fill + dots read as a board. */}
+                <div
+                  className="relative h-[360px] w-full overflow-hidden rounded-2xl border border-border bg-neutral-olive-50/60 shadow-sm sm:h-[420px] dark:bg-neutral-olive-900/30"
+                  style={DOTTED_BG}
+                >
+                  <MockForStep index={i} />
                 </div>
               </div>
             ))}
