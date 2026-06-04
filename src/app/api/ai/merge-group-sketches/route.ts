@@ -41,7 +41,7 @@ async function fetchImageAsBase64(url: string): Promise<string | null> {
  */
 async function describeSketch(imageBase64: string): Promise<string> {
   const result = await generateTextWithRetry({
-    model: google('gemini-2.0-flash'),
+    model: google('gemini-2.5-flash-lite'),
     messages: [
       {
         role: 'user',

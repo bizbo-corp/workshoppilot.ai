@@ -158,12 +158,12 @@ async function generateFullPrd(workshopId: string, force?: boolean): Promise<Res
   // Generate Markdown and JSON in parallel
   const [mdResult, jsonResult] = await Promise.allSettled([
     generateTextWithRetry({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash-lite'),
       temperature: 0.3,
       prompt: buildFullPrdPrompt(artifacts, featurePrioritization, techSpecsMarkdown, techSpecsPreferences),
     }),
     generateTextWithRetry({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash-lite'),
       temperature: 0.2,
       prompt: buildFullPrdJsonPrompt(artifacts, featurePrioritization, techSpecsMarkdown, techSpecsPreferences),
     }),
@@ -193,7 +193,7 @@ async function generateFullPrd(workshopId: string, force?: boolean): Promise<Res
       workshopId,
       stepId: 'validate',
       operation: 'generate-full-prd-md',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash-lite',
       inputTokens: mdResult.value.usage?.inputTokens,
       outputTokens: mdResult.value.usage?.outputTokens,
     });
@@ -203,7 +203,7 @@ async function generateFullPrd(workshopId: string, force?: boolean): Promise<Res
       workshopId,
       stepId: 'validate',
       operation: 'generate-full-prd-json',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash-lite',
       inputTokens: jsonResult.value.usage?.inputTokens,
       outputTokens: jsonResult.value.usage?.outputTokens,
     });
@@ -313,7 +313,7 @@ async function generateV0Prompt(workshopId: string): Promise<Response> {
   const geminiPrompt = buildPrdGenerationPrompt(artifacts);
 
   const result = await generateTextWithRetry({
-    model: google('gemini-2.0-flash'),
+    model: google('gemini-2.5-flash-lite'),
     temperature: 0.4,
     prompt: geminiPrompt,
   });
@@ -323,7 +323,7 @@ async function generateV0Prompt(workshopId: string): Promise<Response> {
     workshopId,
     stepId: 'validate',
     operation: 'generate-prd',
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash-lite',
     inputTokens: result.usage?.inputTokens,
     outputTokens: result.usage?.outputTokens,
   });

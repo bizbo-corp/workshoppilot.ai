@@ -109,7 +109,7 @@ export async function POST(req: Request) {
     });
 
     const result = await generateObject({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash-lite'),
       schema: researchAnalysisSchema,
       prompt,
       temperature: 0.2,
@@ -119,7 +119,7 @@ export async function POST(req: Request) {
       workshopId,
       stepId: 'user-research',
       operation: 'analyze-research',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash-lite',
       inputTokens: result.usage?.inputTokens,
       outputTokens: result.usage?.outputTokens,
     });

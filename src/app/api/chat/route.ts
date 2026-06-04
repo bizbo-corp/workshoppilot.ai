@@ -386,7 +386,7 @@ Do NOT ask the user to re-state the inputs. Do NOT say the board is empty. The c
           workshopId,
           stepId,
           operation: 'chat',
-          model: 'gemini-2.0-flash',
+          model: 'gemini-2.5-flash-lite',
           inputTokens: usage.inputTokens,
           outputTokens: usage.outputTokens,
         });

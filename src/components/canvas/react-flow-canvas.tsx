@@ -1172,6 +1172,83 @@ function ReactFlowCanvasInner({
     [personaTemplates, workshopId, updatePersonaTemplate],
   );
 
+  // Fill the persona card's empty AI zones (empathy fields, narrative, quote)
+  // grounded in the workshop research. Only empty fields are applied so we never
+  // clobber the user's edits or AI content already on the card.
+  const handleFillPersonaFields = useCallback(
+    async (templateId: string): Promise<void> => {
+      const persona = personaTemplates.find((t) => t.id === templateId);
+      if (!persona) return;
+
+      const res = await fetch("/api/ai/persona-fill", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workshopId,
+          templateId,
+          persona: {
+            name: persona.name,
+            age: persona.age,
+            job: persona.job,
+            archetype: persona.archetype,
+            archetypeRole: persona.archetypeRole,
+            empathySays: persona.empathySays,
+            empathyThinks: persona.empathyThinks,
+            empathyFeels: persona.empathyFeels,
+            empathyDoes: persona.empathyDoes,
+            empathyPains: persona.empathyPains,
+            empathyGains: persona.empathyGains,
+            narrative: persona.narrative,
+            quote: persona.quote,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const { toast } = await import("sonner");
+        if (res.status === 429) {
+          toast.error("Slow down a moment — too many AI requests. Try again shortly.");
+        } else {
+          toast.error("Couldn't complete the persona. Please try again.");
+        }
+        return;
+      }
+
+      const { data } = (await res.json()) as {
+        data: Record<string, string>;
+      };
+      if (!data) return;
+
+      // Apply only to zones that are currently empty — never overwrite content.
+      const fillable = [
+        "empathySays",
+        "empathyThinks",
+        "empathyFeels",
+        "empathyDoes",
+        "empathyPains",
+        "empathyGains",
+        "narrative",
+        "quote",
+      ] as const;
+      const updates: Record<string, string> = {};
+      for (const field of fillable) {
+        const current = persona[field as keyof typeof persona];
+        const isEmpty = !(typeof current === "string" && current.trim());
+        if (isEmpty && data[field]?.trim()) {
+          updates[field] = data[field].trim();
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        updatePersonaTemplate(templateId, updates);
+      } else {
+        const { toast } = await import("sonner");
+        toast.info("This persona's zones are already filled in.");
+      }
+    },
+    [personaTemplates, workshopId, updatePersonaTemplate],
+  );
+
   const handleConceptFeasibilityChange = useCallback(
     (id: string, dimension: string, score?: number, rationale?: string) => {
       const card = conceptCards.find((c) => c.id === id);
@@ -1370,6 +1447,7 @@ function ReactFlowCanvasInner({
           ...template,
           onFieldChange: handlePersonaFieldChange,
           onGenerateAvatar: handleGenerateAvatar,
+          onFillFields: handleFillPersonaFields,
         },
         style: { width: 680, height: 1100 },
       }),
@@ -1519,6 +1597,7 @@ function ReactFlowCanvasInner({
     handleConceptFeasibilityChange,
     handlePersonaFieldChange,
     handleGenerateAvatar,
+    handleFillPersonaFields,
     handleHmwFieldChange,
     handleHmwChipSelect,
     handleHmwFieldFocus,

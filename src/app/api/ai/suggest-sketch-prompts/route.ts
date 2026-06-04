@@ -153,7 +153,7 @@ Example format:
 
     try {
       const result = await generateTextWithRetry({
-        model: google('gemini-2.0-flash'),
+        model: google('gemini-2.5-flash-lite'),
         temperature: 0.7, // Higher for creative prompts
         prompt,
       });
@@ -163,7 +163,7 @@ Example format:
         workshopId,
         stepId: 'ideation',
         operation: 'suggest-sketch-prompts',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash-lite',
         inputTokens: result.usage?.inputTokens,
         outputTokens: result.usage?.outputTokens,
       });

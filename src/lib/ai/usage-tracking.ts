@@ -3,13 +3,19 @@ import { aiUsageEvents } from '@/db/schema';
 import { eq, sql } from 'drizzle-orm';
 
 /**
- * Pricing per model (current as of Feb 2026)
+ * Pricing per model (current as of Jun 2026)
  *
- * gemini-2.0-flash: $0.10 per 1M input tokens, $0.40 per 1M output tokens
+ * gemini-2.5-flash-lite: $0.10 per 1M input tokens, $0.40 per 1M output tokens
+ * gemini-2.0-flash: legacy — retired Jun 1 2026; kept for historical usage rows
  * imagen-4.0-fast-generate-001: $0.02 per image
  * imagen-4.0-generate-001: $0.04 per image
  */
 const PRICING = {
+  'gemini-2.5-flash-lite': {
+    inputPerMillionTokens: 0.10, // dollars
+    outputPerMillionTokens: 0.40,
+  },
+  // Legacy — retired, but historical usage rows still reference it.
   'gemini-2.0-flash': {
     inputPerMillionTokens: 0.10, // dollars
     outputPerMillionTokens: 0.40,
@@ -33,8 +39,8 @@ export function calculateCostCents(params: {
 }): number {
   const { model, inputTokens, outputTokens, imageCount } = params;
 
-  if (model === 'gemini-2.0-flash') {
-    const pricing = PRICING['gemini-2.0-flash'];
+  if (model === 'gemini-2.5-flash-lite' || model === 'gemini-2.0-flash') {
+    const pricing = PRICING[model];
     const inputCost = ((inputTokens || 0) / 1_000_000) * pricing.inputPerMillionTokens;
     const outputCost = ((outputTokens || 0) / 1_000_000) * pricing.outputPerMillionTokens;
     return (inputCost + outputCost) * 100; // convert dollars to cents

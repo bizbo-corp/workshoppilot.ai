@@ -23,7 +23,20 @@ import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 export type PersonaTemplateNodeRendererData = PersonaTemplateData & {
   onFieldChange?: (id: string, field: string, value: string) => void;
   onGenerateAvatar?: (id: string) => Promise<string | null>;
+  onFillFields?: (id: string) => Promise<void>;
 };
+
+/** Content zones the "Complete with AI" action can fill. */
+const FILLABLE_ZONES = [
+  "empathySays",
+  "empathyThinks",
+  "empathyFeels",
+  "empathyDoes",
+  "empathyPains",
+  "empathyGains",
+  "narrative",
+  "quote",
+] as const;
 
 export type PersonaTemplateNodeType = Node<
   PersonaTemplateNodeRendererData,
@@ -426,6 +439,7 @@ export const PersonaTemplateNode = memo(
     );
 
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isFilling, setIsFilling] = useState(false);
 
     const handleGenerateAvatar = useCallback(async () => {
       if (!data.onGenerateAvatar || isGenerating) return;
@@ -436,6 +450,41 @@ export const PersonaTemplateNode = memo(
         setIsGenerating(false);
       }
     }, [data.onGenerateAvatar, id, isGenerating]);
+
+    // Whether any AI-fillable zone is still empty — gates the "Complete with AI"
+    // button so it only shows when there's something to fill.
+    const hasEmptyZone = FILLABLE_ZONES.some((field) => {
+      const v = data[field as keyof PersonaTemplateData];
+      return !(typeof v === "string" && v.trim());
+    });
+
+    const handleFillFields = useCallback(async () => {
+      if (!data.onFillFields || isFilling) return;
+      setIsFilling(true);
+      // A single "Generate Persona" press also produces the portrait, but only
+      // if the card doesn't already have one (so we don't clobber an existing
+      // image or burn the image-generation cap on repeat presses). The hero's
+      // own generating state is driven so the portrait area shows progress too.
+      const alsoGenerateImage = !!data.onGenerateAvatar && !data.avatarUrl;
+      if (alsoGenerateImage) setIsGenerating(true);
+      try {
+        await Promise.allSettled([
+          data.onFillFields(id),
+          alsoGenerateImage
+            ? data.onGenerateAvatar!(id)
+            : Promise.resolve(null),
+        ]);
+      } finally {
+        setIsFilling(false);
+        if (alsoGenerateImage) setIsGenerating(false);
+      }
+    }, [
+      data.onFillFields,
+      data.onGenerateAvatar,
+      data.avatarUrl,
+      id,
+      isFilling,
+    ]);
 
     return (
       <div
@@ -460,6 +509,26 @@ export const PersonaTemplateNode = memo(
           {/* Semi-transparent drag handle bar overlaying hero top */}
           <div className="card-drag-handle absolute inset-x-0 top-0 z-10 flex items-center h-9 px-3 cursor-grab active:cursor-grabbing bg-black/20 backdrop-blur-sm rounded-t-2xl transition-colors hover:bg-black/30">
             <GripVertical className="h-4 w-4 text-white/60" />
+
+            {/* Generate action — fills empty zones from the workshop research.
+                Solid olive-accent pill matching the avatar accent, pinned to the
+                top-right of the header bar. Hidden once every zone is filled. */}
+            {!isSkeleton && data.onFillFields && (hasEmptyZone || isFilling) && (
+              <button
+                type="button"
+                onClick={handleFillFields}
+                disabled={isFilling}
+                className="nodrag nopan group ml-auto flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-white/10 transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-wait disabled:opacity-70"
+                style={{ backgroundColor: SAGE.avatarBg }}
+                title="Generate the portrait and empty zones (empathy, narrative, quote) from the workshop research"
+              >
+                <Sparkles
+                  className={cn("h-3.5 w-3.5", isFilling && "animate-spin")}
+                  style={isFilling ? { animationDuration: "2s" } : undefined}
+                />
+                {isFilling ? "Generating…" : "Generate Persona"}
+              </button>
+            )}
           </div>
 
           <HeroSection

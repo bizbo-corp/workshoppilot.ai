@@ -130,7 +130,7 @@ export async function POST(req: Request) {
     }
 
     const result = await generateObject({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash-lite'),
       schema,
       prompt,
     });
@@ -139,7 +139,7 @@ export async function POST(req: Request) {
       workshopId,
       stepId: 'concept',
       operation: `concept-card-${operation}${field ? `-${field}` : ''}`,
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash-lite',
       inputTokens: result.usage?.inputTokens,
       outputTokens: result.usage?.outputTokens,
     });

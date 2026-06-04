@@ -148,7 +148,7 @@ Return ONLY the new card text — plain text, no quotes, no field label, no prea
     }`;
 
     const result = await generateObject({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash-lite'),
       schema: resultSchema,
       prompt,
       temperature: action === 'polish' ? 0.4 : 0.8,
@@ -158,7 +158,7 @@ Return ONLY the new card text — plain text, no quotes, no field label, no prea
       workshopId,
       stepId: 'challenge',
       operation: `setup-card-${action}`,
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash-lite',
       inputTokens: result.usage?.inputTokens,
       outputTokens: result.usage?.outputTokens,
     });

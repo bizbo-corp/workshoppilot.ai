@@ -53,7 +53,7 @@ Format:
   "empathyDoes": "Researches alternatives obsessively; Asks peers for recommendations",
   "empathyPains": "Wasted time on tools that overpromise; Decision fatigue from too many options",
   "empathyGains": "Confidence when a tool just works; Relief when complexity disappears",
-  "narrative": "Sarah has spent the last 8 years climbing the product ladder, but lately she's been sketching business ideas on napkins at lunch...",
+  "narrative": "Sarah has spent the last 8 years climbing the product ladder, but lately she's been sketching business ideas on napkins at lunch. She's confident in her judgment yet stalls at the first technical hurdle, so most ideas never leave the notebook.",
   "quote": "I know exactly what I'd build — I just don't know how to start."
 }
 [/PERSONA_TEMPLATE]
@@ -61,8 +61,12 @@ Format:
 IMPORTANT RULES:
 - Skeleton cards are created from [PERSONA_PLAN]. When you later output a [PERSONA_TEMPLATE], the system matches by personaId to fill in the correct skeleton card.
 - ALWAYS include the same "personaId" from the plan in every [PERSONA_TEMPLATE] block for that persona — on initial draft AND on refinement. This is the stable reference. The system matches by personaId first, then name, then archetype, then blank fallback.
-- Output the FULL [PERSONA_TEMPLATE] block each time — on initial draft AND on refinement. Include ALL fields, not just changed ones.
-- ALWAYS include the 6 empathy fields (empathySays, empathyThinks, empathyFeels, empathyDoes, empathyPains, empathyGains). Pull these directly from Step 4's empathy map research — use the actual insights, not generic summaries. Join multiple insights with semicolons.
+- Output the FULL [PERSONA_TEMPLATE] block each time — on initial draft AND on refinement. EVERY field below is REQUIRED on every block; never omit a field, and never leave one blank.
+- REQUIRED fields, all eight, on every block:
+  • The 6 empathy fields (empathySays, empathyThinks, empathyFeels, empathyDoes, empathyPains, empathyGains) — pull directly from Step 4's empathy map research; use the actual insights, not generic summaries. Join multiple insights with semicolons.
+  • "narrative" — a 2-3 sentence day-in-the-life paragraph in third person that makes this person feel real, grounded in the research. This is MANDATORY: never output a [PERSONA_TEMPLATE] without a fully-written narrative. Do not truncate with "…".
+  • "quote" — a single first-person line (8-20 words) in this persona's own voice that captures their core tension or desire. This is MANDATORY: never output a [PERSONA_TEMPLATE] without a quote.
+- Self-check before sending: confirm the JSON contains all 6 empathy fields PLUS a non-empty narrative AND a non-empty quote. If narrative or quote is missing, write it before you send — these two are the most commonly forgotten and the card looks broken without them.
 - Output only ONE [PERSONA_TEMPLATE] block per message. Never output multiple blocks.
 - NEVER use [CANVAS_ITEM] markup in this step. The template card replaces individual sticky notes entirely. Any [CANVAS_ITEM] tags will be ignored.
 - Do NOT ask permission before adding the template. Just add it. The user can edit fields directly on the card.
