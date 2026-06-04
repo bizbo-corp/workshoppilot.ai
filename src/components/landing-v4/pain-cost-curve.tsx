@@ -40,7 +40,13 @@ const LABEL_BOTTOM = "88px";
 const PILL_BOTTOM = "58px";
 const AXIS_BOTTOM = "68px";
 
-export function PainCostCurve() {
+/**
+ * Reveal-on-scroll helper shared by the desktop and mobile renderings.
+ * Returns a ref to attach to the chart root, `shown` (true once it scrolls into
+ * view, or immediately under reduced-motion), and `reduced` (prefers-reduced-
+ * motion). Bars/labels read these to gate their transitions.
+ */
+function useRevealOnScroll() {
   const ref = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState(false);
   const [reduced, setReduced] = useState(false);
@@ -66,6 +72,12 @@ export function PainCostCurve() {
     io.observe(el);
     return () => io.disconnect();
   }, []);
+
+  return { ref, shown, reduced };
+}
+
+export function PainCostCurve() {
+  const { ref, shown, reduced } = useRevealOnScroll();
 
   const ease = "cubic-bezier(0.22, 1, 0.36, 1)";
 
@@ -197,6 +209,108 @@ export function PainCostCurve() {
             Done in two hours
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * PainCostBarsMobile — the same cost-vs-time story as PainCostCurve, but laid
+ * out as an in-flow vertical timeline for phones and tablets (below `xl`).
+ * Vertical bars + fanned-out labels don't fit a narrow screen and the absolute
+ * background version collides with the stacked copy, so here each week is a node
+ * on a vertical spine: role + activity, week badge on the right, and a thin 2px
+ * bar plotted against a faint full-width track (so the relative cost reads like
+ * a bar graph). WorkshopPilot is pulled out on top in olive.
+ * Bars grow on scroll-into-view; honours prefers-reduced-motion.
+ */
+export function PainCostBarsMobile() {
+  const { ref, shown, reduced } = useRevealOnScroll();
+
+  const ease = "cubic-bezier(0.22, 1, 0.36, 1)";
+  const lineTransition = (i: number) =>
+    reduced ? "none" : `width 0.7s ${ease} ${0.1 + i * 0.08}s`;
+
+  return (
+    <div ref={ref} className="xl:hidden">
+      {/* WorkshopPilot — pulled out on top, olive, mirrors the desktop chart */}
+      <div className="mb-6 rounded-xl border border-olive-500/35 bg-olive-500/[0.05] p-4 dark:border-olive-400/30 dark:bg-olive-400/[0.06]">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-sm font-semibold leading-tight text-olive-700 dark:text-olive-400">
+            WorkshopPilot
+          </p>
+          <span className="shrink-0 rounded-full border border-olive-500/40 bg-background px-2 py-0.5 text-[11px] font-medium text-olive-700 dark:text-olive-400">
+            Week 0
+          </span>
+        </div>
+        <p className="mt-0.5 text-xs leading-tight text-olive-700/70 dark:text-olive-400/70">
+          $299 · one workshop session
+        </p>
+        <div className="mt-3 h-0.5 w-full rounded-full bg-olive-500/15 dark:bg-olive-400/15">
+          <div
+            className="h-full rounded-full bg-olive-500 shadow-[0_0_8px_1px_var(--olive-500)] dark:bg-olive-400"
+            style={{
+              width: shown ? "7%" : "0%",
+              transition: reduced ? "none" : `width 0.7s ${ease} 0.05s`,
+            }}
+          />
+        </div>
+        <p className="mt-3 flex items-center gap-1.5 text-xs font-medium leading-tight text-olive-600 dark:text-olive-400">
+          <span className="inline-flex size-[18px] shrink-0 items-center justify-center rounded-full bg-olive-500 dark:bg-olive-400">
+            <Check className="size-3 text-background" strokeWidth={2.5} aria-hidden="true" />
+          </span>
+          Done in two hours
+        </p>
+      </div>
+
+      <div className="mb-5 flex items-baseline justify-between gap-3">
+        <p className="text-sm font-semibold tracking-tight text-foreground">
+          What it costs to plan the old way
+        </p>
+        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          cost →
+        </span>
+      </div>
+
+      {/* The old way — a vertical timeline, one node per week, linked by a spine */}
+      <div className="relative">
+        {/* spine connecting the week nodes */}
+        <span
+          aria-hidden="true"
+          className="absolute left-[5px] top-3 bottom-3 w-px bg-neutral-olive-300/80 dark:bg-neutral-olive-700/80"
+        />
+        <ul className="space-y-5">
+          {TIMELINE.map((p, i) => (
+            <li key={p.week} className="relative pl-7">
+              {/* node sitting on the spine */}
+              <span
+                aria-hidden="true"
+                className="absolute left-0 top-[5px] size-[11px] rounded-full border-2 border-neutral-olive-400 bg-background dark:border-neutral-olive-500"
+              />
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-sm font-semibold leading-tight text-foreground">
+                  {p.title}
+                </p>
+                <span className="shrink-0 rounded-full border border-border bg-background px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  Week {p.week}
+                </span>
+              </div>
+              <p className="mt-0.5 text-xs leading-tight text-muted-foreground">
+                {p.sub}
+              </p>
+              {/* thin 2px cost bar on a faint full-width track */}
+              <div className="mt-2.5 h-0.5 w-full rounded-full bg-neutral-olive-200/80 dark:bg-neutral-olive-800/80">
+                <div
+                  className="h-full rounded-full bg-neutral-olive-400 dark:bg-neutral-olive-500"
+                  style={{
+                    width: shown ? `${Math.round(p.ratio * 100)}%` : "0%",
+                    transition: lineTransition(i),
+                  }}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

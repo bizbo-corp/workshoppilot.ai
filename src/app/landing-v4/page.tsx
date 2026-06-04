@@ -27,7 +27,7 @@ import {
 } from "@/components/landing-v3/lazy-hero-visuals";
 import { VideoPlayButton } from "@/components/landing-v3/video-dialog";
 import { ProcessScrollytelling } from "@/components/landing-v3/process-scrollytelling";
-import { PainCostCurve } from "@/components/landing-v4/pain-cost-curve";
+import { PainCostCurve, PainCostBarsMobile } from "@/components/landing-v4/pain-cost-curve";
 
 /**
  * Landing Page V4
@@ -176,15 +176,19 @@ export default function LandingV4() {
       </section>
 
       {/* ── Pain Points: "Why Now" ───────────────────────────── */}
-      <section className="relative flex min-h-screen items-center overflow-hidden border-t border-border bg-background py-24 sm:py-32">
-        {/* Cost-vs-time chart (eye candy, behind the copy, hoverable) */}
-        <PainCostCurve />
+      <section className="relative flex min-h-screen items-start overflow-hidden border-t border-border bg-background py-24 sm:py-32 xl:items-center">
+        {/* Cost-vs-time chart (eye candy, behind the copy, hoverable).
+            Large screens only — on phones/tablets it would collide with the
+            stacked copy, so below xl we render PainCostBarsMobile in flow. */}
+        <div className="hidden xl:block" aria-hidden="true">
+          <PainCostCurve />
+        </div>
 
         <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-12 xl:gap-16">
             {/* Left column — sticky headline + intro */}
-            <div className="lg:sticky lg:top-32 lg:self-start">
-              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-serif leading-[1.1] tracking-tight text-foreground mb-6">
+            <div className="xl:sticky xl:top-32 xl:self-start">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl xl:text-[3.5rem] font-serif leading-[1.1] tracking-tight text-foreground mb-6">
                 Most projects fail
                 <br /> before the first
                 <br /> line of code
@@ -259,6 +263,10 @@ export default function LandingV4() {
                 </p>
               </div>
             </div>
+
+            {/* Mobile/tablet only — the cost-vs-time chart as in-flow
+                horizontal bars so it never overlaps the copy above. */}
+            <PainCostBarsMobile />
           </div>
         </div>
       </section>
