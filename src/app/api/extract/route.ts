@@ -99,7 +99,7 @@ export async function POST(req: Request) {
         workshopId,
         stepId,
         operation: 'extract',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash-lite',
         inputTokens: result.usage.inputTokens,
         outputTokens: result.usage.outputTokens,
       });

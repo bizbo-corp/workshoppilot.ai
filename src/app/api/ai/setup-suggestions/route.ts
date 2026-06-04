@@ -122,7 +122,7 @@ ${audienceEmpty ? `- For AUDIENCE, ${ideaProblemKnown ? 'infer who is affected f
 - Plain text only. No numbering, quotes, or trailing punctuation beyond what reads naturally.`;
 
     const result = await generateObject({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash-lite'),
       schema: suggestionsSchema,
       prompt,
       temperature: 0.8,
@@ -132,7 +132,7 @@ ${audienceEmpty ? `- For AUDIENCE, ${ideaProblemKnown ? 'infer who is affected f
       workshopId,
       stepId: 'challenge',
       operation: 'setup-suggestions',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash-lite',
       inputTokens: result.usage?.inputTokens,
       outputTokens: result.usage?.outputTokens,
     });

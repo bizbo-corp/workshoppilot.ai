@@ -130,7 +130,7 @@ export async function POST(req: Request) {
     try {
       const prompt = buildJourneyMapperPrompt(artifacts, journeyCanvasData);
       const result = await generateTextWithRetry({
-        model: google('gemini-2.0-flash'),
+        model: google('gemini-2.5-flash-lite'),
         temperature: 0.3,
         prompt,
       });
@@ -139,7 +139,7 @@ export async function POST(req: Request) {
         workshopId,
         stepId: 'validate',
         operation: 'generate-journey-map',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash-lite',
         inputTokens: result.usage?.inputTokens,
         outputTokens: result.usage?.outputTokens,
       });

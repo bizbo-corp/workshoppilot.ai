@@ -16,7 +16,7 @@ export const maxDuration = 60;
  */
 async function describeExistingSketch(imageBase64: string): Promise<string> {
   const result = await generateTextWithRetry({
-    model: google('gemini-2.0-flash'),
+    model: google('gemini-2.5-flash-lite'),
     messages: [
       {
         role: 'user',
@@ -117,7 +117,7 @@ CLASSIFICATION: <UI|PROCESS>
 PROMPT: <your 2-4 sentence concept prompt>`;
 
     const result = await generateTextWithRetry({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash-lite'),
       messages: [
         {
           role: 'user',

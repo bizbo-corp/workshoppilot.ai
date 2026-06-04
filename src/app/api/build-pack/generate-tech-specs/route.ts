@@ -114,12 +114,12 @@ export async function POST(req: Request) {
     // Generate Markdown and JSON in parallel
     const [mdResult, jsonResult] = await Promise.allSettled([
       generateTextWithRetry({
-        model: google('gemini-2.0-flash'),
+        model: google('gemini-2.5-flash-lite'),
         temperature: 0.3,
         prompt: buildTechSpecsPrompt(artifacts, featurePrioritization, preferences),
       }),
       generateTextWithRetry({
-        model: google('gemini-2.0-flash'),
+        model: google('gemini-2.5-flash-lite'),
         temperature: 0.2,
         prompt: buildTechSpecsJsonPrompt(artifacts, featurePrioritization, preferences),
       }),
@@ -149,7 +149,7 @@ export async function POST(req: Request) {
         workshopId,
         stepId: 'validate',
         operation: 'generate-tech-specs-md',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash-lite',
         inputTokens: mdResult.value.usage?.inputTokens,
         outputTokens: mdResult.value.usage?.outputTokens,
       });
@@ -159,7 +159,7 @@ export async function POST(req: Request) {
         workshopId,
         stepId: 'validate',
         operation: 'generate-tech-specs-json',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash-lite',
         inputTokens: jsonResult.value.usage?.inputTokens,
         outputTokens: jsonResult.value.usage?.outputTokens,
       });

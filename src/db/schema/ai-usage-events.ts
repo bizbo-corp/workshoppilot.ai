@@ -20,7 +20,7 @@ export const aiUsageEvents = pgTable(
       .references(() => workshops.id, { onDelete: 'cascade' }),
     stepId: text('step_id'), // nullable (image gen may lack step context)
     operation: text('operation').notNull(), // 'chat' | 'extract' | 'generate-concept' | etc.
-    model: text('model').notNull(), // 'gemini-2.0-flash' | 'imagen-4.0-fast-generate-001'
+    model: text('model').notNull(), // 'gemini-2.5-flash-lite' | 'imagen-4.0-fast-generate-001'
     inputTokens: integer('input_tokens'), // nullable (null for image gen)
     outputTokens: integer('output_tokens'), // nullable (null for image gen)
     imageCount: integer('image_count'), // nullable (for image gen only)

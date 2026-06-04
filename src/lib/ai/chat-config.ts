@@ -6,9 +6,9 @@ import { getParticipantGuidance } from "./prompts/participant-context";
 
 /**
  * Gemini model configuration for chat
- * Using gemini-2.0-flash for fast, cost-effective MVP responses
+ * Using gemini-2.5-flash-lite for fast, cost-effective MVP responses
  */
-export const chatModel = google("gemini-2.0-flash");
+export const chatModel = google("gemini-2.5-flash-lite");
 
 /**
  * Generic system prompt for design thinking facilitation

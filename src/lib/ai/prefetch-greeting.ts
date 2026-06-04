@@ -123,7 +123,7 @@ export async function prefetchStepStartGreeting(params: {
         workshopId,
         stepId,
         operation: 'chat',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash-lite',
         inputTokens: result.usage.inputTokens,
         outputTokens: result.usage.outputTokens,
       });

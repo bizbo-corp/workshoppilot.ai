@@ -144,7 +144,7 @@ Output as JSON array of strings. Example: ["Mobile-First Experience", "Community
 
     // Call Gemini via Vercel AI SDK
     const result = await generateObject({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash-lite'),
       schema: z.object({
         themes: z.array(z.string()).describe('Array of 3-5 theme branch names'),
       }),
@@ -156,7 +156,7 @@ Output as JSON array of strings. Example: ["Mobile-First Experience", "Community
       workshopId,
       stepId: 'ideation',
       operation: 'suggest-themes',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash-lite',
       inputTokens: result.usage?.inputTokens,
       outputTokens: result.usage?.outputTokens,
     });

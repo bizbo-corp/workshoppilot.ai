@@ -100,7 +100,7 @@ INSIGHTS (index. [persona] text):
 ${numbered}`;
 
     const result = await generateObject({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash-lite'),
       schema: seedSchema,
       prompt,
       temperature: 0.2,
@@ -110,7 +110,7 @@ ${numbered}`;
       workshopId,
       stepId: 'sense-making',
       operation: 'sense-making-seed',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash-lite',
       inputTokens: result.usage?.inputTokens,
       outputTokens: result.usage?.outputTokens,
     });

@@ -92,7 +92,7 @@ If the conversation doesn't cover all 10 steps, summarize the ones that were dis
 
       // Call streamText with Output.object and rate limit retry
       const result = await streamTextWithRetry({
-        model: google('gemini-2.0-flash'),
+        model: google('gemini-2.5-flash-lite'),
         system: extractionPrompt,
         messages: modelMessages,
         output: Output.object({ schema }),
@@ -171,7 +171,7 @@ RULES:
 - Use the user's exact words where possible.`;
 
     const result = await generateTextWithRetry({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash-lite'),
       prompt: fallbackPrompt,
       temperature: 0.1,
     });

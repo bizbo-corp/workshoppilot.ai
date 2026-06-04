@@ -156,7 +156,7 @@ ${generateWildcards ? `6. If an owner has fewer than ${totalSlots} ideas, genera
 
       try {
         const result = await generateObject({
-          model: google('gemini-2.0-flash'),
+          model: google('gemini-2.5-flash-lite'),
           schema: z.object({
             ownerSlots: z.record(z.string(), z.array(slotSchema)),
           }),
@@ -167,7 +167,7 @@ ${generateWildcards ? `6. If an owner has fewer than ${totalSlots} ideas, genera
           workshopId,
           stepId: 'ideation',
           operation: 'enhance-sketch-ideas-batch',
-          model: 'gemini-2.0-flash',
+          model: 'gemini-2.5-flash-lite',
           inputTokens: result.usage?.inputTokens,
           outputTokens: result.usage?.outputTokens,
         });
@@ -285,7 +285,7 @@ ${wildcardCount > 0 ? `\nThen generate ${wildcardCount} additional BONUS ideas (
 
     try {
       const result = await generateObject({
-        model: google('gemini-2.0-flash'),
+        model: google('gemini-2.5-flash-lite'),
         schema: z.object({
           slots: z.array(slotSchema),
         }),
@@ -297,7 +297,7 @@ ${wildcardCount > 0 ? `\nThen generate ${wildcardCount} additional BONUS ideas (
         workshopId,
         stepId: 'ideation',
         operation: 'enhance-sketch-ideas',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash-lite',
         inputTokens: result.usage?.inputTokens,
         outputTokens: result.usage?.outputTokens,
       });

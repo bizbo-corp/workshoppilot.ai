@@ -232,7 +232,7 @@ export async function POST(req: Request) {
     // Call Gemini to generate concept
     try {
       const result = await generateTextWithRetry({
-        model: google('gemini-2.0-flash'),
+        model: google('gemini-2.5-flash-lite'),
         temperature: 0.5, // Lower than sketch prompts for more consistent structured output
         prompt,
       });
@@ -242,7 +242,7 @@ export async function POST(req: Request) {
         workshopId,
         stepId: 'ideation',
         operation: 'generate-concept',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash-lite',
         inputTokens: result.usage?.inputTokens,
         outputTokens: result.usage?.outputTokens,
       });

@@ -83,7 +83,7 @@ export async function generateStepSummary(
 
     // Generate summary via Gemini with rate limit retry
     const result = await generateTextWithRetry({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash-lite'),
       temperature: 0.1, // Low for factual accuracy
       prompt: `INSTRUCTIONS:
 Summarize the following conversation from Step ${stepName} in 3-4 bullet points.
@@ -113,7 +113,7 @@ ${formattedConversation}`,
       workshopId,
       stepId,
       operation: 'generate-summary',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash-lite',
       inputTokens: result.usage?.inputTokens,
       outputTokens: result.usage?.outputTokens,
     });

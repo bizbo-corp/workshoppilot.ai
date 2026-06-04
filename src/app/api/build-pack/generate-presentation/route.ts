@@ -96,7 +96,7 @@ export async function POST(req: Request) {
     } else {
       // Generate executive summary via Gemini (small, fast call)
       const result = await generateTextWithRetry({
-        model: google('gemini-2.0-flash'),
+        model: google('gemini-2.5-flash-lite'),
         temperature: 0.3,
         prompt: buildPresentationSummaryPrompt(artifacts),
       });
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
         workshopId,
         stepId: 'validate',
         operation: 'generate-presentation',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash-lite',
         inputTokens: result.usage?.inputTokens,
         outputTokens: result.usage?.outputTokens,
       });
