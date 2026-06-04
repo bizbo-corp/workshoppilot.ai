@@ -50,9 +50,8 @@ export function MockIdea({ play = true }: { play?: boolean }) {
           aria-hidden
           className={cn(
             "pointer-events-none absolute inset-0 -z-10 translate-x-[18%] translate-y-[calc(-10%-20px)] rounded-2xl p-5 shadow-xl shadow-black/10",
-            // Lightest + least opaque of the stack (nearest the lit idea card),
-            // so colour darkens and opacity rises as the cards recede.
-            "bg-neutral-olive-700/50 text-foreground backdrop-blur-sm dark:bg-neutral-olive-200/50",
+            // Same fill as the audience card behind it.
+            "bg-neutral-olive-600/25 text-foreground backdrop-blur-sm dark:bg-neutral-olive-300/25",
           )}
         >
           <p className="text-[10px] font-semibold uppercase tracking-widest opacity-70">
