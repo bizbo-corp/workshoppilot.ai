@@ -294,6 +294,22 @@ export default async function LobbyPage({ params }: PageProps) {
               the right column. */}
           <div className="flex flex-col gap-6 lg:col-span-2 xl:col-span-3">
             {countdownBlock}
+            {/* Participant's primary CTA, pinned directly under "Let's do this".
+                sticky top-6: as the page scrolls, the Begin button rides along
+                the top of the scroll container through the whole hero region so
+                a late joiner can't miss it. Facilitators get their Start button
+                in the roster card instead. */}
+            {!isFacilitator && (
+              <div className="sticky top-6 z-10">
+                <LobbyParticipantCta
+                  sessionId={sessionId}
+                  workshopId={workshop.id}
+                  initialStarted={!!workshop.workshopStartedAt}
+                  initialStepOrder={ctaStep.order}
+                  initialStepName={ctaStep.name}
+                />
+              </div>
+            )}
             <div className="hidden flex-1 xl:flex xl:flex-col">{challengeBlock}</div>
           </div>
           <div className="flex flex-col gap-6 lg:col-span-1 xl:col-span-2">
@@ -318,24 +334,16 @@ export default async function LobbyPage({ params }: PageProps) {
         {/* Walk-out — full width at the very bottom on every breakpoint. */}
         {walkOutBlock}
 
-        {/* Footer — participant-only. Adaptive CTA (begin / waiting+nudge) on top,
-            the change-request affordance below it. */}
+        {/* Footer — participant-only. The primary CTA now lives pinned under the
+            hero (see left column above); only the secondary change-request
+            affordance remains here. */}
         {!isFacilitator && (
-          <section className="mx-auto flex w-full max-w-xl flex-col gap-3 pb-4">
-            <LobbyParticipantCta
-              sessionId={sessionId}
+          <section className="mx-auto flex w-full max-w-xl flex-col items-end gap-2 pb-4">
+            <LobbyParticipantActions
               workshopId={workshop.id}
-              initialStarted={!!workshop.workshopStartedAt}
-              initialStepOrder={ctaStep.order}
-              initialStepName={ctaStep.name}
+              isWaiting={callerIsWaiting}
+              existingNote={callerApproval?.note ?? null}
             />
-            <div className="flex flex-col items-end gap-2">
-              <LobbyParticipantActions
-                workshopId={workshop.id}
-                isWaiting={callerIsWaiting}
-                existingNote={callerApproval?.note ?? null}
-              />
-            </div>
           </section>
         )}
       </div>
