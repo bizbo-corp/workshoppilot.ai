@@ -45,8 +45,14 @@ export interface StepContext {
    *  'real' = real-world interviews). null until selected. Only meaningful for user-research. */
   interviewMode: 'synthetic' | 'real' | null;
   /** Step-6 journey template locked by the team via the multiplayer poll.
-   *  null until the facilitator hits "Lock template". Only meaningful for journey-mapping. */
-  lockedJourneyTemplate: { templateId: string; templateName: string } | null;
+   *  null until the facilitator hits "Lock template". Only meaningful for journey-mapping.
+   *  `stages` carries the locked option's localised stage names so the AI emits
+   *  them verbatim (matching the card) instead of generic catalog stages. */
+  lockedJourneyTemplate: {
+    templateId: string;
+    templateName: string;
+    stages?: string[];
+  } | null;
   messages: Array<{
     role: string;
     content: string;

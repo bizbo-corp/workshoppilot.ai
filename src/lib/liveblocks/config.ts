@@ -238,6 +238,9 @@ declare global {
           type: 'JOURNEY_POLL_LOCKED';
           templateId: string;
           templateName: string;
+          /** Locked option's localised stages — keeps every client's
+           *  lockedTemplate identical so the banner/grid agree. */
+          stages?: string[];
         }
       /** Broadcast when the facilitator's AI produces a message worth surfacing
        *  to all participants — drives the "workshop pulse" card. Fired by the

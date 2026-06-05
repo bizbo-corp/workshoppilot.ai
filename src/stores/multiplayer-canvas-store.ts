@@ -936,13 +936,13 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
               },
             };
           }),
-        lockJourneyTemplate: (templateId, templateName) =>
+        lockJourneyTemplate: (templateId, templateName, stages) =>
           set((state) => {
             if (!state.journeyPoll) return state;
             return {
               journeyPoll: {
                 ...state.journeyPoll,
-                lockedTemplate: { templateId, templateName },
+                lockedTemplate: { templateId, templateName, stages },
               },
             };
           }),

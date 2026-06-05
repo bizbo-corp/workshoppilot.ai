@@ -316,7 +316,7 @@ function JourneyPollListener() {
       return;
     }
     if (event.type === "JOURNEY_POLL_LOCKED") {
-      lockJourneyTemplate(event.templateId, event.templateName);
+      lockJourneyTemplate(event.templateId, event.templateName, event.stages);
       toast(`Template locked: ${event.templateName}`, { duration: 3000 });
       return;
     }

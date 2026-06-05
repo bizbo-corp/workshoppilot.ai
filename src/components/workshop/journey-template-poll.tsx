@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check } from "lucide-react";
+import { Check, Sparkles, Plus } from "lucide-react";
 import { useBroadcastEvent } from "@liveblocks/react";
 import { toast } from "sonner";
 import { useCanvasStore } from "@/providers/canvas-store-provider";
@@ -12,7 +12,14 @@ import {
 } from "@/lib/liveblocks/config";
 import { getTemplateById } from "@/lib/workshop/journeyTemplates";
 import type { JourneyPollOption } from "@/lib/canvas/journey-poll-types";
+import { emitJourneyCustomRequest } from "@/lib/canvas/journey-custom-bus";
 import { cn } from "@/lib/utils";
+
+/** Fire the custom-journey request to the chat panel and acknowledge it. */
+function requestCustomJourney(description: string) {
+  emitJourneyCustomRequest({ description });
+  toast("Asking Wanda to build your journey…", { duration: 2500 });
+}
 
 function initialsOf(name: string): string {
   const trimmed = name.trim();
@@ -41,6 +48,10 @@ interface JourneyTemplatePollViewProps {
   confirmDisabled: boolean;
   confirmHint?: string;
   onConfirm: () => void;
+  /** When set, renders the "Create your own journey" affordance. The user types
+   *  what they want to map and Wanda builds a custom option. Only wired for the
+   *  person who drives the AI (solo owner / multiplayer facilitator). */
+  onRequestCustom?: (description: string) => void;
 }
 
 export function JourneyTemplatePollView({
@@ -55,6 +66,7 @@ export function JourneyTemplatePollView({
   confirmDisabled,
   confirmHint,
   onConfirm,
+  onRequestCustom,
 }: JourneyTemplatePollViewProps) {
   return (
     <div className="mb-4 rounded-xl border border-olive-200 bg-card p-5 shadow-sm dark:border-neutral-olive-800">
@@ -73,12 +85,18 @@ export function JourneyTemplatePollView({
       <div role="radiogroup" aria-label={title} className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {options.map((option) => {
           const isSelected = selectedTemplateId === option.templateId;
-          // Prefer the template's actual stages from the catalog; fall back to
-          // the option's stagePreview (defensive — unknown catalog id).
+          // Prefer the AI's localised stages (what it spoke in chat) so the card
+          // matches the conversation. Fall back to the option's stored preview,
+          // then the generic catalog stages only as a last resort.
           const catalogTemplate = getTemplateById(option.templateId);
-          const previewStages = catalogTemplate
-            ? catalogTemplate.stages.slice(0, 3).map((s) => s.name)
-            : option.stagePreview;
+          const previewStages =
+            option.stages && option.stages.length > 0
+              ? option.stages.slice(0, 3)
+              : option.stagePreview.length > 0
+                ? option.stagePreview
+                : catalogTemplate
+                  ? catalogTemplate.stages.slice(0, 3).map((s) => s.name)
+                  : [];
 
           return (
             <button
@@ -135,6 +153,8 @@ export function JourneyTemplatePollView({
         })}
       </div>
 
+      {onRequestCustom && <CustomJourneyPanel onSubmit={onRequestCustom} />}
+
       {showConfirm && (
         <div className="mt-4 flex items-center justify-end gap-3">
           {confirmHint && (
@@ -155,6 +175,97 @@ export function JourneyTemplatePollView({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * CustomJourneyPanel — "none of these fit?" affordance. Collapsed it's a single
+ * link; expanded it takes a one-line description and asks Wanda to build a
+ * bespoke journey (she replies by re-opening the poll with a localised `custom`
+ * option). Only rendered for the person who drives the AI.
+ */
+function CustomJourneyPanel({
+  onSubmit,
+}: {
+  onSubmit: (description: string) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [value, setValue] = React.useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  const submit = () => {
+    const description = value.trim();
+    if (!description) return;
+    onSubmit(description);
+    setValue("");
+    setOpen(false);
+  };
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-dashed border-olive-300 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-olive-400 hover:text-foreground dark:border-neutral-olive-700"
+      >
+        <Plus className="h-3.5 w-3.5" aria-hidden />
+        None of these fit? Create your own journey
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-olive-300 bg-olive-50/40 p-3 dark:border-olive-700 dark:bg-olive-950/20">
+      <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Sparkles className="h-4 w-4 text-olive-600" aria-hidden />
+        Create your own journey
+      </div>
+      <p className="mb-2 text-xs text-muted-foreground">
+        Describe the journey you want to map and Wanda will draft the stages for
+        you.
+      </p>
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            submit();
+          } else if (e.key === "Escape") {
+            setOpen(false);
+          }
+        }}
+        placeholder="e.g. patient notes that carry context across multiple vets"
+        className="w-full rounded-md border border-olive-200 bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-500/40 dark:border-neutral-olive-800"
+      />
+      <div className="mt-2 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            setValue("");
+          }}
+          className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={!value.trim()}
+          className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Sparkles className="h-3.5 w-3.5" aria-hidden />
+          Ask Wanda to build
+        </button>
+      </div>
     </div>
   );
 }
@@ -194,7 +305,11 @@ export function SoloJourneyTemplatePoll() {
     const option = journeyPoll.options.find(
       (o) => o.templateId === selectedTemplateId,
     );
-    lockTemplate(selectedTemplateId, option?.templateName ?? selectedTemplateId);
+    lockTemplate(
+      selectedTemplateId,
+      option?.templateName ?? selectedTemplateId,
+      option?.stages,
+    );
   };
 
   return (
@@ -210,6 +325,7 @@ export function SoloJourneyTemplatePoll() {
         selectedTemplateId ? undefined : "Select a structure to continue."
       }
       onConfirm={handleConfirm}
+      onRequestCustom={requestCustomJourney}
     />
   );
 }
@@ -308,11 +424,12 @@ export function JourneyTemplatePoll() {
     }
     const option = journeyPoll.options.find((o) => o.templateId === winner);
     const templateName = option?.templateName ?? winner;
-    lockTemplate(winner, templateName);
+    lockTemplate(winner, templateName, option?.stages);
     broadcast({
       type: "JOURNEY_POLL_LOCKED",
       templateId: winner,
       templateName,
+      stages: option?.stages,
     });
     toast.success(`Confirmed: ${templateName}`);
   };
@@ -359,6 +476,7 @@ export function JourneyTemplatePoll() {
           : "Confirm the team's pick to start mapping."
       }
       onConfirm={handleConfirm}
+      onRequestCustom={isFacilitator ? requestCustomJourney : undefined}
     />
   );
 }

@@ -54,6 +54,10 @@ import {
   onGridAutocomplete,
   type GridAutocompleteRequest,
 } from "@/lib/canvas/grid-autocomplete-bus";
+import {
+  onJourneyCustomRequest,
+  type JourneyCustomRequest,
+} from "@/lib/canvas/journey-custom-bus";
 import { saveCanvasState, savePersonaCandidates, loadCanvasState } from "@/actions/canvas-actions";
 import { sendResearchReminders } from "@/actions/research-actions";
 import { ChatSkeleton } from "./chat-skeleton";
@@ -716,12 +720,23 @@ function parseJourneyStages(content: string): {
 }
 
 /**
- * Parse [JOURNEY_POLL_OPTIONS]templateId1|templateId2|templateId3[/JOURNEY_POLL_OPTIONS]
- * from AI content. The AI picks 3 template IDs from the journeyTemplates catalog;
- * we look up name/description/stages from the catalog ourselves.
+ * Parse [JOURNEY_POLL_OPTIONS]…[/JOURNEY_POLL_OPTIONS] from AI content.
+ *
+ * Rich format (one option per line, localised to the workshop's domain):
+ *   templateId :: Label :: One-line description :: Stage 1 > Stage 2 > Stage 3
+ * The label/description/stages are what the user SEES on the card, so the AI
+ * supplies the same plain, in-domain words it speaks in chat (rather than the
+ * generic catalog jargon). The leading templateId is a catalog id (used for
+ * vote tallying) or the sentinel `custom` for an AI-built journey. Any field
+ * the AI omits falls back to the catalog entry for that id.
+ *
+ * Legacy format (still supported): bare pipe-separated ids
+ *   templateId1|templateId2|templateId3
+ * resolved entirely from the catalog.
  *
  * Returns clean content (markup removed for display) and the resolved option
- * list. Unknown template IDs are silently dropped — defensive against AI typos.
+ * list. Unknown catalog ids with no localised fields are dropped — defensive
+ * against AI typos. `custom` is always kept.
  */
 function parseJourneyPollOptions(content: string): {
   cleanContent: string;
@@ -739,20 +754,42 @@ function parseJourneyPollOptions(content: string): {
       .trim();
   }
   if (!match) return { cleanContent, options: [] };
-  const ids = match[1]
-    .split("|")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  const options: import("@/lib/canvas/journey-poll-types").JourneyPollOption[] =
-    [];
-  for (const id of ids) {
+
+  const inner = match[1].trim();
+  type Option = import("@/lib/canvas/journey-poll-types").JourneyPollOption;
+  const options: Option[] = [];
+
+  // Each option is on its own line in the rich format. The legacy format is a
+  // single line of pipe-separated ids — split that out too so both work.
+  const records = inner.includes("::")
+    ? inner.split("\n").map((l) => l.trim()).filter((l) => l.length > 0)
+    : inner.split("|").map((s) => s.trim()).filter((s) => s.length > 0);
+
+  for (const record of records) {
+    const fields = record.split("::").map((f) => f.trim());
+    const id = fields[0];
+    if (!id) continue;
+    const label = fields[1] || "";
+    const description = fields[2] || "";
+    const localisedStages = (fields[3] || "")
+      .split(">")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
     const template = getTemplateById(id);
-    if (!template) continue;
+    // Drop unknown catalog ids that carry no localised label (likely a typo).
+    // Keep `custom` and any id the AI bothered to localise.
+    if (!template && id !== "custom" && !label) continue;
+
+    const catalogStages = template?.stages.map((s) => s.name) ?? [];
+    const stages = localisedStages.length > 0 ? localisedStages : catalogStages;
+
     options.push({
-      templateId: template.id,
-      templateName: template.name,
-      description: template.description,
-      stagePreview: template.stages.slice(0, 3).map((s) => s.name),
+      templateId: id,
+      templateName: label || template?.name || id,
+      description: description || template?.description || "",
+      stagePreview: stages.slice(0, 3),
+      stages: stages.length > 0 ? stages : undefined,
     });
   }
   return { cleanContent, options };
@@ -1882,6 +1919,36 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
         const c = req.columns[0];
         text = `${marker}\nAuto-fill just the **${req.rowLabel}** cell for the **${c.label}** stage. Emit exactly one [GRID_ITEM row="${req.rowId}" col="${c.id}"]…[/GRID_ITEM] and nothing else — no other cells, no row change. Keep it to a few words grounded in the persona and prior context.${emotionsNote} Then add a short line inviting me to tweak it.`;
       }
+      void (async () => {
+        await flush();
+        send({ role: "user", parts: [{ type: "text", text }] });
+      })();
+    });
+    return unsub;
+  }, []);
+
+  // Step 6 — the journey poll's "Create your own journey" affordance asks the AI
+  // to build a bespoke journey from the user's description. We send it as a
+  // VISIBLE user message (the user typed real intent, so it should read in the
+  // transcript). Wanda replies by re-opening the poll with a localised `custom`
+  // option (see the step prompt's CUSTOM JOURNEY handling). Reuses the same
+  // volatile-ref the auto-fill effect captures so we subscribe just once.
+  React.useEffect(() => {
+    const unsub = onJourneyCustomRequest((req: JourneyCustomRequest) => {
+      const {
+        status: s,
+        stepId,
+        sendMessage: send,
+        flushCanvasToDb: flush,
+      } = autocompleteRef.current;
+      if (stepId !== "journey-mapping") return;
+      if (s !== "ready") {
+        toast.info("One moment — finishing the current response first.");
+        return;
+      }
+      const description = req.description.trim();
+      if (!description) return;
+      const text = `I'd like to map a custom journey instead: ${description}`;
       void (async () => {
         await flush();
         send({ role: "user", parts: [{ type: "text", text }] });

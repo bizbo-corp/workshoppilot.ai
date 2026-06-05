@@ -240,16 +240,31 @@ export async function assembleStepContext(
       : null;
 
   const journeyPollRaw = (canvasState as { journeyPoll?: unknown } | null)?.journeyPoll as
-    | { lockedTemplate?: { templateId?: unknown; templateName?: unknown } | null }
+    | {
+        lockedTemplate?: {
+          templateId?: unknown;
+          templateName?: unknown;
+          stages?: unknown;
+        } | null;
+      }
     | null
     | undefined;
-  const lockedJourneyTemplate: { templateId: string; templateName: string } | null =
+  const lockedJourneyTemplate: {
+    templateId: string;
+    templateName: string;
+    stages?: string[];
+  } | null =
     journeyPollRaw?.lockedTemplate &&
     typeof journeyPollRaw.lockedTemplate.templateId === 'string' &&
     typeof journeyPollRaw.lockedTemplate.templateName === 'string'
       ? {
           templateId: journeyPollRaw.lockedTemplate.templateId,
           templateName: journeyPollRaw.lockedTemplate.templateName,
+          stages: Array.isArray(journeyPollRaw.lockedTemplate.stages)
+            ? journeyPollRaw.lockedTemplate.stages.filter(
+                (s): s is string => typeof s === 'string' && s.trim().length > 0,
+              )
+            : undefined,
         }
       : null;
 
