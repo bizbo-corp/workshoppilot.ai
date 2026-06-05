@@ -54,19 +54,13 @@ const ROW_ICONS: Record<string, LucideIcon> = {
 };
 
 /**
- * Per-row background tints — shades of olive/sage. Painted at the shared empathy
- * zone opacity (`--canvas-zone-opacity`) so the lanes read as calm olive bands,
- * matching the empathy map backgrounds rather than a rainbow.
+ * Single faint-olive fill for the whole journey-map body (no per-row colour
+ * variation — rows are separated by strokes instead). Sits under the watercolour
+ * wash so the map reads as one calm olive paper.
  */
-const ROW_TINT_COLORS: Record<string, string> = {
-  actions: '#8a9a5b',
-  goals: '#9aa873',
-  barriers: '#6b7f4e',
-  touchpoints: '#a3b18a',
-  emotions: '#b1bca0',
-  moments: '#7e8c54',
-  opportunities: '#95a36f',
-};
+const JOURNEY_BODY_TINT = '#8a9a5b';
+const ROW_TINT_OPACITY_LIGHT = 0.14;
+const ROW_TINT_OPACITY_DARK = 0.22;
 
 /**
  * Selector for viewport transformation
@@ -191,6 +185,11 @@ export function GridOverlay({
   const tableH = (rowYPositions[rowYPositions.length - 1] - headerAreaY) * zoom;
   const cornerRadius = 16 * zoom;
   const tableBg = isDark ? '#1c2416' : '#f9f9f8'; // dark olive / neutral-olive-50 paper
+  // Watercolour wash painted over the row bands — olive pigment, soft mottle.
+  // Light mode uses a deep olive that pools darker; dark mode a light olive so
+  // the texture stays visible on the dark paper. Tune the opacity to taste.
+  const watercolourInk = isDark ? '#aeb89a' : '#5b6b41';
+  const watercolourOpacity = isDark ? 0.15 : 0.12;
 
   // --- Drag handlers ---
   const computeDropIndex = useCallback(
@@ -316,7 +315,7 @@ export function GridOverlay({
         width="100%"
         height="100%"
       >
-        {/* Clip path for rounded table corners */}
+        {/* Clip path for rounded table corners + watercolour wash filter */}
         <defs>
           <clipPath id="table-clip">
             <rect
@@ -328,6 +327,43 @@ export function GridOverlay({
               ry={cornerRadius}
             />
           </clipPath>
+
+          {/* Watercolour texture: fractal-noise turbulence shaped into soft,
+              irregular blotches and filled with olive pigment. Applied to a
+              screen-fixed full-svg rect (constant attrs → the browser computes
+              it once and caches it, so panning the grid stays smooth). */}
+          <filter
+            id="journey-watercolour"
+            x="0%"
+            y="0%"
+            width="100%"
+            height="100%"
+            primitiveUnits="userSpaceOnUse"
+          >
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.006 0.009"
+              numOctaves={3}
+              seed={14}
+              stitchTiles="stitch"
+              result="noise"
+            />
+            {/* Map the noise alpha into a mottled mask (clamps to patches). */}
+            <feColorMatrix
+              in="noise"
+              type="matrix"
+              values="0 0 0 0 0
+                      0 0 0 0 0
+                      0 0 0 0 0
+                      0 0 0 1.1 -0.28"
+              result="mask"
+            />
+            <feComponentTransfer in="mask" result="softMask">
+              <feFuncA type="gamma" amplitude="1" exponent="1.6" offset="0" />
+            </feComponentTransfer>
+            <feFlood floodColor={watercolourInk} floodOpacity={1} result="ink" />
+            <feComposite in="ink" in2="softMask" operator="in" />
+          </filter>
         </defs>
 
         {/* All table content clipped to rounded rect */}
@@ -372,27 +408,38 @@ export function GridOverlay({
             fill={tableBg}
           />
 
-          {/* Per-row olive tints — painted across the label gutter + cells at
-              the empathy-map zone opacity so lanes read as calm olive bands.
-              Heights come from rowYPositions, which already reflect the dynamic
-              row growth, so a row's band expands with its cards. */}
-          {config.rows.map((row, index) => {
-            const rowTop = rowYPositions[index];
-            const rowHeight = rowYPositions[index + 1] - rowTop;
-            const topLeft = toScreen(labelAreaX, rowTop);
+          {/* Uniform faint-olive body fill (single band across the gutter +
+              cells, below the header). Rows are distinguished by strokes, not
+              colour. Height spans origin.y → bottom, so it grows with the rows. */}
+          {(() => {
+            const bodyTop = rowYPositions[0];
+            const bodyBottom = rowYPositions[rowYPositions.length - 1];
+            const topLeft = toScreen(labelAreaX, bodyTop);
             const fullWidth = colXPositions[colXPositions.length - 1] - labelAreaX;
             return (
               <rect
-                key={`row-tint-${row.id}`}
                 x={topLeft.x}
                 y={topLeft.y}
                 width={fullWidth * zoom}
-                height={rowHeight * zoom}
-                fill={ROW_TINT_COLORS[row.id] ?? '#8a9a5b'}
-                style={{ opacity: 'var(--canvas-zone-opacity)' }}
+                height={(bodyBottom - bodyTop) * zoom}
+                fill={JOURNEY_BODY_TINT}
+                opacity={isDark ? ROW_TINT_OPACITY_DARK : ROW_TINT_OPACITY_LIGHT}
               />
             );
-          })}
+          })()}
+
+          {/* Watercolour wash over the whole table body. Screen-fixed (width/
+              height = 100%) so the turbulence is computed once and cached; the
+              parent table-clip keeps it inside the rounded table, and the opaque
+              header rect below paints over the top strip. */}
+          <rect
+            x="0"
+            y="0"
+            width="100%"
+            height="100%"
+            filter="url(#journey-watercolour)"
+            opacity={watercolourOpacity}
+          />
 
           {/* Solid olive header bar across the top (stage labels sit on it). */}
           <rect
@@ -506,9 +553,9 @@ export function GridOverlay({
                 y1={leftEdge.y}
                 x2={rightEdge.x}
                 y2={rightEdge.y}
-                stroke="#a8aaa3"
-                strokeWidth={0.5}
-                strokeOpacity={0.5}
+                stroke={isDark ? '#62675c' : '#bfc1ba'}
+                strokeWidth={1}
+                strokeOpacity={0.85}
               />
             );
           })}
@@ -547,9 +594,9 @@ export function GridOverlay({
                 y1={topEdge.y}
                 x2={bottomEdge.x}
                 y2={bottomEdge.y}
-                stroke="#a8aaa3"
-                strokeWidth={0.5}
-                strokeOpacity={0.5}
+                stroke={isDark ? '#62675c' : '#bfc1ba'}
+                strokeWidth={1}
+                strokeOpacity={0.85}
               />
             );
           })}
@@ -573,6 +620,21 @@ export function GridOverlay({
             );
           })()}
         </g>
+
+        {/* Outer border around the whole journey map. Drawn outside the clip so
+            the full stroke shows (a stroke on the clip edge would be half-cut)
+            and it sits on top of the grid lines. */}
+        <rect
+          x={tableTopLeft.x}
+          y={tableTopLeft.y}
+          width={tableW}
+          height={tableH}
+          rx={cornerRadius}
+          ry={cornerRadius}
+          fill="none"
+          stroke={isDark ? '#62675c' : '#aeb3a6'}
+          strokeWidth={1.5}
+        />
       </svg>
 
       {/* ===== LAYER 2: Interactive HTML — z-[5], above renderer (z-4) ===== */}
@@ -584,7 +646,10 @@ export function GridOverlay({
           const colWidth = colRight - colLeft;
           const colMidpoint = colLeft + colWidth / 2;
           const headerPos = toScreen(colMidpoint, config.origin.y - 30);
-          const headerWidth = Math.max(160, colWidth * zoom);
+          // Header box matches the column width at every zoom; the inner content
+          // is laid out at base size and scaled by `zoom` (below) so the label
+          // shrinks/grows with the grid instead of overlapping when zoomed out.
+          const headerWidth = colWidth * zoom;
 
           // Count cards in this column for delete confirmation
           const cardsInColumn = stickyNotes.filter(
@@ -604,12 +669,21 @@ export function GridOverlay({
               className="absolute pointer-events-auto"
               style={{
                 left: headerPos.x - headerWidth / 2,
-                top: headerPos.y - 14,
+                top: headerPos.y - 14 * zoom,
                 width: headerWidth,
-                height: 32,
+                height: 32 * zoom,
                 opacity: isDragging ? 0.5 : 1,
               }}
             >
+              {/* Base-size content scaled by zoom so the label tracks the grid. */}
+              <div
+                style={{
+                  width: colWidth,
+                  height: 32,
+                  transform: `scale(${zoom})`,
+                  transformOrigin: "top left",
+                }}
+              >
               {/* The whole header is the drag surface (with a click-vs-drag
                   threshold), so reordering a stage no longer depends on hitting
                   the tiny grip. Plain clicks still fall through to rename / X. */}
@@ -661,6 +735,7 @@ export function GridOverlay({
                   </button>
                 )}
               </div>
+              </div>
             </div>
           );
         })}
@@ -674,7 +749,9 @@ export function GridOverlay({
               className="absolute pointer-events-auto"
               style={{
                 left: addButtonPos.x,
-                top: addButtonPos.y - 10,
+                top: addButtonPos.y - 10 * zoom,
+                transform: `scale(${zoom})`,
+                transformOrigin: "top left",
               }}
             >
               <button
@@ -715,8 +792,13 @@ export function GridOverlay({
             return (
               <div
                 key={`rowfill-${row.id}`}
-                className="absolute pointer-events-auto -translate-x-1/2"
-                style={{ left: pos.x, top: pos.y + 32 * zoom }}
+                className="absolute pointer-events-auto"
+                style={{
+                  left: pos.x,
+                  top: pos.y + 32 * zoom,
+                  transform: `translateX(-50%) scale(${zoom})`,
+                  transformOrigin: "center top",
+                }}
               >
                 <button
                   type="button"
@@ -753,7 +835,12 @@ export function GridOverlay({
                   type="button"
                   onClick={() => emitGridAutocomplete(req)}
                   className="absolute pointer-events-auto flex h-[18px] w-[18px] items-center justify-center rounded-full border border-olive-300 bg-card/95 text-[#4a5a32] opacity-0 shadow-sm transition-opacity hover:bg-olive-100 hover:opacity-100 focus-visible:opacity-100 dark:border-neutral-olive-700 dark:bg-card dark:text-neutral-olive-200 dark:hover:bg-neutral-olive-700"
-                  style={{ left: tl.x, top: tl.y }}
+                  style={{
+                    left: tl.x,
+                    top: tl.y,
+                    transform: `scale(${zoom})`,
+                    transformOrigin: "top left",
+                  }}
                   title={`Auto-fill the ${row.label} cell for "${col.label}" — you can edit after`}
                 >
                   <Sparkles className="h-2.5 w-2.5" />
