@@ -189,7 +189,22 @@ export function CanvasStoreProvider({
     // wiping server-loaded template stickies and other seed data.
     // Fix: when connected (or on failure fallback), re-apply any fields that
     // the middleware cleared but the server had initial data for.
+    // Once this room's Storage has delivered ANY content (the store became
+    // non-empty while connected), Storage is the source of truth — including
+    // when the user legitimately empties the board (delete-all) or the
+    // facilitator resets the step. Re-seeding `init` after that point would
+    // resurrect the cleared cards a few seconds later, on the next
+    // reconnect/status tick or the fallback timer. That was the reset/delete
+    // regression. We therefore only seed `init` WHILE the room has never held
+    // content. A genuinely new/empty room (including the auth-fail-then-retry
+    // path) still seeds its server-rendered templates, because content never
+    // appears for it until we seed it.
+    let roomHasHeldContent = false;
+
     const applyRecovery = () => {
+      // Don't resurrect content that Storage / the user has since cleared.
+      if (roomHasHeldContent) return;
+
       const init = initialStateRef.current;
       const current = multiStore.getState();
       const patch: Record<string, unknown> = {};
@@ -258,6 +273,26 @@ export function CanvasStoreProvider({
     // any future disconnect/reconnect cycles that re-clear the store.
     const unsub = multiStore.subscribe((state) => {
       const s = state.liveblocks.status;
+      // Mark the room as "has held content" only once Storage is authoritative
+      // (connected) AND actually carries content. We deliberately ignore the
+      // pre-connect optimistic initial state (the middleware clears every
+      // storageMapping field on enterRoom), so a brand-new room is never
+      // mistaken for one that already had content.
+      if (
+        s === 'connected' &&
+        (state.stickyNotes.length > 0 ||
+          state.gridColumns.length > 0 ||
+          state.drawingNodes.length > 0 ||
+          state.mindMapNodes.length > 0 ||
+          state.crazy8sSlots.length > 0 ||
+          state.conceptCards.length > 0 ||
+          state.personaTemplates.length > 0 ||
+          state.hmwCards.length > 0 ||
+          state.brainRewritingMatrices.length > 0 ||
+          state.dotVotes.length > 0)
+      ) {
+        roomHasHeldContent = true;
+      }
       if (s === 'connected' || s === 'disconnected') {
         applyRecovery();
       }

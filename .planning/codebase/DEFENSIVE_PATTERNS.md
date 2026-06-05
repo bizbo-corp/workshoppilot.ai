@@ -71,6 +71,41 @@ Land a regression test first. The closest reference is `scripts/verify-message-i
 
 ---
 
+## Multiplayer canvas recovery — seed `init` only while the room has never held content
+
+`src/providers/canvas-store-provider.tsx` (`applyRecovery`, multiplayer room effect).
+
+**Why it exists.** On `enterRoom`, the `@liveblocks/zustand` middleware clears every
+`storageMapping` field while Storage loads. For a brand-new room (empty Storage), the cleared
+state would persist and wipe the server-seeded template stickies. `applyRecovery` re-applies the
+server's `initialStateRef` data into any field the store left empty, so new rooms still get their
+templates.
+
+**The regression it now guards against.** The recovery used to run on *every* Liveblocks
+`connected`/`disconnected` tick (plus a 3 s fallback) and re-seed `init` whenever the store was
+empty. It could not tell "new room that needs seeding" from "user legitimately emptied the board."
+So **resetting a step or deleting all cards would un-delete them a few seconds later** — the next
+status tick saw an empty store + non-empty `init` (stale server props) and re-injected the cards
+back into Storage.
+
+**The invariant.** Seed `init` **only while the room has never held content.** A
+closure flag `roomHasHeldContent` flips to `true` the first time the store is non-empty *while
+`status === 'connected'`* (Storage is authoritative then; the pre-connect optimistic state is
+deliberately ignored because the middleware is about to clear it). Once set, `applyRecovery`
+early-returns, so user deletes and step resets stick. New/empty rooms — including the
+auth-fail-then-retry path — never flip the flag until *we* seed them, so template seeding still
+works.
+
+**Anti-patterns**
+
+| Idea | Why it's wrong |
+|------|----------------|
+| "Re-seed on every reconnect so the store can never be left empty." | Resurrects deleted cards / un-resets steps. This was the bug. |
+| "Flip `roomHasHeldContent` from the initial store state too." | The store mounts with server props (non-empty), then the middleware clears it. Counting that pre-connect state makes every new room look like it already had content → templates never seed. Only count content seen **while connected**. |
+| "Just clear Liveblocks Storage server-side in `resetStep` instead." | Reasonable hardening, but the client already writes the cleared arrays to Storage on reset; the real defect was recovery undoing that. Fix the recovery first. |
+
+---
+
 ## Canvas sticky-note drag-end guard
 
 Covered in `CLAUDE.md` under "Canvas gotchas" — `liveDimensions` is shared by manual resize **and** auto-fit text-grow, so it cannot be used as a proxy for "currently resizing." Use `activelyResizingIds` (added in `handleResize`, removed in `handleResizeEnd`). Inline guards live at `src/components/canvas/react-flow-canvas.tsx:534-543` and `:2132`.
