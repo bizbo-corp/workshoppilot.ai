@@ -81,7 +81,7 @@ import {
   updateDrawing,
   loadDrawing,
 } from "@/actions/drawing-actions";
-import { saveCanvasState } from "@/actions/canvas-actions";
+import { saveCanvasState, renamePersonaCandidate } from "@/actions/canvas-actions";
 import { type DrawingElement, parseVectorJson } from "@/lib/drawing/types";
 import { ClusterEdge } from "./cluster-edge";
 import { ClusterHullsOverlay } from "./cluster-hulls-overlay";
@@ -271,6 +271,7 @@ function ReactFlowCanvasInner({
   const setCluster = useCanvasStore((s) => s.setCluster);
   const clearCluster = useCanvasStore((s) => s.clearCluster);
   const renameCluster = useCanvasStore((s) => s.renameCluster);
+  const renamePersona = useCanvasStore((s) => s.renamePersona);
   const removeFromCluster = useCanvasStore((s) => s.removeFromCluster);
 
   // Store API for temporal undo/redo access
@@ -940,6 +941,25 @@ function ReactFlowCanvasInner({
     [updateStickyNote],
   );
 
+  // Rename a user-research persona: rewrite the card's first name + re-point every
+  // child insight's cluster (store action), then update the Step 5 snapshot so the
+  // new name carries forward. Reads the OLD first name before the store mutates.
+  const handlePersonaRename = useCallback(
+    (id: string, newName: string) => {
+      const card = storeApi.getState().stickyNotes.find((n) => n.id === id);
+      const trimmed = newName.trim();
+      if (!card || !trimmed) return;
+      const commaIdx = card.text.indexOf(",");
+      const oldFirstName = (commaIdx > 0 ? card.text.slice(0, commaIdx) : card.text).trim();
+      renamePersona(id, trimmed);
+      if (oldFirstName && oldFirstName.toLowerCase() !== trimmed.toLowerCase()) {
+        // Snapshot lives under the user-research step regardless of current step.
+        void renamePersonaCandidate(workshopId, "user-research", oldFirstName, trimmed);
+      }
+    },
+    [storeApi, renamePersona, workshopId],
+  );
+
   // Handle edit complete (textarea blur). Persist any auto-fit dimensions so
   // the grown size sticks across reloads and is visible to other participants.
   const handleEditComplete = useCallback((id: string) => {
@@ -1341,6 +1361,8 @@ function ReactFlowCanvasInner({
               }
             : {}),
           ...(stickyNote.cluster ? { cluster: stickyNote.cluster } : {}),
+          ...(stickyNote.isPersona ? { isPersona: true } : {}),
+          onPersonaRename: handlePersonaRename,
           ...(stickyNote.lockSize ? { lockSize: true } : {}),
           ...(isPreview
             ? {
@@ -1588,6 +1610,7 @@ function ReactFlowCanvasInner({
     autoResizeTick,
     handleTextChange,
     handleEditComplete,
+    handlePersonaRename,
     handleResize,
     handleResizeEnd,
     handleConfirmPreview,

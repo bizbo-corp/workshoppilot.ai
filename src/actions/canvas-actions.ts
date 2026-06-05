@@ -285,6 +285,67 @@ export async function loadPersonaCandidates(
 }
 
 /**
+ * Rename a persona candidate in place (used when the user renames a persona on
+ * the Step 3 canvas). Matches by the current first name (case-insensitive) and
+ * updates only `name`, preserving archetype + description so the Step 5 skeleton
+ * keeps its role. No-op if no candidate matches (e.g. legacy workshop with no
+ * structured snapshot — Step 5 falls back to parsing the live canvas text).
+ */
+export async function renamePersonaCandidate(
+  workshopId: string,
+  stepId: string,
+  oldName: string,
+  newName: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const oldLower = oldName.trim().toLowerCase();
+    const trimmedNew = newName.trim();
+    if (!oldLower || !trimmedNew) return { success: false, error: 'Empty name' };
+
+    const workshopStepRecords = await db
+      .select({ id: workshopSteps.id })
+      .from(workshopSteps)
+      .where(and(eq(workshopSteps.workshopId, workshopId), eq(workshopSteps.stepId, stepId)))
+      .limit(1);
+    if (workshopStepRecords.length === 0) return { success: true };
+    const workshopStepId = workshopStepRecords[0].id;
+
+    const MAX_RETRIES = 3;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const records = await db
+        .select({ id: stepArtifacts.id, version: stepArtifacts.version, artifact: stepArtifacts.artifact })
+        .from(stepArtifacts)
+        .where(eq(stepArtifacts.workshopStepId, workshopStepId))
+        .limit(1);
+      if (records.length === 0) return { success: true };
+
+      const record = records[0];
+      const existingArtifact = (record.artifact || {}) as Record<string, unknown>;
+      const candidates = (existingArtifact._personaCandidates || []) as PersonaCandidate[];
+      if (!candidates.some((c) => c.name?.toLowerCase() === oldLower)) return { success: true };
+
+      const updated = candidates.map((c) =>
+        c.name?.toLowerCase() === oldLower ? { ...c, name: trimmedNew } : c,
+      );
+      const merged = { ...existingArtifact, _personaCandidates: updated };
+
+      const updateResult = await db
+        .update(stepArtifacts)
+        .set({ artifact: merged, version: record.version + 1 })
+        .where(and(eq(stepArtifacts.id, record.id), eq(stepArtifacts.version, record.version)))
+        .returning({ id: stepArtifacts.id });
+
+      if (updateResult.length > 0) return { success: true };
+      if (attempt === MAX_RETRIES - 1) return { success: false, error: 'version_conflict' };
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to rename persona candidate:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+/**
  * Save only the concept card ownership (ownerId, ownerName, ownerColor) to the DB.
  * Surgically updates the `conceptCards` field within the existing `_canvas` JSONB column,
  * preserving all other canvas data. Used during SSR to persist rebalanced ownership

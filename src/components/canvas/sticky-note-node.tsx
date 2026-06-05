@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { Handle, Position, type NodeProps, type Node, NodeResizer } from '@xyflow/react';
-import { Layers, Sparkles } from 'lucide-react';
+import { Layers, Sparkles, SquareUserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StickyNoteColor } from '@/stores/canvas-store';
 
@@ -89,26 +89,6 @@ export const TEXT_COLOR_CLASSES: Record<StickyNoteColor, string> = {
   white: 'text-[var(--sticky-note-white-text)]',
 };
 
-/** Darker avatar background colors per sticky note color — muted to match nature palette */
-const AVATAR_BG: Record<StickyNoteColor, string> = {
-  yellow: 'bg-amber-700',
-  pink: 'bg-rose-600',
-  blue: 'bg-slate-500',
-  green: 'bg-emerald-700',
-  orange: 'bg-amber-600',
-  red: 'bg-red-700',
-  teal: 'bg-teal-700',
-  purple: 'bg-violet-700',
-  white: 'bg-neutral-400',
-};
-
-/** Extract initials from a persona name (first letter of first two words) */
-function getInitials(name: string): string {
-  const words = name.trim().split(/\s+/);
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-  return words[0]?.substring(0, 2).toUpperCase() || '?';
-}
-
 export type StickyNoteNodeData = {
   text: string;
   color: StickyNoteColor;
@@ -122,6 +102,10 @@ export type StickyNoteNodeData = {
   clusterChildCount?: number;
   /** Persona this insight is attributed to (shows a name+color provenance badge). */
   cluster?: string;
+  /** User-research persona card: renders as an avatar placeholder + editable name. */
+  isPersona?: boolean;
+  /** Commit a persona rename (cascades to child clusters + the Step 5 snapshot). */
+  onPersonaRename?: (id: string, newName: string) => void;
   templateKey?: string;
   templateLabel?: string;
   placeholderText?: string;
@@ -153,10 +137,22 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
   // Smallest height that still shows all the text (text at the smallest font).
   // Drives the resizer's minHeight so the box can never be dragged below its text.
   const [minFitHeight, setMinFitHeight] = useState<number>(STICKY_DEFAULT_HEIGHT);
+  const [editingName, setEditingName] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Persona card (user-research): rendered as an avatar + editable name instead
+  // of a text sticky. New cards carry `isPersona`; legacy cards are detected by
+  // the " — " separator. Cluster children are never persona cards.
+  const isPersonaCard =
+    (data.isPersona || data.text.includes(' — ')) && !data.clusterLabel && !data.cluster;
+  // First name only ("Rafael, The Veterinarian — desc" → "Rafael").
+  const personaFirstName = isPersonaCard
+    ? data.text.split(/\s*[—–]\s*/)[0].split(',')[0].trim()
+    : '';
 
   // Measure content and apply the discrete-step fit (see computeFit).
   useLayoutEffect(() => {
-    if (data.isPreview) return;
+    if (data.isPreview || isPersonaCard) return;
 
     const measureEl = data.isEditing ? textareaRef.current : displayTextRef.current;
     if (!measureEl) return;
@@ -257,6 +253,81 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
     }
   }, [data.isEditing]);
 
+  // Commit a persona rename on Enter/blur; cascade is handled upstream.
+  const commitPersonaName = useCallback(() => {
+    const val = nameInputRef.current?.value.trim();
+    setEditingName(false);
+    if (val && val !== personaFirstName) data.onPersonaRename?.(id, val);
+  }, [id, data, personaFirstName]);
+
+  const handleNameKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      nameInputRef.current?.blur();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setEditingName(false);
+    }
+  }, []);
+
+  // Persona card: avatar placeholder + click-to-edit name, on a transparent
+  // background so it reads as the persona's "header" inside the swimlane frame.
+  // Previews (real-interview confirm flow) fall through to the preview block
+  // below so their Add/Skip controls still render.
+  if (isPersonaCard && !data.isPreview) {
+    return (
+      <div
+        ref={outerRef}
+        className={cn(
+          'w-full h-full flex flex-col items-center justify-start gap-2 p-1 font-sans',
+          'rounded-md',
+          !dragging && 'transition-shadow duration-150',
+          selected && !dragging && 'ring-2 ring-selection',
+          dragging && 'scale-[1.02]',
+        )}
+        style={{ touchAction: 'none' }}
+      >
+        <Handle type="target" position={Position.Top} className="!opacity-0 !w-0 !h-0" />
+
+        {/* Avatar fills the available space as a square fitting the smaller side,
+            so it looks right for both new portrait cards and legacy wide cards. */}
+        <div className="flex-1 min-h-0 w-full flex items-center justify-center">
+          <div className="h-full w-auto aspect-square max-w-full rounded-xl bg-neutral-olive-200/80 flex items-center justify-center">
+            <SquareUserRound className="w-1/2 h-1/2 text-neutral-olive-400" strokeWidth={1.25} />
+          </div>
+        </div>
+
+        {editingName ? (
+          <input
+            ref={nameInputRef}
+            className="nodrag nopan w-full max-w-[140px] text-center bg-transparent border-b border-selection outline-none text-sm font-medium text-neutral-olive-800"
+            defaultValue={personaFirstName}
+            autoFocus
+            onFocus={(e) => e.currentTarget.select()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onBlur={commitPersonaName}
+            onKeyDown={handleNameKeyDown}
+          />
+        ) : (
+          <span
+            className="nodrag nopan max-w-full truncate px-1.5 py-0.5 rounded text-sm font-medium text-neutral-olive-800 cursor-text hover:bg-neutral-olive-200/60"
+            title="Click to rename — updates everywhere"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingName(true);
+            }}
+          >
+            {personaFirstName}
+          </span>
+        )}
+
+        <Handle type="source" position={Position.Bottom} className="!opacity-0 !w-0 !h-0" />
+      </div>
+    );
+  }
+
   if (data.isPreview) {
     return (
       <div
@@ -309,12 +380,6 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
   const isTemplate = !!data.templateKey;
   const isEmpty = !data.text?.trim();
   const isTemplatePlaceholder = isTemplate && isEmpty;
-
-  // Persona card detection: has em-dash separator and is not a cluster child
-  const isPersonaCard = data.text.includes(' — ') && !data.clusterLabel;
-  const personaName = isPersonaCard ? data.text.split(/\s*[—–]\s*/)[0].trim() : '';
-  const personaInitials = isPersonaCard ? getInitials(personaName) : '';
-  const avatarBg = isPersonaCard ? (AVATAR_BG[data.color || 'yellow'] || AVATAR_BG.yellow) : '';
 
   return (
     <div
@@ -385,35 +450,16 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
         />
       ) : (
         <>
-          {isPersonaCard ? (
-            <div className="flex items-start gap-2 flex-1 overflow-hidden">
-              <div className={cn(
-                avatarBg,
-                'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
-                'text-[10px] font-bold text-white leading-none'
-              )}>
-                {personaInitials}
-              </div>
-              <p
-                ref={displayTextRef}
-                className="break-words whitespace-pre-wrap overflow-hidden flex-1 font-semibold"
-                style={{ fontSize: `${fontSize}px`, lineHeight: 1.35 }}
-              >
-                {data.text || ''}
-              </p>
-            </div>
-          ) : (
-            <p
-              ref={displayTextRef}
-              className={cn(
-                'break-words whitespace-pre-wrap overflow-hidden flex-1',
-                isTemplatePlaceholder && 'text-neutral-olive-500/50 italic'
-              )}
-              style={{ fontSize: `${fontSize}px`, lineHeight: 1.35 }}
-            >
-              {data.text || data.placeholderText || ''}
-            </p>
-          )}
+          <p
+            ref={displayTextRef}
+            className={cn(
+              'break-words whitespace-pre-wrap overflow-hidden flex-1',
+              isTemplatePlaceholder && 'text-neutral-olive-500/50 italic'
+            )}
+            style={{ fontSize: `${fontSize}px`, lineHeight: 1.35 }}
+          >
+            {data.text || data.placeholderText || ''}
+          </p>
           {data.clusterLabel && (
             <span className="inline-flex items-center gap-1 text-[10px] font-medium text-neutral-olive-500 mt-1">
               <Layers className="w-2.5 h-2.5" />

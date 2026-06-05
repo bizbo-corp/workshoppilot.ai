@@ -456,9 +456,11 @@ export function addCanvasItemsToBoard(options: {
       color = (key && personaColorMap?.[key]) || "white";
     }
 
-    const { width: itemWidth, height: itemHeight } = computeStickyNoteSize(
-      item.text,
-    );
+    // Persona cards render as an avatar + name (not text) — give them a fixed
+    // portrait box so the placeholder reads consistently across personas.
+    const { width: itemWidth, height: itemHeight } = item.isPersona
+      ? { width: 132, height: 168 }
+      : computeStickyNoteSize(item.text);
 
     const newStickyNote: Omit<StickyNote, "id"> = {
       text: item.text,
@@ -469,6 +471,7 @@ export function addCanvasItemsToBoard(options: {
       quadrant,
       cellAssignment,
       cluster: item.cluster,
+      ...(item.isPersona ? { isPersona: true } : {}),
       ...(owner
         ? {
             ownerId: owner.ownerId,

@@ -432,7 +432,11 @@ export function assembleUserResearchCanvasContext(stickyNotes: StickyNote[]): st
 
   // List persona cards
   if (personaCards.length > 0) {
-    const cardList = personaCards.map(p => `- ${p.text}`).join('\n');
+    // Persona cards carry only name + archetype now, but legacy cards may still
+    // hold a "— description" tail. Strip it so the description never steers the AI.
+    const cardList = personaCards
+      .map(p => `- ${p.text.split(/\s*[—–]\s*/)[0].trim()}`)
+      .join('\n');
     sections.push(`**Persona Cards** (${personaCards.length}):\n${cardList}`);
   }
 

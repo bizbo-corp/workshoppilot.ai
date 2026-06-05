@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DeliverableDetailView } from '@/components/workshop/deliverable-detail-view';
+import { WorkshopHeader } from '@/components/layout/workshop-header';
 import { toast } from 'sonner';
 
 interface DeliverableFormat {
@@ -43,6 +44,11 @@ interface OutputsContentProps {
   sessionId: string;
   workshopId: string;
   workshopTitle: string;
+  workshopColor?: string | null;
+  workshopEmoji?: string | null;
+  workshopType?: 'solo' | 'multiplayer';
+  isWorkshopOwner?: boolean;
+  isAdmin?: boolean;
   deliverables: Deliverable[];
   isReadOnly?: boolean;
 }
@@ -158,6 +164,11 @@ export function OutputsContent({
   sessionId,
   workshopId,
   workshopTitle,
+  workshopColor,
+  workshopEmoji,
+  workshopType = 'solo',
+  isWorkshopOwner = false,
+  isAdmin = false,
   deliverables,
   isReadOnly = false,
 }: OutputsContentProps) {
@@ -320,13 +331,30 @@ export function OutputsContent({
   }
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-4xl px-6 py-8 space-y-8">
-        {/* Header */}
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Build Pack</h1>
-          <p className="text-muted-foreground text-sm">{workshopTitle}</p>
-        </div>
+    <div className="flex h-full flex-col">
+      {/* Top bar: workshop name + "Build Pack" breadcrumb + Exit to Dashboard.
+          Desktop only — on mobile the workshop layout already renders the header. */}
+      <div className="hidden md:block">
+        <WorkshopHeader
+          sessionId={sessionId}
+          workshopId={workshopId}
+          workshopName={workshopTitle}
+          workshopColor={workshopColor}
+          workshopEmoji={workshopEmoji}
+          workshopType={workshopType}
+          isFacilitator={isWorkshopOwner}
+          isWorkshopOwner={isWorkshopOwner}
+          isAdmin={isAdmin}
+          breadcrumbTail="Build Pack"
+        />
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-4xl px-6 py-8 space-y-8">
+          {/* Page heading */}
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">Build Pack</h1>
+          </div>
 
         {/* Back link (only on card grid view, hidden for read-only guests) */}
         {!selectedDeliverable && !isReadOnly && (
@@ -588,6 +616,7 @@ export function OutputsContent({
             ))}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

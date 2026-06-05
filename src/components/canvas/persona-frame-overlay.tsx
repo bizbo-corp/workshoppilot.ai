@@ -96,7 +96,7 @@ export function PersonaFrameOverlay() {
     // this, custom personas never got a swimlane frame (dialogue feedback
     // df_ogbk4xa9dgoty657zosxv6d5).
     const personaCards = items.filter(
-      p => !p.cluster && (p.text.includes(' — ') || childrenFor(p).length > 0)
+      p => !p.cluster && (p.isPersona || p.text.includes(' — ') || childrenFor(p).length > 0)
     );
     if (personaCards.length === 0) return [];
 

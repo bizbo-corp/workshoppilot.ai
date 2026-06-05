@@ -665,7 +665,7 @@ export default async function StepPage({ params }: StepPageProps) {
       const step3Canvas = await loadCanvasState(session.workshop.id, 'user-research');
       if (step3Canvas?.stickyNotes) {
         const personaCards = step3Canvas.stickyNotes.filter(
-          (n) => (!n.type || n.type === 'stickyNote') && !n.cluster && n.text.includes(' — ')
+          (n) => (!n.type || n.type === 'stickyNote') && !n.cluster && (n.isPersona || n.text.includes(' — '))
         );
         candidates = personaCards.map((card) => {
           const [namePart, description] = card.text.split(' — ').map((s) => s.trim());

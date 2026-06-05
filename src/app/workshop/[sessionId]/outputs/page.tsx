@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { sessions, buildPacks } from '@/db/schema';
@@ -65,6 +65,16 @@ export default async function OutputsPage({ params }: OutputsPageProps) {
     isReadOnly = true;
   }
 
+  // Admin override (mirrors the workshop layout) so configured admins keep
+  // settings access on the build page.
+  const adminEmail = process.env.ADMIN_EMAIL;
+  let isAdmin = false;
+  if (adminEmail) {
+    const user = await currentUser();
+    const userEmail = user?.emailAddresses?.[0]?.emailAddress;
+    isAdmin = !!userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase();
+  }
+
   // Load build_packs for this workshop
   const rows = await db
     .select()
@@ -101,6 +111,11 @@ export default async function OutputsPage({ params }: OutputsPageProps) {
       sessionId={sessionId}
       workshopId={workshop.id}
       workshopTitle={workshop.title}
+      workshopColor={workshop.color}
+      workshopEmoji={workshop.emoji}
+      workshopType={workshop.workshopType ?? 'solo'}
+      isWorkshopOwner={!isReadOnly}
+      isAdmin={isAdmin}
       deliverables={deliverables}
       isReadOnly={isReadOnly}
     />
