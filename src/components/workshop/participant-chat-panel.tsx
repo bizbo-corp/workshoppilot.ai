@@ -208,7 +208,7 @@ export function ParticipantChatPanel({
             (n) =>
               (!n.type || n.type === "stickyNote") &&
               !n.cluster &&
-              n.text.includes(" — "),
+              (n.isPersona || n.text.includes(" — ")),
           );
         const existingPersonaNames = existingPersonaCards.map((n) => n.text);
 
@@ -248,10 +248,12 @@ export function ParticipantChatPanel({
           (p) =>
             !existingPersonaCards.some((card) => isPersonaCardForCluster(card, p.name)),
         );
+        // Persona cards show name + role only; the summary is dropped.
         const personaCardText = (p: { name: string; role?: string; summary: string }) =>
-          [p.name, p.role, p.summary].filter((s) => s && s.trim()).join(" — ");
+          [p.name, p.role].filter((s) => s && s.trim()).join(", ");
         const personaItems = newPersonas.map((p, i) => ({
           text: personaCardText(p),
+          isPersona: true,
           color: PERSONA_CARD_COLORS[(existingCount + i) % PERSONA_CARD_COLORS.length],
         }));
         if (personaItems.length > 0) {
@@ -561,15 +563,17 @@ export function ParticipantChatPanel({
     const selectedNames = [...personaSelections];
     if (selectedNames.length === 0) return;
 
-    // Count existing persona cards (contain em-dash, no cluster) to continue color sequence
+    // Count existing persona cards (no cluster) to continue color sequence
     const existingPersonaCount = storeApi.getState().stickyNotes.filter(
-      (n) => !n.cluster && n.text.includes(" — "),
+      (n) => !n.cluster && (n.isPersona || n.text.includes(" — ")),
     ).length;
 
+    // Persona cards carry only name + archetype; the tension description is
+    // dropped (rendered as an avatar + name, not text).
     const personaItems = selectedNames.map((name, i) => {
-      const persona = personaOptions.find((p) => p.name === name);
       return {
-        text: persona?.description ? `${name} — ${persona.description}` : name,
+        text: name,
+        isPersona: true,
         color: PERSONA_CARD_COLORS[(existingPersonaCount + i) % PERSONA_CARD_COLORS.length],
       };
     });

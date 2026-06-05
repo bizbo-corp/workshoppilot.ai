@@ -41,6 +41,10 @@ interface WorkshopHeaderProps {
   isAdmin?: boolean;
   /** True once the multiplayer session has started (locks challenge editing). */
   workshopStarted?: boolean;
+  /** Static breadcrumb segment shown after the workshop name on non-step pages
+   *  (e.g. "Build Pack" on the outputs page). Ignored when a step is detected
+   *  from the pathname. */
+  breadcrumbTail?: string;
 }
 
 /**
@@ -92,6 +96,7 @@ export function WorkshopHeader({
   isWorkshopOwner,
   isAdmin,
   workshopStarted,
+  breadcrumbTail,
 }: WorkshopHeaderProps) {
   const pathname = usePathname();
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
@@ -198,6 +203,14 @@ export function WorkshopHeader({
               >
                 {displayName}
               </button>
+            )}
+            {!currentStep && breadcrumbTail && (
+              <>
+                <span className="text-base text-muted-foreground">/</span>
+                <span className="text-base font-medium text-foreground">
+                  {breadcrumbTail}
+                </span>
+              </>
             )}
             {currentStep && (
               <>

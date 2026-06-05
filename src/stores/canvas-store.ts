@@ -85,6 +85,11 @@ export type StickyNote = {
     col: string; // Column ID from GridConfig (e.g., 'awareness', 'consideration')
   };
   cluster?: string; // Parent label for hierarchical clustering (stakeholder mapping)
+  /** User-research persona card (parent of an interview cluster). Renders as an
+   *  avatar placeholder + editable name. Legacy cards are detected by the " — "
+   *  separator in `text` instead; new cards carry this flag and drop the
+   *  description from `text` entirely. */
+  isPersona?: boolean;
   /**
    * When true, the node renders at its stored width/height and does NOT auto-grow
    * to fit text (it shrinks font instead). Set by the cell/grid layout pass so
@@ -203,6 +208,10 @@ export type CanvasActions = {
   setCluster: (ids: string[], clusterName: string) => void;
   clearCluster: (clusterName: string) => void;
   renameCluster: (oldName: string, newName: string) => void;
+  /** Rename a user-research persona: rewrite the persona card's first-name
+   *  segment AND re-point every child insight's `cluster` to the new name, so
+   *  the frame header, provenance badges, and downstream context all follow. */
+  renamePersona: (cardId: string, newFirstName: string) => void;
   removeFromCluster: (id: string) => void;
   setSelectedStickyNoteIds: (ids: string[]) => void;
   addConceptCard: (card: Omit<ConceptCardData, 'id'>) => void;
@@ -814,6 +823,35 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             ),
             isDirty: true,
           })),
+
+        renamePersona: (cardId, newFirstName) =>
+          set((state) => {
+            const card = state.stickyNotes.find((p) => p.id === cardId);
+            const trimmed = newFirstName.trim();
+            if (!card || !trimmed) return {};
+            // The persona card text is "FirstName, Archetype" (new) or
+            // "FirstName, Archetype — description" (legacy) or just "FirstName"
+            // (custom). Replace only the first-name segment (up to the first comma)
+            // and keep whatever follows.
+            const commaIdx = card.text.indexOf(',');
+            const oldFirstName =
+              (commaIdx > 0 ? card.text.slice(0, commaIdx) : card.text).trim();
+            if (oldFirstName.toLowerCase() === trimmed.toLowerCase()) return {};
+            const rest = commaIdx > 0 ? card.text.slice(commaIdx) : '';
+            const newText = `${trimmed}${rest}`;
+            const oldLower = oldFirstName.toLowerCase();
+            return {
+              stickyNotes: state.stickyNotes.map((stickyNote) => {
+                if (stickyNote.id === cardId) return { ...stickyNote, text: newText };
+                // Child insights reference the persona by first name in `cluster`.
+                if (stickyNote.cluster && stickyNote.cluster.toLowerCase() === oldLower) {
+                  return { ...stickyNote, cluster: trimmed };
+                }
+                return stickyNote;
+              }),
+              isDirty: true,
+            };
+          }),
 
         setSelectedStickyNoteIds: (ids) =>
           set(() => ({

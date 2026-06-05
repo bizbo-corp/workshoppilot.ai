@@ -159,6 +159,9 @@ export type CanvasItemParsed = {
   isGridItem?: boolean;
   color?: string;
   templateKey?: string;
+  /** Marks a user-research persona card (parent of an interview cluster). Renders
+   *  as an avatar + editable name rather than a text sticky. */
+  isPersona?: boolean;
 };
 
 /** Known zone/category sets for parseQuadLabel */

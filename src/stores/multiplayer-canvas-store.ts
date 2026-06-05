@@ -549,6 +549,29 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
             ),
           })),
 
+        renamePersona: (cardId, newFirstName) =>
+          set((state) => {
+            const card = state.stickyNotes.find((p) => p.id === cardId);
+            const trimmed = newFirstName.trim();
+            if (!card || !trimmed) return {};
+            const commaIdx = card.text.indexOf(',');
+            const oldFirstName =
+              (commaIdx > 0 ? card.text.slice(0, commaIdx) : card.text).trim();
+            if (oldFirstName.toLowerCase() === trimmed.toLowerCase()) return {};
+            const rest = commaIdx > 0 ? card.text.slice(commaIdx) : '';
+            const newText = `${trimmed}${rest}`;
+            const oldLower = oldFirstName.toLowerCase();
+            return {
+              stickyNotes: state.stickyNotes.map((stickyNote) => {
+                if (stickyNote.id === cardId) return { ...stickyNote, text: newText };
+                if (stickyNote.cluster && stickyNote.cluster.toLowerCase() === oldLower) {
+                  return { ...stickyNote, cluster: trimmed };
+                }
+                return stickyNote;
+              }),
+            };
+          }),
+
         setSelectedStickyNoteIds: (ids) =>
           set(() => ({ selectedStickyNoteIds: ids })),
 
