@@ -58,6 +58,7 @@ import { getStepCanvasConfig } from "@/lib/canvas/step-canvas-config";
 import {
   computeThemeSortPositions,
   computeClusterChildPositions,
+  computePersonaColumnLayout,
 } from "@/lib/canvas/canvas-position";
 import { QuadrantOverlay } from "./quadrant-overlay";
 import { detectQuadrant } from "@/lib/canvas/quadrant-detection";
@@ -88,9 +89,7 @@ import { ClusterHullsOverlay } from "./cluster-hulls-overlay";
 import { ResearchSkeletonOverlay } from "./research-skeleton-overlay";
 import {
   PersonaFrameOverlay,
-  FRAME_WIDTH,
-  MIN_FRAME_HEIGHT,
-  FRAME_PADDING,
+  computePersonaFrames,
 } from "./persona-frame-overlay";
 import { SelectionToolbar } from "./selection-toolbar";
 import { ClusterDialog } from "@/components/dialogs/cluster-dialog";
@@ -241,6 +240,7 @@ function ReactFlowCanvasInner({
   const updateHmwCard = useCanvasStore((s) => s.updateHmwCard);
   const deleteHmwCard = useCanvasStore((s) => s.deleteHmwCard);
   const batchUpdatePositions = useCanvasStore((s) => s.batchUpdatePositions);
+  const batchUpdateStickyNotes = useCanvasStore((s) => s.batchUpdateStickyNotes);
   const gridColumns = useCanvasStore((s) => s.gridColumns);
   const setGridColumns = useCanvasStore((s) => s.setGridColumns);
   const removeGridColumn = useCanvasStore((s) => s.removeGridColumn);
@@ -1914,6 +1914,26 @@ function ReactFlowCanvasInner({
     ],
   );
 
+  // --- User-research persona column table ---
+  // Auto-lay out persona cards + their insights into aligned columns. Keyed on a
+  // STRUCTURAL signature (ids + text + cluster + preview flag), so it re-packs when
+  // notes are added / confirmed / renamed / deleted — but NOT on position-only
+  // changes, so the packed positions don't fight a frame drag or loop on its own
+  // updates. Covers seeding, AI insights, real-interview confirm, and load.
+  const personaLayoutSigRef = useRef<string>("");
+  useEffect(() => {
+    if (stepId !== "user-research") return;
+    const sig = stickyNotes
+      .filter((p) => !p.type || p.type === "stickyNote")
+      .map((p) => `${p.id}:${p.isPreview ? 1 : 0}:${p.cluster ?? ""}:${p.text}`)
+      .sort()
+      .join("|");
+    if (sig === personaLayoutSigRef.current) return;
+    personaLayoutSigRef.current = sig;
+    const updates = computePersonaColumnLayout(stickyNotes);
+    if (updates.length > 0) batchUpdateStickyNotes(updates);
+  }, [stickyNotes, stepId, batchUpdateStickyNotes]);
+
   // Handle theme sort — reorganize sticky notes by cluster on rings
   const handleThemeSort = useCallback(() => {
     const updates = computeThemeSortPositions(stickyNotes, stepId);
@@ -2541,56 +2561,18 @@ function ReactFlowCanvasInner({
               }
 
               // --- Drag-into-persona-frame fallback for user-research step ---
-              // When no hull match found, check if the dropped sticky note center is
-              // inside a persona frame's bounds. Frames are visible rectangles
-              // below each persona card.
+              // When no hull match found, check if the dropped sticky note's center
+              // falls inside a persona column frame. Uses the SAME frame geometry as
+              // the overlay (computePersonaFrames) so the drop zones match what's drawn.
               if (!hullMatchFound && stepId === "user-research") {
-                const personaCards = items.filter(
-                  (p) =>
-                    !p.cluster && p.text.includes(" — ") && p.id !== change.id,
-                );
-
-                for (const card of personaCards) {
-                  // Compute frame bounds (same logic as PersonaFrameOverlay — horizontal row)
-                  const personaName = card.text.split(/\s*[—–]\s*/)[0].trim();
-                  const children = items.filter(
-                    (p) =>
-                      p.cluster &&
-                      p.cluster.toLowerCase() === personaName.toLowerCase() &&
-                      p.id !== card.id,
-                  );
-
-                  const frameX = card.position.x - FRAME_PADDING;
-                  const frameY = card.position.y - FRAME_PADDING;
-
-                  let rightEdge = card.position.x + card.width;
-                  if (children.length > 0) {
-                    const childMaxX = Math.max(...children.map((c) => c.position.x + c.width));
-                    rightEdge = Math.max(rightEdge, childMaxX);
-                  }
-                  const frameWidth = Math.max(FRAME_WIDTH, rightEdge - frameX + FRAME_PADDING);
-
-                  let maxBottom = card.position.y + card.height;
-                  if (children.length > 0) {
-                    const childMaxY = Math.max(...children.map((c) => c.position.y + c.height));
-                    maxBottom = Math.max(maxBottom, childMaxY);
-                  }
-                  const frameHeight = Math.max(MIN_FRAME_HEIGHT, maxBottom - frameY + FRAME_PADDING);
-
-                  const dropMinX = frameX;
-                  const dropMinY = frameY;
-                  const dropMaxX = frameX + frameWidth;
-                  const dropMaxY = frameY + frameHeight;
-
-                  if (
-                    cx >= dropMinX &&
-                    cx <= dropMaxX &&
-                    cy >= dropMinY &&
-                    cy <= dropMaxY
-                  ) {
-                    setCluster([change.id], personaName);
+                const frames = computePersonaFrames(items);
+                for (const frame of frames) {
+                  if (frame.cardId === change.id) continue;
+                  const { x: fx, y: fy, width: fw, height: fh } = frame.bounds;
+                  if (cx >= fx && cx <= fx + fw && cy >= fy && cy <= fy + fh) {
+                    setCluster([change.id], frame.name);
                     updateStickyNote(change.id, {
-                      color: card.color || "yellow",
+                      color: (frame.color as StickyNoteColor) || "yellow",
                     });
                     break;
                   }

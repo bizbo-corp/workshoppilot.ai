@@ -205,6 +205,10 @@ export type CanvasActions = {
   setBoardAdvancedAt: (ts: number) => void;
   setActiveHmwCardId: (id: string | null) => void;
   batchUpdatePositions: (updates: Array<{ id: string; position: { x: number; y: number }; cellAssignment?: { row: string; col: string } }>) => void;
+  /** Apply arbitrary partial updates to many sticky notes in one set (one render,
+   *  one undo step). Used by the user-research column repack to set position +
+   *  size + lockSize together. */
+  batchUpdateStickyNotes: (updates: Array<{ id: string } & Partial<StickyNote>>) => void;
   setCluster: (ids: string[], clusterName: string) => void;
   clearCluster: (clusterName: string) => void;
   renameCluster: (oldName: string, newName: string) => void;
@@ -823,6 +827,18 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             ),
             isDirty: true,
           })),
+
+        batchUpdateStickyNotes: (updates) =>
+          set((state) => {
+            const updateMap = new Map(updates.map((u) => [u.id, u]));
+            return {
+              stickyNotes: state.stickyNotes.map((stickyNote) => {
+                const update = updateMap.get(stickyNote.id);
+                return update ? { ...stickyNote, ...update } : stickyNote;
+              }),
+              isDirty: true,
+            };
+          }),
 
         renamePersona: (cardId, newFirstName) =>
           set((state) => {

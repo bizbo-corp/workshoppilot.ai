@@ -14,7 +14,12 @@ import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useStore as useReactFlowStore, type ReactFlowState } from '@xyflow/react';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import type { StickyNote } from '@/stores/canvas-store';
-import { extractPersonaName } from '@/lib/canvas/canvas-position';
+import {
+  extractPersonaName,
+  isPersonaCardNote,
+  PERSONA_COL_WIDTH,
+  PERSONA_AVATAR_H,
+} from '@/lib/canvas/canvas-position';
 
 const viewportSelector = (state: ReactFlowState) => ({
   x: state.transform[0],
@@ -22,14 +27,16 @@ const viewportSelector = (state: ReactFlowState) => ({
   zoom: state.transform[2],
 });
 
-/** Frame dimensions in canvas-space pixels */
-const MIN_FRAME_WIDTH = 1200;
-const MIN_FRAME_HEIGHT = 180;
+/** Frame dimensions in canvas-space pixels. Columns are uniform width; height is
+ *  equalised across all columns (the tallest wins) so the swimlanes read as an
+ *  aligned table. */
 const FRAME_PADDING = 24;
 const HEADER_H = 28;
 const EDGE_GRAB = 12;
-/** @deprecated alias kept for export compat */
-const FRAME_WIDTH = MIN_FRAME_WIDTH;
+/** Uniform column frame width: the insight column + padding on both sides. */
+const FRAME_WIDTH = PERSONA_COL_WIDTH + FRAME_PADDING * 2;
+/** Minimum column height (avatar/name block + padding) before insights extend it. */
+const MIN_FRAME_HEIGHT = PERSONA_AVATAR_H + FRAME_PADDING * 2;
 
 /**
  * Olive sage frame appearance — identical to the cluster-hull containers used in
@@ -46,13 +53,72 @@ const OLIVE_FRAME = {
 
 export type PersonaFrameData = {
   cardId: string;
+  /** Persona first name (also the cluster key) — shown in the header + avatar. */
   name: string;
+  /** Archetype / characteristic, e.g. "The Anxious Novice" (header only). */
+  characteristic: string;
   color: string;
-  /** Canvas-space bounds of the frame (below the persona card) */
+  /** Canvas-space bounds of the frame (uniform width; equalised height). */
   bounds: { x: number; y: number; width: number; height: number };
   /** All member IDs: persona card + clustered children */
   memberIds: string[];
 };
+
+/**
+ * Derive the persona swimlane frames from the current sticky notes. One uniform
+ * column per persona card; all columns share the tallest column's height so the
+ * lanes align as a table. Shared by the overlay AND the drop-into-frame handler
+ * so the two never drift. Assumes notes are laid out by computePersonaColumnLayout.
+ */
+export function computePersonaFrames(stickyNotes: StickyNote[]): PersonaFrameData[] {
+  const items = stickyNotes.filter((p) => (!p.type || p.type === 'stickyNote') && !p.isPreview);
+
+  const childrenFor = (card: StickyNote) => {
+    const personaNameLower = extractPersonaName(card.text);
+    return items.filter(
+      (p) => p.cluster && p.id !== card.id && (
+        p.cluster.toLowerCase() === personaNameLower
+        || extractPersonaName(p.cluster) === personaNameLower
+        || personaNameLower.startsWith(p.cluster.toLowerCase())
+      ),
+    );
+  };
+
+  const personaCards = items.filter((p) => isPersonaCardNote(p, items));
+  if (personaCards.length === 0) return [];
+
+  const frames = personaCards.map((card) => {
+    // Label = text before any em-dash; split first name vs characteristic on the
+    // first comma ("Anna, The Anxious Novice" → "Anna" + "The Anxious Novice").
+    const label = card.text.split(/\s*[—–]\s*/)[0].trim();
+    const commaIdx = label.indexOf(',');
+    const name = (commaIdx > 0 ? label.slice(0, commaIdx) : label).trim();
+    const characteristic = commaIdx > 0 ? label.slice(commaIdx + 1).trim() : '';
+    const color = card.color || 'yellow';
+    const children = childrenFor(card);
+
+    const frameX = card.position.x - FRAME_PADDING;
+    const frameY = card.position.y - FRAME_PADDING;
+
+    let maxBottom = card.position.y + card.height;
+    for (const c of children) maxBottom = Math.max(maxBottom, c.position.y + c.height);
+    const naturalHeight = Math.max(MIN_FRAME_HEIGHT, maxBottom - frameY + FRAME_PADDING);
+
+    return {
+      cardId: card.id,
+      name,
+      characteristic,
+      color,
+      bounds: { x: frameX, y: frameY, width: FRAME_WIDTH, height: naturalHeight },
+      memberIds: [card.id, ...children.map((c) => c.id)],
+    };
+  });
+
+  // Equalise heights across the row — every column grows to the tallest.
+  const maxHeight = Math.max(...frames.map((f) => f.bounds.height));
+  for (const f of frames) f.bounds.height = maxHeight;
+  return frames;
+}
 
 type DragState = {
   startMouseX: number;
@@ -74,70 +140,10 @@ export function PersonaFrameOverlay() {
 
   const [isDragging, setIsDragging] = useState(false);
 
-  const frames = useMemo<PersonaFrameData[]>(() => {
-    const items = stickyNotes.filter(p => (!p.type || p.type === 'stickyNote') && !p.isPreview);
-
-    // Find clustered children for a candidate persona card (robust matching).
-    const childrenFor = (card: StickyNote) => {
-      const personaNameLower = card.text.split(/\s*[—–]\s*/)[0].trim().toLowerCase();
-      return items.filter(
-        p => p.cluster && p.id !== card.id && (
-          p.cluster.toLowerCase() === personaNameLower
-          || extractPersonaName(p.cluster) === personaNameLower
-          || personaNameLower.startsWith(p.cluster.toLowerCase())
-        )
-      );
-    };
-
-    // Persona cards are unclustered sticky notes. Canned personas always carry an
-    // em-dash ("Name, Archetype — description"), but a CUSTOM-typed persona's card
-    // is often just "Name" (or "Name, Role") with no em-dash — so also treat any
-    // unclustered note that has insights clustered to it as a persona card. Without
-    // this, custom personas never got a swimlane frame (dialogue feedback
-    // df_ogbk4xa9dgoty657zosxv6d5).
-    const personaCards = items.filter(
-      p => !p.cluster && (p.isPersona || p.text.includes(' — ') || childrenFor(p).length > 0)
-    );
-    if (personaCards.length === 0) return [];
-
-    return personaCards.map(card => {
-      const personaName = card.text.split(/\s*[—–]\s*/)[0].trim();
-      const color = card.color || 'yellow';
-
-      const children = childrenFor(card);
-
-      // Frame wraps the entire horizontal row: persona card + children to its right
-      const frameX = card.position.x - FRAME_PADDING;
-      const frameY = card.position.y - FRAME_PADDING;
-
-      // Calculate width: from card left edge to rightmost child, or min width
-      let rightEdge = card.position.x + card.width;
-      if (children.length > 0) {
-        const childMaxX = Math.max(...children.map(c => c.position.x + c.width));
-        rightEdge = Math.max(rightEdge, childMaxX);
-      }
-      const frameWidth = Math.max(MIN_FRAME_WIDTH, rightEdge - frameX + FRAME_PADDING);
-
-      // Calculate height: tallest element in the row + padding
-      let maxBottom = card.position.y + card.height;
-      if (children.length > 0) {
-        const childMaxY = Math.max(...children.map(c => c.position.y + c.height));
-        maxBottom = Math.max(maxBottom, childMaxY);
-      }
-      const frameHeight = Math.max(MIN_FRAME_HEIGHT, maxBottom - frameY + FRAME_PADDING);
-
-      // Member IDs: card + all children
-      const memberIds = [card.id, ...children.map(c => c.id)];
-
-      return {
-        cardId: card.id,
-        name: personaName,
-        color,
-        bounds: { x: frameX, y: frameY, width: frameWidth, height: frameHeight },
-        memberIds,
-      };
-    });
-  }, [stickyNotes]);
+  const frames = useMemo<PersonaFrameData[]>(
+    () => computePersonaFrames(stickyNotes),
+    [stickyNotes],
+  );
 
   // --- Drag ---
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -258,13 +264,23 @@ export function PersonaFrameOverlay() {
                 <circle cx="5" cy="9" r="1" />
               </svg>
 
-              {/* Persona name */}
-              <span
-                className="text-[11px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis"
-                style={{ color: colors.text }}
-              >
-                {frame.name}
-              </span>
+              {/* Name (always shown) + characteristic (truncates if tight) */}
+              <div className="flex min-w-0 items-baseline gap-1.5">
+                <span
+                  className="text-[11px] font-semibold whitespace-nowrap"
+                  style={{ color: colors.text }}
+                >
+                  {frame.name}
+                </span>
+                {frame.characteristic && (
+                  <span
+                    className="text-[11px] font-normal whitespace-nowrap overflow-hidden text-ellipsis opacity-80"
+                    style={{ color: colors.text }}
+                  >
+                    {frame.characteristic}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Edge grab zones for secondary drag access */}
