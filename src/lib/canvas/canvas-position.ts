@@ -540,8 +540,8 @@ export function computeCanvasPosition(
  * PersonaFrameOverlay draws the swimlane frames around these and equalises their
  * heights ("grow the whole row"). Constants are shared so layout + frames agree.
  */
-export const PERSONA_COL_WIDTH = 240;
-export const PERSONA_COL_GAP = 80;
+export const PERSONA_COL_WIDTH = 320;
+export const PERSONA_COL_GAP = 72;
 export const PERSONA_AVATAR_W = 132;
 export const PERSONA_AVATAR_H = 168;
 const PERSONA_NOTE_GAP = 16;

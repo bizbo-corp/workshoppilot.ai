@@ -264,8 +264,9 @@ export function PersonaFrameOverlay() {
                 <circle cx="5" cy="9" r="1" />
               </svg>
 
-              {/* Name (always shown) + characteristic (truncates if tight) */}
-              <div className="flex min-w-0 items-baseline gap-1.5">
+              {/* Header: "<name> - <brief title>". Name always shown; the title
+                  (characteristic) follows after a dash and truncates if tight. */}
+              <div className="flex min-w-0 items-baseline gap-1">
                 <span
                   className="text-[11px] font-semibold whitespace-nowrap"
                   style={{ color: colors.text }}
@@ -274,10 +275,13 @@ export function PersonaFrameOverlay() {
                 </span>
                 {frame.characteristic && (
                   <span
-                    className="text-[11px] font-normal whitespace-nowrap overflow-hidden text-ellipsis opacity-80"
+                    className="flex min-w-0 items-baseline gap-1 text-[11px] font-normal opacity-80"
                     style={{ color: colors.text }}
                   >
-                    {frame.characteristic}
+                    <span aria-hidden>-</span>
+                    <span className="whitespace-nowrap overflow-hidden text-ellipsis">
+                      {frame.characteristic}
+                    </span>
                   </span>
                 )}
               </div>
