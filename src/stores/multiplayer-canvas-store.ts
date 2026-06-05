@@ -549,6 +549,17 @@ export const createMultiplayerCanvasStore = (initState?: InitState) => {
             ),
           })),
 
+        batchUpdateStickyNotes: (updates) =>
+          set((state) => {
+            const updateMap = new Map(updates.map((u) => [u.id, u]));
+            return {
+              stickyNotes: state.stickyNotes.map((stickyNote) => {
+                const update = updateMap.get(stickyNote.id);
+                return update ? { ...stickyNote, ...update } : stickyNote;
+              }),
+            };
+          }),
+
         renamePersona: (cardId, newFirstName) =>
           set((state) => {
             const card = state.stickyNotes.find((p) => p.id === cardId);

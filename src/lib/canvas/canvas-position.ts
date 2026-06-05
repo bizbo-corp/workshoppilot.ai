@@ -534,6 +534,96 @@ export function computeCanvasPosition(
   };
 }
 
+/* ── User-research persona column table ──────────────────────────────────────
+ * Each persona is an equal-width column: avatar/name card on top, interview
+ * insight notes stacked vertically beneath. Columns tile left-to-right. The
+ * PersonaFrameOverlay draws the swimlane frames around these and equalises their
+ * heights ("grow the whole row"). Constants are shared so layout + frames agree.
+ */
+export const PERSONA_COL_WIDTH = 240;
+export const PERSONA_COL_GAP = 80;
+export const PERSONA_AVATAR_W = 132;
+export const PERSONA_AVATAR_H = 168;
+const PERSONA_NOTE_GAP = 16;
+const PERSONA_INSIGHT_TOP_GAP = 16;
+const PERSONA_START_X = 0;
+const PERSONA_TOP_Y = 0;
+
+export type StickyLayoutUpdate = {
+  id: string;
+  position: { x: number; y: number };
+  width: number;
+  height: number;
+  lockSize?: boolean;
+};
+
+/** Insight notes clustered to a persona card (robust first-name matching). */
+function personaChildren(card: StickyNote, items: StickyNote[]): StickyNote[] {
+  const nameLower = extractPersonaName(card.text);
+  return items.filter(
+    (p) => p.cluster && p.id !== card.id && (
+      p.cluster.toLowerCase() === nameLower
+      || extractPersonaName(p.cluster) === nameLower
+      || nameLower.startsWith(p.cluster.toLowerCase())
+    ),
+  );
+}
+
+/** Persona cards = unclustered notes flagged isPersona, or (legacy) carrying an
+ *  em-dash, or any unclustered note that has insights clustered to it. */
+export function isPersonaCardNote(card: StickyNote, items: StickyNote[]): boolean {
+  return !card.cluster
+    && (!card.type || card.type === 'stickyNote')
+    && (!!card.isPersona || card.text.includes(' — ') || personaChildren(card, items).length > 0);
+}
+
+/**
+ * Lay out user-research persona cards + their insights as an aligned column
+ * table. Returns position/size updates for every persona member; insight notes
+ * are locked so the auto-fit pass can't grow them out of their packed slots.
+ * Column order follows the cards' current left-to-right / top-to-bottom order so
+ * it stays stable across re-packs.
+ */
+export function computePersonaColumnLayout(stickyNotes: StickyNote[]): StickyLayoutUpdate[] {
+  const items = stickyNotes.filter((p) => (!p.type || p.type === 'stickyNote') && !p.isPreview);
+  if (items.length === 0) return [];
+
+  const personaCards = items.filter((p) => isPersonaCardNote(p, items));
+  if (personaCards.length === 0) return [];
+
+  const ordered = [...personaCards].sort(
+    (a, b) => (a.position.x - b.position.x) || (a.position.y - b.position.y),
+  );
+
+  const updates: StickyLayoutUpdate[] = [];
+  ordered.forEach((card, colIdx) => {
+    const colX = PERSONA_START_X + colIdx * (PERSONA_COL_WIDTH + PERSONA_COL_GAP);
+    // Avatar/name card sits top-left of its column.
+    updates.push({
+      id: card.id,
+      position: { x: colX, y: PERSONA_TOP_Y },
+      width: PERSONA_AVATAR_W,
+      height: PERSONA_AVATAR_H,
+    });
+    const kids = personaChildren(card, items).sort(
+      (a, b) => (a.position.y - b.position.y) || (a.position.x - b.position.x),
+    );
+    let y = PERSONA_TOP_Y + PERSONA_AVATAR_H + PERSONA_INSIGHT_TOP_GAP;
+    for (const kid of kids) {
+      const height = estimateStickyHeight(kid.text, PERSONA_COL_WIDTH, true);
+      updates.push({
+        id: kid.id,
+        position: { x: colX, y },
+        width: PERSONA_COL_WIDTH,
+        height,
+        lockSize: true,
+      });
+      y += height + PERSONA_NOTE_GAP;
+    }
+  });
+  return updates;
+}
+
 /**
  * Compute reorganized positions for all sticky notes, grouping by cluster
  * and distributing clusters evenly around their assigned rings.
