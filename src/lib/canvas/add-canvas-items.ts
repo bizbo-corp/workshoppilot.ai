@@ -33,15 +33,16 @@ const EMPATHY_ZONE_IDS = new Set<string>([
   "gains",
 ]);
 
-/** Row-based sticky note colors for journey map swimlanes */
+/** Journey map cards default to pale yellow across every lane — lane identity
+ *  lives in the olive row tints + labels, not the card colour. */
 export const GRID_ROW_COLORS: Record<string, StickyNoteColor> = {
-  actions: "blue",
-  goals: "green",
-  barriers: "red",
-  touchpoints: "pink",
-  emotions: "green", // fallback; explicit color attr takes priority
+  actions: "yellow",
+  goals: "yellow",
+  barriers: "yellow",
+  touchpoints: "yellow",
+  emotions: "yellow", // fallback; explicit color attr takes priority
   moments: "yellow",
-  opportunities: "orange",
+  opportunities: "yellow",
 };
 
 const VALID_COLORS = new Set<string>([

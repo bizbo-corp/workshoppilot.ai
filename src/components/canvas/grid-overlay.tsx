@@ -53,26 +53,19 @@ const ROW_ICONS: Record<string, LucideIcon> = {
   opportunities: Lightbulb,
 };
 
-/** Per-row tint colors for swimlane visual identity — matches sticky note palette */
+/**
+ * Per-row background tints — shades of olive/sage. Painted at the shared empathy
+ * zone opacity (`--canvas-zone-opacity`) so the lanes read as calm olive bands,
+ * matching the empathy map backgrounds rather than a rainbow.
+ */
 const ROW_TINT_COLORS: Record<string, string> = {
-  actions: '#a8daff',      // blue  (--canvas-blue-pastel)
-  goals: '#b3efbd',        // green (--canvas-green-pastel)
-  barriers: '#ffafa3',     // red   (--canvas-red-pastel)
-  touchpoints: '#ffa8db',  // pink  (--canvas-pink-pastel)
-  emotions: '#ffa8db',     // pink  (--canvas-pink-pastel) — matches emotion stickies
-  moments: '#ffe299',      // yellow(--canvas-yellow-pastel)
-  opportunities: '#ffd3a8', // orange(--canvas-orange-pastel)
-};
-
-/** Dark accent colors for row label icons + text (light theme / dark theme) */
-const ROW_LABEL_COLORS: Record<string, { light: string; dark: string }> = {
-  actions:       { light: '#1a6d9e', dark: '#7cc8e8' },
-  goals:         { light: '#1a7a4a', dark: '#6dcea0' },
-  barriers:      { light: '#b03028', dark: '#f09088' },
-  touchpoints:   { light: '#a03068', dark: '#f0a0c0' },
-  emotions:      { light: '#58594e', dark: '#c0c2b8' },
-  moments:       { light: '#8a6a10', dark: '#e8d070' },
-  opportunities: { light: '#a05a18', dark: '#f0b878' },
+  actions: '#8a9a5b',
+  goals: '#9aa873',
+  barriers: '#6b7f4e',
+  touchpoints: '#a3b18a',
+  emotions: '#b1bca0',
+  moments: '#7e8c54',
+  opportunities: '#95a36f',
 };
 
 /**
@@ -144,6 +137,20 @@ export function GridOverlay({
   // Ref mirrors dragState so pointerup always reads the latest value
   // (avoids stale-closure race where React hasn't re-rendered yet)
   const dragRef = useRef<typeof dragState>(null);
+  // A press that hasn't yet crossed the drag threshold. We don't enter a drag
+  // (or capture the pointer) until the pointer moves > DRAG_THRESHOLD px, so a
+  // plain click still reaches the header for rename / the X for delete.
+  const pendingPressRef = useRef<{
+    columnId: string;
+    startIndex: number;
+    startX: number;
+    startY: number;
+    pointerId: number;
+  } | null>(null);
+  // True once a press became a drag — used to swallow the trailing click so the
+  // label editor doesn't pop open at the end of a reorder.
+  const dragMovedRef = useRef(false);
+  const DRAG_THRESHOLD = 4;
 
   // Helper to transform canvas coordinates to screen coordinates
   const toScreen = (canvasX: number, canvasY: number) => ({
@@ -183,7 +190,7 @@ export function GridOverlay({
   const tableW = (colXPositions[colXPositions.length - 1] - labelAreaX) * zoom;
   const tableH = (rowYPositions[rowYPositions.length - 1] - headerAreaY) * zoom;
   const cornerRadius = 16 * zoom;
-  const tableBg = isDark ? '#1c2416' : '#ffffff';
+  const tableBg = isDark ? '#1c2416' : '#f9f9f8'; // dark olive / neutral-olive-50 paper
 
   // --- Drag handlers ---
   const computeDropIndex = useCallback(
@@ -205,44 +212,77 @@ export function GridOverlay({
     [colXPositions, zoom, x, effectiveColumns.length],
   );
 
-  const handleGripPointerDown = useCallback(
+  // Press starts on the whole header. We only arm a pending press here — the
+  // drag itself begins in pointermove once the threshold is crossed, leaving a
+  // click free to reach the editable label / delete button.
+  const handleHeaderPointerDown = useCallback(
     (e: React.PointerEvent, columnId: string, colIndex: number) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const target = e.currentTarget as HTMLElement;
-      target.setPointerCapture(e.pointerId);
-      const state = { columnId, startIndex: colIndex, dropIndex: colIndex };
-      dragRef.current = state;
-      setDragState(state);
+      if (!canEditStructure) return;
+      pendingPressRef.current = {
+        columnId,
+        startIndex: colIndex,
+        startX: e.clientX,
+        startY: e.clientY,
+        pointerId: e.pointerId,
+      };
+      dragMovedRef.current = false;
     },
-    [],
+    [canEditStructure],
   );
 
-  const handleGripPointerMove = useCallback(
+  const handleHeaderPointerMove = useCallback(
     (e: React.PointerEvent) => {
       const drag = dragRef.current;
-      if (!drag) return;
-      const newDropIndex = computeDropIndex(e.clientX);
-      if (newDropIndex !== drag.dropIndex) {
-        drag.dropIndex = newDropIndex;
-        setDragState({ ...drag });
+      if (drag) {
+        // Already dragging — track the nearest gap for the drop indicator.
+        const newDropIndex = computeDropIndex(e.clientX);
+        if (newDropIndex !== drag.dropIndex) {
+          drag.dropIndex = newDropIndex;
+          setDragState({ ...drag });
+        }
+        return;
       }
+
+      const pending = pendingPressRef.current;
+      if (!pending || pending.pointerId !== e.pointerId) return;
+      const dist = Math.hypot(e.clientX - pending.startX, e.clientY - pending.startY);
+      if (dist < DRAG_THRESHOLD) return;
+
+      // Threshold crossed → promote to a real drag and capture the pointer so
+      // moves continue to land here even when the cursor leaves the header.
+      dragMovedRef.current = true;
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture(pending.pointerId);
+      } catch {
+        /* capture may be unavailable mid-gesture; drag still works while over the header */
+      }
+      const state = {
+        columnId: pending.columnId,
+        startIndex: pending.startIndex,
+        dropIndex: computeDropIndex(e.clientX),
+      };
+      dragRef.current = state;
+      setDragState(state);
     },
     [computeDropIndex],
   );
 
-  const handleGripPointerUp = useCallback(
+  const handleHeaderPointerUp = useCallback(
     (e: React.PointerEvent) => {
-      // Always release capture first — prevents stuck capture if state is stale
-      const target = e.currentTarget as HTMLElement;
-      try { target.releasePointerCapture(e.pointerId); } catch { /* not captured */ }
+      // Always release capture first — prevents stuck capture if state is stale.
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {
+        /* not captured */
+      }
 
+      pendingPressRef.current = null;
       const drag = dragRef.current;
-      if (!drag) return;
+      if (!drag) return; // never crossed the threshold — treat as a click
 
-      // Convert gap-based dropIndex to array insertion index accounting for removal
+      // Convert gap-based dropIndex to array insertion index accounting for removal.
       let insertIndex = drag.dropIndex;
-      // If dropping after the original position, subtract 1 because the source is removed first
+      // If dropping after the original position, subtract 1 because the source is removed first.
       if (insertIndex > drag.startIndex) {
         insertIndex -= 1;
       }
@@ -255,6 +295,16 @@ export function GridOverlay({
     },
     [onMoveColumn],
   );
+
+  // Swallow the click that the browser fires after a drag gesture so the label
+  // editor doesn't open when the user was only reordering.
+  const handleHeaderClickCapture = useCallback((e: React.MouseEvent) => {
+    if (dragMovedRef.current) {
+      e.stopPropagation();
+      e.preventDefault();
+      dragMovedRef.current = false;
+    }
+  }, []);
 
   const MAX_COLUMNS = 12;
 
@@ -322,13 +372,15 @@ export function GridOverlay({
             fill={tableBg}
           />
 
-          {/* Per-row color tints — extends across label area + grid cells */}
+          {/* Per-row olive tints — painted across the label gutter + cells at
+              the empathy-map zone opacity so lanes read as calm olive bands.
+              Heights come from rowYPositions, which already reflect the dynamic
+              row growth, so a row's band expands with its cards. */}
           {config.rows.map((row, index) => {
             const rowTop = rowYPositions[index];
             const rowHeight = rowYPositions[index + 1] - rowTop;
             const topLeft = toScreen(labelAreaX, rowTop);
             const fullWidth = colXPositions[colXPositions.length - 1] - labelAreaX;
-            const tintColor = ROW_TINT_COLORS[row.id] || '#a8aaa3';
             return (
               <rect
                 key={`row-tint-${row.id}`}
@@ -336,11 +388,20 @@ export function GridOverlay({
                 y={topLeft.y}
                 width={fullWidth * zoom}
                 height={rowHeight * zoom}
-                fill={tintColor}
-                opacity={0.3}
+                fill={ROW_TINT_COLORS[row.id] ?? '#8a9a5b'}
+                style={{ opacity: 'var(--canvas-zone-opacity)' }}
               />
             );
           })}
+
+          {/* Solid olive header bar across the top (stage labels sit on it). */}
+          <rect
+            x={tableTopLeft.x}
+            y={tableTopLeft.y}
+            width={tableW}
+            height={config.origin.y * zoom}
+            fill={isDark ? '#3d4b29' : '#505d3d'}
+          />
 
           {/* Skeleton sticky note placeholders in empty cells */}
           {config.rows.map((row, rowIdx) =>
@@ -389,7 +450,8 @@ export function GridOverlay({
             }),
           )}
 
-          {/* Row labels with icons */}
+          {/* Row labels — just the icon + name in neutral olive (no badge, no
+              colour-coding). Sized in viewport units so they scale with zoom. */}
           {config.rows.map((row, index) => {
             const rowTop = rowYPositions[index];
             const rowBottom = rowYPositions[index + 1];
@@ -399,21 +461,30 @@ export function GridOverlay({
             const midLeft = toScreen(labelAreaX + labelAreaWidth / 2, rowMidpoint);
             const labelWidth = labelAreaWidth * zoom;
             const Icon = ROW_ICONS[row.id];
-            const labelColors = ROW_LABEL_COLORS[row.id];
-            const labelColor = labelColors ? (isDark ? labelColors.dark : labelColors.light) : undefined;
+            // Sizes scale with the viewport so the label zooms with the grid
+            // instead of staying a fixed screen size.
+            const iconPx = 22 * zoom;
+            const fontPx = 13 * zoom;
+            const boxH = 56 * zoom;
 
             return (
               <foreignObject
                 key={row.id}
                 x={midLeft.x - labelWidth / 2}
-                y={midLeft.y - 30}
+                y={midLeft.y - boxH / 2}
                 width={labelWidth}
-                height={60}
+                height={boxH}
                 className="pointer-events-none"
               >
-                <div className="flex flex-col items-center justify-center h-full gap-1" style={labelColor ? { color: labelColor } : undefined}>
-                  {Icon && <Icon className="h-7 w-7" />}
-                  <span className="text-xs font-bold leading-tight text-center">
+                <div
+                  className="flex flex-col items-center justify-center h-full text-neutral-olive-700 dark:text-neutral-olive-200"
+                  style={{ gap: 3 * zoom }}
+                >
+                  {Icon && <Icon style={{ width: iconPx, height: iconPx }} className="shrink-0" />}
+                  <span
+                    className="font-semibold leading-tight text-center"
+                    style={{ fontSize: fontPx }}
+                  >
                     {row.label}
                   </span>
                 </div>
@@ -455,9 +526,9 @@ export function GridOverlay({
                 y1={leftEdge.y}
                 x2={rightEdge.x}
                 y2={rightEdge.y}
-                stroke="#a8aaa3"
-                strokeWidth={0.5}
-                strokeOpacity={0.5}
+                stroke={isDark ? '#91948b' : '#62675c'} /* neutral-olive: darker header underline */
+                strokeWidth={1}
+                strokeOpacity={0.7}
               />
             );
           })()}
@@ -496,7 +567,7 @@ export function GridOverlay({
                 x2={bottomEdge.x}
                 y2={bottomEdge.y}
                 stroke="var(--canvas-blue)"
-                strokeWidth={2}
+                strokeWidth={3}
                 strokeLinecap="round"
               />
             );
@@ -539,18 +610,31 @@ export function GridOverlay({
                 opacity: isDragging ? 0.5 : 1,
               }}
             >
-              <div className="flex items-center justify-center gap-0.5 group h-full">
+              {/* The whole header is the drag surface (with a click-vs-drag
+                  threshold), so reordering a stage no longer depends on hitting
+                  the tiny grip. Plain clicks still fall through to rename / X. */}
+              <div
+                className="flex items-center justify-center gap-0.5 group h-full touch-none"
+                onPointerDown={
+                  canEditStructure
+                    ? (e) => handleHeaderPointerDown(e, col.id, index)
+                    : undefined
+                }
+                onPointerMove={canEditStructure ? handleHeaderPointerMove : undefined}
+                onPointerUp={canEditStructure ? handleHeaderPointerUp : undefined}
+                onPointerCancel={canEditStructure ? handleHeaderPointerUp : undefined}
+                onClickCapture={canEditStructure ? handleHeaderClickCapture : undefined}
+                style={
+                  canEditStructure
+                    ? { cursor: dragState ? 'grabbing' : 'grab' }
+                    : undefined
+                }
+                title={canEditStructure ? 'Drag to reorder this stage' : undefined}
+              >
                 {canEditStructure && (
-                  <button
-                    onPointerDown={(e) => handleGripPointerDown(e, col.id, index)}
-                    onPointerMove={handleGripPointerMove}
-                    onPointerUp={handleGripPointerUp}
-                    className="opacity-40 group-hover:opacity-100 p-0.5 hover:bg-muted rounded transition-opacity touch-none"
-                    style={{ cursor: dragState ? 'grabbing' : 'grab' }}
-                    title="Drag to reorder this stage"
-                  >
-                    <GripVertical className="h-3 w-3 text-muted-foreground" />
-                  </button>
+                  <span className="opacity-50 group-hover:opacity-100 p-0.5 transition-opacity">
+                    <GripVertical className="h-3 w-3 text-neutral-olive-100" />
+                  </span>
                 )}
                 <EditableColumnHeader
                   label={col.label}
@@ -560,6 +644,8 @@ export function GridOverlay({
                 />
                 {effectiveColumns.length > 1 && (
                   <button
+                    // Stop the press from arming a drag so X stays a pure click.
+                    onPointerDown={(e) => e.stopPropagation()}
                     onClick={() =>
                       onDeleteColumn?.(
                         col.id,
@@ -630,7 +716,7 @@ export function GridOverlay({
               <div
                 key={`rowfill-${row.id}`}
                 className="absolute pointer-events-auto -translate-x-1/2"
-                style={{ left: pos.x, top: pos.y + 28 }}
+                style={{ left: pos.x, top: pos.y + 32 * zoom }}
               >
                 <button
                   type="button"
