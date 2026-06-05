@@ -59,7 +59,11 @@ export function buildStepSystemPrompt(
   isParticipant?: boolean,
   participantName?: string,
   interviewMode?: 'synthetic' | 'real' | null,
-  lockedJourneyTemplate?: { templateId: string; templateName: string } | null,
+  lockedJourneyTemplate?: {
+    templateId: string;
+    templateName: string;
+    stages?: string[];
+  } | null,
 ): string {
   // Base role for this step (step instructions may override personality)
   let prompt = `You are guiding the user through Step: ${stepName}.`;
@@ -494,6 +498,12 @@ When the user sends a message like 'For "Given that": [value]' or 'For "how migh
   // (Journey maps need 30-50+ items populated across the full conversation lifecycle)
   if (stepId === "journey-mapping") {
     if (lockedJourneyTemplate) {
+      const lockedStages = lockedJourneyTemplate.stages?.length
+        ? lockedJourneyTemplate.stages
+        : null;
+      const stagesDirective = lockedStages
+        ? `The [JOURNEY_STAGES] tag using EXACTLY these stage names, in this order (these are the localised stages the team saw on the poll card — do NOT rename, reword, or substitute generic template stages): [JOURNEY_STAGES]${lockedStages.join("|")}[/JOURNEY_STAGES]`
+        : `The [JOURNEY_STAGES] tag with the template's default stage names piped together, localised to the workshop's domain.`;
       prompt += `\n\nJOURNEY TEMPLATE LOCKED:
 The team has locked their journey template via the multiplayer poll: **${lockedJourneyTemplate.templateName}**.
 
@@ -501,9 +511,9 @@ Skip the "recommend templates" phase entirely. Do NOT present options, do NOT em
 
 TRIGGER: When the user message is exactly \`__journey_template_locked__:<id>\` or starts with that prefix, this is the system signal that the lock just happened. Respond with a single message containing all of:
 1. ONE short conversational sentence (max 20 words) acknowledging the locked template by name — warm, not robotic. No question.
-2. The [JOURNEY_STAGES] tag with the template's default stage names piped together.
+2. ${stagesDirective}
 3. A one-line transition into the Actions row (e.g. "First up — **Actions**: what they actually do at each stage.").
-4. EXACTLY ONE [GRID_ITEM row="actions" col="<col-id>"] per stage in the locked template. The col values MUST be the lowercase-hyphenated versions of the stage names you just emitted in [JOURNEY_STAGES]. Do NOT repeat a cell. Do NOT skip a cell. The count of Actions [GRID_ITEM] tags must equal the count of stages.
+4. EXACTLY ONE [GRID_ITEM row="actions" col="<col-id>"] per stage you just emitted. The col values MUST be the lowercase-hyphenated versions of those stage names. Do NOT repeat a cell. Do NOT skip a cell. The count of Actions [GRID_ITEM] tags must equal the count of stages.
 5. The row follow-up prompt: "Ready for **Goals**? Say 'next' or adjust anything above."
 
 After this single response, return to the standard row-by-row populate flow described in the step instructions.`;

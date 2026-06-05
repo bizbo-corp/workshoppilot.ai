@@ -265,8 +265,14 @@ export type CanvasActions = {
    *  selected option). */
   retractJourneyVote: (voterId: string) => void;
   /** Lock the team's pick. After this fires, the AI on both sides shifts to
-   *  "populate stages" mode. */
-  lockJourneyTemplate: (templateId: string, templateName: string) => void;
+   *  "populate stages" mode. `stages` carries the locked option's localised
+   *  stage list so the grid columns match the card (and so custom journeys,
+   *  which have no catalog fallback, still seed columns). */
+  lockJourneyTemplate: (
+    templateId: string,
+    templateName: string,
+    stages?: string[],
+  ) => void;
   /** Wipe the poll entirely. Currently unused but exposed for step-reset flows. */
   clearJourneyPoll: () => void;
   setIdeationPhase: (phase: IdeationPhase) => void;
@@ -1317,13 +1323,13 @@ export const createCanvasStore = (initState?: { stickyNotes: StickyNote[]; gridC
             };
           }),
 
-        lockJourneyTemplate: (templateId, templateName) =>
+        lockJourneyTemplate: (templateId, templateName, stages) =>
           set((state) => {
             if (!state.journeyPoll) return state;
             return {
               journeyPoll: {
                 ...state.journeyPoll,
-                lockedTemplate: { templateId, templateName },
+                lockedTemplate: { templateId, templateName, stages },
               },
               isDirty: true,
             };
