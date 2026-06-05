@@ -24,9 +24,14 @@ import { getCellBounds } from "@/lib/canvas/grid-layout";
 import { useCanvasStore } from "@/providers/canvas-store-provider";
 import { EditableColumnHeader } from "./editable-column-header";
 import {
+  emitGridAutocomplete,
+  type GridAutocompleteRequest,
+} from "@/lib/canvas/grid-autocomplete-bus";
+import {
   PlusCircle,
   X,
   GripVertical,
+  Sparkles,
   Footprints,
   Target,
   Construction,
@@ -540,9 +545,9 @@ export function GridOverlay({
                     onPointerDown={(e) => handleGripPointerDown(e, col.id, index)}
                     onPointerMove={handleGripPointerMove}
                     onPointerUp={handleGripPointerUp}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-muted rounded transition-opacity touch-none"
+                    className="opacity-40 group-hover:opacity-100 p-0.5 hover:bg-muted rounded transition-opacity touch-none"
                     style={{ cursor: dragState ? 'grabbing' : 'grab' }}
-                    title="Drag to reorder"
+                    title="Drag to reorder this stage"
                   >
                     <GripVertical className="h-3 w-3 text-muted-foreground" />
                   </button>
@@ -606,6 +611,70 @@ export function GridOverlay({
             </div>
           );
         })()}
+
+        {/* Per-row "Auto-fill" buttons — sit under each row label. Always
+            visible so the autocomplete affordance is discoverable. Asks the AI
+            to fill that whole row across all stages (user edits after). */}
+        {canEditStructure &&
+          config.rows.map((row, index) => {
+            const rowTop = rowYPositions[index];
+            const rowMid = rowTop + (rowYPositions[index + 1] - rowTop) / 2;
+            const pos = toScreen(labelAreaX + labelAreaWidth / 2, rowMid);
+            const req: GridAutocompleteRequest = {
+              scope: "row",
+              rowId: row.id,
+              rowLabel: row.label,
+              columns: effectiveColumns.map((c) => ({ id: c.id, label: c.label })),
+            };
+            return (
+              <div
+                key={`rowfill-${row.id}`}
+                className="absolute pointer-events-auto -translate-x-1/2"
+                style={{ left: pos.x, top: pos.y + 28 }}
+              >
+                <button
+                  type="button"
+                  onClick={() => emitGridAutocomplete(req)}
+                  className="flex items-center gap-1 rounded-full border border-olive-300 bg-card/90 px-2 py-0.5 text-[10px] font-medium text-[#4a5a32] shadow-sm transition-colors hover:bg-olive-100 dark:border-neutral-olive-700 dark:text-neutral-olive-200 dark:hover:bg-neutral-olive-700"
+                  title={`Auto-fill the ${row.label} row with AI — you can edit after`}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Auto-fill
+                </button>
+              </div>
+            );
+          })}
+
+        {/* Per-cell autocomplete — a small wand in each cell's top-left corner,
+            revealed on hover. Fills just that one cell. */}
+        {canEditStructure &&
+          config.rows.map((row, rowIdx) =>
+            effectiveColumns.map((col, colIdx) => {
+              const bounds = getCellBounds(
+                { row: rowIdx, col: colIdx },
+                { ...config, columns: effectiveColumns },
+              );
+              const tl = toScreen(bounds.x + 2, bounds.y + 2);
+              const req: GridAutocompleteRequest = {
+                scope: "cell",
+                rowId: row.id,
+                rowLabel: row.label,
+                columns: [{ id: col.id, label: col.label }],
+              };
+              return (
+                <button
+                  key={`cellfill-${row.id}-${col.id}`}
+                  type="button"
+                  onClick={() => emitGridAutocomplete(req)}
+                  className="absolute pointer-events-auto flex h-[18px] w-[18px] items-center justify-center rounded-full border border-olive-300 bg-card/95 text-[#4a5a32] opacity-0 shadow-sm transition-opacity hover:bg-olive-100 hover:opacity-100 focus-visible:opacity-100 dark:border-neutral-olive-700 dark:bg-card dark:text-neutral-olive-200 dark:hover:bg-neutral-olive-700"
+                  style={{ left: tl.x, top: tl.y }}
+                  title={`Auto-fill the ${row.label} cell for "${col.label}" — you can edit after`}
+                >
+                  <Sparkles className="h-2.5 w-2.5" />
+                </button>
+              );
+            }),
+          )}
       </div>
     </>
   );

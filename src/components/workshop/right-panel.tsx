@@ -5,7 +5,7 @@ import { CanvasWrapper } from '@/components/canvas/canvas-wrapper';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import type { CanvasGuideData } from '@/lib/canvas/canvas-guide-types';
 import type { StepCanvasSettingsData } from '@/lib/canvas/step-canvas-settings-types';
-import { JourneyTemplatePoll } from './journey-template-poll';
+import { JourneyTemplatePoll, SoloJourneyTemplatePoll } from './journey-template-poll';
 
 interface RightPanelProps {
   stepOrder: number;
@@ -48,13 +48,14 @@ export function RightPanel({
 
   return (
     <div className="flex h-full flex-col relative overflow-hidden">
-      {/* Step-6 journey template poll — multiplayer-only overlay above the
-          canvas. The component returns null when there's no open poll or when
-          a template is already locked. Gated on isMultiplayer so we don't
-          mount useBroadcastEvent outside a RoomProvider. */}
-      {isJourneyMapping && isMultiplayer && (
+      {/* Step-6 journey template picker — overlay above the canvas. Each
+          variant returns null when there's no open poll or once a template is
+          confirmed. Solo uses a no-Liveblocks chooser; multiplayer uses the
+          vote card (which mounts useBroadcastEvent, so it must stay gated on
+          isMultiplayer to avoid running that hook outside a RoomProvider). */}
+      {isJourneyMapping && (
         <div className="shrink-0 px-4 pt-4">
-          <JourneyTemplatePoll />
+          {isMultiplayer ? <JourneyTemplatePoll /> : <SoloJourneyTemplatePoll />}
         </div>
       )}
 

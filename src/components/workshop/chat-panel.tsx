@@ -50,6 +50,10 @@ import { THEME_COLORS, ROOT_COLOR } from "@/lib/canvas/mind-map-theme-colors";
 import { computeNewNodePosition } from "@/lib/canvas/mind-map-layout";
 import { getStepCanvasConfig } from "@/lib/canvas/step-canvas-config";
 import { addCanvasItemsToBoard } from "@/lib/canvas/add-canvas-items";
+import {
+  onGridAutocomplete,
+  type GridAutocompleteRequest,
+} from "@/lib/canvas/grid-autocomplete-bus";
 import { saveCanvasState, savePersonaCandidates, loadCanvasState } from "@/actions/canvas-actions";
 import { sendResearchReminders } from "@/actions/research-actions";
 import { ChatSkeleton } from "./chat-skeleton";
@@ -1702,17 +1706,18 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
     }
   }, [status, messages, step.id, researchSourceChosen]);
 
-  // Step 6 — when the facilitator's AI emits [JOURNEY_POLL_OPTIONS], open the
-  // template-vote poll in the canvas store. In multiplayer this fires once per
-  // message (broadcasted to participants); in solo it's gated off since no poll
-  // UI is rendered (right-panel guards on workshopType === 'multiplayer'). Once
-  // a lockedTemplate is set the AI's prompt branch stops re-emitting the marker,
-  // so this guard primarily protects against accidental re-emit before lock.
+  // Step 6 — when the AI emits [JOURNEY_POLL_OPTIONS], open the template picker
+  // in the canvas store. Solo: the owner sees the chooser (SoloJourneyTemplatePoll).
+  // Multiplayer: only the facilitator opens + broadcasts it to participants. Once a
+  // lockedTemplate is set the AI's prompt branch stops re-emitting the marker, so
+  // this guard primarily protects against accidental re-emit before lock.
   const [journeyPollMessageId, setJourneyPollMessageId] = React.useState<
     string | null
   >(null);
   React.useEffect(() => {
-    if (step.id !== "journey-mapping" || !isMultiplayer || !isFacilitator) return;
+    if (step.id !== "journey-mapping") return;
+    // Block only multiplayer participants; solo owner + facilitator proceed.
+    if (isMultiplayer && !isFacilitator) return;
     if (journeyPoll?.lockedTemplate) return;
     if (status !== "ready" || messages.length === 0) return;
     const lastMsg = messages[messages.length - 1];
@@ -1761,7 +1766,9 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
   const hasFiredLockMessage = React.useRef(false);
   React.useEffect(() => {
     if (step.id !== "journey-mapping") return;
-    if (!isMultiplayer || !isFacilitator) return;
+    // Solo owner + multiplayer facilitator drive the lock turn; block only
+    // multiplayer participants (they don't own the AI conversation).
+    if (isMultiplayer && !isFacilitator) return;
     const currentLockedId = journeyPoll?.lockedTemplate?.templateId ?? null;
     const previousLockedId = prevLockedTemplateIdRef.current;
     prevLockedTemplateIdRef.current = currentLockedId;
@@ -1826,6 +1833,60 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
     flushCanvasToDb,
     sendMessage,
   ]);
+
+  // Step 6 — the canvas "Auto-fill" buttons (grid-overlay) ask the AI to fill a
+  // journey row or a single cell. The grid emits on a client-side bus; we turn
+  // that into a hidden synthetic user message so the model fills the cells via
+  // its normal [GRID_ITEM] output (which auto-applies on stream completion).
+  // A ref carries the latest volatile values so we subscribe just once.
+  const autocompleteRef = React.useRef({
+    status,
+    stepId: step.id,
+    sendMessage,
+    flushCanvasToDb,
+  });
+  autocompleteRef.current = {
+    status,
+    stepId: step.id,
+    sendMessage,
+    flushCanvasToDb,
+  };
+  React.useEffect(() => {
+    const unsub = onGridAutocomplete((req: GridAutocompleteRequest) => {
+      const {
+        status: s,
+        stepId,
+        sendMessage: send,
+        flushCanvasToDb: flush,
+      } = autocompleteRef.current;
+      if (stepId !== "journey-mapping") return;
+      if (s !== "ready") {
+        toast.info("One moment — finishing the current response first.");
+        return;
+      }
+      if (req.columns.length === 0) return;
+      const marker = "__journey_autocomplete__";
+      const emotionsNote =
+        req.rowId === "emotions"
+          ? ' Set the traffic-light color attribute on every item (color="green", "orange", or "red") to match the barriers.'
+          : "";
+      let text: string;
+      if (req.scope === "row") {
+        const colList = req.columns
+          .map((c) => `"${c.label}" (col="${c.id}")`)
+          .join(", ");
+        text = `${marker}\nAuto-fill the **${req.rowLabel}** row now for every stage. Emit one [GRID_ITEM row="${req.rowId}" col="<id>"]…[/GRID_ITEM] for each of these stages: ${colList}. Draw on the persona, research, and prior context, and keep each cell to a few words.${emotionsNote} If a cell already has content, refine it. Do NOT fill any other row and do NOT advance to the next row — just emit the ${req.rowLabel} cells, then add a short line inviting me to tweak them.`;
+      } else {
+        const c = req.columns[0];
+        text = `${marker}\nAuto-fill just the **${req.rowLabel}** cell for the **${c.label}** stage. Emit exactly one [GRID_ITEM row="${req.rowId}" col="${c.id}"]…[/GRID_ITEM] and nothing else — no other cells, no row change. Keep it to a few words grounded in the persona and prior context.${emotionsNote} Then add a short line inviting me to tweak it.`;
+      }
+      void (async () => {
+        await flush();
+        send({ role: "user", parts: [{ type: "text", text }] });
+      })();
+    });
+    return unsub;
+  }, []);
 
   // Detect confirmed persona selection + interview mode from historical messages (persistence across refresh)
   const hasCheckedPersonaHistory = React.useRef(false);
@@ -3091,7 +3152,8 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                       .join("") || "";
                   return (
                     text !== "__step_start__" &&
-                    !text.startsWith("__journey_template_locked__")
+                    !text.startsWith("__journey_template_locked__") &&
+                    !text.startsWith("__journey_autocomplete__")
                   );
                 });
                 if (visibleMessages.length === 0) {
