@@ -102,6 +102,20 @@ import { getStepTemplateStickyNotes, guidesToTemplateDefs } from "@/lib/canvas/t
 import { toast } from "sonner";
 // JourneyMapSkeleton removed — skeleton placeholders are now integrated into GridOverlay
 
+// Minimal shape of the Liveblocks Room we touch for multiplayer undo/redo. The
+// @liveblocks/zustand middleware exposes the connected room at
+// `store.getState().liveblocks.room`; this is the per-step canvas room (its
+// history is where canvas mutations land), distinct from the base RoomProvider.
+type LiveblocksRoomLike = {
+  history: {
+    undo: () => void;
+    redo: () => void;
+    canUndo: () => boolean;
+    canRedo: () => boolean;
+  };
+  subscribe: (event: "history", callback: () => void) => () => void;
+};
+
 // Define node types OUTSIDE component for stable reference
 const nodeTypes = {
   stickyNote: StickyNoteNode,
@@ -832,24 +846,45 @@ function ReactFlowCanvasInner({
     [],
   );
 
-  // Undo/redo handlers (temporal middleware is absent on multiplayer stores)
+  // Undo/redo handlers. Solo uses zundo (temporal middleware). Multiplayer uses
+  // the Liveblocks per-client history of the CANVAS store's own room — which the
+  // @liveblocks/zustand middleware connects to a PER-STEP room
+  // (`<roomId>-step-<stepId>`), NOT the base RoomProvider room. So we must reach
+  // the room through the store (storeApi), not via @liveblocks/react hooks.
+  const getCanvasRoom = useCallback((): LiveblocksRoomLike | null => {
+    const lb = (
+      storeApi.getState() as unknown as {
+        liveblocks?: { room?: LiveblocksRoomLike | null };
+      }
+    ).liveblocks;
+    return lb?.room ?? null;
+  }, [storeApi]);
+
   const handleUndo = useCallback(() => {
+    if (isMultiplayer) {
+      getCanvasRoom()?.history.undo();
+      return;
+    }
     const temporalStore = storeApi.temporal;
     if (!temporalStore) return;
     const pastStates = temporalStore.getState().pastStates;
     if (pastStates.length > 0) {
       temporalStore.getState().undo();
     }
-  }, [storeApi]);
+  }, [isMultiplayer, getCanvasRoom, storeApi]);
 
   const handleRedo = useCallback(() => {
+    if (isMultiplayer) {
+      getCanvasRoom()?.history.redo();
+      return;
+    }
     const temporalStore = storeApi.temporal;
     if (!temporalStore) return;
     const futureStates = temporalStore.getState().futureStates;
     if (futureStates.length > 0) {
       temporalStore.getState().redo();
     }
-  }, [storeApi]);
+  }, [isMultiplayer, getCanvasRoom, storeApi]);
 
   // Keyboard shortcuts for undo/redo
   useHotkeys(
@@ -914,6 +949,38 @@ function ReactFlowCanvasInner({
     });
     return unsubscribe;
   }, [storeApi]);
+
+  // Multiplayer: drive canUndo/canRedo from the canvas store's room history.
+  // The room arrives asynchronously (after enterRoom) and changes on step
+  // switches, so we watch the store for the room and (re)subscribe to its
+  // "history" event. Identity-checked so per-keystroke store updates are cheap.
+  useEffect(() => {
+    if (!isMultiplayer) return;
+    let attachedRoom: LiveblocksRoomLike | null = null;
+    let historyUnsub: (() => void) | undefined;
+    const attach = (room: LiveblocksRoomLike | null) => {
+      if (room === attachedRoom) return;
+      historyUnsub?.();
+      attachedRoom = room;
+      if (!room) {
+        setCanUndo(false);
+        setCanRedo(false);
+        return;
+      }
+      const sync = () => {
+        setCanUndo(room.history.canUndo());
+        setCanRedo(room.history.canRedo());
+      };
+      sync();
+      historyUnsub = room.subscribe("history", sync);
+    };
+    attach(getCanvasRoom());
+    const storeUnsub = storeApi.subscribe(() => attach(getCanvasRoom()));
+    return () => {
+      storeUnsub();
+      historyUnsub?.();
+    };
+  }, [isMultiplayer, getCanvasRoom, storeApi]);
 
   // Helper: create a sticky note with pre-generated ID so editing + z-index
   // are set synchronously BEFORE the store update. This eliminates the
