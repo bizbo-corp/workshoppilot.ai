@@ -13,9 +13,10 @@
  * which blocks pointer events on anything below it.
  */
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
   useStore as useReactFlowStore,
+  useReactFlow,
   type ReactFlowState,
 } from "@xyflow/react";
 import { useTheme } from "next-themes";
@@ -98,6 +99,9 @@ export function GridOverlay({
 }: GridOverlayProps) {
   // Subscribe to viewport changes reactively
   const { x, y, zoom } = useReactFlowStore(viewportSelector);
+  // For converting a pointer's window coords → flow coords (handles the pane
+  // offset, pan, and zoom in one call) so drag hit-testing tracks the cursor.
+  const reactFlow = useReactFlow();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
@@ -123,26 +127,19 @@ export function GridOverlay({
   }, [gridColumns, config.columns]);
 
   // --- Drag state for column reorder ---
+  // Tracked in state purely to render the drop indicator. The authoritative
+  // drag logic lives in WINDOW-level pointer listeners (attached on pointerdown,
+  // below), which is what makes reorder reliable in BOTH directions and over ANY
+  // element. The previous per-header pointer-capture approach dropped events
+  // when a left-drag released over the gutter or empty canvas, so only
+  // right-drags (which happen to end over a header) ever committed.
   const [dragState, setDragState] = useState<{
     columnId: string;
     startIndex: number;
     dropIndex: number;
   } | null>(null);
-  // Ref mirrors dragState so pointerup always reads the latest value
-  // (avoids stale-closure race where React hasn't re-rendered yet)
-  const dragRef = useRef<typeof dragState>(null);
-  // A press that hasn't yet crossed the drag threshold. We don't enter a drag
-  // (or capture the pointer) until the pointer moves > DRAG_THRESHOLD px, so a
-  // plain click still reaches the header for rename / the X for delete.
-  const pendingPressRef = useRef<{
-    columnId: string;
-    startIndex: number;
-    startX: number;
-    startY: number;
-    pointerId: number;
-  } | null>(null);
-  // True once a press became a drag — used to swallow the trailing click so the
-  // label editor doesn't pop open at the end of a reorder.
+  // True for the moment between a drag ending and its trailing click — swallows
+  // that click so the label editor doesn't open when the user was reordering.
   const dragMovedRef = useRef(false);
   const DRAG_THRESHOLD = 4;
 
@@ -192,107 +189,96 @@ export function GridOverlay({
   const watercolourOpacity = isDark ? 0.15 : 0.12;
 
   // --- Drag handlers ---
-  const computeDropIndex = useCallback(
-    (clientX: number) => {
-      // Convert screen X positions of column gaps to find closest drop target
-      const screenGapXs = colXPositions.map((cx) => cx * zoom + x);
+  // Live geometry + callback mirrors so the window listeners (attached once per
+  // drag) always read fresh values without being re-created on every render.
+  const geomRef = useRef<{ colXPositions: number[]; colCount: number }>({
+    colXPositions,
+    colCount: effectiveColumns.length,
+  });
+  const onMoveColumnRef = useRef(onMoveColumn);
+  // Keep the mirrors fresh after every render (refs mustn't be written during
+  // render). Event-time reads happen after commit, so this is always current.
+  useEffect(() => {
+    geomRef.current = { colXPositions, colCount: effectiveColumns.length };
+    onMoveColumnRef.current = onMoveColumn;
+  });
+
+  // Cursor (window coords) → nearest column gap → drop index in [0, colCount].
+  // screenToFlowPosition converts to flow space (the same space colXPositions
+  // live in), so the match tracks the cursor exactly at any pan/zoom. Symmetric,
+  // so left- and right-drags resolve a target identically.
+  const dropIndexForClient = useCallback(
+    (clientX: number, clientY: number) => {
+      const { colXPositions, colCount } = geomRef.current;
+      const flowX = reactFlow.screenToFlowPosition({ x: clientX, y: clientY }).x;
       let closest = 0;
       let minDist = Infinity;
-      for (let i = 0; i < screenGapXs.length; i++) {
-        const dist = Math.abs(clientX - screenGapXs[i]);
+      for (let i = 0; i < colXPositions.length; i++) {
+        const dist = Math.abs(flowX - colXPositions[i]);
         if (dist < minDist) {
           minDist = dist;
           closest = i;
         }
       }
-      // Clamp: drop index is between 0 and effectiveColumns.length
-      return Math.max(0, Math.min(closest, effectiveColumns.length));
+      return Math.max(0, Math.min(closest, colCount));
     },
-    [colXPositions, zoom, x, effectiveColumns.length],
+    [reactFlow],
   );
 
-  // Press starts on the whole header. We only arm a pending press here — the
-  // drag itself begins in pointermove once the threshold is crossed, leaving a
-  // click free to reach the editable label / delete button.
+  // Pointerdown on a header arms a potential drag and wires WINDOW listeners.
+  // A plain click (no movement past the threshold) commits nothing, so it still
+  // falls through to rename / delete. The window listeners guarantee we keep
+  // getting moves and the final up no matter where the pointer travels.
   const handleHeaderPointerDown = useCallback(
     (e: React.PointerEvent, columnId: string, colIndex: number) => {
       if (!canEditStructure) return;
-      pendingPressRef.current = {
-        columnId,
-        startIndex: colIndex,
-        startX: e.clientX,
-        startY: e.clientY,
-        pointerId: e.pointerId,
-      };
-      dragMovedRef.current = false;
-    },
-    [canEditStructure],
-  );
+      if (e.button !== 0) return; // primary button only
+      const startX = e.clientX;
+      const startY = e.clientY;
+      let dragging = false;
 
-  const handleHeaderPointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      const drag = dragRef.current;
-      if (drag) {
-        // Already dragging — track the nearest gap for the drop indicator.
-        const newDropIndex = computeDropIndex(e.clientX);
-        if (newDropIndex !== drag.dropIndex) {
-          drag.dropIndex = newDropIndex;
-          setDragState({ ...drag });
+      const handleMove = (ev: PointerEvent) => {
+        if (!dragging) {
+          if (
+            Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD
+          ) {
+            return;
+          }
+          dragging = true;
+          dragMovedRef.current = true;
         }
-        return;
-      }
-
-      const pending = pendingPressRef.current;
-      if (!pending || pending.pointerId !== e.pointerId) return;
-      const dist = Math.hypot(e.clientX - pending.startX, e.clientY - pending.startY);
-      if (dist < DRAG_THRESHOLD) return;
-
-      // Threshold crossed → promote to a real drag and capture the pointer so
-      // moves continue to land here even when the cursor leaves the header.
-      dragMovedRef.current = true;
-      try {
-        (e.currentTarget as HTMLElement).setPointerCapture(pending.pointerId);
-      } catch {
-        /* capture may be unavailable mid-gesture; drag still works while over the header */
-      }
-      const state = {
-        columnId: pending.columnId,
-        startIndex: pending.startIndex,
-        dropIndex: computeDropIndex(e.clientX),
+        setDragState({
+          columnId,
+          startIndex: colIndex,
+          dropIndex: dropIndexForClient(ev.clientX, ev.clientY),
+        });
       };
-      dragRef.current = state;
-      setDragState(state);
+
+      const finish = (ev: PointerEvent) => {
+        window.removeEventListener("pointermove", handleMove);
+        window.removeEventListener("pointerup", finish);
+        window.removeEventListener("pointercancel", finish);
+        if (dragging) {
+          let insertIndex = dropIndexForClient(ev.clientX, ev.clientY);
+          // Dropping to the right of the source: the source is removed first,
+          // so the target gap shifts left by one.
+          if (insertIndex > colIndex) insertIndex -= 1;
+          if (insertIndex !== colIndex) {
+            onMoveColumnRef.current?.(columnId, insertIndex);
+          }
+        }
+        setDragState(null);
+        // Keep dragMovedRef true through the trailing click, then clear it.
+        window.setTimeout(() => {
+          dragMovedRef.current = false;
+        }, 0);
+      };
+
+      window.addEventListener("pointermove", handleMove);
+      window.addEventListener("pointerup", finish);
+      window.addEventListener("pointercancel", finish);
     },
-    [computeDropIndex],
-  );
-
-  const handleHeaderPointerUp = useCallback(
-    (e: React.PointerEvent) => {
-      // Always release capture first — prevents stuck capture if state is stale.
-      try {
-        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch {
-        /* not captured */
-      }
-
-      pendingPressRef.current = null;
-      const drag = dragRef.current;
-      if (!drag) return; // never crossed the threshold — treat as a click
-
-      // Convert gap-based dropIndex to array insertion index accounting for removal.
-      let insertIndex = drag.dropIndex;
-      // If dropping after the original position, subtract 1 because the source is removed first.
-      if (insertIndex > drag.startIndex) {
-        insertIndex -= 1;
-      }
-
-      if (insertIndex !== drag.startIndex) {
-        onMoveColumn?.(drag.columnId, insertIndex);
-      }
-      dragRef.current = null;
-      setDragState(null);
-    },
-    [onMoveColumn],
+    [canEditStructure, dropIndexForClient],
   );
 
   // Swallow the click that the browser fires after a drag gesture so the label
@@ -301,7 +287,6 @@ export function GridOverlay({
     if (dragMovedRef.current) {
       e.stopPropagation();
       e.preventDefault();
-      dragMovedRef.current = false;
     }
   }, []);
 
@@ -601,24 +586,8 @@ export function GridOverlay({
             );
           })}
 
-          {/* Drop indicator line during column drag */}
-          {dragState && (() => {
-            const dropX = colXPositions[dragState.dropIndex];
-            if (dropX === undefined) return null;
-            const topEdge = toScreen(dropX, config.origin.y - 40);
-            const bottomEdge = toScreen(dropX, rowYPositions[rowYPositions.length - 1]);
-            return (
-              <line
-                x1={topEdge.x}
-                y1={topEdge.y}
-                x2={bottomEdge.x}
-                y2={bottomEdge.y}
-                stroke="var(--canvas-blue)"
-                strokeWidth={3}
-                strokeLinecap="round"
-              />
-            );
-          })()}
+          {/* Drop indicator is rendered in the HTML overlay (Layer 2) so it sits
+              above the cards and isn't clipped — see below. */}
         </g>
 
         {/* Outer border around the whole journey map. Drawn outside the clip so
@@ -639,6 +608,29 @@ export function GridOverlay({
 
       {/* ===== LAYER 2: Interactive HTML — z-[5], above renderer (z-4) ===== */}
       <div className="absolute inset-0 pointer-events-none z-[5]">
+        {/* Drop indicator — a full-height blue line at the target gap. Lives in
+            this overlay (not the SVG) so it's above the cards and never clipped,
+            making the drop position obvious for every drag. */}
+        {dragState && (() => {
+          const dropX = colXPositions[dragState.dropIndex];
+          if (dropX === undefined) return null;
+          const top = toScreen(dropX, 0);
+          const heightPx = rowYPositions[rowYPositions.length - 1] * zoom;
+          return (
+            <div
+              className="absolute z-[6] pointer-events-none rounded-full"
+              style={{
+                left: top.x - 1.5,
+                top: top.y,
+                width: 3,
+                height: heightPx,
+                background: "var(--canvas-blue)",
+                boxShadow: "0 0 0 1px var(--canvas-blue), 0 0 6px 1px var(--canvas-blue)",
+              }}
+            />
+          );
+        })()}
+
         {/* Column headers with inline editing, drag handle, and delete */}
         {effectiveColumns.map((col, index) => {
           const colLeft = colXPositions[index];
@@ -694,9 +686,6 @@ export function GridOverlay({
                     ? (e) => handleHeaderPointerDown(e, col.id, index)
                     : undefined
                 }
-                onPointerMove={canEditStructure ? handleHeaderPointerMove : undefined}
-                onPointerUp={canEditStructure ? handleHeaderPointerUp : undefined}
-                onPointerCancel={canEditStructure ? handleHeaderPointerUp : undefined}
                 onClickCapture={canEditStructure ? handleHeaderClickCapture : undefined}
                 style={
                   canEditStructure
