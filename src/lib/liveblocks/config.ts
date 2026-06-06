@@ -179,6 +179,17 @@ declare global {
       mindMapReady: boolean; // participant signals "I'm done" on mind map
       crazy8sReady: boolean; // participant signals "I'm done" on crazy 8s
       votingDone: boolean; // participant signals "I'm done voting"
+      /**
+       * "Follow me" presenter mode (replaces the old one-shot VIEWPORT_SYNC).
+       * Set by the facilitator while presenting — the canvas point at their
+       * viewport centre (FLOW-space, not pixel transform) plus zoom. Followers
+       * re-centre their own viewport on this point, so framing stays correct
+       * across different screen sizes. null when not presenting.
+       */
+      presenterViewport: { cx: number; cy: number; zoom: number } | null;
+      /** True while this participant is locked to the presenter's viewport.
+       *  Lets the facilitator show a live "N following" count. */
+      followingPresenter: boolean;
     };
 
     /**
@@ -215,7 +226,6 @@ declare global {
      */
     RoomEvent:
       | { type: 'STEP_CHANGED'; stepOrder: number; stepName: string }
-      | { type: 'VIEWPORT_SYNC'; x: number; y: number; zoom: number }
       | { type: 'TIMER_UPDATE'; state: 'running' | 'paused' | 'expired' | 'cancelled'; remainingMs: number; totalMs: number }
       | { type: 'SESSION_ENDED' }
       | { type: 'VOTING_OPENED'; voteBudget: number }
