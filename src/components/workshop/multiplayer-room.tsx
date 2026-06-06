@@ -433,6 +433,8 @@ export default function MultiplayerRoom({
           mindMapReady: false,
           crazy8sReady: false,
           votingDone: false,
+          presenterViewport: null,
+          followingPresenter: false,
         }}
         initialStorage={{
           elements: new LiveMap<string, LiveObject<CanvasElementStorable>>(),

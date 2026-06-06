@@ -124,12 +124,33 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
     return () => document.removeEventListener('facilitator-end-session', handler);
   }, []);
 
-  // --- Viewport Sync ---
-  const handleViewportSync = useCallback(() => {
-    // Dispatch custom DOM event — FacilitatorViewportCapture in react-flow-canvas.tsx
-    // listens for this, reads getViewport(), and broadcasts via useBroadcastEvent.
-    document.dispatchEvent(new Event('facilitator-viewport-sync'));
-    toast('Viewport synced to all participants', { duration: 2000 });
+  // --- "Follow me" presenter mode ---
+  // Toggle: while on, PresenterController (inside the canvas / ReactFlowProvider)
+  // streams the facilitator's viewport into presence and all participants track
+  // it. The toolbar lives outside ReactFlowProvider, so we bridge via a DOM
+  // event (same pattern as facilitator-end-session).
+  const [isPresenting, setIsPresenting] = useState(false);
+  const isPresentingRef = useRef(false);
+  const followerCount = useOthers(
+    (others) => others.filter((u) => u.presence.followingPresenter).length,
+  );
+  const togglePresenting = useCallback(() => {
+    // Side effects live in the event handler (not in a setState updater, which
+    // React runs during render — dispatching there triggers a cross-component
+    // setState mid-render). Read the latest value from a ref, not a functional
+    // updater, so the dispatch reflects the new state.
+    const next = !isPresentingRef.current;
+    isPresentingRef.current = next;
+    setIsPresenting(next);
+    document.dispatchEvent(
+      new CustomEvent('facilitator-presenting-changed', { detail: { presenting: next } }),
+    );
+    toast(
+      next
+        ? 'Follow me on — everyone now tracks your view'
+        : 'Follow me off — participants can explore freely',
+      { duration: next ? 2500 : 2000 },
+    );
   }, []);
 
   // --- Timer ---
@@ -332,14 +353,29 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
       {/* Facilitator toolbar — rendered inline within multiplayer controls container.
           Button style matches the canvas toolbar: text-muted-foreground with hover:bg-accent. */}
       <div className="flex items-center gap-0.5">
-        {/* Viewport sync button */}
+        {/* Follow me — presenter mode toggle */}
         <button
-          onClick={handleViewportSync}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-          title="Bring everyone to your view"
+          onClick={togglePresenting}
+          className={cn(
+            'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors',
+            isPresenting
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+          )}
+          title={
+            isPresenting
+              ? 'Stop — let participants explore freely'
+              : 'Bring everyone to your view and keep them in sync'
+          }
         >
           <Eye className="h-4 w-4" />
-          <span className="hidden sm:inline">Sync View</span>
+          <span className="hidden sm:inline">
+            {isPresenting
+              ? followerCount > 0
+                ? `Stop · ${followerCount} following`
+                : 'Stop'
+              : 'Follow me'}
+          </span>
         </button>
 
         <div className="w-px h-5 bg-border mx-0.5" />

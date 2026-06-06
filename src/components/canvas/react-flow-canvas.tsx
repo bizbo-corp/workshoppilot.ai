@@ -12,6 +12,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  useViewport,
   Background,
   BackgroundVariant,
   SelectionMode,
@@ -48,7 +49,8 @@ import { useCanvasAutosave } from "@/hooks/use-canvas-autosave";
 import { usePreventScrollOnCanvas } from "@/hooks/use-prevent-scroll-on-canvas";
 import { useMultiplayerContext } from "@/components/workshop/multiplayer-room";
 import { LiveCursors, CursorBroadcaster } from "./live-cursors";
-import { useBroadcastEvent, useEventListener } from "@liveblocks/react";
+import { useUpdateMyPresence, useOthers, shallow } from "@liveblocks/react";
+import { PresenterFollowBanner } from "./presenter-follow-banner";
 import type {
   StickyNoteColor,
   GridColumn,
@@ -133,49 +135,100 @@ const edgeTypes = {
 };
 
 /**
- * FacilitatorViewportCapture — renderless component that listens for the
- * 'facilitator-viewport-sync' custom DOM event, reads the current ReactFlow
- * viewport, and broadcasts a VIEWPORT_SYNC event to all participants.
+ * PresenterController — renderless component for "Follow me" presenter mode,
+ * mounted only for the facilitator. While presenting, it streams the
+ * facilitator's viewport CENTRE (in flow-space) + zoom into Liveblocks
+ * presence on every viewport change. Followers re-centre their own viewport
+ * on that point (see the follower logic in ReactFlowCanvasInner), so framing
+ * stays correct regardless of each participant's screen size.
  *
- * Must render inside ReactFlowProvider (inside ReactFlowCanvasInner) to use
- * useReactFlow(). Only mounted when the user is the facilitator.
+ * Presenting is toggled from the facilitator toolbar via the
+ * 'facilitator-presenting-changed' DOM event (matches the existing
+ * facilitator-end-session bridge pattern, since the toolbar renders outside
+ * ReactFlowProvider and can't read the viewport directly).
+ *
+ * Must render inside ReactFlowProvider (for useViewport) and RoomProvider
+ * (for useUpdateMyPresence) — both hold in multiplayer.
  */
-function FacilitatorViewportCapture() {
-  const { getViewport } = useReactFlow();
-  const broadcast = useBroadcastEvent();
+function PresenterController() {
+  const viewport = useViewport(); // live { x, y, zoom }, re-renders on change
+  const updateMyPresence = useUpdateMyPresence();
+  const [presenting, setPresenting] = useState(false);
 
+  // Toggle on/off from the toolbar. On "off", clear presence immediately.
   useEffect(() => {
-    function handleRequest() {
-      const vp = getViewport();
-      broadcast({ type: 'VIEWPORT_SYNC', x: vp.x, y: vp.y, zoom: vp.zoom });
+    function onToggle(e: Event) {
+      const next = Boolean((e as CustomEvent).detail?.presenting);
+      setPresenting(next);
+      if (!next) updateMyPresence({ presenterViewport: null });
     }
-    document.addEventListener('facilitator-viewport-sync', handleRequest);
-    return () => document.removeEventListener('facilitator-viewport-sync', handleRequest);
-  }, [getViewport, broadcast]);
+    document.addEventListener('facilitator-presenting-changed', onToggle);
+    return () => document.removeEventListener('facilitator-presenting-changed', onToggle);
+  }, [updateMyPresence]);
+
+  // Always clear on unmount (e.g. step change / disconnect) so participants
+  // aren't left following a stale viewport.
+  useEffect(() => {
+    return () => updateMyPresence({ presenterViewport: null });
+  }, [updateMyPresence]);
+
+  // Stream viewport centre while presenting. The Liveblocks client throttles
+  // presence to 50ms (config.ts), so writing on every render is fine.
+  useEffect(() => {
+    if (!presenting) return;
+    const el = document.querySelector('.react-flow');
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const cx = (rect.width / 2 - viewport.x) / viewport.zoom;
+    const cy = (rect.height / 2 - viewport.y) / viewport.zoom;
+    updateMyPresence({ presenterViewport: { cx, cy, zoom: viewport.zoom } });
+  }, [viewport, presenting, updateMyPresence]);
 
   return null;
 }
 
-/**
- * ViewportSyncReceiver — renderless component that listens for VIEWPORT_SYNC
- * broadcast events and animates the participant's ReactFlow viewport to match.
- *
- * Must render inside ReactFlowProvider to use useReactFlow(). Skips processing
- * if the current user is the facilitator (they originated the broadcast).
- */
-function ViewportSyncReceiver() {
-  const { setViewport } = useReactFlow();
-  const { isFacilitator } = useMultiplayerContext();
+/** Flow-space centre point + zoom streamed by the presenter (see config.ts). */
+type PresenterVp = { cx: number; cy: number; zoom: number };
 
-  useEventListener(({ event }) => {
-    if (event.type === 'VIEWPORT_SYNC' && !isFacilitator) {
-      setViewport(
-        { x: event.x, y: event.y, zoom: event.zoom },
-        { duration: 500 }
-      );
-      toast('Facilitator is guiding your view', { duration: 2000 });
-    }
-  });
+/**
+ * PresenterFollowSync — renderless bridge between Liveblocks presence and the
+ * follower logic in ReactFlowCanvasInner. Mounted only in multiplayer.
+ *
+ * Reads/writes presence via @liveblocks/react hooks (the same path voting and
+ * cursors use), NOT the zustand `liveblocks.others` slice — that slice doesn't
+ * reliably surface UserMeta `.info`, so role-gating the presenter there fails.
+ *
+ *  - onPresenterChange: lifts the active owner's viewport (+ name) to the parent
+ *  - isFollowing: parent-owned follow state, mirrored into our own presence so
+ *    the facilitator's "N following" count works
+ */
+function PresenterFollowSync({
+  onPresenterChange,
+  isFollowing,
+}: {
+  onPresenterChange: (presenter: { vp: PresenterVp; name: string } | null) => void;
+  isFollowing: boolean;
+}) {
+  const updateMyPresence = useUpdateMyPresence();
+
+  // Only the owner/facilitator drives the view. info.role IS populated on the
+  // react useOthers path (voting relies on it).
+  const presenter = useOthers((others) => {
+    const o = others.find(
+      (u) => u.info?.role === "owner" && u.presence.presenterViewport,
+    );
+    return o
+      ? { vp: o.presence.presenterViewport as PresenterVp, name: o.info?.name ?? "Facilitator" }
+      : null;
+  }, shallow);
+
+  useEffect(() => {
+    onPresenterChange(presenter);
+  }, [presenter, onPresenterChange]);
+
+  useEffect(() => {
+    updateMyPresence({ followingPresenter: isFollowing });
+  }, [isFollowing, updateMyPresence]);
 
   return null;
 }
@@ -709,6 +762,77 @@ function ReactFlowCanvasInner({
     const lb = (storeApi.getState() as any).liveblocks;
     lb?.room?.updatePresence({ editingDrawingNodeId: null });
   }, [isMultiplayer, storeApi]);
+
+  // --- "Follow me" presenter mode (follower side) -------------------------
+  // The active presenter's viewport is read from Liveblocks presence by the
+  // renderless PresenterFollowSync child (react hooks, mounted only in
+  // multiplayer) and lifted here. The facilitator streams the centre point; we
+  // re-centre our own viewport on it.
+  const [presenter, setPresenter] = useState<{ vp: PresenterVp; name: string } | null>(null);
+  const handlePresenterChange = useCallback(
+    (p: { vp: PresenterVp; name: string } | null) => setPresenter(p),
+    [],
+  );
+  const presenterViewport = presenter?.vp ?? null;
+  const presenterName = presenter?.name ?? null;
+
+  // idle → not following · following → locked to presenter · brokeOut → user
+  // moved away while the presenter is still active (offer a "Return" button).
+  const [followState, setFollowState] = useState<"idle" | "following" | "brokeOut">("idle");
+  const followStateRef = useRef(followState);
+  useEffect(() => {
+    followStateRef.current = followState;
+  }, [followState]);
+  // When true, the next viewport application animates (initial snap / resume);
+  // continuous tracking applies instantly so it doesn't lag the presenter.
+  const animateNextFollowRef = useRef(false);
+
+  const applyPresenterViewport = useCallback(
+    (vp: PresenterVp, animate: boolean) => {
+      const el = document.querySelector(".react-flow");
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setViewport(
+        {
+          x: rect.width / 2 - vp.cx * vp.zoom,
+          y: rect.height / 2 - vp.cy * vp.zoom,
+          zoom: vp.zoom,
+        },
+        { duration: animate ? 400 : 0 },
+      );
+    },
+    [setViewport],
+  );
+
+  // Auto-follow when a presenter becomes active; release when they stop.
+  useEffect(() => {
+    if (presenterViewport && followState === "idle") {
+      animateNextFollowRef.current = true;
+      setFollowState("following");
+    } else if (!presenterViewport && followState !== "idle") {
+      setFollowState("idle");
+    }
+  }, [presenterViewport, followState]);
+
+  // Track the presenter while following — paused if we're editing a node.
+  useEffect(() => {
+    if (followState !== "following" || !presenterViewport) return;
+    if (editingNodeId) {
+      // Don't yank the user mid-edit; animate the catch-up once they finish.
+      animateNextFollowRef.current = true;
+      return;
+    }
+    applyPresenterViewport(presenterViewport, animateNextFollowRef.current);
+    animateNextFollowRef.current = false;
+  }, [followState, presenterViewport, editingNodeId, applyPresenterViewport]);
+
+  // (followingPresenter is mirrored into presence by PresenterFollowSync.)
+
+  const handleExitFollow = useCallback(() => setFollowState("brokeOut"), []);
+  const handleReturnFollow = useCallback(() => {
+    animateNextFollowRef.current = true;
+    setFollowState("following");
+  }, []);
 
   // Cluster dialog state
   const [clusterDialogOpen, setClusterDialogOpen] = useState(false);
@@ -2942,11 +3066,20 @@ function ReactFlowCanvasInner({
     [contextMenu, updateStickyNote],
   );
 
-  // Close context menu on viewport move
-  const handleMoveStart = useCallback(() => {
-    setContextMenu(null);
-    dismissAutoGuides();
-  }, [dismissAutoGuides]);
+  // Close context menu on viewport move. Also the escape hatch for "Follow me":
+  // a real user gesture (pan/zoom) breaks the follower out. ReactFlow passes a
+  // non-null event for user gestures and null for programmatic setViewport, so
+  // our own tracking updates never trigger a false break-out.
+  const handleMoveStart = useCallback(
+    (event: unknown) => {
+      setContextMenu(null);
+      dismissAutoGuides();
+      if (event && followStateRef.current === "following") {
+        setFollowState("brokeOut");
+      }
+    },
+    [dismissAutoGuides],
+  );
 
   // Reset the pane double-click counter on any node click so a node interaction
   // can't be mistaken for the second click of a pane double-click sequence.
@@ -3248,12 +3381,24 @@ function ReactFlowCanvasInner({
       {workshopType === 'multiplayer' && (
         <CursorBroadcaster handlersRef={cursorHandlersRef} />
       )}
-      {/* Viewport sync components — multiplayer only (inside ReactFlowProvider, so useReactFlow() works) */}
+      {/* "Follow me" presenter mode — multiplayer only. The facilitator streams
+          their viewport via PresenterController (inside ReactFlowProvider, so
+          useViewport() works); followers apply it via the inline follow logic
+          above, with the banner offering Exit / Return. */}
+      {workshopType === 'multiplayer' && isFacilitator && <PresenterController />}
       {workshopType === 'multiplayer' && (
-        <>
-          {isFacilitator && <FacilitatorViewportCapture />}
-          <ViewportSyncReceiver />
-        </>
+        <PresenterFollowSync
+          onPresenterChange={handlePresenterChange}
+          isFollowing={followState === 'following'}
+        />
+      )}
+      {workshopType === 'multiplayer' && presenterViewport && presenterName && followState !== 'idle' && (
+        <PresenterFollowBanner
+          presenterName={presenterName}
+          mode={followState === 'following' ? 'following' : 'brokeOut'}
+          onExit={handleExitFollow}
+          onReturn={handleReturnFollow}
+        />
       )}
       <ReactFlow
         className={cn(
