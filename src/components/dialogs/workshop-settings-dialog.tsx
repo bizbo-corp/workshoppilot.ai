@@ -13,6 +13,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Square } from 'lucide-react';
 import { ChallengeSettingsTab } from '@/components/dialogs/settings/challenge-settings-tab';
 import { BasicsSettingsTab } from '@/components/dialogs/settings/basics-settings-tab';
 import { TeamSettingsTab } from '@/components/dialogs/settings/team-settings-tab';
@@ -41,6 +43,14 @@ export function WorkshopSettingsDialog({
   workshopStarted,
 }: WorkshopSettingsDialogProps) {
   const showTeam = workshopType === 'multiplayer';
+
+  // End-session is multiplayer-only. The live session and its broadcast live
+  // inside the Liveblocks room (FacilitatorControls), which is outside this
+  // dialog's tree — so we request the end flow via a DOM event it listens for.
+  const handleEndSession = () => {
+    onOpenChange(false);
+    document.dispatchEvent(new Event('facilitator-end-session'));
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -82,6 +92,27 @@ export function WorkshopSettingsDialog({
             )}
           </div>
         </Tabs>
+
+        {/* Danger zone — end the live session for everyone (multiplayer only) */}
+        {workshopType === 'multiplayer' && (
+          <div className="mt-2 flex items-center justify-between gap-4 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">End session</p>
+              <p className="text-xs text-muted-foreground">
+                Disconnect all participants and end the live session.
+              </p>
+            </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleEndSession}
+              className="shrink-0 gap-1.5"
+            >
+              <Square className="h-3.5 w-3.5 fill-current" />
+              End session
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

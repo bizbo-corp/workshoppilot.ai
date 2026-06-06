@@ -71,6 +71,7 @@ import { AssetDrawer } from "@/components/canvas/asset-drawer";
 import { useAdminGuides } from "@/hooks/use-admin-guides";
 import { usePanelLayout, clampChatWidth } from "@/hooks/use-panel-layout";
 import { WorkshopHeader } from "@/components/layout/workshop-header";
+import { ShareLinkButton } from "@/components/workshop/share-link-button";
 import { StepTransitionWrapper } from "./step-transition-wrapper";
 import type { CanvasGuideData } from "@/lib/canvas/canvas-guide-types";
 import type { StepCanvasSettingsData } from "@/lib/canvas/step-canvas-settings-types";
@@ -1963,7 +1964,6 @@ export function StepContainer({
           workshopColor={workshopColor}
           workshopEmoji={workshopEmoji}
           workshopType={workshopType ?? "solo"}
-          shareToken={shareToken ?? undefined}
           isFacilitator={isFacilitator}
           isWorkshopOwner={isWorkshopOwner}
           isAdmin={isAdmin}
@@ -2068,6 +2068,10 @@ export function StepContainer({
               >
                 <MessageSquare className="h-4 w-4" />
               </button>
+            )}
+            {/* Share invite link — facilitator only, sits beside the avatars */}
+            {isFacilitator && shareToken && (
+              <ShareLinkButton shareToken={shareToken} />
             )}
             <PresenceBar
               shareToken={shareToken}

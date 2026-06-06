@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useBroadcastEvent, useOthers, useUpdateMyPresence } from '@liveblocks/react';
 import { shallow } from '@liveblocks/react';
 import { useRouter } from 'next/navigation';
-import { Eye, Timer, Square, Pause, Play, X, RotateCcw, CheckCircle2, Rocket, ArrowLeft } from 'lucide-react';
+import { Eye, Timer, Pause, Play, X, RotateCcw, CheckCircle2, Rocket, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -112,6 +112,16 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
+  }, []);
+
+  // The End-session action now lives in the header's Workshop Settings and
+  // Exit Workshop dialogs, which render outside the Liveblocks room and so
+  // cannot broadcast directly. They request the end flow via a DOM event;
+  // we own the confirmation + broadcast here, inside the room.
+  useEffect(() => {
+    const handler = () => setShowEndConfirm(true);
+    document.addEventListener('facilitator-end-session', handler);
+    return () => document.removeEventListener('facilitator-end-session', handler);
   }, []);
 
   // --- Viewport Sync ---
@@ -521,19 +531,8 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
           </>
         )}
 
-        <div className="w-px h-5 bg-border mx-0.5" />
-
-        {/* End Session button */}
-        <button
-          onClick={() => setShowEndConfirm(true)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
-          title="End workshop session"
-        >
-          <Square className="h-3.5 w-3.5 fill-current" />
-          <span className="hidden sm:inline">End</span>
-        </button>
-
-        {/* Separator before presence avatars */}
+        {/* Separator before presence avatars. The End-session action moved to
+            the header's Workshop Settings / Exit Workshop dialogs. */}
         <div className="w-px h-5 bg-border mx-0.5" />
       </div>
 

@@ -12,8 +12,7 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
-import { LogOut, Share2, Check, Settings, Target } from "lucide-react";
-import { toast } from "sonner";
+import { LogOut, Settings, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ExitWorkshopDialog } from "@/components/dialogs/exit-workshop-dialog";
@@ -24,7 +23,6 @@ import { getWorkshopColor } from "@/lib/workshop/workshop-appearance";
 import { SignInModal } from "@/components/auth/sign-in-modal";
 import { renameWorkshop } from "@/actions/workshop-actions";
 import { getPendingChangeRequestCount } from "@/actions/challenge-actions";
-import { copyToClipboard } from "@/lib/clipboard";
 
 interface WorkshopHeaderProps {
   sessionId: string;
@@ -32,7 +30,6 @@ interface WorkshopHeaderProps {
   workshopName?: string;
   workshopColor?: string | null;
   workshopEmoji?: string | null;
-  shareToken?: string | null;
   workshopType?: 'solo' | 'multiplayer';
   isFacilitator?: boolean;
   /** Workshop owner (true in solo too — distinct from multiplayer-context isFacilitator). */
@@ -47,50 +44,12 @@ interface WorkshopHeaderProps {
   breadcrumbTail?: string;
 }
 
-/**
- * ShareButton — inline component for copying the workshop join URL.
- * Only rendered for multiplayer workshops with a shareToken.
- */
-function ShareButton({ shareToken }: { shareToken: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    const url = `${window.location.origin}/join/${shareToken}`;
-    const ok = await copyToClipboard(url);
-    if (ok) {
-      setCopied(true);
-      toast('Link copied!', { duration: 2000 });
-      setTimeout(() => setCopied(false), 2000);
-    } else {
-      toast.error('Could not copy link. Please copy the URL manually.');
-    }
-  };
-
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={handleCopy}
-      className="gap-2"
-      title="Copy invite link"
-    >
-      {copied ? (
-        <Check className="h-4 w-4" />
-      ) : (
-        <Share2 className="h-4 w-4" />
-      )}
-      <span className="hidden sm:inline">Share</span>
-    </Button>
-  );
-}
-
 export function WorkshopHeader({
   sessionId,
   workshopId,
   workshopName = "New Workshop",
   workshopColor,
   workshopEmoji,
-  shareToken,
   workshopType,
   isFacilitator,
   isWorkshopOwner,
@@ -239,13 +198,6 @@ export function WorkshopHeader({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Share button — facilitator only */}
-          {isFacilitator && workshopType === 'multiplayer' && shareToken && (
-            <ShareButton shareToken={shareToken} />
-          )}
-
-          <ThemeToggle />
-
           {canManage ? (
             <Button
               variant="ghost"
@@ -255,7 +207,7 @@ export function WorkshopHeader({
               title="Workshop settings"
             >
               <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Settings</span>
+              <span className="hidden sm:inline">Workshop Settings</span>
               {changeRequests > 0 && (
                 <span
                   className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground"
@@ -288,6 +240,8 @@ export function WorkshopHeader({
             <span className="hidden sm:inline">Exit Workshop</span>
           </Button>
 
+          <ThemeToggle />
+
           <SignedOut>
             <Button size="sm" onClick={() => setSignInOpen(true)}>
               Sign In
@@ -300,10 +254,11 @@ export function WorkshopHeader({
         </div>
       </header>
 
-      {/* Exit confirmation dialog */}
+      {/* Exit confirmation dialog — facilitators get an "end for all" option */}
       <ExitWorkshopDialog
         open={exitDialogOpen}
         onOpenChange={setExitDialogOpen}
+        isFacilitator={!!isFacilitator && workshopType === 'multiplayer'}
       />
 
       {/* Facilitator/admin settings, or read-only challenge view for participants */}

@@ -78,24 +78,20 @@ export default async function WorkshopLayout({
   const isGrandfathered = !isUnlocked && session.workshop.createdAt < PAYWALL_CUTOFF_DATE;
   const isPaywallLocked = PAYWALL_ENABLED && !isUnlocked && !isGrandfathered;
 
-  // Fetch workshop session for multiplayer workshops (provides shareToken for Share button)
-  // Also auto-activate: if the facilitator is loading the workshop, the session should be active
-  let workshopSession: { shareToken: string } | null = null;
+  // Auto-activate multiplayer sessions: if the facilitator is loading the
+  // workshop, a session still "waiting" should flip to active.
   if (session.workshop.workshopType === 'multiplayer') {
     const ws = await dbWithRetry(() =>
       db.query.workshopSessions.findFirst({
         where: eq(workshopSessions.workshopId, session.workshop.id),
-        columns: { id: true, shareToken: true, status: true },
+        columns: { id: true, status: true },
       })
     );
-    if (ws) {
-      workshopSession = { shareToken: ws.shareToken };
-      if (ws.status === 'waiting') {
-        await db
-          .update(workshopSessions)
-          .set({ status: 'active', startedAt: new Date() })
-          .where(eq(workshopSessions.id, ws.id));
-      }
+    if (ws && ws.status === 'waiting') {
+      await db
+        .update(workshopSessions)
+        .set({ status: 'active', startedAt: new Date() })
+        .where(eq(workshopSessions.id, ws.id));
     }
   }
 
@@ -134,7 +130,6 @@ export default async function WorkshopLayout({
               workshopColor={session.workshop.color}
               workshopEmoji={session.workshop.emoji}
               workshopType={session.workshop.workshopType ?? 'solo'}
-              shareToken={workshopSession?.shareToken}
               isFacilitator={isFacilitator}
               isWorkshopOwner={isFacilitator}
               isAdmin={isAdmin}
