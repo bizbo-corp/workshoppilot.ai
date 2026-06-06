@@ -85,22 +85,33 @@ export function LandingHeader() {
             <Logo size="sm" className="text-2xl sm:text-3xl" />
           </Link>
 
-          {/* Center: Nav links (desktop) */}
+          {/* Center: Nav links (desktop). Dashboard lives in the right cluster
+              as a prominent button, so it's intentionally omitted here. */}
           <nav className="hidden items-center gap-6 md:flex">
             <NavLink href="/#pricing" label="Pricing" />
-            {mounted && (
-              <SignedIn>
-                <NavLink href="/dashboard" label="Dashboard" />
-              </SignedIn>
-            )}
           </nav>
 
-          {/* Right: Theme toggle + Auth (desktop) */}
-          <div className="flex items-center gap-2">
+          {/* Right: Dashboard + Theme toggle + Auth (desktop) */}
+          <div className="flex items-center gap-4">
+            {/* Prominent Dashboard button — signed in, desktop only.
+                Sits to the left of the theme toggle. */}
+            {mounted && (
+              <SignedIn>
+                <Button
+                  asChild
+                  variant="secondary"
+                  size="sm"
+                  className="hidden md:inline-flex"
+                >
+                  <Link href="/dashboard">Dashboard</Link>
+                </Button>
+              </SignedIn>
+            )}
+
             <ThemeToggle />
 
             {/* Desktop auth controls */}
-            <div className="hidden items-center gap-2 md:flex">
+            <div className="hidden items-center gap-4 md:flex">
               {mounted ? (
                 <>
                   <ClerkLoading>
@@ -124,12 +135,6 @@ export function LandingHeader() {
                     </Button>
                   </SignedOut>
                   <SignedIn>
-                    <Link
-                      href="/dashboard"
-                      className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Dashboard
-                    </Link>
                     <UserButton
                       appearance={{
                         elements: {
