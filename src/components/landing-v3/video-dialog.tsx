@@ -3,25 +3,23 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Play, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function VideoPlayButton() {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <button
+      <Button
+        variant="secondary"
+        size="lg"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center justify-center gap-2 rounded-md h-10 bg-card/90 border border-foreground/[0.08] px-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
-        style={{
-          boxShadow:
-            "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.08), 0 2px 8px -2px rgba(0,0,0,0.12)",
-        }}
       >
         <span className="flex items-center justify-center w-6 h-6 rounded-full bg-olive-600 dark:bg-olive-500 shrink-0">
-          <Play className="h-3 w-3 text-white fill-white ml-0.5" />
+          <Play className="size-3 text-white fill-white ml-0.5" />
         </span>
         WorkshopPilot in 60s
-      </button>
+      </Button>
 
       {open &&
         createPortal(
