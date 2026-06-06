@@ -3042,14 +3042,11 @@ function ReactFlowCanvasInner({
   // Handle ReactFlow initialization (for empty quadrant/grid canvas centering)
   const handleInit = useCallback(
     (instance: ReactFlowInstance) => {
-      // Admin-configured default viewport takes priority when canvas is empty
-      if (
-        defaultViewportSettings &&
-        stickyNotes.length === 0 &&
-        personaTemplates.length === 0 &&
-        hmwCards.length === 0 &&
-        conceptCards.length === 0
-      ) {
+      // Admin-configured default viewport takes absolute priority — it applies
+      // regardless of canvas content (grid steps like journey-mapping always have
+      // sticky notes, so an "empty canvas" check would never let it run for them).
+      // When set, it wins over every fit-to-content path below.
+      if (defaultViewportSettings) {
         const container = document.querySelector(".react-flow");
         if (container) {
           const rect = container.getBoundingClientRect();
@@ -3145,9 +3142,11 @@ function ReactFlowCanvasInner({
     ],
   );
 
-  // Auto-fit view on mount if nodes exist
+  // Auto-fit view on mount if nodes exist — skipped when an admin default view
+  // is configured, which owns the initial viewport for this step.
   useEffect(() => {
     if (
+      !defaultViewportSettings &&
       (stickyNotes.length > 0 ||
         personaTemplates.length > 0 ||
         hmwCards.length > 0 ||
@@ -3159,12 +3158,13 @@ function ReactFlowCanvasInner({
         hasFitView.current = true;
       }, 100);
     }
-  }, [stickyNotes.length, personaTemplates.length, hmwCards.length, conceptCards.length, fitViewWithChatOffset]);
+  }, [stickyNotes.length, personaTemplates.length, hmwCards.length, conceptCards.length, fitViewWithChatOffset, defaultViewportSettings]);
 
   // Fit grid to viewport when dynamicGridConfig first becomes available (after gridColumns are seeded)
   const hasSetGridViewport = useRef(false);
   useEffect(() => {
     if (
+      defaultViewportSettings ||
       !dynamicGridConfig ||
       stickyNotes.length > 0 ||
       hasFitView.current ||
@@ -3192,7 +3192,7 @@ function ReactFlowCanvasInner({
       y: (rect.height - gridH * z) / 2,
       zoom: z,
     });
-  }, [dynamicGridConfig, stickyNotes.length, setViewport]);
+  }, [dynamicGridConfig, stickyNotes.length, setViewport, defaultViewportSettings]);
 
   // Animate viewport when items are added from chat panel
   useEffect(() => {
@@ -3280,10 +3280,11 @@ function ReactFlowCanvasInner({
         onInit={handleInit}
         snapToGrid={false}
         fitView={
-          stickyNotes.length > 0 ||
-          personaTemplates.length > 0 ||
-          hmwCards.length > 0 ||
-          conceptCards.length > 0
+          !defaultViewportSettings &&
+          (stickyNotes.length > 0 ||
+            personaTemplates.length > 0 ||
+            hmwCards.length > 0 ||
+            conceptCards.length > 0)
         }
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.3}
