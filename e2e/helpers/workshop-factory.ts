@@ -21,17 +21,21 @@ export async function createWorkshopViaUI(page: Page): Promise<{
   // Navigate to landing page
   await page.goto('/');
 
-  // Click the "Start Workshop" button
-  // The button contains text "Start Workshop" or "Setting up your workshop..." during loading
-  const startButton = page.getByRole('button', { name: /start workshop/i });
+  // The "Start Workshop" CTA opens the New Workshop dialog; fill the title,
+  // pick solo ("By myself") mode, and submit to create + navigate.
+  const startButton = page.getByRole('button', { name: /start workshop/i }).first();
   await startButton.click();
 
-  // Wait for navigation to /workshop/{sessionId}/step/1
-  await page.waitForURL(/\/workshop\/.*\/step\/1/, { timeout: 30000 });
+  await page.getByPlaceholder(/Pet Care App/i).fill('E2E test workshop');
+  await page.getByRole('button', { name: /by myself/i }).click();
+  await page.getByRole('button', { name: /^Continue$/ }).click();
+
+  // Wait for navigation to /workshop/{sessionId}/step/challenge (the setup/framing step)
+  await page.waitForURL(/\/workshop\/.*\/step\/challenge/, { timeout: 30000 });
 
   // Extract sessionId from URL
   const url = page.url();
-  const match = url.match(/\/workshop\/([^/]+)\/step\/1/);
+  const match = url.match(/\/workshop\/([^/]+)\/step\/challenge/);
   if (!match) {
     throw new Error(`Failed to extract sessionId from URL: ${url}`);
   }

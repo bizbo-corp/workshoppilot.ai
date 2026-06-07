@@ -394,7 +394,7 @@ export async function sendWorkshopInvites(
   }
 
   if (sessionRow) {
-    revalidatePath(`/workshop/${sessionRow.id}/step/1`);
+    revalidatePath(`/workshop/${sessionRow.id}/step/challenge`);
   }
 
   return { sent, skipped };
@@ -430,7 +430,7 @@ export async function revokeInvite(invitationId: string): Promise<void> {
     .from(sessions)
     .where(eq(sessions.workshopId, invite.workshopId))
     .limit(1);
-  if (sessionRow) revalidatePath(`/workshop/${sessionRow.id}/step/1`);
+  if (sessionRow) revalidatePath(`/workshop/${sessionRow.id}/step/challenge`);
 }
 
 /**
@@ -687,7 +687,7 @@ export async function nudgeInvitations(
     .from(sessions)
     .where(eq(sessions.workshopId, workshopId))
     .limit(1);
-  if (sessionRow) revalidatePath(`/workshop/${sessionRow.id}/step/1`);
+  if (sessionRow) revalidatePath(`/workshop/${sessionRow.id}/step/challenge`);
 
   return { nudged, skipped };
 }

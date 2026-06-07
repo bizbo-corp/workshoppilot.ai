@@ -127,7 +127,7 @@ const SECTIONS: Section[] = [
           'Test your concept with real users — validate assumptions and gather feedback before building.',
         icon: <Rocket className="h-5 w-5" />,
         generatable: false,
-        navigateTo: 'step/10',
+        navigateTo: 'step/validate',
         buttonLabel: 'Go to Validate',
       },
     ],
@@ -359,7 +359,7 @@ export function OutputsContent({
         {/* Back link (only on card grid view, hidden for read-only guests) */}
         {!selectedDeliverable && !isReadOnly && (
           <Link
-            href={`/workshop/${sessionId}/step/10`}
+            href={`/workshop/${sessionId}/step/validate`}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />

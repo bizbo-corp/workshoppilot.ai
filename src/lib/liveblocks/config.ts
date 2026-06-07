@@ -225,7 +225,7 @@ declare global {
      * Note: the broadcasting user does NOT receive their own events.
      */
     RoomEvent:
-      | { type: 'STEP_CHANGED'; stepOrder: number; stepName: string }
+      | { type: 'STEP_CHANGED'; stepSlug: string; stepOrder: number; stepName: string }
       | { type: 'TIMER_UPDATE'; state: 'running' | 'paused' | 'expired' | 'cancelled'; remainingMs: number; totalMs: number }
       | { type: 'SESSION_ENDED' }
       | { type: 'VOTING_OPENED'; voteBudget: number }
@@ -267,6 +267,6 @@ declare global {
           rowId: string | null;
           progressLabel: string | null;
         }
-      | { type: 'STEP_RESET'; stepOrder: number };
+      | { type: 'STEP_RESET'; stepSlug: string };
   }
 }

@@ -284,7 +284,7 @@ interface ChangeRequestEmailParams {
  * Sent to the facilitator when a participant requests a change to the challenge.
  */
 export async function sendChangeRequestEmail(params: ChangeRequestEmailParams) {
-  const url = `${baseUrl()}/workshop/${params.sessionId}/step/1`;
+  const url = `${baseUrl()}/workshop/${params.sessionId}/step/challenge`;
   const body = `
     <p>Hi ${escapeHtml(params.facilitatorName)},</p>
     <p><strong>${escapeHtml(params.participantName)}</strong> requested a change to the challenge for <strong>${escapeHtml(params.workshopTitle)}</strong>:</p>

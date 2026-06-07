@@ -224,7 +224,7 @@ export async function requestChallengeChange(
   if (urlSessionId) {
     revalidatePath(`/workshop/${urlSessionId}/lobby`);
     revalidatePath(`/workshop/${urlSessionId}`);
-    revalidatePath(`/workshop/${urlSessionId}/step/1`);
+    revalidatePath(`/workshop/${urlSessionId}/step/challenge`);
   }
 }
 
@@ -315,7 +315,7 @@ export async function republishChallenge(workshopId: string): Promise<void> {
   }
 
   if (urlSessionId) {
-    revalidatePath(`/workshop/${urlSessionId}/step/1`);
+    revalidatePath(`/workshop/${urlSessionId}/step/challenge`);
     revalidatePath(`/workshop/${urlSessionId}/lobby`);
     revalidatePath(`/workshop/${urlSessionId}`);
   }

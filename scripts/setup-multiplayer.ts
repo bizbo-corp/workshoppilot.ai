@@ -106,7 +106,7 @@ async function main() {
 
   const parts = await db.select().from(sessionParticipants).where(eq(sessionParticipants.sessionId, wss.id));
   console.log('\n=== RESULT ===');
-  console.log('open URL (both users):', `/workshop/${sesId}/step/8`);
+  console.log('open URL (both users):', `/workshop/${sesId}/step/ideation`);
   console.log('participants:', parts.map((p) => ({ name: p.displayName, role: p.role, clerk: p.clerkUserId, color: p.color })));
 }
 

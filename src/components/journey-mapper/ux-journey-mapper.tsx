@@ -911,7 +911,7 @@ function JourneyMapperInner({
         onV0Started={() => {
           setShowPrototypeDialog(false);
           setPrototypeDialogData(undefined);
-          router.push(`/workshop/${sessionId}/step/10?v0=creating`);
+          router.push(`/workshop/${sessionId}/step/validate?v0=creating`);
         }}
       />
 

@@ -132,11 +132,11 @@ export async function setupWorkshop(input: SetupWorkshopInput): Promise<SetupWor
 
   revalidatePath(`/workshop/${sessionRow.id}`);
   revalidatePath(`/workshop/${sessionRow.id}/lobby`);
-  revalidatePath(`/workshop/${sessionRow.id}/step/1`);
+  revalidatePath(`/workshop/${sessionRow.id}/step/challenge`);
 
   const redirectUrl =
     input.mode === 'start_now'
-      ? `/workshop/${sessionRow.id}/step/2`
+      ? `/workshop/${sessionRow.id}/step/stakeholder-mapping`
       : `/workshop/${sessionRow.id}/lobby`;
 
   return { ok: true, redirectUrl, invites };
@@ -173,7 +173,7 @@ export async function startWorkshop(workshopId: string): Promise<{
   if (workshop.workshopStartedAt) {
     return {
       ok: true,
-      nextUrl: `/workshop/${sessionRow.id}/step/2`,
+      nextUrl: `/workshop/${sessionRow.id}/step/stakeholder-mapping`,
       alreadyStarted: true,
     };
   }
@@ -197,12 +197,12 @@ export async function startWorkshop(workshopId: string): Promise<{
   await advanceFromStepOne(workshopId, sessionRow.id);
 
   revalidatePath(`/workshop/${sessionRow.id}/lobby`);
-  revalidatePath(`/workshop/${sessionRow.id}/step/2`);
-  revalidatePath(`/workshop/${sessionRow.id}/step/1`);
+  revalidatePath(`/workshop/${sessionRow.id}/step/stakeholder-mapping`);
+  revalidatePath(`/workshop/${sessionRow.id}/step/challenge`);
 
   return {
     ok: true,
-    nextUrl: `/workshop/${sessionRow.id}/step/2`,
+    nextUrl: `/workshop/${sessionRow.id}/step/stakeholder-mapping`,
     alreadyStarted: false,
   };
 }
@@ -293,7 +293,7 @@ async function advanceFromStepOne(workshopId: string, sessionId: string): Promis
   }
 
   // Eagerly pregenerate the facilitator's Step 2 greeting in the post-response queue,
-  // so by the time setupWorkshop returns and the wizard navigates to /step/2, the chat
+  // so by the time setupWorkshop returns and the wizard navigates to /step/stakeholder-mapping, the chat
   // panel finds a ready-to-replay greeting via the DB-lock singleton instead of having
   // to wait the full Gemini round-trip on mount. The client's own __step_start__ trigger
   // loses the claim race and replays via pollForFilledGreeting. Safe to call from server

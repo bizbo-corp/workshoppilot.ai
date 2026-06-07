@@ -14,6 +14,7 @@ import { useMultiplayerContext } from './multiplayer-room';
 import { endWorkshopSession } from '@/actions/session-actions';
 import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-provider';
 import { computeVotingResults, getVotableTargetIds, currentRoundVotes } from '@/lib/canvas/voting-utils';
+import { getStepByOrder } from '@/lib/workshop/step-metadata';
 
 // Timer preset durations in milliseconds
 const TIMER_PRESETS = [
@@ -510,8 +511,8 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
           </>
         )}
 
-        {/* Start Activity button — Concept Development (step order 10; Brain Writing was inserted at 9) */}
-        {stepOrder === 10 && !conceptActivityStarted && (
+        {/* Start Activity button — Concept Development step */}
+        {getStepByOrder(stepOrder ?? -1)?.id === 'concept' && !conceptActivityStarted && (
           <>
             <div className="w-px h-5 bg-border mx-0.5" />
             <button

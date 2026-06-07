@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { renameWorkshop, updateWorkshopAppearance } from '@/actions/workshop-actions';
 import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
-import { getStepByOrder, getStepById } from '@/lib/workshop/step-metadata';
+import { getStepById, getStepBySlug, getFirstStep } from '@/lib/workshop/step-metadata';
 import { getWorkshopColor } from '@/lib/workshop/workshop-appearance';
 import { WelcomeModal } from '@/components/dashboard/welcome-modal';
 import { AdminResetOnboarding } from '@/components/dashboard/admin-reset-onboarding';
@@ -98,10 +98,11 @@ export default async function DashboardPage() {
       return stepOrder > highestOrder ? step : highest;
     }, undefined);
 
-    // Look up metadata by stepId instead of array index
+    // Look up metadata by stepId instead of array index. Fallback to the
+    // challenge (setup) step for brand-new workshops with no started step.
     const stepMetadata = currentStepData?.stepId
       ? getStepById(currentStepData.stepId)
-      : getStepByOrder(1);
+      : getStepBySlug('challenge');
 
     const step10 = workshop.steps.find((s) => s.stepId === 'validate');
     const isCompleted = step10?.status === 'in_progress' || step10?.status === 'complete';
@@ -114,7 +115,8 @@ export default async function DashboardPage() {
       color: workshop.color,
       emoji: workshop.emoji,
       workshopType: workshop.workshopType,
-      currentStep: stepMetadata?.order || 1,
+      currentStep: stepMetadata?.order ?? 0,
+      currentStepSlug: stepMetadata?.slug ?? getFirstStep().slug,
       currentStepName: stepMetadata?.name || 'Challenge',
       currentStepId: currentStepData?.stepId ?? null,
       sessionId: workshop.sessions[0]?.id || '',
@@ -299,7 +301,7 @@ export default async function DashboardPage() {
                   <div className="mb-4">
                     <div className="mb-1.5 flex items-baseline justify-between">
                       <span className="text-sm text-muted-foreground">
-                        Step {ctaWorkshop.currentStep}: {ctaWorkshop.currentStepName}
+                        {ctaWorkshop.currentStep === 0 ? 'Workshop Setup' : `Step ${ctaWorkshop.currentStep}: ${ctaWorkshop.currentStepName}`}
                       </span>
                       <span className="text-xs text-muted-foreground">{ctaWorkshop.currentStep * 10}%</span>
                     </div>
@@ -309,7 +311,7 @@ export default async function DashboardPage() {
                 <div className="flex gap-3">
                   <Button asChild size="lg" className="btn-lift">
                     <a
-                      href={ctaIsCompleted ? `/workshop/${ctaWorkshop.sessionId}/outputs` : `/workshop/${ctaWorkshop.sessionId}/step/${ctaWorkshop.currentStep}`}
+                      href={ctaIsCompleted ? `/workshop/${ctaWorkshop.sessionId}/outputs` : `/workshop/${ctaWorkshop.sessionId}/step/${ctaWorkshop.currentStepSlug}`}
                     >
                       {ctaIsCompleted ? 'View Outputs' : 'Continue'}
                     </a>
@@ -327,6 +329,7 @@ export default async function DashboardPage() {
                 sessionId: w.sessionId,
                 title: w.title,
                 currentStep: w.currentStep,
+                currentStepSlug: w.currentStepSlug,
                 currentStepName: w.currentStepName,
                 updatedAt: w.updatedAt,
                 color: w.color,

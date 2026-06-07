@@ -111,7 +111,7 @@ function StepAdvanceBroadcaster({
 }: {
   broadcastRef: React.MutableRefObject<
     | ((event:
-        | { type: "STEP_RESET"; stepOrder: number }
+        | { type: "STEP_RESET"; stepSlug: string }
         | { type: "INTERVIEW_MODE_SELECTED"; interviewMode: "synthetic" | "real" }
         | {
             type: "JOURNEY_POLL_OPENED";
@@ -325,7 +325,7 @@ export function StepContainer({
   //   - JOURNEY_POLL_OPENED — facilitator AI emits step-6 template poll options
   const broadcastRef = React.useRef<
     | ((event:
-        | { type: "STEP_RESET"; stepOrder: number }
+        | { type: "STEP_RESET"; stepSlug: string }
         | { type: "INTERVIEW_MODE_SELECTED"; interviewMode: "synthetic" | "real" }
         | {
             type: "JOURNEY_POLL_OPENED";
@@ -910,17 +910,17 @@ export function StepContainer({
   // PRD viewer dialog state
   const [showPrdDialog, setShowPrdDialog] = React.useState(false);
 
-  // v2.2 — Team-mode setup wizard state (Step 1, facilitator only)
+  // v2.2 — Team-mode setup wizard state (Challenge step, facilitator only)
   const [showSetupWizard, setShowSetupWizard] = React.useState(false);
   const isTeamModeStepOne =
-    stepOrder === 1 && facilitatorMode === 'team' && isFacilitator;
+    step?.id === 'challenge' && facilitatorMode === 'team' && isFacilitator;
 
   // Convert solo → team workshop (Step 1, owner only, pre-publish). Affordance for
   // owners who created a solo workshop but later want to invite teammates.
   const [showConvertDialog, setShowConvertDialog] = React.useState(false);
   const [isConverting, setIsConverting] = React.useState(false);
   const canConvertToTeam =
-    stepOrder === 1 &&
+    step?.id === 'challenge' &&
     facilitatorMode === 'solo' &&
     isWorkshopOwner &&
     !challengePublished;
@@ -930,7 +930,7 @@ export function StepContainer({
     try {
       const result = await convertToTeamWorkshop(workshopId);
       if (result.status === 'converted' || result.status === 'already_team') {
-        router.replace(`/workshop/${sessionId}/step/1?setup=1`, { scroll: false });
+        router.replace(`/workshop/${sessionId}/step/challenge?setup=1`, { scroll: false });
         router.refresh();
       } else if (result.status === 'payment_required') {
         // Tier='solo' workshop → user pays $200 upgrade diff. Hand off to Stripe.
@@ -1003,7 +1003,7 @@ export function StepContainer({
     const next = new URLSearchParams(searchParams.toString());
     next.delete('setup');
     const qs = next.toString();
-    router.replace(`/workshop/${sessionId}/step/1${qs ? `?${qs}` : ''}`, { scroll: false });
+    router.replace(`/workshop/${sessionId}/step/challenge${qs ? `?${qs}` : ''}`, { scroll: false });
   }, [isTeamModeStepOne, searchParams, router, sessionId]);
 
   const [v0Status, setV0Status] = React.useState<
@@ -1221,7 +1221,7 @@ export function StepContainer({
       setLocalMessages([]);
       setAutoStartFired(false); // Allow auto-start to fire again after reset
       setConceptActivityStarted(false); // Reset concept activity gate (Step 9)
-      broadcastRef.current?.({ type: 'STEP_RESET', stepOrder });
+      broadcastRef.current?.({ type: 'STEP_RESET', stepSlug: step.id });
       // Clear Step 10 extraction state
       setStep10Artifact(null);
       hasAutoExtracted.current = false;

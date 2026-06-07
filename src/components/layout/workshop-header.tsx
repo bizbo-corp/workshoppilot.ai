@@ -18,7 +18,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ExitWorkshopDialog } from "@/components/dialogs/exit-workshop-dialog";
 import { WorkshopSettingsDialog } from "@/components/dialogs/workshop-settings-dialog";
 import { ChallengeViewDialog } from "@/components/dialogs/challenge-view-dialog";
-import { getStepByOrder } from "@/lib/workshop/step-metadata";
+import { getStepBySlug } from "@/lib/workshop/step-metadata";
 import { getWorkshopColor } from "@/lib/workshop/workshop-appearance";
 import { SignInModal } from "@/components/auth/sign-in-modal";
 import { renameWorkshop } from "@/actions/workshop-actions";
@@ -123,11 +123,11 @@ export function WorkshopHeader({
   };
 
   // Extract current step from pathname
-  // Pathname format: /workshop/[sessionId]/step/[stepNumber]
-  const stepMatch = pathname.match(/\/workshop\/[^/]+\/step\/(\d+)/);
-  const currentStepNumber = stepMatch ? parseInt(stepMatch[1], 10) : null;
-  const currentStep = currentStepNumber
-    ? getStepByOrder(currentStepNumber)
+  // Pathname format: /workshop/[sessionId]/step/[slug]
+  const stepMatch = pathname.match(/\/workshop\/[^/]+\/step\/([^/?#]+)/);
+  const currentStepSlug = stepMatch ? stepMatch[1] : null;
+  const currentStep = currentStepSlug
+    ? getStepBySlug(currentStepSlug)
     : null;
 
   return (
@@ -182,7 +182,7 @@ export function WorkshopHeader({
                 ) : (
                   <>
                     <span className="text-base text-muted-foreground">
-                      Step {currentStep.order - 1}
+                      Step {currentStep.order}
                     </span>
                     <span className="text-base text-muted-foreground">/</span>
                     <span className="text-base font-medium text-foreground">

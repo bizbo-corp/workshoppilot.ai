@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, Bell, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { nudgeFacilitator } from '@/actions/lobby-actions';
+import { getStepByOrder, getFirstStep } from '@/lib/workshop/step-metadata';
 import { toast } from 'sonner';
 
 interface LobbyStateResponse {
@@ -62,7 +63,8 @@ export function LobbyParticipantCta({
   const [nudgedUntil, setNudgedUntil] = useState<number | null>(null);
 
   const stepHref = useCallback(
-    (order: number) => `/workshop/${sessionId}/step/${order}`,
+    (order: number) =>
+      `/workshop/${sessionId}/step/${(getStepByOrder(order) ?? getFirstStep()).slug}`,
     [sessionId],
   );
 

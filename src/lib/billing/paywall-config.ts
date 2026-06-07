@@ -21,3 +21,12 @@ const CUTOFF_MS = process.env.PAYWALL_CUTOFF_OVERRIDE
   : 1772051653843;
 
 export const PAYWALL_CUTOFF_DATE = new Date(CUTOFF_MS);
+
+/**
+ * Slug of the first paywalled step. Everything from this step onward
+ * (Ideation → Brain Writing → Concept → Validate) requires a credit;
+ * Challenge through Reframe are the free preview. Keyed on the stable slug
+ * so the boundary survives any future renumbering — compare against a step's
+ * `order` via `getStepBySlug(PAYWALL_START_SLUG).order`.
+ */
+export const PAYWALL_START_SLUG = "ideation";

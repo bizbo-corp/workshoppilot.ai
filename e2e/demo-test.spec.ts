@@ -20,7 +20,7 @@ test('test', async ({ page }) => {
     .click();
   await page.getByRole('button', { name: 'Add to Whiteboard' }).click();
   await page.getByRole('button', { name: 'Next', exact: true }).click();
-  await page.goto('http://localhost:3000/workshop/ses_ht39el9rhv9rz6rrdo9cd8z6/step/2');
+  await page.goto('http://localhost:3000/workshop/ses_ht39el9rhv9rz6rrdo9cd8z6/step/stakeholder-mapping');
   await page.getByRole('button', { name: 'People who struggle to' }).click();
   await page.getByRole('button', { name: 'Give me a prompting question.' }).click();
   await page.getByRole('button', { name: 'I\'m still stuck. Give me an' }).click();

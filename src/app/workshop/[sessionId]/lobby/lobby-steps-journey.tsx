@@ -23,7 +23,7 @@ interface StepCard {
 
 const STEP_CARDS: StepCard[] = [
   {
-    order: 2,
+    order: 1,
     name: 'Stakeholder Interviews',
     description:
       'Map who matters — power, interest, influence — and decide who you actually need to talk to.',
@@ -32,7 +32,7 @@ const STEP_CARDS: StepCard[] = [
     badgeText: 'text-amber-700 dark:text-amber-300',
   },
   {
-    order: 3,
+    order: 2,
     name: 'User Research',
     description:
       'Sit down with real or synthetic users in conversation — surface real pains and hidden needs.',
@@ -41,7 +41,7 @@ const STEP_CARDS: StepCard[] = [
     badgeText: 'text-cyan-700 dark:text-cyan-300',
   },
   {
-    order: 4,
+    order: 3,
     name: 'Sense Making',
     description:
       'Cluster everything you heard into themes, pains, and gains until patterns start to shimmer.',
@@ -50,7 +50,7 @@ const STEP_CARDS: StepCard[] = [
     badgeText: 'text-violet-700 dark:text-violet-300',
   },
   {
-    order: 5,
+    order: 4,
     name: 'Personas',
     description:
       'Pull your insights into a real human you can design for — name, story, motivations, the lot.',
@@ -59,7 +59,7 @@ const STEP_CARDS: StepCard[] = [
     badgeText: 'text-pink-700 dark:text-pink-300',
   },
   {
-    order: 6,
+    order: 5,
     name: 'Journey Mapping',
     description:
       "Walk through your persona's experience step by step and find where it falls apart — the dip is the opportunity.",
@@ -68,7 +68,7 @@ const STEP_CARDS: StepCard[] = [
     badgeText: 'text-emerald-700 dark:text-emerald-300',
   },
   {
-    order: 7,
+    order: 6,
     name: 'Reframe',
     description:
       'Sharpen the question. Turn the fuzzy challenge into a focused How Might We you can actually answer.',
@@ -77,7 +77,7 @@ const STEP_CARDS: StepCard[] = [
     badgeText: 'text-yellow-700 dark:text-yellow-300',
   },
   {
-    order: 8,
+    order: 7,
     name: 'Ideation',
     description:
       'Mind maps and Crazy 8s sketching — generate volume first, judge later. The good ideas hide behind the bad ones.',
@@ -86,7 +86,7 @@ const STEP_CARDS: StepCard[] = [
     badgeText: 'text-orange-700 dark:text-orange-300',
   },
   {
-    order: 9,
+    order: 8,
     name: 'Brain Writing',
     description:
       'Take the ideas you picked and push each one further — draw variations until the strongest version reveals itself.',
@@ -95,7 +95,7 @@ const STEP_CARDS: StepCard[] = [
     badgeText: 'text-rose-700 dark:text-rose-300',
   },
   {
-    order: 10,
+    order: 9,
     name: 'Concept Development',
     description:
       'Pressure-test the strongest ideas with SWOT, feasibility, and an elevator pitch a five-year-old could repeat.',
@@ -104,7 +104,7 @@ const STEP_CARDS: StepCard[] = [
     badgeText: 'text-indigo-700 dark:text-indigo-300',
   },
   {
-    order: 11,
+    order: 10,
     name: 'Validate & Ship',
     description:
       'Flow diagrams, PRD, user stories — your validated Build Pack, ready to hand to an AI coder or a real one.',
@@ -141,7 +141,7 @@ export function LobbyStepsJourney() {
               <span
                 className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${card.badgeBg} ${card.badgeText}`}
               >
-                {card.order - 1}
+                {card.order}
               </span>
               <h3 className="text-sm font-semibold leading-tight">{card.name}</h3>
             </div>

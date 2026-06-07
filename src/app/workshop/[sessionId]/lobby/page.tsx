@@ -50,7 +50,7 @@ export default async function LobbyPage({ params }: PageProps) {
 
   // Solo workshops never use the lobby
   if (workshop.facilitatorMode !== 'team') {
-    redirect(`/workshop/${sessionId}/step/1`);
+    redirect(`/workshop/${sessionId}/step/challenge`);
   }
 
   const { userId } = await auth();

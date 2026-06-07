@@ -53,7 +53,7 @@ export function ResultsContent({
                 Workshop completed — synthesis summary is still being generated.
               </p>
               <Button variant="outline" asChild>
-                <Link href={`/workshop/${sessionId}/step/10`}>
+                <Link href={`/workshop/${sessionId}/step/validate`}>
                   Go to Step 10
                 </Link>
               </Button>

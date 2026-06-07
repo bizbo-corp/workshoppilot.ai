@@ -186,7 +186,7 @@ export async function createWorkshopSession(formData?: FormData) {
       const result = await createCheckoutUrl({
         sku: tierToBuy,
         workshopId: workshop.id,
-        returnUrl: `/workshop/${sessionId}/step/1`,
+        returnUrl: `/workshop/${sessionId}/step/challenge`,
       });
       if ('url' in result) {
         // Hand off the URL through the outer redirect — see comment below.
@@ -206,7 +206,7 @@ export async function createWorkshopSession(formData?: FormData) {
   if (checkoutUrl) {
     redirect(checkoutUrl);
   }
-  redirect(`/workshop/${sessionId}/step/1`);
+  redirect(`/workshop/${sessionId}/step/challenge`);
 }
 
 /**
@@ -259,7 +259,7 @@ export async function convertToTeamWorkshop(workshopId: string): Promise<Convert
       .from(sessions)
       .where(eq(sessions.workshopId, workshopId))
       .limit(1);
-    const returnUrl = sessionRow ? `/workshop/${sessionRow.id}/step/1` : undefined;
+    const returnUrl = sessionRow ? `/workshop/${sessionRow.id}/step/challenge` : undefined;
     const result = await createCheckoutUrl({
       sku: 'team_upgrade',
       workshopId,
@@ -335,7 +335,7 @@ export async function convertToTeamWorkshop(workshopId: string): Promise<Convert
     .where(eq(sessions.workshopId, workshopId))
     .limit(1);
   if (sessionRow) {
-    revalidatePath(`/workshop/${sessionRow.id}/step/1`);
+    revalidatePath(`/workshop/${sessionRow.id}/step/challenge`);
   }
   revalidatePath('/dashboard');
 
@@ -514,8 +514,6 @@ export async function advanceToNextStep(
   nextStepId: string,
   sessionId: string
 ): Promise<{ nextStepOrder: number } | { paywallRequired: true; hasCredits: boolean; creditBalance: number }> {
-  let nextStepOrder: number;
-
   try {
     // Multiplayer guard: only the workshop owner (facilitator) can advance steps.
     // Guest participants have no Clerk session — getUserId() returns null for them.
@@ -592,7 +590,6 @@ export async function advanceToNextStep(
     if (!nextStep) {
       throw new Error(`Step ${nextStepId} not found in STEPS array`);
     }
-    nextStepOrder = nextStep.order;
 
     // Server-side STEP_CHANGED broadcast. Sent from here (post-DB-commit) rather
     // than from the client BEFORE the action ran — the client-side path could
@@ -615,6 +612,7 @@ export async function advanceToNextStep(
         await liveblocks.getOrCreateRoom(broadcastRoomId, { defaultAccesses: [] });
         await liveblocks.broadcastEvent(broadcastRoomId, {
           type: 'STEP_CHANGED',
+          stepSlug: nextStep.id,
           stepOrder: nextStep.order,
           stepName: nextStep.name,
         });
@@ -705,7 +703,7 @@ export async function advanceToNextStep(
   // This is the idiomatic Next.js pattern for server action navigation.
   // Using router.push() after a server action with revalidatePath doesn't work
   // because the revalidation interferes with client-side navigation.
-  redirect(`/workshop/${sessionId}/step/${nextStepOrder}`);
+  redirect(`/workshop/${sessionId}/step/${nextStepId}`);
 }
 
 /**

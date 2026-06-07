@@ -17,9 +17,6 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/api/webhooks(.*)',
   '/api/health',
-  '/workshop/:path*/step/1',
-  '/workshop/:path*/step/2',
-  '/workshop/:path*/step/3',
   // Join + invite PAGES stay public so the passwordless sign-in gate can render
   // to signed-out visitors. The claim APIs below them require a Clerk session
   // (see isProtectedRoute) — joining a workshop now always requires auth.
@@ -42,13 +39,12 @@ const isProtectedRoute = createRouteMatcher([
   '/api/sessions(.*)',
   '/api/guest-join',    // Join via share link — Clerk session required
   '/api/invite-claim',  // Claim an invite — Clerk session required
-  '/workshop/:path*/step/4',
-  '/workshop/:path*/step/5',
-  '/workshop/:path*/step/6',
-  '/workshop/:path*/step/7',
-  '/workshop/:path*/step/8',
-  '/workshop/:path*/step/9',
-  '/workshop/:path*/step/10',
+  // NOTE: Workshop step pages are intentionally NOT listed here. They are made
+  // public for multiplayer guests via the '/workshop/:path*/step/:stepId'
+  // catch-all in isPublicRoute above; per-step access control is enforced in the
+  // page itself (sequential-enforcement + paywall) and by AuthGuard, not here.
+  // (Previously these were numeric matchers /step/4..10 — brittle and left
+  // /step/11=validate unprotected. Removed during the slug-URL migration.)
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

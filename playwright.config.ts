@@ -43,7 +43,17 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Enable software WebGL (SwiftShader) so WebGL components (e.g. the
+        // landing-page Globe) don't crash in headless Chromium, which has no GPU.
+        // Without this, the GL context is null and the globe lib throws
+        // "Cannot read properties of null (reading 'enable')" on page load,
+        // breaking homepage interactivity before the test can click anything.
+        launchOptions: {
+          args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+        },
+      },
     },
   ],
 

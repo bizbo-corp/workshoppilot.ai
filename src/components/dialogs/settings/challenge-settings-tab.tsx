@@ -105,7 +105,7 @@ export function ChallengeSettingsTab({
           </p>
         ) : (
           <Button asChild variant="outline" size="sm">
-            <Link href={`/workshop/${sessionId}/step/1`}>Edit on the setup canvas</Link>
+            <Link href={`/workshop/${sessionId}/step/challenge`}>Edit on the setup canvas</Link>
           </Button>
         )}
       </div>

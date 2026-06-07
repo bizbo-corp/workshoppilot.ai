@@ -5,7 +5,7 @@ import { db } from "@/db/client";
 import { sessions, stepArtifacts, chatMessages, sessionParticipants, workshopSessions, buildPacks, workshopStepNarration } from "@/db/schema";
 import type { WorkshopPulseSnapshot } from "@/components/workshop/workshop-pulse-card";
 import { getChallengeArtifact, syncChallengeArtifactFromLiveblocks } from "@/lib/workshop/challenge-artifact";
-import { getStepByOrder, STEPS } from "@/lib/workshop/step-metadata";
+import { getStepBySlug, getFirstStep, STEPS } from "@/lib/workshop/step-metadata";
 import { loadMessages } from "@/lib/ai/message-persistence";
 import { StepContainer } from "@/components/workshop/step-container";
 import { CanvasStoreProvider } from "@/providers/canvas-store-provider";
@@ -27,7 +27,7 @@ import { migrateStakeholdersToCanvas, migrateEmpathyToCanvas } from "@/lib/canva
 import { computeRadialPositions } from "@/lib/canvas/mind-map-layout";
 import { getStepTemplateStickyNotes, guidesToTemplateDefs } from "@/lib/canvas/template-sticky-note-config";
 import { dbWithRetry } from "@/db/with-retry";
-import { PAYWALL_CUTOFF_DATE } from "@/lib/billing/paywall-config";
+import { PAYWALL_CUTOFF_DATE, PAYWALL_START_SLUG } from "@/lib/billing/paywall-config";
 import { PaywallOverlay } from "@/components/workshop/paywall-overlay";
 import { resolveClerkParticipant } from "@/lib/auth/resolve-participant";
 import { PARTICIPANT_COLORS } from "@/lib/liveblocks/config";
@@ -42,20 +42,17 @@ interface StepPageProps {
 export default async function StepPage({ params }: StepPageProps) {
   const { sessionId, stepId } = await params;
 
-  // Parse step number
-  const stepNumber = parseInt(stepId, 10);
-
-  // Validate step number (1-11)
-  if (isNaN(stepNumber) || stepNumber < 1 || stepNumber > 11) {
-    redirect(`/workshop/${sessionId}/step/1`);
-  }
-
-  // Get step metadata
-  const step = getStepByOrder(stepNumber);
+  // Resolve the step by slug (the URL segment is a slug, e.g. 'challenge',
+  // 'stakeholder-mapping', … 'validate' — see step-renumber-slug-plan.md).
+  // Unknown slug → bounce to the first numbered workshop step.
+  const step = getStepBySlug(stepId);
 
   if (!step) {
-    redirect(`/workshop/${sessionId}/step/1`);
+    redirect(`/workshop/${sessionId}/step/${getFirstStep().slug}`);
   }
+
+  // Numeric order kept only for display + paywall comparison.
+  const stepNumber = step.order;
 
   // Fetch session with workshop and steps for sequential enforcement
   const session = await dbWithRetry(() =>
@@ -212,17 +209,18 @@ export default async function StepPage({ params }: StepPageProps) {
     );
     if (activeStep) {
       const activeStepDef = STEPS.find((s) => s.id === activeStep.stepId);
-      redirect(`/workshop/${sessionId}/step/${activeStepDef?.order || 1}`);
+      redirect(`/workshop/${sessionId}/step/${activeStepDef?.slug ?? getFirstStep().slug}`);
     }
-    redirect(`/workshop/${sessionId}/step/1`);
+    redirect(`/workshop/${sessionId}/step/${getFirstStep().slug}`);
   }
 
-  // Paywall enforcement: Steps 8-10 require credit or grandfathering
-  // Must run after sequential enforcement so session.workshop data is already fetched.
-  // Steps 1-7 are completely unaffected — guard is stepNumber >= 8.
+  // Paywall enforcement: Ideation onward (PAYWALL_START_SLUG) require credit or
+  // grandfathering. Must run after sequential enforcement so session.workshop
+  // data is already fetched. Challenge → Reframe are the free preview.
   const PAYWALL_ENABLED = process.env.PAYWALL_ENABLED !== 'false';
+  const paywallStartOrder = getStepBySlug(PAYWALL_START_SLUG)!.order;
 
-  if (PAYWALL_ENABLED && stepNumber >= 8) {
+  if (PAYWALL_ENABLED && stepNumber >= paywallStartOrder) {
     const workshop = session.workshop;
     const isUnlocked = workshop.creditConsumedAt !== null;
     const isGrandfathered =
