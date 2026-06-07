@@ -2,8 +2,9 @@
 
 import { memo, useRef, useEffect, useState } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { Check, ChevronDown, Lightbulb, Loader2, RefreshCw, Send, Sparkles, Wand2, X } from 'lucide-react';
+import { Check, ChevronDown, GripVertical, Lightbulb, Loader2, RefreshCw, Send, Sparkles, Wand2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 
 export type HmwCardNodeRendererData = HmwCardData & {
@@ -235,11 +236,13 @@ function ReassignDropdown({
   currentOwnerId,
   availableOwners,
   onReassign,
+  triggerClassName,
 }: {
   cardId: string;
   currentOwnerId?: string;
   availableOwners: Array<{ ownerId: string; ownerName: string; ownerColor: string }>;
   onReassign: (cardId: string, ownerId: string, ownerName: string, ownerColor: string) => void;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -262,7 +265,10 @@ function ReassignDropdown({
     <div ref={ref} className="relative nodrag nopan">
       <button
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-        className="flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+        className={cn(
+          'flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+          triggerClassName ?? 'text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10',
+        )}
       >
         Reassign
         <ChevronDown className="h-3 w-3" />
@@ -340,7 +346,9 @@ function SectionAiButton({
 
   if (isGenerating) {
     return (
-      <Loader2 className="h-3 w-3 shrink-0 animate-spin text-olive-500" />
+      <Button variant="secondary" size="icon-xs" className="nodrag nopan" disabled>
+        <Loader2 className="h-3 w-3 animate-spin text-olive-500" />
+      </Button>
     );
   }
 
@@ -355,13 +363,15 @@ function SectionAiButton({
 
   return (
     <div ref={menuRef} className="relative nodrag nopan">
-      <button
+      <Button
+        variant="secondary"
+        size="icon-xs"
         onClick={handleClick}
-        className="flex items-center justify-center rounded-md p-0.5 text-olive-500/60 hover:text-olive-600 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+        className="nodrag nopan text-olive-600"
         aria-label={`AI generate ${field}`}
       >
         <Wand2 className="h-3 w-3" />
-      </button>
+      </Button>
       {showMenu && (
         <div className="absolute top-full mt-1 right-0 bg-card rounded-lg shadow-lg border border-border p-1 min-w-[160px] z-50 animate-in fade-in-0 zoom-in-95 duration-150">
           <button
@@ -439,13 +449,16 @@ export const HmwCardNode = memo(
     const isGeneratingAll = !!gs['all'];
     const anyGenerating = Object.values(gs).some(Boolean);
 
-    // Owner color tinting
+    // Olive treatment — the card is uniformly olive (matching journey-map group
+    // containers and stakeholder mapping); the owner is identified by a colored
+    // badge in the header, not by tinting the whole card.
     const oc = data.ownerColor;
-    const headerBg = oc || SAGE.headerBg;
-    const headerText = oc ? contrastText(oc) : SAGE.headerText;
-    const cardBg = oc ? `color-mix(in srgb, ${oc} 6%, ${SAGE.bg})` : SAGE.bg;
-    const cardBorder = oc ? `color-mix(in srgb, ${oc} 30%, ${SAGE.border})` : SAGE.border;
-    const sectionBorder = oc ? `color-mix(in srgb, ${oc} 15%, ${SAGE.sectionBorder})` : SAGE.sectionBorder;
+    const cardBg = SAGE.bg;
+    const cardBorder = SAGE.border;
+    const sectionBorder = SAGE.sectionBorder;
+    // Participant badge — their assigned color, with auto-contrast text.
+    const badgeBg = oc || 'rgba(255,255,255,0.15)';
+    const badgeText = oc ? contrastText(oc) : SAGE.headerText;
 
     // State glow
     let boxShadow: string | undefined;
@@ -486,31 +499,92 @@ export const HmwCardNode = memo(
           boxShadow,
         }}
       >
-        {/* Green checkmark badge for filled state */}
-        {isFilled && (
-          <div className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-green-500 shadow-md">
-            <Check className="h-5 w-5 text-white" strokeWidth={3} />
-          </div>
-        )}
+        <Handle
+          type="target"
+          position={Position.Top}
+          className="!opacity-0 !w-0 !h-0"
+        />
 
-        {/* Drag handle grip bar + Generate All button */}
+        {/* ── Olive header — full-width drag handle, journey-map olive ── */}
+        <div className="card-drag-handle cursor-grab active:cursor-grabbing px-5 py-4 flex items-center justify-between gap-3 bg-olive-800 dark:bg-olive-900">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <GripVertical className="h-4 w-4 shrink-0 text-white/50" />
+            <span className="text-lg font-bold tracking-wide shrink-0 text-white">
+              HOW MIGHT WE CARD
+            </span>
+            {/* Participant badge — owner's colour + name */}
+            {data.ownerName && (
+              <span
+                className="rounded-full px-2.5 py-0.5 text-xs font-semibold min-w-0 shrink truncate ring-1 ring-black/5"
+                style={{ backgroundColor: badgeBg, color: badgeText }}
+                title={data.ownerName}
+              >
+                {data.ownerName}
+              </span>
+            )}
+            {data.isFacilitator && data.availableOwners && data.onReassign && (
+              <ReassignDropdown
+                cardId={id}
+                currentOwnerId={data.ownerId}
+                availableOwners={data.availableOwners}
+                onReassign={data.onReassign}
+                triggerClassName="text-white/70 hover:bg-white/15 hover:text-white"
+              />
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Filled indicator */}
+            {isFilled && (
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500">
+                <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+              </span>
+            )}
+            {data.onDelete && (
+              <button
+                type="button"
+                onClick={() => data.onDelete?.(id)}
+                className="nodrag nopan rounded-full p-1 text-white/60 transition-colors hover:bg-white/15 hover:text-white"
+                title="Delete card"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Section bar (second-level header) ── */}
         <div
-          className="card-drag-handle flex items-center justify-center w-full h-6 cursor-grab active:cursor-grabbing hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded-t-2xl relative"
-          style={{ backgroundColor: oc || 'transparent' }}
+          className="px-6 py-2 flex items-center justify-between gap-3"
+          style={{ backgroundColor: SAGE.sectionBg, borderBottom: `1px solid ${sectionBorder}` }}
         >
-          <svg width="32" height="4" viewBox="0 0 32 4" fill="currentColor" className="text-neutral-olive-400">
-            <rect x="0" y="0" width="32" height="2" rx="1" />
-          </svg>
+          <div className="min-w-0 truncate">
+            <span
+              className="text-[11px] font-bold uppercase tracking-widest"
+              style={{ color: SAGE.labelText }}
+            >
+              Reframed Challenge Statement
+            </span>
+            {data.cardIndex !== undefined && data.cardIndex > 0 && (
+              <span
+                className="ml-2 text-[11px] font-semibold"
+                style={{ color: SAGE.hintText }}
+              >
+                (Alternative #{data.cardIndex + 1})
+              </span>
+            )}
+          </div>
           {data.onGenerateAll && !isNonOwned && (
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="xs"
+              disabled={anyGenerating}
               onClick={(e) => {
                 e.stopPropagation();
                 data.onGenerateAll?.(id);
               }}
-              disabled={anyGenerating}
-              className="nodrag nopan absolute right-2 top-0.5 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold transition-colors bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 disabled:opacity-50"
-              style={{ color: SAGE.headerText }}
+              className="nodrag nopan shrink-0"
+              aria-label="Generate all fields"
             >
               {isGeneratingAll ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -518,101 +592,7 @@ export const HmwCardNode = memo(
                 <Sparkles className="h-3 w-3" />
               )}
               {isGeneratingAll ? 'Generating...' : 'Generate All'}
-            </button>
-          )}
-        </div>
-
-        <Handle
-          type="target"
-          position={Position.Top}
-          className="!opacity-0 !w-0 !h-0"
-        />
-
-        {/* ── Header band ── */}
-        <div
-          className="px-6 py-4 flex items-center justify-between"
-          style={{ backgroundColor: headerBg }}
-        >
-          <div className="flex items-center gap-3">
-            <Lightbulb className="h-5 w-5" style={{ color: headerText, opacity: 0.8 }} />
-            <span
-              className="text-lg font-bold tracking-wide"
-              style={{ color: headerText }}
-            >
-              HOW MIGHT WE CARD
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
-              style={{
-                backgroundColor: oc ? `color-mix(in srgb, ${oc} 70%, black)` : 'var(--hmw-badge-bg)',
-                color: oc ? '#ffffff' : SAGE.headerText,
-              }}
-            >
-              HMW
-            </span>
-            {data.onDelete && (
-              <button
-                type="button"
-                onClick={() => data.onDelete?.(id)}
-                className="nodrag nopan rounded-full p-1 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
-                title="Delete card"
-              >
-                <X className="h-4 w-4" style={{ color: headerText, opacity: 0.6 }} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Owner name band (multiplayer only) ── */}
-        {data.ownerName && (
-          <div
-            className="px-6 py-2 flex items-center gap-2"
-            style={{
-              backgroundColor: oc ? `color-mix(in srgb, ${oc} 15%, ${SAGE.sectionBg})` : SAGE.sectionBg,
-              borderBottom: `1px solid ${sectionBorder}`,
-            }}
-          >
-            <span
-              className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
-              style={{ backgroundColor: data.ownerColor || SAGE.headerText }}
-            />
-            <span
-              className="text-xs font-semibold tracking-wide"
-              style={{ color: SAGE.labelText }}
-            >
-              {data.ownerName}
-            </span>
-            {data.isFacilitator && data.availableOwners && data.onReassign && (
-              <ReassignDropdown
-                cardId={id}
-                currentOwnerId={data.ownerId}
-                availableOwners={data.availableOwners}
-                onReassign={data.onReassign}
-              />
-            )}
-          </div>
-        )}
-
-        {/* ── Section bar ── */}
-        <div
-          className="px-6 py-2.5"
-          style={{ backgroundColor: SAGE.sectionBg, borderBottom: `1px solid ${sectionBorder}` }}
-        >
-          <span
-            className="text-[11px] font-bold uppercase tracking-widest"
-            style={{ color: SAGE.labelText }}
-          >
-            Reframed Challenge Statement
-          </span>
-          {data.cardIndex !== undefined && data.cardIndex > 0 && (
-            <span
-              className="ml-2 text-[11px] font-semibold"
-              style={{ color: SAGE.hintText }}
-            >
-              (Alternative #{data.cardIndex + 1})
-            </span>
+            </Button>
           )}
         </div>
 

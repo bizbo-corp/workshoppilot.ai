@@ -17,6 +17,7 @@ import {
   GripHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { ConceptFieldId } from '@/lib/canvas/concept-card-utils';
 
@@ -322,7 +323,9 @@ function SectionAiButton({
 
   if (isGenerating) {
     return (
-      <Loader2 className="h-3 w-3 shrink-0 animate-spin text-olive-500" />
+      <Button variant="secondary" size="icon-xs" className="nodrag nopan" disabled>
+        <Loader2 className="h-3 w-3 animate-spin text-olive-500" />
+      </Button>
     );
   }
 
@@ -337,13 +340,15 @@ function SectionAiButton({
 
   return (
     <div ref={menuRef} className="relative nodrag nopan">
-      <button
+      <Button
+        variant="secondary"
+        size="icon-xs"
         onClick={handleClick}
-        className="flex items-center justify-center rounded-md p-0.5 text-olive-500/60 hover:text-olive-600 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+        className="nodrag nopan text-olive-600"
         aria-label={`AI generate ${field}`}
       >
         <Wand2 className="h-3 w-3" />
-      </button>
+      </Button>
       {showMenu && (
         <div className="absolute top-full mt-1 right-0 bg-card rounded-lg shadow-lg border border-border p-1 min-w-[160px] z-50 animate-in fade-in-0 zoom-in-95 duration-150">
           <button
@@ -492,15 +497,15 @@ export const ConceptCardNode = memo(
               disabled={anyGenerating}
               className={cn(
                 'nodrag nopan absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors',
-                'text-white/70 hover:bg-white/15 hover:text-white',
+                'text-white/80 hover:bg-white/15 hover:text-white',
                 'disabled:opacity-40 disabled:cursor-not-allowed',
               )}
               aria-label="Generate all fields"
             >
               {isGeneratingAll ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Sparkles className="h-3 w-3" />
+                <Sparkles className="h-3.5 w-3.5" />
               )}
               {isGeneratingAll ? 'Generating...' : 'Generate All'}
             </button>
