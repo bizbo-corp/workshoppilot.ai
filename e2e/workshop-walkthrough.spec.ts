@@ -43,8 +43,14 @@ test.describe('Workshop Walkthrough', () => {
     console.log('\n=== Creating workshop ===');
     await page.goto('/');
 
-    const startButton = page.getByRole('button', { name: /start workshop/i });
+    // The landing page "Start Workshop" CTA opens the New Workshop dialog;
+    // fill the title, pick the solo ("By myself") mode, and submit to create.
+    const startButton = page.getByRole('button', { name: /start workshop/i }).first();
     await startButton.click();
+
+    await page.getByPlaceholder(/Pet Care App/i).fill('E2E pet care walkthrough');
+    await page.getByRole('button', { name: /by myself/i }).click();
+    await page.getByRole('button', { name: /^Continue$/ }).click();
 
     await page.waitForURL(/\/workshop\/.*\/step\/challenge/, { timeout: 30000 });
 

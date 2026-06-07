@@ -21,10 +21,14 @@ export async function createWorkshopViaUI(page: Page): Promise<{
   // Navigate to landing page
   await page.goto('/');
 
-  // Click the "Start Workshop" button
-  // The button contains text "Start Workshop" or "Setting up your workshop..." during loading
-  const startButton = page.getByRole('button', { name: /start workshop/i });
+  // The "Start Workshop" CTA opens the New Workshop dialog; fill the title,
+  // pick solo ("By myself") mode, and submit to create + navigate.
+  const startButton = page.getByRole('button', { name: /start workshop/i }).first();
   await startButton.click();
+
+  await page.getByPlaceholder(/Pet Care App/i).fill('E2E test workshop');
+  await page.getByRole('button', { name: /by myself/i }).click();
+  await page.getByRole('button', { name: /^Continue$/ }).click();
 
   // Wait for navigation to /workshop/{sessionId}/step/challenge (the setup/framing step)
   await page.waitForURL(/\/workshop\/.*\/step\/challenge/, { timeout: 30000 });
