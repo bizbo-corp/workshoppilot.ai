@@ -18,6 +18,10 @@ export type PendingHmwChipSelection = {
   cardId: string;
   field: string;
   value: string;
+  /** True when the value was typed by the user (not picked from a chip).
+   *  The chat message then tells the AI to keep the text verbatim and only
+   *  suggest the next field, instead of echoing/replacing the value. */
+  custom?: boolean;
 } | null;
 
 export type PendingHmwFieldFocus = { cardId: string; field: string } | null;

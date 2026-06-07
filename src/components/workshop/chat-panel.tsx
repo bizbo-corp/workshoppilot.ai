@@ -2885,7 +2885,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
   // isLoading flips false, the effect re-runs, and the pending selection is sent.
   React.useEffect(() => {
     if (!pendingHmwChipSelection || isLoading) return;
-    const { field, value } = pendingHmwChipSelection;
+    const { field, value, custom } = pendingHmwChipSelection;
     // Consume now that we can actually send
     setPendingHmwChipSelection(null);
 
@@ -2897,13 +2897,29 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
     };
     const fieldLabel = fieldLabels[field] || field;
 
+    // Picking a chip → the AI echoes the value and moves on. Typing a custom
+    // answer → tell the AI to keep the user's words verbatim and only suggest
+    // the next field (named explicitly so it targets the right one), so it
+    // never overwrites what they wrote.
+    const fieldOrder = ["givenThat", "persona", "immediateGoal", "deeperGoal"];
+    const nextField = fieldOrder[fieldOrder.indexOf(field) + 1];
+    const nextLabel = nextField ? fieldLabels[nextField] : null;
+    // [HMW_SYNC] marker keeps these orchestration messages out of the visible
+    // transcript (see the render filter) while the AI still reads the text.
+    const messageText = custom
+      ? `[HMW_SYNC] For "${fieldLabel}" I've written my own answer: "${value}". Keep it exactly as I wrote it — do not rephrase or replace it.${
+          nextLabel
+            ? ` Now suggest options for the next field ("${nextLabel}"), grounded in what I just wrote.`
+            : ""
+        }`
+      : `[HMW_SYNC] For "${fieldLabel}": ${value}`;
 
     (async () => {
       try {
         await flushCanvasToDb();
         sendMessage({
           role: "user",
-          parts: [{ type: "text", text: `For "${fieldLabel}": ${value}` }],
+          parts: [{ type: "text", text: messageText }],
         });
       } catch (err) {
         console.error("Failed to send HMW chip selection:", err);
@@ -3273,6 +3289,14 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                         .join("\n");
 
                       if (message.role === "user") {
+                        // Fully hide HMW orchestration messages (card → AI sync
+                        // and manual-complete) — they're machine-to-machine, not
+                        // something the user wrote.
+                        if (
+                          /^\s*\[(HMW_SYNC|HMW_MANUAL_COMPLETE)\]/.test(content)
+                        ) {
+                          return null;
+                        }
                         // Strip internal markup tags from display
                         const displayContent = content
                           .replace(/\[STEP_CONFIRMED\]\s*/g, "")
