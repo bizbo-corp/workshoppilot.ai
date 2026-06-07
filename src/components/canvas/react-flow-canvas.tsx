@@ -1260,17 +1260,37 @@ function ReactFlowCanvasInner({
     return `Given that ${lcFirst(strip(merged.givenThat))}, how might we help ${lcFirst(strip(merged.persona))} ${lcFirst(strip(merged.immediateGoal))} so they can ${lcFirst(strip(merged.deeperGoal))}?`;
   }, []);
 
-  // Handle HMW card field changes (manual text edits — silent, no chat message
-  // for the edit itself). When the manual edit fills the LAST empty field of
-  // the card (transitioning the card from incomplete → all 4 filled), fire
-  // pendingHmwManualComplete so chat-panel can ask the AI to surface a
-  // confirm/move-on suggestion (df_dkn6wv4w77drz1l12nku73h6).
+  // Handle HMW card field changes (manual text edits). Typing into a field
+  // should feel exactly like picking a chip: completing an intermediate field
+  // advances the card to the next one with fresh, context-aware suggestions.
+  // - Last field filled → pendingHmwManualComplete (confirm/move-on prompt).
+  // - Intermediate field newly filled → pendingHmwChipSelection {custom} so the
+  //   AI keeps the typed text verbatim and suggests the NEXT field.
   const handleHmwFieldChange = useCallback(
     (id: string, field: string, value: string) => {
+      const HMW_FIELD_ORDER = ['givenThat', 'persona', 'immediateGoal', 'deeperGoal'];
       const card = hmwCards.find((c) => c.id === id);
-      const updatedSuggestions = card?.suggestions
-        ? { ...card.suggestions, [field]: [] }
+      const prevValue = card
+        ? (card as Record<string, unknown>)[field]
         : undefined;
+      const justCompleted = !prevValue && !!value.trim();
+
+      // Clear this field's suggestions. When the field is newly completed, also
+      // drop stale suggestions on all LATER fields — they were derived from the
+      // old context and would otherwise linger as unrelated options.
+      const updatedSuggestions = card?.suggestions
+        ? ({ ...card.suggestions } as Record<string, string[]>)
+        : undefined;
+      if (updatedSuggestions) {
+        updatedSuggestions[field] = [];
+        if (justCompleted) {
+          const idx = HMW_FIELD_ORDER.indexOf(field);
+          if (idx >= 0) {
+            for (const k of HMW_FIELD_ORDER.slice(idx + 1)) updatedSuggestions[k] = [];
+          }
+        }
+      }
+
       const merged = { ...card, [field]: value };
       const fullStatement = assembleHmwStatement(merged);
       updateHmwCard(id, {
@@ -1290,10 +1310,22 @@ function ReactFlowCanvasInner({
         !!merged.immediateGoal &&
         !!merged.deeperGoal;
       if (wasIncomplete && nowComplete) {
+        // Filled the last field by hand → confirm/move-on prompt.
         setPendingHmwManualComplete({ cardId: id });
+      } else if (justCompleted) {
+        // Completed an intermediate field by hand → advance like a chip pick.
+        setActiveHmwCardId(id);
+        setPendingHmwChipSelection({ cardId: id, field, value, custom: true });
       }
     },
-    [hmwCards, updateHmwCard, assembleHmwStatement, setPendingHmwManualComplete],
+    [
+      hmwCards,
+      updateHmwCard,
+      assembleHmwStatement,
+      setPendingHmwManualComplete,
+      setPendingHmwChipSelection,
+      setActiveHmwCardId,
+    ],
   );
 
   // Handle HMW card chip selection — sets field value, clears that field's suggestions, and signals chat

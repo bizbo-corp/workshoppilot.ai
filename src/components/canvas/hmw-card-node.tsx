@@ -130,30 +130,20 @@ function SuggestionChips({
   return (
     <div className="flex flex-wrap gap-1.5 mt-1.5">
       {suggestions.map((suggestion, i) => (
-        <button
+        <Button
           key={i}
           type="button"
+          variant="secondary"
           onClick={() => onSelect(suggestion)}
-          className="nodrag nopan rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer"
-          style={{
-            backgroundColor: SAGE.chipBg,
-            color: SAGE.chipText,
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = SAGE.chipHover; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = SAGE.chipBg; }}
+          className="nodrag nopan w-full h-auto min-h-8 items-start justify-start whitespace-normal rounded-xl px-3 py-2 text-left text-xs font-medium leading-snug"
         >
           {suggestion}
-        </button>
+        </Button>
       ))}
-      <button
+      <Button
         type="button"
-        className="nodrag nopan rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer border border-dashed"
-        style={{
-          borderColor: SAGE.chipBg,
-          color: SAGE.hintText,
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = SAGE.chipBg; }}
-        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+        variant="outline"
+        className="nodrag nopan h-auto rounded-full border-dashed px-3 py-1.5 text-xs font-medium text-muted-foreground"
         onClick={() => {
           const parent = document.activeElement?.closest('[data-field-row]');
           const input = parent?.querySelector('textarea');
@@ -161,7 +151,7 @@ function SuggestionChips({
         }}
       >
         Custom...
-      </button>
+      </Button>
     </div>
   );
 }
@@ -628,15 +618,14 @@ export const HmwCardNode = memo(
                       >
                         {prefix}
                       </span>
+                      {/* No onFocus suggestion-fetch: completing a field (chip or
+                          custom typing) advances and requests the next field's
+                          suggestions. A focus-triggered request duplicated that and
+                          raced the chip click, so it was removed. */}
                       <EditableField
                         value={fieldValue}
                         placeholder={hint}
                         onBlur={(v) => data.onFieldChange?.(id, key, v)}
-                        onFocus={() => {
-                          if (!fieldValue && (!fieldSuggestions || fieldSuggestions.length === 0)) {
-                            data.onFieldFocus?.(id, key);
-                          }
-                        }}
                         className="text-sm font-normal text-[var(--hmw-field-text)]"
                         disabled={isSkeleton || isNonOwned}
                       />
@@ -649,11 +638,15 @@ export const HmwCardNode = memo(
                         onElaborate={(instr) => data.onElaborate?.(id, key, fieldValue || '', instr)}
                       />
                     </div>
-                    <div className="pl-0">
-                      <span className="text-[11px] italic" style={{ color: SAGE.hintText }}>
-                        {hint}
-                      </span>
-                    </div>
+                    {/* Hint shows inline as the placeholder while empty; once
+                        the field has content it moves below the entered text. */}
+                    {fieldValue && (
+                      <div className="pl-0">
+                        <span className="text-[11px] italic" style={{ color: SAGE.hintText }}>
+                          {hint}
+                        </span>
+                      </div>
+                    )}
                     {!fieldValue && !isNonOwned && (
                       <SuggestionChips
                         suggestions={fieldSuggestions}
