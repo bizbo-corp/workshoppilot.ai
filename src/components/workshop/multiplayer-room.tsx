@@ -123,7 +123,7 @@ function StepChangedListener({ sessionId }: { sessionId: string }) {
       });
       // Delay navigation by 1 second so the toast is visible before page transition
       setTimeout(() => {
-        router.push(`/workshop/${sessionId}/step/${event.stepOrder}`);
+        router.push(`/workshop/${sessionId}/step/${event.stepSlug}`);
       }, 1000);
     }
     // v2.2 — Workshop start fans out via the 5s LobbyPoller refresh, not a Liveblocks
@@ -347,7 +347,7 @@ function StepResetListener({ sessionId }: { sessionId: string }) {
 
     // Hard reload forces full teardown: fresh SSR, new stores, new useChat, refs reset
     setTimeout(() => {
-      window.location.href = `/workshop/${sessionId}/step/${event.stepOrder}`;
+      window.location.href = `/workshop/${sessionId}/step/${event.stepSlug}`;
     }, 500);
   });
 

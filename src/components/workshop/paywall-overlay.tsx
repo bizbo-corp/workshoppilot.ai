@@ -100,7 +100,7 @@ export function PaywallOverlay({ sessionId, workshopId, facilitatorMode }: Paywa
       const result = await createCheckoutUrl({
         sku,
         workshopId: sku === 'solo' ? undefined : workshopId,
-        returnUrl: `/workshop/${sessionId}/step/8`,
+        returnUrl: `/workshop/${sessionId}/step/ideation`,
       });
       if ('url' in result) {
         window.location.href = result.url;
@@ -114,8 +114,8 @@ export function PaywallOverlay({ sessionId, workshopId, facilitatorMode }: Paywa
     }
   }
 
-  function handleBackToStep7() {
-    router.push(`/workshop/${sessionId}/step/7`);
+  function handleBackToReframe() {
+    router.push(`/workshop/${sessionId}/step/reframe`);
   }
 
   return (
@@ -224,8 +224,8 @@ export function PaywallOverlay({ sessionId, workshopId, facilitatorMode }: Paywa
             Secure checkout via Stripe
           </div>
 
-          <Button onClick={handleBackToStep7} variant="ghost" className="w-full" size="default">
-            Back to Step 7
+          <Button onClick={handleBackToReframe} variant="ghost" className="w-full" size="default">
+            Back to Step 6
           </Button>
         </div>
       </div>

@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { advanceToNextStep } from '@/actions/workshop-actions';
-import { STEPS } from '@/lib/workshop/step-metadata';
+import { STEPS, TOTAL_STEPS, getStepByOrder, getNextStep, getPrevStep } from '@/lib/workshop/step-metadata';
 import { toast } from 'sonner';
 import { UpgradeDialog } from '@/components/workshop/upgrade-dialog';
 import { DialogueFeedbackDialog } from '@/components/workshop/dialogue-feedback-dialog';
@@ -102,12 +102,13 @@ export function StepNavigation({
     totalImages: number;
     totalCostDollars: number;
   } | null>(null);
-  // Challenge (order 1) is facilitator-only setup, not a stepper step — so the
-  // first navigable step is Stakeholder Mapping (order 2). Treat <= 2 as "first"
-  // to keep Back from landing on the hidden challenge step (and bouncing team
-  // participants to the lobby).
-  const isFirstStep = currentStepOrder <= 2;
-  const isLastStep = currentStepOrder === STEPS.length;
+  // Stable slug for the current step (URLs + nav key on slug, not number).
+  const currentSlug = getStepByOrder(currentStepOrder)?.id ?? '';
+  // Challenge (order 0) is facilitator-only setup; the first navigable step is
+  // Stakeholder Mapping (order 1). Treat order <= 1 as "first" to keep Back from
+  // landing on the hidden challenge step (and bouncing team participants to the lobby).
+  const isFirstStep = currentStepOrder <= 1;
+  const isLastStep = currentStepOrder === TOTAL_STEPS;
   const isCompleted = stepStatus === 'complete';
 
   // Poll usage API when admin toggle is on
@@ -145,9 +146,9 @@ export function StepNavigation({
         console.warn('Canvas flush before next failed:', e);
       }
 
-      // Find current and next step definitions
-      const currentStep = STEPS.find((s) => s.order === currentStepOrder);
-      const nextStep = STEPS.find((s) => s.order === currentStepOrder + 1);
+      // Find current and next step definitions (by slug-derived order)
+      const currentStep = getStepByOrder(currentStepOrder);
+      const nextStep = getNextStep(currentSlug);
 
       if (!currentStep || !nextStep) {
         console.error('Step definitions not found');
@@ -201,7 +202,10 @@ export function StepNavigation({
     }
 
     // Navigate to previous step (no database state change needed)
-    router.push(`/workshop/${sessionId}/step/${currentStepOrder - 1}`);
+    const prevStep = getPrevStep(currentSlug);
+    if (prevStep) {
+      router.push(`/workshop/${sessionId}/step/${prevStep.slug}`);
+    }
   };
 
   return (
@@ -357,7 +361,10 @@ export function StepNavigation({
               } catch (e) {
                 console.warn('Canvas flush before forward nav failed:', e);
               }
-              router.push(`/workshop/${sessionId}/step/${currentStepOrder + 1}`);
+              const nextStep = getNextStep(currentSlug);
+              if (nextStep) {
+                router.push(`/workshop/${sessionId}/step/${nextStep.slug}`);
+              }
             }}
             disabled={isNavigating}
           >

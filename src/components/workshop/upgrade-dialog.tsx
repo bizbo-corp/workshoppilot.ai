@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { consumeCredit, createCheckoutUrl } from '@/actions/billing-actions';
 import { advanceToNextStep } from '@/actions/workshop-actions';
-import { STEPS } from '@/lib/workshop/step-metadata';
+import { STEPS, TOTAL_STEPS } from '@/lib/workshop/step-metadata';
 import { CreativeStepsPreview } from './creative-steps-preview';
 
 interface UpgradeDialogProps {
@@ -91,7 +91,7 @@ export function UpgradeDialog({
       const result = await createCheckoutUrl({
         sku,
         workshopId: sku === 'solo' ? undefined : workshopId,
-        returnUrl: `/workshop/${sessionId}/step/8`,
+        returnUrl: `/workshop/${sessionId}/step/ideation`,
       });
       if ('url' in result) {
         window.location.href = result.url;
@@ -152,10 +152,12 @@ export function UpgradeDialog({
           <div className="w-full h-2 rounded-full bg-muted">
             <div
               className="h-2 rounded-full bg-amber-500 dark:bg-amber-400"
-              style={{ width: '70%' }}
+              style={{ width: `${Math.round((currentStepOrder / TOTAL_STEPS) * 100)}%` }}
             />
           </div>
-          <p className="text-xs text-muted-foreground text-center">7 of 10 steps complete — 3 to go</p>
+          <p className="text-xs text-muted-foreground text-center">
+            {currentStepOrder} of {TOTAL_STEPS} steps complete — {TOTAL_STEPS - currentStepOrder} to go
+          </p>
         </div>
 
         <DialogFooter className="flex-col gap-3 sm:flex-col">

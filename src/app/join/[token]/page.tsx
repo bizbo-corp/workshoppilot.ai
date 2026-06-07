@@ -19,6 +19,7 @@ import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { workshopSessions, sessionParticipants, sessions, workshopSteps } from '@/db/schema';
 import { ParticipantSignInGate } from '@/components/auth/participant-sign-in-gate';
+import { getStepById } from '@/lib/workshop/step-metadata';
 import { GuestJoinFlow } from './guest-join-flow';
 
 interface JoinPageProps {
@@ -99,8 +100,8 @@ export default async function JoinPage({ params, searchParams }: JoinPageProps) 
   // If this Clerk user owns the session, send them into the workshop instead of
   // creating a duplicate participant.
   if (ownerParticipant?.clerkUserId === userId) {
-    const stepOrder = activeStep?.stepDefinition?.order ?? 1;
-    redirect(`/workshop/${aiSession?.id ?? workshopSession.workshopId}/step/${stepOrder}`);
+    const stepSlug = activeStep?.stepDefinition?.id ?? 'stakeholder-mapping';
+    redirect(`/workshop/${aiSession?.id ?? workshopSession.workshopId}/step/${stepSlug}`);
   }
 
   return (
@@ -113,7 +114,7 @@ export default async function JoinPage({ params, searchParams }: JoinPageProps) 
         workshopId={workshopSession.workshopId}
         sessionId={workshopSession.id}
         aiSessionId={aiSession?.id ?? null}
-        currentStepOrder={activeStep?.stepDefinition?.order ?? 1}
+        currentStepOrder={getStepById(activeStep?.stepDefinition?.id ?? 'stakeholder-mapping')?.order ?? 1}
       />
     </div>
   );

@@ -35,7 +35,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { STEPS } from "@/lib/workshop/step-metadata";
+import { STEPS, getStepBySlug } from "@/lib/workshop/step-metadata";
+import { PAYWALL_START_SLUG } from "@/lib/billing/paywall-config";
 import { cn } from "@/lib/utils";
 import Logo, { LogoIcon } from "@/components/Logo";
 import { StepSnapshotDialog } from "@/components/dialogs/step-snapshot-dialog";
@@ -140,9 +141,10 @@ export function WorkshopSidebar({
     handleTogglePin();
   });
 
-  // Extract current step from pathname
-  const stepMatch = pathname.match(/\/workshop\/[^/]+\/step\/(\d+)/);
-  const currentStepNumber = stepMatch ? parseInt(stepMatch[1], 10) : null;
+  // Extract current step slug from pathname (URLs are slug-based)
+  const stepMatch = pathname.match(/\/workshop\/[^/]+\/step\/([^/?#]+)/);
+  const currentStepSlug = stepMatch ? stepMatch[1] : null;
+  const paywallStartOrder = getStepBySlug(PAYWALL_START_SLUG)!.order;
 
   // Create status lookup map
   const statusLookup = new Map(workshopSteps.map((s) => [s.stepId, s.status]));
@@ -163,7 +165,7 @@ export function WorkshopSidebar({
         </SidebarHeader>
         <SidebarContent className="p-4">
           <div className="space-y-2">
-            {Array.from({ length: 9 }).map((_, i) => (
+            {Array.from({ length: 10 }).map((_, i) => (
               <Skeleton key={i} className="h-10 w-full" />
             ))}
           </div>
@@ -197,9 +199,9 @@ export function WorkshopSidebar({
             .map((step) => {
             const status = statusLookup.get(step.id) || "not_started";
             const isComplete = status === "complete";
-            const isCurrent = step.order === currentStepNumber;
+            const isCurrent = step.slug === currentStepSlug;
             const isAccessible = status !== "not_started";
-            const isLocked = isPaywallLocked && step.order >= 8;
+            const isLocked = isPaywallLocked && step.order >= paywallStartOrder;
 
             const content = (
               <>
@@ -225,9 +227,9 @@ export function WorkshopSidebar({
                   ) : isComplete ? (
                     <Check className="h-3 w-3" />
                   ) : (
-                    // Display number is offset by 1 — challenge (order 1) is hidden,
-                    // so Stakeholder Mapping (order 2) reads as step 1, etc.
-                    step.order - 1
+                    // `order` is already the 1-based display number for the
+                    // numbered flow (challenge is order 0 and filtered out above).
+                    step.order
                   )}
                 </div>
 
@@ -266,7 +268,7 @@ export function WorkshopSidebar({
                   )}
                 >
                   {isAccessible ? (
-                    <Link href={`/workshop/${sessionId}/step/${step.order}`}>
+                    <Link href={`/workshop/${sessionId}/step/${step.slug}`}>
                       {content}
                     </Link>
                   ) : (

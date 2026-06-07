@@ -26,12 +26,12 @@ export async function createWorkshopViaUI(page: Page): Promise<{
   const startButton = page.getByRole('button', { name: /start workshop/i });
   await startButton.click();
 
-  // Wait for navigation to /workshop/{sessionId}/step/1
-  await page.waitForURL(/\/workshop\/.*\/step\/1/, { timeout: 30000 });
+  // Wait for navigation to /workshop/{sessionId}/step/challenge (the setup/framing step)
+  await page.waitForURL(/\/workshop\/.*\/step\/challenge/, { timeout: 30000 });
 
   // Extract sessionId from URL
   const url = page.url();
-  const match = url.match(/\/workshop\/([^/]+)\/step\/1/);
+  const match = url.match(/\/workshop\/([^/]+)\/step\/challenge/);
   if (!match) {
     throw new Error(`Failed to extract sessionId from URL: ${url}`);
   }

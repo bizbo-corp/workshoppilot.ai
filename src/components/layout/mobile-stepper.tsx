@@ -18,7 +18,8 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { STEPS, type StepDefinition } from '@/lib/workshop/step-metadata';
+import { STEPS, getStepBySlug, TOTAL_STEPS, type StepDefinition } from '@/lib/workshop/step-metadata';
+import { PAYWALL_START_SLUG } from '@/lib/billing/paywall-config';
 import { cn } from '@/lib/utils';
 import { StepSnapshotDialog } from '@/components/dialogs/step-snapshot-dialog';
 
@@ -40,11 +41,13 @@ export function MobileStepper({
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Determine current step from pathname
-  const stepMatch = pathname.match(/\/workshop\/[^/]+\/step\/(\d+)/);
-  const currentStep = stepMatch ? parseInt(stepMatch[1], 10) : 1;
-  // Challenge (order 1) is facilitator-only setup — shown as "Setup", not a numbered step.
-  const onChallenge = currentStep === 1;
+  // Determine current step slug from pathname (URLs are slug-based)
+  const stepMatch = pathname.match(/\/workshop\/[^/]+\/step\/([^/?#]+)/);
+  const currentSlug = stepMatch ? stepMatch[1] : 'stakeholder-mapping';
+  const currentStepDef = getStepBySlug(currentSlug);
+  const paywallStartOrder = getStepBySlug(PAYWALL_START_SLUG)!.order;
+  // Challenge (order 0) is facilitator-only setup — shown as "Setup", not a numbered step.
+  const onChallenge = currentSlug === 'challenge';
 
   // Create status lookup map
   const statusLookup = new Map(workshopSteps.map(s => [s.stepId, s.status]));
@@ -58,11 +61,11 @@ export function MobileStepper({
         <button suppressHydrationWarning className="flex w-full items-center justify-between border-b bg-background px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="text-base font-medium">
-              {onChallenge ? 'Workshop Setup' : `Step ${currentStep - 1} of 9`}
+              {onChallenge ? 'Workshop Setup' : `Step ${currentStepDef?.order ?? 1} of ${TOTAL_STEPS}`}
             </span>
             {!onChallenge && (
               <span className="text-sm text-muted-foreground">
-                {STEPS[currentStep - 1]?.name}
+                {currentStepDef?.name}
               </span>
             )}
           </div>
@@ -81,9 +84,9 @@ export function MobileStepper({
             .map((step) => {
             const status = statusLookup.get(step.id) || 'not_started';
             const isComplete = status === 'complete';
-            const isCurrent = step.order === currentStep;
+            const isCurrent = step.slug === currentSlug;
             const isAccessible = status !== 'not_started';
-            const isLocked = isPaywallLocked && step.order >= 8;
+            const isLocked = isPaywallLocked && step.order >= paywallStartOrder;
 
             const content = (
               <>
@@ -108,7 +111,7 @@ export function MobileStepper({
                   ) : isComplete ? (
                     <Check className="h-3 w-3" />
                   ) : (
-                    step.order - 1
+                    step.order
                   )}
                 </div>
 
@@ -135,7 +138,7 @@ export function MobileStepper({
             return isAccessible ? (
               <div key={step.id} className="relative">
                 <Link
-                  href={`/workshop/${sessionId}/step/${step.order}`}
+                  href={`/workshop/${sessionId}/step/${step.slug}`}
                   onClick={() => setOpen(false)}
                   className={cn(
                     'flex items-start gap-3 rounded-lg border p-4 transition-colors',

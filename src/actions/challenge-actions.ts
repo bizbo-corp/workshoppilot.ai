@@ -187,7 +187,7 @@ export async function updateChallenge(
     .where(eq(sessions.workshopId, workshopId))
     .limit(1);
   if (sessionRow) {
-    revalidatePath(`/workshop/${sessionRow.id}/step/1`);
+    revalidatePath(`/workshop/${sessionRow.id}/step/challenge`);
     revalidatePath(`/workshop/${sessionRow.id}/lobby`);
   }
 

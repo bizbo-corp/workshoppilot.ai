@@ -33,6 +33,7 @@ interface WorkshopData {
   sessionId: string;
   title: string;
   currentStep: number;
+  currentStepSlug: string;
   currentStepName: string;
   updatedAt: Date;
   color: string | null;
@@ -207,6 +208,7 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
               sessionId={workshop.sessionId}
               title={workshop.title}
               currentStep={workshop.currentStep}
+              currentStepSlug={workshop.currentStepSlug}
               currentStepName={workshop.currentStepName}
               updatedAt={workshop.updatedAt}
               color={workshop.color}
@@ -237,6 +239,7 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
               sessionId={workshop.sessionId}
               title={workshop.title}
               currentStep={workshop.currentStep}
+              currentStepSlug={workshop.currentStepSlug}
               currentStepName={workshop.currentStepName}
               updatedAt={workshop.updatedAt}
               color={workshop.color}

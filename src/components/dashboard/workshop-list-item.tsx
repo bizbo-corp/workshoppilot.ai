@@ -22,6 +22,7 @@ interface WorkshopListItemProps {
   sessionId: string;
   title: string;
   currentStep: number;
+  currentStepSlug: string;
   currentStepName: string;
   updatedAt: Date;
   color: string | null;
@@ -39,6 +40,7 @@ export function WorkshopListItem({
   sessionId,
   title,
   currentStep,
+  currentStepSlug,
   currentStepName,
   updatedAt,
   color,
@@ -147,7 +149,7 @@ export function WorkshopListItem({
       </div>
 
       {/* Continue button */}
-      <Link href={`/workshop/${sessionId}/step/${currentStep}`} className="shrink-0 pr-3">
+      <Link href={`/workshop/${sessionId}/step/${currentStepSlug}`} className="shrink-0 pr-3">
         <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
           Continue
           <ArrowRight className="h-3.5 w-3.5" />

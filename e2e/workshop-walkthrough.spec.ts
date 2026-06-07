@@ -46,10 +46,10 @@ test.describe('Workshop Walkthrough', () => {
     const startButton = page.getByRole('button', { name: /start workshop/i });
     await startButton.click();
 
-    await page.waitForURL(/\/workshop\/.*\/step\/1/, { timeout: 30000 });
+    await page.waitForURL(/\/workshop\/.*\/step\/challenge/, { timeout: 30000 });
 
     const url = page.url();
-    const match = url.match(/\/workshop\/([^/]+)\/step\/1/);
+    const match = url.match(/\/workshop\/([^/]+)\/step\/challenge/);
     expect(match).toBeTruthy();
     sessionId = match![1];
     console.log('Workshop created with session ID:', sessionId);
@@ -101,7 +101,7 @@ test.describe('Workshop Walkthrough', () => {
     console.log('After click - button text:', afterClickText);
 
     // Wait for navigation (server action + router.push)
-    await page.waitForURL(/\/step\/2$/, { timeout: 120000 });
+    await page.waitForURL(/\/step\/stakeholder-mapping$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 2');
 
@@ -121,7 +121,7 @@ test.describe('Workshop Walkthrough', () => {
 
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
-    await page.waitForURL(/\/step\/3$/, { timeout: 120000 });
+    await page.waitForURL(/\/step\/user-research$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 3');
 
@@ -141,7 +141,7 @@ test.describe('Workshop Walkthrough', () => {
 
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
-    await page.waitForURL(/\/step\/4$/, { timeout: 120000 });
+    await page.waitForURL(/\/step\/sense-making$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 4');
 
@@ -161,7 +161,7 @@ test.describe('Workshop Walkthrough', () => {
 
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
-    await page.waitForURL(/\/step\/5$/, { timeout: 120000 });
+    await page.waitForURL(/\/step\/persona$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 5');
 
@@ -181,7 +181,7 @@ test.describe('Workshop Walkthrough', () => {
 
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
-    await page.waitForURL(/\/step\/6$/, { timeout: 120000 });
+    await page.waitForURL(/\/step\/journey-mapping$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 6');
 
@@ -201,7 +201,7 @@ test.describe('Workshop Walkthrough', () => {
 
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
-    await page.waitForURL(/\/step\/7$/, { timeout: 120000 });
+    await page.waitForURL(/\/step\/reframe$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 7');
 
@@ -221,7 +221,7 @@ test.describe('Workshop Walkthrough', () => {
 
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
-    await page.waitForURL(/\/step\/8$/, { timeout: 120000 });
+    await page.waitForURL(/\/step\/ideation$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 8');
 
@@ -253,7 +253,7 @@ test.describe('Workshop Walkthrough', () => {
     // The main "Skip to Next" button is in the footer navigation bar (not sub-step tabs)
     const step8NextButton = page.locator('button', { hasText: /^(Next|Skip to Next)$/ }).last();
     await step8NextButton.evaluate((el: HTMLElement) => el.click());
-    await page.waitForURL(/\/step\/9$/, { timeout: 120000 });
+    await page.waitForURL(/\/step\/brainwriting$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 9');
 
@@ -273,7 +273,7 @@ test.describe('Workshop Walkthrough', () => {
 
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /^(Next|Skip to Next)$/i }).evaluate((el: HTMLElement) => el.click());
-    await page.waitForURL(/\/step\/10$/, { timeout: 120000 });
+    await page.waitForURL(/\/step\/concept$/, { timeout: 120000 });
     await page.waitForTimeout(2000);
     console.log('Navigated to Step 10');
 

@@ -1,14 +1,22 @@
 /**
  * Step Metadata Module
- * Hardcoded step data for all 10 WorkshopPilot design thinking steps
+ * Hardcoded step data for the WorkshopPilot design thinking flow.
  * Per user decision: Step descriptions are hardcoded (not fetched from DB)
+ *
+ * IDENTITY MODEL (see .planning/step-renumber-slug-plan.md):
+ * - The **slug** (`id`/`slug`) is the canonical identity used in URLs, routing,
+ *   DB FKs (`workshopSteps.stepId`), AI prompts, and behavioral branching.
+ *   Never branch on the numeric `order`; branch on `step.id === '<slug>'`.
+ * - `order` is a **display/sequence number only**. `challenge` is pre-workshop
+ *   setup and sits at order 0 (outside the numbered flow); the ten numbered
+ *   workshop steps are 1 (stakeholder-mapping) … 10 (validate).
  *
  * CRITICAL: Step IDs (slugs) MUST match database step_definition IDs
  * Used by: sidebar, step pages, mobile stepper
  */
 
 export interface StepDefinition {
-  order: number; // 1-10
+  order: number; // 0 = challenge (unnumbered setup); 1-10 = numbered workshop steps
   id: string; // Database step_definition ID: 'challenge', 'stakeholder-mapping', etc.
   slug: string; // URL-friendly (same as id): 'challenge', 'stakeholder-mapping', etc.
   name: string; // Display name: 'Challenge', 'Stakeholder Mapping', etc.
@@ -19,7 +27,7 @@ export interface StepDefinition {
 
 export const STEPS: StepDefinition[] = [
   {
-    order: 1,
+    order: 0,
     id: "challenge",
     slug: "challenge",
     name: "Challenge",
@@ -37,7 +45,7 @@ Key Assumptions:
 - [Another assumption to test before committing]`,
   },
   {
-    order: 2,
+    order: 1,
     id: "stakeholder-mapping",
     slug: "stakeholder-mapping",
     name: "Stakeholder Mapping",
@@ -59,7 +67,7 @@ Low Power, Low Interest:
 - [Monitor only]`,
   },
   {
-    order: 3,
+    order: 2,
     id: "user-research",
     slug: "user-research",
     name: "User Research",
@@ -77,7 +85,7 @@ Synthesis Notes:
 - Key insight 3: [Finding from research]`,
   },
   {
-    order: 4,
+    order: 3,
     id: "sense-making",
     slug: "sense-making",
     name: "Research Sense Making",
@@ -103,7 +111,7 @@ Top 5 Gains:
 5. [Desired gain]`,
   },
   {
-    order: 5,
+    order: 4,
     id: "persona",
     slug: "persona",
     name: "Persona Development",
@@ -133,7 +141,7 @@ Quote:
 "[A quote that captures their perspective]"`,
   },
   {
-    order: 6,
+    order: 5,
     id: "journey-mapping",
     slug: "journey-mapping",
     name: "Journey Mapping",
@@ -162,7 +170,7 @@ Stage 4: [Resolution]
 - Opportunity: [Where we can help]`,
   },
   {
-    order: 7,
+    order: 6,
     id: "reframe",
     slug: "reframe",
     name: "Reframing Challenge",
@@ -180,7 +188,7 @@ Refined HMW:
 How might we [reframed problem] for [specific persona] when [specific context] so that [measurable outcome]?`,
   },
   {
-    order: 8,
+    order: 7,
     id: "ideation",
     slug: "ideation",
     name: "Ideation",
@@ -205,7 +213,7 @@ Top Ideas:
 3. [Idea title] -- [Brief description]`,
   },
   {
-    order: 9,
+    order: 8,
     id: "brainwriting",
     slug: "brainwriting",
     name: "Brain Writing",
@@ -225,7 +233,7 @@ Selected Idea: [Idea title]
 - Build 3: [Variation or improvement]`,
   },
   {
-    order: 10,
+    order: 9,
     id: "concept",
     slug: "concept",
     name: "Concept Development",
@@ -257,7 +265,7 @@ Next Steps:
 - [Action item 2]`,
   },
   {
-    order: 11,
+    order: 10,
     id: "validate",
     slug: "validate",
     name: "Validate",
@@ -287,15 +295,49 @@ Build Pack Status:
 ];
 
 /**
- * Total number of steps in the WorkshopPilot process
+ * Total number of *numbered* steps shown to the user (1 … TOTAL_STEPS).
+ * Excludes `challenge` (order 0, pre-workshop setup).
  */
-export const TOTAL_STEPS = 11;
+export const TOTAL_STEPS = 10;
 
 /**
- * Get step by order number (1-11)
+ * The numbered workshop steps in order (excludes `challenge`).
+ * Use this for stepper rendering — challenge is surfaced separately.
+ */
+export const NUMBERED_STEPS: StepDefinition[] = STEPS.filter((s) => s.order >= 1);
+
+/**
+ * Get step by order number. `getStepByOrder(0)` returns `challenge`;
+ * 1 … TOTAL_STEPS return the numbered workshop steps.
  */
 export function getStepByOrder(order: number): StepDefinition | undefined {
   return STEPS.find((step) => step.order === order);
+}
+
+/** First navigable workshop step (Stakeholder Mapping). */
+export function getFirstStep(): StepDefinition {
+  return NUMBERED_STEPS[0];
+}
+
+/**
+ * Next numbered step after the given slug, or undefined if it's the last
+ * numbered step (or the slug is `challenge`/unknown). Drives forward nav.
+ */
+export function getNextStep(slug: string): StepDefinition | undefined {
+  const current = getStepBySlug(slug);
+  if (!current || current.order < 1) return undefined;
+  return getStepByOrder(current.order + 1);
+}
+
+/**
+ * Previous numbered step before the given slug, or undefined if it's the
+ * first numbered step. Never returns `challenge` (order 0) — Back from
+ * step 1 should not land on the hidden setup step.
+ */
+export function getPrevStep(slug: string): StepDefinition | undefined {
+  const current = getStepBySlug(slug);
+  if (!current || current.order <= 1) return undefined;
+  return getStepByOrder(current.order - 1);
 }
 
 /** Labels for the in-chat "Accept" button per step */

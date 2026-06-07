@@ -18,7 +18,7 @@ function baseUrl(): string {
  * Deep-link into the User Research contribution surface via the join flow.
  *
  * We deliberately link to `/join/{shareToken}` rather than the bare
- * `/workshop/{sessionId}/step/3` URL: the join page is public and runs the
+ * `/workshop/{sessionId}/step/user-research` URL: the join page is public and runs the
  * passwordless sign-in gate, then resolves (or creates) the caller's
  * participant row before dropping them into the workshop. A bare step URL
  * assumes an already-resolved participant — a signed-out recipient (the common

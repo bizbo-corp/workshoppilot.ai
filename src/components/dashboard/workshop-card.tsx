@@ -28,6 +28,7 @@ interface WorkshopCardProps {
   sessionId: string;
   title: string;
   currentStep: number;
+  currentStepSlug: string;
   currentStepName: string;
   updatedAt: Date;
   color: string | null;
@@ -50,6 +51,7 @@ export function WorkshopCard({
   sessionId,
   title,
   currentStep,
+  currentStepSlug,
   currentStepName,
   updatedAt,
   color,
@@ -70,7 +72,7 @@ export function WorkshopCard({
   const [editedTitle, setEditedTitle] = useState(title);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const href = `/workshop/${sessionId}/step/${currentStep}`;
+  const href = `/workshop/${sessionId}/step/${currentStepSlug}`;
 
   const enterEdit = () => {
     setEditedTitle(title);

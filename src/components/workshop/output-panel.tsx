@@ -171,8 +171,8 @@ export function OutputPanel({
 
   // State 4: Artifact available
   if (artifact) {
-    // Step-specific rendering for Definition steps (5-7)
-    if (stepOrder === 5) {
+    // Step-specific rendering for Definition steps (persona / journey / reframe)
+    if (step?.id === 'persona') {
       return (
         <div className="flex h-full flex-col overflow-y-auto p-6">
           <div className="mb-4">
@@ -191,7 +191,7 @@ export function OutputPanel({
       );
     }
 
-    if (stepOrder === 6) {
+    if (step?.id === 'journey-mapping') {
       return (
         <div className="flex h-full flex-col overflow-y-auto p-6">
           <div className="mb-4">
@@ -210,7 +210,7 @@ export function OutputPanel({
       );
     }
 
-    if (stepOrder === 7) {
+    if (step?.id === 'reframe') {
       return (
         <div className="flex h-full flex-col overflow-y-auto p-6">
           <div className="mb-4">
