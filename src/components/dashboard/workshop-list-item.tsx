@@ -132,7 +132,7 @@ export function WorkshopListItem({
             </h3>
           )}
           <span className="shrink-0 text-xs text-muted-foreground">
-            Step {currentStep}: {currentStepName}
+            {currentStep === 0 ? 'Workshop Setup' : `Step ${currentStep}: ${currentStepName}`}
           </span>
         </div>
       </div>

@@ -274,7 +274,7 @@ export function WorkshopCard({
         <div className="mb-3">
           <div className="mb-1.5 flex items-baseline justify-between">
             <p className="text-sm text-muted-foreground">
-              Step {currentStep}: {currentStepName}
+              {currentStep === 0 ? 'Workshop Setup' : `Step ${currentStep}: ${currentStepName}`}
             </p>
             <span className="text-xs text-muted-foreground">{currentStep * 10}%</span>
           </div>

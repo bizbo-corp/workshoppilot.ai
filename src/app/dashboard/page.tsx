@@ -301,7 +301,7 @@ export default async function DashboardPage() {
                   <div className="mb-4">
                     <div className="mb-1.5 flex items-baseline justify-between">
                       <span className="text-sm text-muted-foreground">
-                        Step {ctaWorkshop.currentStep}: {ctaWorkshop.currentStepName}
+                        {ctaWorkshop.currentStep === 0 ? 'Workshop Setup' : `Step ${ctaWorkshop.currentStep}: ${ctaWorkshop.currentStepName}`}
                       </span>
                       <span className="text-xs text-muted-foreground">{ctaWorkshop.currentStep * 10}%</span>
                     </div>
