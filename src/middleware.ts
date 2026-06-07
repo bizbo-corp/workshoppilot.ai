@@ -1,13 +1,15 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
+import { isAuthBypassEnabled } from '@/lib/auth/bypass';
 
 /**
  * E2E Test Auth Bypass
- * When BYPASS_AUTH=true, Clerk middleware still runs (so auth() works in server
- * components/actions) but no routes are protected. auth() returns { userId: null }
- * for unauthenticated requests, and existing code falls back to 'anonymous'.
+ * When BYPASS_AUTH=true (test environments only — isAuthBypassEnabled fails
+ * closed in production/preview), Clerk middleware still runs (so auth() works in
+ * server components/actions) but no routes are protected. auth() returns
+ * { userId: null } for unauthenticated requests, and existing code falls back to
+ * 'anonymous' (API routes use the matching bypass in authenticateWorkshopRequest).
  */
-const BYPASS_AUTH = process.env.BYPASS_AUTH === 'true';
 
 // Route matchers
 const isPublicRoute = createRouteMatcher([
@@ -50,7 +52,9 @@ const isProtectedRoute = createRouteMatcher([
 export default clerkMiddleware(async (auth, req) => {
   // E2E test mode: allow all routes through without protection.
   // clerkMiddleware still establishes auth context so auth() calls work.
-  if (BYPASS_AUTH) {
+  // isAuthBypassEnabled() fails closed — it can never return true on a
+  // production or preview deployment, even if BYPASS_AUTH leaks into env.
+  if (isAuthBypassEnabled()) {
     return NextResponse.next();
   }
 

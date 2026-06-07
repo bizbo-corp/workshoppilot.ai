@@ -1,6 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { isAdmin } from './roles';
 import { resolveClerkParticipant, isWorkshopOwner } from './resolve-participant';
+import { isAuthBypassEnabled } from './bypass';
 
 /**
  * Auth result for workshop-scoped API routes.
@@ -30,6 +31,20 @@ export type WorkshopRequestAuth =
 export async function authenticateWorkshopRequest(
   workshopId: string,
 ): Promise<WorkshopRequestAuth | null> {
+  // E2E test bypass — see isAuthBypassEnabled(). NEVER active in a production or
+  // preview deployment (fails closed on NODE_ENV='production'). Without this,
+  // BYPASS_AUTH only disables middleware route protection, so workshop API
+  // routes still 401 (auth() has no userId), which blocks the AI greeting and
+  // any other authenticated workshop call in tests. Returns a synthetic owner.
+  if (isAuthBypassEnabled()) {
+    return {
+      kind: 'owner',
+      userId: 'anonymous',
+      isAdmin: true,
+      rateLimitKey: 'user:bypass',
+    };
+  }
+
   const { userId, sessionClaims } = await auth();
   if (!userId) return null;
 
