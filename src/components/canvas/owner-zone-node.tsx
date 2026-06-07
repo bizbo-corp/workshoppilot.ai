@@ -31,14 +31,16 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
       style={{
         width: data.width || 1600,
         height: data.height || 1400,
-        backgroundColor: `color-mix(in srgb, ${data.ownerThemeBgColor} 22%, transparent)`,
-        border: `2px solid color-mix(in srgb, ${data.ownerThemeColor} 45%, transparent)`,
+        // Neutral olive container chrome — participant identity lives in the header badge,
+        // not the lane background (matches persona / journey-mapping styling).
+        backgroundColor: 'color-mix(in srgb, var(--neutral-olive-500) 10%, transparent)',
+        border: '1.5px solid color-mix(in srgb, var(--neutral-olive-500) 32%, transparent)',
         borderRadius: 16,
         pointerEvents: data.isDraggable ? 'auto' : 'none',
         position: 'relative',
       }}
     >
-      {/* Header bar with color badge + participant name */}
+      {/* Header bar — olive, with a participant color+name badge */}
       <div
         className="owner-zone-drag-handle"
         style={{
@@ -50,44 +52,58 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 12px',
+          padding: '0 10px',
           borderRadius: '14px 14px 0 0',
-          backgroundColor: `color-mix(in srgb, ${data.ownerThemeBgColor} 40%, transparent)`,
+          backgroundColor: 'var(--olive-600)',
           pointerEvents: data.isDraggable ? 'auto' : 'none',
           cursor: data.isDraggable ? 'grab' : undefined,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {/* Color badge */}
-          <div
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              backgroundColor: data.ownerThemeColor,
-              opacity: 0.7,
-              flexShrink: 0,
-            }}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Participant badge — pill in the participant's selected color */}
           <span
             style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: data.ownerThemeColor,
-              opacity: data.isReady ? 0.8 : 0.6,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '3px 10px',
+              borderRadius: 9999,
+              backgroundColor: data.ownerThemeBgColor,
+              border: `1px solid color-mix(in srgb, ${data.ownerThemeColor} 35%, transparent)`,
+              maxWidth: 260,
             }}
           >
-            {data.ownerName}
+            <span
+              style={{
+                width: 9,
+                height: 9,
+                borderRadius: '50%',
+                backgroundColor: data.ownerThemeColor,
+                flexShrink: 0,
+              }}
+            />
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: data.ownerThemeColor,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {data.ownerName}
+            </span>
           </span>
           {data.isReady && (
-            <>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
               <CheckCircle2
-                style={{ width: 14, height: 14, color: '#16a34a', flexShrink: 0 }}
+                style={{ width: 14, height: 14, color: '#ffffff', flexShrink: 0 }}
               />
-              <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 500 }}>
+              <span style={{ fontSize: 11, color: '#ffffff', fontWeight: 500 }}>
                 Ready
               </span>
-            </>
+            </span>
           )}
         </div>
 
@@ -100,7 +116,7 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
               gap: 3,
               fontSize: 11,
               fontWeight: 500,
-              color: data.starCount > 0 ? data.ownerThemeColor : 'rgba(0,0,0,0.3)',
+              color: data.starCount > 0 ? '#ffffff' : 'rgba(255,255,255,0.55)',
             }}
           >
             <Star
