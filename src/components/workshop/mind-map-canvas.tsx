@@ -116,6 +116,11 @@ const isCrazy8sNode = (id: string) =>
 // Kept in sync with IDEATION_CELL_PADDING in ideation-table-layout.ts.
 const ZONE_PADDING = 120;
 
+// Visual gutter between adjacent owner-zone lane frames. Each frame is inset by
+// half this amount on each side; content positions (which use ZONE_PADDING) are
+// untouched, so this only affects the frame chrome, not the table layout.
+const ZONE_GAP = 96;
+
 // Flow band node ID prefix
 const FLOW_BAND_PREFIX = 'flow-band-';
 const isFlowBandNode = (id: string) => id.startsWith(FLOW_BAND_PREFIX);
@@ -1441,10 +1446,13 @@ function MindMapCanvasInner({
 
       // Show confirm button on the facilitator's lane
       const isFacilitatorZone = oid === facilitatorOwnerId;
+      // Inset each lane frame horizontally so adjacent containers read as separate
+      // cards with a clear gutter between them, instead of abutting edge-to-edge.
+      const zoneInset = ZONE_GAP / 2;
       return {
         id: `${ZONE_NODE_PREFIX}${oid}`,
         type: 'ownerZoneNode',
-        position: { x: left - ZONE_PADDING, y: top - ZONE_PADDING },
+        position: { x: left - ZONE_PADDING + zoneInset, y: top - ZONE_PADDING },
         draggable: false,
         selectable: false,
         connectable: false,
@@ -1459,7 +1467,7 @@ function MindMapCanvasInner({
           isReady: readinessMap[oid] ?? false,
           showDoneButton,
           onToggleReady: handleToggle,
-          width: right - left + 2 * ZONE_PADDING,
+          width: right - left + 2 * ZONE_PADDING - ZONE_GAP,
           height: bottom - top + 2 * ZONE_PADDING,
           starCount: ownerStarCounts[oid] || 0,
           ...(isFacilitatorZone && showConfirmButton ? { showConfirmButton, onConfirmMindMap, isConfirmingMindMap } : {}),
