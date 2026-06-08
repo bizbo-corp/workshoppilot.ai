@@ -57,15 +57,15 @@ export function PickLensCard({
                   {selected && <span className="h-2 w-2 rounded-full bg-primary" />}
                 </span>
                 <span>
-                  <span className="text-sm font-medium">
+                  <span className="text-base font-medium">
                     {LENS_LABELS[lens]}
                     {isDefault && (
-                      <span className="ml-2 text-xs font-normal text-primary">
+                      <span className="ml-2 text-sm font-normal text-primary">
                         recommended first
                       </span>
                     )}
                   </span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                  <span className="mt-0.5 block text-sm text-foreground/70">
                     {LENS_DESCRIPTIONS[lens]}
                   </span>
                 </span>
@@ -73,7 +73,7 @@ export function PickLensCard({
             );
           })}
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-foreground/70">
           Start with Desirability. You can run a Feasibility or Viability round later.
         </p>
         <Button onClick={onContinue} size="sm">

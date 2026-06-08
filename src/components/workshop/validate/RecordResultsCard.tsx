@@ -13,7 +13,7 @@ import { ScoreRing } from './ScoreRing';
 const VERDICT_BADGE: Record<Verdict, string> = {
   validated: 'bg-green-500/10 text-green-700 dark:text-green-400',
   promising: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
-  inconclusive: 'bg-muted text-muted-foreground',
+  inconclusive: 'bg-muted text-foreground/70',
   invalidated: 'bg-destructive/10 text-destructive',
 };
 
@@ -64,27 +64,27 @@ export function RecordResultsCard({
             <div className="flex items-center gap-2">
               <span
                 className={cn(
-                  'rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                  'rounded-full px-2.5 py-0.5 text-sm font-semibold',
                   VERDICT_BADGE[verdict]
                 )}
               >
                 {VERDICT_LABELS[verdict]}
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm text-foreground/70">
                 {plan.result.actual}
                 {unit} vs. target {targetDisplay}
               </span>
             </div>
-            <p className="text-sm text-foreground">{nextStepNudge(verdict)}</p>
+            <p className="text-base text-foreground">{nextStepNudge(verdict)}</p>
             {plan.result.notes && (
-              <p className="text-xs text-muted-foreground">“{plan.result.notes}”</p>
+              <p className="text-sm text-foreground/70">“{plan.result.notes}”</p>
             )}
             <Button variant="ghost" size="xs" onClick={() => setEditing(true)}>
               Update result
             </Button>
           </div>
         </div>
-        <p className="mt-3 text-[11px] text-muted-foreground">
+        <p className="mt-3 text-[13px] text-foreground/70">
           The score is a decision aid — it measures your result against the target you set, not
           objective truth.
         </p>
@@ -94,14 +94,14 @@ export function RecordResultsCard({
 
   return (
     <div className="rounded-xl border border-primary/30 bg-card p-5">
-      <h4 className="text-sm font-semibold">Record your result</h4>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <h4 className="text-base font-semibold">Record your result</h4>
+      <p className="mt-1 text-base text-foreground/70">
         {plan.signal?.metric || 'Your measured value'} — you targeted{' '}
         <span className="font-medium text-foreground">{targetDisplay}</span>.
       </p>
       <div className="mt-4 space-y-3">
         <div className="space-y-1.5">
-          <label className="text-xs font-medium">
+          <label className="text-sm font-medium">
             Actual value{isPercent ? ' (%)' : ''}
           </label>
           <Input
@@ -114,12 +114,12 @@ export function RecordResultsCard({
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-medium">
-            Notes <span className="text-muted-foreground">(optional)</span>
+          <label className="text-sm font-medium">
+            Notes <span className="text-foreground/70">(optional)</span>
           </label>
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
         </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex items-center gap-3">
           <Button
             size="sm"

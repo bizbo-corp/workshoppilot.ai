@@ -6,7 +6,7 @@ import type { Verdict } from '@/lib/schemas';
 const VERDICT_RING: Record<Verdict, string> = {
   validated: 'text-green-600 dark:text-green-400',
   promising: 'text-amber-500 dark:text-amber-400',
-  inconclusive: 'text-muted-foreground',
+  inconclusive: 'text-foreground/70',
   invalidated: 'text-destructive',
 };
 
@@ -52,8 +52,8 @@ export function ScoreRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold tabular-nums">{clamped}</span>
-        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">score</span>
+        <span className="text-3xl font-bold tabular-nums">{clamped}</span>
+        <span className="text-[12px] uppercase tracking-wide text-foreground/70">score</span>
       </div>
     </div>
   );

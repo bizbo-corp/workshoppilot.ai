@@ -53,19 +53,19 @@ export function DetectOutputTypeCard({
       }
     >
       {isClassifying && !classification ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-base text-foreground/70">
           <Loader2 className="h-4 w-4 animate-spin" />
           Detecting your output type…
         </div>
       ) : (
         <div className="space-y-4">
           {classification && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-base text-foreground/70">
               {lowConfidence ? 'Best guess — please confirm. ' : ''}
               {classification.rationale}
             </p>
           )}
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-foreground/70">
             Pick the primary type. If your concept combines two (e.g. a product with an app),
             add a second — up to {MAX}.
           </p>
@@ -93,14 +93,14 @@ export function DetectOutputTypeCard({
                   aria-pressed={selected}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium">{OUTPUT_TYPE_LABELS[type]}</span>
+                    <span className="text-base font-medium">{OUTPUT_TYPE_LABELS[type]}</span>
                     {selected && (
-                      <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                      <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[12px] font-semibold text-primary">
                         {isPrimary ? 'primary' : '2nd'}
                       </span>
                     )}
                   </div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">
+                  <div className="mt-0.5 text-sm text-foreground/70">
                     {OUTPUT_TYPE_DESCRIPTIONS[type]}
                   </div>
                 </button>
@@ -108,7 +108,7 @@ export function DetectOutputTypeCard({
             })}
           </div>
 
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           <div className="flex items-center gap-3">
             <Button onClick={onContinue} disabled={selectedTypes.length === 0} size="sm">
@@ -119,7 +119,7 @@ export function DetectOutputTypeCard({
               size="sm"
               onClick={onRetry}
               disabled={isClassifying}
-              className="gap-1.5 text-muted-foreground"
+              className="gap-1.5 text-foreground/70"
             >
               {isClassifying ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

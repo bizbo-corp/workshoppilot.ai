@@ -56,20 +56,20 @@ export function ProposeAssumptionCard({
       summary={value ? <span className="italic">“{value}”</span> : null}
     >
       {isProposing && !value ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-base text-foreground/70">
           <Loader2 className="h-4 w-4 animate-spin" />
           Drafting your riskiest assumption…
         </div>
       ) : (
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-base text-foreground/70">
             The belief that, if wrong, would most likely kill the idea — phrased as something
             about people&apos;s needs or behaviour, not a feature.
           </p>
 
           {/* Scope toggle: challenge-level vs concept-specific */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">Focus:</span>
+            <span className="text-sm font-medium text-foreground/70">Focus:</span>
             <div className="inline-flex rounded-md border border-border p-0.5">
               {(['broad', 'specific'] as const).map((s) => (
                 <button
@@ -78,10 +78,10 @@ export function ProposeAssumptionCard({
                   onClick={() => onScopeChange(s)}
                   disabled={isProposing}
                   className={cn(
-                    'rounded px-2.5 py-1 text-xs font-medium capitalize transition-colors disabled:opacity-50',
+                    'rounded px-2.5 py-1 text-sm font-medium capitalize transition-colors disabled:opacity-50',
                     scope === s
                       ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent'
+                      : 'text-foreground/70 hover:bg-accent'
                   )}
                 >
                   {s === 'broad' ? 'Broad (the challenge)' : 'Specific (the concept)'}
@@ -98,7 +98,7 @@ export function ProposeAssumptionCard({
           />
 
           {showFeatureNudge && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
+            <p className="text-sm text-amber-600 dark:text-amber-400">
               This reads like a feature. Try reframing it as a belief about what people need or
               will do.
             </p>
@@ -106,14 +106,14 @@ export function ProposeAssumptionCard({
 
           {alternatives.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">Other options:</p>
+              <p className="text-sm font-medium text-foreground/70">Other options:</p>
               {alternatives.map((alt, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => onSelectAlternative(alt)}
                   className={cn(
-                    'block w-full rounded-md border border-border p-2 text-left text-sm transition-colors hover:bg-accent',
+                    'block w-full rounded-md border border-border p-2 text-left text-base transition-colors hover:bg-accent',
                     alt === value && 'border-primary bg-primary/10'
                   )}
                 >
@@ -123,10 +123,10 @@ export function ProposeAssumptionCard({
             </div>
           )}
 
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           {process.env.NODE_ENV !== 'production' && devMeta && (
-            <div className="rounded-md border border-dashed border-amber-500/40 bg-amber-500/5 p-2 text-[11px] text-muted-foreground">
+            <div className="rounded-md border border-dashed border-amber-500/40 bg-amber-500/5 p-2 text-[13px] text-foreground/70">
               <span className="font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
                 Dev · drawn from:
               </span>{' '}
@@ -148,7 +148,7 @@ export function ProposeAssumptionCard({
               size="sm"
               onClick={onSuggestAnother}
               disabled={isProposing}
-              className="gap-1.5 text-muted-foreground"
+              className="gap-1.5 text-foreground/70"
             >
               {isProposing ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

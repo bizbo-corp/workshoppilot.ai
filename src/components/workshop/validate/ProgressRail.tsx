@@ -16,18 +16,18 @@ export function ProgressRail({ progress }: { progress: ProgressStep }) {
             <div className="flex items-center gap-2">
               <span
                 className={cn(
-                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-semibold',
                   status === 'done' && 'bg-primary text-primary-foreground',
                   status === 'active' && 'bg-primary/15 text-primary ring-2 ring-primary/30',
-                  status === 'locked' && 'bg-muted text-muted-foreground'
+                  status === 'locked' && 'bg-muted text-foreground/70'
                 )}
               >
                 {status === 'done' ? <Check className="h-3.5 w-3.5" /> : i + 1}
               </span>
               <span
                 className={cn(
-                  'hidden text-xs font-medium lg:inline',
-                  status === 'locked' ? 'text-muted-foreground' : 'text-foreground'
+                  'hidden text-sm font-medium lg:inline',
+                  status === 'locked' ? 'text-foreground/70' : 'text-foreground'
                 )}
               >
                 {SECTION_LABELS[section]}

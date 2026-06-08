@@ -25,7 +25,7 @@ interface SignalCandidate {
 }
 
 const STRENGTH_CLASS: Record<ProxyStrength, string> = {
-  weak: 'text-muted-foreground',
+  weak: 'text-foreground/70',
   medium: 'text-amber-600 dark:text-amber-400',
   strong: 'text-green-600 dark:text-green-400',
 };
@@ -272,7 +272,7 @@ export function DefineSignalCard({
     >
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-base text-foreground/70">
             Set your bar <em>before</em> you test — that&apos;s what lets us score the result
             honestly afterwards.
           </p>
@@ -289,7 +289,7 @@ export function DefineSignalCard({
         </div>
 
         {suggestContext.assumption && (
-          <p className="rounded-lg border border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+          <p className="rounded-lg border border-dashed border-border bg-muted/30 p-3 text-sm text-foreground/70">
             You&apos;re testing:{' '}
             <span className="italic text-foreground">“{suggestContext.assumption}”</span>
             <br />
@@ -298,7 +298,7 @@ export function DefineSignalCard({
           </p>
         )}
 
-        {suggestError && <p className="text-xs text-destructive">{suggestError}</p>}
+        {suggestError && <p className="text-sm text-destructive">{suggestError}</p>}
 
         {/* ── A. What are you measuring ── */}
         <section className="space-y-3">
@@ -306,7 +306,7 @@ export function DefineSignalCard({
 
           {candidates && candidates.length > 0 && (
             <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
-              <p className="text-xs font-medium">Pick a way to measure it:</p>
+              <p className="text-sm font-medium">Pick a way to measure it:</p>
               {candidates.map((c, i) => (
                 <button
                   key={i}
@@ -315,13 +315,13 @@ export function DefineSignalCard({
                   className="block w-full rounded-md border border-border bg-background p-2.5 text-left transition-colors hover:bg-accent"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium">{c.signal.metric}</span>
-                    <span className={cn('shrink-0 text-[10px] font-semibold uppercase tracking-wide', STRENGTH_CLASS[c.proxyStrength])}>
+                    <span className="text-base font-medium">{c.signal.metric}</span>
+                    <span className={cn('shrink-0 text-[12px] font-semibold uppercase tracking-wide', STRENGTH_CLASS[c.proxyStrength])}>
                       {PROXY_STRENGTH_LABELS[c.proxyStrength]}
                     </span>
                   </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{c.why}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
+                  <p className="mt-0.5 text-sm text-foreground/70">{c.why}</p>
+                  <p className="mt-1 text-[13px] text-foreground/70">
                     Bar: {c.signal.target}
                     {c.signal.metricType === 'percent' ? '%' : ` of ${c.signal.sampleSize}`}
                   </p>
@@ -338,7 +338,7 @@ export function DefineSignalCard({
           )}
 
           {/* Traffic-light legend — the dots rate the measure you choose above */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-foreground/70">
             <span>The dot shows how strongly each measure proves your assumption:</span>
             <Legend strength="strong" />
             <Legend strength="medium" />
@@ -356,13 +356,13 @@ export function DefineSignalCard({
         <section className="space-y-3">
           <GroupHeading marker="B" title="Set your bar" />
 
-          <div className="space-y-2.5 rounded-lg border border-border bg-muted/30 p-4 text-sm">
-            <div className="-mt-1 mb-1 flex items-center justify-end gap-2 text-xs">
-              <span className={cn(!percent ? 'font-medium text-foreground' : 'text-muted-foreground')}>
+          <div className="space-y-2.5 rounded-lg border border-border bg-muted/30 p-4 text-base">
+            <div className="-mt-1 mb-1 flex items-center justify-end gap-2 text-sm">
+              <span className={cn(!percent ? 'font-medium text-foreground' : 'text-foreground/70')}>
                 Count
               </span>
               <Switch checked={percent} onCheckedChange={toggleMode} aria-label="Measure as a percentage" />
-              <span className={cn(percent ? 'font-medium text-foreground' : 'text-muted-foreground')}>
+              <span className={cn(percent ? 'font-medium text-foreground' : 'text-foreground/70')}>
                 %
               </span>
             </div>
@@ -395,9 +395,9 @@ export function DefineSignalCard({
                 placeholder={percent ? '25' : '3'}
               />
               <span>{percent ? '% or fewer do.' : 'or fewer do.'}</span>
-              {!killDirty.current && <span className="text-[11px] text-muted-foreground">(auto)</span>}
+              {!killDirty.current && <span className="text-[13px] text-foreground/70">(auto)</span>}
             </div>
-            <p className="pt-1 text-xs text-muted-foreground">
+            <p className="pt-1 text-sm text-foreground/70">
               The pivot line auto-fills as the opposite of your pass bar, but it can be anything
               below it — set it where &quot;this idea isn&apos;t worth pursuing&quot; honestly sits.
             </p>
@@ -412,7 +412,7 @@ export function DefineSignalCard({
           <GroupHeading marker="C" title="Spell it out" subtitle="Auto-written from your bar — edit anytime" />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium">What would prove you right?</label>
+              <label className="text-sm font-medium">What would prove you right?</label>
               <Textarea
                 value={successText}
                 onChange={(e) => {
@@ -423,7 +423,7 @@ export function DefineSignalCard({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium">What would tell you you&apos;re wrong?</label>
+              <label className="text-sm font-medium">What would tell you you&apos;re wrong?</label>
               <Textarea
                 value={failText}
                 onChange={(e) => {
@@ -437,7 +437,7 @@ export function DefineSignalCard({
         </section>
 
         {!valid && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-foreground/70">
             Add what you&apos;re measuring, how many people, and the &quot;I&apos;m right
             if&quot; number.
           </p>
@@ -453,12 +453,12 @@ export function DefineSignalCard({
 
 function GroupHeading({ marker, title, subtitle }: { marker: string; title: string; subtitle?: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+    <div className="flex items-center gap-2.5">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[13px] font-bold text-primary">
         {marker}
       </span>
-      <h4 className="text-sm font-semibold">{title}</h4>
-      {subtitle && <span className="text-xs font-normal text-muted-foreground">· {subtitle}</span>}
+      <h4 className="text-lg font-semibold tracking-tight">{title}</h4>
+      {subtitle && <span className="text-base font-normal text-foreground/70">· {subtitle}</span>}
     </div>
   );
 }
@@ -466,7 +466,7 @@ function GroupHeading({ marker, title, subtitle }: { marker: string; title: stri
 function Legend({ strength }: { strength: ProxyStrength }) {
   return (
     <span className="inline-flex items-center gap-1">
-      <span className={cn('text-[8px]', STRENGTH_CLASS[strength])} aria-hidden>
+      <span className={cn('text-[10px]', STRENGTH_CLASS[strength])} aria-hidden>
         ●
       </span>
       {PROXY_STRENGTH_LABELS[strength]}
@@ -479,7 +479,7 @@ function TestHealthMeter({ health }: { health: ReturnType<typeof assessTestHealt
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="flex items-center gap-2">
-        <span className="text-xs font-medium">Test strength:</span>
+        <span className="text-sm font-medium">Test strength:</span>
         <span className="flex items-center gap-0.5">
           {[1, 2, 3].map((i) => (
             <span
@@ -488,14 +488,14 @@ function TestHealthMeter({ health }: { health: ReturnType<typeof assessTestHealt
             />
           ))}
         </span>
-        <span className={cn('text-xs font-semibold', HEALTH_CLASS[health.level])}>
+        <span className={cn('text-sm font-semibold', HEALTH_CLASS[health.level])}>
           {HEALTH_LABELS[health.level]}
         </span>
       </div>
       {health.notes.length > 0 && (
         <ul className="mt-2 space-y-1">
           {health.notes.map((n, i) => (
-            <li key={i} className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+            <li key={i} className="flex items-start gap-1.5 text-[13px] text-foreground/70">
               {n.tone === 'good' ? (
                 <Check className="mt-0.5 h-3 w-3 shrink-0 text-green-600 dark:text-green-400" />
               ) : (
@@ -524,7 +524,7 @@ function MetricChipRow({
 }) {
   return (
     <div className="space-y-1">
-      <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{title}</span>
+      <span className="text-[13px] font-medium uppercase tracking-wide text-foreground/70">{title}</span>
       <div className="flex flex-wrap gap-1.5">
         {options.map((o) => {
           const isSelected = selected === o.label;
@@ -535,12 +535,12 @@ function MetricChipRow({
               onClick={() => onPick(o)}
               title={PROXY_STRENGTH_LABELS[o.proxyStrength]}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors',
+                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm transition-colors',
                 isSelected ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-accent'
               )}
             >
               {o.label}
-              <span className={cn('text-[8px]', STRENGTH_CLASS[o.proxyStrength])} aria-hidden>
+              <span className={cn('text-[10px]', STRENGTH_CLASS[o.proxyStrength])} aria-hidden>
                 ●
               </span>
             </button>

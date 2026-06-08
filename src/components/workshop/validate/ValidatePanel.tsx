@@ -402,7 +402,7 @@ export function ValidatePanel({
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Loader2 className="h-6 w-6 animate-spin text-foreground/70" />
       </div>
     );
   }
@@ -418,14 +418,16 @@ export function ValidatePanel({
       <div className="space-y-6 p-6">
         <header className="space-y-3">
           <div>
-            <h2 className="text-lg font-semibold">Validate your idea</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="font-serif text-3xl leading-[1.1] tracking-tight text-foreground">
+              Validate your idea
+            </h2>
+            <p className="text-base text-foreground/70">
               Design thinking validates one assumption about a human need — not each piece. We&apos;ll
               test your whole solution with the cheapest experiment.
             </p>
           </div>
           {concepts.length > 1 && (
-            <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-sm text-foreground/70">
               <span className="font-medium text-foreground">Your solution combines:</span>{' '}
               {concepts.map((c) => c.name).join(' · ')}
             </p>
@@ -514,7 +516,7 @@ export function ValidatePanel({
         {assembled && activePlan && (
           <div className="space-y-4 rounded-xl border-2 border-primary/20 bg-primary/5 p-5">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-base font-semibold">Your validation plan is ready</h3>
+              <h3 className="text-lg font-semibold">Your validation plan is ready</h3>
             </div>
             <ValidationPlanSummary plan={activePlan} />
 
@@ -526,10 +528,10 @@ export function ValidatePanel({
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="space-y-0.5">
-                    <p className="text-sm font-semibold">Build &amp; run your test</p>
-                    <p className="text-xs text-muted-foreground">{builderCta.blurb}</p>
+                    <p className="text-base font-semibold">Build &amp; run your test</p>
+                    <p className="text-sm text-foreground/70">{builderCta.blurb}</p>
                   </div>
-                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-transform group-hover:translate-x-0.5">
+                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-4 py-2.5 text-base font-medium text-primary-foreground transition-transform group-hover:translate-x-0.5">
                     {builderCta.label}
                     <ArrowRight className="h-4 w-4" />
                   </span>
@@ -552,7 +554,7 @@ export function ValidatePanel({
 
             {/* ② Record the result — deferred; you can only log it after running the test. */}
             {builderCta && (
-              <p className="border-t border-border/60 pt-3 text-xs text-muted-foreground">
+              <p className="border-t border-border/60 pt-3 text-sm text-foreground/70">
                 Run your test, then come back and log what happened below.
               </p>
             )}
@@ -592,15 +594,15 @@ export function ValidatePanel({
         {/* Previously completed plans */}
         {completedPlans.length > 0 && (
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground">
+            <h3 className="text-base font-semibold text-foreground/70">
               Other assumptions you&apos;ve tested
             </h3>
             {completedPlans.map((plan) => (
               <div key={plan.id} className="space-y-3 rounded-xl border bg-card p-5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium">{LENS_LABELS[plan.lens]} risk</span>
+                  <span className="text-base font-medium">{LENS_LABELS[plan.lens]} risk</span>
                   {plan.result && (
-                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 text-sm text-foreground/70">
                       <Rocket className="h-3 w-3" /> score {plan.result.score}
                     </span>
                   )}

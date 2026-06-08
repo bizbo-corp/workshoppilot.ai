@@ -36,7 +36,7 @@ export function RecommendArtifactCard({
       summary={selected ? <span className="font-medium text-foreground">{selected.label}</span> : null}
     >
       <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-foreground/70">
           The cheapest valid test for this kind of output under this lens.
         </p>
         <div className="space-y-2">
@@ -56,17 +56,17 @@ export function RecommendArtifactCard({
                 aria-pressed={isSelected}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium">
+                  <span className="text-base font-medium">
                     {option.label}
                     {i === 0 && (
-                      <span className="ml-2 text-xs font-normal text-primary">recommended</span>
+                      <span className="ml-2 text-sm font-normal text-primary">recommended</span>
                     )}
                   </span>
-                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[12px] font-medium text-foreground/70">
                     {option.costHint}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+                <p className="mt-1 text-sm text-foreground/70">{option.description}</p>
               </button>
             );
           })}
