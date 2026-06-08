@@ -9,37 +9,94 @@
 import { generateObject } from 'ai';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
-import type { AllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifacts';
-import { buildValidationContext } from '@/lib/validation/llm-context';
+import { loadValidationBrief } from '@/lib/validation/llm-context';
 import { OUTPUT_TYPE_LABELS } from '@/lib/validation/artifact-lookup';
 import type { OutputType } from '@/lib/schemas/validation-schemas';
 
 const proposalSchema = z.object({
   assumption: z.string(),
   alternatives: z.array(z.string()).min(2).max(3),
+  sources: z
+    .array(z.string())
+    .min(1)
+    .max(6)
+    .describe(
+      'Which workshop steps/phases most informed this assumption — use the step names from the brief, e.g. "Concept Development", "Ideation", "Sense-making", "Reframing".'
+    ),
+  rationale: z.string().describe('One sentence: why this is the riskiest assumption.'),
 });
 
 const SYSTEM = `You surface the RISKIEST ASSUMPTION behind a design-thinking concept — the belief that,
 if wrong, would most likely kill the idea.
 
-Rules:
+What the assumption must be about:
+- Anchor on the CORE VALUE / NEED in the challenge's desired outcome (e.g. emotional connection
+  with an audience, driving others to action) — a belief about whether the target user genuinely
+  wants, and will get, that value from the concept.
+- Do NOT make the riskiest assumption about pricing, "paying a premium", or distribution unless
+  that is truly the single biggest risk. Desirability (do they want it?) comes first.
+- Stay inside the challenge's real domain and the concept described in the brief.
+
+Hard rules:
+- Personas, journey maps, HMW statements and other workshop outputs are design-thinking TOOLS
+  used during the workshop — they are NOT the product. NEVER describe the product/service as a
+  journey map, persona, or any workshop artifact. The subject is THE CONCEPT in the brief.
 - Phrase it as a falsifiable statement about the user/customer's NEED or BEHAVIOR.
-  Good: "Novice speakers will trust an AI to restructure their talk."
-  Bad (feature statement): "The app has a restructure button."
+- The output type only shapes the PHRASING (a service → about using/paying for the service); it
+  must not invent a different product than the concept in the brief.
 - Focus on desirability (do people actually want / will they do this?), not implementation.
-- Keep each statement to one clear sentence.
-- Provide 2–3 DISTINCT alternative assumptions, each testing a different belief.`;
+
+Style — the most important part:
+- ONE short, plain sentence. Aim for 12–18 words; 25 max.
+- State a SINGLE belief. No compound clauses — no "rather than", no "over X", no "instead of",
+  no ", believing…", and no hedging like "perceive sufficient value".
+- Name the user, the solution, and the GOAL it serves. Prefer "will want a … that helps them …".
+  Good (broad): "Speakers will want an app that helps them communicate ideas to drive action in others."
+  Good (specific): "Speakers will want an audience-profiler feature in order to tailor their message."
+  Bad (means, not goal): "Speakers believe understanding audience emotions is key to driving action."
+  Bad (long / compound / hedged): "Business professionals will perceive sufficient value in a
+  structured empathy tool to pay for it, rather than relying on free presentation features."
+  Bad (feature statement): "The app has a restructure button."
+- Provide 2–3 DISTINCT alternatives, each ONE short sentence testing a different belief about
+  the same concept and user.
+- Also return: sources (which workshop steps/phases most shaped this — use the step names in the
+  brief) and rationale (one sentence on why it's the riskiest).`;
+
+export type AssumptionScope = 'broad' | 'specific';
 
 export async function proposeAssumption(
-  artifacts: AllWorkshopArtifacts,
+  workshopId: string,
   outputType: OutputType,
+  scope: AssumptionScope = 'broad',
   avoid?: string
 ): Promise<{
   assumption: string;
   alternatives: string[];
+  sources: string[];
+  rationale: string;
   usage?: { inputTokens?: number; outputTokens?: number };
 }> {
-  const context = buildValidationContext(artifacts);
+  const { brief, conceptName } = await loadValidationBrief(workshopId);
+  const label = OUTPUT_TYPE_LABELS[outputType];
+
+  const framing =
+    scope === 'specific'
+      ? `Frame the assumption SPECIFICALLY about ONE concrete feature or mechanic of the concept${
+          conceptName ? ` "${conceptName}"` : ''
+        }.
+Use this exact shape: "<target user> will want a <specific feature> that <what it does> in order to <the sub-goal it serves>."
+Name the concept's actual mechanic (e.g. an audience-profiler, an analogy generator).
+Example: "Speakers will want an audience-profiler feature that maps audience needs in order to empathise with specific audiences."`
+      : `Frame the assumption BROADLY at the level of the ORIGINAL CHALLENGE's END GOAL, in the challenge's own words (e.g. communicate effectively to persuade, inspire, or drive others to action).
+Use this exact shape: "<target user> will want a ${label} that helps them <the challenge's end goal>."
+Refer to the solution generically as "a ${label}". Do NOT mention intermediate mechanisms (emotions, empathy, audience analysis, message clarity) or any specific concept feature — those belong only to Specific framing.
+Example: "Speakers will want an app that helps them communicate their ideas effectively to drive action in others."`;
+
+  const scopeReminder =
+    scope === 'specific'
+      ? ' Anchor it on a concrete feature and the sub-goal that feature serves.'
+      : ' Keep it about the end goal (communicating effectively to drive action), never the means or a specific feature.';
+
   const avoidLine = avoid
     ? `\n\nDo NOT repeat this assumption; produce a different one:\n"${avoid}"`
     : '';
@@ -48,13 +105,21 @@ export async function proposeAssumption(
     model: google('gemini-2.5-flash-lite'),
     schema: proposalSchema,
     system: SYSTEM,
-    prompt: `Workshop summary:\n\n${context}\n\nThe output is a ${OUTPUT_TYPE_LABELS[outputType]}. Propose the single riskiest assumption plus alternatives.${avoidLine}`,
+    prompt: `The concept is being taken to market as a ${label}. ${framing}
+
+Brief:
+
+${brief}
+
+Propose the single riskiest assumption about whether the target user will adopt this ${label} to get the desired outcome, plus 2–3 distinct alternatives. Each must be ONE short, testable sentence (12–18 words).${scopeReminder} Stay strictly within the workshop's domain above; never describe the product as a journey map, persona, or other workshop artifact, and do not invent an unrelated product.${avoidLine}`,
     temperature: 0.4,
   });
 
   return {
     assumption: result.object.assumption,
     alternatives: result.object.alternatives,
+    sources: result.object.sources,
+    rationale: result.object.rationale,
     usage: result.usage,
   };
 }

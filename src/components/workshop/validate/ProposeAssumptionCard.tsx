@@ -26,6 +26,9 @@ export function ProposeAssumptionCard({
   onSelectAlternative,
   onContinue,
   onEdit,
+  devMeta,
+  scope,
+  onScopeChange,
 }: {
   status: SectionStatus;
   value: string;
@@ -37,6 +40,10 @@ export function ProposeAssumptionCard({
   onSelectAlternative: (text: string) => void;
   onContinue: () => void;
   onEdit: () => void;
+  /** Dev-only provenance (which steps shaped the assumption). Not persisted. */
+  devMeta?: { sources: string[]; rationale: string } | null;
+  scope: 'broad' | 'specific';
+  onScopeChange: (scope: 'broad' | 'specific') => void;
 }) {
   const showFeatureNudge = value.trim().length > 0 && looksLikeFeature(value);
 
@@ -59,6 +66,29 @@ export function ProposeAssumptionCard({
             The belief that, if wrong, would most likely kill the idea — phrased as something
             about people&apos;s needs or behaviour, not a feature.
           </p>
+
+          {/* Scope toggle: challenge-level vs concept-specific */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Focus:</span>
+            <div className="inline-flex rounded-md border border-border p-0.5">
+              {(['broad', 'specific'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onScopeChange(s)}
+                  disabled={isProposing}
+                  className={cn(
+                    'rounded px-2.5 py-1 text-xs font-medium capitalize transition-colors disabled:opacity-50',
+                    scope === s
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-accent'
+                  )}
+                >
+                  {s === 'broad' ? 'Broad (the challenge)' : 'Specific (the concept)'}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <Textarea
             value={value}
@@ -94,6 +124,20 @@ export function ProposeAssumptionCard({
           )}
 
           {error && <p className="text-xs text-destructive">{error}</p>}
+
+          {process.env.NODE_ENV !== 'production' && devMeta && (
+            <div className="rounded-md border border-dashed border-amber-500/40 bg-amber-500/5 p-2 text-[11px] text-muted-foreground">
+              <span className="font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                Dev · drawn from:
+              </span>{' '}
+              {devMeta.sources.length ? devMeta.sources.join(' · ') : '—'}
+              {devMeta.rationale && (
+                <div className="mt-0.5">
+                  <span className="font-medium">Why riskiest:</span> {devMeta.rationale}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center gap-3">
             <Button onClick={onContinue} disabled={!value.trim()} size="sm">

@@ -9,7 +9,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
-import { loadAllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifacts';
 import { resolveValidateAccess } from '@/lib/validation/access';
 import { classifyOutputType } from '@/lib/validation/classify-output-type';
 import { updateValidateArtifact } from '@/lib/validation/save-validation';
@@ -36,8 +35,7 @@ export async function POST(req: Request) {
     if (!workshopId) return json({ error: 'workshopId is required' }, 400);
     if (!(await resolveValidateAccess(workshopId))) return json({ error: 'Access denied' }, 403);
 
-    const artifacts = await loadAllWorkshopArtifacts(workshopId);
-    const result = await classifyOutputType(artifacts);
+    const result = await classifyOutputType(workshopId);
 
     recordUsageEvent({
       workshopId,

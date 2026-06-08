@@ -9,7 +9,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { checkRateLimit, rateLimitResponse, getRateLimitId } from '@/lib/ai/rate-limiter';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
-import { loadAllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifacts';
 import { resolveValidateAccess } from '@/lib/validation/access';
 import { proposeAssumption } from '@/lib/validation/propose-assumption';
 import { outputTypeSchema } from '@/lib/schemas';
@@ -31,7 +30,7 @@ export async function POST(req: Request) {
   if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
   try {
-    const { workshopId, outputType, avoid } = await req.json();
+    const { workshopId, outputType, avoid, scope } = await req.json();
     if (!workshopId) return json({ error: 'workshopId is required' }, 400);
 
     const parsedType = outputTypeSchema.safeParse(outputType);
@@ -39,10 +38,10 @@ export async function POST(req: Request) {
 
     if (!(await resolveValidateAccess(workshopId))) return json({ error: 'Access denied' }, 403);
 
-    const artifacts = await loadAllWorkshopArtifacts(workshopId);
     const result = await proposeAssumption(
-      artifacts,
+      workshopId,
       parsedType.data,
+      scope === 'specific' ? 'specific' : 'broad',
       typeof avoid === 'string' ? avoid : undefined
     );
 
@@ -55,7 +54,12 @@ export async function POST(req: Request) {
       outputTokens: result.usage?.outputTokens,
     });
 
-    return json({ assumption: result.assumption, alternatives: result.alternatives });
+    return json({
+      assumption: result.assumption,
+      alternatives: result.alternatives,
+      sources: result.sources,
+      rationale: result.rationale,
+    });
   } catch (error) {
     console.error('[validation/propose-assumption] error:', error instanceof Error ? error.message : error);
     return json({ error: 'Internal server error' }, 500);

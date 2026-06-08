@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { resolveValidateAccess } from '@/lib/validation/access';
 import { loadAllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifacts';
+import { getConceptCards } from '@/lib/validation/llm-context';
 import {
   updateValidateArtifact,
   getValidateArtifact,
@@ -59,18 +60,13 @@ export async function getValidationState(workshopId: string): Promise<
       getValidateArtifact(workshopId),
       loadAllWorkshopArtifacts(workshopId),
     ]);
-    const rawConcepts =
-      (artifacts.concept as { concepts?: unknown[] } | null)?.concepts ?? [];
-    const concepts: WorkshopConcept[] = (Array.isArray(rawConcepts) ? rawConcepts : [])
-      .map((c) => {
-        const rec = c as Record<string, unknown>;
-        return {
-          name: asString(rec.name),
-          ideaSource: asString(rec.ideaSource),
-          elevatorPitch: asString(rec.elevatorPitch),
-          usp: asString(rec.usp),
-        };
-      })
+    const concepts: WorkshopConcept[] = getConceptCards(artifacts)
+      .map((c) => ({
+        name: asString(c.name),
+        ideaSource: asString(c.ideaSource),
+        elevatorPitch: asString(c.elevatorPitch),
+        usp: asString(c.usp),
+      }))
       .filter((c) => c.name);
 
     const challenge = artifacts.challenge as Record<string, unknown> | null;

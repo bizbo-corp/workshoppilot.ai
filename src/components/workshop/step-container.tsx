@@ -1229,9 +1229,11 @@ export function StepContainer({
       setAutoStartFired(false); // Allow auto-start to fire again after reset
       setConceptActivityStarted(false); // Reset concept activity gate (Step 9)
       broadcastRef.current?.({ type: 'STEP_RESET', stepSlug: step.id });
-      // Clear Step 10 extraction state
+      // Clear Step 10 extraction + validation-flow state
       setStep10Artifact(null);
       hasAutoExtracted.current = false;
+      setValidateOutputType(null);
+      setValidatePlanCount(0);
       // Clear ALL canvas/whiteboard state SYNCHRONOUSLY, before the ChatPanel
       // re-mounts via resetKey. This was previously deferred in a
       // requestAnimationFrame AFTER resetKey, which left a window where the canvas
@@ -1291,6 +1293,7 @@ export function StepContainer({
     return (
       <div className="flex h-full flex-col overflow-y-auto">
         <ValidatePanel
+          key={`validate:${sessionId}:${resetKey}`}
           workshopId={workshopId}
           sessionId={sessionId}
           journeyMapApproved={journeyMapApproved}

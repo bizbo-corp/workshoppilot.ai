@@ -9,8 +9,7 @@
 import { generateObject } from 'ai';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
-import type { AllWorkshopArtifacts } from '@/lib/build-pack/load-workshop-artifacts';
-import { buildValidationContext } from '@/lib/validation/llm-context';
+import { loadValidationBrief } from '@/lib/validation/llm-context';
 import { outputTypeSchema, type OutputType } from '@/lib/schemas/validation-schemas';
 
 const classifierSchema = z.object({
@@ -28,21 +27,25 @@ const SYSTEM = `You classify the output of a design-thinking workshop into exact
 
 Pick the single best fit for the PRIMARY concept. Weight the concept most heavily, then the
 reframed challenge, then the original challenge. Set confidence honestly (0–1): below 0.6 means
-"best guess, please confirm". Keep the rationale to one short sentence.`;
+"best guess, please confirm". Keep the rationale to one short sentence.
 
-export async function classifyOutputType(artifacts: AllWorkshopArtifacts): Promise<{
+Classify the CONCEPT (the thing being built or offered) — NOT the workshop's own tools. Journey
+maps, personas and HMW statements are design-thinking artifacts used during the workshop, not the
+output type.`;
+
+export async function classifyOutputType(workshopId: string): Promise<{
   type: OutputType;
   confidence: number;
   rationale: string;
   usage?: { inputTokens?: number; outputTokens?: number };
 }> {
-  const context = buildValidationContext(artifacts);
+  const { brief } = await loadValidationBrief(workshopId);
 
   const result = await generateObject({
     model: google('gemini-2.5-flash-lite'),
     schema: classifierSchema,
     system: SYSTEM,
-    prompt: `Workshop summary:\n\n${context}\n\nClassify the output type.`,
+    prompt: `${brief}\n\nClassify the output type of the concept being validated.`,
     temperature: 0.1,
   });
 

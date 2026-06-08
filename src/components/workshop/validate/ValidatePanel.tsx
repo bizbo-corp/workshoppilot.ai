@@ -84,6 +84,13 @@ export function ValidatePanel({
   const [classifyError, setClassifyError] = React.useState<string | null>(null);
   const [isProposing, setIsProposing] = React.useState(false);
   const [proposeError, setProposeError] = React.useState<string | null>(null);
+  // Dev-only provenance for the generated assumption (not persisted).
+  const [assumptionMeta, setAssumptionMeta] = React.useState<{
+    sources: string[];
+    rationale: string;
+  } | null>(null);
+  // Broad (challenge-level) vs Specific (named-concept) assumption framing.
+  const [assumptionScope, setAssumptionScope] = React.useState<'broad' | 'specific'>('broad');
   const [recordError, setRecordError] = React.useState<string | null>(null);
   const [recordingId, setRecordingId] = React.useState<string | null>(null);
   const [addingToBuildPack, setAddingToBuildPack] = React.useState(false);
@@ -195,6 +202,7 @@ export function ValidatePanel({
   }, [activePlan?.progressStep, classification, isClassifying, runClassify]);
 
   const selectType = (type: OutputType) => {
+    if (activePlan?.outputType === type) return; // no change
     const next: OutputTypeClassification = {
       type,
       confidence: 1,
@@ -203,14 +211,35 @@ export function ValidatePanel({
       classifiedAt: now(),
     };
     setClassification(next);
-    // Changing the type invalidates the artifact recommendation.
-    patchActive({ outputType: type, artifactType: '', artifactLabel: '' });
     void saveClassification(workshopId, next);
+    setAssumptionMeta(null);
+
+    // Changing the output type invalidates everything downstream that depends on it.
+    // Clear the assumption + artifact and rewind to the assumption step so it regenerates
+    // (the auto-propose effect re-fires once progressStep is back on 'assumption').
+    proposeTriggered.current = false;
+    setPlans((prev) =>
+      prev.map((p) => {
+        if (p.id !== activeId) return p;
+        const pastDetect =
+          SECTION_ORDER.indexOf(p.progressStep) > SECTION_ORDER.indexOf('detect');
+        return {
+          ...p,
+          outputType: type,
+          assumption: '',
+          assumptionAlternatives: [],
+          artifactType: '',
+          artifactLabel: '',
+          progressStep: pastDetect ? 'assumption' : p.progressStep,
+          updatedAt: now(),
+        };
+      })
+    );
   };
 
   // ---- Assumption ----
   const runPropose = React.useCallback(
-    async (avoid?: string) => {
+    async (avoid?: string, scopeOverride?: 'broad' | 'specific') => {
       if (!activePlan) return;
       setIsProposing(true);
       setProposeError(null);
@@ -218,19 +247,31 @@ export function ValidatePanel({
         const r = await fetch('/api/validation/propose-assumption', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ workshopId, outputType: activePlan.outputType, avoid }),
+          body: JSON.stringify({
+            workshopId,
+            outputType: activePlan.outputType,
+            scope: scopeOverride ?? assumptionScope,
+            avoid,
+          }),
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data?.error || 'Could not propose an assumption');
         patchActive({ assumption: data.assumption, assumptionAlternatives: data.alternatives });
+        setAssumptionMeta({ sources: data.sources ?? [], rationale: data.rationale ?? '' });
       } catch (e) {
         setProposeError(e instanceof Error ? e.message : 'Could not propose an assumption');
       } finally {
         setIsProposing(false);
       }
     },
-    [activePlan, workshopId, patchActive]
+    [activePlan, workshopId, patchActive, assumptionScope]
   );
+
+  const changeScope = (scope: 'broad' | 'specific') => {
+    if (scope === assumptionScope) return;
+    setAssumptionScope(scope);
+    void runPropose(undefined, scope);
+  };
 
   // Auto-propose when entering the assumption section with no assumption yet.
   React.useEffect(() => {
@@ -371,6 +412,9 @@ export function ValidatePanel({
               onSelectAlternative={(text) => patchActive({ assumption: text })}
               onContinue={() => commitSection('assumption', { assumption: activePlan.assumption })}
               onEdit={() => setEditingSection('assumption')}
+              devMeta={assumptionMeta}
+              scope={assumptionScope}
+              onScopeChange={changeScope}
             />
 
             <PickLensCard
