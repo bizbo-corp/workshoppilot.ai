@@ -9,9 +9,7 @@ import { StepConfirmButton } from "./step-confirm-button";
 import { ParticipantChatPanel } from "./participant-chat-panel";
 import { RightPanel } from "./right-panel";
 import { WorkshopSetup } from "./setup/workshop-setup";
-import { SynthesisBuildPackSection } from "./synthesis-summary-view";
 import { ValidatePanel } from "./validate/ValidatePanel";
-import type { OutputType } from "@/lib/schemas";
 import { MobileTabBar } from "./mobile-tab-bar";
 import { StepNavigation } from "./step-navigation";
 import { ResetStepDialog } from "@/components/dialogs/reset-step-dialog";
@@ -19,12 +17,6 @@ import { PrdViewerDialog } from "./prd-viewer-dialog";
 import { useIdeationPhases } from "@/hooks/use-ideation-phases";
 import { useBrainwritingPhase, type BrainwritingSeed } from "@/hooks/use-brainwriting-phase";
 import {
-  Loader2,
-  ArrowLeft,
-  ExternalLink,
-  Rocket,
-  CheckCircle2,
-  FileCode2,
   ChevronLeft,
   ChevronRight,
   MessageSquare,
@@ -60,7 +52,6 @@ import { fireConfetti } from "@/lib/utils/confetti";
 import { cn } from "@/lib/utils";
 import { FACILITATOR } from "@/lib/ai/facilitator";
 import { getWorkshopColor } from "@/lib/workshop/workshop-appearance";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
   useCanvasStore,
@@ -990,10 +981,8 @@ export function StepContainer({
     null,
   );
   const [step10MessageCount, setStep10MessageCount] = React.useState(0);
-  // Validation flow (UI-driven Step 10): resolved output type drives the app_digital
-  // reveal of the Journey Map + V0 tools; plan count gates workshop completion.
-  const [validateOutputType, setValidateOutputType] =
-    React.useState<OutputType | null>(null);
+  // Validation flow (UI-driven Step 10): plan count gates workshop completion. The build/run
+  // tools (Journey Map → V0, fake-door) live behind the per-artifact CTA inside ValidatePanel.
   const [validatePlanCount, setValidatePlanCount] = React.useState(0);
 
   // V0 prototype creation status (polling from journey map)
@@ -1013,14 +1002,11 @@ export function StepContainer({
     router.replace(`/workshop/${sessionId}/step/challenge${qs ? `?${qs}` : ''}`, { scroll: false });
   }, [isTeamModeStepOne, searchParams, router, sessionId]);
 
+  // Status only drives the "prototype ready" toast now; the result detail card moved off the
+  // Validate page (it lives on the results page / journey-mapper toolbar).
   const [v0Status, setV0Status] = React.useState<
     "idle" | "creating" | "ready" | "error"
   >(v0Creating ? "creating" : "idle");
-  const [v0Result, setV0Result] = React.useState<{
-    demoUrl: string;
-    editorUrl: string;
-    fileCount: number;
-  } | null>(null);
 
   // Workshop completion state — initialized from server-provided workshopStatus
   const [workshopCompleted, setWorkshopCompleted] = React.useState(
@@ -1141,11 +1127,6 @@ export function StepContainer({
         const data = await res.json();
         if (data.status === "ready") {
           setV0Status("ready");
-          setV0Result({
-            demoUrl: data.demoUrl,
-            editorUrl: data.editorUrl,
-            fileCount: data.fileCount,
-          });
           toast.success("v0 prototype created!", { duration: 5000 });
         } else if (data.status === "failed") {
           setV0Status("error");
@@ -1232,7 +1213,6 @@ export function StepContainer({
       // Clear Step 10 extraction + validation-flow state
       setStep10Artifact(null);
       hasAutoExtracted.current = false;
-      setValidateOutputType(null);
       setValidatePlanCount(0);
       // Clear ALL canvas/whiteboard state SYNCHRONOUSLY, before the ChatPanel
       // re-mounts via resetKey. This was previously deferred in a
@@ -1297,213 +1277,9 @@ export function StepContainer({
           workshopId={workshopId}
           sessionId={sessionId}
           journeyMapApproved={journeyMapApproved}
-          onOutputTypeChange={setValidateOutputType}
           onPlanCountChange={setValidatePlanCount}
         />
 
-        {/* app_digital only: reveal the existing Journey Map + V0 prototype tools */}
-        {validateOutputType === 'app_digital' && (
-        <div className="border-t border-border px-6 pb-6">
-          <div className="space-y-8 pt-6">
-            {/* Step 1: UX Journey Map — must be completed before prototype */}
-          <div className={cn(
-            "rounded-xl border-2 p-5 space-y-3",
-            journeyMapApproved
-              ? "border-green-500/30 bg-green-500/5"
-              : "border-primary/20 bg-primary/5",
-          )}>
-            <div className="flex items-center gap-3">
-              <div className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                journeyMapApproved ? "bg-green-500/10" : "bg-primary/10",
-              )}>
-                {journeyMapApproved ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 text-primary"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z" />
-                    <path d="M9 3v15" />
-                    <path d="M15 6v15" />
-                  </svg>
-                )}
-              </div>
-              <div>
-                <h3 className="text-base font-semibold">
-                  {journeyMapApproved ? "Journey Map Approved" : "UX Journey Map"}
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  {journeyMapApproved
-                    ? "Your journey map has been approved — prototype generation is unlocked"
-                    : "Review and approve your journey map before creating a prototype"}
-                </p>
-              </div>
-            </div>
-            {!journeyMapApproved && (
-              <p className="text-sm text-muted-foreground">
-                Your validated concepts are mapped onto user journey stages.
-                Approve the map to unlock prototype generation.
-              </p>
-            )}
-            <div className="flex items-center gap-3">
-              <a
-                href={`/workshop/${sessionId}/outputs/journey-map`}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors",
-                  journeyMapApproved
-                    ? "border hover:bg-muted"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90",
-                )}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z" />
-                  <path d="M9 3v15" />
-                  <path d="M15 6v15" />
-                </svg>
-                {journeyMapApproved ? "View Journey Map" : "Open Journey Map"}
-              </a>
-              {!journeyMapApproved && (
-                <span className="text-xs text-muted-foreground">
-                  Approve your map to enable prototyping
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Step 2: V0 Prototype — disabled until journey map is approved */}
-          <SynthesisBuildPackSection
-            workshopId={workshopId}
-            onGeneratePrd={() => setShowPrdDialog(true)}
-            workshopCompleted={workshopCompleted}
-            prototypeDisabled={!journeyMapApproved}
-          />
-
-          {/* V0 Prototype creation status */}
-          {v0Status === "creating" && (
-            <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-5 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <Loader2 className="h-5 w-5 text-primary animate-spin" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold">
-                    Creating Prototype
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Your v0 prototype is being built from your journey map...
-                  </p>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                This typically takes 30-60 seconds. You&apos;ll be notified when
-                it&apos;s ready.
-              </p>
-            </div>
-          )}
-
-          {v0Status === "ready" && v0Result && (
-            <div className="rounded-xl border-2 border-green-500/30 bg-green-500/5 p-5 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-500/10">
-                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold">Prototype Ready</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Your v0 prototype has been created successfully
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                {v0Result.editorUrl && (
-                  <a
-                    href={`${v0Result.editorUrl}${v0Result.editorUrl.includes("?") ? "&" : "?"}f=1`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-                  >
-                    <Rocket className="h-4 w-4" />
-                    View Prototype
-                  </a>
-                )}
-                {v0Result.editorUrl && (
-                  <a
-                    href={v0Result.editorUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Edit in v0
-                  </a>
-                )}
-                {v0Result.fileCount > 0 && (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <FileCode2 className="h-3.5 w-3.5" />
-                    {v0Result.fileCount} file
-                    {v0Result.fileCount !== 1 ? "s" : ""}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {v0Status === "error" && (
-            <div className="rounded-xl border-2 border-destructive/20 bg-destructive/5 p-5 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
-                  <Rocket className="h-5 w-5 text-destructive" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold">
-                    Prototype Creation Issue
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    The prototype is taking longer than expected or may have
-                    failed.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setV0Status("creating")}
-                  className="gap-1.5"
-                >
-                  <Loader2 className="h-3.5 w-3.5" />
-                  Keep Waiting
-                </Button>
-                <a
-                  href={`/workshop/${sessionId}/outputs/journey-map`}
-                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  Back to Journey Map
-                </a>
-              </div>
-            </div>
-          )}
-          </div>
-        </div>
-        )}
         <PrdViewerDialog
           open={showPrdDialog}
           onOpenChange={setShowPrdDialog}

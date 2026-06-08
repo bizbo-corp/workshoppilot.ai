@@ -24,12 +24,17 @@ const SYSTEM = `You classify the output of a design-thinking workshop into exact
 - service: a human-delivered or staged experience
 - process_change: an internal workflow, organizational, or policy change
 - offering: a business model, pricing, or go-to-market offer
+- experience_design: reworking an existing journey, flow, or page (e.g. a website or form redesign)
+- brand_comms: how the thing is named, framed, messaged, and positioned (branding / messaging)
+- campaign: a time-bound marketing, awareness, or advocacy campaign
 
-Pick the single best fit for the PRIMARY concept. Weight the concept most heavily, then the
-reframed challenge, then the original challenge. Set confidence honestly (0–1): below 0.6 means
-"best guess, please confirm". Keep the rationale to one short sentence.
+The brief may list SEVERAL components/parts (features, screens) — they are parts of ONE solution.
+Classify the WHOLE solution, picking the single best fit for what it primarily IS. Weight the
+solution most heavily, then the reframed challenge, then the original challenge. Set confidence
+honestly (0–1): below 0.6 means "best guess, please confirm". Keep the rationale to one short
+sentence.
 
-Classify the CONCEPT (the thing being built or offered) — NOT the workshop's own tools. Journey
+Classify the SOLUTION (the thing being built or offered) — NOT the workshop's own tools. Journey
 maps, personas and HMW statements are design-thinking artifacts used during the workshop, not the
 output type.`;
 
@@ -45,7 +50,7 @@ export async function classifyOutputType(workshopId: string): Promise<{
     model: google('gemini-2.5-flash-lite'),
     schema: classifierSchema,
     system: SYSTEM,
-    prompt: `${brief}\n\nClassify the output type of the concept being validated.`,
+    prompt: `${brief}\n\nClassify the output type of the solution being validated.`,
     temperature: 0.1,
   });
 

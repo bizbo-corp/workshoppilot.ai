@@ -16,8 +16,10 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 export function ValidationPlanSummary({ plan }: { plan: ValidationPlan }) {
   return (
     <dl className="space-y-1.5">
-      <Row label="Concept">{plan.conceptName}</Row>
-      <Row label="Output type">{OUTPUT_TYPE_LABELS[plan.outputType]}</Row>
+      <Row label="Solution">{plan.conceptName}</Row>
+      <Row label="Output type">
+        {(plan.outputTypes ?? [plan.outputType]).map((t) => OUTPUT_TYPE_LABELS[t]).join(' + ')}
+      </Row>
       <Row label="Assumption">
         <span className="italic">“{plan.assumption}”</span>
       </Row>

@@ -8,9 +8,13 @@ import { VERDICT_LABELS, nextStepNudge } from '@/lib/validation/score';
 
 function planSection(plan: ValidationPlan): string {
   const lines: string[] = [];
-  lines.push(`## ${plan.conceptName}`);
+  lines.push(`## ${plan.conceptName} — ${LENS_LABELS[plan.lens]}`);
   lines.push('');
-  lines.push(`- **Output type:** ${OUTPUT_TYPE_LABELS[plan.outputType]}`);
+  lines.push(
+    `- **Output type:** ${(plan.outputTypes ?? [plan.outputType])
+      .map((t) => OUTPUT_TYPE_LABELS[t])
+      .join(' + ')}`
+  );
   lines.push(`- **Riskiest assumption:** ${plan.assumption}`);
   lines.push(`- **Lens:** ${LENS_LABELS[plan.lens]}`);
   lines.push(`- **Test:** ${plan.artifactLabel}`);

@@ -104,7 +104,10 @@ export async function loadValidationBrief(workshopId: string): Promise<Validatio
   // assembleStepContext injects a sentinel string when no summaries exist — ignore it.
   const summaries =
     stepCtx.summaries && !stepCtx.summaries.startsWith('⚠️') ? stepCtx.summaries : '';
-  const concept = conceptSubject(artifacts);
+  // The workshop's concepts are PARTS of ONE solution, not competing products. We validate the
+  // whole solution, so the brief lists every component and tells the model to reason over the sum.
+  const components = getConceptCards(artifacts).filter((c) => c.name || c.elevatorPitch);
+  const primary = components[0] ?? null;
 
   const lines: string[] = [];
   if (ctx.originalIdea) lines.push(`THE ORIGINAL IDEA / SPARK:\n- ${ctx.originalIdea}`);
@@ -112,13 +115,16 @@ export async function loadValidationBrief(workshopId: string): Promise<Validatio
   if (ctx.problemStatement) lines.push(`THE PROBLEM:\n- ${ctx.problemStatement}`);
   if (ctx.reframedHmw) lines.push(`REFRAMED CHALLENGE:\n- ${ctx.reframedHmw}`);
 
-  lines.push('\nTHE CONCEPT BEING VALIDATED (the thing under test — this is the subject):');
-  if (concept.hasConcept) {
-    lines.push(`- Name: ${concept.name ?? 'Untitled concept'}`);
-    if (concept.pitch) lines.push(`- What it is: ${concept.pitch}`);
-    if (concept.usp) lines.push(`- What makes it different: ${concept.usp}`);
+  lines.push(
+    '\nTHE SOLUTION BEING VALIDATED (ONE solution — the items below are its parts/components, e.g. features or screens; reason about the WHOLE solution, never a single part):'
+  );
+  if (components.length > 0) {
+    for (const c of components) {
+      const detail = [c.elevatorPitch, c.usp].filter(Boolean).join(' — ');
+      lines.push(`- ${c.name ?? 'Untitled component'}${detail ? `: ${detail}` : ''}`);
+    }
   } else {
-    lines.push('- Infer the concept from the workshop summary below.');
+    lines.push('- Infer the solution from the workshop summary below.');
   }
 
   if (summaries) {
@@ -129,7 +135,7 @@ export async function loadValidationBrief(workshopId: string): Promise<Validatio
 
   return {
     brief: lines.join('\n'),
-    conceptName: concept.name,
-    hasContent: !!(concept.hasConcept || summaries || ctx.originalIdea),
+    conceptName: primary?.name ?? null,
+    hasContent: !!(components.length > 0 || summaries || ctx.originalIdea),
   };
 }

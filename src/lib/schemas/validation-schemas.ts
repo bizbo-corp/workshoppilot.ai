@@ -22,6 +22,9 @@ export const outputTypeSchema = z.enum([
   'service', // human-delivered or staged experience
   'process_change', // internal workflow / org / policy change
   'offering', // business model / pricing / go-to-market offer
+  'experience_design', // reworking an existing journey / flow / page (e.g. website or form redesign)
+  'brand_comms', // how the thing is named, framed, messaged, and positioned
+  'campaign', // a time-bound marketing / awareness / advocacy campaign
 ]);
 export type OutputType = z.infer<typeof outputTypeSchema>;
 
@@ -112,7 +115,13 @@ export const validationPlanSchema = z.object({
     .string()
     .optional()
     .describe('ideaSource of the concept in the concept artifact, if known'),
-  outputType: outputTypeSchema.describe('Resolved output type (user override wins)'),
+  outputType: outputTypeSchema.describe('Primary resolved output type (drives the recommended test)'),
+  outputTypes: z
+    .array(outputTypeSchema)
+    .min(1)
+    .max(2)
+    .optional()
+    .describe('Up to two output types (primary first); the concept may combine two'),
   assumption: z.string().describe('The riskiest assumption, as a falsifiable belief'),
   assumptionAlternatives: z
     .array(z.string())
