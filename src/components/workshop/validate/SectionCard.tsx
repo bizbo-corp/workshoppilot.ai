@@ -40,17 +40,17 @@ export function SectionCard({
       <div className="flex items-center gap-3">
         <span
           className={cn(
-            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base font-semibold',
             status === 'done'
               ? 'bg-primary text-primary-foreground'
               : status === 'active'
                 ? 'bg-primary/15 text-primary'
-                : 'bg-muted text-muted-foreground'
+                : 'bg-muted text-foreground/70'
           )}
         >
           {status === 'done' ? <Check className="h-4 w-4" /> : index}
         </span>
-        <h3 className="flex-1 text-sm font-semibold">{title}</h3>
+        <h3 className="flex-1 text-xl font-semibold tracking-tight">{title}</h3>
         {status === 'done' && onEdit && (
           <Button variant="ghost" size="xs" onClick={onEdit} className="gap-1">
             <Pencil className="h-3 w-3" />
@@ -60,7 +60,7 @@ export function SectionCard({
       </div>
 
       {status === 'done' && summary != null && (
-        <div className="mt-3 pl-10 text-sm text-muted-foreground">{summary}</div>
+        <div className="mt-3 pl-10 text-base text-foreground/70">{summary}</div>
       )}
 
       {status === 'active' && children != null && (

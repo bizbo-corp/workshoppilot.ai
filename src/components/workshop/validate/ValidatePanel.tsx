@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, Plus, FileDown, Rocket } from 'lucide-react';
+import { Loader2, Plus, FileDown, Rocket, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { createPrefixedId } from '@/lib/ids';
@@ -20,7 +20,7 @@ import type {
   Signal,
   ValidationPlan,
 } from '@/lib/schemas';
-import { findArtifactByKey, type ArtifactOption } from '@/lib/validation/artifact-lookup';
+import { findArtifactByKey, LENS_LABELS, type ArtifactOption } from '@/lib/validation/artifact-lookup';
 import { ProgressRail } from './ProgressRail';
 import { DetectOutputTypeCard } from './DetectOutputTypeCard';
 import { ProposeAssumptionCard } from './ProposeAssumptionCard';
@@ -35,13 +35,21 @@ import { SECTION_ORDER, sectionStatus, type SectionStatus } from './sections';
 
 const now = () => new Date().toISOString();
 
-function makeDraft(concept: WorkshopConcept | undefined, outputType: OutputType): ValidationPlan {
+// One solution per workshop: a single concept keeps its name; multiple parts roll up to one
+// "Your solution" so the whole thing is validated as a unit, not concept-by-concept.
+function solutionLabel(concepts: { name: string }[]): string {
+  if (concepts.length === 1 && concepts[0].name) return concepts[0].name;
+  return 'Your solution';
+}
+
+function makeDraft(solutionName: string, outputType: OutputType): ValidationPlan {
   const ts = now();
   return {
     id: createPrefixedId('vpl'),
-    conceptName: concept?.name || 'Primary concept',
-    conceptRef: concept?.ideaSource || undefined,
+    conceptName: solutionName || 'Your solution',
+    conceptRef: undefined,
     outputType,
+    outputTypes: [outputType],
     assumption: '',
     assumptionAlternatives: [],
     lens: 'desirability',
@@ -59,15 +67,16 @@ export interface ValidatePanelProps {
   workshopId: string;
   sessionId: string;
   journeyMapApproved?: boolean;
-  /** Reports the resolved output type of the active plan (drives the app_digital reveal). */
-  onOutputTypeChange?: (type: OutputType | null) => void;
+  /** Reports the active plan's output types (drives the app_digital reveal). */
+  onOutputTypesChange?: (types: OutputType[]) => void;
   /** Reports the number of completed plans (drives workshop-completion gating). */
   onPlanCountChange?: (count: number) => void;
 }
 
 export function ValidatePanel({
   workshopId,
-  onOutputTypeChange,
+  sessionId,
+  onOutputTypesChange,
   onPlanCountChange,
 }: ValidatePanelProps) {
   const [loading, setLoading] = React.useState(true);
@@ -102,6 +111,9 @@ export function ValidatePanel({
   const completedPlans = plans.filter(
     (p) => p.progressStep === 'complete' && p.id !== activeId
   );
+  const activeTypes = activePlan
+    ? activePlan.outputTypes ?? [activePlan.outputType]
+    : [];
 
   // ---- Initial load / resume ----
   React.useEffect(() => {
@@ -127,8 +139,8 @@ export function ValidatePanel({
         setPlans(validationPlans);
         setActiveId(null);
       } else {
-        // Fresh start: seed the first draft for the primary concept.
-        const draft = makeDraft(cs[0], cls?.type ?? 'app_digital');
+        // Fresh start: seed ONE solution-level draft (concepts are its parts, not separate tests).
+        const draft = makeDraft(solutionLabel(cs), cls?.type ?? 'app_digital');
         setPlans([draft]);
         setActiveId(draft.id);
       }
@@ -139,10 +151,11 @@ export function ValidatePanel({
     };
   }, [workshopId]);
 
-  // Report resolved output type + completed count upward.
+  // Report resolved output types + completed count upward.
+  const activeTypesKey = activeTypes.join(',');
   React.useEffect(() => {
-    onOutputTypeChange?.(activePlan?.outputType ?? classification?.type ?? null);
-  }, [activePlan?.outputType, classification?.type, onOutputTypeChange]);
+    onOutputTypesChange?.(activeTypesKey ? (activeTypesKey.split(',') as OutputType[]) : []);
+  }, [activeTypesKey, onOutputTypesChange]);
 
   const completedCount = plans.filter((p) => p.progressStep === 'complete').length;
   React.useEffect(() => {
@@ -180,7 +193,7 @@ export function ValidatePanel({
       const data = await r.json();
       if (!r.ok) throw new Error(data?.error || 'Classification failed');
       setClassification(data.classification);
-      patchActive({ outputType: data.classification.type });
+      patchActive({ outputType: data.classification.type, outputTypes: [data.classification.type] });
     } catch (e) {
       setClassifyError(e instanceof Error ? e.message : 'Classification failed');
     } finally {
@@ -201,45 +214,60 @@ export function ValidatePanel({
     }
   }, [activePlan?.progressStep, classification, isClassifying, runClassify]);
 
-  const selectType = (type: OutputType) => {
-    if (activePlan?.outputType === type) return; // no change
-    const next: OutputTypeClassification = {
-      type,
-      confidence: 1,
+  // Toggle an output type on/off (max 2; first = primary). When the set changes, the
+  // assumption auto-updates to match: we clear the stale one and regenerate it in place for
+  // the new types (passing them directly so it never races on stale state).
+  const toggleType = (type: OutputType) => {
+    if (!activePlan) return;
+    const current = activePlan.outputTypes ?? [activePlan.outputType];
+    let nextTypes: OutputType[];
+    if (current.includes(type)) {
+      nextTypes = current.filter((t) => t !== type);
+      if (nextTypes.length === 0) return; // keep at least one
+    } else {
+      if (current.length >= 2) return; // max 2
+      nextTypes = [...current, type];
+    }
+    const primary = nextTypes[0];
+    const hadAssumption = !!activePlan.assumption;
+
+    const cls: OutputTypeClassification = {
+      type: primary,
+      confidence: classification?.confidence ?? 1,
       rationale: classification?.rationale ?? '',
       source: 'user_override',
       classifiedAt: now(),
     };
-    setClassification(next);
-    void saveClassification(workshopId, next);
-    setAssumptionMeta(null);
+    setClassification(cls);
+    void saveClassification(workshopId, cls);
 
-    // Changing the output type invalidates everything downstream that depends on it.
-    // Clear the assumption + artifact and rewind to the assumption step so it regenerates
-    // (the auto-propose effect re-fires once progressStep is back on 'assumption').
-    proposeTriggered.current = false;
-    setPlans((prev) =>
-      prev.map((p) => {
-        if (p.id !== activeId) return p;
-        const pastDetect =
-          SECTION_ORDER.indexOf(p.progressStep) > SECTION_ORDER.indexOf('detect');
-        return {
-          ...p,
-          outputType: type,
-          assumption: '',
-          assumptionAlternatives: [],
-          artifactType: '',
-          artifactLabel: '',
-          progressStep: pastDetect ? 'assumption' : p.progressStep,
-          updatedAt: now(),
-        };
-      })
-    );
+    const nextPlan: ValidationPlan = {
+      ...activePlan,
+      outputType: primary,
+      outputTypes: nextTypes,
+      // Clear the now-stale assumption + artifact so nothing persists out of sync.
+      assumption: '',
+      assumptionAlternatives: [],
+      artifactType: '',
+      artifactLabel: '',
+      updatedAt: now(),
+    };
+    setPlans((prev) => prev.map((p) => (p.id === activeId ? nextPlan : p)));
+    void persist(nextPlan);
+
+    setAssumptionMeta(null);
+    // Auto-regenerate the assumption for the new output set if one already existed.
+    if (hadAssumption) {
+      proposeTriggered.current = true; // we are generating explicitly; don't double-fire
+      void runPropose(undefined, assumptionScope, nextTypes);
+    } else {
+      proposeTriggered.current = false; // let the auto-propose effect handle first generation
+    }
   };
 
   // ---- Assumption ----
   const runPropose = React.useCallback(
-    async (avoid?: string, scopeOverride?: 'broad' | 'specific') => {
+    async (avoid?: string, scopeOverride?: 'broad' | 'specific', typesOverride?: OutputType[]) => {
       if (!activePlan) return;
       setIsProposing(true);
       setProposeError(null);
@@ -249,7 +277,7 @@ export function ValidatePanel({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             workshopId,
-            outputType: activePlan.outputType,
+            outputTypes: typesOverride ?? activePlan.outputTypes ?? [activePlan.outputType],
             scope: scopeOverride ?? assumptionScope,
             avoid,
           }),
@@ -316,15 +344,27 @@ export function ValidatePanel({
     return natural === 'locked' ? 'locked' : 'done';
   };
 
-  const startNextConcept = () => {
-    const usedRefs = new Set(plans.map((p) => p.conceptRef ?? p.conceptName));
-    const nextConcept = concepts.find((c) => !usedRefs.has(c.ideaSource || c.name)) ?? concepts[0];
-    const draft = makeDraft(nextConcept, classification?.type ?? 'app_digital');
-    setClassification(null);
-    classifyTriggered.current = false;
-    proposeTriggered.current = false;
+  // Test ANOTHER risk of the SAME solution (not another concept). Reuses the solution's output
+  // type, defaults to a not-yet-used lens, and starts at the assumption (Detect is already done).
+  const addAnotherTest = () => {
+    const base = activePlan ?? plans[plans.length - 1];
+    const types: OutputType[] =
+      base?.outputTypes ?? (base ? [base.outputType] : ['app_digital']);
+    const usedLenses = new Set(plans.map((p) => p.lens));
+    const nextLens =
+      (['feasibility', 'viability', 'desirability'] as Lens[]).find((l) => !usedLenses.has(l)) ??
+      'desirability';
+    const draft: ValidationPlan = {
+      ...makeDraft(solutionLabel(concepts), types[0]),
+      outputTypes: types,
+      lens: nextLens,
+      progressStep: 'assumption',
+    };
+    proposeTriggered.current = false; // let the auto-propose effect generate a fresh assumption
+    setEditingSection(null);
     setPlans((prev) => [...prev, draft]);
     setActiveId(draft.id);
+    void persist(draft);
   };
 
   const record = async (planId: string, actual: number, notes?: string) => {
@@ -362,7 +402,7 @@ export function ValidatePanel({
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Loader2 className="h-6 w-6 animate-spin text-foreground/70" />
       </div>
     );
   }
@@ -371,18 +411,27 @@ export function ValidatePanel({
   const selectedArtifact: ArtifactOption | undefined = activePlan
     ? findArtifactByKey(activePlan.artifactType)
     : undefined;
+  const builderCta = activePlan ? artifactBuilderCta(activePlan, sessionId) : null;
 
   return (
     <div className="flex flex-col">
       <div className="space-y-6 p-6">
         <header className="space-y-3">
           <div>
-            <h2 className="text-lg font-semibold">Validate your concept</h2>
-            <p className="text-sm text-muted-foreground">
-              Design thinking validates an assumption about a human need — not the thing itself.
-              Let&apos;s find the cheapest way to test yours.
+            <h2 className="font-serif text-3xl leading-[1.1] tracking-tight text-foreground">
+              Validate your idea
+            </h2>
+            <p className="text-base text-foreground/70">
+              Design thinking validates one assumption about a human need — not each piece. We&apos;ll
+              test your whole solution with the cheapest experiment.
             </p>
           </div>
+          {concepts.length > 1 && (
+            <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-sm text-foreground/70">
+              <span className="font-medium text-foreground">Your solution combines:</span>{' '}
+              {concepts.map((c) => c.name).join(' · ')}
+            </p>
+          )}
           {activePlan && <ProgressRail progress={activePlan.progressStep} />}
         </header>
 
@@ -391,12 +440,16 @@ export function ValidatePanel({
             <DetectOutputTypeCard
               status={statusFor('detect')}
               classification={classification}
+              selectedTypes={activeTypes}
               isClassifying={isClassifying}
               error={classifyError}
               onRetry={runClassify}
-              onSelectType={selectType}
+              onToggleType={toggleType}
               onContinue={() =>
-                commitSection('detect', { outputType: classification?.type ?? activePlan.outputType })
+                commitSection('detect', {
+                  outputType: activePlan.outputType,
+                  outputTypes: activeTypes,
+                })
               }
               onEdit={() => setEditingSection('detect')}
             />
@@ -463,29 +516,47 @@ export function ValidatePanel({
         {assembled && activePlan && (
           <div className="space-y-4 rounded-xl border-2 border-primary/20 bg-primary/5 p-5">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-base font-semibold">Your validation plan is ready</h3>
+              <h3 className="text-lg font-semibold">Your validation plan is ready</h3>
             </div>
             <ValidationPlanSummary plan={activePlan} />
+
+            {/* ① Build & run the test — the primary next action, artifact-specific. */}
+            {builderCta && (
+              <a
+                href={builderCta.href}
+                className="group block rounded-xl border-2 border-primary/30 bg-primary/10 p-4 transition-colors hover:bg-primary/15"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <p className="text-base font-semibold">Build &amp; run your test</p>
+                    <p className="text-sm text-foreground/70">{builderCta.blurb}</p>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-4 py-2.5 text-base font-medium text-primary-foreground transition-transform group-hover:translate-x-0.5">
+                    {builderCta.label}
+                    <ArrowRight className="h-4 w-4" />
+                  </span>
+                </div>
+              </a>
+            )}
 
             {selectedArtifact?.generatesConceptCard ? (
               <ConceptCardArtifact
                 plan={activePlan}
                 context={{
                   problem: reframedStatement || problemStatement,
-                  elevatorPitch:
-                    concepts.find((c) => (c.ideaSource || c.name) === (activePlan.conceptRef || activePlan.conceptName))
-                      ?.elevatorPitch ?? '',
-                  usp:
-                    concepts.find((c) => (c.ideaSource || c.name) === (activePlan.conceptRef || activePlan.conceptName))
-                      ?.usp ?? '',
+                  elevatorPitch: concepts[0]?.elevatorPitch ?? '',
+                  usp: concepts[0]?.usp ?? '',
                 }}
               />
-            ) : activePlan.outputType === 'app_digital' ? (
-              <p className="rounded-lg border border-dashed border-border bg-background p-3 text-sm text-muted-foreground">
-                Prototype &amp; journey-map tools are available below.
-              </p>
-            ) : (
+            ) : !builderCta ? (
               <ArtifactChecklist plan={activePlan} />
+            ) : null}
+
+            {/* ② Record the result — deferred; you can only log it after running the test. */}
+            {builderCta && (
+              <p className="border-t border-border/60 pt-3 text-sm text-foreground/70">
+                Run your test, then come back and log what happened below.
+              </p>
             )}
 
             <RecordResultsCard
@@ -510,10 +581,10 @@ export function ValidatePanel({
                 )}
                 Add to Build Pack
               </Button>
-              {concepts.length > 1 && (
-                <Button variant="ghost" size="sm" className="gap-1.5" onClick={startNextConcept}>
+              {plans.length < 3 && (
+                <Button variant="ghost" size="sm" className="gap-1.5" onClick={addAnotherTest}>
                   <Plus className="h-3.5 w-3.5" />
-                  Validate the next one
+                  Test another assumption
                 </Button>
               )}
             </div>
@@ -523,15 +594,15 @@ export function ValidatePanel({
         {/* Previously completed plans */}
         {completedPlans.length > 0 && (
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground">
-              Other validation plans
+            <h3 className="text-base font-semibold text-foreground/70">
+              Other assumptions you&apos;ve tested
             </h3>
             {completedPlans.map((plan) => (
               <div key={plan.id} className="space-y-3 rounded-xl border bg-card p-5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium">{plan.conceptName}</span>
+                  <span className="text-base font-medium">{LENS_LABELS[plan.lens]} risk</span>
                   {plan.result && (
-                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 text-sm text-foreground/70">
                       <Rocket className="h-3 w-3" /> score {plan.result.score}
                     </span>
                   )}
@@ -549,6 +620,33 @@ export function ValidatePanel({
   );
 }
 
+/**
+ * The primary "go build & run this test" action for the chosen artifact, if it has a dedicated
+ * builder page. Prototype tests route to the journey map → V0 flow; fake-door tests to the
+ * landing-page generator. Other artifacts fall back to the static checklist.
+ */
+function artifactBuilderCta(
+  plan: ValidationPlan,
+  sessionId: string
+): { label: string; href: string; blurb: string } | null {
+  const art = findArtifactByKey(plan.artifactType);
+  if (art?.revealsPrototype) {
+    return {
+      label: 'Create your prototype',
+      href: `/workshop/${sessionId}/outputs/journey-map`,
+      blurb: 'Map the journey, then generate a clickable prototype to put in front of users.',
+    };
+  }
+  if (plan.artifactType === 'fake_door_smoke_test') {
+    return {
+      label: 'Build your fake-door page',
+      href: `/workshop/${sessionId}/outputs/fake-door`,
+      blurb: 'Stand up a landing page with one call-to-action to measure real demand.',
+    };
+  }
+  return null;
+}
+
 /** Sensible default metric phrasing per output type. */
 function defaultMetricFor(type: OutputType): string {
   switch (type) {
@@ -560,6 +658,12 @@ function defaultMetricFor(type: OutputType): string {
       return 'People who would buy / pre-order it';
     case 'offering':
       return 'Target buyers who committed';
+    case 'experience_design':
+      return 'Users who complete the task on the redesign';
+    case 'brand_comms':
+      return 'People who understood and acted on the message';
+    case 'campaign':
+      return 'People who took the campaign’s target action';
     case 'app_digital':
     default:
       return 'Users who took the key action';

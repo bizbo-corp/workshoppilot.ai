@@ -372,15 +372,15 @@ export function StepNavigation({
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         ) : isLastStep && workshopCompleted ? (
-          /* Workshop already completed — show non-interactive badge */
+          /* Workshop completed — route to the Build Pack */
           <Button
-            variant="outline"
+            onClick={() => router.push(`/workshop/${sessionId}/results`)}
             size="lg"
-            disabled
-            className="text-olive-700 dark:text-olive-400 border-olive-500/40 bg-olive-500/10 cursor-default"
+            className="btn-shimmer"
           >
             <CheckCircle2 className="mr-2 h-4 w-4" />
-            Workshop Complete
+            View Build Pack
+            <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         ) : isLastStep && canCompleteWorkshop ? (
           /* Extraction done, workshop not yet completed */

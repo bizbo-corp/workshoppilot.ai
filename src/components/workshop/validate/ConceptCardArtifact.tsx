@@ -24,7 +24,7 @@ export function ConceptCardArtifact({
   return (
     <div className="rounded-xl border bg-card p-5">
       <div className="mb-4 flex items-center justify-between">
-        <h4 className="text-sm font-semibold">Concept card</h4>
+        <h4 className="text-base font-semibold">Concept card</h4>
         <Button
           variant="outline"
           size="xs"
@@ -38,10 +38,10 @@ export function ConceptCardArtifact({
 
       <div className="concept-card space-y-4 rounded-lg border border-border bg-background p-5">
         <header>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Concept</p>
-          <h3 className="text-lg font-bold">{plan.conceptName}</h3>
+          <p className="text-sm uppercase tracking-wide text-foreground/70">Concept</p>
+          <h3 className="text-xl font-bold">{plan.conceptName}</h3>
           {context.elevatorPitch && (
-            <p className="mt-1 text-sm text-muted-foreground">{context.elevatorPitch}</p>
+            <p className="mt-1 text-base text-foreground/70">{context.elevatorPitch}</p>
           )}
         </header>
 
@@ -69,10 +69,10 @@ export function ConceptCardArtifact({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="text-sm font-semibold uppercase tracking-wide text-foreground/70">
         {label}
       </p>
-      <div className="mt-0.5 text-sm text-foreground">{children}</div>
+      <div className="mt-0.5 text-base text-foreground">{children}</div>
     </div>
   );
 }

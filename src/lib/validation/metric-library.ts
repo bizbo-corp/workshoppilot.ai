@@ -76,6 +76,24 @@ const LIBRARY: Record<OutputType, MetricOption[]> = {
     { key: 'presale', label: 'buyers who pre-pay / pre-order', category: 'behaviour', proxyStrength: 'strong', ...C(15, 3, 1) },
     { key: 'value_prop_resonates', label: 'buyers who say the value prop fits their need', category: 'attitude', proxyStrength: 'medium', ...C(10, 7, 3) },
   ],
+  experience_design: [
+    { key: 'complete_task_redesign', label: 'users who complete the task on the redesign', category: 'behaviour', proxyStrength: 'strong', ...C(10, 7, 3) },
+    { key: 'complete_unaided', label: 'users who finish without help or errors', category: 'behaviour', proxyStrength: 'strong', ...C(10, 7, 3) },
+    { key: 'prefer_redesign', label: 'users who prefer the redesign to the current version', category: 'attitude', proxyStrength: 'medium', ...C(10, 7, 3) },
+    { key: 'task_success_rate', label: 'task success rate on the redesign', category: 'behaviour', proxyStrength: 'medium', ...P(30, 70, 40) },
+  ],
+  brand_comms: [
+    { key: 'understood_message', label: 'people who correctly understand the message', category: 'behaviour', proxyStrength: 'strong', ...C(10, 7, 3) },
+    { key: 'message_resonates', label: 'people who say the messaging/positioning fits them', category: 'attitude', proxyStrength: 'medium', ...C(10, 7, 3) },
+    { key: 'prefer_new_message', label: 'people who prefer the new messaging to the current', category: 'attitude', proxyStrength: 'medium', ...C(10, 6, 2) },
+    { key: 'took_action_msg', label: 'people who take the intended action after seeing it', category: 'behaviour', proxyStrength: 'strong', ...P(50, 12, 2) },
+  ],
+  campaign: [
+    { key: 'engaged_campaign', label: 'people who engage with the campaign (click/share)', category: 'behaviour', proxyStrength: 'medium', ...P(50, 12, 2) },
+    { key: 'campaign_action', label: 'people who take the campaign’s target action', category: 'behaviour', proxyStrength: 'strong', ...P(50, 10, 2) },
+    { key: 'recall_campaign', label: 'people who recall the campaign message', category: 'attitude', proxyStrength: 'medium', ...C(10, 7, 3) },
+    { key: 'would_share', label: 'people who would share it with others', category: 'attitude', proxyStrength: 'medium', ...C(10, 6, 2) },
+  ],
 };
 
 export function getMetricOptions(outputType: OutputType): MetricOption[] {

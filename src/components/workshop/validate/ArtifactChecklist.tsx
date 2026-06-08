@@ -101,11 +101,11 @@ export function ArtifactChecklist({ plan }: { plan: ValidationPlan }) {
 
   return (
     <div className="rounded-xl border bg-card p-5">
-      <h4 className="text-sm font-semibold">{plan.artifactLabel}</h4>
-      <p className="mt-1 text-sm text-muted-foreground">How to run this test:</p>
+      <h4 className="text-base font-semibold">{plan.artifactLabel}</h4>
+      <p className="mt-1 text-base text-foreground/70">How to run this test:</p>
       <ol className="mt-3 space-y-2">
         {steps.map((step, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm">
+          <li key={i} className="flex items-start gap-2 text-base">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary/60" />
             <span>{step}</span>
           </li>

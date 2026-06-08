@@ -5,8 +5,8 @@ import { OUTPUT_TYPE_LABELS, LENS_LABELS } from '@/lib/validation/artifact-looku
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[7rem_1fr] gap-2 text-sm">
-      <dt className="text-muted-foreground">{label}</dt>
+    <div className="grid grid-cols-[7rem_1fr] gap-2 text-base">
+      <dt className="text-foreground/70">{label}</dt>
       <dd className="text-foreground">{children}</dd>
     </div>
   );
@@ -16,8 +16,10 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 export function ValidationPlanSummary({ plan }: { plan: ValidationPlan }) {
   return (
     <dl className="space-y-1.5">
-      <Row label="Concept">{plan.conceptName}</Row>
-      <Row label="Output type">{OUTPUT_TYPE_LABELS[plan.outputType]}</Row>
+      <Row label="Solution">{plan.conceptName}</Row>
+      <Row label="Output type">
+        {(plan.outputTypes ?? [plan.outputType]).map((t) => OUTPUT_TYPE_LABELS[t]).join(' + ')}
+      </Row>
       <Row label="Assumption">
         <span className="italic">“{plan.assumption}”</span>
       </Row>

@@ -30,17 +30,24 @@ export async function POST(req: Request) {
   if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
   try {
-    const { workshopId, outputType, avoid, scope } = await req.json();
+    const { workshopId, outputType, outputTypes, avoid, scope } = await req.json();
     if (!workshopId) return json({ error: 'workshopId is required' }, 400);
 
-    const parsedType = outputTypeSchema.safeParse(outputType);
-    if (!parsedType.success) return json({ error: 'Valid outputType is required' }, 400);
+    // Accept an array (max 2) or fall back to a single outputType.
+    const rawTypes = Array.isArray(outputTypes) ? outputTypes : [outputType];
+    const parsedTypes = rawTypes
+      .flatMap((t) => {
+        const r = outputTypeSchema.safeParse(t);
+        return r.success ? [r.data] : [];
+      })
+      .slice(0, 2);
+    if (parsedTypes.length === 0) return json({ error: 'Valid outputType is required' }, 400);
 
     if (!(await resolveValidateAccess(workshopId))) return json({ error: 'Access denied' }, 403);
 
     const result = await proposeAssumption(
       workshopId,
-      parsedType.data,
+      parsedTypes,
       scope === 'specific' ? 'specific' : 'broad',
       typeof avoid === 'string' ? avoid : undefined
     );
