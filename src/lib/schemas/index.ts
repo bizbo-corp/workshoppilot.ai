@@ -21,6 +21,18 @@ export {
   validateArtifactSchema,
 } from './step-schemas';
 
+// Re-export validation-planning schemas (Step 10 UI flow)
+export {
+  outputTypeSchema,
+  lensSchema,
+  verdictSchema,
+  progressStepSchema,
+  outputTypeClassificationSchema,
+  signalSchema,
+  validationResultSchema,
+  validationPlanSchema,
+} from './validation-schemas';
+
 // Re-export all types
 export type {
   ChallengeArtifact,
@@ -34,6 +46,17 @@ export type {
   ConceptArtifact,
   ValidateArtifact,
 } from './step-schemas';
+
+export type {
+  OutputType,
+  Lens,
+  Verdict,
+  ProgressStep,
+  OutputTypeClassification,
+  Signal,
+  ValidationResult,
+  ValidationPlan,
+} from './validation-schemas';
 
 import {
   challengeArtifactSchema,

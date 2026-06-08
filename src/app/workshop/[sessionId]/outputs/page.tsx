@@ -28,6 +28,7 @@ function getDeliverableType(title: string): string {
   if (title.startsWith('Journey Map:')) return 'journey-map';
   if (title.startsWith('Feature Prioritization:')) return 'feature-prioritization';
   if (title.startsWith('Presentation:')) return 'stakeholder-ppt';
+  if (title.startsWith('Validation Plan')) return 'validation-plan';
   return 'other';
 }
 

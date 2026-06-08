@@ -10,6 +10,8 @@ import { ParticipantChatPanel } from "./participant-chat-panel";
 import { RightPanel } from "./right-panel";
 import { WorkshopSetup } from "./setup/workshop-setup";
 import { SynthesisBuildPackSection } from "./synthesis-summary-view";
+import { ValidatePanel } from "./validate/ValidatePanel";
+import type { OutputType } from "@/lib/schemas";
 import { MobileTabBar } from "./mobile-tab-bar";
 import { StepNavigation } from "./step-navigation";
 import { ResetStepDialog } from "@/components/dialogs/reset-step-dialog";
@@ -988,6 +990,11 @@ export function StepContainer({
     null,
   );
   const [step10MessageCount, setStep10MessageCount] = React.useState(0);
+  // Validation flow (UI-driven Step 10): resolved output type drives the app_digital
+  // reveal of the Journey Map + V0 tools; plan count gates workshop completion.
+  const [validateOutputType, setValidateOutputType] =
+    React.useState<OutputType | null>(null);
+  const [validatePlanCount, setValidatePlanCount] = React.useState(0);
 
   // V0 prototype creation status (polling from journey map)
   const searchParams = useSearchParams();
@@ -1222,9 +1229,11 @@ export function StepContainer({
       setAutoStartFired(false); // Allow auto-start to fire again after reset
       setConceptActivityStarted(false); // Reset concept activity gate (Step 9)
       broadcastRef.current?.({ type: 'STEP_RESET', stepSlug: step.id });
-      // Clear Step 10 extraction state
+      // Clear Step 10 extraction + validation-flow state
       setStep10Artifact(null);
       hasAutoExtracted.current = false;
+      setValidateOutputType(null);
+      setValidatePlanCount(0);
       // Clear ALL canvas/whiteboard state SYNCHRONOUSLY, before the ChatPanel
       // re-mounts via resetKey. This was previously deferred in a
       // requestAnimationFrame AFTER resetKey, which left a window where the canvas
@@ -1282,37 +1291,21 @@ export function StepContainer({
   // Synthesis summary (narrative, journey, confidence, next steps) lives on the results page
   const renderStep10Content = () => {
     return (
-      <div className="flex h-full flex-col overflow-y-auto p-6">
-        <div className="space-y-8">
-          {/* Extraction status banner — non-blocking */}
-          {isExtracting && (
-            <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-              <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
-              <p className="text-sm text-muted-foreground">
-                Generating synthesis summary...
-              </p>
-            </div>
-          )}
-          {extractionError && (
-            <div className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-              <p className="text-sm text-muted-foreground">
-                Summary generation failed — you can still generate your Build
-                Pack below.
-              </p>
-              <button
-                onClick={() => {
-                  hasAutoExtracted.current = false;
-                  setExtractionError(null);
-                  handleStep10Extract();
-                }}
-                className="shrink-0 rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
-              >
-                Retry
-              </button>
-            </div>
-          )}
+      <div className="flex h-full flex-col overflow-y-auto">
+        <ValidatePanel
+          key={`validate:${sessionId}:${resetKey}`}
+          workshopId={workshopId}
+          sessionId={sessionId}
+          journeyMapApproved={journeyMapApproved}
+          onOutputTypeChange={setValidateOutputType}
+          onPlanCountChange={setValidatePlanCount}
+        />
 
-          {/* Step 1: UX Journey Map — must be completed before prototype */}
+        {/* app_digital only: reveal the existing Journey Map + V0 prototype tools */}
+        {validateOutputType === 'app_digital' && (
+        <div className="border-t border-border px-6 pb-6">
+          <div className="space-y-8 pt-6">
+            {/* Step 1: UX Journey Map — must be completed before prototype */}
           <div className={cn(
             "rounded-xl border-2 p-5 space-y-3",
             journeyMapApproved
@@ -1508,7 +1501,9 @@ export function StepContainer({
               </div>
             </div>
           )}
+          </div>
         </div>
+        )}
         <PrdViewerDialog
           open={showPrdDialog}
           onOpenChange={setShowPrdDialog}
@@ -1702,7 +1697,7 @@ export function StepContainer({
             }
             isCompletingWorkshop={isCompletingWorkshop}
             workshopCompleted={workshopCompleted}
-            canCompleteWorkshop={step?.id === 'validate' && !!step10Artifact}
+            canCompleteWorkshop={step?.id === 'validate' && (validatePlanCount > 0 || !!step10Artifact)}
             onFlushCanvas={flushCanvasToDb}
             nextDisabledReason={nextDisabledReason}
             nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Next: Invite team' : undefined}
@@ -2012,7 +2007,7 @@ export function StepContainer({
             }
             isCompletingWorkshop={isCompletingWorkshop}
             workshopCompleted={workshopCompleted}
-            canCompleteWorkshop={step?.id === 'validate' && !!step10Artifact}
+            canCompleteWorkshop={step?.id === 'validate' && (validatePlanCount > 0 || !!step10Artifact)}
             onFlushCanvas={flushCanvasToDb}
             nextDisabledReason={nextDisabledReason}
             nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Next: Invite team' : undefined}

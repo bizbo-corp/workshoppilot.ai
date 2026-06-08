@@ -8,6 +8,7 @@
 import { extractStepArtifact, ExtractionError } from '@/lib/extraction';
 import { auth } from '@clerk/nextjs/server';
 import { saveStepArtifact } from '@/lib/context/save-artifact';
+import { updateValidateArtifact } from '@/lib/validation/save-validation';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { db } from '@/db/client';
 import { chatMessages, workshopSteps } from '@/db/schema';
@@ -128,8 +129,18 @@ export async function POST(req: Request) {
 
     const workshopStepId = workshopStepRows[0].id;
 
-    // Save artifact to database with validation
-    await saveStepArtifact(workshopStepId, stepId, result.artifact, '1.0', true);
+    // Save artifact to database with validation.
+    // The `validate` step artifact also holds the UI-driven validation plans +
+    // classification, so synthesis must be MERGED (read-modify-write) rather than
+    // full-replaced — saveStepArtifact would otherwise clobber the validation data.
+    if (stepId === 'validate') {
+      await updateValidateArtifact(workshopId, (current) => ({
+        ...current,
+        ...result.artifact,
+      }));
+    } else {
+      await saveStepArtifact(workshopStepId, stepId, result.artifact, '1.0', true);
+    }
 
     // Return success with extracted artifact
     return new Response(
