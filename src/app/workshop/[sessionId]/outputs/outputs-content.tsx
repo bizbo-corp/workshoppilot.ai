@@ -11,6 +11,7 @@ import {
   ListOrdered,
   Map as MapIcon,
   Rocket,
+  ClipboardCheck,
   ArrowRight,
   Loader2,
   Download,
@@ -129,6 +130,14 @@ const SECTIONS: Section[] = [
         generatable: false,
         navigateTo: 'step/validate',
         buttonLabel: 'Go to Validate',
+      },
+      {
+        type: 'validation-plan',
+        title: 'Validation Plan',
+        description:
+          'Your riskiest assumption, the cheapest valid test, and a pre-committed success signal — with a score once you record results.',
+        icon: <ClipboardCheck className="h-5 w-5" />,
+        generatable: true,
       },
     ],
   },
@@ -315,6 +324,7 @@ export function OutputsContent({
     if (type === 'journey-map') return handleGenerateJourneyMap;
     if (type === 'feature-prioritization') return handleGenerateFeaturePrioritization;
     if (type === 'stakeholder-ppt') return () => handleGeneratePresentation(false);
+    if (type === 'validation-plan') return () => router.push(`/workshop/${sessionId}/step/validate`);
     return undefined;
   }
 

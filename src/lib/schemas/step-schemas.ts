@@ -12,6 +12,10 @@
  */
 
 import { z } from 'zod';
+import {
+  outputTypeClassificationSchema,
+  validationPlanSchema,
+} from './validation-schemas';
 
 /**
  * Step 1: Challenge Definition
@@ -453,12 +457,24 @@ export const conceptArtifactSchema = z.object({
 export type ConceptArtifact = z.infer<typeof conceptArtifactSchema>;
 
 /**
- * Step 10: Validate & Synthesis
- * Dual-format synthesis: narrative + structured summary with confidence assessment
+ * Step 10: Validate (schema v2)
+ *
+ * Holds TWO independent sub-trees in one artifact (the step_artifacts row is UNIQUE
+ * per workshop step):
+ *  - synthesis fields (narrativeIntro/stepSummaries/confidenceAssessment/recommendedNextSteps)
+ *    — now OPTIONAL. No longer shown in the step UI; generated behind the scenes for the
+ *    Build Pack export.
+ *  - validation-planning fields (classification + validationPlans) — the UI-driven flow.
+ *
+ * Both are optional so a partial write (e.g. plans before synthesis) validates fine.
+ * Writes MUST go through updateValidateArtifact (read-modify-write) to avoid clobbering
+ * the other sub-tree, because saveStepArtifact does a full replace.
  */
 export const validateArtifactSchema = z.object({
+  // --- Synthesis (Build Pack only; optional) ---
   narrativeIntro: z
     .string()
+    .optional()
     .describe('1-2 paragraph storytelling narrative of the journey from vague idea to validated concept'),
   stepSummaries: z
     .array(
@@ -474,6 +490,7 @@ export const validateArtifactSchema = z.object({
     )
     .min(3)
     .max(10)
+    .optional()
     .describe('Structured summary of key outputs from each step of the journey (aim for all 10 steps)'),
   confidenceAssessment: z
     .object({
@@ -490,12 +507,23 @@ export const validateArtifactSchema = z.object({
         .enum(['thin', 'moderate', 'strong'])
         .describe('Assessment of research quality: thin (synthetic only), moderate (some real data), strong (real interviews + data)'),
     })
+    .optional()
     .describe('Honest confidence assessment of how well-validated the concept is based on research quality'),
   recommendedNextSteps: z
     .array(z.string())
     .min(3)
     .max(5)
+    .optional()
     .describe('3-5 concrete, specific next actions based on concept and gaps identified — NOT generic advice'),
+
+  // --- Validation planning (UI-driven flow) ---
+  classification: outputTypeClassificationSchema
+    .optional()
+    .describe('Detected output type (classify-once at Validate)'),
+  validationPlans: z
+    .array(validationPlanSchema)
+    .optional()
+    .describe('One validation plan per concept'),
 });
 
 export type ValidateArtifact = z.infer<typeof validateArtifactSchema>;
