@@ -11,6 +11,8 @@ interface SynthesisSummaryViewProps {
   sessionId?: string;
   onGeneratePrd?: () => void;
   workshopCompleted?: boolean;
+  /** Show the inline Prototype deliverable card. Off when embedded where deliverables already list. */
+  showDeliverables?: boolean;
 }
 
 interface StepSummary {
@@ -66,6 +68,7 @@ export function SynthesisSummaryView({
   workshopId,
   onGeneratePrd,
   workshopCompleted = false,
+  showDeliverables = true,
 }: SynthesisSummaryViewProps) {
   const narrative = (artifact.narrativeIntro || artifact.narrative) as string | undefined;
   const stepSummaries = (artifact.stepSummaries as StepSummary[]) || [];
@@ -175,7 +178,7 @@ export function SynthesisSummaryView({
       {recommendedNextSteps.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
-            <span>What's Next</span>
+            <span>What&apos;s Next</span>
             <svg
               className="h-5 w-5 text-muted-foreground"
               fill="none"
@@ -208,25 +211,27 @@ export function SynthesisSummaryView({
         </div>
       )}
 
-      {/* V0 Prototype */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          Prototype
-          {workshopCompleted && (
-            <CheckCircle2 className="h-5 w-5 text-olive-600 dark:text-olive-400" />
-          )}
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <DeliverableCard
-            title="V0 Prototype"
-            description="AI-generated clickable prototype from your workshop — preview in browser or edit in V0."
-            icon={<Zap className="h-5 w-5" />}
-            disabled={!workshopId}
-            buttonLabel={workshopId ? 'Generate Prototype' : 'Coming Soon'}
-            onDownload={onGeneratePrd}
-          />
+      {/* V0 Prototype (hidden when embedded alongside the full deliverables list) */}
+      {showDeliverables && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            Prototype
+            {workshopCompleted && (
+              <CheckCircle2 className="h-5 w-5 text-olive-600 dark:text-olive-400" />
+            )}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <DeliverableCard
+              title="V0 Prototype"
+              description="AI-generated clickable prototype from your workshop — preview in browser or edit in V0."
+              icon={<Zap className="h-5 w-5" />}
+              disabled={!workshopId}
+              buttonLabel={workshopId ? 'Generate Prototype' : 'Coming Soon'}
+              onDownload={onGeneratePrd}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

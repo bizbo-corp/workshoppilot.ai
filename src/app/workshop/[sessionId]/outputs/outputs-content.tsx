@@ -27,6 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { DeliverableDetailView } from '@/components/workshop/deliverable-detail-view';
 import { WorkshopHeader } from '@/components/layout/workshop-header';
+import { WorkshopSummaryTile, type WorkshopSynthesis } from '@/components/workshop/workshop-summary-tile';
 import { toast } from 'sonner';
 
 interface DeliverableFormat {
@@ -52,6 +53,8 @@ interface OutputsContentProps {
   isAdmin?: boolean;
   deliverables: Deliverable[];
   isReadOnly?: boolean;
+  /** Validate-step synthesis (narrative / step summaries / confidence / next steps), if any. */
+  synthesis?: Record<string, unknown> | null;
 }
 
 type GenerationStatus = 'idle' | 'loading' | 'done' | 'error';
@@ -180,6 +183,7 @@ export function OutputsContent({
   isAdmin = false,
   deliverables,
   isReadOnly = false,
+  synthesis = null,
 }: OutputsContentProps) {
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -387,6 +391,15 @@ export function OutputsContent({
           />
         ) : (
           <div className="space-y-10">
+            {/* Workshop summary tile — score + a few lines, expandable to the full synthesis. */}
+            {synthesis &&
+              (typeof synthesis.narrativeIntro === 'string' ||
+                (Array.isArray(synthesis.stepSummaries) && synthesis.stepSummaries.length > 0)) && (
+                <WorkshopSummaryTile
+                  synthesis={synthesis as WorkshopSynthesis}
+                  workshopId={workshopId}
+                />
+              )}
             {SECTIONS.map((section) => (
               <div key={section.id} className="space-y-4">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">

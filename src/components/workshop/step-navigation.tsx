@@ -374,7 +374,7 @@ export function StepNavigation({
         ) : isLastStep && workshopCompleted ? (
           /* Workshop completed — route to the Build Pack */
           <Button
-            onClick={() => router.push(`/workshop/${sessionId}/results`)}
+            onClick={() => router.push(`/workshop/${sessionId}/outputs`)}
             size="lg"
             className="btn-shimmer"
           >
