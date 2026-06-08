@@ -216,7 +216,7 @@ Top Ideas:
     order: 8,
     id: "brainwriting",
     slug: "brainwriting",
-    name: "Brain Writing",
+    name: "Iteration",
     description:
       "Iterate on the selected sketches — build on each idea to push it further",
     mockOutputType: "Brain Writing Matrix",
@@ -268,7 +268,7 @@ Next Steps:
     order: 10,
     id: "validate",
     slug: "validate",
-    name: "Validate",
+    name: "Validation Plan",
     description:
       "Create flow diagrams, prototyping, PRD generation, and Build Pack export",
     mockOutputType: "Flow Diagram & PRD Outline",
@@ -349,7 +349,7 @@ export const STEP_CONFIRM_LABELS: Record<string, string> = {
   'persona': 'Confirm Persona',
   'journey-mapping': 'Confirm Journey Map',
   'reframe': 'Confirm HMW Statement',
-  'brainwriting': 'Complete Brain Writing',
+  'brainwriting': 'Complete Iteration',
   'concept': 'Complete Concept Development',
 };
 

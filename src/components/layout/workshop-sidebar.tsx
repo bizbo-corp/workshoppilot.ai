@@ -237,11 +237,9 @@ export function WorkshopSidebar({
                 {state === "expanded" && (
                   <span
                     className={cn(
-                      "flex-1 truncate text-base",
-                      // Completed = bold + full foreground; incomplete = regular @ 80%.
-                      isComplete
-                        ? "font-bold text-foreground"
-                        : "font-normal text-foreground/80",
+                      "flex-1 truncate text-base font-normal",
+                      // Completed = full foreground; incomplete = dimmed @ 80%.
+                      isComplete ? "text-foreground" : "text-foreground/80",
                     )}
                   >
                     {step.name}
