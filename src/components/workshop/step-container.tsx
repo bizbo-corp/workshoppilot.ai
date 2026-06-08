@@ -1087,7 +1087,7 @@ export function StepContainer({
       toast.success("Workshop completed!", { duration: 4000 });
       // Proceed to the Build Pack screen. Brief delay so the confetti registers first.
       setTimeout(() => {
-        router.push(`/workshop/${sessionId}/results`);
+        router.push(`/workshop/${sessionId}/outputs`);
       }, 1200);
     } catch (error) {
       // completeWorkshop does not call redirect(), so no NEXT_REDIRECT to rethrow

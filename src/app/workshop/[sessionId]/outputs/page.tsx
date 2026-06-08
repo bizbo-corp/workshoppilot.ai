@@ -1,9 +1,11 @@
 import { redirect } from 'next/navigation';
 import { auth, currentUser } from '@clerk/nextjs/server';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { sessions, buildPacks } from '@/db/schema';
+import { sessions, buildPacks, stepArtifacts, workshopSteps } from '@/db/schema';
 import { resolveClerkParticipant } from '@/lib/auth/resolve-participant';
+import { generateValidateSynthesis } from '@/lib/validation/generate-synthesis';
+import { updateValidateArtifact } from '@/lib/validation/save-validation';
 import { OutputsContent } from './outputs-content';
 
 interface OutputsPageProps {
@@ -107,6 +109,44 @@ export default async function OutputsPage({ params }: OutputsPageProps) {
 
   const deliverables = Array.from(groupMap.values());
 
+  // Workshop summary (the synthesis) — shown as a collapsible tile at the top of the Build Pack.
+  // Loaded from the validate artifact; self-healed (generated from step summaries + persisted)
+  // if it was never produced, so the summary is always available here.
+  let synthesis: Record<string, unknown> | null = null;
+  const validateStepRow = await db
+    .select({ id: workshopSteps.id })
+    .from(workshopSteps)
+    .where(and(eq(workshopSteps.workshopId, workshop.id), eq(workshopSteps.stepId, 'validate')))
+    .limit(1);
+  if (validateStepRow.length > 0) {
+    const artRows = await db
+      .select({ artifact: stepArtifacts.artifact })
+      .from(stepArtifacts)
+      .where(eq(stepArtifacts.workshopStepId, validateStepRow[0].id))
+      .limit(1);
+    if (artRows.length > 0) {
+      const { _canvas, ...extracted } = artRows[0].artifact as Record<string, unknown>;
+      if (Object.keys(extracted).length > 0) synthesis = extracted;
+    }
+  }
+
+  const hasSynthesis =
+    !!synthesis &&
+    (typeof synthesis.narrativeIntro === 'string' ||
+      (Array.isArray(synthesis.stepSummaries) && synthesis.stepSummaries.length > 0));
+
+  if (!hasSynthesis && !isReadOnly) {
+    try {
+      const gen = await generateValidateSynthesis(workshop.id);
+      if (gen) {
+        await updateValidateArtifact(workshop.id, (current) => ({ ...current, ...gen.synthesis }));
+        synthesis = { ...(synthesis ?? {}), ...gen.synthesis };
+      }
+    } catch (err) {
+      console.error('[outputs] synthesis generation failed:', err);
+    }
+  }
+
   return (
     <OutputsContent
       sessionId={sessionId}
@@ -119,6 +159,7 @@ export default async function OutputsPage({ params }: OutputsPageProps) {
       isAdmin={isAdmin}
       deliverables={deliverables}
       isReadOnly={isReadOnly}
+      synthesis={synthesis}
     />
   );
 }
