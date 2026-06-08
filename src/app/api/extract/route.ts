@@ -9,6 +9,7 @@ import { extractStepArtifact, ExtractionError } from '@/lib/extraction';
 import { auth } from '@clerk/nextjs/server';
 import { saveStepArtifact } from '@/lib/context/save-artifact';
 import { updateValidateArtifact } from '@/lib/validation/save-validation';
+import { generateValidateSynthesis } from '@/lib/validation/generate-synthesis';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { db } from '@/db/client';
 import { chatMessages, workshopSteps } from '@/db/schema';
@@ -55,6 +56,40 @@ export async function POST(req: Request) {
           error: 'workshopId, stepId, and sessionId are required',
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate step: the Build Pack synthesis is generated from the workshop's own step
+    // summaries (NOT the chat), so it stays full even though the Validate chat is now brief.
+    // This is independent of conversation length — no message-count requirement.
+    if (stepId === 'validate') {
+      const gen = await generateValidateSynthesis(workshopId);
+      if (!gen) {
+        return new Response(
+          JSON.stringify({
+            error: 'extraction_failed',
+            message: 'Not enough workshop content to synthesize yet',
+          }),
+          { status: 422, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      if (gen.usage) {
+        recordUsageEvent({
+          workshopId,
+          stepId,
+          operation: 'extract',
+          model: 'gemini-2.5-flash-lite',
+          inputTokens: gen.usage.inputTokens,
+          outputTokens: gen.usage.outputTokens,
+        });
+      }
+      await updateValidateArtifact(workshopId, (current) => ({
+        ...current,
+        ...gen.synthesis,
+      }));
+      return new Response(
+        JSON.stringify({ artifact: gen.synthesis, stepId }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
 

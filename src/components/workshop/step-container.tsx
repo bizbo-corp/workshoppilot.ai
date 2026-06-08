@@ -1070,6 +1070,11 @@ export function StepContainer({
 
     setIsCompletingWorkshop(true);
     try {
+      // Make sure the Build Pack synthesis exists before completing. It's generated from the
+      // workshop's step summaries (not the chat), so a brief Validate chat won't starve it.
+      if (!step10Artifact) {
+        await handleStep10Extract();
+      }
       await completeWorkshop(workshopId, sessionId);
       setWorkshopCompleted(true);
       fireConfetti();
@@ -1081,7 +1086,7 @@ export function StepContainer({
     } finally {
       setIsCompletingWorkshop(false);
     }
-  }, [isCompletingWorkshop, workshopCompleted, workshopId, sessionId]);
+  }, [isCompletingWorkshop, workshopCompleted, workshopId, sessionId, step10Artifact, handleStep10Extract]);
 
   // Step 10: auto-extract on mount when conversation already exists
   const hasAutoExtracted = React.useRef(false);
