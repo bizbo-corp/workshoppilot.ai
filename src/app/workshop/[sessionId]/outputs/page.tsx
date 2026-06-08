@@ -114,10 +114,21 @@ export default async function OutputsPage({ params }: OutputsPageProps) {
   // if it was never produced, so the summary is always available here.
   let synthesis: Record<string, unknown> | null = null;
   const validateStepRow = await db
-    .select({ id: workshopSteps.id })
+    .select({ id: workshopSteps.id, status: workshopSteps.status })
     .from(workshopSteps)
     .where(and(eq(workshopSteps.workshopId, workshop.id), eq(workshopSteps.stepId, 'validate')))
     .limit(1);
+
+  // Reaching the Build Pack means the Validation Plan is considered done — mark it complete so it
+  // shows checked in the sidebar. The plan itself stays editable on the Validate step (you can
+  // still record results later); this only flips the navigation/completion status.
+  if (validateStepRow.length > 0 && !isReadOnly && validateStepRow[0].status !== 'complete') {
+    await db
+      .update(workshopSteps)
+      .set({ status: 'complete' })
+      .where(eq(workshopSteps.id, validateStepRow[0].id));
+  }
+
   if (validateStepRow.length > 0) {
     const artRows = await db
       .select({ artifact: stepArtifacts.artifact })
