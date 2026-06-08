@@ -13,6 +13,10 @@ import { google } from '@ai-sdk/google';
 import { z } from 'zod';
 import { loadValidationBrief } from '@/lib/validation/llm-context';
 
+// Generation schema is deliberately LENIENT on array maxes: Gemini does not hard-enforce
+// max-item constraints, so a strict .max() makes generateObject throw on overproduction. We
+// give it headroom here and clamp to the canonical shape (≤3 keyOutputs, ≤10 steps, ≤5 next
+// steps) in normalizeSynthesis() below.
 export const validateSynthesisSchema = z.object({
   narrativeIntro: z
     .string()
@@ -22,21 +26,32 @@ export const validateSynthesisSchema = z.object({
       z.object({
         stepNumber: z.number().int().min(1).max(10),
         stepName: z.string(),
-        keyOutputs: z.array(z.string()).min(1).max(3),
+        keyOutputs: z.array(z.string()).min(1).describe('At most 3 key outputs for this step.'),
       })
     )
     .min(3)
-    .max(10)
     .describe('Key human-readable output(s) per step covered in the brief.'),
   confidenceAssessment: z.object({
     score: z.number().int().min(1).max(10),
     rationale: z.string(),
     researchQuality: z.enum(['thin', 'moderate', 'strong']),
   }),
-  recommendedNextSteps: z.array(z.string()).min(3).max(5),
+  recommendedNextSteps: z.array(z.string()).min(3),
 });
 
 export type ValidateSynthesis = z.infer<typeof validateSynthesisSchema>;
+
+/** Clamp the generated synthesis to the canonical Build-Pack shape the artifact schema expects. */
+function normalizeSynthesis(raw: ValidateSynthesis): ValidateSynthesis {
+  return {
+    narrativeIntro: raw.narrativeIntro,
+    stepSummaries: raw.stepSummaries
+      .slice(0, 10)
+      .map((s) => ({ ...s, keyOutputs: s.keyOutputs.slice(0, 3) })),
+    confidenceAssessment: raw.confidenceAssessment,
+    recommendedNextSteps: raw.recommendedNextSteps.slice(0, 5),
+  };
+}
 
 const SYSTEM = `You are writing the closing SYNTHESIS for a design-thinking workshop's Build Pack — a
 written deliverable the user reads after the workshop, not a chat message.
@@ -83,5 +98,5 @@ export async function generateValidateSynthesis(
     temperature: 0.3,
   });
 
-  return { synthesis: result.object, usage: result.usage };
+  return { synthesis: normalizeSynthesis(result.object), usage: result.usage };
 }

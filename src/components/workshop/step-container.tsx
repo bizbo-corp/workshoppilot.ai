@@ -1070,15 +1070,25 @@ export function StepContainer({
 
     setIsCompletingWorkshop(true);
     try {
-      // Make sure the Build Pack synthesis exists before completing. It's generated from the
-      // workshop's step summaries (not the chat), so a brief Validate chat won't starve it.
+      // Best-effort: generate the Build Pack synthesis from the workshop's step summaries (not
+      // the chat). handleStep10Extract swallows its own errors, so this never throws.
       if (!step10Artifact) {
         await handleStep10Extract();
+      }
+      // Safety net: the synthesis is a Build-Pack nicety, NOT a gate on finishing. Ensure the
+      // final step is marked complete so completeWorkshop (which requires all steps done) can't
+      // be blocked by a synthesis hiccup.
+      if (step?.id === 'validate') {
+        await updateStepStatus(workshopId, 'validate', 'complete', sessionId);
       }
       await completeWorkshop(workshopId, sessionId);
       setWorkshopCompleted(true);
       fireConfetti();
       toast.success("Workshop completed!", { duration: 4000 });
+      // Proceed to the Build Pack screen. Brief delay so the confetti registers first.
+      setTimeout(() => {
+        router.push(`/workshop/${sessionId}/results`);
+      }, 1200);
     } catch (error) {
       // completeWorkshop does not call redirect(), so no NEXT_REDIRECT to rethrow
       console.error("Failed to complete workshop:", error);
@@ -1086,7 +1096,7 @@ export function StepContainer({
     } finally {
       setIsCompletingWorkshop(false);
     }
-  }, [isCompletingWorkshop, workshopCompleted, workshopId, sessionId, step10Artifact, handleStep10Extract]);
+  }, [isCompletingWorkshop, workshopCompleted, workshopId, sessionId, step10Artifact, handleStep10Extract, router, step?.id]);
 
   // Step 10: auto-extract on mount when conversation already exists
   const hasAutoExtracted = React.useRef(false);
