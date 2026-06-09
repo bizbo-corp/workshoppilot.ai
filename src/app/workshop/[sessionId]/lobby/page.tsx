@@ -33,7 +33,7 @@ import { LobbyScheduleDisplay } from './lobby-schedule-display';
 import { StartWorkshopButton } from './start-workshop-button';
 import { LobbyParticipantActions } from './lobby-actions';
 import { Heading, Text, Eyebrow, Caption } from '@/components/ui/typography';
-import { Sparkles, FileCheck, Users, Lightbulb } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -168,7 +168,7 @@ export default async function LobbyPage({ params }: PageProps) {
     ) : (
       <div className="relative h-full overflow-hidden rounded-3xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50 to-teal-50 px-8 py-10 text-center shadow-sm dark:border-emerald-700/30 dark:from-emerald-950/40 dark:to-teal-950/30">
         <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow-lg">
-          <Sparkles className="h-6 w-6" />
+          <Icon name="sparkles" className="h-6 w-6" />
         </div>
         <Eyebrow className="text-emerald-700 dark:text-emerald-300">
           Ready to roll
@@ -199,7 +199,7 @@ export default async function LobbyPage({ params }: PageProps) {
         </div>
       )}
       <div className="mb-4 flex items-center gap-2">
-        <Users className="h-4 w-4 text-muted-foreground" />
+        <Icon name="users" className="h-4 w-4 text-muted-foreground" />
         <Eyebrow>
           Who&apos;s here
         </Eyebrow>
@@ -221,7 +221,7 @@ export default async function LobbyPage({ params }: PageProps) {
     <section className="relative flex h-full flex-col justify-center overflow-hidden rounded-3xl border border-amber-200/60 bg-gradient-to-br from-amber-50/80 via-yellow-50/60 to-orange-50/40 p-8 shadow-sm dark:border-amber-700/30 dark:from-amber-950/30 dark:via-yellow-950/20 dark:to-orange-950/20 sm:p-10">
       <div className="relative mx-auto max-w-3xl text-center">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-eyebrow text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/60 dark:text-amber-300">
-          <Lightbulb className="h-3 w-3" />
+          <Icon name="lightbulb" className="h-3 w-3" />
           The challenge
         </span>
         {artifact?.hmwStatement ? (
@@ -365,7 +365,7 @@ function WalkOutSection({ durationLabel }: { durationLabel: string | null }) {
           </Heading>
         </div>
         <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-olive-100 text-olive-700 dark:bg-olive-900/50 dark:text-olive-300">
-          <FileCheck className="h-6 w-6" />
+          <Icon name="file-check" className="h-6 w-6" />
         </span>
       </div>
       <ul className="mt-5 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3 xl:grid-cols-1">

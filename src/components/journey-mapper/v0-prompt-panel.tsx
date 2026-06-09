@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Copy, Check, ExternalLink, Loader2, FileCode2, AlertCircle } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 
 interface V0Result {
@@ -75,14 +75,14 @@ export function V0PromptPanel({ prompt, buildPackId, workshopId, onClose }: V0Pr
             onClick={handleCopy}
             className="h-7 text-xs gap-1.5"
           >
-            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+            {copied ? <Icon name="check" className="h-3 w-3" /> : <Icon name="copy" className="h-3 w-3" />}
             {copied ? 'Copied' : 'Copy'}
           </Button>
           <button
             onClick={onClose}
             className="p-1 rounded-md hover:bg-muted transition-colors"
           >
-            <X className="h-4 w-4" />
+            <Icon name="close" className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -98,19 +98,19 @@ export function V0PromptPanel({ prompt, buildPackId, workshopId, onClose }: V0Pr
           >
             {isCreating ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Icon name="spinner" className="h-4 w-4 animate-spin" />
                 Creating prototype...
               </>
             ) : (
               <>
-                <ExternalLink className="h-4 w-4" />
+                <Icon name="external-link" className="h-4 w-4" />
                 Create on v0
               </>
             )}
           </Button>
           {v0Error && (
             <div className="flex items-start gap-2 text-xs text-destructive">
-              <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <Icon name="alert-circle" className="h-3.5 w-3.5 mt-0.5 shrink-0" />
               <div>
                 <p>{v0Error}</p>
                 {!v0Error.includes('API key') && (
@@ -131,7 +131,7 @@ export function V0PromptPanel({ prompt, buildPackId, workshopId, onClose }: V0Pr
       {v0Result && (
         <div className="px-4 py-3 border-b space-y-2">
           <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 font-medium">
-            <Check className="h-3.5 w-3.5" />
+            <Icon name="check" className="h-3.5 w-3.5" />
             Prototype created
           </div>
           <div className="flex flex-wrap gap-2">
@@ -142,7 +142,7 @@ export function V0PromptPanel({ prompt, buildPackId, workshopId, onClose }: V0Pr
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
               >
-                <ExternalLink className="h-3 w-3" />
+                <Icon name="external-link" className="h-3 w-3" />
                 Demo
               </a>
             )}
@@ -153,13 +153,13 @@ export function V0PromptPanel({ prompt, buildPackId, workshopId, onClose }: V0Pr
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
               >
-                <ExternalLink className="h-3 w-3" />
+                <Icon name="external-link" className="h-3 w-3" />
                 Edit in v0
               </a>
             )}
             {v0Result.files.length > 0 && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <FileCode2 className="h-3 w-3" />
+                <Icon name="file-code" className="h-3 w-3" />
                 {v0Result.files.length} file{v0Result.files.length !== 1 ? 's' : ''}
               </span>
             )}

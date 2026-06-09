@@ -12,7 +12,7 @@ import { type NodeProps, type Node } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ThumbsUp, Layers, Merge, Unlink } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import type { Crazy8sSlot, SlotGroup } from '@/lib/canvas/crazy-8s-types';
 
 export type VotingGroupNodeData = {
@@ -97,7 +97,7 @@ function VotingGroupNodeComponent({ data }: NodeProps<VotingGroupNodeType>) {
           </div>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-            <Layers className="h-6 w-6 mr-1.5 opacity-50" />
+            <Icon name="layers" className="h-6 w-6 mr-1.5 opacity-50" />
             Group
           </div>
         )}
@@ -145,7 +145,7 @@ function VotingGroupNodeComponent({ data }: NodeProps<VotingGroupNodeType>) {
                 className="h-6 text-[10px] gap-1 px-2"
                 onClick={() => onStartMerge(group.id)}
               >
-                <Merge className="h-3 w-3" />
+                <Icon name="merge" className="h-3 w-3" />
                 Merge
               </Button>
             )}
@@ -155,7 +155,7 @@ function VotingGroupNodeComponent({ data }: NodeProps<VotingGroupNodeType>) {
               className="h-6 text-[10px] gap-1 px-2"
               onClick={() => onUngroup(group.id)}
             >
-              <Unlink className="h-3 w-3" />
+              <Icon name="unlink" className="h-3 w-3" />
               Ungroup
             </Button>
           </div>
@@ -182,7 +182,7 @@ function VotingGroupNodeComponent({ data }: NodeProps<VotingGroupNodeType>) {
               disabled={!canVote}
               onClick={() => onCastVote(group.id)}
             >
-              <ThumbsUp className="h-3 w-3" />
+              <Icon name="thumbs-up" className="h-3 w-3" />
               +1 Vote
             </Button>
           )

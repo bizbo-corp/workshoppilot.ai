@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode, SVGProps } from "react";
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Copy, FileCode, GripVertical } from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import { cn } from "@/lib/utils";
 import {
   BUILD_PACK_DECK_TITLE,
@@ -263,7 +263,7 @@ function Roadmap({ animate }: { animate: boolean }) {
               i === 0 && "bg-muted/50 shadow-sm",
             )}
           >
-            <GripVertical className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground/50" />
+            <Icon name="grip-vertical" className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground/50" />
             <span className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
               {i + 1}
             </span>
@@ -333,7 +333,7 @@ function MdFile({ animate }: { animate: boolean }) {
     >
       {/* Title bar */}
       <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-3 py-2">
-        <FileCode className="h-3.5 w-3.5 text-olive-600 dark:text-olive-400" />
+        <Icon name="file-code" className="h-3.5 w-3.5 text-olive-600 dark:text-olive-400" />
         <span className="font-mono text-[11px] text-foreground">
           {BUILD_PACK_FILENAME}
         </span>
@@ -383,7 +383,7 @@ function MdFile({ animate }: { animate: boolean }) {
             {a}
           </span>
         ))}
-        <Copy className="ml-auto h-3 w-3 text-muted-foreground" />
+        <Icon name="copy" className="ml-auto h-3 w-3 text-muted-foreground" />
       </div>
     </motion.div>
   );

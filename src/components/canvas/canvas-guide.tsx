@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { X, Pencil } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { cn } from '@/lib/utils';
@@ -97,7 +97,7 @@ export function CanvasGuide({ guide, onDismiss, isExiting, isAdminEditing, onEdi
           )}
           aria-label="Edit guide"
         >
-          <Pencil className="h-3 w-3" />
+          <Icon name="pencil" className="h-3 w-3" />
         </button>
       )}
 
@@ -115,7 +115,7 @@ export function CanvasGuide({ guide, onDismiss, isExiting, isAdminEditing, onEdi
           )}
           aria-label="Dismiss guide"
         >
-          <X className="h-3.5 w-3.5" />
+          <Icon name="close" className="h-3.5 w-3.5" />
         </button>
       )}
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Play } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Eyebrow } from '@/components/ui/typography';
 
 /**
@@ -46,7 +46,7 @@ export function LobbyIntroVideo() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
             <span className="relative flex h-20 w-20 items-center justify-center rounded-full bg-white/95 shadow-2xl transition-transform group-hover:scale-105">
-              <Play className="ml-1.5 h-9 w-9 fill-olive-700 text-olive-700" />
+              <Icon name="play" weight="fill" className="ml-1.5 h-9 w-9 fill-olive-700 text-olive-700" />
             </span>
             <span className="absolute bottom-5 left-6 text-left">
               <span className="block text-xs font-bold uppercase tracking-eyebrow text-white/80">

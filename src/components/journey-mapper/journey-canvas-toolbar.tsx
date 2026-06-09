@@ -1,6 +1,6 @@
 'use client';
 
-import { MousePointer2, Hand, Plus } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 export interface JourneyCanvasToolbarProps {
@@ -53,14 +53,14 @@ export function JourneyCanvasToolbar({
           active={activeTool === 'pointer'}
           title="Pointer tool (V)"
         >
-          <MousePointer2 className="w-4 h-4" />
+          <Icon name="mouse-pointer" className="w-4 h-4" />
         </IconButton>
         <IconButton
           onClick={() => onToolChange('hand')}
           active={activeTool === 'hand'}
           title="Hand tool (Space)"
         >
-          <Hand className="w-4 h-4" />
+          <Icon name="hand" className="w-4 h-4" />
         </IconButton>
       </div>
 
@@ -72,7 +72,7 @@ export function JourneyCanvasToolbar({
         title="Add a new screen"
         className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
       >
-        <Plus className="w-3.5 h-3.5" />
+        <Icon name="plus" className="w-3.5 h-3.5" />
         <span>Add Screen</span>
       </button>
     </div>

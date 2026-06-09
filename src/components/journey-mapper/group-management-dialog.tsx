@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Check, X } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import {
   Dialog,
   DialogContent,
@@ -141,7 +141,7 @@ export function GroupManagementDialog({
                     className="h-7 w-7 p-0"
                     onClick={() => handleRename(group.id)}
                   >
-                    <Check className="h-3.5 w-3.5" />
+                    <Icon name="check" className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -152,7 +152,7 @@ export function GroupManagementDialog({
                       setRenameValue('');
                     }}
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <Icon name="close" className="h-3.5 w-3.5" />
                   </Button>
                 </>
               ) : (
@@ -174,7 +174,7 @@ export function GroupManagementDialog({
                       setRenameValue(group.label);
                     }}
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <Icon name="pencil" className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -182,7 +182,7 @@ export function GroupManagementDialog({
                     className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                     onClick={() => handleDelete(group.id)}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Icon name="trash" className="h-3.5 w-3.5" />
                   </Button>
                 </>
               )}
@@ -209,7 +209,7 @@ export function GroupManagementDialog({
             onClick={handleCreate}
             disabled={!newGroupName.trim()}
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Icon name="plus" className="h-3.5 w-3.5" />
             Add
           </Button>
         </div>

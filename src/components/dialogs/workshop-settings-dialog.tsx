@@ -15,7 +15,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Caption, Heading } from '@/components/ui/typography';
-import { Square } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { ChallengeSettingsTab } from '@/components/dialogs/settings/challenge-settings-tab';
 import { BasicsSettingsTab } from '@/components/dialogs/settings/basics-settings-tab';
 import { TeamSettingsTab } from '@/components/dialogs/settings/team-settings-tab';
@@ -109,7 +109,7 @@ export function WorkshopSettingsDialog({
               onClick={handleEndSession}
               className="shrink-0 gap-1.5"
             >
-              <Square className="h-3.5 w-3.5 fill-current" />
+              <Icon name="square" className="h-3.5 w-3.5 fill-current" />
               End session
             </Button>
           </div>

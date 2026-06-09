@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Pencil } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 export type ParticipantProgress = {
   ownerId: string;
@@ -62,12 +62,12 @@ export function Crazy8sProgressPanel({ participants }: Crazy8sProgressPanelProps
             </span>
             {p.isCompleted ? (
               <span className="flex items-center gap-0.5 text-[10px] text-green-600 font-medium shrink-0">
-                <Check className="w-3 h-3" />
+                <Icon name="check" className="w-3 h-3" />
                 Done
               </span>
             ) : (
               <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
-                <Pencil className="w-3 h-3" />
+                <Icon name="pencil" className="w-3 h-3" />
                 {p.filledSlots}/{p.totalSlots}
               </span>
             )}

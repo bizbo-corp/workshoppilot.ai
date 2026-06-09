@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2 } from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +31,7 @@ export function StepConfirmButton({
       disabled={disabled}
       className={cn("gap-2 rounded-full px-5", className)}
     >
-      <CheckCircle2 className="h-4 w-4" />
+      <Icon name="check-circle" className="h-4 w-4" />
       {label}
     </Button>
   );

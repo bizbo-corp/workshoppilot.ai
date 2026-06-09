@@ -1,18 +1,17 @@
 'use client';
 
-import { Check } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 interface OptionCardProps {
   label: string;
   description?: string;
-  icon?: LucideIcon;
+  icon?: IconName;
   selected: boolean;
   onSelect: () => void;
 }
 
-export function OptionCard({ label, description, icon: Icon, selected, onSelect }: OptionCardProps) {
+export function OptionCard({ label, description, icon, selected, onSelect }: OptionCardProps) {
   return (
     <button
       type="button"
@@ -27,9 +26,9 @@ export function OptionCard({ label, description, icon: Icon, selected, onSelect 
           : 'border-border hover:border-primary/40'
       )}
     >
-      {Icon && (
+      {icon && (
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-          <Icon className="h-4 w-4 text-muted-foreground" />
+          <Icon name={icon} className="h-4 w-4 text-muted-foreground" />
         </div>
       )}
       <div className="flex-1 space-y-0.5">
@@ -40,7 +39,7 @@ export function OptionCard({ label, description, icon: Icon, selected, onSelect 
       </div>
       {selected && (
         <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          <Check className="h-3 w-3" />
+          <Icon name="check" className="h-3 w-3" />
         </div>
       )}
     </button>

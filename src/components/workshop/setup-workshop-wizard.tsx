@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, UserPlus, Calendar, Zap, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -365,7 +365,7 @@ function ReviewAndInviteStep({
                 className="text-muted-foreground hover:text-foreground"
                 aria-label={`Remove ${email}`}
               >
-                <X className="h-3 w-3" />
+                <Icon name="close" className="h-3 w-3" />
               </button>
             </span>
           ))}
@@ -399,7 +399,7 @@ function ReviewAndInviteStep({
           Go back and edit
         </Button>
         <Button onClick={onNext} disabled={!challenge.hmwStatement}>
-          Pick a time <ArrowRight className="ml-1.5 h-4 w-4" />
+          Pick a time <Icon name="arrow-right" className="ml-1.5 h-4 w-4" />
         </Button>
       </div>
     </div>
@@ -448,14 +448,14 @@ function ScheduleStep({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <ModeCard
             active={mode === 'start_now'}
-            icon={<Zap className="h-5 w-5" />}
+            icon={<Icon name="zap" className="h-5 w-5" />}
             title="Start now"
             description="Email goes out immediately. Anyone who clicks the link drops straight into the workshop."
             onClick={() => onModeChange('start_now')}
           />
           <ModeCard
             active={mode === 'schedule'}
-            icon={<Calendar className="h-5 w-5" />}
+            icon={<Icon name="calendar" className="h-5 w-5" />}
             title="Schedule for later"
             description="Pick a date and time. Participants wait in the lobby until you click Start."
             onClick={() => onModeChange('schedule')}
@@ -519,14 +519,14 @@ function ScheduleStep({
 
       <div className="flex items-center justify-between pt-1">
         <Button variant="ghost" onClick={onBack} disabled={isSubmitting}>
-          <ArrowLeft className="mr-1.5 h-4 w-4" /> Back
+          <Icon name="arrow-left" className="mr-1.5 h-4 w-4" /> Back
         </Button>
         <Button onClick={onSubmit} disabled={isSubmitting}>
           {isSubmitting ? (
             'Sending…'
           ) : (
             <>
-              <UserPlus className="mr-1.5 h-4 w-4" />
+              <Icon name="user-plus" className="mr-1.5 h-4 w-4" />
               {mode === 'start_now'
                 ? `Send ${emailCount} invite${emailCount === 1 ? '' : 's'} & start now`
                 : `Send ${emailCount} invite${emailCount === 1 ? '' : 's'} & open lobby`}

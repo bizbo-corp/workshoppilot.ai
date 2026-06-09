@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, LocateFixed, X } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 interface PresenterFollowBannerProps {
@@ -55,7 +55,7 @@ export function PresenterFollowBanner({
         {isFollowing ? (
           <>
             <span className="flex items-center gap-1.5">
-              <Eye className="h-4 w-4 shrink-0 text-primary" />
+              <Icon name="eye" className="h-4 w-4 shrink-0 text-primary" />
               <span className="truncate">
                 Following <span className="font-semibold">{presenterName}</span>
               </span>
@@ -66,7 +66,7 @@ export function PresenterFollowBanner({
               className="ml-1 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               title="Stop following and explore on your own"
             >
-              <X className="h-3.5 w-3.5" />
+              <Icon name="close" className="h-3.5 w-3.5" />
               Exit
             </button>
           </>
@@ -81,7 +81,7 @@ export function PresenterFollowBanner({
               className="ml-1 flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               title="Return to the presenter's view"
             >
-              <LocateFixed className="h-3.5 w-3.5" />
+              <Icon name="locate-fixed" className="h-3.5 w-3.5" />
               Return
             </button>
           </>

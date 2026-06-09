@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Upload, Loader2, FileText, Sparkles } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import {
   Dialog,
   DialogContent,
@@ -86,7 +86,7 @@ export function ResearchUploadDialog({
       <DialogContent className="flex max-h-[85vh] flex-col gap-4 sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-olive-600 dark:text-olive-400" />
+            <Icon name="file-text" className="h-5 w-5 text-olive-600 dark:text-olive-400" />
             Add your existing research
           </DialogTitle>
           <DialogDescription>
@@ -179,7 +179,7 @@ export function ResearchUploadDialog({
             disabled={analyzing}
             className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-olive-50 hover:text-foreground disabled:opacity-50 dark:hover:bg-neutral-olive-800"
           >
-            <Upload className="h-3.5 w-3.5" />
+            <Icon name="upload" className="h-3.5 w-3.5" />
             Upload a .txt / .md file
           </button>
           <span className={cn(overLimit && "text-destructive")}>
@@ -213,12 +213,12 @@ export function ResearchUploadDialog({
           >
             {analyzing ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Icon name="spinner" className="h-4 w-4 animate-spin" />
                 Analyzing…
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4" />
+                <Icon name="sparkles" className="h-4 w-4" />
                 Analyze research
               </>
             )}

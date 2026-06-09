@@ -1,5 +1,4 @@
-import { Brain, Zap, Lightbulb, FileText } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 /**
  * Landing page value propositions section
@@ -8,32 +7,32 @@ import type { LucideIcon } from 'lucide-react';
  */
 
 interface ValueProp {
-  icon: LucideIcon;
+  icon: IconName;
   title: string;
   description: string;
 }
 
 const VALUE_PROPS: ValueProp[] = [
   {
-    icon: Brain,
+    icon: 'brain',
     title: 'AI Facilitator, Not a Chatbot',
     description:
       'A structured 10-step design thinking process guided by AI. It asks the right questions, challenges assumptions, and keeps you on track — just like a human facilitator would.',
   },
   {
-    icon: Zap,
+    icon: 'zap',
     title: 'Vague Idea to Validated Specs',
     description:
       'Start with nothing more than a rough concept. End with PRDs, user stories, and technical specifications that AI coding tools can immediately act on.',
   },
   {
-    icon: Lightbulb,
+    icon: 'lightbulb',
     title: 'No Experience Required',
     description:
       "You don't need to know what design thinking is. The AI handles methodology — you bring domain knowledge and creative instinct.",
   },
   {
-    icon: FileText,
+    icon: 'file-text',
     title: 'Build Pack Output',
     description:
       'Every workshop produces a complete Build Pack: structured deliverables designed for handoff to AI coders like Cursor, Copilot, or Claude.',
@@ -55,10 +54,10 @@ export function ValuePropsSection() {
         {/* Value prop cards grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
           {VALUE_PROPS.map((prop) => {
-            const Icon = prop.icon;
             return (
               <div key={prop.title}>
                 <Icon
+                  name={prop.icon}
                   size={32}
                   className="text-olive-600 dark:text-olive-400 mb-4"
                 />

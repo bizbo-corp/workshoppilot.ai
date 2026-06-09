@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Stage, Layer, Line, Rect, Ellipse, Arrow, Text, Path, Image as KonvaImage } from 'react-konva';
 import type Konva from 'konva';
-import { Loader2, ImageUp } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { useDrawingStore } from '@/providers/drawing-store-provider';
 import { usePencilTool, PencilToolPreview } from '@/components/ezydraw/tools/pencil-tool';
 import { useHighlighterTool, HighlighterToolPreview } from '@/components/ezydraw/tools/highlighter-tool';
@@ -640,7 +640,7 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle, EzyDrawStageProps>(({
       {isDragOver && (
         <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center bg-olive-50/60 border-2 border-dashed border-olive-400 rounded-lg">
           <div className="flex flex-col items-center gap-2 text-olive-600">
-            <ImageUp className="h-8 w-8" />
+            <Icon name="image-up" className="h-8 w-8" />
             <span className="text-sm font-medium">Drop image to upload</span>
           </div>
         </div>
@@ -650,7 +650,7 @@ export const EzyDrawStage = forwardRef<EzyDrawStageHandle, EzyDrawStageProps>(({
       {isUploadingImage && (
         <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center bg-white/60">
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
-            <Loader2 className="h-6 w-6 animate-spin" />
+            <Icon name="spinner" className="h-6 w-6 animate-spin" />
             <span className="text-sm">Processing image...</span>
           </div>
         </div>

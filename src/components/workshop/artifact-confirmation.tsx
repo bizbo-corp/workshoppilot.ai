@@ -9,7 +9,7 @@
 
 'use client';
 
-import { Check } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 
 interface ArtifactConfirmationProps {
@@ -30,7 +30,7 @@ export function ArtifactConfirmation({
     return (
       <div className="flex items-center justify-between rounded-lg border border-green-500/20 bg-green-500/10 px-4 py-3">
         <div className="flex items-center gap-2">
-          <Check className="h-4 w-4 text-green-700 dark:text-green-400" />
+          <Icon name="check" className="h-4 w-4 text-green-700 dark:text-green-400" />
           <span className="text-sm font-medium text-green-700 dark:text-green-400">
             Output confirmed
           </span>

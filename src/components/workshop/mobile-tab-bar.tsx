@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { MessageSquare, Layout } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 interface MobileTabBarProps {
@@ -21,7 +21,7 @@ export function MobileTabBar({ activeTab, onTabChange }: MobileTabBarProps) {
             : 'text-muted-foreground'
         )}
       >
-        <MessageSquare className="h-5 w-5" />
+        <Icon name="message-square" className="h-5 w-5" />
         <span className="text-xs">Chat</span>
       </button>
       <button
@@ -33,7 +33,7 @@ export function MobileTabBar({ activeTab, onTabChange }: MobileTabBarProps) {
             : 'text-muted-foreground'
         )}
       >
-        <Layout className="h-5 w-5" />
+        <Icon name="layout" className="h-5 w-5" />
         <span className="text-xs">Canvas</span>
       </button>
     </div>

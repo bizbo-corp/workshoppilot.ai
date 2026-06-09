@@ -9,7 +9,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, Check, Eye, Lock } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import {
   Sheet,
   SheetContent,
@@ -69,7 +69,7 @@ export function MobileStepper({
               </span>
             )}
           </div>
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          <Icon name="chevron-down" className="h-4 w-4 text-muted-foreground" />
         </button>
       </SheetTrigger>
 
@@ -107,9 +107,9 @@ export function MobileStepper({
                   )}
                 >
                   {isLocked ? (
-                    <Lock className="h-3 w-3" />
+                    <Icon name="lock" className="h-3 w-3" />
                   ) : isComplete ? (
-                    <Check className="h-3 w-3" />
+                    <Icon name="check" className="h-3 w-3" />
                   ) : (
                     step.order
                   )}
@@ -158,7 +158,7 @@ export function MobileStepper({
                     className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                     title={`View ${step.name} snapshot`}
                   >
-                    <Eye className="h-4 w-4" />
+                    <Icon name="eye" className="h-4 w-4" />
                   </button>
                 )}
               </div>

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { resetOnboarding } from '@/actions/billing-actions';
 import { Button } from '@/components/ui/button';
-import { RotateCcw } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 export function AdminResetOnboarding() {
   const router = useRouter();
@@ -15,7 +15,7 @@ export function AdminResetOnboarding() {
 
   return (
     <Button variant="ghost" size="sm" onClick={handleReset} className="text-xs text-muted-foreground">
-      <RotateCcw className="mr-1 h-3 w-3" />
+      <Icon name="rotate-ccw" className="mr-1 h-3 w-3" />
       Reset Onboarding
     </Button>
   );

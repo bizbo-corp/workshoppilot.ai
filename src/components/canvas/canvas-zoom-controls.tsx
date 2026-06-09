@@ -1,7 +1,7 @@
 'use client';
 
 import { useReactFlow } from '@xyflow/react';
-import { Plus, Minus, Maximize } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 interface CanvasZoomControlsProps {
   /** Override default fitView behavior (e.g. to account for chat panel offset) */
@@ -18,21 +18,21 @@ export function CanvasZoomControls({ onFitView }: CanvasZoomControlsProps) {
         title="Zoom in"
         className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
       >
-        <Plus className="w-4 h-4" />
+        <Icon name="plus" className="w-4 h-4" />
       </button>
       <button
         onClick={() => zoomOut({ duration: 200 })}
         title="Zoom out"
         className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
       >
-        <Minus className="w-4 h-4" />
+        <Icon name="minus" className="w-4 h-4" />
       </button>
       <button
         onClick={() => onFitView ? onFitView() : fitView({ padding: 0.2, duration: 300 })}
         title="Fit view"
         className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
       >
-        <Maximize className="w-4 h-4" />
+        <Icon name="maximize" className="w-4 h-4" />
       </button>
     </div>
   );

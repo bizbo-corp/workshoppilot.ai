@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ArrowLeft, ClipboardCheck, Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Surface } from '@/components/ui/surface';
 import { getValidationState, recordValidationResult } from '@/actions/validation-actions';
@@ -68,14 +68,14 @@ export function ValidationPlanDeliverable({
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5">
-          <ArrowLeft className="h-4 w-4" />
+          <Icon name="arrow-left" className="h-4 w-4" />
           Back
         </Button>
       </div>
 
       <div className="flex items-center gap-2.5">
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-500/10 text-violet-500">
-          <ClipboardCheck className="h-5 w-5" />
+          <Icon name="clipboard-check" className="h-5 w-5" />
         </span>
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Validation Plan</h1>
@@ -89,7 +89,7 @@ export function ValidationPlanDeliverable({
 
       {loading ? (
         <div className="flex h-40 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-foreground/70" />
+          <Icon name="spinner" className="h-6 w-6 animate-spin text-foreground/70" />
         </div>
       ) : plans.length === 0 ? (
         <Surface className="p-8 text-center text-base text-foreground/70">

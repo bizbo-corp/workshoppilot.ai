@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Sparkles, Plus } from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import { useBroadcastEvent } from "@liveblocks/react";
 import { toast } from "sonner";
 import { useCanvasStore } from "@/providers/canvas-store-provider";
@@ -171,7 +171,7 @@ export function JourneyTemplatePollView({
               "disabled:cursor-not-allowed disabled:opacity-50",
             )}
           >
-            <Check className="h-3.5 w-3.5" aria-hidden />
+            <Icon name="check" className="h-3.5 w-3.5" aria-hidden />
             Confirm journey type
           </button>
         </div>
@@ -214,7 +214,7 @@ function CustomJourneyPanel({
         onClick={() => setOpen(true)}
         className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-dashed border-olive-300 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-olive-400 hover:text-foreground dark:border-neutral-olive-700"
       >
-        <Plus className="h-3.5 w-3.5" aria-hidden />
+        <Icon name="plus" className="h-3.5 w-3.5" aria-hidden />
         None of these fit? Create your own journey
       </button>
     );
@@ -223,7 +223,7 @@ function CustomJourneyPanel({
   return (
     <div className="mt-3 rounded-lg border border-olive-300 bg-olive-50/40 p-3 dark:border-olive-700 dark:bg-olive-950/20">
       <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
-        <Sparkles className="h-4 w-4 text-olive-600" aria-hidden />
+        <Icon name="sparkles" className="h-4 w-4 text-olive-600" aria-hidden />
         Create your own journey
       </div>
       <p className="mb-2 text-xs text-muted-foreground">
@@ -263,7 +263,7 @@ function CustomJourneyPanel({
           disabled={!value.trim()}
           className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <Sparkles className="h-3.5 w-3.5" aria-hidden />
+          <Icon name="sparkles" className="h-3.5 w-3.5" aria-hidden />
           Ask Wanda to build
         </button>
       </div>
@@ -491,7 +491,7 @@ function LockedBanner({
 }) {
   return (
     <div className="mb-4 flex items-center gap-2 rounded-lg border border-olive-300 bg-olive-50/60 px-4 py-2.5 text-sm dark:border-olive-700 dark:bg-olive-950/30">
-      <Check className="h-4 w-4 flex-none text-olive-600" aria-hidden />
+      <Icon name="check" className="h-4 w-4 flex-none text-olive-600" aria-hidden />
       <span className="font-medium text-foreground">
         {template.templateName}
       </span>

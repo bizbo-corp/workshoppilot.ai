@@ -11,7 +11,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles, Palette, Zap, FileText, Shield } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -111,7 +111,7 @@ export function UpgradeDialog({
         <DialogHeader>
           {/* Sparkle icon in amber circle */}
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50">
-            <Sparkles className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+            <Icon name="sparkles" className="h-6 w-6 text-amber-600 dark:text-amber-400" />
           </div>
 
           {/* Excitement-framed headline */}
@@ -131,17 +131,17 @@ export function UpgradeDialog({
         {/* What's ahead - mini step preview */}
         <div className="grid grid-cols-3 gap-2">
           <div className="flex flex-col items-center gap-1.5 rounded-lg border bg-muted/30 p-2.5 text-center">
-            <Palette className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <Icon name="palette" className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <p className="text-xs font-medium leading-tight">Ideation</p>
             <p className="text-[10px] text-muted-foreground leading-tight">Mind maps & Crazy 8s sketching</p>
           </div>
           <div className="flex flex-col items-center gap-1.5 rounded-lg border bg-muted/30 p-2.5 text-center">
-            <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <Icon name="zap" className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <p className="text-xs font-medium leading-tight">Concepts</p>
             <p className="text-[10px] text-muted-foreground leading-tight">SWOT analysis & elevator pitch</p>
           </div>
           <div className="flex flex-col items-center gap-1.5 rounded-lg border bg-muted/30 p-2.5 text-center">
-            <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <Icon name="file-text" className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <p className="text-xs font-medium leading-tight">Build Pack</p>
             <p className="text-[10px] text-muted-foreground leading-tight">PRD, stories & tech specs</p>
           </div>
@@ -226,7 +226,7 @@ export function UpgradeDialog({
               </div>
 
               <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
-                <Shield className="h-3 w-3" />
+                <Icon name="shield" className="h-3 w-3" />
                 Secure checkout via Stripe
               </div>
             </>

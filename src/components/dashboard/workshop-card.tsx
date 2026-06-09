@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowRight, Check, Clock, Pencil, Users } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -182,7 +182,7 @@ export function WorkshopCard({
               title="Done"
               className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-accent disabled:opacity-50"
             >
-              <Check className="h-4 w-4" />
+              <Icon name="check" className="h-4 w-4" />
             </button>
           ) : (
             <>
@@ -192,7 +192,7 @@ export function WorkshopCard({
                 title="Open workshop"
                 className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-accent"
               >
-                <ArrowRight className="h-4 w-4" />
+                <Icon name="arrow-right" className="h-4 w-4" />
               </Link>
               <button
                 type="button"
@@ -201,7 +201,7 @@ export function WorkshopCard({
                 title="Edit workshop"
                 className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-accent"
               >
-                <Pencil className="h-4 w-4" />
+                <Icon name="pencil" className="h-4 w-4" />
               </button>
             </>
           )}
@@ -250,7 +250,7 @@ export function WorkshopCard({
             {/* Multiplayer badge */}
             {workshopType === 'multiplayer' && (
               <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-black/10 px-2 py-0.5 dark:bg-white/15">
-                <Users className="h-3 w-3 text-foreground/60" />
+                <Icon name="users" className="h-3 w-3 text-foreground/60" />
                 <span className="text-xs text-foreground/60">Multiplayer</span>
               </div>
             )}
@@ -288,7 +288,7 @@ export function WorkshopCard({
         {/* Timestamp + AI cost row */}
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5" />
+            <Icon name="clock" className="h-3.5 w-3.5" />
             <span>
               {formatDistanceToNow(new Date(updatedAt), { addSuffix: true })}
             </span>

@@ -1,6 +1,6 @@
 'use client';
 
-import { Pencil, Sparkles } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AI_DECIDE } from '@/lib/tech-specs-wizard/types';
@@ -51,19 +51,18 @@ function SummarySection({
   preferences: TechSpecsPreferences;
   onEdit: () => void;
 }) {
-  const Icon = page.icon;
   const answers = getPageAnswers(page.questions, preferences);
 
   return (
     <div className="flex items-start gap-3 rounded-xl border p-4">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <Icon name={page.icon} className="h-4 w-4 text-muted-foreground" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-medium">{page.title}</h3>
           <Button variant="ghost" size="xs" onClick={onEdit} className="shrink-0 gap-1 text-muted-foreground">
-            <Pencil className="h-3 w-3" />
+            <Icon name="pencil" className="h-3 w-3" />
             Edit
           </Button>
         </div>
@@ -92,7 +91,7 @@ function SummarySection({
 function AiDecideBadge() {
   return (
     <Badge variant="outline" className="text-xs font-normal gap-1 border-dashed text-muted-foreground">
-      <Sparkles className="h-3 w-3" />
+      <Icon name="sparkles" className="h-3 w-3" />
       AI decides
     </Badge>
   );

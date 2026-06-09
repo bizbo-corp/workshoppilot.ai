@@ -12,7 +12,7 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
-import { LogOut, Settings, Target } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ExitWorkshopDialog } from "@/components/dialogs/exit-workshop-dialog";
@@ -206,7 +206,7 @@ export function WorkshopHeader({
               className="relative gap-2"
               title="Workshop settings"
             >
-              <Settings className="h-4 w-4" />
+              <Icon name="settings" className="h-4 w-4" />
               <span className="hidden sm:inline">Workshop Settings</span>
               {changeRequests > 0 && (
                 <span
@@ -225,7 +225,7 @@ export function WorkshopHeader({
               className="gap-2"
               title="View the challenge"
             >
-              <Target className="h-4 w-4" />
+              <Icon name="target" className="h-4 w-4" />
               <span className="hidden sm:inline">Challenge</span>
             </Button>
           )}
@@ -236,7 +236,7 @@ export function WorkshopHeader({
             onClick={() => setExitDialogOpen(true)}
             className="gap-2"
           >
-            <LogOut className="h-4 w-4" />
+            <Icon name="log-out" className="h-4 w-4" />
             <span className="hidden sm:inline">Exit Workshop</span>
           </Button>
 

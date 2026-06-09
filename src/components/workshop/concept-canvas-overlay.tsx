@@ -1,6 +1,6 @@
 'use client';
 
-import { Info } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 
 interface ConceptCanvasOverlayProps {
@@ -24,7 +24,7 @@ export function ConceptCanvasOverlay({
   if (!selectedSketchSlotIds || selectedSketchSlotIds.length === 0) {
     return (
       <div className="absolute bottom-16 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-muted-foreground/20 bg-background/95 px-4 py-3 text-sm text-muted-foreground shadow-lg backdrop-blur-sm">
-        <Info className="h-4 w-4" />
+        <Icon name="info" className="h-4 w-4" />
         <span>Complete Step 8 to generate concept cards</span>
       </div>
     );

@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Trash2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import type { JourneyMapperNode, UiType, Priority } from '@/lib/journey-mapper/types';
 
 const UI_TYPE_LABELS: Record<UiType, string> = {
@@ -130,7 +130,7 @@ export function JourneyNodeDetailDialog({
                 onOpenChange(false);
               }}
             >
-              <Trash2 className="h-4 w-4 mr-1.5" />
+              <Icon name="trash" className="h-4 w-4 mr-1.5" />
               Delete
             </Button>
           )}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, type ReactNode } from 'react';
-import { Check, Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -299,7 +299,7 @@ export function GuidedPilotButton({
               <Button type="submit" variant="primary" disabled={!isStep1Valid || isPending}>
                 {isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Icon name="spinner" className="mr-2 h-4 w-4 animate-spin" />
                     Submitting...
                   </>
                 ) : (
@@ -375,7 +375,7 @@ export function GuidedPilotButton({
                     'Stakeholder-ready presentation deck',
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-2.5 text-sm text-foreground">
-                      <Check className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
+                      <Icon name="check" className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
                       {item}
                     </li>
                   ))}
@@ -424,7 +424,7 @@ export function GuidedPilotButton({
         {step === 3 && invoiceChosen && (
           <div className="text-center py-6">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-olive-100 dark:bg-olive-900">
-              <Check className="h-6 w-6 text-olive-600 dark:text-olive-400" />
+              <Icon name="check" className="h-6 w-6 text-olive-600 dark:text-olive-400" />
             </div>
             <DialogHeader>
               <DialogTitle className="text-center">You&apos;re all set!</DialogTitle>

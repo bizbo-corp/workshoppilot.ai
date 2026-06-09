@@ -10,7 +10,7 @@
 
 import { memo } from 'react';
 import { type NodeProps, type Node } from '@xyflow/react';
-import { GitBranchPlus, ArrowRight } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { BR_NODE_WIDTH, BR_NODE_HEIGHT_DEFAULT, BR_NODE_GAP, computeBrNodeHeight } from './brain-rewriting-group-node';
 import { PhaseContainerShell } from './phase-container-shell';
 
@@ -55,7 +55,7 @@ function BrainRewritingContainerNodeComponent({ data }: NodeProps<BrainRewriting
 
   const headerExtra = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <GitBranchPlus style={{ width: 16, height: 16, color: 'var(--color-primary)', opacity: 0.8 }} />
+      <Icon name="git-branch-plus" style={{ width: 16, height: 16, color: 'var(--color-primary)', opacity: 0.8 }} />
       <span
         style={{
           fontSize: 11,
@@ -108,7 +108,7 @@ function BrainRewritingContainerNodeComponent({ data }: NodeProps<BrainRewriting
         onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
         onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
       >
-        <ArrowRight style={{ width: 14, height: 14 }} />
+        <Icon name="arrow-right" style={{ width: 14, height: 14 }} />
         Proceed to Concept Development
       </button>
     </div>

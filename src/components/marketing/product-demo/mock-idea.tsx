@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { CheckCircle2 } from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import { cn } from "@/lib/utils";
 import {
   IDEA_SUGGESTIONS,
@@ -131,7 +131,7 @@ export function MockIdea({ play = true }: { play?: boolean }) {
               )}
             >
               {done && (
-                <CheckCircle2 className="h-3.5 w-3.5 text-[var(--sticky-note-yellow-text)]" />
+                <Icon name="check-circle" className="h-3.5 w-3.5 text-[var(--sticky-note-yellow-text)]" />
               )}
               Confirm
             </span>

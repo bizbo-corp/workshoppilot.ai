@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useBroadcastEvent, useOthers, useUpdateMyPresence } from '@liveblocks/react';
 import { shallow } from '@liveblocks/react';
 import { useRouter } from 'next/navigation';
-import { Eye, Timer, Pause, Play, X, RotateCcw, CheckCircle2, Rocket, ArrowLeft } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -369,7 +369,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
               : 'Bring everyone to your view and keep them in sync'
           }
         >
-          <Eye className="h-4 w-4" />
+          <Icon name="eye" className="h-4 w-4" />
           <span className="hidden sm:inline">
             {isPresenting
               ? followerCount > 0
@@ -389,7 +389,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
               title={votingMode && votingSession.status === 'idle' ? 'Start voting timer for participants' : 'Set countdown timer'}
             >
-              <Timer className="h-4 w-4" />
+              <Icon name="timer" className="h-4 w-4" />
               <span className="hidden sm:inline">{timerButtonLabel}</span>
             </button>
 
@@ -450,7 +450,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
                 className="p-0.5 rounded hover:bg-background/50 transition-colors"
                 title="Pause timer"
               >
-                <Pause className="h-3.5 w-3.5" />
+                <Icon name="pause" className="h-3.5 w-3.5" />
               </button>
             )}
             {timerState === 'paused' && (
@@ -459,7 +459,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
                 className="p-0.5 rounded hover:bg-background/50 transition-colors"
                 title="Resume timer"
               >
-                <Play className="h-3.5 w-3.5" />
+                <Icon name="play" className="h-3.5 w-3.5" />
               </button>
             )}
             {(timerState === 'running' || timerState === 'paused') && (
@@ -468,7 +468,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
                 className="p-0.5 rounded hover:bg-background/50 transition-colors"
                 title="Cancel timer"
               >
-                <X className="h-3.5 w-3.5" />
+                <Icon name="close" className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
@@ -489,7 +489,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
               )}
               title={allParticipantsDone ? 'All participants are done — close voting' : 'Close voting and show results'}
             >
-              <CheckCircle2 className="h-4 w-4" />
+              <Icon name="check-circle" className="h-4 w-4" />
               Close Voting
             </button>
           </>
@@ -505,7 +505,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
               title="Clear all votes and restart voting"
             >
-              <RotateCcw className="h-4 w-4" />
+              <Icon name="rotate-ccw" className="h-4 w-4" />
               <span className="hidden sm:inline">Reset Votes</span>
             </button>
           </>
@@ -528,7 +528,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               title="Start concept development activity for all participants"
             >
-              <Rocket className="h-4 w-4" />
+              <Icon name="rocket" className="h-4 w-4" />
               <span className="hidden sm:inline">Start Activity</span>
             </button>
           </>
@@ -543,7 +543,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
               title="Go back to mind mapping phase (preserves all data)"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <Icon name="arrow-left" className="h-4 w-4" />
               <span className="hidden sm:inline">Back to Mind Map</span>
             </button>
           </>
@@ -562,7 +562,7 @@ export function FacilitatorControls({ workshopId, sessionId: _sessionId, votingM
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
               title="Clear all Crazy 8s data and return to mind mapping"
             >
-              <RotateCcw className="h-4 w-4" />
+              <Icon name="rotate-ccw" className="h-4 w-4" />
               <span className="hidden sm:inline">Reset Crazy 8s</span>
             </button>
           </>

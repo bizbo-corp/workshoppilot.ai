@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Users } from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import type { FieldworkSubmission } from "@/stores/canvas-store";
 
 /**
@@ -21,7 +21,7 @@ export function FieldworkRoster({
   return (
     <div className="rounded-xl border border-olive-200 bg-olive-50/60 p-3 dark:border-neutral-olive-700 dark:bg-neutral-olive-900/30">
       <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-foreground">
-        <Users className="h-3.5 w-3.5 text-olive-600 dark:text-olive-400" />
+        <Icon name="users" className="h-3.5 w-3.5 text-olive-600 dark:text-olive-400" />
         Research submitted ({entries.length})
       </p>
       {entries.length === 0 ? (
@@ -37,7 +37,7 @@ export function FieldworkRoster({
                 style={{ backgroundColor: s.color || "#b3efbd" }}
               />
               <span className="truncate">{s.name || "Participant"}</span>
-              <CheckCircle2 className="h-3 w-3 shrink-0 text-olive-600 dark:text-olive-400" />
+              <Icon name="check-circle" className="h-3 w-3 shrink-0 text-olive-600 dark:text-olive-400" />
             </li>
           ))}
         </ul>

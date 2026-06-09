@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   // refresh loop. Wildcard covers every current and future worktree host.
   allowedDevOrigins: ['*.test.localhost'],
   experimental: {
-    optimizePackageImports: ['lucide-react'],
+    optimizePackageImports: ['@phosphor-icons/react'],
     serverActions: {
       bodySizeLimit: '10mb',
     },

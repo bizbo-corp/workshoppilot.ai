@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Upload, Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import type { AssetData, AssetCategory } from '@/lib/asset-library/asset-library-types';
 
@@ -84,10 +84,10 @@ export function AssetUploadZone({ onUpload, category, compact }: AssetUploadZone
         className="hidden"
       />
       {isUploading ? (
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <Icon name="spinner" className="h-5 w-5 animate-spin text-muted-foreground" />
       ) : (
         <>
-          <Upload className={cn('text-muted-foreground', compact ? 'h-4 w-4' : 'h-6 w-6')} />
+          <Icon name="upload" className={cn('text-muted-foreground', compact ? 'h-4 w-4' : 'h-6 w-6')} />
           <p className={cn('mt-1 text-muted-foreground', compact ? 'text-[10px]' : 'text-xs')}>
             {compact ? 'Drop or click to upload' : 'Drag & drop files or click to browse'}
           </p>

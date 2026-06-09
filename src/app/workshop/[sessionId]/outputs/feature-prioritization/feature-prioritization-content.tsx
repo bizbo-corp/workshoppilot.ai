@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ListOrdered, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Heading, Text } from '@/components/ui/typography';
 import {
@@ -127,7 +127,7 @@ function FeaturePrioritizationInner({
         <div className="text-center space-y-4 max-w-md">
           <div className="flex justify-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <ListOrdered className="h-8 w-8 text-primary" />
+              <Icon name="list-ordered" className="h-8 w-8 text-primary" />
             </div>
           </div>
           <Heading level={2} className="text-xl">Feature Prioritization</Heading>
@@ -137,7 +137,7 @@ function FeaturePrioritizationInner({
           </Text>
           {error && (
             <div className="flex items-center gap-2 text-sm text-destructive justify-center">
-              <AlertCircle className="h-4 w-4" />
+              <Icon name="alert-circle" className="h-4 w-4" />
               {error}
             </div>
           )}
@@ -162,12 +162,12 @@ function FeaturePrioritizationInner({
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Icon name="spinner" className="h-4 w-4 animate-spin" />
                   Generating...
                 </>
               ) : (
                 <>
-                  <ListOrdered className="h-4 w-4" />
+                  <Icon name="list-ordered" className="h-4 w-4" />
                   Generate Features
                 </>
               )}
@@ -178,7 +178,7 @@ function FeaturePrioritizationInner({
               href={`/workshop/${sessionId}/outputs`}
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
+              <Icon name="arrow-left" className="h-3.5 w-3.5" />
               Back to Build Pack
             </Link>
           </div>
@@ -197,7 +197,7 @@ function FeaturePrioritizationInner({
               href={`/workshop/${sessionId}/outputs`}
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
+              <Icon name="arrow-left" className="h-3.5 w-3.5" />
               Back to Build Pack
             </Link>
             <Heading level={1} as="h1" className="text-2xl font-semibold sm:text-2xl">Feature Prioritization</Heading>
@@ -214,9 +214,9 @@ function FeaturePrioritizationInner({
                 disabled={isGenerating}
               >
                 {isGenerating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Icon name="spinner" className="h-4 w-4 animate-spin" />
                 ) : (
-                  <RefreshCw className="h-4 w-4" />
+                  <Icon name="refresh" className="h-4 w-4" />
                 )}
                 Regenerate
               </Button>

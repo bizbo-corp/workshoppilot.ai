@@ -1,15 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Check,
-  Loader2,
-  PencilLine,
-  RefreshCw,
-  Sparkles,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import type { StickyNoteColor } from '@/stores/canvas-store';
 
@@ -30,12 +22,12 @@ const CARD_TEXT: Partial<Record<StickyNoteColor, string>> = {
 };
 
 function ToolButton({
-  icon: Icon,
+  icon,
   label,
   onClick,
   disabled,
 }: {
-  icon: typeof Sparkles;
+  icon: IconName;
   label: string;
   onClick?: () => void;
   disabled?: boolean;
@@ -49,7 +41,7 @@ function ToolButton({
       aria-label={label}
       className="rounded-md p-1 opacity-70 transition-colors hover:bg-black/10 hover:opacity-100 disabled:opacity-40 dark:hover:bg-white/15"
     >
-      <Icon className="h-3.5 w-3.5" />
+      <Icon name={icon} className="h-3.5 w-3.5" />
     </button>
   );
 }
@@ -120,25 +112,25 @@ export function SetupCard({
         )}
       >
         {busy ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin opacity-70" />
+          <Icon name="spinner" className="h-3.5 w-3.5 animate-spin opacity-70" />
         ) : filled ? (
           <>
-            {onPolish && <ToolButton icon={Sparkles} label="Polish wording" onClick={onPolish} />}
+            {onPolish && <ToolButton icon="sparkles" label="Polish wording" onClick={onPolish} />}
             {onElaborate && (
               <ToolButton
-                icon={PencilLine}
+                icon="pencil-line"
                 label="Elaborate — steer the change"
                 onClick={() => setElaborateOpen((o) => !o)}
               />
             )}
             {onRegenerate && (
-              <ToolButton icon={RefreshCw} label="Auto-generate (brand new)" onClick={onRegenerate} />
+              <ToolButton icon="refresh" label="Auto-generate (brand new)" onClick={onRegenerate} />
             )}
           </>
         ) : (
           onRegenerate && (
             <ToolButton
-              icon={RefreshCw}
+              icon="refresh"
               label="Smart suggest — write something brand new"
               onClick={onRegenerate}
             />
@@ -196,7 +188,7 @@ export function SetupCard({
             aria-label="Cancel"
             className="shrink-0 rounded-md p-1 opacity-70 transition-colors hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/15"
           >
-            <X className="h-3.5 w-3.5" />
+            <Icon name="close" className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
@@ -215,7 +207,7 @@ export function SetupCard({
               aria-label="Reset (clear)"
               className="rounded-md p-1 opacity-0 transition-opacity hover:bg-black/10 group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-40 dark:hover:bg-white/15"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Icon name="trash" className="h-3.5 w-3.5" />
             </button>
           ) : (
             <span />
@@ -228,7 +220,7 @@ export function SetupCard({
               title="Confirm — refresh suggestions for the other cards"
               className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium opacity-70 transition-colors hover:bg-black/5 hover:opacity-100 disabled:opacity-40 dark:hover:bg-white/10"
             >
-              <Check className="h-3.5 w-3.5" />
+              <Icon name="check" className="h-3.5 w-3.5" />
               Confirm
             </button>
           )}

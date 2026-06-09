@@ -1,18 +1,17 @@
 'use client';
 
-import { Check } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 interface MultiOptionCardProps {
   label: string;
   description?: string;
-  icon?: LucideIcon;
+  icon?: IconName;
   checked: boolean;
   onToggle: () => void;
 }
 
-export function MultiOptionCard({ label, description, icon: Icon, checked, onToggle }: MultiOptionCardProps) {
+export function MultiOptionCard({ label, description, checked, onToggle }: MultiOptionCardProps) {
   return (
     <button
       type="button"
@@ -35,7 +34,7 @@ export function MultiOptionCard({ label, description, icon: Icon, checked, onTog
             : 'border-muted-foreground/30'
         )}
       >
-        {checked && <Check className="h-3 w-3" />}
+        {checked && <Icon name="check" className="h-3 w-3" />}
       </div>
       <div className="flex-1 space-y-0.5">
         <span className="text-sm font-medium">{label}</span>

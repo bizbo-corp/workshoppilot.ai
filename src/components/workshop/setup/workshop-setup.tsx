@@ -13,7 +13,7 @@ import {
 } from '@/lib/canvas/setup-suggestions-config';
 import type { StickyNoteColor } from '@/stores/canvas-store';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { SetupCard } from './setup-card';
 import { SuggestionChips } from './suggestion-chips';
 import { ChallengeCard } from './challenge-card';
@@ -420,7 +420,7 @@ export function WorkshopSetup({
             <div className="mt-4 flex justify-center">
               {confirmed ? (
                 <span className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-olive-50 px-4 py-2 text-sm font-medium text-olive-800 dark:border-olive-700 dark:bg-olive-950/30 dark:text-olive-300">
-                  <CheckCircle2 className="h-4 w-4" />
+                  <Icon name="check-circle" className="h-4 w-4" />
                   Challenge accepted
                 </span>
               ) : (
@@ -428,7 +428,7 @@ export function WorkshopSetup({
                   onClick={onConfirm}
                   className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-olive-50 px-5 py-2.5 text-sm font-medium text-olive-800 transition-colors hover:bg-olive-100 dark:border-olive-700 dark:bg-olive-950/30 dark:text-olive-300 dark:hover:bg-olive-900/40"
                 >
-                  <CheckCircle2 className="h-4 w-4" />
+                  <Icon name="check-circle" className="h-4 w-4" />
                   {confirmLabel}
                 </button>
               )}

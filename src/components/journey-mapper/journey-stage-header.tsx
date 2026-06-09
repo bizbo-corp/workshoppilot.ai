@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { type NodeProps, type Node } from '@xyflow/react';
 import { cn } from '@/lib/utils';
-import { AlertTriangle } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import type { StageEmotion } from '@/lib/journey-mapper/types';
 
 export type StageHeaderData = {
@@ -40,7 +40,7 @@ export const JourneyStageHeader = memo(
               {data.stageName}
             </h3>
             {data.isDip && (
-              <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+              <Icon name="alert-triangle" className="h-3.5 w-3.5 text-red-500 shrink-0" />
             )}
           </div>
 

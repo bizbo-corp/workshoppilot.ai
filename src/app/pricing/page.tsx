@@ -1,18 +1,4 @@
-import {
-  ArrowRight,
-  Check,
-  Clock,
-  FileText,
-  HelpCircle,
-  Layers,
-  Map,
-  Shield,
-  Sparkles,
-  Star,
-  Target,
-  Users,
-  Zap,
-} from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { LandingHeader } from '@/components/layout/landing-header';
 import { Footer } from '@/components/landing/footer';
 import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
@@ -156,7 +142,7 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
         <section className="pt-16 pb-8 sm:pt-20 sm:pb-12 bg-background">
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-olive-300/50 bg-olive-50/80 px-4 py-1.5 text-sm font-medium text-olive-700 dark:border-olive-700/50 dark:bg-olive-950/50 dark:text-olive-300 mb-6">
-              <Clock className="h-4 w-4" />
+              <Icon name="clock" className="h-4 w-4" />
               60 minutes to developer-ready
             </div>
             <Heading level={1} className="md:text-5xl mb-4">
@@ -206,7 +192,7 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
                   {tier.badge && (
                     <div className="mb-4">
                       <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-olive-700 dark:text-olive-300 bg-olive-100 dark:bg-olive-900 rounded-full px-3 py-1">
-                        <Sparkles className="h-3 w-3" />
+                        <Icon name="sparkles" className="h-3 w-3" />
                         {tier.badge}
                       </span>
                     </div>
@@ -236,7 +222,8 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
                   <ul className="space-y-3 flex-1 mb-8">
                     {tier.features.map((feature) => (
                       <li key={feature} className="flex items-start gap-2.5">
-                        <Check
+                        <Icon
+                          name="check"
                           size={16}
                           className="text-olive-600 dark:text-olive-400 mt-0.5 shrink-0"
                         />
@@ -291,7 +278,7 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
             {/* Trust signals */}
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
+                <Icon name="shield" className="h-4 w-4" />
                 Secure payment via Stripe
               </div>
             </div>
@@ -313,41 +300,40 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
                 {
-                  icon: FileText,
+                  icon: 'file-text' as const,
                   title: 'PRD',
                   description: 'Formal Product Requirements Document — the "Bible" for your developers.',
                 },
                 {
-                  icon: Users,
+                  icon: 'users' as const,
                   title: 'User Stories',
                   description: 'Import-ready for Jira, Linear, or Trello. Saves 10+ hours of manual work.',
                 },
                 {
-                  icon: Layers,
+                  icon: 'layers' as const,
                   title: 'Tech Specs',
                   description: 'Architecture, data models, and API contracts your dev team can act on immediately.',
                 },
                 {
-                  icon: Map,
+                  icon: 'map' as const,
                   title: 'Feature Roadmap',
                   description: 'Phase 1 vs Phase 2 prioritisation. Build the right thing first.',
                 },
                 {
-                  icon: Target,
+                  icon: 'target' as const,
                   title: 'Lean Canvas',
                   description: '1-page business model. Essential for alignment and early pitching.',
                 },
                 {
-                  icon: Zap,
+                  icon: 'zap' as const,
                   title: 'AI-Coder Ready',
                   description: 'Structured for Cursor, Claude Code, Copilot, and other AI coding tools.',
                 },
               ].map((item) => {
-                const Icon = item.icon;
                 return (
                   <div key={item.title} className="flex items-start gap-4 p-4 rounded-xl">
                     <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-olive-100 dark:bg-olive-950/50 shrink-0">
-                      <Icon className="h-5 w-5 text-olive-600 dark:text-olive-400" />
+                      <Icon name={item.icon} className="h-5 w-5 text-olive-600 dark:text-olive-400" />
                     </div>
                     <div>
                       <Heading level={4} as="h3" className="font-bold mb-1">{item.title}</Heading>
@@ -375,7 +361,7 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
               {FAQ_ITEMS.map((item) => (
                 <div key={item.question} className="border-b border-border pb-6 last:border-0">
                   <Heading level={3} as="h3" className="flex items-start gap-3 text-base font-semibold mb-2">
-                    <HelpCircle className="h-5 w-5 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
+                    <Icon name="help-circle" className="h-5 w-5 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
                     {item.question}
                   </Heading>
                   <Text variant="muted" className="leading-relaxed pl-8">
@@ -402,14 +388,16 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
                 className="min-w-[220px] text-base shadow-lg shadow-olive-600/20"
               >
                 Start Free Workshop
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <Icon name="arrow-right" className="ml-2 h-4 w-4" />
               </NewWorkshopButton>
             </div>
             <div className="mt-8 flex items-center justify-center gap-4">
               <div className="flex gap-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
+                  <Icon
                     key={i}
+                    name="star"
+                    weight="fill"
                     className="h-3.5 w-3.5 fill-olive-500 text-olive-500 dark:fill-olive-400 dark:text-olive-400"
                   />
                 ))}

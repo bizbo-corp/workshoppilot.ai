@@ -1,7 +1,7 @@
 'use client';
 
 import { Panel } from '@xyflow/react';
-import { RefreshCw, Wand2, ArrowLeft, Loader2, CheckCircle2, Rocket, Trash2, Eye, EyeOff, Map, Network, Sparkles, FolderCog, MoreVertical, ChevronDown } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -64,7 +64,7 @@ export function JourneyMapperToolbar({
         href={`/workshop/${sessionId}/outputs`}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mr-2"
       >
-        <ArrowLeft className="h-3.5 w-3.5" />
+        <Icon name="arrow-left" className="h-3.5 w-3.5" />
         Build Pack
       </Link>
 
@@ -91,7 +91,7 @@ export function JourneyMapperToolbar({
           onClick={onManageGroups}
           className="h-7 text-xs gap-1.5"
         >
-          <FolderCog className="h-3 w-3" />
+          <Icon name="folder-cog" className="h-3 w-3" />
           Groups
         </Button>
       )}
@@ -107,7 +107,7 @@ export function JourneyMapperToolbar({
               viewMode === 'journey' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Map className="h-3 w-3" />
+            <Icon name="map" className="h-3 w-3" />
             Journey
           </button>
           <button
@@ -116,7 +116,7 @@ export function JourneyMapperToolbar({
               viewMode === 'sitemap' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Network className="h-3 w-3" />
+            <Icon name="network" className="h-3 w-3" />
             Sitemap
           </button>
         </div>
@@ -127,7 +127,7 @@ export function JourneyMapperToolbar({
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
             View
-            <ChevronDown className="h-3 w-3" />
+            <Icon name="chevron-down" className="h-3 w-3" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
@@ -137,15 +137,15 @@ export function JourneyMapperToolbar({
               onCheckedChange={() => onTogglePeripherals()}
             >
               {showPeripherals ? (
-                <Eye className="h-3.5 w-3.5 mr-2" />
+                <Icon name="eye" className="h-3.5 w-3.5 mr-2" />
               ) : (
-                <EyeOff className="h-3.5 w-3.5 mr-2" />
+                <Icon name="eye-off" className="h-3.5 w-3.5 mr-2" />
               )}
               Peripherals
             </DropdownMenuCheckboxItem>
           )}
           <DropdownMenuItem onClick={onAutoTidy}>
-            <Sparkles className="h-3.5 w-3.5 mr-2" />
+            <Icon name="sparkles" className="h-3.5 w-3.5 mr-2" />
             Auto-tidy
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -159,7 +159,7 @@ export function JourneyMapperToolbar({
           onClick={onApprove}
           className="h-7 text-xs gap-1.5"
         >
-          <CheckCircle2 className="h-3 w-3" />
+          <Icon name="check-circle" className="h-3 w-3" />
           Approve Journey
         </Button>
       )}
@@ -169,7 +169,7 @@ export function JourneyMapperToolbar({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-7 w-7 p-0">
-              <MoreVertical className="h-3.5 w-3.5" />
+              <Icon name="more-vertical" className="h-3.5 w-3.5" />
               <span className="sr-only">More options</span>
             </Button>
           </DropdownMenuTrigger>
@@ -179,19 +179,19 @@ export function JourneyMapperToolbar({
               disabled={isRegenerating}
             >
               {isRegenerating ? (
-                <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                <Icon name="spinner" className="h-3.5 w-3.5 mr-2 animate-spin" />
               ) : (
-                <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                <Icon name="refresh" className="h-3.5 w-3.5 mr-2" />
               )}
               Re-generate
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onGenerateV0Prompt}>
-              <Wand2 className="h-3.5 w-3.5 mr-2" />
+              <Icon name="magic-wand" className="h-3.5 w-3.5 mr-2" />
               Preview in v0
             </DropdownMenuItem>
             {isApproved && (
               <DropdownMenuItem onClick={onCreatePrototype}>
-                <Rocket className="h-3.5 w-3.5 mr-2" />
+                <Icon name="rocket" className="h-3.5 w-3.5 mr-2" />
                 Create Prototype
               </DropdownMenuItem>
             )}
@@ -202,9 +202,9 @@ export function JourneyMapperToolbar({
               className="text-destructive focus:text-destructive"
             >
               {isResetting ? (
-                <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                <Icon name="spinner" className="h-3.5 w-3.5 mr-2 animate-spin" />
               ) : (
-                <Trash2 className="h-3.5 w-3.5 mr-2" />
+                <Icon name="trash" className="h-3.5 w-3.5 mr-2" />
               )}
               Reset
             </DropdownMenuItem>

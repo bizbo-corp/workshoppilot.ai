@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import {
   Dialog,
   DialogContent,
@@ -72,7 +72,7 @@ export function StepSnapshotDialog({
         {isCarousel && (
           <div className="sticky bottom-0 flex items-center justify-between border-t bg-background px-4 py-3">
             <Button variant="outline" size="sm" onClick={prev}>
-              <ChevronLeft className="mr-1 h-4 w-4" />
+              <Icon name="chevron-left" className="mr-1 h-4 w-4" />
               Previous
             </Button>
             <div className="flex gap-2">
@@ -88,7 +88,7 @@ export function StepSnapshotDialog({
             </div>
             <Button variant="outline" size="sm" onClick={next}>
               Next
-              <ChevronRight className="ml-1 h-4 w-4" />
+              <Icon name="chevron-right" className="ml-1 h-4 w-4" />
             </Button>
           </div>
         )}

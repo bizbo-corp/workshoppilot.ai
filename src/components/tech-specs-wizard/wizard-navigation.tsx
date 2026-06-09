@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 
 interface WizardNavigationProps {
@@ -31,7 +31,7 @@ export function WizardNavigation({
         disabled={currentPage === 0 && !isSummary}
         className="gap-1.5"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <Icon name="arrow-left" className="h-4 w-4" />
         Back
       </Button>
 
@@ -43,12 +43,12 @@ export function WizardNavigation({
         >
           {isGenerating ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Icon name="spinner" className="h-4 w-4 animate-spin" />
               Generating...
             </>
           ) : (
             <>
-              <Sparkles className="h-4 w-4" />
+              <Icon name="sparkles" className="h-4 w-4" />
               Generate Tech Specs
             </>
           )}
@@ -56,7 +56,7 @@ export function WizardNavigation({
       ) : (
         <Button onClick={onNext} className="gap-1.5 btn-lift">
           {currentPage === totalPages - 1 ? 'Review' : 'Next'}
-          <ArrowRight className="h-4 w-4" />
+          <Icon name="arrow-right" className="h-4 w-4" />
         </Button>
       )}
     </div>

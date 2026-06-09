@@ -2,21 +2,7 @@
 
 import { memo, useRef, useEffect, useState, useCallback } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import {
-  MessageSquare,
-  Brain,
-  Heart,
-  Activity,
-  AlertTriangle,
-  TrendingUp,
-  User,
-  Briefcase,
-  Quote,
-  BookOpen,
-  Sparkles,
-  RefreshCw,
-  GripVertical,
-} from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import type { PersonaTemplateData } from "@/lib/canvas/persona-template-types";
 
@@ -58,42 +44,42 @@ const EMPATHY_ZONES = [
   {
     key: "empathySays",
     label: "Says",
-    Icon: MessageSquare,
+    iconName: "message-square",
     accent: "var(--persona-empathy-says)",
     textColor: "var(--persona-text-muted)",
   },
   {
     key: "empathyThinks",
     label: "Thinks",
-    Icon: Brain,
+    iconName: "brain",
     accent: "var(--persona-empathy-thinks)",
     textColor: "var(--persona-text-muted)",
   },
   {
     key: "empathyFeels",
     label: "Feels",
-    Icon: Heart,
+    iconName: "heart",
     accent: "var(--persona-empathy-feels)",
     textColor: "var(--persona-text-muted)",
   },
   {
     key: "empathyDoes",
     label: "Does",
-    Icon: Activity,
+    iconName: "activity",
     accent: "var(--persona-empathy-does)",
     textColor: "var(--persona-text-muted)",
   },
   {
     key: "empathyPains",
     label: "Pains",
-    Icon: AlertTriangle,
+    iconName: "alert-triangle",
     accent: "var(--persona-empathy-pains)",
     textColor: "var(--persona-empathy-pains-text)",
   },
   {
     key: "empathyGains",
     label: "Gains",
-    Icon: TrendingUp,
+    iconName: "trending-up",
     accent: "var(--persona-empathy-gains)",
     textColor: "var(--persona-empathy-gains-text)",
   },
@@ -141,7 +127,8 @@ function ProfileAvatar({
         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full animate-pulse"
         style={{ backgroundColor: SAGE.avatarBg, color: "#ffffff" }}
       >
-        <Sparkles
+        <Icon
+          name="sparkles"
           className="h-4 w-4 animate-spin"
           style={{ animationDuration: "3s" }}
         />
@@ -208,7 +195,8 @@ function HeroSection({
           className="absolute inset-0 flex items-center justify-center animate-pulse"
           style={{ backgroundColor: SAGE.headerBg }}
         >
-          <Sparkles
+          <Icon
+            name="sparkles"
             className="h-12 w-12 animate-spin text-white/60"
             style={{ animationDuration: "3s" }}
           />
@@ -218,7 +206,7 @@ function HeroSection({
           className="absolute inset-0 flex flex-col items-center justify-center gap-3"
           style={{ backgroundColor: SAGE.headerBg }}
         >
-          <User className="h-16 w-16 text-white/30 animate-pulse" />
+          <Icon name="user" className="h-16 w-16 text-white/30 animate-pulse" />
           <span className="text-sm font-medium text-white/40 animate-pulse">
             Awaiting generation...
           </span>
@@ -238,7 +226,7 @@ function HeroSection({
           {/* Hover regenerate overlay */}
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
             <div className="flex items-center gap-2 rounded-full bg-card/90 px-4 py-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
-              <RefreshCw className="h-4 w-4 text-card-foreground" />
+              <Icon name="refresh" className="h-4 w-4 text-card-foreground" />
               <span className="text-sm font-medium text-card-foreground">
                 Regenerate
               </span>
@@ -254,7 +242,7 @@ function HeroSection({
           title="Generate portrait"
         >
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 opacity-60 group-hover:opacity-100 transition-opacity">
-            <Sparkles className="h-10 w-10 text-white/70" />
+            <Icon name="sparkles" className="h-10 w-10 text-white/70" />
             <span className="text-sm font-medium text-white/70">
               Generate portrait
             </span>
@@ -508,7 +496,7 @@ export const PersonaTemplateNode = memo(
         <div className="relative">
           {/* Semi-transparent drag handle bar overlaying hero top */}
           <div className="card-drag-handle absolute inset-x-0 top-0 z-10 flex items-center h-9 px-3 cursor-grab active:cursor-grabbing bg-black/20 backdrop-blur-sm rounded-t-2xl transition-colors hover:bg-black/30">
-            <GripVertical className="h-4 w-4 text-white/60" />
+            <Icon name="grip-vertical" className="h-4 w-4 text-white/60" />
 
             {/* Generate action — fills empty zones from the workshop research.
                 Solid olive-accent pill matching the avatar accent, pinned to the
@@ -522,7 +510,8 @@ export const PersonaTemplateNode = memo(
                 style={{ backgroundColor: SAGE.avatarBg }}
                 title="Generate the portrait and empty zones (empathy, narrative, quote) from the workshop research"
               >
-                <Sparkles
+                <Icon
+                  name="sparkles"
                   className={cn("h-3.5 w-3.5", isFilling && "animate-spin")}
                   style={isFilling ? { animationDuration: "2s" } : undefined}
                 />
@@ -565,7 +554,8 @@ export const PersonaTemplateNode = memo(
           ) : (
             <div className="flex-1 space-y-0.5">
               <div className="flex items-baseline gap-2">
-                <User
+                <Icon
+                  name="user"
                   className="h-4 w-4 shrink-0 translate-y-[1px]"
                   style={{ color: "var(--persona-text-muted)" }}
                 />
@@ -590,7 +580,8 @@ export const PersonaTemplateNode = memo(
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Briefcase
+                <Icon
+                  name="briefcase"
                   className="h-3.5 w-3.5 shrink-0"
                   style={{ color: "var(--persona-text-muted)" }}
                 />
@@ -630,7 +621,7 @@ export const PersonaTemplateNode = memo(
             )}
           </div>
           <div className="grid grid-cols-3 gap-2.5">
-            {EMPATHY_ZONES.map(({ key, label, Icon, accent, textColor }) => (
+            {EMPATHY_ZONES.map(({ key, label, iconName, accent, textColor }) => (
               <div
                 key={key}
                 className="flex flex-col rounded-xl border p-3"
@@ -642,6 +633,7 @@ export const PersonaTemplateNode = memo(
               >
                 <div className="mb-1.5 flex items-center gap-1.5">
                   <Icon
+                    name={iconName}
                     className="h-3.5 w-3.5 shrink-0"
                     style={{ color: accent }}
                   />
@@ -682,7 +674,8 @@ export const PersonaTemplateNode = memo(
           }}
         >
           <div className="mb-2 flex items-center gap-2">
-            <BookOpen
+            <Icon
+              name="book-open"
               className="h-3.5 w-3.5 shrink-0"
               style={{ color: SAGE.avatarBg }}
             />
@@ -722,7 +715,8 @@ export const PersonaTemplateNode = memo(
           style={{ color: "var(--persona-text-quote)" }}
         >
           <div className="mb-2 flex items-center gap-2">
-            <Quote
+            <Icon
+              name="quote"
               className="h-3.5 w-3.5 shrink-0"
               style={{ color: SAGE.avatarBg }}
             />

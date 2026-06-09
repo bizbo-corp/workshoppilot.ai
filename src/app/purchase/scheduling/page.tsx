@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Calendar, Sparkles } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { db } from '@/db/client';
 import { workshops, users } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -43,7 +43,7 @@ export default async function WhiteGloveSchedulingPage({ searchParams }: PagePro
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
       <Surface className="w-full max-w-xl p-8">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-olive-100 dark:bg-olive-900/30">
-          <Sparkles className="h-7 w-7 text-olive-700 dark:text-olive-400" />
+          <Icon name="sparkles" className="h-7 w-7 text-olive-700 dark:text-olive-400" />
         </div>
 
         <Heading level={1} className="text-2xl text-center mb-2">
@@ -55,7 +55,7 @@ export default async function WhiteGloveSchedulingPage({ searchParams }: PagePro
         </Text>
 
         <div className="rounded-lg border bg-muted/30 px-4 py-3 mb-6 flex items-center gap-3">
-          <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Icon name="calendar" className="h-4 w-4 text-muted-foreground shrink-0" />
           <Text>
             Workshop: <span className="font-medium">{workshop.title}</span>
           </Text>

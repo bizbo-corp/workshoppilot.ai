@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 
 interface AddColumnButtonProps {
@@ -62,7 +62,7 @@ export function AddColumnButton({ onAdd, disabled = false }: AddColumnButtonProp
       className="text-muted-foreground disabled:opacity-30"
       title={disabled ? 'Maximum 12 stages' : 'Add a new stage column'}
     >
-      <PlusCircle />
+      <Icon name="plus-circle" className="h-3.5 w-3.5" />
       Add Stage
     </Button>
   );

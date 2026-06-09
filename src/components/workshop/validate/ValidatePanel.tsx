@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, Plus, Rocket, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Surface } from '@/components/ui/surface';
@@ -436,7 +436,7 @@ export function ValidatePanel({
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-foreground/70" />
+        <Icon name="spinner" className="h-6 w-6 animate-spin text-foreground/70" />
       </div>
     );
   }
@@ -576,7 +576,7 @@ export function ValidatePanel({
                   </div>
                   <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-4 py-2.5 text-base font-medium text-primary-foreground transition-transform group-hover:translate-x-0.5">
                     {builderCta.label}
-                    <ArrowRight className="h-4 w-4" />
+                    <Icon name="arrow-right" className="h-4 w-4" />
                   </span>
                 </div>
               </a>
@@ -617,9 +617,9 @@ export function ValidatePanel({
                   href={`/workshop/${sessionId}/outputs`}
                   className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-base font-medium text-primary-foreground btn-shimmer"
                 >
-                  <CheckCircle2 className="h-4 w-4" />
+                  <Icon name="check-circle" className="h-4 w-4" />
                   View Build Pack
-                  <ArrowRight className="h-4 w-4" />
+                  <Icon name="arrow-right" className="h-4 w-4" />
                 </a>
               ) : onWrapUp ? (
                 <>
@@ -630,12 +630,12 @@ export function ValidatePanel({
                     disabled={isWrappingUp}
                   >
                     {isWrappingUp ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Icon name="spinner" className="h-4 w-4 animate-spin" />
                     ) : (
-                      <CheckCircle2 className="h-4 w-4" />
+                      <Icon name="check-circle" className="h-4 w-4" />
                     )}
                     Wrap up validation plan
-                    {!isWrappingUp && <ArrowRight className="h-4 w-4" />}
+                    {!isWrappingUp && <Icon name="arrow-right" className="h-4 w-4" />}
                   </Button>
                   <p className="text-center text-sm text-foreground/70">
                     Saves your plan to the Build Pack and finishes the workshop. You can record the
@@ -646,7 +646,7 @@ export function ValidatePanel({
               {plans.length < 3 && (
                 <div className="flex justify-center">
                   <Button variant="ghost" size="sm" className="gap-1.5" onClick={addAnotherTest}>
-                    <Plus className="h-3.5 w-3.5" />
+                    <Icon name="plus" className="h-3.5 w-3.5" />
                     Test another assumption
                   </Button>
                 </div>
@@ -667,7 +667,7 @@ export function ValidatePanel({
                   <span className="text-base font-medium">{LENS_LABELS[plan.lens]} risk</span>
                   {plan.result && (
                     <span className="inline-flex items-center gap-1 text-sm text-foreground/70">
-                      <Rocket className="h-3 w-3" /> score {plan.result.score}
+                      <Icon name="rocket" className="h-3 w-3" /> score {plan.result.score}
                     </span>
                   )}
                   <Button variant="ghost" size="xs" onClick={() => setActiveId(plan.id)}>

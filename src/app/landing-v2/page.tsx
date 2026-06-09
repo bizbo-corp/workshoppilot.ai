@@ -1,24 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
-import {
-  ArrowRight,
-  Ban,
-  CheckCircle2,
-  ChevronRight,
-  Clock,
-  FileText,
-  Layers,
-  Lightbulb,
-  Map,
-  MessageSquareX,
-  Rocket,
-  Sparkles,
-  Star,
-  Target,
-  Users,
-  Zap,
-} from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { LandingHeader } from '@/components/layout/landing-header';
 import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
 import { Button } from '@/components/ui/button';
@@ -70,7 +53,7 @@ export default function LandingV2() {
         <div className="relative mx-auto max-w-4xl text-center z-10">
           {/* Eyebrow */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-olive-300/50 bg-olive-50/80 px-4 py-1.5 text-sm font-medium text-olive-700 dark:border-olive-700/50 dark:bg-olive-950/50 dark:text-olive-300">
-            <Clock className="h-4 w-4" />
+            <Icon name="clock" className="h-4 w-4" />
             Save weeks of planning in one session
           </div>
 
@@ -116,13 +99,13 @@ export default function LandingV2() {
               className="min-w-[220px] text-base shadow-lg shadow-olive-600/20"
             >
               Start Free Workshop
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <Icon name="arrow-right" className="ml-2 h-4 w-4" />
             </NewWorkshopButton>
 
             <Link href="#deliverables">
               <Button variant="outline" size="lg">
                 See what you get
-                <ChevronRight className="ml-1 h-4 w-4" />
+                <Icon name="chevron-right" className="ml-1 h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -131,8 +114,10 @@ export default function LandingV2() {
           <div className="mt-12 flex flex-col items-center gap-3">
             <div className="flex gap-0.5">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Star
+                <Icon
                   key={i}
+                  name="star"
+                  weight="fill"
                   className="h-4 w-4 fill-olive-500 text-olive-500 dark:fill-olive-400 dark:text-olive-400"
                 />
               ))}
@@ -160,7 +145,7 @@ export default function LandingV2() {
             {/* Pain 1 */}
             <div className="relative">
               <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-950/50 mb-6">
-                <MessageSquareX className="h-7 w-7 text-red-600 dark:text-red-400" />
+                <Icon name="message-square-x" className="h-7 w-7 text-red-600 dark:text-red-400" />
               </div>
               <h3 className="text-lg font-bold text-foreground mb-3">
                 Kill the Blank Page
@@ -174,7 +159,7 @@ export default function LandingV2() {
             {/* Pain 2 */}
             <div className="relative">
               <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-950/50 mb-6">
-                <Ban className="h-7 w-7 text-amber-600 dark:text-amber-400" />
+                <Icon name="ban" className="h-7 w-7 text-amber-600 dark:text-amber-400" />
               </div>
               <h3 className="text-lg font-bold text-foreground mb-3">
                 Avoid Costly Rebuilds
@@ -188,7 +173,7 @@ export default function LandingV2() {
             {/* Pain 3 */}
             <div className="relative">
               <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-olive-100 dark:bg-olive-950/50 mb-6">
-                <Target className="h-7 w-7 text-olive-600 dark:text-olive-400" />
+                <Icon name="target" className="h-7 w-7 text-olive-600 dark:text-olive-400" />
               </div>
               <h3 className="text-lg font-bold text-foreground mb-3">
                 Founder-to-Developer Clarity
@@ -218,27 +203,26 @@ export default function LandingV2() {
             {[
               {
                 step: '01',
-                icon: Lightbulb,
+                icon: 'lightbulb' as const,
                 title: 'Describe Your Idea',
                 description:
                   "Even if it's just a sentence. \"I want to build an app that helps dog walkers find clients\" is enough to start.",
               },
               {
                 step: '02',
-                icon: Zap,
+                icon: 'zap' as const,
                 title: 'AI Runs the Workshop',
                 description:
                   'Our AI facilitator walks you through a structured 10-step Design Thinking process — the same framework used by consultants charging $5,000+.',
               },
               {
                 step: '03',
-                icon: Rocket,
+                icon: 'rocket' as const,
                 title: 'Walk Away Build-Ready',
                 description:
                   'Download your Build Pack: PRD, user stories, technical roadmap, and more. Hand it to developers or feed it to AI coding tools.',
               },
             ].map((item) => {
-              const Icon = item.icon;
               return (
                 <div
                   key={item.step}
@@ -249,7 +233,7 @@ export default function LandingV2() {
                     STEP {item.step}
                   </div>
                   <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-olive-100 dark:bg-olive-950/50 mx-auto mb-6">
-                    <Icon className="h-8 w-8 text-olive-600 dark:text-olive-400" />
+                    <Icon name={item.icon} className="h-8 w-8 text-olive-600 dark:text-olive-400" />
                   </div>
                   <h3 className="text-xl font-bold text-foreground mb-3">{item.title}</h3>
                   <p className="text-muted-foreground leading-relaxed">{item.description}</p>
@@ -265,7 +249,7 @@ export default function LandingV2() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 rounded-full border border-olive-300/50 bg-olive-50/80 px-4 py-1.5 text-sm font-medium text-olive-700 dark:border-olive-700/50 dark:bg-olive-950/50 dark:text-olive-300 mb-6">
-              <Sparkles className="h-4 w-4" />
+              <Icon name="sparkles" className="h-4 w-4" />
               Your Build Pack
             </div>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -280,49 +264,48 @@ export default function LandingV2() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
-                icon: FileText,
+                icon: 'file-text' as const,
                 title: 'Product Requirements Document',
                 description:
                   'The "Bible" for your developers. Prevents scope creep, defines exactly what gets built, and keeps everyone aligned.',
                 tag: 'PRD',
               },
               {
-                icon: Users,
+                icon: 'users' as const,
                 title: 'User Stories & Personas',
                 description:
                   'Import-ready stories for Jira, Linear, or Trello. Saves 10+ hours of manual writing and ensures nothing gets missed.',
                 tag: 'Stories',
               },
               {
-                icon: Layers,
+                icon: 'layers' as const,
                 title: 'Technical Specifications',
                 description:
                   'Architecture recommendations, data models, and API contracts. Give your dev team (or AI coder) a massive head start.',
                 tag: 'Tech Specs',
               },
               {
-                icon: Map,
+                icon: 'map' as const,
                 title: 'Feature Roadmap',
                 description:
                   'Phase 1 vs Phase 2 prioritisation. Launch an MVP instead of a bloated failure. Know exactly what to build first.',
                 tag: 'Roadmap',
               },
               {
-                icon: Target,
+                icon: 'target' as const,
                 title: 'Lean Canvas',
                 description:
                   'A one-page business model breakdown. Essential for internal alignment, early pitching, and validating market fit.',
                 tag: 'Canvas',
               },
               {
-                icon: Zap,
+                icon: 'zap' as const,
                 title: 'AI-Coder Ready Output',
                 description:
                   'Structured for direct handoff to Cursor, Claude Code, Copilot, or any AI coding tool. Skip the prompt engineering.',
                 tag: 'AI-Ready',
               },
             ].map((item) => {
-              const Icon = item.icon;
               return (
                 <div
                   key={item.title}
@@ -330,7 +313,7 @@ export default function LandingV2() {
                 >
                   <div className="flex items-center gap-3 mb-4">
                     <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-olive-100 dark:bg-olive-950/50">
-                      <Icon className="h-5 w-5 text-olive-600 dark:text-olive-400" />
+                      <Icon name={item.icon} className="h-5 w-5 text-olive-600 dark:text-olive-400" />
                     </div>
                     <span className="text-xs font-mono font-semibold uppercase tracking-wider text-olive-600 dark:text-olive-400">
                       {item.tag}
@@ -398,7 +381,7 @@ export default function LandingV2() {
             {/* WorkshopPilot row */}
             <div className="flex items-center justify-between rounded-xl border-2 border-olive-600 dark:border-olive-400 bg-olive-50 dark:bg-olive-950/30 px-6 py-5">
               <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-6 w-6 text-olive-600 dark:text-olive-400" />
+                <Icon name="check-circle" className="h-6 w-6 text-olive-600 dark:text-olive-400" />
                 <span className="text-lg font-bold text-foreground">WorkshopPilot</span>
               </div>
               <div className="flex items-center gap-6">
@@ -466,8 +449,10 @@ export default function LandingV2() {
                 {/* Stars */}
                 <div className="flex gap-0.5 mb-4">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
+                    <Icon
                       key={i}
+                      name="star"
+                      weight="fill"
                       className="h-3.5 w-3.5 fill-olive-500 text-olive-500 dark:fill-olive-400 dark:text-olive-400"
                     />
                   ))}
@@ -513,7 +498,7 @@ export default function LandingV2() {
               className="min-w-[220px] text-base shadow-lg shadow-olive-600/20"
             >
               Start Free Workshop
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <Icon name="arrow-right" className="ml-2 h-4 w-4" />
             </NewWorkshopButton>
             <Link href="/pricing">
               <Button variant="outline" size="lg">

@@ -12,7 +12,7 @@ import { DashboardUnauthenticated } from '@/components/dashboard/dashboard-unaut
 import { WorkshopGrid } from '@/components/dashboard/workshop-grid';
 import { CompletedWorkshopCard } from '@/components/dashboard/completed-workshop-card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { renameWorkshop, updateWorkshopAppearance } from '@/actions/workshop-actions';
 import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
 import { getStepById, getStepBySlug, getFirstStep } from '@/lib/workshop/step-metadata';
@@ -279,7 +279,7 @@ export default async function DashboardPage() {
           </p>
           <div className="mt-6">
             <NewWorkshopButton size="lg" className="btn-lift">
-              <PlusCircle className="mr-2 h-5 w-5" />
+              <Icon name="plus-circle" className="mr-2 h-5 w-5" />
               Start Workshop
             </NewWorkshopButton>
           </div>

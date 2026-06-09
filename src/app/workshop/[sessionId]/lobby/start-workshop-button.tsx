@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Play } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { startWorkshop } from '@/actions/workshop-setup-actions';
@@ -40,7 +40,7 @@ export function StartWorkshopButton({ workshopId, className }: StartWorkshopButt
 
   return (
     <Button variant="primary" onClick={handleClick} disabled={isPending} size="lg" className={className}>
-      <Play className="mr-2 h-4 w-4" />
+      <Icon name="play" className="mr-2 h-4 w-4" />
       {isPending ? 'Starting…' : 'Start workshop'}
     </Button>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Trash2, Save, Check, Upload, Library, ArrowLeftRight, ArrowUpToLine, ArrowDownToLine } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { GuideColorPicker } from './guide-color-picker';
 import type {
@@ -185,12 +185,12 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
             >
               {showSaved ? (
                 <>
-                  <Check className="h-3 w-3" />
+                  <Icon name="check" className="h-3 w-3" />
                   Saved
                 </>
               ) : (
                 <>
-                  <Save className="h-3 w-3" />
+                  <Icon name="save" className="h-3 w-3" />
                   {isSaving ? 'Saving...' : 'Save'}
                 </>
               )}
@@ -217,7 +217,7 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
                 className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                 title="Delete guide"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Icon name="trash" className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
@@ -279,7 +279,7 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
               <div className="rounded-md border border-primary/20 bg-primary/5 p-2 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <Library className="h-3 w-3 text-primary" />
+                    <Icon name="library" className="h-3 w-3 text-primary" />
                     <span className="text-[10px] font-medium text-primary">Library Asset</span>
                   </div>
                   {onOpenAssetDrawer && (
@@ -288,7 +288,7 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
                       onClick={onOpenAssetDrawer}
                       className="flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-medium text-primary border border-primary/30 hover:bg-primary/10 transition-colors"
                     >
-                      <ArrowLeftRight className="h-2.5 w-2.5" />
+                      <Icon name="arrow-left-right" className="h-2.5 w-2.5" />
                       Swap
                     </button>
                   )}
@@ -326,7 +326,7 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
                     onClick={onOpenAssetDrawer}
                     className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground border border-border hover:bg-muted transition-colors"
                   >
-                    <Library className="h-3 w-3" />
+                    <Icon name="library" className="h-3 w-3" />
                     Pick from Library
                   </button>
                 )}
@@ -335,7 +335,7 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
                   onClick={() => fileInputRef.current?.click()}
                   className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground border border-border hover:bg-muted transition-colors"
                 >
-                  <Upload className="h-3 w-3" />
+                  <Icon name="upload" className="h-3 w-3" />
                   Upload SVG
                 </button>
                 <input
@@ -585,7 +585,7 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
             className="flex items-center gap-1 rounded px-2 py-1 text-xs border border-border hover:bg-muted transition-colors"
             title="Bring to front"
           >
-            <ArrowUpToLine className="h-3 w-3" />
+            <Icon name="arrow-up-to-line" className="h-3 w-3" />
             Front
           </button>
           <button
@@ -602,7 +602,7 @@ export function GuideEditPopover({ guide, position, onUpdate, onDelete, onSave, 
             className="flex items-center gap-1 rounded px-2 py-1 text-xs border border-border hover:bg-muted transition-colors"
             title="Send to back"
           >
-            <ArrowDownToLine className="h-3 w-3" />
+            <Icon name="arrow-down-to-line" className="h-3 w-3" />
             Back
           </button>
         </div>

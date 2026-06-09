@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Share2, Check } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { toast } from 'sonner';
 import { copyToClipboard } from '@/lib/clipboard';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ export function ShareLinkButton({ shareToken }: { shareToken: string }) {
       title="Copy invite link"
       aria-label="Copy invite link"
     >
-      {copied ? <Check /> : <Share2 />}
+      {copied ? <Icon name="check" className="h-4 w-4" /> : <Icon name="share" className="h-4 w-4" />}
     </Button>
   );
 }

@@ -9,7 +9,7 @@ import { Heading, Text } from "@/components/ui/typography"
  * layout that was previously hand-rolled per screen.
  *
  *   <EmptyState
- *     icon={<Icon icon={Inbox} size="lg" />}
+ *     icon={<Icon name="tray" className="h-8 w-8" />}
  *     title="No workshops yet"
  *     description="Start one to see it here."
  *     action={<Button variant="primary">New workshop</Button>}

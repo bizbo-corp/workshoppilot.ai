@@ -6,18 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Surface } from '@/components/ui/surface';
 import { getStepById } from '@/lib/workshop/step-metadata';
 import { toast } from 'sonner';
-import {
-  ArrowLeft,
-  RefreshCw,
-  Check,
-  CheckCircle2,
-  RotateCcw,
-  Pencil,
-  Trash2,
-  Loader2,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 interface FeedbackEntry {
   id: string;
@@ -67,7 +56,7 @@ export function DialogueFeedbackClient() {
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => router.push('/admin')}>
-            <ArrowLeft className="mr-1 h-4 w-4" />
+            <Icon name="arrow-left" className="mr-1 h-4 w-4" />
             Admin
           </Button>
         </div>
@@ -79,7 +68,7 @@ export function DialogueFeedbackClient() {
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={fetchEntries} disabled={isLoading}>
-            <RefreshCw className={`mr-1 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <Icon name="refresh" className={`mr-1 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
@@ -104,7 +93,7 @@ export function DialogueFeedbackClient() {
         {/* Entries */}
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <Icon name="spinner" className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : entries.length === 0 ? (
           <div className="rounded-lg border border-dashed p-12 text-center">
@@ -278,7 +267,7 @@ function FeedbackCard({
               : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
           }`}
         >
-          {entry.status === 'resolved' && <CheckCircle2 className="h-3 w-3" />}
+          {entry.status === 'resolved' && <Icon name="check-circle" className="h-3 w-3" />}
           {entry.status}
         </span>
         <span className="font-medium text-foreground">{stepName}</span>
@@ -306,7 +295,7 @@ function FeedbackCard({
           />
           <div className="flex gap-2">
             <Button size="sm" onClick={handleSaveEdit} disabled={actionLoading === 'edit'}>
-              {actionLoading === 'edit' && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+              {actionLoading === 'edit' && <Icon name="spinner" className="mr-1 h-3 w-3 animate-spin" />}
               Save
             </Button>
             <Button size="sm" variant="ghost" onClick={() => { setIsEditing(false); setEditText(entry.feedbackText); }}>
@@ -345,8 +334,8 @@ function FeedbackCard({
           />
           <div className="flex gap-2">
             <Button size="sm" onClick={handleResolve} disabled={actionLoading === 'resolve'}>
-              {actionLoading === 'resolve' && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-              <Check className="mr-1 h-3 w-3" />
+              {actionLoading === 'resolve' && <Icon name="spinner" className="mr-1 h-3 w-3 animate-spin" />}
+              <Icon name="check" className="mr-1 h-3 w-3" />
               Confirm Resolve
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setIsResolving(false)}>
@@ -361,7 +350,7 @@ function FeedbackCard({
         onClick={() => setShowContext(!showContext)}
         className="mb-3 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
-        {showContext ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        {showContext ? <Icon name="chevron-up" className="h-3 w-3" /> : <Icon name="chevron-down" className="h-3 w-3" />}
         Context Snapshot
       </button>
       {showContext && (
@@ -377,11 +366,11 @@ function FeedbackCard({
         className="mb-3 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
       >
         {promptLoading ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
+          <Icon name="spinner" className="h-3 w-3 animate-spin" />
         ) : showPrompt ? (
-          <ChevronUp className="h-3 w-3" />
+          <Icon name="chevron-up" className="h-3 w-3" />
         ) : (
-          <ChevronDown className="h-3 w-3" />
+          <Icon name="chevron-down" className="h-3 w-3" />
         )}
         View captured AI prompt
       </button>
@@ -413,24 +402,24 @@ function FeedbackCard({
       <div className="flex items-center gap-2 border-t pt-3">
         {entry.status === 'pending' && !isResolving && (
           <Button size="sm" variant="outline" onClick={() => setIsResolving(true)}>
-            <Check className="mr-1 h-3 w-3" />
+            <Icon name="check" className="mr-1 h-3 w-3" />
             Resolve
           </Button>
         )}
         {entry.status === 'resolved' && (
           <Button size="sm" variant="outline" onClick={handleReopen} disabled={actionLoading === 'reopen'}>
-            {actionLoading === 'reopen' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <RotateCcw className="mr-1 h-3 w-3" />}
+            {actionLoading === 'reopen' ? <Icon name="spinner" className="mr-1 h-3 w-3 animate-spin" /> : <Icon name="rotate-ccw" className="mr-1 h-3 w-3" />}
             Reopen
           </Button>
         )}
         {!isEditing && (
           <Button size="sm" variant="ghost" onClick={() => setIsEditing(true)}>
-            <Pencil className="mr-1 h-3 w-3" />
+            <Icon name="pencil" className="mr-1 h-3 w-3" />
             Edit
           </Button>
         )}
         <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={handleDelete} disabled={actionLoading === 'delete'}>
-          {actionLoading === 'delete' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Trash2 className="mr-1 h-3 w-3" />}
+          {actionLoading === 'delete' ? <Icon name="spinner" className="mr-1 h-3 w-3 animate-spin" /> : <Icon name="trash" className="mr-1 h-3 w-3" />}
           Delete
         </Button>
       </div>

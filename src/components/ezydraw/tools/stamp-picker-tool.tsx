@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, X } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import type { AssetData } from '@/lib/asset-library/asset-library-types';
 
@@ -149,7 +149,7 @@ export function StampPickerTool({
       >
         {/* Header: search + close */}
         <div className="flex items-center gap-2 border-b px-3 py-2">
-          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Icon name="search" className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
             type="text"
             value={search}
@@ -163,7 +163,7 @@ export function StampPickerTool({
             onClick={onClose}
             className="rounded p-0.5 text-muted-foreground hover:text-foreground"
           >
-            <X className="h-4 w-4" />
+            <Icon name="close" className="h-4 w-4" />
           </button>
         </div>
 

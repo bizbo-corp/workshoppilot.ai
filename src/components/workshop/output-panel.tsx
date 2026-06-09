@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { Button } from '@/components/ui/button';
 import { Surface } from '@/components/ui/surface';
@@ -132,7 +132,7 @@ export function OutputPanel({
           </div>
         </div>
         <Surface className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Icon name="spinner" className="h-8 w-8 animate-spin text-muted-foreground" />
           <Text variant="muted">
             Extracting your output...
           </Text>

@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Wand2, RefreshCw, Check } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import type { SlotGroup, Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 import { useImageGenRemaining } from '@/hooks/use-image-gen-remaining';
@@ -159,17 +159,17 @@ export function MergeGroupDialog({
           >
             {isGenerating ? (
               <>
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                <Icon name="spinner" className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                 Generating...
               </>
             ) : previewUrl ? (
               <>
-                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                <Icon name="refresh" className="mr-1.5 h-3.5 w-3.5" />
                 Regenerate
               </>
             ) : (
               <>
-                <Wand2 className="mr-1.5 h-3.5 w-3.5" />
+                <Icon name="magic-wand" className="mr-1.5 h-3.5 w-3.5" />
                 Generate Merged Sketch
               </>
             )}
@@ -198,7 +198,7 @@ export function MergeGroupDialog({
         {previewUrl && (
           <div className="flex justify-end">
             <Button variant="primary" onClick={handleAccept} size="sm">
-              <Check className="mr-1.5 h-3.5 w-3.5" />
+              <Icon name="check" className="mr-1.5 h-3.5 w-3.5" />
               Accept Merged Sketch
             </Button>
           </div>

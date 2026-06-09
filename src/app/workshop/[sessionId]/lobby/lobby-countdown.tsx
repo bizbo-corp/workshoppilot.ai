@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Heading, Text, Eyebrow } from '@/components/ui/typography';
 
 interface LobbyCountdownProps {
@@ -30,7 +30,7 @@ export function LobbyCountdown({ startAtIso }: LobbyCountdownProps) {
         <BackgroundSparkles />
         <div className="relative">
           <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-olive-500 to-olive-700 text-white shadow-lg">
-            <Sparkles className="h-6 w-6" />
+            <Icon name="sparkles" className="h-6 w-6" />
           </div>
           <Eyebrow className="text-olive-700 dark:text-olive-300">
             Ready when you are

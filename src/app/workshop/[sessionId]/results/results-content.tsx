@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { SynthesisSummaryView, SynthesisBuildPackSection } from '@/components/workshop/synthesis-summary-view';
 import { PrdViewerDialog } from '@/components/workshop/prd-viewer-dialog';
 import { Button } from '@/components/ui/button';
@@ -34,7 +34,7 @@ export function ResultsContent({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
           >
-            <ExternalLink className="h-4 w-4" />
+            <Icon name="external-link" className="h-4 w-4" />
             View Prototype
           </a>
         )}

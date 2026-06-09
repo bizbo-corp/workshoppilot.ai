@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sparkles, MessageSquare, LayoutGrid, ListChecks } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { markOnboardingComplete } from '@/actions/billing-actions';
 import {
   Dialog,
@@ -43,7 +43,7 @@ export function WelcomeModal({ showWelcomeModal }: WelcomeModalProps) {
         <DialogHeader>
           {/* Sparkles icon in olive circle — same pattern as UpgradeDialog's Lock icon */}
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-olive-100 dark:bg-olive-900/50">
-            <Sparkles className="h-6 w-6 text-olive-700 dark:text-olive-400" />
+            <Icon name="sparkles" className="h-6 w-6 text-olive-700 dark:text-olive-400" />
           </div>
 
           <DialogTitle className="text-center text-xl font-semibold">
@@ -60,7 +60,7 @@ export function WelcomeModal({ showWelcomeModal }: WelcomeModalProps) {
         <div className="space-y-3">
           <div className="flex items-start gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-olive-100 dark:bg-olive-900/50">
-              <MessageSquare className="h-4 w-4 text-olive-700 dark:text-olive-400" />
+              <Icon name="message-square" className="h-4 w-4 text-olive-700 dark:text-olive-400" />
             </div>
             <div>
               <p className="text-sm font-medium text-foreground">AI Chat</p>
@@ -72,7 +72,7 @@ export function WelcomeModal({ showWelcomeModal }: WelcomeModalProps) {
 
           <div className="flex items-start gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-olive-100 dark:bg-olive-900/50">
-              <LayoutGrid className="h-4 w-4 text-olive-700 dark:text-olive-400" />
+              <Icon name="layout-grid" className="h-4 w-4 text-olive-700 dark:text-olive-400" />
             </div>
             <div>
               <p className="text-sm font-medium text-foreground">Canvas</p>
@@ -84,7 +84,7 @@ export function WelcomeModal({ showWelcomeModal }: WelcomeModalProps) {
 
           <div className="flex items-start gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-olive-100 dark:bg-olive-900/50">
-              <ListChecks className="h-4 w-4 text-olive-700 dark:text-olive-400" />
+              <Icon name="list-checks" className="h-4 w-4 text-olive-700 dark:text-olive-400" />
             </div>
             <div>
               <p className="text-sm font-medium text-foreground">Steps</p>

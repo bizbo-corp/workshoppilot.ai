@@ -2,20 +2,7 @@
 
 import { memo, useRef, useEffect, useState } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import {
-  Rocket,
-  Sparkles,
-  Target,
-  BarChart3,
-  ImageIcon,
-  ChevronDown,
-  Check,
-  Wand2,
-  Loader2,
-  RefreshCw,
-  Send,
-  GripHorizontal,
-} from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { CanvasNodeShell, QuadrantCard } from '@/components/canvas/canvas-node-shell';
@@ -249,7 +236,7 @@ function ReassignDropdown({
         className="flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
       >
         Reassign
-        <ChevronDown className="h-3 w-3" />
+        <Icon name="chevron-down" className="h-3 w-3" />
       </button>
       {open && (
         <div className="absolute top-full mt-1 right-0 bg-card rounded-lg shadow-lg border border-border p-1 min-w-[160px] z-50 animate-in fade-in-0 zoom-in-95 duration-150">
@@ -325,7 +312,7 @@ function SectionAiButton({
   if (isGenerating) {
     return (
       <Button variant="secondary" size="icon-xs" className="nodrag nopan" disabled>
-        <Loader2 className="h-3 w-3 animate-spin text-olive-500" />
+        <Icon name="spinner" className="h-3 w-3 animate-spin text-olive-500" />
       </Button>
     );
   }
@@ -348,7 +335,7 @@ function SectionAiButton({
         className="nodrag nopan text-olive-600"
         aria-label={`AI generate ${field}`}
       >
-        <Wand2 className="h-3 w-3" />
+        <Icon name="magic-wand" className="h-3 w-3" />
       </Button>
       {showMenu && (
         <div className="absolute top-full mt-1 right-0 bg-card rounded-lg shadow-lg border border-border p-1 min-w-[160px] z-50 animate-in fade-in-0 zoom-in-95 duration-150">
@@ -360,7 +347,7 @@ function SectionAiButton({
             }}
             className="flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
           >
-            <RefreshCw className="h-3 w-3" />
+            <Icon name="refresh" className="h-3 w-3" />
             Regenerate
           </button>
           <button
@@ -370,7 +357,7 @@ function SectionAiButton({
             }}
             className="flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
           >
-            <Wand2 className="h-3 w-3" />
+            <Icon name="magic-wand" className="h-3 w-3" />
             Elaborate
           </button>
           {showElaborate && (
@@ -405,7 +392,7 @@ function SectionAiButton({
                   disabled={!instructions.trim()}
                   className="rounded p-1 hover:bg-accent disabled:opacity-40 transition-colors"
                 >
-                  <Send className="h-3 w-3" />
+                  <Icon name="send" className="h-3 w-3" />
                 </button>
               </div>
             </div>
@@ -459,7 +446,7 @@ export const ConceptCardNode = memo(
         {/* Filled checkmark badge */}
         {isFilled && (
           <div className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-green-500 shadow-md">
-            <Check className="h-5 w-5 text-white" strokeWidth={3} />
+            <Icon name="check" className="h-5 w-5 text-white" strokeWidth={3} />
           </div>
         )}
 
@@ -470,7 +457,7 @@ export const ConceptCardNode = memo(
             backgroundColor: oc || 'var(--persona-header-bg)',
           }}
         >
-          <GripHorizontal className="h-4 w-4 text-white/50" />
+          <Icon name="grip-horizontal" className="h-4 w-4 text-white/50" />
 
           {/* Generate All — top-right on drag bar */}
           {canGenerate && data.onGenerateAll && (
@@ -488,9 +475,9 @@ export const ConceptCardNode = memo(
               aria-label="Generate all fields"
             >
               {isGeneratingAll ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Icon name="spinner" className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Sparkles className="h-3.5 w-3.5" />
+                <Icon name="sparkles" className="h-3.5 w-3.5" />
               )}
               {isGeneratingAll ? 'Generating...' : 'Generate All'}
             </button>
@@ -575,7 +562,7 @@ export const ConceptCardNode = memo(
                 : SAGE.headerBg,
             }}
           >
-            <ImageIcon className="h-12 w-12" style={{ color: 'var(--persona-text-muted)', opacity: 0.3 }} />
+            <Icon name="image" className="h-12 w-12" style={{ color: 'var(--persona-text-muted)', opacity: 0.3 }} />
             <span className="text-sm font-medium" style={{ color: 'var(--persona-text-muted)', opacity: 0.5 }}>Awaiting sketch...</span>
           </div>
         )}
@@ -591,7 +578,7 @@ export const ConceptCardNode = memo(
           style={{ borderBottom: `1px solid ${sectionBorder}` }}
         >
           <div className="mb-2 flex items-center gap-2">
-            <Rocket className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
+            <Icon name="rocket" className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
             <h4 className="flex-1 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               Elevator Pitch
             </h4>
@@ -621,7 +608,7 @@ export const ConceptCardNode = memo(
           style={{ borderBottom: `1px solid ${sectionBorder}` }}
         >
           <div className="mb-2 flex items-center gap-2">
-            <Sparkles className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
+            <Icon name="sparkles" className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
             <h4 className="flex-1 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               Unique Selling Proposition
             </h4>
@@ -651,7 +638,7 @@ export const ConceptCardNode = memo(
           style={{ borderBottom: `1px solid ${sectionBorder}` }}
         >
           <div className="mb-3 flex items-center gap-2">
-            <Target className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
+            <Icon name="target" className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
             <h4 className="flex-1 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               SWOT Analysis
             </h4>
@@ -746,7 +733,7 @@ export const ConceptCardNode = memo(
         {/* ── 5. Feasibility Assessment ── */}
         <div className="px-6 py-5">
           <div className="mb-3 flex items-center gap-2">
-            <BarChart3 className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
+            <Icon name="bar-chart" className="h-3.5 w-3.5 shrink-0" style={{ color: SAGE.avatarBg }} />
             <h4 className="flex-1 text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--persona-text-medium)' }}>
               Feasibility Assessment
             </h4>

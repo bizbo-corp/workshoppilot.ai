@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Check, Pencil } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { SectionStatus } from './sections';
@@ -51,13 +51,13 @@ export function SectionCard({
                 : 'bg-muted text-foreground/70'
           )}
         >
-          {status === 'done' ? <Check className="h-4 w-4" /> : index}
+          {status === 'done' ? <Icon name="check" className="h-4 w-4" /> : index}
         </span>
         <h3 className="flex-1 text-xl font-semibold tracking-tight">{title}</h3>
         {status === 'active' && headerRight}
         {status === 'done' && onEdit && (
           <Button variant="ghost" size="xs" onClick={onEdit} className="gap-1">
-            <Pencil className="h-3 w-3" />
+            <Icon name="pencil" className="h-3 w-3" />
             Edit
           </Button>
         )}
