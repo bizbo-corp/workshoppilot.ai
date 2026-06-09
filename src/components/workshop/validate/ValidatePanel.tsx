@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Loader2, Plus, Rocket, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Surface } from '@/components/ui/surface';
 import { createPrefixedId } from '@/lib/ids';
 import {
   getValidationState,
@@ -661,7 +662,7 @@ export function ValidatePanel({
               Other assumptions you&apos;ve tested
             </h3>
             {completedPlans.map((plan) => (
-              <div key={plan.id} className="space-y-3 rounded-xl border bg-card p-5">
+              <Surface key={plan.id} className="space-y-3 p-5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-base font-medium">{LENS_LABELS[plan.lens]} risk</span>
                   {plan.result && (
@@ -674,7 +675,7 @@ export function ValidatePanel({
                   </Button>
                 </div>
                 <ValidationPlanSummary plan={plan} />
-              </div>
+              </Surface>
             ))}
           </div>
         )}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Surface } from '@/components/ui/surface';
 import { getStepById } from '@/lib/workshop/step-metadata';
 import { toast } from 'sonner';
 import {
@@ -267,7 +268,7 @@ function FeedbackCard({
   };
 
   return (
-    <div className="rounded-lg border bg-card p-5 shadow-sm">
+    <Surface className="p-5">
       {/* Top row: status badge + step + timestamp */}
       <div className="mb-3 flex items-center gap-2 text-xs">
         <span
@@ -433,6 +434,6 @@ function FeedbackCard({
           Delete
         </Button>
       </div>
-    </div>
+    </Surface>
   );
 }

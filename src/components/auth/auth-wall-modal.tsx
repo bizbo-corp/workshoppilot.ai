@@ -4,6 +4,7 @@ import { SignIn } from '@clerk/nextjs';
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Heading, Text, Eyebrow } from '@/components/ui/typography';
+import { Surface } from '@/components/ui/surface';
 
 export interface AuthWallModalProps {
   open: boolean;
@@ -36,7 +37,7 @@ export function AuthWallModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-4xl rounded-xl bg-card shadow-2xl border border-border">
+      <Surface className="relative w-full max-w-4xl shadow-2xl">
         {/* Close button */}
         <button
           onClick={handleNotNow}
@@ -61,7 +62,7 @@ export function AuthWallModal({
               </div>
 
               {/* Step 4 Preview Card */}
-              <div className="rounded-lg border-2 border-olive-200 bg-card p-6 shadow-sm">
+              <Surface className="border-2 border-olive-200 p-6">
                 <div className="mb-3 flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
                     4
@@ -75,7 +76,7 @@ export function AuthWallModal({
                 <Text variant="muted">
                   Create low-fidelity representations of your solutions to test with users.
                 </Text>
-              </div>
+              </Surface>
 
               {/* Remaining Steps */}
               <div>
@@ -136,7 +137,7 @@ export function AuthWallModal({
             Not now
           </button>
         </div>
-      </div>
+      </Surface>
     </div>
   );
 }

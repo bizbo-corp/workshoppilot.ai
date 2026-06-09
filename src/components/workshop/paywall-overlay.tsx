@@ -21,6 +21,7 @@ import { Sparkles, Palette, Zap, FileText, Shield, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getCredits, consumeCredit, createCheckoutUrl } from '@/actions/billing-actions';
+import { Surface } from '@/components/ui/surface';
 import { CreativeStepsPreview } from './creative-steps-preview';
 
 interface PaywallOverlayProps {
@@ -122,7 +123,7 @@ export function PaywallOverlay({ sessionId, workshopId, facilitatorMode }: Paywa
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
       <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px]" />
 
-      <div className="relative z-10 flex max-w-lg flex-col items-center gap-5 rounded-xl border bg-background/95 p-8 shadow-2xl backdrop-blur-sm">
+      <Surface variant="panel" className="relative z-10 flex max-w-lg flex-col items-center gap-5 bg-background/95 p-8 shadow-2xl backdrop-blur-sm">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50">
           <Sparkles className="h-8 w-8 text-amber-600 dark:text-amber-400" />
         </div>
@@ -228,7 +229,7 @@ export function PaywallOverlay({ sessionId, workshopId, facilitatorMode }: Paywa
             Back to Step 6
           </Button>
         </div>
-      </div>
+      </Surface>
     </div>
   );
 }

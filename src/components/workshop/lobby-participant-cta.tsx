@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { nudgeFacilitator } from '@/actions/lobby-actions';
 import { getStepByOrder, getFirstStep } from '@/lib/workshop/step-metadata';
 import { toast } from 'sonner';
+import { Surface } from '@/components/ui/surface';
 
 interface LobbyStateResponse {
   started: boolean;
@@ -129,7 +130,7 @@ export function LobbyParticipantCta({
   // ── Late joiner, facilitator online → enter the step ──
   if (startedAtMount.current && state.facilitatorPresent) {
     return (
-      <div className="w-full rounded-2xl border bg-card p-6 text-center shadow-sm">
+      <Surface className="w-full rounded-2xl p-6 text-center">
         <p className="text-sm text-muted-foreground">Ready to start?</p>
         <Button
           size="lg"
@@ -149,14 +150,14 @@ export function LobbyParticipantCta({
         <p className="mt-2 text-xs text-muted-foreground">
           The facilitator is here — jump into Step {state.currentStepOrder}.
         </p>
-      </div>
+      </Surface>
     );
   }
 
   // ── Late joiner, facilitator offline → waiting + nudge ──
   if (startedAtMount.current && !state.facilitatorPresent) {
     return (
-      <div className="w-full rounded-2xl border bg-card p-6 text-center shadow-sm">
+      <Surface className="w-full rounded-2xl p-6 text-center">
         <p className="text-sm font-medium text-foreground">
           Waiting on the facilitator
         </p>
@@ -179,13 +180,13 @@ export function LobbyParticipantCta({
             </>
           )}
         </Button>
-      </div>
+      </Surface>
     );
   }
 
   // ── Pre-start waiter → waiting for the facilitator to begin ──
   return (
-    <div className="w-full rounded-2xl border bg-card p-6 text-center shadow-sm">
+    <Surface className="w-full rounded-2xl p-6 text-center">
       <p className="text-sm font-medium text-foreground">
         Waiting for the facilitator to begin…
       </p>
@@ -209,6 +210,6 @@ export function LobbyParticipantCta({
           </>
         )}
       </Button>
-    </div>
+    </Surface>
   );
 }

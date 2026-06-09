@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { Surface } from '@/components/ui/surface';
 
 interface IdeationClusterViewProps {
   artifact: Record<string, unknown>;
@@ -58,11 +59,11 @@ export function IdeationClusterView({ artifact }: IdeationClusterViewProps) {
   // Empty state
   if (clusters.length === 0 && mindMapThemes.length === 0 && crazyEightsIdeas.length === 0) {
     return (
-      <div className="flex items-center justify-center rounded-lg border bg-card p-12">
+      <Surface className="flex items-center justify-center p-12">
         <p className="text-sm text-muted-foreground">
           Generated ideas will appear here after the ideation rounds complete
         </p>
-      </div>
+      </Surface>
     );
   }
 
@@ -157,15 +158,15 @@ export function IdeationClusterView({ artifact }: IdeationClusterViewProps) {
           </h3>
           <div className="grid gap-3 sm:grid-cols-2">
             {crazyEightsIdeas.map((idea, idx) => (
-              <div
+              <Surface
                 key={idx}
-                className="rounded-lg border border-dashed bg-card p-3"
+                className="border-dashed p-3"
               >
                 <h5 className="mb-1 font-semibold text-sm">{idea.title}</h5>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {idea.description}
                 </p>
-              </div>
+              </Surface>
             ))}
           </div>
         </div>

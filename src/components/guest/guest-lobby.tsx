@@ -23,6 +23,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { Surface } from '@/components/ui/surface';
 
 interface Participant {
   id: string;
@@ -160,12 +161,12 @@ export function GuestLobby({
   if (sessionNotFound) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm rounded-xl border bg-card p-8 text-center shadow-sm">
+        <Surface className="w-full max-w-sm p-8 text-center">
           <h2 className="mb-2 text-lg font-semibold">Workshop Not Found</h2>
           <p className="text-sm text-muted-foreground">
             This workshop no longer exists or the link has expired.
           </p>
-        </div>
+        </Surface>
       </div>
     );
   }
@@ -173,10 +174,10 @@ export function GuestLobby({
   if (status === 'ended') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm rounded-xl border bg-card p-8 text-center shadow-sm">
+        <Surface className="w-full max-w-sm p-8 text-center">
           <h2 className="mb-2 text-lg font-semibold">Session Ended</h2>
           <p className="text-sm text-muted-foreground">This session has ended. Thanks for participating!</p>
-        </div>
+        </Surface>
       </div>
     );
   }
@@ -197,7 +198,7 @@ export function GuestLobby({
       </div>
 
       {/* Lobby card */}
-      <div className="w-full max-w-sm rounded-xl border bg-card shadow-sm">
+      <Surface className="w-full max-w-sm">
         <div className="p-6">
           <h1 className="mb-1 text-xl font-semibold text-card-foreground">
             {workshopTitle}
@@ -294,7 +295,7 @@ export function GuestLobby({
             </span>
           </div>
         </div>
-      </div>
+      </Surface>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { Surface } from '@/components/ui/surface';
 
 interface ConceptSheetViewProps {
   artifact: Record<string, unknown>;
@@ -81,11 +82,11 @@ export function ConceptSheetView({ artifact }: ConceptSheetViewProps) {
   // Empty state
   if (concepts.length === 0) {
     return (
-      <div className="flex items-center justify-center rounded-lg border bg-card p-12">
+      <Surface className="flex items-center justify-center p-12">
         <p className="text-sm text-muted-foreground">
           Developed concepts will appear here after AI generates concept sheets
         </p>
-      </div>
+      </Surface>
     );
   }
 
@@ -195,7 +196,7 @@ export function ConceptSheetView({ artifact }: ConceptSheetViewProps) {
           {/* Feasibility Scores */}
           <div>
             <h4 className="mb-3 font-semibold">Feasibility Assessment</h4>
-            <div className="space-y-4 rounded-lg border bg-card p-4">
+            <Surface className="space-y-4 p-4">
               {/* Technical */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -243,7 +244,7 @@ export function ConceptSheetView({ artifact }: ConceptSheetViewProps) {
                   {concept.feasibility.userDesirability.rationale}
                 </p>
               </div>
-            </div>
+            </Surface>
           </div>
 
           {/* Concept separator (if multiple concepts) */}

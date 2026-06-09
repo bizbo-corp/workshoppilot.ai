@@ -1,6 +1,7 @@
 'use client';
 
 import { Presentation, Rocket } from 'lucide-react';
+import { Surface } from '@/components/ui/surface';
 import type { OutputType } from '@/lib/schemas';
 import { getValidationGuidance } from '@/lib/validation/output-type-guidance';
 
@@ -26,7 +27,7 @@ export function ValidationGuidanceCard({
   if (!guidance) return null;
 
   return (
-    <div className="rounded-xl border bg-card p-5">
+    <Surface className="p-5">
       <h4 className="text-base font-semibold">Recommended validation approach</h4>
       <p className="mt-1 text-base text-foreground/70">{guidance.approach}.</p>
 
@@ -87,6 +88,6 @@ export function ValidationGuidanceCard({
         Your Validation Plan is done — this step is complete as soon as the plan exists. The
         after-the-workshop actions continue later and won’t reopen it.
       </p>
-    </div>
+    </Surface>
   );
 }

@@ -20,6 +20,7 @@ import { getWorkshopColor } from '@/lib/workshop/workshop-appearance';
 import { WelcomeModal } from '@/components/dashboard/welcome-modal';
 import { AdminResetOnboarding } from '@/components/dashboard/admin-reset-onboarding';
 import { Progress } from '@/components/ui/progress';
+import { Surface } from '@/components/ui/surface';
 
 export default async function DashboardPage() {
   // Defense in depth: verify auth at page level
@@ -254,7 +255,7 @@ export default async function DashboardPage() {
       </div>
 
       {workshopsWithProgress.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-12 text-center">
+        <Surface className="p-12 text-center">
           <div className="mx-auto mb-6 flex justify-center">
             <svg viewBox="0 0 180 120" fill="none" className="w-44 h-28 text-muted-foreground" aria-hidden="true">
               <rect x="30" y="18" width="80" height="100" rx="8" fill="currentColor" opacity="0.08" transform="rotate(-8 70 68)" stroke="currentColor" strokeWidth="1" strokeOpacity="0.15" />
@@ -282,15 +283,13 @@ export default async function DashboardPage() {
               Start Workshop
             </NewWorkshopButton>
           </div>
-        </div>
+        </Surface>
       ) : (
         <>
           {/* Primary CTA section */}
           {ctaWorkshop && (
             <div className="mb-8">
-              <div
-                className="rounded-xl border border-border bg-card p-6 shadow-sm"
-              >
+              <Surface className="p-6">
                 <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   {ctaIsCompleted ? 'Your Latest Output' : 'Continue Where You Left Off'}
                 </p>
@@ -317,7 +316,7 @@ export default async function DashboardPage() {
                     </a>
                   </Button>
                 </div>
-              </div>
+              </Surface>
             </div>
           )}
 

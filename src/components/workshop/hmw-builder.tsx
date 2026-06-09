@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { Surface } from '@/components/ui/surface';
 
 interface HMWBuilderProps {
   artifact: Record<string, unknown>;
@@ -107,11 +108,11 @@ export function HMWBuilder({ artifact, onFieldEdit }: HMWBuilderProps) {
   // Empty state
   if (hmwStatements.length === 0) {
     return (
-      <div className="flex items-center justify-center rounded-lg border bg-card p-12">
+      <Surface className="flex items-center justify-center p-12">
         <p className="text-sm text-muted-foreground">
           Your reframed HMW will appear here after the AI helps you build it
         </p>
-      </div>
+      </Surface>
     );
   }
 
@@ -138,10 +139,10 @@ export function HMWBuilder({ artifact, onFieldEdit }: HMWBuilderProps) {
         const isSelected = selectedForIdeation?.includes(idx);
 
         return (
-          <div
+          <Surface
             key={idx}
             className={cn(
-              'rounded-lg border bg-card p-6 shadow-xs',
+              'p-6',
               isSelected && 'ring-2 ring-green-500/50'
             )}
           >
@@ -222,13 +223,13 @@ export function HMWBuilder({ artifact, onFieldEdit }: HMWBuilderProps) {
                 {statement.fullStatement}
               </p>
             </div>
-          </div>
+          </Surface>
         );
       })}
 
       {/* Insights Applied */}
       {insightsApplied.length > 0 && (
-        <div className="rounded-lg border bg-card p-4">
+        <Surface className="p-4">
           <h4 className="mb-3 font-semibold text-sm">Research Insights Applied</h4>
           <ul className="space-y-2">
             {insightsApplied.map((insight, idx) => (
@@ -238,7 +239,7 @@ export function HMWBuilder({ artifact, onFieldEdit }: HMWBuilderProps) {
               </li>
             ))}
           </ul>
-        </div>
+        </Surface>
       )}
 
       {/* Evolution explanation */}

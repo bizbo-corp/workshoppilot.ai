@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Surface } from '@/components/ui/surface';
 import type { QualitativeResult, ValidationPlan, Verdict } from '@/lib/schemas';
 import { VERDICT_LABELS, nextStepNudge } from '@/lib/validation/score';
 import { ScoreRing } from './ScoreRing';
@@ -99,7 +100,7 @@ export function RecordResultsCard({
     const { score, verdict: v } = plan.result;
     const qual = plan.result.qualitative;
     return (
-      <div className="rounded-xl border bg-card p-5">
+      <Surface className="p-5">
         <div className="flex items-start gap-4">
           {score != null && <ScoreRing score={score} verdict={v} />}
           <div className="min-w-0 flex-1 space-y-2">
@@ -143,14 +144,14 @@ export function RecordResultsCard({
             ? 'The score reflects the verdict you judged — a decision aid, not objective truth.'
             : 'The score is a decision aid — it measures your result against the target you set, not objective truth.'}
         </p>
-      </div>
+      </Surface>
     );
   }
 
   // ─────────────────────────── Collapsed (default) ───────────────────────────
   if (!editing) {
     return (
-      <div className="rounded-xl border bg-card p-5">
+      <Surface className="p-5">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h4 className="text-base font-semibold">Record your result</h4>
@@ -169,13 +170,13 @@ export function RecordResultsCard({
             Record a result
           </Button>
         </div>
-      </div>
+      </Surface>
     );
   }
 
   // ─────────────────────────── Edit view ───────────────────────────
   return (
-    <div className="rounded-xl border border-primary/30 bg-card p-5">
+    <Surface className="border-primary/30 p-5">
       <h4 className="text-base font-semibold">Record your result</h4>
       <p className="mt-1 text-base text-foreground/70">
         {isQualitative ? (
@@ -276,6 +277,6 @@ export function RecordResultsCard({
           </Button>
         </div>
       </div>
-    </div>
+    </Surface>
   );
 }

@@ -13,6 +13,7 @@ import {
 import { getTemplateById } from "@/lib/workshop/journeyTemplates";
 import type { JourneyPollOption } from "@/lib/canvas/journey-poll-types";
 import { emitJourneyCustomRequest } from "@/lib/canvas/journey-custom-bus";
+import { Surface } from "@/components/ui/surface";
 import { cn } from "@/lib/utils";
 
 /** Fire the custom-journey request to the chat panel and acknowledge it. */
@@ -69,7 +70,7 @@ export function JourneyTemplatePollView({
   onRequestCustom,
 }: JourneyTemplatePollViewProps) {
   return (
-    <div className="mb-4 rounded-xl border border-olive-200 bg-card p-5 shadow-sm dark:border-neutral-olive-800">
+    <Surface className="mb-4 border-olive-200 p-5 dark:border-neutral-olive-800">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-foreground">{title}</h3>
@@ -175,7 +176,7 @@ export function JourneyTemplatePollView({
           </button>
         </div>
       )}
-    </div>
+    </Surface>
   );
 }
 

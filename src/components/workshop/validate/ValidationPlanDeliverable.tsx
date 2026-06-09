@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { ArrowLeft, ClipboardCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Surface } from '@/components/ui/surface';
 import { getValidationState, recordValidationResult } from '@/actions/validation-actions';
 import type { ValidationPlan } from '@/lib/schemas';
 import { LENS_LABELS } from '@/lib/validation/artifact-lookup';
@@ -91,13 +92,13 @@ export function ValidationPlanDeliverable({
           <Loader2 className="h-6 w-6 animate-spin text-foreground/70" />
         </div>
       ) : plans.length === 0 ? (
-        <div className="rounded-xl border bg-card p-8 text-center text-base text-foreground/70">
+        <Surface className="p-8 text-center text-base text-foreground/70">
           No validation plan yet. Build one on the Validate step.
-        </div>
+        </Surface>
       ) : (
         <div className="space-y-6">
           {plans.map((plan) => (
-            <div key={plan.id} className="space-y-4 rounded-xl border bg-card p-5">
+            <Surface key={plan.id} className="space-y-4 p-5">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-base font-semibold">
                   {plan.conceptName} — {LENS_LABELS[plan.lens]}
@@ -121,7 +122,7 @@ export function ValidationPlanDeliverable({
                   onRecord={(input) => record(plan.id, input)}
                 />
               )}
-            </div>
+            </Surface>
           ))}
         </div>
       )}
@@ -140,7 +141,7 @@ function ReadOnlyResult({ plan }: { plan: ValidationPlan }) {
   }
   const { score, verdict } = plan.result;
   return (
-    <div className="flex items-start gap-4 rounded-xl border bg-background p-4">
+    <Surface variant="panel" className="flex items-start gap-4 bg-background p-4">
       {score != null && <ScoreRing score={score} verdict={verdict} />}
       <div className="min-w-0 flex-1 space-y-1">
         <span className="text-base font-semibold">{VERDICT_LABELS[verdict]}</span>
@@ -161,6 +162,6 @@ function ReadOnlyResult({ plan }: { plan: ValidationPlan }) {
         )}
         {plan.result.notes && <p className="text-sm text-foreground/70">“{plan.result.notes}”</p>}
       </div>
-    </div>
+    </Surface>
   );
 }

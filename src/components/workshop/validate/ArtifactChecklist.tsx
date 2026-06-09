@@ -1,6 +1,7 @@
 'use client';
 
 import { CheckCircle2 } from 'lucide-react';
+import { Surface } from '@/components/ui/surface';
 import type { ValidationPlan } from '@/lib/schemas';
 
 /** Static how-to steps per artifact key for non-app, non-concept-card tests. */
@@ -174,7 +175,7 @@ export function ArtifactChecklist({ plan }: { plan: ValidationPlan }) {
   ];
 
   return (
-    <div className="rounded-xl border bg-card p-5">
+    <Surface className="p-5">
       <h4 className="text-base font-semibold">{plan.artifactLabel}</h4>
       <p className="mt-1 text-base text-foreground/70">How to run this test:</p>
       <ol className="mt-3 space-y-2">
@@ -185,6 +186,6 @@ export function ArtifactChecklist({ plan }: { plan: ValidationPlan }) {
           </li>
         ))}
       </ol>
-    </div>
+    </Surface>
   );
 }

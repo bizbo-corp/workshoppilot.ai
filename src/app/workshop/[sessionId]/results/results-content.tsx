@@ -6,6 +6,7 @@ import { ExternalLink } from 'lucide-react';
 import { SynthesisSummaryView, SynthesisBuildPackSection } from '@/components/workshop/synthesis-summary-view';
 import { PrdViewerDialog } from '@/components/workshop/prd-viewer-dialog';
 import { Button } from '@/components/ui/button';
+import { Surface } from '@/components/ui/surface';
 
 interface ResultsContentProps {
   sessionId: string;
@@ -48,7 +49,7 @@ export function ResultsContent({
           />
         ) : (
           <div className="space-y-8">
-            <div className="rounded-lg border bg-card p-8 text-center">
+            <Surface className="p-8 text-center">
               <p className="text-muted-foreground mb-4">
                 Workshop completed — synthesis summary is still being generated.
               </p>
@@ -57,7 +58,7 @@ export function ResultsContent({
                   Go to Step 10
                 </Link>
               </Button>
-            </div>
+            </Surface>
 
             {/* Deliverables always available */}
             <SynthesisBuildPackSection

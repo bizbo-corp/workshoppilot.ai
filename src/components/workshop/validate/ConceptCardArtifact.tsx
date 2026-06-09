@@ -2,6 +2,7 @@
 
 import { Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Surface } from '@/components/ui/surface';
 import type { ValidationPlan } from '@/lib/schemas';
 
 export interface ConceptCardContext {
@@ -22,7 +23,7 @@ export function ConceptCardArtifact({
   context: ConceptCardContext;
 }) {
   return (
-    <div className="rounded-xl border bg-card p-5">
+    <Surface className="p-5">
       <div className="mb-4 flex items-center justify-between">
         <h4 className="text-base font-semibold">Concept card</h4>
         <Button
@@ -36,7 +37,7 @@ export function ConceptCardArtifact({
         </Button>
       </div>
 
-      <div className="concept-card space-y-4 rounded-lg border border-border bg-background p-5">
+      <Surface variant="panel" className="concept-card space-y-4 bg-background p-5">
         <header>
           <p className="text-sm uppercase tracking-wide text-foreground/70">Concept</p>
           <h3 className="text-xl font-bold">{plan.conceptName}</h3>
@@ -61,8 +62,8 @@ export function ConceptCardArtifact({
             <li>What would have to be true for this to work for you?</li>
           </ul>
         </Field>
-      </div>
-    </div>
+      </Surface>
+    </Surface>
   );
 }
 

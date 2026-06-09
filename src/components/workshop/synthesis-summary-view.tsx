@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Zap, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Surface } from '@/components/ui/surface';
 import { DeliverableCard } from './deliverable-card';
 
 interface SynthesisSummaryViewProps {
@@ -78,11 +79,11 @@ export function SynthesisSummaryView({
   // Empty state
   if (!narrative && stepSummaries.length === 0 && !confidenceAssessment && recommendedNextSteps.length === 0) {
     return (
-      <div className="flex items-center justify-center rounded-lg border bg-card p-12">
+      <Surface className="flex items-center justify-center p-12">
         <p className="text-sm text-muted-foreground">
           Your validated synthesis summary will appear here after AI completes the review
         </p>
-      </div>
+      </Surface>
     );
   }
 
@@ -103,9 +104,9 @@ export function SynthesisSummaryView({
           <h3 className="text-lg font-semibold">Journey Summary</h3>
           <div className="space-y-3">
             {stepSummaries.map((step, idx) => (
-              <div
+              <Surface
                 key={idx}
-                className="flex gap-4 rounded-lg border bg-card p-4"
+                className="flex gap-4 p-4"
               >
                 {/* Step number badge */}
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
@@ -124,7 +125,7 @@ export function SynthesisSummaryView({
                     ))}
                   </ul>
                 </div>
-              </div>
+              </Surface>
             ))}
           </div>
         </div>
@@ -134,7 +135,7 @@ export function SynthesisSummaryView({
       {confidenceAssessment && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Confidence Assessment</h3>
-          <div className="rounded-lg border bg-card p-6 space-y-4">
+          <Surface className="p-6 space-y-4">
             {/* Score display */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -170,7 +171,7 @@ export function SynthesisSummaryView({
                 {confidenceAssessment.rationale}
               </p>
             </div>
-          </div>
+          </Surface>
         </div>
       )}
 
@@ -193,7 +194,7 @@ export function SynthesisSummaryView({
               />
             </svg>
           </h3>
-          <div className="rounded-lg border bg-card p-6">
+          <Surface className="p-6">
             <ol className="space-y-3">
               {recommendedNextSteps.map((step, idx) => (
                 <li key={idx} className="flex gap-3">
@@ -207,7 +208,7 @@ export function SynthesisSummaryView({
                 </li>
               ))}
             </ol>
-          </div>
+          </Surface>
         </div>
       )}
 

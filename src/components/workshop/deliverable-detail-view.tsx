@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import { ArrowLeft, Copy, Check, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Surface } from '@/components/ui/surface';
 import { toast } from 'sonner';
 
 interface DeliverableFormat {
@@ -127,7 +128,7 @@ export function DeliverableDetailView({
       </div>
 
       {/* Content tabs */}
-      <div className="rounded-lg border bg-card">
+      <Surface>
         <Tabs defaultValue="rendered">
           <TabsList className="w-full rounded-b-none border-b">
             <TabsTrigger value="rendered" className="flex-1">
@@ -170,7 +171,7 @@ export function DeliverableDetailView({
             )}
           </TabsContent>
         </Tabs>
-      </div>
+      </Surface>
     </div>
   );
 }
