@@ -16,6 +16,7 @@ import { getStepByOrder } from "@/lib/workshop/step-metadata";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { SuggestionPill } from "@/components/ui/suggestion-pill";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { refetchStepMessages } from "@/actions/auto-save-actions";
 import {
@@ -1016,7 +1017,6 @@ export function ParticipantChatPanel({
 
   if (!step) return null;
 
-  const oliveButtonClass = "cursor-pointer rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
   // Step 3 hold card — shown while the facilitator is picking AI vs Real
   // interviews. Suppresses the chat scaffold entirely so no skeleton, no
@@ -1258,19 +1258,18 @@ export function ParticipantChatPanel({
                 {suggestions.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {suggestions.map((s, i) => (
-                      <button
+                      <SuggestionPill
                         key={i}
                         disabled={isLoading}
                         onClick={() => handleSend(s)}
-                        className={oliveButtonClass}
                       >
                         {s}
-                      </button>
+                      </SuggestionPill>
                     ))}
                   </div>
                 ) : (
                   <div>
-                    <button
+                    <SuggestionPill
                       disabled={isLoading}
                       onClick={() => {
                         setQuickAck(getRandomAck());
@@ -1279,14 +1278,10 @@ export function ParticipantChatPanel({
                           parts: [{ type: "text", text: "[SUGGEST_QUESTIONS] Give me some question ideas for this persona." }],
                         });
                       }}
-                      className={cn(
-                        "inline-flex items-center gap-1.5",
-                        oliveButtonClass,
-                      )}
                     >
                       <Sparkles className="h-3.5 w-3.5" />
                       Give me a suggestion
-                    </button>
+                    </SuggestionPill>
                   </div>
                 )}
                 <p className="text-sm font-medium text-foreground pl-1">
@@ -1300,14 +1295,13 @@ export function ParticipantChatPanel({
               <div className="space-y-2 pt-1">
                 <div className="flex flex-wrap gap-2">
                   {suggestions.map((s, i) => (
-                    <button
+                    <SuggestionPill
                       key={i}
                       disabled={isLoading}
                       onClick={() => handleSend(s)}
-                      className={oliveButtonClass}
                     >
                       {s}
-                    </button>
+                    </SuggestionPill>
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground pl-1">

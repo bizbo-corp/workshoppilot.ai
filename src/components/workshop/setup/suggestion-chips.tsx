@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { SuggestionPill } from '@/components/ui/suggestion-pill';
 
 /**
  * Example chips beneath a setup card. The parent (WorkshopSetup) owns the data.
@@ -54,23 +55,15 @@ export function SuggestionChips({
           : suggestions.map((s, i) => {
               const isSelected = selectedSet.has(s.toLowerCase());
               return (
-                <button
+                <SuggestionPill
                   key={`${i}-${s}`}
-                  type="button"
-                  aria-pressed={selected ? isSelected : undefined}
+                  block={isStack}
+                  selected={selected ? isSelected : false}
                   onClick={() => onPick(s)}
-                  className={cn(
-                    'border text-left shadow-sm transition-colors',
-                    isStack
-                      ? 'w-full rounded-lg px-3 py-2 text-xs leading-relaxed'
-                      : 'rounded-md px-2.5 py-1 text-xs leading-snug',
-                    isSelected
-                      ? 'border-black/30 bg-black/15 font-medium dark:border-white/40 dark:bg-white/25'
-                      : 'border-black/10 bg-white/50 hover:bg-white dark:border-white/15 dark:bg-white/10 dark:hover:bg-white/20',
-                  )}
+                  className={isStack ? 'leading-relaxed' : undefined}
                 >
                   {s}
-                </button>
+                </SuggestionPill>
               );
             })}
       </div>

@@ -1295,6 +1295,7 @@ export function StepContainer({
           onWrapUp={handleCompleteWorkshop}
           isWrappingUp={isCompletingWorkshop}
           workshopCompleted={workshopCompleted}
+          isAdmin={!!isAdmin}
         />
 
         <PrdViewerDialog

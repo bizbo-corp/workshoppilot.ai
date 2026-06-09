@@ -22,6 +22,7 @@ import { getStepByOrder } from "@/lib/workshop/step-metadata";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { SuggestionPill } from "@/components/ui/suggestion-pill";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { refetchStepMessages } from "@/actions/auto-save-actions";
 import {
@@ -3897,7 +3898,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                         {suggestions.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {suggestions.map((suggestion, i) => (
-                              <button
+                              <SuggestionPill
                                 key={i}
                                 disabled={isLoading}
                                 onClick={async () => {
@@ -3909,13 +3910,9 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                                     parts: [{ type: "text", text: suggestion }],
                                   });
                                 }}
-                                className={cn(
-                                  "cursor-pointer rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors",
-                                  "disabled:cursor-not-allowed disabled:opacity-50",
-                                )}
                               >
                                 {suggestion}
-                              </button>
+                              </SuggestionPill>
                             ))}
                           </div>
                         )}
@@ -4037,7 +4034,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                           {otherSuggestions.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                               {otherSuggestions.map((suggestion, i) => (
-                                <button
+                                <SuggestionPill
                                   key={i}
                                   disabled={isLoading}
                                   onClick={async () => {
@@ -4050,13 +4047,9 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                                       ],
                                     });
                                   }}
-                                  className={cn(
-                                    "cursor-pointer rounded-full border border-olive-300 bg-card px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors",
-                                    "disabled:cursor-not-allowed disabled:opacity-50",
-                                  )}
                                 >
                                   {suggestion}
-                                </button>
+                                </SuggestionPill>
                               ))}
                             </div>
                           )}

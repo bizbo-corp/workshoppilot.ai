@@ -78,6 +78,8 @@ export interface ValidatePanelProps {
   isWrappingUp?: boolean;
   /** Already completed — the CTA becomes "View Build Pack" instead of re-completing. */
   workshopCompleted?: boolean;
+  /** Admin: unlocks the assumption Focus (broad/specific) toggle. */
+  isAdmin?: boolean;
 }
 
 export function ValidatePanel({
@@ -88,6 +90,7 @@ export function ValidatePanel({
   onWrapUp,
   isWrappingUp = false,
   workshopCompleted = false,
+  isAdmin = false,
 }: ValidatePanelProps) {
   const [loading, setLoading] = React.useState(true);
   const [classification, setClassification] =
@@ -498,6 +501,7 @@ export function ValidatePanel({
               devMeta={assumptionMeta}
               scope={assumptionScope}
               onScopeChange={changeScope}
+              isAdmin={isAdmin}
             />
 
             <PickLensCard

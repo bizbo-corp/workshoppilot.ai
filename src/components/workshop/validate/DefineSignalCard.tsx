@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { SuggestionPill } from '@/components/ui/suggestion-pill';
 import type { Lens, OutputType, Signal } from '@/lib/schemas';
 import {
   getMetricOptions,
@@ -380,24 +381,24 @@ export function DefineSignalCard({
             <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
               <p className="text-sm font-medium">Pick a way to measure it:</p>
               {candidates.map((c, i) => (
-                <button
+                <SuggestionPill
                   key={i}
-                  type="button"
+                  block
                   onClick={() => applySuggestion(c)}
-                  className="block w-full rounded-md border border-border bg-background p-2.5 text-left transition-colors hover:bg-accent"
+                  className="flex-col items-stretch gap-0 px-3 py-2.5"
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center justify-between gap-2">
                     <span className="text-base font-medium">{c.signal.metric}</span>
                     <span className={cn('shrink-0 text-[12px] font-semibold uppercase tracking-wide', STRENGTH_CLASS[c.proxyStrength])}>
                       {PROXY_STRENGTH_LABELS[c.proxyStrength]}
                     </span>
-                  </div>
-                  <p className="mt-0.5 text-sm text-foreground/70">{c.why}</p>
-                  <p className="mt-1 text-[13px] text-foreground/70">
+                  </span>
+                  <span className="mt-0.5 block text-sm text-foreground/70">{c.why}</span>
+                  <span className="mt-1 block text-[13px] text-foreground/70">
                     Bar: {c.signal.target}
                     {c.signal.metricType === 'percent' ? '%' : ` of ${c.signal.sampleSize}`}
-                  </p>
-                </button>
+                  </span>
+                </SuggestionPill>
               ))}
             </div>
           )}
@@ -634,21 +635,17 @@ function MetricChipRow({
         {options.map((o) => {
           const isSelected = selected === o.label;
           return (
-            <button
+            <SuggestionPill
               key={o.key}
-              type="button"
+              selected={isSelected}
               onClick={() => onPick(o)}
               title={PROXY_STRENGTH_LABELS[o.proxyStrength]}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm transition-colors',
-                isSelected ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-accent'
-              )}
             >
               {o.label}
               <span className={cn('text-[10px]', STRENGTH_CLASS[o.proxyStrength])} aria-hidden>
                 ●
               </span>
-            </button>
+            </SuggestionPill>
           );
         })}
       </div>
