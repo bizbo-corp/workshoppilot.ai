@@ -99,7 +99,7 @@ export function LandingHeader() {
               <SignedIn>
                 <Button
                   asChild
-                  variant="secondary"
+                  variant="tertiary"
                   size="sm"
                   className="hidden md:inline-flex"
                 >

@@ -35,6 +35,10 @@
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-foreground: var(--tertiary-foreground);
+  --color-tertiary-border: var(--tertiary-border);
+  --color-tertiary-hover: var(--tertiary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
@@ -62,6 +66,7 @@
 
   /* Olive palette */
   --color-olive-50: var(--olive-50);
+  --color-olive-75: var(--olive-75);
   --color-olive-100: var(--olive-100);
   --color-olive-200: var(--olive-200);
   --color-olive-300: var(--olive-300);
@@ -94,6 +99,8 @@
 /* Olive palette */
 :root {
   --olive-50: #f9fbf6;
+  /* Midpoint of 50 and 100 — a touch more olive than 50 for resting suggestion pills. */
+  --olive-75: #edf0e8;
   --olive-100: #e1e5d9;
   --olive-200: #c9d0bc;
   --olive-300: #b1bca0;
@@ -250,6 +257,11 @@
   --primary-foreground: var(--neutral-olive-100);
   --secondary: var(--neutral-olive-200);
   --secondary-foreground: var(--neutral-olive-900);
+  /* Tertiary — the pale-olive tier (suggestion pills + tertiary buttons). */
+  --tertiary: var(--olive-75);
+  --tertiary-foreground: var(--foreground);
+  --tertiary-border: var(--olive-200);
+  --tertiary-hover: var(--olive-100);
   --muted: var(--neutral-olive-50);
   --muted-foreground: var(--neutral-olive-500);
   --accent: var(--neutral-olive-100);
@@ -369,6 +381,11 @@
   --primary-foreground: var(--neutral-olive-800);
   --secondary: var(--neutral-olive-800);
   --secondary-foreground: var(--neutral-olive-50);
+  /* Tertiary — pale-olive tier (dark: recessed neutral-olive). */
+  --tertiary: var(--neutral-olive-900);
+  --tertiary-foreground: var(--foreground);
+  --tertiary-border: var(--neutral-olive-700);
+  --tertiary-hover: var(--neutral-olive-800);
   --muted: var(--neutral-olive-800);
   --muted-foreground: var(--neutral-olive-400);
   --accent: var(--neutral-olive-700);

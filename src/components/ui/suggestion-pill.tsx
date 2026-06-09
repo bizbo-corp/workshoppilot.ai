@@ -7,9 +7,10 @@ import { cn } from '@/lib/utils';
  * Standard suggestion pill used app-wide — AI chat reply suggestions, the validate-step
  * assumption alternatives, setup example chips, signal metric chips, etc.
  *
- * Pale-olive fill with a soft olive border. The corner radius is fixed at ~half a single line's
- * height, so the browser caps it to a FULL pill on one line and keeps it as rounded corners when
- * the text wraps to multiple lines — no measuring needed.
+ * Uses the shared `tertiary` colour tier (the pale-olive tokens), so it stays in lockstep with the
+ * tertiary Button variant — change `--tertiary*` once and both update. The corner radius is fixed at
+ * ~half a single line's height, so the browser caps it to a FULL pill on one line and keeps it as
+ * rounded corners when the text wraps to multiple lines — no measuring needed.
  *
  * - default (inline): short, single-line pills (chat suggestions, metric chips).
  * - block: full-width, left-aligned for long / multi-line suggestions (assumption alternatives).
@@ -29,12 +30,11 @@ export const SuggestionPill = React.forwardRef<HTMLButtonElement, SuggestionPill
         aria-pressed={props['aria-pressed'] ?? (selected ? true : undefined)}
         className={cn(
           'cursor-pointer rounded-[19px] border px-3.5 py-2 text-sm leading-snug shadow-sm transition-colors',
-          'border-olive-200 bg-olive-50 text-foreground hover:bg-olive-100 hover:border-olive-300',
-          'dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:text-foreground dark:hover:bg-neutral-olive-800',
+          'border-tertiary-border bg-tertiary text-tertiary-foreground hover:bg-tertiary-hover',
           'disabled:cursor-not-allowed disabled:opacity-50',
           block ? 'flex w-full items-start gap-1.5 text-left' : 'inline-flex items-center gap-1.5',
           selected &&
-            'border-olive-400 bg-olive-100 font-medium dark:border-neutral-olive-500 dark:bg-neutral-olive-800',
+            'border-olive-400 bg-tertiary-hover font-medium dark:border-neutral-olive-500',
           className,
         )}
         {...props}
