@@ -18,6 +18,7 @@ export function SectionCard({
   status,
   summary,
   onEdit,
+  headerRight,
   children,
 }: {
   index: number;
@@ -26,6 +27,8 @@ export function SectionCard({
   /** Compact summary shown when status === 'done'. */
   summary?: React.ReactNode;
   onEdit?: () => void;
+  /** Optional control rendered top-right of the header while the section is active. */
+  headerRight?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   return (
@@ -51,6 +54,7 @@ export function SectionCard({
           {status === 'done' ? <Check className="h-4 w-4" /> : index}
         </span>
         <h3 className="flex-1 text-xl font-semibold tracking-tight">{title}</h3>
+        {status === 'active' && headerRight}
         {status === 'done' && onEdit && (
           <Button variant="ghost" size="xs" onClick={onEdit} className="gap-1">
             <Pencil className="h-3 w-3" />

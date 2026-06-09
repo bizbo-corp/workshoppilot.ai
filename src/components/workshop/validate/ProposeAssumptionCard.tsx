@@ -5,6 +5,7 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { SuggestionPill } from '@/components/ui/suggestion-pill';
 import { SectionCard } from './SectionCard';
 import type { SectionStatus } from './sections';
 
@@ -29,6 +30,7 @@ export function ProposeAssumptionCard({
   devMeta,
   scope,
   onScopeChange,
+  isAdmin = false,
 }: {
   status: SectionStatus;
   value: string;
@@ -44,8 +46,35 @@ export function ProposeAssumptionCard({
   devMeta?: { sources: string[]; rationale: string } | null;
   scope: 'broad' | 'specific';
   onScopeChange: (scope: 'broad' | 'specific') => void;
+  /** Focus toggle (broad vs specific) is an admin-only control; everyone else gets broad. */
+  isAdmin?: boolean;
 }) {
   const showFeatureNudge = value.trim().length > 0 && looksLikeFeature(value);
+
+  // Admin-only, subtle Focus toggle — moved to the section header's top-right.
+  const focusToggle = isAdmin ? (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[12px] font-medium text-foreground/45">Focus</span>
+      <div className="inline-flex rounded-md border border-border/60 p-0.5">
+        {(['broad', 'specific'] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => onScopeChange(s)}
+            disabled={isProposing}
+            className={cn(
+              'rounded px-2 py-0.5 text-[12px] font-medium capitalize transition-colors disabled:opacity-50',
+              scope === s
+                ? 'bg-foreground/10 text-foreground'
+                : 'text-foreground/50 hover:text-foreground/80'
+            )}
+          >
+            {s === 'broad' ? 'Broad' : 'Specific'}
+          </button>
+        ))}
+      </div>
+    </div>
+  ) : null;
 
   return (
     <SectionCard
@@ -53,6 +82,7 @@ export function ProposeAssumptionCard({
       title="What's the riskiest assumption?"
       status={status}
       onEdit={onEdit}
+      headerRight={focusToggle}
       summary={value ? <span className="italic">“{value}”</span> : null}
     >
       {isProposing && !value ? (
@@ -67,35 +97,30 @@ export function ProposeAssumptionCard({
             about people&apos;s needs or behaviour, not a feature.
           </p>
 
-          {/* Scope toggle: challenge-level vs concept-specific */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-foreground/70">Focus:</span>
-            <div className="inline-flex rounded-md border border-border p-0.5">
-              {(['broad', 'specific'] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => onScopeChange(s)}
-                  disabled={isProposing}
-                  className={cn(
-                    'rounded px-2.5 py-1 text-sm font-medium capitalize transition-colors disabled:opacity-50',
-                    scope === s
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-foreground/70 hover:bg-accent'
-                  )}
-                >
-                  {s === 'broad' ? 'Broad (the challenge)' : 'Specific (the concept)'}
-                </button>
-              ))}
-            </div>
+          {/* The assumption to test — larger, editable in place, with "Suggest another" beside it
+              (matched to the textarea height, secondary/white styling). */}
+          <div className="flex items-stretch gap-3">
+            <Textarea
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              rows={3}
+              placeholder="e.g. Novice speakers will trust an AI to restructure their talk."
+              className="flex-1 text-lg leading-relaxed"
+            />
+            <Button
+              variant="secondary"
+              onClick={onSuggestAnother}
+              disabled={isProposing}
+              className="h-auto shrink-0 self-stretch gap-1.5"
+            >
+              {isProposing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
+              Suggest another
+            </Button>
           </div>
-
-          <Textarea
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            rows={3}
-            placeholder="e.g. Novice speakers will trust an AI to restructure their talk."
-          />
 
           {showFeatureNudge && (
             <p className="text-sm text-amber-600 dark:text-amber-400">
@@ -105,21 +130,20 @@ export function ProposeAssumptionCard({
           )}
 
           {alternatives.length > 0 && (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <p className="text-sm font-medium text-foreground/70">Other options:</p>
-              {alternatives.map((alt, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => onSelectAlternative(alt)}
-                  className={cn(
-                    'block w-full rounded-md border border-border p-2 text-left text-base transition-colors hover:bg-accent',
-                    alt === value && 'border-primary bg-primary/10'
-                  )}
-                >
-                  {alt}
-                </button>
-              ))}
+              <div className="flex flex-col gap-2">
+                {alternatives.map((alt, i) => (
+                  <SuggestionPill
+                    key={i}
+                    block
+                    selected={alt === value}
+                    onClick={() => onSelectAlternative(alt)}
+                  >
+                    {alt}
+                  </SuggestionPill>
+                ))}
+              </div>
             </div>
           )}
 
@@ -142,20 +166,6 @@ export function ProposeAssumptionCard({
           <div className="flex items-center gap-3">
             <Button onClick={onContinue} disabled={!value.trim()} size="sm">
               Use this assumption
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onSuggestAnother}
-              disabled={isProposing}
-              className="gap-1.5 text-foreground/70"
-            >
-              {isProposing ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5" />
-              )}
-              Suggest another
             </Button>
           </div>
         </div>
