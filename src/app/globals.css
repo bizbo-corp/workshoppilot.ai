@@ -62,6 +62,7 @@
 
   /* Olive palette */
   --color-olive-50: var(--olive-50);
+  --color-olive-75: var(--olive-75);
   --color-olive-100: var(--olive-100);
   --color-olive-200: var(--olive-200);
   --color-olive-300: var(--olive-300);
@@ -94,6 +95,8 @@
 /* Olive palette */
 :root {
   --olive-50: #f9fbf6;
+  /* Midpoint of 50 and 100 — a touch more olive than 50 for resting suggestion pills. */
+  --olive-75: #edf0e8;
   --olive-100: #e1e5d9;
   --olive-200: #c9d0bc;
   --olive-300: #b1bca0;
