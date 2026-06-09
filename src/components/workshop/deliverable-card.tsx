@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { FileText, Presentation, Users, Code, Download, Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import {
   Card,
   CardHeader,
@@ -45,17 +45,17 @@ export const DELIVERABLES = [
 type IconName = 'FileText' | 'Presentation' | 'Users' | 'Code';
 
 const ICON_MAP: Record<IconName, React.ReactNode> = {
-  FileText: <FileText className="h-5 w-5" />,
-  Presentation: <Presentation className="h-5 w-5" />,
-  Users: <Users className="h-5 w-5" />,
-  Code: <Code className="h-5 w-5" />,
+  FileText: <Icon name="file-text" className="h-5 w-5" />,
+  Presentation: <Icon name="presentation" className="h-5 w-5" />,
+  Users: <Icon name="users" className="h-5 w-5" />,
+  Code: <Icon name="code" className="h-5 w-5" />,
 };
 
 /**
  * Get a Lucide icon element by name string.
  */
 export function getDeliverableIcon(iconName: string): React.ReactNode {
-  return ICON_MAP[iconName as IconName] ?? <FileText className="h-5 w-5" />;
+  return ICON_MAP[iconName as IconName] ?? <Icon name="file-text" className="h-5 w-5" />;
 }
 
 interface DeliverableCardProps {
@@ -111,7 +111,7 @@ export function DeliverableCard({
           disabled={disabled || isLoading}
           onClick={disabled ? undefined : onDownload}
         >
-          {isLoading ? <Loader2 className="animate-spin" /> : <Download />}
+          {isLoading ? <Icon name="spinner" className="animate-spin" /> : <Icon name="download" />}
           {label}
         </Button>
       </CardFooter>

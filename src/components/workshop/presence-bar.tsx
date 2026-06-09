@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { useOthers, useSelf, useOthersListener, useBroadcastEvent } from '@liveblocks/react';
 import { shallow } from '@liveblocks/react';
-import { Crown, Check, Link2, X } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { toast } from 'sonner';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { currentRoundVotes } from '@/lib/canvas/voting-utils';
@@ -277,12 +277,12 @@ export function PresenceBar({
               )}
               {p.role === 'owner' && !isIdle && !showCheckmark && (
                 <span className="absolute -top-1 -left-1 w-3.5 h-3.5">
-                  <Crown className="w-3.5 h-3.5 text-amber-500 drop-shadow-sm" />
+                  <Icon name="crown" className="w-3.5 h-3.5 text-amber-500 drop-shadow-sm" />
                 </span>
               )}
               {showCheckmark && (
                 <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-card flex items-center justify-center">
-                  <Check className="w-2 h-2 text-white" />
+                  <Icon name="check" className="w-2 h-2 text-white" />
                 </span>
               )}
             </div>
@@ -303,7 +303,7 @@ export function PresenceBar({
               onClick={handleCopyLink}
               className="flex items-center gap-2 w-full px-2 py-1.5 mb-2 rounded-lg text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors border border-dashed border-border"
             >
-              <Link2 className="w-3.5 h-3.5 shrink-0" />
+              <Icon name="link" className="w-3.5 h-3.5 shrink-0" />
               <span className="flex-1 text-left truncate">Invite Link</span>
               <span className="text-[10px] font-medium shrink-0">
                 {copied ? 'Copied!' : 'Copy'}
@@ -333,10 +333,10 @@ export function PresenceBar({
                     <span className="text-muted-foreground ml-1">(you)</span>
                   )}
                 </span>
-                {p.role === 'owner' && <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                {p.role === 'owner' && <Icon name="crown" className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
                 {(isVoteComplete || isCrazy8sComplete) && (
                   <span className="flex items-center gap-0.5 text-[10px] text-green-600 font-medium shrink-0">
-                    <Check className="w-3 h-3" />
+                    <Icon name="check" className="w-3 h-3" />
                   </span>
                 )}
                 {/* Online/idle status dot */}
@@ -352,7 +352,7 @@ export function PresenceBar({
                     className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0"
                     title={`Remove ${p.name}`}
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <Icon name="close" className="w-3.5 h-3.5" />
                   </button>
                 )}
                 {/* Inline confirmation */}
@@ -402,9 +402,9 @@ export function PresenceBar({
                       title={`Copy rejoin link for ${p.displayName}`}
                     >
                       {copiedRejoinId === p.participantId ? (
-                        <Check className="w-3.5 h-3.5 text-green-600" />
+                        <Icon name="check" className="w-3.5 h-3.5 text-green-600" />
                       ) : (
-                        <Link2 className="w-3.5 h-3.5" />
+                        <Icon name="link" className="w-3.5 h-3.5" />
                       )}
                     </button>
                   )}

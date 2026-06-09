@@ -17,7 +17,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { GripVertical, ChevronDown, ChevronRight, Pencil, Trash2, Check, X } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,7 +108,7 @@ export function FeatureCard({ feature, rank, isReadOnly }: FeatureCardProps) {
             {...listeners}
             className="mt-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
           >
-            <GripVertical className="h-4 w-4" />
+            <Icon name="grip-vertical" className="h-4 w-4" />
           </button>
         )}
 
@@ -135,11 +135,11 @@ export function FeatureCard({ feature, rank, isReadOnly }: FeatureCardProps) {
               />
               <div className="flex gap-2">
                 <Button size="sm" variant="default" onClick={handleSaveEdit}>
-                  <Check className="h-3 w-3 mr-1" />
+                  <Icon name="check" className="h-3 w-3 mr-1" />
                   Save
                 </Button>
                 <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
-                  <X className="h-3 w-3 mr-1" />
+                  <Icon name="close" className="h-3 w-3 mr-1" />
                   Cancel
                 </Button>
               </div>
@@ -173,9 +173,9 @@ export function FeatureCard({ feature, rank, isReadOnly }: FeatureCardProps) {
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-2 transition-colors"
             >
               {isExpanded ? (
-                <ChevronDown className="h-3 w-3" />
+                <Icon name="chevron-down" className="h-3 w-3" />
               ) : (
-                <ChevronRight className="h-3 w-3" />
+                <Icon name="chevron-right" className="h-3 w-3" />
               )}
               {feature.subfeatures.length} subfeature{feature.subfeatures.length !== 1 ? 's' : ''}
             </button>
@@ -191,7 +191,7 @@ export function FeatureCard({ feature, rank, isReadOnly }: FeatureCardProps) {
               className="h-7 w-7"
               onClick={() => setIsEditing(true)}
             >
-              <Pencil className="h-3 w-3" />
+              <Icon name="pencil" className="h-3 w-3" />
             </Button>
             <Button
               variant="ghost"
@@ -199,7 +199,7 @@ export function FeatureCard({ feature, rank, isReadOnly }: FeatureCardProps) {
               className="h-7 w-7 text-destructive hover:text-destructive"
               onClick={handleDelete}
             >
-              <Trash2 className="h-3 w-3" />
+              <Icon name="trash" className="h-3 w-3" />
             </Button>
           </div>
         )}

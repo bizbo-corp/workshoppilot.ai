@@ -13,7 +13,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, RotateCcw, Plus, Camera, CheckCircle2, MessageSquare, Aperture } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -245,7 +245,7 @@ export function StepNavigation({
                   size="sm"
                   disabled={isNavigating}
                 >
-                  <RotateCcw className="mr-2 h-4 w-4" />
+                  <Icon name="rotate-ccw" className="mr-2 h-4 w-4" />
                   Reset
                 </Button>
               )}
@@ -255,7 +255,7 @@ export function StepNavigation({
                   variant="outline"
                   size="sm"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Icon name="plus" className="mr-2 h-4 w-4" />
                   Artifact
                 </Button>
               )}
@@ -266,7 +266,7 @@ export function StepNavigation({
                   size="sm"
                   disabled={isNavigating}
                 >
-                  <Camera className="mr-2 h-4 w-4" />
+                  <Icon name="camera" className="mr-2 h-4 w-4" />
                   Save Default View
                 </Button>
               )}
@@ -303,7 +303,7 @@ export function StepNavigation({
                 size="sm"
                 disabled={isCapturing}
               >
-                <Aperture className={cn("mr-2 h-4 w-4", isCapturing && "animate-spin")} />
+                <Icon name="aperture" className={cn("mr-2 h-4 w-4", isCapturing && "animate-spin")} />
                 {isCapturing ? 'Capturing...' : 'Snapshot'}
               </Button>
               <Button
@@ -311,7 +311,7 @@ export function StepNavigation({
                 variant="outline"
                 size="sm"
               >
-                <MessageSquare className="mr-2 h-4 w-4" />
+                <Icon name="message-square" className="mr-2 h-4 w-4" />
                 Feedback
               </Button>
               {usage && (
@@ -340,7 +340,7 @@ export function StepNavigation({
             className={cn(!isNavigating && !nextDisabledReason && 'btn-shimmer')}
           >
             {isNavigating ? 'Advancing...' : (nextLabelOverride ?? 'Next')}
-            {!isNavigating && !nextLabelOverride && <ChevronRight className="ml-2 h-4 w-4" />}
+            {!isNavigating && !nextLabelOverride && <Icon name="chevron-right" className="ml-2 h-4 w-4" />}
           </Button>
         ) : !isLastStep && !isCompleted ? (
           <Button
@@ -350,7 +350,7 @@ export function StepNavigation({
             variant={artifactConfirmed && !nextDisabledReason ? 'default' : 'outline'}
           >
             {isNavigating ? 'Advancing...' : (nextLabelOverride ?? 'Next')}
-            {!isNavigating && !nextLabelOverride && <ChevronRight className="ml-2 h-4 w-4" />}
+            {!isNavigating && !nextLabelOverride && <Icon name="chevron-right" className="ml-2 h-4 w-4" />}
           </Button>
         ) : isCompleted && !isLastStep ? (
           <Button
@@ -369,7 +369,7 @@ export function StepNavigation({
             disabled={isNavigating}
           >
             Next Step
-            <ChevronRight className="ml-2 h-4 w-4" />
+            <Icon name="chevron-right" className="ml-2 h-4 w-4" />
           </Button>
         ) : isLastStep && workshopCompleted ? (
           /* Workshop completed — route to the Build Pack */
@@ -378,9 +378,9 @@ export function StepNavigation({
             size="lg"
             className="btn-shimmer"
           >
-            <CheckCircle2 className="mr-2 h-4 w-4" />
+            <Icon name="check-circle" className="mr-2 h-4 w-4" />
             View Build Pack
-            <ChevronRight className="ml-2 h-4 w-4" />
+            <Icon name="chevron-right" className="ml-2 h-4 w-4" />
           </Button>
         ) : isLastStep && canCompleteWorkshop ? (
           /* Extraction done, workshop not yet completed */

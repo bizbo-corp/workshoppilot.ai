@@ -12,7 +12,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { LogOut, Square } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import {
   Dialog,
   DialogContent,
@@ -65,7 +65,7 @@ export function ExitWorkshopDialog({
           </DialogHeader>
           <DialogFooter className="sm:flex-col sm:items-stretch sm:space-x-0 sm:gap-2">
             <Button onClick={handleExit} className="gap-2">
-              <LogOut className="h-4 w-4" />
+              <Icon name="log-out" className="h-4 w-4" />
               Leave (session keeps running)
             </Button>
             <Button
@@ -73,7 +73,7 @@ export function ExitWorkshopDialog({
               onClick={handleEndForAll}
               className="gap-2"
             >
-              <Square className="h-3.5 w-3.5 fill-current" />
+              <Icon name="square" className="h-3.5 w-3.5 fill-current" />
               End the session or workshop for all participants
             </Button>
             <Button variant="ghost" onClick={handleStay}>

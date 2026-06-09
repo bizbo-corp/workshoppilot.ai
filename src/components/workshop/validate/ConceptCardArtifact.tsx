@@ -1,6 +1,6 @@
 'use client';
 
-import { Printer } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import type { ValidationPlan } from '@/lib/schemas';
 
@@ -31,7 +31,7 @@ export function ConceptCardArtifact({
           className="gap-1.5 print:hidden"
           onClick={() => window.print()}
         >
-          <Printer className="h-3.5 w-3.5" />
+          <Icon name="printer" className="h-3.5 w-3.5" />
           Print
         </Button>
       </div>

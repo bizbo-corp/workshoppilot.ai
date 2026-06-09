@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import { useReactFlow, useStore as useReactFlowStore, type ReactFlowState } from '@xyflow/react';
 import { useUpdateMyPresence, useOthersMapped, shallow } from '@liveblocks/react';
-import { Crown } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { getParticipantTextColor, getParticipantDeepColor } from '@/lib/liveblocks/config';
 
 // ---------------------------------------------------------------------------
@@ -49,7 +49,7 @@ function CursorLabel({
       className="ml-4 -mt-1 flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap shadow-sm"
       style={{ backgroundColor: getParticipantDeepColor(color), color: getParticipantTextColor(color) }}
     >
-      {isFacilitator && <Crown className="w-3 h-3" />}
+      {isFacilitator && <Icon name="crown" className="w-3 h-3" />}
       {name}
     </div>
   );

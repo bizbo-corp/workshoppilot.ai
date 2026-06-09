@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon } from '@/components/ui/icon';
 import { AI_DECIDE } from '@/lib/tech-specs-wizard/types';
 import type { TechSpecsPreferences, WizardPageConfig, WizardQuestion } from '@/lib/tech-specs-wizard/types';
 import { OptionCard } from './option-card';
@@ -14,15 +15,13 @@ interface WizardPageProps {
 }
 
 export function WizardPage({ config, preferences, onUpdate }: WizardPageProps) {
-  const Icon = config.icon;
-
   return (
     <div className="space-y-8">
       {/* Page header */}
       <div className="space-y-2">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Icon className="h-5 w-5" />
+            <Icon name={config.icon} className="h-5 w-5" />
           </div>
           <div>
             <h2 className="text-lg font-semibold">{config.title}</h2>

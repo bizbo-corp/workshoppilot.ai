@@ -1,16 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, PencilLine, RefreshCw, Sparkles, X } from 'lucide-react';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 function ToolButton({
-  icon: Icon,
+  icon,
   label,
   onClick,
   disabled,
 }: {
-  icon: typeof Sparkles;
+  icon: IconName;
   label: string;
   onClick?: () => void;
   disabled?: boolean;
@@ -24,7 +24,7 @@ function ToolButton({
       aria-label={label}
       className="rounded-md p-1 opacity-70 transition-colors hover:bg-foreground/10 hover:opacity-100 disabled:opacity-40"
     >
-      <Icon className="h-3.5 w-3.5" />
+      <Icon name={icon} className="h-3.5 w-3.5" />
     </button>
   );
 }
@@ -88,19 +88,19 @@ export function ChallengeCard({
           )}
         >
           {busy ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin opacity-70" />
+            <Icon name="spinner" className="h-3.5 w-3.5 animate-spin opacity-70" />
           ) : (
             <>
-              {onPolish && <ToolButton icon={Sparkles} label="Polish wording" onClick={onPolish} />}
+              {onPolish && <ToolButton icon="sparkles" label="Polish wording" onClick={onPolish} />}
               {onElaborate && (
                 <ToolButton
-                  icon={PencilLine}
+                  icon="pencil-line"
                   label="Elaborate — steer the change"
                   onClick={() => setElaborateOpen((o) => !o)}
                 />
               )}
               {onRegenerate && (
-                <ToolButton icon={RefreshCw} label="Regenerate (brand new)" onClick={onRegenerate} />
+                <ToolButton icon="refresh" label="Regenerate (brand new)" onClick={onRegenerate} />
               )}
             </>
           )}
@@ -171,7 +171,7 @@ export function ChallengeCard({
             aria-label="Cancel"
             className="shrink-0 rounded-md p-1 opacity-70 transition-colors hover:bg-black/10 hover:opacity-100"
           >
-            <X className="h-3.5 w-3.5" />
+            <Icon name="close" className="h-3.5 w-3.5" />
           </button>
         </div>
       )}

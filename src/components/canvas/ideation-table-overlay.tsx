@@ -19,7 +19,7 @@ import {
   type ReactFlowState,
 } from '@xyflow/react';
 import { useTheme } from 'next-themes';
-import { Network, Zap, Vote, type LucideIcon } from 'lucide-react';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 const viewportSelector = (state: ReactFlowState) => ({
   x: state.transform[0],
@@ -45,10 +45,10 @@ interface IdeationTableOverlayProps {
   rows: IdeationTableRow[];
 }
 
-const ROW_ICONS: Record<string, LucideIcon> = {
-  'mind-map': Network,
-  'crazy-8s': Zap,
-  voting: Vote,
+const ROW_ICONS: Record<string, IconName> = {
+  'mind-map': 'network',
+  'crazy-8s': 'zap',
+  voting: 'vote',
 };
 
 /** Width of the left label gutter, in store units. */
@@ -118,7 +118,7 @@ export function IdeationTableOverlay({ leftX, rightX, rows }: IdeationTableOverl
       {rows.map((row) => {
         const mid = toScreen(leftX - LABEL_GAP - LABEL_GUTTER / 2, row.top + row.height / 2);
         const w = LABEL_GUTTER * zoom;
-        const Icon = ROW_ICONS[row.key];
+        const iconName = ROW_ICONS[row.key];
         return (
           <foreignObject
             key={`rowlabel-${row.key}`}
@@ -132,7 +132,7 @@ export function IdeationTableOverlay({ leftX, rightX, rows }: IdeationTableOverl
               className="flex flex-col items-center justify-center h-full gap-1"
               style={{ color: labelColor }}
             >
-              {Icon && <Icon style={{ width: 26 * zoom, height: 26 * zoom }} />}
+              {iconName && <Icon name={iconName} style={{ width: 26 * zoom, height: 26 * zoom }} />}
               <span
                 className="font-semibold text-center leading-tight"
                 style={{ fontSize: Math.max(11, 15 * zoom) }}

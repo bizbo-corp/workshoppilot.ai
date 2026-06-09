@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -87,7 +87,7 @@ export function ProposeAssumptionCard({
     >
       {isProposing && !value ? (
         <div className="flex items-center gap-2 text-base text-foreground/70">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Icon name="spinner" className="h-4 w-4 animate-spin" />
           Drafting your riskiest assumption…
         </div>
       ) : (
@@ -114,9 +114,9 @@ export function ProposeAssumptionCard({
               className="h-auto shrink-0 self-stretch gap-1.5"
             >
               {isProposing ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Icon name="spinner" className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Sparkles className="h-3.5 w-3.5" />
+                <Icon name="sparkles" className="h-3.5 w-3.5" />
               )}
               Suggest another
             </Button>

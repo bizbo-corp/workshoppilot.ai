@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useEventListener } from "@liveblocks/react";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 
@@ -104,7 +104,7 @@ export function WorkshopPulseCard({ stepId, initial }: WorkshopPulseCardProps) {
       )}
     >
       <div className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-        <Sparkles
+        <Icon name="sparkles"
           className={cn(
             "h-3 w-3 text-olive-600 dark:text-olive-400",
             justPulsed && "animate-pulse",
@@ -130,7 +130,7 @@ export function WorkshopPulseCard({ stepId, initial }: WorkshopPulseCardProps) {
 
       {pulse.cta && (
         <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-olive-600/10 px-3 py-1 text-xs font-medium text-olive-800 dark:bg-olive-400/15 dark:text-olive-200">
-          <ArrowRight className="h-3 w-3" aria-hidden />
+          <Icon name="arrow-right" className="h-3 w-3" aria-hidden />
           {pulse.cta}
         </div>
       )}

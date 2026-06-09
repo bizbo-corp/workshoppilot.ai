@@ -1,4 +1,4 @@
-import { Circle, CircleCheck } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 export interface LobbyRosterEntry {
   id: string;
@@ -28,9 +28,9 @@ export function LobbyRoster({ entries }: LobbyRosterProps) {
       {entries.map((entry) => (
         <li key={entry.id} className="flex items-center gap-2 text-sm">
           {entry.role === 'invited' ? (
-            <Circle className="h-4 w-4 text-muted-foreground" />
+            <Icon name="circle" className="h-4 w-4 text-muted-foreground" />
           ) : (
-            <CircleCheck className="h-4 w-4 text-emerald-600" />
+            <Icon name="check-circle" className="h-4 w-4 text-emerald-600" />
           )}
           <span className={entry.role === 'invited' ? 'text-muted-foreground' : ''}>
             {entry.label}

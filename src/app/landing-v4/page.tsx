@@ -1,22 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import {
-  ArrowRight,
-  Briefcase,
-  Check,
-  ChevronDown,
-  Code2,
-  FileText,
-  FlagTriangleRight,
-  Lightbulb,
-  MousePointerClick,
-  Package,
-  Route,
-  Shield,
-  Sparkles,
-  Star,
-  Timer,
-} from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { LandingHeader } from "@/components/layout/landing-header";
 import { NewWorkshopButton } from "@/components/dialogs/new-workshop-dialog";
 import { Button } from "@/components/ui/button";
@@ -112,15 +96,15 @@ export default function LandingV4() {
           {/* Reassurance — speed + zero barrier to entry */}
           <div className="mx-auto mt-6 flex max-w-3xl flex-col items-start gap-x-6 gap-y-2 text-sm font-normal text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
             <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-              <Timer className="h-4 w-4 text-olive-600 dark:text-olive-400" />
+              <Icon name="timer" className="h-4 w-4 text-olive-600 dark:text-olive-400" />
               Save time and money on planning
             </span>
             <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-              <Briefcase className="h-4 w-4 text-olive-600 dark:text-olive-400" />
+              <Icon name="briefcase" className="h-4 w-4 text-olive-600 dark:text-olive-400" />
               No experience required
             </span>
             <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-              <Lightbulb className="h-4 w-4 text-olive-600 dark:text-olive-400" />
+              <Icon name="lightbulb" className="h-4 w-4 text-olive-600 dark:text-olive-400" />
               Just bring your ideas and creativity
             </span>
           </div>
@@ -132,7 +116,7 @@ export default function LandingV4() {
               className="px-4 text-base shadow-lg shadow-olive-600/20"
             >
               Start Workshop
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <Icon name="arrow-right" className="ml-2 h-4 w-4" />
             </NewWorkshopButton>
 
             <VideoPlayButton />
@@ -145,9 +129,10 @@ export default function LandingV4() {
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex w-full max-w-xs sm:max-w-none flex-col items-center gap-2 px-6 py-2.5">
             <div className="flex gap-0.5">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Star
+                <Icon
                   key={i}
-                  strokeWidth={1.5}
+                  name="star"
+                  weight="fill"
                   className="h-4 w-4 fill-[#fffaf0] text-amber-400 dark:fill-[#fdf6e8]"
                 />
               ))}
@@ -171,7 +156,7 @@ export default function LandingV4() {
           }}
         >
           See what you get
-          <ChevronDown className="h-4 w-4 animate-bounce" />
+          <Icon name="chevron-down" className="h-4 w-4 animate-bounce" />
         </a>
       </section>
 
@@ -313,7 +298,7 @@ export default function LandingV4() {
           >
             {[
               {
-                icon: FileText,
+                icon: "file-text" as const,
                 title: "Product Requirements Document",
                 format: ".md",
                 audience: "Developers & Product Managers",
@@ -321,7 +306,7 @@ export default function LandingV4() {
                   "Scope, features and acceptance criteria in one structured document — ready to hand a developer or drop straight into an AI coding agent like Cursor or Claude Code.",
               },
               {
-                icon: Code2,
+                icon: "code" as const,
                 title: "Technical Specifications",
                 format: ".md",
                 audience: "Engineers & Systems Architects",
@@ -329,7 +314,7 @@ export default function LandingV4() {
                   "Architecture recommendations, data models and API contracts. Enough detail for your dev team or AI coder to start shipping on day one.",
               },
               {
-                icon: FlagTriangleRight,
+                icon: "flag" as const,
                 title: "Prioritized Feature Roadmap",
                 format: ".json",
                 audience: "Founders & Product Leads",
@@ -337,7 +322,7 @@ export default function LandingV4() {
                   "Phase 1 vs. Phase 2, decided. Exportable as JSON for direct import into Jira, Linear or your project management tool of choice.",
               },
               {
-                icon: Package,
+                icon: "package" as const,
                 title: "Workshop Outputs Pack",
                 format: ".pptx",
                 audience: "Stakeholders & Investors",
@@ -345,7 +330,7 @@ export default function LandingV4() {
                   "Every workshop artifact in one download — personas, problem statements, Lean Canvas and ideation results. Ready to share with your team or attach to a pitch deck.",
               },
               {
-                icon: Route,
+                icon: "route" as const,
                 title: "Journey Map",
                 format: ".md",
                 audience: "Designers & UX Teams",
@@ -353,7 +338,7 @@ export default function LandingV4() {
                   "A step-by-step map of how users move through your product. Identifies pain points, drop-off risks and moments that matter before a single screen is designed.",
               },
               {
-                icon: MousePointerClick,
+                icon: "mouse-pointer-click" as const,
                 title: "Prototype",
                 format: "Interactive",
                 audience: "Everyone",
@@ -361,7 +346,6 @@ export default function LandingV4() {
                   "A clickable prototype that brings your idea to life. Test assumptions with real users, align your team visually and validate before you invest in code.",
               },
             ].map((item) => {
-              const Icon = item.icon;
               return (
                 <div
                   key={item.title}
@@ -369,7 +353,7 @@ export default function LandingV4() {
                 >
                   <div className="md:col-span-5">
                     <div className="flex items-center gap-3">
-                      <Icon className="h-6 w-6 text-olive-600 dark:text-olive-400 shrink-0" />
+                      <Icon name={item.icon} className="h-6 w-6 text-olive-600 dark:text-olive-400 shrink-0" />
                       <h3 className="text-lg font-semibold text-foreground tracking-tight">
                         {item.title}
                       </h3>
@@ -524,8 +508,10 @@ export default function LandingV4() {
               >
                 <div className="flex gap-0.5 mb-6">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
+                    <Icon
                       key={i}
+                      name="star"
+                      weight="fill"
                       className="h-4 w-4 fill-olive-500 text-olive-500 dark:fill-olive-400 dark:text-olive-400"
                     />
                   ))}
@@ -677,7 +663,7 @@ export default function LandingV4() {
                   "Export-ready for dev teams and AI coders",
                 ].map((feature) => (
                   <li key={feature} className="flex items-start gap-2.5">
-                    <Check className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
+                    <Icon name="check" className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
                     <span className="text-sm text-foreground">{feature}</span>
                   </li>
                 ))}
@@ -694,7 +680,7 @@ export default function LandingV4() {
             <div className="rounded-2xl border border-olive-600 dark:border-olive-400 ring-1 ring-olive-600/20 dark:ring-olive-400/20 p-8 flex flex-col">
               <div className="mb-4">
                 <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-olive-700 dark:text-olive-300 bg-olive-100 dark:bg-olive-900 rounded-full px-3 py-1">
-                  <Sparkles className="h-3 w-3" />
+                  <Icon name="sparkles" className="h-3 w-3" />
                   Most Popular
                 </span>
               </div>
@@ -723,7 +709,7 @@ export default function LandingV4() {
                   "Live cursors, presence, chat",
                 ].map((feature) => (
                   <li key={feature} className="flex items-start gap-2.5">
-                    <Check className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
+                    <Icon name="check" className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
                     <span className="text-sm text-foreground">{feature}</span>
                   </li>
                 ))}
@@ -751,7 +737,7 @@ export default function LandingV4() {
             >
               <div className="mb-4">
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 rounded-full px-3 py-1">
-                  <Sparkles className="h-3 w-3" />
+                  <Icon name="sparkles" className="h-3 w-3" />
                   White Glove
                 </span>
               </div>
@@ -780,7 +766,7 @@ export default function LandingV4() {
                   "Direct line to the founders",
                 ].map((feature) => (
                   <li key={feature} className="flex items-start gap-2.5">
-                    <Check className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <Icon name="check" className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                     <span className="text-sm text-foreground">{feature}</span>
                   </li>
                 ))}
@@ -802,7 +788,7 @@ export default function LandingV4() {
           {/* Trust signals */}
           <div className="mt-12 flex flex-col sm:flex-row items-start gap-6 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
+              <Icon name="shield" className="h-4 w-4" />
               Secure payment via Stripe
             </div>
           </div>
@@ -840,7 +826,7 @@ export default function LandingV4() {
                   className="min-w-[200px] text-base shadow-lg shadow-olive-600/20"
                 >
                   Start Free Workshop
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <Icon name="arrow-right" className="ml-2 h-4 w-4" />
                 </NewWorkshopButton>
                 <a href="#pricing">
                   <Button variant="outline" size="lg">

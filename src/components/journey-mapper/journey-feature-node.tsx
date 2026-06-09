@@ -2,7 +2,7 @@
 
 import { memo, useState } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { Plus } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import type { JourneyMapperNode } from '@/lib/journey-mapper/types';
 
@@ -102,7 +102,7 @@ export const JourneyFeatureNode = memo(
                 }}
                 title={`Add node ${dir}`}
               >
-                <Plus className="h-3 w-3" />
+                <Icon name="plus" className="h-3 w-3" />
               </button>
             ))}
           </>

@@ -1,23 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useMemo } from 'react';
-import {
-  Search,
-  X,
-  Upload,
-  Trash2,
-  RefreshCw,
-  LayoutGrid,
-  Table,
-  ArrowLeft,
-  Loader2,
-  Replace,
-  Pencil,
-  Check,
-  Code,
-  Tag,
-  Sparkles,
-} from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -289,7 +273,7 @@ export function LibraryClient() {
               href="/admin"
               className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <Icon name="arrow-left" className="h-4 w-4" />
             </Link>
             <div>
               <h1 className="text-2xl font-bold text-foreground">Media Manager</h1>
@@ -305,14 +289,14 @@ export function LibraryClient() {
               onClick={refetch}
               disabled={isLoading}
             >
-              <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', isLoading && 'animate-spin')} />
+              <Icon name="refresh" className={cn('h-3.5 w-3.5 mr-1.5', isLoading && 'animate-spin')} />
               Refresh
             </Button>
             <Button
               size="sm"
               onClick={() => setShowUploadDialog(true)}
             >
-              <Upload className="h-3.5 w-3.5 mr-1.5" />
+              <Icon name="upload" className="h-3.5 w-3.5 mr-1.5" />
               Upload
             </Button>
           </div>
@@ -323,7 +307,7 @@ export function LibraryClient() {
           <div className="flex items-center gap-3">
             {/* Search */}
             <div className="relative w-64">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Icon name="search" className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search assets..."
@@ -336,7 +320,7 @@ export function LibraryClient() {
                   onClick={() => updateSearch('')}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <Icon name="close" className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
@@ -373,7 +357,7 @@ export function LibraryClient() {
                     size="sm"
                     onClick={() => setShowTagPopover((v) => !v)}
                   >
-                    <Tag className="h-3.5 w-3.5 mr-1.5" />
+                    <Icon name="tag" className="h-3.5 w-3.5 mr-1.5" />
                     Tag {selectedIds.size} selected
                   </Button>
                   {showTagPopover && (
@@ -413,9 +397,9 @@ export function LibraryClient() {
                             disabled={isBulkTagging || !bulkTagInput.trim()}
                           >
                             {isBulkTagging ? (
-                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                              <Icon name="spinner" className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                             ) : (
-                              <Check className="h-3.5 w-3.5 mr-1.5" />
+                              <Icon name="check" className="h-3.5 w-3.5 mr-1.5" />
                             )}
                             Apply Tags
                           </Button>
@@ -426,9 +410,9 @@ export function LibraryClient() {
                             disabled={isAutoTagging}
                           >
                             {isAutoTagging ? (
-                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                              <Icon name="spinner" className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                             ) : (
-                              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                              <Icon name="sparkles" className="h-3.5 w-3.5 mr-1.5" />
                             )}
                             Auto-Tag
                           </Button>
@@ -444,9 +428,9 @@ export function LibraryClient() {
                   disabled={isBulkDeleting || unusedSelected.length === 0}
                 >
                   {isBulkDeleting ? (
-                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    <Icon name="spinner" className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                   ) : (
-                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                    <Icon name="trash" className="h-3.5 w-3.5 mr-1.5" />
                   )}
                   Delete {unusedSelected.length} unused
                 </Button>
@@ -462,7 +446,7 @@ export function LibraryClient() {
                   view === 'grid' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted',
                 )}
               >
-                <LayoutGrid className="h-3.5 w-3.5" />
+                <Icon name="layout-grid" className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => setView('table')}
@@ -471,7 +455,7 @@ export function LibraryClient() {
                   view === 'table' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted',
                 )}
               >
-                <Table className="h-3.5 w-3.5" />
+                <Icon name="table" className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
@@ -480,7 +464,7 @@ export function LibraryClient() {
         {/* Tag filter pills */}
         {availableTags.length > 0 && (
           <div className="mb-4 flex items-center gap-2">
-            <Tag className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+            <Icon name="tag" className="h-3 w-3 text-muted-foreground flex-shrink-0" />
             <div className="flex flex-wrap gap-1">
               <button
                 onClick={() => setActiveTag(null)}
@@ -522,7 +506,7 @@ export function LibraryClient() {
         {/* Content */}
         {isLoading ? (
           <div className="flex items-center justify-center py-24">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <Icon name="spinner" className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : filteredAssets.length === 0 ? (
           <div className="py-24 text-center">
@@ -547,7 +531,7 @@ export function LibraryClient() {
                 className="mt-4"
                 onClick={() => setShowUploadDialog(true)}
               >
-                <Upload className="h-3.5 w-3.5 mr-1.5" />
+                <Icon name="upload" className="h-3.5 w-3.5 mr-1.5" />
                 Upload your first asset
               </Button>
             )}
@@ -572,7 +556,7 @@ export function LibraryClient() {
                     className="rounded-full bg-background p-1 shadow-sm hover:bg-muted"
                     title="Edit"
                   >
-                    <Pencil className="h-3 w-3" />
+                    <Icon name="pencil" className="h-3 w-3" />
                   </button>
                   <button
                     onClick={(e) => {
@@ -582,7 +566,7 @@ export function LibraryClient() {
                     className="rounded-full bg-background p-1 shadow-sm hover:bg-muted"
                     title="Replace file"
                   >
-                    <Replace className="h-3 w-3" />
+                    <Icon name="replace" className="h-3 w-3" />
                   </button>
                   {asset.usageCount === 0 && (
                     <button
@@ -593,7 +577,7 @@ export function LibraryClient() {
                       className="rounded-full bg-background p-1 shadow-sm hover:bg-destructive/10 hover:text-destructive"
                       title="Delete"
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Icon name="trash" className="h-3 w-3" />
                     </button>
                   )}
                 </div>
@@ -704,14 +688,14 @@ export function LibraryClient() {
                           className="rounded p-1 hover:bg-muted"
                           title="Edit"
                         >
-                          <Pencil className="h-3 w-3" />
+                          <Icon name="pencil" className="h-3 w-3" />
                         </button>
                         <button
                           onClick={() => setShowReplaceDialog(asset)}
                           className="rounded p-1 hover:bg-muted"
                           title="Replace"
                         >
-                          <Replace className="h-3 w-3" />
+                          <Icon name="replace" className="h-3 w-3" />
                         </button>
                         {asset.usageCount === 0 && (
                           <button
@@ -719,7 +703,7 @@ export function LibraryClient() {
                             className="rounded p-1 hover:bg-destructive/10 hover:text-destructive"
                             title="Delete"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Icon name="trash" className="h-3 w-3" />
                           </button>
                         )}
                       </div>
@@ -787,9 +771,9 @@ export function LibraryClient() {
                 className="w-full"
               >
                 {isReplacing ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Icon name="spinner" className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
-                  <Upload className="h-4 w-4 mr-2" />
+                  <Icon name="upload" className="h-4 w-4 mr-2" />
                 )}
                 {isReplacing ? 'Replacing...' : 'Choose new file'}
               </Button>
@@ -897,7 +881,7 @@ export function LibraryClient() {
                       onClick={() => setShowSvgEditor((v) => !v)}
                       className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <Code className="h-3.5 w-3.5" />
+                      <Icon name="code" className="h-3.5 w-3.5" />
                       {showSvgEditor ? 'Hide SVG Code' : 'Edit SVG Code'}
                     </button>
                     {showSvgEditor && (
@@ -931,9 +915,9 @@ export function LibraryClient() {
               </Button>
               <Button onClick={handleSaveEdit} disabled={isSavingEdit}>
                 {isSavingEdit ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  <Icon name="spinner" className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                 ) : (
-                  <Check className="h-3.5 w-3.5 mr-1.5" />
+                  <Icon name="check" className="h-3.5 w-3.5 mr-1.5" />
                 )}
                 Save
               </Button>

@@ -12,7 +12,7 @@ import * as React from 'react';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Merge } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { useMultiplayerContext } from './multiplayer-room';
 import type { VotingResult } from '@/lib/canvas/voting-types';
@@ -122,7 +122,7 @@ export function VotingResultsSidebar({
                     title="Merge group"
                     onClick={() => onStartMerge(group.id)}
                   >
-                    <Merge className="h-3 w-3" />
+                    <Icon name="merge" className="h-3 w-3" />
                   </Button>
                 )}
 

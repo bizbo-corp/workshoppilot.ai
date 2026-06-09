@@ -16,13 +16,7 @@ import { ResetStepDialog } from "@/components/dialogs/reset-step-dialog";
 import { PrdViewerDialog } from "./prd-viewer-dialog";
 import { useIdeationPhases } from "@/hooks/use-ideation-phases";
 import { useBrainwritingPhase, type BrainwritingSeed } from "@/hooks/use-brainwriting-phase";
-import {
-  ChevronLeft,
-  ChevronRight,
-  MessageSquare,
-  UserPlus,
-  X,
-} from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import {
   resetStep,
   updateStepStatus,
@@ -39,7 +33,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users } from "lucide-react";
 import { saveCanvasState } from "@/actions/canvas-actions";
 import {
   getStepByOrder,
@@ -1703,10 +1696,10 @@ export function StepContainer({
             )}
           >
             {chatCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
+              <Icon name="chevron-right" className="h-4 w-4" />
             ) : (
               <>
-                <ChevronLeft className="h-4 w-4" />
+                <Icon name="chevron-left" className="h-4 w-4" />
                 <span className="ml-2 text-sm">Collapse</span>
               </>
             )}
@@ -1834,7 +1827,7 @@ export function StepContainer({
                     : 'Manage invitations or change schedule'
                 }
               >
-                <UserPlus className="h-4 w-4" />
+                <Icon name="user-plus" className="h-4 w-4" />
                 Manage invites
                 {pendingInviteCount && pendingInviteCount > 0 ? (
                   <span
@@ -1855,7 +1848,7 @@ export function StepContainer({
                 )}
                 title="Participant activity"
               >
-                <MessageSquare className="h-4 w-4" />
+                <Icon name="message-square" className="h-4 w-4" />
               </button>
             )}
             {/* Share invite link — facilitator only, sits beside the avatars */}
@@ -1899,7 +1892,7 @@ export function StepContainer({
                   onClick={() => setShowParticipantOverview(false)}
                   className="text-muted-foreground hover:text-foreground text-xs"
                 >
-                  <X className="h-4 w-4" />
+                  <Icon name="close" className="h-4 w-4" />
                 </button>
               </div>
               <ParticipantOverview sessionId={sessionId} stepId={step.id} workshopId={workshopId} shareToken={shareToken ?? undefined} />
@@ -1916,7 +1909,7 @@ export function StepContainer({
             className="flex items-center gap-1.5 rounded-xl bg-card shadow-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             title="Invite teammates and facilitate together"
           >
-            <UserPlus className="h-4 w-4" />
+            <Icon name="user-plus" className="h-4 w-4" />
             Invite team
           </button>
         </div>
@@ -1926,7 +1919,7 @@ export function StepContainer({
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Users className="h-5 w-5" />
+              <Icon name="users" className="h-5 w-5" />
             </div>
             <AlertDialogTitle>
               {tier === 'solo' ? 'Upgrade to a team workshop?' : 'Switch to a team workshop?'}

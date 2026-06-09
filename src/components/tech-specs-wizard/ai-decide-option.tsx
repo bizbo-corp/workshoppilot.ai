@@ -1,6 +1,6 @@
 'use client';
 
-import { Sparkles } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 interface AiDecideOptionProps {
@@ -28,7 +28,7 @@ export function AiDecideOption({ selected, onSelect }: AiDecideOptionProps) {
         'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors',
         selected ? 'bg-primary/15' : 'bg-muted'
       )}>
-        <Sparkles className={cn('h-4 w-4', selected ? 'text-primary' : 'text-muted-foreground')} />
+        <Icon name="sparkles" className={cn('h-4 w-4', selected ? 'text-primary' : 'text-muted-foreground')} />
       </div>
       <div className="flex-1 space-y-0.5">
         <span className="text-sm font-medium">Let AI decide</span>

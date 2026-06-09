@@ -2,7 +2,7 @@
 
 import { SignUp } from '@clerk/nextjs';
 import { useEffect } from 'react';
-import { X } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 export interface SignUpModalProps {
   open: boolean;
@@ -47,7 +47,7 @@ export function SignUpModal({
           className="absolute right-4 top-4 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           aria-label="Close"
         >
-          <X className="h-5 w-5" />
+          <Icon name="close" className="h-5 w-5" />
         </button>
 
         {/* Clerk SignUp component */}

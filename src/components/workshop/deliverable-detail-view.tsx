@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { ArrowLeft, Copy, Check, Download } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
@@ -83,7 +83,7 @@ export function DeliverableDetailView({
           onClick={onBack}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <Icon name="arrow-left" className="h-4 w-4" />
           Back to deliverables
         </button>
       )}
@@ -100,9 +100,9 @@ export function DeliverableDetailView({
           disabled={!markdownContent}
         >
           {copied ? (
-            <Check className="h-4 w-4 text-green-600" />
+            <Icon name="check" className="h-4 w-4 text-green-600" />
           ) : (
-            <Copy className="h-4 w-4" />
+            <Icon name="copy" className="h-4 w-4" />
           )}
           {copied ? 'Copied!' : 'Copy Markdown'}
         </Button>
@@ -112,7 +112,7 @@ export function DeliverableDetailView({
           onClick={handleDownloadMd}
           disabled={!markdownContent}
         >
-          <Download className="h-4 w-4" />
+          <Icon name="download" className="h-4 w-4" />
           Download .md
         </Button>
         <Button
@@ -121,7 +121,7 @@ export function DeliverableDetailView({
           onClick={handleDownloadJson}
           disabled={!jsonContent}
         >
-          <Download className="h-4 w-4" />
+          <Icon name="download" className="h-4 w-4" />
           Download .json
         </Button>
       </div>

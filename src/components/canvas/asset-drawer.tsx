@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Search, X } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import {
   Sheet,
   SheetContent,
@@ -69,7 +69,7 @@ export function AssetDrawer({ open, onOpenChange, onSelectAsset, selectionLabel 
         {/* Search bar */}
         <div className="border-b px-4 py-2">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Icon name="search" className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search assets..."
@@ -82,7 +82,7 @@ export function AssetDrawer({ open, onOpenChange, onSelectAsset, selectionLabel 
                 onClick={() => updateSearch('')}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                <X className="h-3 w-3" />
+                <Icon name="close" className="h-3 w-3" />
               </button>
             )}
           </div>

@@ -5,7 +5,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import TextareaAutosize from "react-textarea-autosize";
 import ReactMarkdown from "react-markdown";
-import { Send, Loader2, Sparkles, FileText, CheckCircle2 } from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import { PersonaInterrupt } from "./persona-interrupt";
 import { ResearchUploadDialog } from "./research-upload-dialog";
 import { FieldworkRoster } from "./fieldwork-roster";
@@ -1279,7 +1279,7 @@ export function ParticipantChatPanel({
                         });
                       }}
                     >
-                      <Sparkles className="h-3.5 w-3.5" />
+                      <Icon name="sparkles" className="h-3.5 w-3.5" />
                       Give me a suggestion
                     </SuggestionPill>
                   </div>
@@ -1342,7 +1342,7 @@ export function ParticipantChatPanel({
               onClick={handleConfirmResearch}
               className="inline-flex items-center gap-1.5 rounded-full bg-olive-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
             >
-              <CheckCircle2 className="h-3.5 w-3.5" />
+              <Icon name="check-circle" className="h-3.5 w-3.5" />
               Add to board
             </button>
             <button
@@ -1370,7 +1370,7 @@ export function ParticipantChatPanel({
                 onClick={() => setUploadOpen(true)}
                 className="inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-xs font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 dark:border-neutral-olive-700 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
               >
-                <FileText className="h-3.5 w-3.5" />
+                <Icon name="file-text" className="h-3.5 w-3.5" />
                 Add your research
               </button>
               {fieldworkOpen && (
@@ -1394,7 +1394,7 @@ export function ParticipantChatPanel({
                       : "border border-olive-300 bg-card text-olive-800 hover:bg-olive-100 dark:border-neutral-olive-700 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700",
                   )}
                 >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <Icon name="check-circle" className="h-3.5 w-3.5" />
                   {hasSubmittedResearch ? "Research submitted" : "Mark my research done"}
                 </button>
               )}
@@ -1423,7 +1423,7 @@ export function ParticipantChatPanel({
             disabled={!inputValue.trim() || isLoading}
             aria-label="Send message"
           >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send />}
+            {isLoading ? <Icon name="spinner" className="h-4 w-4 animate-spin" /> : <Icon name="send" />}
           </Button>
         </form>
       </div>

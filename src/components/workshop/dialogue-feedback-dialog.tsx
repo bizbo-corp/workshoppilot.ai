@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useDialogueFeedback } from '@/hooks/use-dialogue-feedback';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 interface DialogueFeedbackDialogProps {
   open: boolean;
@@ -88,7 +88,7 @@ export function DialogueFeedbackDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting || !feedbackText.trim()}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting && <Icon name="spinner" className="mr-2 h-4 w-4 animate-spin" />}
             Submit Feedback
           </Button>
         </DialogFooter>

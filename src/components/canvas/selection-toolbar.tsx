@@ -7,7 +7,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Layers, Trash2, ChevronDown, UserCircle } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 const COLOR_DOT: Record<string, string> = {
@@ -63,7 +63,7 @@ export function SelectionToolbar({ count, position, onCluster, onDelete, persona
           'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
         )}
       >
-        <Layers className="w-4 h-4" />
+        <Icon name="layers" className="w-4 h-4" />
         <span>Cluster</span>
       </button>
 
@@ -81,9 +81,9 @@ export function SelectionToolbar({ count, position, onCluster, onDelete, persona
                 assignOpen && 'bg-accent text-accent-foreground',
               )}
             >
-              <UserCircle className="w-4 h-4" />
+              <Icon name="user-circle" className="w-4 h-4" />
               <span>Assign to</span>
-              <ChevronDown className="w-3 h-3" />
+              <Icon name="chevron-down" className="w-3 h-3" />
             </button>
 
             {assignOpen && (
@@ -117,7 +117,7 @@ export function SelectionToolbar({ count, position, onCluster, onDelete, persona
           'text-muted-foreground hover:bg-accent hover:text-red-600 dark:hover:text-red-400',
         )}
       >
-        <Trash2 className="w-4 h-4" />
+        <Icon name="trash" className="w-4 h-4" />
         <span>Delete</span>
       </button>
 

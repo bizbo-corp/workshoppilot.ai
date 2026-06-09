@@ -12,7 +12,7 @@ import { type NodeProps, type Node } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ThumbsUp } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import type { Crazy8sSlot } from '@/lib/canvas/crazy-8s-types';
 
 export type VotingCardNodeData = {
@@ -147,7 +147,7 @@ function VotingCardNodeComponent({ data }: NodeProps<VotingCardNodeType>) {
               disabled={!canVote}
               onClick={() => onCastVote(slot.slotId)}
             >
-              <ThumbsUp className="h-3 w-3" />
+              <Icon name="thumbs-up" className="h-3 w-3" />
               +1 Vote
             </Button>
           )

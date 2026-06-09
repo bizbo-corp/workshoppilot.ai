@@ -1,18 +1,6 @@
 'use client';
 
-import {
-  ConciergeBell,
-  Handshake,
-  Loader2,
-  Megaphone,
-  Package,
-  RefreshCw,
-  Shuffle,
-  Smartphone,
-  Star,
-  Workflow,
-  type LucideIcon,
-} from 'lucide-react';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { OutputType, OutputTypeClassification } from '@/lib/schemas';
@@ -26,15 +14,15 @@ import type { SectionStatus } from './sections';
 const TYPES = Object.keys(OUTPUT_TYPE_LABELS) as OutputType[];
 const MAX = 2;
 
-const OUTPUT_TYPE_ICONS: Record<OutputType, LucideIcon> = {
-  app_digital: Smartphone,
-  service: ConciergeBell,
-  process_change: Shuffle,
-  experience_design: Workflow,
-  offering: Handshake,
-  brand_comms: Star,
-  campaign: Megaphone,
-  physical_product: Package, // not specified — sensible default
+const OUTPUT_TYPE_ICONS: Record<OutputType, IconName> = {
+  app_digital: 'smartphone',
+  service: 'bell',
+  process_change: 'shuffle',
+  experience_design: 'workflow',
+  offering: 'handshake',
+  brand_comms: 'star',
+  campaign: 'megaphone',
+  physical_product: 'package', // not specified — sensible default
 };
 
 export function DetectOutputTypeCard({
@@ -77,7 +65,7 @@ export function DetectOutputTypeCard({
     >
       {isClassifying && !classification ? (
         <div className="flex items-center gap-2 text-base text-foreground/70">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Icon name="spinner" className="h-4 w-4 animate-spin" />
           Detecting your output type…
         </div>
       ) : (
@@ -99,7 +87,6 @@ export function DetectOutputTypeCard({
               const selected = idx >= 0;
               const isPrimary = idx === 0;
               const disabled = !selected && atMax;
-              const Icon = OUTPUT_TYPE_ICONS[type];
               return (
                 <button
                   key={type}
@@ -118,7 +105,7 @@ export function DetectOutputTypeCard({
                 >
                   <div className="flex items-center gap-3">
                     <Icon
-                      strokeWidth={1.5}
+                      name={OUTPUT_TYPE_ICONS[type]}
                       className={cn(
                         'h-7 w-7 shrink-0',
                         selected ? 'text-primary' : 'text-foreground/70'
@@ -157,9 +144,9 @@ export function DetectOutputTypeCard({
               className="gap-1.5 text-foreground/70"
             >
               {isClassifying ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Icon name="spinner" className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <RefreshCw className="h-3.5 w-3.5" />
+                <Icon name="refresh" className="h-3.5 w-3.5" />
               )}
               Re-detect
             </Button>

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
-import { ArrowLeft, DoorOpen } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { db } from '@/db/client';
 import { sessions } from '@/db/schema';
 import { resolveClerkParticipant } from '@/lib/auth/resolve-participant';
@@ -51,13 +51,13 @@ export default async function FakeDoorPage({ params }: FakeDoorPageProps) {
         href={`/workshop/${sessionId}/step/validate`}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <Icon name="arrow-left" className="h-4 w-4" />
         Back to Validate
       </Link>
 
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-          <DoorOpen className="h-5 w-5 text-primary" />
+          <Icon name="door-open" className="h-5 w-5 text-primary" />
         </div>
         <div>
           <h1 className="text-lg font-semibold">Fake-door landing page</h1>

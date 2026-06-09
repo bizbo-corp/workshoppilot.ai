@@ -1,10 +1,4 @@
-import {
-  Code2,
-  FileText,
-  FlagTriangleRight,
-  Route,
-  type LucideIcon,
-} from "lucide-react";
+import { type IconName } from "@/components/ui/icon";
 
 /**
  * Scripted content for the marketing PRODUCT demo (the animated lookalike of
@@ -85,14 +79,14 @@ export const STAKEHOLDERS: StakeholderSticky[] = [
 export type BuildPackItem = {
   title: string;
   format: string;
-  icon: LucideIcon;
+  icon: IconName;
 };
 
 export const BUILD_PACK_ITEMS: BuildPackItem[] = [
-  { title: "Product Requirements", format: ".md", icon: FileText },
-  { title: "Technical Specs", format: ".md", icon: Code2 },
-  { title: "Journey Map", format: ".md", icon: Route },
-  { title: "Feature Priorities", format: ".json", icon: FlagTriangleRight },
+  { title: "Product Requirements", format: ".md", icon: "file-text" },
+  { title: "Technical Specs", format: ".md", icon: "code" },
+  { title: "Journey Map", format: ".md", icon: "route" },
+  { title: "Feature Priorities", format: ".json", icon: "flag" },
 ];
 
 /** Step 3 output: a markdown Build Pack file ready to hand to a coding agent. */

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronUp } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { OutputPanel } from './output-panel';
 import { ArtifactConfirmation } from './artifact-confirmation';
 
@@ -46,7 +46,7 @@ export function OutputAccordion({
         className="flex cursor-pointer items-center justify-between border-t bg-muted/50 px-4 py-2 transition-colors hover:bg-muted/70"
       >
         <span className="text-sm font-medium">Output</span>
-        <ChevronUp className="h-4 w-4 rotate-180 transition-transform" />
+        <Icon name="chevron-up" className="h-4 w-4 rotate-180 transition-transform" />
       </div>
     );
   }
@@ -60,7 +60,7 @@ export function OutputAccordion({
         className="flex cursor-pointer items-center justify-between border-b bg-muted/50 px-4 py-2 transition-colors hover:bg-muted/70"
       >
         <span className="text-sm font-medium">Output</span>
-        <ChevronUp className="h-4 w-4 transition-transform" />
+        <Icon name="chevron-up" className="h-4 w-4 transition-transform" />
       </div>
 
       {/* Scrollable content */}

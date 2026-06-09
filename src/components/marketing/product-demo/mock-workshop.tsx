@@ -2,15 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import {
-  ArrowRight,
-  CheckCircle2,
-  GripVertical,
-  MousePointer2,
-  Paperclip,
-  Plus,
-  Sparkles,
-} from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import { cn } from "@/lib/utils";
 import { LightStreak } from "./light-streak";
 import { useTypewriter } from "./use-typewriter";
@@ -179,7 +171,7 @@ export function MockWorkshop({
           className="absolute z-[5] flex flex-col rounded-xl shadow-sm"
         >
           <div className="flex items-center gap-1.5 rounded-t-xl bg-olive-600 px-2.5 py-1.5 dark:bg-olive-500">
-            <GripVertical className="h-3.5 w-3.5 text-olive-50/70" />
+            <Icon name="grip-vertical" className="h-3.5 w-3.5 text-olive-50/70" />
             <span className="text-[11px] font-semibold text-olive-50">
               {WORKSHOP_GROUP.label}
             </span>
@@ -232,7 +224,7 @@ export function MockWorkshop({
               phase === "click" && "scale-95",
             )}
           >
-            <Sparkles className="h-3 w-3 text-olive-600 dark:text-olive-400" />
+            <Icon name="sparkles" className="h-3 w-3 text-olive-600 dark:text-olive-400" />
             {WORKSHOP_CHAT.stuckLabel}
           </span>
 
@@ -264,9 +256,9 @@ export function MockWorkshop({
                 >
                   {chip}
                   {isAdded ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />
+                    <Icon name="check-circle" className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />
                   ) : (
-                    <Plus className="h-3.5 w-3.5 opacity-70" />
+                    <Icon name="plus" className="h-3.5 w-3.5 opacity-70" />
                   )}
                 </motion.div>
               );
@@ -279,9 +271,9 @@ export function MockWorkshop({
             {WORKSHOP_CHAT.placeholder}
           </p>
           <div className="mt-3 flex items-center">
-            <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+            <Icon name="paperclip" className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="ml-auto flex h-5 w-5 items-center justify-center rounded bg-olive-700 text-olive-50 dark:bg-olive-600">
-              <ArrowRight className="h-3 w-3" />
+              <Icon name="arrow-right" className="h-3 w-3" />
             </span>
           </div>
         </div>
@@ -297,7 +289,7 @@ export function MockWorkshop({
           animate={{ x: (wp.x / 100) * box.w, y: (wp.y / 100) * box.h }}
           transition={{ type: "spring", stiffness: 120, damping: 20 }}
         >
-          <MousePointer2 className="h-5 w-5 fill-foreground text-background" />
+          <Icon name="mouse-pointer" className="h-5 w-5 fill-foreground text-background" />
         </motion.div>
       )}
     </div>

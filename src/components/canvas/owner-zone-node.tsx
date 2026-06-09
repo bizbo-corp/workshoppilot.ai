@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { ArrowRight, CheckCircle2, Loader2, Star } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import type { NodeProps, Node } from '@xyflow/react';
 
 export const OWNER_ZONE_HEADER_HEIGHT = 32;
@@ -97,7 +97,7 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
           </span>
           {data.isReady && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-              <CheckCircle2
+              <Icon name="check-circle"
                 style={{ width: 14, height: 14, color: '#ffffff', flexShrink: 0 }}
               />
               <span style={{ fontSize: 11, color: '#ffffff', fontWeight: 500 }}>
@@ -119,7 +119,7 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
               color: data.starCount > 0 ? '#ffffff' : 'rgba(255,255,255,0.55)',
             }}
           >
-            <Star
+            <Icon name="star"
               style={{
                 width: 12,
                 height: 12,
@@ -163,7 +163,7 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
             }}
           >
             {data.isReady && (
-              <CheckCircle2 style={{ width: 16, height: 16 }} />
+              <Icon name="check-circle" style={{ width: 16, height: 16 }} />
             )}
             {data.isReady ? "I'm Done" : "I'm Done"}
           </button>
@@ -205,9 +205,9 @@ export const OwnerZoneNode = memo(({ data }: NodeProps<OwnerZoneNode>) => {
             }}
           >
             {data.isConfirmingMindMap ? (
-              <Loader2 className="animate-spin" style={{ width: 16, height: 16 }} />
+              <Icon name="spinner" className="animate-spin" style={{ width: 16, height: 16 }} />
             ) : (
-              <ArrowRight style={{ width: 16, height: 16 }} />
+              <Icon name="arrow-right" style={{ width: 16, height: 16 }} />
             )}
             {data.isConfirmingMindMap ? 'Enhancing...' : 'Continue to Crazy 8s'}
           </button>

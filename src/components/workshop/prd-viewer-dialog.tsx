@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Check, Copy, ExternalLink, Loader2, RefreshCw, Zap, AlertTriangle, Code2, Fullscreen, Link2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import {
   Dialog,
   DialogContent,
@@ -276,7 +276,7 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId, initialData, o
       <DialogContent className="sm:max-w-[700px] max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-primary" />
+            <Icon name="zap" className="h-5 w-5 text-primary" />
             {conceptName ? `Prototype: ${conceptName}` : 'Generate Prototype'}
           </DialogTitle>
           <DialogDescription>
@@ -293,14 +293,14 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId, initialData, o
         {/* Loading state */}
         {state === 'generating-prd' && (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Icon name="spinner" className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">Analyzing workshop artifacts...</p>
           </div>
         )}
 
         {state === 'creating-v0' && (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Icon name="spinner" className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">V0 is building your prototype...</p>
             <p className="text-xs text-muted-foreground/70">This typically takes 30-60 seconds</p>
           </div>
@@ -309,7 +309,7 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId, initialData, o
         {/* Error state */}
         {error && state === 'idle' && (
           <div className="flex flex-col items-center justify-center py-8 gap-3">
-            <AlertTriangle className="h-8 w-8 text-destructive" />
+            <Icon name="alert-triangle" className="h-8 w-8 text-destructive" />
             <p className="text-sm text-destructive text-center max-w-md">{error}</p>
           </div>
         )}
@@ -364,7 +364,7 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId, initialData, o
                       onClick={() => setShowFiles(!showFiles)}
                       className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <Code2 className="h-4 w-4" />
+                      <Icon name="code" className="h-4 w-4" />
                       {showFiles ? 'Hide' : 'View'} Source Files ({v0Data.files.length})
                     </button>
                     {showFiles && (
@@ -390,7 +390,7 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId, initialData, o
         {/* Fullscreen prototype link */}
         {fullscreenUrl && (
           <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
-            <Link2 className="h-4 w-4 text-primary shrink-0" />
+            <Icon name="link" className="h-4 w-4 text-primary shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-xs text-muted-foreground">Shareable prototype link</p>
               <a
@@ -407,7 +407,7 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId, initialData, o
               className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
               title="Copy link"
             >
-              {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+              {copied ? <Icon name="check" className="h-4 w-4 text-green-600" /> : <Icon name="copy" className="h-4 w-4" />}
             </button>
           </div>
         )}
@@ -417,7 +417,7 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId, initialData, o
           <div className="flex gap-2">
             {(state === 'prd-ready' || state === 'v0-ready' || state === 'v0-error') && (
               <Button variant="outline" size="sm" onClick={handleRegenerate}>
-                <RefreshCw className="h-4 w-4" />
+                <Icon name="refresh" className="h-4 w-4" />
                 Regenerate
               </Button>
             )}
@@ -426,7 +426,7 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId, initialData, o
             {state === 'v0-ready' && v0Data && fullscreenUrl && (
               <Button size="sm" variant="outline" asChild>
                 <a href={fullscreenUrl} target="_blank" rel="noopener noreferrer">
-                  <Fullscreen className="h-4 w-4" />
+                  <Icon name="fullscreen" className="h-4 w-4" />
                   Full Screen
                 </a>
               </Button>
@@ -434,20 +434,20 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId, initialData, o
             {state === 'v0-ready' && v0Data && (
               <Button variant="outline" size="sm" asChild>
                 <a href={v0Data.editorUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4" />
+                  <Icon name="external-link" className="h-4 w-4" />
                   Open in V0
                 </a>
               </Button>
             )}
             {state === 'prd-ready' && v0Available && (
               <Button size="sm" onClick={handleCreateV0}>
-                <Zap className="h-4 w-4" />
+                <Icon name="zap" className="h-4 w-4" />
                 Create in V0
               </Button>
             )}
             {state === 'v0-error' && v0Available && (
               <Button size="sm" variant="outline" onClick={handleCreateV0}>
-                <RefreshCw className="h-4 w-4" />
+                <Icon name="refresh" className="h-4 w-4" />
                 Retry V0
               </Button>
             )}
@@ -478,11 +478,11 @@ function CopyButton({ text, size = 'default' }: { text: string; size?: 'sm' | 'd
     >
       {copied ? (
         <span className="flex items-center gap-1 text-green-600">
-          <Check className={size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'} />
+          <Icon name="check" className={size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'} />
           {size !== 'sm' && <span className="text-xs">Copied!</span>}
         </span>
       ) : (
-        <Copy className={size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'} />
+        <Icon name="copy" className={size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'} />
       )}
     </button>
   );

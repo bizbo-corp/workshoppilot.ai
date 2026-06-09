@@ -3,7 +3,7 @@
 import { memo, useState, useCallback, useMemo } from 'react';
 import { type NodeProps, type Node } from '@xyflow/react';
 import { Crazy8sCanvas } from '@/components/workshop/crazy-8s-canvas';
-import { Zap, Save, Check, Loader2, SkipForward, CheckCircle2, Pencil, Link2, Unlink, X, Wand2, Image, Star } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import type { SlotGroup } from '@/lib/canvas/crazy-8s-types';
@@ -184,7 +184,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
           {/* Header — acts as drag handle */}
           <div className="flex items-center justify-between border-b bg-amber-50 dark:bg-amber-950/20 px-4 py-2.5 shrink-0 rounded-t-[10px] cursor-grab active:cursor-grabbing">
             <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-amber-600" />
+              <Icon name="zap" className="h-4 w-4 text-amber-600" />
               <span className="text-sm font-semibold text-amber-900 dark:text-amber-200">
                 Select Your Best Ideas
               </span>
@@ -200,7 +200,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                   className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40 transition-colors"
                   title="Group selected ideas as parts of one solution"
                 >
-                  <Link2 className="h-3.5 w-3.5" />
+                  <Icon name="link" className="h-3.5 w-3.5" />
                   Group
                 </button>
               )}
@@ -209,7 +209,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                   onClick={data.onBackToDrawing}
                   className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40 transition-colors"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Icon name="pencil" className="h-3.5 w-3.5" />
                   Edit Sketches
                 </button>
               )}
@@ -217,7 +217,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                 onClick={() => data.onConfirmSelection?.(true)}
                 className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40 transition-colors"
               >
-                <SkipForward className="h-3.5 w-3.5" />
+                <Icon name="skip-forward" className="h-3.5 w-3.5" />
                 Skip
               </button>
               <button
@@ -225,7 +225,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                 disabled={selectedSlotIds.length === 0}
                 className="flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
               >
-                <CheckCircle2 className="h-3.5 w-3.5" />
+                <Icon name="check-circle" className="h-3.5 w-3.5" />
                 Continue to Brain Rewriting
               </button>
             </div>
@@ -234,7 +234,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
           {/* Group naming bar */}
           {isNamingGroup && (
             <div className="nodrag nopan flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-950/20 border-b">
-              <Link2 className="h-4 w-4 text-blue-600 shrink-0" />
+              <Icon name="link" className="h-4 w-4 text-blue-600 shrink-0" />
               <span className="text-xs text-blue-700 dark:text-blue-300 shrink-0">Name this group:</span>
               <input
                 type="text"
@@ -259,7 +259,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                 onClick={() => { setIsNamingGroup(false); setGroupName(''); }}
                 className="rounded-md p-1 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
               >
-                <X className="h-3.5 w-3.5" />
+                <Icon name="close" className="h-3.5 w-3.5" />
               </button>
             </div>
           )}
@@ -281,7 +281,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                     key={group.id}
                     className="inline-flex items-center gap-1 rounded-full bg-blue-100 dark:bg-blue-900/40 px-2.5 py-0.5 text-xs text-blue-800 dark:text-blue-200"
                   >
-                    <Link2 className="h-3 w-3" />
+                    <Icon name="link" className="h-3 w-3" />
                     {group.label}
                     <span className="text-blue-500 dark:text-blue-400">({memberTitles})</span>
                     {/* Merge button */}
@@ -295,14 +295,14 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                       )}
                       title={hasMerged ? 'View/edit merged sketch' : 'Merge into single sketch'}
                     >
-                      {hasMerged ? <Image className="h-3 w-3" /> : <Wand2 className="h-3 w-3" />}
+                      {hasMerged ? <Icon name="image" className="h-3 w-3" /> : <Icon name="magic-wand" className="h-3 w-3" />}
                     </button>
                     <button
                       onClick={() => handleUngroup(group.id)}
                       className="ml-0.5 rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
                       title="Ungroup"
                     >
-                      <Unlink className="h-3 w-3" />
+                      <Icon name="unlink" className="h-3 w-3" />
                     </button>
                   </span>
                 );
@@ -351,7 +351,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                       {/* Group badge */}
                       {isGrouped && (
                         <div className="absolute top-3 left-3 flex items-center gap-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-white shadow-md">
-                          <Link2 className="h-2.5 w-2.5" />
+                          <Icon name="link" className="h-2.5 w-2.5" />
                           <span className="text-[10px] font-medium max-w-[60px] truncate">{group.label}</span>
                         </div>
                       )}
@@ -360,7 +360,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                           'absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full text-white shadow-md',
                           isGrouped ? 'bg-blue-600' : 'bg-olive-600'
                         )}>
-                          <Check className="h-3 w-3" />
+                          <Icon name="check" className="h-3 w-3" />
                         </div>
                       )}
                     </button>
@@ -387,7 +387,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
       <div className="rounded-xl border-2 border-[var(--olive-600)]/60 bg-background shadow-lg h-full flex flex-col relative">
         <div className="flex items-center justify-between border-b border-black/10 px-4 py-2.5 shrink-0 rounded-t-[10px] cursor-grab active:cursor-grabbing bg-[var(--olive-600)]">
           <div className="flex items-center gap-2.5">
-            <Zap className="h-4 w-4 text-white" />
+            <Icon name="zap" className="h-4 w-4 text-white" />
             <span className="text-sm font-semibold text-white">
               {headerTitle}
             </span>
@@ -412,7 +412,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                 className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-white/90 hover:bg-white/15 transition-colors disabled:opacity-50"
                 title="Update slot titles from starred mind map nodes"
               >
-                {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className="h-3.5 w-3.5 fill-current" />}
+                {isSyncing ? <Icon name="spinner" className="h-3.5 w-3.5 animate-spin" /> : <Icon name="star" className="h-3.5 w-3.5 fill-current" />}
                 {isSyncing ? 'Syncing...' : 'Sync Stars'}
               </button>
             )}
@@ -427,11 +427,11 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
                 }`}
               >
                 {isSaving ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Icon name="spinner" className="h-3.5 w-3.5 animate-spin" />
                 ) : saved ? (
-                  <Check className="h-3.5 w-3.5" />
+                  <Icon name="check" className="h-3.5 w-3.5" />
                 ) : (
-                  <Save className="h-3.5 w-3.5" />
+                  <Icon name="save" className="h-3.5 w-3.5" />
                 )}
                 {isSaving ? 'Saving...' : saved ? 'Saved' : 'Save & Continue'}
               </button>
@@ -453,7 +453,7 @@ export const Crazy8sGroupNode = memo(({ data }: NodeProps<Crazy8sGroupNode>) => 
         {saved && data.completionInfo && (
           <div className="absolute inset-0 rounded-xl bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-10">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-              <Check className="h-6 w-6 text-green-600" />
+              <Icon name="check" className="h-6 w-6 text-green-600" />
             </div>
             <div className="text-sm font-semibold text-foreground">Sketches Saved!</div>
             <div className="text-xs text-muted-foreground">Waiting for other participants...</div>

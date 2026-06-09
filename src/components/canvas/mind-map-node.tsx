@@ -2,7 +2,7 @@
 
 import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { Plus, Star, Trash2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 export type MindMapNodeData = {
@@ -265,7 +265,7 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
               style={{ color: data.themeColor }}
               title={data.isStarred ? 'Unstar idea' : 'Star for Crazy 8s'}
             >
-              <Star className={cn('h-3.5 w-3.5', data.isStarred && 'fill-current')} />
+              <Icon name="star" className={cn('h-3.5 w-3.5', data.isStarred && 'fill-current')} />
             </button>
           )}
 
@@ -284,7 +284,7 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
               className="nodrag nopan p-1 rounded hover:bg-red-100 text-red-600 transition-all opacity-0 group-hover:opacity-100"
               title="Delete node"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Icon name="trash" className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
@@ -317,7 +317,7 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
               }}
               title={`Add node ${dir}`}
             >
-              <Plus className="h-3 w-3" />
+              <Icon name="plus" className="h-3 w-3" />
             </button>
           ))}
         </>

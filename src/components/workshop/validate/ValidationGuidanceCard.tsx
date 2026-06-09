@@ -1,6 +1,6 @@
 'use client';
 
-import { Presentation, Rocket } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import type { OutputType } from '@/lib/schemas';
 import { getValidationGuidance } from '@/lib/validation/output-type-guidance';
 
@@ -33,7 +33,7 @@ export function ValidationGuidanceCard({
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
           <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground/80">
-            <Presentation className="h-4 w-4 text-primary/70" />
+            <Icon name="presentation" className="h-4 w-4 text-primary/70" />
             In the workshop
           </div>
           <ul className="mt-2 space-y-1.5">
@@ -48,7 +48,7 @@ export function ValidationGuidanceCard({
 
         <div>
           <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground/80">
-            <Rocket className="h-4 w-4 text-primary/70" />
+            <Icon name="rocket" className="h-4 w-4 text-primary/70" />
             After the workshop
           </div>
           <ul className="mt-2 space-y-1.5">

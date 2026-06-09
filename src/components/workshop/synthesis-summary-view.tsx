@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Zap, CheckCircle2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { DeliverableCard } from './deliverable-card';
 
@@ -217,14 +217,14 @@ export function SynthesisSummaryView({
           <h3 className="text-lg font-semibold flex items-center gap-2">
             Prototype
             {workshopCompleted && (
-              <CheckCircle2 className="h-5 w-5 text-olive-600 dark:text-olive-400" />
+              <Icon name="check-circle" className="h-5 w-5 text-olive-600 dark:text-olive-400" />
             )}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <DeliverableCard
               title="V0 Prototype"
               description="AI-generated clickable prototype from your workshop — preview in browser or edit in V0."
-              icon={<Zap className="h-5 w-5" />}
+              icon={<Icon name="zap" className="h-5 w-5" />}
               disabled={!workshopId}
               buttonLabel={workshopId ? 'Generate Prototype' : 'Coming Soon'}
               onDownload={onGeneratePrd}
@@ -257,7 +257,7 @@ export function SynthesisBuildPackSection({
       <h3 className="text-lg font-semibold flex items-center gap-2">
         Prototype
         {workshopCompleted && (
-          <CheckCircle2 className="h-5 w-5 text-olive-600 dark:text-olive-400" />
+          <Icon name="check-circle" className="h-5 w-5 text-olive-600 dark:text-olive-400" />
         )}
       </h3>
       <p className="text-sm text-muted-foreground">
@@ -267,7 +267,7 @@ export function SynthesisBuildPackSection({
         <DeliverableCard
           title="V0 Prototype"
           description="AI-generated clickable prototype from your workshop — preview in browser or edit in V0."
-          icon={<Zap className="h-5 w-5" />}
+          icon={<Icon name="zap" className="h-5 w-5" />}
           disabled={!workshopId || prototypeDisabled}
           buttonLabel={prototypeDisabled ? 'Complete Journey Map First' : workshopId ? 'Generate Prototype' : 'Coming Soon'}
           onDownload={onGeneratePrd}

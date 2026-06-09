@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { Clock, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -153,7 +153,7 @@ export function CompletedWorkshopCard({
         <CardContent className="px-6 pt-4 pb-4">
           {/* Completed badge */}
           <div className="mb-3 flex items-center gap-1.5">
-            <CheckCircle2 className="h-4 w-4 text-olive-600 dark:text-olive-400" />
+            <Icon name="check-circle" className="h-4 w-4 text-olive-600 dark:text-olive-400" />
             <span className="text-sm font-medium text-olive-700 dark:text-olive-400">Completed</span>
           </div>
 
@@ -192,7 +192,7 @@ export function CompletedWorkshopCard({
 
           {/* Timestamp */}
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
+            <Icon name="clock" className="h-3.5 w-3.5" />
             <span>
               {formatDistanceToNow(new Date(updatedAt), { addSuffix: true })}
             </span>
@@ -217,7 +217,7 @@ export function CompletedWorkshopCard({
             className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
           >
             View Prototype
-            <ExternalLink className="h-3.5 w-3.5" />
+            <Icon name="external-link" className="h-3.5 w-3.5" />
           </a>
         </div>
       )}

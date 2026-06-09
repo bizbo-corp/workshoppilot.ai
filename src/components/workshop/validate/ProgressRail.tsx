@@ -1,6 +1,6 @@
 'use client';
 
-import { Check } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import type { ProgressStep } from '@/lib/schemas';
 import { RAIL_SECTIONS, SECTION_LABELS, sectionStatus } from './sections';
@@ -22,7 +22,7 @@ export function ProgressRail({ progress }: { progress: ProgressStep }) {
                   status === 'locked' && 'bg-muted text-foreground/70'
                 )}
               >
-                {status === 'done' ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                {status === 'done' ? <Icon name="check" className="h-3.5 w-3.5" /> : i + 1}
               </span>
               <span
                 className={cn(

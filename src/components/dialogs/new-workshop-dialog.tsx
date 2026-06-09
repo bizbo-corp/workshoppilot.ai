@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef, useTransition, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
-import { Smile, Check, MessageSquare, Users, ChevronDown } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -173,7 +173,7 @@ export function NewWorkshopButton({ variant, size, className, children, preselec
                       'flex h-10 w-10 items-center justify-center rounded-lg',
                       facilitatorMode === 'solo' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                     )}>
-                      <MessageSquare className="h-5 w-5" />
+                      <Icon name="message-square" className="h-5 w-5" />
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-foreground">By myself</p>
@@ -196,7 +196,7 @@ export function NewWorkshopButton({ variant, size, className, children, preselec
                       'flex h-10 w-10 items-center justify-center rounded-lg',
                       facilitatorMode === 'team' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                     )}>
-                      <Users className="h-5 w-5" />
+                      <Icon name="users" className="h-5 w-5" />
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-foreground">With my team</p>
@@ -237,7 +237,7 @@ export function NewWorkshopButton({ variant, size, className, children, preselec
                   : 'border-olive-500/40 bg-olive-50/50 dark:border-olive-400/30 dark:bg-olive-950/20'
               )}>
                 <div className="flex items-start gap-3">
-                  <Users className="h-5 w-5 text-foreground/70 mt-0.5 shrink-0" />
+                  <Icon name="users" className="h-5 w-5 text-foreground/70 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-foreground">
                       {preselectTier === 'white_glove' ? 'White Glove — $1,499' : 'Team Workshop — $299'}
@@ -277,7 +277,7 @@ export function NewWorkshopButton({ variant, size, className, children, preselec
                 aria-expanded={customizeOpen}
                 className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
               >
-                <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', customizeOpen && 'rotate-180')} />
+                <Icon name="chevron-down" className={cn('h-3.5 w-3.5 transition-transform', customizeOpen && 'rotate-180')} />
                 Customize color &amp; emoji
               </button>
               {customizeOpen && (
@@ -298,7 +298,7 @@ export function NewWorkshopButton({ variant, size, className, children, preselec
                           style={{ backgroundColor: c.hex }}
                         >
                           {c.id === selectedColor.id && (
-                            <Check className="absolute inset-0 m-auto h-2.5 w-2.5 text-white" />
+                            <Icon name="check" className="absolute inset-0 m-auto h-2.5 w-2.5 text-white" />
                           )}
                         </span>
                       </button>
@@ -316,7 +316,7 @@ export function NewWorkshopButton({ variant, size, className, children, preselec
                       {selectedEmoji ? (
                         <span className="text-sm leading-none">{selectedEmoji}</span>
                       ) : (
-                        <Smile className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Icon name="smile" className="h-3.5 w-3.5 text-muted-foreground" />
                       )}
                     </button>
                   </div>

@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Bell, Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { nudgeFacilitator } from '@/actions/lobby-actions';
 import { getStepByOrder, getFirstStep } from '@/lib/workshop/step-metadata';
@@ -138,11 +138,11 @@ export function LobbyParticipantCta({
           onClick={() => enterStep(state.currentStepOrder)}
         >
           {entering ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Icon name="spinner" className="h-4 w-4 animate-spin" />
           ) : (
             <>
               Begin {state.currentStepName}
-              <ArrowRight className="ml-1 h-4 w-4" />
+              <Icon name="arrow-right" className="ml-1 h-4 w-4" />
             </>
           )}
         </Button>
@@ -171,10 +171,10 @@ export function LobbyParticipantCta({
           onClick={handleNudge}
         >
           {nudgePending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Icon name="spinner" className="h-4 w-4 animate-spin" />
           ) : (
             <>
-              <Bell className="mr-1.5 h-4 w-4" />
+              <Icon name="bell" className="mr-1.5 h-4 w-4" />
               {nudgeOnCooldown ? 'Facilitator nudged' : 'Nudge facilitator'}
             </>
           )}
@@ -201,10 +201,10 @@ export function LobbyParticipantCta({
         onClick={handleNudge}
       >
         {nudgePending ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Icon name="spinner" className="h-4 w-4 animate-spin" />
         ) : (
           <>
-            <Bell className="mr-1.5 h-4 w-4" />
+            <Icon name="bell" className="mr-1.5 h-4 w-4" />
             {nudgeOnCooldown ? 'Facilitator nudged' : 'Nudge facilitator'}
           </>
         )}

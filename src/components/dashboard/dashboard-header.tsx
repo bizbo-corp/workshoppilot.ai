@@ -13,7 +13,7 @@
 
 import Link from 'next/link';
 import { UserButton, useUser } from '@clerk/nextjs';
-import { Coins, Shield } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import Logo from '@/components/Logo';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { cn } from '@/lib/utils';
@@ -48,7 +48,7 @@ export function DashboardHeader({ creditBalance }: DashboardHeaderProps) {
                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
             )}
           >
-            <Coins className="h-3 w-3" />
+            <Icon name="coins" className="h-3 w-3" />
             {creditBalance > 0
               ? `${creditBalance} credit${creditBalance !== 1 ? 's' : ''}`
               : 'No credits'}
@@ -59,7 +59,7 @@ export function DashboardHeader({ creditBalance }: DashboardHeaderProps) {
             href="/admin"
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
           >
-            <Shield className="h-3 w-3" />
+            <Icon name="shield" className="h-3 w-3" />
             Admin
           </Link>
         )}

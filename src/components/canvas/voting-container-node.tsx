@@ -10,7 +10,7 @@
 
 import { memo } from 'react';
 import { type NodeProps, type Node } from '@xyflow/react';
-import { Vote } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { PhaseContainerShell } from './phase-container-shell';
 
 export type VotingContainerNodeData = {
@@ -33,7 +33,7 @@ function VotingContainerNodeComponent({ data }: NodeProps<VotingContainerNodeTyp
 
   const headerExtra = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <Vote style={{ width: 16, height: 16, opacity: 0.6 }} />
+      <Icon name="vote" style={{ width: 16, height: 16, opacity: 0.6 }} />
       <span
         style={{
           fontSize: 11,

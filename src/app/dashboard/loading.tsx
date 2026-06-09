@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 /**
  * Dashboard loading state — shown while the dashboard page fetches data.
@@ -18,7 +18,7 @@ export default function DashboardLoading() {
       </div>
 
       <div className="flex justify-center py-24">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Icon name="spinner" className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     </>
   );

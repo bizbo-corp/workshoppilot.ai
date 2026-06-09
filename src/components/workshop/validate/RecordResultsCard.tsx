@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, Plus } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -165,7 +165,7 @@ export function RecordResultsCard({
             className="shrink-0 gap-1.5"
             onClick={() => setEditing(true)}
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Icon name="plus" className="h-3.5 w-3.5" />
             Record a result
           </Button>
         </div>
@@ -268,7 +268,7 @@ export function RecordResultsCard({
             onClick={() => valid && onRecord(buildPayload())}
             className="gap-1.5"
           >
-            {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {isSaving && <Icon name="spinner" className="h-3.5 w-3.5 animate-spin" />}
             {isQualitative ? 'Record result' : 'Compute score'}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>

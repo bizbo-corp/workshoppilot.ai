@@ -3,38 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useDrawingStore } from '@/providers/drawing-store-provider';
-import {
-  Pencil,
-  Highlighter,
-  Square,
-  Circle,
-  Type,
-  MousePointer2,
-  Eraser,
-  ArrowRight,
-  Minus,
-  Diamond,
-  Undo2,
-  Redo2,
-  Trash2,
-  Save,
-  X,
-  MessageCircle,
-  Stamp,
-  ChevronDown,
-  Sparkles,
-  Loader2,
-  PersonStanding,
-  Smartphone,
-  Car,
-  AppWindow,
-  MessagesSquare,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  ImageUp,
-  Loader2 as Loader2Icon,
-} from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -91,33 +60,33 @@ interface EzyDrawFooterProps {
 // --- Tool section constants ---
 
 const NAVIGATION_TOOLS = [
-  { tool: 'select', icon: MousePointer2, label: 'Select (V)', hotkey: 'v' },
-  { tool: 'eraser', icon: Eraser, label: 'Eraser (E)', hotkey: 'e' },
+  { tool: 'select', icon: 'mouse-pointer', label: 'Select (V)', hotkey: 'v' },
+  { tool: 'eraser', icon: 'eraser', label: 'Eraser (E)', hotkey: 'e' },
 ] as const;
 
 const DRAWING_TOOLS = [
-  { tool: 'pencil', icon: Pencil, label: 'Pencil (P)', hotkey: 'p' },
-  { tool: 'text', icon: Type, label: 'Text (T)', hotkey: 't' },
-  { tool: 'highlighter', icon: Highlighter, label: 'Highlighter (H)', hotkey: 'h' },
+  { tool: 'pencil', icon: 'pencil', label: 'Pencil (P)', hotkey: 'p' },
+  { tool: 'text', icon: 'type', label: 'Text (T)', hotkey: 't' },
+  { tool: 'highlighter', icon: 'highlighter', label: 'Highlighter (H)', hotkey: 'h' },
 ] as const;
 
 const SHAPE_TOOLS = [
-  { tool: 'rectangle', icon: Square, label: 'Rectangle', hotkey: 'r' },
-  { tool: 'circle', icon: Circle, label: 'Circle', hotkey: 'c' },
-  { tool: 'diamond', icon: Diamond, label: 'Diamond', hotkey: 'd' },
-  { tool: 'arrow', icon: ArrowRight, label: 'Arrow', hotkey: 'a' },
-  { tool: 'line', icon: Minus, label: 'Line', hotkey: 'l' },
-  { tool: 'speechBubble', icon: MessageCircle, label: 'Speech Bubble', hotkey: 'b' },
+  { tool: 'rectangle', icon: 'square', label: 'Rectangle', hotkey: 'r' },
+  { tool: 'circle', icon: 'circle', label: 'Circle', hotkey: 'c' },
+  { tool: 'diamond', icon: 'diamond', label: 'Diamond', hotkey: 'd' },
+  { tool: 'arrow', icon: 'arrow-right', label: 'Arrow', hotkey: 'a' },
+  { tool: 'line', icon: 'minus', label: 'Line', hotkey: 'l' },
+  { tool: 'speechBubble', icon: 'message-circle', label: 'Speech Bubble', hotkey: 'b' },
 ] as const;
 
 const ALL_TOOLS = [...NAVIGATION_TOOLS, ...DRAWING_TOOLS, ...SHAPE_TOOLS] as const;
 
 const STAMP_CATEGORIES = [
-  { key: 'people', icon: PersonStanding, label: 'Stick Person' },
-  { key: 'devices', icon: Smartphone, label: 'Devices' },
-  { key: 'vehicles', icon: Car, label: 'Vehicles' },
-  { key: 'ui', icon: AppWindow, label: 'UI Elements' },
-  { key: 'speech', icon: MessagesSquare, label: 'Speech Bubbles' },
+  { key: 'people', icon: 'person-standing', label: 'Stick Person' },
+  { key: 'devices', icon: 'smartphone', label: 'Devices' },
+  { key: 'vehicles', icon: 'car', label: 'Vehicles' },
+  { key: 'ui', icon: 'app-window', label: 'UI Elements' },
+  { key: 'speech', icon: 'messages-square', label: 'Speech Bubbles' },
 ] as const;
 
 const STROKE_WIDTH_OPTIONS = [
@@ -296,14 +265,14 @@ export function EzyDrawToolbar({ onImageUpload }: { onImageUpload?: (file: File)
   // Determine if any shape tool is currently active
   const isShapeActive = SHAPE_TOOLS.some((s) => s.tool === activeTool);
   const lastShapeConfig = SHAPE_TOOLS.find((s) => s.tool === lastShape) ?? SHAPE_TOOLS[0];
-  const ShapeIcon = lastShapeConfig.icon;
+  const shapeIconName = lastShapeConfig.icon;
 
   return (
     <>
       <div className="z-10 flex h-12 shrink-0 items-center gap-1 overflow-x-auto border-b bg-card/95 px-3 backdrop-blur">
         {/* === Section 1: Navigation === */}
         <div className="flex items-center gap-0.5">
-          {NAVIGATION_TOOLS.map(({ tool, icon: Icon, label }) => (
+          {NAVIGATION_TOOLS.map(({ tool, icon, label }) => (
             <Button
               key={tool}
               variant="ghost"
@@ -312,7 +281,7 @@ export function EzyDrawToolbar({ onImageUpload }: { onImageUpload?: (file: File)
               onClick={() => setActiveTool(tool as any)}
               title={label}
             >
-              <Icon className="h-4 w-4" />
+              <Icon name={icon} className="h-4 w-4" />
             </Button>
           ))}
         </div>
@@ -421,7 +390,7 @@ export function EzyDrawToolbar({ onImageUpload }: { onImageUpload?: (file: File)
             onClick={() => setActiveTool('pencil')}
             title="Pencil (P)"
           >
-            <Pencil className="h-4 w-4" />
+            <Icon name="pencil" className="h-4 w-4" />
           </Button>
 
           {/* Shapes dropdown */}
@@ -433,12 +402,12 @@ export function EzyDrawToolbar({ onImageUpload }: { onImageUpload?: (file: File)
                 className={cn('h-8 w-8 relative', isShapeActive && ACTIVE_TOOL_CLASS)}
                 title={`${lastShapeConfig.label} (${lastShapeConfig.hotkey.toUpperCase()})`}
               >
-                <ShapeIcon className="h-4 w-4" />
-                <ChevronDown className="absolute bottom-0.5 right-0.5 h-2 w-2 opacity-50" />
+                <Icon name={shapeIconName} className="h-4 w-4" />
+                <Icon name="chevron-down" className="absolute bottom-0.5 right-0.5 h-2 w-2 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[160px]">
-              {SHAPE_TOOLS.map(({ tool, icon: Icon, label, hotkey }) => (
+              {SHAPE_TOOLS.map(({ tool, icon, label, hotkey }) => (
                 <DropdownMenuItem
                   key={tool}
                   onClick={() => {
@@ -447,7 +416,7 @@ export function EzyDrawToolbar({ onImageUpload }: { onImageUpload?: (file: File)
                   }}
                   className={cn(activeTool === tool && 'bg-accent')}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon name={icon} className="h-4 w-4" />
                   <span className="flex-1">{label}</span>
                   <span className="ml-auto text-xs text-muted-foreground">{hotkey.toUpperCase()}</span>
                 </DropdownMenuItem>
@@ -463,7 +432,7 @@ export function EzyDrawToolbar({ onImageUpload }: { onImageUpload?: (file: File)
             onClick={() => setActiveTool('text')}
             title="Text (T)"
           >
-            <Type className="h-4 w-4" />
+            <Icon name="type" className="h-4 w-4" />
           </Button>
 
           {/* Highlighter */}
@@ -474,7 +443,7 @@ export function EzyDrawToolbar({ onImageUpload }: { onImageUpload?: (file: File)
             onClick={() => setActiveTool('highlighter')}
             title="Highlighter (H)"
           >
-            <Highlighter className="h-4 w-4" />
+            <Icon name="highlighter" className="h-4 w-4" />
           </Button>
         </div>
 
@@ -505,11 +474,11 @@ export function EzyDrawToolbar({ onImageUpload }: { onImageUpload?: (file: File)
             onClick={(e) => toggleStampCategory('other', e.currentTarget)}
             title="More Stamps (K)"
           >
-            <Stamp className="h-4 w-4" />
+            <Icon name="stamp" className="h-4 w-4" />
           </Button>
 
           {/* Stamp category buttons */}
-          {STAMP_CATEGORIES.map(({ key, icon: Icon, label }) => (
+          {STAMP_CATEGORIES.map(({ key, icon, label }) => (
             <Button
               key={key}
               variant="ghost"
@@ -518,7 +487,7 @@ export function EzyDrawToolbar({ onImageUpload }: { onImageUpload?: (file: File)
               onClick={(e) => toggleStampCategory(key, e.currentTarget)}
               title={label}
             >
-              <Icon className="h-4 w-4" />
+              <Icon name={icon} className="h-4 w-4" />
             </Button>
           ))}
         </div>
@@ -547,9 +516,9 @@ export function EzyDrawToolbar({ onImageUpload }: { onImageUpload?: (file: File)
               title="Upload Image (U)"
             >
               {isUploadingImage ? (
-                <Loader2Icon className="h-4 w-4 animate-spin" />
+                <Icon name="spinner" className="h-4 w-4 animate-spin" />
               ) : (
-                <ImageUp className="h-4 w-4" />
+                <Icon name="image-up" className="h-4 w-4" />
               )}
               Upload
             </Button>
@@ -567,10 +536,10 @@ export function EzyDrawToolbar({ onImageUpload }: { onImageUpload?: (file: File)
               <div className="w-3" />
               <div className="flex items-center gap-0.5">
                 {([
-                  { align: 'left' as const, icon: AlignLeft, label: 'Align left' },
-                  { align: 'center' as const, icon: AlignCenter, label: 'Align center' },
-                  { align: 'right' as const, icon: AlignRight, label: 'Align right' },
-                ]).map(({ align, icon: Icon, label }) => (
+                  { align: 'left' as const, icon: 'align-left' as const, label: 'Align left' },
+                  { align: 'center' as const, icon: 'align-center' as const, label: 'Align center' },
+                  { align: 'right' as const, icon: 'align-right' as const, label: 'Align right' },
+                ]).map(({ align, icon, label }) => (
                   <Button
                     key={align}
                     variant="ghost"
@@ -587,7 +556,7 @@ export function EzyDrawToolbar({ onImageUpload }: { onImageUpload?: (file: File)
                     }}
                     title={label}
                   >
-                    <Icon className="h-3.5 w-3.5" />
+                    <Icon name={icon} className="h-3.5 w-3.5" />
                   </Button>
                 ))}
               </div>
@@ -710,7 +679,7 @@ export function EzyDrawFooter({
       {/* Iteration prompt (Brain Rewriting) */}
       {onIterationPromptChange && (
         <div className="flex items-center gap-2 border-b border-purple-200/50 dark:border-purple-800/50 px-3 py-1.5">
-          <Sparkles className="h-3.5 w-3.5 shrink-0 text-purple-500" />
+          <Icon name="sparkles" className="h-3.5 w-3.5 shrink-0 text-purple-500" />
           <input
             type="text"
             value={iterationPrompt || ''}
@@ -737,9 +706,9 @@ export function EzyDrawFooter({
           )}
           <div className="flex items-start gap-1.5">
             {isRewritingPrompt ? (
-              <Loader2 className="h-3.5 w-3.5 shrink-0 text-amber-500 mt-0.5 animate-spin" />
+              <Icon name="spinner" className="h-3.5 w-3.5 shrink-0 text-amber-500 mt-0.5 animate-spin" />
             ) : (
-              <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500 mt-0.5" />
+              <Icon name="sparkles" className="h-3.5 w-3.5 shrink-0 text-amber-500 mt-0.5" />
             )}
             <textarea
               ref={promptRef}
@@ -765,7 +734,7 @@ export function EzyDrawFooter({
             disabled={!canUndo}
             title="Undo (Cmd+Z)"
           >
-            <Undo2 className="h-4 w-4" />
+            <Icon name="undo" className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
@@ -775,7 +744,7 @@ export function EzyDrawFooter({
             disabled={!canRedo}
             title="Redo (Cmd+Shift+Z)"
           >
-            <Redo2 className="h-4 w-4" />
+            <Icon name="redo" className="h-4 w-4" />
           </Button>
 
           <div className="mx-1 h-6 w-px bg-border" />
@@ -788,7 +757,7 @@ export function EzyDrawFooter({
                 className="h-8 w-8"
                 title="Clear all"
               >
-                <Trash2 className="h-4 w-4" />
+                <Icon name="trash" className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -846,9 +815,9 @@ export function EzyDrawFooter({
               title="Generate AI sketch from description"
             >
               {isGeneratingImage ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                <Icon name="spinner" className="h-4 w-4 mr-1.5 animate-spin" />
               ) : (
-                <Sparkles className="h-4 w-4 mr-1.5" />
+                <Icon name="sparkles" className="h-4 w-4 mr-1.5" />
               )}
               {isGeneratingImage ? 'Generating...' : 'Generate Sketch'}
             </Button>
@@ -864,7 +833,7 @@ export function EzyDrawFooter({
             onClick={onCancel}
             title="Cancel"
           >
-            <X className="h-4 w-4 mr-1" />
+            <Icon name="close" className="h-4 w-4 mr-1" />
             Cancel
           </Button>
           <Button
@@ -873,7 +842,7 @@ export function EzyDrawFooter({
             onClick={onSave}
             title="Save drawing"
           >
-            <Save className="h-4 w-4 mr-1" />
+            <Icon name="save" className="h-4 w-4 mr-1" />
             Save
           </Button>
         </div>

@@ -7,7 +7,7 @@
  */
 
 import { useStore as useReactFlowStore, type ReactFlowState } from '@xyflow/react';
-import { MessageSquare, Brain, Heart, Activity, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Icon, type IconName } from '@/components/ui/icon';
 import type { EmpathyZoneConfig } from '@/lib/canvas/empathy-zones';
 
 /**
@@ -20,14 +20,14 @@ const viewportSelector = (state: ReactFlowState) => ({
   zoom: state.transform[2],
 });
 
-/** Zone icon mapping — lucide-react icons for each empathy zone */
-const ZONE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  says: MessageSquare,
-  thinks: Brain,
-  feels: Heart,
-  does: Activity,
-  pains: AlertTriangle,
-  gains: TrendingUp,
+/** Zone icon mapping — design-system icon names for each empathy zone */
+const ZONE_ICONS: Record<string, IconName> = {
+  says: 'message-square',
+  thinks: 'brain',
+  feels: 'heart',
+  does: 'activity',
+  pains: 'alert-triangle',
+  gains: 'trending-up',
 };
 
 interface EmpathyMapOverlayProps {
@@ -91,7 +91,7 @@ export function EmpathyMapOverlay({ config }: EmpathyMapOverlayProps) {
         const screenPos = toScreen(zone.bounds.x, zone.bounds.y);
         const isPains = zoneKey === 'pains';
         const isGains = zoneKey === 'gains';
-        const Icon = ZONE_ICONS[zoneKey];
+        const iconName = ZONE_ICONS[zoneKey];
 
         // Sage-palette text colors — dark for light mode, light for dark mode
         let textColorClass = 'text-[#4a5a32] dark:text-[#d4e0b8]'; // sage
@@ -107,7 +107,7 @@ export function EmpathyMapOverlay({ config }: EmpathyMapOverlayProps) {
             height={32}
           >
             <div className={`flex items-center gap-1.5 h-full ${textColorClass}`}>
-              {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+              {iconName && <Icon name={iconName} className="h-3.5 w-3.5 shrink-0" />}
               <span className="text-sm font-semibold">
                 {zone.label}
               </span>

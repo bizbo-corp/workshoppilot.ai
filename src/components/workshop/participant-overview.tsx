@@ -1,15 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  ChevronDown,
-  ChevronRight,
-  MessageSquare,
-  Loader2,
-  Link2,
-  Check,
-  Mail,
-} from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import { cn } from "@/lib/utils";
 import { copyToClipboard } from "@/lib/clipboard";
 import { toast } from "sonner";
@@ -191,7 +183,7 @@ export function ParticipantOverview({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <Icon name="spinner" className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -227,7 +219,7 @@ export function ParticipantOverview({
               )}
               title={allInCooldown ? 'All nudged recently' : 'Send a reminder email to everyone pending'}
             >
-              {nudgingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
+              {nudgingAll ? <Icon name="spinner" className="h-3 w-3 animate-spin" /> : <Icon name="mail" className="h-3 w-3" />}
               Nudge all
             </button>
           </div>
@@ -240,7 +232,7 @@ export function ParticipantOverview({
                   key={inv.id}
                   className="flex items-center gap-2 rounded-lg border bg-card/50 px-3 py-2"
                 >
-                  <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <Icon name="mail" className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <span className="flex-1 truncate text-sm text-foreground">{inv.email}</span>
                   {onCooldown ? (
                     <span className="text-[11px] text-muted-foreground">
@@ -252,7 +244,7 @@ export function ParticipantOverview({
                       disabled={isNudging}
                       className="inline-flex items-center gap-1 rounded-md bg-foreground/5 px-2 py-0.5 text-[11px] font-medium text-foreground hover:bg-foreground/10 disabled:opacity-50 transition-colors"
                     >
-                      {isNudging ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                      {isNudging ? <Icon name="spinner" className="h-3 w-3 animate-spin" /> : null}
                       Nudge
                     </button>
                   )}
@@ -283,7 +275,7 @@ export function ParticipantOverview({
                 />
                 <span className="flex-1 text-sm font-medium truncate">{p.displayName}</span>
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <MessageSquare className="h-3 w-3" />
+                  <Icon name="message-square" className="h-3 w-3" />
                   {p.messageCount}
                 </span>
                 {shareToken && p.rejoinToken && (
@@ -296,16 +288,16 @@ export function ParticipantOverview({
                     title={`Copy rejoin link for ${p.displayName}`}
                   >
                     {copiedId === p.participantId ? (
-                      <Check className="h-3.5 w-3.5 text-green-600" />
+                      <Icon name="check" className="h-3.5 w-3.5 text-green-600" />
                     ) : (
-                      <Link2 className="h-3.5 w-3.5" />
+                      <Icon name="link" className="h-3.5 w-3.5" />
                     )}
                   </button>
                 )}
                 {expandedId === p.participantId ? (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  <Icon name="chevron-down" className="h-4 w-4 text-muted-foreground" />
                 ) : (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <Icon name="chevron-right" className="h-4 w-4 text-muted-foreground" />
                 )}
               </button>
 
@@ -313,7 +305,7 @@ export function ParticipantOverview({
                 <div className="border-t bg-muted/30 px-3 py-2 max-h-[300px] overflow-y-auto">
                   {loadingChat ? (
                     <div className="flex justify-center py-4">
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <Icon name="spinner" className="h-4 w-4 animate-spin text-muted-foreground" />
                     </div>
                   ) : chatHistory.length === 0 ? (
                     <p className="text-xs text-muted-foreground py-2">No messages yet</p>

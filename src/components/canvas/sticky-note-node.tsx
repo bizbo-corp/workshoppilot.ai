@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { Handle, Position, type NodeProps, type Node, NodeResizer } from '@xyflow/react';
-import { Layers, Sparkles, SquareUserRound } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import type { StickyNoteColor } from '@/stores/canvas-store';
 
@@ -294,7 +294,7 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
             so it looks right for both new portrait cards and legacy wide cards. */}
         <div className="flex-1 min-h-0 w-full flex items-center justify-center">
           <div className="h-full w-auto aspect-square max-w-full rounded-xl bg-neutral-olive-200/80 flex items-center justify-center">
-            <SquareUserRound className="w-1/2 h-1/2 text-neutral-olive-400" strokeWidth={1.25} />
+            <Icon name="square-user" className="w-1/2 h-1/2 text-neutral-olive-400" strokeWidth={1.25} />
           </div>
         </div>
 
@@ -462,7 +462,7 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
           </p>
           {data.clusterLabel && (
             <span className="inline-flex items-center gap-1 text-[10px] font-medium text-neutral-olive-500 mt-1">
-              <Layers className="w-2.5 h-2.5" />
+              <Icon name="layers" className="w-2.5 h-2.5" />
               {data.clusterLabel} ({data.clusterChildCount ?? 0})
             </span>
           )}
@@ -484,7 +484,7 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
             title={isSynth ? 'Synthesized insight' : `From ${data.cluster}`}
           >
             {isSynth ? (
-              <Sparkles className="h-2.5 w-2.5" />
+              <Icon name="sparkles" className="h-2.5 w-2.5" />
             ) : (
               <span
                 className="h-2 w-2 rounded-full"

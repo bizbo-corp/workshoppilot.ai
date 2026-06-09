@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { SynthesisSummaryView } from './synthesis-summary-view';
@@ -78,11 +78,11 @@ export function WorkshopSummaryTile({
       >
         {expanded ? (
           <>
-            Hide summary <ChevronUp className="h-4 w-4" />
+            Hide summary <Icon name="chevron-up" className="h-4 w-4" />
           </>
         ) : (
           <>
-            Expand summary <ChevronDown className="h-4 w-4" />
+            Expand summary <Icon name="chevron-down" className="h-4 w-4" />
           </>
         )}
       </Button>

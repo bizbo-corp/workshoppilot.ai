@@ -19,7 +19,7 @@
 import { useCanvasStore } from '@/providers/canvas-store-provider';
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
-import { CircleDot, Check } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { useMultiplayerContext } from './multiplayer-room';
 import { useUpdateMyPresence, useSelf } from '@liveblocks/react';
 import { computeVotingResults, getVotableTargetIds, currentRoundVotes } from '@/lib/canvas/voting-utils';
@@ -35,7 +35,7 @@ function VotingDoneButton() {
   if (votingDone) {
     return (
       <span className="flex items-center gap-1 text-xs font-medium text-primary">
-        <Check className="h-3.5 w-3.5" />
+        <Icon name="check" className="h-3.5 w-3.5" />
         Done
       </span>
     );
@@ -98,7 +98,7 @@ export function VotingHud({ onVotingClosed }: VotingHudProps) {
           className="rounded-full shadow-sm gap-1.5"
           onClick={handleStartVoting}
         >
-          <CircleDot className="h-3.5 w-3.5" />
+          <Icon name="circle-dot" className="h-3.5 w-3.5" />
           Start Voting
         </Button>
       </div>

@@ -7,7 +7,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Check, Copy, X } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -161,7 +161,7 @@ export function TeamSettingsTab({ workshopId }: TeamSettingsTabProps) {
       {team.shareToken && (
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleCopy} className="gap-2">
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copied ? <Icon name="check" className="h-4 w-4" /> : <Icon name="copy" className="h-4 w-4" />}
             Copy invite link
           </Button>
         </div>
@@ -219,7 +219,7 @@ export function TeamSettingsTab({ workshopId }: TeamSettingsTabProps) {
                   title="Remove participant"
                   className="text-muted-foreground hover:text-destructive disabled:opacity-50"
                 >
-                  <X className="h-4 w-4" />
+                  <Icon name="close" className="h-4 w-4" />
                 </button>
               )}
             </li>

@@ -2,7 +2,7 @@
 
 import { memo, useRef, useEffect, useState } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { Check, ChevronDown, GripVertical, Lightbulb, Loader2, RefreshCw, Send, Sparkles, Wand2, X } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
@@ -261,7 +261,7 @@ function ReassignDropdown({
         )}
       >
         Reassign
-        <ChevronDown className="h-3 w-3" />
+        <Icon name="chevron-down" className="h-3 w-3" />
       </button>
       {open && (
         <div className="absolute top-full mt-1 right-0 bg-card rounded-lg shadow-lg border border-border p-1 min-w-[160px] z-50 animate-in fade-in-0 zoom-in-95 duration-150">
@@ -337,7 +337,7 @@ function SectionAiButton({
   if (isGenerating) {
     return (
       <Button variant="secondary" size="icon-xs" className="nodrag nopan" disabled>
-        <Loader2 className="h-3 w-3 animate-spin text-olive-500" />
+        <Icon name="spinner" className="h-3 w-3 animate-spin text-olive-500" />
       </Button>
     );
   }
@@ -360,7 +360,7 @@ function SectionAiButton({
         className="nodrag nopan text-olive-600"
         aria-label={`AI generate ${field}`}
       >
-        <Wand2 className="h-3 w-3" />
+        <Icon name="magic-wand" className="h-3 w-3" />
       </Button>
       {showMenu && (
         <div className="absolute top-full mt-1 right-0 bg-card rounded-lg shadow-lg border border-border p-1 min-w-[160px] z-50 animate-in fade-in-0 zoom-in-95 duration-150">
@@ -372,7 +372,7 @@ function SectionAiButton({
             }}
             className="flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
           >
-            <RefreshCw className="h-3 w-3" />
+            <Icon name="refresh" className="h-3 w-3" />
             Regenerate
           </button>
           <button
@@ -382,7 +382,7 @@ function SectionAiButton({
             }}
             className="flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
           >
-            <Wand2 className="h-3 w-3" />
+            <Icon name="magic-wand" className="h-3 w-3" />
             Elaborate
           </button>
           {showElaborate && (
@@ -417,7 +417,7 @@ function SectionAiButton({
                   disabled={!instructions.trim()}
                   className="rounded p-1 hover:bg-accent disabled:opacity-40 transition-colors"
                 >
-                  <Send className="h-3 w-3" />
+                  <Icon name="send" className="h-3 w-3" />
                 </button>
               </div>
             </div>
@@ -498,7 +498,7 @@ export const HmwCardNode = memo(
         {/* ── Olive header — full-width drag handle, journey-map olive ── */}
         <div className="card-drag-handle cursor-grab active:cursor-grabbing px-5 py-4 flex items-center justify-between gap-3 bg-olive-800 dark:bg-olive-900">
           <div className="flex items-center gap-2.5 min-w-0">
-            <GripVertical className="h-4 w-4 shrink-0 text-white/50" />
+            <Icon name="grip-vertical" className="h-4 w-4 shrink-0 text-white/50" />
             <span className="text-lg font-bold tracking-wide shrink-0 text-white">
               HOW MIGHT WE CARD
             </span>
@@ -526,7 +526,7 @@ export const HmwCardNode = memo(
             {/* Filled indicator */}
             {isFilled && (
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500">
-                <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                <Icon name="check" className="h-3.5 w-3.5 text-white" strokeWidth={3} />
               </span>
             )}
             {data.onDelete && (
@@ -536,7 +536,7 @@ export const HmwCardNode = memo(
                 className="nodrag nopan rounded-full p-1 text-white/60 transition-colors hover:bg-white/15 hover:text-white"
                 title="Delete card"
               >
-                <X className="h-4 w-4" />
+                <Icon name="close" className="h-4 w-4" />
               </button>
             )}
           </div>
@@ -577,9 +577,9 @@ export const HmwCardNode = memo(
               aria-label="Generate all fields"
             >
               {isGeneratingAll ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Icon name="spinner" className="h-3 w-3 animate-spin" />
               ) : (
-                <Sparkles className="h-3 w-3" />
+                <Icon name="sparkles" className="h-3 w-3" />
               )}
               {isGeneratingAll ? 'Generating...' : 'Generate All'}
             </Button>
@@ -667,7 +667,7 @@ export const HmwCardNode = memo(
             style={{ backgroundColor: SAGE.statementBg, border: `1px solid ${sectionBorder}` }}
           >
             <div className="mb-2 flex items-center gap-2">
-              <Lightbulb className="h-3.5 w-3.5" style={{ color: SAGE.labelText }} />
+              <Icon name="lightbulb" className="h-3.5 w-3.5" style={{ color: SAGE.labelText }} />
               <span
                 className="text-[11px] font-bold uppercase tracking-widest"
                 style={{ color: SAGE.labelText }}

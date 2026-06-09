@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
-import { Smile, Check } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -90,7 +90,7 @@ export function WorkshopAppearancePicker({
         {emoji ? (
           <span className="text-base leading-none">{emoji}</span>
         ) : (
-          <Smile className="h-4 w-4 text-muted-foreground" />
+          <Icon name="smile" className="h-4 w-4 text-muted-foreground" />
         )}
       </div>
     );
@@ -110,7 +110,7 @@ export function WorkshopAppearancePicker({
             {emoji ? (
               <span className="text-base leading-none">{emoji}</span>
             ) : (
-              <Smile className="h-4 w-4 text-muted-foreground" />
+              <Icon name="smile" className="h-4 w-4 text-muted-foreground" />
             )}
           </button>
         </DropdownMenuTrigger>
@@ -138,7 +138,7 @@ export function WorkshopAppearancePicker({
                   style={{ backgroundColor: c.hex }}
                 >
                   {c.id === currentColor.id && (
-                    <Check className="absolute inset-0 m-auto h-2.5 w-2.5 text-white" />
+                    <Icon name="check" className="absolute inset-0 m-auto h-2.5 w-2.5 text-white" />
                   )}
                 </span>
               </button>
@@ -154,7 +154,7 @@ export function WorkshopAppearancePicker({
                 openEmojiPicker();
               }}
             >
-              <Smile className="h-3.5 w-3.5" />
+              <Icon name="smile" className="h-3.5 w-3.5" />
               Change emoji
             </button>
           </div>

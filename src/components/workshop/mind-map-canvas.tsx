@@ -16,7 +16,7 @@ import {
   type OnSelectionChangeParams,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Plus, Minus, Maximize, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, X, CheckCircle2, Star, Layers, ArrowRight, Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 import { cn } from '@/lib/utils';
 import { MindMapNode } from '@/components/canvas/mind-map-node';
@@ -2371,21 +2371,21 @@ function MindMapCanvasInner({
             title="Zoom in"
             className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           >
-            <Plus className="w-4 h-4" />
+            <Icon name="plus" className="w-4 h-4" />
           </button>
           <button
             onClick={() => zoomOut({ duration: 200 })}
             title="Zoom out"
             className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           >
-            <Minus className="w-4 h-4" />
+            <Icon name="minus" className="w-4 h-4" />
           </button>
           <button
             onClick={() => fitView({ padding: 0.3, duration: 300 })}
             title="Fit view"
             className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           >
-            <Maximize className="w-4 h-4" />
+            <Icon name="maximize" className="w-4 h-4" />
           </button>
         </div>
 
@@ -2410,7 +2410,7 @@ function MindMapCanvasInner({
                     onClick={() => onOwnerSwitch(oid)}
                   >
                     {readinessMap[oid] && oid !== facilitatorOwnerId && (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                      <Icon name="check-circle" className="h-3.5 w-3.5 text-green-600 shrink-0" />
                     )}
                     <span
                       className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
@@ -2419,7 +2419,7 @@ function MindMapCanvasInner({
                     {ownerNames?.[oid] || oid}
                     {typeof ownerStarCounts[oid] === 'number' && ownerStarCounts[oid] > 0 && (
                       <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                        <Star className="h-2.5 w-2.5 fill-current" />
+                        <Icon name="star" className="h-2.5 w-2.5 fill-current" />
                         {ownerStarCounts[oid]}
                       </span>
                     )}
@@ -2433,7 +2433,7 @@ function MindMapCanvasInner({
                         setDeleteTarget({ ownerId: oid, name: ownerNames?.[oid] || 'this participant' });
                       }}
                     >
-                      <X className="h-3 w-3" />
+                      <Icon name="close" className="h-3 w-3" />
                     </button>
                   )}
                 </div>
@@ -2446,7 +2446,7 @@ function MindMapCanvasInner({
         {allReady && isFacilitator && (
           <Panel position="top-center" className="!mt-4">
             <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2 shadow-md">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <Icon name="check-circle" className="h-4 w-4 text-green-600" />
               <span className="text-sm font-medium text-green-800">
                 All participants are ready
               </span>
@@ -2462,7 +2462,7 @@ function MindMapCanvasInner({
               className="gap-1.5 shadow-md"
               onClick={() => setShowGroupPrompt(true)}
             >
-              <Layers className="h-3.5 w-3.5" />
+              <Icon name="layers" className="h-3.5 w-3.5" />
               Group {votingSelectedIds.length} Selected
             </Button>
           </Panel>
@@ -2550,7 +2550,7 @@ function MindMapCanvasInner({
               className="h-8 w-8"
               title="Select (marquee)"
             >
-              <MousePointer2 className="h-4 w-4" />
+              <Icon name="mouse-pointer" className="h-4 w-4" />
             </Button>
             <Button
               onClick={() => setToolMode('pan')}
@@ -2559,7 +2559,7 @@ function MindMapCanvasInner({
               className="h-8 w-8"
               title="Pan (hand)"
             >
-              <Hand className="h-4 w-4" />
+              <Icon name="hand" className="h-4 w-4" />
             </Button>
             {/* Hide mind-map controls during multiplayer voting */}
             {!(votingMode && isMultiplayerIdeation) && (
@@ -2571,7 +2571,7 @@ function MindMapCanvasInner({
                   variant="ghost"
                   className="gap-1.5"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Icon name="plus" className="h-4 w-4" />
                   Add Node
                 </Button>
                 <Button
@@ -2581,7 +2581,7 @@ function MindMapCanvasInner({
                   className="gap-1.5"
                   title="Auto-layout (radial)"
                 >
-                  <LayoutGrid className="h-4 w-4" />
+                  <Icon name="layout-grid" className="h-4 w-4" />
                   Layout
                 </Button>
                 {/* Star count badge (solo mode or when no owner tabs shown) */}
@@ -2589,7 +2589,7 @@ function MindMapCanvasInner({
                   <>
                     <div className="mx-1 h-5 w-px bg-border" />
                     <div className="flex items-center gap-1 px-2 text-xs text-muted-foreground" title="Starred ideas for Crazy 8s (max 8)">
-                      <Star className={cn('h-3.5 w-3.5', soloStarCount > 0 ? 'fill-amber-500 text-amber-500' : '')} />
+                      <Icon name="star" className={cn('h-3.5 w-3.5', soloStarCount > 0 ? 'fill-amber-500 text-amber-500' : '')} />
                       <span className={cn('font-medium', soloStarCount > 0 && 'text-amber-600 dark:text-amber-400')}>
                         {soloStarCount}/8
                       </span>
@@ -2607,9 +2607,9 @@ function MindMapCanvasInner({
                       className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
                     >
                       {isConfirmingMindMap ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Icon name="spinner" className="h-4 w-4 animate-spin" />
                       ) : (
-                        <ArrowRight className="h-4 w-4" />
+                        <Icon name="arrow-right" className="h-4 w-4" />
                       )}
                       Crazy 8s
                     </Button>
@@ -2625,7 +2625,7 @@ function MindMapCanvasInner({
               variant="ghost"
               className="h-8 w-8"
             >
-              <Undo2 className="h-4 w-4" />
+              <Icon name="undo" className="h-4 w-4" />
             </Button>
             <Button
               onClick={handleRedo}
@@ -2634,7 +2634,7 @@ function MindMapCanvasInner({
               variant="ghost"
               className="h-8 w-8"
             >
-              <Redo2 className="h-4 w-4" />
+              <Icon name="redo" className="h-4 w-4" />
             </Button>
           </div>
         </Panel>

@@ -18,7 +18,7 @@
  */
 
 import { useCanvasStore } from '@/providers/canvas-store-provider';
-import { Sparkles } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 /** Skeleton frames to render, with how many placeholder stickies each holds. */
 const SKELETON_FRAMES = [
@@ -74,7 +74,7 @@ export function ResearchSkeletonOverlay() {
       <div className="flex flex-col items-center gap-5">
         {/* Note explaining what this space becomes */}
         <div className="flex items-center gap-2 rounded-full border border-neutral-olive-200 bg-neutral-olive-50/80 px-4 py-1.5 text-sm font-medium text-neutral-olive-500 backdrop-blur-sm dark:border-neutral-olive-700 dark:bg-neutral-olive-900/60 dark:text-neutral-olive-300">
-          <Sparkles className="h-4 w-4 text-olive-600" />
+          <Icon name="sparkles" className="h-4 w-4 text-olive-600" />
           This is where your research findings will be compiled
         </div>
 

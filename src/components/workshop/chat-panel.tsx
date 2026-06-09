@@ -5,18 +5,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import TextareaAutosize from "react-textarea-autosize";
 import ReactMarkdown from "react-markdown";
-import {
-  Loader2,
-  Plus,
-  CheckCircle2,
-  Sparkles,
-  UserPlus,
-  ArrowRight,
-  Rocket,
-  RefreshCw,
-  FileText,
-  Users,
-} from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import { PersonaInterrupt } from "./persona-interrupt";
 import { getStepByOrder } from "@/lib/workshop/step-metadata";
 import { Button } from "@/components/ui/button";
@@ -927,7 +916,7 @@ function ConceptPreActivity() {
         onClick={handleStart}
         className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
       >
-        <Rocket className="h-4 w-4" />
+        <Icon name="rocket" className="h-4 w-4" />
         Start Activity
       </button>
     </div>
@@ -3444,7 +3433,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                                       key={pi}
                                       className="inline-flex items-center gap-1 rounded-md border border-muted bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground my-1"
                                     >
-                                      <CheckCircle2 className="h-3 w-3" />
+                                      <Icon name="check-circle" className="h-3 w-3" />
                                       {node.label}
                                     </span>
                                   );
@@ -3487,7 +3476,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                                           }
                                     }
                                   >
-                                    <Plus className="h-3 w-3" />
+                                    <Icon name="plus" className="h-3 w-3" />
                                     {node.label}
                                   </button>
                                 );
@@ -3695,7 +3684,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
 
                                     {/* Custom persona input */}
                                     <div className="mt-3 flex items-center gap-2">
-                                      <UserPlus className="h-4 w-4 text-muted-foreground shrink-0" />
+                                      <Icon name="user-plus" className="h-4 w-4 text-muted-foreground shrink-0" />
                                       <input
                                         type="text"
                                         value={customPersonaInput}
@@ -3938,7 +3927,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                                 "disabled:cursor-not-allowed disabled:opacity-50",
                               )}
                             >
-                              <Sparkles className="h-3.5 w-3.5" />
+                              <Icon name="sparkles" className="h-3.5 w-3.5" />
                               Give me a suggestion
                             </button>
                           </div>
@@ -3971,7 +3960,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                             "cursor-pointer inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-xs text-muted-foreground shadow-sm hover:bg-olive-100 hover:border-olive-400 dark:border-neutral-olive-700 dark:bg-neutral-olive-900 dark:hover:bg-neutral-olive-800 dark:hover:border-neutral-olive-600 transition-colors",
                           )}
                         >
-                          <RefreshCw className="h-3 w-3" />
+                          <Icon name="refresh" className="h-3 w-3" />
                           Catch up on my edits
                         </button>
                       </div>
@@ -4072,7 +4061,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                               )}
                             >
                               Looks good — Add these stages
-                              <ArrowRight className="h-3.5 w-3.5" />
+                              <Icon name="arrow-right" className="h-3.5 w-3.5" />
                             </button>
                           ) : null}
                           {nextSuggestion ? (
@@ -4094,7 +4083,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                               {nextRowLabel
                                 ? `Move on to ${nextRowLabel}`
                                 : "Next"}
-                              <ArrowRight className="h-3.5 w-3.5" />
+                              <Icon name="arrow-right" className="h-3.5 w-3.5" />
                             </button>
                           ) : null}
                           <p className="text-xs text-muted-foreground pl-1">
@@ -4136,7 +4125,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                             "disabled:cursor-not-allowed disabled:opacity-50",
                           )}
                         >
-                          <Sparkles className="h-3.5 w-3.5" />
+                          <Icon name="sparkles" className="h-3.5 w-3.5" />
                           Let&apos;s move on to pains and gains
                         </button>
                       </div>
@@ -4173,7 +4162,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                           onClick={handleConfirmResearch}
                           className="inline-flex items-center gap-2 rounded-full bg-olive-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
                         >
-                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <Icon name="check-circle" className="h-3.5 w-3.5" />
                           Add to board
                         </button>
                         <button
@@ -4211,7 +4200,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                           }}
                           className="inline-flex items-center gap-2 rounded-full bg-olive-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
                         >
-                          <Users className="h-3.5 w-3.5" />
+                          <Icon name="users" className="h-3.5 w-3.5" />
                           Open fieldwork
                         </button>
                       </div>
@@ -4255,7 +4244,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                               }}
                               className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
                             >
-                              <Sparkles className="h-3.5 w-3.5" />
+                              <Icon name="sparkles" className="h-3.5 w-3.5" />
                               Close fieldwork &amp; synthesize
                             </button>
                           )}
@@ -4302,7 +4291,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                           }}
                           className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <Sparkles className="h-3.5 w-3.5" />
+                          <Icon name="sparkles" className="h-3.5 w-3.5" />
                           I&apos;m ready to compile
                         </button>
                       </div>
@@ -4326,7 +4315,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                           onClick={handleThemeSort}
                           className="inline-flex items-center gap-2 rounded-full border border-olive-400 bg-card px-4 py-2 text-sm font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 hover:shadow-md dark:border-olive-600 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
                         >
-                          <Sparkles className="h-3.5 w-3.5" />
+                          <Icon name="sparkles" className="h-3.5 w-3.5" />
                           Sort cards into themes
                         </button>
                       </div>
@@ -4411,7 +4400,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
       {/* Rate limit banner — hidden for read-only participants */}
       {rateLimitInfo && !isReadOnly && (
         <div className="mx-4 mb-2 flex items-center gap-2 rounded-md border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20 px-3 py-2 text-base text-yellow-800 dark:text-yellow-200">
-          <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+          <Icon name="spinner" className="h-4 w-4 animate-spin shrink-0" />
           <span>AI is busy. Try again in {rateLimitInfo.retryAfter}s...</span>
         </div>
       )}
@@ -4427,7 +4416,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                 onClick={() => setUploadOpen(true)}
                 className="inline-flex items-center gap-1.5 rounded-full border border-olive-300 bg-card px-3 py-1.5 text-xs font-medium text-olive-800 shadow-sm transition-all hover:bg-olive-100 dark:border-neutral-olive-700 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700"
               >
-                <FileText className="h-3.5 w-3.5" />
+                <Icon name="file-text" className="h-3.5 w-3.5" />
                 Add research
               </button>
             </div>
@@ -4464,7 +4453,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
               // disabled:opacity-100 keeps it solid (not faint) when empty.
               className="absolute right-[6px] top-1/2 size-8 -mt-0.5 -translate-y-1/2 rounded-md disabled:opacity-100"
             >
-              <ArrowRight className="h-4 w-4" />
+              <Icon name="arrow-right" className="h-4 w-4" />
             </Button>
           </form>
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { AssetThumbnail } from './asset-thumbnail';
 import type { AssetData } from '@/lib/asset-library/asset-library-types';
 
@@ -16,7 +16,7 @@ export function AssetGrid({ assets, isLoading, selectedId, onSelect, showUsage }
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <Icon name="spinner" className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }

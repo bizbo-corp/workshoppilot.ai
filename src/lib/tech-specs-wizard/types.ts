@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react';
+import type { IconName } from '@/components/ui/icon';
 
 export const AI_DECIDE = '__ai_decide__' as const;
 export type AiDecide = typeof AI_DECIDE;
@@ -106,7 +106,7 @@ export interface WizardOption {
   value: string;
   label: string;
   description?: string;
-  icon?: LucideIcon;
+  icon?: IconName;
 }
 
 export interface WizardQuestionBase {
@@ -143,6 +143,6 @@ export interface WizardPageConfig {
   id: string;
   title: string;
   description: string;
-  icon: LucideIcon;
+  icon: IconName;
   questions: WizardQuestion[];
 }

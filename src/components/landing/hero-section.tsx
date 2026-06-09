@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ChevronDown, Sparkles, Star } from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import { SignedIn } from "@clerk/nextjs";
 import { NewWorkshopButton } from "@/components/dialogs/new-workshop-dialog";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ export function HeroSection() {
       <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8 z-10">
         {/* Badge / eyebrow pill */}
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-olive-300/50 bg-olive-50/80 px-4 py-1.5 text-sm font-medium text-olive-700 dark:border-olive-700/50 dark:bg-olive-950/50 dark:text-olive-300">
-          <Sparkles className="h-4 w-4" />
+          <Icon name="sparkles" className="h-4 w-4" />
           AI-Powered Design Thinking
         </div>
 
@@ -69,7 +69,7 @@ export function HeroSection() {
             <Link href="/dashboard">
               <Button variant="outline" size="lg">
                 Continue Workshop
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <Icon name="arrow-right" className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           </SignedIn>
@@ -79,7 +79,7 @@ export function HeroSection() {
         <div className="mt-10 flex flex-col items-center gap-2">
           <div className="flex gap-0.5">
             {Array.from({ length: 5 }).map((_, i) => (
-              <Star
+              <Icon name="star"
                 key={i}
                 className="h-4 w-4 fill-olive-500 text-olive-500 dark:fill-olive-400 dark:text-olive-400"
               />
@@ -92,7 +92,7 @@ export function HeroSection() {
 
         {/* Scroll indicator */}
         <div className="mt-12">
-          <ChevronDown className="mx-auto h-6 w-6 animate-bounce text-muted-foreground/50" />
+          <Icon name="chevron-down" className="mx-auto h-6 w-6 animate-bounce text-muted-foreground/50" />
         </div>
       </div>
     </section>

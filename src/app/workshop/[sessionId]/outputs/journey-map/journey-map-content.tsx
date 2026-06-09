@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Map, Loader2, AlertCircle } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -158,7 +158,7 @@ function JourneyMapInner({
         <div className="text-center space-y-4 max-w-md">
           <div className="flex justify-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <Map className="h-8 w-8 text-primary" />
+              <Icon name="map" className="h-8 w-8 text-primary" />
             </div>
           </div>
           <h2 className="text-xl font-semibold">UX Journey Mapper</h2>
@@ -168,7 +168,7 @@ function JourneyMapInner({
           </p>
           {error && (
             <div className="flex items-center gap-2 text-sm text-destructive justify-center">
-              <AlertCircle className="h-4 w-4" />
+              <Icon name="alert-circle" className="h-4 w-4" />
               {error}
             </div>
           )}
@@ -188,12 +188,12 @@ function JourneyMapInner({
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Icon name="spinner" className="h-4 w-4 animate-spin" />
                   Generating...
                 </>
               ) : (
                 <>
-                  <Map className="h-4 w-4" />
+                  <Icon name="map" className="h-4 w-4" />
                   Generate Journey Map
                 </>
               )}
@@ -204,7 +204,7 @@ function JourneyMapInner({
               href={`/workshop/${sessionId}/outputs`}
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
+              <Icon name="arrow-left" className="h-3.5 w-3.5" />
               Back to Build Pack
             </Link>
           </div>

@@ -28,30 +28,17 @@ import {
   emitGridAutocomplete,
   type GridAutocompleteRequest,
 } from "@/lib/canvas/grid-autocomplete-bus";
-import {
-  PlusCircle,
-  X,
-  GripVertical,
-  Sparkles,
-  Footprints,
-  Target,
-  Construction,
-  Pointer,
-  Smile,
-  Zap,
-  Lightbulb,
-  type LucideIcon,
-} from "lucide-react";
+import { Icon, type IconName } from "@/components/ui/icon";
 
 /** Row icon mapping for journey map swimlanes */
-const ROW_ICONS: Record<string, LucideIcon> = {
-  actions: Footprints,
-  goals: Target,
-  barriers: Construction,
-  touchpoints: Pointer,
-  emotions: Smile,
-  moments: Zap,
-  opportunities: Lightbulb,
+const ROW_ICONS: Record<string, IconName> = {
+  actions: 'footprints',
+  goals: 'target',
+  barriers: 'construction',
+  touchpoints: 'pointer',
+  emotions: 'smile',
+  moments: 'zap',
+  opportunities: 'lightbulb',
 };
 
 /**
@@ -492,7 +479,7 @@ export function GridOverlay({
 
             const midLeft = toScreen(labelAreaX + labelAreaWidth / 2, rowMidpoint);
             const labelWidth = labelAreaWidth * zoom;
-            const Icon = ROW_ICONS[row.id];
+            const iconName = ROW_ICONS[row.id];
             // Sizes scale with the viewport so the label zooms with the grid
             // instead of staying a fixed screen size.
             const iconPx = 22 * zoom;
@@ -512,7 +499,7 @@ export function GridOverlay({
                   className="flex flex-col items-center justify-center h-full text-neutral-olive-700 dark:text-neutral-olive-200"
                   style={{ gap: 3 * zoom }}
                 >
-                  {Icon && <Icon style={{ width: iconPx, height: iconPx }} className="shrink-0" />}
+                  {iconName && <Icon name={iconName} style={{ width: iconPx, height: iconPx }} className="shrink-0" />}
                   <span
                     className="font-semibold leading-tight text-center"
                     style={{ fontSize: fontPx }}
@@ -696,7 +683,7 @@ export function GridOverlay({
               >
                 {canEditStructure && (
                   <span className="opacity-50 group-hover:opacity-100 p-0.5 transition-opacity">
-                    <GripVertical className="h-3 w-3 text-neutral-olive-100" />
+                    <Icon name="grip-vertical" className="h-3 w-3 text-neutral-olive-100" />
                   </span>
                 )}
                 <EditableColumnHeader
@@ -720,7 +707,7 @@ export function GridOverlay({
                     className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-opacity"
                     title="Delete column"
                   >
-                    <X className="h-3 w-3 text-red-500" />
+                    <Icon name="close" className="h-3 w-3 text-red-500" />
                   </button>
                 )}
               </div>
@@ -757,7 +744,7 @@ export function GridOverlay({
                     : "Add a new stage column"
                 }
               >
-                <PlusCircle className="h-3.5 w-3.5" />
+                <Icon name="plus-circle" className="h-3.5 w-3.5" />
                 Add Stage
               </button>
             </div>
@@ -795,7 +782,7 @@ export function GridOverlay({
                   className="flex items-center gap-1 rounded-full border border-olive-300 bg-card/90 px-2 py-0.5 text-[10px] font-medium text-[#4a5a32] shadow-sm transition-colors hover:bg-olive-100 dark:border-neutral-olive-700 dark:text-neutral-olive-200 dark:hover:bg-neutral-olive-700"
                   title={`Auto-fill the ${row.label} row with AI — you can edit after`}
                 >
-                  <Sparkles className="h-3 w-3" />
+                  <Icon name="sparkles" className="h-3 w-3" />
                   Auto-fill
                 </button>
               </div>
@@ -832,7 +819,7 @@ export function GridOverlay({
                   }}
                   title={`Auto-fill the ${row.label} cell for "${col.label}" — you can edit after`}
                 >
-                  <Sparkles className="h-2.5 w-2.5" />
+                  <Icon name="sparkles" className="h-2.5 w-2.5" />
                 </button>
               );
             }),

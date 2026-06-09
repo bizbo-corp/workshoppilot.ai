@@ -3,20 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft,
-  FileText,
-  Code,
-  Presentation,
-  ListOrdered,
-  Map as MapIcon,
-  Rocket,
-  ClipboardCheck,
-  ArrowRight,
-  Loader2,
-  Download,
-  RefreshCw,
-} from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import {
   Card,
   CardHeader,
@@ -96,7 +83,7 @@ const SECTIONS: Section[] = [
         title: 'Stakeholder Presentation',
         description:
           'Executive summary deck covering the problem, research insights, proposed solution, and implementation roadmap.',
-        icon: <Presentation className="h-5 w-5" />,
+        icon: <Icon name="presentation" className="h-5 w-5" />,
         generatable: true,
       },
       {
@@ -104,7 +91,7 @@ const SECTIONS: Section[] = [
         title: 'Feature Prioritization',
         description:
           'AI-generated prioritized feature list with drag-and-drop reordering, derived from your journey map and concepts.',
-        icon: <ListOrdered className="h-5 w-5" />,
+        icon: <Icon name="list-ordered" className="h-5 w-5" />,
         generatable: true,
         navigateTo: 'feature-prioritization',
       },
@@ -121,7 +108,7 @@ const SECTIONS: Section[] = [
         title: 'UX Journey Map',
         description:
           'Interactive roadmap mapping your concepts onto user journey stages — then generate a v0 prototype prompt.',
-        icon: <MapIcon className="h-5 w-5" />,
+        icon: <Icon name="map" className="h-5 w-5" />,
         generatable: true,
         navigateTo: 'journey-map',
       },
@@ -130,7 +117,7 @@ const SECTIONS: Section[] = [
         title: 'Prototype',
         description:
           'Test your concept with real users — validate assumptions and gather feedback before building.',
-        icon: <Rocket className="h-5 w-5" />,
+        icon: <Icon name="rocket" className="h-5 w-5" />,
         generatable: false,
         navigateTo: 'step/validate',
         buttonLabel: 'Go to Validate',
@@ -140,7 +127,7 @@ const SECTIONS: Section[] = [
         title: 'Validation Plan',
         description:
           'Your riskiest assumption, the cheapest valid test, and a pre-committed success signal — with a score once you record results.',
-        icon: <ClipboardCheck className="h-5 w-5" />,
+        icon: <Icon name="clipboard-check" className="h-5 w-5" />,
         generatable: true,
       },
     ],
@@ -156,7 +143,7 @@ const SECTIONS: Section[] = [
         title: 'Technical Specifications',
         description:
           'Architecture overview, API contracts, data models, and integration requirements derived from your concept.',
-        icon: <Code className="h-5 w-5" />,
+        icon: <Icon name="code" className="h-5 w-5" />,
         generatable: true,
         navigateTo: 'tech-specs',
       },
@@ -165,7 +152,7 @@ const SECTIONS: Section[] = [
         title: 'Product Requirements Document',
         description:
           'The definitive handoff document — combines feature prioritization, technical specifications, and all workshop insights into a complete PRD for coding agents.',
-        icon: <FileText className="h-5 w-5" />,
+        icon: <Icon name="file-text" className="h-5 w-5" />,
         generatable: true,
         navigateTo: 'prd',
       },
@@ -377,7 +364,7 @@ export function OutputsContent({
             href={`/workshop/${sessionId}/step/validate`}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <Icon name="arrow-left" className="h-4 w-4" />
             Back to Workshop
           </Link>
         )}
@@ -453,7 +440,7 @@ export function OutputsContent({
                               }}
                             >
                               {card.buttonLabel ?? 'Go'}
-                              <ArrowRight className="h-4 w-4" />
+                              <Icon name="arrow-right" className="h-4 w-4" />
                             </Button>
                           </CardFooter>
                         </Card>
@@ -520,12 +507,12 @@ export function OutputsContent({
                             >
                               {isLoading ? (
                                 <>
-                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <Icon name="spinner" className="h-4 w-4 animate-spin" />
                                   {presentationProgress || 'Generating...'}
                                 </>
                               ) : (
                                 <>
-                                  <Download className="h-4 w-4" />
+                                  <Icon name="download" className="h-4 w-4" />
                                   Download Again
                                 </>
                               )}
@@ -538,7 +525,7 @@ export function OutputsContent({
                                 onClick={() => handleGeneratePresentation(true)}
                                 title="Regenerate with fresh AI content"
                               >
-                                <RefreshCw className="h-4 w-4" />
+                                <Icon name="refresh" className="h-4 w-4" />
                               </Button>
                             )}
                           </CardFooter>
@@ -591,7 +578,7 @@ export function OutputsContent({
                               {card.navigateTo
                                 ? `View ${card.type === 'prd' ? 'PRD' : card.type === 'tech-specs' ? 'Tech Specs' : card.type === 'journey-map' ? 'Journey Map' : card.type === 'feature-prioritization' ? 'Features' : 'Details'}`
                                 : 'View Details'}
-                              <ArrowRight className="h-4 w-4" />
+                              <Icon name="arrow-right" className="h-4 w-4" />
                             </Button>
                           </CardFooter>
                         </Card>
@@ -630,7 +617,7 @@ export function OutputsContent({
                             >
                               {isLoading ? (
                                 <>
-                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <Icon name="spinner" className="h-4 w-4 animate-spin" />
                                   {card.type === 'stakeholder-ppt' && presentationProgress ? presentationProgress : 'Generating...'}
                                 </>
                               ) : status === 'error' ? (

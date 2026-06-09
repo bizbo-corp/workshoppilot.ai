@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, Sparkles, Check, AlertTriangle } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -355,7 +355,7 @@ export function DefineSignalCard({
               onClick={suggest}
               disabled={isSuggesting}
             >
-              {isSuggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              {isSuggesting ? <Icon name="spinner" className="h-3 w-3 animate-spin" /> : <Icon name="sparkles" className="h-3 w-3" />}
               Suggest measures
             </Button>
           )}
@@ -603,9 +603,9 @@ function TestHealthMeter({ health }: { health: ReturnType<typeof assessTestHealt
           {health.notes.map((n, i) => (
             <li key={i} className="flex items-start gap-1.5 text-[13px] text-foreground/70">
               {n.tone === 'good' ? (
-                <Check className="mt-0.5 h-3 w-3 shrink-0 text-green-600 dark:text-green-400" />
+                <Icon name="check" className="mt-0.5 h-3 w-3 shrink-0 text-green-600 dark:text-green-400" />
               ) : (
-                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
+                <Icon name="alert-triangle" className="mt-0.5 h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
               )}
               <span>{n.text}</span>
             </li>

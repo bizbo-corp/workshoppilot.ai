@@ -2,7 +2,7 @@
 
 import { memo, useCallback } from 'react';
 import { type NodeProps, NodeResizer } from '@xyflow/react';
-import { X, Pencil } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { cn } from '@/lib/utils';
@@ -90,7 +90,7 @@ function AdminEditButton({ guide }: { guide: GuideNodeData }) {
       )}
       aria-label="Edit guide"
     >
-      <Pencil className="h-3 w-3" />
+      <Icon name="pencil" className="h-3 w-3" />
     </button>
   );
 }
@@ -331,7 +331,7 @@ function GuideNodeComponent({ id, data, selected }: NodeProps) {
           )}
           aria-label="Dismiss guide"
         >
-          <X className="h-3.5 w-3.5" />
+          <Icon name="close" className="h-3.5 w-3.5" />
         </button>
       )}
 

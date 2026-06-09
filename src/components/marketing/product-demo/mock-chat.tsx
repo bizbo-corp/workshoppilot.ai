@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import { cn } from "@/lib/utils";
 import { CHAT_MESSAGES } from "./demo-data";
 import { useTypewriter } from "./use-typewriter";
@@ -26,7 +26,7 @@ export function MockChat({ play = true }: { play?: boolean }) {
       className="w-56 rounded-xl border border-border bg-card/95 p-3 shadow-xl shadow-black/10 backdrop-blur"
     >
       <div className="mb-2 flex items-center gap-1.5">
-        <Sparkles className="h-3.5 w-3.5 text-olive-600 dark:text-olive-400" />
+        <Icon name="sparkles" className="h-3.5 w-3.5 text-olive-600 dark:text-olive-400" />
         <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
           AI Facilitator
         </span>

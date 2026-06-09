@@ -17,7 +17,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Palette, Zap, FileText, Shield, Users } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getCredits, consumeCredit, createCheckoutUrl } from '@/actions/billing-actions';
@@ -33,17 +33,17 @@ interface PaywallOverlayProps {
 
 const VALUE_ITEMS = [
   {
-    icon: Palette,
+    icon: 'palette' as const,
     title: 'Visual Ideation',
     description: 'Mind maps and Crazy 8s rapid sketching',
   },
   {
-    icon: Zap,
+    icon: 'zap' as const,
     title: 'Concept Development',
     description: 'SWOT analysis, elevator pitches, and concept cards',
   },
   {
-    icon: FileText,
+    icon: 'file-text' as const,
     title: 'Build Pack Output',
     description: 'Complete PRD, user stories, and tech specs',
   },
@@ -124,7 +124,7 @@ export function PaywallOverlay({ sessionId, workshopId, facilitatorMode }: Paywa
 
       <div className="relative z-10 flex max-w-lg flex-col items-center gap-5 rounded-xl border bg-background/95 p-8 shadow-2xl backdrop-blur-sm">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50">
-          <Sparkles className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+          <Icon name="sparkles" className="h-8 w-8 text-amber-600 dark:text-amber-400" />
         </div>
 
         <div className="space-y-2 text-center">
@@ -143,7 +143,7 @@ export function PaywallOverlay({ sessionId, workshopId, facilitatorMode }: Paywa
         <div className="w-full space-y-2">
           {VALUE_ITEMS.map((item) => (
             <div key={item.title} className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3">
-              <item.icon className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <Icon name={item.icon} className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
               <div>
                 <p className="text-xs font-medium leading-tight">{item.title}</p>
                 <p className="text-xs text-muted-foreground leading-tight mt-0.5">{item.description}</p>
@@ -162,7 +162,7 @@ export function PaywallOverlay({ sessionId, workshopId, facilitatorMode }: Paywa
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Users className="h-4 w-4 text-olive-600 dark:text-olive-400" />
+                  <Icon name="users" className="h-4 w-4 text-olive-600 dark:text-olive-400" />
                   <div>
                     <p className="text-sm font-semibold">Unlock for your team</p>
                     <p className="text-xs text-muted-foreground">Up to 15 participants, real-time canvas</p>
@@ -220,7 +220,7 @@ export function PaywallOverlay({ sessionId, workshopId, facilitatorMode }: Paywa
           )}
 
           <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
-            <Shield className="h-3 w-3" />
+            <Icon name="shield" className="h-3 w-3" />
             Secure checkout via Stripe
           </div>
 

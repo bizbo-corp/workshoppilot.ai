@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { type NodeProps, type Node } from '@xyflow/react';
 import { BrainRewritingCanvas } from '@/components/workshop/brain-rewriting-canvas';
-import { GitBranchPlus } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { BrainRewritingMatrix } from '@/lib/canvas/brain-rewriting-types';
@@ -59,7 +59,7 @@ export const BrainRewritingGroupNode = memo(({ data }: NodeProps<BrainRewritingG
             : 'bg-muted/30'
         )}>
           <div className="flex items-center gap-2">
-            <GitBranchPlus className={cn('h-4 w-4', isIncluded ? 'text-purple-600' : 'text-muted-foreground')} />
+            <Icon name="git-branch-plus" className={cn('h-4 w-4', isIncluded ? 'text-purple-600' : 'text-muted-foreground')} />
             <span className={cn(
               'text-sm font-semibold',
               isIncluded ? 'text-purple-900 dark:text-purple-200' : 'text-muted-foreground'

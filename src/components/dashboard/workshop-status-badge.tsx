@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Pause } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 type WorkshopStatus = 'completed' | 'active' | 'stalled';
@@ -19,9 +19,9 @@ export function WorkshopStatusBadge({ status }: WorkshopStatusBadgeProps) {
         status === 'stalled' && 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
       )}
     >
-      {status === 'completed' && <CheckCircle2 className="h-3 w-3" />}
+      {status === 'completed' && <Icon name="check-circle" className="h-3 w-3" />}
       {status === 'active' && <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" /></span>}
-      {status === 'stalled' && <Pause className="h-3 w-3" />}
+      {status === 'stalled' && <Icon name="pause" className="h-3 w-3" />}
       {status === 'completed' ? 'Completed' : status === 'active' ? 'Active' : 'Stalled'}
     </span>
   );

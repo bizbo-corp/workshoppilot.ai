@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 import { type NodeProps, type Node } from '@xyflow/react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 export type GroupContainerData = {
   groupId: string;
@@ -86,7 +86,7 @@ export const JourneyGroupContainer = memo(
                 }}
                 title="Edit group"
               >
-                <Pencil className="h-3 w-3 text-white/80" />
+                <Icon name="pencil" className="h-3 w-3 text-white/80" />
               </button>
               <button
                 className="p-1 rounded hover:bg-white/20 transition-colors"
@@ -96,7 +96,7 @@ export const JourneyGroupContainer = memo(
                 }}
                 title="Delete group"
               >
-                <Trash2 className="h-3 w-3 text-white/80" />
+                <Icon name="trash" className="h-3 w-3 text-white/80" />
               </button>
             </div>
           )}

@@ -18,7 +18,7 @@ import { useCanvasStore, useCanvasStoreApi } from '@/providers/canvas-store-prov
 import { type DrawingElement, type VectorData, parseVectorJson } from '@/lib/drawing/types';
 import type { EzyDrawSaveResult } from '@/components/ezydraw/ezydraw-modal';
 import { Button } from '@/components/ui/button';
-import { Sparkles } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { useUser } from '@clerk/nextjs';
 import { useMultiplayerContext } from './multiplayer-room';
 import { PARTICIPANT_COLORS } from '@/lib/liveblocks/config';
@@ -369,7 +369,7 @@ export function Crazy8sCanvas({ workshopId, stepId, ownerId, votingMode, onVoteS
             onClick={handleSuggestPrompts}
             disabled={isLoadingPrompts}
           >
-            <Sparkles className="h-4 w-4 mr-2" />
+            <Icon name="sparkles" className="h-4 w-4 mr-2" />
             {isLoadingPrompts ? 'Generating ideas...' : 'Suggest Prompts'}
           </Button>
         </div>

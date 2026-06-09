@@ -18,7 +18,7 @@
 
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Copy, Check, Monitor } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 const SESSION_KEY = 'wp_mobile_gate_dismissed';
 
@@ -89,9 +89,9 @@ export function MobileGate({ workshopName }: MobileGateProps) {
         >
           <div className="flex flex-col items-center gap-6 text-center max-w-sm">
             {/* Illustration */}
-            <Monitor
+            <Icon
+              name="monitor"
               className="w-24 h-24 text-neutral-olive-300"
-              strokeWidth={1.25}
             />
 
             {/* Copy */}
@@ -122,12 +122,12 @@ export function MobileGate({ workshopName }: MobileGateProps) {
               >
                 {copied ? (
                   <>
-                    <Check className="w-4 h-4" />
+                    <Icon name="check" className="w-4 h-4" />
                     Copied!
                   </>
                 ) : (
                   <>
-                    <Copy className="w-4 h-4" />
+                    <Icon name="copy" className="w-4 h-4" />
                     Copy link
                   </>
                 )}

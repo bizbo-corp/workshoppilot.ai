@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowRight } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -152,7 +152,7 @@ export function WorkshopListItem({
       <Link href={`/workshop/${sessionId}/step/${currentStepSlug}`} className="shrink-0 pr-3">
         <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
           Continue
-          <ArrowRight className="h-3.5 w-3.5" />
+          <Icon name="arrow-right" className="h-3.5 w-3.5" />
         </Button>
       </Link>
     </div>

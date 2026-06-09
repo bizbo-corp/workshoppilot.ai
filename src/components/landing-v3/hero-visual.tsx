@@ -1,15 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  Code2,
-  FileText,
-  FlagTriangleRight,
-  Map,
-  Presentation,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { LightTrails } from "./light-trails";
 
 /* ─── Sticky Note ───────────────────────────────────────────── */
@@ -105,7 +97,7 @@ function UserCursor({
         className="ml-1.5 -mt-0.5 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold text-white shadow-sm whitespace-nowrap"
         style={{ backgroundColor: color }}
       >
-        {hasIcon && <Sparkles className="h-2.5 w-2.5" />}
+        {hasIcon && <Icon name="sparkles" className="h-2.5 w-2.5" />}
         {name}
       </span>
     </div>
@@ -116,42 +108,42 @@ function UserCursor({
 
 const deliverables = [
   {
-    icon: FileText,
+    icon: "file-text" as const,
     label: "Markdown PRDs",
     rotation: "1deg",
     delay: "0.2s",
     color: "#16a34a",
   },
   {
-    icon: Code2,
+    icon: "code" as const,
     label: "Tech Specs",
     rotation: "-1.5deg",
     delay: "1s",
     color: "#6366f1",
   },
   {
-    icon: Presentation,
+    icon: "presentation" as const,
     label: "Stakeholder Deck",
     rotation: "-1deg",
     delay: "2.5s",
     color: "#e97820",
   },
   {
-    icon: Map,
+    icon: "map" as const,
     label: "Journey Map",
     rotation: "1.5deg",
     delay: "3.2s",
     color: "#06b6d4",
   },
   {
-    icon: FlagTriangleRight,
+    icon: "flag" as const,
     label: "Feature Roadmap",
     rotation: "1deg",
     delay: "4s",
     color: "#f59e0b",
   },
   {
-    icon: Users,
+    icon: "users" as const,
     label: "User Stories",
     rotation: "-1.5deg",
     delay: "4.8s",
@@ -321,7 +313,7 @@ export function HeroVisual() {
         }}
       >
         {deliverables.map(
-          ({ icon: Icon, label, rotation, delay, color }, i) => (
+          ({ icon, label, rotation, delay, color }, i) => (
             <div
               key={label}
               data-trail-dest={i}
@@ -342,6 +334,7 @@ export function HeroVisual() {
                 style={{ backgroundColor: `${color}24` }}
               >
                 <Icon
+                  name={icon}
                   className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5"
                   style={{ color }}
                 />

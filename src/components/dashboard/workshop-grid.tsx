@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Trash2, List, LayoutGrid, Pencil, Plus } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -112,7 +112,7 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
             onClick={editMode ? handleExitEditMode : () => setEditMode(true)}
             className="text-muted-foreground"
           >
-            {editMode ? 'Done' : <><Pencil className="mr-1.5 h-3.5 w-3.5" />Edit</>}
+            {editMode ? 'Done' : <><Icon name="pencil" className="mr-1.5 h-3.5 w-3.5" />Edit</>}
           </Button>
 
           {/* View toggle */}
@@ -127,7 +127,7 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
               )}
               aria-label="List view"
             >
-              <List className="h-4 w-4" />
+              <Icon name="list" className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode('grid')}
@@ -139,7 +139,7 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
               )}
               aria-label="Grid view"
             >
-              <LayoutGrid className="h-4 w-4" />
+              <Icon name="layout-grid" className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -164,7 +164,7 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
             <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm">
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Icon name="trash" className="mr-2 h-4 w-4" />
                   Delete {selectedIds.size} {selectedIds.size === 1 ? 'workshop' : 'workshops'}
                 </Button>
               </AlertDialogTrigger>
@@ -198,7 +198,7 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
         <div className="space-y-2">
           {/* New workshop row */}
           <NewWorkshopButton variant="ghost" className="w-full justify-start gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-muted-foreground hover:text-foreground hover:border-foreground/20">
-            <Plus className="h-4 w-4" />
+            <Icon name="plus" className="h-4 w-4" />
             Start New Workshop
           </NewWorkshopButton>
           {workshops.map((workshop) => (
@@ -229,7 +229,7 @@ export function WorkshopGrid({ workshops, onRename, onUpdateAppearance }: Worksh
             variant="ghost"
             className="new-workshop-card flex h-full flex-col items-center justify-center gap-4 rounded-xl bg-card text-muted-foreground hover:bg-white hover:text-foreground transition-all duration-200 hover:-translate-y-1 hover:shadow-xl dark:hover:bg-neutral-olive-800"
           >
-            <Plus className="h-24 w-24" strokeWidth={0.8} />
+            <Icon name="plus" className="h-24 w-24" strokeWidth={0.8} />
             <span className="text-lg font-serif">Start New Workshop</span>
           </NewWorkshopButton>
           {workshops.map((workshop, index) => (

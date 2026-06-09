@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { SignedIn, SignedOut, UserButton, ClerkLoading } from '@clerk/nextjs';
 import Logo from '@/components/Logo';
 import { Button } from '@/components/ui/button';
@@ -160,7 +160,7 @@ export function LandingHeader() {
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="md:hidden">
-                  <Menu className="h-5 w-5" />
+                  <Icon name="menu" className="h-5 w-5" />
                   <span className="sr-only">Open menu</span>
                 </Button>
               </SheetTrigger>

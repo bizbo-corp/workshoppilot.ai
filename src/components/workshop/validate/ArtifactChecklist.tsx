@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import type { ValidationPlan } from '@/lib/schemas';
 
 /** Static how-to steps per artifact key for non-app, non-concept-card tests. */
@@ -180,7 +180,7 @@ export function ArtifactChecklist({ plan }: { plan: ValidationPlan }) {
       <ol className="mt-3 space-y-2">
         {steps.map((step, i) => (
           <li key={i} className="flex items-start gap-2 text-base">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary/60" />
+            <Icon name="check-circle" className="mt-0.5 h-4 w-4 shrink-0 text-primary/60" />
             <span>{step}</span>
           </li>
         ))}

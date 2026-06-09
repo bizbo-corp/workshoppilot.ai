@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Code, RefreshCw, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { DeliverableDetailView } from '@/components/workshop/deliverable-detail-view';
 import { WizardShell } from '@/components/tech-specs-wizard/wizard-shell';
@@ -124,7 +124,7 @@ export function TechSpecsContent({
       href={`/workshop/${sessionId}/outputs`}
       className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
     >
-      <ArrowLeft className="h-3.5 w-3.5" />
+      <Icon name="arrow-left" className="h-3.5 w-3.5" />
       Back to Build Pack
     </Link>
   );
@@ -151,7 +151,7 @@ export function TechSpecsContent({
       <div className="h-full flex items-center justify-center">
         <div className="text-center space-y-4 max-w-md">
           <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-primary/10">
-            <Code className="h-8 w-8 text-primary" />
+            <Icon name="code" className="h-8 w-8 text-primary" />
           </div>
           <h2 className="text-xl font-semibold">Technical Specifications</h2>
           <p className="text-sm text-muted-foreground">
@@ -184,9 +184,9 @@ export function TechSpecsContent({
                 </p>
               </div>
               {showPreferences ? (
-                <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Icon name="chevron-up" className="h-4 w-4 text-muted-foreground shrink-0" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Icon name="chevron-down" className="h-4 w-4 text-muted-foreground shrink-0" />
               )}
             </button>
             {showPreferences && (
@@ -207,7 +207,7 @@ export function TechSpecsContent({
                     onClick={handleGenerate}
                     className="gap-2 shrink-0"
                   >
-                    <RefreshCw className="h-4 w-4" />
+                    <Icon name="refresh" className="h-4 w-4" />
                     Regenerate
                   </Button>
                 </div>
@@ -237,7 +237,7 @@ export function TechSpecsContent({
           <div className="mt-6">
             {phase === 'generating' ? (
               <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <Icon name="spinner" className="h-8 w-8 animate-spin text-primary" />
                 <div className="text-center space-y-1">
                   <p className="text-sm font-medium">Generating Technical Specifications...</p>
                   <p className="text-xs text-muted-foreground">

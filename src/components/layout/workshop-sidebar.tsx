@@ -20,7 +20,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Check, ChevronLeft, ChevronRight, Eye, Lock } from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import {
   Sidebar,
   SidebarContent,
@@ -223,9 +223,9 @@ export function WorkshopSidebar({
                   )}
                 >
                   {isLocked ? (
-                    <Lock className="h-3 w-3" />
+                    <Icon name="lock" className="h-3 w-3" />
                   ) : isComplete ? (
-                    <Check className="h-3 w-3" />
+                    <Icon name="check" className="h-3 w-3" />
                   ) : (
                     // `order` is already the 1-based display number for the
                     // numbered flow (challenge is order 0 and filtered out above).
@@ -288,7 +288,7 @@ export function WorkshopSidebar({
                     title={`View ${step.name} snapshot`}
                     className="absolute right-1 inset-y-1 flex items-center justify-center w-8 rounded-full opacity-0 group-hover/menu-item:opacity-100 transition-opacity hover:bg-olive-200/60 dark:hover:bg-olive-800/40"
                   >
-                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <Icon name="eye" className="h-4 w-4 text-muted-foreground" />
                   </button>
                 )}
               </SidebarMenuItem>
@@ -305,7 +305,7 @@ export function WorkshopSidebar({
             className="h-9 w-full justify-start hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
             title={isPinned ? "Collapse sidebar (⌘B)" : "Pin sidebar open (⌘B)"}
           >
-            <ChevronLeft className="h-4 w-4" />
+            <Icon name="chevron-left" className="h-4 w-4" />
             <span className="ml-2 text-sm text-muted-foreground">
               {isPinned ? "Collapse" : "Pin open"} (⌘B)
             </span>
@@ -318,7 +318,7 @@ export function WorkshopSidebar({
             className="mx-auto flex h-9 w-9 hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
             title="Expand sidebar (⌘B)"
           >
-            <ChevronRight className="h-4 w-4" />
+            <Icon name="chevron-right" className="h-4 w-4" />
           </Button>
         )}
       </SidebarFooter>

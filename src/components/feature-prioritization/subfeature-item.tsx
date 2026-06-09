@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Pencil, Trash2, Check, X } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useFeaturePrioritizationStoreApi } from '@/providers/feature-prioritization-store-provider';
@@ -67,7 +67,7 @@ export function SubfeatureItem({ subfeature, featureId, isReadOnly }: Subfeature
           {...listeners}
           className="mt-0.5 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
         >
-          <GripVertical className="h-3 w-3" />
+          <Icon name="grip-vertical" className="h-3 w-3" />
         </button>
       )}
 
@@ -89,11 +89,11 @@ export function SubfeatureItem({ subfeature, featureId, isReadOnly }: Subfeature
             />
             <div className="flex gap-1">
               <Button size="sm" variant="default" className="h-6 text-xs" onClick={handleSave}>
-                <Check className="h-3 w-3 mr-1" />
+                <Icon name="check" className="h-3 w-3 mr-1" />
                 Save
               </Button>
               <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={handleCancel}>
-                <X className="h-3 w-3 mr-1" />
+                <Icon name="close" className="h-3 w-3 mr-1" />
                 Cancel
               </Button>
             </div>
@@ -119,7 +119,7 @@ export function SubfeatureItem({ subfeature, featureId, isReadOnly }: Subfeature
             className="h-6 w-6"
             onClick={() => setIsEditing(true)}
           >
-            <Pencil className="h-2.5 w-2.5" />
+            <Icon name="pencil" className="h-2.5 w-2.5" />
           </Button>
           <Button
             variant="ghost"
@@ -127,7 +127,7 @@ export function SubfeatureItem({ subfeature, featureId, isReadOnly }: Subfeature
             className="h-6 w-6 text-destructive hover:text-destructive"
             onClick={handleDelete}
           >
-            <Trash2 className="h-2.5 w-2.5" />
+            <Icon name="trash" className="h-2.5 w-2.5" />
           </Button>
         </div>
       )}

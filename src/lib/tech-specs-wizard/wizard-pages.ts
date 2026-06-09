@@ -1,16 +1,3 @@
-import {
-  Monitor,
-  Cloud,
-  Link2,
-  Shield,
-  Database,
-  Lock,
-  Zap,
-  Globe,
-  CreditCard,
-  Languages,
-  Wrench,
-} from 'lucide-react';
 import type { WizardPageConfig } from './types';
 
 export const WIZARD_PAGES: WizardPageConfig[] = [
@@ -19,7 +6,7 @@ export const WIZARD_PAGES: WizardPageConfig[] = [
     id: 'platform',
     title: 'Platform',
     description: 'What type of application are you building?',
-    icon: Monitor,
+    icon: 'monitor',
     questions: [
       {
         type: 'single-select',
@@ -71,7 +58,7 @@ export const WIZARD_PAGES: WizardPageConfig[] = [
     id: 'hosting',
     title: 'Hosting & Deployment',
     description: 'Where will your application be hosted?',
-    icon: Cloud,
+    icon: 'cloud',
     questions: [
       {
         type: 'single-select',
@@ -105,7 +92,7 @@ export const WIZARD_PAGES: WizardPageConfig[] = [
     id: 'integrations',
     title: 'Existing Systems',
     description: 'Does this need to work with anything already in place?',
-    icon: Link2,
+    icon: 'link',
     questions: [
       {
         type: 'single-select',
@@ -144,7 +131,7 @@ export const WIZARD_PAGES: WizardPageConfig[] = [
     id: 'auth',
     title: 'Authentication & Users',
     description: 'How will people sign in and what does your user base look like?',
-    icon: Shield,
+    icon: 'shield',
     questions: [
       {
         type: 'multi-select',
@@ -188,7 +175,7 @@ export const WIZARD_PAGES: WizardPageConfig[] = [
     id: 'data',
     title: 'Data & Storage',
     description: 'What kind of data will your application handle?',
-    icon: Database,
+    icon: 'database',
     questions: [
       {
         type: 'multi-select',
@@ -231,7 +218,7 @@ export const WIZARD_PAGES: WizardPageConfig[] = [
     id: 'security',
     title: 'Security & Compliance',
     description: 'What security and regulatory requirements apply?',
-    icon: Lock,
+    icon: 'lock',
     questions: [
       {
         type: 'single-select',
@@ -286,7 +273,7 @@ export const WIZARD_PAGES: WizardPageConfig[] = [
     id: 'performance',
     title: 'Performance & Reliability',
     description: 'What are your expectations for speed and uptime?',
-    icon: Zap,
+    icon: 'zap',
     questions: [
       {
         type: 'multi-select',
@@ -327,7 +314,7 @@ export const WIZARD_PAGES: WizardPageConfig[] = [
     id: 'geographic',
     title: 'Geographic Reach',
     description: 'Where are your users located?',
-    icon: Globe,
+    icon: 'globe',
     questions: [
       {
         type: 'single-select',
@@ -368,7 +355,7 @@ export const WIZARD_PAGES: WizardPageConfig[] = [
     id: 'third-party',
     title: 'Third-Party Services',
     description: 'Which external services will your app need?',
-    icon: CreditCard,
+    icon: 'credit-card',
     questions: [
       {
         type: 'single-select',
@@ -413,7 +400,7 @@ export const WIZARD_PAGES: WizardPageConfig[] = [
     id: 'accessibility',
     title: 'Accessibility & Internationalization',
     description: 'Who needs to be able to use your app, and in what languages?',
-    icon: Languages,
+    icon: 'languages',
     questions: [
       {
         type: 'single-select',
@@ -463,7 +450,7 @@ export const WIZARD_PAGES: WizardPageConfig[] = [
     id: 'development',
     title: 'Development Preferences',
     description: 'What does your team and tooling look like?',
-    icon: Wrench,
+    icon: 'wrench',
     questions: [
       {
         type: 'multi-select',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, Undo2, Redo2, MousePointer2, Hand, LayoutGrid, Copy, Plus } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import type { StickyNoteColor } from '@/stores/canvas-store';
 import {
@@ -121,14 +121,14 @@ export function CanvasToolbar({
             active={activeTool === 'pointer'}
             title="Pointer tool (V)"
           >
-            <MousePointer2 className="w-4 h-4" />
+            <Icon name="mouse-pointer" className="w-4 h-4" />
           </IconButton>
           <IconButton
             onClick={() => onToolChange('hand')}
             active={activeTool === 'hand'}
             title="Hand tool (Space)"
           >
-            <Hand className="w-4 h-4" />
+            <Icon name="hand" className="w-4 h-4" />
           </IconButton>
         </div>
 
@@ -142,7 +142,7 @@ export function CanvasToolbar({
             title="Add sticky note"
             className="relative flex items-center gap-1 px-2.5 py-1.5 bg-[var(--sticky-note-yellow)] text-amber-900/80 text-sm font-semibold transition-all hover:brightness-[0.97] active:brightness-[0.95] cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Icon name="plus" className="w-3.5 h-3.5" />
             <span>Sticky note</span>
           </button>
 
@@ -153,7 +153,7 @@ export function CanvasToolbar({
                 title="Sticky note options"
                 className="flex items-center px-1.5 bg-[var(--sticky-note-yellow)] text-amber-900/60 border-l border-amber-400/40 transition-all hover:brightness-[0.97] hover:text-amber-900/80 cursor-pointer"
               >
-                <ChevronDown className="w-3 h-3" />
+                <Icon name="chevron-down" className="w-3 h-3" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center" side="top" sideOffset={8} className="w-52">
@@ -220,7 +220,7 @@ export function CanvasToolbar({
               aria-label="Organize sticky notes by cluster"
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
             >
-              <LayoutGrid className="w-4 h-4" />
+              <Icon name="layout-grid" className="w-4 h-4" />
               <span>Organize</span>
             </button>
           </>
@@ -236,7 +236,7 @@ export function CanvasToolbar({
               aria-label="Remove duplicate sticky notes"
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
             >
-              <Copy className="w-4 h-4" />
+              <Icon name="copy" className="w-4 h-4" />
               <span>Dedup</span>
             </button>
           </>
@@ -247,10 +247,10 @@ export function CanvasToolbar({
         {/* Undo / Redo */}
         <div className="flex items-center">
           <IconButton onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)">
-            <Undo2 className="w-4 h-4" />
+            <Icon name="undo" className="w-4 h-4" />
           </IconButton>
           <IconButton onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)">
-            <Redo2 className="w-4 h-4" />
+            <Icon name="redo" className="w-4 h-4" />
           </IconButton>
         </div>
       </div>

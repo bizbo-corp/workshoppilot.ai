@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Icon } from '@/components/ui/icon';
 import { useEffect, useRef, useState } from "react";
 
 /**
@@ -204,7 +204,7 @@ export function PainCostCurve() {
           </p>
           <p className="mt-1 flex items-center gap-1.5 text-[12px] font-medium leading-tight text-olive-600 dark:text-olive-400">
             <span className="inline-flex size-[18px] items-center justify-center rounded-full bg-olive-500 dark:bg-olive-400">
-              <Check className="size-3 text-background" strokeWidth={2.5} aria-hidden="true" />
+              <Icon name="check" className="size-3 text-background" strokeWidth={2.5} aria-hidden="true" />
             </span>
             Done in two hours
           </p>
@@ -257,7 +257,7 @@ export function PainCostBarsMobile() {
         </div>
         <p className="mt-3 flex items-center gap-1.5 text-xs font-medium leading-tight text-olive-600 dark:text-olive-400">
           <span className="inline-flex size-[18px] shrink-0 items-center justify-center rounded-full bg-olive-500 dark:bg-olive-400">
-            <Check className="size-3 text-background" strokeWidth={2.5} aria-hidden="true" />
+            <Icon name="check" className="size-3 text-background" strokeWidth={2.5} aria-hidden="true" />
           </span>
           Done in two hours
         </p>

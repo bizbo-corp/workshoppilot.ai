@@ -8,7 +8,7 @@
  */
 
 import { cn } from '@/lib/utils';
-import { Pencil, Lock, Check } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import type { BrainRewritingMatrix, BrainRewritingCellId } from '@/lib/canvas/brain-rewriting-types';
 
 interface BrainRewritingGridProps {
@@ -96,7 +96,7 @@ export function BrainRewritingGrid({
                     ? 'bg-purple-500/90 text-white'
                     : 'bg-purple-400/80 text-white'
                 )}>
-                  {state === 'completed' && <Check className="inline h-3 w-3 mr-1 -mt-0.5" />}
+                  {state === 'completed' && <Icon name="check" className="inline h-3 w-3 mr-1 -mt-0.5" />}
                   {cell.assigneeName}
                 </span>
               </div>
@@ -112,12 +112,12 @@ export function BrainRewritingGrid({
                 />
               ) : state !== 'locked' ? (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                  <Pencil className="h-6 w-6" />
+                  <Icon name="pencil" className="h-6 w-6" />
                   <span className="text-xs">Tap to draw</span>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground/50">
-                  <Lock className="h-6 w-6" />
+                  <Icon name="lock" className="h-6 w-6" />
                   <span className="text-xs">Complete previous first</span>
                 </div>
               )}
