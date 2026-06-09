@@ -5,6 +5,7 @@ import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Check, ChevronDown, GripVertical, Lightbulb, Loader2, RefreshCw, Send, Sparkles, Wand2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { CanvasNodeShell } from '@/components/canvas/canvas-node-shell';
 import type { HmwCardData } from '@/lib/canvas/hmw-card-types';
 
 export type HmwCardNodeRendererData = HmwCardData & {
@@ -450,17 +451,6 @@ export const HmwCardNode = memo(
     const badgeBg = oc || 'rgba(255,255,255,0.15)';
     const badgeText = oc ? contrastText(oc) : SAGE.headerText;
 
-    // State glow
-    let boxShadow: string | undefined;
-    let glowClass = '';
-    if (isFilled) {
-      boxShadow = `0 0 0 2px #22c55e, 0 0 16px 4px #22c55e40`;
-    } else if (isActive) {
-      glowClass = 'concept-card-active-glow';
-    } else if (selected) {
-      boxShadow = `0 0 0 2px ${SAGE.borderSelected}`;
-    }
-
     // Check if all 4 fields are filled for statement assembly
     const allFieldsFilled = !!(data.givenThat && data.persona && data.immediateGoal && data.deeperGoal);
 
@@ -475,19 +465,16 @@ export const HmwCardNode = memo(
       : null;
 
     return (
-      <div
-        className={cn(
-          'hmw-card w-[700px] rounded-2xl shadow-xl overflow-hidden relative',
-          glowClass,
-          isNonOwned && 'concept-card-non-owned',
-        )}
-        style={{
-          backgroundColor: cardBg,
-          borderWidth: 2,
-          borderStyle: 'solid',
-          borderColor: selected ? SAGE.borderSelected : cardBorder,
-          boxShadow,
-        }}
+      <CanvasNodeShell
+        className="hmw-card w-[700px]"
+        backgroundColor={cardBg}
+        borderColor={selected ? SAGE.borderSelected : cardBorder}
+        borderWidth={2}
+        isFilled={isFilled}
+        isActive={isActive}
+        selected={selected}
+        borderSelected={SAGE.borderSelected}
+        isNonOwned={isNonOwned}
       >
         <Handle
           type="target"
@@ -689,7 +676,7 @@ export const HmwCardNode = memo(
           position={Position.Bottom}
           className="!opacity-0 !w-0 !h-0"
         />
-      </div>
+      </CanvasNodeShell>
     );
   }
 );

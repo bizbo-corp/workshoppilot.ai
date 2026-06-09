@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { CanvasNodeShell, QuadrantCard } from '@/components/canvas/canvas-node-shell';
 import type { ConceptCardData } from '@/lib/canvas/concept-card-types';
 import type { ConceptFieldId } from '@/lib/canvas/concept-card-utils';
 
@@ -443,33 +444,17 @@ export const ConceptCardNode = memo(
     const cardBorder = oc ? `color-mix(in srgb, ${oc} 30%, ${SAGE.border})` : SAGE.border;
     const sectionBorder = oc ? `color-mix(in srgb, ${oc} 15%, ${SAGE.sectionBorder})` : SAGE.sectionBorder;
 
-    // State glows layer on top of owner tint
-    let boxShadow: string | undefined;
-    let glowClass = '';
-
-    if (isFilled) {
-      boxShadow = `0 0 0 2px #22c55e, 0 0 16px 4px #22c55e40`;
-    } else if (isActive) {
-      glowClass = 'concept-card-active-glow';
-    } else if (selected) {
-      boxShadow = `0 0 0 2px ${SAGE.borderSelected}`;
-    }
-
     return (
-      <div
-        className={cn(
-          'persona-card relative w-[680px] rounded-2xl shadow-xl overflow-hidden',
-          glowClass,
-          isNonOwned && 'concept-card-non-owned',
-        )}
-        style={{
-          backgroundColor: cardBg,
-          color: 'var(--persona-text-strong)',
-          borderWidth: 1,
-          borderStyle: 'solid',
-          borderColor: cardBorder,
-          boxShadow,
-        }}
+      <CanvasNodeShell
+        className="persona-card w-[680px]"
+        backgroundColor={cardBg}
+        borderColor={cardBorder}
+        color="var(--persona-text-strong)"
+        isFilled={isFilled}
+        isActive={isActive}
+        selected={selected}
+        borderSelected={SAGE.borderSelected}
+        isNonOwned={isNonOwned}
       >
         {/* Filled checkmark badge */}
         {isFilled && (
@@ -680,20 +665,11 @@ export const ConceptCardNode = memo(
             />
           </div>
           <div className="grid grid-cols-2 gap-2.5">
-            {/* Strengths */}
-            <div
-              className="flex flex-col space-y-1 rounded-xl border p-3"
-              style={{
-                backgroundColor: 'color-mix(in srgb, var(--persona-empathy-gains) 10%, transparent)',
-                borderColor: 'color-mix(in srgb, var(--persona-empathy-gains) 25%, transparent)',
-              }}
+            <QuadrantCard
+              accent="var(--persona-empathy-gains)"
+              labelColor="var(--persona-empathy-gains-text)"
+              label="Strengths"
             >
-              <div className="mb-2 flex items-center gap-2">
-                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--persona-empathy-gains)' }} />
-                <h5 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--persona-empathy-gains-text)' }}>
-                  Strengths
-                </h5>
-              </div>
               {swot.strengths.map((item, idx) => (
                 <EditableField
                   key={`s-${idx}`}
@@ -706,22 +682,13 @@ export const ConceptCardNode = memo(
                   autoGrow
                 />
               ))}
-            </div>
+            </QuadrantCard>
 
-            {/* Weaknesses */}
-            <div
-              className="flex flex-col space-y-1 rounded-xl border p-3"
-              style={{
-                backgroundColor: 'color-mix(in srgb, var(--persona-empathy-pains) 10%, transparent)',
-                borderColor: 'color-mix(in srgb, var(--persona-empathy-pains) 25%, transparent)',
-              }}
+            <QuadrantCard
+              accent="var(--persona-empathy-pains)"
+              labelColor="var(--persona-empathy-pains-text)"
+              label="Weaknesses"
             >
-              <div className="mb-2 flex items-center gap-2">
-                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--persona-empathy-pains)' }} />
-                <h5 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--persona-empathy-pains-text)' }}>
-                  Weaknesses
-                </h5>
-              </div>
               {swot.weaknesses.map((item, idx) => (
                 <EditableField
                   key={`w-${idx}`}
@@ -734,22 +701,13 @@ export const ConceptCardNode = memo(
                   autoGrow
                 />
               ))}
-            </div>
+            </QuadrantCard>
 
-            {/* Opportunities */}
-            <div
-              className="flex flex-col space-y-1 rounded-xl border p-3"
-              style={{
-                backgroundColor: 'color-mix(in srgb, var(--persona-empathy-says) 10%, transparent)',
-                borderColor: 'color-mix(in srgb, var(--persona-empathy-says) 25%, transparent)',
-              }}
+            <QuadrantCard
+              accent="var(--persona-empathy-says)"
+              labelColor="var(--persona-text-muted)"
+              label="Opportunities"
             >
-              <div className="mb-2 flex items-center gap-2">
-                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--persona-empathy-says)' }} />
-                <h5 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--persona-text-muted)' }}>
-                  Opportunities
-                </h5>
-              </div>
               {swot.opportunities.map((item, idx) => (
                 <EditableField
                   key={`o-${idx}`}
@@ -762,22 +720,13 @@ export const ConceptCardNode = memo(
                   autoGrow
                 />
               ))}
-            </div>
+            </QuadrantCard>
 
-            {/* Threats */}
-            <div
-              className="flex flex-col space-y-1 rounded-xl border p-3"
-              style={{
-                backgroundColor: 'color-mix(in srgb, var(--persona-empathy-feels) 10%, transparent)',
-                borderColor: 'color-mix(in srgb, var(--persona-empathy-feels) 25%, transparent)',
-              }}
+            <QuadrantCard
+              accent="var(--persona-empathy-feels)"
+              labelColor="var(--persona-text-muted)"
+              label="Threats"
             >
-              <div className="mb-2 flex items-center gap-2">
-                <div className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--persona-empathy-feels)' }} />
-                <h5 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--persona-text-muted)' }}>
-                  Threats
-                </h5>
-              </div>
               {swot.threats.map((item, idx) => (
                 <EditableField
                   key={`t-${idx}`}
@@ -790,7 +739,7 @@ export const ConceptCardNode = memo(
                   autoGrow
                 />
               ))}
-            </div>
+            </QuadrantCard>
           </div>
         </div>
 
@@ -855,7 +804,7 @@ export const ConceptCardNode = memo(
           position={Position.Bottom}
           className="!opacity-0 !w-0 !h-0"
         />
-      </div>
+      </CanvasNodeShell>
     );
   }
 );
