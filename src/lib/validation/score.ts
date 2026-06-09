@@ -20,15 +20,44 @@ function achievementRatio(signal: Signal, actual: number): number {
   return actual / denom;
 }
 
+/** A display score for a verdict reached qualitatively (no numeric target to measure against). */
+const VERDICT_SCORE: Record<Verdict, number> = {
+  validated: 90,
+  promising: 70,
+  inconclusive: 45,
+  invalidated: 15,
+};
+
+export function verdictToScore(verdict: Verdict): number {
+  return VERDICT_SCORE[verdict];
+}
+
+/**
+ * Compute a score + verdict for a recorded result.
+ *
+ * - Quantitative (count/percent/ratio/binary): score = actual vs. target; verdict from the bars.
+ * - Qualitative (no numeric actual): the verdict is the user's judgement of observed themes;
+ *   the score is derived from that verdict purely for the gauge.
+ * - Hybrid: numeric score as above, but a supplied `verdictOverride` (the user's qualitative read)
+ *   wins over the computed verdict.
+ */
 export function computeScore(
   signal: Signal,
-  actual: number
+  actual: number | null | undefined,
+  verdictOverride?: Verdict
 ): { score: number; verdict: Verdict } {
+  // Qualitative / no measured number → verdict is judged, score follows the verdict.
+  if (signal.metricType === 'qualitative' || actual == null) {
+    const verdict = verdictOverride ?? 'inconclusive';
+    return { score: verdictToScore(verdict), verdict };
+  }
+
+  const target = signal.target ?? 0;
   const ratio = achievementRatio(signal, actual);
   const score = clamp(Math.round(ratio * 100), 0, 100);
 
   let verdict: Verdict;
-  if (actual >= signal.target) {
+  if (target > 0 && actual >= target) {
     verdict = 'validated';
   } else if (signal.killThreshold != null && actual <= signal.killThreshold) {
     verdict = 'invalidated';
@@ -37,6 +66,9 @@ export function computeScore(
   } else {
     verdict = 'inconclusive';
   }
+
+  // Hybrid: a recorded qualitative read can override the numeric verdict.
+  if (verdictOverride) verdict = verdictOverride;
 
   return { score, verdict };
 }

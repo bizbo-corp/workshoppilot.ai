@@ -8,6 +8,7 @@ import {
   updateValidateArtifact,
   getValidateArtifact,
 } from '@/lib/validation/save-validation';
+import { syncValidationPlanDeliverable } from '@/lib/validation/sync-build-pack';
 import { computeScore } from '@/lib/validation/score';
 import {
   outputTypeClassificationSchema,
@@ -15,6 +16,8 @@ import {
   type OutputTypeClassification,
   type ValidationPlan,
   type ValidateArtifact,
+  type Verdict,
+  type QualitativeResult,
 } from '@/lib/schemas';
 
 type ActionResult<T = undefined> =
@@ -144,18 +147,32 @@ export async function upsertValidationPlan(
 /**
  * Record a real-world result for a plan and compute the score/verdict server-side
  * (authoritative). Requires the plan to already have a committed signal.
+ *
+ * Supports three shapes:
+ *  - quantitative: `actual` is a number → score/verdict computed from the signal's bars.
+ *  - qualitative:  no `actual`; the caller supplies `verdict` (and usually `qualitative`).
+ *  - hybrid:       `actual` plus an optional `verdict` override and `qualitative` observations.
  */
 export async function recordValidationResult(
   workshopId: string,
   planId: string,
-  actual: number,
-  notes?: string
+  input: {
+    actual?: number | null;
+    notes?: string;
+    verdict?: Verdict;
+    qualitative?: QualitativeResult;
+  }
 ): Promise<ActionResult<{ plan: ValidationPlan }>> {
   if (!(await resolveValidateAccess(workshopId))) {
     return { success: false, error: 'Access denied' };
   }
-  if (!Number.isFinite(actual)) {
+  const { actual, notes, verdict: verdictOverride, qualitative } = input;
+  const hasActual = actual != null;
+  if (hasActual && !Number.isFinite(actual)) {
     return { success: false, error: 'Actual value must be a number' };
+  }
+  if (!hasActual && !verdictOverride) {
+    return { success: false, error: 'A verdict is required for a qualitative result' };
   }
   try {
     let savedPlan: ValidationPlan | null = null;
@@ -166,13 +183,18 @@ export async function recordValidationResult(
       const plan = plans[idx];
       if (!plan.signal) throw new Error('Plan has no committed signal');
 
-      const { score, verdict } = computeScore(plan.signal, actual);
+      const { score, verdict } = computeScore(
+        plan.signal,
+        hasActual ? actual : null,
+        verdictOverride
+      );
       const updatedPlan: ValidationPlan = {
         ...plan,
         result: {
-          actual,
+          ...(hasActual ? { actual: actual as number } : {}),
           score,
           verdict,
+          ...(qualitative ? { qualitative } : {}),
           recordedAt: new Date().toISOString(),
           ...(notes ? { notes } : {}),
         },
@@ -185,6 +207,14 @@ export async function recordValidationResult(
         validationPlans: plans.map((p, i) => (i === idx ? updatedPlan : p)),
       };
     });
+
+    // Keep the Build Pack's Validation Plan deliverable in sync with the recorded result so the
+    // exported markdown reflects the latest outcome (best-effort — never block the save).
+    try {
+      await syncValidationPlanDeliverable(workshopId);
+    } catch (syncErr) {
+      console.error('[recordValidationResult] deliverable sync failed:', syncErr);
+    }
 
     revalidatePath(`/workshop/[sessionId]/step/[stepId]`, 'page');
     if (!savedPlan) return { success: false, error: 'Plan not found' };

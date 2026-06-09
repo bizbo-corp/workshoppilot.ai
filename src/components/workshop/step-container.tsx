@@ -981,9 +981,10 @@ export function StepContainer({
     null,
   );
   const [step10MessageCount, setStep10MessageCount] = React.useState(0);
-  // Validation flow (UI-driven Step 10): plan count gates workshop completion. The build/run
-  // tools (Journey Map → V0, fake-door) live behind the per-artifact CTA inside ValidatePanel.
-  const [validatePlanCount, setValidatePlanCount] = React.useState(0);
+  // Validation flow (UI-driven Step 10): the build/run tools (Journey Map → V0, fake-door) live
+  // behind the per-artifact CTA inside ValidatePanel. Workshop completion is driven by the
+  // panel's primary "Wrap up validation plan" CTA (onWrapUp → handleCompleteWorkshop), so there
+  // is no separate footer "Complete Workshop" button on the validate step.
 
   // V0 prototype creation status (polling from journey map)
   const searchParams = useSearchParams();
@@ -1228,7 +1229,6 @@ export function StepContainer({
       // Clear Step 10 extraction + validation-flow state
       setStep10Artifact(null);
       hasAutoExtracted.current = false;
-      setValidatePlanCount(0);
       // Clear ALL canvas/whiteboard state SYNCHRONOUSLY, before the ChatPanel
       // re-mounts via resetKey. This was previously deferred in a
       // requestAnimationFrame AFTER resetKey, which left a window where the canvas
@@ -1292,7 +1292,9 @@ export function StepContainer({
           workshopId={workshopId}
           sessionId={sessionId}
           journeyMapApproved={journeyMapApproved}
-          onPlanCountChange={setValidatePlanCount}
+          onWrapUp={handleCompleteWorkshop}
+          isWrappingUp={isCompletingWorkshop}
+          workshopCompleted={workshopCompleted}
         />
 
         <PrdViewerDialog
@@ -1488,7 +1490,7 @@ export function StepContainer({
             }
             isCompletingWorkshop={isCompletingWorkshop}
             workshopCompleted={workshopCompleted}
-            canCompleteWorkshop={step?.id === 'validate' && (validatePlanCount > 0 || !!step10Artifact)}
+            canCompleteWorkshop={false}
             onFlushCanvas={flushCanvasToDb}
             nextDisabledReason={nextDisabledReason}
             nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Next: Invite team' : undefined}
@@ -1798,7 +1800,7 @@ export function StepContainer({
             }
             isCompletingWorkshop={isCompletingWorkshop}
             workshopCompleted={workshopCompleted}
-            canCompleteWorkshop={step?.id === 'validate' && (validatePlanCount > 0 || !!step10Artifact)}
+            canCompleteWorkshop={false}
             onFlushCanvas={flushCanvasToDb}
             nextDisabledReason={nextDisabledReason}
             nextLabelOverride={isTeamModeStepOne && !challengePublished ? 'Next: Invite team' : undefined}

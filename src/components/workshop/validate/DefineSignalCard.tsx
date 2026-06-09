@@ -42,6 +42,13 @@ const HEALTH_BG: Record<HealthLevel, string> = {
 };
 const HEALTH_DOTS: Record<HealthLevel, number> = { weak: 1, okay: 2, strong: 3 };
 
+type MetricMode = 'quantitative' | 'qualitative' | 'both';
+const METRIC_MODES: { key: MetricMode; label: string; hint: string }[] = [
+  { key: 'quantitative', label: 'Quantitative', hint: 'A number (how many / what %)' },
+  { key: 'qualitative', label: 'Qualitative', hint: 'Themes you judge — no number' },
+  { key: 'both', label: 'Both', hint: 'A number plus what people said' },
+];
+
 function toNum(s: string): number | null {
   if (s.trim() === '') return null;
   const n = Number(s);
@@ -97,6 +104,14 @@ export function DefineSignalCard({
   onEdit: () => void;
 }) {
   const [metric, setMetric] = React.useState(initial?.metric ?? defaultMetric ?? '');
+  // Quantitative (a number) / Qualitative (themes + judged verdict) / Both (a number + observations).
+  const [mode, setMode] = React.useState<MetricMode>(() =>
+    initial?.metricType === 'qualitative'
+      ? 'qualitative'
+      : initial?.allowQualitative
+        ? 'both'
+        : 'quantitative'
+  );
   // Default to percentage for new signals; respect a saved signal's mode.
   const [percent, setPercent] = React.useState(initial ? initial.metricType === 'percent' : true);
   const [target, setTarget] = React.useState(initial?.target?.toString() ?? '');
@@ -142,15 +157,21 @@ export function DefineSignalCard({
     }
   }, [percent, target, sampleSize, killThreshold, metric]);
 
-  const valid = metric.trim() !== '' && targetNum != null && sampleNum != null && sampleNum >= 1;
+  const isQualitative = mode === 'qualitative';
+  const valid = isQualitative
+    ? metric.trim() !== '' && sampleNum != null && sampleNum >= 1
+    : metric.trim() !== '' && targetNum != null && sampleNum != null && sampleNum >= 1;
 
-  const health = assessTestHealth({
-    metricType: percent ? 'percent' : 'count',
-    sampleSize: sampleNum,
-    target: targetNum,
-    killThreshold: toNum(killThreshold),
-    proxyStrength: chosenStrength,
-  });
+  // Test health is a numeric-bar assessment — only meaningful when there IS a numeric bar.
+  const health = isQualitative
+    ? null
+    : assessTestHealth({
+        metricType: percent ? 'percent' : 'count',
+        sampleSize: sampleNum,
+        target: targetNum,
+        killThreshold: toNum(killThreshold),
+        proxyStrength: chosenStrength,
+      });
 
   const setMetricText = (text: string) => {
     setMetric(text);
@@ -181,7 +202,7 @@ export function DefineSignalCard({
     setMetric(s.metric);
     setChosenStrength(c.proxyStrength);
     setPercent(s.metricType === 'percent');
-    setTarget(s.target.toString());
+    setTarget(s.target != null ? s.target.toString() : '');
     setSampleSize(s.sampleSize.toString());
     if (s.killThreshold != null) {
       killDirty.current = true;
@@ -214,7 +235,19 @@ export function DefineSignalCard({
   };
 
   const submit = () => {
-    if (!valid || targetNum == null || sampleNum == null) return;
+    if (!valid || sampleNum == null) return;
+    if (isQualitative) {
+      onContinue({
+        metric: metric.trim(),
+        metricType: 'qualitative',
+        sampleSize: Math.round(sampleNum),
+        killThreshold: null,
+        ...(successText.trim() ? { successCriteriaText: successText.trim() } : {}),
+        ...(failText.trim() ? { failCriteriaText: failText.trim() } : {}),
+      });
+      return;
+    }
+    if (targetNum == null) return;
     onContinue({
       metric: metric.trim(),
       metricType: percent ? 'percent' : 'count',
@@ -223,6 +256,8 @@ export function DefineSignalCard({
       killThreshold: toNum(killThreshold),
       ...(successText.trim() ? { successCriteriaText: successText.trim() } : {}),
       ...(failText.trim() ? { failCriteriaText: failText.trim() } : {}),
+      // "Both" = numeric bar that also invites qualitative observations at record time.
+      ...(mode === 'both' ? { allowQualitative: true } : {}),
     });
   };
 
@@ -252,14 +287,22 @@ export function DefineSignalCard({
   };
 
   const summary = initial ? (
-    <span>
-      {initial.metric}: success at{' '}
-      <span className="font-medium text-foreground">
-        {initial.target}
-        {initial.metricType === 'percent' ? '%' : ` of ${initial.sampleSize}`}
+    initial.metricType === 'qualitative' ? (
+      <span>
+        {initial.metric}: <span className="font-medium text-foreground">judged qualitatively</span>
+        {initial.sampleSize ? ` with ${initial.sampleSize} people` : ''}
       </span>
-      {initial.killThreshold != null ? `, pivot at ≤${initial.killThreshold}` : ''}
-    </span>
+    ) : (
+      <span>
+        {initial.metric}: success at{' '}
+        <span className="font-medium text-foreground">
+          {initial.target}
+          {initial.metricType === 'percent' ? '%' : ` of ${initial.sampleSize}`}
+        </span>
+        {initial.killThreshold != null ? `, pivot at ≤${initial.killThreshold}` : ''}
+        {initial.allowQualitative ? ' · + observations' : ''}
+      </span>
+    )
   ) : null;
 
   return (
@@ -271,21 +314,50 @@ export function DefineSignalCard({
       summary={summary}
     >
       <div className="space-y-6">
+        {/* Metric mode — a number, judged themes, or both. */}
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium">How will you judge the result?</span>
+          <div className="grid grid-cols-3 gap-1.5">
+            {METRIC_MODES.map((m) => {
+              const active = mode === m.key;
+              return (
+                <button
+                  key={m.key}
+                  type="button"
+                  onClick={() => setMode(m.key)}
+                  className={cn(
+                    'rounded-lg border px-2.5 py-2 text-left transition-colors',
+                    active ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'
+                  )}
+                >
+                  <span className={cn('block text-sm font-semibold', active && 'text-primary')}>
+                    {m.label}
+                  </span>
+                  <span className="block text-[12px] text-foreground/70">{m.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="flex items-start justify-between gap-3">
           <p className="text-base text-foreground/70">
-            Set your bar <em>before</em> you test — that&apos;s what lets us score the result
-            honestly afterwards.
+            {isQualitative
+              ? 'Decide up front what a good vs. a poor result looks like — that keeps your read honest after you observe.'
+              : 'Set your bar before you test — that’s what lets us score the result honestly afterwards.'}
           </p>
-          <Button
-            variant="outline"
-            size="xs"
-            className="shrink-0 gap-1.5"
-            onClick={suggest}
-            disabled={isSuggesting}
-          >
-            {isSuggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-            Suggest measures
-          </Button>
+          {!isQualitative && (
+            <Button
+              variant="outline"
+              size="xs"
+              className="shrink-0 gap-1.5"
+              onClick={suggest}
+              disabled={isSuggesting}
+            >
+              {isSuggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              Suggest measures
+            </Button>
+          )}
         </div>
 
         {suggestContext.assumption && (
@@ -304,7 +376,7 @@ export function DefineSignalCard({
         <section className="space-y-3">
           <GroupHeading marker="A" title="What are you measuring?" />
 
-          {candidates && candidates.length > 0 && (
+          {!isQualitative && candidates && candidates.length > 0 && (
             <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
               <p className="text-sm font-medium">Pick a way to measure it:</p>
               {candidates.map((c, i) => (
@@ -330,32 +402,58 @@ export function DefineSignalCard({
             </div>
           )}
 
-          {behaviourOptions.length > 0 && (
+          {!isQualitative && behaviourOptions.length > 0 && (
             <MetricChipRow title="What they do" options={behaviourOptions} selected={metric} onPick={applyMetricPick} />
           )}
-          {attitudeOptions.length > 0 && (
+          {!isQualitative && attitudeOptions.length > 0 && (
             <MetricChipRow title="What they say" options={attitudeOptions} selected={metric} onPick={applyMetricPick} />
           )}
 
           {/* Traffic-light legend — the dots rate the measure you choose above */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-foreground/70">
-            <span>The dot shows how strongly each measure proves your assumption:</span>
-            <Legend strength="strong" />
-            <Legend strength="medium" />
-            <Legend strength="weak" />
-          </div>
+          {!isQualitative && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-foreground/70">
+              <span>The dot shows how strongly each measure proves your assumption:</span>
+              <Legend strength="strong" />
+              <Legend strength="medium" />
+              <Legend strength="weak" />
+            </div>
+          )}
 
           <Input
             value={metric}
             onChange={(e) => setMetricText(e.target.value)}
-            placeholder={defaultMetric || "e.g. stakeholders who'd adopt it as-is"}
+            placeholder={
+              isQualitative
+                ? 'e.g. how the message lands with the audience'
+                : defaultMetric || "e.g. stakeholders who'd adopt it as-is"
+            }
           />
         </section>
 
-        {/* ── B. Set your bar ── */}
+        {/* ── B. Set your bar (numeric) — or just who you'll observe (qualitative) ── */}
         <section className="space-y-3">
-          <GroupHeading marker="B" title="Set your bar" />
+          <GroupHeading marker="B" title={isQualitative ? 'Who will you observe?' : 'Set your bar'} />
 
+          {isQualitative ? (
+            <div className="space-y-2.5 rounded-lg border border-border bg-muted/30 p-4 text-base">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span>We&apos;ll observe / talk to</span>
+                <Input
+                  type="number"
+                  value={sampleSize}
+                  onChange={(e) => setSampleSize(e.target.value)}
+                  className="h-7 w-16 text-center"
+                  placeholder="6"
+                />
+                <span>people.</span>
+              </div>
+              <p className="pt-1 text-sm text-foreground/70">
+                No numeric bar — you&apos;ll judge the result from what you observe and pick the
+                verdict yourself when you record it.
+              </p>
+            </div>
+          ) : (
+          <>
           <div className="space-y-2.5 rounded-lg border border-border bg-muted/30 p-4 text-base">
             <div className="-mt-1 mb-1 flex items-center justify-end gap-2 text-sm">
               <span className={cn(!percent ? 'font-medium text-foreground' : 'text-foreground/70')}>
@@ -404,12 +502,18 @@ export function DefineSignalCard({
           </div>
 
           {/* Test health */}
-          <TestHealthMeter health={health} />
+          {health && <TestHealthMeter health={health} />}
+          </>
+          )}
         </section>
 
         {/* ── C. Spell it out ── */}
         <section className="space-y-3">
-          <GroupHeading marker="C" title="Spell it out" subtitle="Auto-written from your bar — edit anytime" />
+          <GroupHeading
+            marker="C"
+            title="Spell it out"
+            subtitle={isQualitative ? 'What a good vs. poor result looks like' : 'Auto-written from your bar — edit anytime'}
+          />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">What would prove you right?</label>
@@ -438,8 +542,9 @@ export function DefineSignalCard({
 
         {!valid && (
           <p className="text-sm text-foreground/70">
-            Add what you&apos;re measuring, how many people, and the &quot;I&apos;m right
-            if&quot; number.
+            {isQualitative
+              ? 'Add what you’re measuring and how many people you’ll observe.'
+              : 'Add what you’re measuring, how many people, and the “I’m right if” number.'}
           </p>
         )}
 

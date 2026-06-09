@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, Plus, FileDown, Rocket, ArrowRight } from 'lucide-react';
+import { Loader2, Plus, Rocket, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { createPrefixedId } from '@/lib/ids';
@@ -27,9 +27,10 @@ import { ProposeAssumptionCard } from './ProposeAssumptionCard';
 import { PickLensCard } from './PickLensCard';
 import { RecommendArtifactCard } from './RecommendArtifactCard';
 import { DefineSignalCard } from './DefineSignalCard';
-import { RecordResultsCard } from './RecordResultsCard';
+import { RecordResultsCard, type RecordResultInput } from './RecordResultsCard';
 import { ConceptCardArtifact } from './ConceptCardArtifact';
 import { ArtifactChecklist } from './ArtifactChecklist';
+import { ValidationGuidanceCard } from './ValidationGuidanceCard';
 import { ValidationPlanSummary } from './ValidationPlanSummary';
 import { SECTION_ORDER, sectionStatus, type SectionStatus } from './sections';
 
@@ -71,6 +72,12 @@ export interface ValidatePanelProps {
   onOutputTypesChange?: (types: OutputType[]) => void;
   /** Reports the number of completed plans (drives workshop-completion gating). */
   onPlanCountChange?: (count: number) => void;
+  /** Wraps up the plan: completes the workshop and opens the Build Pack. */
+  onWrapUp?: () => void;
+  /** True while the wrap-up / completion is in flight. */
+  isWrappingUp?: boolean;
+  /** Already completed — the CTA becomes "View Build Pack" instead of re-completing. */
+  workshopCompleted?: boolean;
 }
 
 export function ValidatePanel({
@@ -78,6 +85,9 @@ export function ValidatePanel({
   sessionId,
   onOutputTypesChange,
   onPlanCountChange,
+  onWrapUp,
+  isWrappingUp = false,
+  workshopCompleted = false,
 }: ValidatePanelProps) {
   const [loading, setLoading] = React.useState(true);
   const [classification, setClassification] =
@@ -102,10 +112,11 @@ export function ValidatePanel({
   const [assumptionScope, setAssumptionScope] = React.useState<'broad' | 'specific'>('broad');
   const [recordError, setRecordError] = React.useState<string | null>(null);
   const [recordingId, setRecordingId] = React.useState<string | null>(null);
-  const [addingToBuildPack, setAddingToBuildPack] = React.useState(false);
+  const [tailoring, setTailoring] = React.useState(false);
 
   const classifyTriggered = React.useRef(false);
   const proposeTriggered = React.useRef(false);
+  const tailorTriggered = React.useRef<string | null>(null);
 
   const activePlan = plans.find((p) => p.id === activeId) ?? null;
   const completedPlans = plans.filter(
@@ -314,6 +325,45 @@ export function ValidatePanel({
     }
   }, [activePlan?.progressStep, activePlan?.assumption, isProposing, runPropose]);
 
+  // When a plan is fully assembled, generate the one-line "for your solution" tailored example
+  // (hybrid guidance) once, then persist it on the plan so it's stable across renders.
+  React.useEffect(() => {
+    const plan = plans.find((p) => p.id === activeId) ?? null;
+    const isAssembled = !!plan && plan.progressStep === 'complete' && !editingSection;
+    if (!plan || !isAssembled || plan.tailoredExample || tailorTriggered.current === plan.id) {
+      return;
+    }
+    tailorTriggered.current = plan.id;
+    let cancelled = false;
+    (async () => {
+      setTailoring(true);
+      try {
+        const r = await fetch('/api/validation/tailor-example', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workshopId, plan }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!cancelled && r.ok && typeof data.example === 'string' && data.example.trim()) {
+          const updated: ValidationPlan = {
+            ...plan,
+            tailoredExample: data.example.trim(),
+            updatedAt: now(),
+          };
+          setPlans((prev) => prev.map((p) => (p.id === plan.id ? updated : p)));
+          void persist(updated);
+        }
+      } catch {
+        // Best-effort: the static guidance stands on its own without the tailored line.
+      } finally {
+        if (!cancelled) setTailoring(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [plans, activeId, editingSection, workshopId, persist]);
+
   // ---- Section commit (advance OR save-in-place when editing) ----
   const commitSection = React.useCallback(
     (section: ProgressStep, patch: Partial<ValidationPlan>) => {
@@ -367,36 +417,16 @@ export function ValidatePanel({
     void persist(draft);
   };
 
-  const record = async (planId: string, actual: number, notes?: string) => {
+  const record = async (planId: string, input: RecordResultInput) => {
     setRecordingId(planId);
     setRecordError(null);
-    const res = await recordValidationResult(workshopId, planId, actual, notes);
+    const res = await recordValidationResult(workshopId, planId, input);
     setRecordingId(null);
     if (!res.success) {
       setRecordError(res.error || 'Failed to record result');
       return;
     }
     setPlans((prev) => prev.map((p) => (p.id === planId ? res.data!.plan : p)));
-  };
-
-  const addToBuildPack = async () => {
-    setAddingToBuildPack(true);
-    try {
-      const r = await fetch('/api/build-pack/generate-validation-plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workshopId }),
-      });
-      if (!r.ok) {
-        const data = await r.json().catch(() => ({}));
-        throw new Error(data?.error || 'Failed to add to Build Pack');
-      }
-      toast.success('Validation plan added to your Build Pack');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to add to Build Pack');
-    } finally {
-      setAddingToBuildPack(false);
-    }
   };
 
   if (loading) {
@@ -520,6 +550,14 @@ export function ValidatePanel({
             </div>
             <ValidationPlanSummary plan={activePlan} />
 
+            {/* Output-type-tailored approach: in-workshop vs post-workshop. Renders only for
+                output types with tailored guidance; generic types fall through to the checklist. */}
+            <ValidationGuidanceCard
+              outputType={activePlan.outputType}
+              tailoredExample={activePlan.tailoredExample}
+              tailoring={tailoring}
+            />
+
             {/* ① Build & run the test — the primary next action, artifact-specific. */}
             {builderCta && (
               <a
@@ -563,29 +601,50 @@ export function ValidatePanel({
               plan={activePlan}
               isSaving={recordingId === activePlan.id}
               error={recordError}
-              onRecord={(actual, notes) => record(activePlan.id, actual, notes)}
+              onRecord={(input) => record(activePlan.id, input)}
             />
 
-            <div className="flex flex-wrap items-center gap-3 pt-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={addToBuildPack}
-                disabled={addingToBuildPack}
-              >
-                {addingToBuildPack ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <FileDown className="h-3.5 w-3.5" />
-                )}
-                Add to Build Pack
-              </Button>
+            {/* Primary: wrap up the plan → completes the workshop and opens the Build Pack.
+                Recording the result is optional and can be done later in the Build Pack. */}
+            <div className="space-y-2 pt-1">
+              {workshopCompleted ? (
+                <a
+                  href={`/workshop/${sessionId}/outputs`}
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-base font-medium text-primary-foreground btn-shimmer"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  View Build Pack
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+              ) : onWrapUp ? (
+                <>
+                  <Button
+                    size="lg"
+                    className="w-full gap-2 btn-shimmer"
+                    onClick={onWrapUp}
+                    disabled={isWrappingUp}
+                  >
+                    {isWrappingUp ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    Wrap up validation plan
+                    {!isWrappingUp && <ArrowRight className="h-4 w-4" />}
+                  </Button>
+                  <p className="text-center text-sm text-foreground/70">
+                    Saves your plan to the Build Pack and finishes the workshop. You can record the
+                    result later in the Build Pack — it&apos;s not required.
+                  </p>
+                </>
+              ) : null}
               {plans.length < 3 && (
-                <Button variant="ghost" size="sm" className="gap-1.5" onClick={addAnotherTest}>
-                  <Plus className="h-3.5 w-3.5" />
-                  Test another assumption
-                </Button>
+                <div className="flex justify-center">
+                  <Button variant="ghost" size="sm" className="gap-1.5" onClick={addAnotherTest}>
+                    <Plus className="h-3.5 w-3.5" />
+                    Test another assumption
+                  </Button>
+                </div>
               )}
             </div>
           </div>

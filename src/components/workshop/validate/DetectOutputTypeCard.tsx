@@ -1,6 +1,18 @@
 'use client';
 
-import { Loader2, RefreshCw } from 'lucide-react';
+import {
+  ConciergeBell,
+  Handshake,
+  Loader2,
+  Megaphone,
+  Package,
+  RefreshCw,
+  Shuffle,
+  Smartphone,
+  Star,
+  Workflow,
+  type LucideIcon,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { OutputType, OutputTypeClassification } from '@/lib/schemas';
@@ -13,6 +25,17 @@ import type { SectionStatus } from './sections';
 
 const TYPES = Object.keys(OUTPUT_TYPE_LABELS) as OutputType[];
 const MAX = 2;
+
+const OUTPUT_TYPE_ICONS: Record<OutputType, LucideIcon> = {
+  app_digital: Smartphone,
+  service: ConciergeBell,
+  process_change: Shuffle,
+  experience_design: Workflow,
+  offering: Handshake,
+  brand_comms: Star,
+  campaign: Megaphone,
+  physical_product: Package, // not specified — sensible default
+};
 
 export function DetectOutputTypeCard({
   status,
@@ -76,6 +99,7 @@ export function DetectOutputTypeCard({
               const selected = idx >= 0;
               const isPrimary = idx === 0;
               const disabled = !selected && atMax;
+              const Icon = OUTPUT_TYPE_ICONS[type];
               return (
                 <button
                   key={type}
@@ -92,16 +116,27 @@ export function DetectOutputTypeCard({
                   )}
                   aria-pressed={selected}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-base font-medium">{OUTPUT_TYPE_LABELS[type]}</span>
-                    {selected && (
-                      <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[12px] font-semibold text-primary">
-                        {isPrimary ? 'primary' : '2nd'}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-0.5 text-sm text-foreground/70">
-                    {OUTPUT_TYPE_DESCRIPTIONS[type]}
+                  <div className="flex items-center gap-3">
+                    <Icon
+                      strokeWidth={1.5}
+                      className={cn(
+                        'h-7 w-7 shrink-0',
+                        selected ? 'text-primary' : 'text-foreground/70'
+                      )}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-base font-medium">{OUTPUT_TYPE_LABELS[type]}</span>
+                        {selected && (
+                          <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[12px] font-semibold text-primary">
+                            {isPrimary ? 'primary' : '2nd'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-0.5 text-sm text-foreground/70">
+                        {OUTPUT_TYPE_DESCRIPTIONS[type]}
+                      </div>
+                    </div>
                   </div>
                 </button>
               );
