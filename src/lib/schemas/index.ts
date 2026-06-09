@@ -29,6 +29,7 @@ export {
   progressStepSchema,
   outputTypeClassificationSchema,
   signalSchema,
+  qualitativeResultSchema,
   validationResultSchema,
   validationPlanSchema,
 } from './validation-schemas';
@@ -54,6 +55,7 @@ export type {
   ProgressStep,
   OutputTypeClassification,
   Signal,
+  QualitativeResult,
   ValidationResult,
   ValidationPlan,
 } from './validation-schemas';

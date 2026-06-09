@@ -6,6 +6,7 @@ import { sessions, buildPacks, stepArtifacts, workshopSteps } from '@/db/schema'
 import { resolveClerkParticipant } from '@/lib/auth/resolve-participant';
 import { generateValidateSynthesis } from '@/lib/validation/generate-synthesis';
 import { updateValidateArtifact } from '@/lib/validation/save-validation';
+import { syncValidationPlanDeliverable } from '@/lib/validation/sync-build-pack';
 import { OutputsContent } from './outputs-content';
 
 interface OutputsPageProps {
@@ -76,6 +77,16 @@ export default async function OutputsPage({ params }: OutputsPageProps) {
     const user = await currentUser();
     const userEmail = user?.emailAddresses?.[0]?.emailAddress;
     isAdmin = !!userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase();
+  }
+
+  // Auto-publish the Validation Plan deliverable from the current plans (owner only), so the
+  // Build Pack always has an up-to-date copy without a manual "Add to Build Pack" step.
+  if (!isReadOnly) {
+    try {
+      await syncValidationPlanDeliverable(workshop.id);
+    } catch (err) {
+      console.error('[outputs] validation-plan sync failed:', err);
+    }
   }
 
   // Load build_packs for this workshop

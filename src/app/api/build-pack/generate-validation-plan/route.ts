@@ -5,14 +5,9 @@
  * Body: { workshopId: string }
  */
 
-import { db } from '@/db/client';
-import { buildPacks } from '@/db/schema';
-import { eq, and, like } from 'drizzle-orm';
 import { resolveValidateAccess } from '@/lib/validation/access';
 import { getValidateArtifact } from '@/lib/validation/save-validation';
-import { renderValidationPlanMarkdown } from '@/lib/validation/plan-markdown';
-
-const TITLE = 'Validation Plan';
+import { syncValidationPlanDeliverable } from '@/lib/validation/sync-build-pack';
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -28,33 +23,12 @@ export async function POST(req: Request) {
     if (!(await resolveValidateAccess(workshopId))) return json({ error: 'Access denied' }, 403);
 
     const artifact = await getValidateArtifact(workshopId);
-    const plans = artifact?.validationPlans ?? [];
-    if (plans.length === 0) {
+    if ((artifact?.validationPlans ?? []).length === 0) {
       return json({ error: 'No validation plans to export yet' }, 400);
     }
 
-    const content = renderValidationPlanMarkdown(plans);
-
-    const existing = (
-      await db
-        .select()
-        .from(buildPacks)
-        .where(and(eq(buildPacks.workshopId, workshopId), like(buildPacks.title, `${TITLE}%`)))
-    ).find((r) => r.formatType === 'markdown');
-
-    let buildPackId: string;
-    if (existing) {
-      await db.update(buildPacks).set({ content }).where(eq(buildPacks.id, existing.id));
-      buildPackId = existing.id;
-    } else {
-      const [inserted] = await db
-        .insert(buildPacks)
-        .values({ workshopId, title: TITLE, formatType: 'markdown', content })
-        .returning({ id: buildPacks.id });
-      buildPackId = inserted.id;
-    }
-
-    return json({ saved: true, buildPackId });
+    await syncValidationPlanDeliverable(workshopId);
+    return json({ saved: true });
   } catch (error) {
     console.error(
       '[build-pack/generate-validation-plan] error:',

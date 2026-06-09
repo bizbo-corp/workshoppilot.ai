@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DeliverableDetailView } from '@/components/workshop/deliverable-detail-view';
+import { ValidationPlanDeliverable } from '@/components/workshop/validate/ValidationPlanDeliverable';
 import { WorkshopHeader } from '@/components/layout/workshop-header';
 import { WorkshopSummaryTile, type WorkshopSynthesis } from '@/components/workshop/workshop-summary-tile';
 import { toast } from 'sonner';
@@ -383,12 +384,21 @@ export function OutputsContent({
 
         {/* Detail view or card grid */}
         {selectedDeliverable ? (
-          <DeliverableDetailView
-            title={selectedDeliverable.type === 'prd' ? 'Product Requirements Document' : selectedDeliverable.type === 'tech-specs' ? 'Technical Specifications' : selectedDeliverable.title}
-            type={selectedDeliverable.type}
-            formats={selectedDeliverable.formats}
-            onBack={() => setSelectedType(null)}
-          />
+          selectedDeliverable.type === 'validation-plan' ? (
+            <ValidationPlanDeliverable
+              workshopId={workshopId}
+              sessionId={sessionId}
+              isReadOnly={isReadOnly}
+              onBack={() => setSelectedType(null)}
+            />
+          ) : (
+            <DeliverableDetailView
+              title={selectedDeliverable.type === 'prd' ? 'Product Requirements Document' : selectedDeliverable.type === 'tech-specs' ? 'Technical Specifications' : selectedDeliverable.title}
+              type={selectedDeliverable.type}
+              formats={selectedDeliverable.formats}
+              onBack={() => setSelectedType(null)}
+            />
+          )
         ) : (
           <div className="space-y-10">
             {/* Workshop summary tile — score + a few lines, expandable to the full synthesis. */}

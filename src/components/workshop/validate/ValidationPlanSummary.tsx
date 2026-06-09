@@ -27,8 +27,10 @@ export function ValidationPlanSummary({ plan }: { plan: ValidationPlan }) {
       <Row label="Test">{plan.artifactLabel}</Row>
       {plan.signal && (
         <Row label="Signal">
-          {plan.signal.metric} — target {plan.signal.target} of {plan.signal.sampleSize}
-          {plan.signal.killThreshold != null ? `, pivot at ≤${plan.signal.killThreshold}` : ''}
+          {plan.signal.metricType === 'qualitative'
+            ? `${plan.signal.metric} — judged qualitatively`
+            : `${plan.signal.metric} — target ${plan.signal.target} of ${plan.signal.sampleSize}` +
+              (plan.signal.killThreshold != null ? `, pivot at ≤${plan.signal.killThreshold}` : '')}
         </Row>
       )}
     </dl>

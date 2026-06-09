@@ -80,11 +80,16 @@ export type OutputTypeClassification = z.infer<typeof outputTypeClassificationSc
 
 /** Pre-committed, measurable pass/fail target — defined BEFORE the test is run. */
 export const signalSchema = z.object({
-  metric: z.string().describe('What is measured, e.g. "Stakeholders who would adopt as-is"'),
+  metric: z.string().describe('What is measured, e.g. "Stakeholders would adopt as-is"'),
   metricType: z
-    .enum(['count', 'percent', 'ratio', 'binary'])
-    .describe('Shape of the metric, used for scoring normalization'),
-  target: z.number().describe('Pass threshold (e.g. 5 of 8, or 60 for 60%)'),
+    .enum(['count', 'percent', 'ratio', 'binary', 'qualitative'])
+    .describe(
+      'Shape of the metric. count/percent/ratio/binary are scored numerically; "qualitative" has no numeric target — the verdict is judged from observed themes/notes.'
+    ),
+  target: z
+    .number()
+    .optional()
+    .describe('Numeric pass threshold (e.g. 5 of 8, or 60 for 60%). Omitted for qualitative metrics.'),
   unit: z.string().optional().describe('Optional unit label for display'),
   sampleSize: z.number().int().min(1).describe('How many people/observations'),
   killThreshold: z
@@ -94,13 +99,36 @@ export const signalSchema = z.object({
   by: z.string().optional().describe('Optional deadline'),
   successCriteriaText: z.string().optional().describe('Plain-language "what would prove you right"'),
   failCriteriaText: z.string().optional().describe('Plain-language "what would tell you you are wrong"'),
+  allowQualitative: z
+    .boolean()
+    .optional()
+    .describe('Hybrid: a numeric signal that ALSO invites qualitative observations when recording.'),
 });
 export type Signal = z.infer<typeof signalSchema>;
 
+/** Qualitative observations recorded against a qualitative or hybrid signal. */
+export const qualitativeResultSchema = z.object({
+  themes: z.array(z.string()).default([]).describe('Recurring themes / reactions observed'),
+  summary: z.string().optional().describe('Free-text synthesis of what was observed'),
+});
+export type QualitativeResult = z.infer<typeof qualitativeResultSchema>;
+
 /** Real-world outcome recorded after the test runs, with computed score + verdict. */
 export const validationResultSchema = z.object({
-  actual: z.number().describe('Actual measured value'),
-  score: z.number().int().min(0).max(100).describe('0–100 achievement vs. target'),
+  actual: z
+    .number()
+    .optional()
+    .describe('Actual measured value (quantitative/hybrid). Omitted for qualitative-only results.'),
+  score: z
+    .number()
+    .int()
+    .min(0)
+    .max(100)
+    .optional()
+    .describe('0–100 achievement. Numeric for quant/hybrid; verdict-derived for qualitative.'),
+  qualitative: qualitativeResultSchema
+    .optional()
+    .describe('Observed themes / synthesis (qualitative or hybrid results)'),
   verdict: verdictSchema,
   recordedAt: z.string().describe('ISO timestamp'),
   notes: z.string().optional(),
@@ -132,6 +160,10 @@ export const validationPlanSchema = z.object({
   artifactLabel: z.string().describe('Human label for the chosen artifact'),
   signal: signalSchema.nullable().describe('Pre-committed signal; null until defined'),
   result: validationResultSchema.nullable().describe('Filled later in RECORD_RESULTS'),
+  tailoredExample: z
+    .string()
+    .optional()
+    .describe('One-line LLM-tailored "for your solution, e.g. …" example, generated when the plan is assembled'),
   progressStep: progressStepSchema.describe('Furthest-completed section (resumability)'),
   createdAt: z.string().describe('ISO timestamp'),
   updatedAt: z.string().describe('ISO timestamp'),
