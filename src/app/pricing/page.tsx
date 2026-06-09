@@ -16,6 +16,7 @@ import {
 import { LandingHeader } from '@/components/layout/landing-header';
 import { Footer } from '@/components/landing/footer';
 import { NewWorkshopButton } from '@/components/dialogs/new-workshop-dialog';
+import { Heading, Text } from '@/components/ui/typography';
 
 /**
  * Pricing Page — three-tier conversion-optimized layout
@@ -158,14 +159,14 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
               <Clock className="h-4 w-4" />
               60 minutes to developer-ready
             </div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">
+            <Heading level={1} className="md:text-5xl mb-4">
               Weeks of Planning.{' '}
               <span className="text-olive-600 dark:text-olive-400">One Simple Price.</span>
-            </h1>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            </Heading>
+            <Text variant="muted" className="text-lg max-w-2xl mx-auto">
               The same deliverables a product consultant charges $3,000+ to produce.
               Start free, pay only when you&apos;re ready for the full Build Pack.
-            </p>
+            </Text>
           </div>
         </section>
 
@@ -212,8 +213,8 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
                   )}
 
                   {/* Tier header */}
-                  <h2 className="text-xl font-bold text-foreground mb-1">{tier.name}</h2>
-                  <p className="text-sm text-muted-foreground mb-5">{tier.description}</p>
+                  <Heading level={3} as="h2" className="text-xl font-bold mb-1">{tier.name}</Heading>
+                  <Text variant="muted" className="mb-5">{tier.description}</Text>
 
                   {/* Price */}
                   <div className="mb-2">
@@ -256,7 +257,7 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
                         type="submit"
                         className={`w-full rounded-xl py-3.5 px-4 font-semibold text-sm transition-colors cursor-pointer${
                           tier.highlighted
-                            ? ' bg-olive-800 text-white hover:bg-olive-900 dark:bg-olive-700 dark:hover:bg-olive-600 shadow-md shadow-olive-800/30'
+                            ? ' bg-primary-brand text-primary-brand-foreground hover:bg-primary-brand/90 shadow-md shadow-primary-brand/30'
                             : ' bg-card border border-border text-foreground hover:bg-accent'
                         }`}
                       >
@@ -268,7 +269,7 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
                       preselectTier={tier.preselectTier}
                       className={`w-full rounded-xl py-3.5 px-4 font-semibold text-sm transition-colors cursor-pointer${
                         tier.highlighted
-                          ? ' bg-olive-800 text-white hover:bg-olive-900 dark:bg-olive-700 dark:hover:bg-olive-600 shadow-md shadow-olive-800/30'
+                          ? ' bg-primary-brand text-primary-brand-foreground hover:bg-primary-brand/90 shadow-md shadow-primary-brand/30'
                           : ' bg-card border border-border text-foreground hover:bg-accent'
                       }`}
                     >
@@ -301,12 +302,12 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
         <section className="py-20 sm:py-24 bg-card">
           <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">
+              <Heading level={2} className="text-2xl sm:text-3xl font-bold mb-4">
                 What&apos;s in Your Build Pack?
-              </h2>
-              <p className="text-muted-foreground max-w-xl mx-auto">
+              </Heading>
+              <Text variant="muted" className="max-w-xl mx-auto">
                 Every workshop produces professional-grade deliverables designed for immediate use.
-              </p>
+              </Text>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -349,10 +350,10 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
                       <Icon className="h-5 w-5 text-olive-600 dark:text-olive-400" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-foreground mb-1">{item.title}</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
+                      <Heading level={4} as="h3" className="font-bold mb-1">{item.title}</Heading>
+                      <Text variant="muted" className="leading-relaxed">
                         {item.description}
-                      </p>
+                      </Text>
                     </div>
                   </div>
                 );
@@ -365,21 +366,21 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
         <section className="py-20 sm:py-24 bg-background">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">
+              <Heading level={2} className="text-2xl sm:text-3xl font-bold mb-4">
                 Frequently Asked Questions
-              </h2>
+              </Heading>
             </div>
 
             <div className="space-y-6">
               {FAQ_ITEMS.map((item) => (
                 <div key={item.question} className="border-b border-border pb-6 last:border-0">
-                  <h3 className="flex items-start gap-3 text-base font-semibold text-foreground mb-2">
+                  <Heading level={3} as="h3" className="flex items-start gap-3 text-base font-semibold mb-2">
                     <HelpCircle className="h-5 w-5 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
                     {item.question}
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed pl-8">
+                  </Heading>
+                  <Text variant="muted" className="leading-relaxed pl-8">
                     {item.answer}
-                  </p>
+                  </Text>
                 </div>
               ))}
             </div>
@@ -389,12 +390,12 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
         {/* ── Bottom CTA ─────────────────────────────────────── */}
         <section className="py-20 sm:py-24 bg-card">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">
+            <Heading level={2} className="text-2xl sm:text-3xl font-bold mb-4">
               Ready to Turn Your Idea Into a Blueprint?
-            </h2>
-            <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+            </Heading>
+            <Text variant="muted" className="mb-8 max-w-xl mx-auto">
               Start free. No credit card required. See real results before you pay.
-            </p>
+            </Text>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <NewWorkshopButton
                 size="lg"
@@ -413,9 +414,9 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
                   />
                 ))}
               </div>
-              <p className="text-sm text-muted-foreground">
+              <Text variant="muted">
                 Trusted by indie founders and product teams
-              </p>
+              </Text>
             </div>
           </div>
         </section>

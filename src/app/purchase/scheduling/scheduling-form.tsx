@@ -122,7 +122,7 @@ export function SchedulingForm({ workshopId, defaultName, defaultEmail }: Schedu
         />
       </div>
 
-      <Button type="submit" disabled={isPending} className="w-full" size="lg">
+      <Button type="submit" variant="primary" disabled={isPending} className="w-full" size="lg">
         {isPending ? 'Submitting…' : 'Send booking request'}
       </Button>
     </form>

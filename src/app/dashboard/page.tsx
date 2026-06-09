@@ -309,7 +309,7 @@ export default async function DashboardPage() {
                   </div>
                 )}
                 <div className="flex gap-3">
-                  <Button asChild size="lg" className="btn-lift">
+                  <Button asChild variant="primary" size="lg" className="btn-lift">
                     <a
                       href={ctaIsCompleted ? `/workshop/${ctaWorkshop.sessionId}/outputs` : `/workshop/${ctaWorkshop.sessionId}/step/${ctaWorkshop.currentStepSlug}`}
                     >

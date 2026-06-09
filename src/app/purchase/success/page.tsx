@@ -7,6 +7,8 @@ import { eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { consumeCredit } from '@/actions/billing-actions';
 import { updateStepStatus } from '@/actions/workshop-actions';
+import { Surface } from '@/components/ui/surface';
+import { Heading, Text, Code } from '@/components/ui/typography';
 
 /**
  * Purchase success page — Server Component.
@@ -80,7 +82,7 @@ export default async function PurchaseSuccessPage({
   if (result.status === 'payment_not_paid') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 shadow-sm text-center">
+        <Surface className="w-full max-w-md p-8 text-center">
           {/* Processing indicator */}
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-900/20">
             <svg
@@ -99,21 +101,21 @@ export default async function PurchaseSuccessPage({
             </svg>
           </div>
 
-          <h1 className="text-2xl font-bold text-foreground mb-3">
+          <Heading level={1} className="text-2xl mb-3">
             Payment Processing
-          </h1>
-          <p className="text-muted-foreground mb-8 leading-relaxed">
+          </Heading>
+          <Text variant="muted" className="mb-8 leading-relaxed">
             Your payment is being processed. Credits will be added to your
             account shortly. This typically takes a few minutes.
-          </p>
+          </Text>
 
           <Link
             href="/dashboard"
-            className="inline-block w-full rounded-lg bg-olive-700 hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500 px-6 py-3 text-sm font-semibold text-white transition-colors"
+            className="inline-block w-full rounded-lg bg-primary-brand px-6 py-3 text-sm font-semibold text-primary-brand-foreground transition-colors hover:bg-primary-brand/90"
           >
             Go to Dashboard
           </Link>
-        </div>
+        </Surface>
       </div>
     );
   }
@@ -122,7 +124,7 @@ export default async function PurchaseSuccessPage({
   if (result.status === 'user_not_found') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 shadow-sm text-center">
+        <Surface className="w-full max-w-md p-8 text-center">
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
             <svg
               className="h-8 w-8 text-red-600 dark:text-red-400"
@@ -140,27 +142,27 @@ export default async function PurchaseSuccessPage({
             </svg>
           </div>
 
-          <h1 className="text-2xl font-bold text-foreground mb-3">
+          <Heading level={1} className="text-2xl mb-3">
             Something Went Wrong
-          </h1>
-          <p className="text-muted-foreground mb-2 leading-relaxed">
+          </Heading>
+          <Text variant="muted" className="mb-2 leading-relaxed">
             Your payment was received but we encountered an issue crediting your
             account.
-          </p>
-          <p className="text-sm text-muted-foreground mb-8">
+          </Text>
+          <Text variant="muted" className="mb-8">
             Please contact support with your session ID:{' '}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded font-mono">
+            <Code className="text-xs">
               {session_id}
-            </code>
-          </p>
+            </Code>
+          </Text>
 
           <Link
             href="/dashboard"
-            className="inline-block w-full rounded-lg bg-olive-700 hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500 px-6 py-3 text-sm font-semibold text-white transition-colors"
+            className="inline-block w-full rounded-lg bg-primary-brand px-6 py-3 text-sm font-semibold text-primary-brand-foreground transition-colors hover:bg-primary-brand/90"
           >
             Go to Dashboard
           </Link>
-        </div>
+        </Surface>
       </div>
     );
   }
@@ -212,7 +214,7 @@ export default async function PurchaseSuccessPage({
   // fulfilled or already_fulfilled — show success UI
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 shadow-sm text-center">
+      <Surface className="w-full max-w-md p-8 text-center">
         {/* Success checkmark */}
         <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-olive-100 dark:bg-olive-900/30">
           <svg
@@ -231,36 +233,36 @@ export default async function PurchaseSuccessPage({
           </svg>
         </div>
 
-        <h1 className="text-2xl font-bold text-foreground mb-3">
+        <Heading level={1} className="text-2xl mb-3">
           Purchase Complete!
-        </h1>
+        </Heading>
 
         {/* Credit summary */}
         <div className="mb-6">
           {isAlreadyFulfilled ? (
-            <p className="text-muted-foreground leading-relaxed">
+            <Text variant="muted" className="leading-relaxed">
               Your credits are ready —{' '}
               <span className="font-semibold text-foreground">
                 {displayBalance} credit{displayBalance !== 1 ? 's' : ''}{' '}
                 available
               </span>{' '}
               in your account.
-            </p>
+            </Text>
           ) : (
             <>
-              <p className="text-muted-foreground leading-relaxed">
+              <Text variant="muted" className="leading-relaxed">
                 <span className="font-semibold text-foreground">
                   {creditsAdded} credit{creditsAdded !== 1 ? 's' : ''} added
                 </span>{' '}
                 to your account.
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
+              </Text>
+              <Text variant="muted" className="mt-2">
                 You now have{' '}
                 <span className="font-semibold text-foreground">
                   {displayBalance} credit{displayBalance !== 1 ? 's' : ''}
                 </span>{' '}
                 total.
-              </p>
+              </Text>
             </>
           )}
         </div>
@@ -290,7 +292,7 @@ export default async function PurchaseSuccessPage({
         <div className="flex flex-col gap-3">
           <Link
             href="/dashboard"
-            className="inline-block w-full rounded-lg bg-olive-700 hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500 px-6 py-3 text-sm font-semibold text-white transition-colors"
+            className="inline-block w-full rounded-lg bg-primary-brand px-6 py-3 text-sm font-semibold text-primary-brand-foreground transition-colors hover:bg-primary-brand/90"
           >
             Go to Dashboard
           </Link>
@@ -301,7 +303,7 @@ export default async function PurchaseSuccessPage({
             Start a New Workshop
           </Link>
         </div>
-      </div>
+      </Surface>
     </div>
   );
 }

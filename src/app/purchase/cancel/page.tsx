@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { Surface } from '@/components/ui/surface';
+import { Heading, Text } from '@/components/ui/typography';
 
 /**
  * Purchase cancel page — Server Component.
@@ -13,7 +15,7 @@ import Link from 'next/link';
 export default function PurchaseCancelPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 shadow-sm text-center">
+      <Surface className="w-full max-w-md p-8 text-center">
         {/* Neutral indicator — not an error */}
         <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
           <svg
@@ -32,28 +34,28 @@ export default function PurchaseCancelPage() {
           </svg>
         </div>
 
-        <h1 className="text-2xl font-bold text-foreground mb-3">
+        <Heading level={1} className="text-2xl mb-3">
           Purchase Cancelled
-        </h1>
+        </Heading>
 
-        <p className="text-muted-foreground mb-2 leading-relaxed">
+        <Text variant="muted" className="mb-2 leading-relaxed">
           No worries — you can purchase credits anytime from your dashboard or
           when you&apos;re ready to unlock Steps 7–10.
-        </p>
+        </Text>
 
-        <p className="text-sm text-muted-foreground mb-8">
+        <Text variant="muted" className="mb-8">
           Your workshop progress is saved and waiting for you.
-        </p>
+        </Text>
 
         <div className="flex flex-col gap-3">
           <Link
             href="/dashboard"
-            className="inline-block w-full rounded-lg bg-olive-700 hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500 px-6 py-3 text-sm font-semibold text-white transition-colors"
+            className="inline-block w-full rounded-lg bg-primary-brand px-6 py-3 text-sm font-semibold text-primary-brand-foreground transition-colors hover:bg-primary-brand/90"
           >
             Return to Dashboard
           </Link>
         </div>
-      </div>
+      </Surface>
     </div>
   );
 }

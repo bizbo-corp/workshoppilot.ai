@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Caption, Heading } from '@/components/ui/typography';
 import { Square } from 'lucide-react';
 import { ChallengeSettingsTab } from '@/components/dialogs/settings/challenge-settings-tab';
 import { BasicsSettingsTab } from '@/components/dialogs/settings/basics-settings-tab';
@@ -97,10 +98,10 @@ export function WorkshopSettingsDialog({
         {workshopType === 'multiplayer' && (
           <div className="mt-2 flex items-center justify-between gap-4 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground">End session</p>
-              <p className="text-xs text-muted-foreground">
+              <Heading level={4}>End session</Heading>
+              <Caption>
                 Disconnect all participants and end the live session.
-              </p>
+              </Caption>
             </div>
             <Button
               variant="destructive"

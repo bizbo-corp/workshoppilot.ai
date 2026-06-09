@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Code, RefreshCw, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Heading, Text } from '@/components/ui/typography';
 import { DeliverableDetailView } from '@/components/workshop/deliverable-detail-view';
 import { WizardShell } from '@/components/tech-specs-wizard/wizard-shell';
 import { GenerationView } from '@/components/tech-specs-wizard/generation-view';
@@ -153,10 +154,10 @@ export function TechSpecsContent({
           <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-primary/10">
             <Code className="h-8 w-8 text-primary" />
           </div>
-          <h2 className="text-xl font-semibold">Technical Specifications</h2>
-          <p className="text-sm text-muted-foreground">
+          <Heading level={2} className="text-xl">Technical Specifications</Heading>
+          <Text variant="muted">
             Tech specs haven&apos;t been generated yet.
-          </p>
+          </Text>
           {backLink}
         </div>
       </div>
@@ -178,10 +179,10 @@ export function TechSpecsContent({
               className="flex w-full items-center justify-between p-4 text-left"
             >
               <div>
-                <h2 className="text-sm font-semibold">Technical Decisions</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <Heading level={4} as="h2">Technical Decisions</Heading>
+                <Text variant="small" className="mt-0.5">
                   Your selections that shaped this specification
-                </p>
+                </Text>
               </div>
               {showPreferences ? (
                 <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -198,9 +199,9 @@ export function TechSpecsContent({
                   hideHeader
                 />
                 <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t">
-                  <p className="text-xs text-muted-foreground flex-1">
+                  <Text variant="small" className="flex-1">
                     Edit your choices above, then regenerate to update the specs and PRD.
-                  </p>
+                  </Text>
                   <Button
                     variant="outline"
                     size="sm"

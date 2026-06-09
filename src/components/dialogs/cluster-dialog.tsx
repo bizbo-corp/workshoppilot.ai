@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Caption } from '@/components/ui/typography';
 
 interface ClusterDialogProps {
   open: boolean;
@@ -66,7 +67,7 @@ export function ClusterDialog({
 
           {existingClusters.length > 0 && (
             <div>
-              <p className="text-xs text-muted-foreground mb-1.5">Add to existing cluster:</p>
+              <Caption className="mb-1.5">Add to existing cluster:</Caption>
               <div className="flex flex-wrap gap-1.5">
                 {existingClusters.map((cluster) => (
                   <button
@@ -86,7 +87,7 @@ export function ClusterDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!name.trim()}>
+          <Button variant="primary" onClick={handleConfirm} disabled={!name.trim()}>
             Create Cluster
           </Button>
         </DialogFooter>

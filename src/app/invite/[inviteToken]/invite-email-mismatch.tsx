@@ -1,6 +1,9 @@
 'use client';
 
 import { SignOutButton } from '@clerk/nextjs';
+import { Button } from '@/components/ui/button';
+import { Surface } from '@/components/ui/surface';
+import { Heading, Text } from '@/components/ui/typography';
 
 interface InviteEmailMismatchProps {
   invitedEmail: string;
@@ -21,21 +24,19 @@ export function InviteEmailMismatch({
 }: InviteEmailMismatchProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-sm">
-        <h1 className="mb-2 text-xl font-semibold">Wrong account</h1>
-        <p className="mb-1 text-sm text-muted-foreground">
+      <Surface className="w-full max-w-md p-8 text-center">
+        <Heading level={3} as="h1" className="mb-2 text-xl">Wrong account</Heading>
+        <Text variant="muted" className="mb-1">
           This invite was sent to <span className="font-medium text-foreground">{invitedEmail}</span>,
           but you&apos;re signed in as <span className="font-medium text-foreground">{signedInEmail}</span>.
-        </p>
-        <p className="mb-6 text-sm text-muted-foreground">
+        </Text>
+        <Text variant="muted" className="mb-6">
           Sign out and sign back in with <span className="font-medium text-foreground">{invitedEmail}</span> to join.
-        </p>
+        </Text>
         <SignOutButton redirectUrl={inviteUrl}>
-          <button className="w-full rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background hover:opacity-90">
-            Sign out and switch account
-          </button>
+          <Button variant="primary" className="w-full">Sign out and switch account</Button>
         </SignOutButton>
-      </div>
+      </Surface>
     </div>
   );
 }

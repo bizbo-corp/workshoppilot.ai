@@ -106,7 +106,7 @@ export function LobbyParticipantActions({
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit}>Send request</Button>
+            <Button variant="primary" onClick={handleSubmit}>Send request</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

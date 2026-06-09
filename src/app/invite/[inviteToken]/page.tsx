@@ -20,6 +20,8 @@ import {
 } from '@/db/schema';
 import { getPrimaryEmail } from '@/lib/auth/participant-name';
 import { ParticipantSignInGate } from '@/components/auth/participant-sign-in-gate';
+import { Surface } from '@/components/ui/surface';
+import { Heading, Text } from '@/components/ui/typography';
 import { InviteClaimFlow } from './invite-claim-flow';
 import { InviteEmailMismatch } from './invite-email-mismatch';
 
@@ -120,16 +122,16 @@ export default async function InvitePage({ params }: InvitePageProps) {
 function InviteErrorCard({ title, message }: { title: string; message: string }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm rounded-xl border bg-card p-8 text-center shadow-sm">
-        <h1 className="mb-2 text-xl font-semibold">{title}</h1>
-        <p className="mb-6 text-sm text-muted-foreground">{message}</p>
+      <Surface className="w-full max-w-sm p-8 text-center">
+        <Heading level={3} as="h1" className="mb-2 text-xl">{title}</Heading>
+        <Text variant="muted" className="mb-6">{message}</Text>
         <Link
           href="/"
           className="text-sm font-medium underline underline-offset-4 hover:text-foreground"
         >
           Go to Home
         </Link>
-      </div>
+      </Surface>
     </div>
   );
 }

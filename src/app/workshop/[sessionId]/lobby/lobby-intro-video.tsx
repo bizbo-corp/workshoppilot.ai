@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Play } from 'lucide-react';
+import { Eyebrow } from '@/components/ui/typography';
 
 /**
  * Lobby intro video — placeholder using the homepage 60-second explainer
@@ -14,9 +15,7 @@ export function LobbyIntroVideo() {
   return (
     <section className="overflow-hidden rounded-3xl border bg-card shadow-sm">
       <div className="border-b bg-muted/30 px-6 py-4">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-          While you wait · 60 seconds
-        </p>
+        <Eyebrow>While you wait · 60 seconds</Eyebrow>
         <h2 className="mt-1 text-lg font-semibold leading-tight">
           How a WorkshopPilot session actually flows
         </h2>
@@ -50,7 +49,7 @@ export function LobbyIntroVideo() {
               <Play className="ml-1.5 h-9 w-9 fill-olive-700 text-olive-700" />
             </span>
             <span className="absolute bottom-5 left-6 text-left">
-              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-white/80">
+              <span className="block text-xs font-bold uppercase tracking-eyebrow text-white/80">
                 While you wait
               </span>
               <span className="mt-1 block text-lg font-semibold text-white">

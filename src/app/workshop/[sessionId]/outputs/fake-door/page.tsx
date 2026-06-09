@@ -8,6 +8,8 @@ import { sessions } from '@/db/schema';
 import { resolveClerkParticipant } from '@/lib/auth/resolve-participant';
 import { getValidateArtifact } from '@/lib/validation/save-validation';
 import { loadFakeDoorHandoff } from '@/lib/validation/fake-door-prompt';
+import { Surface } from '@/components/ui/surface';
+import { Heading, Text } from '@/components/ui/typography';
 
 interface FakeDoorPageProps {
   params: Promise<{ sessionId: string }>;
@@ -60,11 +62,11 @@ export default async function FakeDoorPage({ params }: FakeDoorPageProps) {
           <DoorOpen className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-lg font-semibold">Fake-door landing page</h1>
-          <p className="text-sm text-muted-foreground">
+          <Heading level={3} as="h1">Fake-door landing page</Heading>
+          <Text variant="muted">
             Put up a simple page with one call-to-action and measure who clicks — real demand,
             before you build.
-          </p>
+          </Text>
         </div>
       </div>
 
@@ -76,17 +78,17 @@ export default async function FakeDoorPage({ params }: FakeDoorPageProps) {
 
       {handoff ? (
         <div className="space-y-2">
-          <h2 className="text-sm font-semibold">Handoff prompt</h2>
+          <Heading level={4} as="h2">Handoff prompt</Heading>
           <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-xl border border-border bg-card p-4 text-xs leading-relaxed text-foreground">
             {handoff.prompt}
           </pre>
-          <p className="text-xs text-muted-foreground">Select all and copy to use it.</p>
+          <Text variant="small">Select all and copy to use it.</Text>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+        <Surface className="p-4 text-sm text-muted-foreground">
           No fake-door test found yet. Pick the fake-door / landing-page test on the Validate step
           first, then come back here.
-        </div>
+        </Surface>
       )}
     </div>
   );

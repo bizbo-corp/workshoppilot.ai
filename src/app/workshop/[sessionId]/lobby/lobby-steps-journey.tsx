@@ -10,6 +10,7 @@
  */
 
 import type { ReactNode } from 'react';
+import { Eyebrow } from '@/components/ui/typography';
 
 interface StepCard {
   order: number;
@@ -119,9 +120,7 @@ export function LobbyStepsJourney() {
     <section className="rounded-3xl border bg-card p-6 shadow-sm sm:p-8">
       <div className="mb-6 flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            The journey ahead
-          </p>
+          <Eyebrow>The journey ahead</Eyebrow>
           <h2 className="mt-1 text-2xl font-semibold leading-tight sm:text-3xl">
             Ten stages, one validated build pack
           </h2>

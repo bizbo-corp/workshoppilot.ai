@@ -9,6 +9,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // Tier 1 — the single most important action on a view (brand olive CTA).
+        primary:
+          "bg-primary-brand text-primary-brand-foreground shadow-sm hover:bg-primary-brand/90",
+        // Neutral strong solid. Deprecated as a tier name — prefer an explicit
+        // primary/secondary/tertiary. Kept (unchanged) so no-variant call sites
+        // don't shift mid-migration; remove once every Button declares a variant.
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",

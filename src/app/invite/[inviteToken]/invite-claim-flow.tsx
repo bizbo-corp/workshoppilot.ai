@@ -8,6 +8,9 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Surface } from '@/components/ui/surface';
+import { Heading, Text } from '@/components/ui/typography';
 
 interface InviteClaimFlowProps {
   inviteToken: string;
@@ -61,11 +64,11 @@ export function InviteClaimFlow({
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-sm">
-        <p className="mb-2 text-sm text-muted-foreground">
+      <Surface className="w-full max-w-md p-8 text-center">
+        <Text variant="muted" className="mb-2">
           {facilitatorName ?? 'Your facilitator'} invited you to
-        </p>
-        <h1 className="mb-4 text-2xl font-semibold">{workshopTitle}</h1>
+        </Text>
+        <Heading level={1} as="h1" className="mb-4 text-2xl font-semibold">{workshopTitle}</Heading>
 
         {state.kind === 'submitting' ? (
           <div className="flex flex-col items-center gap-3 text-muted-foreground">
@@ -75,18 +78,19 @@ export function InviteClaimFlow({
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-destructive">{state.message}</p>
-            <button
+            <Button
+              variant="primary"
               onClick={() => {
                 startedRef.current = true;
                 void submit();
               }}
-              className="w-full rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background hover:opacity-90"
+              className="w-full"
             >
               Try again
-            </button>
+            </Button>
           </div>
         )}
-      </div>
+      </Surface>
     </div>
   );
 }

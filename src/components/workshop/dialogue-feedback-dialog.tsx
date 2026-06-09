@@ -87,7 +87,7 @@ export function DialogueFeedbackDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || !feedbackText.trim()}>
+          <Button variant="primary" onClick={handleSubmit} disabled={isSubmitting || !feedbackText.trim()}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Submit Feedback
           </Button>

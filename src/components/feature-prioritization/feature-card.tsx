@@ -20,6 +20,7 @@ import {
 import { GripVertical, ChevronDown, ChevronRight, Pencil, Trash2, Check, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Surface } from '@/components/ui/surface';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useFeaturePrioritizationStoreApi } from '@/providers/feature-prioritization-store-provider';
@@ -95,10 +96,10 @@ export function FeatureCard({ feature, rank, isReadOnly }: FeatureCardProps) {
   };
 
   return (
-    <div
+    <Surface
       ref={setNodeRef}
       style={style}
-      className={`rounded-lg border bg-card ${isDragging ? 'shadow-lg opacity-90' : 'shadow-sm'}`}
+      className={isDragging ? 'shadow-lg opacity-90' : undefined}
     >
       <div className="flex items-start gap-3 p-4">
         {/* Drag handle */}
@@ -134,7 +135,7 @@ export function FeatureCard({ feature, rank, isReadOnly }: FeatureCardProps) {
                 rows={2}
               />
               <div className="flex gap-2">
-                <Button size="sm" variant="default" onClick={handleSaveEdit}>
+                <Button size="sm" variant="primary" onClick={handleSaveEdit}>
                   <Check className="h-3 w-3 mr-1" />
                   Save
                 </Button>
@@ -240,6 +241,6 @@ export function FeatureCard({ feature, rank, isReadOnly }: FeatureCardProps) {
           )}
         </div>
       )}
-    </div>
+    </Surface>
   );
 }

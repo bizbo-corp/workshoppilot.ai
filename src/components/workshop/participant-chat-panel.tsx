@@ -1208,9 +1208,10 @@ export function ParticipantChatPanel({
                           </div>
                           <div className="mt-4 flex justify-center">
                             <Button
+                              variant="primary"
                               disabled={personaSelections.size === 0 || isLoading}
                               onClick={handlePersonaConfirm}
-                              className="rounded-full bg-olive-700 px-5 py-2 text-sm font-medium text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
+                              className="rounded-full px-5"
                             >
                               Confirm Selection ({personaSelections.size}/2)
                             </Button>
@@ -1340,7 +1341,7 @@ export function ParticipantChatPanel({
           <div className="flex justify-center gap-2">
             <button
               onClick={handleConfirmResearch}
-              className="inline-flex items-center gap-1.5 rounded-full bg-olive-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary-brand px-4 py-1.5 text-sm font-medium text-primary-brand-foreground hover:bg-primary-brand/90"
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
               Add to board
@@ -1390,7 +1391,7 @@ export function ParticipantChatPanel({
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium shadow-sm transition-all",
                     hasSubmittedResearch
-                      ? "bg-olive-700 text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
+                      ? "bg-primary-brand text-primary-brand-foreground hover:bg-primary-brand/90"
                       : "border border-olive-300 bg-card text-olive-800 hover:bg-olive-100 dark:border-neutral-olive-700 dark:bg-neutral-olive-800 dark:text-olive-300 dark:hover:bg-neutral-olive-700",
                   )}
                 >

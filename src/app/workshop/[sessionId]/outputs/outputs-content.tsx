@@ -25,6 +25,7 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Heading, Eyebrow } from '@/components/ui/typography';
 import { DeliverableDetailView } from '@/components/workshop/deliverable-detail-view';
 import { ValidationPlanDeliverable } from '@/components/workshop/validate/ValidationPlanDeliverable';
 import { WorkshopHeader } from '@/components/layout/workshop-header';
@@ -368,7 +369,7 @@ export function OutputsContent({
         <div className="mx-auto max-w-4xl px-6 py-8 space-y-8">
           {/* Page heading */}
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Build Pack</h1>
+            <Heading level={1} as="h1" className="text-2xl font-semibold sm:text-2xl">Build Pack</Heading>
           </div>
 
         {/* Back link (only on card grid view, hidden for read-only guests) */}
@@ -412,9 +413,7 @@ export function OutputsContent({
               )}
             {SECTIONS.map((section) => (
               <div key={section.id} className="space-y-4">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  {section.label}
-                </h2>
+                <Eyebrow>{section.label}</Eyebrow>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {section.cards.map((card) => {
                     const generated = isGenerated(card.type);

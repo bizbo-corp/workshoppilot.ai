@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Share2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { copyToClipboard } from '@/lib/clipboard';
+import { Button } from '@/components/ui/button';
 
 /**
  * ShareLinkButton — icon-only button that copies the workshop join URL.
@@ -26,13 +27,15 @@ export function ShareLinkButton({ shareToken }: { shareToken: string }) {
   };
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="icon-sm"
       onClick={handleCopy}
-      className="rounded-md p-1.5 px-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+      className="text-muted-foreground"
       title="Copy invite link"
       aria-label="Copy invite link"
     >
-      {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
-    </button>
+      {copied ? <Check /> : <Share2 />}
+    </Button>
   );
 }

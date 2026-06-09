@@ -3,6 +3,7 @@
 import { SignIn } from '@clerk/nextjs';
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { Heading, Text, Eyebrow } from '@/components/ui/typography';
 
 export interface AuthWallModalProps {
   open: boolean;
@@ -51,12 +52,12 @@ export function AuthWallModal({
           <div className="rounded-l-xl bg-gradient-to-br from-neutral-olive-50 to-neutral-olive-100 p-8 md:p-10">
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">
+                <Heading level={2}>
                   Create your account to continue
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
+                </Heading>
+                <Text variant="muted" className="mt-2">
                   You&apos;ve completed the first 3 steps! Sign in or create an account to unlock the rest of your design thinking journey.
-                </p>
+                </Text>
               </div>
 
               {/* Step 4 Preview Card */}
@@ -66,21 +67,21 @@ export function AuthWallModal({
                     4
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-foreground">
+                    <Heading level={3}>
                       Prototype
-                    </h3>
+                    </Heading>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <Text variant="muted">
                   Create low-fidelity representations of your solutions to test with users.
-                </p>
+                </Text>
               </div>
 
               {/* Remaining Steps */}
               <div>
-                <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                <Eyebrow className="mb-3">
                   What comes next
-                </h4>
+                </Eyebrow>
                 <div className="space-y-2">
                   {[
                     { num: 5, name: 'Test', desc: 'Validate assumptions with real users' },

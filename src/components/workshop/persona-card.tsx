@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { Surface } from '@/components/ui/surface';
+import { Heading, Text, Eyebrow } from '@/components/ui/typography';
 
 interface PersonaCardProps {
   persona: Record<string, unknown>;
@@ -37,17 +38,17 @@ function CompactPersonaCard({ persona }: { persona: Record<string, unknown> }) {
   const initials = getInitials(name);
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+    <Surface className="flex items-center gap-3 p-3">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
         <span className="text-sm font-bold text-primary">{initials}</span>
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-semibold text-sm">{name}</p>
         {role && (
-          <p className="truncate text-xs text-muted-foreground">{role}</p>
+          <Text variant="muted" className="truncate text-xs">{role}</Text>
         )}
       </div>
-    </div>
+    </Surface>
   );
 }
 
@@ -56,7 +57,7 @@ function CompactPersonaCard({ persona }: { persona: Record<string, unknown> }) {
  */
 export function PersonaSkeletonCard({ index }: PersonaSkeletonCardProps) {
   return (
-    <div className="rounded-lg border bg-card p-6">
+    <Surface className="p-6">
       <div className="mb-4 flex items-start justify-between">
         <div className="flex items-center gap-4">
           {/* Avatar skeleton */}
@@ -96,7 +97,7 @@ export function PersonaSkeletonCard({ index }: PersonaSkeletonCardProps) {
           </div>
         ))}
       </div>
-    </div>
+    </Surface>
   );
 }
 
@@ -131,17 +132,15 @@ export function PersonaCard({
     <div className="space-y-4">
       {/* Multi-persona indicator */}
       {totalPersonas && totalPersonas > 1 && currentIndex !== undefined && (
-        <p className="text-sm text-muted-foreground">
+        <Text variant="muted">
           Persona {currentIndex + 1} of {totalPersonas}
-        </p>
+        </Text>
       )}
 
       {/* Completed personas (compact view) */}
       {allPersonas && allPersonas.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Completed Personas
-          </p>
+          <Eyebrow>Completed Personas</Eyebrow>
           <div className="grid gap-2 sm:grid-cols-2">
             {allPersonas.map((p, idx) => (
               <CompactPersonaCard key={idx} persona={p} />
@@ -151,7 +150,7 @@ export function PersonaCard({
       )}
 
       {/* Main persona card */}
-      <div className="rounded-lg border bg-card p-6 shadow-xs">
+      <Surface className="p-6">
         {/* Header with avatar and badges */}
         <div className="mb-4 flex items-start justify-between">
           <div className="flex items-center gap-4">
@@ -162,16 +161,16 @@ export function PersonaCard({
 
             {/* Name and role */}
             <div>
-              <h3 className="text-xl font-semibold">{name}</h3>
+              <Heading level={3} as="h3" className="text-xl">{name}</Heading>
               {role && (
-                <p className="text-sm text-muted-foreground">{role}</p>
+                <Text variant="muted">{role}</Text>
               )}
               {(age || location) && (
-                <p className="text-sm text-muted-foreground">
+                <Text variant="muted">
                   {age && `${age} years old`}
                   {age && location && ' • '}
                   {location}
-                </p>
+                </Text>
               )}
             </div>
           </div>
@@ -194,7 +193,7 @@ export function PersonaCard({
         {/* Bio section */}
         {bio && (
           <div className="mb-4">
-            <p className="text-sm leading-relaxed">{bio}</p>
+            <Text className="leading-relaxed">{bio}</Text>
           </div>
         )}
 
@@ -203,7 +202,7 @@ export function PersonaCard({
           {/* Goals */}
           {goals.length > 0 && (
             <div>
-              <h4 className="mb-2 font-semibold text-sm">Goals</h4>
+              <Heading level={4} as="h4" className="mb-2">Goals</Heading>
               <ul className="space-y-1">
                 {goals.map((goal, idx) => (
                   <li key={idx} className="flex gap-2 text-sm">
@@ -218,7 +217,7 @@ export function PersonaCard({
           {/* Pains */}
           {pains.length > 0 && (
             <div>
-              <h4 className="mb-2 font-semibold text-sm">Pains</h4>
+              <Heading level={4} as="h4" className="mb-2">Pains</Heading>
               <ul className="space-y-1">
                 {pains.map((pain, idx) => (
                   <li key={idx} className="flex gap-2 text-sm">
@@ -233,7 +232,7 @@ export function PersonaCard({
           {/* Gains */}
           {gains.length > 0 && (
             <div>
-              <h4 className="mb-2 font-semibold text-sm">Gains</h4>
+              <Heading level={4} as="h4" className="mb-2">Gains</Heading>
               <ul className="space-y-1">
                 {gains.map((gain, idx) => (
                   <li key={idx} className="flex gap-2 text-sm">
@@ -248,7 +247,7 @@ export function PersonaCard({
           {/* Motivations */}
           {motivations.length > 0 && (
             <div>
-              <h4 className="mb-2 font-semibold text-sm">Motivations</h4>
+              <Heading level={4} as="h4" className="mb-2">Motivations</Heading>
               <ul className="space-y-1">
                 {motivations.map((motivation, idx) => (
                   <li key={idx} className="flex gap-2 text-sm">
@@ -264,7 +263,7 @@ export function PersonaCard({
         {/* Optional sections */}
         {behaviors.length > 0 && (
           <div className="mt-4">
-            <h4 className="mb-2 font-semibold text-sm">Behaviors</h4>
+            <Heading level={4} as="h4" className="mb-2">Behaviors</Heading>
             <ul className="space-y-1">
               {behaviors.map((behavior, idx) => (
                 <li key={idx} className="flex gap-2 text-sm">
@@ -278,7 +277,7 @@ export function PersonaCard({
 
         {frustrations.length > 0 && (
           <div className="mt-4">
-            <h4 className="mb-2 font-semibold text-sm">Frustrations</h4>
+            <Heading level={4} as="h4" className="mb-2">Frustrations</Heading>
             <ul className="space-y-1">
               {frustrations.map((frustration, idx) => (
                 <li key={idx} className="flex gap-2 text-sm">
@@ -292,11 +291,11 @@ export function PersonaCard({
 
         {dayInTheLife && (
           <div className="mt-4">
-            <h4 className="mb-2 font-semibold text-sm">Day in the Life</h4>
-            <p className="text-sm leading-relaxed">{dayInTheLife}</p>
+            <Heading level={4} as="h4" className="mb-2">Day in the Life</Heading>
+            <Text className="leading-relaxed">{dayInTheLife}</Text>
           </div>
         )}
-      </div>
+      </Surface>
     </div>
   );
 }

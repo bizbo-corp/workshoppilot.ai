@@ -4,6 +4,7 @@ import { SignIn } from '@clerk/nextjs';
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import Logo from '@/components/Logo';
+import { Heading, Text } from '@/components/ui/typography';
 
 interface ParticipantSignInGateProps {
   /** Where Clerk returns the user after a successful sign-in. Must be the exact
@@ -53,10 +54,10 @@ export function ParticipantSignInGate({
       <Logo size="md" className="mb-8 text-foreground" />
       <div className="mb-6 max-w-md text-center">
         <p className="text-sm font-medium text-muted-foreground">You&apos;re joining</p>
-        <h1 className="mt-1 text-2xl font-semibold text-foreground">{workshopTitle}</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
+        <Heading level={2} as="h1" className="mt-1">{workshopTitle}</Heading>
+        <Text variant="muted" className="mt-3">
           {subtitle ?? 'Sign in to join — it takes a few seconds and keeps everyone’s name and work correctly attributed.'}
-        </p>
+        </Text>
       </div>
       <div ref={formRef} className="w-full max-w-md">
         <SignIn

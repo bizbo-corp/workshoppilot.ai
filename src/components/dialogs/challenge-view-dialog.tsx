@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Eyebrow, Text } from '@/components/ui/typography';
 import { getChallengeForViewer } from '@/actions/challenge-actions';
 import type { ChallengeArtifact } from '@/lib/workshop/challenge-artifact';
 
@@ -27,10 +28,8 @@ interface ChallengeViewDialogProps {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-olive-200/60 bg-olive-50/40 p-3 dark:border-olive-800/40 dark:bg-olive-900/20">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{value}</p>
+      <Eyebrow>{label}</Eyebrow>
+      <Text className="mt-1 whitespace-pre-wrap">{value}</Text>
     </div>
   );
 }
@@ -87,9 +86,9 @@ export function ChallengeViewDialog({ workshopId, open, onOpenChange }: Challeng
             )}
           </div>
         ) : (
-          <p className="text-sm italic text-muted-foreground">
+          <Text variant="muted" className="italic">
             The challenge hasn&apos;t been framed yet.
-          </p>
+          </Text>
         )}
       </DialogContent>
     </Dialog>

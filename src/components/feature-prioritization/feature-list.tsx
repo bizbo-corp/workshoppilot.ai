@@ -16,6 +16,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { Badge } from '@/components/ui/badge';
+import { Eyebrow, Text } from '@/components/ui/typography';
 import { useFeaturePrioritizationStore, useFeaturePrioritizationStoreApi } from '@/providers/feature-prioritization-store-provider';
 import { FeatureCard } from './feature-card';
 
@@ -62,16 +63,14 @@ export function FeatureList({ isReadOnly }: FeatureListProps) {
       {/* Core Features */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Core Features
-          </h2>
+          <Eyebrow>Core Features</Eyebrow>
           <Badge variant="secondary" className="text-xs">
             {coreFeatures.length}
           </Badge>
         </div>
 
         {coreFeatures.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">No core features</p>
+          <Text variant="muted" className="py-4 text-center">No core features</Text>
         ) : isReadOnly ? (
           <div className="space-y-3">
             {coreFeatures.map((feature, index) => (
@@ -112,9 +111,7 @@ export function FeatureList({ isReadOnly }: FeatureListProps) {
       {peripheralFeatures.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Peripheral Features
-            </h2>
+            <Eyebrow>Peripheral Features</Eyebrow>
             <Badge variant="secondary" className="text-xs">
               {peripheralFeatures.length}
             </Badge>

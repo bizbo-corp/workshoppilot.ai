@@ -88,7 +88,7 @@ export function SubfeatureItem({ subfeature, featureId, isReadOnly }: Subfeature
               placeholder="Description"
             />
             <div className="flex gap-1">
-              <Button size="sm" variant="default" className="h-6 text-xs" onClick={handleSave}>
+              <Button size="sm" variant="primary" className="h-6 text-xs" onClick={handleSave}>
                 <Check className="h-3 w-3 mr-1" />
                 Save
               </Button>

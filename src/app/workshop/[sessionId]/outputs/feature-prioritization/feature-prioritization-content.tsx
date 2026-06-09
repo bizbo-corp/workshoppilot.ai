@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ListOrdered, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Heading, Text } from '@/components/ui/typography';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -129,11 +130,11 @@ function FeaturePrioritizationInner({
               <ListOrdered className="h-8 w-8 text-primary" />
             </div>
           </div>
-          <h2 className="text-xl font-semibold">Feature Prioritization</h2>
-          <p className="text-sm text-muted-foreground">
+          <Heading level={2} className="text-xl">Feature Prioritization</Heading>
+          <Text variant="muted">
             Generate a prioritized feature list from your journey map.
             Drag and drop to reorder features by importance.
-          </p>
+          </Text>
           {error && (
             <div className="flex items-center gap-2 text-sm text-destructive justify-center">
               <AlertCircle className="h-4 w-4" />
@@ -141,21 +142,22 @@ function FeaturePrioritizationInner({
             </div>
           )}
           {!hasStep9 ? (
-            <p className="text-sm text-muted-foreground">
+            <Text variant="muted">
               Complete Step 9 (Concept) first to generate features.
-            </p>
+            </Text>
           ) : !hasJourneyMap ? (
-            <p className="text-sm text-muted-foreground">
+            <Text variant="muted">
               Generate a Journey Map first to create feature prioritization.
-            </p>
+            </Text>
           ) : isReadOnly ? (
-            <p className="text-sm text-muted-foreground">
+            <Text variant="muted">
               No feature prioritization has been generated yet.
-            </p>
+            </Text>
           ) : (
             <Button
               onClick={() => handleGenerate(true)}
               disabled={isGenerating}
+              variant="primary"
               className="gap-2"
             >
               {isGenerating ? (
@@ -198,10 +200,10 @@ function FeaturePrioritizationInner({
               <ArrowLeft className="h-3.5 w-3.5" />
               Back to Build Pack
             </Link>
-            <h1 className="text-2xl font-semibold tracking-tight">Feature Prioritization</h1>
-            <p className="text-sm text-muted-foreground">
+            <Heading level={1} as="h1" className="text-2xl font-semibold sm:text-2xl">Feature Prioritization</Heading>
+            <Text variant="muted">
               Drag to reorder features by priority. Position determines importance.
-            </p>
+            </Text>
           </div>
           {!isReadOnly && (
             <div className="flex items-center gap-2">

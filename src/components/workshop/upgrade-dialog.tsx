@@ -170,6 +170,7 @@ export function UpgradeDialog({
 
               {/* Primary CTA: consume credit */}
               <Button
+                variant="primary"
                 size="lg"
                 className="w-full"
                 onClick={handleUseCredit}

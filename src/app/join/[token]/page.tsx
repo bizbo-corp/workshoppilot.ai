@@ -19,6 +19,8 @@ import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { workshopSessions, sessionParticipants, sessions, workshopSteps } from '@/db/schema';
 import { ParticipantSignInGate } from '@/components/auth/participant-sign-in-gate';
+import { Surface } from '@/components/ui/surface';
+import { Heading, Text } from '@/components/ui/typography';
 import { getStepById } from '@/lib/workshop/step-metadata';
 import { GuestJoinFlow } from './guest-join-flow';
 
@@ -43,19 +45,19 @@ export default async function JoinPage({ params, searchParams }: JoinPageProps) 
   if (!workshopSession) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm rounded-xl border bg-card p-8 text-center shadow-sm">
-          <h1 className="mb-2 text-xl font-semibold">Invalid Link</h1>
-          <p className="mb-6 text-sm text-muted-foreground">
+        <Surface className="w-full max-w-sm p-8 text-center">
+          <Heading level={3} as="h1" className="mb-2 text-xl">Invalid Link</Heading>
+          <Text variant="muted" className="mb-6">
             This workshop link is invalid or has expired. Please ask the facilitator
             to share a new link.
-          </p>
+          </Text>
           <Link
             href="/"
             className="text-sm font-medium underline underline-offset-4 hover:text-foreground"
           >
             Go to Home
           </Link>
-        </div>
+        </Surface>
       </div>
     );
   }

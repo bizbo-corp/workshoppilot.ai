@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Heading, Text } from '@/components/ui/typography';
 import { submitGuidedPilotInquiry } from '@/actions/guided-pilot-actions';
 import { toast } from 'sonner';
 
@@ -210,9 +211,9 @@ export function GuidedPilotButton({
           <form onSubmit={handleStep1Submit}>
             <DialogHeader>
               <DialogTitle>Tell us about your project</DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <Text variant="muted" className="mt-1">
                 Help us prepare the perfect guided workshop for you.
-              </p>
+              </Text>
             </DialogHeader>
 
             <div className="mt-5 space-y-4">
@@ -295,7 +296,7 @@ export function GuidedPilotButton({
               <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={!isStep1Valid || isPending}>
+              <Button type="submit" variant="primary" disabled={!isStep1Valid || isPending}>
                 {isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -314,9 +315,9 @@ export function GuidedPilotButton({
           <div>
             <DialogHeader>
               <DialogTitle>Schedule a discovery call</DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <Text variant="muted" className="mt-1">
                 Pick a time that works for you. We&apos;ll discuss your project and workshop approach.
-              </p>
+              </Text>
             </DialogHeader>
 
             <div className="mt-5">
@@ -345,7 +346,7 @@ export function GuidedPilotButton({
               >
                 Skip — Pay Deposit Instead
               </button>
-              <Button onClick={() => setStep(3)}>
+              <Button variant="primary" onClick={() => setStep(3)}>
                 I&apos;ve booked my call
               </Button>
             </div>
@@ -357,15 +358,15 @@ export function GuidedPilotButton({
           <div>
             <DialogHeader>
               <DialogTitle>Reserve your session</DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <Text variant="muted" className="mt-1">
                 Secure your guided workshop with a $250 deposit, or we&apos;ll send an invoice after your call.
-              </p>
+              </Text>
             </DialogHeader>
 
             <div className="mt-5 space-y-4">
               {/* Summary */}
               <div className="rounded-xl border border-border bg-muted/30 p-5 space-y-3">
-                <h4 className="text-sm font-semibold text-foreground">The Guided Pilot includes:</h4>
+                <Heading level={4}>The Guided Pilot includes:</Heading>
                 <ul className="space-y-2">
                   {[
                     'Full AI Build Pack',
@@ -393,12 +394,13 @@ export function GuidedPilotButton({
                     name="priceId"
                     value={process.env.NEXT_PUBLIC_STRIPE_PRICE_GUIDED_DEPOSIT}
                   />
-                  <Button type="submit" className="w-full" size="lg">
+                  <Button type="submit" variant="primary" className="w-full" size="lg">
                     Pay $250 Deposit to Reserve
                   </Button>
                 </form>
               ) : (
                 <Button
+                  variant="primary"
                   className="w-full"
                   size="lg"
                   onClick={() => setInvoiceChosen(true)}
@@ -427,11 +429,11 @@ export function GuidedPilotButton({
             <DialogHeader>
               <DialogTitle className="text-center">You&apos;re all set!</DialogTitle>
             </DialogHeader>
-            <p className="text-sm text-muted-foreground mt-3 max-w-sm mx-auto">
+            <Text variant="muted" className="mt-3 max-w-sm mx-auto">
               We&apos;ll be in touch at <strong className="text-foreground">{email}</strong> with
               next steps and an invoice. Looking forward to working with you!
-            </p>
-            <Button className="mt-6" onClick={() => handleOpenChange(false)}>
+            </Text>
+            <Button variant="primary" className="mt-6" onClick={() => handleOpenChange(false)}>
               Close
             </Button>
           </div>

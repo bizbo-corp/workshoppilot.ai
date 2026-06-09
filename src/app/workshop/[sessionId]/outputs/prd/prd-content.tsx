@@ -17,6 +17,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Heading, Text } from '@/components/ui/typography';
 import { DeliverableDetailView } from '@/components/workshop/deliverable-detail-view';
 import { toast } from 'sonner';
 
@@ -115,10 +116,10 @@ export function PrdContent({
           <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-primary/10">
             <FileText className="h-8 w-8 text-primary" />
           </div>
-          <h2 className="text-xl font-semibold">Product Requirements Document</h2>
-          <p className="text-sm text-muted-foreground">
+          <Heading level={2} className="text-xl">Product Requirements Document</Heading>
+          <Text variant="muted">
             The PRD hasn&apos;t been generated yet.
-          </p>
+          </Text>
           {backLink}
         </div>
       </div>
@@ -206,10 +207,10 @@ export function PrdContent({
             <FileText className="h-7 w-7" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold">Product Requirements Document</h1>
-            <p className="text-sm text-muted-foreground">
+            <Heading level={1} as="h1" className="text-xl font-semibold sm:text-xl">Product Requirements Document</Heading>
+            <Text variant="muted">
               The definitive handoff document for coding agents — combines all your workshop insights into one comprehensive PRD.
-            </p>
+            </Text>
           </div>
         </div>
 
@@ -251,7 +252,7 @@ export function PrdContent({
         </div>
 
         {/* Generate button */}
-        <Button onClick={() => handleGenerate(false)} className="w-full gap-2 btn-lift" size="lg">
+        <Button onClick={() => handleGenerate(false)} variant="primary" className="w-full gap-2 btn-lift" size="lg">
           <Sparkles className="h-4 w-4" />
           Generate PRD
         </Button>

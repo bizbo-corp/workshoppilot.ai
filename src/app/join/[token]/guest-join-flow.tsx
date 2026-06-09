@@ -12,6 +12,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { GuestLobby } from '@/components/guest/guest-lobby';
+import { Surface } from '@/components/ui/surface';
+import { Heading, Text } from '@/components/ui/typography';
 
 interface JoinResponse {
   ok: boolean;
@@ -99,9 +101,9 @@ export function GuestJoinFlow({
   if (state.stage === 'error') {
     return (
       <div className="flex min-h-screen items-center justify-center px-4">
-        <div className="w-full max-w-sm rounded-xl border bg-card p-8 text-center shadow-sm">
-          <h2 className="mb-2 text-lg font-semibold">Unable to Join</h2>
-          <p className="mb-6 text-sm text-muted-foreground">{state.message}</p>
+        <Surface className="w-full max-w-sm p-8 text-center">
+          <Heading level={3} className="mb-2">Unable to Join</Heading>
+          <Text variant="muted" className="mb-6">{state.message}</Text>
           <button
             onClick={() => {
               startedRef.current = true;
@@ -111,7 +113,7 @@ export function GuestJoinFlow({
           >
             Try again
           </button>
-        </div>
+        </Surface>
       </div>
     );
   }

@@ -39,7 +39,7 @@ export function StartWorkshopButton({ workshopId, className }: StartWorkshopButt
   }
 
   return (
-    <Button onClick={handleClick} disabled={isPending} size="lg" className={className}>
+    <Button variant="primary" onClick={handleClick} disabled={isPending} size="lg" className={className}>
       <Play className="mr-2 h-4 w-4" />
       {isPending ? 'Starting…' : 'Start workshop'}
     </Button>

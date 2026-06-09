@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Map, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Heading, Text } from '@/components/ui/typography';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -161,11 +162,11 @@ function JourneyMapInner({
               <Map className="h-8 w-8 text-primary" />
             </div>
           </div>
-          <h2 className="text-xl font-semibold">UX Journey Mapper</h2>
-          <p className="text-sm text-muted-foreground">
+          <Heading level={2} className="text-xl">UX Journey Mapper</Heading>
+          <Text variant="muted">
             Map your validated concepts onto your user journey to create an interactive
             UX roadmap and generate a v0 prototype prompt.
-          </p>
+          </Text>
           {error && (
             <div className="flex items-center gap-2 text-sm text-destructive justify-center">
               <AlertCircle className="h-4 w-4" />
@@ -173,17 +174,18 @@ function JourneyMapInner({
             </div>
           )}
           {!hasStep9 ? (
-            <p className="text-sm text-muted-foreground">
+            <Text variant="muted">
               Complete Step 9 (Concept) first to generate a journey map.
-            </p>
+            </Text>
           ) : isReadOnly ? (
-            <p className="text-sm text-muted-foreground">
+            <Text variant="muted">
               No journey map has been generated yet.
-            </p>
+            </Text>
           ) : (
             <Button
               onClick={() => handleGenerate(true)}
               disabled={isGenerating}
+              variant="primary"
               className="gap-2"
             >
               {isGenerating ? (

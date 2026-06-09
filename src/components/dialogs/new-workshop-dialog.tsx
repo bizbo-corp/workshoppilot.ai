@@ -359,7 +359,7 @@ export function NewWorkshopButton({ variant, size, className, children, preselec
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!trimmedTitle || !facilitatorMode || isPending}>
+            <Button type="submit" variant="primary" disabled={!trimmedTitle || !facilitatorMode || isPending}>
               {isPending
                 ? 'Creating…'
                 : tierToBuy === 'white_glove'

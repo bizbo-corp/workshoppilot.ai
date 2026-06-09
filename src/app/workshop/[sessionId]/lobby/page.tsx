@@ -32,6 +32,7 @@ import { LobbyRoster, type LobbyRosterEntry } from './lobby-roster';
 import { LobbyScheduleDisplay } from './lobby-schedule-display';
 import { StartWorkshopButton } from './start-workshop-button';
 import { LobbyParticipantActions } from './lobby-actions';
+import { Heading, Text, Eyebrow, Caption } from '@/components/ui/typography';
 import { Sparkles, FileCheck, Users, Lightbulb } from 'lucide-react';
 
 interface PageProps {
@@ -169,15 +170,15 @@ export default async function LobbyPage({ params }: PageProps) {
         <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow-lg">
           <Sparkles className="h-6 w-6" />
         </div>
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+        <Eyebrow className="text-emerald-700 dark:text-emerald-300">
           Ready to roll
-        </p>
-        <h2 className="mt-2 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+        </Eyebrow>
+        <Heading level={1} as="h2" className="mt-2 text-4xl sm:text-5xl">
           Let&apos;s do this
-        </h2>
-        <p className="mt-3 text-sm text-muted-foreground">
+        </Heading>
+        <Text variant="muted" className="mt-3">
           The facilitator can kick things off whenever you&apos;re ready.
-        </p>
+        </Text>
       </div>
     );
 
@@ -192,16 +193,16 @@ export default async function LobbyPage({ params }: PageProps) {
             workshopId={workshop.id}
             className="h-12 w-full text-base shadow-md"
           />
-          <p className="mt-2 text-center text-xs text-muted-foreground">
+          <Caption className="mt-2 text-center">
             Starting will pull everyone in this lobby into Step 2 together.
-          </p>
+          </Caption>
         </div>
       )}
       <div className="mb-4 flex items-center gap-2">
         <Users className="h-4 w-4 text-muted-foreground" />
-        <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+        <Eyebrow>
           Who&apos;s here
-        </h2>
+        </Eyebrow>
         <span className="ml-auto text-xs text-muted-foreground">
           {rosterEntries.length}
         </span>
@@ -219,7 +220,7 @@ export default async function LobbyPage({ params }: PageProps) {
     // justify-center keeps the content vertically centred when the box grows.
     <section className="relative flex h-full flex-col justify-center overflow-hidden rounded-3xl border border-amber-200/60 bg-gradient-to-br from-amber-50/80 via-yellow-50/60 to-orange-50/40 p-8 shadow-sm dark:border-amber-700/30 dark:from-amber-950/30 dark:via-yellow-950/20 dark:to-orange-950/20 sm:p-10">
       <div className="relative mx-auto max-w-3xl text-center">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/60 dark:text-amber-300">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-white/70 px-3 py-1 text-[10px] font-bold uppercase tracking-eyebrow text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/60 dark:text-amber-300">
           <Lightbulb className="h-3 w-3" />
           The challenge
         </span>
@@ -262,12 +263,12 @@ export default async function LobbyPage({ params }: PageProps) {
       <div className="mx-auto max-w-4xl space-y-8 xl:max-w-7xl">
         {/* Header */}
         <header>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+          <Eyebrow>
             Workshop lobby
-          </p>
-          <h1 className="mt-2 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+          </Eyebrow>
+          <Heading level={1} className="mt-2 leading-tight">
             {workshop.title}
-          </h1>
+          </Heading>
           <p className="mt-3 max-w-2xl text-base italic leading-relaxed text-amber-700 dark:text-amber-300 sm:text-lg">
             Bring curiosity and wild ideas — that&apos;s where innovation comes from. ✨
           </p>
@@ -356,12 +357,12 @@ function WalkOutSection({ durationLabel }: { durationLabel: string | null }) {
     <section className="rounded-3xl border bg-gradient-to-br from-olive-50/60 to-card p-6 shadow-sm dark:from-olive-950/20 sm:p-8">
       <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+          <Eyebrow>
             What you&apos;ll walk out with
-          </p>
-          <h2 className="mt-1 text-xl font-semibold leading-tight sm:text-2xl">
+          </Eyebrow>
+          <Heading level={2} className="mt-1 text-xl leading-tight sm:text-2xl">
             A validated Build Pack in {durationLabel ?? '60–120 minutes'}
-          </h2>
+          </Heading>
         </div>
         <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-olive-100 text-olive-700 dark:bg-olive-900/50 dark:text-olive-300">
           <FileCheck className="h-6 w-6" />
@@ -370,21 +371,21 @@ function WalkOutSection({ durationLabel }: { durationLabel: string | null }) {
       <ul className="mt-5 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3 xl:grid-cols-1">
         <li className="rounded-xl border bg-background/60 p-4">
           <p className="text-sm font-semibold">PRD &amp; user stories</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <Caption className="mt-1">
             A spec document ready to brief AI coders or engineers.
-          </p>
+          </Caption>
         </li>
         <li className="rounded-xl border bg-background/60 p-4">
           <p className="text-sm font-semibold">Persona &amp; journey map</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <Caption className="mt-1">
             A real user you can keep designing for after the session.
-          </p>
+          </Caption>
         </li>
         <li className="rounded-xl border bg-background/60 p-4">
           <p className="text-sm font-semibold">Concept sheet</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <Caption className="mt-1">
             SWOT, feasibility, and elevator pitch for your strongest idea.
-          </p>
+          </Caption>
         </li>
       </ul>
     </section>

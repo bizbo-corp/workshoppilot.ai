@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Sparkles } from 'lucide-react';
+import { Heading, Text, Eyebrow } from '@/components/ui/typography';
 
 interface LobbyCountdownProps {
   /** ISO string for when the workshop starts. */
@@ -31,15 +32,15 @@ export function LobbyCountdown({ startAtIso }: LobbyCountdownProps) {
           <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-olive-500 to-olive-700 text-white shadow-lg">
             <Sparkles className="h-6 w-6" />
           </div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-olive-700 dark:text-olive-300">
+          <Eyebrow className="text-olive-700 dark:text-olive-300">
             Ready when you are
-          </p>
-          <h2 className="mt-2 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+          </Eyebrow>
+          <Heading level={1} as="h2" className="mt-2 text-4xl sm:text-5xl">
             Let&apos;s do this
-          </h2>
-          <p className="mt-3 text-sm text-muted-foreground">
+          </Heading>
+          <Text variant="muted" className="mt-3">
             The facilitator can kick things off any moment now.
-          </p>
+          </Text>
         </div>
       </div>
     );
@@ -100,7 +101,7 @@ export function LobbyCountdown({ startAtIso }: LobbyCountdownProps) {
                 <span className="font-mono text-5xl font-bold leading-none tabular-nums tracking-tighter text-foreground sm:text-7xl">
                   {String(seg.value).padStart(2, '0')}
                 </span>
-                <span className="mt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:text-xs">
+                <span className="mt-2 text-[10px] font-semibold uppercase tracking-eyebrow text-muted-foreground sm:text-xs">
                   {seg.label}
                 </span>
               </div>
@@ -113,11 +114,11 @@ export function LobbyCountdown({ startAtIso }: LobbyCountdownProps) {
           ))}
         </div>
 
-        <p className="mt-5 text-sm text-muted-foreground">
+        <Text variant="muted" className="mt-5">
           {isImminent
             ? 'Get comfy — your team is gathering below.'
             : 'Watch the intro video, scroll the journey, and meet your crew below.'}
-        </p>
+        </Text>
       </div>
     </div>
   );

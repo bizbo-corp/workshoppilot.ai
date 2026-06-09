@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/typography';
 
 interface WelcomeModalProps {
   showWelcomeModal: boolean;
@@ -63,9 +64,9 @@ export function WelcomeModal({ showWelcomeModal }: WelcomeModalProps) {
             </div>
             <div>
               <p className="text-sm font-medium text-foreground">AI Chat</p>
-              <p className="text-sm text-muted-foreground">
+              <Text variant="muted">
                 Ask questions, get guidance, and brainstorm with your AI facilitator
-              </p>
+              </Text>
             </div>
           </div>
 
@@ -75,9 +76,9 @@ export function WelcomeModal({ showWelcomeModal }: WelcomeModalProps) {
             </div>
             <div>
               <p className="text-sm font-medium text-foreground">Canvas</p>
-              <p className="text-sm text-muted-foreground">
+              <Text variant="muted">
                 Visualize your ideas with mind maps, sketches, and concept cards
-              </p>
+              </Text>
             </div>
           </div>
 
@@ -87,9 +88,9 @@ export function WelcomeModal({ showWelcomeModal }: WelcomeModalProps) {
             </div>
             <div>
               <p className="text-sm font-medium text-foreground">Steps</p>
-              <p className="text-sm text-muted-foreground">
+              <Text variant="muted">
                 Follow 10 design thinking steps from vague idea to validated Build Pack
-              </p>
+              </Text>
             </div>
           </div>
         </div>
@@ -102,7 +103,7 @@ export function WelcomeModal({ showWelcomeModal }: WelcomeModalProps) {
 
         <DialogFooter className="sm:flex-col">
           {/* Get Started CTA */}
-          <Button size="lg" className="w-full" onClick={handleDismiss}>
+          <Button variant="primary" size="lg" className="w-full" onClick={handleDismiss}>
             Get Started
           </Button>
         </DialogFooter>

@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { Eyebrow } from '@/components/ui/typography';
 import { renameWorkshop, updateWorkshopAppearance } from '@/actions/workshop-actions';
 import { WORKSHOP_COLORS, WORKSHOP_EMOJIS } from '@/lib/workshop/workshop-appearance';
 
@@ -66,7 +67,7 @@ export function BasicsSettingsTab({
       </div>
 
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Color</p>
+        <Eyebrow>Color</Eyebrow>
         <div className="flex flex-wrap gap-2">
           {WORKSHOP_COLORS.map((c) => (
             <button
@@ -87,7 +88,7 @@ export function BasicsSettingsTab({
       </div>
 
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Emoji</p>
+        <Eyebrow>Emoji</Eyebrow>
         <div className="flex max-h-40 flex-wrap gap-1 overflow-y-auto rounded-lg border border-olive-200/60 p-2 dark:border-olive-800/40">
           {WORKSHOP_EMOJIS.map((e) => (
             <button

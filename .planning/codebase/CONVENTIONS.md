@@ -145,6 +145,25 @@
 - Object mappings for conditional classes: `sizeClasses[size]`
 - CSS variables in theme (globals.css)
 
+## Design System
+
+The consolidated primitives live in `src/components/ui/`. Prefer them over hand-rolled markup; pass `className` for layout, not to restyle the primitive.
+
+**Tokens (`src/app/globals.css`)** — semantic, defined for light AND dark, mapped via `@theme inline`:
+- Color: `--primary` / `--secondary` / `--tertiary`, `--primary-brand` (strong olive CTA), `--destructive`, and the state set `--success` / `--warning` / `--info` (+ `*-foreground`). Never use `gray-*`/`slate-*`/`blue-*`/raw `white`; use `olive-*` / `neutral-olive-*` / semantic tokens.
+- Radius: `rounded-card` / `rounded-node` / `rounded-pill` (+ Tailwind `--radius-*`).
+- Type: `tracking-eyebrow` is the one canonical all-caps tracking value.
+
+**Buttons (`button.tsx`)** — semantic tiers: `primary` (most important, brand olive) › `secondary` (neutral solid) › `tertiary` (pale pill) › plus `destructive` / `outline` / `ghost` / `link`. `default` is a deprecated neutral alias kept so no-variant call sites don't shift mid-migration — declare an explicit tier on new buttons.
+
+**Typography (`typography.tsx`)** — `Heading` (level 1–4) / `H1`–`H4`, `Text` (`body`/`muted`/`lead`/`small`), `Eyebrow`, `Caption`, `Code`. Use these instead of copy-pasting size/weight/tracking strings.
+
+**Surfaces** — `Card` (slotted header/content/footer) for structured cards; `Surface` (`card`/`panel`/`node` variants) for plain card-like boxes instead of hand-rolled `rounded-* border bg-card shadow-*` divs.
+
+**Other primitives** — `Icon` (constrained size scale + `currentColor`; usually unneeded inside `Button`), `Avatar` (initials/image), `EmptyState` (icon+title+description+CTA), `SuggestionPill`, `Badge`.
+
+**Enforcement** — `npm run lint:tokens` scans `src/app` + `src/components` and reports OFF_BRAND / RAW white-black / STATE_COLOR / HEX violations (allow-lists canvas/ezydraw/marketing palettes). Report-only today; `--strict` gates on OFF_BRAND once that list is cleaned.
+
 ---
 
-*Convention analysis: 2026-02-07*
+*Convention analysis: 2026-02-07 · Design System section added 2026-06-10*

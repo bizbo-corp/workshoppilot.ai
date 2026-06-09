@@ -6,6 +6,8 @@ import { db } from '@/db/client';
 import { workshops, users } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { SchedulingForm } from './scheduling-form';
+import { Surface } from '@/components/ui/surface';
+import { Heading, Text } from '@/components/ui/typography';
 
 interface PageProps {
   searchParams: Promise<{ workshop_id?: string }>;
@@ -39,24 +41,24 @@ export default async function WhiteGloveSchedulingPage({ searchParams }: PagePro
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
-      <div className="w-full max-w-xl rounded-xl border border-border bg-card p-8 shadow-sm">
+      <Surface className="w-full max-w-xl p-8">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-olive-100 dark:bg-olive-900/30">
           <Sparkles className="h-7 w-7 text-olive-700 dark:text-olive-400" />
         </div>
 
-        <h1 className="text-2xl font-bold text-foreground text-center mb-2">
+        <Heading level={1} className="text-2xl text-center mb-2">
           You&apos;re all set
-        </h1>
-        <p className="text-sm text-muted-foreground text-center mb-6 leading-relaxed">
+        </Heading>
+        <Text variant="muted" className="text-center mb-6 leading-relaxed">
           Welcome to White Glove. Tell us when you&apos;d like to meet — we&apos;ll reach out within
           one business day to lock in your onboarding call.
-        </p>
+        </Text>
 
         <div className="rounded-lg border bg-muted/30 px-4 py-3 mb-6 flex items-center gap-3">
           <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-          <p className="text-sm text-foreground">
+          <Text>
             Workshop: <span className="font-medium">{workshop.title}</span>
-          </p>
+          </Text>
         </div>
 
         <SchedulingForm
@@ -73,7 +75,7 @@ export default async function WhiteGloveSchedulingPage({ searchParams }: PagePro
             Skip for now — I&apos;ll book later
           </Link>
         </div>
-      </div>
+      </Surface>
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Eyebrow, Text } from '@/components/ui/typography';
 import { copyToClipboard } from '@/lib/clipboard';
 import { getWorkshopTeam, type WorkshopTeam } from '@/actions/challenge-actions';
 import { sendWorkshopInvites, revokeInvite, resendInvite } from '@/actions/invitation-actions';
@@ -137,7 +138,7 @@ export function TeamSettingsTab({ workshopId }: TeamSettingsTabProps) {
   }
 
   if (!team) {
-    return <p className="py-4 text-sm italic text-muted-foreground">Team data unavailable.</p>;
+    return <Text variant="muted" className="py-4 italic">Team data unavailable.</Text>;
   }
 
   const hasChangeRequests = team.roster.some((p) => p.changeRequest);
@@ -147,11 +148,11 @@ export function TeamSettingsTab({ workshopId }: TeamSettingsTabProps) {
       {/* Change requests → republish */}
       {hasChangeRequests && (
         <div className="rounded-lg border border-amber-300/60 bg-amber-50/60 p-3 dark:border-amber-700/40 dark:bg-amber-950/30">
-          <p className="text-sm text-foreground">
+          <Text>
             Some participants requested changes. Edit the challenge, then republish to ask
             everyone to review again.
-          </p>
-          <Button size="sm" className="mt-2" onClick={handleRepublish} disabled={busy}>
+          </Text>
+          <Button variant="secondary" size="sm" className="mt-2" onClick={handleRepublish} disabled={busy}>
             Republish challenge
           </Button>
         </div>
@@ -186,7 +187,7 @@ export function TeamSettingsTab({ workshopId }: TeamSettingsTabProps) {
               }
             }}
           />
-          <Button size="sm" onClick={handleInvite} disabled={busy || !inviteEmail.trim() || team.seatsRemaining === 0}>
+          <Button variant="primary" size="sm" onClick={handleInvite} disabled={busy || !inviteEmail.trim() || team.seatsRemaining === 0}>
             Invite
           </Button>
         </div>
@@ -194,9 +195,7 @@ export function TeamSettingsTab({ workshopId }: TeamSettingsTabProps) {
 
       {/* Roster */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          People ({team.roster.length})
-        </p>
+        <Eyebrow>People ({team.roster.length})</Eyebrow>
         <ul className="space-y-1">
           {team.roster.map((p) => (
             <li key={p.id} className="flex items-center gap-2 text-sm">
@@ -225,7 +224,7 @@ export function TeamSettingsTab({ workshopId }: TeamSettingsTabProps) {
             </li>
           ))}
           {team.roster.length === 0 && (
-            <li className="text-sm italic text-muted-foreground">No one has joined yet.</li>
+            <li><Text variant="muted" className="italic">No one has joined yet.</Text></li>
           )}
         </ul>
       </div>
@@ -233,9 +232,7 @@ export function TeamSettingsTab({ workshopId }: TeamSettingsTabProps) {
       {/* Pending invites */}
       {team.pendingInvites.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Pending invites
-          </p>
+          <Eyebrow>Pending invites</Eyebrow>
           <ul className="space-y-1">
             {team.pendingInvites.map((inv) => (
               <li key={inv.id} className="flex items-center gap-2 text-sm">

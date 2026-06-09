@@ -440,7 +440,7 @@ export function PrdViewerDialog({ open, onOpenChange, workshopId, initialData, o
               </Button>
             )}
             {state === 'prd-ready' && v0Available && (
-              <Button size="sm" onClick={handleCreateV0}>
+              <Button variant="primary" size="sm" onClick={handleCreateV0}>
                 <Zap className="h-4 w-4" />
                 Create in V0
               </Button>

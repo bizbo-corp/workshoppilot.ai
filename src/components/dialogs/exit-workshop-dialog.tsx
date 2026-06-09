@@ -64,7 +64,7 @@ export function ExitWorkshopDialog({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:flex-col sm:items-stretch sm:space-x-0 sm:gap-2">
-            <Button onClick={handleExit} className="gap-2">
+            <Button variant="primary" onClick={handleExit} className="gap-2">
               <LogOut className="h-4 w-4" />
               Leave (session keeps running)
             </Button>
@@ -99,7 +99,7 @@ export function ExitWorkshopDialog({
           <Button variant="ghost" onClick={handleStay}>
             Stay in Workshop
           </Button>
-          <Button onClick={handleExit}>Return to Dashboard</Button>
+          <Button variant="primary" onClick={handleExit}>Return to Dashboard</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

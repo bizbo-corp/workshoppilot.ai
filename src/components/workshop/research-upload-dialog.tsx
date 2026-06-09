@@ -207,9 +207,9 @@ export function ResearchUploadDialog({
             Cancel
           </Button>
           <Button
+            variant="primary"
             onClick={handleAnalyze}
             disabled={!trimmed || analyzing}
-            className="bg-olive-700 text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
           >
             {analyzing ? (
               <>

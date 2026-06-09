@@ -3830,7 +3830,8 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                                             ],
                                           });
                                         }}
-                                        className="rounded-full bg-olive-700 px-5 py-2 text-sm font-medium text-white hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
+                                        variant="primary"
+                                        className="rounded-full px-5"
                                       >
                                         Confirm Selection (
                                         {personaSelections.size}/3)
@@ -4067,7 +4068,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                                 });
                               }}
                               className={cn(
-                                "cursor-pointer inline-flex items-center gap-2 rounded-full border border-olive-500 bg-olive-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-olive-700 dark:bg-olive-700 dark:border-olive-600 dark:hover:bg-olive-600 transition-colors",
+                                "cursor-pointer inline-flex items-center gap-2 rounded-full border border-primary-brand bg-primary-brand px-4 py-2 text-sm font-medium text-primary-brand-foreground shadow-sm transition-colors hover:bg-primary-brand/90",
                                 "disabled:cursor-not-allowed disabled:opacity-50",
                               )}
                             >
@@ -4087,7 +4088,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                                 });
                               }}
                               className={cn(
-                                "cursor-pointer inline-flex items-center gap-2 rounded-full border border-olive-500 bg-olive-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-olive-700 dark:bg-olive-700 dark:border-olive-600 dark:hover:bg-olive-600 transition-colors",
+                                "cursor-pointer inline-flex items-center gap-2 rounded-full border border-primary-brand bg-primary-brand px-4 py-2 text-sm font-medium text-primary-brand-foreground shadow-sm transition-colors hover:bg-primary-brand/90",
                                 "disabled:cursor-not-allowed disabled:opacity-50",
                               )}
                             >
@@ -4171,7 +4172,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                       <div className="flex justify-center gap-2">
                         <button
                           onClick={handleConfirmResearch}
-                          className="inline-flex items-center gap-2 rounded-full bg-olive-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
+                          className="inline-flex items-center gap-2 rounded-full bg-primary-brand px-4 py-2 text-sm font-medium text-primary-brand-foreground shadow-sm transition-all hover:bg-primary-brand/90"
                         >
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           Add to board
@@ -4209,7 +4210,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                             setFieldworkOpen(true);
                             await flushCanvasToDb();
                           }}
-                          className="inline-flex items-center gap-2 rounded-full bg-olive-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-olive-800 dark:bg-olive-600 dark:hover:bg-olive-500"
+                          className="inline-flex items-center gap-2 rounded-full bg-primary-brand px-4 py-2 text-sm font-medium text-primary-brand-foreground shadow-sm transition-all hover:bg-primary-brand/90"
                         >
                           <Users className="h-3.5 w-3.5" />
                           Open fieldwork

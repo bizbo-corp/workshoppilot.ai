@@ -154,7 +154,7 @@ export function MergeGroupDialog({
           <Button
             onClick={handleGenerate}
             disabled={isGenerating || remaining <= 0}
-            variant={previewUrl ? 'outline' : 'default'}
+            variant={previewUrl ? 'outline' : 'primary'}
             size="sm"
           >
             {isGenerating ? (
@@ -197,7 +197,7 @@ export function MergeGroupDialog({
         {/* Accept button */}
         {previewUrl && (
           <div className="flex justify-end">
-            <Button onClick={handleAccept} size="sm">
+            <Button variant="primary" onClick={handleAccept} size="sm">
               <Check className="mr-1.5 h-3.5 w-3.5" />
               Accept Merged Sketch
             </Button>

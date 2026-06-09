@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Eyebrow, Text } from '@/components/ui/typography';
 import { getChallengeForViewer, updateChallenge } from '@/actions/challenge-actions';
 import type { ChallengeArtifact } from '@/lib/workshop/challenge-artifact';
 
@@ -88,9 +89,7 @@ export function ChallengeSettingsTab({
     return (
       <div className="space-y-4 py-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Challenge statement
-          </p>
+          <Eyebrow>Challenge statement</Eyebrow>
           <blockquote className="mt-1 border-l-4 border-primary bg-olive-50/60 px-4 py-3 text-sm font-medium leading-relaxed text-foreground dark:bg-olive-900/30">
             {hmwStatement || <span className="italic text-muted-foreground">Not framed yet.</span>}
           </blockquote>
@@ -120,7 +119,7 @@ export function ChallengeSettingsTab({
       <EditField label="The Problem" value={problem} onChange={setProblem} rows={2} />
       <EditField label="The Audience" value={audience} onChange={setAudience} rows={2} />
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving} size="sm">
+        <Button variant="primary" onClick={handleSave} disabled={saving} size="sm">
           {saving ? 'Saving…' : 'Save changes'}
         </Button>
       </div>
@@ -131,8 +130,8 @@ export function ChallengeSettingsTab({
 function ReadField({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-olive-200/60 bg-olive-50/40 p-3 dark:border-olive-800/40 dark:bg-olive-900/20">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{value}</p>
+      <Eyebrow>{label}</Eyebrow>
+      <Text className="mt-1 whitespace-pre-wrap">{value}</Text>
     </div>
   );
 }

@@ -5,6 +5,8 @@ import ReactMarkdown from 'react-markdown';
 import { Loader2 } from 'lucide-react';
 import { getStepByOrder } from '@/lib/workshop/step-metadata';
 import { Button } from '@/components/ui/button';
+import { Surface } from '@/components/ui/surface';
+import { Heading, Text } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 import { PersonaCard } from './persona-card';
 import { JourneyMapGrid } from './journey-map-grid';
@@ -112,7 +114,7 @@ export function OutputPanel({
   if (!step) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">Step not found</p>
+        <Text variant="muted">Step not found</Text>
       </div>
     );
   }
@@ -123,18 +125,18 @@ export function OutputPanel({
       <div className="flex h-full flex-col overflow-y-auto p-6">
         <div className="mb-4">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+            <Heading level={3}>{step.mockOutputType}</Heading>
             <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
               Extracting...
             </span>
           </div>
         </div>
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-lg border bg-card p-8">
+        <Surface className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
+          <Text variant="muted">
             Extracting your output...
-          </p>
-        </div>
+          </Text>
+        </Surface>
       </div>
     );
   }
@@ -145,26 +147,26 @@ export function OutputPanel({
       <div className="flex h-full flex-col overflow-y-auto p-6">
         <div className="mb-4">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+            <Heading level={3}>{step.mockOutputType}</Heading>
             <span className="rounded-md bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
               Error
             </span>
           </div>
         </div>
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-lg border border-destructive/50 bg-card p-8">
-          <p className="text-center text-sm text-muted-foreground">
+        <Surface className="flex flex-1 flex-col items-center justify-center gap-4 border-destructive/50 p-8">
+          <Text variant="muted" className="text-center">
             I had trouble extracting your output. You can try again or continue
             chatting to refine.
-          </p>
-          <p className="text-center text-xs text-muted-foreground">
+          </Text>
+          <Text variant="small" className="text-center">
             {extractionError}
-          </p>
+          </Text>
           {onRetry && (
             <Button onClick={onRetry} variant="outline" size="sm">
               Try Again
             </Button>
           )}
-        </div>
+        </Surface>
       </div>
     );
   }
@@ -177,14 +179,14 @@ export function OutputPanel({
         <div className="flex h-full flex-col overflow-y-auto p-6">
           <div className="mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+              <Heading level={3}>{step.mockOutputType}</Heading>
               <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
                 Extracted
               </span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <Text variant="muted" className="mt-1">
               Review your extracted output below
-            </p>
+            </Text>
           </div>
           <PersonaCard persona={artifact} />
         </div>
@@ -196,14 +198,14 @@ export function OutputPanel({
         <div className="flex h-full flex-col overflow-y-auto p-6">
           <div className="mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+              <Heading level={3}>{step.mockOutputType}</Heading>
               <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
                 Extracted
               </span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <Text variant="muted" className="mt-1">
               Review your extracted output below
-            </p>
+            </Text>
           </div>
           <JourneyMapGrid artifact={artifact} />
         </div>
@@ -215,14 +217,14 @@ export function OutputPanel({
         <div className="flex h-full flex-col overflow-y-auto p-6">
           <div className="mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+              <Heading level={3}>{step.mockOutputType}</Heading>
               <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
                 Extracted
               </span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <Text variant="muted" className="mt-1">
               Review your extracted output below
-            </p>
+            </Text>
           </div>
           <HMWBuilder artifact={artifact} />
         </div>
@@ -235,14 +237,14 @@ export function OutputPanel({
         <div className="flex h-full flex-col overflow-y-auto p-6">
           <div className="mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+              <Heading level={3}>{step.mockOutputType}</Heading>
               <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
                 Extracted
               </span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <Text variant="muted" className="mt-1">
               Review your extracted output below
-            </p>
+            </Text>
           </div>
           <IdeationClusterView artifact={artifact} />
         </div>
@@ -254,14 +256,14 @@ export function OutputPanel({
         <div className="flex h-full flex-col overflow-y-auto p-6">
           <div className="mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+              <Heading level={3}>{step.mockOutputType}</Heading>
               <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
                 Extracted
               </span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <Text variant="muted" className="mt-1">
               Review your extracted output below
-            </p>
+            </Text>
           </div>
           <ConceptSheetView artifact={artifact} />
         </div>
@@ -273,14 +275,14 @@ export function OutputPanel({
         <div className="flex h-full flex-col overflow-y-auto p-6">
           <div className="mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+              <Heading level={3}>{step.mockOutputType}</Heading>
               <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
                 Extracted
               </span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <Text variant="muted" className="mt-1">
               Review your extracted output below
-            </p>
+            </Text>
           </div>
           <SynthesisSummaryView artifact={artifact} workshopCompleted={workshopCompleted} />
         </div>
@@ -294,7 +296,7 @@ export function OutputPanel({
       <div className="flex h-full flex-col overflow-y-auto p-6">
         <div className="mb-4">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold">{step.mockOutputType}</h3>
+            <Heading level={3}>{step.mockOutputType}</Heading>
             <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
               Extracted
             </span>
@@ -303,14 +305,14 @@ export function OutputPanel({
             Review your extracted output below
           </p>
         </div>
-        <div
+        <Surface
           className={cn(
-            'flex-1 rounded-lg border bg-card p-6 shadow-xs',
+            'flex-1 p-6',
             'prose prose-sm dark:prose-invert max-w-none'
           )}
         >
           <ReactMarkdown>{markdown}</ReactMarkdown>
-        </div>
+        </Surface>
       </div>
     );
   }
@@ -326,19 +328,17 @@ export function OutputPanel({
             Preview
           </span>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <Text variant="muted" className="mt-1">
           AI-generated content will appear here
-        </p>
+        </Text>
       </div>
 
       {/* Mock content */}
-      <div
-        className="flex-1 rounded-lg border bg-card p-4 shadow-xs"
-      >
+      <Surface className="flex-1 p-4">
         <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-muted-foreground">
           {step.mockOutputContent}
         </pre>
-      </div>
+      </Surface>
     </div>
   );
 }

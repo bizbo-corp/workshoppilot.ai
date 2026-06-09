@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Heading, Caption, Code } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 import {
   adminGrantCredits,
@@ -71,7 +72,7 @@ export function AdminGrants() {
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <h4 className="text-sm font-semibold text-foreground">Grant solo credits</h4>
+        <Heading level={4}>Grant solo credits</Heading>
         <div className="grid gap-2 sm:grid-cols-[100px_1fr_auto]">
           <Input
             type="number"
@@ -91,6 +92,7 @@ export function AdminGrants() {
             aria-label="Recipient email"
           />
           <Button
+            variant="primary"
             size="sm"
             onClick={handleGrantCredits}
             disabled={creditPending}
@@ -98,13 +100,13 @@ export function AdminGrants() {
             {creditPending ? 'Granting…' : 'Grant credits'}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Writes a <code className="rounded bg-muted px-1">credit_transactions</code> ledger row (description: &ldquo;Admin grant&rdquo;) so the books stay honest.
-        </p>
+        <Caption>
+          Writes a <Code>credit_transactions</Code> ledger row (description: &ldquo;Admin grant&rdquo;) so the books stay honest.
+        </Caption>
       </div>
 
       <div className="space-y-3 border-t border-border pt-4">
-        <h4 className="text-sm font-semibold text-foreground">Upgrade a workshop</h4>
+        <Heading level={4}>Upgrade a workshop</Heading>
         <div className="grid gap-2 sm:grid-cols-[1fr_160px_auto]">
           <Input
             type="text"
@@ -125,6 +127,7 @@ export function AdminGrants() {
             <option value="white_glove">white_glove</option>
           </select>
           <Button
+            variant="primary"
             size="sm"
             onClick={handleUpgradeWorkshop}
             disabled={tierPending}
@@ -132,9 +135,9 @@ export function AdminGrants() {
             {tierPending ? 'Upgrading…' : 'Upgrade workshop'}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <Caption>
           Bypasses the Stripe path. Sets tier, facilitator mode, multiplayer type, and seeds the Liveblocks session if missing.
-        </p>
+        </Caption>
       </div>
     </div>
   );
