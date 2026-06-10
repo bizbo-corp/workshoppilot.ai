@@ -10,6 +10,7 @@
  */
 
 import type { Lens, OutputType } from '@/lib/schemas/validation-schemas';
+import type { IconName } from '@/components/ui/icon';
 
 export interface ArtifactOption {
   /** Stable key persisted on the plan (ValidationPlan.artifactType). */
@@ -282,6 +283,57 @@ export const ARTIFACT_LOOKUP: LookupTable = {
     ],
   },
 };
+
+/**
+ * Each test artifact → a glyph that reflects what the test actually is. Shared by the
+ * artifact picker (Step 10 "Cheapest way to test it") and the plan summary so the same
+ * test reads the same everywhere. Keys match ArtifactOption.key above.
+ */
+export const TEST_ICONS: Record<string, IconName> = {
+  // app_digital
+  clickable_prototype: 'mouse-pointer-click',
+  fake_door_smoke_test: 'door-open',
+  technical_spike: 'code',
+  pricing_test: 'coins',
+  // physical_product
+  physical_mockup: 'package',
+  wizard_of_oz: 'magic-wand',
+  manufacturing_check: 'wrench',
+  preorder_test: 'credit-card',
+  // service
+  roleplay_walkthrough: 'messages-square',
+  concierge_test: 'hand',
+  service_blueprint_dryrun: 'map',
+  paid_pilot: 'coins',
+  // process_change
+  concept_card_reinterview: 'clipboard-check',
+  dry_run_simulation: 'footprints',
+  team_pilot: 'users',
+  cost_benefit_signoff: 'check-circle',
+  // offering
+  landing_value_prop: 'app-window',
+  capacity_check: 'settings',
+  presale_loi: 'file-text',
+  // experience_design
+  usability_test: 'eye',
+  ab_first_click: 'shuffle',
+  design_build_spike: 'palette',
+  completion_rate_test: 'trending-up',
+  // brand_comms
+  message_resonance_test: 'megaphone',
+  five_second_test: 'timer',
+  brand_content_review: 'search',
+  response_premium_test: 'heart',
+  // campaign
+  creative_concept_test: 'sparkles',
+  landing_signup_test: 'user-plus',
+  cost_per_action_test: 'coins',
+};
+
+/** Icon for a test artifact key, falling back to a generic checklist glyph. */
+export function getTestIcon(key: string): IconName {
+  return TEST_ICONS[key] ?? 'list-checks';
+}
 
 /** Cheapest-valid-first list of artifacts for an output type + lens. */
 export function getArtifacts(outputType: OutputType, lens: Lens): ArtifactOption[] {

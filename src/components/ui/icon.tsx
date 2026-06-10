@@ -176,6 +176,8 @@ import { Megaphone } from '@phosphor-icons/react/dist/ssr/Megaphone';
 import { Footprints } from '@phosphor-icons/react/dist/ssr/Footprints';
 import { Barricade } from '@phosphor-icons/react/dist/ssr/Barricade';
 import { HandPointing } from '@phosphor-icons/react/dist/ssr/HandPointing';
+import { TestTube } from '@phosphor-icons/react/dist/ssr/TestTube';
+import { ChartPie } from '@phosphor-icons/react/dist/ssr/ChartPie';
 
 /**
  * Semantic, kebab-case name → Phosphor glyph. Names mirror intent (not the
@@ -339,6 +341,8 @@ const ICONS = {
   footprints: Footprints,
   construction: Barricade,
   pointer: HandPointing,
+  'test-tube': TestTube,
+  'chart-pie': ChartPie,
 } as const;
 
 export type IconName = keyof typeof ICONS;

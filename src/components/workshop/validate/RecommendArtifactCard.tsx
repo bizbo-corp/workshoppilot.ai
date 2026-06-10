@@ -2,10 +2,15 @@
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import type { Lens, OutputType } from '@/lib/schemas';
-import { getArtifacts, type ArtifactOption } from '@/lib/validation/artifact-lookup';
+import { getArtifacts, getTestIcon, type ArtifactOption } from '@/lib/validation/artifact-lookup';
+import { getWorkshopColor } from '@/lib/workshop/workshop-appearance';
 import { SectionCard } from './SectionCard';
 import type { SectionStatus } from './sections';
+
+// Same orange "test" hue used for the Test chip in the plan summary, kept in sync.
+const TEST_HEX = getWorkshopColor('orange').hex;
 
 export function RecommendArtifactCard({
   status,
@@ -55,18 +60,32 @@ export function RecommendArtifactCard({
                 )}
                 aria-pressed={isSelected}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-base font-medium">
-                    {option.label}
-                    {i === 0 && (
-                      <span className="ml-2 text-sm font-normal text-primary">recommended</span>
-                    )}
+                <div className="flex items-start gap-3">
+                  <span
+                    className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                    style={{ backgroundColor: `color-mix(in srgb, ${TEST_HEX} 28%, transparent)` }}
+                  >
+                    <Icon
+                      name={getTestIcon(option.key)}
+                      className="h-5 w-5"
+                      style={{ color: `color-mix(in srgb, ${TEST_HEX} 62%, var(--foreground))` }}
+                    />
                   </span>
-                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[12px] font-medium text-foreground/70">
-                    {option.costHint}
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-base font-medium">
+                        {option.label}
+                        {i === 0 && (
+                          <span className="ml-2 text-sm font-normal text-primary">recommended</span>
+                        )}
+                      </span>
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[12px] font-medium text-foreground/70">
+                        {option.costHint}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-foreground/70">{option.description}</p>
+                  </div>
                 </div>
-                <p className="mt-1 text-sm text-foreground/70">{option.description}</p>
               </button>
             );
           })}
