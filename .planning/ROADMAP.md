@@ -213,7 +213,13 @@ See `milestones/v2.0-ROADMAP.md` for full details.
   3. User clicks the (+) icon on a node and a new adjacent screen-card node appears connected to it
   4. User edits a node's name, UI type, purpose, or key elements inline and deletes nodes or edges; changes survive a page reload within 5 seconds (debounced autosave to `build_packs.content`)
   5. User clicks "Mark complete" / "Approve" on the flow and the state flips to approved; the prototype builder link activates only after this state is set
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 63-01-PLAN.md — Foundation: types, Zustand store + provider, save-journey-flow API route
+- [ ] 63-02-PLAN.md — Components: screen-card node, edge, editable node-detail dialog
+- [ ] 63-03-PLAN.md — Canvas: ReactFlow wiring (connect/forks, (+) add, delete, Mark complete toolbar)
+- [ ] 63-04-PLAN.md — Route: page + content with debounced autosave, empty state, human verification
 
 ### Phase 64: AI Baseline Generation
 **Goal**: Users are explicitly asked how they want to test their idea, and the AI generates a correct-archetype baseline flow scoped to their choice — with a regenerate option and graceful handling of two-sided products
