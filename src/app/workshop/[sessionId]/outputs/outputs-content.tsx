@@ -356,7 +356,7 @@ export function OutputsContent({
         <div className="mx-auto max-w-4xl px-6 py-8 space-y-8">
           {/* Page heading */}
           <div className="space-y-1">
-            <Heading level={1} as="h1" className="text-2xl font-semibold sm:text-2xl">Build Pack</Heading>
+            <Heading level={1} as="h1" className="font-serif text-3xl font-normal leading-[1.1] tracking-tight sm:text-3xl">Build Pack</Heading>
           </div>
 
         {/* Back link (only on card grid view, hidden for read-only guests) */}

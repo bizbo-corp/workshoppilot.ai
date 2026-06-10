@@ -16,52 +16,28 @@ export function ValidationGuidanceCard({
   outputType,
   tailoredExample,
   tailoring = false,
+  flat = false,
 }: {
   outputType: OutputType;
   /** One-line LLM-tailored "for your solution" example, once generated. */
   tailoredExample?: string;
   /** True while the tailored example is being generated. */
   tailoring?: boolean;
+  /** Render without the card chrome — for hosts that already provide a card (Build Pack). */
+  flat?: boolean;
 }) {
   const guidance = getValidationGuidance(outputType);
   if (!guidance) return null;
 
-  return (
-    <Surface className="p-5">
+  const content = (
+    <>
       <h4 className="text-base font-semibold">Recommended validation approach</h4>
       <p className="mt-1 text-base text-foreground/70">{guidance.approach}.</p>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <div>
-          <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground/80">
-            <Icon name="presentation" className="h-4 w-4 text-primary/70" />
-            In the workshop
-          </div>
-          <ul className="mt-2 space-y-1.5">
-            {guidance.inWorkshop.map((item, i) => (
-              <li key={i} className="flex items-start gap-2 text-base">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/50" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground/80">
-            <Icon name="rocket" className="h-4 w-4 text-primary/70" />
-            After the workshop
-          </div>
-          <ul className="mt-2 space-y-1.5">
-            {guidance.postWorkshop.map((item, i) => (
-              <li key={i} className="flex items-start gap-2 text-base">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/50" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+      <ol className="mt-5">
+        <GuidancePhase icon="presentation" label="In the workshop" hint="now" items={guidance.inWorkshop} />
+        <GuidancePhase icon="rocket" label="After the workshop" hint="later" items={guidance.postWorkshop} isLast />
+      </ol>
 
       {guidance.qualNote && (
         <p className="mt-4 text-base text-foreground/80">
@@ -88,6 +64,53 @@ export function ValidationGuidanceCard({
         Your Validation Plan is done — this step is complete as soon as the plan exists. The
         after-the-workshop actions continue later and won’t reopen it.
       </p>
-    </Surface>
+    </>
+  );
+
+  if (flat) return <div className="border-t border-border/60 pt-5">{content}</div>;
+  return <Surface className="p-5">{content}</Surface>;
+}
+
+/**
+ * One phase of the in-workshop → after-workshop sequence: a marker on a vertical
+ * rail (the phases are sequential, not parallel), eyebrow label + bulleted actions.
+ */
+function GuidancePhase({
+  icon,
+  label,
+  hint,
+  items,
+  isLast = false,
+}: {
+  icon: 'presentation' | 'rocket';
+  label: string;
+  /** Tiny temporal qualifier next to the label — "now" / "later". */
+  hint: string;
+  items: string[];
+  isLast?: boolean;
+}) {
+  return (
+    <li className={`relative pl-10 ${isLast ? '' : 'pb-6'}`}>
+      {!isLast && (
+        <span aria-hidden className="absolute bottom-0 left-[13px] top-8 w-px bg-border/70" />
+      )}
+      <span className="absolute left-0 top-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary/10">
+        <Icon name={icon} className="h-3.5 w-3.5 text-primary" />
+      </span>
+      <div className="flex min-h-7 items-baseline gap-2 pt-1.5">
+        <span className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-foreground/80">
+          {label}
+        </span>
+        <span className="text-xs italic text-foreground/50">{hint}</span>
+      </div>
+      <ul className="mt-1.5 space-y-1.5">
+        {items.map((item, i) => (
+          <li key={i} className="flex items-start gap-2 text-[15px] leading-snug text-foreground/90">
+            <span className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-foreground/40" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </li>
   );
 }
