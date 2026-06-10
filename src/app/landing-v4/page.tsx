@@ -829,7 +829,7 @@ export default function LandingV4() {
                   <Icon name="arrow-right" className="ml-2 h-4 w-4" />
                 </NewWorkshopButton>
                 <a href="#pricing">
-                  <Button variant="outline" size="lg">
+                  <Button variant="outline" size="lg" className="text-base">
                     View Pricing
                   </Button>
                 </a>
