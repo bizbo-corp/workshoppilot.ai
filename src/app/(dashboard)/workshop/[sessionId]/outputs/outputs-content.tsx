@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Icon } from '@/components/ui/icon';
 import {
   Card,
@@ -17,6 +16,8 @@ import { DeliverableDetailView } from '@/components/workshop/deliverable-detail-
 import { ValidationPlanDeliverable } from '@/components/workshop/validate/ValidationPlanDeliverable';
 import { WorkshopHeader } from '@/components/layout/workshop-header';
 import { WorkshopSummaryTile, type WorkshopSynthesis } from '@/components/workshop/workshop-summary-tile';
+import { StepJumpDialog } from '@/components/dialogs/step-jump-dialog';
+import { useBuildPackNav } from '@/components/layout/build-pack-nav-context';
 import { toast } from 'sonner';
 
 interface DeliverableFormat {
@@ -175,7 +176,15 @@ export function OutputsContent({
   synthesis = null,
 }: OutputsContentProps) {
   const router = useRouter();
-  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const { info: buildPackNav } = useBuildPackNav();
+  // ?view=<type> deep-links a deliverable detail (used by the dashboard sidebar)
+  const viewParam = searchParams.get('view');
+  const [selectedType, setSelectedType] = useState<string | null>(viewParam);
+  const [stepDialogOpen, setStepDialogOpen] = useState(false);
+  useEffect(() => {
+    setSelectedType(viewParam);
+  }, [viewParam]);
   const prdStatus: GenerationStatus = 'idle';
   const techSpecsStatus: GenerationStatus = 'idle';
   const [journeyMapStatus, setJourneyMapStatus] = useState<GenerationStatus>('idle');
@@ -359,17 +368,6 @@ export function OutputsContent({
             <Heading level={1} as="h1" className="font-serif text-3xl font-normal leading-[1.1] tracking-tight sm:text-3xl">Build Pack</Heading>
           </div>
 
-        {/* Back link (only on card grid view, hidden for read-only guests) */}
-        {!selectedDeliverable && !isReadOnly && (
-          <Link
-            href={`/workshop/${sessionId}/step/validate`}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-          >
-            <Icon name="arrow-left" className="h-4 w-4" />
-            Back to Workshop
-          </Link>
-        )}
-
         {/* Detail view or card grid */}
         {selectedDeliverable ? (
           selectedDeliverable.type === 'validation-plan' ? (
@@ -396,6 +394,7 @@ export function OutputsContent({
                 <WorkshopSummaryTile
                   synthesis={synthesis as WorkshopSynthesis}
                   workshopId={workshopId}
+                  onBackToWorkshop={isReadOnly ? undefined : () => setStepDialogOpen(true)}
                 />
               )}
             {SECTIONS.map((section) => (
@@ -637,6 +636,14 @@ export function OutputsContent({
         )}
         </div>
       </div>
+
+      {/* "Back to Workshop" step picker (steps published by the outputs layout) */}
+      <StepJumpDialog
+        open={stepDialogOpen}
+        onOpenChange={setStepDialogOpen}
+        sessionId={sessionId}
+        steps={buildPackNav?.steps ?? []}
+      />
     </div>
   );
 }

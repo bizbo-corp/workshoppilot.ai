@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { SynthesisSummaryView } from './synthesis-summary-view';
 
 export interface WorkshopSynthesis {
@@ -28,9 +29,12 @@ function scoreColor(score: number): string {
 export function WorkshopSummaryTile({
   synthesis,
   workshopId,
+  onBackToWorkshop,
 }: {
   synthesis: WorkshopSynthesis;
   workshopId?: string;
+  /** When provided, shows a "Back to workshop" link (opens the step picker). */
+  onBackToWorkshop?: () => void;
 }) {
   const [expanded, setExpanded] = React.useState(false);
 
@@ -39,7 +43,8 @@ export function WorkshopSummaryTile({
   const quality = synthesis.confidenceAssessment?.researchQuality;
 
   return (
-    <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-6 space-y-4">
+    // Same card chrome as the deliverable grid, on a primary tint to stand out
+    <Card className="gap-4 bg-primary/10 px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-serif text-2xl leading-tight tracking-tight text-foreground">
           Workshop summary
@@ -70,22 +75,29 @@ export function WorkshopSummaryTile({
         )
       )}
 
-      <Button
-        variant="outline"
-        size="sm"
-        className="gap-1.5"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        {expanded ? (
-          <>
-            Hide summary <Icon name="chevron-up" className="h-4 w-4" />
-          </>
-        ) : (
-          <>
-            Expand summary <Icon name="chevron-down" className="h-4 w-4" />
-          </>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? (
+            <>
+              Hide summary <Icon name="chevron-up" className="h-4 w-4" />
+            </>
+          ) : (
+            <>
+              Expand summary <Icon name="chevron-down" className="h-4 w-4" />
+            </>
+          )}
+        </Button>
+        {onBackToWorkshop && (
+          <Button variant="tertiary" size="sm" onClick={onBackToWorkshop}>
+            Back to workshop
+          </Button>
         )}
-      </Button>
-    </div>
+      </div>
+    </Card>
   );
 }
