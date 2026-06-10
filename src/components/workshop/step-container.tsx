@@ -59,6 +59,8 @@ import { usePanelLayout, clampChatWidth } from "@/hooks/use-panel-layout";
 import { WorkshopHeader } from "@/components/layout/workshop-header";
 import { ShareLinkButton } from "@/components/workshop/share-link-button";
 import { StepTransitionWrapper } from "./step-transition-wrapper";
+import { HeaderStreak } from "./header-streak";
+import { Eyebrow } from "@/components/ui/typography";
 import type { CanvasGuideData } from "@/lib/canvas/canvas-guide-types";
 import type { StepCanvasSettingsData } from "@/lib/canvas/step-canvas-settings-types";
 import { useMultiplayerContext } from "@/components/workshop/multiplayer-room";
@@ -235,6 +237,15 @@ export function StepContainer({
   // value persists on pointer-up. transition-[width] is disabled mid-drag.
   const [isResizingChat, setIsResizingChat] = React.useState(false);
   const [liveChatWidth, setLiveChatWidth] = React.useState<number | null>(null);
+
+  // Chat header light streak — fires during a brief intro window on load, and
+  // whenever Wanda is generating (reported by ChatPanel via onThinkingChange).
+  const [chatThinking, setChatThinking] = React.useState(false);
+  const [introStreak, setIntroStreak] = React.useState(true);
+  React.useEffect(() => {
+    const t = setTimeout(() => setIntroStreak(false), 3200);
+    return () => clearTimeout(t);
+  }, []);
   const resizeStartRef = React.useRef<{ x: number; width: number } | null>(null);
   // Mirror of liveChatWidth so pointer-up can read the final value without a
   // setState updater (calling setChatWidth inside an updater would fire the
@@ -1307,16 +1318,28 @@ export function StepContainer({
         // Frosted-glass header — sits over the scroll area so messages blur
         // behind it as they pass under. Same olive hue as the body; soft shadow
         // gives it a floating, neumorphic feel (no hard divider).
-        <div className="panel-header absolute inset-x-0 top-0 z-20 flex h-16 items-center gap-2.5 px-3 bg-olive-100/70 backdrop-blur-md dark:bg-neutral-olive-950/70">
+        <div className="panel-header panel-header--flat absolute inset-x-0 top-0 z-20 flex h-16 items-center gap-2.5 px-5 bg-chat-surface backdrop-blur-md">
+          <HeaderStreak active={introStreak || chatThinking} />
           <div className="flex h-8 w-8 shrink-0 items-center justify-center text-base leading-none">
             {FACILITATOR.emoji}
           </div>
-          <span className="text-sm font-bold">
+          <Eyebrow className="text-foreground">
             {FACILITATOR.name} - your AI{" "}
             {facilitatorMode === "team" || workshopType === "multiplayer"
               ? "assistant"
               : "facilitator"}
-          </span>
+          </Eyebrow>
+          {/* Collapse control — fades in on chat hover; replaces the old
+              persistent footer toggle. */}
+          <button
+            type="button"
+            onClick={() => setChatCollapsed(true)}
+            title="Collapse chat"
+            aria-label="Collapse chat"
+            className="ml-auto flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-all hover:bg-olive-200/60 hover:text-foreground group-hover/chat:opacity-100 dark:hover:bg-neutral-olive-800"
+          >
+            <Icon name="panel-left" className="h-4 w-4" />
+          </button>
         </div>
       )}
       <div className="min-h-0 flex-1">
@@ -1348,6 +1371,7 @@ export function StepContainer({
                   ? setStep10MessageCount
                   : undefined
             }
+            onThinkingChange={setChatThinking}
             subStep={step?.id === 'ideation' ? ideation.currentPhase : undefined}
             showStepConfirm={
               step?.id === 'ideation'
@@ -1658,7 +1682,7 @@ export function StepContainer({
         {chatCollapsed ? (
           /* Collapsed: the whole rail is one big button that expands the chat.
              Avatar sits in an h-16 header band to align with the sidebar logo
-             + canvas header. The toggle also lives in the shared footer below. */
+             + canvas header; a chevron hint fades in on hover. */
           <button
             type="button"
             onClick={() => setChatCollapsed(false)}
@@ -1673,38 +1697,21 @@ export function StepContainer({
                 {FACILITATOR.emoji}
               </div>
             </div>
+            <div className="flex justify-center pt-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+              <Icon name="panel-left" className="h-4 w-4" />
+            </div>
           </button>
         ) : (
-          <div className="min-h-0 flex-1">{renderContent()}</div>
+          // Floating chat card — one rounded, faintly-bordered container that the
+          // header, message body, and input footer all share. overflow-hidden
+          // clips the absolute header's top corners and the footer's bottom
+          // corners to the same radius so it reads as a single unbroken box.
+          <div className="flex min-h-0 flex-1 flex-col p-4">
+            <div className="group/chat relative min-h-0 flex-1 overflow-hidden rounded-3xl border-[0.5px] border-t-white/60 border-l-white/60 border-r-olive-200/50 border-b-olive-200/50 bg-chat-surface/75 shadow-[-1px_-1px_3px_rgba(255,255,255,0.35),1px_1px_3px_rgba(70,75,50,0.06)] dark:border-t-white/[0.08] dark:border-l-white/[0.08] dark:border-r-black/20 dark:border-b-black/20 dark:shadow-[-1px_-1px_3px_rgba(255,255,255,0.015),1px_1px_4px_rgba(0,0,0,0.4)]">
+              {renderContent()}
+            </div>
+          </div>
         )}
-
-        {/* Persistent footer — collapse / expand toggle, mirrors the sidebar's
-            footer toggle so both panels collapse from the same spot. */}
-        <div
-          className={cn(
-            "flex items-center border-t px-2 py-4",
-            chatCollapsed ? "justify-center" : "justify-start"
-          )}
-        >
-          <button
-            type="button"
-            onClick={() => setChatCollapsed(!chatCollapsed)}
-            title={chatCollapsed ? "Expand chat" : "Collapse chat"}
-            className={cn(
-              "flex h-9 items-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-olive-100 hover:text-foreground dark:hover:bg-olive-900/30",
-              chatCollapsed ? "w-9 justify-center" : "w-full justify-start px-2"
-            )}
-          >
-            {chatCollapsed ? (
-              <Icon name="chevron-right" className="h-4 w-4" />
-            ) : (
-              <>
-                <Icon name="chevron-left" className="h-4 w-4" />
-                <span className="ml-2 text-sm">Collapse</span>
-              </>
-            )}
-          </button>
-        </div>
 
         {/* Resize handle — sits on the chat's right edge, hidden when collapsed */}
         {!chatCollapsed && (
