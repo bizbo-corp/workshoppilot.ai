@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
+milestone: v0.5
 milestone_name: Journey Flow + Low-Fidelity Prototype Pipeline
-status: roadmap_created
-last_updated: "2026-06-11T00:00:00.000Z"
+status: unknown
+last_updated: "2026-06-10T22:56:41.326Z"
 progress:
-  total_phases: 43
+  total_phases: 39
   completed_phases: 38
-  total_plans: 109
-  completed_plans: 109
+  total_plans: 113
+  completed_plans: 111
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 63
-Plan: 01 complete
-Status: In progress — Plan 01 shipped (types, store, provider, save route)
-Last activity: 2026-06-10 — Phase 63 Plan 01: Journey Flow data foundation complete
+Plan: 02 complete
+Status: In progress — Plan 02 shipped (node card, edge, detail dialog)
+Last activity: 2026-06-10 — Phase 63 Plan 02: Journey Flow presentational components complete
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Last activity: 2026-06-10 — Phase 63 Plan 01: Journey Flow data foundation com
 | **Total shipped** | **62** | **155** | **22 days** |
 | Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings P03 | 3 | 3 tasks | 4 files |
 | Phase 62.2 P02 | 4min | 2 tasks | 3 files |
+| Phase 63-journey-flow-editor-core P02 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,9 @@ Last activity: 2026-06-10 — Phase 63 Plan 01: Journey Flow data foundation com
 - [Phase 63 Plan 01]: Title prefix 'Journey Flow:' kept distinct from 'Journey Map:' — old mapper is parked not deleted; overwriting its build-pack row would be silent data loss.
 - [Phase 63 Plan 01]: deleteNode cascades edge removal (filters sourceNodeId AND targetNodeId) — orphan edges break ReactFlow rendering; this was a known gap in old mapper.
 - [Phase 63 Plan 01]: Plain db client (not dbWithRetry) used in save route — matches both other save routes; fast-path writes are established exception per 63-RESEARCH.md OQ-3.
+- [Phase 63-journey-flow-editor-core]: JourneyFlowEdge endpoint circles use var(--background) not hardcoded white — olive token compliance
+- [Phase 63-journey-flow-editor-core]: Priority dot colors use CSS vars (destructive/primary/muted-foreground) inline style — no hardcoded palette colors
+- [Phase 63-journey-flow-editor-core]: keyElements blank-line filter deferred to onOpenChange close callback to avoid eating the newline user just typed
 
 ### Roadmap Evolution
 
@@ -87,5 +91,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-06-10
-Stopped at: Completed 63-01-PLAN.md — Journey Flow data foundation (types, store, provider, save route)
+Stopped at: Completed 63-02-PLAN.md — Journey Flow node card, edge, and detail dialog components
 Resume file: None
