@@ -285,7 +285,7 @@ Plans:
 | 59-62. Dot Voting & Mobile Gate | v2.0 | 7/7 | Complete | 2026-03-01 |
 | 62.1 Fix Cross-Workshop Dialogue Leak & Duplicate Greetings | hotfix | 3/3 | Complete | 2026-05-16 |
 | 62.2 AI SDK v5 Message-ID Server-Side Resolution | 2/2 | Complete | 2026-05-16 | — |
-| 63. Journey Flow Editor Core | 2/4 | In Progress|  | - |
+| 63. Journey Flow Editor Core | 3/4 | In Progress|  | - |
 | 64. AI Baseline Generation | v2.1 | 0/TBD | Not started | - |
 | 65. Validation Guidance Wiring | v2.1 | 0/TBD | Not started | - |
 | 66. Low-Fi Prototype Prompt | v2.1 | 0/TBD | Not started | - |
