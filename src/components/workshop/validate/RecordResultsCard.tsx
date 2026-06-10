@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { optionTileVariants } from '@/components/ui/option-tile';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Surface } from '@/components/ui/surface';
@@ -218,8 +219,8 @@ export function RecordResultsCard({
                   type="button"
                   onClick={() => setVerdict(verdict === v ? (isHybrid ? null : v) : v)}
                   className={cn(
-                    'rounded-md border px-2 py-1.5 text-sm font-medium transition-colors',
-                    verdict === v ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-accent'
+                    optionTileVariants({ selected: verdict === v }),
+                    'rounded-md px-2 py-1.5 text-sm font-medium'
                   )}
                 >
                   {VERDICT_LABELS[v]}

@@ -18,8 +18,8 @@ import { cn } from "@/lib/utils"
 const surfaceVariants = cva("", {
   variants: {
     variant: {
-      // Standard page/content card.
-      card: "bg-card text-card-foreground rounded-card border shadow-sm",
+      // Standard page/content card. Neumorphic hairline border (.neu-edge).
+      card: "bg-card text-card-foreground rounded-card neu-edge shadow-sm",
       // Lighter inset panel (e.g. sub-sections, sidebars).
       panel: "bg-background/60 rounded-card border",
       // Canvas node shell — larger radius, stronger lift.

@@ -109,7 +109,7 @@ export function MobileGate({ workshopName }: MobileGateProps) {
               {/* Primary: Email link */}
               <a
                 href={mailtoHref}
-                className="w-full inline-flex items-center justify-center rounded-md bg-neutral-olive-100 text-neutral-olive-900 hover:bg-neutral-olive-200 px-4 py-2.5 text-sm font-medium transition-colors"
+                className="w-full inline-flex items-center justify-center rounded-md bg-olive-100 text-neutral-olive-900 hover:bg-olive-200 px-4 py-2.5 text-sm font-medium transition-colors"
               >
                 Email this link to myself
               </a>

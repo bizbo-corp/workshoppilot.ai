@@ -259,7 +259,7 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
             <button
               onClick={handleToggleStar}
               className={cn(
-                'nodrag nopan text-xs px-1.5 py-0.5 rounded hover:bg-neutral-olive-100/50 transition-all',
+                'nodrag nopan text-xs px-1.5 py-0.5 rounded hover:bg-olive-100/50 transition-all',
                 data.isStarred ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
               )}
               style={{ color: data.themeColor }}
@@ -272,7 +272,7 @@ export const MindMapNode = memo(({ data, id }: NodeProps<MindMapNode>) => {
           {/* +Child/+Branch and Delete — hover-only always */}
           <button
             onClick={handleAddChild}
-            className="nodrag nopan text-xs px-2 py-0.5 rounded hover:bg-neutral-olive-100/50 transition-all opacity-0 group-hover:opacity-100"
+            className="nodrag nopan text-xs px-2 py-0.5 rounded hover:bg-olive-100/50 transition-all opacity-0 group-hover:opacity-100"
             style={{ color: data.themeColor }}
           >
             {isRoot ? '+Branch' : '+Child'}

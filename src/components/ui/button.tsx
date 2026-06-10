@@ -9,19 +9,21 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Tier 1 — the single most important action on a view (brand olive CTA).
+        // Tier 1 — the single most important action on a view. Darkest solid
+        // (--primary, neutral-olive-800 in light mode). The brand-green CTA
+        // lives on as the --primary-brand token for marketing surfaces.
         primary:
-          "bg-primary-brand text-primary-brand-foreground shadow-sm hover:bg-primary-brand/90",
-        // Neutral strong solid. Deprecated as a tier name — prefer an explicit
-        // primary/secondary/tertiary. Kept (unchanged) so no-variant call sites
-        // don't shift mid-migration; remove once every Button declares a variant.
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+          "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
+        // Deprecated alias of `primary` — shadcn's name for the no-variant
+        // fallback. Renders identically to `primary` so unmarked call sites
+        // stay tier-1; migrate them to variant="primary", then remove.
+        default: "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
         secondary:
-          "bg-neutral-olive-50 dark:bg-neutral-olive-900 text-secondary-foreground border border-border shadow-sm hover:bg-neutral-olive-100 dark:hover:bg-neutral-olive-800",
+          "bg-olive-50 dark:bg-neutral-olive-900 text-secondary-foreground border border-border shadow-sm hover:bg-olive-100 dark:hover:bg-neutral-olive-800",
         tertiary:
           "bg-tertiary text-tertiary-foreground border border-tertiary-border shadow-sm hover:bg-tertiary-hover",
         ghost:

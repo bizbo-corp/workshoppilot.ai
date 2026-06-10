@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { optionTileVariants } from '@/components/ui/option-tile';
 import { Icon } from '@/components/ui/icon';
 import type { Lens, OutputType } from '@/lib/schemas';
 import { getArtifacts, getTestIcon, type ArtifactOption } from '@/lib/validation/artifact-lookup';
@@ -52,12 +53,7 @@ export function RecommendArtifactCard({
                 key={option.key}
                 type="button"
                 onClick={() => onChange(option)}
-                className={cn(
-                  'block w-full rounded-lg border p-3 text-left transition-colors',
-                  isSelected
-                    ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
-                    : 'border-border hover:bg-accent'
-                )}
+                className={cn(optionTileVariants({ selected: isSelected }), 'block w-full p-3')}
                 aria-pressed={isSelected}
               >
                 <div className="flex items-start gap-3">
@@ -68,7 +64,9 @@ export function RecommendArtifactCard({
                     <Icon
                       name={getTestIcon(option.key)}
                       className="h-5 w-5"
-                      style={{ color: `color-mix(in srgb, ${TEST_HEX} 62%, var(--foreground))` }}
+                      style={{
+                        color: `color-mix(in srgb, ${TEST_HEX} 62%, ${isSelected ? 'var(--primary-foreground)' : 'var(--foreground)'})`,
+                      }}
                     />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -76,14 +74,35 @@ export function RecommendArtifactCard({
                       <span className="text-base font-medium">
                         {option.label}
                         {i === 0 && (
-                          <span className="ml-2 text-sm font-normal text-primary">recommended</span>
+                          <span
+                            className={cn(
+                              'ml-2 text-sm font-normal',
+                              isSelected ? 'text-primary-foreground/80' : 'text-primary'
+                            )}
+                          >
+                            recommended
+                          </span>
                         )}
                       </span>
-                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[12px] font-medium text-foreground/70">
+                      <span
+                        className={cn(
+                          'shrink-0 rounded-full px-2 py-0.5 text-[12px] font-medium',
+                          isSelected
+                            ? 'bg-primary-foreground/20 text-primary-foreground/90'
+                            : 'bg-muted text-foreground/70'
+                        )}
+                      >
                         {option.costHint}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-foreground/70">{option.description}</p>
+                    <p
+                      className={cn(
+                        'mt-1 text-sm',
+                        isSelected ? 'text-primary-foreground/80' : 'text-foreground/70'
+                      )}
+                    >
+                      {option.description}
+                    </p>
                   </div>
                 </div>
               </button>
