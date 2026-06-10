@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.5
-milestone_name: milestone
-status: unknown
-last_updated: "2026-05-16T03:42:16.805Z"
+milestone: v2.1
+milestone_name: Journey Flow + Low-Fidelity Prototype Pipeline
+status: defining_requirements
+last_updated: "2026-06-11T00:00:00.000Z"
 progress:
   total_phases: 38
   completed_phases: 38
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 62.2 — AI SDK v5 Message-ID Server-Side Resolution
+**Current focus:** Milestone v2.1 — Journey Flow + Low-Fidelity Prototype Pipeline
 
 ## Current Position
 
-Phase: 62.2-ai-sdk-v5-message-id-resolution
-Plan: COMPLETE (Plan 02 done — verification script + Known Limitations closure)
-Status: Complete — Phase 62.2 fully shipped; all 6 ACs verified; 62.1 Known Limitations closed
-Last activity: 2026-05-16 — Plan 02 complete; scripts/verify-message-id-resolution.ts created; 62.1-01 and 62.1-02 SUMMARYs updated
+Phase: Not started (creating roadmap)
+Plan: —
+Status: Requirements defined; roadmap in progress
+Last activity: 2026-06-11 — Milestone v2.1 started; REQUIREMENTS.md written from v2.1-BRIEF.md
 
 ## Performance Metrics
 

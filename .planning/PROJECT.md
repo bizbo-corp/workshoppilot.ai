@@ -8,6 +8,19 @@ An AI-powered digital facilitator that guides anyone from a vague idea through a
 
 Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
 
+## Current Milestone: v2.1 Journey Flow + Low-Fidelity Prototype Pipeline
+
+**Goal:** Replace the over-complex UX Journey Mapper with Journey Flow — a simple data-only node editor that AI-seeds from workshop outputs — and pipe it into an agent-agnostic low-fidelity prototype prompt, with validation guidance routing digital outputs into the pipeline and non-digital outputs to alternatives.
+
+**Target features:**
+- Journey Flow editor at `/workshop/[sessionId]/outputs/journey-flow/` — single data-only screen-card node type, drag-to-connect edges, (+) adjacent-screen add, Zustand store + debounced autosave, mark-complete state
+- AI baseline generation — explicit test-scope choice (whole journey vs single feature), AI-determined flow archetypes reconciled with `strategicIntent`, regenerate option
+- Validation guidance wiring — digital types route to Journey Flow + gated prototype builder; non-digital types get off-platform alternatives; classification edge cases handled
+- Low-fi prototype prompt — fidelity switch (hi-fi stubbed), wireframe-style preamble, agent-agnostic copy/paste handoff, shared journey-understanding functions
+- Park old mapper — de-linked but functional, replacement banner
+
+**Brief:** `.planning/milestones/v2.1-BRIEF.md` (locked decisions)
+
 ## Requirements
 
 ### Validated
@@ -261,4 +274,4 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Undo/redo disabled in multiplayer mode (liveblocks() + temporal() TypeScript incompatible)
 
 ---
-*Last updated: 2026-03-01 after v2.0 milestone*
+*Last updated: 2026-06-11 — milestone v2.1 Journey Flow + Low-Fidelity Prototype Pipeline started*
