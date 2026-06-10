@@ -102,14 +102,14 @@ export function DetectOutputTypeCard({
                       name={OUTPUT_TYPE_ICONS[type]}
                       className={cn(
                         'h-7 w-7 shrink-0',
-                        selected ? 'text-primary-foreground' : 'text-foreground/70'
+                        selected ? 'text-foreground' : 'text-foreground/70'
                       )}
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-base font-medium">{OUTPUT_TYPE_LABELS[type]}</span>
                         {selected && (
-                          <span className="shrink-0 rounded-full bg-primary-foreground/20 px-1.5 py-0.5 text-[12px] font-semibold text-primary-foreground">
+                          <span className="shrink-0 rounded-full bg-foreground/20 px-1.5 py-0.5 text-[12px] font-semibold text-foreground">
                             {isPrimary ? 'primary' : '2nd'}
                           </span>
                         )}
@@ -117,7 +117,7 @@ export function DetectOutputTypeCard({
                       <div
                         className={cn(
                           'mt-0.5 text-sm',
-                          selected ? 'text-primary-foreground/80' : 'text-foreground/70'
+                          selected ? 'text-foreground/80' : 'text-foreground/70'
                         )}
                       >
                         {OUTPUT_TYPE_DESCRIPTIONS[type]}

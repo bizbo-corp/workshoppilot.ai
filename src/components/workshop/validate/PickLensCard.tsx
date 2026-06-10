@@ -47,10 +47,10 @@ export function PickLensCard({
                 <span
                   className={cn(
                     'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
-                    selected ? 'border-primary-foreground' : 'border-muted-foreground/40'
+                    selected ? 'border-foreground' : 'border-muted-foreground/40'
                   )}
                 >
-                  {selected && <span className="h-2 w-2 rounded-full bg-primary-foreground" />}
+                  {selected && <span className="h-2 w-2 rounded-full bg-foreground" />}
                 </span>
                 <span>
                   <span className="text-base font-medium">
@@ -59,7 +59,7 @@ export function PickLensCard({
                       <span
                         className={cn(
                           'ml-2 text-sm font-normal',
-                          selected ? 'text-primary-foreground/80' : 'text-primary'
+                          selected ? 'text-foreground/80' : 'text-primary'
                         )}
                       >
                         recommended first
@@ -69,7 +69,7 @@ export function PickLensCard({
                   <span
                     className={cn(
                       'mt-0.5 block text-sm',
-                      selected ? 'text-primary-foreground/80' : 'text-foreground/70'
+                      selected ? 'text-foreground/80' : 'text-foreground/70'
                     )}
                   >
                     {LENS_DESCRIPTIONS[lens]}
