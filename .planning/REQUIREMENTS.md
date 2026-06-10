@@ -9,11 +9,11 @@
 ### Journey Flow Editor (FLOW)
 
 - [ ] **FLOW-01**: User can open Journey Flow at `/workshop/[sessionId]/outputs/journey-flow/`, alongside the parked old mapper route
-- [ ] **FLOW-02**: User sees screen/section nodes as data-only cards (name, UI type, short description) on a React Flow canvas, backed by node data `{ id, name, uiType, purpose, keyElements: string[], addressesPain?, priority }`
+- [x] **FLOW-02**: User sees screen/section nodes as data-only cards (name, UI type, short description) on a React Flow canvas, backed by node data `{ id, name, uiType, purpose, keyElements: string[], addressesPain?, priority }`
 - [ ] **FLOW-03**: User can connect nodes with drag-to-connect edges (free-form, forks allowed)
 - [ ] **FLOW-04**: User can add an adjacent screen/section via a (+) icon on a node (port existing toolbar + adjacency-placement logic)
 - [ ] **FLOW-05**: User can edit node card fields (name, UI type, purpose, key elements) and delete nodes/edges
-- [ ] **FLOW-06**: Journey Flow state persists via a simple Zustand store with debounced autosave to `build_packs.content` (same pattern as old mapper, leaner shape)
+- [x] **FLOW-06**: Journey Flow state persists via a simple Zustand store with debounced autosave to `build_packs.content` (same pattern as old mapper, leaner shape)
 - [ ] **FLOW-07**: User can mark the Journey Flow approved/complete; downstream actions (prototype prompt) gate on this state
 
 ### AI Baseline Generation (GEN)
@@ -67,11 +67,11 @@ Deferred to later milestones:
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FLOW-01 | Phase 63 | Pending |
-| FLOW-02 | Phase 63 | Pending |
+| FLOW-02 | Phase 63 | Complete |
 | FLOW-03 | Phase 63 | Pending |
 | FLOW-04 | Phase 63 | Pending |
 | FLOW-05 | Phase 63 | Pending |
-| FLOW-06 | Phase 63 | Pending |
+| FLOW-06 | Phase 63 | Complete |
 | FLOW-07 | Phase 63 | Pending |
 | GEN-01 | Phase 64 | Pending |
 | GEN-02 | Phase 64 | Pending |

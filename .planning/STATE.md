@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 
 ## Current Position
 
-Phase: 63 (next)
-Plan: —
-Status: Roadmap created; Phase 63 ready to plan
-Last activity: 2026-06-11 — Milestone v2.1 roadmap written (phases 63-67, 23 requirements, 5 phases)
+Phase: 63
+Plan: 01 complete
+Status: In progress — Plan 01 shipped (types, store, provider, save route)
+Last activity: 2026-06-10 — Phase 63 Plan 01: Journey Flow data foundation complete
 
 ## Performance Metrics
 
@@ -67,6 +67,9 @@ Last activity: 2026-06-11 — Milestone v2.1 roadmap written (phases 63-67, 23 r
   - [Phase 62.2 Plan 01 complete]: Server-side message-id resolved via AI SDK v6 generateMessageId — three 62.1 workarounds removed (empty-id filter, post-stream backfill, deterministic placeholder as canonical id); chat_request_logs.response_message_id now populated at insert time; all 6 ACs verified
 - [Phase 62.2]: Phase 62.2 Plan 02: AC-1/2/4/wire-through/AC-6 codified in scripts/verify-message-id-resolution.ts (verify-sentinel.ts pattern); 62.1 Known Limitations closed with audit trail preserved
 - [v2.1 Roadmap]: 5 phases (63-67) derived from 23 requirements. Brief's suggested phase breakdown followed — natural delivery boundaries matched. Phase 64 depends on Phase 63; Phase 65 depends on Phase 63; Phase 66 depends on both 63 and 65; Phase 67 depends on Phase 66.
+- [Phase 63 Plan 01]: Title prefix 'Journey Flow:' kept distinct from 'Journey Map:' — old mapper is parked not deleted; overwriting its build-pack row would be silent data loss.
+- [Phase 63 Plan 01]: deleteNode cascades edge removal (filters sourceNodeId AND targetNodeId) — orphan edges break ReactFlow rendering; this was a known gap in old mapper.
+- [Phase 63 Plan 01]: Plain db client (not dbWithRetry) used in save route — matches both other save routes; fast-path writes are established exception per 63-RESEARCH.md OQ-3.
 
 ### Roadmap Evolution
 
@@ -83,6 +86,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-06-11
-Stopped at: v2.1 roadmap created — 5 phases (63-67), 23 requirements, 100% coverage. Ready for Phase 63 planning.
+Last session: 2026-06-10
+Stopped at: Completed 63-01-PLAN.md — Journey Flow data foundation (types, store, provider, save route)
 Resume file: None
