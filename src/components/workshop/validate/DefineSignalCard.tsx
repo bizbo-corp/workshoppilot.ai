@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { optionTileVariants } from '@/components/ui/option-tile';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -326,15 +327,17 @@ export function DefineSignalCard({
                   key={m.key}
                   type="button"
                   onClick={() => setMode(m.key)}
-                  className={cn(
-                    'rounded-lg border px-2.5 py-2 text-left transition-colors',
-                    active ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'
-                  )}
+                  className={cn(optionTileVariants({ selected: active }), 'px-2.5 py-2')}
                 >
-                  <span className={cn('block text-sm font-semibold', active && 'text-primary')}>
-                    {m.label}
+                  <span className="block text-sm font-semibold">{m.label}</span>
+                  <span
+                    className={cn(
+                      'block text-[12px]',
+                      active ? 'text-primary-foreground/80' : 'text-foreground/70'
+                    )}
+                  >
+                    {m.hint}
                   </span>
-                  <span className="block text-[12px] text-foreground/70">{m.hint}</span>
                 </button>
               );
             })}

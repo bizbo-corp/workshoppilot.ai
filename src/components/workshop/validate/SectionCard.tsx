@@ -34,10 +34,10 @@ export function SectionCard({
   return (
     <section
       className={cn(
-        'rounded-xl border p-5 transition-colors',
-        status === 'active' && 'border-primary/30 bg-card shadow-sm',
-        status === 'done' && 'border-border bg-card/60',
-        status === 'locked' && 'border-dashed border-border bg-muted/30 opacity-60'
+        'rounded-xl p-5 transition-colors',
+        status === 'active' && 'neu-edge bg-card shadow-sm',
+        status === 'done' && 'neu-edge-inset bg-card/60',
+        status === 'locked' && 'border border-dashed border-border bg-muted/30 opacity-60'
       )}
     >
       <div className="flex items-center gap-3">

@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { optionTileVariants } from '@/components/ui/option-tile';
 import type { Lens } from '@/lib/schemas';
 import { LENS_LABELS, LENS_DESCRIPTIONS } from '@/lib/validation/artifact-lookup';
 import { SectionCard } from './SectionCard';
@@ -40,32 +41,37 @@ export function PickLensCard({
                 key={lens}
                 type="button"
                 onClick={() => onChange(lens)}
-                className={cn(
-                  'flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors',
-                  selected
-                    ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
-                    : 'border-border hover:bg-accent'
-                )}
+                className={cn(optionTileVariants({ selected }), 'flex w-full items-start gap-3 p-3')}
                 aria-pressed={selected}
               >
                 <span
                   className={cn(
                     'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
-                    selected ? 'border-primary' : 'border-muted-foreground/40'
+                    selected ? 'border-primary-foreground' : 'border-muted-foreground/40'
                   )}
                 >
-                  {selected && <span className="h-2 w-2 rounded-full bg-primary" />}
+                  {selected && <span className="h-2 w-2 rounded-full bg-primary-foreground" />}
                 </span>
                 <span>
                   <span className="text-base font-medium">
                     {LENS_LABELS[lens]}
                     {isDefault && (
-                      <span className="ml-2 text-sm font-normal text-primary">
+                      <span
+                        className={cn(
+                          'ml-2 text-sm font-normal',
+                          selected ? 'text-primary-foreground/80' : 'text-primary'
+                        )}
+                      >
                         recommended first
                       </span>
                     )}
                   </span>
-                  <span className="mt-0.5 block text-sm text-foreground/70">
+                  <span
+                    className={cn(
+                      'mt-0.5 block text-sm',
+                      selected ? 'text-primary-foreground/80' : 'text-foreground/70'
+                    )}
+                  >
                     {LENS_DESCRIPTIONS[lens]}
                   </span>
                 </span>

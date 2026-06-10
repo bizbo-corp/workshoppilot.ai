@@ -3,6 +3,7 @@
 import { Icon, type IconName } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { optionTileVariants } from '@/components/ui/option-tile';
 import type { OutputType, OutputTypeClassification } from '@/lib/schemas';
 import {
   OUTPUT_TYPE_LABELS,
@@ -93,14 +94,7 @@ export function DetectOutputTypeCard({
                   type="button"
                   onClick={() => onToggleType(type)}
                   disabled={disabled}
-                  className={cn(
-                    'rounded-lg border p-3 text-left transition-colors',
-                    selected
-                      ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
-                      : disabled
-                        ? 'border-border opacity-40'
-                        : 'border-border hover:bg-accent'
-                  )}
+                  className={cn(optionTileVariants({ selected, disabled }), 'p-3')}
                   aria-pressed={selected}
                 >
                   <div className="flex items-center gap-3">
@@ -108,19 +102,24 @@ export function DetectOutputTypeCard({
                       name={OUTPUT_TYPE_ICONS[type]}
                       className={cn(
                         'h-7 w-7 shrink-0',
-                        selected ? 'text-primary' : 'text-foreground/70'
+                        selected ? 'text-primary-foreground' : 'text-foreground/70'
                       )}
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-base font-medium">{OUTPUT_TYPE_LABELS[type]}</span>
                         {selected && (
-                          <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[12px] font-semibold text-primary">
+                          <span className="shrink-0 rounded-full bg-primary-foreground/20 px-1.5 py-0.5 text-[12px] font-semibold text-primary-foreground">
                             {isPrimary ? 'primary' : '2nd'}
                           </span>
                         )}
                       </div>
-                      <div className="mt-0.5 text-sm text-foreground/70">
+                      <div
+                        className={cn(
+                          'mt-0.5 text-sm',
+                          selected ? 'text-primary-foreground/80' : 'text-foreground/70'
+                        )}
+                      >
                         {OUTPUT_TYPE_DESCRIPTIONS[type]}
                       </div>
                     </div>
