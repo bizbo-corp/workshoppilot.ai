@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { UserButton, useUser } from '@clerk/nextjs';
 import { Icon } from '@/components/ui/icon';
 import Logo from '@/components/Logo';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { cn } from '@/lib/utils';
 
@@ -31,13 +32,17 @@ export function DashboardHeader({ creditBalance }: DashboardHeaderProps) {
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background/80 backdrop-blur-md px-6">
-      {/* Left section: Logo */}
-      <Link href="/" className="flex items-center">
-        <Logo size="sm" />
-      </Link>
+      {/* Left section: sidebar trigger + logo on mobile (the sidebar carries
+          the logo on desktop) */}
+      <div className="flex items-center gap-2 md:hidden">
+        <SidebarTrigger />
+        <Link href="/" className="flex items-center">
+          <Logo size="sm" />
+        </Link>
+      </div>
 
       {/* Right section: Credit badge, Theme toggle, User menu */}
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-2">
         {creditBalance !== undefined && (
           <Link
             href="/pricing"

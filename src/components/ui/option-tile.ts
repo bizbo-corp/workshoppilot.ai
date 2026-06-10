@@ -6,8 +6,9 @@ import { cva, type VariantProps } from "class-variance-authority"
  * test, signal-mode, and verdict pickers.
  *
  * Resting tiles share the tertiary tier with suggestion pills; the selected
- * tile inverts to the primary solid (dark fill, light text — flips in dark
- * mode automatically via the primary tokens). Muted copy inside a selected
+ * tile inverts to a dark fill (foreground @ 80% with a hairline full-strength
+ * foreground border — flips in dark mode automatically via the foreground
+ * token). Muted copy inside a selected
  * tile should switch to `text-primary-foreground/80` instead of
  * `text-foreground/70` (/80 is the floor — /70 lands at ~4.4:1 on the dark
  * fill, just under the 4.5:1 AA threshold for small text), and accent text
@@ -21,7 +22,7 @@ export const optionTileVariants = cva(
   {
     variants: {
       selected: {
-        true: "border-primary bg-primary text-primary-foreground shadow-sm",
+        true: "border-foreground bg-foreground/80 text-primary-foreground shadow-sm",
         false: "border-tertiary-border bg-tertiary shadow-sm",
       },
       disabled: {

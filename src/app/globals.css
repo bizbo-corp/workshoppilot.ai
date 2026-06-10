@@ -143,7 +143,9 @@
   --selection: var(--olive-600);
   /* Canvas (light) — lightest surface of the workspace stack: canvas (50) →
      sidebar (200) → chat (300). */
-  --canvas-bg: var(--olive-50);
+  /* Match the page surface (--background, olive-75) so the canvas doesn't
+     read lighter than sibling screens like Validation Plan / Challenge. */
+  --canvas-bg: var(--background);
   --canvas-dots: color-mix(in srgb, var(--foreground) 40%, transparent);
   --canvas-grid-line: var(--neutral-olive-300);
   --canvas-grid-line-light: var(--neutral-olive-200);
@@ -280,11 +282,10 @@
      (yellow-olive) — deliberately greener so cards don't read yellow. */
   --card: #f2f7f0;
   /* Neumorphic hairline edge (used by .neu-edge) — light catch on top/left,
-     shade on bottom/right. Pure white for the highlight: olive-50 is too
-     close to the card fill to register; the shadow steps to olive-300 to
-     balance it. */
+     shade on bottom/right. Pure white for the highlight; olive-200 for the
+     shadow (olive-300 read too thick/heavy against the card fill). */
   --edge-highlight: #ffffff;
-  --edge-shadow: var(--olive-300);
+  --edge-shadow: var(--olive-200);
   --card-foreground: var(--neutral-olive-950);
   --popover: var(--card);
   --popover-foreground: var(--neutral-olive-950);
@@ -339,7 +340,7 @@
 .dark {
   /* Neumorphic edge (dark) — same treatment the chat panel uses. */
   --edge-highlight: rgba(255, 255, 255, 0.08);
-  --edge-shadow: rgba(0, 0, 0, 0.2);
+  --edge-shadow: rgba(0, 0, 0, 0.15);
   /* Chat panel fill — midpoint of the 950 dock and the lighter 900 step. */
   --chat-surface: color-mix(in oklab, var(--neutral-olive-950), var(--neutral-olive-900));
   /* Lighter olive in dark mode so selection rings + resize handles stay visible

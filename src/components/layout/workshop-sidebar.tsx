@@ -31,6 +31,7 @@ import {
   SidebarMenuAction,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { STEPS, getStepBySlug } from "@/lib/workshop/step-metadata";
@@ -146,6 +147,11 @@ export function WorkshopSidebar({
 
   // Create status lookup map
   const statusLookup = new Map(workshopSteps.map((s) => [s.stepId, s.status]));
+
+  // Workshop finished → offer a route back to the build pack under the steps
+  const allStepsComplete = STEPS.filter((s) => s.id !== "challenge").every(
+    (s) => statusLookup.get(s.id) === "complete",
+  );
   const snapshotLookup = new Map(
     workshopSteps.map((s) => [s.stepId, s.snapshotUrl]),
   );
@@ -310,6 +316,25 @@ export function WorkshopSidebar({
             );
           })}
         </SidebarMenu>
+
+        {allStepsComplete && (
+          <div className={cn("mt-2", state === "collapsed" ? "px-0.5" : "px-1")}>
+            <Button
+              asChild
+              variant="tertiary"
+              size={state === "collapsed" ? "icon-sm" : "sm"}
+              className="w-full"
+            >
+              <Link
+                href={`/workshop/${sessionId}/outputs`}
+                title="Back to Build Pack"
+              >
+                <Icon name="package" className="h-4 w-4" />
+                {state === "expanded" && <span>Back to Build Pack</span>}
+              </Link>
+            </Button>
+          </div>
+        )}
       </SidebarContent>
 
       {viewingSnapshot && (
