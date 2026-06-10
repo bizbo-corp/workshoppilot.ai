@@ -22,7 +22,6 @@ import type {
   ValidationPlan,
 } from '@/lib/schemas';
 import { findArtifactByKey, type ArtifactOption } from '@/lib/validation/artifact-lookup';
-import { ProgressRail } from './ProgressRail';
 import { DetectOutputTypeCard } from './DetectOutputTypeCard';
 import { ProposeAssumptionCard } from './ProposeAssumptionCard';
 import { PickLensCard } from './PickLensCard';
@@ -466,7 +465,6 @@ export function ValidatePanel({
               {concepts.map((c) => c.name).join(' · ')}
             </p>
           )}
-          {activePlan && <ProgressRail progress={activePlan.progressStep} />}
         </header>
 
         {activePlan && (

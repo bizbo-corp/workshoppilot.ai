@@ -333,7 +333,7 @@ export function DefineSignalCard({
                   <span
                     className={cn(
                       'block text-[12px]',
-                      active ? 'text-primary-foreground/80' : 'text-foreground/70'
+                      active ? 'text-foreground/80' : 'text-foreground/70'
                     )}
                   >
                     {m.hint}

@@ -6,13 +6,11 @@ import { cva, type VariantProps } from "class-variance-authority"
  * test, signal-mode, and verdict pickers.
  *
  * Resting tiles share the tertiary tier with suggestion pills; the selected
- * tile inverts to a dark fill (foreground @ 80% with a hairline full-strength
- * foreground border — flips in dark mode automatically via the foreground
- * token). Muted copy inside a selected
- * tile should switch to `text-primary-foreground/80` instead of
- * `text-foreground/70` (/80 is the floor — /70 lands at ~4.4:1 on the dark
- * fill, just under the 4.5:1 AA threshold for small text), and accent text
- * (`text-primary`) to `text-primary-foreground`.
+ * tile gets a faint foreground tint (foreground @ 25%) with a hairline
+ * full-strength foreground border — flips in dark mode automatically via the
+ * foreground token. Text stays in the foreground ramp on both states: full
+ * foreground for labels, `text-foreground/80` for muted copy inside a
+ * selected tile (vs /70 resting) so it holds contrast on the tinted fill.
  *
  * Spacing/radius defaults to rounded-lg; call sites add their own padding
  * (and may override radius) via cn().
@@ -22,7 +20,7 @@ export const optionTileVariants = cva(
   {
     variants: {
       selected: {
-        true: "border-foreground bg-foreground/80 text-primary-foreground shadow-sm",
+        true: "border-foreground bg-foreground/25 text-foreground shadow-sm",
         false: "border-tertiary-border bg-tertiary shadow-sm",
       },
       disabled: {

@@ -65,7 +65,7 @@ export function RecommendArtifactCard({
                       name={getTestIcon(option.key)}
                       className="h-5 w-5"
                       style={{
-                        color: `color-mix(in srgb, ${TEST_HEX} 62%, ${isSelected ? 'var(--primary-foreground)' : 'var(--foreground)'})`,
+                        color: `color-mix(in srgb, ${TEST_HEX} 62%, var(--foreground))`,
                       }}
                     />
                   </span>
@@ -77,7 +77,7 @@ export function RecommendArtifactCard({
                           <span
                             className={cn(
                               'ml-2 text-sm font-normal',
-                              isSelected ? 'text-primary-foreground/80' : 'text-primary'
+                              isSelected ? 'text-foreground/80' : 'text-primary'
                             )}
                           >
                             recommended
@@ -88,7 +88,7 @@ export function RecommendArtifactCard({
                         className={cn(
                           'shrink-0 rounded-full px-2 py-0.5 text-[12px] font-medium',
                           isSelected
-                            ? 'bg-primary-foreground/20 text-primary-foreground/90'
+                            ? 'bg-foreground/20 text-foreground/90'
                             : 'bg-muted text-foreground/70'
                         )}
                       >
@@ -98,7 +98,7 @@ export function RecommendArtifactCard({
                     <p
                       className={cn(
                         'mt-1 text-sm',
-                        isSelected ? 'text-primary-foreground/80' : 'text-foreground/70'
+                        isSelected ? 'text-foreground/80' : 'text-foreground/70'
                       )}
                     >
                       {option.description}
