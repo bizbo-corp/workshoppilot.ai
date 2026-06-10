@@ -13,6 +13,7 @@ export function VideoPlayButton() {
       <Button
         variant="secondary"
         size="lg"
+        className="text-base"
         onClick={() => setOpen(true)}
       >
         <span className="flex items-center justify-center w-6 h-6 rounded-full bg-olive-600 dark:bg-olive-500 shrink-0">
