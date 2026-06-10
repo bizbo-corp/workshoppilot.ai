@@ -195,7 +195,7 @@ See `milestones/v2.0-ROADMAP.md` for full details.
 
 #### Phase Summary
 
-- [ ] **Phase 63: Journey Flow Editor Core** - Route, node data model, drag-to-connect edges, (+) add, inline edit/delete, Zustand store + autosave, mark-complete
+- [x] **Phase 63: Journey Flow Editor Core** - Route, node data model, drag-to-connect edges, (+) add, inline edit/delete, Zustand store + autosave, mark-complete (completed 2026-06-10)
 - [ ] **Phase 64: AI Baseline Generation** - Test-scope choice UI, archetype detection, baseline flow generation (journey + mini-flow modes), regenerate, two-sided fallback
 - [ ] **Phase 65: Validation Guidance Wiring** - Digital type routing with Journey Flow links + prototype gating, non-digital alternatives with off-platform guidance, edge-case handling, classifier audit
 - [ ] **Phase 66: Low-Fi Prototype Prompt** - Fidelity switch, low-fi template with wireframe preamble, shared journey-understanding refactor, agent-agnostic copy/paste handoff, hi-fi stub, single-feature scoping
@@ -285,7 +285,7 @@ Plans:
 | 59-62. Dot Voting & Mobile Gate | v2.0 | 7/7 | Complete | 2026-03-01 |
 | 62.1 Fix Cross-Workshop Dialogue Leak & Duplicate Greetings | hotfix | 3/3 | Complete | 2026-05-16 |
 | 62.2 AI SDK v5 Message-ID Server-Side Resolution | 2/2 | Complete | 2026-05-16 | — |
-| 63. Journey Flow Editor Core | 3/4 | In Progress|  | - |
+| 63. Journey Flow Editor Core | 4/4 | Complete   | 2026-06-10 | - |
 | 64. AI Baseline Generation | v2.1 | 0/TBD | Not started | - |
 | 65. Validation Guidance Wiring | v2.1 | 0/TBD | Not started | - |
 | 66. Low-Fi Prototype Prompt | v2.1 | 0/TBD | Not started | - |
