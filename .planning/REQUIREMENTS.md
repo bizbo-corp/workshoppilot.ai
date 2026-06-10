@@ -66,7 +66,29 @@ Deferred to later milestones:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmap) | | |
+| FLOW-01 | Phase 63 | Pending |
+| FLOW-02 | Phase 63 | Pending |
+| FLOW-03 | Phase 63 | Pending |
+| FLOW-04 | Phase 63 | Pending |
+| FLOW-05 | Phase 63 | Pending |
+| FLOW-06 | Phase 63 | Pending |
+| FLOW-07 | Phase 63 | Pending |
+| GEN-01 | Phase 64 | Pending |
+| GEN-02 | Phase 64 | Pending |
+| GEN-03 | Phase 64 | Pending |
+| GEN-04 | Phase 64 | Pending |
+| GEN-05 | Phase 64 | Pending |
+| VAL-01 | Phase 65 | Pending |
+| VAL-02 | Phase 65 | Pending |
+| VAL-03 | Phase 65 | Pending |
+| VAL-04 | Phase 65 | Pending |
+| PROMPT-01 | Phase 66 | Pending |
+| PROMPT-02 | Phase 66 | Pending |
+| PROMPT-03 | Phase 66 | Pending |
+| PROMPT-04 | Phase 66 | Pending |
+| PROMPT-05 | Phase 66 | Pending |
+| PARK-01 | Phase 67 | Pending |
+| PARK-02 | Phase 67 | Pending |
 
 ---
 *Requirements defined: 2026-06-11 from v2.1 milestone brief*

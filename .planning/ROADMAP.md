@@ -14,6 +14,7 @@
 - ✅ **v1.8 Onboarding + Payments** — Phases 47-53 (shipped 2026-02-26)
 - ✅ **v1.9 Multiplayer Collaboration** — Phases 54-58 (shipped 2026-02-28)
 - ✅ **v2.0 Dot Voting & Mobile Gate** — Phases 59-62 (shipped 2026-03-01)
+- 🚧 **v2.1 Journey Flow + Low-Fidelity Prototype Pipeline** — Phases 63-67 (in progress)
 
 ## Phases
 
@@ -186,6 +187,80 @@ See `milestones/v2.0-ROADMAP.md` for full details.
 
 </details>
 
+---
+
+### 🚧 v2.1 Journey Flow + Low-Fidelity Prototype Pipeline (In Progress)
+
+**Milestone Goal:** Replace the over-complex UX Journey Mapper with Journey Flow — a simple data-only node editor that AI-seeds from workshop outputs — and pipe it into an agent-agnostic low-fidelity prototype prompt, with validation guidance routing digital outputs into the pipeline and non-digital outputs to alternatives.
+
+#### Phase Summary
+
+- [ ] **Phase 63: Journey Flow Editor Core** - Route, node data model, drag-to-connect edges, (+) add, inline edit/delete, Zustand store + autosave, mark-complete
+- [ ] **Phase 64: AI Baseline Generation** - Test-scope choice UI, archetype detection, baseline flow generation (journey + mini-flow modes), regenerate, two-sided fallback
+- [ ] **Phase 65: Validation Guidance Wiring** - Digital type routing with Journey Flow links + prototype gating, non-digital alternatives with off-platform guidance, edge-case handling, classifier audit
+- [ ] **Phase 66: Low-Fi Prototype Prompt** - Fidelity switch, low-fi template with wireframe preamble, shared journey-understanding refactor, agent-agnostic copy/paste handoff, hi-fi stub, single-feature scoping
+- [ ] **Phase 67: Park Old Mapper + Polish** - De-link old mapper from primary nav/guidance, replacement banner, end-to-end path verification
+
+## Phase Details
+
+### Phase 63: Journey Flow Editor Core
+**Goal**: Users can open Journey Flow, see and manipulate screen-card nodes on a React Flow canvas, and have their work persist automatically with a mark-complete state
+**Depends on**: Phase 62 (v2.0 complete — existing ReactFlow + Zustand + autosave infrastructure)
+**Requirements**: FLOW-01, FLOW-02, FLOW-03, FLOW-04, FLOW-05, FLOW-06, FLOW-07
+**Success Criteria** (what must be TRUE):
+  1. User navigates to `/workshop/[sessionId]/outputs/journey-flow/` and sees a React Flow canvas with screen-card nodes (name, UI type, short description) rendered from persisted state
+  2. User drags from a node port to another node to create a connecting edge; forks (one source, multiple targets) are allowed
+  3. User clicks the (+) icon on a node and a new adjacent screen-card node appears connected to it
+  4. User edits a node's name, UI type, purpose, or key elements inline and deletes nodes or edges; changes survive a page reload within 5 seconds (debounced autosave to `build_packs.content`)
+  5. User clicks "Mark complete" / "Approve" on the flow and the state flips to approved; the prototype builder link activates only after this state is set
+**Plans**: TBD
+
+### Phase 64: AI Baseline Generation
+**Goal**: Users are explicitly asked how they want to test their idea, and the AI generates a correct-archetype baseline flow scoped to their choice — with a regenerate option and graceful handling of two-sided products
+**Depends on**: Phase 63
+**Requirements**: GEN-01, GEN-02, GEN-03, GEN-04, GEN-05
+**Success Criteria** (what must be TRUE):
+  1. On first entry to Journey Flow (no existing nodes), user sees a clear choice: "Test the whole journey" vs "Test a single feature" — with a concept picker visible in single-feature mode; no AI infers this choice automatically
+  2. After choosing scope, AI generates a baseline flow on the canvas: full multi-screen flow for journey mode, or a concise entry → action → result mini-flow for single-feature mode
+  3. The generated baseline reflects an AI-determined archetype (linear sequence, hub-and-spoke, funnel, branching, single-screen tool, loop, etc.) that reconciles with the existing `strategicIntent` value — not a generic placeholder
+  4. User clicks "Regenerate" and a fresh baseline replaces the current nodes and edges
+  5. When the AI detects a two-sided product (marketplace, platform), it generates only the riskier side's journey and includes a note in the canvas explaining this decision
+**Plans**: TBD
+
+### Phase 65: Validation Guidance Wiring
+**Goal**: The Step 10 validation guidance card routes each workshop to the correct next action — Journey Flow + prototype builder for digital outputs, off-platform alternatives for non-digital outputs — with robust edge-case handling and a single audited classifier
+**Depends on**: Phase 63
+**Requirements**: VAL-01, VAL-02, VAL-03, VAL-04
+**Success Criteria** (what must be TRUE):
+  1. A workshop with a digital output type (`app_digital`, `experience_design`, or digital-leaning) sees a "Recommended validation approach" card with an active link to Journey Flow and a prototype builder link that is disabled until Journey Flow is marked complete
+  2. A workshop with a non-digital output type (campaign, offering, process change, brand & comms, service, physical product) sees type-appropriate validation alternatives with a "how to do this outside WorkshopPilot" explanation and no Journey Flow or prototype links
+  3. When the classifier returns low confidence or a combined `outputTypes` array, the UI surfaces a clear disclosure and lets the user reclassify their output type manually
+  4. `classifyOutputType()` is the single classification entry point — no parallel classifier exists — and its confidence and combined-type handling have been reviewed and hardened
+**Plans**: TBD
+
+### Phase 66: Low-Fi Prototype Prompt
+**Goal**: Users can generate a self-contained, agent-agnostic low-fidelity prototype prompt from their Journey Flow and copy it into any AI coding agent to get a working wireframe-style prototype
+**Depends on**: Phase 65 (gating wired), Phase 63 (Journey Flow data as source)
+**Requirements**: PROMPT-01, PROMPT-02, PROMPT-03, PROMPT-04, PROMPT-05
+**Success Criteria** (what must be TRUE):
+  1. User sees a fidelity switch showing "Low fidelity" (active) and "High fidelity" (visible but clearly labeled "coming later" and non-interactive)
+  2. Low-fi prompt is generated from Journey Flow node data and contains a mandatory wireframe-style preamble instructing the coding agent to render grayscale, boxy, unbranded, sketch-quality UI with only the elements needed to test the idea
+  3. The generated prompt is agent-agnostic plain text with a prominent one-click copy button and next-step instructions reading "Paste into your preferred AI coding agent — v0, Claude, Codex, Replit" plus a help link; no v0-specific "Create on v0" button exists in this flow
+  4. Journey-understanding logic (flow parsing, screen descriptions, navigation derivation) lives in shared functions consumed by the low-fi template — structured so the hi-fi path can be added without rework
+  5. In single-feature mode, the generated prompt covers only the mini-flow screens, not the full workshop journey
+**Plans**: TBD
+
+### Phase 67: Park Old Mapper + Polish
+**Goal**: The old UX Journey Mapper remains accessible at its original route but is clearly marked as replaced, primary guidance points exclusively to Journey Flow, and the full digital-output path works end-to-end
+**Depends on**: Phase 66
+**Requirements**: PARK-01, PARK-02
+**Success Criteria** (what must be TRUE):
+  1. The old UX Journey Mapper loads without errors at `/workshop/[sessionId]/outputs/journey-map/` with all existing functionality intact
+  2. The old mapper displays a banner stating it is being replaced by Journey Flow, with a link to the new route
+  3. Primary navigation and validation guidance no longer link to the old mapper — all guidance entry points direct to Journey Flow
+  4. A digital-output workshop can complete the full pipeline end-to-end: Validate step guidance card → Journey Flow (AI baseline → user edits → mark complete) → prototype prompt → copy → paste into a coding agent
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -203,9 +278,15 @@ See `milestones/v2.0-ROADMAP.md` for full details.
 | 54-58. Multiplayer Collaboration | v1.9 | 12/12 | Complete | 2026-02-28 |
 | 59-62. Dot Voting & Mobile Gate | v2.0 | 7/7 | Complete | 2026-03-01 |
 | 62.1 Fix Cross-Workshop Dialogue Leak & Duplicate Greetings | hotfix | 3/3 | Complete | 2026-05-16 |
-| 62.2 AI SDK v5 Message-ID Server-Side Resolution | 2/2 | Complete    | 2026-05-16 | — |
+| 62.2 AI SDK v5 Message-ID Server-Side Resolution | 2/2 | Complete | 2026-05-16 | — |
+| 63. Journey Flow Editor Core | v2.1 | 0/TBD | Not started | - |
+| 64. AI Baseline Generation | v2.1 | 0/TBD | Not started | - |
+| 65. Validation Guidance Wiring | v2.1 | 0/TBD | Not started | - |
+| 66. Low-Fi Prototype Prompt | v2.1 | 0/TBD | Not started | - |
+| 67. Park Old Mapper + Polish | v2.1 | 0/TBD | Not started | - |
 
 **Total shipped:** 12 milestones, 62 phases, ~155 plans in 22 days
+**v2.1 in progress:** 5 phases, 23 requirements
 
 ---
-*Last updated: 2026-05-16 — phase 62.2 planned (2 plans, 2 waves)*
+*Last updated: 2026-06-11 — v2.1 roadmap created (phases 63-67)*
