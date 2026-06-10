@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
-import { Surface } from '@/components/ui/surface';
 import { getValidationState, recordValidationResult } from '@/actions/validation-actions';
 import type { ValidationPlan } from '@/lib/schemas';
 import { LENS_LABELS } from '@/lib/validation/artifact-lookup';
@@ -78,7 +77,7 @@ export function ValidationPlanDeliverable({
           <Icon name="clipboard-check" className="h-5 w-5" />
         </span>
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Validation Plan</h1>
+          <h2 className="text-xl font-semibold tracking-tight">Validation Plan</h2>
           <p className="text-sm text-foreground/70">
             {isReadOnly
               ? 'The riskiest assumption, the test, and the result once recorded.'
@@ -92,17 +91,17 @@ export function ValidationPlanDeliverable({
           <Icon name="spinner" className="h-6 w-6 animate-spin text-foreground/70" />
         </div>
       ) : plans.length === 0 ? (
-        <Surface className="p-8 text-center text-base text-foreground/70">
+        <p className="py-8 text-center text-base text-foreground/70">
           No validation plan yet. Build one on the Validate step.
-        </Surface>
+        </p>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-12">
           {plans.map((plan) => (
-            <Surface key={plan.id} className="space-y-4 p-5">
+            <section key={plan.id} className="space-y-5">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-base font-semibold">
+                <h3 className="text-lg font-semibold tracking-tight">
                   {plan.conceptName} — {LENS_LABELS[plan.lens]}
-                </h2>
+                </h3>
               </div>
 
               <ValidationPlanSummary plan={plan} />
@@ -110,6 +109,7 @@ export function ValidationPlanDeliverable({
               <ValidationGuidanceCard
                 outputType={plan.outputType}
                 tailoredExample={plan.tailoredExample}
+                flat
               />
 
               {isReadOnly ? (
@@ -120,9 +120,10 @@ export function ValidationPlanDeliverable({
                   isSaving={recordingId === plan.id}
                   error={recordingId === plan.id ? recordError : null}
                   onRecord={(input) => record(plan.id, input)}
+                  flat
                 />
               )}
-            </Surface>
+            </section>
           ))}
         </div>
       )}
@@ -134,14 +135,14 @@ export function ValidationPlanDeliverable({
 function ReadOnlyResult({ plan }: { plan: ValidationPlan }) {
   if (!plan.result) {
     return (
-      <p className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-foreground/70">
+      <p className="border-t border-border/60 pt-5 text-sm text-foreground/70">
         No result recorded yet.
       </p>
     );
   }
   const { score, verdict } = plan.result;
   return (
-    <Surface variant="panel" className="flex items-start gap-4 bg-background p-4">
+    <div className="flex items-start gap-4 border-t border-border/60 pt-5">
       {score != null && <ScoreRing score={score} verdict={verdict} />}
       <div className="min-w-0 flex-1 space-y-1">
         <span className="text-base font-semibold">{VERDICT_LABELS[verdict]}</span>
@@ -162,6 +163,6 @@ function ReadOnlyResult({ plan }: { plan: ValidationPlan }) {
         )}
         {plan.result.notes && <p className="text-sm text-foreground/70">“{plan.result.notes}”</p>}
       </div>
-    </Surface>
+    </div>
   );
 }

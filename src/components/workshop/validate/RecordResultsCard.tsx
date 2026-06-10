@@ -40,11 +40,14 @@ export function RecordResultsCard({
   isSaving,
   error,
   onRecord,
+  flat = false,
 }: {
   plan: ValidationPlan;
   isSaving: boolean;
   error: string | null;
   onRecord: (input: RecordResultInput) => void;
+  /** Render without the card chrome — for hosts that already provide a card (Build Pack). */
+  flat?: boolean;
 }) {
   const isQualitative = plan.signal?.metricType === 'qualitative';
   const isHybrid = !isQualitative && !!plan.signal?.allowQualitative;
@@ -96,12 +99,15 @@ export function RecordResultsCard({
     };
   };
 
+  // Flat hosts (Build Pack) get a divider instead of a nested card.
+  const flatClass = 'border-t border-border/60 pt-5';
+
   // ─────────────────────────── Recorded view ───────────────────────────
   if (plan.result && !editing) {
     const { score, verdict: v } = plan.result;
     const qual = plan.result.qualitative;
-    return (
-      <Surface className="p-5">
+    const recorded = (
+      <>
         <div className="flex items-start gap-4">
           {score != null && <ScoreRing score={score} verdict={v} />}
           <div className="min-w-0 flex-1 space-y-2">
@@ -145,15 +151,16 @@ export function RecordResultsCard({
             ? 'The score reflects the verdict you judged — a decision aid, not objective truth.'
             : 'The score is a decision aid — it measures your result against the target you set, not objective truth.'}
         </p>
-      </Surface>
+      </>
     );
+    if (flat) return <div className={flatClass}>{recorded}</div>;
+    return <Surface className="p-5">{recorded}</Surface>;
   }
 
   // ─────────────────────────── Collapsed (default) ───────────────────────────
   if (!editing) {
-    return (
-      <Surface className="p-5">
-        <div className="flex items-center justify-between gap-3">
+    const collapsed = (
+      <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h4 className="text-base font-semibold">Record your result</h4>
             <p className="mt-0.5 text-sm text-foreground/70">
@@ -170,14 +177,15 @@ export function RecordResultsCard({
             <Icon name="plus" className="h-3.5 w-3.5" />
             Record a result
           </Button>
-        </div>
-      </Surface>
+      </div>
     );
+    if (flat) return <div className={flatClass}>{collapsed}</div>;
+    return <Surface className="p-5">{collapsed}</Surface>;
   }
 
   // ─────────────────────────── Edit view ───────────────────────────
-  return (
-    <Surface className="border-primary/30 p-5">
+  const editForm = (
+    <>
       <h4 className="text-base font-semibold">Record your result</h4>
       <p className="mt-1 text-base text-foreground/70">
         {isQualitative ? (
@@ -278,6 +286,8 @@ export function RecordResultsCard({
           </Button>
         </div>
       </div>
-    </Surface>
+    </>
   );
+  if (flat) return <div className={flatClass}>{editForm}</div>;
+  return <Surface className="border-primary/30 p-5">{editForm}</Surface>;
 }
