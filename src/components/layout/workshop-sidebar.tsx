@@ -25,14 +25,12 @@ import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarFooter,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarMenuAction,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { STEPS, getStepBySlug } from "@/lib/workshop/step-metadata";
@@ -183,11 +181,28 @@ export function WorkshopSidebar({
       {/* Logo */}
       <SidebarHeader
         className={cn(
-          "panel-header flex h-16 flex-row items-center",
+          "panel-header panel-header--flat group/logo flex h-16 flex-row items-center",
           state === "collapsed" ? "justify-center px-2" : "justify-start px-4",
         )}
       >
-        {state === "collapsed" ? <LogoIcon size="lg" /> : <Logo size="md" />}
+        {state === "collapsed" ? (
+          <LogoIcon size="lg" />
+        ) : (
+          <>
+            <Logo size="md" />
+            {/* Collapse / pin control — fades in on logo hover; replaces the old
+                persistent footer toggle. */}
+            <button
+              type="button"
+              onClick={handleTogglePin}
+              title={isPinned ? "Collapse sidebar (⌘B)" : "Pin sidebar open (⌘B)"}
+              aria-label={isPinned ? "Collapse sidebar" : "Pin sidebar open"}
+              className="ml-auto flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-all hover:bg-olive-100 hover:text-foreground group-hover/logo:opacity-100 dark:hover:bg-olive-900/30"
+            >
+              <Icon name="panel-left" className="h-4 w-4" />
+            </button>
+          </>
+        )}
       </SidebarHeader>
 
       <SidebarContent className="p-2">
@@ -296,32 +311,6 @@ export function WorkshopSidebar({
           })}
         </SidebarMenu>
       </SidebarContent>
-
-      <SidebarFooter className="border-t px-2 py-4">
-        {state === "expanded" ? (
-          <Button
-            variant="ghost"
-            onClick={handleTogglePin}
-            className="h-9 w-full justify-start hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
-            title={isPinned ? "Collapse sidebar (⌘B)" : "Pin sidebar open (⌘B)"}
-          >
-            <Icon name="chevron-left" className="h-4 w-4" />
-            <span className="ml-2 text-sm text-muted-foreground">
-              {isPinned ? "Collapse" : "Pin open"} (⌘B)
-            </span>
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleTogglePin}
-            className="mx-auto flex h-9 w-9 hover:bg-olive-100 dark:hover:bg-olive-900/30 transition-colors duration-150"
-            title="Expand sidebar (⌘B)"
-          >
-            <Icon name="chevron-right" className="h-4 w-4" />
-          </Button>
-        )}
-      </SidebarFooter>
 
       {viewingSnapshot && (
         <StepSnapshotDialog

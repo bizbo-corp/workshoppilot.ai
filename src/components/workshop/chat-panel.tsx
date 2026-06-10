@@ -856,6 +856,9 @@ interface ChatPanelProps {
   workshopId: string;
   initialMessages?: UIMessage[];
   onMessageCountChange?: (count: number) => void;
+  /** Reports when Wanda is generating (streaming / submitted) so the header
+      light streak can activate. */
+  onThinkingChange?: (thinking: boolean) => void;
   subStep?:
     | "mind-mapping"
     | "crazy-eights"
@@ -934,6 +937,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
   workshopId,
   initialMessages,
   onMessageCountChange,
+  onThinkingChange,
   subStep,
   showStepConfirm,
   onStepConfirm,
@@ -1341,6 +1345,11 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
   React.useEffect(() => {
     onMessageCountChange?.(messages.length);
   }, [messages.length, onMessageCountChange]);
+
+  // Report "thinking" status (streaming / submitted) so the header streak fires
+  React.useEffect(() => {
+    onThinkingChange?.(isLoading);
+  }, [isLoading, onThinkingChange]);
 
   // Report last assistant message text for collapsed preview strip
   React.useEffect(() => {
@@ -4408,7 +4417,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
 
       {/* Input area — hidden for read-only participants and during concept pre-activity */}
       {!isReadOnly && !(isMultiplayer && step.id === 'concept' && !conceptActivityStarted) && (
-        <div className="border-t bg-background/20 p-4">
+        <div className="p-3">
           {/* Persistent bulk-research entry point (Step 3, facilitator) */}
           {step.id === "user-research" && (
             <div className="mb-2 flex justify-start">
@@ -4437,7 +4446,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
               }
               disabled={isLoading || !!rateLimitInfo}
               className={cn(
-                "w-full resize-none rounded-md border border-input bg-neutral-olive-50 py-2 pl-3 pr-12 text-base shadow-xs outline-none transition-[color,box-shadow] dark:bg-neutral-olive-975",
+                "w-full resize-none rounded-xl border border-input bg-neutral-olive-50 py-2 pl-3 pr-12 text-base shadow-xs outline-none transition-[color,box-shadow] dark:bg-neutral-olive-975",
                 "placeholder:text-muted-foreground",
                 "disabled:cursor-not-allowed disabled:opacity-50",
                 "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",

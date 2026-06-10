@@ -84,6 +84,9 @@
   /* Olive palette */
   --color-olive-50: var(--olive-50);
   --color-olive-75: var(--olive-75);
+  /* Chat panel surface — midpoint of olive-50/100 (dark: between the 950 dock
+     and 900). Registered so `bg-chat-surface/75` gets a clean opacity modifier. */
+  --color-chat-surface: var(--chat-surface);
   --color-olive-100: var(--olive-100);
   --color-olive-200: var(--olive-200);
   --color-olive-300: var(--olive-300);
@@ -133,6 +136,8 @@
 /* Light mode — sage / olive hue */
 :root {
   --radius: 0.625rem;
+  /* Chat panel fill — midpoint of olive-50 and olive-100. */
+  --chat-surface: var(--olive-75);
   /* Selection — olive (brand), matches the cluster group header (olive-600).
      Used for all canvas selection indicators. */
   --selection: var(--olive-600);
@@ -319,6 +324,8 @@
 
 /* Dark mode — deep green */
 .dark {
+  /* Chat panel fill — midpoint of the 950 dock and the lighter 900 step. */
+  --chat-surface: color-mix(in oklab, var(--neutral-olive-950), var(--neutral-olive-900));
   /* Lighter olive in dark mode so selection rings + resize handles stay visible
      against the dark canvas (light mode uses olive-600 to match the group header). */
   --selection: var(--olive-400);
@@ -769,6 +776,13 @@
 .panel-header {
   border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 12px -6px rgba(0, 0, 0, 0.25);
+}
+
+/* Flat variant: no divider, no floating shadow. Used by the sidebar and
+   chat-panel headers, which sit flush against their panels. */
+.panel-header--flat {
+  border-bottom: none;
+  box-shadow: none;
 }
 
 /* AI chat messages — theme the typography plugin to the app's olive --foreground
