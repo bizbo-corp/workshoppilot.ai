@@ -51,6 +51,8 @@ Rules:
 - Keep sample sizes small and achievable (often 5–12 people).
 - Targets must be reachable but meaningful; killThreshold is the "walk away" line (well
   below target, or null).
+- For "count" metrics the target is a number OF the sample — it MUST be ≤ sampleSize
+  (e.g. 7 of 10, never 50 of 10). For "percent" the target is a 0–100 percentage.
 - "why" is ONE short sentence tying the metric to the assumption. Criteria are ONE plain
   sentence each, no jargon.`;
 
@@ -79,19 +81,28 @@ Propose 2–3 ways to measure success for this test.`,
     temperature: 0.4,
   });
 
-  const candidates: SignalCandidate[] = result.object.candidates.map((c) => ({
-    why: c.why,
-    proxyStrength: c.proxyStrength,
-    signal: {
-      metric: c.metric,
-      metricType: c.metricType,
-      target: c.target,
-      sampleSize: c.sampleSize,
-      killThreshold: c.killThreshold,
-      successCriteriaText: c.successCriteriaText,
-      failCriteriaText: c.failCriteriaText,
-    },
-  }));
+  const candidates: SignalCandidate[] = result.object.candidates.map((c) => {
+    const sampleSize = Math.max(1, Math.round(c.sampleSize));
+    // Belt-and-suspenders: a count target can never exceed the sample (no "50 of 10"),
+    // and the kill line must sit strictly below the pass bar.
+    const max = c.metricType === 'percent' ? 100 : sampleSize;
+    const target = Math.min(Math.max(0, c.target), max);
+    const killThreshold =
+      c.killThreshold != null ? Math.min(c.killThreshold, Math.max(0, target - 1)) : null;
+    return {
+      why: c.why,
+      proxyStrength: c.proxyStrength,
+      signal: {
+        metric: c.metric,
+        metricType: c.metricType,
+        target,
+        sampleSize,
+        killThreshold,
+        successCriteriaText: c.successCriteriaText,
+        failCriteriaText: c.failCriteriaText,
+      },
+    };
+  });
 
   return { candidates, usage: result.usage };
 }

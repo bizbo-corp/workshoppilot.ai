@@ -21,7 +21,7 @@ import type {
   Signal,
   ValidationPlan,
 } from '@/lib/schemas';
-import { findArtifactByKey, LENS_LABELS, type ArtifactOption } from '@/lib/validation/artifact-lookup';
+import { findArtifactByKey, type ArtifactOption } from '@/lib/validation/artifact-lookup';
 import { ProgressRail } from './ProgressRail';
 import { DetectOutputTypeCard } from './DetectOutputTypeCard';
 import { ProposeAssumptionCard } from './ProposeAssumptionCard';
@@ -664,15 +664,25 @@ export function ValidatePanel({
             {completedPlans.map((plan) => (
               <Surface key={plan.id} className="space-y-3 p-5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-base font-medium">{LENS_LABELS[plan.lens]} risk</span>
-                  {plan.result && (
-                    <span className="inline-flex items-center gap-1 text-sm text-foreground/70">
-                      <Icon name="rocket" className="h-3 w-3" /> score {plan.result.score}
-                    </span>
-                  )}
-                  <Button variant="ghost" size="xs" onClick={() => setActiveId(plan.id)}>
-                    Open
-                  </Button>
+                  <span className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    Validation test
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {plan.result && (
+                      <span className="inline-flex items-center gap-1 text-sm text-foreground/70">
+                        <Icon name="rocket" className="h-3 w-3" /> score {plan.result.score}
+                      </span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="gap-1"
+                      onClick={() => setActiveId(plan.id)}
+                    >
+                      Open
+                      <Icon name="arrow-right" className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
                 <ValidationPlanSummary plan={plan} />
               </Surface>
