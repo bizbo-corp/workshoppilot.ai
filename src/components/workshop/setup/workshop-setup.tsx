@@ -17,6 +17,7 @@ import { Icon } from '@/components/ui/icon';
 import { SetupCard } from './setup-card';
 import { SuggestionChips } from './suggestion-chips';
 import { ChallengeCard } from './challenge-card';
+import { IdeaTypeChooser } from './idea-type-chooser';
 
 const FIELDS: SetupField[] = ['idea', 'problem', 'audience'];
 
@@ -434,6 +435,11 @@ export function WorkshopSetup({
               )}
             </div>
           )}
+
+          {/* Early idea-type capture — appears once the challenge is accepted.
+              AI guesses, user confirms/corrects; seeds the same classification
+              record the Validate step reads, so Steps 2–10 stay type-aware. */}
+          <IdeaTypeChooser workshopId={workshopId} active={confirmed} />
         </div>
       </div>
     </div>

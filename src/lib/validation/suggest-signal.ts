@@ -10,6 +10,7 @@ import { generateObject } from 'ai';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
 import { OUTPUT_TYPE_LABELS, LENS_LABELS } from '@/lib/validation/artifact-lookup';
+import { cheapTestMenuLines } from '@/lib/validation/evidence-bars';
 import type { Lens, OutputType, Signal } from '@/lib/schemas/validation-schemas';
 
 const candidateSchema = z.object({
@@ -76,6 +77,9 @@ export async function suggestSignals(input: {
 Output type: ${OUTPUT_TYPE_LABELS[input.outputType]}
 Lens: ${LENS_LABELS[input.lens]}
 Chosen test: ${input.artifactLabel}
+
+Ground the measures in tests that actually fit this kind of idea — not generic app metrics:
+${cheapTestMenuLines([input.outputType])}
 
 Propose 2–3 ways to measure success for this test.`,
     temperature: 0.4,

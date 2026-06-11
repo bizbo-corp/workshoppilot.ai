@@ -73,3 +73,58 @@ export function evidenceBarLines(types: OutputType[]): string {
     })
     .join('\n');
 }
+
+/**
+ * Per-type cheap-test menus: the kinds of tests that fit each idea type. Injected into
+ * the signal suggester so a service idea gets concierge-pilot signals, not fake-door
+ * click-through rates. ADDITIVE prompt context only — the candidate schema (including
+ * proxyStrength) is unchanged.
+ */
+export const CHEAP_TEST_MENUS: Record<OutputType, string> = {
+  app_digital:
+    'fake-door landing page with signups, clickable-prototype walkthroughs, waitlist conversions, a concierge (manual-behind-the-scenes) version with a few users',
+  physical_product:
+    'pre-orders or refundable deposits, hands-on sessions with a rough prototype or mock-up, a sales page with a real buy button, a market-stall / pop-up test',
+  service:
+    'a paid concierge pilot with 1–3 real clients, a paid discovery session, a signed letter of intent, referrals arriving after a trial run',
+  process_change:
+    'a one-team manual pilot for a week, before/after timing or error counts on the affected task, shadowing the people doing the work, a named owner committing to adopt',
+  offering:
+    'putting the new price/packaging in a real quote to live prospects, presenting old vs. new offer side by side, a signed letter of intent at the new terms',
+  experience_design:
+    'a hallway test of the new flow against the old one, an A/B on the live step with drop-off measured, watching first-time users attempt the redesigned task',
+  brand_comms:
+    'message A/B tests with the real audience (clicks, replies, recall), a 5-second test on the new framing, reply rates on outbound using the new language',
+  campaign:
+    'a small paid pilot with measured click-through / cost-per-action, organic engagement on a teaser post, sign-ups attributable to the pilot, a partner committing channel space',
+};
+
+/** One prompt-ready line listing the cheap tests that fit these types. */
+export function cheapTestMenuLines(types: OutputType[]): string {
+  return types
+    .map((t) => `- Tests that fit this kind of idea (${t}): ${CHEAP_TEST_MENUS[t]}.`)
+    .join('\n');
+}
+
+/**
+ * Per-type broad-assumption phrasing examples so the proposer's wording matches the
+ * idea type instead of defaulting to app language.
+ */
+export const ASSUMPTION_EXAMPLES: Record<OutputType, string> = {
+  app_digital:
+    'Speakers will want an app that helps them communicate their ideas effectively to drive action in others.',
+  physical_product:
+    'Commuting cyclists will want a helmet light that keeps them visible without daily charging.',
+  service:
+    'Busy clinic owners will pay for a service that takes compliance paperwork off their plate entirely.',
+  process_change:
+    'Support agents will adopt a handoff process that spares them re-explaining each case.',
+  offering:
+    'Existing customers will choose a subscription that bundles maintenance into one predictable fee.',
+  experience_design:
+    'First-time visitors will complete a redesigned signup that gets them to value in one sitting.',
+  brand_comms:
+    'Prospective clients will respond to messaging that names their problem in their own words.',
+  campaign:
+    'Local parents will engage with a campaign that makes school-route safety feel urgent and fixable.',
+};
