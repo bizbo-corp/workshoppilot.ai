@@ -207,6 +207,10 @@ export const validationPlanSchema = z.object({
     .string()
     .optional()
     .describe('ISO timestamp when the user clicked Done on this assembled plan (per-test wrap-up)'),
+  resultReminderSentAt: z
+    .string()
+    .optional()
+    .describe('ISO timestamp when the "log your results" follow-up email was sent (sent once)'),
   progressStep: progressStepSchema.describe('Furthest-completed section (resumability)'),
   createdAt: z.string().describe('ISO timestamp'),
   updatedAt: z.string().describe('ISO timestamp'),
