@@ -41,8 +41,8 @@
 
 ### Park Old Mapper (PARK)
 
-- [ ] **PARK-01**: Old UX Journey Mapper remains functional at `/workshop/[sessionId]/outputs/journey-map/` but is de-linked from primary navigation/guidance (guidance points to Journey Flow)
-- [ ] **PARK-02**: Old mapper displays a notice/banner that it is being replaced by Journey Flow
+- [x] **PARK-01**: Old UX Journey Mapper remains functional at `/workshop/[sessionId]/outputs/journey-map/` but is de-linked from primary navigation/guidance (guidance points to Journey Flow)
+- [x] **PARK-02**: Old mapper displays a notice/banner that it is being replaced by Journey Flow
 
 ## Future Requirements
 
@@ -87,8 +87,8 @@ Deferred to later milestones:
 | PROMPT-03 | Phase 66 | Complete |
 | PROMPT-04 | Phase 66 | Complete |
 | PROMPT-05 | Phase 66 | Complete |
-| PARK-01 | Phase 67 | Pending |
-| PARK-02 | Phase 67 | Pending |
+| PARK-01 | Phase 67 | Complete |
+| PARK-02 | Phase 67 | Complete |
 
 ---
 *Requirements defined: 2026-06-11 from v2.1 milestone brief*

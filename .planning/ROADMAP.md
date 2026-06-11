@@ -14,7 +14,7 @@
 - ✅ **v1.8 Onboarding + Payments** — Phases 47-53 (shipped 2026-02-26)
 - ✅ **v1.9 Multiplayer Collaboration** — Phases 54-58 (shipped 2026-02-28)
 - ✅ **v2.0 Dot Voting & Mobile Gate** — Phases 59-62 (shipped 2026-03-01)
-- 🚧 **v2.1 Journey Flow + Low-Fidelity Prototype Pipeline** — Phases 63-67 (in progress)
+- ✅ **v2.1 Journey Flow + Low-Fidelity Prototype Pipeline** — Phases 63-67 (shipped 2026-06-11)
 
 ## Phases
 
@@ -199,7 +199,7 @@ See `milestones/v2.0-ROADMAP.md` for full details.
 - [x] **Phase 64: AI Baseline Generation** - Test-scope choice UI, archetype detection, baseline flow generation (journey + mini-flow modes), regenerate, two-sided fallback (completed 2026-06-11)
 - [x] **Phase 65: Validation Guidance Wiring** - Digital type routing with Journey Flow links + prototype gating, non-digital alternatives with off-platform guidance, edge-case handling, classifier audit (completed 2026-06-11)
 - [x] **Phase 66: Low-Fi Prototype Prompt** - Fidelity switch, low-fi template with wireframe preamble, shared journey-understanding refactor, agent-agnostic copy/paste handoff, hi-fi stub, single-feature scoping (completed 2026-06-11)
-- [ ] **Phase 67: Park Old Mapper + Polish** - De-link old mapper from primary nav/guidance, replacement banner, end-to-end path verification
+- [x] **Phase 67: Park Old Mapper + Polish** - De-link old mapper from primary nav/guidance, replacement banner, end-to-end path verification (completed 2026-06-11)
 
 ## Phase Details
 
@@ -309,10 +309,10 @@ Plans:
 | 64. AI Baseline Generation | 4/4 | Complete    | 2026-06-11 | - |
 | 65. Validation Guidance Wiring | 3/3 | Complete    | 2026-06-11 | - |
 | 66. Low-Fi Prototype Prompt | 3/3 | Complete    | 2026-06-11 | - |
-| 67. Park Old Mapper + Polish | 1/2 | In Progress|  | - |
+| 67. Park Old Mapper + Polish | 2/2 | Complete   | 2026-06-11 | - |
 
-**Total shipped:** 12 milestones, 62 phases, ~155 plans in 22 days
-**v2.1 in progress:** 5 phases, 23 requirements
+**Total shipped:** 13 milestones, 67 phases, ~157 plans in 22 days
+**v2.1 complete:** 5 phases (63-67), 23 requirements all delivered
 
 ---
-*Last updated: 2026-06-11 — Phase 65 complete (3/3 plans, VAL-01/02/03 verified; prototype-prompt placeholder route established for Phase 66)*
+*Last updated: 2026-06-11 — Phase 67 complete (2/2 plans); v2.1 milestone (Journey Flow + Low-Fidelity Prototype Pipeline) fully delivered; full digital-output pipeline E2E verified*
