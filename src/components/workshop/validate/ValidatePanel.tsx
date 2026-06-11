@@ -464,7 +464,6 @@ export function ValidatePanel({
   const selectedArtifact: ArtifactOption | undefined = activePlan
     ? findArtifactByKey(activePlan.artifactType)
     : undefined;
-  const builderCta = activePlan ? artifactBuilderCta(activePlan, sessionId) : null;
 
   return (
     <div className="flex flex-col">
@@ -592,20 +591,6 @@ export function ValidatePanel({
                 onReclassify={() => setEditingSection('detect')}
               />
 
-              {/* Primary action pre-test: build the artifact (prototype / fake-door page). */}
-              {builderCta && (
-                <a
-                  href={builderCta.href}
-                  className="group flex items-center justify-between gap-3 rounded-xl border-2 border-primary/30 bg-primary/10 p-4 transition-colors hover:bg-primary/15"
-                >
-                  <p className="text-sm text-foreground/80">{builderCta.blurb}</p>
-                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-4 py-2.5 text-base font-medium text-primary-foreground transition-transform group-hover:translate-x-0.5">
-                    {builderCta.label}
-                    <Icon name="arrow-right" className="h-4 w-4" />
-                  </span>
-                </a>
-              )}
-
               {selectedArtifact?.generatesConceptCard ? (
                 <ConceptCardArtifact
                   plan={activePlan}
@@ -615,13 +600,12 @@ export function ValidatePanel({
                     usp: concepts[0]?.usp ?? '',
                   }}
                 />
-              ) : !builderCta ? (
+              ) : (
                 <ArtifactChecklist plan={activePlan} />
-              ) : null}
+              )}
 
-              {/* Post-test action: record the result (flat — the zone provides the card). */}
+              {/* Post-test action: record the result — own card chrome inside the zone. */}
               <RecordResultsCard
-                flat
                 plan={activePlan}
                 isSaving={recordingId === activePlan.id}
                 error={recordError}
@@ -673,9 +657,10 @@ export function ValidatePanel({
           </div>
         )}
 
-        {/* Previously completed plans — hidden while a new test is mid-wizard (or a section is
-            being edited) so the page holds one focus: the test being created. */}
-        {(!activePlan || assembled) && completedPlans.length > 0 && (
+        {/* Previously completed plans — hidden while any active test is open (mid-wizard OR
+            assembled but not yet acknowledged), so focus stays on the current test. Shows
+            again once the user clicks Done (acknowledgedAt set) or when no plan is active. */}
+        {(!activePlan || (assembled && !!activePlan.acknowledgedAt)) && completedPlans.length > 0 && (
           <div className="space-y-3">
             <h3 className="text-base font-semibold text-foreground/70">
               Other assumptions you&apos;ve tested
@@ -709,10 +694,10 @@ export function ValidatePanel({
           </div>
         )}
 
-        {/* Page-level action: test another assumption. Visible when the active plan is assembled
-            OR when no plan is active (all tests acknowledged after a reload) — hidden only while
-            a wizard is in progress, matching the prior-tests list above. */}
-        {(assembled || !activePlan) && plans.length < 3 && (
+        {/* Page-level action: test another assumption. Visible only after the active plan is
+            acknowledged (Done clicked) or when no plan is active — matches the prior-tests
+            visibility rule so the page holds one focus while any test is open. */}
+        {(!activePlan || (assembled && !!activePlan.acknowledgedAt)) && plans.length < 3 && (
           <div className="flex justify-center pb-2">
             {/* Same secondary-additive treatment as "+ Record a result" (similarity) */}
             <Button variant="outline" size="sm" className="gap-1.5" onClick={addAnotherTest}>
@@ -724,33 +709,6 @@ export function ValidatePanel({
       </div>
     </div>
   );
-}
-
-/**
- * The primary "go build & run this test" action for the chosen artifact, if it has a dedicated
- * builder page. Prototype tests route to Journey Flow → low-fi prototype builder; fake-door
- * tests to the landing-page generator. Other artifacts fall back to the static checklist.
- */
-function artifactBuilderCta(
-  plan: ValidationPlan,
-  sessionId: string
-): { label: string; href: string; blurb: string } | null {
-  const art = findArtifactByKey(plan.artifactType);
-  if (art?.revealsPrototype) {
-    return {
-      label: 'Create your prototype',
-      href: `/workshop/${sessionId}/outputs/journey-flow?from=validate`,
-      blurb: 'Map the journey flow, then generate a low-fi prototype to put in front of users.',
-    };
-  }
-  if (plan.artifactType === 'fake_door_smoke_test') {
-    return {
-      label: 'Build your fake-door page',
-      href: `/workshop/${sessionId}/outputs/fake-door`,
-      blurb: 'Stand up a landing page with one call-to-action to measure real demand.',
-    };
-  }
-  return null;
 }
 
 /** Sensible default metric phrasing per output type. */

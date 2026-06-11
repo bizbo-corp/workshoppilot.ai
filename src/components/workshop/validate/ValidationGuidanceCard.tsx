@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Icon } from '@/components/ui/icon';
+import { Button } from '@/components/ui/button';
 import { Surface } from '@/components/ui/surface';
 import { OUTPUT_TYPE_LABELS } from '@/lib/validation/artifact-lookup';
 import type { OutputType, OutputTypeClassification } from '@/lib/schemas';
@@ -76,12 +77,12 @@ export function ValidationGuidanceCard({
             return {
               text,
               action: (
-                <Link
-                  href={`/workshop/${sessionId}/outputs/journey-flow?from=validate`}
-                  className="text-primary underline underline-offset-2 hover:text-primary/80"
-                >
-                  Open Journey Flow →
-                </Link>
+                <Button asChild size="sm" variant="default" className="mt-1">
+                  <Link href={`/workshop/${sessionId}/outputs/journey-flow?from=validate`}>
+                    Open Journey Flow
+                    <Icon name="arrow-right" className="h-3.5 w-3.5" />
+                  </Link>
+                </Button>
               ),
             };
           }
@@ -91,27 +92,24 @@ export function ValidationGuidanceCard({
                 text,
                 action: (
                   // Phase 66 route; update href if Phase 66 lands elsewhere
-                  <Link
-                    href={`/workshop/${sessionId}/outputs/prototype-prompt`}
-                    className="text-primary underline underline-offset-2 hover:text-primary/80"
-                  >
-                    Build your prototype →
-                  </Link>
+                  <Button asChild size="sm" variant="default" className="mt-1">
+                    <Link href={`/workshop/${sessionId}/outputs/prototype-prompt`}>
+                      Build your prototype
+                      <Icon name="arrow-right" className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
                 ),
               };
             }
             return {
               text,
               action: (
-                <span
-                  aria-disabled="true"
-                  className="cursor-not-allowed text-foreground/50"
-                >
+                <Button size="sm" variant="default" disabled className="mt-1 cursor-not-allowed">
                   Build your prototype
-                  <span className="ml-2 text-xs italic text-foreground/60">
-                    Complete your Journey Flow first
+                  <span className="ml-1 text-xs font-normal opacity-80">
+                    — complete Journey Flow first
                   </span>
-                </span>
+                </Button>
               ),
             };
           }
