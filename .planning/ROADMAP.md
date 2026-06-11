@@ -309,7 +309,7 @@ Plans:
 | 64. AI Baseline Generation | 4/4 | Complete    | 2026-06-11 | - |
 | 65. Validation Guidance Wiring | 3/3 | Complete    | 2026-06-11 | - |
 | 66. Low-Fi Prototype Prompt | 3/3 | Complete    | 2026-06-11 | - |
-| 67. Park Old Mapper + Polish | 2/2 | Complete   | 2026-06-11 | - |
+| 67. Park Old Mapper + Polish | 2/2 | Complete    | 2026-06-11 | - |
 
 **Total shipped:** 13 milestones, 67 phases, ~157 plans in 22 days
 **v2.1 complete:** 5 phases (63-67), 23 requirements all delivered
