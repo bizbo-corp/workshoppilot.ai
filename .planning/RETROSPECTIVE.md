@@ -129,6 +129,49 @@
 
 ---
 
+## Milestone: v2.1 — Journey Flow + Low-Fidelity Prototype Pipeline
+
+**Shipped:** 2026-06-11
+**Phases:** 5 | **Plans:** 16
+
+### What Was Built
+- Journey Flow editor: data-only screen/section node cards on React Flow, drag-to-connect edges, (+) adjacent add, Zustand store + debounced autosave, mark-complete gating
+- AI baseline generation: explicit test-scope chooser (journey vs single feature), archetype detection, confirm-gated regenerate, two-sided riskier-side fallback
+- Validation guidance wiring: digital types → Journey Flow + gated prototype builder; non-digital types → off-platform alternatives; classifier audited as single path
+- Agent-agnostic low-fi prototype prompt: code-enforced wireframe preamble, shared journey-understanding module, copy/paste handoff with help dialog, staleness detection
+- Old mapper parked: session-dismissible replacement banner, sidebar/hub de-linked, zero functional changes to frozen code
+
+### What Worked
+- Every phase verified with goal-backward verification immediately after execution — milestone audit found zero requirement gaps and zero integration gaps
+- Deterministic guarantees around LLM output (preamble prepended in code, fallback body) eliminated a whole class of "LLM misbehaved" failures
+- Human-verify checkpoints caught real UX issues early (validate-page hierarchy in 65, unreachable Collapse button in 66) — fixed inline at low cost
+- Shared prompt-builder module boundary (PROMPT-04) designed before the hi-fi path exists — pure functions with no fidelity-specific logic baked in
+- Discuss-phase CONTEXT.md before planning meant zero relitigating of decisions during execution
+
+### What Was Inefficient
+- VAL-03 traceability row went stale ("Pending" while actually verified) — caught only at milestone audit
+- `phase complete` CLI reported wrong totals in MILESTONES.md entry (counted all 43 disk phases, empty accomplishments) — required manual correction
+- Phase 65 took 6 UX feedback rounds at checkpoint — the guidance-card design would have benefited from a mockup-first approach
+
+### Patterns Established
+- Code-prepended mandatory sections for LLM-generated artifacts (preamble assembly outside the model)
+- Timestamp-comparison staleness detection against build_packs.updatedAt — no schema changes, two-layer (server + client) check
+- Park-don't-delete for replaced features: banner + de-link only, frozen code, original route intact
+- Lazy useState initializer for sessionStorage reads (avoids hydration mismatch AND set-state-in-effect lint)
+
+### Key Lessons
+1. Hard guarantees beat prompt instructions — anything mandatory in LLM output should be assembled in code
+2. Verifier agents catch stale tracking docs that executors miss — the 3-source cross-reference (VERIFICATION + SUMMARY + traceability) earns its cost
+3. Designing the shared-module boundary before the second consumer exists works when the boundary is pure functions
+4. Human checkpoints with concrete walkthrough steps (numbered, per-requirement) get faster approvals than open-ended "test it"
+
+### Cost Observations
+- Model mix: ~70% sonnet (executors, verifiers, researchers), ~30% main-loop orchestration
+- Milestone completed in 2 days across 5 phases / 16 plans
+- Notable: two inline fixes during checkpoints (UX collapse, back-link param) avoided gap-closure cycles entirely
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -147,6 +190,7 @@
 | v1.8 | 7 | 11 | Payments — Stripe integration, server-side enforcement |
 | v1.9 | 5 | 12 | Multiplayer — Liveblocks CRDT, guest auth, facilitator controls |
 | v2.0 | 4 | 7 | Dot voting + mobile gate — smallest milestone, cleanest chain |
+| v2.1 | 5 | 16 | Journey Flow pipeline — discuss-phase contexts + zero audit gaps |
 
 ### Top Lessons (Verified Across Milestones)
 

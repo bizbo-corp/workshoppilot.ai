@@ -1,31 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.5
-milestone_name: milestone
-status: unknown
-last_updated: "2026-05-16T03:42:16.805Z"
+milestone: v2.1
+milestone_name: Journey Flow + Low-Fidelity Prototype Pipeline
+status: shipped
+last_updated: "2026-06-11T08:33:21.674Z"
 progress:
-  total_phases: 38
-  completed_phases: 38
-  total_plans: 109
-  completed_plans: 109
+  total_phases: 43
+  completed_phases: 43
+  total_plans: 125
+  completed_plans: 125
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-01)
+See: .planning/PROJECT.md (updated 2026-06-11)
 
 **Core value:** Anyone with a vague idea can produce validated, AI-ready product specs without design thinking knowledge — the AI facilitator replaces the human facilitator.
-**Current focus:** Phase 62.2 — AI SDK v5 Message-ID Server-Side Resolution
+**Current focus:** Planning next milestone (v2.1 shipped 2026-06-11)
 
 ## Current Position
 
-Phase: 62.2-ai-sdk-v5-message-id-resolution
-Plan: COMPLETE (Plan 02 done — verification script + Known Limitations closure)
-Status: Complete — Phase 62.2 fully shipped; all 6 ACs verified; 62.1 Known Limitations closed
-Last activity: 2026-05-16 — Plan 02 complete; scripts/verify-message-id-resolution.ts created; 62.1-01 and 62.1-02 SUMMARYs updated
+Phase: 67 — Park Old Mapper Polish (complete)
+Plan: 2/2
+Status: Phase 67 complete — all plans shipped; v2.1 milestone (Phases 63-67, 23 requirements) fully delivered
+Last activity: 2026-06-11 — Phase 67 Plan 02 executed (E2E gates + human checkpoint); full pipeline walkthrough approved; v2.1 milestone delivered
 
 ## Performance Metrics
 
@@ -48,6 +48,18 @@ Last activity: 2026-05-16 — Plan 02 complete; scripts/verify-message-id-resolu
 | **Total shipped** | **62** | **155** | **22 days** |
 | Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings P03 | 3 | 3 tasks | 4 files |
 | Phase 62.2 P02 | 4min | 2 tasks | 3 files |
+| Phase 63-journey-flow-editor-core P02 | 2min | 2 tasks | 3 files |
+| Phase 63-journey-flow-editor-core P03 | 2min | 2 tasks | 2 files |
+| Phase 64-ai-baseline-generation P02 | 2min | 2 tasks | 1 file |
+| Phase 64-ai-baseline-generation P03 | 2 | 2 tasks | 3 files |
+| Phase 64 P04 | continuation | 3 tasks | 3 files |
+| Phase 65 P02 | 8 | 2 tasks | 3 files |
+| Phase 65-validation-guidance-wiring P01 | 6 | 2 tasks | 4 files |
+| Phase 65-validation-guidance-wiring P03 | multi-session | 3 tasks (6-round checkpoint) | 12 files |
+| Phase 66-low-fi-prototype-prompt P01 | 4 | 3 tasks | 3 files |
+| Phase 66-low-fi-prototype-prompt P02 | 8 | 2 tasks | 2 files |
+| Phase 67 P01 | 5min | 2 tasks | 3 files |
+| Phase 67-park-old-mapper-polish P02 | 15 | 2 tasks | 0 files |
 
 ## Accumulated Context
 
@@ -66,10 +78,50 @@ Last activity: 2026-05-16 — Plan 02 complete; scripts/verify-message-id-resolu
   - [Phase 62.1-fix-cross-workshop-dialogue-leak-and-duplicate-greetings]: GREET-01 + SCOPE-01 complete — DB-lock greeting singleton, 409/404 scope assertion, stop() cleanup, composite key, migration 0024 all shipped
   - [Phase 62.2 Plan 01 complete]: Server-side message-id resolved via AI SDK v6 generateMessageId — three 62.1 workarounds removed (empty-id filter, post-stream backfill, deterministic placeholder as canonical id); chat_request_logs.response_message_id now populated at insert time; all 6 ACs verified
 - [Phase 62.2]: Phase 62.2 Plan 02: AC-1/2/4/wire-through/AC-6 codified in scripts/verify-message-id-resolution.ts (verify-sentinel.ts pattern); 62.1 Known Limitations closed with audit trail preserved
+- [v2.1 Roadmap]: 5 phases (63-67) derived from 23 requirements. Brief's suggested phase breakdown followed — natural delivery boundaries matched. Phase 64 depends on Phase 63; Phase 65 depends on Phase 63; Phase 66 depends on both 63 and 65; Phase 67 depends on Phase 66.
+- [Phase 63 Plan 01]: Title prefix 'Journey Flow:' kept distinct from 'Journey Map:' — old mapper is parked not deleted; overwriting its build-pack row would be silent data loss.
+- [Phase 63 Plan 01]: deleteNode cascades edge removal (filters sourceNodeId AND targetNodeId) — orphan edges break ReactFlow rendering; this was a known gap in old mapper.
+- [Phase 63 Plan 01]: Plain db client (not dbWithRetry) used in save route — matches both other save routes; fast-path writes are established exception per 63-RESEARCH.md OQ-3.
+- [Phase 63-journey-flow-editor-core]: JourneyFlowEdge endpoint circles use var(--background) not hardcoded white — olive token compliance
+- [Phase 63-journey-flow-editor-core]: Priority dot colors use CSS vars (destructive/primary/muted-foreground) inline style — no hardcoded palette colors
+- [Phase 63-journey-flow-editor-core]: keyElements blank-line filter deferred to onOpenChange close callback to avoid eating the newline user just typed
+- [Phase 63-journey-flow-editor-core]: spinner icon alias used in JourneyFlowToolbar (not loader-circle) — matches phosphor-icons registration in icon.tsx
+- [Phase 63-journey-flow-editor-core]: JourneyFlowCanvasToolbar rendered outside ReactFlow div so it is unaffected by canvas zoom/pan transforms
+- [Phase 63-journey-flow-editor-core Plan 04]: Outer/inner component split in journey-flow-content — outer provides JourneyFlowStoreProvider, inner consumes hooks; prevents hook-before-provider runtime error
+- [Phase 63-journey-flow-editor-core Plan 04]: Autosave skips flush when nodes.length === 0 — prevents overwriting valid prior state on first-mount before user adds a node
+- [Phase 63-journey-flow-editor-core Plan 04]: Phase 63 complete — all 4 plans shipped; route pattern (Next 16 async params + Clerk auth + resolveClerkParticipant isReadOnly) established as template for future output routes
+- [Phase 64-01]: ARCHETYPE_TO_INTENT is the single reconciled concept — FlowArchetype (7 values) = structural pattern, StrategicIntent (5 values) = product category for Phase 66 dispatch
+- [Phase 64-01]: detectArchetype() uses direct keyword overrides for funnel/tool before intent scoring — handles cases where detectStrategicIntent() doesn't reach marketing-site/tool threshold
+- [Phase 64-01]: All new JourneyFlowState fields are optional — _schemaVersion stays at 1; Phase 66 guards with ?? fallback
+- [Phase 64-02]: Feature-scope guard: LLM returning >4 screen nodes throws to heuristic fallback (heuristic always produces exactly 3)
+- [Phase 64-02]: Belt-and-braces two-sided floor: detectTwoSided keyword check runs after both LLM and heuristic paths — GEN-05 holds even when LLM misses it
+- [Phase 64-02]: Cache hit requires nodes.length > 0 AND state.testScope === requested scope — prevents cross-scope cache hits
+- [Phase 64-03]: All icon references reused existing registry entries (workflow/map/target/sparkles/refresh/info) — no new phosphor imports needed for 64-03 UI work
+- [Phase 64]: [Phase 64-04]: Autosave timer cleared AND isDirty set false before fetch — closes window where re-render during await could re-queue debounce for old nodes
+- [Phase 64]: [Phase 64-04]: handleRegenerate always confirms — no heuristic to detect edits; executeRegenerate defaults testScope to 'journey' when missing (start-from-scratch has no stored scope)
+- [Phase 64]: [Phase 64-04]: Phase 64 complete — all 4 plans shipped; GEN-01 through GEN-05 user-facing behavior verified via human checkpoint
+- [Phase 65]: journeyMapApproved renamed to journeyFlowApproved — dead prop from old mapper scaffolding repointed to Phase 63 Journey Flow build-pack row
+- [Phase 65-01]: offPlatform strings use double-quote delimiters to avoid escaped-apostrophe parse issues
+- [Phase 65-01]: classifyOutputType() confirmed invoked from exactly one place (src/app/api/validation/classify/route.ts) — no parallel classifier exists
+- [Phase 65-01]: Combined output types (outputTypes array) are UI-only; the classifier always returns a single type by design — documented in AUDIT block
+- [Phase 65-03]: Per-test acknowledgedAt added to validation-schemas.ts — Done state persists per assumption without a global section flag; finer-grained than section-level flags
+- [Phase 65-03]: Preview/edit mode toggle on ValidatePanel — Done collapses card into summary view; auto-redirect removed because it broke mid-plan review flow
+- [Phase 65-03]: /outputs/prototype-prompt placeholder page created in Phase 65 — URL contract established for Phase 66; Phase 66 replaces page body only, route already exists
+- [Phase 65-03]: ?from=validate query param convention for Journey Flow toolbar back link — toolbar stays reusable, navigation context flows via query param
+- [Phase 65-03]: artifactBuilderCta block removed from ValidatePanel (not repointed) — guidance card inline gated link is the single canonical entry to prototype building
+- [Phase 66]: PROMPT-04 shared boundary: prompt-builder.ts is fidelity-agnostic — hi-fi path imports same module with its own preamble/assembler
+- [Phase 66]: StoredPrototypePrompt persists generatedFromFlowUpdatedAt for staleness detection (timestamp approach, zero schema changes)
+- [Phase 66-02]: Hi-fi fidelity option rendered as span aria-disabled not a button — zero interaction, not-allowed cursor, Coming later badge
+- [Phase 66-02]: isStale recomputed on client from generatedFromFlowUpdatedAt vs flowUpdatedAt to catch mid-session flow changes
+- [Phase 66-low-fi-prototype-prompt]: Expanded prompt preview capped at 60vh with overflow-y-auto — scroll-bound long AI-generated text expansions to keep page controls reachable
+- [Phase 67-park-old-mapper-polish]: icon registry maps X phosphor icon to 'close' (not 'x'); plan used wrong name — fixed inline
+- [Phase 67-park-old-mapper-polish]: Lazy useState initializer used instead of useEffect+setState for sessionStorage read — avoids react-hooks/set-state-in-effect lint error while maintaining hydration safety
+- [Phase 67-park-old-mapper-polish]: No inline fixes needed during E2E walkthrough — all A1-A6 + B7-B11 steps passed on first verification; triage rule not invoked
 
 ### Roadmap Evolution
 
 - Phase 62.2 added: AI SDK v5 Message-ID Server-Side Resolution (follow-up to 62.1; eliminates three workarounds rooted in AI SDK v5 server-side empty-id behavior — see .planning/phases/62.2-ai-sdk-v5-message-id-resolution/62.2-CONTEXT.md)
+- v2.1 roadmap created: phases 63-67 covering Journey Flow editor core, AI baseline generation, validation guidance wiring, low-fi prototype prompt, and parking the old mapper
 
 ### Pending Todos
 
@@ -81,6 +133,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-16
-Stopped at: Completed Phase 62.2 Plan 02 (verification script + Known Limitations closure) — phase 62.2 complete
+Last session: 2026-06-11
+Stopped at: Completed 67-02-PLAN.md — E2E pipeline walkthrough approved; Phase 67 complete; v2.1 milestone (Phases 63-67) fully delivered
 Resume file: None

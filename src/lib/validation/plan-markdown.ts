@@ -34,6 +34,10 @@ function planSection(plan: ValidationPlan): string {
     lines.push('');
     lines.push(`**After the workshop**`);
     for (const item of guidance.postWorkshop) lines.push(`- ${item}`);
+    if (guidance.offPlatform) {
+      lines.push('');
+      lines.push(`**Doing this outside WorkshopPilot:** ${guidance.offPlatform}`);
+    }
     if (guidance.qualNote) {
       lines.push('');
       lines.push(`**Measuring it:** ${guidance.qualNote}`);

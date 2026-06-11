@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { auth, currentUser } from '@clerk/nextjs/server';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, like } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { sessions, buildPacks, stepArtifacts, workshopSteps } from '@/db/schema';
 import { resolveClerkParticipant } from '@/lib/auth/resolve-participant';
@@ -169,6 +169,23 @@ export default async function OutputsPage({ params }: OutputsPageProps) {
     }
   }
 
+  // Journey Flow approval status — gates the prototype-builder link in ValidationGuidanceCard
+  // (same query used on the validate step page).
+  let journeyFlowApproved = false;
+  try {
+    const jfRows = await db
+      .select({ content: buildPacks.content })
+      .from(buildPacks)
+      .where(and(eq(buildPacks.workshopId, workshop.id), like(buildPacks.title, 'Journey Flow:%'), eq(buildPacks.formatType, 'json')))
+      .limit(1);
+    if (jfRows[0]?.content) {
+      const state = JSON.parse(jfRows[0].content);
+      journeyFlowApproved = state.isApproved === true;
+    }
+  } catch {
+    // Non-fatal: defaults to false, which keeps the prototype link disabled
+  }
+
   return (
     <OutputsContent
       sessionId={sessionId}
@@ -182,6 +199,7 @@ export default async function OutputsPage({ params }: OutputsPageProps) {
       deliverables={deliverables}
       isReadOnly={isReadOnly}
       synthesis={synthesis}
+      journeyFlowApproved={journeyFlowApproved}
     />
   );
 }

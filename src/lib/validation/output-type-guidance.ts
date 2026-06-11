@@ -7,8 +7,10 @@
  * drift.
  *
  * Each entry splits guidance into:
- *  - inWorkshop:  what the team can produce and test DURING the session, and
- *  - postWorkshop: what to produce and test AFTERWARDS,
+ *  - inWorkshop:    what the team can produce and test DURING the session,
+ *  - postWorkshop:  what to produce and test AFTERWARDS,
+ *  - offPlatform    how to run this test OUTSIDE WorkshopPilot (non-digital types only; the
+ *                   digital path lives in-platform via Journey Flow → low-fi prototype builder),
  * plus an optional `qualNote` (the qualitative angle) and a static worked `example`.
  *
  * This is purely advisory content. It does NOT touch step-completion: the Validation step is
@@ -31,6 +33,9 @@ export interface ValidationGuidance {
   qualNote?: string;
   /** A concrete, generic worked example of running the test (rendered as "Worked example: …"). */
   example?: string;
+  /** How to run this test outside WorkshopPilot — concrete tools and steps. Non-digital buckets
+   *  only; the digital bucket's path lives in-platform (Journey Flow → prototype builder). */
+  offPlatform?: string;
 }
 
 /**
@@ -78,10 +83,12 @@ const GUIDANCE: Record<GuidanceBucket, ValidationGuidance> = {
     ],
     qualNote:
       'Resonance is mostly qualitative — capture whether the message lands and what it makes people think or feel, not just a click-rate.',
+    offPlatform:
+      "Test the message in the wild: run a 5-second test on Maze or UsabilityHub, a quick resonance survey via Google Forms, or post copy variants directly in the channels you'd actually use — email, social, your site.",
   },
   physical: {
     approach:
-      'A model scaled to the product’s fidelity (paper/cardboard concept → functional mock-up), plus a focus-group reaction',
+      "A model scaled to the product's fidelity (paper/cardboard concept → functional mock-up), plus a focus-group reaction",
     inWorkshop: [
       'Build the simplest representative model — a conceptual object, or a half-working prototype if complexity allows.',
       'Show it to a small focus group for hands-on reactions.',
@@ -92,6 +99,8 @@ const GUIDANCE: Record<GuidanceBucket, ValidationGuidance> = {
     ],
     qualNote:
       'Combine the quantitative pre-order signal with qualitative focus-group reactions to the form and feel.',
+    offPlatform:
+      "Build the mockup with whatever's at hand — paper, cardboard, foam. Show it in person or over a video call. For a pre-order test, a Shopify draft store or a simple order form with a payment link is enough.",
   },
   service: {
     approach:
@@ -106,6 +115,8 @@ const GUIDANCE: Record<GuidanceBucket, ValidationGuidance> = {
     ],
     qualNote:
       'Measure both the number who would sign up and a qualitative read on the experience quality of those who went through it.',
+    offPlatform:
+      'Run the walkthrough or concierge test in person or over a video call. A shared doc or Miro board works for the storyboard — walk people through it step by step and watch where they hesitate.',
   },
   campaign: {
     approach: 'A creative concept test and/or a landing-page / sign-up test',
@@ -119,6 +130,8 @@ const GUIDANCE: Record<GuidanceBucket, ValidationGuidance> = {
     ],
     qualNote:
       'Read both the quantitative response (sign-ups, click rate) and the qualitative resonance of the creative concept.',
+    offPlatform:
+      'Run the concept test off-platform: put two or three creative directions in front of your audience with a quick survey (Google Forms, Maze) or a small paid social test, and measure which one gets the response.',
   },
   offering: {
     approach:
@@ -135,6 +148,8 @@ const GUIDANCE: Record<GuidanceBucket, ValidationGuidance> = {
       'Pair the quantitative interest signal with a short follow-up conversation on why buyers would — or would not — commit.',
     example:
       'If your offer is “£X/mo analytics for indie shops”, stand up a one-page site stating the price with a “Request early access” button, send it to ~20 target buyers, count the requests, then call a few to hear why they did or didn’t.',
+    offPlatform:
+      'Stand up the landing page with an outside tool — Carrd, Webflow, or even a Notion page. Collect sign-ups with a simple form, then follow up by phone or email to hear the why.',
   },
 };
 
@@ -145,4 +160,10 @@ const GUIDANCE: Record<GuidanceBucket, ValidationGuidance> = {
 export function getValidationGuidance(outputType: OutputType): ValidationGuidance | null {
   const bucket = OUTPUT_TYPE_BUCKET[outputType];
   return bucket ? GUIDANCE[bucket] : null;
+}
+
+/** True when this output type routes to the in-platform digital path (Journey Flow → low-fi
+ *  prototype builder). Use this rather than hand-rolling the bucket split in UI code. */
+export function isDigitalOutputType(outputType: OutputType): boolean {
+  return OUTPUT_TYPE_BUCKET[outputType] === 'digital';
 }

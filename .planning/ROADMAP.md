@@ -14,6 +14,7 @@
 - ✅ **v1.8 Onboarding + Payments** — Phases 47-53 (shipped 2026-02-26)
 - ✅ **v1.9 Multiplayer Collaboration** — Phases 54-58 (shipped 2026-02-28)
 - ✅ **v2.0 Dot Voting & Mobile Gate** — Phases 59-62 (shipped 2026-03-01)
+- ✅ **v2.1 Journey Flow + Low-Fidelity Prototype Pipeline** — Phases 63-67 (shipped 2026-06-11)
 
 ## Phases
 
@@ -186,6 +187,21 @@ See `milestones/v2.0-ROADMAP.md` for full details.
 
 </details>
 
+---
+
+<details>
+<summary>✅ v2.1 Journey Flow + Low-Fidelity Prototype Pipeline (Phases 63-67) — SHIPPED 2026-06-11</summary>
+
+- [x] Phase 63: Journey Flow Editor Core (4/4 plans) — completed 2026-06-10
+- [x] Phase 64: AI Baseline Generation (4/4 plans) — completed 2026-06-11
+- [x] Phase 65: Validation Guidance Wiring (3/3 plans) — completed 2026-06-11
+- [x] Phase 66: Low-Fi Prototype Prompt (3/3 plans) — completed 2026-06-11
+- [x] Phase 67: Park Old Mapper + Polish (2/2 plans) — completed 2026-06-11
+
+See `milestones/v2.1-ROADMAP.md` for full details.
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -203,9 +219,15 @@ See `milestones/v2.0-ROADMAP.md` for full details.
 | 54-58. Multiplayer Collaboration | v1.9 | 12/12 | Complete | 2026-02-28 |
 | 59-62. Dot Voting & Mobile Gate | v2.0 | 7/7 | Complete | 2026-03-01 |
 | 62.1 Fix Cross-Workshop Dialogue Leak & Duplicate Greetings | hotfix | 3/3 | Complete | 2026-05-16 |
-| 62.2 AI SDK v5 Message-ID Server-Side Resolution | 2/2 | Complete    | 2026-05-16 | — |
+| 62.2 AI SDK v5 Message-ID Server-Side Resolution | hotfix | 2/2 | Complete | 2026-05-16 |
+| 63. Journey Flow Editor Core | v2.1 | 4/4 | Complete | 2026-06-10 |
+| 64. AI Baseline Generation | v2.1 | 4/4 | Complete | 2026-06-11 |
+| 65. Validation Guidance Wiring | v2.1 | 3/3 | Complete | 2026-06-11 |
+| 66. Low-Fi Prototype Prompt | v2.1 | 3/3 | Complete | 2026-06-11 |
+| 67. Park Old Mapper + Polish | v2.1 | 2/2 | Complete | 2026-06-11 |
 
-**Total shipped:** 12 milestones, 62 phases, ~155 plans in 22 days
+**Total shipped:** 13 milestones, 67 phases, ~157 plans in 22 days
+**v2.1 complete:** 5 phases (63-67), 23 requirements all delivered
 
 ---
-*Last updated: 2026-05-16 — phase 62.2 planned (2 plans, 2 waves)*
+*Last updated: 2026-06-11 — v2.1 milestone shipped and archived*

@@ -1,9 +1,16 @@
 /**
  * Output-type classifier (Step 10 — Validate).
  *
- * Classifies the workshop output into exactly one of five types by reading the existing
+ * Classifies the workshop output into exactly one of eight types by reading the existing
  * upstream artifacts (classify-once). Returns confidence + rationale so the UI can present
  * it as a best guess when confidence is low.
+ *
+ * AUDIT (Phase 65): this is the SINGLE classification entry point — do not add a parallel
+ * classifier. It returns exactly ONE type by design; combined types (`outputTypes: [primary,
+ * secondary]`) are a UI-only concept added by the user via toggleType() in ValidatePanel.
+ * Confidence is classifier-declared (0–1); < 0.6 renders as "best guess" disclosures in the
+ * UI (DetectOutputTypeCard + ValidationGuidanceCard). A `source: 'user_override'`
+ * classification is an implicit confirmation and always carries confidence 1.
  */
 
 import { generateObject } from 'ai';

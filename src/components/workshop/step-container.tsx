@@ -157,7 +157,7 @@ interface StepContainerProps {
   brainwritingSeed?: BrainwritingSeed;
   shareToken?: string | null;
   workshopSessionId?: string | null;
-  journeyMapApproved?: boolean;
+  journeyFlowApproved?: boolean;
   canvasConfirmed?: boolean;
   /** v2.1 — Workshop in team mode = facilitator frames challenge + invites by email. */
   facilitatorMode?: 'solo' | 'team';
@@ -210,7 +210,7 @@ export function StepContainer({
   brainwritingSeed,
   shareToken,
   workshopSessionId,
-  journeyMapApproved = false,
+  journeyFlowApproved = false,
   canvasConfirmed = false,
   facilitatorMode,
   tier = null,
@@ -1089,11 +1089,7 @@ export function StepContainer({
       await completeWorkshop(workshopId, sessionId);
       setWorkshopCompleted(true);
       fireConfetti();
-      toast.success("Workshop completed!", { duration: 4000 });
-      // Proceed to the Build Pack screen. Brief delay so the confetti registers first.
-      setTimeout(() => {
-        router.push(`/workshop/${sessionId}/outputs`);
-      }, 1200);
+      toast.success("Workshop completed — use the View Build Pack button to continue.", { duration: 5000 });
     } catch (error) {
       // completeWorkshop does not call redirect(), so no NEXT_REDIRECT to rethrow
       console.error("Failed to complete workshop:", error);
@@ -1101,7 +1097,7 @@ export function StepContainer({
     } finally {
       setIsCompletingWorkshop(false);
     }
-  }, [isCompletingWorkshop, workshopCompleted, workshopId, sessionId, step10Artifact, handleStep10Extract, router, step?.id]);
+  }, [isCompletingWorkshop, workshopCompleted, workshopId, sessionId, step10Artifact, handleStep10Extract, step?.id]);
 
   // Step 10: auto-extract on mount when conversation already exists
   const hasAutoExtracted = React.useRef(false);
@@ -1286,7 +1282,7 @@ export function StepContainer({
     storeApi,
   ]);
 
-  // Step 10: render validation deliverables — journey map first, then prototype
+  // Step 10: render validation deliverables — Journey Flow first, then prototype
   // Synthesis summary (narrative, journey, confidence, next steps) lives on the results page
   const renderStep10Content = () => {
     return (
@@ -1295,7 +1291,7 @@ export function StepContainer({
           key={`validate:${sessionId}:${resetKey}`}
           workshopId={workshopId}
           sessionId={sessionId}
-          journeyMapApproved={journeyMapApproved}
+          journeyFlowApproved={journeyFlowApproved}
           onWrapUp={handleCompleteWorkshop}
           isWrappingUp={isCompletingWorkshop}
           workshopCompleted={workshopCompleted}

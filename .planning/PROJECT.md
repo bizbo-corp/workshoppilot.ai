@@ -2,7 +2,7 @@
 
 ## What This Is
 
-An AI-powered digital facilitator that guides anyone from a vague idea through a structured 10-step design thinking process, producing validated, AI-coder-ready product specs. The AI isn't a sidebar assistant; it's the principal guide — leading users through conversational prompts, questioning, synthesizing, and generating structured outputs at each stage. Features a split-screen layout with interactive canvas: structured whiteboards for stakeholder rings (Step 2), empathy map zones (Step 4), and journey map swimlanes (Step 6), with AI suggest-then-confirm placement. Includes EzyDraw — an in-app drawing tool with pencil, shapes, UI kit, speech bubbles, and emoji — powering visual mind maps (Step 8a), Crazy 8s sketch grids (Step 8b) with dot voting for idea prioritization, and AI-generated concept cards with SWOT analysis and feasibility ratings (Step 9). Supports real-time multiplayer workshops with live canvas sync, guest join flow, facilitator controls, and anonymous dot voting with timer-controlled reveal. On workshop completion, Gemini generates a PRD and Tech Specs from all 10 steps of workshop data, downloadable as Markdown and JSON from a dedicated outputs page.
+An AI-powered digital facilitator that guides anyone from a vague idea through a structured 10-step design thinking process, producing validated, AI-coder-ready product specs. The AI isn't a sidebar assistant; it's the principal guide — leading users through conversational prompts, questioning, synthesizing, and generating structured outputs at each stage. Features a split-screen layout with interactive canvas: structured whiteboards for stakeholder rings (Step 2), empathy map zones (Step 4), and journey map swimlanes (Step 6), with AI suggest-then-confirm placement. Includes EzyDraw — an in-app drawing tool with pencil, shapes, UI kit, speech bubbles, and emoji — powering visual mind maps (Step 8a), Crazy 8s sketch grids (Step 8b) with dot voting for idea prioritization, and AI-generated concept cards with SWOT analysis and feasibility ratings (Step 9). Supports real-time multiplayer workshops with live canvas sync, guest join flow, facilitator controls, and anonymous dot voting with timer-controlled reveal. On workshop completion, Gemini generates a PRD and Tech Specs from all 10 steps of workshop data, downloadable as Markdown and JSON from a dedicated outputs page. For digital product ideas, validation guidance routes into Journey Flow — a data-only node editor AI-seeded from workshop outputs — which feeds an agent-agnostic low-fidelity prototype prompt users paste into any AI coding agent (v0, Claude, Codex, Replit) to get a wireframe-style prototype.
 
 ## Core Value
 
@@ -91,6 +91,11 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - ✓ Ranked results panel with selection checkboxes for advancing ideas to Step 9 — v2.0
 - ✓ Multiplayer dot voting: anonymous votes, timer-coupled facilitator controls, completion indicators, per-voter attribution dots — v2.0
 - ✓ Mobile gate overlay for workshop pages (<1024px coarse pointer) with email-to-self and copy-link CTAs, sessionStorage dismissal — v2.0
+- ✓ Journey Flow editor: data-only screen/section node cards, drag-to-connect edges, (+) adjacent add, Zustand store + debounced autosave, mark-complete gating — v2.1
+- ✓ AI baseline flow generation with explicit test-scope choice, archetype detection, regenerate, two-sided riskier-side fallback — v2.1
+- ✓ Validation guidance wiring: digital types → Journey Flow + gated prototype builder; non-digital types → off-platform alternatives; single audited classifier — v2.1
+- ✓ Agent-agnostic low-fi prototype prompt with code-enforced wireframe preamble, shared journey-understanding module, staleness detection, mini-flow scoping — v2.1
+- ✓ Old UX Journey Mapper parked: functional at original route with replacement banner, de-linked from all primary navigation — v2.1
 
 ### Active
 
@@ -235,14 +240,19 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 | sessionStorage for mobile gate (not localStorage) | Gate reappears in new tabs/sessions; localStorage would suppress indefinitely | ✓ Good — appropriate persistence |
 | Compound matchMedia (coarse pointer + <1024px) | Catches phones and portrait iPads; no unreliable userAgent sniffing | ✓ Good — CSS media feature query |
 | MobileGate outside SidebarProvider as Fragment sibling | Avoids stacking context issues from SidebarProvider transform/will-change | ✓ Good — z-[200] works correctly |
+| Journey Flow as data-only node cards (no visual wireframing) | Old mapper's visual complexity was the failure mode; data is what the prompt needs | ✓ Good — editor shipped in 1 day, feeds prompt cleanly |
+| Wireframe preamble prepended in code, not by LLM | PROMPT-02's mandatory preamble must hold even if Gemini misbehaves | ✓ Good — deterministic guarantee with LLM fallback body |
+| Staleness via stored flowUpdatedAt timestamp comparison | No schema changes, no hashing; build_packs updatedAt is the source of truth | ✓ Good — two-layer detection (server + client) |
+| Park old mapper, don't delete | Existing workshops have journey-map data; zero-risk freeze with banner + de-link | ✓ Good — old route intact, zero functional changes |
+| Agent-agnostic prompt handoff (no create-v0-chat) | Users pick their own coding agent; removes v0 API dependency | ✓ Good — copy/paste works with v0, Claude, Codex, Replit |
 
 ## Current State
 
-**Shipped:** v2.0 Dot Voting & Mobile Gate (2026-03-01)
+**Shipped:** v2.1 Journey Flow + Low-Fidelity Prototype Pipeline (2026-06-11)
 **Live at:** https://workshoppilot.ai
-**Codebase:** ~55,873 lines of TypeScript across ~300+ files
+**Codebase:** ~56,000+ lines of TypeScript across ~300+ files
 **Tech stack:** Clerk + Neon + Gemini + Drizzle + Stripe + Liveblocks + AI SDK 6 + ReactFlow + Konva.js + Zustand + Playwright + Vercel — all validated in production
-**Milestones:** v0.5 (shell, 2d) + v1.0 (AI, 3d) + v1.1 (canvas, 2d) + v1.2 (whiteboard, 2d) + v1.3 (visual, 1d) + v1.4 (polish, 1d) + v1.5 (launch, 2d) + v1.6 (prod polish, 1d) + v1.7 (build pack, <1d) + v1.8 (payments, 2d) + v1.9 (multiplayer, 3d) + v2.0 (voting, 2d) = 22 days total
+**Milestones:** v0.5 (shell, 2d) + v1.0 (AI, 3d) + v1.1 (canvas, 2d) + v1.2 (whiteboard, 2d) + v1.3 (visual, 1d) + v1.4 (polish, 1d) + v1.5 (launch, 2d) + v1.6 (prod polish, 1d) + v1.7 (build pack, <1d) + v1.8 (payments, 2d) + v1.9 (multiplayer, 3d) + v2.0 (voting, 2d) + v2.1 (journey flow pipeline, 2d) = 24 days total
 
 **Known issues / tech debt:**
 - Next.js middleware → proxy convention migration (non-blocking)
@@ -259,6 +269,10 @@ Anyone with a vague idea can produce validated, AI-ready product specs without d
 - Agency tier absent from pricing page (PRIC-02 deferred)
 - SYNC-04 (per-participant Crazy 8s slots) deferred to v2 — requires partitioned Liveblocks storage
 - Undo/redo disabled in multiplayer mode (liveblocks() + temporal() TypeScript incompatible)
+- Archetype-driven layout positioning deferred — archetype shapes generation + badge only (v2.1)
+- Journey-flow toolbar back-link only handles ?from=validate; other values show "Build Pack" (cosmetic, v2.1)
+- Build Pack hub Journey Flow card keeps stale internal key `type: 'journey-map'` — rename when old mapper is removed (v2.1)
+- 159 pre-existing lint errors (count unchanged by v2.1)
 
 ---
-*Last updated: 2026-03-01 after v2.0 milestone*
+*Last updated: 2026-06-11 after v2.1 milestone*

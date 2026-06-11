@@ -45,6 +45,9 @@ interface OutputsContentProps {
   isReadOnly?: boolean;
   /** Validate-step synthesis (narrative / step summaries / confidence / next steps), if any. */
   synthesis?: Record<string, unknown> | null;
+  /** Journey Flow marked complete — threads through to ValidationPlanDeliverable so the
+   *  prototype-builder link is active in the Build Pack the same way it is on the Validate step. */
+  journeyFlowApproved?: boolean;
 }
 
 type GenerationStatus = 'idle' | 'loading' | 'done' | 'error';
@@ -107,12 +110,13 @@ const SECTIONS: Section[] = [
     cards: [
       {
         type: 'journey-map',
-        title: 'UX Journey Map',
+        title: 'Journey Flow',
         description:
-          'Interactive roadmap mapping your concepts onto user journey stages — then generate a v0 prototype prompt.',
-        icon: <Icon name="map" className="h-5 w-5" />,
-        generatable: true,
-        navigateTo: 'journey-map',
+          'AI-generated user journey flow for your digital product — edit the screens, mark it complete, then build a prototype prompt.',
+        icon: <Icon name="workflow" className="h-5 w-5" />,
+        generatable: false,
+        navigateTo: 'journey-flow',
+        buttonLabel: 'Open Journey Flow',
       },
       {
         type: 'prototype',
@@ -174,6 +178,7 @@ export function OutputsContent({
   deliverables,
   isReadOnly = false,
   synthesis = null,
+  journeyFlowApproved = false,
 }: OutputsContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -187,7 +192,6 @@ export function OutputsContent({
   }, [viewParam]);
   const prdStatus: GenerationStatus = 'idle';
   const techSpecsStatus: GenerationStatus = 'idle';
-  const [journeyMapStatus, setJourneyMapStatus] = useState<GenerationStatus>('idle');
   const [featurePrioritizationStatus, setFeaturePrioritizationStatus] = useState<GenerationStatus>('idle');
   const [presentationStatus, setPresentationStatus] = useState<GenerationStatus>('idle');
   const [presentationGenerated, setPresentationGenerated] = useState(
@@ -223,27 +227,6 @@ export function OutputsContent({
 
   // PRD generation is now handled by the dedicated page at /outputs/prd
   // Tech specs generation is now handled by the wizard page at /outputs/tech-specs
-
-  const handleGenerateJourneyMap = useCallback(async () => {
-    setJourneyMapStatus('loading');
-    try {
-      const res = await fetch('/api/build-pack/generate-journey-map', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workshopId }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Journey map generation failed');
-      }
-      setJourneyMapStatus('done');
-      toast.success('Journey map generated');
-      router.push(`/workshop/${sessionId}/outputs/journey-map`);
-    } catch (err) {
-      setJourneyMapStatus('error');
-      toast.error(err instanceof Error ? err.message : 'Journey map generation failed');
-    }
-  }, [workshopId, sessionId, router]);
 
   const handleGenerateFeaturePrioritization = useCallback(async () => {
     setFeaturePrioritizationStatus('loading');
@@ -314,7 +297,6 @@ export function OutputsContent({
   function getGenerationStatus(type: string): GenerationStatus {
     if (type === 'prd') return prdStatus;
     if (type === 'tech-specs') return techSpecsStatus;
-    if (type === 'journey-map') return journeyMapStatus;
     if (type === 'feature-prioritization') return featurePrioritizationStatus;
     if (type === 'stakeholder-ppt') return presentationStatus;
     return 'idle';
@@ -323,7 +305,6 @@ export function OutputsContent({
   function getGenerateHandler(type: string): (() => void) | undefined {
     if (type === 'prd') return () => router.push(`/workshop/${sessionId}/outputs/prd`);
     if (type === 'tech-specs') return () => router.push(`/workshop/${sessionId}/outputs/tech-specs`);
-    if (type === 'journey-map') return handleGenerateJourneyMap;
     if (type === 'feature-prioritization') return handleGenerateFeaturePrioritization;
     if (type === 'stakeholder-ppt') return () => handleGeneratePresentation(false);
     if (type === 'validation-plan') return () => router.push(`/workshop/${sessionId}/step/validate`);
@@ -332,7 +313,7 @@ export function OutputsContent({
 
   function handleCardClick(card: CardDef) {
     if (card.navigateTo) {
-      if (card.navigateTo === 'journey-map' || card.navigateTo === 'feature-prioritization' || card.navigateTo === 'tech-specs' || card.navigateTo === 'prd') {
+      if (card.navigateTo === 'journey-flow' || card.navigateTo === 'journey-map' || card.navigateTo === 'feature-prioritization' || card.navigateTo === 'tech-specs' || card.navigateTo === 'prd') {
         router.push(`/workshop/${sessionId}/outputs/${card.navigateTo}`);
       } else {
         router.push(`/workshop/${sessionId}/${card.navigateTo}`);
@@ -374,6 +355,7 @@ export function OutputsContent({
             <ValidationPlanDeliverable
               workshopId={workshopId}
               sessionId={sessionId}
+              journeyFlowApproved={journeyFlowApproved}
               isReadOnly={isReadOnly}
               onBack={() => setSelectedType(null)}
             />
@@ -574,7 +556,7 @@ export function OutputsContent({
                               }}
                             >
                               {card.navigateTo
-                                ? `View ${card.type === 'prd' ? 'PRD' : card.type === 'tech-specs' ? 'Tech Specs' : card.type === 'journey-map' ? 'Journey Map' : card.type === 'feature-prioritization' ? 'Features' : 'Details'}`
+                                ? `View ${card.type === 'prd' ? 'PRD' : card.type === 'tech-specs' ? 'Tech Specs' : card.type === 'feature-prioritization' ? 'Features' : 'Details'}`
                                 : 'View Details'}
                               <Icon name="arrow-right" className="h-4 w-4" />
                             </Button>
@@ -619,9 +601,9 @@ export function OutputsContent({
                                   {card.type === 'stakeholder-ppt' && presentationProgress ? presentationProgress : 'Generating...'}
                                 </>
                               ) : status === 'error' ? (
-                                `Retry ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : card.type === 'feature-prioritization' ? 'Features' : card.type === 'stakeholder-ppt' ? 'Presentation' : 'Tech Specs'}`
+                                `Retry ${card.type === 'prd' ? 'PRD' : card.type === 'feature-prioritization' ? 'Features' : card.type === 'stakeholder-ppt' ? 'Presentation' : 'Tech Specs'}`
                               ) : (
-                                `Generate ${card.type === 'prd' ? 'PRD' : card.type === 'journey-map' ? 'Journey Map' : card.type === 'feature-prioritization' ? 'Features' : card.type === 'stakeholder-ppt' ? 'Presentation' : 'Tech Specs'}`
+                                `Generate ${card.type === 'prd' ? 'PRD' : card.type === 'feature-prioritization' ? 'Features' : card.type === 'stakeholder-ppt' ? 'Presentation' : 'Tech Specs'}`
                               )}
                             </Button>
                           )}

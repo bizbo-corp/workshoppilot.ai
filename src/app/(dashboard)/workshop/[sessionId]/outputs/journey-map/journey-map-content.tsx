@@ -255,6 +255,56 @@ function JourneyMapInner({
   );
 }
 
+const BANNER_SESSION_KEY = 'wp_journey_map_parked_dismissed';
+
+function readBannerDismissed(): boolean {
+  try {
+    return sessionStorage.getItem(BANNER_SESSION_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function JourneyMapParkedBanner({ sessionId }: { sessionId: string }) {
+  // Lazy initializer reads sessionStorage client-side only (avoids hydration
+  // mismatch; sessionStorage is undefined during SSR so the factory returns false).
+  const [dismissed, setDismissed] = useState(() =>
+    typeof window !== 'undefined' ? readBannerDismissed() : false
+  );
+
+  function dismiss() {
+    try { sessionStorage.setItem(BANNER_SESSION_KEY, '1'); } catch { /* degraded: visual dismiss only */ }
+    setDismissed(true);
+  }
+
+  if (dismissed) return null;
+
+  return (
+    <div className="flex items-center gap-3 border-b border-border bg-muted/60 px-4 py-2.5 text-sm">
+      <Icon name="info" className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <span className="flex-1 text-foreground/80">
+        <span className="font-semibold text-foreground">The UX Journey Mapper has been replaced by Journey Flow.</span>{' '}
+        Your work here is preserved.
+      </span>
+      <Link
+        href={`/workshop/${sessionId}/outputs/journey-flow`}
+        className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary hover:underline"
+      >
+        Open Journey Flow
+        <Icon name="arrow-right" className="h-3 w-3" />
+      </Link>
+      <button
+        type="button"
+        onClick={dismiss}
+        aria-label="Dismiss"
+        className="ml-1 shrink-0 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+      >
+        <Icon name="close" className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
 export function JourneyMapContent({
   sessionId,
   workshopId,
@@ -263,15 +313,18 @@ export function JourneyMapContent({
   isReadOnly,
 }: JourneyMapContentProps) {
   return (
-    <div className="h-full w-full relative">
-      <JourneyMapperStoreProvider initialState={savedState ?? undefined}>
-        <JourneyMapInner
-          sessionId={sessionId}
-          workshopId={workshopId}
-          hasStep9={hasStep9}
-          isReadOnly={isReadOnly}
-        />
-      </JourneyMapperStoreProvider>
+    <div className="flex h-full w-full flex-col">
+      <JourneyMapParkedBanner sessionId={sessionId} />
+      <div className="relative min-h-0 flex-1">
+        <JourneyMapperStoreProvider initialState={savedState ?? undefined}>
+          <JourneyMapInner
+            sessionId={sessionId}
+            workshopId={workshopId}
+            hasStep9={hasStep9}
+            isReadOnly={isReadOnly}
+          />
+        </JourneyMapperStoreProvider>
+      </div>
     </div>
   );
 }

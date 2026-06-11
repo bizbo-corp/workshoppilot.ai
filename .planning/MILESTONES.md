@@ -301,3 +301,27 @@
 
 ---
 
+
+## v2.1 Journey Flow + Low-Fidelity Prototype Pipeline (Shipped: 2026-06-11)
+
+**Delivered:** Replaced the over-complex UX Journey Mapper with Journey Flow — a simple data-only node editor AI-seeded from workshop outputs — piped into an agent-agnostic low-fidelity prototype prompt, with validation guidance routing digital outputs into the pipeline and non-digital outputs to off-platform alternatives.
+
+**Phases completed:** 63–67 (16 plans)
+
+**Key accomplishments:**
+- Journey Flow editor at `/outputs/journey-flow`: data-only screen/section node cards on React Flow, drag-to-connect edges, (+) adjacent add, inline edit/delete, Zustand store with debounced autosave to build_packs, mark-complete gating
+- AI baseline generation with explicit test-scope choice (whole journey vs single feature with concept picker), flow-archetype detection, confirm-gated regenerate, and two-sided-idea fallback mapping only the riskier side
+- Validation guidance wiring: digital output types get a guidance card linking Journey Flow with prototype builder gated on completion; non-digital types get type-appropriate off-platform alternatives; classifier audited as the single classification path
+- Agent-agnostic low-fi prototype prompt: code-enforced wireframe preamble (grayscale, boxy, unbranded), shared journey-understanding module ready for the future hi-fi path, fidelity switch with hi-fi "coming later" stub, one-click full-text copy with help dialog, DB persistence with staleness detection, mini-flow scoping in single-feature mode
+- Old UX Journey Mapper parked: functional at its original route with a session-dismissible replacement banner; sidebar and Build Pack hub point exclusively to Journey Flow
+- Milestone audit passed: 23/23 requirements, 6/6 E2E flows wired, zero orphaned exports; full pipeline human-verified twice
+
+**Stats:**
+- 33 src files changed (5,340 insertions, 215 deletions)
+- 5 phases, 16 plans, 78 commits
+- 2 days (2026-06-10 → 2026-06-11)
+
+**Git range:** `feat(63-01)` → `docs(v2.1)`
+
+---
+

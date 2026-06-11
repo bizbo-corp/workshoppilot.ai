@@ -40,7 +40,7 @@ interface DashboardSidebarProps {
 const BUILD_PACK_ITEMS: Array<{ label: string; icon: IconName; href: string }> = [
   { label: 'Stakeholder Presentation', icon: 'presentation', href: 'outputs?view=stakeholder-ppt' },
   { label: 'Feature Prioritization', icon: 'list-ordered', href: 'outputs/feature-prioritization' },
-  { label: 'UX Journey Map', icon: 'map', href: 'outputs/journey-map' },
+  { label: 'Journey Flow', icon: 'workflow', href: 'outputs/journey-flow' },
   { label: 'Prototype', icon: 'rocket', href: 'step/validate' },
   { label: 'Validation Plan', icon: 'clipboard-check', href: 'outputs?view=validation-plan' },
   { label: 'Technical Specs', icon: 'code', href: 'outputs/tech-specs' },

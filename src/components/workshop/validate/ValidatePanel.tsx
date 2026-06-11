@@ -67,7 +67,7 @@ function makeDraft(solutionName: string, outputType: OutputType): ValidationPlan
 export interface ValidatePanelProps {
   workshopId: string;
   sessionId: string;
-  journeyMapApproved?: boolean;
+  journeyFlowApproved?: boolean;
   /** Reports the active plan's output types (drives the app_digital reveal). */
   onOutputTypesChange?: (types: OutputType[]) => void;
   /** Reports the number of completed plans (drives workshop-completion gating). */
@@ -85,6 +85,7 @@ export interface ValidatePanelProps {
 export function ValidatePanel({
   workshopId,
   sessionId,
+  journeyFlowApproved = false,
   onOutputTypesChange,
   onPlanCountChange,
   onWrapUp,
@@ -101,7 +102,9 @@ export function ValidatePanel({
   const [plans, setPlans] = React.useState<ValidationPlan[]>([]);
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [editingSection, setEditingSection] = React.useState<ProgressStep | null>(null);
-
+  // Preview mode: once a plan is assembled, default to PREVIEW (step cards hidden).
+  // The "Edit" button in the guidance card header switches to EDIT mode (step cards visible).
+  const [previewMode, setPreviewMode] = React.useState(true);
   const [isClassifying, setIsClassifying] = React.useState(false);
   const [classifyError, setClassifyError] = React.useState<string | null>(null);
   const [isProposing, setIsProposing] = React.useState(false);
@@ -146,9 +149,17 @@ export function ValidatePanel({
       setReframedStatement(res.data!.reframedStatement);
 
       const inProgress = validationPlans.find((p) => p.progressStep !== 'complete');
+      // A complete-but-unacknowledged plan still owes the user its Done row — keep it active
+      // across reloads so acknowledgement (per-test, persisted) can't be skipped by a refresh.
+      const unacknowledged = [...validationPlans]
+        .reverse()
+        .find((p) => p.progressStep === 'complete' && !p.acknowledgedAt);
       if (inProgress) {
         setPlans(validationPlans);
         setActiveId(inProgress.id);
+      } else if (unacknowledged) {
+        setPlans(validationPlans);
+        setActiveId(unacknowledged.id);
       } else if (validationPlans.length > 0) {
         setPlans(validationPlans);
         setActiveId(null);
@@ -247,7 +258,7 @@ export function ValidatePanel({
 
     const cls: OutputTypeClassification = {
       type: primary,
-      confidence: classification?.confidence ?? 1,
+      confidence: 1, // explicit user choice is certain — never carry stale LLM confidence (Gap 3)
       rationale: classification?.rationale ?? '',
       source: 'user_override',
       classifiedAt: now(),
@@ -383,7 +394,10 @@ export function ValidatePanel({
       };
       setPlans((prev) => prev.map((p) => (p.id === next.id ? next : p)));
       if (editing) setEditingSection(null);
-      if (nextStep === 'complete') setActiveId(next.id); // keep showing the assembled plan
+      if (nextStep === 'complete') {
+        setActiveId(next.id); // keep showing the assembled plan
+        setPreviewMode(true);  // newly assembled → default to Preview
+      }
       void persist(next);
     },
     [activePlan, editingSection, persist]
@@ -415,9 +429,22 @@ export function ValidatePanel({
     };
     proposeTriggered.current = false; // let the auto-propose effect generate a fresh assumption
     setEditingSection(null);
+    setPreviewMode(true); // fresh wizard — preview doesn't apply until assembled
     setPlans((prev) => [...prev, draft]);
     setActiveId(draft.id);
     void persist(draft);
+  };
+
+  // Per-test wrap-up: Done acknowledges THIS plan (persisted on the plan itself, so it
+  // survives reloads) and completes the workshop the first time. Subsequent tests get their
+  // own Done — visibility derives from "assembled && !acknowledgedAt", never from the global
+  // workshopCompleted flag (which once hid Done forever on completed workshops).
+  const acknowledgeDone = () => {
+    if (!activePlan) return;
+    const next: ValidationPlan = { ...activePlan, acknowledgedAt: now(), updatedAt: now() };
+    setPlans((prev) => prev.map((p) => (p.id === next.id ? next : p)));
+    void persist(next);
+    if (!workshopCompleted) onWrapUp?.();
   };
 
   const record = async (planId: string, input: RecordResultInput) => {
@@ -441,10 +468,12 @@ export function ValidatePanel({
   }
 
   const assembled = activePlan && activePlan.progressStep === 'complete' && !editingSection;
+  // In Preview mode the five step cards are hidden; Edit mode reveals them.
+  // While the wizard is in progress (not yet assembled), the step cards always show.
+  const showStepCards = !assembled || !previewMode;
   const selectedArtifact: ArtifactOption | undefined = activePlan
     ? findArtifactByKey(activePlan.artifactType)
     : undefined;
-  const builderCta = activePlan ? artifactBuilderCta(activePlan, sessionId) : null;
 
   return (
     <div className="flex flex-col">
@@ -467,8 +496,27 @@ export function ValidatePanel({
           )}
         </header>
 
-        {activePlan && (
+        {activePlan && showStepCards && (
           <div className="space-y-4">
+            {/* EDIT mode banner — shown when manually switching back to edit after assembly */}
+            {assembled && !previewMode && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-2.5">
+                <span className="text-sm text-foreground/70">
+                  Editing your validation plan — changes are saved automatically.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingSection(null);
+                    setPreviewMode(true);
+                  }}
+                  className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-foreground/70 hover:bg-muted"
+                >
+                  Preview
+                </button>
+              </div>
+            )}
+
             <DetectOutputTypeCard
               status={statusFor('detect')}
               classification={classification}
@@ -545,116 +593,94 @@ export function ValidatePanel({
           </div>
         )}
 
-        {/* Assembled plan: artifact panel + record results + actions */}
+        {/* Assembled plan. The page reads as three zones (gestalt: common region + proximity):
+            PLAN — the five step cards above (what we decided);
+            ACT  — ONE bordered "Run your test" region: guidance, build CTA, record result;
+            STATUS — the saved/Done row + test-another below. */}
         {assembled && activePlan && (
-          <div className="space-y-4 rounded-xl border-2 border-primary/20 bg-primary/5 p-5">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-lg font-semibold">Your validation plan is ready</h3>
-            </div>
-            <ValidationPlanSummary plan={activePlan} />
+          <div className="space-y-4">
+            {/* ACT — everything about running the test lives in this one region. */}
+            <Surface className="space-y-5 p-5">
+              <div>
+                <h3 className="text-lg font-semibold">Run your test</h3>
+                <p className="mt-0.5 text-sm text-foreground/70">
+                  Build the test, put it in front of people, then log what happened below.
+                </p>
+              </div>
 
-            {/* Output-type-tailored approach: in-workshop vs post-workshop. Renders only for
-                output types with tailored guidance; generic types fall through to the checklist. */}
-            <ValidationGuidanceCard
-              outputType={activePlan.outputType}
-              tailoredExample={activePlan.tailoredExample}
-              tailoring={tailoring}
-            />
-
-            {/* ① Build & run the test — the primary next action, artifact-specific. */}
-            {builderCta && (
-              <a
-                href={builderCta.href}
-                className="group block rounded-xl border-2 border-primary/30 bg-primary/10 p-4 transition-colors hover:bg-primary/15"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="space-y-0.5">
-                    <p className="text-base font-semibold">Build &amp; run your test</p>
-                    <p className="text-sm text-foreground/70">{builderCta.blurb}</p>
-                  </div>
-                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-4 py-2.5 text-base font-medium text-primary-foreground transition-transform group-hover:translate-x-0.5">
-                    {builderCta.label}
-                    <Icon name="arrow-right" className="h-4 w-4" />
-                  </span>
-                </div>
-              </a>
-            )}
-
-            {selectedArtifact?.generatesConceptCard ? (
-              <ConceptCardArtifact
-                plan={activePlan}
-                context={{
-                  problem: reframedStatement || problemStatement,
-                  elevatorPitch: concepts[0]?.elevatorPitch ?? '',
-                  usp: concepts[0]?.usp ?? '',
+              <ValidationGuidanceCard
+                flat
+                outputType={activePlan.outputType}
+                outputTypes={activePlan.outputTypes ?? [activePlan.outputType]}
+                tailoredExample={activePlan.tailoredExample}
+                tailoring={tailoring}
+                journeyFlowApproved={journeyFlowApproved}
+                classification={classification}
+                sessionId={sessionId}
+                onReclassify={() => setEditingSection('detect')}
+                onEditMode={() => {
+                  setEditingSection(null);
+                  setPreviewMode(false);
                 }}
               />
-            ) : !builderCta ? (
-              <ArtifactChecklist plan={activePlan} />
-            ) : null}
 
-            {/* ② Record the result — deferred; you can only log it after running the test. */}
-            {builderCta && (
-              <p className="border-t border-border/60 pt-3 text-sm text-foreground/70">
-                Run your test, then come back and log what happened below.
-              </p>
-            )}
+              {selectedArtifact?.generatesConceptCard ? (
+                <ConceptCardArtifact
+                  plan={activePlan}
+                  context={{
+                    problem: reframedStatement || problemStatement,
+                    elevatorPitch: concepts[0]?.elevatorPitch ?? '',
+                    usp: concepts[0]?.usp ?? '',
+                  }}
+                />
+              ) : (
+                <ArtifactChecklist plan={activePlan} />
+              )}
 
-            <RecordResultsCard
-              plan={activePlan}
-              isSaving={recordingId === activePlan.id}
-              error={recordError}
-              onRecord={(input) => record(activePlan.id, input)}
-            />
+              {/* Post-test action: record the result — own card chrome inside the zone. */}
+              <RecordResultsCard
+                plan={activePlan}
+                isSaving={recordingId === activePlan.id}
+                error={recordError}
+                onRecord={(input) => record(activePlan.id, input)}
+              />
 
-            {/* Primary: wrap up the plan → completes the workshop and opens the Build Pack.
-                Recording the result is optional and can be done later in the Build Pack. */}
-            <div className="space-y-2 pt-1">
-              {workshopCompleted ? (
-                <a
-                  href={`/workshop/${sessionId}/outputs`}
-                  className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-base font-medium text-primary-foreground btn-shimmer"
-                >
-                  <Icon name="check-circle" className="h-4 w-4" />
-                  View Build Pack
-                  <Icon name="arrow-right" className="h-4 w-4" />
-                </a>
-              ) : onWrapUp ? (
-                <>
-                  <Button
-                    size="lg"
-                    className="w-full gap-2 btn-shimmer"
-                    onClick={onWrapUp}
-                    disabled={isWrappingUp}
-                  >
-                    {isWrappingUp ? (
-                      <Icon name="spinner" className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Icon name="check-circle" className="h-4 w-4" />
-                    )}
-                    Wrap up validation plan
-                    {!isWrappingUp && <Icon name="arrow-right" className="h-4 w-4" />}
-                  </Button>
-                  <p className="text-center text-sm text-foreground/70">
-                    Saves your plan to the Build Pack and finishes the workshop. You can record the
-                    result later in the Build Pack — it&apos;s not required.
-                  </p>
-                </>
-              ) : null}
-              {plans.length < 3 && (
-                <div className="flex justify-center">
-                  <Button variant="ghost" size="sm" className="gap-1.5" onClick={addAnotherTest}>
-                    <Icon name="plus" className="h-3.5 w-3.5" />
-                    Test another assumption
-                  </Button>
+              {/* Done button — lives at the bottom of the Run-your-test card.
+                  Shows until THIS plan is acknowledged (per-plan, persisted).
+                  Never gated on global workshopCompleted. */}
+              {!activePlan.acknowledgedAt && (
+                <div className="space-y-2 border-t border-border/60 pt-4">
+                  {!workshopCompleted && (
+                    <p className="text-center text-sm text-foreground/70">
+                      Done finishes the workshop and saves your plan to the Build Pack. You can
+                      record the result later — it&apos;s not required.
+                    </p>
+                  )}
+                  <div className="flex justify-center">
+                    <Button
+                      size="sm"
+                      className="gap-1.5 btn-shimmer"
+                      onClick={acknowledgeDone}
+                      disabled={isWrappingUp}
+                    >
+                      {isWrappingUp ? (
+                        <Icon name="spinner" className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Icon name="check-circle" className="h-4 w-4" />
+                      )}
+                      Done
+                    </Button>
+                  </div>
                 </div>
               )}
-            </div>
+            </Surface>
           </div>
         )}
 
-        {/* Previously completed plans */}
-        {completedPlans.length > 0 && (
+        {/* Previously completed plans — hidden while any active test is open (mid-wizard OR
+            assembled but not yet acknowledged), so focus stays on the current test. Shows
+            again once the user clicks Done (acknowledgedAt set) or when no plan is active. */}
+        {(!activePlan || (assembled && !!activePlan.acknowledgedAt)) && completedPlans.length > 0 && (
           <div className="space-y-3">
             <h3 className="text-base font-semibold text-foreground/70">
               Other assumptions you&apos;ve tested
@@ -687,36 +713,22 @@ export function ValidatePanel({
             ))}
           </div>
         )}
+
+        {/* Page-level action: test another assumption. Visible only after the active plan is
+            acknowledged (Done clicked) or when no plan is active — matches the prior-tests
+            visibility rule so the page holds one focus while any test is open. */}
+        {(!activePlan || (assembled && !!activePlan.acknowledgedAt)) && plans.length < 3 && (
+          <div className="flex justify-center pb-2">
+            {/* Same secondary-additive treatment as "+ Record a result" (similarity) */}
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={addAnotherTest}>
+              <Icon name="plus" className="h-3.5 w-3.5" />
+              Test another assumption
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
-}
-
-/**
- * The primary "go build & run this test" action for the chosen artifact, if it has a dedicated
- * builder page. Prototype tests route to the journey map → V0 flow; fake-door tests to the
- * landing-page generator. Other artifacts fall back to the static checklist.
- */
-function artifactBuilderCta(
-  plan: ValidationPlan,
-  sessionId: string
-): { label: string; href: string; blurb: string } | null {
-  const art = findArtifactByKey(plan.artifactType);
-  if (art?.revealsPrototype) {
-    return {
-      label: 'Create your prototype',
-      href: `/workshop/${sessionId}/outputs/journey-map`,
-      blurb: 'Map the journey, then generate a clickable prototype to put in front of users.',
-    };
-  }
-  if (plan.artifactType === 'fake_door_smoke_test') {
-    return {
-      label: 'Build your fake-door page',
-      href: `/workshop/${sessionId}/outputs/fake-door`,
-      blurb: 'Stand up a landing page with one call-to-action to measure real demand.',
-    };
-  }
-  return null;
 }
 
 /** Sensible default metric phrasing per output type. */
