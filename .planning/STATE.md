@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Journey Flow + Low-Fidelity Prototype Pipeline
 status: unknown
-last_updated: "2026-06-11T01:10:27.711Z"
+last_updated: "2026-06-11T01:33:37.116Z"
 progress:
   total_phases: 40
-  completed_phases: 39
+  completed_phases: 40
   total_plans: 117
-  completed_plans: 116
+  completed_plans: 117
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 64 — AI Baseline Generation
-Plan: 03 complete (3/4)
-Status: Phase 64 in progress — Plans 01-03 complete; Plan 04 (wiring) remaining
-Last activity: 2026-06-11 — 64-03 executed (2/2 tasks): ScopeChooser, toolbar Regenerate + archetype badge, annotation node variant
+Plan: 04 complete (4/4)
+Status: Phase 64 complete — all 4 plans shipped; GEN-01 through GEN-05 user-facing behavior verified
+Last activity: 2026-06-11 — 64-04 executed (3/3 tasks): concept loading, ScopeChooser + generation wiring, checkpoint approved by user
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Last activity: 2026-06-11 — 64-03 executed (2/2 tasks): ScopeChooser, toolbar 
 | Phase 63-journey-flow-editor-core P03 | 2min | 2 tasks | 2 files |
 | Phase 64-ai-baseline-generation P02 | 2min | 2 tasks | 1 file |
 | Phase 64-ai-baseline-generation P03 | 2 | 2 tasks | 3 files |
+| Phase 64 P04 | continuation | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,9 @@ Last activity: 2026-06-11 — 64-03 executed (2/2 tasks): ScopeChooser, toolbar 
 - [Phase 64-02]: Belt-and-braces two-sided floor: detectTwoSided keyword check runs after both LLM and heuristic paths — GEN-05 holds even when LLM misses it
 - [Phase 64-02]: Cache hit requires nodes.length > 0 AND state.testScope === requested scope — prevents cross-scope cache hits
 - [Phase 64-03]: All icon references reused existing registry entries (workflow/map/target/sparkles/refresh/info) — no new phosphor imports needed for 64-03 UI work
+- [Phase 64]: [Phase 64-04]: Autosave timer cleared AND isDirty set false before fetch — closes window where re-render during await could re-queue debounce for old nodes
+- [Phase 64]: [Phase 64-04]: handleRegenerate always confirms — no heuristic to detect edits; executeRegenerate defaults testScope to 'journey' when missing (start-from-scratch has no stored scope)
+- [Phase 64]: [Phase 64-04]: Phase 64 complete — all 4 plans shipped; GEN-01 through GEN-05 user-facing behavior verified via human checkpoint
 
 ### Roadmap Evolution
 
@@ -106,5 +110,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-06-11
-Stopped at: Completed 64-02-PLAN.md and 64-03-PLAN.md — generate-journey-flow API route (hybrid LLM+heuristic); ScopeChooser, toolbar Regenerate + archetype badge, annotation node variant
+Stopped at: Completed 64-04-PLAN.md — generation wiring, ScopeChooser entry state, regenerate confirm flow; all six verification steps approved by user
 Resume file: None

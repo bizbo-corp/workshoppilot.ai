@@ -196,7 +196,7 @@ See `milestones/v2.0-ROADMAP.md` for full details.
 #### Phase Summary
 
 - [x] **Phase 63: Journey Flow Editor Core** - Route, node data model, drag-to-connect edges, (+) add, inline edit/delete, Zustand store + autosave, mark-complete (completed 2026-06-10)
-- [ ] **Phase 64: AI Baseline Generation** - Test-scope choice UI, archetype detection, baseline flow generation (journey + mini-flow modes), regenerate, two-sided fallback
+- [x] **Phase 64: AI Baseline Generation** - Test-scope choice UI, archetype detection, baseline flow generation (journey + mini-flow modes), regenerate, two-sided fallback (completed 2026-06-11)
 - [ ] **Phase 65: Validation Guidance Wiring** - Digital type routing with Journey Flow links + prototype gating, non-digital alternatives with off-platform guidance, edge-case handling, classifier audit
 - [ ] **Phase 66: Low-Fi Prototype Prompt** - Fidelity switch, low-fi template with wireframe preamble, shared journey-understanding refactor, agent-agnostic copy/paste handoff, hi-fi stub, single-feature scoping
 - [ ] **Phase 67: Park Old Mapper + Polish** - De-link old mapper from primary nav/guidance, replacement banner, end-to-end path verification
@@ -292,7 +292,7 @@ Plans:
 | 62.1 Fix Cross-Workshop Dialogue Leak & Duplicate Greetings | hotfix | 3/3 | Complete | 2026-05-16 |
 | 62.2 AI SDK v5 Message-ID Server-Side Resolution | 2/2 | Complete | 2026-05-16 | — |
 | 63. Journey Flow Editor Core | 4/4 | Complete    | 2026-06-10 | - |
-| 64. AI Baseline Generation | 3/4 | In Progress|  | - |
+| 64. AI Baseline Generation | 4/4 | Complete   | 2026-06-11 | - |
 | 65. Validation Guidance Wiring | v2.1 | 0/TBD | Not started | - |
 | 66. Low-Fi Prototype Prompt | v2.1 | 0/TBD | Not started | - |
 | 67. Park Old Mapper + Polish | v2.1 | 0/TBD | Not started | - |
