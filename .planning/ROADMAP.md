@@ -304,7 +304,7 @@ Plans:
 | 63. Journey Flow Editor Core | 4/4 | Complete    | 2026-06-10 | - |
 | 64. AI Baseline Generation | 4/4 | Complete    | 2026-06-11 | - |
 | 65. Validation Guidance Wiring | 3/3 | Complete    | 2026-06-11 | - |
-| 66. Low-Fi Prototype Prompt | 1/3 | In Progress|  | - |
+| 66. Low-Fi Prototype Prompt | 2/3 | In Progress|  | - |
 | 67. Park Old Mapper + Polish | v2.1 | 0/TBD | Not started | - |
 
 **Total shipped:** 12 milestones, 62 phases, ~155 plans in 22 days

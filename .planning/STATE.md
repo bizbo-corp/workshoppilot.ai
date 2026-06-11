@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Journey Flow + Low-Fidelity Prototype Pipeline
 status: unknown
-last_updated: "2026-06-11T06:21:30.870Z"
+last_updated: "2026-06-11T06:26:50.157Z"
 progress:
   total_phases: 42
   completed_phases: 41
   total_plans: 123
-  completed_plans: 121
+  completed_plans: 122
 ---
 
 # Project State
@@ -57,6 +57,7 @@ Last activity: 2026-06-11 — Phase 65 executed (3/3 plans), checkpoint approved
 | Phase 65-validation-guidance-wiring P01 | 6 | 2 tasks | 4 files |
 | Phase 65-validation-guidance-wiring P03 | multi-session | 3 tasks (6-round checkpoint) | 12 files |
 | Phase 66-low-fi-prototype-prompt P01 | 4 | 3 tasks | 3 files |
+| Phase 66-low-fi-prototype-prompt P02 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,8 @@ Last activity: 2026-06-11 — Phase 65 executed (3/3 plans), checkpoint approved
 - [Phase 65-03]: artifactBuilderCta block removed from ValidatePanel (not repointed) — guidance card inline gated link is the single canonical entry to prototype building
 - [Phase 66]: PROMPT-04 shared boundary: prompt-builder.ts is fidelity-agnostic — hi-fi path imports same module with its own preamble/assembler
 - [Phase 66]: StoredPrototypePrompt persists generatedFromFlowUpdatedAt for staleness detection (timestamp approach, zero schema changes)
+- [Phase 66-02]: Hi-fi fidelity option rendered as span aria-disabled not a button — zero interaction, not-allowed cursor, Coming later badge
+- [Phase 66-02]: isStale recomputed on client from generatedFromFlowUpdatedAt vs flowUpdatedAt to catch mid-session flow changes
 
 ### Roadmap Evolution
 
