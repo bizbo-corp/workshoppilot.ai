@@ -135,7 +135,7 @@ export default function LandingV4() {
                   key={i}
                   name="star"
                   weight="fill"
-                  className="h-4 w-4 fill-[#fffaf0] text-amber-400 dark:fill-[#fdf6e8]"
+                  className="h-4 w-4 fill-[#eab308] dark:fill-[var(--sticky-note-yellow)]"
                 />
               ))}
             </div>
@@ -725,7 +725,7 @@ export default function LandingV4() {
             {/* ── White Glove — $1,499 ────────────────────────── */}
             <div
               id="guided-pilot"
-              className="rounded-2xl border border-amber-500/40 dark:border-amber-400/30 ring-1 ring-amber-500/20 dark:ring-amber-400/15 p-8 flex flex-col scroll-mt-28 bg-gradient-to-b from-amber-50/50 via-card to-card dark:from-amber-950/30 dark:via-card dark:to-card"
+              className="rounded-2xl border border-premium-border ring-1 ring-amber-500/20 dark:ring-amber-400/15 p-8 flex flex-col scroll-mt-28 bg-gradient-to-b from-amber-50/50 via-card to-card dark:from-amber-950/30 dark:via-card dark:to-card"
               style={{
                 boxShadow:
                   "inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 24px -4px rgba(180,130,40,0.12)",

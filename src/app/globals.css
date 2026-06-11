@@ -8,6 +8,8 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-selection: var(--selection);
+  /* Premium (White Glove) amber accent border — shared by the pricing box and hero stars */
+  --color-premium-border: var(--premium-border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
@@ -141,6 +143,9 @@
   /* Selection — olive (brand), matches the cluster group header (olive-600).
      Used for all canvas selection indicators. */
   --selection: var(--olive-600);
+  /* Premium (White Glove) accent border — amber-500 @ 40%; shared by the
+     White Glove pricing box and the hero trust-strip stars. */
+  --premium-border: rgba(245, 158, 11, 0.4);
   /* Canvas (light) — lightest surface of the workspace stack: canvas (50) →
      sidebar (200) → chat (300). */
   /* Match the page surface (--background, olive-75) so the canvas doesn't
@@ -346,6 +351,8 @@
   /* Lighter olive in dark mode so selection rings + resize handles stay visible
      against the dark canvas (light mode uses olive-600 to match the group header). */
   --selection: var(--olive-400);
+  /* Premium accent border (dark) — amber-400 @ 30% */
+  --premium-border: rgba(251, 191, 36, 0.3);
   /* Canvas (dark) — workspace stack: canvas (900) → sidebar (950) → chat (975) */
   --canvas-bg: var(--neutral-olive-900);
   --canvas-dots: color-mix(in srgb, var(--foreground) 50%, transparent);
