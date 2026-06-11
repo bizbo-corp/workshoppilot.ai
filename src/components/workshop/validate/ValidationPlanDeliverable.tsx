@@ -17,14 +17,21 @@ import { ScoreRing } from './ScoreRing';
  * step; here the owner can record the real-world result whenever the test has run (it carries
  * straight back to the plan + the exported markdown). Read-only guests see the plan and any
  * result, without editing.
+ *
+ * Phase 65: sessionId and journeyFlowApproved are threaded through so ValidationGuidanceCard
+ * can render the same digital links (Journey Flow, prototype) available on the Validate step.
  */
 export function ValidationPlanDeliverable({
   workshopId,
+  sessionId,
+  journeyFlowApproved = false,
   isReadOnly = false,
   onBack,
 }: {
   workshopId: string;
   sessionId: string;
+  /** Journey Flow marked complete — enables the prototype-builder link inside the guidance card. */
+  journeyFlowApproved?: boolean;
   isReadOnly?: boolean;
   onBack: () => void;
 }) {
@@ -108,7 +115,10 @@ export function ValidationPlanDeliverable({
 
               <ValidationGuidanceCard
                 outputType={plan.outputType}
+                outputTypes={plan.outputTypes ?? [plan.outputType]}
                 tailoredExample={plan.tailoredExample}
+                sessionId={sessionId}
+                journeyFlowApproved={journeyFlowApproved}
                 flat
               />
 

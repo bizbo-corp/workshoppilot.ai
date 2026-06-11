@@ -45,6 +45,9 @@ interface OutputsContentProps {
   isReadOnly?: boolean;
   /** Validate-step synthesis (narrative / step summaries / confidence / next steps), if any. */
   synthesis?: Record<string, unknown> | null;
+  /** Journey Flow marked complete — threads through to ValidationPlanDeliverable so the
+   *  prototype-builder link is active in the Build Pack the same way it is on the Validate step. */
+  journeyFlowApproved?: boolean;
 }
 
 type GenerationStatus = 'idle' | 'loading' | 'done' | 'error';
@@ -174,6 +177,7 @@ export function OutputsContent({
   deliverables,
   isReadOnly = false,
   synthesis = null,
+  journeyFlowApproved = false,
 }: OutputsContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -374,6 +378,7 @@ export function OutputsContent({
             <ValidationPlanDeliverable
               workshopId={workshopId}
               sessionId={sessionId}
+              journeyFlowApproved={journeyFlowApproved}
               isReadOnly={isReadOnly}
               onBack={() => setSelectedType(null)}
             />
