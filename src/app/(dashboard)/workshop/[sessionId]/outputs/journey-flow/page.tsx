@@ -10,10 +10,12 @@ import type { ScopeChooserConcept } from '@/components/journey-flow/scope-choose
 
 interface JourneyFlowPageProps {
   params: Promise<{ sessionId: string }>;
+  searchParams: Promise<{ from?: string }>;
 }
 
-export default async function JourneyFlowPage({ params }: JourneyFlowPageProps) {
+export default async function JourneyFlowPage({ params, searchParams }: JourneyFlowPageProps) {
   const { sessionId } = await params;
+  const { from } = await searchParams;
 
   const session = await db.query.sessions.findFirst({
     where: eq(sessions.id, sessionId),
@@ -98,6 +100,7 @@ export default async function JourneyFlowPage({ params }: JourneyFlowPageProps) 
       savedState={savedState}
       concepts={concepts}
       isReadOnly={isReadOnly}
+      from={from}
     />
   );
 }

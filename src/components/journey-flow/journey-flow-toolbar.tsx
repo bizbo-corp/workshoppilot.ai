@@ -24,6 +24,12 @@ export interface JourneyFlowToolbarProps {
   isGenerating?: boolean;
   /** When set, renders a small archetype badge after the action buttons. */
   archetype?: FlowArchetype;
+  /**
+   * Navigation context — determines the back-link label and destination.
+   *  'validate' → "← Validation Plan" back to the workshop's validate step
+   *  undefined / anything else → "← Build Pack" back to outputs
+   */
+  from?: string;
 }
 
 export function JourneyFlowToolbar({
@@ -35,15 +41,22 @@ export function JourneyFlowToolbar({
   onRegenerate,
   isGenerating,
   archetype,
+  from,
 }: JourneyFlowToolbarProps) {
+  const backHref =
+    from === 'validate'
+      ? `/workshop/${sessionId}/step/validate`
+      : `/workshop/${sessionId}/outputs`;
+  const backLabel = from === 'validate' ? 'Validation Plan' : 'Build Pack';
+
   return (
     <Panel position="top-left" className="flex items-center gap-2">
       <Link
-        href={`/workshop/${sessionId}/outputs`}
+        href={backHref}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mr-2"
       >
         <Icon name="arrow-left" className="h-3.5 w-3.5" />
-        Build Pack
+        {backLabel}
       </Link>
 
       <div className="h-5 w-px bg-border" />

@@ -77,7 +77,7 @@ export function ValidationGuidanceCard({
               text,
               action: (
                 <Link
-                  href={`/workshop/${sessionId}/outputs/journey-flow`}
+                  href={`/workshop/${sessionId}/outputs/journey-flow?from=validate`}
                   className="text-primary underline underline-offset-2 hover:text-primary/80"
                 >
                   Open Journey Flow →

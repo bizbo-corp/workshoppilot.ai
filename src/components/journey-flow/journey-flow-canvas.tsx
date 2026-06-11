@@ -90,6 +90,8 @@ export interface JourneyFlowCanvasProps {
   isGenerating?: boolean;
   /** When set, renders a small archetype badge in the toolbar. */
   archetype?: import('@/lib/journey-flow/types').FlowArchetype;
+  /** Navigation context forwarded from the inbound ?from= query param. */
+  from?: string;
 }
 
 /**
@@ -115,6 +117,7 @@ function JourneyFlowCanvasInner({
   onRegenerate,
   isGenerating,
   archetype: archetypeProp,
+  from,
 }: JourneyFlowCanvasProps) {
   const storeApi = useJourneyFlowStoreApi();
   const nodes = useJourneyFlowStore((s) => s.nodes);
@@ -463,6 +466,7 @@ function JourneyFlowCanvasInner({
           onRegenerate={onRegenerate}
           isGenerating={isGenerating}
           archetype={archetype}
+          from={from}
         />
       </ReactFlow>
 

@@ -36,6 +36,8 @@ interface JourneyFlowContentProps {
   savedState: Partial<JourneyFlowState> | null;
   concepts: ScopeChooserConcept[];
   isReadOnly?: boolean;
+  /** Forwarded from the inbound ?from= query param — controls the back-link in the toolbar. */
+  from?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -47,6 +49,7 @@ function JourneyFlowInner({
   workshopId,
   concepts,
   isReadOnly,
+  from,
 }: Omit<JourneyFlowContentProps, 'savedState'>) {
   const storeApi = useJourneyFlowStoreApi();
   const nodes = useJourneyFlowStore((s) => s.nodes);
@@ -251,6 +254,7 @@ function JourneyFlowInner({
         onRegenerate={isReadOnly ? undefined : handleRegenerate}
         isGenerating={isGenerating}
         archetype={flowArchetype}
+        from={from}
       />
 
       <AlertDialog open={showRegenerateConfirm} onOpenChange={setShowRegenerateConfirm}>
@@ -284,6 +288,7 @@ export function JourneyFlowContent({
   savedState,
   concepts,
   isReadOnly,
+  from,
 }: JourneyFlowContentProps) {
   return (
     <div className="h-full w-full relative">
@@ -293,6 +298,7 @@ export function JourneyFlowContent({
           workshopId={workshopId}
           concepts={concepts}
           isReadOnly={isReadOnly}
+          from={from}
         />
       </JourneyFlowStoreProvider>
     </div>
