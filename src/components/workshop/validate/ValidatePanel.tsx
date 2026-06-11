@@ -85,6 +85,7 @@ export interface ValidatePanelProps {
 export function ValidatePanel({
   workshopId,
   sessionId,
+  journeyFlowApproved = false,
   onOutputTypesChange,
   onPlanCountChange,
   onWrapUp,
@@ -247,7 +248,7 @@ export function ValidatePanel({
 
     const cls: OutputTypeClassification = {
       type: primary,
-      confidence: classification?.confidence ?? 1,
+      confidence: 1, // explicit user choice is certain — never carry stale LLM confidence (Gap 3)
       rationale: classification?.rationale ?? '',
       source: 'user_override',
       classifiedAt: now(),
@@ -557,8 +558,13 @@ export function ValidatePanel({
                 output types with tailored guidance; generic types fall through to the checklist. */}
             <ValidationGuidanceCard
               outputType={activePlan.outputType}
+              outputTypes={activePlan.outputTypes ?? [activePlan.outputType]}
               tailoredExample={activePlan.tailoredExample}
               tailoring={tailoring}
+              journeyFlowApproved={journeyFlowApproved}
+              classification={classification}
+              sessionId={sessionId}
+              onReclassify={() => setEditingSection('detect')}
             />
 
             {/* ① Build & run the test — the primary next action, artifact-specific. */}
@@ -694,8 +700,8 @@ export function ValidatePanel({
 
 /**
  * The primary "go build & run this test" action for the chosen artifact, if it has a dedicated
- * builder page. Prototype tests route to the journey map → V0 flow; fake-door tests to the
- * landing-page generator. Other artifacts fall back to the static checklist.
+ * builder page. Prototype tests route to Journey Flow → low-fi prototype builder; fake-door
+ * tests to the landing-page generator. Other artifacts fall back to the static checklist.
  */
 function artifactBuilderCta(
   plan: ValidationPlan,
@@ -705,8 +711,8 @@ function artifactBuilderCta(
   if (art?.revealsPrototype) {
     return {
       label: 'Create your prototype',
-      href: `/workshop/${sessionId}/outputs/journey-map`,
-      blurb: 'Map the journey, then generate a clickable prototype to put in front of users.',
+      href: `/workshop/${sessionId}/outputs/journey-flow`,
+      blurb: 'Map the journey flow, then generate a low-fi prototype to put in front of users.',
     };
   }
   if (plan.artifactType === 'fake_door_smoke_test') {
