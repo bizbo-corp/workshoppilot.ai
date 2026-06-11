@@ -84,6 +84,12 @@ export interface JourneyFlowCanvasProps {
   workshopId: string;
   sessionId: string;
   isReadOnly?: boolean;
+  /** Callback from content layer to trigger regeneration confirmation. */
+  onRegenerate?: () => void;
+  /** When true, the Regenerate button shows a spinner and is disabled. */
+  isGenerating?: boolean;
+  /** When set, renders a small archetype badge in the toolbar. */
+  archetype?: import('@/lib/journey-flow/types').FlowArchetype;
 }
 
 /**
@@ -106,11 +112,17 @@ function JourneyFlowCanvasInner({
   workshopId,
   sessionId,
   isReadOnly = false,
+  onRegenerate,
+  isGenerating,
+  archetype: archetypeProp,
 }: JourneyFlowCanvasProps) {
   const storeApi = useJourneyFlowStoreApi();
   const nodes = useJourneyFlowStore((s) => s.nodes);
   const edges = useJourneyFlowStore((s) => s.edges);
   const isApproved = useJourneyFlowStore((s) => s.isApproved);
+  const flowArchetype = useJourneyFlowStore((s) => s.flowArchetype);
+  // Prefer the live store value; fall back to the prop passed from the content layer
+  const archetype = flowArchetype ?? archetypeProp;
 
   const [detailNodeId, setDetailNodeId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<'pointer' | 'hand'>('pointer');
@@ -448,6 +460,9 @@ function JourneyFlowCanvasInner({
           isApproved={isApproved}
           isApproving={isApproving}
           onApprove={handleApprove}
+          onRegenerate={onRegenerate}
+          isGenerating={isGenerating}
+          archetype={archetype}
         />
       </ReactFlow>
 
