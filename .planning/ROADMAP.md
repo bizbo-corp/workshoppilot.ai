@@ -231,7 +231,13 @@ Plans:
   3. The generated baseline reflects an AI-determined archetype (linear sequence, hub-and-spoke, funnel, branching, single-screen tool, loop, etc.) that reconciles with the existing `strategicIntent` value — not a generic placeholder
   4. User clicks "Regenerate" and a fresh baseline replaces the current nodes and edges
   5. When the AI detects a two-sided product (marketplace, platform), it generates only the riskier side's journey and includes a note in the canvas explaining this decision
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 64-01-PLAN.md — Foundation: archetype/scope types, heuristic flow generator, LLM prompt (Wave 1)
+- [ ] 64-02-PLAN.md — POST /api/build-pack/generate-journey-flow route: hybrid LLM + heuristic, two-sided handling, upsert (Wave 2)
+- [ ] 64-03-PLAN.md — UI components: ScopeChooser, toolbar Regenerate + archetype badge, annotation node variant (Wave 2)
+- [ ] 64-04-PLAN.md — Wiring: concept loading, scope-chooser entry state, regenerate confirm flow + human verification (Wave 3)
 
 ### Phase 65: Validation Guidance Wiring
 **Goal**: The Step 10 validation guidance card routes each workshop to the correct next action — Journey Flow + prototype builder for digital outputs, off-platform alternatives for non-digital outputs — with robust edge-case handling and a single audited classifier
