@@ -670,8 +670,9 @@ export function ValidatePanel({
           </div>
         )}
 
-        {/* Previously completed plans */}
-        {completedPlans.length > 0 && (
+        {/* Previously completed plans — hidden while a new test is mid-wizard (or a section is
+            being edited) so the page holds one focus: the test being created. */}
+        {(!activePlan || assembled) && completedPlans.length > 0 && (
           <div className="space-y-3">
             <h3 className="text-base font-semibold text-foreground/70">
               Other assumptions you&apos;ve tested
@@ -705,9 +706,10 @@ export function ValidatePanel({
           </div>
         )}
 
-        {/* Page-level action: test another assumption (shown once the active plan is assembled
-            and fewer than 3 tests exist). Always visible — not gated on card state. */}
-        {assembled && plans.length < 3 && (
+        {/* Page-level action: test another assumption. Visible when the active plan is assembled
+            OR when no plan is active (all tests acknowledged after a reload) — hidden only while
+            a wizard is in progress, matching the prior-tests list above. */}
+        {(assembled || !activePlan) && plans.length < 3 && (
           <div className="flex justify-center pb-2">
             <Button variant="ghost" size="sm" className="gap-1.5" onClick={addAnotherTest}>
               <Icon name="plus" className="h-3.5 w-3.5" />
