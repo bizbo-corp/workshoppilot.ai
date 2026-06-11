@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Journey Flow + Low-Fidelity Prototype Pipeline
 status: unknown
-last_updated: "2026-06-11T01:05:52.256Z"
+last_updated: "2026-06-11T01:10:27.711Z"
 progress:
   total_phases: 40
   completed_phases: 39
   total_plans: 117
-  completed_plans: 114
+  completed_plans: 116
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 64 — AI Baseline Generation
-Plan: 01 complete (1/4)
-Status: Phase 64 in progress — Plan 01 complete (types, generator, prompt)
-Last activity: 2026-06-11 — 64-01 executed (3/3 tasks): types extended, heuristic generator, LLM prompt
+Plan: 03 complete (3/4)
+Status: Phase 64 in progress — Plans 01-03 complete; Plan 04 (wiring) remaining
+Last activity: 2026-06-11 — 64-03 executed (2/2 tasks): ScopeChooser, toolbar Regenerate + archetype badge, annotation node variant
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Last activity: 2026-06-11 — 64-01 executed (3/3 tasks): types extended, heuris
 | Phase 62.2 P02 | 4min | 2 tasks | 3 files |
 | Phase 63-journey-flow-editor-core P02 | 2min | 2 tasks | 3 files |
 | Phase 63-journey-flow-editor-core P03 | 2min | 2 tasks | 2 files |
+| Phase 64-ai-baseline-generation P03 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,7 @@ Last activity: 2026-06-11 — 64-01 executed (3/3 tasks): types extended, heuris
 - [Phase 64-01]: ARCHETYPE_TO_INTENT is the single reconciled concept — FlowArchetype (7 values) = structural pattern, StrategicIntent (5 values) = product category for Phase 66 dispatch
 - [Phase 64-01]: detectArchetype() uses direct keyword overrides for funnel/tool before intent scoring — handles cases where detectStrategicIntent() doesn't reach marketing-site/tool threshold
 - [Phase 64-01]: All new JourneyFlowState fields are optional — _schemaVersion stays at 1; Phase 66 guards with ?? fallback
+- [Phase 64-03]: All icon references reused existing registry entries (workflow/map/target/sparkles/refresh/info) — no new phosphor imports needed for 64-03 UI work
 
 ### Roadmap Evolution
 
@@ -100,5 +102,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-06-11
-Stopped at: Completed 64-01-PLAN.md — Journey Flow type contracts, heuristic generator (7 archetypes), LLM prompt
+Stopped at: Completed 64-03-PLAN.md — ScopeChooser, toolbar Regenerate + archetype badge, annotation node variant
 Resume file: None
