@@ -157,7 +157,7 @@ interface StepContainerProps {
   brainwritingSeed?: BrainwritingSeed;
   shareToken?: string | null;
   workshopSessionId?: string | null;
-  journeyMapApproved?: boolean;
+  journeyFlowApproved?: boolean;
   canvasConfirmed?: boolean;
   /** v2.1 — Workshop in team mode = facilitator frames challenge + invites by email. */
   facilitatorMode?: 'solo' | 'team';
@@ -210,7 +210,7 @@ export function StepContainer({
   brainwritingSeed,
   shareToken,
   workshopSessionId,
-  journeyMapApproved = false,
+  journeyFlowApproved = false,
   canvasConfirmed = false,
   facilitatorMode,
   tier = null,
@@ -1286,7 +1286,7 @@ export function StepContainer({
     storeApi,
   ]);
 
-  // Step 10: render validation deliverables — journey map first, then prototype
+  // Step 10: render validation deliverables — Journey Flow first, then prototype
   // Synthesis summary (narrative, journey, confidence, next steps) lives on the results page
   const renderStep10Content = () => {
     return (
@@ -1295,7 +1295,7 @@ export function StepContainer({
           key={`validate:${sessionId}:${resetKey}`}
           workshopId={workshopId}
           sessionId={sessionId}
-          journeyMapApproved={journeyMapApproved}
+          journeyFlowApproved={journeyFlowApproved}
           onWrapUp={handleCompleteWorkshop}
           isWrappingUp={isCompletingWorkshop}
           workshopCompleted={workshopCompleted}

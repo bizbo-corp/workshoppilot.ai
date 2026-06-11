@@ -67,7 +67,7 @@ function makeDraft(solutionName: string, outputType: OutputType): ValidationPlan
 export interface ValidatePanelProps {
   workshopId: string;
   sessionId: string;
-  journeyMapApproved?: boolean;
+  journeyFlowApproved?: boolean;
   /** Reports the active plan's output types (drives the app_digital reveal). */
   onOutputTypesChange?: (types: OutputType[]) => void;
   /** Reports the number of completed plans (drives workshop-completion gating). */
