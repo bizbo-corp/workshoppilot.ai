@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import type { FlowArchetype } from '@/lib/journey-flow/types';
+import { ARCHETYPE_LABELS } from '@/lib/journey-flow/types';
 
 // ---------------------------------------------------------------------------
 // JourneyFlowToolbar — top-left Panel (back link + mark complete / approved badge)
@@ -16,6 +18,12 @@ export interface JourneyFlowToolbarProps {
   isApproved: boolean;
   isApproving?: boolean;
   onApprove: () => void;
+  /** Optional: callback to regenerate the baseline flow. Shown when not read-only and a baseline exists. */
+  onRegenerate?: () => void;
+  /** When true, the Regenerate button shows a spinner and is disabled. */
+  isGenerating?: boolean;
+  /** When set, renders a small archetype badge after the action buttons. */
+  archetype?: FlowArchetype;
 }
 
 export function JourneyFlowToolbar({
@@ -24,6 +32,9 @@ export function JourneyFlowToolbar({
   isApproved,
   isApproving,
   onApprove,
+  onRegenerate,
+  isGenerating,
+  archetype,
 }: JourneyFlowToolbarProps) {
   return (
     <Panel position="top-left" className="flex items-center gap-2">
@@ -36,6 +47,23 @@ export function JourneyFlowToolbar({
       </Link>
 
       <div className="h-5 w-px bg-border" />
+
+      {!isReadOnly && onRegenerate && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs gap-1.5"
+          onClick={onRegenerate}
+          disabled={isGenerating}
+        >
+          {isGenerating ? (
+            <Icon name="spinner" className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Icon name="refresh" className="h-3.5 w-3.5" />
+          )}
+          Regenerate
+        </Button>
+      )}
 
       {!isReadOnly && !isApproved && (
         <Button
@@ -62,6 +90,12 @@ export function JourneyFlowToolbar({
         >
           <Icon name="check-circle" className="h-3 w-3" />
           Flow approved
+        </span>
+      )}
+
+      {archetype && (
+        <span className="rounded-full border px-2 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground">
+          {ARCHETYPE_LABELS[archetype]}
         </span>
       )}
     </Panel>
