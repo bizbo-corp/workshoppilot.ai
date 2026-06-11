@@ -33,9 +33,9 @@
 
 ### Prototype Prompt Builder (PROMPT)
 
-- [ ] **PROMPT-01**: User sees a fidelity switch: low fidelity (functional) / high fidelity (visible but clearly stubbed "coming later")
+- [x] **PROMPT-01**: User sees a fidelity switch: low fidelity (functional) / high fidelity (visible but clearly stubbed "coming later")
 - [x] **PROMPT-02**: Low-fi prompt is generated from Journey Flow node data (not old mapper state) and includes a mandatory low-fi preamble enforcing wireframe style — grayscale, boxy, unbranded, sketch-like, only elements needed to test the idea
-- [ ] **PROMPT-03**: The generated prompt is agent-agnostic self-contained plain text with a prominent copy button and next-step instructions ("Paste into your preferred AI coding agent — v0, Claude, Codex, Replit") plus a help link to a short how-to guide; no v0-specific "Create on v0" action or `create-v0-chat` dependency in the new flow
+- [x] **PROMPT-03**: The generated prompt is agent-agnostic self-contained plain text with a prominent copy button and next-step instructions ("Paste into your preferred AI coding agent — v0, Claude, Codex, Replit") plus a help link to a short how-to guide; no v0-specific "Create on v0" action or `create-v0-chat` dependency in the new flow
 - [x] **PROMPT-04**: Journey-understanding logic (flow parsing, screen descriptions, navigation derivation) is refactored into shared functions usable by both fidelity levels
 - [x] **PROMPT-05**: Single-feature mode produces a prototype prompt scoped to the mini-flow only
 
@@ -82,9 +82,9 @@ Deferred to later milestones:
 | VAL-02 | Phase 65 | Complete |
 | VAL-03 | Phase 65 | Pending |
 | VAL-04 | Phase 65 | Complete |
-| PROMPT-01 | Phase 66 | Pending |
+| PROMPT-01 | Phase 66 | Complete |
 | PROMPT-02 | Phase 66 | Complete |
-| PROMPT-03 | Phase 66 | Pending |
+| PROMPT-03 | Phase 66 | Complete |
 | PROMPT-04 | Phase 66 | Complete |
 | PROMPT-05 | Phase 66 | Complete |
 | PARK-01 | Phase 67 | Pending |
