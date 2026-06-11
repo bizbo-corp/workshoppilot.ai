@@ -58,6 +58,8 @@ export type {
   QualitativeResult,
   ValidationResult,
   ValidationPlan,
+  HonestyRead,
+  HonestyDimension,
 } from './validation-schemas';
 
 import {

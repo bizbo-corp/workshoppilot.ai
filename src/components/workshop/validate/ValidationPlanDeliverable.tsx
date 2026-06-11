@@ -3,13 +3,18 @@
 import * as React from 'react';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
-import { getValidationState, recordValidationResult } from '@/actions/validation-actions';
+import {
+  getValidationState,
+  recordValidationResult,
+  upsertValidationPlan,
+} from '@/actions/validation-actions';
 import type { ValidationPlan } from '@/lib/schemas';
 import { LENS_LABELS } from '@/lib/validation/artifact-lookup';
 import { VERDICT_LABELS } from '@/lib/validation/score';
 import { ValidationPlanSummary } from './ValidationPlanSummary';
 import { ValidationGuidanceCard } from './ValidationGuidanceCard';
 import { RecordResultsCard, type RecordResultInput } from './RecordResultsCard';
+import { HonestyReadCard } from './HonestyReadCard';
 import { ArmedScoreRing, armedCaption, ScoreRing } from './ScoreRing';
 
 /**
@@ -112,6 +117,24 @@ export function ValidationPlanDeliverable({
               </div>
 
               <ValidationPlanSummary plan={plan} />
+
+              {/* The facilitator's evidence-anchored read, persisted on the plan.
+                  Read-only guests only see it when it already exists. */}
+              <HonestyReadCard
+                plan={plan}
+                workshopId={workshopId}
+                isReadOnly={isReadOnly}
+                flat
+                onGenerated={(read) => {
+                  const updated: ValidationPlan = {
+                    ...plan,
+                    honestyRead: read,
+                    updatedAt: new Date().toISOString(),
+                  };
+                  setPlans((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                  void upsertValidationPlan(workshopId, updated);
+                }}
+              />
 
               <ValidationGuidanceCard
                 outputType={plan.outputType}

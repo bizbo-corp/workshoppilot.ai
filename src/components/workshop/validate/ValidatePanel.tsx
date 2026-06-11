@@ -28,6 +28,7 @@ import { PickLensCard } from './PickLensCard';
 import { RecommendArtifactCard } from './RecommendArtifactCard';
 import { DefineSignalCard } from './DefineSignalCard';
 import { RecordResultsCard, type RecordResultInput } from './RecordResultsCard';
+import { HonestyReadCard } from './HonestyReadCard';
 import { ConceptCardArtifact } from './ConceptCardArtifact';
 import { ArtifactChecklist } from './ArtifactChecklist';
 import { ValidationGuidanceCard } from './ValidationGuidanceCard';
@@ -599,6 +600,22 @@ export function ValidatePanel({
             STATUS — the saved/Done row + test-another below. */}
         {assembled && activePlan && (
           <div className="space-y-4">
+            {/* JUDGE — the facilitator's evidence-anchored read of the idea, before the test.
+                Generated once per assembled plan, persisted on the plan itself. */}
+            <HonestyReadCard
+              plan={activePlan}
+              workshopId={workshopId}
+              onGenerated={(read) => {
+                const updated: ValidationPlan = {
+                  ...activePlan,
+                  honestyRead: read,
+                  updatedAt: now(),
+                };
+                setPlans((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                void persist(updated);
+              }}
+            />
+
             {/* ACT — everything about running the test lives in this one region. */}
             <Surface className="space-y-5 p-5">
               <div>

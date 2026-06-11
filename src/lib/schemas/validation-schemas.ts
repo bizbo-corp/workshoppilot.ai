@@ -137,6 +137,39 @@ export const validationResultSchema = z.object({
 });
 export type ValidationResult = z.infer<typeof validationResultSchema>;
 
+/** One dimension of the in-session honesty read. */
+export const honestyDimensionSchema = z.object({
+  dimension: z
+    .enum(['problem', 'audience', 'edge', 'evidence', 'cost_to_test'])
+    .describe('Which universal dimension this read covers'),
+  strength: z
+    .enum(['solid', 'thin', 'missing'])
+    .describe('Solid only when backed by evidence actually given during the workshop'),
+  read: z.string().describe('1–2 direct sentences in the facilitator voice'),
+  sources: z
+    .array(z.string())
+    .default([])
+    .describe('Workshop step names the read is anchored to (empty when nothing supports it)'),
+  nextTest: z
+    .string()
+    .optional()
+    .describe('Cheapest next experiment that would firm this up — required when thin/missing'),
+});
+export type HonestyDimension = z.infer<typeof honestyDimensionSchema>;
+
+/**
+ * The in-session honesty read: an evidence-anchored qualitative judgment of the idea's
+ * current strength. Deliberately has NO number — the Validation Score stays post-test.
+ */
+export const honestyReadSchema = z.object({
+  dimensions: z.array(honestyDimensionSchema).min(3).max(5),
+  verdictLine: z
+    .string()
+    .describe('The headline honest read — allowed to say "not worth building yet"'),
+  generatedAt: z.string().describe('ISO timestamp'),
+});
+export type HonestyRead = z.infer<typeof honestyReadSchema>;
+
 /** A complete validation plan for a single concept. A workshop may have several. */
 export const validationPlanSchema = z.object({
   id: z.string().describe('Prefixed id (vpl_*)'),
@@ -166,6 +199,10 @@ export const validationPlanSchema = z.object({
     .string()
     .optional()
     .describe('One-line LLM-tailored "for your solution, e.g. …" example, generated when the plan is assembled'),
+  honestyRead: honestyReadSchema
+    .nullable()
+    .optional()
+    .describe('In-session evidence-anchored read of the idea, generated when the plan is assembled'),
   acknowledgedAt: z
     .string()
     .optional()
