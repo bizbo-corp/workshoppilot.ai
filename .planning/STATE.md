@@ -50,6 +50,7 @@ Last activity: 2026-06-11 — 64-03 executed (2/2 tasks): ScopeChooser, toolbar 
 | Phase 62.2 P02 | 4min | 2 tasks | 3 files |
 | Phase 63-journey-flow-editor-core P02 | 2min | 2 tasks | 3 files |
 | Phase 63-journey-flow-editor-core P03 | 2min | 2 tasks | 2 files |
+| Phase 64-ai-baseline-generation P02 | 2min | 2 tasks | 1 file |
 | Phase 64-ai-baseline-generation P03 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
@@ -84,6 +85,9 @@ Last activity: 2026-06-11 — 64-03 executed (2/2 tasks): ScopeChooser, toolbar 
 - [Phase 64-01]: ARCHETYPE_TO_INTENT is the single reconciled concept — FlowArchetype (7 values) = structural pattern, StrategicIntent (5 values) = product category for Phase 66 dispatch
 - [Phase 64-01]: detectArchetype() uses direct keyword overrides for funnel/tool before intent scoring — handles cases where detectStrategicIntent() doesn't reach marketing-site/tool threshold
 - [Phase 64-01]: All new JourneyFlowState fields are optional — _schemaVersion stays at 1; Phase 66 guards with ?? fallback
+- [Phase 64-02]: Feature-scope guard: LLM returning >4 screen nodes throws to heuristic fallback (heuristic always produces exactly 3)
+- [Phase 64-02]: Belt-and-braces two-sided floor: detectTwoSided keyword check runs after both LLM and heuristic paths — GEN-05 holds even when LLM misses it
+- [Phase 64-02]: Cache hit requires nodes.length > 0 AND state.testScope === requested scope — prevents cross-scope cache hits
 - [Phase 64-03]: All icon references reused existing registry entries (workflow/map/target/sparkles/refresh/info) — no new phosphor imports needed for 64-03 UI work
 
 ### Roadmap Evolution
@@ -102,5 +106,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-06-11
-Stopped at: Completed 64-03-PLAN.md — ScopeChooser, toolbar Regenerate + archetype badge, annotation node variant
+Stopped at: Completed 64-02-PLAN.md and 64-03-PLAN.md — generate-journey-flow API route (hybrid LLM+heuristic); ScopeChooser, toolbar Regenerate + archetype badge, annotation node variant
 Resume file: None
