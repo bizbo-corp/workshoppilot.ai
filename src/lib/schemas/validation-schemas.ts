@@ -166,6 +166,10 @@ export const validationPlanSchema = z.object({
     .string()
     .optional()
     .describe('One-line LLM-tailored "for your solution, e.g. …" example, generated when the plan is assembled'),
+  acknowledgedAt: z
+    .string()
+    .optional()
+    .describe('ISO timestamp when the user clicked Done on this assembled plan (per-test wrap-up)'),
   progressStep: progressStepSchema.describe('Furthest-completed section (resumability)'),
   createdAt: z.string().describe('ISO timestamp'),
   updatedAt: z.string().describe('ISO timestamp'),

@@ -146,9 +146,17 @@ export function ValidatePanel({
       setReframedStatement(res.data!.reframedStatement);
 
       const inProgress = validationPlans.find((p) => p.progressStep !== 'complete');
+      // A complete-but-unacknowledged plan still owes the user its Done row — keep it active
+      // across reloads so acknowledgement (per-test, persisted) can't be skipped by a refresh.
+      const unacknowledged = [...validationPlans]
+        .reverse()
+        .find((p) => p.progressStep === 'complete' && !p.acknowledgedAt);
       if (inProgress) {
         setPlans(validationPlans);
         setActiveId(inProgress.id);
+      } else if (unacknowledged) {
+        setPlans(validationPlans);
+        setActiveId(unacknowledged.id);
       } else if (validationPlans.length > 0) {
         setPlans(validationPlans);
         setActiveId(null);
@@ -420,6 +428,18 @@ export function ValidatePanel({
     void persist(draft);
   };
 
+  // Per-test wrap-up: Done acknowledges THIS plan (persisted on the plan itself, so it
+  // survives reloads) and completes the workshop the first time. Subsequent tests get their
+  // own Done — visibility derives from "assembled && !acknowledgedAt", never from the global
+  // workshopCompleted flag (which once hid Done forever on completed workshops).
+  const acknowledgeDone = () => {
+    if (!activePlan) return;
+    const next: ValidationPlan = { ...activePlan, acknowledgedAt: now(), updatedAt: now() };
+    setPlans((prev) => prev.map((p) => (p.id === next.id ? next : p)));
+    void persist(next);
+    if (!workshopCompleted) onWrapUp?.();
+  };
+
   const record = async (planId: string, input: RecordResultInput) => {
     setRecordingId(planId);
     setRecordError(null);
@@ -606,33 +626,29 @@ export function ValidatePanel({
               onRecord={(input) => record(activePlan.id, input)}
             />
 
-            {/* Bottom action row: Done button (pre-completion) or saved status (post-completion).
-                Done completes the workshop and activates the footer "View Build Pack" button. */}
+            {/* STATUS — ONE bottom action row per test (common region). Done shows until THIS
+                plan is acknowledged (per-plan, persisted), then the row becomes a saved note.
+                Never gated on global workshopCompleted — that hid Done forever on round two. */}
             <div className="space-y-2 pt-1">
-              {workshopCompleted ? (
-                /* Workshop already completed — show saved status; footer handles navigation. */
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Icon name="check-circle" className="h-4 w-4 shrink-0 text-primary" />
-                    <span className="text-sm font-medium">Validation plan saved</span>
-                    {activePlan.assumption && (
-                      <span className="hidden sm:block text-sm text-foreground/60 truncate">
-                        · {activePlan.assumption}
-                      </span>
-                    )}
-                  </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Icon name="check-circle" className="h-4 w-4 shrink-0 text-primary" />
+                  <span className="shrink-0 text-sm font-medium">Validation plan saved</span>
+                  {activePlan.assumption && (
+                    <span className="hidden sm:block text-sm text-foreground/60 truncate">
+                      · {activePlan.assumption}
+                    </span>
+                  )}
+                </div>
+                {activePlan.acknowledgedAt ? (
                   <span className="shrink-0 text-xs text-foreground/60">
                     Use the footer to view your Build Pack
                   </span>
-                </div>
-              ) : onWrapUp ? (
-                <>
+                ) : (
                   <Button
-                    size="lg"
-                    className="w-full gap-2 btn-shimmer"
-                    onClick={() => {
-                      onWrapUp();
-                    }}
+                    size="sm"
+                    className="shrink-0 gap-1.5 btn-shimmer"
+                    onClick={acknowledgeDone}
                     disabled={isWrappingUp}
                   >
                     {isWrappingUp ? (
@@ -641,14 +657,15 @@ export function ValidatePanel({
                       <Icon name="check-circle" className="h-4 w-4" />
                     )}
                     Done
-                    {!isWrappingUp && <Icon name="arrow-right" className="h-4 w-4" />}
                   </Button>
-                  <p className="text-center text-sm text-foreground/70">
-                    Saves your plan to the Build Pack and finishes the workshop. You can record the
-                    result later in the Build Pack — it&apos;s not required.
-                  </p>
-                </>
-              ) : null}
+                )}
+              </div>
+              {!activePlan.acknowledgedAt && !workshopCompleted && (
+                <p className="text-center text-sm text-foreground/70">
+                  Done finishes the workshop and saves your plan to the Build Pack. You can record
+                  the result later — it&apos;s not required.
+                </p>
+              )}
             </div>
           </div>
         )}
