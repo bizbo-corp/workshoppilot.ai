@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.5
+milestone: v2.1
 milestone_name: Journey Flow + Low-Fidelity Prototype Pipeline
-status: unknown
-last_updated: "2026-06-11T01:33:37.116Z"
+status: in_progress
+last_updated: "2026-06-11T01:37:55.534Z"
 progress:
   total_phases: 40
   completed_phases: 40
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 
 ## Current Position
 
-Phase: 64 — AI Baseline Generation
-Plan: 04 complete (4/4)
-Status: Phase 64 complete — all 4 plans shipped; GEN-01 through GEN-05 user-facing behavior verified
-Last activity: 2026-06-11 — 64-04 executed (3/3 tasks): concept loading, ScopeChooser + generation wiring, checkpoint approved by user
+Phase: 65 (next) — Validation Guidance Wiring
+Plan: —
+Status: Phase 64 complete and verified (14/14 must-haves); Phase 65 ready to plan
+Last activity: 2026-06-11 — Phase 64 executed (4/4 plans), checkpoint approved, VERIFICATION.md passed
 
 ## Performance Metrics
 
