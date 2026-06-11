@@ -1170,18 +1170,18 @@ export default async function StepPage({ params }: StepPageProps) {
   // Load admin-configured default viewport settings for this step
   const canvasSettings = await loadStepCanvasSettings(step.id);
 
-  // Validate step: check if journey map has been approved (gates prototype generation)
-  let journeyMapApproved = false;
+  // Validate step: check if the Journey Flow has been marked complete (gates the low-fi prototype builder link)
+  let journeyFlowApproved = false;
   if (step.id === 'validate') {
-    const jmRows = await db
+    const jfRows = await db
       .select({ content: buildPacks.content })
       .from(buildPacks)
-      .where(and(eq(buildPacks.workshopId, session.workshop.id), like(buildPacks.title, 'Journey Map:%'), eq(buildPacks.formatType, 'json')))
+      .where(and(eq(buildPacks.workshopId, session.workshop.id), like(buildPacks.title, 'Journey Flow:%'), eq(buildPacks.formatType, 'json')))
       .limit(1);
-    if (jmRows[0]?.content) {
+    if (jfRows[0]?.content) {
       try {
-        const state = JSON.parse(jmRows[0].content);
-        journeyMapApproved = state.isApproved === true;
+        const state = JSON.parse(jfRows[0].content);
+        journeyFlowApproved = state.isApproved === true;
       } catch { /* invalid JSON */ }
     }
   }
@@ -1278,7 +1278,7 @@ export default async function StepPage({ params }: StepPageProps) {
               brainwritingSeed={brainwritingSeed}
               shareToken={workshopShareToken}
               workshopSessionId={workshopSessionId}
-              journeyMapApproved={journeyMapApproved}
+              journeyFlowApproved={journeyFlowApproved}
               canvasConfirmed={canvasConfirmed}
               facilitatorMode={session.workshop.facilitatorMode}
               tier={session.workshop.tier}
@@ -1312,7 +1312,7 @@ export default async function StepPage({ params }: StepPageProps) {
             isAdmin={userIsAdmin}
             canvasGuides={canvasGuides}
             canvasSettings={canvasSettings}
-            journeyMapApproved={journeyMapApproved}
+            journeyFlowApproved={journeyFlowApproved}
             canvasConfirmed={canvasConfirmed}
             facilitatorMode={session.workshop.facilitatorMode}
             tier={session.workshop.tier}
