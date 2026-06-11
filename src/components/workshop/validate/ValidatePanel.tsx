@@ -565,66 +565,69 @@ export function ValidatePanel({
           </div>
         )}
 
-        {/* Assembled plan: action row — Done button (pre-completion) or saved status (post-completion) */}
+        {/* Assembled plan. The page reads as three zones (gestalt: common region + proximity):
+            PLAN — the five step cards above (what we decided);
+            ACT  — ONE bordered "Run your test" region: guidance, build CTA, record result;
+            STATUS — the saved/Done row + test-another below. */}
         {assembled && activePlan && (
           <div className="space-y-4">
-            {/* Guidance and artifact tools — always shown once assembled */}
-            <ValidationGuidanceCard
-              outputType={activePlan.outputType}
-              outputTypes={activePlan.outputTypes ?? [activePlan.outputType]}
-              tailoredExample={activePlan.tailoredExample}
-              tailoring={tailoring}
-              journeyFlowApproved={journeyFlowApproved}
-              classification={classification}
-              sessionId={sessionId}
-              onReclassify={() => setEditingSection('detect')}
-            />
+            {/* ACT — everything about running the test lives in this one region. */}
+            <Surface className="space-y-5 p-5">
+              <div>
+                <h3 className="text-lg font-semibold">Run your test</h3>
+                <p className="mt-0.5 text-sm text-foreground/70">
+                  Build the test, put it in front of people, then log what happened below.
+                </p>
+              </div>
 
-            {/* ① Build & run the test — the primary next action, artifact-specific. */}
-            {builderCta && (
-              <a
-                href={builderCta.href}
-                className="group block rounded-xl border-2 border-primary/30 bg-primary/10 p-4 transition-colors hover:bg-primary/15"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="space-y-0.5">
-                    <p className="text-base font-semibold">Build &amp; run your test</p>
-                    <p className="text-sm text-foreground/70">{builderCta.blurb}</p>
-                  </div>
+              <ValidationGuidanceCard
+                flat
+                outputType={activePlan.outputType}
+                outputTypes={activePlan.outputTypes ?? [activePlan.outputType]}
+                tailoredExample={activePlan.tailoredExample}
+                tailoring={tailoring}
+                journeyFlowApproved={journeyFlowApproved}
+                classification={classification}
+                sessionId={sessionId}
+                onReclassify={() => setEditingSection('detect')}
+              />
+
+              {/* Primary action pre-test: build the artifact (prototype / fake-door page). */}
+              {builderCta && (
+                <a
+                  href={builderCta.href}
+                  className="group flex items-center justify-between gap-3 rounded-xl border-2 border-primary/30 bg-primary/10 p-4 transition-colors hover:bg-primary/15"
+                >
+                  <p className="text-sm text-foreground/80">{builderCta.blurb}</p>
                   <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-4 py-2.5 text-base font-medium text-primary-foreground transition-transform group-hover:translate-x-0.5">
                     {builderCta.label}
                     <Icon name="arrow-right" className="h-4 w-4" />
                   </span>
-                </div>
-              </a>
-            )}
+                </a>
+              )}
 
-            {selectedArtifact?.generatesConceptCard ? (
-              <ConceptCardArtifact
+              {selectedArtifact?.generatesConceptCard ? (
+                <ConceptCardArtifact
+                  plan={activePlan}
+                  context={{
+                    problem: reframedStatement || problemStatement,
+                    elevatorPitch: concepts[0]?.elevatorPitch ?? '',
+                    usp: concepts[0]?.usp ?? '',
+                  }}
+                />
+              ) : !builderCta ? (
+                <ArtifactChecklist plan={activePlan} />
+              ) : null}
+
+              {/* Post-test action: record the result (flat — the zone provides the card). */}
+              <RecordResultsCard
+                flat
                 plan={activePlan}
-                context={{
-                  problem: reframedStatement || problemStatement,
-                  elevatorPitch: concepts[0]?.elevatorPitch ?? '',
-                  usp: concepts[0]?.usp ?? '',
-                }}
+                isSaving={recordingId === activePlan.id}
+                error={recordError}
+                onRecord={(input) => record(activePlan.id, input)}
               />
-            ) : !builderCta ? (
-              <ArtifactChecklist plan={activePlan} />
-            ) : null}
-
-            {/* ② Record the result — deferred; you can only log it after running the test. */}
-            {builderCta && (
-              <p className="border-t border-border/60 pt-3 text-sm text-foreground/70">
-                Run your test, then come back and log what happened below.
-              </p>
-            )}
-
-            <RecordResultsCard
-              plan={activePlan}
-              isSaving={recordingId === activePlan.id}
-              error={recordError}
-              onRecord={(input) => record(activePlan.id, input)}
-            />
+            </Surface>
 
             {/* STATUS — ONE bottom action row per test (common region). Done shows until THIS
                 plan is acknowledged (per-plan, persisted), then the row becomes a saved note.
@@ -711,7 +714,8 @@ export function ValidatePanel({
             a wizard is in progress, matching the prior-tests list above. */}
         {(assembled || !activePlan) && plans.length < 3 && (
           <div className="flex justify-center pb-2">
-            <Button variant="ghost" size="sm" className="gap-1.5" onClick={addAnotherTest}>
+            {/* Same secondary-additive treatment as "+ Record a result" (similarity) */}
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={addAnotherTest}>
               <Icon name="plus" className="h-3.5 w-3.5" />
               Test another assumption
             </Button>
