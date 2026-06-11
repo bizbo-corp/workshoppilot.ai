@@ -19,10 +19,10 @@
 ### AI Baseline Generation (GEN)
 
 - [ ] **GEN-01**: On entry, user explicitly chooses test scope: "Test the whole journey" vs "Test a single feature" (with concept picker for feature mode) — no AI inference of scope
-- [ ] **GEN-02**: AI generates a baseline flow from workshop outputs for the chosen scope — full journey in journey mode, mini-flow (entry → action → result) in single-feature mode
-- [ ] **GEN-03**: AI determines the flow archetype (linear sequence, hub-and-spoke, single-page sections, funnel/landing-page test, branching flow, single-screen tool, loop/engagement cycle) to shape the generated baseline, reconciling the archetype set with the existing `strategicIntent` enum into a single concept
+- [x] **GEN-02**: AI generates a baseline flow from workshop outputs for the chosen scope — full journey in journey mode, mini-flow (entry → action → result) in single-feature mode
+- [x] **GEN-03**: AI determines the flow archetype (linear sequence, hub-and-spoke, single-page sections, funnel/landing-page test, branching flow, single-screen tool, loop/engagement cycle) to shape the generated baseline, reconciling the archetype set with the existing `strategicIntent` enum into a single concept
 - [ ] **GEN-04**: User can regenerate the baseline flow
-- [ ] **GEN-05**: When the AI detects a two-sided idea, it maps only the riskier side's journey and says so in the generated baseline (no dual-journey generation)
+- [x] **GEN-05**: When the AI detects a two-sided idea, it maps only the riskier side's journey and says so in the generated baseline (no dual-journey generation)
 
 ### Validation Guidance Wiring (VAL)
 
@@ -74,10 +74,10 @@ Deferred to later milestones:
 | FLOW-06 | Phase 63 | Complete |
 | FLOW-07 | Phase 63 | Complete |
 | GEN-01 | Phase 64 | Pending |
-| GEN-02 | Phase 64 | Pending |
-| GEN-03 | Phase 64 | Pending |
+| GEN-02 | Phase 64 | Complete |
+| GEN-03 | Phase 64 | Complete |
 | GEN-04 | Phase 64 | Pending |
-| GEN-05 | Phase 64 | Pending |
+| GEN-05 | Phase 64 | Complete |
 | VAL-01 | Phase 65 | Pending |
 | VAL-02 | Phase 65 | Pending |
 | VAL-03 | Phase 65 | Pending |

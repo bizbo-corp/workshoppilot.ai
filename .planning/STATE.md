@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
+milestone: v0.5
 milestone_name: Journey Flow + Low-Fidelity Prototype Pipeline
-status: in_progress
-last_updated: "2026-06-10T23:31:20.802Z"
+status: unknown
+last_updated: "2026-06-11T01:05:52.256Z"
 progress:
-  total_phases: 39
+  total_phases: 40
   completed_phases: 39
-  total_plans: 113
-  completed_plans: 113
+  total_plans: 117
+  completed_plans: 114
 ---
 
 # Project State
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 
 ## Current Position
 
-Phase: 64 (next) — AI Baseline Generation
-Plan: —
-Status: Phase 63 complete and verified (11/11 must-haves); Phase 64 ready to plan
-Last activity: 2026-06-11 — Phase 63 executed (4/4 plans), human checkpoint approved, VERIFICATION.md passed
+Phase: 64 — AI Baseline Generation
+Plan: 01 complete (1/4)
+Status: Phase 64 in progress — Plan 01 complete (types, generator, prompt)
+Last activity: 2026-06-11 — 64-01 executed (3/3 tasks): types extended, heuristic generator, LLM prompt
 
 ## Performance Metrics
 
@@ -80,6 +80,9 @@ Last activity: 2026-06-11 — Phase 63 executed (4/4 plans), human checkpoint ap
 - [Phase 63-journey-flow-editor-core Plan 04]: Outer/inner component split in journey-flow-content — outer provides JourneyFlowStoreProvider, inner consumes hooks; prevents hook-before-provider runtime error
 - [Phase 63-journey-flow-editor-core Plan 04]: Autosave skips flush when nodes.length === 0 — prevents overwriting valid prior state on first-mount before user adds a node
 - [Phase 63-journey-flow-editor-core Plan 04]: Phase 63 complete — all 4 plans shipped; route pattern (Next 16 async params + Clerk auth + resolveClerkParticipant isReadOnly) established as template for future output routes
+- [Phase 64-01]: ARCHETYPE_TO_INTENT is the single reconciled concept — FlowArchetype (7 values) = structural pattern, StrategicIntent (5 values) = product category for Phase 66 dispatch
+- [Phase 64-01]: detectArchetype() uses direct keyword overrides for funnel/tool before intent scoring — handles cases where detectStrategicIntent() doesn't reach marketing-site/tool threshold
+- [Phase 64-01]: All new JourneyFlowState fields are optional — _schemaVersion stays at 1; Phase 66 guards with ?? fallback
 
 ### Roadmap Evolution
 
@@ -97,5 +100,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-06-11
-Stopped at: Completed 63-04-PLAN.md — Journey Flow route, autosave, human verification (Phase 63 complete)
+Stopped at: Completed 64-01-PLAN.md — Journey Flow type contracts, heuristic generator (7 archetypes), LLM prompt
 Resume file: None

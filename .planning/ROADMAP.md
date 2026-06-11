@@ -292,7 +292,7 @@ Plans:
 | 62.1 Fix Cross-Workshop Dialogue Leak & Duplicate Greetings | hotfix | 3/3 | Complete | 2026-05-16 |
 | 62.2 AI SDK v5 Message-ID Server-Side Resolution | 2/2 | Complete | 2026-05-16 | — |
 | 63. Journey Flow Editor Core | 4/4 | Complete    | 2026-06-10 | - |
-| 64. AI Baseline Generation | v2.1 | 0/TBD | Not started | - |
+| 64. AI Baseline Generation | 1/4 | In Progress|  | - |
 | 65. Validation Guidance Wiring | v2.1 | 0/TBD | Not started | - |
 | 66. Low-Fi Prototype Prompt | v2.1 | 0/TBD | Not started | - |
 | 67. Park Old Mapper + Polish | v2.1 | 0/TBD | Not started | - |
