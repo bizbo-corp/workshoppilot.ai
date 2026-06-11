@@ -281,7 +281,11 @@ Plans:
   2. The old mapper displays a banner stating it is being replaced by Journey Flow, with a link to the new route
   3. Primary navigation and validation guidance no longer link to the old mapper — all guidance entry points direct to Journey Flow
   4. A digital-output workshop can complete the full pipeline end-to-end: Validate step guidance card → Journey Flow (AI baseline → user edits → mark complete) → prototype prompt → copy → paste into a coding agent
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 67-01-PLAN.md — De-link old mapper (sidebar + Build Pack hub) and add session-dismissible replacement banner
+- [ ] 67-02-PLAN.md — Automated gates + manual E2E pipeline walkthrough with inline triage fixes (human checkpoint)
 
 ## Progress
 
