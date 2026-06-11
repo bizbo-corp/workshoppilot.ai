@@ -94,9 +94,8 @@ export function ValidationGuidanceCard({
               return {
                 text,
                 action: (
-                  // Phase 66 route; update href if Phase 66 lands elsewhere
                   <Button asChild size="sm" variant="tertiary" className="mt-1">
-                    <Link href={`/workshop/${sessionId}/outputs/prototype-prompt`}>
+                    <Link href={`/workshop/${sessionId}/outputs/prototype-prompt?from=validate`}>
                       Build your prototype
                       <Icon name="arrow-right" className="h-3.5 w-3.5" />
                     </Link>
