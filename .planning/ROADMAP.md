@@ -197,7 +197,7 @@ See `milestones/v2.0-ROADMAP.md` for full details.
 
 - [x] **Phase 63: Journey Flow Editor Core** - Route, node data model, drag-to-connect edges, (+) add, inline edit/delete, Zustand store + autosave, mark-complete (completed 2026-06-10)
 - [x] **Phase 64: AI Baseline Generation** - Test-scope choice UI, archetype detection, baseline flow generation (journey + mini-flow modes), regenerate, two-sided fallback (completed 2026-06-11)
-- [ ] **Phase 65: Validation Guidance Wiring** - Digital type routing with Journey Flow links + prototype gating, non-digital alternatives with off-platform guidance, edge-case handling, classifier audit
+- [x] **Phase 65: Validation Guidance Wiring** - Digital type routing with Journey Flow links + prototype gating, non-digital alternatives with off-platform guidance, edge-case handling, classifier audit (completed 2026-06-11)
 - [ ] **Phase 66: Low-Fi Prototype Prompt** - Fidelity switch, low-fi template with wireframe preamble, shared journey-understanding refactor, agent-agnostic copy/paste handoff, hi-fi stub, single-feature scoping
 - [ ] **Phase 67: Park Old Mapper + Polish** - De-link old mapper from primary nav/guidance, replacement banner, end-to-end path verification
 
@@ -298,7 +298,7 @@ Plans:
 | 62.2 AI SDK v5 Message-ID Server-Side Resolution | 2/2 | Complete | 2026-05-16 | — |
 | 63. Journey Flow Editor Core | 4/4 | Complete    | 2026-06-10 | - |
 | 64. AI Baseline Generation | 4/4 | Complete    | 2026-06-11 | - |
-| 65. Validation Guidance Wiring | 2/3 | In Progress|  | - |
+| 65. Validation Guidance Wiring | 3/3 | Complete | 2026-06-11 | - |
 | 66. Low-Fi Prototype Prompt | v2.1 | 0/TBD | Not started | - |
 | 67. Park Old Mapper + Polish | v2.1 | 0/TBD | Not started | - |
 
@@ -306,4 +306,4 @@ Plans:
 **v2.1 in progress:** 5 phases, 23 requirements
 
 ---
-*Last updated: 2026-06-11 — v2.1 roadmap created (phases 63-67)*
+*Last updated: 2026-06-11 — Phase 65 complete (3/3 plans, VAL-01/02/03 verified; prototype-prompt placeholder route established for Phase 66)*

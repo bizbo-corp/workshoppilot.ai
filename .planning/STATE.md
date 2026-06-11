@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 
 ## Current Position
 
-Phase: 65 (next) — Validation Guidance Wiring
+Phase: 66 (next) — Low-Fi Prototype Prompt
 Plan: —
-Status: Phase 64 complete and verified (14/14 must-haves); Phase 65 ready to plan
-Last activity: 2026-06-11 — Phase 64 executed (4/4 plans), checkpoint approved, VERIFICATION.md passed
+Status: Phase 65 complete (3/3 plans, VAL-01/02/03 verified); Phase 66 ready to plan
+Last activity: 2026-06-11 — Phase 65 executed (3/3 plans), checkpoint approved after 6 UX feedback rounds
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Last activity: 2026-06-11 — Phase 64 executed (4/4 plans), checkpoint approved
 | Phase 64 P04 | continuation | 3 tasks | 3 files |
 | Phase 65 P02 | 8 | 2 tasks | 3 files |
 | Phase 65-validation-guidance-wiring P01 | 6 | 2 tasks | 4 files |
+| Phase 65-validation-guidance-wiring P03 | multi-session | 3 tasks (6-round checkpoint) | 12 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,11 @@ Last activity: 2026-06-11 — Phase 64 executed (4/4 plans), checkpoint approved
 - [Phase 65-01]: offPlatform strings use double-quote delimiters to avoid escaped-apostrophe parse issues
 - [Phase 65-01]: classifyOutputType() confirmed invoked from exactly one place (src/app/api/validation/classify/route.ts) — no parallel classifier exists
 - [Phase 65-01]: Combined output types (outputTypes array) are UI-only; the classifier always returns a single type by design — documented in AUDIT block
+- [Phase 65-03]: Per-test acknowledgedAt added to validation-schemas.ts — Done state persists per assumption without a global section flag; finer-grained than section-level flags
+- [Phase 65-03]: Preview/edit mode toggle on ValidatePanel — Done collapses card into summary view; auto-redirect removed because it broke mid-plan review flow
+- [Phase 65-03]: /outputs/prototype-prompt placeholder page created in Phase 65 — URL contract established for Phase 66; Phase 66 replaces page body only, route already exists
+- [Phase 65-03]: ?from=validate query param convention for Journey Flow toolbar back link — toolbar stays reusable, navigation context flows via query param
+- [Phase 65-03]: artifactBuilderCta block removed from ValidatePanel (not repointed) — guidance card inline gated link is the single canonical entry to prototype building
 
 ### Roadmap Evolution
 
@@ -116,5 +122,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-06-11
-Stopped at: Completed 64-04-PLAN.md — generation wiring, ScopeChooser entry state, regenerate confirm flow; all six verification steps approved by user
+Stopped at: Completed 65-03-PLAN.md — validation guidance card wiring, completion UX (6 feedback rounds), prototype-prompt placeholder; VAL-01/02/03 verified by user
 Resume file: None
