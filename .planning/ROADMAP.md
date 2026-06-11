@@ -298,7 +298,7 @@ Plans:
 | 62.2 AI SDK v5 Message-ID Server-Side Resolution | 2/2 | Complete | 2026-05-16 | — |
 | 63. Journey Flow Editor Core | 4/4 | Complete    | 2026-06-10 | - |
 | 64. AI Baseline Generation | 4/4 | Complete    | 2026-06-11 | - |
-| 65. Validation Guidance Wiring | v2.1 | 0/TBD | Not started | - |
+| 65. Validation Guidance Wiring | 2/3 | In Progress|  | - |
 | 66. Low-Fi Prototype Prompt | v2.1 | 0/TBD | Not started | - |
 | 67. Park Old Mapper + Polish | v2.1 | 0/TBD | Not started | - |
 

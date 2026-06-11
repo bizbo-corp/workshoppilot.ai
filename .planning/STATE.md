@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
+milestone: v0.5
 milestone_name: Journey Flow + Low-Fidelity Prototype Pipeline
-status: in_progress
-last_updated: "2026-06-11T01:37:55.534Z"
+status: unknown
+last_updated: "2026-06-11T02:13:14.081Z"
 progress:
-  total_phases: 40
+  total_phases: 41
   completed_phases: 40
-  total_plans: 117
-  completed_plans: 117
+  total_plans: 120
+  completed_plans: 119
 ---
 
 # Project State
@@ -53,6 +53,8 @@ Last activity: 2026-06-11 — Phase 64 executed (4/4 plans), checkpoint approved
 | Phase 64-ai-baseline-generation P02 | 2min | 2 tasks | 1 file |
 | Phase 64-ai-baseline-generation P03 | 2 | 2 tasks | 3 files |
 | Phase 64 P04 | continuation | 3 tasks | 3 files |
+| Phase 65 P02 | 8 | 2 tasks | 3 files |
+| Phase 65-validation-guidance-wiring P01 | 6 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -93,6 +95,10 @@ Last activity: 2026-06-11 — Phase 64 executed (4/4 plans), checkpoint approved
 - [Phase 64]: [Phase 64-04]: Autosave timer cleared AND isDirty set false before fetch — closes window where re-render during await could re-queue debounce for old nodes
 - [Phase 64]: [Phase 64-04]: handleRegenerate always confirms — no heuristic to detect edits; executeRegenerate defaults testScope to 'journey' when missing (start-from-scratch has no stored scope)
 - [Phase 64]: [Phase 64-04]: Phase 64 complete — all 4 plans shipped; GEN-01 through GEN-05 user-facing behavior verified via human checkpoint
+- [Phase 65]: journeyMapApproved renamed to journeyFlowApproved — dead prop from old mapper scaffolding repointed to Phase 63 Journey Flow build-pack row
+- [Phase 65-01]: offPlatform strings use double-quote delimiters to avoid escaped-apostrophe parse issues
+- [Phase 65-01]: classifyOutputType() confirmed invoked from exactly one place (src/app/api/validation/classify/route.ts) — no parallel classifier exists
+- [Phase 65-01]: Combined output types (outputTypes array) are UI-only; the classifier always returns a single type by design — documented in AUDIT block
 
 ### Roadmap Evolution
 
