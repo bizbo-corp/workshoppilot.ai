@@ -248,7 +248,12 @@ Plans:
   2. A workshop with a non-digital output type (campaign, offering, process change, brand & comms, service, physical product) sees type-appropriate validation alternatives with a "how to do this outside WorkshopPilot" explanation and no Journey Flow or prototype links
   3. When the classifier returns low confidence or a combined `outputTypes` array, the UI surfaces a clear disclosure and lets the user reclassify their output type manually
   4. `classifyOutputType()` is the single classification entry point — no parallel classifier exists — and its confidence and combined-type handling have been reviewed and hardened
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 65-01-PLAN.md — Guidance content: offPlatform field + copy for all non-digital buckets, isDigitalOutputType() helper, Build Pack markdown render, classifier audit (VAL-02, VAL-04)
+- [ ] 65-02-PLAN.md — SSR gating plumbing: rename journeyMapApproved → journeyFlowApproved, repoint query to 'Journey Flow:%', thread through both StepContainer branches (VAL-01)
+- [ ] 65-03-PLAN.md — Card wiring: digital Journey Flow link + gated prototype link, off-platform render, low-conf/combined-type disclosures, reclassify CTA, journey-flow CTA repoint + human verify (VAL-01, VAL-02, VAL-03)
 
 ### Phase 66: Low-Fi Prototype Prompt
 **Goal**: Users can generate a self-contained, agent-agnostic low-fidelity prototype prompt from their Journey Flow and copy it into any AI coding agent to get a working wireframe-style prototype
