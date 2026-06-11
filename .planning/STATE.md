@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Journey Flow + Low-Fidelity Prototype Pipeline
 status: unknown
-last_updated: "2026-06-11T06:26:50.157Z"
+last_updated: "2026-06-11T07:25:58.839Z"
 progress:
   total_phases: 42
-  completed_phases: 41
+  completed_phases: 42
   total_plans: 123
-  completed_plans: 122
+  completed_plans: 123
 ---
 
 # Project State
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 
 ## Current Position
 
-Phase: 66 (next) — Low-Fi Prototype Prompt
-Plan: —
-Status: Phase 65 complete (3/3 plans, VAL-01/02/03 verified); Phase 66 ready to plan
-Last activity: 2026-06-11 — Phase 65 executed (3/3 plans), checkpoint approved after 6 UX feedback rounds
+Phase: 66 — Low-Fi Prototype Prompt (complete)
+Plan: 3/3
+Status: Phase 66 complete (3/3 plans, PROMPT-01 through PROMPT-05 verified); Phase 67 ready to plan
+Last activity: 2026-06-11 — Phase 66 executed (3/3 plans), checkpoint approved; UX fix (max-h-[60vh]) committed 3f2c283
 
 ## Performance Metrics
 
@@ -111,6 +111,7 @@ Last activity: 2026-06-11 — Phase 65 executed (3/3 plans), checkpoint approved
 - [Phase 66]: StoredPrototypePrompt persists generatedFromFlowUpdatedAt for staleness detection (timestamp approach, zero schema changes)
 - [Phase 66-02]: Hi-fi fidelity option rendered as span aria-disabled not a button — zero interaction, not-allowed cursor, Coming later badge
 - [Phase 66-02]: isStale recomputed on client from generatedFromFlowUpdatedAt vs flowUpdatedAt to catch mid-session flow changes
+- [Phase 66-low-fi-prototype-prompt]: Expanded prompt preview capped at 60vh with overflow-y-auto — scroll-bound long AI-generated text expansions to keep page controls reachable
 
 ### Roadmap Evolution
 
@@ -128,5 +129,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-06-11
-Stopped at: Completed 65-03-PLAN.md — validation guidance card wiring, completion UX (6 feedback rounds), prototype-prompt placeholder; VAL-01/02/03 verified by user
+Stopped at: Completed 66-03-PLAN.md — Phase 66 end-to-end verified; PROMPT-01 through PROMPT-05 human-approved; UX fix for unbounded prompt height committed
 Resume file: None
