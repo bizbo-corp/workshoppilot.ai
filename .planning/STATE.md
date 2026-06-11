@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
+milestone: v0.5
 milestone_name: Journey Flow + Low-Fidelity Prototype Pipeline
-status: in_progress
-last_updated: "2026-06-11T04:56:10.243Z"
+status: unknown
+last_updated: "2026-06-11T06:21:30.870Z"
 progress:
-  total_phases: 41
+  total_phases: 42
   completed_phases: 41
-  total_plans: 120
-  completed_plans: 120
+  total_plans: 123
+  completed_plans: 121
 ---
 
 # Project State
@@ -56,6 +56,7 @@ Last activity: 2026-06-11 — Phase 65 executed (3/3 plans), checkpoint approved
 | Phase 65 P02 | 8 | 2 tasks | 3 files |
 | Phase 65-validation-guidance-wiring P01 | 6 | 2 tasks | 4 files |
 | Phase 65-validation-guidance-wiring P03 | multi-session | 3 tasks (6-round checkpoint) | 12 files |
+| Phase 66-low-fi-prototype-prompt P01 | 4 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,8 @@ Last activity: 2026-06-11 — Phase 65 executed (3/3 plans), checkpoint approved
 - [Phase 65-03]: /outputs/prototype-prompt placeholder page created in Phase 65 — URL contract established for Phase 66; Phase 66 replaces page body only, route already exists
 - [Phase 65-03]: ?from=validate query param convention for Journey Flow toolbar back link — toolbar stays reusable, navigation context flows via query param
 - [Phase 65-03]: artifactBuilderCta block removed from ValidatePanel (not repointed) — guidance card inline gated link is the single canonical entry to prototype building
+- [Phase 66]: PROMPT-04 shared boundary: prompt-builder.ts is fidelity-agnostic — hi-fi path imports same module with its own preamble/assembler
+- [Phase 66]: StoredPrototypePrompt persists generatedFromFlowUpdatedAt for staleness detection (timestamp approach, zero schema changes)
 
 ### Roadmap Evolution
 
