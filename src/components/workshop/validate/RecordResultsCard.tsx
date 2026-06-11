@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Surface } from '@/components/ui/surface';
 import type { QualitativeResult, ValidationPlan, Verdict } from '@/lib/schemas';
 import { VERDICT_LABELS, nextStepNudge } from '@/lib/validation/score';
-import { ScoreRing } from './ScoreRing';
+import { ArmedScoreRing, armedCaption, ScoreRing } from './ScoreRing';
 
 const VERDICT_BADGE: Record<Verdict, string> = {
   validated: 'bg-green-500/10 text-green-700 dark:text-green-400',
@@ -157,15 +157,23 @@ export function RecordResultsCard({
     return <Surface className="p-5">{recorded}</Surface>;
   }
 
-  // ─────────────────────────── Collapsed (default) ───────────────────────────
+  // ─────────────────────── Collapsed / armed (default) ───────────────────────
+  // The signal is committed but no result exists yet: show the gauge "armed" —
+  // empty, with the pass/kill bars the user just committed drawn on it.
   if (!editing) {
     const collapsed = (
-      <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h4 className="text-base font-semibold">Record your result</h4>
+      <div className="flex items-start gap-4">
+          {plan.signal && <ArmedScoreRing signal={plan.signal} size={80} />}
+          <div className="min-w-0 flex-1">
+            <h4 className="text-base font-semibold">Your Validation Score is waiting</h4>
+            {plan.signal && (
+              <p className="mt-0.5 text-sm font-medium text-foreground/80">
+                {armedCaption(plan.signal)}
+              </p>
+            )}
             <p className="mt-0.5 text-sm text-foreground/70">
-              Optional — add this once you’ve run the test. You don’t need it to finish the
-              workshop, and it carries over to your Build Pack.
+              Optional — record the result once you’ve run the test. You don’t need it to
+              finish the workshop, and it carries over to your Build Pack.
             </p>
           </div>
           <Button

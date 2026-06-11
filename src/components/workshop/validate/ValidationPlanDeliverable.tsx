@@ -10,7 +10,7 @@ import { VERDICT_LABELS } from '@/lib/validation/score';
 import { ValidationPlanSummary } from './ValidationPlanSummary';
 import { ValidationGuidanceCard } from './ValidationGuidanceCard';
 import { RecordResultsCard, type RecordResultInput } from './RecordResultsCard';
-import { ScoreRing } from './ScoreRing';
+import { ArmedScoreRing, armedCaption, ScoreRing } from './ScoreRing';
 
 /**
  * Interactive Validation Plan view inside the Build Pack. The plan was wrapped up on the Validate
@@ -145,9 +145,15 @@ export function ValidationPlanDeliverable({
 function ReadOnlyResult({ plan }: { plan: ValidationPlan }) {
   if (!plan.result) {
     return (
-      <p className="border-t border-border/60 pt-5 text-sm text-foreground/70">
-        No result recorded yet.
-      </p>
+      <div className="flex items-start gap-4 border-t border-border/60 pt-5">
+        {plan.signal && <ArmedScoreRing signal={plan.signal} size={80} />}
+        <div className="min-w-0 flex-1">
+          <span className="text-base font-semibold">No result recorded yet</span>
+          {plan.signal && (
+            <p className="mt-0.5 text-sm text-foreground/70">{armedCaption(plan.signal)}</p>
+          )}
+        </div>
+      </div>
     );
   }
   const { score, verdict } = plan.result;
