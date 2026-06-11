@@ -613,8 +613,9 @@ export function ValidatePanel({
               onRecord={(input) => record(activePlan.id, input)}
             />
 
-            {/* Primary: wrap up the plan → completes the workshop and opens the Build Pack.
-                Recording the result is optional and can be done later in the Build Pack. */}
+            {/* Primary: mark the plan done → completes the workshop and enables the footer
+                "View Build Pack" button. Recording the result is optional and can be done
+                later in the Build Pack. */}
             <div className="space-y-2 pt-1">
               {workshopCompleted ? (
                 <a
@@ -638,7 +639,7 @@ export function ValidatePanel({
                     ) : (
                       <Icon name="check-circle" className="h-4 w-4" />
                     )}
-                    Wrap up validation plan
+                    Done
                     {!isWrappingUp && <Icon name="arrow-right" className="h-4 w-4" />}
                   </Button>
                   <p className="text-center text-sm text-foreground/70">
@@ -647,14 +648,6 @@ export function ValidatePanel({
                   </p>
                 </>
               ) : null}
-              {plans.length < 3 && (
-                <div className="flex justify-center">
-                  <Button variant="ghost" size="sm" className="gap-1.5" onClick={addAnotherTest}>
-                    <Icon name="plus" className="h-3.5 w-3.5" />
-                    Test another assumption
-                  </Button>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -691,6 +684,17 @@ export function ValidatePanel({
                 <ValidationPlanSummary plan={plan} />
               </Surface>
             ))}
+          </div>
+        )}
+
+        {/* Page-level action: test another assumption (shown outside any card once the active
+            plan is assembled and fewer than 3 tests exist). */}
+        {assembled && plans.length < 3 && (
+          <div className="flex justify-center pb-2">
+            <Button variant="ghost" size="sm" className="gap-1.5" onClick={addAnotherTest}>
+              <Icon name="plus" className="h-3.5 w-3.5" />
+              Test another assumption
+            </Button>
           </div>
         )}
       </div>
