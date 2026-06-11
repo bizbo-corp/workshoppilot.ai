@@ -28,7 +28,7 @@
 
 - [x] **VAL-01**: Digital output types (`app_digital`, `experience_design`, other digital-leaning) see a "Recommended validation approach" card linking to Journey Flow, with the low-fi prototype builder link disabled until Journey Flow is marked complete, plus after-workshop guidance (Figma-fidelity prototype, usability tests)
 - [x] **VAL-02**: Non-digital output types (campaign, offering, process change, brand & comms, service, physical product) see type-appropriate alternatives with a short "how to do this outside WorkshopPilot" explanation, and are NOT offered Journey Flow / prototype actions
-- [ ] **VAL-03**: Classification edge cases are handled: low confidence, combined types (`outputTypes` array), and user reclassification when they disagree with the detected type
+- [x] **VAL-03**: Classification edge cases are handled: low confidence, combined types (`outputTypes` array), and user reclassification when they disagree with the detected type
 - [x] **VAL-04**: `classifyOutputType()` robustness is audited (confidence handling, combined types) — wired in as the single classifier, no parallel classification
 
 ### Prototype Prompt Builder (PROMPT)
