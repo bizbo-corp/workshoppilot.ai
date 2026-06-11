@@ -287,7 +287,11 @@ export function PrototypePromptContent({
 
             {/* Prompt text preview */}
             <div className="relative">
-              <pre className="whitespace-pre-wrap break-words rounded-xl border border-border bg-muted/30 p-4 font-mono text-xs text-foreground/90">
+              <pre
+                className={`whitespace-pre-wrap break-words rounded-xl border border-border bg-muted/30 p-4 font-mono text-xs text-foreground/90 ${
+                  expanded ? 'max-h-[60vh] overflow-y-auto' : ''
+                }`}
+              >
                 {previewText}
               </pre>
 
