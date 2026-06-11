@@ -102,6 +102,10 @@ export function ValidatePanel({
   const [plans, setPlans] = React.useState<ValidationPlan[]>([]);
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [editingSection, setEditingSection] = React.useState<ProgressStep | null>(null);
+  // Collapsed state — set to true after the user clicks "Done" so the card minimises and
+  // the footer "View Build Pack" button becomes the navigation mechanism. If the workshop
+  // was already completed before this render (page reload / resume), start collapsed.
+  const [validationCardCollapsed, setValidationCardCollapsed] = React.useState(workshopCompleted);
 
   const [isClassifying, setIsClassifying] = React.useState(false);
   const [classifyError, setClassifyError] = React.useState<string | null>(null);
@@ -546,8 +550,32 @@ export function ValidatePanel({
           </div>
         )}
 
+        {/* Assembled plan: collapsed summary row (after Done is clicked) */}
+        {assembled && activePlan && validationCardCollapsed && (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <Icon name="check-circle" className="h-4 w-4 shrink-0 text-primary" />
+              <span className="text-sm font-medium truncate">
+                Validation plan saved
+              </span>
+              {activePlan.assumption && (
+                <span className="hidden sm:block text-sm text-foreground/60 truncate">
+                  · {activePlan.assumption}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              className="shrink-0 text-xs text-foreground/60 hover:text-foreground underline underline-offset-2"
+              onClick={() => setValidationCardCollapsed(false)}
+            >
+              View plan
+            </button>
+          </div>
+        )}
+
         {/* Assembled plan: artifact panel + record results + actions */}
-        {assembled && activePlan && (
+        {assembled && activePlan && !validationCardCollapsed && (
           <div className="space-y-4 rounded-xl border-2 border-primary/20 bg-primary/5 p-5">
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-lg font-semibold">Your validation plan is ready</h3>
@@ -618,20 +646,21 @@ export function ValidatePanel({
                 later in the Build Pack. */}
             <div className="space-y-2 pt-1">
               {workshopCompleted ? (
-                <a
-                  href={`/workshop/${sessionId}/outputs`}
-                  className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-base font-medium text-primary-foreground btn-shimmer"
-                >
-                  <Icon name="check-circle" className="h-4 w-4" />
-                  View Build Pack
-                  <Icon name="arrow-right" className="h-4 w-4" />
-                </a>
+                /* Workshop already completed — footer "View Build Pack" is the nav;
+                   show a quiet "Done" state in the card. */
+                <p className="flex items-center justify-center gap-1.5 text-sm text-foreground/60 py-1">
+                  <Icon name="check-circle" className="h-4 w-4 text-primary" />
+                  Workshop complete — use the footer to view your Build Pack.
+                </p>
               ) : onWrapUp ? (
                 <>
                   <Button
                     size="lg"
                     className="w-full gap-2 btn-shimmer"
-                    onClick={onWrapUp}
+                    onClick={() => {
+                      setValidationCardCollapsed(true);
+                      onWrapUp();
+                    }}
                     disabled={isWrappingUp}
                   >
                     {isWrappingUp ? (
@@ -688,8 +717,8 @@ export function ValidatePanel({
         )}
 
         {/* Page-level action: test another assumption (shown outside any card once the active
-            plan is assembled and fewer than 3 tests exist). */}
-        {assembled && plans.length < 3 && (
+            plan is assembled and fewer than 3 tests exist). Hidden when card is collapsed. */}
+        {assembled && !validationCardCollapsed && plans.length < 3 && (
           <div className="flex justify-center pb-2">
             <Button variant="ghost" size="sm" className="gap-1.5" onClick={addAnotherTest}>
               <Icon name="plus" className="h-3.5 w-3.5" />
@@ -715,7 +744,7 @@ function artifactBuilderCta(
   if (art?.revealsPrototype) {
     return {
       label: 'Create your prototype',
-      href: `/workshop/${sessionId}/outputs/journey-flow`,
+      href: `/workshop/${sessionId}/outputs/journey-flow?from=validate`,
       blurb: 'Map the journey flow, then generate a low-fi prototype to put in front of users.',
     };
   }

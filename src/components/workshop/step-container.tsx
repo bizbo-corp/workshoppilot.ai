@@ -1089,11 +1089,7 @@ export function StepContainer({
       await completeWorkshop(workshopId, sessionId);
       setWorkshopCompleted(true);
       fireConfetti();
-      toast.success("Workshop completed!", { duration: 4000 });
-      // Proceed to the Build Pack screen. Brief delay so the confetti registers first.
-      setTimeout(() => {
-        router.push(`/workshop/${sessionId}/outputs`);
-      }, 1200);
+      toast.success("Workshop completed — use the View Build Pack button to continue.", { duration: 5000 });
     } catch (error) {
       // completeWorkshop does not call redirect(), so no NEXT_REDIRECT to rethrow
       console.error("Failed to complete workshop:", error);
@@ -1101,7 +1097,7 @@ export function StepContainer({
     } finally {
       setIsCompletingWorkshop(false);
     }
-  }, [isCompletingWorkshop, workshopCompleted, workshopId, sessionId, step10Artifact, handleStep10Extract, router, step?.id]);
+  }, [isCompletingWorkshop, workshopCompleted, workshopId, sessionId, step10Artifact, handleStep10Extract, step?.id]);
 
   // Step 10: auto-extract on mount when conversation already exists
   const hasAutoExtracted = React.useRef(false);
