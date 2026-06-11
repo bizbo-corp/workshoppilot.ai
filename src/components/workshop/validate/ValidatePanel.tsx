@@ -102,11 +102,6 @@ export function ValidatePanel({
   const [plans, setPlans] = React.useState<ValidationPlan[]>([]);
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [editingSection, setEditingSection] = React.useState<ProgressStep | null>(null);
-  // Collapsed state — set to true after the user clicks "Done" so the card minimises and
-  // the footer "View Build Pack" button becomes the navigation mechanism. If the workshop
-  // was already completed before this render (page reload / resume), start collapsed.
-  const [validationCardCollapsed, setValidationCardCollapsed] = React.useState(workshopCompleted);
-
   const [isClassifying, setIsClassifying] = React.useState(false);
   const [classifyError, setClassifyError] = React.useState<string | null>(null);
   const [isProposing, setIsProposing] = React.useState(false);
@@ -550,40 +545,10 @@ export function ValidatePanel({
           </div>
         )}
 
-        {/* Assembled plan: collapsed summary row (after Done is clicked) */}
-        {assembled && activePlan && validationCardCollapsed && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <Icon name="check-circle" className="h-4 w-4 shrink-0 text-primary" />
-              <span className="text-sm font-medium truncate">
-                Validation plan saved
-              </span>
-              {activePlan.assumption && (
-                <span className="hidden sm:block text-sm text-foreground/60 truncate">
-                  · {activePlan.assumption}
-                </span>
-              )}
-            </div>
-            <button
-              type="button"
-              className="shrink-0 text-xs text-foreground/60 hover:text-foreground underline underline-offset-2"
-              onClick={() => setValidationCardCollapsed(false)}
-            >
-              View plan
-            </button>
-          </div>
-        )}
-
-        {/* Assembled plan: artifact panel + record results + actions */}
-        {assembled && activePlan && !validationCardCollapsed && (
-          <div className="space-y-4 rounded-xl border-2 border-primary/20 bg-primary/5 p-5">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-lg font-semibold">Your validation plan is ready</h3>
-            </div>
-            <ValidationPlanSummary plan={activePlan} />
-
-            {/* Output-type-tailored approach: in-workshop vs post-workshop. Renders only for
-                output types with tailored guidance; generic types fall through to the checklist. */}
+        {/* Assembled plan: action row — Done button (pre-completion) or saved status (post-completion) */}
+        {assembled && activePlan && (
+          <div className="space-y-4">
+            {/* Guidance and artifact tools — always shown once assembled */}
             <ValidationGuidanceCard
               outputType={activePlan.outputType}
               outputTypes={activePlan.outputTypes ?? [activePlan.outputType]}
@@ -641,24 +606,31 @@ export function ValidatePanel({
               onRecord={(input) => record(activePlan.id, input)}
             />
 
-            {/* Primary: mark the plan done → completes the workshop and enables the footer
-                "View Build Pack" button. Recording the result is optional and can be done
-                later in the Build Pack. */}
+            {/* Bottom action row: Done button (pre-completion) or saved status (post-completion).
+                Done completes the workshop and activates the footer "View Build Pack" button. */}
             <div className="space-y-2 pt-1">
               {workshopCompleted ? (
-                /* Workshop already completed — footer "View Build Pack" is the nav;
-                   show a quiet "Done" state in the card. */
-                <p className="flex items-center justify-center gap-1.5 text-sm text-foreground/60 py-1">
-                  <Icon name="check-circle" className="h-4 w-4 text-primary" />
-                  Workshop complete — use the footer to view your Build Pack.
-                </p>
+                /* Workshop already completed — show saved status; footer handles navigation. */
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Icon name="check-circle" className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="text-sm font-medium">Validation plan saved</span>
+                    {activePlan.assumption && (
+                      <span className="hidden sm:block text-sm text-foreground/60 truncate">
+                        · {activePlan.assumption}
+                      </span>
+                    )}
+                  </div>
+                  <span className="shrink-0 text-xs text-foreground/60">
+                    Use the footer to view your Build Pack
+                  </span>
+                </div>
               ) : onWrapUp ? (
                 <>
                   <Button
                     size="lg"
                     className="w-full gap-2 btn-shimmer"
                     onClick={() => {
-                      setValidationCardCollapsed(true);
                       onWrapUp();
                     }}
                     disabled={isWrappingUp}
@@ -716,9 +688,9 @@ export function ValidatePanel({
           </div>
         )}
 
-        {/* Page-level action: test another assumption (shown outside any card once the active
-            plan is assembled and fewer than 3 tests exist). Hidden when card is collapsed. */}
-        {assembled && !validationCardCollapsed && plans.length < 3 && (
+        {/* Page-level action: test another assumption (shown once the active plan is assembled
+            and fewer than 3 tests exist). Always visible — not gated on card state. */}
+        {assembled && plans.length < 3 && (
           <div className="flex justify-center pb-2">
             <Button variant="ghost" size="sm" className="gap-1.5" onClick={addAnotherTest}>
               <Icon name="plus" className="h-3.5 w-3.5" />
