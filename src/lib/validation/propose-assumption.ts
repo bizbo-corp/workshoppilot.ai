@@ -11,6 +11,7 @@ import { google } from '@ai-sdk/google';
 import { z } from 'zod';
 import { loadValidationBrief } from '@/lib/validation/llm-context';
 import { OUTPUT_TYPE_NOUNS } from '@/lib/validation/artifact-lookup';
+import { ASSUMPTION_EXAMPLES } from '@/lib/validation/evidence-bars';
 import type { OutputType } from '@/lib/schemas/validation-schemas';
 
 const proposalSchema = z.object({
@@ -100,7 +101,8 @@ Example: "Speakers will want an audience-profiler feature that maps audience nee
       : `Frame the assumption BROADLY at the level of the ORIGINAL CHALLENGE's END GOAL, in the challenge's own words (e.g. communicate effectively to persuade, inspire, or drive others to action).
 Shape: "<target user> will want <a/an> ${subject} that helps them <the challenge's end goal>."
 Refer to the solution naturally as ${subject} — pick the correct article (a / an, or none for a mass noun) and you may lightly adjust it so the sentence reads as natural English; NEVER paste a raw UI label like "App / Digital". Do NOT mention intermediate mechanisms (emotions, empathy, audience analysis, message clarity) or any specific concept feature — those belong only to Specific framing.
-Example: "Speakers will want an app that helps them communicate their ideas effectively to drive action in others."`;
+The verb must fit the idea type — services get "pay for"/"book", process changes get "adopt", campaigns get "engage with", physical products get "want"/"buy" — never app language for a non-app idea.
+Example for this idea type: "${ASSUMPTION_EXAMPLES[types[0]]}"`;
 
   const scopeReminder =
     scope === 'specific'

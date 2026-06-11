@@ -3,14 +3,19 @@
 import * as React from 'react';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
-import { getValidationState, recordValidationResult } from '@/actions/validation-actions';
+import {
+  getValidationState,
+  recordValidationResult,
+  upsertValidationPlan,
+} from '@/actions/validation-actions';
 import type { ValidationPlan } from '@/lib/schemas';
 import { LENS_LABELS } from '@/lib/validation/artifact-lookup';
 import { VERDICT_LABELS } from '@/lib/validation/score';
 import { ValidationPlanSummary } from './ValidationPlanSummary';
 import { ValidationGuidanceCard } from './ValidationGuidanceCard';
 import { RecordResultsCard, type RecordResultInput } from './RecordResultsCard';
-import { ScoreRing } from './ScoreRing';
+import { HonestyReadCard } from './HonestyReadCard';
+import { ArmedScoreRing, armedCaption, ScoreRing } from './ScoreRing';
 
 /**
  * Interactive Validation Plan view inside the Build Pack. The plan was wrapped up on the Validate
@@ -113,6 +118,24 @@ export function ValidationPlanDeliverable({
 
               <ValidationPlanSummary plan={plan} />
 
+              {/* The facilitator's evidence-anchored read, persisted on the plan.
+                  Read-only guests only see it when it already exists. */}
+              <HonestyReadCard
+                plan={plan}
+                workshopId={workshopId}
+                isReadOnly={isReadOnly}
+                flat
+                onGenerated={(read) => {
+                  const updated: ValidationPlan = {
+                    ...plan,
+                    honestyRead: read,
+                    updatedAt: new Date().toISOString(),
+                  };
+                  setPlans((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                  void upsertValidationPlan(workshopId, updated);
+                }}
+              />
+
               <ValidationGuidanceCard
                 outputType={plan.outputType}
                 outputTypes={plan.outputTypes ?? [plan.outputType]}
@@ -145,9 +168,15 @@ export function ValidationPlanDeliverable({
 function ReadOnlyResult({ plan }: { plan: ValidationPlan }) {
   if (!plan.result) {
     return (
-      <p className="border-t border-border/60 pt-5 text-sm text-foreground/70">
-        No result recorded yet.
-      </p>
+      <div className="flex items-start gap-4 border-t border-border/60 pt-5">
+        {plan.signal && <ArmedScoreRing signal={plan.signal} size={80} />}
+        <div className="min-w-0 flex-1">
+          <span className="text-base font-semibold">No result recorded yet</span>
+          {plan.signal && (
+            <p className="mt-0.5 text-sm text-foreground/70">{armedCaption(plan.signal)}</p>
+          )}
+        </div>
+      </div>
     );
   }
   const { score, verdict } = plan.result;

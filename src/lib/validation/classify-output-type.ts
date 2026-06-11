@@ -8,6 +8,12 @@
  * AUDIT (Phase 65): this is the SINGLE classification entry point — do not add a parallel
  * classifier. It returns exactly ONE type by design; combined types (`outputTypes: [primary,
  * secondary]`) are a UI-only concept added by the user via toggleType() in ValidatePanel.
+ *
+ * Early capture (offering-tightening WI-6): Step 1's IdeaTypeChooser calls this same
+ * classifier (via /api/validation/classify) right after the challenge is accepted and lets
+ * the user confirm/correct the guess. The confirmed pick is stored as THE classification
+ * record (source 'user_override'), which the Validate step then reuses instead of
+ * re-classifying — the early signal feeds in by seeding the record, not via a second path.
  * Confidence is classifier-declared (0–1); < 0.6 renders as "best guess" disclosures in the
  * UI (DetectOutputTypeCard + ValidationGuidanceCard). A `source: 'user_override'`
  * classification is an implicit confirmation and always carries confidence 1.

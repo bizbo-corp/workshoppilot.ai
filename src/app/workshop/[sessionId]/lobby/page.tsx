@@ -370,7 +370,7 @@ function WalkOutSection({ durationLabel }: { durationLabel: string | null }) {
       </div>
       <ul className="mt-5 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3 xl:grid-cols-1">
         <li className="rounded-xl border bg-background/60 p-4">
-          <p className="text-sm font-semibold">PRD &amp; user stories</p>
+          <p className="text-sm font-semibold">PRD &amp; tech specs</p>
           <Caption className="mt-1">
             A spec document ready to brief AI coders or engineers.
           </Caption>

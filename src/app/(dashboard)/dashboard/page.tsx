@@ -275,7 +275,7 @@ export default async function DashboardPage() {
             Start your first workshop
           </h3>
           <p className="mt-2 max-w-md mx-auto text-sm text-muted-foreground">
-            Walk through 10 design thinking steps with AI guidance and emerge with a validated Build Pack — PRDs, user stories, and tech specs ready for development.
+            Walk through 10 design thinking steps with AI guidance and emerge with a ready-to-run validation plan — plus a PRD and tech specs for digital ideas.
           </p>
           <div className="mt-6">
             <NewWorkshopButton size="lg" className="btn-lift">

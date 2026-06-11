@@ -43,7 +43,7 @@ function getTiers(): PricingTier[] {
         'AI facilitator guides every step',
         'Interactive canvas with visual tools',
         'Complete Build Pack output',
-        'PRD, user stories & tech specs',
+        'PRD & tech specs for digital ideas',
         'Export-ready for dev teams & AI coders',
       ],
       cta: 'Start a Solo Workshop',
@@ -90,7 +90,7 @@ const FAQ_ITEMS = [
   {
     question: 'What exactly do I get?',
     answer:
-      'A complete Build Pack containing a Product Requirements Document (PRD), user stories ready for Jira/Linear, technical specifications, a feature roadmap, and a lean canvas. These are the same deliverables a product consultant would charge $3,000-$5,000 to produce.',
+      'A ready-to-run validation plan with a pre-committed success signal — plus, for digital ideas, a complete Build Pack containing a Product Requirements Document (PRD) and technical specifications. These are the same deliverables a product consultant would charge $3,000-$5,000 to produce.',
   },
   {
     question: 'What are Steps 1-6 (the free part)?',
@@ -143,15 +143,16 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-olive-300/50 bg-olive-50/80 px-4 py-1.5 text-sm font-medium text-olive-700 dark:border-olive-700/50 dark:bg-olive-950/50 dark:text-olive-300 mb-6">
               <Icon name="clock" className="h-4 w-4" />
-              60 minutes to developer-ready
+              One session to an honest answer
             </div>
             <Heading level={1} className="md:text-5xl mb-4">
               Weeks of Planning.{' '}
               <span className="text-olive-600 dark:text-olive-400">One Simple Price.</span>
             </Heading>
             <Text variant="muted" className="text-lg max-w-2xl mx-auto">
-              The same deliverables a product consultant charges $3,000+ to produce.
-              Start free, pay only when you&apos;re ready for the full Build Pack.
+              One price for any kind of idea — find out if yours is worth
+              building. Start free, pay only when you&apos;re ready to unlock
+              your validation plan.
             </Text>
           </div>
         </section>
@@ -305,9 +306,9 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
                   description: 'Formal Product Requirements Document — the "Bible" for your developers.',
                 },
                 {
-                  icon: 'users' as const,
-                  title: 'User Stories',
-                  description: 'Import-ready for Jira, Linear, or Trello. Saves 10+ hours of manual work.',
+                  icon: 'clipboard-check' as const,
+                  title: 'Validation Plan',
+                  description: 'Your riskiest assumption, the cheapest test that proves or kills it, and a pre-committed success signal.',
                 },
                 {
                   icon: 'layers' as const,
@@ -316,8 +317,8 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
                 },
                 {
                   icon: 'map' as const,
-                  title: 'Feature Roadmap',
-                  description: 'Phase 1 vs Phase 2 prioritisation. Build the right thing first.',
+                  title: 'Journey Map',
+                  description: 'How users move through your product — pain points and drop-off risks mapped before you build.',
                 },
                 {
                   icon: 'target' as const,

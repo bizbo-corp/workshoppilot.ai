@@ -20,20 +20,6 @@ export const DELIVERABLES = [
     iconName: 'FileText' as const,
   },
   {
-    id: 'stakeholder-ppt',
-    title: 'Stakeholder Presentation',
-    description:
-      'Executive summary deck covering the problem, research insights, proposed solution, and implementation roadmap.',
-    iconName: 'Presentation' as const,
-  },
-  {
-    id: 'user-stories',
-    title: 'User Stories',
-    description:
-      'Prioritized user stories with acceptance criteria, mapped to personas and journey stages from your research.',
-    iconName: 'Users' as const,
-  },
-  {
     id: 'tech-specs',
     title: 'Technical Specifications',
     description:

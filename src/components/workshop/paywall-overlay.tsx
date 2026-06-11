@@ -46,7 +46,7 @@ const VALUE_ITEMS = [
   {
     icon: 'file-text' as const,
     title: 'Build Pack Output',
-    description: 'Complete PRD, user stories, and tech specs',
+    description: 'Validation plan, PRD, and tech specs',
   },
 ];
 

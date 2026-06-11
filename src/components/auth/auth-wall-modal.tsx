@@ -88,7 +88,7 @@ export function AuthWallModal({
                     { num: 5, name: 'Test', desc: 'Validate assumptions with real users' },
                     { num: 6, name: 'Define MVP', desc: 'Identify core features' },
                     { num: 7, name: 'Technical Spec', desc: 'Define architecture & tech stack' },
-                    { num: 8, name: 'User Stories', desc: 'Create detailed requirements' },
+                    { num: 8, name: 'Iteration', desc: 'Refine your strongest ideas' },
                     { num: 9, name: 'Architecture', desc: 'Design system structure' },
                     { num: 10, name: 'Build Pack', desc: 'Generate AI-ready specifications' },
                   ].map((step) => (
