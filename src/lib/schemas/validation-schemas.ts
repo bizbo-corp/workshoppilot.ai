@@ -12,9 +12,11 @@
 import { z } from 'zod';
 
 /**
- * The kind of thing the workshop produced. Drives the artifact lookup (which
- * cheapest-valid test to recommend) and the §5 visibility gate: ONLY `app_digital`
- * reveals the UX Journey Map + V0 prototype.
+ * The kind of thing the workshop produced. Drives the artifact lookup (which cheapest-valid
+ * test to recommend) and the digital-path gate: `app_digital` and `experience_design` (the
+ * 'digital' guidance bucket — see output-type-guidance.ts isDigitalOutputType) route to
+ * Journey Flow + the low-fi prototype builder; all other types get off-platform validation
+ * alternatives.
  */
 export const outputTypeSchema = z.enum([
   'app_digital', // app, web tool, software feature, digital service
