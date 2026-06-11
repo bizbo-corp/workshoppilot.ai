@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Journey Flow + Low-Fidelity Prototype Pipeline
 status: unknown
-last_updated: "2026-06-11T07:30:03.964Z"
+last_updated: "2026-06-11T08:07:56.660Z"
 progress:
-  total_phases: 42
+  total_phases: 43
   completed_phases: 42
-  total_plans: 123
-  completed_plans: 123
+  total_plans: 125
+  completed_plans: 124
 ---
 
 # Project State
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 
 ## Current Position
 
-Phase: 66 — Low-Fi Prototype Prompt (complete)
-Plan: 3/3
-Status: Phase 66 complete (3/3 plans, PROMPT-01 through PROMPT-05 verified); Phase 67 ready to plan
-Last activity: 2026-06-11 — Phase 66 executed (3/3 plans), checkpoint approved; UX fix (max-h-[60vh]) committed 3f2c283
+Phase: 67 — Park Old Mapper Polish (in progress)
+Plan: 1/2
+Status: Phase 67 Plan 01 complete (PARK-01 + PARK-02 verified); Plan 02 ready
+Last activity: 2026-06-11 — Phase 67 Plan 01 executed (2 tasks); sidebar/hub de-linked; replacement banner added to old mapper
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Last activity: 2026-06-11 — Phase 66 executed (3/3 plans), checkpoint approved
 | Phase 65-validation-guidance-wiring P03 | multi-session | 3 tasks (6-round checkpoint) | 12 files |
 | Phase 66-low-fi-prototype-prompt P01 | 4 | 3 tasks | 3 files |
 | Phase 66-low-fi-prototype-prompt P02 | 8 | 2 tasks | 2 files |
+| Phase 67 P01 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,8 @@ Last activity: 2026-06-11 — Phase 66 executed (3/3 plans), checkpoint approved
 - [Phase 66-02]: Hi-fi fidelity option rendered as span aria-disabled not a button — zero interaction, not-allowed cursor, Coming later badge
 - [Phase 66-02]: isStale recomputed on client from generatedFromFlowUpdatedAt vs flowUpdatedAt to catch mid-session flow changes
 - [Phase 66-low-fi-prototype-prompt]: Expanded prompt preview capped at 60vh with overflow-y-auto — scroll-bound long AI-generated text expansions to keep page controls reachable
+- [Phase 67-park-old-mapper-polish]: icon registry maps X phosphor icon to 'close' (not 'x'); plan used wrong name — fixed inline
+- [Phase 67-park-old-mapper-polish]: Lazy useState initializer used instead of useEffect+setState for sessionStorage read — avoids react-hooks/set-state-in-effect lint error while maintaining hydration safety
 
 ### Roadmap Evolution
 
@@ -129,5 +132,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-06-11
-Stopped at: Completed 66-03-PLAN.md — Phase 66 end-to-end verified; PROMPT-01 through PROMPT-05 human-approved; UX fix for unbounded prompt height committed
+Stopped at: Completed 67-01-PLAN.md — PARK-01 + PARK-02 verified; sidebar/hub de-linked to Journey Flow; replacement banner added to old mapper
 Resume file: None
