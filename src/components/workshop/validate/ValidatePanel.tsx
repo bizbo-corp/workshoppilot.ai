@@ -102,6 +102,9 @@ export function ValidatePanel({
   const [plans, setPlans] = React.useState<ValidationPlan[]>([]);
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [editingSection, setEditingSection] = React.useState<ProgressStep | null>(null);
+  // Preview mode: once a plan is assembled, default to PREVIEW (step cards hidden).
+  // The "Edit" button in the guidance card header switches to EDIT mode (step cards visible).
+  const [previewMode, setPreviewMode] = React.useState(true);
   const [isClassifying, setIsClassifying] = React.useState(false);
   const [classifyError, setClassifyError] = React.useState<string | null>(null);
   const [isProposing, setIsProposing] = React.useState(false);
@@ -391,7 +394,10 @@ export function ValidatePanel({
       };
       setPlans((prev) => prev.map((p) => (p.id === next.id ? next : p)));
       if (editing) setEditingSection(null);
-      if (nextStep === 'complete') setActiveId(next.id); // keep showing the assembled plan
+      if (nextStep === 'complete') {
+        setActiveId(next.id); // keep showing the assembled plan
+        setPreviewMode(true);  // newly assembled → default to Preview
+      }
       void persist(next);
     },
     [activePlan, editingSection, persist]
@@ -423,6 +429,7 @@ export function ValidatePanel({
     };
     proposeTriggered.current = false; // let the auto-propose effect generate a fresh assumption
     setEditingSection(null);
+    setPreviewMode(true); // fresh wizard — preview doesn't apply until assembled
     setPlans((prev) => [...prev, draft]);
     setActiveId(draft.id);
     void persist(draft);
@@ -461,6 +468,9 @@ export function ValidatePanel({
   }
 
   const assembled = activePlan && activePlan.progressStep === 'complete' && !editingSection;
+  // In Preview mode the five step cards are hidden; Edit mode reveals them.
+  // While the wizard is in progress (not yet assembled), the step cards always show.
+  const showStepCards = !assembled || !previewMode;
   const selectedArtifact: ArtifactOption | undefined = activePlan
     ? findArtifactByKey(activePlan.artifactType)
     : undefined;
@@ -486,8 +496,27 @@ export function ValidatePanel({
           )}
         </header>
 
-        {activePlan && (
+        {activePlan && showStepCards && (
           <div className="space-y-4">
+            {/* EDIT mode banner — shown when manually switching back to edit after assembly */}
+            {assembled && !previewMode && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-2.5">
+                <span className="text-sm text-foreground/70">
+                  Editing your validation plan — changes are saved automatically.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingSection(null);
+                    setPreviewMode(true);
+                  }}
+                  className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-foreground/70 hover:bg-muted"
+                >
+                  Preview
+                </button>
+              </div>
+            )}
+
             <DetectOutputTypeCard
               status={statusFor('detect')}
               classification={classification}
@@ -589,6 +618,10 @@ export function ValidatePanel({
                 classification={classification}
                 sessionId={sessionId}
                 onReclassify={() => setEditingSection('detect')}
+                onEditMode={() => {
+                  setEditingSection(null);
+                  setPreviewMode(false);
+                }}
               />
 
               {selectedArtifact?.generatesConceptCard ? (
@@ -611,49 +644,36 @@ export function ValidatePanel({
                 error={recordError}
                 onRecord={(input) => record(activePlan.id, input)}
               />
-            </Surface>
 
-            {/* STATUS — ONE bottom action row per test (common region). Done shows until THIS
-                plan is acknowledged (per-plan, persisted), then the row becomes a saved note.
-                Never gated on global workshopCompleted — that hid Done forever on round two. */}
-            <div className="space-y-2 pt-1">
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Icon name="check-circle" className="h-4 w-4 shrink-0 text-primary" />
-                  <span className="shrink-0 text-sm font-medium">Validation plan saved</span>
-                  {activePlan.assumption && (
-                    <span className="hidden sm:block text-sm text-foreground/60 truncate">
-                      · {activePlan.assumption}
-                    </span>
+              {/* Done button — lives at the bottom of the Run-your-test card.
+                  Shows until THIS plan is acknowledged (per-plan, persisted).
+                  Never gated on global workshopCompleted. */}
+              {!activePlan.acknowledgedAt && (
+                <div className="space-y-2 border-t border-border/60 pt-4">
+                  {!workshopCompleted && (
+                    <p className="text-center text-sm text-foreground/70">
+                      Done finishes the workshop and saves your plan to the Build Pack. You can
+                      record the result later — it&apos;s not required.
+                    </p>
                   )}
+                  <div className="flex justify-center">
+                    <Button
+                      size="sm"
+                      className="gap-1.5 btn-shimmer"
+                      onClick={acknowledgeDone}
+                      disabled={isWrappingUp}
+                    >
+                      {isWrappingUp ? (
+                        <Icon name="spinner" className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Icon name="check-circle" className="h-4 w-4" />
+                      )}
+                      Done
+                    </Button>
+                  </div>
                 </div>
-                {activePlan.acknowledgedAt ? (
-                  <span className="shrink-0 text-xs text-foreground/60">
-                    Use the footer to view your Build Pack
-                  </span>
-                ) : (
-                  <Button
-                    size="sm"
-                    className="shrink-0 gap-1.5 btn-shimmer"
-                    onClick={acknowledgeDone}
-                    disabled={isWrappingUp}
-                  >
-                    {isWrappingUp ? (
-                      <Icon name="spinner" className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Icon name="check-circle" className="h-4 w-4" />
-                    )}
-                    Done
-                  </Button>
-                )}
-              </div>
-              {!activePlan.acknowledgedAt && !workshopCompleted && (
-                <p className="text-center text-sm text-foreground/70">
-                  Done finishes the workshop and saves your plan to the Build Pack. You can record
-                  the result later — it&apos;s not required.
-                </p>
               )}
-            </div>
+            </Surface>
           </div>
         )}
 

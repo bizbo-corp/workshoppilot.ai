@@ -32,6 +32,7 @@ export function ValidationGuidanceCard({
   classification,
   sessionId,
   onReclassify,
+  onEditMode,
 }: {
   outputType: OutputType;
   /** One-line LLM-tailored "for your solution" example, once generated. */
@@ -50,6 +51,8 @@ export function ValidationGuidanceCard({
   sessionId?: string;
   /** Reopens the output-type section (DetectOutputTypeCard) for manual reclassification. */
   onReclassify?: () => void;
+  /** Switches the parent panel into Edit mode (reveals step cards). */
+  onEditMode?: () => void;
 }) {
   const guidance = getValidationGuidance(outputType);
   if (!guidance) return null;
@@ -77,7 +80,7 @@ export function ValidationGuidanceCard({
             return {
               text,
               action: (
-                <Button asChild size="sm" variant="default" className="mt-1">
+                <Button asChild size="sm" variant="tertiary" className="mt-1">
                   <Link href={`/workshop/${sessionId}/outputs/journey-flow?from=validate`}>
                     Open Journey Flow
                     <Icon name="arrow-right" className="h-3.5 w-3.5" />
@@ -92,7 +95,7 @@ export function ValidationGuidanceCard({
                 text,
                 action: (
                   // Phase 66 route; update href if Phase 66 lands elsewhere
-                  <Button asChild size="sm" variant="default" className="mt-1">
+                  <Button asChild size="sm" variant="tertiary" className="mt-1">
                     <Link href={`/workshop/${sessionId}/outputs/prototype-prompt`}>
                       Build your prototype
                       <Icon name="arrow-right" className="h-3.5 w-3.5" />
@@ -104,7 +107,7 @@ export function ValidationGuidanceCard({
             return {
               text,
               action: (
-                <Button size="sm" variant="default" disabled className="mt-1 cursor-not-allowed">
+                <Button size="sm" variant="tertiary" disabled className="mt-1 cursor-not-allowed">
                   Build your prototype
                   <span className="ml-1 text-xs font-normal opacity-80">
                     — complete Journey Flow first
@@ -121,15 +124,26 @@ export function ValidationGuidanceCard({
     <>
       <div className="flex items-start justify-between gap-2">
         <h4 className="text-base font-semibold">Recommended validation approach</h4>
-        {onReclassify && (
-          <button
-            type="button"
-            onClick={onReclassify}
-            className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-foreground/70 hover:bg-muted"
-          >
-            Change output type
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {onEditMode && (
+            <button
+              type="button"
+              onClick={onEditMode}
+              className="rounded-md border border-border px-2 py-1 text-xs text-foreground/70 hover:bg-muted"
+            >
+              Edit
+            </button>
+          )}
+          {onReclassify && (
+            <button
+              type="button"
+              onClick={onReclassify}
+              className="rounded-md border border-border px-2 py-1 text-xs text-foreground/70 hover:bg-muted"
+            >
+              Change output type
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Low-confidence disclosure — LLM source only; user override is an explicit choice */}
