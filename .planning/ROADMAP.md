@@ -265,7 +265,12 @@ Plans:
   3. The generated prompt is agent-agnostic plain text with a prominent one-click copy button and next-step instructions reading "Paste into your preferred AI coding agent — v0, Claude, Codex, Replit" plus a help link; no v0-specific "Create on v0" button exists in this flow
   4. Journey-understanding logic (flow parsing, screen descriptions, navigation derivation) lives in shared functions consumed by the low-fi template — structured so the hi-fi path can be added without rework
   5. In single-feature mode, the generated prompt covers only the mini-flow screens, not the full workshop journey
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 66-01-PLAN.md — Server side: shared prompt-builder module, low-fi prompt file (wireframe preamble), Gemini generation API route
+- [ ] 66-02-PLAN.md — Page UI: fidelity switch, generate/regenerate, collapsed preview, copy UX, help dialog, staleness banner
+- [ ] 66-03-PLAN.md — Verification: automated gates (tsc/lint/build/greps) + human checkpoint on full flow
 
 ### Phase 67: Park Old Mapper + Polish
 **Goal**: The old UX Journey Mapper remains accessible at its original route but is clearly marked as replaced, primary guidance points exclusively to Journey Flow, and the full digital-output path works end-to-end
@@ -299,7 +304,7 @@ Plans:
 | 63. Journey Flow Editor Core | 4/4 | Complete    | 2026-06-10 | - |
 | 64. AI Baseline Generation | 4/4 | Complete    | 2026-06-11 | - |
 | 65. Validation Guidance Wiring | 3/3 | Complete    | 2026-06-11 | - |
-| 66. Low-Fi Prototype Prompt | v2.1 | 0/TBD | Not started | - |
+| 66. Low-Fi Prototype Prompt | v2.1 | 0/3 | Planned | - |
 | 67. Park Old Mapper + Polish | v2.1 | 0/TBD | Not started | - |
 
 **Total shipped:** 12 milestones, 62 phases, ~155 plans in 22 days
