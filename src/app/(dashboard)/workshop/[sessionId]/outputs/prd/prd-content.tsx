@@ -212,6 +212,8 @@ export function PrdContent({
               available={true}
               description="Challenge, research, persona, journey, ideation, concept, and validation"
             />
+            {/* Feature Prioritization is no longer a storefront deliverable, so this
+                checklist is the only surface that links to its generator page. */}
             <SourceItem
               icon="list-ordered"
               label="Feature Prioritization"
@@ -221,6 +223,15 @@ export function PrdContent({
                 : 'Generate Feature Prioritization first for release-phased features'
               }
             />
+            {!hasFeaturePrioritization && !isReadOnly && (
+              <Link
+                href={`/workshop/${sessionId}/outputs/feature-prioritization`}
+                className="ml-8 inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              >
+                Generate Feature Prioritization
+                <Icon name="arrow-right" className="h-3 w-3" />
+              </Link>
+            )}
             <SourceItem
               icon="code"
               label="Technical Specifications"

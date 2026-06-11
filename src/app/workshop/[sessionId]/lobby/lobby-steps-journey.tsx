@@ -108,7 +108,7 @@ const STEP_CARDS: StepCard[] = [
     order: 10,
     name: 'Validate & Ship',
     description:
-      'Flow diagrams, PRD, user stories — your validated Build Pack, ready to hand to an AI coder or a real one.',
+      'Your riskiest assumption, the test that proves or kills it, and a Build Pack ready to hand to an AI coder or a real one.',
     illustration: <ValidateIllustration />,
     badgeBg: 'bg-green-100 dark:bg-green-900/50',
     badgeText: 'text-green-700 dark:text-green-300',
@@ -126,7 +126,7 @@ export function LobbyStepsJourney() {
           </h2>
         </div>
         <p className="text-sm text-muted-foreground sm:max-w-xs sm:text-right">
-          A guided arc from fuzzy problem to a PRD, user stories, and tech specs you can ship.
+          A guided arc from fuzzy problem to a validation plan, PRD, and tech specs you can ship.
         </p>
       </div>
 

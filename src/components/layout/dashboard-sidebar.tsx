@@ -38,8 +38,8 @@ interface DashboardSidebarProps {
  * `view` links open a deliverable detail on the outputs hub via ?view=.
  */
 const BUILD_PACK_ITEMS: Array<{ label: string; icon: IconName; href: string }> = [
-  { label: 'Stakeholder Presentation', icon: 'presentation', href: 'outputs?view=stakeholder-ppt' },
-  { label: 'Feature Prioritization', icon: 'list-ordered', href: 'outputs/feature-prioritization' },
+  // Stakeholder Presentation + Feature Prioritization removed from the storefront
+  // (offering-tightening) — their generators stay wired; PRD/Tech Specs depend on them.
   { label: 'Journey Flow', icon: 'workflow', href: 'outputs/journey-flow' },
   { label: 'Prototype', icon: 'rocket', href: 'step/validate' },
   { label: 'Validation Plan', icon: 'clipboard-check', href: 'outputs?view=validation-plan' },

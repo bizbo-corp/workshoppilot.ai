@@ -66,6 +66,9 @@ interface CardDef {
   generatable: boolean;
   navigateTo?: string;
   buttonLabel?: string;
+  /** Hidden from the storefront but still wired — the generator/route stays
+   *  intact because other deliverables (PRD, Tech Specs, Prototype) depend on it. */
+  hidden?: boolean;
 }
 
 interface Section {
@@ -90,6 +93,7 @@ const SECTIONS: Section[] = [
           'Executive summary deck covering the problem, research insights, proposed solution, and implementation roadmap.',
         icon: <Icon name="presentation" className="h-5 w-5" />,
         generatable: true,
+        hidden: true,
       },
       {
         type: 'feature-prioritization',
@@ -99,6 +103,7 @@ const SECTIONS: Section[] = [
         icon: <Icon name="list-ordered" className="h-5 w-5" />,
         generatable: true,
         navigateTo: 'feature-prioritization',
+        hidden: true,
       },
     ],
   },
@@ -379,11 +384,11 @@ export function OutputsContent({
                   onBackToWorkshop={isReadOnly ? undefined : () => setStepDialogOpen(true)}
                 />
               )}
-            {SECTIONS.map((section) => (
+            {SECTIONS.filter((section) => section.cards.some((c) => !c.hidden)).map((section) => (
               <div key={section.id} className="space-y-4">
                 <Eyebrow>{section.label}</Eyebrow>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {section.cards.map((card) => {
+                  {section.cards.filter((c) => !c.hidden).map((card) => {
                     const generated = isGenerated(card.type);
                     const status = getGenerationStatus(card.type);
                     const isLoading = status === 'loading';

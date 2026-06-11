@@ -314,20 +314,12 @@ export default function LandingV4() {
                   "Architecture recommendations, data models and API contracts. Enough detail for your dev team or AI coder to start shipping on day one.",
               },
               {
-                icon: "flag" as const,
-                title: "Prioritized Feature Roadmap",
-                format: ".json",
+                icon: "clipboard-check" as const,
+                title: "Validation Plan",
+                format: ".md",
                 audience: "Founders & Product Leads",
                 description:
-                  "Phase 1 vs. Phase 2, decided. Exportable as JSON for direct import into Jira, Linear or your project management tool of choice.",
-              },
-              {
-                icon: "package" as const,
-                title: "Workshop Outputs Pack",
-                format: ".pptx",
-                audience: "Stakeholders & Investors",
-                description:
-                  "Every workshop artifact in one download — personas, problem statements, Lean Canvas and ideation results. Ready to share with your team or attach to a pitch deck.",
+                  "Your riskiest assumption, the cheapest test that proves or kills it, and a pre-committed success signal — with a Validation Score once you record results.",
               },
               {
                 icon: "route" as const,
