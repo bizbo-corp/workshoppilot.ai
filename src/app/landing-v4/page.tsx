@@ -53,16 +53,16 @@ export default function LandingV4() {
         <div className="relative mx-auto max-w-4xl text-center z-10">
           {/* Headline */}
           <h1 className="text-3xl font-serif leading-[1.08] tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl">
-            Go from{" "}
+            From{" "}
             <span className="relative">
               <span className="text-olive-600 dark:text-olive-400">
                 Vague Idea
               </span>
             </span>{" "}
-            to
+            to a
             <br className="hidden sm:block" />{" "}
             <span className="text-olive-600 dark:text-olive-400">
-              Developer-Ready
+              Ready-to-Run Validation Plan
             </span>{" "}
             <span className="relative inline-block">
               in 2 hours.
@@ -84,20 +84,22 @@ export default function LandingV4() {
 
           {/* Subheadline */}
           <p className="mx-auto mt-8 max-w-6xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-            WorkshopPilot uses Design-Thinking activities to turn your vision
-            into a comprehensive{" "}
+            ...and the honest truth about whether it&apos;s worth building.
+            WorkshopPilot facilitates a real design-thinking workshop: it finds
+            your{" "}
             <strong className="text-foreground/80 dark:text-foreground/80">
-              Build Pack
-            </strong>{" "}
-            - the ultimate tool to align stakeholders, win over investors and
-            hand off directly to an AI coding agent.
+              riskiest assumption
+            </strong>
+            , designs the cheapest test that proves or kills it, and builds the
+            test with you. Digital ideas also get a full Build Pack, ready to
+            hand to an AI coding agent.
           </p>
 
           {/* Reassurance — speed + zero barrier to entry */}
           <div className="mx-auto mt-6 flex max-w-3xl flex-col items-start gap-x-6 gap-y-2 text-sm font-normal text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
             <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
               <Icon name="timer" className="h-4 w-4 text-olive-600 dark:text-olive-400" />
-              Save time and money on planning
+              Know before you spend months building
             </span>
             <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
               <Icon name="briefcase" className="h-4 w-4 text-olive-600 dark:text-olive-400" />
@@ -105,7 +107,7 @@ export default function LandingV4() {
             </span>
             <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
               <Icon name="lightbulb" className="h-4 w-4 text-olive-600 dark:text-olive-400" />
-              Just bring your ideas and creativity
+              Any idea — not just apps
             </span>
           </div>
 
@@ -276,15 +278,16 @@ export default function LandingV4() {
           {/* Header — left-aligned, consistent with other sections */}
           <div className="max-w-2xl mb-16 sm:mb-20">
             <p className="text-sm font-medium uppercase tracking-widest text-olive-600 dark:text-olive-400 mb-4">
-              Your Build Pack
+              What you walk out with
             </p>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif leading-[1.1] tracking-tight text-foreground mb-4">
-              Walk away with everything
-              <br className="hidden sm:block" /> you need to start building
+              Walk away knowing
+              <br className="hidden sm:block" /> if it&apos;s worth building
             </h2>
             <p className="text-muted-foreground text-lg">
-              Not a PDF of your chat. Structured, professional artifacts you can
-              hand straight to developers, stakeholders or AI coding tools.
+              Not a PDF of your chat. A validation plan ready to run for any
+              kind of idea — plus structured, developer-ready artifacts when
+              your idea is digital.
             </p>
           </div>
 
@@ -298,10 +301,18 @@ export default function LandingV4() {
           >
             {[
               {
+                icon: "clipboard-check" as const,
+                title: "Validation Plan",
+                format: ".md",
+                audience: "Every idea — apps, services, campaigns",
+                description:
+                  "Your riskiest assumption, the cheapest test that proves or kills it, and a pre-committed success signal — with a Validation Score once you record results.",
+              },
+              {
                 icon: "file-text" as const,
                 title: "Product Requirements Document",
                 format: ".md",
-                audience: "Developers & Product Managers",
+                audience: "Digital ideas — Developers & Product Managers",
                 description:
                   "Scope, features and acceptance criteria in one structured document — ready to hand a developer or drop straight into an AI coding agent like Cursor or Claude Code.",
               },
@@ -309,17 +320,9 @@ export default function LandingV4() {
                 icon: "code" as const,
                 title: "Technical Specifications",
                 format: ".md",
-                audience: "Engineers & Systems Architects",
+                audience: "Digital ideas — Engineers & Architects",
                 description:
                   "Architecture recommendations, data models and API contracts. Enough detail for your dev team or AI coder to start shipping on day one.",
-              },
-              {
-                icon: "clipboard-check" as const,
-                title: "Validation Plan",
-                format: ".md",
-                audience: "Founders & Product Leads",
-                description:
-                  "Your riskiest assumption, the cheapest test that proves or kills it, and a pre-committed success signal — with a Validation Score once you record results.",
               },
               {
                 icon: "route" as const,
@@ -384,7 +387,7 @@ export default function LandingV4() {
                 Compare
               </p>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif leading-[1.1] tracking-tight text-foreground mb-6">
-                The same deliverables.
+                The same answer.
                 <br /> A fraction of the cost.
               </h2>
 
@@ -610,9 +613,9 @@ export default function LandingV4() {
               <br className="hidden sm:block" /> One simple price.
             </h2>
             <p className="text-muted-foreground text-lg">
-              The same deliverables a product consultant charges $3,000+ to
-              produce. Start free, pay only when you&apos;re ready for the full
-              Build Pack.
+              One price for any kind of idea — the same answer a product
+              consultant charges $3,000+ to reach. Start free, pay only when
+              you&apos;re ready to unlock your validation plan.
             </p>
           </div>
 
@@ -651,7 +654,8 @@ export default function LandingV4() {
                 {[
                   "Full 10-step design thinking process",
                   "AI facilitator guides every step",
-                  "Complete Build Pack output",
+                  "Validation plan with a pre-committed success signal",
+                  "PRD & tech specs for digital ideas",
                   "Export-ready for dev teams and AI coders",
                 ].map((feature) => (
                   <li key={feature} className="flex items-start gap-2.5">
@@ -797,17 +801,19 @@ export default function LandingV4() {
             {/* Left — headline */}
             <div>
               <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-serif leading-[1.1] tracking-tight text-foreground">
-                Plan faster.
-                <br /> Build smarter
+                Stop guessing.
+                <br /> Find out.
               </h2>
             </div>
 
             {/* Right — copy + actions */}
             <div>
               <p className="text-muted-foreground text-lg leading-relaxed mb-3">
-                Start a free workshop and walk away with a complete Build Pack —
-                PRD, tech specs, roadmap, and more. The same deliverables that
-                would cost $3,000+ from a consultant.
+                Start a free workshop and walk away with a ready-to-run
+                validation plan — your riskiest assumption, the test that proves
+                or kills it, and the honest truth about whether your idea holds
+                up. Digital ideas also get the full Build Pack: PRD and tech
+                specs.
               </p>
               <p className="text-sm text-muted-foreground mb-8">
                 Steps 1–6 are free. No credit card required.
