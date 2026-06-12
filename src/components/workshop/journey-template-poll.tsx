@@ -141,7 +141,7 @@ export function JourneyTemplatePollView({
                   {previewStages.map((stage, i) => (
                     <span
                       key={`${option.templateId}-stage-${i}`}
-                      className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
+                      className="rounded-full bg-olive-100 px-2 py-0.5 text-[11px] font-medium text-olive-900 dark:bg-neutral-olive-800 dark:text-neutral-olive-100"
                     >
                       {stage}
                     </span>

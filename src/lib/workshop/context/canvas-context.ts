@@ -440,10 +440,18 @@ export function assembleUserResearchCanvasContext(stickyNotes: StickyNote[]): st
     sections.push(`**Persona Cards** (${personaCards.length}):\n${cardList}`);
   }
 
-  // Group insights by persona
+  // Group insights by persona. A cluster with no matching Persona Card is
+  // orphaned (usually left over from a pre-reset run, or a hallucinated
+  // interviewee) — flag it so the AI never reads it as a live interviewee.
+  // See dialogue feedback df_mbi0fob5ndnreeaups06634c: a stale "Mateo" cluster
+  // made the AI offer "Move to next interviewee" with only one persona selected.
   for (const [persona, insights] of insightsByPersona) {
+    const hasCard = personaCards.some(card => isPersonaCardForCluster(card, persona));
     const insightList = insights.map(p => `- ${p.text}`).join('\n');
-    sections.push(`**${persona}** (${insights.length} insight${insights.length > 1 ? 's' : ''}):\n${insightList}`);
+    const header = hasCard
+      ? `**${persona}** (${insights.length} insight${insights.length > 1 ? 's' : ''})`
+      : `**${persona}** (${insights.length} insight${insights.length > 1 ? 's' : ''} — ORPHANED: no Persona Card on the board; ${persona} is NOT an interviewee and never counts toward interview progress)`;
+    sections.push(`${header}:\n${insightList}`);
   }
 
   // Interview progress tracking — helps the AI know when all personas are done.

@@ -291,17 +291,18 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
         <Handle type="target" position={Position.Top} className="!opacity-0 !w-0 !h-0" />
 
         {/* Avatar fills the available space as a square fitting the smaller side,
-            so it looks right for both new portrait cards and legacy wide cards. */}
+            so it looks right for both new portrait cards and legacy wide cards.
+            Styled to match the chat panel's persona avatar (PersonaInterrupt). */}
         <div className="flex-1 min-h-0 w-full flex items-center justify-center">
-          <div className="h-full w-auto aspect-square max-w-full rounded-xl bg-neutral-olive-200/80 flex items-center justify-center">
-            <Icon name="square-user" className="w-1/2 h-1/2 text-neutral-olive-400" strokeWidth={1.25} />
+          <div className="h-full w-auto aspect-square max-w-full rounded-full bg-olive-200/80 dark:bg-neutral-olive-800 flex items-center justify-center">
+            <Icon name="user" className="w-1/2 h-1/2 text-olive-600 dark:text-olive-400" strokeWidth={1.5} />
           </div>
         </div>
 
         {editingName ? (
           <input
             ref={nameInputRef}
-            className="nodrag nopan w-full max-w-[140px] text-center bg-transparent border-b border-selection outline-none text-sm font-medium text-neutral-olive-800"
+            className="nodrag nopan w-full max-w-[140px] text-center bg-transparent border-b border-selection outline-none text-sm font-medium text-neutral-olive-800 dark:text-neutral-olive-200"
             defaultValue={personaFirstName}
             autoFocus
             onFocus={(e) => e.currentTarget.select()}
@@ -311,7 +312,7 @@ export const StickyNoteNode = memo(({ data, selected, id, dragging }: NodeProps<
           />
         ) : (
           <span
-            className="nodrag nopan max-w-full truncate px-1.5 py-0.5 rounded text-sm font-medium text-neutral-olive-800 cursor-text hover:bg-neutral-olive-200/60"
+            className="nodrag nopan max-w-full truncate px-1.5 py-0.5 rounded text-sm font-medium text-neutral-olive-800 dark:text-neutral-olive-200 cursor-text hover:bg-neutral-olive-200/60 dark:hover:bg-neutral-olive-800/60"
             title="Click to rename — updates everywhere"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
