@@ -764,11 +764,27 @@ function parseJourneyPollOptions(content: string): {
     const id = fields[0];
     if (!id) continue;
     const label = fields[1] || "";
-    const description = fields[2] || "";
-    const localisedStages = (fields[3] || "")
+    let description = fields[2] || "";
+    let localisedStages = (fields[3] || "")
       .split(">")
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
+    // Tolerate a missing " :: " before the stage flow: the model sometimes
+    // glues the stages onto the description ("…full development > Awareness >
+    // Consideration > …"). Without this, the stages field is empty and the
+    // card falls back to generic catalog stages that contradict what the AI
+    // said in chat. Require 4+ segments so a description that merely contains
+    // a ">" isn't shredded.
+    if (localisedStages.length === 0 && description.includes(">")) {
+      const segments = description
+        .split(">")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      if (segments.length >= 4) {
+        description = segments[0];
+        localisedStages = segments.slice(1);
+      }
+    }
 
     const template = getTemplateById(id);
     // Drop unknown catalog ids that carry no localised label (likely a typo).
@@ -989,6 +1005,9 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
   const persistInterviewMode = useCanvasStore((state) => state.setInterviewMode);
   const journeyPoll = useCanvasStore((state) => state.journeyPoll);
   const openJourneyPoll = useCanvasStore((state) => state.openJourneyPoll);
+  const lockJourneyTemplate = useCanvasStore(
+    (state) => state.lockJourneyTemplate,
+  );
   const drawingNodes = useCanvasStore((state) => state.drawingNodes);
   const mindMapNodes = useCanvasStore((state) => state.mindMapNodes);
   const mindMapEdges = useCanvasStore((state) => state.mindMapEdges);
@@ -1768,13 +1787,43 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
     if (isMultiplayer && !isFacilitator) return;
     if (journeyPoll?.lockedTemplate) return;
     if (status !== "ready" || messages.length === 0) return;
-    const lastMsg = messages[messages.length - 1];
-    if (lastMsg.role !== "assistant") return;
+    const textOf = (m: (typeof messages)[number]) =>
+      (m.parts?.filter((p) => p.type === "text") || [])
+        .map((p) => p.text)
+        .join("\n");
+    // Skip trailing synthetic triggers (e.g. the persisted "__step_start__"
+    // row that follows a prefetched greeting in the DB). After a refresh
+    // that row is the last message, and only looking at messages[-1] meant
+    // the poll silently never re-opened post-reset.
+    let idx = messages.length - 1;
+    while (idx >= 0) {
+      const m = messages[idx];
+      if (m.role === "user" && textOf(m).startsWith("__")) {
+        idx--;
+        continue;
+      }
+      break;
+    }
+    const lastMsg = idx >= 0 ? messages[idx] : null;
+    if (!lastMsg || lastMsg.role !== "assistant") return;
     if (journeyPollMessageId === lastMsg.id) return;
-    const textParts = lastMsg.parts?.filter((p) => p.type === "text") || [];
-    const content = textParts.map((p) => p.text).join("\n");
+    const content = textOf(lastMsg);
+    // Stages already confirmed in this same turn → the poll is moot.
+    if (content.includes("[JOURNEY_STAGES]")) return;
     const { options } = parseJourneyPollOptions(content);
     if (options.length === 0) return;
+    // Already open with these exact options (refresh while voting) — don't
+    // re-open, it would wipe the votes cast so far.
+    if (
+      journeyPoll &&
+      journeyPoll.options.length === options.length &&
+      journeyPoll.options.every(
+        (o, i) => o.templateId === options[i].templateId,
+      )
+    ) {
+      setJourneyPollMessageId(lastMsg.id);
+      return;
+    }
     openJourneyPoll(options);
     onJourneyPollOpenBroadcast?.(options);
     setJourneyPollMessageId(lastMsg.id);
@@ -1784,7 +1833,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
     step.id,
     isMultiplayer,
     isFacilitator,
-    journeyPoll?.lockedTemplate,
+    journeyPoll,
     journeyPollMessageId,
     openJourneyPoll,
     onJourneyPollOpenBroadcast,
@@ -2435,6 +2484,34 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
       }
       if (newColumns.length >= 3) {
         replaceGridColumns(newColumns);
+        // The AI only emits [JOURNEY_STAGES] once a structure is settled, so
+        // if the poll card is still open the user confirmed in chat instead of
+        // clicking Confirm (common with custom journeys). Lock it now so the
+        // chooser collapses — otherwise it sits at "Waiting for votes…"
+        // forever. Match the emitted stages back to a poll option to keep the
+        // real template id; anything else is a custom journey.
+        const poll = storeApi.getState().journeyPoll;
+        if (poll && !poll.lockedTemplate) {
+          const stageLabels = newColumns.map((c) => c.label);
+          const matched = poll.options.find(
+            (o) =>
+              o.stages &&
+              o.stages.length === stageLabels.length &&
+              o.stages.every(
+                (s, i) =>
+                  s.trim().toLowerCase() === stageLabels[i].trim().toLowerCase(),
+              ),
+          );
+          // The AI drove this lock itself — suppress the synthetic
+          // __journey_template_locked__ turn (it exists to wake the AI after a
+          // canvas-side confirm; firing it here would re-run the stages turn).
+          hasFiredLockMessage.current = true;
+          lockJourneyTemplate(
+            matched?.templateId ?? "custom",
+            matched?.templateName ?? "Custom journey",
+            stageLabels,
+          );
+        }
       }
     }
 
@@ -2860,6 +2937,7 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
     conceptCards.length,
     flushCanvasToDb,
     onConceptComplete,
+    lockJourneyTemplate,
   ]);
 
   // Clear stream error on successful completion

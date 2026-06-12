@@ -779,7 +779,7 @@ export function GridOverlay({
                 <button
                   type="button"
                   onClick={() => emitGridAutocomplete(req)}
-                  className="flex items-center gap-1 rounded-full border border-olive-300 bg-card/90 px-2 py-0.5 text-[10px] font-medium text-[#4a5a32] shadow-sm transition-colors hover:bg-olive-100 dark:border-neutral-olive-700 dark:text-neutral-olive-200 dark:hover:bg-neutral-olive-700"
+                  className="flex items-center gap-1 rounded-full border border-olive-400 bg-card px-2 py-0.5 text-[11px] font-medium text-olive-900 shadow-sm transition-colors hover:bg-olive-100 dark:border-neutral-olive-600 dark:text-neutral-olive-100 dark:hover:bg-neutral-olive-700"
                   title={`Auto-fill the ${row.label} row with AI — you can edit after`}
                 >
                   <Icon name="sparkles" className="h-3 w-3" />
@@ -810,7 +810,7 @@ export function GridOverlay({
                   key={`cellfill-${row.id}-${col.id}`}
                   type="button"
                   onClick={() => emitGridAutocomplete(req)}
-                  className="absolute pointer-events-auto flex h-[18px] w-[18px] items-center justify-center rounded-full border border-olive-300 bg-card/95 text-[#4a5a32] opacity-0 shadow-sm transition-opacity hover:bg-olive-100 hover:opacity-100 focus-visible:opacity-100 dark:border-neutral-olive-700 dark:bg-card dark:text-neutral-olive-200 dark:hover:bg-neutral-olive-700"
+                  className="absolute pointer-events-auto flex h-[18px] w-[18px] items-center justify-center rounded-full border border-olive-400 bg-card text-olive-900 opacity-0 shadow-sm transition-opacity hover:bg-olive-100 hover:opacity-100 focus-visible:opacity-100 dark:border-neutral-olive-600 dark:bg-card dark:text-neutral-olive-100 dark:hover:bg-neutral-olive-700"
                   style={{
                     left: tl.x,
                     top: tl.y,
