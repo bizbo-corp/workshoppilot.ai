@@ -1638,10 +1638,16 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
       if (cancelled) return;
       const notes = canvas?.stickyNotes || [];
 
-      // Persona → color map from Step 3 persona cards ("Name — description", no cluster).
+      // Persona → color map from Step 3 persona cards: new-style cards carry
+      // `isPersona` (text "Anaru, The Product Manager"); legacy cards are
+      // detected by their "Name — description" text. Matching ONLY the legacy
+      // em-dash format skipped every isPersona card, leaving the map empty so
+      // all carried-over insights rendered white/"Synthesized"
+      // (df_t2fbnth16gjkfgcdv62c3z6p).
       const map: Record<string, StickyNoteColor> = {};
       for (const n of notes) {
-        if ((n.type && n.type !== "stickyNote") || n.cluster || !n.text.includes(" — ")) continue;
+        if ((n.type && n.type !== "stickyNote") || n.cluster) continue;
+        if (!n.isPersona && !n.text.includes(" — ")) continue;
         // Key by FIRST name only. Step 3 insight clusters are first names (e.g.
         // "Anaru"), but the persona card text is "Anaru, The Department Heads —
         // …" — keying off the whole pre-em-dash segment never matches the
