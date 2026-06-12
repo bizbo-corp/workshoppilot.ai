@@ -271,9 +271,13 @@ export function parseCanvasItems(content: string): {
       color = colorMatch[1].trim().toLowerCase();
       remaining = remaining.slice(0, colorMatch.index).trim();
     }
-    const clusterMatch = remaining.match(/,\s*Cluster:\s*(.+)$/i);
+    // Separator is tolerant ([,.;—–] or bare whitespace): the model sometimes
+    // ends the insight sentence with a period instead of the comma the format
+    // specifies ("...cycles. Cluster: Mateo"), which used to leave "Cluster: X"
+    // in the sticky text and silently drop the persona grouping.
+    const clusterMatch = remaining.match(/[,.;—–]?\s*\bCluster:\s*(.+)$/i);
     if (clusterMatch) {
-      cluster = clusterMatch[1].trim();
+      cluster = clusterMatch[1].trim().replace(/\.+$/, "");
       remaining = remaining.slice(0, clusterMatch.index).trim();
     }
     const ringMatch = remaining.match(/,\s*Ring:\s*([^,]+)$/i);

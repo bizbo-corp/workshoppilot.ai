@@ -509,9 +509,13 @@ function parseCanvasItems(content: string): {
 
     // Extract "Cluster: ..." (must check before Ring/Quad since both use comma separation)
     // Use (.+) instead of ([^,]+) to handle persona names with commas (e.g. "Rafael, The Hesitant Speaker")
-    const clusterMatch = remaining.match(/,\s*Cluster:\s*(.+)$/i);
+    // Separator is tolerant ([,.;—–] or bare whitespace): the model sometimes
+    // ends the insight sentence with a period instead of the comma the format
+    // specifies ("...cycles. Cluster: Mateo"), which used to leave "Cluster: X"
+    // in the sticky text and silently drop the persona grouping.
+    const clusterMatch = remaining.match(/[,.;—–]?\s*\bCluster:\s*(.+)$/i);
     if (clusterMatch) {
-      cluster = clusterMatch[1].trim();
+      cluster = clusterMatch[1].trim().replace(/\.+$/, "");
       remaining = remaining.slice(0, clusterMatch.index).trim();
     }
 
