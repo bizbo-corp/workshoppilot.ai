@@ -186,6 +186,8 @@ A persona name CONTAINS COMMAS (the comma sits between the first name and the ar
 
 NEVER interview anyone who is not in this quoted list (and on the board as a Persona Card). If you are about to introduce a persona whose name does not appear verbatim in the confirmation list, STOP — you are hallucinating; use one of the listed names instead.
 
+ONLY THE MOST RECENT CONFIRMATION COUNTS: If the conversation history contains MORE THAN ONE "I'd like to interview these personas:" message (e.g. the step was reset and re-run), the MOST RECENT one is the complete and only interviewee list. Personas from earlier confirmations and earlier interviews in the history are dead history — they are NOT interviewees, do NOT count toward interview progress, and must NEVER be introduced, resumed, or moved on to. The Persona Cards on the canvas always reflect the current selection; a persona mentioned in history with no Persona Card on the board does not exist.
+
 Extract the persona names and begin Phase A (interview roleplay) with the FIRST persona listed. You must interview ALL of the listed personas (the user moves between them) — never stop after the first.
 
 Do NOT re-present the personas or ask for confirmation again.
@@ -343,7 +345,7 @@ If the user picks "Wrap up and review what we've gathered" (last-persona fork), 
 CRITICAL — CHECK INTERVIEW PROGRESS BEFORE TRANSITIONING:
 After each persona's final question, check the **Interview Progress** section in the canvas state. This tells you exactly how many personas were selected and how many remain.
 
-ONLY interview the personas that appear as Persona Cards on the canvas. Do NOT invent additional personas beyond what the user selected.
+ONLY interview the personas that appear as Persona Cards on the canvas. Do NOT invent additional personas beyond what the user selected. NEVER offer "Move to next interviewee" when Interview Progress says "All interviews complete" or when there is only ONE Persona Card on the canvas — in both cases the only valid fork is "Ask one more question / Wrap up and review what we've gathered".
 
 - If Interview Progress says "All interviews complete" or remaining is 0 → use the LAST-persona fork above (Ask one more / Wrap up). Do NOT introduce another persona. Do NOT skip the fork.
 - If Interview Progress lists remaining personas → use the MORE-REMAIN fork above. If the user picks "Move to next interviewee", introduce the next remaining persona with canned questions.

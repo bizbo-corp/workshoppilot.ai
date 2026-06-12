@@ -482,29 +482,38 @@ export function computeCanvasPosition(
     }
   }
 
-  // --- User Research: unmatched cluster fallback — place near last persona card ---
-  // This catches cases where the AI sends a cluster name that doesn't match any persona card.
-  // Without this, items would end up at the generic stagger position far from the board.
+  // --- User Research: unmatched cluster fallback — place BELOW the board content ---
+  // This catches cases where the AI sends a cluster name that doesn't match any
+  // persona card (stale pre-reset cluster, hallucinated interviewee). These used
+  // to land in the LAST persona card's row, which put them visually inside that
+  // persona's frame — reading as if the insight belonged to them
+  // (df_mbi0fob5ndnreeaups06634c). Park them in their own row below everything
+  // instead, left-aligned with the first persona card.
   if (stepId === 'user-research' && metadata.cluster) {
     const personaCards = existingStickyNotes.filter(
       (p) => !p.cluster && (!p.type || p.type === 'stickyNote') && p.text.includes(' — '),
     );
     if (personaCards.length > 0) {
-      // Fall back to the last persona card — place in its horizontal row
-      const fallbackParent = personaCards[personaCards.length - 1];
-      const siblings = existingStickyNotes.filter(
-        (p) => p.cluster && isPersonaCardForCluster(fallbackParent, p.cluster),
+      const orphanSiblings = existingStickyNotes.filter(
+        (p) =>
+          p.cluster &&
+          !personaCards.some((card) => isPersonaCardForCluster(card, p.cluster!)),
       );
-      const childIdx = siblings.length;
+      const childIdx = orphanSiblings.length;
       const CHILD_WIDTH = 280;
       const CHILD_GAP = 20;
-      const startX = fallbackParent.position.x + fallbackParent.width + CHILD_GAP;
+      const realNotes = existingStickyNotes.filter(
+        (p) => (!p.type || p.type === 'stickyNote') && !p.isPreview,
+      );
+      const lowestBottom = Math.max(
+        ...realNotes.map((p) => p.position.y + p.height),
+        personaCards[0].position.y,
+      );
       return {
         position: {
-          x: startX + childIdx * (CHILD_WIDTH + CHILD_GAP),
-          y: fallbackParent.position.y,
+          x: personaCards[0].position.x + childIdx * (CHILD_WIDTH + CHILD_GAP),
+          y: lowestBottom + 160,
         },
-        quadrant: fallbackParent.quadrant,
       };
     }
   }
