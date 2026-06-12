@@ -3371,9 +3371,13 @@ export const ChatPanel = React.forwardRef<ChatPanelHandle, ChatPanelProps>(funct
                       const isResearchSourceMessage =
                         message.id === researchSourceMessageId;
                       const personaIntro = detectPersonaIntro(content);
-                      // Separate "X down, Y to go" counter from persona answer body
+                      // Separate "X down, Y to go" counter from persona answer body.
+                      // Swallow the lead-in stem too ("That's" / "That was") — the model
+                      // sometimes writes "That was 1 down, 3 to go with me." mid-paragraph,
+                      // and extracting only the counter left an orphaned "That was" stitched
+                      // to the next sentence ("That was What else is on your mind?").
                       const questionCountMatch = finalContent.match(
-                        /(?:That's\s+)?\d+\s+down,\s+\d+\s+to\s+go\s+with\s+me\.?/i,
+                        /(?:That(?:'s|’s|\s+was)\s+)?\d+\s+down,\s+\d+\s+to\s+go\s+with\s+me\.?/i,
                       );
                       const contentAfterCount = questionCountMatch
                         ? finalContent.replace(questionCountMatch[0], "").trim()
