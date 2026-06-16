@@ -35,8 +35,6 @@ import { StampPickerTool } from '@/components/ezydraw/tools/stamp-picker-tool';
 import type { DrawingElement } from '@/lib/drawing/types';
 import type { AssetData } from '@/lib/asset-library/asset-library-types';
 
-export type ImageModelTier = 'fast' | 'standard';
-
 interface EzyDrawFooterProps {
   onSave: () => void;
   onCancel: () => void;
@@ -53,8 +51,6 @@ interface EzyDrawFooterProps {
   useExistingDrawing?: boolean;
   onUseExistingDrawingChange?: (value: boolean) => void;
   hasCanvasContent?: boolean;
-  imageModel?: ImageModelTier;
-  onImageModelChange?: (model: ImageModelTier) => void;
 }
 
 // --- Tool section constants ---
@@ -618,8 +614,6 @@ export function EzyDrawFooter({
   useExistingDrawing,
   onUseExistingDrawingChange,
   hasCanvasContent,
-  imageModel,
-  onImageModelChange,
 }: EzyDrawFooterProps) {
   const canUndo = useDrawingStore((state) => state.canUndo);
   const canRedo = useDrawingStore((state) => state.canRedo);
@@ -777,35 +771,9 @@ export function EzyDrawFooter({
           </AlertDialog>
         </div>
 
-        {/* Center: AI generate + model toggle */}
+        {/* Center: AI generate */}
         {onGenerateImage && (
           <div className="flex items-center gap-2">
-            {onImageModelChange && (
-              <div className="flex items-center h-7 rounded-md border border-border bg-muted/50 p-0.5" title="Image quality tier (admin only)">
-                <button
-                  className={cn(
-                    'h-6 rounded px-2 text-[10px] font-medium transition-colors',
-                    imageModel === 'fast'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                  onClick={() => onImageModelChange('fast')}
-                >
-                  Fast $0.02
-                </button>
-                <button
-                  className={cn(
-                    'h-6 rounded px-2 text-[10px] font-medium transition-colors',
-                    imageModel === 'standard'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                  onClick={() => onImageModelChange('standard')}
-                >
-                  Standard $0.04
-                </button>
-              </div>
-            )}
             <Button
               variant="outline"
               size="sm"

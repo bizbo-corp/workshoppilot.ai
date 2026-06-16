@@ -1,7 +1,7 @@
 import { google } from '@ai-sdk/google';
-import { generateImage } from 'ai';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
+import { generateGeminiImage, GEMINI_IMAGE_MODEL } from '@/lib/ai/generate-gemini-image';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { loadWorkshopContext } from '@/lib/ai/workshop-context';
 import { put } from '@vercel/blob';
@@ -182,9 +182,8 @@ export async function POST(req: Request) {
 
     const prompt = parts.join(' ');
 
-    // Generate image with Imagen 4 Fast
-    const result = await generateImage({
-      model: google.image('imagen-4.0-fast-generate-001'),
+    // Generate image with Gemini Flash Image
+    const result = await generateGeminiImage({
       prompt,
       aspectRatio: '4:3',
     });
@@ -194,13 +193,13 @@ export async function POST(req: Request) {
       workshopId,
       stepId: 'ideation',
       operation: 'merge-group-sketches',
-      model: 'imagen-4.0-fast-generate-001',
+      model: GEMINI_IMAGE_MODEL,
       imageCount: 1,
       itemId,
     });
 
-    const base64Data = result.image.base64;
-    const mimeType = result.image.mediaType || 'image/png';
+    const base64Data = result.base64;
+    const mimeType = result.mediaType || 'image/png';
 
     // Upload to Vercel Blob
     let mergedImageUrl: string;

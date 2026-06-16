@@ -1,14 +1,13 @@
 'use client';
 
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { DrawingStoreProvider, useDrawingStore } from '@/providers/drawing-store-provider';
-import { EzyDrawToolbar, EzyDrawFooter, type ImageModelTier } from './toolbar';
+import { EzyDrawToolbar, EzyDrawFooter } from './toolbar';
 import { EzyDrawStage, type EzyDrawStageHandle } from './ezydraw-stage';
 import type { DrawingElement } from '@/lib/drawing/types';
 import { exportToWebP } from '@/lib/drawing/export';
@@ -123,14 +122,6 @@ function EzyDrawContent({
 
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
-  // Admin-only model tier toggle
-  const { user } = useUser();
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-  const userEmail = user?.primaryEmailAddress?.emailAddress;
-  const userRoles = (user?.publicMetadata as { roles?: string[] })?.roles ?? [];
-  const userIsAdmin = userRoles.includes('admin') || !!(adminEmail && userEmail && userEmail.toLowerCase() === adminEmail.toLowerCase());
-  const [imageModel, setImageModel] = useState<ImageModelTier>('standard');
-
   // Editable prompt — AI-woven concept prompt that user can edit before generating
   const isGenerateMode = !!(workshopId && !onIterationPromptChange);
   const [editablePrompt, setEditablePrompt] = useState(
@@ -238,7 +229,6 @@ function EzyDrawContent({
           slotId,
           ...(promptToSend ? { additionalPrompt: promptToSend } : {}),
           ...(!useExistingDrawing ? {} : backgroundImageUrl?.startsWith('https://') ? { previousImageUrl: backgroundImageUrl } : {}),
-          ...(imageModel !== 'fast' ? { imageModel } : {}),
         }),
       });
 
@@ -266,7 +256,7 @@ function EzyDrawContent({
     } finally {
       setIsGeneratingImage(false);
     }
-  }, [workshopId, slotTitle, slotDescription, iterationPrompt, editablePrompt, isGenerateMode, useExistingDrawing, isGeneratingImage, getSnapshot, backgroundImageUrl, stageRef, replaceWithGeneratedImage, imageModel, slotId]);
+  }, [workshopId, slotTitle, slotDescription, iterationPrompt, editablePrompt, isGenerateMode, useExistingDrawing, isGeneratingImage, getSnapshot, backgroundImageUrl, stageRef, replaceWithGeneratedImage, slotId]);
 
   const handleImageUpload = useCallback(async (file: File) => {
     const validation = validateImageFile(file);
@@ -330,8 +320,6 @@ function EzyDrawContent({
         useExistingDrawing={useExistingDrawing}
         onUseExistingDrawingChange={isGenerateMode ? setUseExistingDrawing : undefined}
         hasCanvasContent={hasCanvasContent}
-        imageModel={userIsAdmin ? imageModel : undefined}
-        onImageModelChange={userIsAdmin ? setImageModel : undefined}
       />
     </div>
   );
