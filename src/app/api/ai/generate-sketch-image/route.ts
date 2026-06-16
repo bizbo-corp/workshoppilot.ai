@@ -1,6 +1,6 @@
 import { google } from '@ai-sdk/google';
-import { generateImage } from 'ai';
 import { generateTextWithRetry } from '@/lib/ai/gemini-retry';
+import { generateGeminiImage, GEMINI_IMAGE_MODEL } from '@/lib/ai/generate-gemini-image';
 import { recordUsageEvent } from '@/lib/ai/usage-tracking';
 import { loadWorkshopContext, type WorkshopContext } from '@/lib/ai/workshop-context';
 import { put } from '@vercel/blob';
@@ -268,7 +268,6 @@ export async function POST(req: Request) {
     previousImageUrl,
     hasPersonStamps,
     slotId,
-    imageModel,
   } = body as {
     workshopId?: string;
     ideaTitle?: string;
@@ -278,7 +277,6 @@ export async function POST(req: Request) {
     previousImageUrl?: string;
     hasPersonStamps?: boolean;
     slotId?: string;
-    imageModel?: string;
   };
 
   if (!workshopId || (!ideaTitle && !additionalPrompt)) {
@@ -293,19 +291,10 @@ export async function POST(req: Request) {
 
   const isAdminUser = authResult.kind === 'owner' && authResult.isAdmin;
 
-  // Resolve Imagen model:
-  // - Admin honors their explicit toggle (the only role that sees it in the UI).
-  // - Participants default to standard for better output quality (their
-  //   sketches are the bulk of generations during a live workshop).
-  // - Non-admin facilitators (no toggle exposed) stay on fast.
-  // The per-item generation cap below still applies, so cost is bounded.
-  const resolvedModel: string = isAdminUser
-    ? imageModel === 'standard'
-      ? 'imagen-4.0-generate-001'
-      : 'imagen-4.0-fast-generate-001'
-    : authResult.kind === 'participant'
-      ? 'imagen-4.0-generate-001'
-      : 'imagen-4.0-fast-generate-001';
+  // Gemini Flash Image is a single tier — no more fast/standard split, so the
+  // old admin quality toggle (and the per-role model resolution) is gone. The
+  // per-item generation cap below still bounds cost.
+  const resolvedModel = GEMINI_IMAGE_MODEL;
 
   if (!isAdminUser) {
     const rl = checkRateLimit(authResult.rateLimitKey, 'image-gen');
@@ -352,10 +341,9 @@ export async function POST(req: Request) {
       hasPersonStamps: !!hasPersonStamps,
     });
 
-    // Generate image with selected Imagen model
+    // Generate image with Gemini Flash Image
     console.log('[sketch-image] using model:', resolvedModel);
-    const result = await generateImage({
-      model: google.image(resolvedModel),
+    const result = await generateGeminiImage({
       prompt,
       aspectRatio: '4:3',
     });
@@ -370,8 +358,8 @@ export async function POST(req: Request) {
       itemId,
     });
 
-    const base64Data = result.image.base64;
-    const mimeType = result.image.mediaType || 'image/png';
+    const base64Data = result.base64;
+    const mimeType = result.mediaType || 'image/png';
 
     // Upload to Vercel Blob to avoid large data URLs in client state
     let imageUrl: string;

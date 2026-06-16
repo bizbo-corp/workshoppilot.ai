@@ -1,6 +1,5 @@
-import { generateImage } from "ai";
-import { google } from "@ai-sdk/google";
 import { put } from "@vercel/blob";
+import { generateGeminiImage, GEMINI_IMAGE_MODEL } from "@/lib/ai/generate-gemini-image";
 import { deleteBlobUrls } from "@/lib/blob/delete-blob-urls";
 import { recordUsageEvent } from "@/lib/ai/usage-tracking";
 import { checkRateLimit, rateLimitResponse } from "@/lib/ai/rate-limiter";
@@ -222,7 +221,7 @@ function buildImagePrompt(persona: {
 
 /**
  * POST /api/ai/generate-persona-image
- * Generates a B&W caricature portrait using Imagen 4 Fast.
+ * Generates a B&W caricature portrait using Gemini Flash Image.
  *
  * Request body:
  * - workshopId: string
@@ -302,8 +301,7 @@ export async function POST(req: Request) {
       quote,
     });
 
-    const result = await generateImage({
-      model: google.image("imagen-4.0-fast-generate-001"),
+    const result = await generateGeminiImage({
       prompt,
       aspectRatio: "1:1",
     });
@@ -313,13 +311,13 @@ export async function POST(req: Request) {
       workshopId,
       stepId: "persona",
       operation: "generate-persona-image",
-      model: "imagen-4.0-fast-generate-001",
+      model: GEMINI_IMAGE_MODEL,
       imageCount: 1,
       itemId,
     });
 
-    const base64Data = result.image.base64;
-    const mimeType = result.image.mediaType || "image/png";
+    const base64Data = result.base64;
+    const mimeType = result.mediaType || "image/png";
 
     // Upload to Vercel Blob or fall back to data URL
     let imageUrl: string;

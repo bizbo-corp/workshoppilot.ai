@@ -7,8 +7,11 @@ import { eq, sql } from 'drizzle-orm';
  *
  * gemini-2.5-flash-lite: $0.10 per 1M input tokens, $0.40 per 1M output tokens
  * gemini-2.0-flash: legacy — retired Jun 1 2026; kept for historical usage rows
- * imagen-4.0-fast-generate-001: $0.02 per image
- * imagen-4.0-generate-001: $0.04 per image
+ * gemini-3.1-flash-image: ~$0.039 per image (≈1290 output tokens at Gemini
+ *   Flash image rates; bills per output token, but we record imageCount so we
+ *   approximate per-image — confirm against current Google pricing)
+ * imagen-4.0-*-generate-001: legacy Imagen — discontinued Aug 17 2026; kept for
+ *   historical usage rows (migrated to gemini-3.1-flash-image)
  */
 const PRICING = {
   'gemini-2.5-flash-lite': {
@@ -20,6 +23,10 @@ const PRICING = {
     inputPerMillionTokens: 0.10, // dollars
     outputPerMillionTokens: 0.40,
   },
+  'gemini-3.1-flash-image': {
+    perImage: 0.039, // dollars (per-image approximation; see note above)
+  },
+  // Legacy Imagen — discontinued, but historical usage rows still reference these.
   'imagen-4.0-fast-generate-001': {
     perImage: 0.02, // dollars
   },
@@ -46,13 +53,12 @@ export function calculateCostCents(params: {
     return (inputCost + outputCost) * 100; // convert dollars to cents
   }
 
-  if (model === 'imagen-4.0-fast-generate-001') {
-    const pricing = PRICING['imagen-4.0-fast-generate-001'];
-    return (imageCount || 0) * pricing.perImage * 100; // convert dollars to cents
-  }
-
-  if (model === 'imagen-4.0-generate-001') {
-    const pricing = PRICING['imagen-4.0-generate-001'];
+  if (
+    model === 'gemini-3.1-flash-image' ||
+    model === 'imagen-4.0-fast-generate-001' ||
+    model === 'imagen-4.0-generate-001'
+  ) {
+    const pricing = PRICING[model];
     return (imageCount || 0) * pricing.perImage * 100; // convert dollars to cents
   }
 
