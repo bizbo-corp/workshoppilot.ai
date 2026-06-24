@@ -319,12 +319,14 @@ export function getFirstStep(): StepDefinition {
 }
 
 /**
- * Next numbered step after the given slug, or undefined if it's the last
- * numbered step (or the slug is `challenge`/unknown). Drives forward nav.
+ * Next step after the given slug, or undefined if it's the last numbered step
+ * (or the slug is unknown). Drives forward nav. The Challenge step (order 0)
+ * bridges forward to Stakeholder Mapping (order 1) — advancing off Challenge
+ * goes through here, so it must not bail on order 0.
  */
 export function getNextStep(slug: string): StepDefinition | undefined {
   const current = getStepBySlug(slug);
-  if (!current || current.order < 1) return undefined;
+  if (!current || current.order < 0) return undefined;
   return getStepByOrder(current.order + 1);
 }
 
