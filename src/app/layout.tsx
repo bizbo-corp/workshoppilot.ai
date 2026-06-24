@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "next-themes";
+import { ClerkThemeProvider } from "@/components/providers/clerk-theme-provider";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "sonner";
@@ -41,7 +41,16 @@ export default function RootLayout({
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.startsWith("pk_");
 
-  const content = (
+  // Clerk's appearance must react to the resolved theme, so ClerkProvider lives
+  // inside ThemeProvider (via ClerkThemeProvider). When Clerk keys are absent we
+  // skip the provider entirely and render children directly.
+  const inner = hasClerkKeys ? (
+    <ClerkThemeProvider>{children}</ClerkThemeProvider>
+  ) : (
+    children
+  );
+
+  return (
     <html lang="en" suppressHydrationWarning className="h-full">
       <head>
         {/* Polyfill crypto.randomUUID for browsers without secure context */}
@@ -59,7 +68,7 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem={true}
         >
-          {children}
+          {inner}
           <Analytics />
           <SpeedInsights />
           <Toaster richColors position="bottom-right" />
@@ -67,47 +76,4 @@ export default function RootLayout({
       </body>
     </html>
   );
-
-  if (hasClerkKeys) {
-    return (
-      <ClerkProvider
-        signInFallbackRedirectUrl="/dashboard"
-        signUpFallbackRedirectUrl="/dashboard"
-        appearance={{
-          layout: {
-            socialButtonsVariant: "blockButton",
-          },
-          variables: {
-            colorPrimary: "#6b7a2f",
-            colorBackground: "hsl(var(--card))",
-            colorText: "hsl(var(--foreground))",
-            colorInputBackground: "hsl(var(--background))",
-            colorInputText: "hsl(var(--foreground))",
-            borderRadius: "0.5rem",
-            fontFamily: "var(--font-geist-sans)",
-          },
-          elements: {
-            card: "shadow-none",
-            formButtonPrimary:
-              "bg-primary hover:bg-primary/90 text-primary-foreground",
-            footerActionLink: "text-primary hover:text-primary/80",
-            identityPreviewEditButton: "text-primary",
-            socialButtonsBlockButton:
-              "border-border text-foreground hover:bg-accent",
-            socialButtonsBlockButtonText: "font-medium",
-            socialButtonsProviderIcon: "w-5 h-5",
-            dividerLine: "bg-border",
-            dividerText: "text-muted-foreground",
-            formFieldInput:
-              "border-border bg-background text-foreground focus:ring-ring",
-            formFieldLabel: "text-foreground",
-          },
-        }}
-      >
-        {content}
-      </ClerkProvider>
-    );
-  }
-
-  return content;
 }
