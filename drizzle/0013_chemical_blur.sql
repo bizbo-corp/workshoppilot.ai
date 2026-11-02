@@ -1,1 +1,0 @@
-ALTER TABLE "canvas_guides" ADD COLUMN "show_stroke" boolean DEFAULT true NOT NULL;

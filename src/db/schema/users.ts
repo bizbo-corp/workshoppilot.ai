@@ -1,7 +1,13 @@
-import { pgTable, text, timestamp, index, integer, boolean } from 'drizzle-orm/pg-core';
+import { text, integer, boolean, timestamp, index } from 'drizzle-orm/pg-core';
+import { v2 } from './pg-schema';
 import { createPrefixedId } from '@/lib/ids';
 
-export const users = pgTable(
+/**
+ * One row per signed-in person. Clerk owns authentication; this row owns
+ * everything the product needs to know about them: credits, role, flags.
+ * Sign-in is mandatory in 2.0, so there are no guest rows.
+ */
+export const users = v2.table(
   'users',
   {
     id: text('id')
@@ -9,30 +15,18 @@ export const users = pgTable(
       .$defaultFn(() => createPrefixedId('usr')),
     clerkUserId: text('clerk_user_id').notNull().unique(),
     email: text('email').notNull(),
-    firstName: text('first_name'),
-    lastName: text('last_name'),
-    imageUrl: text('image_url'),
-    company: text('company'),
-    // Roles stored as JSON text array. Default: ["facilitator"]
-    // Future-proofed for participant role
-    roles: text('roles').notNull().default('["facilitator"]'),
-    deletedAt: timestamp('deleted_at', { mode: 'date', precision: 3 }),
-    createdAt: timestamp('created_at', { mode: 'date', precision: 3 })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', { mode: 'date', precision: 3 })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-    // Billing and onboarding columns (v1.8)
+    name: text('name'),
+    avatarUrl: text('avatar_url'),
+    /** Cached balance; the credit_ledger is the source of truth. */
     creditBalance: integer('credit_balance').notNull().default(0),
-    onboardingComplete: boolean('onboarding_complete').notNull().default(false),
-    stripeCustomerId: text('stripe_customer_id'),
-    planTier: text('plan_tier').notNull().default('free'),
+    isAdmin: boolean('is_admin').notNull().default(false),
+    /** Per-account cap on free-tier AI spend, in US cents, to limit abuse. */
+    freeSpendCapCents: integer('free_spend_cap_cents').notNull().default(200),
+    createdAt: timestamp('created_at', { mode: 'date', precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', precision: 3 }).notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at', { mode: 'date', precision: 3 }),
   },
-  (table) => ({
-    clerkUserIdIdx: index('users_clerk_user_id_idx').on(table.clerkUserId),
-    emailIdx: index('users_email_idx').on(table.email),
-    stripeCustomerIdIdx: index('users_stripe_customer_id_idx').on(table.stripeCustomerId),
-  })
+  (t) => [index('users_email_idx').on(t.email)],
 );
+
+export type User = typeof users.$inferSelect;

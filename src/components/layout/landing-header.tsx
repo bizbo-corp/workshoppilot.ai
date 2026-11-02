@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/static-components -- brochure code, rebuilt in Phase 6 */
 'use client';
 
 import { useState, useEffect } from 'react';

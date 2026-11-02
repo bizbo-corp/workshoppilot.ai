@@ -1,25 +1,23 @@
 import 'server-only';
 import Stripe from 'stripe';
 
-// Fail fast: throw at module initialization if key is missing
-// Same pattern as src/db/client.ts
 if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error(
-    'STRIPE_SECRET_KEY environment variable is not set. Configure your Stripe API key.'
-  );
+  throw new Error('STRIPE_SECRET_KEY is not set');
 }
 
-// Production safety: prevent test keys from reaching production
-if (
-  process.env.VERCEL_ENV === 'production' &&
-  process.env.STRIPE_SECRET_KEY.startsWith('sk_test_')
-) {
-  throw new Error(
-    'STRIPE_SECRET_KEY is a test key (sk_test_*) but VERCEL_ENV is production. Use production Stripe keys.'
-  );
+if (process.env.VERCEL_ENV === 'production' && process.env.STRIPE_SECRET_KEY.startsWith('sk_test_')) {
+  throw new Error('STRIPE_SECRET_KEY is a test key but VERCEL_ENV is production');
 }
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2026-02-25.clover', // Pinned to stripe@20.4.0 default
+  apiVersion: '2026-02-25.clover',
   typescript: true,
 });
+
+/** Absolute origin for Stripe redirect URLs. */
+export function appUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (process.env.VERCEL_ENV === 'production') return 'https://www.workshoppilot.ai';
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:3000';
+}

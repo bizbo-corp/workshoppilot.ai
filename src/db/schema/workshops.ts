@@ -1,118 +1,93 @@
-import { pgTable, text, integer, timestamp, index, unique } from 'drizzle-orm/pg-core';
+import { text, integer, jsonb, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { v2 } from './pg-schema';
 import { createPrefixedId } from '@/lib/ids';
+import { users } from './users';
+
+/** Stage ids are fixed; their content lives in src/lib/stages. */
+export const STAGE_IDS = ['setup', 'discover', 'define', 'develop', 'deliver'] as const;
+export type StageId = (typeof STAGE_IDS)[number];
+
+/** The four idea-type lenses plus the four that map onto them. */
+export const IDEA_TYPES = [
+  'digital_product',
+  'service',
+  'process_change',
+  'physical_product',
+  'offering',
+  'experience',
+  'brand',
+  'campaign',
+] as const;
+export type IdeaType = (typeof IDEA_TYPES)[number];
+
+export const WORKSHOP_STATUSES = ['active', 'completed', 'archived'] as const;
+export type WorkshopStatus = (typeof WORKSHOP_STATUSES)[number];
 
 /**
- * Workshops table
- * Core entity representing a design thinking workshop session
+ * A workshop is one idea going through Setup and the four stages.
+ *
+ * `state` is a projection rebuilt from workshop_events by the engine
+ * (src/lib/engine). It is stored so reads are one query, but the event log
+ * is the truth; `stateSeq` records the last event folded in.
  */
-export const workshops = pgTable(
+export const workshops = v2.table(
   'workshops',
   {
     id: text('id')
       .primaryKey()
-      .$defaultFn(() => createPrefixedId('ws')),
-    clerkUserId: text('clerk_user_id').notNull(),
+      .$defaultFn(() => createPrefixedId('wks')),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
-    originalIdea: text('original_idea').notNull(),
-    status: text('status', {
-      enum: ['draft', 'active', 'paused', 'completed'],
-    })
-      .notNull()
-      .default('draft')
-      .$type<'draft' | 'active' | 'paused' | 'completed'>(),
-    orgId: text('org_id'),
-    templateId: text('template_id'),
-    visibility: text('visibility', {
-      enum: ['private', 'shared'],
-    })
-      .notNull()
-      .default('private')
-      .$type<'private' | 'shared'>(),
-    shareToken: text('share_token'),
-    color: text('color'),
-    emoji: text('emoji'),
-    createdAt: timestamp('created_at', { mode: 'date', precision: 3 })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', { mode: 'date', precision: 3 })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    /** The one-sentence idea the user typed to start. */
+    idea: text('idea').notNull(),
+    ideaType: text('idea_type', { enum: IDEA_TYPES }),
+    stage: text('stage', { enum: STAGE_IDS }).notNull().default('setup'),
+    status: text('status', { enum: WORKSHOP_STATUSES }).notNull().default('active'),
+    state: jsonb('state').$type<Record<string, unknown>>().notNull().default({}),
+    stateSeq: integer('state_seq').notNull().default(0),
+    /** Set when a seeded test run created this workshop; hidden from dashboards. */
+    testRunId: text('test_run_id'),
+    createdAt: timestamp('created_at', { mode: 'date', precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', precision: 3 }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { mode: 'date', precision: 3 }),
     deletedAt: timestamp('deleted_at', { mode: 'date', precision: 3 }),
-    // Credit tracking (v1.8) — marks when a credit was consumed for this workshop
-    creditConsumedAt: timestamp('credit_consumed_at', { mode: 'date', precision: 3 }),
-    // Multiplayer support (v1.9) — set at creation time, not upgradeable
-    workshopType: text('workshop_type', {
-      enum: ['solo', 'multiplayer'],
-    })
-      .notNull()
-      .default('solo')
-      .$type<'solo' | 'multiplayer'>(),
-    maxParticipants: integer('max_participants'), // null for solo (no limit applies)
-    // Last time the facilitator opened this workshop
-    lastVisitedAt: timestamp('last_visited_at', { mode: 'date', precision: 3 }),
-    // Facilitator-led team flow (v2.1) — distinct from workshopType.
-    // 'team' = creator confirms facilitator role, completes Step 1, then invites participants.
-    // 'solo' = legacy single-user flow (also used for multiplayer workshops created before v2.1).
-    facilitatorMode: text('facilitator_mode', {
-      enum: ['solo', 'team'],
-    })
-      .notNull()
-      .default('solo')
-      .$type<'solo' | 'team'>(),
-    // Stamped when facilitator publishes the challenge and invites go out.
-    challengePublishedAt: timestamp('challenge_published_at', { mode: 'date', precision: 3 }),
-    // Bumped each time the facilitator republishes after a change request — invalidates approvals.
-    challengeRevision: integer('challenge_revision').notNull().default(1),
-    // v2.2 — Workshop scheduling (team mode only). Set when facilitator picks "Schedule for later"
-    // in the Setup Workshop wizard. Null for "Start now" workshops.
-    scheduledStartAt: timestamp('scheduled_start_at', { mode: 'date', precision: 3 }),
-    scheduledDurationMinutes: integer('scheduled_duration_minutes'), // 60 / 90 / 120
-    scheduledTimezone: text('scheduled_timezone'), // IANA TZ, e.g. 'America/Los_Angeles'
-    // v2.2 — Stamped when the facilitator actually kicks off the workshop (either "Start now"
-    // immediately or clicks Start from the lobby). Drives lobby gating + late-joiner routing.
-    workshopStartedAt: timestamp('workshop_started_at', { mode: 'date', precision: 3 }),
-    // v2.3 — Pricing tier purchased for this workshop. Null = still in free trial (Steps 1-6).
-    // Set at fulfillment time. 'solo' may also be set retroactively for grandfathered workshops.
-    tier: text('tier', {
-      enum: ['solo', 'team', 'white_glove'],
-    }).$type<'solo' | 'team' | 'white_glove' | null>(),
-    // v2.3 — When the tier purchase completed. Null for grandfathered workshops where the tier
-    // was backfilled without a corresponding purchase.
-    tierPaidAt: timestamp('tier_paid_at', { mode: 'date', precision: 3 }),
   },
-  (table) => ({
-    clerkUserIdIdx: index('workshops_clerk_user_id_idx').on(table.clerkUserId),
-    statusIdx: index('workshops_status_idx').on(table.status),
-    orgIdIdx: index('workshops_org_id_idx').on(table.orgId),
-  })
+  (t) => [
+    index('workshops_owner_idx').on(t.ownerId),
+    index('workshops_status_idx').on(t.status),
+  ],
 );
 
+export const MEMBER_ROLES = ['owner', 'facilitator', 'participant'] as const;
+export type MemberRole = (typeof MEMBER_ROLES)[number];
+
 /**
- * Workshop Members table
- * Tracks users associated with a workshop and their roles
+ * Who can open a workshop. One row per person per workshop, enforced by the
+ * unique index, so duplicate identities in a session cannot exist. Solo
+ * workshops have one row (the owner); the V2 teams tier adds more.
  */
-export const workshopMembers = pgTable(
+export const workshopMembers = v2.table(
   'workshop_members',
   {
     id: text('id')
       .primaryKey()
-      .$defaultFn(() => createPrefixedId('wm')),
+      .$defaultFn(() => createPrefixedId('wmb')),
     workshopId: text('workshop_id')
       .notNull()
       .references(() => workshops.id, { onDelete: 'cascade' }),
-    clerkUserId: text('clerk_user_id').notNull(),
-    role: text('role').notNull(), // Extensible: 'owner', 'editor', 'viewer'
-    createdAt: timestamp('created_at', { mode: 'date', precision: 3 })
+    userId: text('user_id')
       .notNull()
-      .defaultNow(),
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: text('role', { enum: MEMBER_ROLES }).notNull().default('participant'),
+    joinedAt: timestamp('joined_at', { mode: 'date', precision: 3 }).notNull().defaultNow(),
   },
-  (table) => ({
-    workshopIdIdx: index('workshop_members_workshop_id_idx').on(table.workshopId),
-    clerkUserIdIdx: index('workshop_members_clerk_user_id_idx').on(table.clerkUserId),
-    workshopUserUnique: unique('workshop_members_workshop_user_unique').on(
-      table.workshopId,
-      table.clerkUserId
-    ),
-  })
+  (t) => [
+    uniqueIndex('workshop_members_unique_idx').on(t.workshopId, t.userId),
+    index('workshop_members_user_idx').on(t.userId),
+  ],
 );
+
+export type Workshop = typeof workshops.$inferSelect;
+export type WorkshopMember = typeof workshopMembers.$inferSelect;

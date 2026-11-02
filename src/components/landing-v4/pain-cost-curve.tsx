@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect -- brochure code, rebuilt in Phase 6 */
 "use client";
 
 import { Icon } from '@/components/ui/icon';

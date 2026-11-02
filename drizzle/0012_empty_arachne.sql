@@ -1,1 +1,0 @@
-ALTER TABLE "canvas_guides" ADD COLUMN "show_fill" boolean DEFAULT false NOT NULL;
