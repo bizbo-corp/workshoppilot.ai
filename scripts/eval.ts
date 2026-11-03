@@ -96,9 +96,10 @@ async function runCase(c: Case, userId: string) {
 
   // Judge every reply, with everything the user has said so far, so a fact
   // the user gave three turns ago is not marked as invented.
-  const said: string[] = [];
+  const said: string[] = [`(typed when starting the workshop) ${c.idea}`];
   for (const r of replies) {
-    if (!r.turn.startsWith('[')) said.push(r.turn);
+    if (r.turn.startsWith('[board]')) said.push(`(added to the board) ${r.turn.slice(8)}`);
+    else if (!r.turn.startsWith('[')) said.push(r.turn);
     if (r.reply === '(quiet)') continue;
     r.scores = await aiObject(
       { job: 'eval_judge', workshopId: w.id, userId },

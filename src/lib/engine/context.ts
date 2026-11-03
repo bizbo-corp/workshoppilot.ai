@@ -6,7 +6,7 @@ import type { BoardId, EngineEvent, WorkshopState } from './types';
 import { SOUL as soul } from '@/lib/ai/soul';
 
 /** How many recent chat messages the model sees verbatim. */
-const RECENT_MESSAGES = 14;
+const RECENT_MESSAGES = 10;
 
 /**
  * Build the model's context from state, not from chat history. The system
