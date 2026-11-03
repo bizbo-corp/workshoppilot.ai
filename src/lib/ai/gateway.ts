@@ -1,4 +1,4 @@
-import { generateText, generateObject, streamText, type ModelMessage, type LanguageModel } from 'ai';
+import { generateText, generateObject, streamText, type ModelMessage, type LanguageModel, type StopCondition, type ToolSet } from 'ai';
 import type { z } from 'zod';
 import { db } from '@/db/client';
 import { aiCalls } from '@/db/schema';
@@ -78,7 +78,9 @@ export interface TextParams {
   system?: string;
   messages: ModelMessage[];
   maxOutputTokens?: number;
-  tools?: Parameters<typeof generateText>[0]['tools'];
+  tools?: ToolSet;
+  /** Multi-step tool loops stop here; default is a single step. */
+  stopWhen?: StopCondition<ToolSet> | StopCondition<ToolSet>[];
 }
 
 /** One-shot text, logged. */
@@ -93,6 +95,7 @@ export async function aiText(ctx: CallContext, params: TextParams) {
       messages: params.messages,
       maxOutputTokens: params.maxOutputTokens ?? cfg.maxOutputTokens,
       tools: params.tools,
+      stopWhen: params.stopWhen,
     });
     await logCall({ ...ctx, modelId, usage: toUsage(result.usage), durationMs: Date.now() - started, ok: true });
     return result;
@@ -144,6 +147,7 @@ export function aiStream(ctx: CallContext, params: TextParams) {
     messages: params.messages,
     maxOutputTokens: params.maxOutputTokens ?? cfg.maxOutputTokens,
     tools: params.tools,
+    stopWhen: params.stopWhen,
     onFinish: async ({ usage }) => {
       await logCall({ ...ctx, modelId, usage: toUsage(usage), durationMs: Date.now() - started, ok: true });
     },

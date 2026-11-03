@@ -3,22 +3,8 @@ import { v2 } from './pg-schema';
 import { createPrefixedId } from '@/lib/ids';
 import { users } from './users';
 
-/** Stage ids are fixed; their content lives in src/lib/stages. */
-export const STAGE_IDS = ['setup', 'discover', 'define', 'develop', 'deliver'] as const;
-export type StageId = (typeof STAGE_IDS)[number];
-
-/** The four idea-type lenses plus the four that map onto them. */
-export const IDEA_TYPES = [
-  'digital_product',
-  'service',
-  'process_change',
-  'physical_product',
-  'offering',
-  'experience',
-  'brand',
-  'campaign',
-] as const;
-export type IdeaType = (typeof IDEA_TYPES)[number];
+import { STAGE_IDS, IDEA_TYPES, type StageId, type IdeaType } from '@/lib/engine/ids';
+export { STAGE_IDS, IDEA_TYPES, type StageId, type IdeaType };
 
 export const WORKSHOP_STATUSES = ['active', 'completed', 'archived'] as const;
 export type WorkshopStatus = (typeof WORKSHOP_STATUSES)[number];
