@@ -90,9 +90,9 @@ export default function LandingV4() {
             <strong className="text-foreground/80 dark:text-foreground/80">
               riskiest assumption
             </strong>
-            , designs the cheapest test that proves or kills it, and builds the
-            test with you. Digital ideas also get a full Build Pack, ready to
-            hand to an AI coding agent.
+            , designs the cheapest test that proves or kills it, and tells you
+            straight whether the idea is ready. Digital ideas also get a Build
+            Pack, ready to hand to an AI coding agent.
           </p>
 
           {/* Reassurance — speed + zero barrier to entry */}
@@ -129,18 +129,8 @@ export default function LandingV4() {
         <div className="relative w-full flex-1 mt-10 min-h-[280px] sm:min-h-[360px] lg:mt-0 lg:min-h-0">
           {/* Social proof — glassmorphic pill, top-center of visual area */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex w-full max-w-xs sm:max-w-none flex-col items-center gap-2 px-6 py-2.5">
-            <div className="flex gap-0.5">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Icon
-                  key={i}
-                  name="star"
-                  weight="fill"
-                  className="h-4 w-4 fill-[#eab308] dark:fill-[var(--sticky-note-yellow)]"
-                />
-              ))}
-            </div>
             <p className="text-sm text-foreground text-center">
-              Trusted by indie founders, product teams and innovators like you.
+              Built by a facilitator who has run these workshops for years.
             </p>
           </div>
 
@@ -200,9 +190,9 @@ export default function LandingV4() {
                     WorkshopPilot
                   </span>
                   <span className="text-muted-foreground">
-                    : a validated, build-ready plan for{" "}
-                    <span className="font-medium text-foreground">$299</span>, in
-                    one workshop team session.
+                    : a free workshop, and a validated plan for{" "}
+                    <span className="font-medium text-foreground">$20</span> of
+                    credits.
                   </span>
                 </p>
               </div>
@@ -398,14 +388,14 @@ export default function LandingV4() {
                 </p>
                 <div className="flex items-baseline gap-4">
                   <span className="text-5xl sm:text-6xl font-bold text-foreground tracking-tight">
-                    $99
+                    $0
                   </span>
                   <span className="text-lg text-muted-foreground">
-                    ~2 hours
+                    for the workshop, about $20 for the Verdict
                   </span>
                 </div>
                 <p className="text-muted-foreground mt-3 leading-relaxed">
-                  97% cheaper than a consultant — and you keep the output
+                  A fraction of a consultant&apos;s fee, and you keep the output
                   forever.
                 </p>
               </div>
@@ -460,142 +450,6 @@ export default function LandingV4() {
         </div>
       </section>
 
-      {/* ── Testimonials ─────────────────────────────────────── */}
-      <section
-        className="py-24 sm:py-32 bg-background border-t border-border"
-        style={{ contentVisibility: "auto", containIntrinsicSize: "0 700px" }}
-      >
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="max-w-2xl mb-16 sm:mb-20">
-            <p className="text-sm font-medium uppercase tracking-widest text-olive-600 dark:text-olive-400 mb-4">
-              Testimonials
-            </p>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif leading-[1.1] tracking-tight text-foreground">
-              Builders like you are
-              <br className="hidden sm:block" /> shipping faster
-            </h2>
-          </div>
-
-          {/* Featured testimonials — large, two-column */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16">
-            {[
-              {
-                quote:
-                  "We used WorkshopPilot to test some ideas on how we could better lean into AI tools to improve our processes and outputs. It drove the process extremely effectively, ensuring we gathered information to lay the groundwork. It was organised, creative, thoughtful and insightful. We were wrapped with the direction it gave us in steering our product.",
-                name: "Irene Chapple",
-                role: "Founder, Better Aotearoa",
-                image:
-                  "https://www.bizbo.co.nz/bitmap/people/irene-chapple.jpg",
-              },
-              {
-                quote:
-                  "WorkshopPilot guided through a process to \u2018productise\u2019 our service business. The idea is to take what we do organically to be more deliberate and predictive. It was excellent. It understands and interprets and extracts the essence of what we imagined and suggests a path forward. And all good fun along the way. Good process.",
-                name: "Vincent Heeringa",
-                role: "Founder, Better Aotearoa",
-                image:
-                  "https://www.bizbo.co.nz/bitmap/people/vincent-heeringa.jpg",
-              },
-            ].map((testimonial) => (
-              <div
-                key={testimonial.name}
-                className="border-l-2 border-olive-300 dark:border-olive-600 pl-6 sm:pl-8"
-              >
-                <div className="flex gap-0.5 mb-6">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Icon
-                      key={i}
-                      name="star"
-                      weight="fill"
-                      className="h-4 w-4 fill-olive-500 text-olive-500 dark:fill-olive-400 dark:text-olive-400"
-                    />
-                  ))}
-                </div>
-                <p className="text-foreground/80 leading-relaxed mb-8">
-                  &ldquo;{testimonial.quote}&rdquo;
-                </p>
-                <div className="flex items-center gap-4">
-                  <img
-                    src={testimonial.image}
-                    alt={testimonial.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {testimonial.name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {testimonial.role}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Secondary testimonials — hidden for now; add back later. */}
-          {/*
-          <div className="divide-y divide-border mt-16 pt-16 border-t border-border">
-            {[
-              {
-                quote:
-                  "I spent weeks trying to write a PRD for my side project. WorkshopPilot walked me through it in one session. The output was better than anything I could have written alone.",
-                name: "Sarah K.",
-                role: "Indie Developer",
-                initial: "S",
-              },
-              {
-                quote:
-                  "As a non-technical founder, I always struggled to communicate my vision to developers. Now I hand them the Build Pack and they actually understand what I want.",
-                name: "Marcus L.",
-                role: "Startup Founder",
-                initial: "M",
-              },
-              {
-                quote:
-                  "I was about to spend $4,000 on a product consultant. Ran WorkshopPilot instead and the deliverables were just as thorough. Wish I found this sooner.",
-                name: "Priya M.",
-                role: "Product Designer",
-                initial: "P",
-              },
-            ].map((testimonial) => (
-              <div
-                key={testimonial.name}
-                className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8 py-10 first:pt-0"
-              >
-                <div className="md:col-span-8">
-                  <div className="flex gap-0.5 mb-3">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className="h-3.5 w-3.5 fill-olive-500 text-olive-500 dark:fill-olive-400 dark:text-olive-400"
-                      />
-                    ))}
-                  </div>
-                  <p className="text-muted-foreground leading-relaxed">
-                    &ldquo;{testimonial.quote}&rdquo;
-                  </p>
-                </div>
-                <div className="md:col-span-4 flex items-center md:justify-end gap-3">
-                  <div className="w-10 h-10 rounded-full bg-olive-200 dark:bg-olive-800 flex items-center justify-center text-sm font-semibold text-olive-700 dark:text-olive-300 shrink-0">
-                    {testimonial.initial}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {testimonial.name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {testimonial.role}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          */}
-        </div>
-      </section>
-
       {/* ── Pricing ────────────────────────────────────────── */}
       <section
         id="pricing"
@@ -603,185 +457,131 @@ export default function LandingV4() {
         style={{ contentVisibility: "auto", containIntrinsicSize: "0 900px" }}
       >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          {/* Header */}
           <div className="max-w-2xl mb-12 sm:mb-16">
             <p className="text-sm font-medium uppercase tracking-widest text-olive-600 dark:text-olive-400 mb-4">
               Pricing
             </p>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif leading-[1.1] tracking-tight text-foreground mb-4">
-              Weeks of planning.
-              <br className="hidden sm:block" /> One simple price.
+              The workshop is free.
+              <br className="hidden sm:block" /> Pay for the verdict.
             </h2>
             <p className="text-muted-foreground text-lg">
-              One price for any kind of idea — the same answer a product
-              consultant charges $3,000+ to reach. Start free, pay only when
-              you&apos;re ready to unlock your validation plan.
+              Run the whole workshop, every stage and every board, for nothing.
+              Credits pay for the heavy lifting: the honest Verdict, the Build
+              Pack and sketch clean-ups. They never expire.
             </p>
           </div>
 
-          {/* Value anchor */}
-          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-8 text-sm text-muted-foreground mb-16 sm:mb-20">
-            <span className="line-through opacity-60">
-              Product Manager: $3,000
-            </span>
-            <span className="hidden sm:inline text-border">|</span>
-            <span className="line-through opacity-60">DT Workshop: $5,000</span>
-            <span className="hidden sm:inline text-border">|</span>
-            <span className="font-semibold text-olive-600 dark:text-olive-400">
-              WorkshopPilot: from $99
-            </span>
-          </div>
-
-          {/* Pricing tiers — Solo / Team (highlighted) / White Glove */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl">
-            {/* ── Solo Workshop — $99 ─────────────────────────── */}
+            {/* Free */}
             <div className="rounded-2xl border border-border p-8 flex flex-col">
-              <h3 className="text-lg font-semibold text-foreground mb-1">
-                Solo Workshop
-              </h3>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Free workshop</h3>
               <p className="text-sm text-muted-foreground mb-6">
-                AI-facilitated, just you. Validate any idea start to finish.
+                The full facilitated workshop for any kind of idea: digital,
+                service, process or physical.
               </p>
               <div className="mb-6">
-                <span className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
-                  $99
-                </span>
-                <span className="text-sm text-muted-foreground ml-2">
-                  / one workshop
-                </span>
+                <span className="text-4xl font-serif text-foreground">$0</span>
               </div>
-              <ul className="space-y-3 flex-1 mb-8">
+              <ul className="space-y-3 text-sm text-muted-foreground mb-8 flex-1">
                 {[
-                  "Full 10-step design thinking process",
-                  "AI facilitator guides every step",
-                  "Validation plan with a pre-committed success signal",
-                  "PRD & tech specs for digital ideas",
-                  "Export-ready for dev teams and AI coders",
-                ].map((feature) => (
-                  <li key={feature} className="flex items-start gap-2.5">
-                    <Icon name="check" className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
-                    <span className="text-sm text-foreground">{feature}</span>
+                  "Setup plus Discover, Define, Develop, Deliver",
+                  "The AI facilitator in chat and on the boards",
+                  "Stakeholder rings, empathy map, journey strip, idea board",
+                  "Upload your own sketches",
+                  "A one-page summary and your armed Validation Score",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-olive-600 dark:text-olive-400" />
+                    {item}
                   </li>
                 ))}
               </ul>
               <NewWorkshopButton variant="secondary" size="lg" className="w-full text-base">
-                Start a Solo Workshop
+                Start a free workshop
               </NewWorkshopButton>
               <p className="text-center text-xs text-muted-foreground mt-4">
-                Free to start — pay $99 at the Build Pack unlock.
+                Sign in with Google, Apple or email. No card.
               </p>
             </div>
 
-            {/* ── Team Workshop — $299 (highlighted) ──────────── */}
-            <div className="rounded-2xl border border-olive-600 dark:border-olive-400 ring-1 ring-olive-600/20 dark:ring-olive-400/20 p-8 flex flex-col">
-              <div className="mb-4">
-                <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-olive-700 dark:text-olive-300 bg-olive-100 dark:bg-olive-900 rounded-full px-3 py-1">
-                  <Icon name="sparkles" className="h-3 w-3" />
-                  Most Popular
-                </span>
-              </div>
-              <h3 className="text-lg font-semibold text-foreground mb-1">
-                Team Workshop
-              </h3>
+            {/* Credits */}
+            <div className="rounded-2xl border-2 border-olive-600 dark:border-olive-500 p-8 flex flex-col relative bg-card">
+              <span className="absolute -top-3 left-8 rounded-full bg-olive-600 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white dark:bg-olive-500">
+                Most people
+              </span>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Credits</h3>
               <p className="text-sm text-muted-foreground mb-6">
-                Run a real workshop with your team — invite by email, schedule
-                a session, build together.
+                Buy a pack once; spend credits on the jobs that need a stronger
+                model.
               </p>
               <div className="mb-6">
-                <span className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
-                  $299
-                </span>
-                <span className="text-sm text-muted-foreground ml-2">
-                  / one team workshop
-                </span>
+                <span className="text-4xl font-serif text-foreground">$25</span>
+                <span className="text-muted-foreground"> for 500 credits</span>
               </div>
-              <ul className="space-y-3 flex-1 mb-8">
+              <ul className="space-y-3 text-sm text-muted-foreground mb-8 flex-1">
                 {[
-                  "Everything in Solo, plus:",
-                  "Invite teammates by email",
-                  "Real-time multiplayer canvas",
-                  "Lobby + scheduled sessions",
-                  "Up to 15 participants",
-                  "Live cursors, presence, chat",
-                ].map((feature) => (
-                  <li key={feature} className="flex items-start gap-2.5">
-                    <Icon name="check" className="h-4 w-4 text-olive-600 dark:text-olive-400 mt-0.5 shrink-0" />
-                    <span className="text-sm text-foreground">{feature}</span>
+                  "The Verdict: 400 credits. The honest read, your riskiest assumption, the cheapest test with a target and a kill threshold",
+                  "The Build Pack, included with the Verdict: PRD and tech specs, service blueprint, process map or product brief, by idea type",
+                  "Sketch clean-up: 10 credits an image",
+                  "Bigger packs: 1,500 for $60, 5,000 for $150",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-olive-600 dark:text-olive-400" />
+                    {item}
                   </li>
                 ))}
               </ul>
-              <NewWorkshopButton
-                preselectTier="team"
-                size="lg"
-                className="w-full text-base shadow-lg shadow-olive-600/20"
-              >
-                Start a Team Workshop
+              <NewWorkshopButton size="lg" className="w-full text-base shadow-lg shadow-olive-600/20">
+                Start, then decide
               </NewWorkshopButton>
               <p className="text-center text-xs text-muted-foreground mt-4">
-                Already paid for Solo? Upgrade to Team for $200.
+                New accounts get 50 credits to try a clean-up.
               </p>
             </div>
 
-            {/* ── White Glove — $1,499 ────────────────────────── */}
+            {/* Guided */}
             <div
               id="guided-pilot"
               className="rounded-2xl border border-premium-border ring-1 ring-amber-500/20 dark:ring-amber-400/15 p-8 flex flex-col scroll-mt-28 bg-gradient-to-b from-amber-50/50 via-card to-card dark:from-amber-950/30 dark:via-card dark:to-card"
-              style={{
-                boxShadow:
-                  "inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 24px -4px rgba(180,130,40,0.12)",
-              }}
             >
               <div className="mb-4">
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 rounded-full px-3 py-1">
                   <Icon name="sparkles" className="h-3 w-3" />
-                  White Glove
+                  With a human
                 </span>
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-1">
-                White Glove
-              </h3>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Coach and Guided Pilot</h3>
               <p className="text-sm text-muted-foreground mb-6">
-                Get a real human facilitator to take you through the workshop.
-                Includes Team workshop plus 1:1 setup, custom Build Pack
-                review, and 30-day support.
+                An experienced facilitator reviews your Verdict and keeps you
+                honest until the test is done, or runs the workshop live with
+                your team.
               </p>
               <div className="mb-6">
-                <span className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
-                  $1,499
-                </span>
-                <span className="text-sm text-muted-foreground ml-2">
-                  / one engagement
-                </span>
+                <span className="text-4xl font-serif text-foreground">$299</span>
+                <span className="text-muted-foreground"> a month, or $1,499 per pilot</span>
               </div>
-              <ul className="space-y-3 flex-1 mb-8">
+              <ul className="space-y-3 text-sm text-muted-foreground mb-8 flex-1">
                 {[
-                  "Everything in Team, plus:",
-                  "1:1 onboarding call with our team",
-                  "Custom Build Pack review & polish",
-                  "Workshop facilitation guidance",
-                  "Direct line to the founders",
-                ].map((feature) => (
-                  <li key={feature} className="flex items-start gap-2.5">
-                    <Icon name="check" className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-                    <span className="text-sm text-foreground">{feature}</span>
+                  "Weekly 30 minute check-in until your test has run",
+                  "A second pair of eyes on the Verdict and the Build Pack",
+                  "Guided Pilot: a live facilitated workshop with your team",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" />
+                    {item}
                   </li>
                 ))}
               </ul>
-              <NewWorkshopButton
-                preselectTier="white_glove"
-                variant="secondary"
-                size="lg"
-                className="w-full text-base"
-              >
-                Get White Glove
-              </NewWorkshopButton>
+              <Button asChild variant="outline" size="lg" className="w-full text-base">
+                <a href="mailto:michael@bizbo.co.nz?subject=WorkshopPilot%20Coach%20or%20Guided%20Pilot">Talk to Michael</a>
+              </Button>
               <p className="text-center text-xs text-muted-foreground mt-4">
-                Best for funded startups and corporate innovation teams.
+                Best for teams and funded founders.
               </p>
             </div>
           </div>
 
-          {/* Trust signals */}
           <div className="mt-12 flex flex-col sm:flex-row items-start gap-6 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <Icon name="shield" className="h-4 w-4" />
@@ -809,14 +609,13 @@ export default function LandingV4() {
             {/* Right — copy + actions */}
             <div>
               <p className="text-muted-foreground text-lg leading-relaxed mb-3">
-                Start a free workshop and walk away with a ready-to-run
-                validation plan — your riskiest assumption, the test that proves
-                or kills it, and the honest truth about whether your idea holds
-                up. Digital ideas also get the full Build Pack: PRD and tech
-                specs.
+                Start a free workshop and walk away with a plan you can test
+                next week: your riskiest assumption, the cheapest test that
+                proves or kills it, and an honest read on whether the idea holds
+                up. Digital ideas also get a Build Pack: PRD and tech specs.
               </p>
               <p className="text-sm text-muted-foreground mb-8">
-                Steps 1–6 are free. No credit card required.
+                The whole workshop is free. No card to start.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <NewWorkshopButton
