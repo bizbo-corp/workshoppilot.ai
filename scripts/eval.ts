@@ -94,15 +94,18 @@ async function runCase(c: Case, userId: string) {
     }
   }
 
-  // Judge every reply.
+  // Judge every reply, with everything the user has said so far, so a fact
+  // the user gave three turns ago is not marked as invented.
+  const said: string[] = [];
   for (const r of replies) {
+    if (!r.turn.startsWith('[')) said.push(r.turn);
     if (r.reply === '(quiet)') continue;
     r.scores = await aiObject(
       { job: 'eval_judge', workshopId: w.id, userId },
       {
         system: JUDGE_SYSTEM,
         schema: scoreSchema,
-        messages: [{ role: 'user', content: `Stage goal: ${STAGES[r.stage as keyof typeof STAGES].goal}\n\nWhat the user just did: ${r.turn}\n\nFacilitator reply:\n${r.reply}` }],
+        messages: [{ role: 'user', content: `Stage goal: ${STAGES[r.stage as keyof typeof STAGES].goal}\n\nEverything the user has said so far, in order:\n${said.map((t) => `- ${t}`).join('\n') || '- (nothing yet)'}\n\nWhat the user just did: ${r.turn}\n\nFacilitator reply:\n${r.reply}` }],
       },
     );
   }

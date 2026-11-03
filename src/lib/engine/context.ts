@@ -19,6 +19,15 @@ const RECENT_MESSAGES = 14;
  * come first; the volatile state description comes last.
  */
 export function buildSystemPrompt(state: WorkshopState): string {
+  const { stable, volatile } = buildSystemParts(state);
+  return `${stable}\n\n${volatile}`;
+}
+
+/**
+ * Two parts so the stable prefix (voice, tools, stage, lens) can be cached
+ * by the provider and only the state description is re-read each turn.
+ */
+export function buildSystemParts(state: WorkshopState): { stable: string; volatile: string } {
   const stage = STAGES[state.stage];
   const lens = getLens(state.ideaType);
 
@@ -53,8 +62,9 @@ Rules: one question per message. Keep replies under 120 words unless you are pre
     parts.push(`# Idea type: not yet known\n\nWork it out from the user's words and call set_idea_type. Types: digital_product, service, process_change, physical_product, offering, experience, brand, campaign.`);
   }
 
-  parts.push(describeState(state));
-  parts.push(`# Before every reply, check
+  const stable = parts.join('\n\n');
+  const volatileParts: string[] = [describeState(state)];
+  volatileParts.push(`# Before every reply, check
 
 1. Did the user just agree to, or did you just write, a value for a field above? Then call set_field with it FIRST. A draft that only appears in your text is lost.
 2. Did the user name people, quotes, pains, ideas or moments that belong on a board in this stage? Call add_board_item for each, in their words.
@@ -69,7 +79,7 @@ Board rule: when the note says the user added or changed something on the board,
 Past the target number of exchanges for this stage, stop gathering: draft the remaining fields from what you have (beliefs labelled as beliefs), set them, and ask the user to confirm so the stage can complete.
 
 Then write the reply: lead with the point, one question, under 120 words. When you have just completed a stage, two lines at most and no question; the next stage opens with its own.`);
-  return parts.join('\n\n');
+  return { stable, volatile: volatileParts.join('\n\n') };
 }
 
 /** Plain-language description of the workshop state for the model. */

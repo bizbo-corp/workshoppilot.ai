@@ -42,8 +42,10 @@ export interface JobConfig {
 }
 
 const DEFAULTS: Record<AiJob, JobConfig> = {
-  // Haiku 5.5 costs the same as Flash Lite per token and follows tool rules far better (measured 2026-11-03).
-  facilitate: { model: 'anthropic/claude-haiku-5-5', credits: 0, maxOutputTokens: 600, kind: 'text' },
+  // Measured 2026-11-03 on the evals: Flash Lite ignores tool rules, Haiku follows them but
+  // misses what the user just said, Sonnet 5.5 passes most cases. With the stable prompt
+  // cached, a Sonnet turn is about a quarter of a cent.
+  facilitate: { model: 'anthropic/claude-sonnet-5-5', credits: 0, maxOutputTokens: 2500, kind: 'text' },
   should_speak: { model: 'google/gemini-2.5-flash-lite', credits: 0, maxOutputTokens: 20, kind: 'text' },
   summarise_stage: { model: 'google/gemini-2.5-flash-lite', credits: 0, maxOutputTokens: 800, kind: 'text' },
   extract: { model: 'google/gemini-2.5-flash-lite', credits: 0, maxOutputTokens: 2000, kind: 'text' },

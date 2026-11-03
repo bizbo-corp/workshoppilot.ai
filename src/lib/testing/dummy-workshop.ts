@@ -176,7 +176,7 @@ export async function runDummyWorkshop(opts: { seed?: string; triggeredBy?: stri
           {
             system: 'Score one facilitator reply, 1 to 5. relevance: does it respond specifically to what the user just said or did? evidence: does it credit only evidence the user actually has, naming beliefs as beliefs? One-line note on the biggest problem or "fine".',
             schema: judgeSchema,
-            messages: [{ role: 'user', content: `User (${scenario.behaviour}, evidence: ${scenario.evidence}): ${transcript.filter((t) => t.role === 'user').slice(-1)[0]?.content ?? '[opened]'}\n\nFacilitator: ${lastReply}` }],
+            messages: [{ role: 'user', content: `Everything the user has said so far:\n${transcript.filter((t) => t.role === 'user').map((t) => `- ${t.content}`).join('\n') || '- (nothing yet)'}\n\nUser (${scenario.behaviour}, real evidence they have: ${scenario.evidence}) just said: ${transcript.filter((t) => t.role === 'user').slice(-1)[0]?.content ?? '[opened]'}\n\nFacilitator: ${lastReply}` }],
           },
         );
         if (j.relevance < 3 || j.evidence < 3) lowReplies.push({ turn: transcript.filter((t) => t.role === 'user').slice(-1)[0]?.content ?? '[opened]', reply: lastReply, note: j.note });

@@ -3,7 +3,7 @@ import { and, asc, eq, gt } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { workshopEvents } from '@/db/schema';
 import { aiStream } from '@/lib/ai/gateway';
-import { buildMessages, buildSystemPrompt } from './context';
+import { buildMessages, buildSystemParts } from './context';
 import { reduce } from './reducer';
 import { append, loadWorkshop } from './store';
 import { facilitatorTools } from './tools';
@@ -53,16 +53,21 @@ export async function facilitate(input: FacilitateInput) {
   };
   const tools = facilitatorTools({ getState: () => state, emit, suggestions });
 
-  const system = buildSystemPrompt(state);
-  const messages = buildMessages(state, sinceAi, { trigger: input.trigger });
+  const { stable, volatile } = buildSystemParts(state);
+  // The stable prefix carries a cache marker (honoured by Anthropic models,
+  // ignored by others); the state description follows it uncached.
+  const messages = [
+    { role: 'system' as const, content: stable, providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } } },
+    { role: 'system' as const, content: volatile },
+    ...buildMessages(state, sinceAi, { trigger: input.trigger }),
+  ];
 
   const result = aiStream(
     { job: 'facilitate', workshopId: input.workshopId, userId: input.userId, model: input.model },
     {
-      system,
       messages,
       tools,
-      maxOutputTokens: 900,
+      maxOutputTokens: 2500,
       stopWhen: FACILITATE_STOP,
     },
   );
