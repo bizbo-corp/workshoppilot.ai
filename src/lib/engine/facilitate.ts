@@ -115,7 +115,9 @@ export function moveOnTarget(state: WorkshopState, text: string | undefined): st
   const current = currentActivity(state);
   if (!current.done(state)) return null;
   const i = stage.activities.findIndex((a) => a.id === current.id);
-  const next = stage.activities[i + 1];
+  let next = stage.activities[i + 1];
+  // "That's all the research I have" while heading into interviews means skip them.
+  if (next?.id === 'interviews' && /\b(research|interview|notes)\b/i.test(text)) next = stage.activities[i + 2];
   return next ? next.id : null;
 }
 

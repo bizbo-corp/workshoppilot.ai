@@ -213,5 +213,6 @@ describe('moveOnTarget', () => {
     let s = inDiscover;
     for (let i = 0; i < 4; i++) s = reduce(s, { seq: 10 + i, actor: 'user', actorId: null, createdAt: new Date(), payload: { type: 'board.item_added', item: { id: `i${i}`, board: 'stakeholder_rings', zone: 'core', text: `Person ${i}`, createdBy: 'user' } } });
     expect(moveOnTarget(s, "That's all from me, move on")).toBe('interviews');
+    expect(moveOnTarget(s, "That's all the research I have for now. Yes, let's move on.")).toBe('empathy');
   });
 });
