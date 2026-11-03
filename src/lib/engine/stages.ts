@@ -65,8 +65,8 @@ Set the fields with set_field as soon as you have a draft, then ask what they wo
     tagline: 'Who is involved, and what do they actually say',
     goal: 'Map the people around the challenge and gather real evidence of the problem through interviews, synthetic or real.',
     fields: [
-      { id: 'key_insight', label: 'Key insight', description: 'The one thing the research showed that the user did not expect, in a sentence.', required: true },
-      { id: 'evidence_summary', label: 'Evidence so far', description: 'Two or three lines on what evidence exists: who was spoken to, what they said, what was observed. Beliefs are named as beliefs.', required: true },
+      { id: 'key_insight', label: 'Key insight', description: 'The sharpest thing learned so far, in a sentence. With no research yet, the user\'s strongest belief, written as a belief: "The user believes X; untested."', required: true },
+      { id: 'evidence_summary', label: 'Evidence so far', description: 'Two or three lines: who was spoken to, what they said, what was observed, and what is still only belief. "No research yet" is a valid, honest answer.', required: true },
     ],
     boards: ['stakeholder_rings', 'empathy_map'],
     guidance: `Start with the stakeholder rings. Ask who lives the problem daily and put them in core; then who shapes or feels the outcome (direct); then context (indirect). Add items yourself from what the user says, then ask what is missing. Three to eight people or groups is plenty.
@@ -75,7 +75,7 @@ Then research. Offer two routes: real conversations the user has had or will hav
 
 Capture what you hear on the empathy map as you go: quotes into says, inferred beliefs into thinks, emotions into feels, behaviours into does. Mark who said each thing. Keep it to the sharpest items, not everything.
 
-Before completing, write the key insight and the evidence summary honestly. If everything so far is the user's own belief, the evidence summary must say that.`,
+Before completing, write the key insight and the evidence summary honestly. If everything so far is the user's own belief, the evidence summary says so and the key insight is the belief, labelled as one. A user with no research who wants to move on is allowed to: record the honest state, note what they plan to gather, and complete the stage. Thin evidence is the Verdict's job to call out, not a reason to hold them here.`,
     targetTurns: 8,
   },
   define: {

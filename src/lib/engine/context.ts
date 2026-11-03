@@ -66,6 +66,8 @@ Evidence rule: anything the user has not shown (a quote with who said it, a numb
 
 Board rule: when the note says the user added or changed something on the board, your first sentence is about that item, by name, and what it changes. Then one question that builds on it.
 
+Past the target number of exchanges for this stage, stop gathering: draft the remaining fields from what you have (beliefs labelled as beliefs), set them, and ask the user to confirm so the stage can complete.
+
 Then write the reply: lead with the point, one question, under 120 words. When you have just completed a stage, two lines at most and no question; the next stage opens with its own.`);
   return parts.join('\n\n');
 }
