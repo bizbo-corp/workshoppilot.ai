@@ -54,6 +54,8 @@ export function ActivityRail({ state, title, onOpenActivity, collapsed, onToggle
                           onClick={() => onOpenActivity(a.id)}
                           data-activity={a.id}
                           data-current={isCurrent || undefined}
+                          aria-label={`${a.label}${aDone ? ', done' : ''}${isCurrent ? ', current' : ''}`}
+                          aria-current={isCurrent ? 'step' : undefined}
                           className={cn(
                             'flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs',
                             isCurrent ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground',
