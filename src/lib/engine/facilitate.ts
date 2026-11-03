@@ -89,20 +89,16 @@ export async function facilitate(input: FacilitateInput) {
 
 
 /**
- * A turn may speak in more than one step. Keep each step's text once: some
- * models repeat the step-one text verbatim after the tool results come back.
+ * A turn may speak in more than one step. The last step's text is the
+ * model's final answer (some models restate or rewrite step-one text after
+ * the tool results come back), so it wins; earlier text is kept only when
+ * the last step said nothing.
  */
 export function joinStepText(texts: string[]): string {
-  const kept: string[] = [];
-  for (const raw of texts) {
-    const t = raw.trim();
-    if (!t) continue;
-    if (kept.some((k) => k === t || k.includes(t))) continue;
-    const idx = kept.findIndex((k) => t.includes(k));
-    if (idx >= 0) kept[idx] = t;
-    else kept.push(t);
-  }
-  return kept.join('\n\n');
+  const trimmed = texts.map((t) => t.trim());
+  const last = trimmed[trimmed.length - 1];
+  if (last) return last;
+  return trimmed.filter(Boolean).join('\n\n');
 }
 
 async function eventsSince(workshopId: string, seq: number): Promise<EngineEvent[]> {

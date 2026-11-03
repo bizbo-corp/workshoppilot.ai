@@ -83,9 +83,15 @@ async function runCase(c: Case, userId: string) {
       await append({ workshopId: w.id, actor: 'user', actorId: userId, payload: { type: 'board.item_added', item } });
       await turn('canvas', undefined, `[board] ${t.board}/${t.zone}: ${t.text}`);
     }
-    // The app greets when a stage completes; do the same here.
+    // The app greets when a stage completes; do the same here, and judge the
+    // hand-off and the greeting as one reply, which is how the user reads them.
     const after = await loadWorkshop(w.id);
-    if (after && after.state.lastAiStage !== after.state.stage) await turn('greeting', undefined, `[open ${after.state.stage}]`);
+    if (after && after.state.lastAiStage !== after.state.stage) {
+      const handoff = replies.pop();
+      await turn('greeting', undefined, `[open ${after.state.stage}]`);
+      const greeting = replies.pop();
+      if (handoff && greeting) replies.push({ turn: handoff.turn, stage: greeting.stage, reply: `${handoff.reply}\n\n${greeting.reply}` });
+    }
   }
 
   // Judge every reply.

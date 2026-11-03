@@ -174,11 +174,12 @@ describe('a full facilitator turn with a mock model', () => {
 });
 
 describe('joinStepText', () => {
-  it('keeps text from every step once', () => {
-    expect(joinStepText(['Drafted it.', '', 'What would you change?'])).toBe('Drafted it.\n\nWhat would you change?');
+  it('keeps earlier text only when the last step is silent', () => {
+    expect(joinStepText(['Drafted it.', ''])).toBe('Drafted it.');
+    expect(joinStepText(['', 'What would you change?'])).toBe('What would you change?');
   });
-  it('drops a step that repeats an earlier one', () => {
+  it('lets the last step win when the model rewrites its reply', () => {
     expect(joinStepText(['Good call. Owners matter.', 'Good call. Owners matter.'])).toBe('Good call. Owners matter.');
-    expect(joinStepText(['Good call.', 'Good call. Owners matter too.'])).toBe('Good call. Owners matter too.');
+    expect(joinStepText(['First draft.', 'Final version, reworded.'])).toBe('Final version, reworded.');
   });
 });
