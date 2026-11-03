@@ -5,7 +5,7 @@ import { requireUser } from '@/lib/auth/current-user';
 import { stripe, appUrl } from '@/lib/billing/stripe';
 import { getPack } from '@/lib/credits/packs';
 
-export type ActionResult<T = undefined> = { success: true; data: T } | { success: false; error: string };
+import type { ActionResult } from './types';
 
 /** Start Stripe Checkout for a credit pack. Redirects to Stripe on success. */
 export async function startCreditCheckout(packId: string, returnTo?: string): Promise<ActionResult> {

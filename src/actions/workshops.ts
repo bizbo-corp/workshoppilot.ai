@@ -6,10 +6,9 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/db/client';
 import { workshops, workshopMembers, workshopEvents, type Workshop } from '@/db/schema';
 import { requireUser } from '@/lib/auth/current-user';
-import type { ActionResult } from './billing';
+import type { ActionResult } from './types';
+import { FREE_ACTIVE_WORKSHOPS } from '@/lib/workshops/limits';
 
-/** Free tier: this many active workshops at once. Extra ones are a credit job later. */
-export const FREE_ACTIVE_WORKSHOPS = 2;
 
 export async function listMyWorkshops(): Promise<Workshop[]> {
   const user = await requireUser();

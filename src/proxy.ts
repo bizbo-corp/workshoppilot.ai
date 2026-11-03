@@ -1,9 +1,14 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
+import { isAuthBypassEnabled } from '@/lib/auth/bypass';
 
 /**
  * Sign-in is mandatory for everything except the brochure pages, the
  * webhooks and the health check. Per-workshop access is checked again in
  * the server code (membership), so this is the outer gate, not the only one.
+ *
+ * With BYPASS_AUTH=true (tests only, fails closed on Vercel) nothing is
+ * protected; getCurrentUser then returns the fixed test account.
  */
 const isPublicRoute = createRouteMatcher([
   '/',
@@ -15,7 +20,8 @@ const isPublicRoute = createRouteMatcher([
   '/manifest.webmanifest',
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
+export const proxy = clerkMiddleware(async (auth, req) => {
+  if (isAuthBypassEnabled()) return NextResponse.next();
   if (!isPublicRoute(req)) {
     await auth.protect();
   }
