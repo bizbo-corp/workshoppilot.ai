@@ -51,8 +51,10 @@ export interface WorkshopState {
   completedStages: StageId[];
   /** seq of the last event the AI produced or saw; canvas changes after it are "news". */
   aiSeenSeq: number;
-  /** seq at which the current stage was entered; the AI greets if it has not spoken since. */
+  /** seq at which the current stage was entered. */
   stageEnteredSeq: number;
+  /** Stage the AI was facilitating when it last spoke; it greets when this differs from `stage`. */
+  lastAiStage: StageId | null;
   seq: number;
 }
 
@@ -60,7 +62,7 @@ export interface WorkshopState {
 export type EventPayload =
   | { type: 'workshop.created'; idea: string }
   | { type: 'chat.user'; text: string }
-  | { type: 'chat.ai'; text: string; suggestions?: string[] }
+  | { type: 'chat.ai'; text: string; suggestions?: string[]; stage?: StageId }
   | { type: 'field.set'; stage: StageId; field: string; value: string }
   | { type: 'field.cleared'; stage: StageId; field: string }
   | { type: 'board.item_added'; item: BoardItem }
@@ -105,6 +107,7 @@ export function initialState(idea = ''): WorkshopState {
     completedStages: [],
     aiSeenSeq: 0,
     stageEnteredSeq: 0,
+    lastAiStage: null,
     seq: 0,
   };
 }

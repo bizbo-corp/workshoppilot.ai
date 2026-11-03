@@ -8,6 +8,7 @@ import { workshops, workshopMembers, workshopEvents, type Workshop } from '@/db/
 import { requireUser } from '@/lib/auth/current-user';
 import type { ActionResult } from './types';
 import { FREE_ACTIVE_WORKSHOPS } from '@/lib/workshops/limits';
+import { isAuthBypassEnabled } from '@/lib/auth/bypass';
 
 
 export async function listMyWorkshops(): Promise<Workshop[]> {
@@ -35,7 +36,9 @@ export async function createWorkshop(formData: FormData): Promise<ActionResult<{
   }
 
   const title = idea.length > 60 ? `${idea.slice(0, 57).trimEnd()}…` : idea;
-  const [workshop] = await db.insert(workshops).values({ ownerId: user.id, title, idea }).returning();
+  // Workshops made by the test account are tagged so they never count against caps or show on dashboards.
+  const testRunId = isAuthBypassEnabled() ? 'e2e' : null;
+  const [workshop] = await db.insert(workshops).values({ ownerId: user.id, title, idea, testRunId }).returning();
   await db.insert(workshopMembers).values({ workshopId: workshop.id, userId: user.id, role: 'owner' });
   await db.insert(workshopEvents).values({
     workshopId: workshop.id,

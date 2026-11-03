@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Playwright starts its own dev server beside the one you are using; give it its own build dir.
+  distDir: process.env.NEXT_DIST_DIR ?? '.next',
   // Worktree-fleet serves each branch via a vanity host (e.g. wt2.test.localhost).
   // Next.js 16 blocks cross-origin dev traffic (HMR/server actions) from hosts
   // that aren't whitelisted here, which surfaces as a server-error overlay and a

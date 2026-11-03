@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const bodySchema = z.object({
-  trigger: z.enum(['chat', 'canvas', 'greeting']).default('chat'),
+  mode: z.enum(['chat', 'canvas', 'greeting']).default('chat'),
   text: z.string().max(4000).optional(),
 });
 
@@ -24,9 +24,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { user } = await requireMember(id);
     const parsed = bodySchema.safeParse(await req.json());
     if (!parsed.success) return NextResponse.json({ error: 'Bad request' }, { status: 400 });
-    if (parsed.data.trigger === 'chat' && !parsed.data.text?.trim()) return NextResponse.json({ error: 'Empty message' }, { status: 400 });
+    if (parsed.data.mode === 'chat' && !parsed.data.text?.trim()) return NextResponse.json({ error: 'Empty message' }, { status: 400 });
 
-    const { result, finished } = await facilitate({ workshopId: id, userId: user.id, trigger: parsed.data.trigger, text: parsed.data.text });
+    const { result, finished } = await facilitate({ workshopId: id, userId: user.id, trigger: parsed.data.mode, text: parsed.data.text });
     // Make sure the chat.ai event lands even if the client disconnects.
     void Promise.resolve(finished).catch((err: unknown) => console.error('[chat] finish failed', err));
     return result.toUIMessageStreamResponse();

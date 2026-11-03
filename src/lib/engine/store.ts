@@ -64,7 +64,7 @@ export async function append(input: AppendInput, current?: WorkshopState): Promi
   if (!base) throw new Error(`Workshop ${input.workshopId} not found`);
 
   const { type, ...rest } = input.payload;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     const seq = base.seq + 1 + attempt;
     try {
       const [row] = await db
@@ -79,7 +79,7 @@ export async function append(input: AppendInput, current?: WorkshopState): Promi
         .where(eq(workshops.id, input.workshopId));
       return { state, event };
     } catch (err) {
-      if (attempt === 0 && isUniqueViolation(err)) {
+      if (attempt < 2 && isUniqueViolation(err)) {
         // Someone else wrote this seq. Reload and retry once.
         const fresh = await loadWorkshop(input.workshopId);
         if (fresh) return append(input, fresh.state);

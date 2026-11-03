@@ -54,6 +54,15 @@ Rules: one question per message. Keep replies under 120 words unless you are pre
   }
 
   parts.push(describeState(state));
+  parts.push(`# Before every reply, check
+
+1. Did the user just agree to, or did you just write, a value for a field above? Then call set_field with it FIRST. A draft that only appears in your text is lost.
+2. Did the user name people, quotes, pains, ideas or moments that belong on a board in this stage? Call add_board_item for each, in their words.
+3. Is the idea type still unknown? Call set_idea_type with your best guess.
+4. Are all required fields set and has the user said yes? Call complete_stage.
+5. Does your reply end in a question? Call suggest_replies.
+
+Then write the reply: lead with the point, one question, under 120 words.`);
   return parts.join('\n\n');
 }
 

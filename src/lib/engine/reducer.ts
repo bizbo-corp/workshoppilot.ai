@@ -23,6 +23,7 @@ export function reduce(state: WorkshopState, event: EngineEvent): WorkshopState 
       return {
         ...next,
         aiSeenSeq: event.seq,
+        lastAiStage: p.stage ?? state.stage,
         messages: pushMessage(state.messages, { id: `m${event.seq}`, role: 'ai', text: p.text, suggestions: p.suggestions, seq: event.seq }),
       };
 

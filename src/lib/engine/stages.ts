@@ -2,8 +2,7 @@ import type { BoardId, StageId, WorkshopState } from './types';
 
 /** True when the facilitator has not spoken since the current stage began. */
 export function needsGreeting(state: WorkshopState): boolean {
-  const lastAi = [...state.messages].reverse().find((m) => m.role === 'ai');
-  return !lastAi || lastAi.seq <= state.stageEnteredSeq;
+  return state.lastAiStage !== state.stage;
 }
 
 export interface FieldDef {

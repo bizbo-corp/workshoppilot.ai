@@ -3,6 +3,7 @@ import type { z } from 'zod';
 import { db } from '@/db/client';
 import { aiCalls } from '@/db/schema';
 import { getJobConfig, estimateCostCents, type AiJob, type Usage } from './jobs';
+import { isFakeAiEnabled, createFakeFacilitator } from './fake-model';
 
 /**
  * Every model call in the app goes through here. The caller names a job, the
@@ -60,6 +61,10 @@ function resolveModel(ctx: CallContext): { model: LanguageModel; modelId: string
   if (ctx.model) {
     const id = typeof ctx.model === 'string' ? ctx.model : ctx.model.modelId;
     return { model: ctx.model, modelId: id };
+  }
+  if (isFakeAiEnabled()) {
+    const fake = createFakeFacilitator();
+    return { model: fake, modelId: fake.modelId };
   }
   return { model: cfg.model, modelId: cfg.model };
 }

@@ -34,7 +34,7 @@ export function WorkshopRoom({ workshopId, initialState, title }: { workshopId: 
   const send = useCallback(
     (text: string) => {
       setFocus('chat');
-      void chat.sendMessage({ text }, { body: { trigger: 'chat', text } });
+      void chat.sendMessage({ text }, { body: { mode: 'chat', text } });
     },
     [chat],
   );
@@ -44,9 +44,9 @@ export function WorkshopRoom({ workshopId, initialState, title }: { workshopId: 
     if (finished || !needsGreeting(state)) return;
     if (greetedStage.current === state.stage) return;
     greetedStage.current = state.stage;
-    void chat.sendMessage({ text: '' }, { body: { trigger: 'greeting' } });
+    void chat.sendMessage({ text: '' }, { body: { mode: 'greeting' } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.stage, state.stageEnteredSeq]);
+  }, [state.stage, state.lastAiStage]);
 
   // Canvas activity: after a pause, give the facilitator a turn.
   const nudgeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -57,7 +57,7 @@ export function WorkshopRoom({ workshopId, initialState, title }: { workshopId: 
       if (nudgeTimer.current) clearTimeout(nudgeTimer.current);
       nudgeTimer.current = setTimeout(() => {
         if (chat.status === 'streaming' || chat.status === 'submitted') return;
-        void chat.sendMessage({ text: '' }, { body: { trigger: 'canvas' } });
+        void chat.sendMessage({ text: '' }, { body: { mode: 'canvas' } });
       }, 15_000);
     },
     [chat, setState],

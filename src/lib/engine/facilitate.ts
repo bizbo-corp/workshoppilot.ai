@@ -38,11 +38,18 @@ export async function facilitate(input: FacilitateInput) {
     ({ state } = await append({ workshopId: input.workshopId, actor: 'user', actorId: input.userId, payload: { type: 'chat.user', text: input.text.trim() } }, state));
   }
 
+  const stageAtStart = state.stage;
   const sinceAi = await eventsSince(input.workshopId, state.aiSeenSeq);
 
   const suggestions: string[] = [];
-  const emit = async (payload: EventPayload) => {
-    ({ state } = await append({ workshopId: input.workshopId, actor: 'ai', actorId: 'facilitate', payload }, state));
+  // The SDK runs a step's tool calls concurrently; events must land one at a time.
+  let queue: Promise<unknown> = Promise.resolve();
+  const emit = (payload: EventPayload) => {
+    const next = queue.then(async () => {
+      ({ state } = await append({ workshopId: input.workshopId, actor: 'ai', actorId: 'facilitate', payload }, state));
+    });
+    queue = next.catch(() => undefined);
+    return next;
   };
   const tools = facilitatorTools({ getState: () => state, emit, suggestions });
 
@@ -69,7 +76,7 @@ export async function facilitate(input: FacilitateInput) {
       return null;
     }
     ({ state } = await append(
-      { workshopId: input.workshopId, actor: 'ai', actorId: 'facilitate', payload: { type: 'chat.ai', text: clean, suggestions: suggestions.length ? [...suggestions] : undefined } },
+      { workshopId: input.workshopId, actor: 'ai', actorId: 'facilitate', payload: { type: 'chat.ai', text: clean, suggestions: suggestions.length ? [...suggestions] : undefined, stage: stageAtStart } },
       state,
     ));
     return state;
