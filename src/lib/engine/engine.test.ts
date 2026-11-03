@@ -9,7 +9,7 @@ import { buildSystemPrompt, buildMessages, describeCanvasChanges } from './conte
 import { isStageDone, missingFields, STAGES, STAGE_ORDER } from './stages';
 import { getLens, IDEA_TYPE_LABELS } from './lenses';
 import { BOARDS } from './boards';
-import { FACILITATE_STOP } from './facilitate';
+import { FACILITATE_STOP, joinStepText } from './facilitate';
 import { IDEA_TYPES } from '@/lib/engine/ids';
 
 /** In-memory engine: tools emit, reducer folds. */
@@ -170,5 +170,15 @@ describe('a full facilitator turn with a mock model', () => {
     expect(text).toContain('What would you change');
     expect(h.state.fields['setup.challenge']).toContain('groomers');
     expect(h.log.map((e) => e.type)).toEqual(['field.set']);
+  });
+});
+
+describe('joinStepText', () => {
+  it('keeps text from every step once', () => {
+    expect(joinStepText(['Drafted it.', '', 'What would you change?'])).toBe('Drafted it.\n\nWhat would you change?');
+  });
+  it('drops a step that repeats an earlier one', () => {
+    expect(joinStepText(['Good call. Owners matter.', 'Good call. Owners matter.'])).toBe('Good call. Owners matter.');
+    expect(joinStepText(['Good call.', 'Good call. Owners matter too.'])).toBe('Good call. Owners matter too.');
   });
 });

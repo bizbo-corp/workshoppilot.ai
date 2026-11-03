@@ -71,7 +71,7 @@ export async function facilitate(input: FacilitateInput) {
   // speak in more than one step (text beside a tool call, then more text), so
   // join every step's text rather than keeping only the last.
   const finished = result.steps.then(async (steps) => {
-    const clean = steps.map((s) => s.text.trim()).filter(Boolean).join('\n\n').trim();
+    const clean = joinStepText(steps.map((s) => s.text));
     if (!clean || clean === '(quiet)') {
       // Mark the canvas changes as seen even when the AI chose silence.
       ({ state } = await append({ workshopId: input.workshopId, actor: 'ai', actorId: 'facilitate', payload: { type: 'ai.seen', seq: state.seq } }, state));
@@ -87,6 +87,23 @@ export async function facilitate(input: FacilitateInput) {
   return { result, finished, getState: () => state };
 }
 
+
+/**
+ * A turn may speak in more than one step. Keep each step's text once: some
+ * models repeat the step-one text verbatim after the tool results come back.
+ */
+export function joinStepText(texts: string[]): string {
+  const kept: string[] = [];
+  for (const raw of texts) {
+    const t = raw.trim();
+    if (!t) continue;
+    if (kept.some((k) => k === t || k.includes(t))) continue;
+    const idx = kept.findIndex((k) => t.includes(k));
+    if (idx >= 0) kept[idx] = t;
+    else kept.push(t);
+  }
+  return kept.join('\n\n');
+}
 
 async function eventsSince(workshopId: string, seq: number): Promise<EngineEvent[]> {
   const rows = await db

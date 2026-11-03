@@ -71,7 +71,7 @@ Set the fields with set_field as soon as you have a draft, then ask what they wo
     boards: ['stakeholder_rings', 'empathy_map'],
     guidance: `Start with the stakeholder rings. Ask who lives the problem daily and put them in core; then who shapes or feels the outcome (direct); then context (indirect). Add items yourself from what the user says, then ask what is missing. Three to eight people or groups is plenty.
 
-Then research. Offer two routes: real conversations the user has had or will have, and synthetic interviews where you play a core stakeholder so they can practise questions and surface likely answers. Synthetic answers are hypotheses, never evidence; say so.
+Then research. Offer two routes: real conversations the user has had or will have, and a synthetic interview where you play a core stakeholder so they can practise questions and surface likely answers. Run a synthetic interview only when the user asks for one, keep it to three or four exchanges, start each synthetic line with "Synthetic:", and never put a synthetic answer on the empathy map as if someone said it. Synthetic answers are hypotheses, never evidence.
 
 Capture what you hear on the empathy map as you go: quotes into says, inferred beliefs into thinks, emotions into feels, behaviours into does. Mark who said each thing. Keep it to the sharpest items, not everything.
 
