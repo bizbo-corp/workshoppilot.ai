@@ -37,7 +37,10 @@ export function ChatPanel({ messages, status, onSend, suggestions, finished, wor
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {messages
-          .filter((m) => m.parts.some((p) => p.type === 'text' && p.text.trim()))
+          .filter((m) => {
+            const t = textOf(m).trim();
+            return t && t !== '(quiet)';
+          })
           .map((m) => (
             <div key={m.id} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
               <div

@@ -64,7 +64,7 @@ export async function append(input: AppendInput, current?: WorkshopState): Promi
   if (!base) throw new Error(`Workshop ${input.workshopId} not found`);
 
   const { type, ...rest } = input.payload;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 5; attempt++) {
     const seq = base.seq + 1 + attempt;
     try {
       const [row] = await db
@@ -79,7 +79,7 @@ export async function append(input: AppendInput, current?: WorkshopState): Promi
         .where(eq(workshops.id, input.workshopId));
       return { state, event };
     } catch (err) {
-      if (attempt < 2 && isUniqueViolation(err)) {
+      if (attempt < 4 && isUniqueViolation(err)) {
         // Someone else wrote this seq. Reload and retry once.
         const fresh = await loadWorkshop(input.workshopId);
         if (fresh) return append(input, fresh.state);
@@ -99,6 +99,12 @@ export async function appendAll(workshopId: string, actor: EngineEvent['actor'],
   return state!;
 }
 
+/** Drizzle wraps driver errors; the Postgres code sits on the wrapper or on its cause. */
 function isUniqueViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && 'code' in err && (err as { code?: string }).code === '23505';
+  let e: unknown = err;
+  for (let depth = 0; depth < 3 && typeof e === 'object' && e !== null; depth++) {
+    if ((e as { code?: string }).code === '23505') return true;
+    e = (e as { cause?: unknown }).cause;
+  }
+  return false;
 }

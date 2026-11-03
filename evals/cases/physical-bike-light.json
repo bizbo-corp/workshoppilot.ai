@@ -1,0 +1,12 @@
+{
+  "id": "physical-bike-light",
+  "idea": "A bike light that clips onto any helmet and charges from the sun so commuters never find it flat",
+  "expectIdeaType": "physical_product",
+  "turns": [
+    { "kind": "chat", "text": "Everyday commuters, not sport cyclists. They forget to charge, so they ride dark half the winter. I'm sure there's demand, everyone I know hates charging lights." },
+    { "kind": "chat", "text": "Fine, it's a belief for now. The stake is safety, people get hit at dusk. Draft it." },
+    { "kind": "chat", "text": "Yes." },
+    { "kind": "chat", "text": "No interviews yet. I've got a bike shop owner who'd talk to me and I could stand outside a station at 5pm." },
+    { "kind": "chat", "text": "Let's park research there and move on, I'll do the station thing this week." }
+  ]
+}

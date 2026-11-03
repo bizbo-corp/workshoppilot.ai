@@ -1,0 +1,13 @@
+{
+  "id": "process-vet-onboarding",
+  "idea": "Our vet clinic takes three weeks to get a new vet working on their own and the senior vets are fed up",
+  "expectIdeaType": "process_change",
+  "turns": [
+    { "kind": "chat", "text": "It's an internal thing, not a product. New vets shadow a senior for three weeks because nobody has written down how we do anything. The seniors lose half their day." },
+    { "kind": "chat", "text": "The new vets feel it most, they feel useless. But the seniors are the ones who complain. Draft the challenge for the new vets." },
+    { "kind": "chat", "text": "Yes, go ahead." },
+    { "kind": "chat", "text": "I asked the last two hires. Both said the first week was fine and the problem was weeks two and three, waiting around for a senior to check their work." },
+    { "kind": "canvas", "board": "empathy_map", "zone": "says", "text": "\"I spent most of Tuesday waiting for someone to sign off a vaccination.\" (Priya, hired March)" },
+    { "kind": "chat", "text": "Happy with that, move on." }
+  ]
+}

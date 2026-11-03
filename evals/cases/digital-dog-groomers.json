@@ -1,0 +1,13 @@
+{
+  "id": "digital-dog-groomers",
+  "idea": "A booking app for mobile dog groomers so they stop losing jobs to missed calls",
+  "expectIdeaType": "digital_product",
+  "turns": [
+    { "kind": "chat", "text": "Solo mobile groomers. They are elbow deep in a wet dog when the phone rings, so they miss it and the customer books someone else. About $90 a time." },
+    { "kind": "chat", "text": "Mostly the money, but also calling back at 7pm to find the slot has gone. It makes them feel unprofessional. Draft the challenge." },
+    { "kind": "chat", "text": "Yes, happy with that." },
+    { "kind": "canvas", "board": "stakeholder_rings", "zone": "direct", "text": "Dog owners who book by phone" },
+    { "kind": "chat", "text": "I spoke to two groomers last week. One said she ignores the phone completely while working and loses maybe three jobs a week. The other has her partner answer." },
+    { "kind": "chat", "text": "That's all the research I have for now. Yes, let's move on." }
+  ]
+}
