@@ -11,6 +11,8 @@ export interface FieldDef {
   /** What good looks like; the AI reads this. */
   description: string;
   required: boolean;
+  /** System fields: never shown to the user or described to the AI. */
+  hidden?: boolean;
 }
 
 export interface StageDef {
@@ -121,6 +123,8 @@ Build the concept card for the chosen idea on the board, zone by zone, with the 
     fields: [
       { id: 'assumption', label: 'Riskiest assumption', description: 'A falsifiable statement about the persona\'s need or behaviour. Not a feature statement.', required: true },
       { id: 'test_plan', label: 'Test plan', description: 'Method, metric, target, kill threshold and date, in two or three lines.', required: true },
+      { id: 'result', label: 'Logged result', description: 'Set by the summary page when the user logs the test outcome.', required: false, hidden: true },
+      { id: 'reminder_sent', label: 'Reminder sent', description: 'Set by the reminder cron.', required: false, hidden: true },
     ],
     boards: ['test_card'],
     guidance: `Surface the riskiest assumption: the belief that, if wrong, kills the concept. Anchor it on the core value the persona is meant to get, not pricing or distribution, unless the research says those are the risk. Offer two alternatives and let the user choose.

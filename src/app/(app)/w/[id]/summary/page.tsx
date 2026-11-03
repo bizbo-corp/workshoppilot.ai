@@ -96,7 +96,7 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
             {state.stageSummaries[s] && <p className="text-sm text-muted-foreground">{state.stageSummaries[s]}</p>}
             <dl className="space-y-1.5">
               {STAGES[s].fields
-                .filter((f) => state.fields[fieldKey(s, f.id)])
+                .filter((f) => !f.hidden && state.fields[fieldKey(s, f.id)])
                 .map((f) => (
                   <div key={f.id}>
                     <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{f.label}</dt>

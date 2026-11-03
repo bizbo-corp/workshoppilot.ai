@@ -29,7 +29,7 @@ export function facilitatorTools(ctx: ToolContext) {
       }),
       execute: async ({ field, value }) => {
         const state = ctx.getState();
-        const def = STAGES[state.stage].fields.find((f) => f.id === field);
+        const def = STAGES[state.stage].fields.find((f) => f.id === field && !f.hidden);
         if (!def) return { ok: false, error: `Unknown field "${field}" for ${state.stage}. Fields: ${STAGES[state.stage].fields.map((f) => f.id).join(', ')}` };
         await ctx.emit({ type: 'field.set', stage: state.stage, field, value: value.trim() });
         return { ok: true, field, missing: missingFields(ctx.getState()).map((f) => f.id) };

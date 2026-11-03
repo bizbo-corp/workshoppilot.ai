@@ -18,7 +18,7 @@ export function workshopBrief(state: WorkshopState): string {
     const done = state.completedStages.includes(s);
     lines.push('', `== ${stage.label}${done ? '' : ' (not completed)'} ==`);
     if (state.stageSummaries[s]) lines.push(`Summary: ${state.stageSummaries[s]}`);
-    for (const f of stage.fields) {
+    for (const f of stage.fields.filter((x) => !x.hidden)) {
       const v = state.fields[fieldKey(s, f.id)];
       if (v) lines.push(`${f.label}: ${v}`);
     }

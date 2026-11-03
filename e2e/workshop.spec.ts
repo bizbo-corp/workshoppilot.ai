@@ -40,6 +40,11 @@ test('a workshop runs from idea to summary', async ({ page }) => {
   await expect(page.getByText('That is the workshop done.')).toBeVisible();
   await page.getByRole('link', { name: 'See the summary' }).click();
   await expect(page).toHaveURL(/\/summary$/);
+
+  // The free summary writes itself; the score is waiting for the Verdict.
+  await expect(page.getByRole('heading', { name: /Test the text-back/ })).toBeVisible();
+  await expect(page.locator('[data-score="armed"]')).toBeVisible();
+  await expect(page.getByText(/Get the Verdict|Buy credits/).first()).toBeVisible();
 });
 
 test('the user can add a sticky and the AI sees it', async ({ page }) => {

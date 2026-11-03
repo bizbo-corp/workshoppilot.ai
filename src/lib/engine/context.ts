@@ -77,7 +77,7 @@ export function describeState(state: WorkshopState): string {
     lines.push('', '## Earlier stages');
     for (const s of earlier) {
       lines.push(`### ${STAGES[s].label}`, state.stageSummaries[s] ?? '(no summary)');
-      for (const f of STAGES[s].fields) {
+      for (const f of STAGES[s].fields.filter((x) => !x.hidden)) {
         const v = state.fields[fieldKey(s, f.id)];
         if (v) lines.push(`- ${f.label}: ${v}`);
       }
@@ -86,7 +86,7 @@ export function describeState(state: WorkshopState): string {
 
   const stage = STAGES[state.stage];
   lines.push('', `## This stage: ${stage.label}`);
-  for (const f of stage.fields) {
+  for (const f of stage.fields.filter((x) => !x.hidden)) {
     const v = state.fields[fieldKey(state.stage, f.id)];
     lines.push(`- ${f.label} (${f.id}${f.required ? ', required' : ''}): ${v ? v : 'NOT SET. ' + f.description}`);
   }

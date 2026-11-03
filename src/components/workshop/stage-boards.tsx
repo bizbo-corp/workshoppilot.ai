@@ -78,7 +78,7 @@ function FieldsPanel({ workshopId, state, onChange }: Props) {
     <div className="rounded-lg border border-border bg-card">
       <div className="border-b border-border px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">What this stage produces</div>
       <ul className="divide-y divide-border">
-        {stage.fields.map((f) => {
+        {stage.fields.filter((f) => !f.hidden).map((f) => {
           const value = state.fields[fieldKey(state.stage, f.id)];
           const isEditing = editing === f.id;
           return (
