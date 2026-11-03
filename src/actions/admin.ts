@@ -8,7 +8,7 @@ import type { ActionResult } from './types';
 export async function startDummyWorkshop(): Promise<ActionResult<{ seed: string; pass: boolean; summary: string }>> {
   const admin = await requireAdmin();
   try {
-    const { report, seed } = await runDummyWorkshop({ triggeredBy: `admin:${admin.email}`, maxTurns: 16 });
+    const { report, seed } = await runDummyWorkshop({ triggeredBy: `admin:${admin.email}`, maxTurns: 20 });
     return { success: true, data: { seed, pass: report.pass, summary: report.summary } };
   } catch (err) {
     return { success: false, error: String(err instanceof Error ? err.message : err) };

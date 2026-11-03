@@ -208,5 +208,5 @@ export function describeCanvasChanges(events: EngineEvent[]): string {
     else if (p.type === 'idea_type.set') lines.push(`set the idea type to ${p.ideaType}`);
     else if (p.type === 'activity.entered') lines.push(`opened the "${p.activity}" activity`);
   }
-  return lines.length ? `[Since you last spoke the user: ${lines.join('; ')}]` : '';
+  return lines.length ? `[Since you last spoke the user: ${lines.join('; ')}. These changes are already reflected in the board lists; they are not duplicates.]` : '';
 }
