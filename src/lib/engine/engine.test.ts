@@ -67,7 +67,8 @@ describe('stages and lenses', () => {
 
   it('every stage board exists and every stage has a required field', () => {
     for (const id of STAGE_ORDER) {
-      for (const b of STAGES[id].boards) expect(BOARDS[b]).toBeDefined();
+      for (const a of STAGES[id].activities) if (a.board) expect(BOARDS[a.board]).toBeDefined();
+      expect(STAGES[id].activities.length).toBeGreaterThan(0);
       expect(STAGES[id].fields.some((f) => f.required)).toBe(true);
     }
   });
@@ -113,6 +114,21 @@ describe('facilitator tools', () => {
     expect(h.state.boards.stakeholder_rings.filter((i) => i.zone === 'core')).toHaveLength(BOARDS.stakeholder_rings.maxPerZone);
   });
 
+  it('moves between activities and runs a practice interview', async () => {
+    const s = reduce(initialState('x'), { seq: 1, actor: 'ai', actorId: null, createdAt: new Date(), payload: { type: 'stage.entered', stage: 'discover' } });
+    const h = harness(s);
+    expect(await h.tools.set_activity.execute!({ activity: 'nope' }, opts)).toMatchObject({ ok: false });
+    expect(await h.tools.set_activity.execute!({ activity: 'interviews' }, opts)).toMatchObject({ ok: true });
+    expect(h.state.activity).toBe('interviews');
+    const added = (await h.tools.add_board_item.execute!({ board: 'interviewees', zone: 'list', text: 'Priya, The Locum Vet', meta: { kind: 'synthetic', tension: 'waits on sign-off' } }, opts)) as { id: string };
+    expect(await h.tools.start_interview.execute!({ itemId: added.id }, opts)).toMatchObject({ ok: true, name: 'Priya' });
+    expect(h.state.interview?.name).toBe('Priya');
+    expect(buildSystemPrompt(h.state)).toContain('IN CHARACTER');
+    await h.tools.end_interview.execute!({}, opts);
+    expect(h.state.interview).toBeNull();
+    expect(h.state.boards.interviewees[0].meta?.done).toBe(true);
+  });
+
   it('collects suggested replies', async () => {
     const h = harness();
     await h.tools.suggest_replies.execute!({ replies: ['Yes', 'Not quite'] }, opts);
@@ -123,8 +139,9 @@ describe('facilitator tools', () => {
 describe('context', () => {
   it('puts the stable parts first and the state last', () => {
     const sys = buildSystemPrompt(initialState('x'));
-    expect(sys.indexOf('sharp consultant')).toBeLessThan(sys.indexOf('# Current stage'));
-    expect(sys.indexOf('# Current stage')).toBeLessThan(sys.indexOf('# Workshop state'));
+    expect(sys.indexOf('sharp consultant')).toBeLessThan(sys.indexOf('# Stage:'));
+    expect(sys.indexOf('# Stage:')).toBeLessThan(sys.indexOf('# Current activity'));
+    expect(sys.indexOf('# Current activity')).toBeLessThan(sys.indexOf('# Workshop state'));
     expect(sys).toContain('NOT SET');
   });
 

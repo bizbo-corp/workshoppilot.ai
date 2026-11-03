@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { listMyWorkshops } from '@/actions/workshops';
 import { NewWorkshopForm } from '@/components/workshop/new-workshop-form';
-import { STAGE_LABELS } from '@/lib/stages/definitions';
+import { STAGE_LABELS } from '@/lib/engine/stages';
 
 export const dynamic = 'force-dynamic';
 

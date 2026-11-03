@@ -6,6 +6,7 @@ import { requireMember } from '@/lib/workshops/access';
 import { append, loadWorkshop } from '@/lib/engine/store';
 import { BOARDS, isZone } from '@/lib/engine/boards';
 import { STAGES, fieldKey } from '@/lib/engine/stages';
+import { stageBoards } from '@/lib/engine/tools';
 import { BOARD_IDS, type WorkshopState } from '@/lib/engine/types';
 import { IDEA_TYPES } from '@/lib/engine/ids';
 import type { ActionResult } from './types';
@@ -30,7 +31,7 @@ export async function addBoardItem(input: z.infer<typeof addSchema>): Promise<Ac
   const { user } = await requireMember(workshopId);
   const loaded = await loadWorkshop(workshopId);
   if (!loaded) return { success: false, error: 'Not found' };
-  if (!STAGES[loaded.state.stage].boards.includes(board)) return { success: false, error: 'That board is not open in this stage' };
+  if (!stageBoards(loaded.state).includes(board)) return { success: false, error: 'That board is not open in this stage' };
   if (!isZone(board, zone)) return { success: false, error: 'Unknown zone' };
   if (loaded.state.boards[board].filter((i) => i.zone === zone).length >= BOARDS[board].maxPerZone) return { success: false, error: 'That zone is full' };
   const item = { id: createPrefixedId('itm'), board, zone, text: text.trim(), createdBy: 'user' as const, imageUrl };
@@ -89,5 +90,27 @@ export async function setIdeaType(workshopId: string, ideaType: string): Promise
   const loaded = await loadWorkshop(workshopId);
   if (!loaded) return { success: false, error: 'Not found' };
   const { state } = await append({ workshopId, actor: 'user', actorId: user.id, payload: { type: 'idea_type.set', ideaType: parsed.data, confidence: 1, source: 'user' } }, loaded.state);
+  return { success: true, data: { state } };
+}
+
+/** The user opens an activity from the rail. */
+export async function setActivity(workshopId: string, activity: string): Promise<ActionResult<{ state: WorkshopState }>> {
+  const { user } = await requireMember(workshopId);
+  const loaded = await loadWorkshop(workshopId);
+  if (!loaded) return { success: false, error: 'Not found' };
+  if (!STAGES[loaded.state.stage].activities.some((a) => a.id === activity)) return { success: false, error: 'Unknown activity' };
+  let state = loaded.state;
+  if (state.interview) ({ state } = await append({ workshopId, actor: 'user', actorId: user.id, payload: { type: 'interview.ended' } }, state));
+  ({ state } = await append({ workshopId, actor: 'user', actorId: user.id, payload: { type: 'activity.entered', stage: state.stage, activity } }, state));
+  return { success: true, data: { state } };
+}
+
+/** The user leaves a practice interview from the banner. */
+export async function endInterview(workshopId: string): Promise<ActionResult<{ state: WorkshopState }>> {
+  const { user } = await requireMember(workshopId);
+  const loaded = await loadWorkshop(workshopId);
+  if (!loaded) return { success: false, error: 'Not found' };
+  if (!loaded.state.interview) return { success: true, data: { state: loaded.state } };
+  const { state } = await append({ workshopId, actor: 'user', actorId: user.id, payload: { type: 'interview.ended' } }, loaded.state);
   return { success: true, data: { state } };
 }

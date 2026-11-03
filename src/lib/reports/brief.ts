@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { BOARDS } from '@/lib/engine/boards';
 import { getLens } from '@/lib/engine/lenses';
 import { STAGES, STAGE_ORDER, fieldKey } from '@/lib/engine/stages';
+import type { BoardId } from '@/lib/engine/types';
 import type { WorkshopState } from '@/lib/engine/types';
 
 /**
@@ -22,7 +23,8 @@ export function workshopBrief(state: WorkshopState): string {
       const v = state.fields[fieldKey(s, f.id)];
       if (v) lines.push(`${f.label}: ${v}`);
     }
-    for (const b of stage.boards) {
+    const boards = [...new Set(stage.activities.map((a) => a.board).filter((b): b is BoardId => !!b))];
+    for (const b of boards) {
       const items = state.boards[b];
       if (!items.length) continue;
       lines.push(`${BOARDS[b].label}:`);

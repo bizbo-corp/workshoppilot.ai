@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Icon } from '@/components/ui/icon';
 import { STAGES, fieldKey } from '@/lib/engine/stages';
+import { stageBoards } from '@/lib/engine/tools';
 import { IDEA_TYPE_LABELS, getLens } from '@/lib/engine/lenses';
 import type { BoardId, WorkshopState } from '@/lib/engine/types';
 import { IDEA_TYPES } from '@/lib/engine/ids';
@@ -33,7 +34,7 @@ export function StageBoards({ workshopId, state, onChange }: Props) {
       <div className="space-y-6">
         <FieldsPanel workshopId={workshopId} state={state} onChange={onChange} />
         {state.stage === 'setup' && <IdeaTypeChooser workshopId={workshopId} state={state} onChange={onChange} />}
-        {stage.boards.map((b) => (
+        {stageBoards(state).map((b) => (
           <BoardFor key={b} board={b} />
         ))}
       </div>
@@ -55,6 +56,8 @@ function BoardFor({ board }: { board: BoardId }) {
       return <CardBoard board="concept_card" hint="One concept, grounded in the research" />;
     case 'test_card':
       return <CardBoard board="test_card" hint="The test that could kill it" />;
+    default:
+      return null;
   }
 }
 

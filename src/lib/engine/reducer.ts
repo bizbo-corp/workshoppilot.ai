@@ -79,7 +79,19 @@ export function reduce(state: WorkshopState, event: EngineEvent): WorkshopState 
       };
 
     case 'stage.entered':
-      return { ...next, stage: p.stage, stageEnteredSeq: event.seq };
+      return { ...next, stage: p.stage, activity: null, interview: null, stageEnteredSeq: event.seq };
+
+    case 'activity.entered':
+      return p.stage === state.stage ? { ...next, activity: p.activity } : next;
+
+    case 'interview.started':
+      return { ...next, interview: { itemId: p.itemId, name: p.name, questions: 0 } };
+
+    case 'interview.question':
+      return state.interview ? { ...next, interview: { ...state.interview, questions: state.interview.questions + 1 } } : next;
+
+    case 'interview.ended':
+      return { ...next, interview: null };
 
     case 'ai.seen':
       return { ...next, aiSeenSeq: p.seq };
@@ -90,7 +102,13 @@ export function reduce(state: WorkshopState, event: EngineEvent): WorkshopState 
 }
 
 export function replay(events: EngineEvent[], seed: WorkshopState = initialState()): WorkshopState {
-  return events.reduce(reduce, seed);
+  return events.reduce(reduce, upgrade(seed));
+}
+
+/** Fill in fields and boards that older stored projections do not have. */
+export function upgrade(state: WorkshopState): WorkshopState {
+  const fresh = initialState(state.idea);
+  return { ...fresh, ...state, boards: { ...fresh.boards, ...state.boards } };
 }
 
 function pushMessage(list: WorkshopState['messages'], m: WorkshopState['messages'][number]) {

@@ -8,6 +8,7 @@ import { IDEA_TYPES } from '@/lib/engine/ids';
 import { facilitate } from '@/lib/engine/facilitate';
 import { append, loadWorkshop } from '@/lib/engine/store';
 import { STAGES, STAGE_ORDER, missingFields } from '@/lib/engine/stages';
+import { stageBoards } from '@/lib/engine/tools';
 import { createPrefixedId } from '@/lib/ids';
 import type { BoardId, WorkshopState } from '@/lib/engine/types';
 
@@ -143,7 +144,8 @@ export async function runDummyWorkshop(opts: { seed?: string; triggeredBy?: stri
 
       // Simulated user decides what to do.
       const stage = STAGES[state.stage];
-      const boardsHint = stage.boards.length ? `Boards open now: ${stage.boards.join(', ')} (zones: ${stage.boards.map((b) => `${b}=${zoneIds(b).join('/')}`).join('; ')}).` : 'No boards in this stage.';
+      const open = stageBoards(state);
+      const boardsHint = open.length ? `Boards open now: ${open.join(', ')} (zones: ${open.map((b) => `${b}=${zoneIds(b).join('/')}`).join('; ')}).` : 'No boards in this stage.';
       const u = await aiObject(
         { job: 'test_user', workshopId, userId },
         { system: userSystem, schema: userTurnSchema, messages: [...transcript.slice(-10), { role: 'user', content: `[Stage: ${stage.label}. ${boardsHint} Respond to the facilitator's last message.]` }] },
@@ -151,7 +153,7 @@ export async function runDummyWorkshop(opts: { seed?: string; triggeredBy?: stri
       turns++;
 
       if (u.action === 'finish') break;
-      if (u.action === 'add_item' && u.board && u.zone && stage.boards.includes(u.board as BoardId) && zoneIds(u.board as BoardId).includes(u.zone)) {
+      if (u.action === 'add_item' && u.board && u.zone && open.includes(u.board as BoardId) && zoneIds(u.board as BoardId).includes(u.zone)) {
         const item = { id: createPrefixedId('itm'), board: u.board as BoardId, zone: u.zone, text: u.text.slice(0, 300), createdBy: 'user' as const };
         await append({ workshopId, actor: 'user', actorId: userId, payload: { type: 'board.item_added', item } }, state);
         lastReply = await turn('canvas');

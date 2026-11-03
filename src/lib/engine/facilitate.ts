@@ -36,6 +36,8 @@ export async function facilitate(input: FacilitateInput) {
 
   if (input.trigger === 'chat' && input.text?.trim()) {
     ({ state } = await append({ workshopId: input.workshopId, actor: 'user', actorId: input.userId, payload: { type: 'chat.user', text: input.text.trim() } }, state));
+    // A typed message during a practice interview counts as a question to the interviewee.
+    if (state.interview) ({ state } = await append({ workshopId: input.workshopId, actor: 'system', actorId: null, payload: { type: 'interview.question' } }, state));
   }
 
   const stageAtStart = state.stage;

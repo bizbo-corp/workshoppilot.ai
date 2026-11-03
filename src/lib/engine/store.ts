@@ -2,7 +2,7 @@ import { and, asc, eq, gt } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { workshops, workshopEvents, type Workshop } from '@/db/schema';
 import { initialState, type EngineEvent, type EventPayload, type WorkshopState } from './types';
-import { reduce, replay } from './reducer';
+import { reduce, replay, upgrade } from './reducer';
 
 /**
  * Persistence for the event log and its projection.
@@ -29,7 +29,7 @@ export async function loadWorkshop(workshopId: string): Promise<{ workshop: Work
 
   // Fold any events newer than the stored projection (a crash between the
   // event insert and the state update leaves at most a few).
-  let state = (Object.keys(workshop.state).length ? (workshop.state as unknown as WorkshopState) : initialState(workshop.idea));
+  let state = upgrade(Object.keys(workshop.state).length ? (workshop.state as unknown as WorkshopState) : initialState(workshop.idea));
   const newer = await db
     .select()
     .from(workshopEvents)

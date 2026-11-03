@@ -5,7 +5,10 @@ export type { StageId, IdeaType };
 /** Boards the stages can show. Each has fixed zones; items sit in a zone. */
 export const BOARD_IDS = [
   'stakeholder_rings',
+  'interviewees',
+  'insights',
   'empathy_map',
+  'persona_card',
   'journey_strip',
   'idea_board',
   'concept_card',
@@ -42,6 +45,10 @@ export interface ChatMessage {
 export interface WorkshopState {
   idea: string;
   stage: StageId;
+  /** The activity in focus within the stage; null means the stage's first. */
+  activity: string | null;
+  /** A practice interview in progress: which interviewee item, and how many questions asked. */
+  interview: { itemId: string; name: string; questions: number } | null;
   ideaType: IdeaType | null;
   ideaTypeConfidence: number | null;
   fields: Record<string, string>;
@@ -71,6 +78,10 @@ export type EventPayload =
   | { type: 'idea_type.set'; ideaType: IdeaType; confidence: number; source: 'ai' | 'user' }
   | { type: 'stage.completed'; stage: StageId; summary: string }
   | { type: 'stage.entered'; stage: StageId }
+  | { type: 'activity.entered'; stage: StageId; activity: string }
+  | { type: 'interview.started'; itemId: string; name: string }
+  | { type: 'interview.question' }
+  | { type: 'interview.ended' }
   | { type: 'ai.seen'; seq: number };
 
 export type EventType = EventPayload['type'];
@@ -86,7 +97,10 @@ export interface EngineEvent {
 export function emptyBoards(): Record<BoardId, BoardItem[]> {
   return {
     stakeholder_rings: [],
+    interviewees: [],
+    insights: [],
     empathy_map: [],
+    persona_card: [],
     journey_strip: [],
     idea_board: [],
     concept_card: [],
@@ -98,6 +112,8 @@ export function initialState(idea = ''): WorkshopState {
   return {
     idea,
     stage: 'setup',
+    activity: null,
+    interview: null,
     ideaType: null,
     ideaTypeConfidence: null,
     fields: {},
