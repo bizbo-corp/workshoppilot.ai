@@ -42,10 +42,10 @@ export interface JobConfig {
 }
 
 const DEFAULTS: Record<AiJob, JobConfig> = {
-  // Measured 2026-11-03 on the evals: Flash Lite ignores tool rules, Haiku follows them but
-  // misses what the user just said, Sonnet 5.5 passes most cases. With the stable prompt
-  // cached, a Sonnet turn is about a quarter of a cent.
-  facilitate: { model: 'anthropic/claude-sonnet-5-5', credits: 0, maxOutputTokens: 2500, kind: 'text' },
+  // Measured 2026-11-03 on the evals with the judge seeing the whole conversation: Flash
+  // Lite ignores tool rules, Gemini Flash 0/3, Sonnet 5.5 2/3, Haiku 5.5 3/3 at a tenth of
+  // Sonnet's price. The stable prompt prefix is cached.
+  facilitate: { model: 'anthropic/claude-haiku-5-5', credits: 0, maxOutputTokens: 2500, kind: 'text' },
   should_speak: { model: 'google/gemini-2.5-flash-lite', credits: 0, maxOutputTokens: 20, kind: 'text' },
   summarise_stage: { model: 'google/gemini-2.5-flash-lite', credits: 0, maxOutputTokens: 800, kind: 'text' },
   extract: { model: 'google/gemini-2.5-flash-lite', credits: 0, maxOutputTokens: 2000, kind: 'text' },
