@@ -21,6 +21,8 @@ export interface ActivityDef {
   why: string;
   /** The board this activity works on, if any. */
   board?: BoardId;
+  /** Other boards the activity may write to. */
+  alsoBoards?: BoardId[];
   /** Facilitation script for this activity. Ported from the 1.0 step prompts. */
   script: string;
   /** True when the activity has produced enough to move on. */
@@ -127,6 +129,7 @@ Done: run a blindspot check against those categories. If something major is miss
         what: 'Hear from the people who live the problem, for real or in a practice interview Wanda plays.',
         why: 'Research is the difference between a hunch and a finding.',
         board: 'insights',
+        alsoBoards: ['interviewees'],
         targetTurns: 12,
         done: (s) => count(s, 'insights') >= 1,
         script: `You are a persona chameleon: warm facilitator between interviews, and completely in character during a practice interview.

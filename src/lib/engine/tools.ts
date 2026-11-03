@@ -21,7 +21,7 @@ export interface ToolContext {
 
 /** Boards the current stage may touch: any of its activities' boards. */
 export function stageBoards(state: WorkshopState): BoardId[] {
-  const ids = STAGES[state.stage].activities.map((a) => a.board).filter((b): b is BoardId => !!b);
+  const ids = STAGES[state.stage].activities.flatMap((a) => [a.board, ...(a.alsoBoards ?? [])]).filter((b): b is BoardId => !!b);
   return [...new Set(ids)];
 }
 
