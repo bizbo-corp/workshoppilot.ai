@@ -9,7 +9,7 @@ import { buildSystemPrompt, buildMessages, describeCanvasChanges } from './conte
 import { isStageDone, missingFields, STAGES, STAGE_ORDER } from './stages';
 import { getLens, IDEA_TYPE_LABELS } from './lenses';
 import { BOARDS } from './boards';
-import { FACILITATE_STOP, joinStepText } from './facilitate';
+import { FACILITATE_STOP, joinStepText, moveOnTarget } from './facilitate';
 import { IDEA_TYPES } from '@/lib/engine/ids';
 
 /** In-memory engine: tools emit, reducer folds. */
@@ -198,5 +198,20 @@ describe('joinStepText', () => {
   it('lets the last step win when the model rewrites its reply', () => {
     expect(joinStepText(['Good call. Owners matter.', 'Good call. Owners matter.'])).toBe('Good call. Owners matter.');
     expect(joinStepText(['First draft.', 'Final version, reworded.'])).toBe('Final version, reworded.');
+  });
+});
+
+describe('moveOnTarget', () => {
+  const inDiscover = reduce(initialState('x'), { seq: 1, actor: 'ai', actorId: null, createdAt: new Date(), payload: { type: 'stage.entered', stage: 'discover' } });
+  it('ignores ordinary messages', () => {
+    expect(moveOnTarget(inDiscover, 'The groomers and their customers')).toBeNull();
+  });
+  it('waits until the activity has produced enough', () => {
+    expect(moveOnTarget(inDiscover, "That's all, let's move on")).toBeNull();
+  });
+  it('advances to the next activity when it has', () => {
+    let s = inDiscover;
+    for (let i = 0; i < 4; i++) s = reduce(s, { seq: 10 + i, actor: 'user', actorId: null, createdAt: new Date(), payload: { type: 'board.item_added', item: { id: `i${i}`, board: 'stakeholder_rings', zone: 'core', text: `Person ${i}`, createdBy: 'user' } } });
+    expect(moveOnTarget(s, "That's all from me, move on")).toBe('interviews');
   });
 });

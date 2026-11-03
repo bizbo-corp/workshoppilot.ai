@@ -186,7 +186,9 @@ export function buildMessages(state: WorkshopState, eventsSinceAiSpoke: EngineEv
     // it before anything the script wants. Models attend to the end.
     const last = out.pop();
     const text = typeof last?.content === 'string' ? last.content : '';
-    out.push({ role: 'user', content: `${canvasNote ? `${canvasNote}\n\n` : ''}${text}\n\n[Respond to this message first: answer any question in it, act on any plan or request to move on, and only refer to board items listed in the state. Then one question of your own, or none if they asked to move on.]` });
+    const moved = eventsSinceAiSpoke.find((e) => e.actorId === 'move-on' && e.payload.type === 'activity.entered');
+    const movedNote = moved && moved.payload.type === 'activity.entered' ? `[They asked to move on, so you are now in the "${moved.payload.activity}" activity. Acknowledge in one line and open it the way its script says.]` : '';
+    out.push({ role: 'user', content: `${canvasNote ? `${canvasNote}\n\n` : ''}${text}\n\n${movedNote || '[Respond to this message first: answer any question in it, act on any plan or request to move on, and only refer to board items listed in the state. Then one question of your own, or none if they asked to move on.]'}` });
   }
 
   if (out[0]?.role === 'assistant') out.unshift({ role: 'user', content: '[Workshop opened]' });
@@ -198,6 +200,7 @@ export function describeCanvasChanges(events: EngineEvent[]): string {
   for (const e of events) {
     if (e.actor !== 'user') continue;
     const p = e.payload;
+    if (p.type === 'activity.entered' && e.actorId === 'move-on') continue;
     if (p.type === 'board.item_added') lines.push(`added to ${p.item.board}/${p.item.zone}: "${p.item.text}"${p.item.imageUrl ? ' (with an image)' : ''}`);
     else if (p.type === 'board.item_updated') lines.push(`changed item ${p.id}: ${JSON.stringify(p.patch)}`);
     else if (p.type === 'board.item_removed') lines.push(`removed item ${p.id}`);

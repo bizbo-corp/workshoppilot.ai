@@ -4,6 +4,7 @@ import { db } from '@/db/client';
 import { workshopEvents } from '@/db/schema';
 import { aiStream } from '@/lib/ai/gateway';
 import { buildMessages, buildSystemParts } from './context';
+import { STAGES, currentActivity } from './stages';
 import { reduce } from './reducer';
 import { append, loadWorkshop } from './store';
 import { facilitatorTools } from './tools';
@@ -38,6 +39,13 @@ export async function facilitate(input: FacilitateInput) {
     ({ state } = await append({ workshopId: input.workshopId, actor: 'user', actorId: input.userId, payload: { type: 'chat.user', text: input.text.trim() } }, state));
     // A typed message during a practice interview counts as a question to the interviewee.
     if (state.interview) ({ state } = await append({ workshopId: input.workshopId, actor: 'system', actorId: null, payload: { type: 'interview.question' } }, state));
+    // "Move on" with a finished activity advances before the model speaks, so
+    // the script for the next activity is what it reads, not the one it left.
+    const next = moveOnTarget(state, input.text);
+    if (next) {
+      if (state.interview) ({ state } = await append({ workshopId: input.workshopId, actor: 'system', actorId: null, payload: { type: 'interview.ended' } }, state));
+      ({ state } = await append({ workshopId: input.workshopId, actor: 'system', actorId: 'move-on', payload: { type: 'activity.entered', stage: state.stage, activity: next } }, state));
+    }
   }
 
   const stageAtStart = state.stage;
@@ -94,6 +102,22 @@ export async function facilitate(input: FacilitateInput) {
   return { result, finished, getState: () => state };
 }
 
+
+const MOVE_ON = /\b(move on|next (activity|step|stage|one)|let'?s go on|carry on|that'?s (all|enough|it) (for now|from me)?|skip (this|it|ahead)|park (it|that|this|research)|done with (this|that|research|interviews|the map)|happy with (that|those|it|this),? (let'?s )?(move|go))\b/i;
+
+/**
+ * When the user asks to move on and the current activity has produced
+ * enough, the next activity's id; otherwise null and the model decides.
+ */
+export function moveOnTarget(state: WorkshopState, text: string | undefined): string | null {
+  if (!text || !MOVE_ON.test(text)) return null;
+  const stage = STAGES[state.stage];
+  const current = currentActivity(state);
+  if (!current.done(state)) return null;
+  const i = stage.activities.findIndex((a) => a.id === current.id);
+  const next = stage.activities[i + 1];
+  return next ? next.id : null;
+}
 
 /**
  * A turn may speak in more than one step. The last step's text is the

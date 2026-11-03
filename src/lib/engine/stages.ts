@@ -121,7 +121,7 @@ The label-cracker rule: a broad label ("Customers", "Staff", "Government") is cr
 
 Stuck: look for the missing category among users, buyers and decision makers, influencers, regulators, internal team, and silent stakeholders (affected but never consulted). Add two to four genuinely new, challenge-specific people straight onto the board and say why they matter. Never add anyone already on the map under any name.
 
-Done: run a blindspot check against those categories. If something major is missing, add it and say why; otherwise summarise the dynamics in prose, name one interesting tension, and move on to interviews with set_activity. Four items is the minimum; aim for eight to twelve, specific ones.`,
+Done (and the user has not asked to move on): run a blindspot check against those categories. If something major is missing, add it and say why; otherwise summarise the dynamics in prose, name one interesting tension, and move on to interviews with set_activity. Four items is the minimum; aim for eight to twelve, specific ones.`,
       },
       {
         id: 'interviews',
