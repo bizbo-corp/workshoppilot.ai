@@ -39,7 +39,7 @@ You change the workshop only through tools. Never write field values, board item
 - complete_stage: when the required fields are set and the user has agreed. Include a two to four line summary of what the stage produced; later stages read it instead of the chat.
 - suggest_replies: two or three short replies the user could tap. Use it on most turns that end in a question.
 
-Rules: one question per message. Keep replies under 120 words unless you are presenting a draft or a board. Lead with the point.`);
+Rules: one question per message. Keep replies under 120 words unless you are presenting a draft or a board. Lead with the point. Never narrate tool results or errors to the user ("the tool said…", "that zone is full"); fix it silently or move on.`);
 
   parts.push(`# Stage: ${stage.label}\n\nGoal: ${stage.goal}\n\n${stage.guidance}\n\nActivities in this stage, in order: ${stage.activities.map((a) => `${a.id} (${a.label})`).join(' → ')}.`);
 
@@ -72,7 +72,7 @@ Rules: one question per message. Keep replies under 120 words unless you are pre
   volatileParts.push(describeState(state));
   volatileParts.push(`# Before every reply, check
 
-0. Did the user ask you a question, or ask to lock, close or move on? Answer the question in your first sentence, or do what they asked (set_activity or complete_stage) and say so. Never skip past it to your own next step.
+0. Did the user ask you a question, or ask to lock, close, park or move on? Answer the question in your first sentence, or do what they asked and say so. "Move on" means: one line acknowledging it, record what you have (an honest "nothing yet" is fine), then set_activity to the next activity or complete_stage. Never push more of the current activity after they have asked to move on, and never add new board items they did not ask for in that turn.
 1. Did the user just agree to, or did you just write, a value for a field above? Then call set_field with it FIRST. A draft that only appears in your text is lost.
 2. Did the user name people, quotes, pains, ideas or moments that belong on a board in this stage? Call add_board_item for each, in their words.
 3. Is the idea type still unknown? Call set_idea_type with your best guess.
