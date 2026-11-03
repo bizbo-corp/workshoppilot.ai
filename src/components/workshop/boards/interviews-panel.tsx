@@ -25,7 +25,7 @@ export function InterviewsPanel({ onAskToInterview }: { onAskToInterview: (name:
     <div className="space-y-4">
       <BoardFrame
         title={BOARDS.interviewees.label}
-        hint="Practice interviews are Wanda playing a part; only real people count as evidence"
+        hint="Practice means Wanda plays the part; only real people count as evidence"
         actions={
           active ? (
             <Button

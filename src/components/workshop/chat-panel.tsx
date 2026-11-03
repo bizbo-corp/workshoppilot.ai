@@ -31,8 +31,10 @@ export function ChatPanel({ messages, status, onSend, suggestions, finished, wor
   const bottom = useRef<HTMLDivElement>(null);
   const busy = status === 'submitted' || status === 'streaming';
 
+  const firstPaint = useRef(true);
   useEffect(() => {
-    bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    bottom.current?.scrollIntoView({ behavior: firstPaint.current ? 'instant' : 'smooth', block: 'end' });
+    firstPaint.current = false;
   }, [messages, status]);
 
   function submit() {

@@ -139,12 +139,12 @@ export function AddSticky({ board, zone, label, full, placeholder = 'Type, then 
 export function BoardFrame({ title, hint, children, className, actions }: { title: string; hint?: string; children: ReactNode; className?: string; actions?: ReactNode }) {
   return (
     <section className={cn('rounded-lg border border-border bg-card', className)} data-board-frame={title}>
-      <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-2">
-        <div className="flex items-baseline gap-2">
+      <header className="flex items-start justify-between gap-3 border-b border-border px-4 py-2">
+        <div className="min-w-0">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground">{title}</h3>
-          {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+          {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
         </div>
-        {actions}
+        {actions && <div className="shrink-0">{actions}</div>}
       </header>
       {children}
     </section>
