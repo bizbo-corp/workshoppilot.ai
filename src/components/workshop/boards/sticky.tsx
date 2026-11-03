@@ -8,13 +8,15 @@ import { useBoard } from './board-context';
 
 /**
  * One item on a board. Click to edit, Enter to save, the corner button to
- * remove. AI-added items are tinted so the user can tell whose words they
- * are. `data-*` attributes let the geometry test check layout.
+ * remove. Items the facilitator added have a dashed edge so you can tell
+ * whose words they are; everything else stays neutral. A `source` badge
+ * shows who said it when the item carries one.
  */
-export function Sticky({ item, tone = 'yellow', className, children }: { item: BoardItem; tone?: 'yellow' | 'blue' | 'green' | 'pink' | 'white'; className?: string; children?: ReactNode }) {
+export function Sticky({ item, className, children, badge }: { item: BoardItem; className?: string; children?: ReactNode; badge?: ReactNode }) {
   const { update, remove } = useBoard();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(item.text);
+  const source = typeof item.meta?.source === 'string' ? item.meta.source : null;
 
   function save() {
     setEditing(false);
@@ -26,24 +28,17 @@ export function Sticky({ item, tone = 'yellow', className, children }: { item: B
     update(item.id, { text: t });
   }
 
-  const bg =
-    item.createdBy === 'ai'
-      ? 'bg-[var(--sticky-note-white)] dark:bg-neutral-olive-800'
-      : {
-          yellow: 'bg-[var(--sticky-note-yellow)] text-[var(--sticky-note-yellow-text)]',
-          blue: 'bg-[var(--sticky-note-blue)] text-neutral-olive-950',
-          green: 'bg-[var(--sticky-note-green)] text-neutral-olive-950',
-          pink: 'bg-[var(--sticky-note-pink)] text-neutral-olive-950',
-          white: 'bg-[var(--sticky-note-white)] text-neutral-olive-950',
-        }[tone];
-
   return (
     <div
       data-item-id={item.id}
       data-zone={item.zone}
       data-board={item.board}
       data-created-by={item.createdBy}
-      className={cn('group relative rounded-md px-2.5 py-2 text-xs leading-snug shadow-sm', bg, item.createdBy === 'ai' && 'border border-dashed border-olive-300 dark:border-neutral-olive-600', className)}
+      className={cn(
+        'group relative rounded-md border bg-background px-2.5 py-2 text-xs leading-snug text-foreground shadow-xs',
+        item.createdBy === 'ai' ? 'border-dashed border-olive-400/70 dark:border-olive-500/50' : 'border-border',
+        className,
+      )}
     >
       {editing ? (
         <textarea
@@ -73,6 +68,12 @@ export function Sticky({ item, tone = 'yellow', className, children }: { item: B
           {item.text}
         </button>
       )}
+      {(source || badge) && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
+          {source && <span className="rounded-sm bg-muted px-1 py-0.5">{source}</span>}
+          {badge}
+        </div>
+      )}
       {children}
       <button
         type="button"
@@ -87,7 +88,7 @@ export function Sticky({ item, tone = 'yellow', className, children }: { item: B
 }
 
 /** A small "+" that turns into a textarea; Enter adds the item. */
-export function AddSticky({ board, zone, label, full, placeholder = 'Type, then Enter' }: { board: BoardItem['board']; zone: string; label: string; full: boolean; placeholder?: string }) {
+export function AddSticky({ board, zone, label, full, placeholder = 'Type, then Enter', meta }: { board: BoardItem['board']; zone: string; label: string; full: boolean; placeholder?: string; meta?: Record<string, string | number | boolean> }) {
   const { add } = useBoard();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
@@ -96,7 +97,7 @@ export function AddSticky({ board, zone, label, full, placeholder = 'Type, then 
     const t = text.trim();
     setOpen(false);
     setText('');
-    if (t) add(board, zone, t);
+    if (t) add(board, zone, t, undefined, meta);
   }
 
   if (full) return null;
@@ -106,9 +107,9 @@ export function AddSticky({ board, zone, label, full, placeholder = 'Type, then 
         type="button"
         aria-label={`Add to ${label}`}
         onClick={() => setOpen(true)}
-        className="flex h-7 w-7 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+        className="flex h-6 w-6 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground"
       >
-        <Icon name="plus" className="h-3.5 w-3.5" />
+        <Icon name="plus" className="h-3 w-3" />
       </button>
     );
   return (
@@ -134,14 +135,39 @@ export function AddSticky({ board, zone, label, full, placeholder = 'Type, then 
   );
 }
 
-export function BoardFrame({ title, hint, children, className }: { title: string; hint?: string; children: ReactNode; className?: string }) {
+export function BoardFrame({ title, hint, children, className, actions }: { title: string; hint?: string; children: ReactNode; className?: string; actions?: ReactNode }) {
   return (
     <section className={cn('rounded-lg border border-border bg-card', className)} data-board-frame={title}>
-      <header className="flex items-baseline justify-between border-b border-border px-4 py-2">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</h3>
-        {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+      <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-2">
+        <div className="flex items-baseline gap-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground">{title}</h3>
+          {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+        </div>
+        {actions}
       </header>
       {children}
     </section>
+  );
+}
+
+/** A labelled drop zone: label, add button, wrapped items. */
+export function Zone({ board, id, label, hint, items, max, className, tone = 'plain', children, meta }: { board: BoardItem['board']; id: string; label: string; hint?: string; items: BoardItem[]; max: number; className?: string; tone?: 'plain' | 'tint'; children?: ReactNode; meta?: Record<string, string | number | boolean> }) {
+  return (
+    <div data-zone-container={id} className={cn('flex min-h-[7rem] flex-col p-3', tone === 'tint' ? 'bg-muted/40' : 'bg-card', className)}>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <span className="text-xs font-medium">{label}</span>
+          {hint && <span className="ml-1.5 text-[11px] text-muted-foreground">{hint}</span>}
+        </div>
+        <AddSticky board={board} zone={id} label={label} full={items.length >= max} meta={meta} />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {items.map((it) => (
+          <Sticky key={it.id} item={it} className="max-w-[14rem]" />
+        ))}
+        {children}
+      </div>
+      {items.length === 0 && !children && <p className="mt-auto text-[11px] text-muted-foreground/70">Nothing here yet.</p>}
+    </div>
   );
 }

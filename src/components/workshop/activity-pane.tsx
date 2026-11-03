@@ -4,10 +4,9 @@ import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Icon } from '@/components/ui/icon';
-import { STAGES, fieldKey } from '@/lib/engine/stages';
-import { stageBoards } from '@/lib/engine/tools';
+import { STAGES, STAGE_ORDER, currentActivity, fieldKey } from '@/lib/engine/stages';
 import { IDEA_TYPE_LABELS, getLens } from '@/lib/engine/lenses';
-import type { BoardId, WorkshopState } from '@/lib/engine/types';
+import type { WorkshopState } from '@/lib/engine/types';
 import { IDEA_TYPES } from '@/lib/engine/ids';
 import { setFieldValue, setIdeaType } from '@/actions/board';
 import { BoardProvider } from './boards/board-context';
@@ -16,53 +15,84 @@ import { EmpathyMap } from './boards/empathy-map';
 import { JourneyStrip } from './boards/journey-strip';
 import { IdeaBoard } from './boards/idea-board';
 import { CardBoard } from './boards/card-board';
+import { PersonaCard } from './boards/persona-card';
+import { InterviewsPanel } from './boards/interviews-panel';
 
 interface Props {
   workshopId: string;
   state: WorkshopState;
   onChange: (next: WorkshopState) => void;
+  onSend: (text: string) => void;
 }
 
 /**
- * Everything the user can touch for the current stage: the fields the AI
- * is filling, the idea type chooser in Setup, and the stage's boards.
+ * The right-hand side: one activity at a time. A short header says what
+ * this activity is and why it matters, the board for it sits underneath,
+ * and the outputs it produces are listed at the bottom so progress is
+ * never a mystery.
  */
-export function StageBoards({ workshopId, state, onChange }: Props) {
+export function ActivityPane({ workshopId, state, onChange, onSend }: Props) {
   const stage = STAGES[state.stage];
+  const activity = currentActivity(state);
+  const index = stage.activities.findIndex((a) => a.id === activity.id);
+  const fields = stage.fields.filter((f) => !f.hidden && (f.activity === activity.id || (!f.activity && index === stage.activities.length - 1)));
+
   return (
     <BoardProvider workshopId={workshopId} state={state} onChange={onChange}>
-      <div className="space-y-6">
-        <FieldsPanel workshopId={workshopId} state={state} onChange={onChange} />
+      <div className="space-y-4">
+        <header className="rounded-lg border border-border bg-card px-4 py-3">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <span>Stage {STAGE_ORDER.indexOf(state.stage)} · {stage.label}</span>
+            <span aria-hidden>·</span>
+            <span>
+              Activity {index + 1} of {stage.activities.length}
+            </span>
+          </div>
+          <h2 className="mt-1 text-lg font-semibold tracking-tight">{activity.label}</h2>
+          <p className="mt-0.5 text-sm text-foreground/90">{activity.what}</p>
+          <p className="text-sm text-muted-foreground">{activity.why}</p>
+        </header>
+
         {state.stage === 'setup' && <IdeaTypeChooser workshopId={workshopId} state={state} onChange={onChange} />}
-        {stageBoards(state).map((b) => (
-          <BoardFor key={b} board={b} />
-        ))}
+
+        <BoardFor activityId={activity.id} onSend={onSend} />
+
+        {fields.length > 0 && <OutputsPanel workshopId={workshopId} state={state} onChange={onChange} fields={fields} />}
       </div>
     </BoardProvider>
   );
 }
 
-function BoardFor({ board }: { board: BoardId }) {
-  switch (board) {
-    case 'stakeholder_rings':
+function BoardFor({ activityId, onSend }: { activityId: string; onSend: (text: string) => void }) {
+  switch (activityId) {
+    case 'stakeholders':
       return <StakeholderRings />;
-    case 'empathy_map':
-      return <EmpathyMap />;
-    case 'journey_strip':
+    case 'interviews':
+      return <InterviewsPanel onAskToInterview={(name) => onSend(`Let's do the practice interview with ${name}.`)} />;
+    case 'empathy':
+      return <EmpathyMap focus="evidence" />;
+    case 'synthesis':
+      return <EmpathyMap focus="synthesis" />;
+    case 'persona':
+      return <PersonaCard />;
+    case 'journey':
       return <JourneyStrip />;
-    case 'idea_board':
-      return <IdeaBoard />;
-    case 'concept_card':
-      return <CardBoard board="concept_card" hint="One concept, grounded in the research" />;
-    case 'test_card':
-      return <CardBoard board="test_card" hint="The test that could kill it" />;
+    case 'crazy8s':
+      return <IdeaBoard mode="ideate" />;
+    case 'shortlist':
+      return <IdeaBoard mode="shortlist" />;
+    case 'concept':
+      return <CardBoard board="concept_card" hint="Something you could pitch" />;
+    case 'assumption':
+      return <CardBoard board="test_card" hint="The belief that, if wrong, kills it" only={['assumption']} />;
+    case 'test':
+      return <CardBoard board="test_card" hint="Agreed now, scored later" />;
     default:
       return null;
   }
 }
 
-function FieldsPanel({ workshopId, state, onChange }: Props) {
-  const stage = STAGES[state.stage];
+function OutputsPanel({ workshopId, state, onChange, fields }: Pick<Props, 'workshopId' | 'state' | 'onChange'> & { fields: (typeof STAGES)[keyof typeof STAGES]['fields'] }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [, start] = useTransition();
@@ -78,14 +108,14 @@ function FieldsPanel({ workshopId, state, onChange }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card">
-      <div className="border-b border-border px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">What this stage produces</div>
+    <div className="rounded-lg border border-border bg-card" data-outputs>
+      <div className="border-b border-border px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">What this activity produces</div>
       <ul className="divide-y divide-border">
-        {stage.fields.filter((f) => !f.hidden).map((f) => {
+        {fields.map((f) => {
           const value = state.fields[fieldKey(state.stage, f.id)];
           const isEditing = editing === f.id;
           return (
-            <li key={f.id} className="px-4 py-3" data-field={f.id} data-filled={value ? 'true' : 'false'}>
+            <li key={f.id} className="px-4 py-2.5" data-field={f.id} data-filled={value ? 'true' : 'false'}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 text-sm font-medium">
@@ -107,7 +137,7 @@ function FieldsPanel({ workshopId, state, onChange }: Props) {
                       className="mt-1 w-full resize-none rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                     />
                   ) : (
-                    <p className={cn('mt-1 text-sm', value ? '' : 'text-muted-foreground')}>{value || f.description}</p>
+                    <p className={cn('mt-0.5 text-sm', value ? '' : 'text-muted-foreground')}>{value || f.description}</p>
                   )}
                 </div>
                 {!isEditing && (
@@ -132,16 +162,16 @@ function FieldsPanel({ workshopId, state, onChange }: Props) {
   );
 }
 
-function IdeaTypeChooser({ workshopId, state, onChange }: Props) {
+function IdeaTypeChooser({ workshopId, state, onChange }: Pick<Props, 'workshopId' | 'state' | 'onChange'>) {
   const [, start] = useTransition();
   const lens = getLens(state.ideaType);
   return (
     <div className="rounded-lg border border-border bg-card p-4">
-      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">What kind of thing is this?</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">What kind of thing is this?</div>
       <p className="mt-1 text-sm text-muted-foreground">
         {state.ideaType
-          ? `${state.ideaTypeConfidence && state.ideaTypeConfidence < 0.6 ? 'Best guess: ' : ''}${lens?.label}. Change it if that is wrong.`
-          : 'The facilitator will guess; you can set it here.'}
+          ? `${state.ideaTypeConfidence && state.ideaTypeConfidence < 0.6 ? 'Best guess: ' : ''}${lens?.label}. Change it if that is wrong; it shapes the words, boards and tests from here on.`
+          : 'Wanda will guess from what you say; you can set it here.'}
       </p>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {IDEA_TYPES.map((t) => (
@@ -156,10 +186,7 @@ function IdeaTypeChooser({ workshopId, state, onChange }: Props) {
                 else toast.error(r.error);
               })
             }
-            className={cn(
-              'rounded-full border px-3 py-1 text-xs',
-              state.ideaType === t ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background hover:bg-accent',
-            )}
+            className={cn('rounded-full border px-3 py-1 text-xs', state.ideaType === t ? 'border-foreground bg-foreground text-background' : 'border-border bg-background hover:bg-accent')}
           >
             {IDEA_TYPE_LABELS[t]}
           </button>

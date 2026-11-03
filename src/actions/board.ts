@@ -22,19 +22,20 @@ const addSchema = z.object({
   zone: z.string(),
   text: z.string().min(1).max(300),
   imageUrl: z.string().url().optional(),
+  meta: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
 });
 
 export async function addBoardItem(input: z.infer<typeof addSchema>): Promise<ActionResult<{ id: string; state: WorkshopState }>> {
   const parsed = addSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: 'Invalid item' };
-  const { workshopId, board, zone, text, imageUrl } = parsed.data;
+  const { workshopId, board, zone, text, imageUrl, meta } = parsed.data;
   const { user } = await requireMember(workshopId);
   const loaded = await loadWorkshop(workshopId);
   if (!loaded) return { success: false, error: 'Not found' };
   if (!stageBoards(loaded.state).includes(board)) return { success: false, error: 'That board is not open in this stage' };
   if (!isZone(board, zone)) return { success: false, error: 'Unknown zone' };
   if (loaded.state.boards[board].filter((i) => i.zone === zone).length >= BOARDS[board].maxPerZone) return { success: false, error: 'That zone is full' };
-  const item = { id: createPrefixedId('itm'), board, zone, text: text.trim(), createdBy: 'user' as const, imageUrl };
+  const item = { id: createPrefixedId('itm'), board, zone, text: text.trim(), createdBy: 'user' as const, imageUrl, meta };
   const { state } = await append({ workshopId, actor: 'user', actorId: user.id, payload: { type: 'board.item_added', item } }, loaded.state);
   return { success: true, data: { id: item.id, state } };
 }

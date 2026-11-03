@@ -16,7 +16,7 @@
     "db:migrate": "dotenv -e .env.local -- drizzle-kit migrate",
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
     "vercel-build": "next build",
-    "dev:bypass": "BYPASS_AUTH=true next dev -p 3010",
+    "dev:bypass": "BYPASS_AUTH=true next dev -p 3012",
     "eval": "dotenv -e .env.local -- tsx scripts/eval.ts"
   },
   "dependencies": {
@@ -45,6 +45,7 @@
     "heic-to": "^1.4.2",
     "next": "^16.1.6",
     "next-themes": "^0.4.6",
+    "perfect-freehand": "^1.2.3",
     "radix-ui": "^1.4.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",

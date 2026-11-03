@@ -12,7 +12,7 @@ import type { BoardId, BoardItem, WorkshopState } from '@/lib/engine/types';
 interface BoardApi {
   workshopId: string;
   state: WorkshopState;
-  add: (board: BoardId, zone: string, text: string, imageUrl?: string) => void;
+  add: (board: BoardId, zone: string, text: string, imageUrl?: string, meta?: Record<string, string | number | boolean>) => void;
   update: (id: string, patch: { text?: string; zone?: string; meta?: Record<string, string | number | boolean> }) => void;
   remove: (id: string) => void;
   pending: boolean;
@@ -29,9 +29,9 @@ export function BoardProvider({ workshopId, state, onChange, children }: { works
     state,
     pending,
     onChange,
-    add: (board, zone, text, imageUrl) =>
+    add: (board, zone, text, imageUrl, meta) =>
       start(async () => {
-        const r = await addBoardItem({ workshopId, board, zone, text, imageUrl });
+        const r = await addBoardItem({ workshopId, board, zone, text, imageUrl, meta });
         if (r.success) onChange(r.data.state);
         else toast.error(r.error);
       }),
