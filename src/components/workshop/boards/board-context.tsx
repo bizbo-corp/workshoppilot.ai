@@ -17,11 +17,13 @@ interface BoardApi {
   remove: (id: string) => void;
   pending: boolean;
   onChange: (s: WorkshopState) => void;
+  /** Looking back at a finished stage: no edits. */
+  readOnly: boolean;
 }
 
 const Ctx = createContext<BoardApi | null>(null);
 
-export function BoardProvider({ workshopId, state, onChange, children }: { workshopId: string; state: WorkshopState; onChange: (s: WorkshopState) => void; children: ReactNode }) {
+export function BoardProvider({ workshopId, state, onChange, children, readOnly = false }: { workshopId: string; state: WorkshopState; onChange: (s: WorkshopState) => void; children: ReactNode; readOnly?: boolean }) {
   const [pending, start] = useTransition();
 
   const api: BoardApi = {
@@ -29,6 +31,7 @@ export function BoardProvider({ workshopId, state, onChange, children }: { works
     state,
     pending,
     onChange,
+    readOnly,
     add: (board, zone, text, imageUrl, meta) =>
       start(async () => {
         const r = await addBoardItem({ workshopId, board, zone, text, imageUrl, meta });

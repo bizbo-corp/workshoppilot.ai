@@ -13,7 +13,7 @@ import { useBoard } from './board-context';
  * shows who said it when the item carries one.
  */
 export function Sticky({ item, className, children, badge }: { item: BoardItem; className?: string; children?: ReactNode; badge?: ReactNode }) {
-  const { update, remove } = useBoard();
+  const { update, remove, readOnly } = useBoard();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(item.text);
   const source = typeof item.meta?.source === 'string' ? item.meta.source : null;
@@ -60,7 +60,7 @@ export function Sticky({ item, className, children, badge }: { item: BoardItem; 
           className="w-full resize-none bg-transparent outline-none"
         />
       ) : (
-        <button type="button" className="block w-full text-left" onClick={() => setEditing(true)} title="Click to edit">
+        <button type="button" className="block w-full text-left" onClick={() => !readOnly && setEditing(true)} title={readOnly ? undefined : 'Click to edit'}>
           {item.imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={item.imageUrl} alt="" className="mb-1.5 w-full rounded object-cover" />
@@ -75,6 +75,7 @@ export function Sticky({ item, className, children, badge }: { item: BoardItem; 
         </div>
       )}
       {children}
+      {!readOnly && (
       <button
         type="button"
         aria-label="Remove"
@@ -83,13 +84,14 @@ export function Sticky({ item, className, children, badge }: { item: BoardItem; 
       >
         <Icon name="minus" className="h-2.5 w-2.5" />
       </button>
+      )}
     </div>
   );
 }
 
 /** A small "+" that turns into a textarea; Enter adds the item. */
 export function AddSticky({ board, zone, label, full, placeholder = 'Type, then Enter', meta }: { board: BoardItem['board']; zone: string; label: string; full: boolean; placeholder?: string; meta?: Record<string, string | number | boolean> }) {
-  const { add } = useBoard();
+  const { add, readOnly } = useBoard();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
 
@@ -100,7 +102,7 @@ export function AddSticky({ board, zone, label, full, placeholder = 'Type, then 
     if (t) add(board, zone, t, undefined, meta);
   }
 
-  if (full) return null;
+  if (full || readOnly) return null;
   if (!open)
     return (
       <button

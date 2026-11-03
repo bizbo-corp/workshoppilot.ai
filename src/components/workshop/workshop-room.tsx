@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { toast } from 'sonner';
-import type { WorkshopState } from '@/lib/engine/types';
+import type { StageId, WorkshopState } from '@/lib/engine/types';
 import { needsGreeting } from '@/lib/engine/stages';
 import { endInterview, setActivity } from '@/actions/board';
 import { useWorkshopState } from './use-workshop';
@@ -21,6 +21,7 @@ import { ActivityPane } from './activity-pane';
 export function WorkshopRoom({ workshopId, initialState, title }: { workshopId: string; initialState: WorkshopState; title: string }) {
   const { state, setState, refresh } = useWorkshopState(workshopId, initialState);
   const [railCollapsed, setRailCollapsed] = useState(false);
+  const [viewing, setViewing] = useState<{ stage: StageId; activity: string } | null>(null);
   const greetedStage = useRef<string | null>(null);
   const [, start] = useTransition();
   const finished = state.completedStages.includes('deliver');
@@ -93,7 +94,18 @@ export function WorkshopRoom({ workshopId, initialState, title }: { workshopId: 
 
   return (
     <div className="flex h-full min-h-0 w-full overflow-hidden bg-background">
-      <ActivityRail state={state} title={title} onOpenActivity={openActivity} collapsed={railCollapsed} onToggle={() => setRailCollapsed((v) => !v)} />
+      <ActivityRail
+        state={state}
+        title={title}
+        onOpenActivity={(id) => {
+          setViewing(null);
+          openActivity(id);
+        }}
+        onViewActivity={(stage, activity) => setViewing({ stage, activity })}
+        viewing={viewing}
+        collapsed={railCollapsed}
+        onToggle={() => setRailCollapsed((v) => !v)}
+      />
       <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(380px,11fr)_14fr]">
         <section className="flex min-h-0 flex-col border-r border-border bg-background">
           <ChatPanel
@@ -108,7 +120,7 @@ export function WorkshopRoom({ workshopId, initialState, title }: { workshopId: 
           />
         </section>
         <section className="scroll-quiet min-h-0 overflow-y-auto bg-muted/30 p-4 lg:p-6">
-          <ActivityPane workshopId={workshopId} state={state} onChange={onBoardChange} onSend={send} />
+          <ActivityPane workshopId={workshopId} state={state} onChange={onBoardChange} onSend={send} viewing={viewing} onBackToCurrent={() => setViewing(null)} />
         </section>
       </div>
     </div>

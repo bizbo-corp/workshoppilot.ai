@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Icon } from '@/components/ui/icon';
 import { STAGES, STAGE_ORDER, currentActivity, fieldKey } from '@/lib/engine/stages';
 import { IDEA_TYPE_LABELS, getLens } from '@/lib/engine/lenses';
-import type { WorkshopState } from '@/lib/engine/types';
+import type { StageId, WorkshopState } from '@/lib/engine/types';
 import { IDEA_TYPES } from '@/lib/engine/ids';
 import { setFieldValue, setIdeaType } from '@/actions/board';
 import { BoardProvider } from './boards/board-context';
@@ -23,6 +23,9 @@ interface Props {
   state: WorkshopState;
   onChange: (next: WorkshopState) => void;
   onSend: (text: string) => void;
+  /** Looking back at an earlier stage's activity, read-only. */
+  viewing?: { stage: StageId; activity: string } | null;
+  onBackToCurrent?: () => void;
 }
 
 /**
@@ -31,18 +34,30 @@ interface Props {
  * and the outputs it produces are listed at the bottom so progress is
  * never a mystery.
  */
-export function ActivityPane({ workshopId, state, onChange, onSend }: Props) {
-  const stage = STAGES[state.stage];
-  const activity = currentActivity(state);
+export function ActivityPane({ workshopId, state, onChange, onSend, viewing, onBackToCurrent }: Props) {
+  const stageId = viewing?.stage ?? state.stage;
+  const stage = STAGES[stageId];
+  const activity = viewing ? (stage.activities.find((a) => a.id === viewing.activity) ?? stage.activities[0]) : currentActivity(state);
   const index = stage.activities.findIndex((a) => a.id === activity.id);
   const fields = stage.fields.filter((f) => !f.hidden && (f.activity === activity.id || (!f.activity && index === stage.activities.length - 1)));
+  const readOnly = !!viewing;
 
   return (
-    <BoardProvider workshopId={workshopId} state={state} onChange={onChange}>
+    <BoardProvider workshopId={workshopId} state={state} onChange={onChange} readOnly={readOnly}>
       <div className="space-y-4">
-        <header className="rounded-lg border border-border bg-card px-4 py-3" data-stage={state.stage} data-activity={activity.id}>
+        {viewing && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/60 px-4 py-2 text-xs" data-viewing>
+            <span>
+              Looking back at <span className="font-medium">{stage.label} · {activity.label}</span>. This stage is done; the boards are read-only here.
+            </span>
+            <button type="button" onClick={onBackToCurrent} className="shrink-0 rounded-md border border-border bg-background px-2 py-1 hover:bg-accent">
+              Back to where I was
+            </button>
+          </div>
+        )}
+        <header className="rounded-lg border border-border bg-card px-4 py-3" data-stage={stageId} data-activity={activity.id}>
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-            <span>Stage {STAGE_ORDER.indexOf(state.stage)} · {stage.label}</span>
+            <span>Stage {STAGE_ORDER.indexOf(stageId)} · {stage.label}</span>
             <span aria-hidden>·</span>
             <span>
               Activity {index + 1} of {stage.activities.length}
@@ -53,11 +68,11 @@ export function ActivityPane({ workshopId, state, onChange, onSend }: Props) {
           <p className="text-sm text-muted-foreground">{activity.why}</p>
         </header>
 
-        {state.stage === 'setup' && <IdeaTypeChooser workshopId={workshopId} state={state} onChange={onChange} />}
+        {stageId === 'setup' && !readOnly && <IdeaTypeChooser workshopId={workshopId} state={state} onChange={onChange} />}
 
         <BoardFor activityId={activity.id} onSend={onSend} />
 
-        {fields.length > 0 && <OutputsPanel workshopId={workshopId} state={state} onChange={onChange} fields={fields} />}
+        {fields.length > 0 && <OutputsPanel workshopId={workshopId} state={state} onChange={onChange} fields={fields} stage={stageId} readOnly={readOnly} />}
       </div>
     </BoardProvider>
   );
@@ -92,7 +107,7 @@ function BoardFor({ activityId, onSend }: { activityId: string; onSend: (text: s
   }
 }
 
-function OutputsPanel({ workshopId, state, onChange, fields }: Pick<Props, 'workshopId' | 'state' | 'onChange'> & { fields: (typeof STAGES)[keyof typeof STAGES]['fields'] }) {
+function OutputsPanel({ workshopId, state, onChange, fields, stage, readOnly }: Pick<Props, 'workshopId' | 'state' | 'onChange'> & { fields: (typeof STAGES)[keyof typeof STAGES]['fields']; stage: StageId; readOnly: boolean }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [, start] = useTransition();
@@ -112,7 +127,7 @@ function OutputsPanel({ workshopId, state, onChange, fields }: Pick<Props, 'work
       <div className="border-b border-border px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">What this activity produces</div>
       <ul className="divide-y divide-border">
         {fields.map((f) => {
-          const value = state.fields[fieldKey(state.stage, f.id)];
+          const value = state.fields[fieldKey(stage, f.id)];
           const isEditing = editing === f.id;
           return (
             <li key={f.id} className="px-4 py-2.5" data-field={f.id} data-filled={value ? 'true' : 'false'}>
@@ -140,7 +155,7 @@ function OutputsPanel({ workshopId, state, onChange, fields }: Pick<Props, 'work
                     <p className={cn('mt-0.5 text-sm', value ? '' : 'text-muted-foreground')}>{value || f.description}</p>
                   )}
                 </div>
-                {!isEditing && (
+                {!isEditing && !readOnly && (
                   <button
                     type="button"
                     className="text-muted-foreground hover:text-foreground"

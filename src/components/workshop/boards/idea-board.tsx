@@ -6,9 +6,12 @@ import { cn } from '@/lib/utils';
 import { Icon } from '@/components/ui/icon';
 import { BOARDS } from '@/lib/engine/boards';
 import { cleanUpSketch } from '@/actions/images';
+import { addBoardItem } from '@/actions/board';
+import { Button } from '@/components/ui/button';
 import { useBoard, itemsIn, useBoardChange } from './board-context';
 import { AddSticky, BoardFrame, Sticky } from './sticky';
 import { DrawingPad } from './drawing-pad';
+import { SheetSplitter } from './sheet-splitter';
 
 /**
  * Eight slots, Crazy 8s style. A slot takes a few words, a photo of a
@@ -19,9 +22,25 @@ export function IdeaBoard({ mode = 'ideate' }: { mode?: 'ideate' | 'shortlist' }
   const def = BOARDS.idea_board;
   const shortlisted = state.boards.idea_board.filter((i) => i.meta?.shortlisted).length;
   const [drawingFor, setDrawingFor] = useState<string | null>(null);
+  const [sheet, setSheet] = useState<File | null>(null);
+  const sheetInput = useRef<HTMLInputElement>(null);
+  const { onChange } = useBoardChange();
 
   return (
-    <BoardFrame title={def.label} hint={mode === 'shortlist' ? `Star one to three · ${shortlisted} shortlisted` : 'Sketch, snap a photo or type a few words'}>
+    <BoardFrame
+      title={def.label}
+      hint={mode === 'shortlist' ? `Star one to three · ${shortlisted} shortlisted` : 'Sketch, snap a photo or type a few words'}
+      actions={
+        mode === 'ideate' ? (
+          <>
+            <input ref={sheetInput} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files?.[0] && setSheet(e.target.files[0])} />
+            <Button size="xs" variant="outline" onClick={() => sheetInput.current?.click()}>
+              <Icon name="camera" className="h-3 w-3" /> Upload a sheet of eight
+            </Button>
+          </>
+        ) : null
+      }
+    >
       <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
         {def.zones.map((z, i) => {
           const item = itemsIn(state, 'idea_board', z.id)[0];
@@ -60,6 +79,28 @@ export function IdeaBoard({ mode = 'ideate' }: { mode?: 'ideate' | 'shortlist' }
           );
         })}
       </div>
+      {sheet && (
+        <SheetSplitter
+          file={sheet}
+          onCancel={() => setSheet(null)}
+          onSplit={async (cells) => {
+            // Fill the empty slots in order; uploads run in parallel, adds in order.
+            const empty = def.zones.map((z) => z.id).filter((z) => !itemsIn(state, 'idea_board', z)[0]);
+            const urls = await Promise.all(cells.slice(0, empty.length).map((b) => uploadBlob(workshopId, b)));
+            let latest = state;
+            for (let i = 0; i < urls.length; i++) {
+              const url = urls[i];
+              if (!url) continue;
+              const r = await addBoardItem({ workshopId, board: 'idea_board', zone: empty[i], text: `Sketch ${i + 1}`, imageUrl: url });
+              if (r.success) latest = r.data.state;
+              else toast.error(r.error);
+            }
+            onChange(latest);
+            setSheet(null);
+            toast.success(`${urls.filter(Boolean).length} sketches added`);
+          }}
+        />
+      )}
       {drawingFor && (
         <DrawingPad
           title={`Idea ${Number(drawingFor.slice(1))}`}

@@ -11,7 +11,7 @@ import type { StageId, WorkshopState } from '@/lib/engine/types';
  * tick for what is done and a marker for where you are. Activities in the
  * current stage are clickable; earlier and later stages are read-only.
  */
-export function ActivityRail({ state, title, onOpenActivity, collapsed, onToggle }: { state: WorkshopState; title: string; onOpenActivity: (id: string) => void; collapsed: boolean; onToggle: () => void }) {
+export function ActivityRail({ state, title, onOpenActivity, onViewActivity, viewing, collapsed, onToggle }: { state: WorkshopState; title: string; onOpenActivity: (id: string) => void; onViewActivity: (stage: StageId, id: string) => void; viewing: { stage: StageId; activity: string } | null; collapsed: boolean; onToggle: () => void }) {
   const current = currentActivity(state);
 
   return (
@@ -45,22 +45,23 @@ export function ActivityRail({ state, title, onOpenActivity, collapsed, onToggle
                 <ol className="ml-[1.35rem] mt-0.5 border-l border-border pl-3">
                   {stage.activities.map((a) => {
                     const aDone = done || a.done(state);
-                    const isCurrent = active && a.id === current.id;
+                    const isCurrent = active && a.id === current.id && !viewing;
+                    const isViewing = viewing?.stage === sid && viewing.activity === a.id;
                     return (
                       <li key={a.id}>
                         <button
                           type="button"
-                          disabled={!active}
-                          onClick={() => onOpenActivity(a.id)}
+                          disabled={future}
+                          onClick={() => (active ? onOpenActivity(a.id) : onViewActivity(sid, a.id))}
                           data-activity={a.id}
                           data-current={isCurrent || undefined}
                           aria-label={`${a.label}${aDone ? ', done' : ''}${isCurrent ? ', current' : ''}`}
-                          aria-current={isCurrent ? 'step' : undefined}
+                          aria-current={isCurrent ? 'step' : isViewing ? 'true' : undefined}
                           className={cn(
                             'flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs',
-                            isCurrent ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground',
-                            active && !isCurrent && 'hover:bg-accent/60 hover:text-foreground',
-                            !active && 'cursor-default',
+                            isCurrent || isViewing ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground',
+                            !future && !isCurrent && !isViewing && 'hover:bg-accent/60 hover:text-foreground',
+                            future && 'cursor-default',
                           )}
                         >
                           <span className={cn('flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border', aDone ? 'border-olive-600 bg-olive-600 text-white' : isCurrent ? 'border-foreground' : 'border-border')}>
