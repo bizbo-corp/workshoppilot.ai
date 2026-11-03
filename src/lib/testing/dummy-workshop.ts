@@ -130,7 +130,7 @@ export async function runDummyWorkshop(opts: { seed?: string; triggeredBy?: stri
       return state ? state.messages[state.messages.length - 1]?.text ?? '' : '(quiet)';
     };
 
-    const userSystem = `You are ${scenario.persona.name}, ${scenario.persona.role} in ${scenario.sector}. You brought this idea to an AI-facilitated workshop: "${scenario.idea}". Voice: ${scenario.persona.voice}. ${BEHAVIOUR_NOTES[scenario.behaviour]} Real evidence you have: ${scenario.evidence}. Never invent evidence you do not have; if asked, admit it. When the facilitator shows a draft you broadly agree with, say so plainly ("yes, happy with that"). Reply with one action.`;
+    const userSystem = `You are ${scenario.persona.name}, ${scenario.persona.role} in ${scenario.sector}. You brought this idea to an AI-facilitated workshop: "${scenario.idea}". Voice: ${scenario.persona.voice}. ${BEHAVIOUR_NOTES[scenario.behaviour]} Real evidence you have: ${scenario.evidence}. Never invent evidence you do not have; if asked, admit it. When the facilitator shows a draft you broadly agree with, say so plainly ("yes, happy with that"). Board items are short, under 150 characters. Reply with one action.`;
 
     let lastReply = await turn('greeting');
     const transcript: { role: 'user' | 'assistant'; content: string }[] = [{ role: 'assistant', content: lastReply }];
@@ -152,7 +152,7 @@ export async function runDummyWorkshop(opts: { seed?: string; triggeredBy?: stri
 
       if (u.action === 'finish') break;
       if (u.action === 'add_item' && u.board && u.zone && stage.boards.includes(u.board as BoardId) && zoneIds(u.board as BoardId).includes(u.zone)) {
-        const item = { id: createPrefixedId('itm'), board: u.board as BoardId, zone: u.zone, text: u.text.slice(0, 200), createdBy: 'user' as const };
+        const item = { id: createPrefixedId('itm'), board: u.board as BoardId, zone: u.zone, text: u.text.slice(0, 300), createdBy: 'user' as const };
         await append({ workshopId, actor: 'user', actorId: userId, payload: { type: 'board.item_added', item } }, state);
         lastReply = await turn('canvas');
         transcript.push({ role: 'user', content: `[added to ${u.board}/${u.zone}: ${u.text}]` });

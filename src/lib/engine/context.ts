@@ -66,6 +66,7 @@ Rules: one question per message. Keep replies under 120 words unless you are pre
   const volatileParts: string[] = [describeState(state)];
   volatileParts.push(`# Before every reply, check
 
+0. Did the user ask you a question, or ask to lock, close or move on? Answer the question in your first sentence, or do what they asked (complete_stage) and say so. Never skip past it to your own next step.
 1. Did the user just agree to, or did you just write, a value for a field above? Then call set_field with it FIRST. A draft that only appears in your text is lost.
 2. Did the user name people, quotes, pains, ideas or moments that belong on a board in this stage? Call add_board_item for each, in their words.
 3. Is the idea type still unknown? Call set_idea_type with your best guess.
@@ -127,8 +128,7 @@ export function describeBoard(state: WorkshopState, board: BoardId): string {
 }
 
 function countStageTurns(state: WorkshopState): number {
-  // Messages since the last stage.entered are not tracked in state; approximate from recent messages.
-  return Math.ceil(state.messages.filter((m) => m.role === 'user').length / Math.max(1, state.completedStages.length + 1));
+  return state.messages.filter((m) => m.role === 'user' && m.seq > state.stageEnteredSeq).length;
 }
 
 /**
