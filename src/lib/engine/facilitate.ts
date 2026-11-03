@@ -106,14 +106,14 @@ export async function facilitate(input: FacilitateInput) {
 const MOVE_ON = /\b(move on|next (activity|step|stage|one)|let'?s go on|carry on|that'?s (all|enough|it) (for now|from me)?|skip (this|it|ahead)|park (it|that|this|research)|done with (this|that|research|interviews|the map)|happy with (that|those|it|this),? (let'?s )?(move|go))\b/i;
 
 /**
- * When the user asks to move on and the current activity has produced
- * enough, the next activity's id; otherwise null and the model decides.
+ * When the user asks to move on, the next activity's id (null at the last
+ * one, where completing the stage is the model's call). The user is free
+ * to leave an activity thin; the Verdict is where thin evidence is judged.
  */
 export function moveOnTarget(state: WorkshopState, text: string | undefined): string | null {
   if (!text || !MOVE_ON.test(text)) return null;
   const stage = STAGES[state.stage];
   const current = currentActivity(state);
-  if (!current.done(state)) return null;
   const i = stage.activities.findIndex((a) => a.id === current.id);
   let next = stage.activities[i + 1];
   // "That's all the research I have" while heading into interviews means skip them.

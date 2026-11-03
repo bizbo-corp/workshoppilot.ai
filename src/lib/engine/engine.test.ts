@@ -206,8 +206,12 @@ describe('moveOnTarget', () => {
   it('ignores ordinary messages', () => {
     expect(moveOnTarget(inDiscover, 'The groomers and their customers')).toBeNull();
   });
-  it('waits until the activity has produced enough', () => {
-    expect(moveOnTarget(inDiscover, "That's all, let's move on")).toBeNull();
+  it('lets the user leave an activity thin', () => {
+    expect(moveOnTarget(inDiscover, "That's all, let's move on")).toBe('interviews');
+  });
+  it('is null at the last activity of a stage', () => {
+    const s = reduce(inDiscover, { seq: 2, actor: 'user', actorId: null, createdAt: new Date(), payload: { type: 'activity.entered', stage: 'discover', activity: 'empathy' } });
+    expect(moveOnTarget(s, 'move on')).toBeNull();
   });
   it('advances to the next activity when it has', () => {
     let s = inDiscover;
