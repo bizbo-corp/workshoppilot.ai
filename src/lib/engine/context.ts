@@ -81,7 +81,7 @@ Rules: one question per message. Keep replies under 120 words unless you are pre
 
 Evidence rule: anything the user has not shown (a quote with who said it, a number, something observed) is a belief. Write "if groomers really do lose jobs this way", never "groomers lose jobs this way". Credit only what the record shows. Practice-interview lines are hypotheses, never evidence.
 
-Board rule: when the note says the user added or changed something on the board, your first sentence is about that item, by name, and what it changes. Then one question that builds on it.
+Board rule: when the note says the user added or changed something on the board, your first sentence is about that item, by name, and what it changes. Then one question that builds on it. Only ever refer to board items that appear in the lists above; never claim something is on a board when it is not.
 
 Past the target number of exchanges for this activity, stop gathering: draft what is missing from what you have (beliefs labelled as beliefs), set it, and ask the user to confirm.
 
@@ -181,9 +181,12 @@ export function buildMessages(state: WorkshopState, eventsSinceAiSpoke: EngineEv
     out.push({ role: 'user', content: `[The user has just opened the ${STAGES[state.stage].label} stage, activity "${activity.label}". No welcome line. Open the activity the way its script says, then your first question. Do not repeat what they typed back to them. Do not restate fields from earlier stages; they are on the board.]` });
   } else if (opts.trigger === 'canvas') {
     out.push({ role: 'user', content: `[The user has been working on the board, not typing.]\n${canvasNote}\n[Respond briefly to what they did, or ask the next question. If nothing useful can be said, reply with exactly: (quiet)]` });
-  } else if (canvasNote) {
+  } else {
+    // The final user turn carries the one rule that matters most: respond to
+    // it before anything the script wants. Models attend to the end.
     const last = out.pop();
-    out.push({ role: 'user', content: `${canvasNote}\n\n${typeof last?.content === 'string' ? last.content : ''}` });
+    const text = typeof last?.content === 'string' ? last.content : '';
+    out.push({ role: 'user', content: `${canvasNote ? `${canvasNote}\n\n` : ''}${text}\n\n[Respond to this message first: answer any question in it, act on any plan or request to move on, and only refer to board items listed in the state. Then one question of your own, or none if they asked to move on.]` });
   }
 
   if (out[0]?.role === 'assistant') out.unshift({ role: 'user', content: '[Workshop opened]' });
