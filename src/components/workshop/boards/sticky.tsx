@@ -141,10 +141,10 @@ export function AddSticky({ board, zone, label, full, placeholder = 'Type, then 
 export function BoardFrame({ title, hint, children, className, actions }: { title: string; hint?: string; children: ReactNode; className?: string; actions?: ReactNode }) {
   return (
     <section className={cn('rounded-lg border border-border bg-card', className)} data-board-frame={title}>
-      <header className="flex items-start justify-between gap-3 border-b border-border px-4 py-2">
+      <header className="flex items-start justify-between gap-3 border-b border-border px-4 py-2.5">
         <div className="min-w-0">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground">{title}</h3>
-          {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
         </div>
         {actions && <div className="shrink-0">{actions}</div>}
       </header>
@@ -157,10 +157,10 @@ export function BoardFrame({ title, hint, children, className, actions }: { titl
 export function Zone({ board, id, label, hint, items, max, className, tone = 'plain', children, meta }: { board: BoardItem['board']; id: string; label: string; hint?: string; items: BoardItem[]; max: number; className?: string; tone?: 'plain' | 'tint'; children?: ReactNode; meta?: Record<string, string | number | boolean> }) {
   return (
     <div data-zone-container={id} className={cn('flex min-h-[7rem] flex-col p-3', tone === 'tint' ? 'bg-muted/40' : 'bg-card', className)}>
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <span className="text-xs font-medium">{label}</span>
-          {hint && <span className="ml-1.5 text-[11px] text-muted-foreground">{hint}</span>}
+          <div className="text-sm font-medium leading-tight">{label}</div>
+          {hint && <div className="text-[11px] text-muted-foreground">{hint}</div>}
         </div>
         <AddSticky board={board} zone={id} label={label} full={items.length >= max} meta={meta} />
       </div>

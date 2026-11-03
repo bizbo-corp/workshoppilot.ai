@@ -63,9 +63,9 @@ export function ActivityPane({ workshopId, state, onChange, onSend, viewing, onB
               Activity {index + 1} of {stage.activities.length}
             </span>
           </div>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight">{activity.label}</h2>
-          <p className="mt-0.5 text-sm text-foreground/90">{activity.what}</p>
-          <p className="text-sm text-muted-foreground">{activity.why}</p>
+          <h2 className="mt-1.5 text-xl font-semibold tracking-tight">{activity.label}</h2>
+          <p className="mt-1 text-base text-foreground/90">{activity.what}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{activity.why}</p>
         </header>
 
         {stageId === 'setup' && !readOnly && <IdeaTypeChooser workshopId={workshopId} state={state} onChange={onChange} />}
@@ -124,7 +124,7 @@ function OutputsPanel({ workshopId, state, onChange, fields, stage, readOnly }: 
 
   return (
     <div className="rounded-lg border border-border bg-card" data-outputs>
-      <div className="border-b border-border px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">What this activity produces</div>
+      <div className="border-b border-border px-4 py-2.5"><h3 className="text-sm font-semibold">What this activity produces</h3><p className="text-xs text-muted-foreground">Filled in from the conversation. Click the pencil to change any of them.</p></div>
       <ul className="divide-y divide-border">
         {fields.map((f) => {
           const value = state.fields[fieldKey(stage, f.id)];
@@ -132,9 +132,9 @@ function OutputsPanel({ workshopId, state, onChange, fields, stage, readOnly }: 
           return (
             <li key={f.id} className="px-4 py-2.5" data-field={f.id} data-filled={value ? 'true' : 'false'}>
               <div className="flex items-start justify-between gap-3">
+                <div className="mt-1 shrink-0">{value ? <Icon name="check" className="h-3.5 w-3.5 text-olive-600" /> : <span className="block h-3.5 w-3.5 rounded-full border border-border" />}</div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 text-sm font-medium">
-                    {value ? <Icon name="check" className="h-3.5 w-3.5 text-olive-600" /> : <span className="h-3.5 w-3.5 rounded-full border border-border" />}
                     {f.label}
                     {!f.required && <span className="text-xs font-normal text-muted-foreground">optional</span>}
                   </div>

@@ -9,18 +9,21 @@ import { needsGreeting } from '@/lib/engine/stages';
 import { endInterview, setActivity } from '@/actions/board';
 import { useWorkshopState } from './use-workshop';
 import { ChatPanel } from './chat-panel';
+import { Icon } from '@/components/ui/icon';
+import { cn } from '@/lib/utils';
 import { ActivityRail } from './activity-rail';
 import { ActivityPane } from './activity-pane';
 
 /**
- * The room: the map of stages and activities on the left, the conversation
- * with Wanda in the middle, the activity in focus on the right. Chat and
+ * The room: the map of stages and activities on the left, the activity in
+ * focus in the middle, the conversation with Wanda in a panel on the right. Chat and
  * boards share one state; whichever the user works in, the other side
  * catches up.
  */
 export function WorkshopRoom({ workshopId, initialState, title }: { workshopId: string; initialState: WorkshopState; title: string }) {
   const { state, setState, refresh } = useWorkshopState(workshopId, initialState);
   const [railCollapsed, setRailCollapsed] = useState(false);
+  const [chatWidth, setChatWidth] = useState<'closed' | 'normal' | 'wide'>('normal');
   const [viewing, setViewing] = useState<{ stage: StageId; activity: string } | null>(null);
   const greetedStage = useRef<string | null>(null);
   const [, start] = useTransition();
@@ -106,8 +109,19 @@ export function WorkshopRoom({ workshopId, initialState, title }: { workshopId: 
         collapsed={railCollapsed}
         onToggle={() => setRailCollapsed((v) => !v)}
       />
-      <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(380px,11fr)_14fr]">
-        <section className="flex min-h-0 flex-col border-r border-border bg-background">
+      <section className="scroll-quiet min-h-0 min-w-0 flex-1 overflow-y-auto bg-muted/30 p-4 lg:p-6">
+        <ActivityPane workshopId={workshopId} state={state} onChange={onBoardChange} onSend={send} viewing={viewing} onBackToCurrent={() => setViewing(null)} />
+      </section>
+      <section
+        className={cn('flex min-h-0 shrink-0 flex-col border-l border-border bg-background transition-[width] duration-200', chatWidth === 'closed' ? 'w-12' : chatWidth === 'wide' ? 'w-[400px] lg:w-[560px]' : 'w-[400px]')}
+        data-chat-width={chatWidth}
+      >
+        {chatWidth === 'closed' ? (
+          <button type="button" onClick={() => setChatWidth('normal')} aria-label="Open the chat" className="flex h-full w-full flex-col items-center gap-2 py-3 text-muted-foreground hover:bg-accent hover:text-foreground">
+            <Icon name="message-circle" className="h-4 w-4" />
+            <span className="text-[10px] [writing-mode:vertical-rl]">Wanda</span>
+          </button>
+        ) : (
           <ChatPanel
             messages={chat.messages}
             status={chat.status}
@@ -117,12 +131,11 @@ export function WorkshopRoom({ workshopId, initialState, title }: { workshopId: 
             workshopId={workshopId}
             interview={state.interview}
             onEndInterview={leaveInterview}
+            width={chatWidth}
+            onWidth={setChatWidth}
           />
-        </section>
-        <section className="scroll-quiet min-h-0 overflow-y-auto bg-muted/30 p-4 lg:p-6">
-          <ActivityPane workshopId={workshopId} state={state} onChange={onBoardChange} onSend={send} viewing={viewing} onBackToCurrent={() => setViewing(null)} />
-        </section>
-      </div>
+        )}
+      </section>
     </div>
   );
 }

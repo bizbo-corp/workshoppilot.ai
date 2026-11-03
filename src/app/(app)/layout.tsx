@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-dvh flex-col bg-background text-foreground">
       <header className="z-40 shrink-0 border-b border-border bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4">
+        <div className="flex h-14 w-full items-center justify-between px-4">
           <Link href="/dashboard" className="flex items-center gap-2">
             <Logo size="sm" />
           </Link>

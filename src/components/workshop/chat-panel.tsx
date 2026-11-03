@@ -19,6 +19,8 @@ interface Props {
   workshopId: string;
   interview: WorkshopState['interview'];
   onEndInterview: () => void;
+  width?: 'normal' | 'wide';
+  onWidth?: (w: 'closed' | 'normal' | 'wide') => void;
 }
 
 /**
@@ -26,7 +28,7 @@ interface Props {
  * so at the top and her replies carry the interviewee's initial instead,
  * so nobody mistakes a practice answer for a real one.
  */
-export function ChatPanel({ messages, status, onSend, suggestions, finished, workshopId, interview, onEndInterview }: Props) {
+export function ChatPanel({ messages, status, onSend, suggestions, finished, workshopId, interview, onEndInterview, width = 'normal', onWidth }: Props) {
   const [draft, setDraft] = useState('');
   const bottom = useRef<HTMLDivElement>(null);
   const busy = status === 'submitted' || status === 'streaming';
@@ -53,10 +55,20 @@ export function ChatPanel({ messages, status, onSend, suggestions, finished, wor
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center gap-2.5 border-b border-border px-4 py-2.5">
         <Avatar label={FACILITATOR.name} emoji={FACILITATOR.emoji} />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="text-sm font-medium leading-tight">{FACILITATOR.name}</div>
           <div className="text-[11px] text-muted-foreground">Your facilitator</div>
         </div>
+        {onWidth && (
+          <div className="hidden items-center gap-1 lg:flex">
+            <button type="button" onClick={() => onWidth(width === 'wide' ? 'normal' : 'wide')} aria-label={width === 'wide' ? 'Narrow the chat' : 'Widen the chat'} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">
+              <Icon name={width === 'wide' ? 'arrow-right' : 'arrow-left'} className="h-3.5 w-3.5" />
+            </button>
+            <button type="button" onClick={() => onWidth('closed')} aria-label="Hide the chat" className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">
+              <Icon name="close" className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {interview && (
