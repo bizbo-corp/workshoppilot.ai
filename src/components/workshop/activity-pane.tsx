@@ -40,7 +40,7 @@ export function ActivityPane({ workshopId, state, onChange, onSend }: Props) {
   return (
     <BoardProvider workshopId={workshopId} state={state} onChange={onChange}>
       <div className="space-y-4">
-        <header className="rounded-lg border border-border bg-card px-4 py-3">
+        <header className="rounded-lg border border-border bg-card px-4 py-3" data-stage={state.stage} data-activity={activity.id}>
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
             <span>Stage {STAGE_ORDER.indexOf(state.stage)} · {stage.label}</span>
             <span aria-hidden>·</span>

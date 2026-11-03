@@ -130,6 +130,7 @@ export function AddSticky({ board, zone, label, full, placeholder = 'Type, then 
       }}
       rows={2}
       placeholder={placeholder}
+      data-add-input={zone}
       className="w-full min-w-[9rem] resize-none rounded-md border border-border bg-background px-2 py-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
     />
   );

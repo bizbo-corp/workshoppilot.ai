@@ -86,13 +86,13 @@ test('stickies stay inside their zones and never pile up, in light and dark mode
   // Setup -> Discover -> Define, letting the scripted facilitator seed each board.
   await agree(page);
   await agree(page);
-  await expect(page.getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
+  await expect(page.locator('[data-stage="discover"]')).toBeVisible();
   await agree(page);
 
   // Add a few of our own so zones hold more than one item.
   for (const text of ['Practice manager', 'Head vet', 'Locum agency']) {
     await page.getByRole('button', { name: 'Add to Direct' }).click();
-    const input = page.getByPlaceholder('Type, then Enter');
+    const input = page.locator('[data-add-input]');
     await input.fill(text);
     await input.press('Enter');
     await expect(page.locator('[data-item-id]', { hasText: text })).toBeVisible();
@@ -100,8 +100,10 @@ test('stickies stay inside their zones and never pile up, in light and dark mode
   await checkBoards(page);
 
   await agree(page);
-  await expect(page.getByRole('heading', { name: 'Define', exact: true })).toBeVisible();
+  await expect(page.locator('[data-stage="define"]')).toBeVisible();
   await agree(page);
+  // The pane shows one activity at a time; open the journey from the map.
+  await page.locator('[data-activity="journey"]').click();
   await expect(page.locator('[data-zone-container="m1"] [data-item-id]')).toBeVisible();
   await checkBoards(page);
 
