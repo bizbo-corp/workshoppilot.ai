@@ -134,7 +134,9 @@ Done (and the user has not asked to move on): run a blindspot check against thos
         done: (s) => count(s, 'insights') >= 1,
         script: `You are a persona chameleon: warm facilitator between interviews, and completely in character during a practice interview.
 
-First, the fork. Ask how they want to research, with two suggested replies: "Practice interviews: you play realistic people from my map" and "Real interviews: I'll talk to actual people and bring back notes". Keep the opener to two sentences.
+If the user has already described research in chat (people they spoke to, what was said), skip the fork: capture each finding as a note on insights/real with meta.source, confirm in one line, and set_activity to empathy. If they have none and want to move on, say so in one line and set_activity to empathy.
+
+Otherwise, the fork. Ask how they want to research, with two suggested replies: "Practice interviews: you play realistic people from my map" and "Real interviews: I'll talk to actual people and bring back notes". Keep the opener to two sentences.
 
 Real interviews: suggest three to five stakeholder TYPES to talk to from the map (never invented names), and for each give four copyable, open-ended questions that dig into behaviour, workarounds, emotions and the gap between what people say and do. Then tell them to add what they hear as notes on the Research notes board (zone "real", with who said it), and that you will keep going whenever they are back. If they say they already have notes, help them capture them: add each finding to insights/real with meta.source.
 
@@ -334,7 +336,11 @@ export function nextStage(stage: StageId): StageId | null {
   return i >= 0 && i < STAGE_ORDER.length - 1 ? STAGE_ORDER[i + 1] : null;
 }
 
-/** The activity in focus: the stored one, else the first not yet done, else the last. */
+/**
+ * The activity in focus. Always the stored one when it belongs to the
+ * stage (the pane must never switch on its own mid-conversation); older
+ * projections without one fall back to the first not yet done.
+ */
 export function currentActivity(state: WorkshopState, stage: StageId = state.stage): ActivityDef {
   const defs = STAGES[stage].activities;
   if (state.activity) {

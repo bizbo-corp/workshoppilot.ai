@@ -1,5 +1,5 @@
 import { initialState, type EngineEvent, type WorkshopState } from './types';
-import { fieldKey } from './stages';
+import { STAGES, fieldKey } from './stages';
 
 /** Keep this many chat messages in the projection; older ones live in the log. */
 const MAX_MESSAGES = 60;
@@ -14,7 +14,7 @@ export function reduce(state: WorkshopState, event: EngineEvent): WorkshopState 
 
   switch (p.type) {
     case 'workshop.created':
-      return { ...next, idea: p.idea };
+      return { ...next, idea: p.idea, activity: STAGES.setup.activities[0].id };
 
     case 'chat.user':
       return { ...next, messages: pushMessage(state.messages, { id: `m${event.seq}`, role: 'user', text: p.text, seq: event.seq }) };
@@ -79,7 +79,7 @@ export function reduce(state: WorkshopState, event: EngineEvent): WorkshopState 
       };
 
     case 'stage.entered':
-      return { ...next, stage: p.stage, activity: null, interview: null, stageEnteredSeq: event.seq };
+      return { ...next, stage: p.stage, activity: STAGES[p.stage].activities[0].id, interview: null, stageEnteredSeq: event.seq };
 
     case 'activity.entered':
       return p.stage === state.stage ? { ...next, activity: p.activity } : next;
