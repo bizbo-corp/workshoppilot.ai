@@ -3,6 +3,8 @@ import { CREDIT_PACKS, formatUsd } from '@/lib/credits/packs';
 import { getJobConfig } from '@/lib/ai/jobs';
 import { BuyPackButton } from '@/components/billing/buy-pack-button';
 
+import { PageContainer } from '@/components/layout/page-container';
+
 export const dynamic = 'force-dynamic';
 
 export default async function CreditsPage({ searchParams }: { searchParams: Promise<{ cancelled?: string; return_to?: string }> }) {
@@ -11,6 +13,7 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
   const sketch = getJobConfig('clean_sketch').credits;
 
   return (
+    <PageContainer>
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Credits</h1>
@@ -39,5 +42,6 @@ export default async function CreditsPage({ searchParams }: { searchParams: Prom
         ))}
       </ul>
     </div>
+    </PageContainer>
   );
 }

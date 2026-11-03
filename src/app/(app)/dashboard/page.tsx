@@ -5,6 +5,8 @@ import { STAGES, STAGE_ORDER, currentActivity } from '@/lib/engine/stages';
 import type { WorkshopState } from '@/lib/engine/types';
 import { upgrade } from '@/lib/engine/reducer';
 
+import { PageContainer } from '@/components/layout/page-container';
+
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ new?: string }> }) {
@@ -12,6 +14,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const active = list.filter((w) => w.status !== 'archived');
 
   return (
+    <PageContainer>
     <div className="space-y-10">
       <section className="space-y-4">
         <h1 className="text-2xl font-semibold tracking-tight">What are you thinking of building?</h1>
@@ -52,5 +55,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         )}
       </section>
     </div>
+    </PageContainer>
   );
 }

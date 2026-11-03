@@ -13,8 +13,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await getCurrentUser();
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
+    <div className="flex h-dvh flex-col bg-background text-foreground">
+      <header className="z-40 shrink-0 border-b border-border bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4">
           <Link href="/dashboard" className="flex items-center gap-2">
             <Logo size="sm" />
@@ -38,7 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </nav>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
+      <main className="min-h-0 flex-1 overflow-y-auto scroll-quiet">{children}</main>
     </div>
   );
 }

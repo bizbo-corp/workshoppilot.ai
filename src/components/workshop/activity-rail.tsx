@@ -25,7 +25,7 @@ export function ActivityRail({ state, title, onOpenActivity, collapsed, onToggle
           <Icon name={collapsed ? 'arrow-right' : 'arrow-left'} className="h-3.5 w-3.5" />
         </button>
       </div>
-      <ol className="min-h-0 flex-1 overflow-y-auto py-2">
+      <ol className="scroll-quiet min-h-0 flex-1 overflow-y-auto py-2">
         {STAGE_ORDER.map((sid, si) => {
           const stage = STAGES[sid];
           const done = state.completedStages.includes(sid);

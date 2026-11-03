@@ -13,6 +13,8 @@ import { ScoreRing } from '@/components/workshop/score-ring';
 import { SummaryActions, ResultForm } from '@/components/workshop/summary-actions';
 import { Button } from '@/components/ui/button';
 
+import { PageContainer } from '@/components/layout/page-container';
+
 export const dynamic = 'force-dynamic';
 
 /**
@@ -40,7 +42,8 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
   const result = parseResult(state.fields[fieldKey('deliver', 'result')]);
 
   return (
-    <article className="mx-auto max-w-3xl space-y-10">
+    <PageContainer className="max-w-3xl">
+    <article className="space-y-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground">Workshop summary</div>
@@ -108,6 +111,7 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
         ))}
       </section>
     </article>
+    </PageContainer>
   );
 }
 

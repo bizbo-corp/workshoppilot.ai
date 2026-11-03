@@ -342,7 +342,30 @@
 }
 
 /* Dark mode — deep green */
+/* Dark mode, neutralised: the surfaces lean grey with only a hint of olive,
+   so the olive accent is the only green on screen. Light mode is untouched. */
 .dark {
+  --background: #1b1d1a;
+  --foreground: #e4e5e1;
+  --card: #232623;
+  --card-foreground: #f1f2ef;
+  --popover: #2b2e2a;
+  --popover-foreground: #f1f2ef;
+  --primary: #e9eae5;
+  --primary-foreground: #1b1d1a;
+  --secondary: #2b2e2a;
+  --secondary-foreground: #f1f2ef;
+  --tertiary: #232623;
+  --tertiary-border: #3a3e38;
+  --tertiary-hover: #2b2e2a;
+  --muted: #2b2e2a;
+  --muted-foreground: #9c9f98;
+  --accent: #343834;
+  --accent-foreground: #d5d7d1;
+  --border: rgba(255, 255, 255, 0.09);
+  --input: rgba(255, 255, 255, 0.13);
+  --ring: #7c8077;
+  --chat-surface: #202320;
   /* Neumorphic edge (dark) — same treatment the chat panel uses. */
   --edge-highlight: rgba(255, 255, 255, 0.08);
   --edge-shadow: rgba(0, 0, 0, 0.15);
@@ -967,4 +990,26 @@
   background-color: var(--primary) !important;
   color: var(--primary-foreground) !important;
   box-shadow: none !important;
+}
+
+/* Scrollbars that stay out of the way: invisible until the area is hovered or scrolling. */
+.scroll-quiet {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  scrollbar-gutter: stable;
+}
+.scroll-quiet:hover,
+.scroll-quiet:focus-within {
+  scrollbar-color: color-mix(in oklab, var(--foreground) 25%, transparent) transparent;
+}
+.scroll-quiet::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-quiet::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 8px;
+}
+.scroll-quiet:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--foreground) 25%, transparent);
 }

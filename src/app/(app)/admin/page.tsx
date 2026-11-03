@@ -5,6 +5,8 @@ import { CREDIT_UNIT_CENTS, MIN_MARGIN_MULTIPLE, getJobConfig, AI_JOBS } from '@
 import { cn } from '@/lib/utils';
 import { RunDummyWorkshopButton } from '@/components/admin/run-dummy-button';
 
+import { PageContainer } from '@/components/layout/page-container';
+
 export const dynamic = 'force-dynamic';
 
 interface JobRow {
@@ -45,6 +47,7 @@ export default async function AdminPage() {
   const rows = jobs.rows as unknown as JobRow[];
 
   return (
+    <PageContainer>
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
 
@@ -118,6 +121,7 @@ export default async function AdminPage() {
         )}
       </section>
     </div>
+    </PageContainer>
   );
 }
 

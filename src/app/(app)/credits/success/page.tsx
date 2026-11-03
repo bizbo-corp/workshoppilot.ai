@@ -5,6 +5,8 @@ import { stripe } from '@/lib/billing/stripe';
 import { fulfilCheckoutSession } from '@/lib/billing/fulfil';
 import { Button } from '@/components/ui/button';
 
+import { PageContainer } from '@/components/layout/page-container';
+
 export const dynamic = 'force-dynamic';
 
 /**
@@ -26,7 +28,8 @@ export default async function CreditsSuccessPage({
   const returnTo = params.return_to && params.return_to.startsWith('/') && !params.return_to.startsWith('//') ? params.return_to : '/dashboard';
 
   return (
-    <div className="mx-auto max-w-md space-y-4 py-12 text-center">
+    <PageContainer className="max-w-md text-center">
+    <div className="space-y-4 py-4">
       <h1 className="text-2xl font-semibold">{result.ok ? 'Credits added' : 'Payment is still processing'}</h1>
       <p className="text-muted-foreground">
         {result.ok
@@ -37,5 +40,6 @@ export default async function CreditsSuccessPage({
         <Link href={returnTo}>Carry on</Link>
       </Button>
     </div>
+    </PageContainer>
   );
 }

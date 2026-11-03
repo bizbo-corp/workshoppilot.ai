@@ -71,14 +71,14 @@ export function ChatPanel({ messages, status, onSend, suggestions, finished, wor
         </div>
       )}
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
+      <div className="scroll-quiet min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-4 py-4">
         {visible.map((m, i) => {
           const isUser = m.role === 'user';
           const asInterviewee = !isUser && interview && i === visible.length - 1;
           return (
             <div key={m.id} className={cn('flex gap-2.5', isUser ? 'justify-end' : 'justify-start')}>
               {!isUser && <Avatar label={asInterviewee ? interview.name : FACILITATOR.name} emoji={asInterviewee ? undefined : FACILITATOR.emoji} small />}
-              <div className={cn('max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed', isUser ? 'bg-foreground text-background' : 'border border-border bg-card')}>
+              <div className={cn('max-w-[85%] break-words rounded-xl px-3.5 py-2.5 text-sm leading-relaxed', isUser ? 'bg-foreground text-background' : 'border border-border bg-card')}>
                 {isUser ? (
                   <p className="whitespace-pre-wrap">{textOf(m)}</p>
                 ) : (

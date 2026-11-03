@@ -92,7 +92,7 @@ export function WorkshopRoom({ workshopId, initialState, title }: { workshopId: 
   }, [send, setState, workshopId]);
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] bg-background">
+    <div className="flex h-full min-h-0 w-full overflow-hidden bg-background">
       <ActivityRail state={state} title={title} onOpenActivity={openActivity} collapsed={railCollapsed} onToggle={() => setRailCollapsed((v) => !v)} />
       <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(380px,11fr)_14fr]">
         <section className="flex min-h-0 flex-col border-r border-border bg-background">
@@ -107,7 +107,7 @@ export function WorkshopRoom({ workshopId, initialState, title }: { workshopId: 
             onEndInterview={leaveInterview}
           />
         </section>
-        <section className="min-h-0 overflow-y-auto bg-muted/30 p-4 lg:p-6">
+        <section className="scroll-quiet min-h-0 overflow-y-auto bg-muted/30 p-4 lg:p-6">
           <ActivityPane workshopId={workshopId} state={state} onChange={onBoardChange} onSend={send} />
         </section>
       </div>
