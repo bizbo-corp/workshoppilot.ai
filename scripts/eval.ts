@@ -17,7 +17,7 @@ import { db } from '../src/db/client';
 import { users, workshops, workshopMembers, workshopEvents } from '../src/db/schema';
 import { aiObject } from '../src/lib/ai/gateway';
 import { facilitate } from '../src/lib/engine/facilitate';
-import { append } from '../src/lib/engine/store';
+import { append, loadWorkshop } from '../src/lib/engine/store';
 import { createPrefixedId } from '../src/lib/ids';
 import { STAGES } from '../src/lib/engine/stages';
 import type { BoardId } from '../src/lib/engine/types';
@@ -83,6 +83,9 @@ async function runCase(c: Case, userId: string) {
       await append({ workshopId: w.id, actor: 'user', actorId: userId, payload: { type: 'board.item_added', item } });
       await turn('canvas', undefined, `[board] ${t.board}/${t.zone}: ${t.text}`);
     }
+    // The app greets when a stage completes; do the same here.
+    const after = await loadWorkshop(w.id);
+    if (after && after.state.lastAiStage !== after.state.stage) await turn('greeting', undefined, `[open ${after.state.stage}]`);
   }
 
   // Judge every reply.

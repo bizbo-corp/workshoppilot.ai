@@ -49,14 +49,15 @@ const DEFAULTS: Record<AiJob, JobConfig> = {
   extract: { model: 'google/gemini-2.5-flash-lite', credits: 0, maxOutputTokens: 2000, kind: 'text' },
   interview: { model: 'google/gemini-2.5-flash', credits: 0, maxOutputTokens: 900, kind: 'text' },
   classify_idea: { model: 'google/gemini-2.5-flash-lite', credits: 0, maxOutputTokens: 200, kind: 'text' },
-  summary_report: { model: 'google/gemini-2.5-flash', credits: 0, maxOutputTokens: 2500, kind: 'text' },
+  summary_report: { model: 'google/gemini-2.5-flash', credits: 0, maxOutputTokens: 4000, kind: 'text' },
   verdict: { model: 'anthropic/claude-opus-5-5', credits: 400, effort: 'high', maxOutputTokens: 6000, kind: 'text' },
   build_pack: { model: 'anthropic/claude-opus-5-5', credits: 0, effort: 'medium', maxOutputTokens: 12000, kind: 'text' },
   clean_sketch: { model: 'google/gemini-3.1-flash-image', credits: 10, maxOutputTokens: 0, kind: 'image' },
   persona_image: { model: 'google/gemini-3.1-flash-image', credits: 0, maxOutputTokens: 0, kind: 'image' },
-  test_scenario: { model: 'anthropic/claude-sonnet-5-5', credits: 0, maxOutputTokens: 1500, kind: 'text' },
-  test_user: { model: 'anthropic/claude-sonnet-5-5', credits: 0, maxOutputTokens: 400, kind: 'text' },
-  eval_judge: { model: 'anthropic/claude-sonnet-5-5', credits: 0, maxOutputTokens: 400, kind: 'text' },
+  // Sonnet thinks before it answers and the reasoning counts against the output budget, so these are generous.
+  test_scenario: { model: 'anthropic/claude-sonnet-5-5', credits: 0, maxOutputTokens: 4000, kind: 'text' },
+  test_user: { model: 'anthropic/claude-sonnet-5-5', credits: 0, maxOutputTokens: 2500, kind: 'text' },
+  eval_judge: { model: 'anthropic/claude-sonnet-5-5', credits: 0, maxOutputTokens: 2500, kind: 'text' },
 };
 
 /**

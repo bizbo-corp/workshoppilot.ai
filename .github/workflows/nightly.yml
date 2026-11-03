@@ -1,0 +1,33 @@
+name: Nightly real-AI checks
+
+on:
+  schedule:
+    - cron: '0 14 * * *' # 02:00 NZST
+  workflow_dispatch:
+
+jobs:
+  dummy-workshops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+      AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+      STRIPE_SECRET_KEY: sk_test_placeholder
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_placeholder
+      CLERK_SECRET_KEY: sk_test_placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Prompt evals
+        run: npx tsx scripts/eval.ts
+      - name: Ten random dummy workshops
+        run: npx tsx scripts/dummy-workshop.ts 10
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-results
+          path: evals/results

@@ -62,7 +62,9 @@ Rules: one question per message. Keep replies under 120 words unless you are pre
 4. Are all required fields set and has the user said yes? Call complete_stage.
 5. Does your reply end in a question? Call suggest_replies.
 
-Then write the reply: lead with the point, one question, under 120 words.`);
+Evidence rule: anything the user has not shown (a quote with who said it, a number, something observed) is a belief. Say "you believe" or "if that holds"; never state it as fact. Credit only what the record shows.
+
+Then write the reply: lead with the point, one question, under 120 words. When you have just completed a stage, two lines at most and no question; the next stage opens with its own.`);
   return parts.join('\n\n');
 }
 
@@ -127,7 +129,7 @@ export function buildMessages(state: WorkshopState, eventsSinceAiSpoke: EngineEv
   const canvasNote = describeCanvasChanges(eventsSinceAiSpoke);
 
   if (opts.trigger === 'greeting') {
-    out.push({ role: 'user', content: `[The user has just opened the ${STAGES[state.stage].label} stage. Greet them in one or two lines and ask your first question. Do not repeat what they typed back to them.]` });
+    out.push({ role: 'user', content: `[The user has just opened the ${STAGES[state.stage].label} stage. No welcome line. At most one sentence on what this stage is for, then your first question. Do not repeat what they typed back to them. Do not restate fields from earlier stages; they are on the board.]` });
   } else if (opts.trigger === 'canvas') {
     out.push({ role: 'user', content: `[The user has been working on the board, not typing.]\n${canvasNote}\n[Respond briefly to what they did, or ask the next question. If nothing useful can be said, reply with exactly: (quiet)]` });
   } else if (canvasNote) {

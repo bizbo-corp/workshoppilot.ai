@@ -1,11 +1,12 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Icon } from '@/components/ui/icon';
 import { BOARDS } from '@/lib/engine/boards';
-import { useBoard, itemsIn } from './board-context';
+import { useBoard, itemsIn, useBoardChange } from './board-context';
+import { cleanUpSketch } from '@/actions/images';
 import { AddSticky, BoardFrame, Sticky } from './sticky';
 
 /**
@@ -14,6 +15,7 @@ import { AddSticky, BoardFrame, Sticky } from './sticky';
  */
 export function IdeaBoard() {
   const { state, update, add, workshopId } = useBoard();
+  const cleanCredits = 10;
   const def = BOARDS.idea_board;
   const shortlisted = state.boards.idea_board.filter((i) => i.meta?.shortlisted).length;
 
@@ -45,6 +47,7 @@ export function IdeaBoard() {
                   >
                     <Icon name="star" weight={star ? 'fill' : 'regular'} className="h-3 w-3" /> {star ? 'Shortlisted' : 'Shortlist'}
                   </button>
+                  {item.imageUrl && !item.meta?.cleaned && <CleanUpButton workshopId={workshopId} itemId={item.id} credits={cleanCredits} />}
                 </Sticky>
               )}
             </div>
@@ -95,5 +98,30 @@ export function UploadButton({ workshopId, onUploaded }: { workshopId: string; o
         {busy ? <Icon name="spinner" className="h-3.5 w-3.5 animate-spin" /> : <Icon name="camera" className="h-3.5 w-3.5" />}
       </button>
     </>
+  );
+}
+
+/** The paid clean-up. Credits are checked server-side; this just asks. */
+function CleanUpButton({ workshopId, itemId, credits }: { workshopId: string; itemId: string; credits: number }) {
+  const [pending, start] = useTransition();
+  const { onChange } = useBoardChange();
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onClick={() =>
+        start(async () => {
+          const r = await cleanUpSketch(workshopId, itemId);
+          if (r.success) {
+            onChange(r.data.state);
+            toast.success('Cleaned up');
+          } else toast.error(r.error);
+        })
+      }
+      className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground disabled:opacity-50"
+    >
+      {pending ? <Icon name="spinner" className="h-3 w-3 animate-spin" /> : <Icon name="sparkles" className="h-3 w-3" />}
+      Clean it up ({credits} credits)
+    </button>
   );
 }

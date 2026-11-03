@@ -110,7 +110,7 @@ export function facilitatorTools(ctx: ToolContext) {
         const next = nextStage(state.stage);
         await ctx.emit({ type: 'stage.completed', stage: state.stage, summary: summary.trim() });
         if (next) await ctx.emit({ type: 'stage.entered', stage: next });
-        return { ok: true, next: next ?? 'finished', note: next ? `Say one line about what they built, then one line previewing ${STAGES[next].label}. The next stage greets them when they open it; do not start it here.` : 'The workshop is finished. Point them to the summary.' };
+        return { ok: true, next: next ?? 'finished', note: next ? `Two lines at most: one on what they built (do not restate the fields), one previewing ${STAGES[next].label}. No question. The next stage opens with its own.` : 'The workshop is finished. Point them to the summary.' };
       },
     }),
 

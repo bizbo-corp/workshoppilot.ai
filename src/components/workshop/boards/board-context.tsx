@@ -16,6 +16,7 @@ interface BoardApi {
   update: (id: string, patch: { text?: string; zone?: string; meta?: Record<string, string | number | boolean> }) => void;
   remove: (id: string) => void;
   pending: boolean;
+  onChange: (s: WorkshopState) => void;
 }
 
 const Ctx = createContext<BoardApi | null>(null);
@@ -27,6 +28,7 @@ export function BoardProvider({ workshopId, state, onChange, children }: { works
     workshopId,
     state,
     pending,
+    onChange,
     add: (board, zone, text, imageUrl) =>
       start(async () => {
         const r = await addBoardItem({ workshopId, board, zone, text, imageUrl });
@@ -58,4 +60,9 @@ export function useBoard(): BoardApi {
 
 export function itemsIn(state: WorkshopState, board: BoardId, zone: string): BoardItem[] {
   return state.boards[board].filter((i) => i.zone === zone);
+}
+
+export function useBoardChange(): { onChange: (s: WorkshopState) => void } {
+  const { onChange } = useBoard();
+  return { onChange };
 }

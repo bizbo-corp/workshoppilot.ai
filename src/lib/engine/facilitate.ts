@@ -67,9 +67,11 @@ export async function facilitate(input: FacilitateInput) {
     },
   );
 
-  // Record the reply once the whole multi-step run has finished.
-  const finished = result.text.then(async (text) => {
-    const clean = text.trim();
+  // Record the reply once the whole multi-step run has finished. A turn may
+  // speak in more than one step (text beside a tool call, then more text), so
+  // join every step's text rather than keeping only the last.
+  const finished = result.steps.then(async (steps) => {
+    const clean = steps.map((s) => s.text.trim()).filter(Boolean).join('\n\n').trim();
     if (!clean || clean === '(quiet)') {
       // Mark the canvas changes as seen even when the AI chose silence.
       ({ state } = await append({ workshopId: input.workshopId, actor: 'ai', actorId: 'facilitate', payload: { type: 'ai.seen', seq: state.seq } }, state));
